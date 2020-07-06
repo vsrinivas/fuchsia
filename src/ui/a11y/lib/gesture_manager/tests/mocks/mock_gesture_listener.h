@@ -11,7 +11,7 @@
 
 #include <string>
 
-namespace accessiblity_test {
+namespace accessibility_test {
 
 class MockGestureListener : public fuchsia::accessibility::gesture::Listener {
  public:
@@ -57,6 +57,6 @@ class MockGestureListener : public fuchsia::accessibility::gesture::Listener {
   bool is_registered_ = false;
 };
 
-}  // namespace accessiblity_test
+}  // namespace accessibility_test
 
 #endif  // SRC_UI_A11Y_LIB_GESTURE_MANAGER_TESTS_MOCKS_MOCK_GESTURE_LISTENER_H_

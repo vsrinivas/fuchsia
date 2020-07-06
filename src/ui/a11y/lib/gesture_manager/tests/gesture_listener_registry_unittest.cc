@@ -28,15 +28,15 @@ class GestureListenerRegistryTest : public gtest::TestLoopFixture {
 
 TEST_F(GestureListenerRegistryTest, RegistersSuccessfully) {
   EXPECT_FALSE(registry_.listener());
-  accessiblity_test::MockGestureListener listener;
+  MockGestureListener listener;
   registry_.Register(listener.NewBinding(), []() {});
   EXPECT_TRUE(registry_.listener());
 }
 
 TEST_F(GestureListenerRegistryTest, HonorsLastRegisteredListener) {
   EXPECT_FALSE(registry_.listener());
-  accessiblity_test::MockGestureListener listener;
-  accessiblity_test::MockGestureListener last_listener;
+  MockGestureListener listener;
+  MockGestureListener last_listener;
   registry_.Register(listener.NewBinding(), []() {});
   registry_.Register(last_listener.NewBinding(), []() {});
   RunLoopUntilIdle();

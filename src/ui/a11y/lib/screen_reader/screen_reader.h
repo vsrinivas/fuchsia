@@ -31,11 +31,11 @@ namespace a11y {
 // TODO(MI4-2546): Rename this class once the final screen reader name exists.
 class ScreenReader {
  public:
-  // Pointers to Semantics Manager, TTS Manager, Gesture Listener Registry and Gesture Manager must
+  // Pointers to Semantics Manager, Gesture Listener Registry and Gesture Manager must
   // outlive screen reader. A11y App is responsible for creating these pointers along with Screen
   // Reader object.
   ScreenReader(std::unique_ptr<ScreenReaderContext> context,
-               a11y::SemanticsSource* semantics_source, a11y::TtsManager* tts_manager,
+               a11y::SemanticsSource* semantics_source,
                a11y::GestureListenerRegistry* gesture_listener_registry);
   ~ScreenReader() = default;
 
@@ -44,7 +44,7 @@ class ScreenReader {
   ScreenReaderContext* context() { return context_.get(); }
 
  private:
-  // Initializes services TTS Engine and binds actions to gesture manager.
+  // Initializes services and binds actions to gesture manager.
   void InitializeServicesAndAction();
 
   // Helps finding the appropriate Action based on Action Name and calls Run()
@@ -61,9 +61,6 @@ class ScreenReader {
 
   // Stores Action context which is required to build an Action.
   std::unique_ptr<ScreenReaderAction::ActionContext> action_context_;
-
-  // Pointer to TTS Manager.
-  a11y::TtsManager* tts_manager_;
 
   // Pointer to Gesture Listener Registry.
   GestureListenerRegistry* gesture_listener_registry_;

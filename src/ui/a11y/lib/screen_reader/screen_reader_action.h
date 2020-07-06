@@ -35,7 +35,6 @@ class ScreenReaderAction {
   // complete an action.
   struct ActionContext {
     a11y::SemanticsSource* semantics_source;
-    fuchsia::accessibility::tts::EnginePtr tts_engine_ptr;
   };
 
   explicit ScreenReaderAction(ActionContext* context, ScreenReaderContext* screen_reader_context);
@@ -61,18 +60,10 @@ class ScreenReaderAction {
   // error.
   fit::promise<> SetA11yFocusPromise(const uint32_t node_id, zx_koid_t view_koid);
 
-  // Returns a promise that from a node_id and view_koid, builds an utterance to be spoken. An error
-  // is thrown if the semantic tree or the semantic node are missing data necessary to build an
-  // utterance.
-  fit::promise<fuchsia::accessibility::tts::Utterance> BuildUtteranceFromNodePromise(
-      zx_koid_t view_koid, uint32_t node_id);
-
-  // Returns a promise that enqueues an utterance. An error is thrown if the atempt to enqueue the
-  // utterance is rejected by the TTS service.
-  fit::promise<> EnqueueUtterancePromise(fuchsia::accessibility::tts::Utterance utterance);
-
-  // Returns a promise that cancels pending tts utterances.
-  fit::promise<> CancelTts();
+  // Returns a promise that from a node_id and view_koid, builds a speech task to speak the node
+  // description. An error is thrown if the semantic tree or the semantic node are missing data
+  // necessary to build an utterance.
+  fit::promise<> BuildSpeechTaskFromNodePromise(zx_koid_t view_koid, uint32_t node_id);
 
   // ActionContext which is used to make calls to Semantics Manager and TTS.
   ActionContext* action_context_;

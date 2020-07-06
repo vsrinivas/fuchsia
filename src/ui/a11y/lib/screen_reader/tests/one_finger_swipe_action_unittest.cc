@@ -13,7 +13,7 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
-#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
+#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
@@ -71,31 +71,13 @@ class OneFingerSwipeActionTest : public gtest::TestLoopFixture {
         view_manager_(std::move(factory_), std::make_unique<MockViewSemanticsFactory>(),
                       std::make_unique<MockAnnotationViewFactory>(), context_provider_.context(),
                       context_provider_.context()->outgoing()->debug_dir()),
-        tts_manager_(context_provider_.context()),
         semantic_provider_(&view_manager_) {
     action_context_.semantics_source = &view_manager_;
-    tts_manager_.OpenEngine(action_context_.tts_engine_ptr.NewRequest(),
-                            [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
-                              EXPECT_TRUE(result.is_response());
-                            });
-    a11y_focus_manager_ = std::make_unique<MockA11yFocusManager>();
-    a11y_focus_manager_ptr_ = a11y_focus_manager_.get();
-    screen_reader_context_ =
-        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager_), &tts_manager_);
+    screen_reader_context_ = std::make_unique<MockScreenReaderContext>();
+    a11y_focus_manager_ptr_ = screen_reader_context_->mock_a11y_focus_manager_ptr();
+    mock_speaker_ptr_ = screen_reader_context_->mock_speaker_ptr();
+
     view_manager_.SetSemanticsEnabled(true);
-
-    SetupTtsEngine(&mock_tts_engine_);
-  }
-
-  void SetupTtsEngine(accessibility_test::MockTtsEngine* mock_tts_engine) {
-    fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle =
-        mock_tts_engine->GetHandle();
-    tts_manager_.RegisterEngine(
-        std::move(engine_handle),
-        [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {
-          EXPECT_TRUE(result.is_response());
-        });
-    RunLoopUntilIdle();
   }
 
   void AddNodeToSemanticTree() {
@@ -122,12 +104,11 @@ class OneFingerSwipeActionTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
   a11y::ViewManager view_manager_;
   a11y::ScreenReaderAction::ActionContext action_context_;
-  a11y::TtsManager tts_manager_;
-  std::unique_ptr<a11y::ScreenReaderContext> screen_reader_context_;
+  std::unique_ptr<MockScreenReaderContext> screen_reader_context_;
   std::unique_ptr<MockA11yFocusManager> a11y_focus_manager_;
   MockA11yFocusManager* a11y_focus_manager_ptr_;
-  accessibility_test::MockSemanticProvider semantic_provider_;
-  accessibility_test::MockTtsEngine mock_tts_engine_;
+  MockScreenReaderContext::MockSpeaker* mock_speaker_ptr_;
+  MockSemanticProvider semantic_provider_;
 };
 
 // Swipe Action should do nothing if there is no semantic tree in focus.
@@ -144,8 +125,7 @@ TEST_F(OneFingerSwipeActionTest, NoTreeInFocus) {
   EXPECT_FALSE(factory_ptr_->semantic_tree()->IsGetNextNodeCalled());
   EXPECT_FALSE(factory_ptr_->semantic_tree()->IsGetPreviousNodeCalled());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
+  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
 }
 
 // When next node is not found, the Swipe Action should do nothing.
@@ -170,8 +150,7 @@ TEST_F(OneFingerSwipeActionTest, NextNodeNotFound) {
   EXPECT_TRUE(factory_ptr_->semantic_tree()->IsGetNextNodeCalled());
   EXPECT_EQ(kRootNodeId, factory_ptr_->semantic_tree()->NextNodeCalledOnId());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
+  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
 }
 
 // When Previous node is not found, the Swipe Action should do nothing.
@@ -196,8 +175,7 @@ TEST_F(OneFingerSwipeActionTest, PreviousNodeNotFound) {
   EXPECT_TRUE(factory_ptr_->semantic_tree()->IsGetPreviousNodeCalled());
   EXPECT_EQ(kRootNodeId, factory_ptr_->semantic_tree()->PreviousNodeCalledOnId());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
+  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
 }
 
 // When SetA11yFocus fails then OneFingerSwipeAction should not call TTS to speak.
@@ -227,11 +205,10 @@ TEST_F(OneFingerSwipeActionTest, SetA11yFocusFailed) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
   EXPECT_EQ(kRootNodeId, a11y_focus_manager_ptr_->GetA11yFocus().value().node_id);
   EXPECT_EQ(semantic_provider_.koid(),
             a11y_focus_manager_ptr_->GetA11yFocus().value().view_ref_koid);
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
+  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
 }
 
 // NextAction should get focused node information and then call GetNextNode() to get the next node.
@@ -261,15 +238,12 @@ TEST_F(OneFingerSwipeActionTest, NextActionPerformed) {
   ASSERT_EQ(semantic_provider_.GetRequestedAction(),
             fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN);
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   EXPECT_EQ(next_node_id, a11y_focus_manager_ptr_->GetA11yFocus().value().node_id);
   EXPECT_EQ(semantic_provider_.koid(),
             a11y_focus_manager_ptr_->GetA11yFocus().value().view_ref_koid);
-  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
-
-  // Check if Utterance and Speak functions are called in Tts.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), next_node_label);
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->node_ids()[0], kChildNodeId);
 }
 
 // Previous action should get focused node information and then call GetPrevousNode() to get the
@@ -299,15 +273,12 @@ TEST_F(OneFingerSwipeActionTest, PreviousActionPerformed) {
   ASSERT_EQ(semantic_provider_.GetRequestedAction(),
             fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN);
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   EXPECT_EQ(previous_node_id, a11y_focus_manager_ptr_->GetA11yFocus().value().node_id);
   EXPECT_EQ(semantic_provider_.koid(),
             a11y_focus_manager_ptr_->GetA11yFocus().value().view_ref_koid);
-  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
-
-  // Check if Utterance and Speak functions are called in Tts.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), previous_node_label);
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->node_ids()[0], kChildNodeId);
 }
 
 }  // namespace

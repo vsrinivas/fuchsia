@@ -26,13 +26,25 @@ void DelayTask(int64_t delay, fit::suspended_task task) {
 
 }  // namespace
 
-Speaker::Speaker(fuchsia::accessibility::tts::EnginePtr& tts_engine_ptr,
+Speaker::Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
                  std::unique_ptr<NodeDescriber> node_describer)
-    : tts_engine_ptr_(tts_engine_ptr), node_describer_(std::move(node_describer)) {}
+    : tts_engine_ptr_(tts_engine_ptr), node_describer_(std::move(node_describer)) {
+  FX_DCHECK(tts_engine_ptr_);
+}
 
-fit::promise<> Speaker::SpeakPromise(const fuchsia::accessibility::semantics::Node* node,
-                                     Options options) {
+fit::promise<> Speaker::SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
+                                         Options options) {
   auto utterances = node_describer_->DescribeNode(node);
+  auto task = std::make_shared<SpeechTask>(std::move(utterances));
+
+  return PrepareTask(task, options.interrupt).and_then(DispatchUtterances(task, options.interrupt));
+}
+
+fit::promise<> Speaker::SpeakMessagePromise(Utterance utterance, Options options) {
+  std::vector<NodeDescriber::UtteranceAndContext> utterances;
+  NodeDescriber::UtteranceAndContext utterance_and_context;
+  utterance_and_context.utterance = std::move(utterance);
+  utterances.push_back(std::move(utterance_and_context));
   auto task = std::make_shared<SpeechTask>(std::move(utterances));
 
   return PrepareTask(task, options.interrupt).and_then(DispatchUtterances(task, options.interrupt));
@@ -115,8 +127,9 @@ fit::promise<> Speaker::DispatchSingleUtterance(std::weak_ptr<SpeechTask> weak_t
 
 fit::promise<> Speaker::CancelTts() {
   fit::bridge<> bridge;
-  tts_engine_ptr_->Cancel(
-      [completer = std::move(bridge.completer)]() mutable { completer.complete_ok(); });
+  (*tts_engine_ptr_)->Cancel([completer = std::move(bridge.completer)]() mutable {
+    completer.complete_ok();
+  });
   return bridge.consumer.promise_or(fit::error());
 }
 
@@ -141,28 +154,30 @@ fit::promise<> Speaker::EndSpeechTask(std::weak_ptr<SpeechTask> weak_task, bool 
 
 fit::promise<> Speaker::EnqueueUtterance(Utterance utterance) {
   fit::bridge<> bridge;
-  tts_engine_ptr_->Enqueue(std::move(utterance),
-                           [completer = std::move(bridge.completer)](
-                               fuchsia::accessibility::tts::Engine_Enqueue_Result result) mutable {
-                             if (result.is_err()) {
-                               FX_LOGS(ERROR) << "Error returned while calling tts::Enqueue().";
-                               return completer.complete_error();
-                             }
-                             completer.complete_ok();
-                           });
+  (*tts_engine_ptr_)
+      ->Enqueue(std::move(utterance),
+                [completer = std::move(bridge.completer)](
+                    fuchsia::accessibility::tts::Engine_Enqueue_Result result) mutable {
+                  if (result.is_err()) {
+                    FX_LOGS(ERROR) << "Error returned while calling tts::Enqueue().";
+                    return completer.complete_error();
+                  }
+                  completer.complete_ok();
+                });
   return bridge.consumer.promise_or(fit::error());
 }
 
 fit::promise<> Speaker::Speak() {
   fit::bridge<> bridge;
-  tts_engine_ptr_->Speak([completer = std::move(bridge.completer)](
-                             fuchsia::accessibility::tts::Engine_Speak_Result result) mutable {
-    if (result.is_err()) {
-      FX_LOGS(ERROR) << "Speaker: Error returned while calling tts::Speak().";
-      return completer.complete_error();
-    }
-    completer.complete_ok();
-  });
+  (*tts_engine_ptr_)
+      ->Speak([completer = std::move(bridge.completer)](
+                  fuchsia::accessibility::tts::Engine_Speak_Result result) mutable {
+        if (result.is_err()) {
+          FX_LOGS(ERROR) << "Speaker: Error returned while calling tts::Speak().";
+          return completer.complete_error();
+        }
+        completer.complete_ok();
+      });
   return bridge.consumer.promise_or(fit::error());
 }
 

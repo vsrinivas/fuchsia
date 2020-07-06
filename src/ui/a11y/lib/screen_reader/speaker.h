@@ -39,12 +39,21 @@ class Speaker {
     bool interrupt = true;
   };
 
-  explicit Speaker(fuchsia::accessibility::tts::EnginePtr& tts_engine_ptr,
+  explicit Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
                    std::unique_ptr<NodeDescriber> node_describer);
   virtual ~Speaker() = default;
 
   // Returns a speech task that speaks the node description.
-  fit::promise<> SpeakPromise(const fuchsia::accessibility::semantics::Node* node, Options options);
+  virtual fit::promise<> SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
+                                          Options options);
+
+  // Returns a speech task that speaks the provided |message|.
+  virtual fit::promise<> SpeakMessagePromise(fuchsia::accessibility::tts::Utterance utterance,
+                                             Options options);
+
+ protected:
+  // For mocks.
+  Speaker() = default;
 
  private:
   // A speech task holds the data needed to speak a description. The object is passed to the several
@@ -94,7 +103,7 @@ class Speaker {
   fit::promise<> Speak();
 
   // Interface to the tts service that receives utterance requests.
-  fuchsia::accessibility::tts::EnginePtr& tts_engine_ptr_;
+  fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr_ = nullptr;
 
   // Used to generate node descriptions.
   std::unique_ptr<NodeDescriber> node_describer_;

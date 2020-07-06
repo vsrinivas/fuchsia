@@ -4,7 +4,7 @@
 
 #include "src/ui/a11y/lib/gesture_manager/tests/mocks/mock_gesture_listener.h"
 
-namespace accessiblity_test {
+namespace accessibility_test {
 
 MockGestureListener::MockGestureListener() : binding_(this) {
   binding_.set_error_handler([this](zx_status_t status) { is_registered_ = false; });
@@ -45,4 +45,4 @@ fuchsia::accessibility::gesture::Type MockGestureListener::gesture_type() const 
   return gesture_type_;
 }
 
-}  // namespace accessiblity_test
+}  // namespace accessibility_test

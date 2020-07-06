@@ -8,10 +8,29 @@
 
 namespace accessibility_test {
 
+fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakNodePromise(
+    const fuchsia::accessibility::semantics::Node* node, Options options) {
+  received_speak_ = true;
+  node_ids_.push_back(node->node_id());
+  return fit::make_ok_promise();
+}
+
+fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessagePromise(
+    fuchsia::accessibility::tts::Utterance utterance, Options options) {
+  received_speak_ = true;
+  if (utterance.has_message()) {
+    messages_.push_back(utterance.message());
+  }
+  return fit::make_ok_promise();
+}
+
 MockScreenReaderContext::MockScreenReaderContext() : ScreenReaderContext() {
   auto a11y_focus_manager = std::make_unique<MockA11yFocusManager>();
   mock_a11y_focus_manager_ptr_ = a11y_focus_manager.get();
   a11y_focus_manager_ = std::move(a11y_focus_manager);
+  auto mock_speaker = std::make_unique<MockSpeaker>();
+  mock_speaker_ptr_ = mock_speaker.get();
+  speaker_ = std::move(mock_speaker);
 }
 
 }  // namespace accessibility_test

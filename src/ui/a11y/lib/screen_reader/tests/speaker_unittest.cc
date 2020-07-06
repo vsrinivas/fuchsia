@@ -42,7 +42,7 @@ class SpeakerTest : public gtest::RealLoopFixture {
 
     auto node_describer = std::make_unique<MockNodeDescriber>();
     mock_node_describer_ptr_ = node_describer.get();
-    speaker_ = std::make_unique<a11y::Speaker>(tts_engine_ptr_, std::move(node_describer));
+    speaker_ = std::make_unique<a11y::Speaker>(&tts_engine_ptr_, std::move(node_describer));
   }
   ~SpeakerTest() = default;
 
@@ -56,11 +56,22 @@ class SpeakerTest : public gtest::RealLoopFixture {
   async::Executor executor_;
 };
 
+TEST_F(SpeakerTest, SpeaksAMessage) {
+  fuchsia::accessibility::tts::Utterance message;
+  message.set_message("foo");
+  auto task = speaker_->SpeakMessagePromise(std::move(message), {.interrupt = true});
+  executor_.schedule_task(std::move(task));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
+  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
+  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), "foo");
+}
+
 TEST_F(SpeakerTest, SpeaksANode) {
   Node node;
   node.mutable_attributes()->set_label("foo");
   node.set_role(fuchsia::accessibility::semantics::Role::UNKNOWN);
-  auto task = speaker_->SpeakPromise(&node, {.interrupt = true});
+  auto task = speaker_->SpeakNodePromise(&node, {.interrupt = true});
   executor_.schedule_task(std::move(task));
   RunLoopUntilIdle();
   EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
@@ -74,7 +85,7 @@ TEST_F(SpeakerTest, SpeaksANodeRightAwayWhenFrontOfTheQueue) {
   node.set_role(fuchsia::accessibility::semantics::Role::UNKNOWN);
   // Interrupt here is false, which means that this task would wait for others to finish. As it is
   // at the front of the queue, it starts right away.
-  auto task = speaker_->SpeakPromise(&node, {.interrupt = false});
+  auto task = speaker_->SpeakNodePromise(&node, {.interrupt = false});
   executor_.schedule_task(std::move(task));
   RunLoopUntilIdle();
   EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
@@ -95,7 +106,7 @@ TEST_F(SpeakerTest, SpeaksANodeWithTimeSpacedUtterances) {
   Node node;
   node.mutable_attributes()->set_label("foo");
   node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
-  auto task = speaker_->SpeakPromise(&node, {.interrupt = true});
+  auto task = speaker_->SpeakNodePromise(&node, {.interrupt = true});
   executor_.schedule_task(std::move(task));
   RunLoopWithTimeout(zx::duration(zx::msec(100)));
   // At this point, the first utterance ran, but the second is still waiting the 300 msec delay to
@@ -121,11 +132,11 @@ TEST_F(SpeakerTest, TaskWaitsInQueueWhenNotInterrupting) {
   Node node;
   node.mutable_attributes()->set_label("foo");
   node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
-  auto task = speaker_->SpeakPromise(&node, {.interrupt = true});
+  auto task = speaker_->SpeakNodePromise(&node, {.interrupt = true});
   // Creates a new task that will not run right away because it is not interrupting.
   // Note that the second task will also call the mock node describer, but will only receive "foo"in
   // return.
-  auto task2 = speaker_->SpeakPromise(&node, {.interrupt = false});
+  auto task2 = speaker_->SpeakNodePromise(&node, {.interrupt = false});
   executor_.schedule_task(std::move(task));
   executor_.schedule_task(std::move(task2));
   RunLoopWithTimeout(zx::duration(zx::msec(100)));
@@ -155,8 +166,8 @@ TEST_F(SpeakerTest, TaskTrumpsOtherTasksWhenInterrupting) {
   node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
   Node node2;
   node2.mutable_attributes()->set_label("bar");
-  auto task = speaker_->SpeakPromise(&node, {.interrupt = false});
-  auto task2 = speaker_->SpeakPromise(&node2, {.interrupt = true});
+  auto task = speaker_->SpeakNodePromise(&node, {.interrupt = false});
+  auto task2 = speaker_->SpeakNodePromise(&node2, {.interrupt = true});
 
   executor_.schedule_task(std::move(task));
   RunLoopWithTimeout(zx::duration(zx::msec(100)));
@@ -180,7 +191,7 @@ TEST_F(SpeakerTest, DropsTaskWhenEnqueueFails) {
   Node node;
   node.mutable_attributes()->set_label("foo");
   node.set_role(fuchsia::accessibility::semantics::Role::UNKNOWN);
-  auto task = speaker_->SpeakPromise(&node, {.interrupt = true});
+  auto task = speaker_->SpeakNodePromise(&node, {.interrupt = true});
   executor_.schedule_task(std::move(task));
   RunLoopUntilIdle();
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
@@ -192,7 +203,7 @@ TEST_F(SpeakerTest, DropsTaskWhenSpeakFails) {
   Node node;
   node.mutable_attributes()->set_label("foo");
   node.set_role(fuchsia::accessibility::semantics::Role::UNKNOWN);
-  auto task = speaker_->SpeakPromise(&node, {.interrupt = true});
+  auto task = speaker_->SpeakNodePromise(&node, {.interrupt = true});
   executor_.schedule_task(std::move(task));
   RunLoopUntilIdle();
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());

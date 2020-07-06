@@ -43,17 +43,8 @@ void ThreeFingerSwipeAction::Run(ActionData process_data) {
         // If utterance is present, then send it to TTS.
         fuchsia::accessibility::tts::Utterance tts_utterance;
         tts_utterance.set_message(*utterance);
-        auto promise = EnqueueUtterancePromise(std::move(tts_utterance))
-                           .and_then([this]() {
-                             // Speaks the enqueued utterance. No need to chain another promise,
-                             // as this is the last step.
-                             action_context_->tts_engine_ptr->Speak(
-                                 [](fuchsia::accessibility::tts::Engine_Speak_Result result) {
-                                   if (result.is_err()) {
-                                     FX_LOGS(ERROR) << "Error returned while calling tts::Speak()";
-                                   }
-                                 });
-                           })
+        auto promise = screen_reader_context_->speaker()
+                           ->SpeakMessagePromise(std::move(tts_utterance), {.interrupt = true})
                            // Cancel any promises if this class goes out of scope.
                            .wrap_with(scope_);
         auto* executor = screen_reader_context_->executor();

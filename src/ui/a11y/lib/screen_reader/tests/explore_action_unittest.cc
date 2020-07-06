@@ -10,13 +10,13 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-#include <src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h>
 #include <src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
+#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
@@ -39,28 +39,13 @@ class ExploreActionTest : public gtest::TestLoopFixture {
                       std::make_unique<MockViewSemanticsFactory>(),
                       std::make_unique<MockAnnotationViewFactory>(), context_provider_.context(),
                       context_provider_.context()->outgoing()->debug_dir()),
-        tts_manager_(context_provider_.context()),
         semantic_provider_(&view_manager_) {
     action_context_.semantics_source = &view_manager_;
     view_manager_.SetSemanticsEnabled(true);
 
-    tts_manager_.OpenEngine(action_context_.tts_engine_ptr.NewRequest(),
-                            [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
-                              EXPECT_TRUE(result.is_response());
-                            });
-    auto a11y_focus_manager = std::make_unique<accessibility_test::MockA11yFocusManager>();
-    a11y_focus_manager_ptr_ = a11y_focus_manager.get();
-    screen_reader_context_ =
-        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager), &tts_manager_);
-    // Setup tts and basic semantic support for this test.
-    fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle =
-        mock_tts_engine_.GetHandle();
-    tts_manager_.RegisterEngine(
-        std::move(engine_handle),
-        [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {
-          EXPECT_TRUE(result.is_response());
-        });
-    RunLoopUntilIdle();
+    screen_reader_context_ = std::make_unique<MockScreenReaderContext>();
+    a11y_focus_manager_ptr_ = screen_reader_context_->mock_a11y_focus_manager_ptr();
+    mock_speaker_ptr_ = screen_reader_context_->mock_speaker_ptr();
 
     // Creating test node to update.
     std::vector<Node> update_nodes;
@@ -79,19 +64,16 @@ class ExploreActionTest : public gtest::TestLoopFixture {
   ~ExploreActionTest() override = default;
 
   vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
-
   sys::testing::ComponentContextProvider context_provider_;
   a11y::ViewManager view_manager_;
   a11y::ScreenReaderAction::ActionContext action_context_;
-  a11y::TtsManager tts_manager_;
-  accessibility_test::MockSemanticProvider semantic_provider_;
-  accessibility_test::MockTtsEngine mock_tts_engine_;
-
-  std::unique_ptr<a11y::ScreenReaderContext> screen_reader_context_;
-  accessibility_test::MockA11yFocusManager* a11y_focus_manager_ptr_;
+  MockSemanticProvider semantic_provider_;
+  std::unique_ptr<MockScreenReaderContext> screen_reader_context_;
+  MockA11yFocusManager* a11y_focus_manager_ptr_;
+  MockScreenReaderContext::MockSpeaker* mock_speaker_ptr_;
 };
 
-TEST_F(ExploreActionTest, SuccessfulExploreActionReadsLabel) {
+TEST_F(ExploreActionTest, SuccessfulExploreActionReadsNode) {
   a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
   a11y::ExploreAction::ActionData action_data;
   action_data.current_view_koid = semantic_provider_.koid();
@@ -112,15 +94,9 @@ TEST_F(ExploreActionTest, SuccessfulExploreActionReadsLabel) {
   ASSERT_TRUE(focus);
   EXPECT_EQ(focus->node_id, 0u);
   EXPECT_EQ(focus->view_ref_koid, semantic_provider_.koid());
-
-  // Make sure Cancel() is called to empty the queue.
-  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
-
-  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
-
-  // Check if Utterance and Speak functions are called in Tts.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), "Label A");
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->node_ids()[0], 0u);
 }
 
 TEST_F(ExploreActionTest, HitTestFails) {
@@ -139,9 +115,8 @@ TEST_F(ExploreActionTest, HitTestFails) {
   RunLoopUntilIdle();
 
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
+  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_TRUE(mock_speaker_ptr_->node_ids().empty());
 }
 
 TEST_F(ExploreActionTest, SetA11yFocusFails) {
@@ -165,9 +140,8 @@ TEST_F(ExploreActionTest, SetA11yFocusFails) {
   EXPECT_NE(focus->node_id, 0u);
   EXPECT_NE(focus->view_ref_koid, semantic_provider_.koid());
 
-  EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
+  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_TRUE(mock_speaker_ptr_->node_ids().empty());
 }
 
 TEST_F(ExploreActionTest, GettingA11yFocusFails) {
@@ -186,7 +160,6 @@ TEST_F(ExploreActionTest, GettingA11yFocusFails) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   // We need to inspect the focus that was set by us, so flip the mock behavior.
   a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(false);
 
@@ -195,8 +168,8 @@ TEST_F(ExploreActionTest, GettingA11yFocusFails) {
   EXPECT_EQ(focus->node_id, 0u);
   EXPECT_EQ(focus->view_ref_koid, semantic_provider_.koid());
 
-  EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
+  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_TRUE(mock_speaker_ptr_->node_ids().empty());
 }
 
 TEST_F(ExploreActionTest, HitTestNodeIDResultIsNotPresentInTheTree) {
@@ -214,81 +187,8 @@ TEST_F(ExploreActionTest, HitTestNodeIDResultIsNotPresentInTheTree) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
-  EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
-}
-
-TEST_F(ExploreActionTest, NodeIsMissingLabelToBuildUtterance) {
-  a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
-  // Note that x and y are set just for completeness of the data type. the semantic provider is
-  // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = 10;
-  action_data.local_point.y = 10;
-
-  semantic_provider_.SetHitTestResult(2);
-  Node node;
-  node.set_node_id(2);
-  // Do not set label, and update the node.
-  std::vector<Node> updates;
-  updates.push_back(std::move(node));
-  semantic_provider_.UpdateSemanticNodes(std::move(updates));
-  semantic_provider_.CommitUpdates();
-  RunLoopUntilIdle();
-
-  explore_action.Run(action_data);
-  RunLoopUntilIdle();
-
-  EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
-  EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
-}
-
-TEST_F(ExploreActionTest, EnqueueTtsUtteranceFails) {
-  a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
-  // Note that x and y are set just for completeness of the data type. the semantic provider is
-  // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = 10;
-  action_data.local_point.y = 10;
-
-  semantic_provider_.SetHitTestResult(0);
-  mock_tts_engine_.set_should_fail_enqueue(true);
-  explore_action.Run(action_data);
-  RunLoopUntilIdle();
-
-  EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
-  EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
-}
-
-TEST_F(ExploreActionTest, SpeakFails) {
-  a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
-  // Note that x and y are set just for completeness of the data type. the semantic provider is
-  // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = 10;
-  action_data.local_point.y = 10;
-
-  semantic_provider_.SetHitTestResult(0);
-  mock_tts_engine_.set_should_fail_speak(true);
-  explore_action.Run(action_data);
-  RunLoopUntilIdle();
-
-  EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
-
-  // It received the utterances, but failed Speak() later.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), "Label A");
-
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
+  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_TRUE(mock_speaker_ptr_->node_ids().empty());
 }
 
 TEST_F(ExploreActionTest, ContinuousExploreSpeaksNodeWhenA11yFocusIsDifferent) {
@@ -309,14 +209,13 @@ TEST_F(ExploreActionTest, ContinuousExploreSpeaksNodeWhenA11yFocusIsDifferent) {
 
   // Checks that a new a11y focus was set.
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
 
   auto focus = a11y_focus_manager_ptr_->GetA11yFocus();
   ASSERT_TRUE(focus);
   EXPECT_EQ(focus->node_id, 0u);
   EXPECT_EQ(focus->view_ref_koid, semantic_provider_.koid());
 
-  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
 }
 
 TEST_F(ExploreActionTest, ContinuousExploreDropsWhenA11yFocusIsTheSame) {
@@ -335,10 +234,8 @@ TEST_F(ExploreActionTest, ContinuousExploreDropsWhenA11yFocusIsTheSame) {
   a11y_focus_manager_ptr_->SetA11yFocus(semantic_provider_.koid(), 0, [](auto...) {});
   explore_action.Run(action_data);
   RunLoopUntilIdle();
-
-  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
-  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
-  EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
+  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_TRUE(mock_speaker_ptr_->node_ids().empty());
 }
 
 }  // namespace

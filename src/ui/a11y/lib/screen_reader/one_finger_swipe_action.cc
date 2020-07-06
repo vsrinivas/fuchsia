@@ -55,22 +55,8 @@ void OneFingerSwipeAction::Run(ActionData process_data) {
           .and_then([this, new_node_id, a11y_focus]() mutable {
             return SetA11yFocusPromise(new_node_id, a11y_focus->view_ref_koid);
           })
-          .and_then([this]() { return CancelTts(); })
           .and_then([this, a11y_focus, new_node_id]() mutable {
-            return BuildUtteranceFromNodePromise(a11y_focus->view_ref_koid, new_node_id);
-          })
-          .and_then([this](fuchsia::accessibility::tts::Utterance& utterance) mutable {
-            return EnqueueUtterancePromise(std::move(utterance));
-          })
-          .and_then([this]() {
-            // Speaks the enqueued utterance. No need to chain another promise, as this
-            // is the last step.
-            action_context_->tts_engine_ptr->Speak(
-                [](fuchsia::accessibility::tts::Engine_Speak_Result result) {
-                  if (result.is_err()) {
-                    FX_LOGS(ERROR) << "Error returned while calling tts::Speak()";
-                  }
-                });
+            return BuildSpeechTaskFromNodePromise(a11y_focus->view_ref_koid, new_node_id);
           })
           // Cancel any promises if this class goes out of scope.
           .wrap_with(scope_);

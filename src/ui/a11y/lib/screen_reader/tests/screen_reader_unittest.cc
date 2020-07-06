@@ -20,7 +20,7 @@
 #include "src/ui/a11y/lib/gesture_manager/recognizers/swipe_recognizer_base.h"
 #include "src/ui/a11y/lib/gesture_manager/tests/mocks/mock_gesture_listener.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
-#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
+#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree.h"
 #include "src/ui/a11y/lib/testing/input.h"
@@ -75,17 +75,14 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
       : factory_(std::make_unique<MockSemanticTreeServiceFactory>()),
         factory_ptr_(factory_.get()),
         context_provider_(),
-        tts_manager_(context_provider_.context()),
         view_manager_(std::move(factory_), std::make_unique<MockViewSemanticsFactory>(),
                       std::make_unique<MockAnnotationViewFactory>(), context_provider_.context(),
                       context_provider_.context()->outgoing()->debug_dir()),
-        a11y_focus_manager_(std::make_unique<MockA11yFocusManager>()),
-        a11y_focus_manager_ptr_(a11y_focus_manager_.get()),
-        context_(std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager_),
-                                                             &tts_manager_)),
+        context_(std::make_unique<MockScreenReaderContext>()),
         context_ptr_(context_.get()),
-        screen_reader_(std::move(context_), &view_manager_, &tts_manager_,
-                       &gesture_listener_registry_),
+        a11y_focus_manager_ptr_(context_ptr_->mock_a11y_focus_manager_ptr()),
+        mock_speaker_ptr_(context_ptr_->mock_speaker_ptr()),
+        screen_reader_(std::move(context_), &view_manager_, &gesture_listener_registry_),
         semantic_provider_(&view_manager_) {
     screen_reader_.BindGestures(gesture_manager_.gesture_handler());
     gesture_listener_registry_.Register(mock_gesture_listener_.NewBinding(), []() {});
@@ -93,7 +90,6 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
     semantic_provider_.SetSemanticsEnabled(true);
     view_manager_.SetSemanticsEnabled(true);
     factory_ptr_->service()->EnableSemanticsUpdates(true);
-    SetupTtsEngine(&mock_tts_engine_);
     AddNodeToSemanticTree();
   }
 
@@ -111,17 +107,6 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   void CreateOnOneFingerTapAction() {
     SendPointerEvents(TapEvents(
         kPointerId, {0, 0} /*global coordinates of tap ignored by mock semantic provider*/));
-  }
-
-  void SetupTtsEngine(accessibility_test::MockTtsEngine* mock_tts_engine) {
-    fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle =
-        mock_tts_engine->GetHandle();
-    tts_manager_.RegisterEngine(
-        std::move(engine_handle),
-        [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {
-          EXPECT_TRUE(result.is_response());
-        });
-    RunLoopUntilIdle();
   }
 
   void AddNodeToSemanticTree() {
@@ -146,19 +131,17 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   std::unique_ptr<MockSemanticTreeServiceFactory> factory_;
   MockSemanticTreeServiceFactory* factory_ptr_;
   sys::testing::ComponentContextProvider context_provider_;
-  a11y::TtsManager tts_manager_;
   a11y::ViewManager view_manager_;
   a11y::GestureManager gesture_manager_;
   a11y::GestureListenerRegistry gesture_listener_registry_;
-  accessiblity_test::MockGestureListener mock_gesture_listener_;
+  MockGestureListener mock_gesture_listener_;
 
-  std::unique_ptr<MockA11yFocusManager> a11y_focus_manager_;
+  std::unique_ptr<MockScreenReaderContext> context_;
+  MockScreenReaderContext* context_ptr_;
   MockA11yFocusManager* a11y_focus_manager_ptr_;
-  std::unique_ptr<a11y::ScreenReaderContext> context_;
-  a11y::ScreenReaderContext* context_ptr_;
+  MockScreenReaderContext::MockSpeaker* mock_speaker_ptr_;
   a11y::ScreenReader screen_reader_;
-  accessibility_test::MockSemanticProvider semantic_provider_;
-  accessibility_test::MockTtsEngine mock_tts_engine_;
+  MockSemanticProvider semantic_provider_;
 };  // namespace
 
 TEST_F(ScreenReaderTest, OnOneFingerSingleTapAction) {
@@ -169,11 +152,9 @@ TEST_F(ScreenReaderTest, OnOneFingerSingleTapAction) {
   RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
 
   // Verify that TTS is called when OneFingerTapAction was performed.
-  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
-
-  // Check if Utterance and Speak functions are called in TTS.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kRootNodeLabel);
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->node_ids()[0], kRootNodeId);
 }
 
 TEST_F(ScreenReaderTest, OnOneFingerDoubleTapAction) {
@@ -222,9 +203,9 @@ TEST_F(ScreenReaderTest, OnOneFingerDragAction) {
   // Verify that TTS is called when ExploreAction associated with the drag gesture was performed.
   // Note that because the mock is always returning the same hit test result (node 0), and
   // continuous exploration is on, only one spoken utterance is expected.
-  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), "Label A");
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->node_ids()[0], kRootNodeId);
 }
 
 TEST_F(ScreenReaderTest, NextAction) {
@@ -250,11 +231,9 @@ TEST_F(ScreenReaderTest, NextAction) {
   EXPECT_EQ(kChildNodeId, a11y_focus_manager_ptr_->GetA11yFocus().value().node_id);
   EXPECT_EQ(semantic_provider_.koid(),
             a11y_focus_manager_ptr_->GetA11yFocus().value().view_ref_koid);
-  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
-
-  // Check if Utterance and Speak functions are called in TTS.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kChildNodeLabel);
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->node_ids()[0], kChildNodeId);
 }
 
 TEST_F(ScreenReaderTest, PreviousAction) {
@@ -280,11 +259,9 @@ TEST_F(ScreenReaderTest, PreviousAction) {
   EXPECT_EQ(kChildNodeId, a11y_focus_manager_ptr_->GetA11yFocus().value().node_id);
   EXPECT_EQ(semantic_provider_.koid(),
             a11y_focus_manager_ptr_->GetA11yFocus().value().view_ref_koid);
-  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
-
-  // Check if Utterance and Speak functions are called in TTS.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kChildNodeLabel);
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->node_ids()[0], kChildNodeId);
 }
 
 TEST_F(ScreenReaderTest, ThreeFingerUpSwipeAction) {
@@ -303,11 +280,9 @@ TEST_F(ScreenReaderTest, ThreeFingerUpSwipeAction) {
   EXPECT_TRUE(mock_gesture_listener_.is_registered());
   // Up Gesture corresponds to Right Swipe.
   ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_RIGHT);
-  ASSERT_TRUE(mock_tts_engine_.ReceivedSpeak());
-
-  // Check if Utterance and Speak functions are called in Tts.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kListenerUtterance);
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->messages().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->messages()[0], kListenerUtterance);
 }
 
 TEST_F(ScreenReaderTest, ThreeFingerDownSwipeAction) {
@@ -326,11 +301,9 @@ TEST_F(ScreenReaderTest, ThreeFingerDownSwipeAction) {
   EXPECT_TRUE(mock_gesture_listener_.is_registered());
   // Down Gesture corresponds to Left Swipe.
   ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_LEFT);
-  ASSERT_TRUE(mock_tts_engine_.ReceivedSpeak());
-
-  // Check if Utterance and Speak functions are called in Tts.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kListenerUtterance);
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->messages().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->messages()[0], kListenerUtterance);
 }
 
 TEST_F(ScreenReaderTest, ThreeFingerRightSwipeAction) {
@@ -349,11 +322,9 @@ TEST_F(ScreenReaderTest, ThreeFingerRightSwipeAction) {
   EXPECT_TRUE(mock_gesture_listener_.is_registered());
   // Right Gesture corresponds to Down Swipe.
   ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_DOWN);
-  ASSERT_TRUE(mock_tts_engine_.ReceivedSpeak());
-
-  // Check if Utterance and Speak functions are called in Tts.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kListenerUtterance);
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->messages().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->messages()[0], kListenerUtterance);
 }
 
 TEST_F(ScreenReaderTest, ThreeFingerLeftSwipeAction) {
@@ -372,11 +343,9 @@ TEST_F(ScreenReaderTest, ThreeFingerLeftSwipeAction) {
   EXPECT_TRUE(mock_gesture_listener_.is_registered());
   // Left Gesture corresponds to Up Swipe.
   ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_UP);
-  ASSERT_TRUE(mock_tts_engine_.ReceivedSpeak());
-
-  // Check if Utterance and Speak functions are called in Tts.
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
-  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kListenerUtterance);
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->messages().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->messages()[0], kListenerUtterance);
 }
 
 }  // namespace

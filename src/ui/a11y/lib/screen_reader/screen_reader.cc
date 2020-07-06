@@ -27,11 +27,9 @@ constexpr char kThreeFingerRightSwipeActionLabel[] = "Three finger Right Swipe A
 }  // namespace
 
 ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
-                           a11y::SemanticsSource* semantics_source, a11y::TtsManager* tts_manager,
+                           a11y::SemanticsSource* semantics_source,
                            a11y::GestureListenerRegistry* gesture_listener_registry)
-    : context_(std::move(context)),
-      tts_manager_(tts_manager),
-      gesture_listener_registry_(gesture_listener_registry) {
+    : context_(std::move(context)), gesture_listener_registry_(gesture_listener_registry) {
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->semantics_source = semantics_source;
 
@@ -148,15 +146,6 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
 }
 
 void ScreenReader::InitializeServicesAndAction() {
-  // Initialize TTS Engine which will be used for Speaking using TTS.
-  // TTS engine is stored in action_context_.
-  tts_manager_->OpenEngine(action_context_->tts_engine_ptr.NewRequest(),
-                           [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
-                             if (result.is_err()) {
-                               FX_LOGS(ERROR) << "Tts Manager failed to Open Engine.";
-                             }
-                           });
-
   // Initialize Screen reader supported "Actions".
   actions_.insert(std::make_pair(kExploreActionLabel, std::make_unique<a11y::ExploreAction>(
                                                           action_context_.get(), context_.get())));

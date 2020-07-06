@@ -64,7 +64,6 @@ void ExploreAction::Run(ActionData process_data) {
                      mode = screen_reader_context_->mode()](Hit& hit) mutable -> fit::promise<> {
             return SetA11yFocusOrStopPromise(mode, view_koid, hit.node_id());
           })
-          .and_then([this]() { return CancelTts(); })
           .and_then([this]() mutable -> fit::result<A11yFocusManager::A11yFocusInfo> {
             auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
             auto focus = a11y_focus_manager->GetA11yFocus();
@@ -74,20 +73,7 @@ void ExploreAction::Run(ActionData process_data) {
             return fit::ok(std::move(*focus));
           })
           .and_then([this](const A11yFocusManager::A11yFocusInfo& focus) mutable {
-            return BuildUtteranceFromNodePromise(focus.view_ref_koid, focus.node_id);
-          })
-          .and_then([this](Utterance& utterance) mutable {
-            return EnqueueUtterancePromise(std::move(utterance));
-          })
-          .and_then([this]() {
-            // Speaks the enqueued utterance. No need to chain another promise, as this
-            // is the last step.
-            action_context_->tts_engine_ptr->Speak(
-                [](fuchsia::accessibility::tts::Engine_Speak_Result result) {
-                  if (result.is_err()) {
-                    FX_LOGS(ERROR) << "Error returned while calling tts::Speak()";
-                  }
-                });
+            return BuildSpeechTaskFromNodePromise(focus.view_ref_koid, focus.node_id);
           })
           // Cancel any promises if this class goes out of scope.
           .wrap_with(scope_);
