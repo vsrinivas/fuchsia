@@ -404,17 +404,17 @@ The `environments` section declares environments as describe in
 -   `extend`: How the environment should extend this realm's environment.
     -   `realm`: Inherit all properties from this realm's environment.
     -   `none`: Start with an empty environment, do not inherit anything.
-    -   `runners`: The runners registered in the environment. An array of
-        objects with the following properties:
-        -   `runner`: The [name](#capability-names) of a runner capability,
-            whose source is specified in `from`.
-        -   `from`: The source of the runner capability, one of:
-            -   `parent`: The component's parent.
-            -   `self`: This component.
-            -   `#<child-name>`: A [reference](#references) to a child component
-                instance.
-        -   `as` _(option)_: An explicit name for the runner as it will be known
-            in this environment. If omitted, defaults to `runner`.
+-   `runners`: The runners registered in the environment. An array of
+    objects with the following properties:
+    -   `runner`: The [name](#capability-names) of a runner capability, whose
+        source is specified in `from`.
+    -   `from`: The source of the runner capability, one of:
+        -   `parent`: The component's parent.
+        -   `self`: This component.
+        -   `#<child-name>`: A [reference](#references) to a child component
+            instance.
+    -   `as` _(option)_: An explicit name for the runner as it will be known in
+        this environment. If omitted, defaults to `runner`.
 
 Example:
 
