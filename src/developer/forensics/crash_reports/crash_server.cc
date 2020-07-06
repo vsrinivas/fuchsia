@@ -18,13 +18,11 @@ namespace forensics {
 namespace crash_reports {
 namespace {
 
-// Wrapper around Report::Attachment that allows crashpad::HTTPMultipartBuilder to upload
+// Wrapper around SizedData that allows crashpad::HTTPMultipartBuilder to upload
 // attachments.
-class AttachmentReader : public crashpad::FileReaderInterface {
+class SizedDataReader : public crashpad::FileReaderInterface {
  public:
-  AttachmentReader(const Report::Attachment& attachment) : attachment_(attachment) {
-    FX_CHECK(attachment.data) << "|attachment| must have data";
-  }
+  SizedDataReader(const SizedData& data) : data_(data) {}
 
   // crashpad::FileReaderInterface
   crashpad::FileOperationResult Read(void* data, size_t size) override;
@@ -33,30 +31,30 @@ class AttachmentReader : public crashpad::FileReaderInterface {
   crashpad::FileOffset Seek(crashpad::FileOffset offset, int whence) override;
 
  private:
-  const Report::Attachment& attachment_;
+  const SizedData& data_;
   size_t offset_{};
 };
 
-crashpad::FileOperationResult AttachmentReader::Read(void* data, size_t size) {
-  if (offset_ >= attachment_.size) {
+crashpad::FileOperationResult SizedDataReader::Read(void* data, size_t size) {
+  if (offset_ >= data_.size()) {
     return 0;
   }
 
   // Can't read beyond the end of the buffer.
-  const auto read_size = std::min(size, attachment_.size - offset_);
-  memcpy(data, static_cast<void*>(attachment_.data.get()), read_size);
+  const auto read_size = std::min(size, data_.size() - offset_);
+  memcpy(data, const_cast<uint8_t*>(data_.data()), read_size);
   Seek(read_size, SEEK_CUR);
 
   return read_size;
 }
 
-crashpad::FileOffset AttachmentReader::Seek(crashpad::FileOffset offset, int whence) {
+crashpad::FileOffset SizedDataReader::Seek(crashpad::FileOffset offset, int whence) {
   if (whence == SEEK_SET) {
     offset_ = offset;
   } else if (whence == SEEK_CUR) {
     offset_ += offset;
   } else if (whence == SEEK_END) {
-    offset_ = attachment_.size + offset;
+    offset_ = data_.size() + offset;
   } else {
     return -1;
   }
@@ -69,7 +67,7 @@ crashpad::FileOffset AttachmentReader::Seek(crashpad::FileOffset offset, int whe
 CrashServer::CrashServer(const std::string& url) : url_(url) {}
 
 bool CrashServer::MakeRequest(const Report& report, std::string* server_report_id) {
-  std::vector<AttachmentReader> attachment_readers;
+  std::vector<SizedDataReader> attachment_readers;
   attachment_readers.reserve(report.Attachments().size() + 1);
 
   std::map<std::string, crashpad::FileReaderInterface*> file_readers;

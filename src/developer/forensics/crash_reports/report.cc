@@ -11,18 +11,19 @@ namespace forensics {
 namespace crash_reports {
 namespace {
 
-std::optional<Report::Attachment> MakeAttachment(const fuchsia::mem::Buffer& buffer) {
+std::optional<SizedData> MakeAttachment(const fuchsia::mem::Buffer& buffer) {
   if (!buffer.vmo.is_valid()) {
     return std::nullopt;
   }
 
-  auto data = std::make_unique<uint8_t[]>(buffer.size);
-  if (const zx_status_t status = buffer.vmo.read(data.get(), /*offset=*/0u, /*len=*/buffer.size);
+  SizedData data;
+  data.reserve(buffer.size);
+  if (const zx_status_t status = buffer.vmo.read(data.data(), /*offset=*/0u, /*len=*/data.size());
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to read vmo";
     return std::nullopt;
   }
-  return Report::Attachment{.data = std::move(data), .size = buffer.size};
+  return data;
 }
 
 }  // namespace
@@ -31,7 +32,7 @@ std::optional<Report> Report::MakeReport(const std::string& program_shortname,
                                          const std::map<std::string, std::string>& annotations,
                                          std::map<std::string, fuchsia::mem::Buffer> attachments,
                                          std::optional<fuchsia::mem::Buffer> minidump) {
-  std::map<std::string, Attachment> attachment_copies;
+  std::map<std::string, SizedData> attachment_copies;
   for (const auto& [k, v] : attachments) {
     auto attachment = MakeAttachment(v);
     if (!attachment) {
@@ -40,7 +41,7 @@ std::optional<Report> Report::MakeReport(const std::string& program_shortname,
     attachment_copies.emplace(k, std::move(attachment.value()));
   }
 
-  std::optional<Attachment> minidump_copy =
+  std::optional<SizedData> minidump_copy =
       minidump.has_value() ? MakeAttachment(minidump.value()) : std::nullopt;
 
   return Report(program_shortname, annotations, std::move(attachment_copies),
@@ -49,7 +50,7 @@ std::optional<Report> Report::MakeReport(const std::string& program_shortname,
 
 Report::Report(const std::string& program_shortname,
                const std::map<std::string, std::string>& annotations,
-               std::map<std::string, Attachment> attachments, std::optional<Attachment> minidump)
+               std::map<std::string, SizedData> attachments, std::optional<SizedData> minidump)
     : program_shortname_(program_shortname),
       annotations_(annotations),
       attachments_(std::move(attachments)),

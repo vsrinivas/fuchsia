@@ -192,6 +192,8 @@ source_set("crash_server") {
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
     "//third_party/crashpad/util",
   ]
+
+  deps = [ "//src/developer/forensics/utils:sized_data" ]
 }
 
 source_set("database") {
@@ -295,7 +297,10 @@ source_set("report") {
     "report.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.mem",
+    "//src/developer/forensics/utils:sized_data",
+  ]
 }
 
 source_set("report_util") {
