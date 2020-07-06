@@ -8,10 +8,10 @@ import (
 	"sync"
 	"testing"
 
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/bootrecord"
-	"thinfs/fs/msdosfs/testutil"
-	"thinfs/thinio"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/bootrecord"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/testutil"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/thinio"
 )
 
 func setup(t *testing.T, size string) (*testutil.FileFAT, *thinio.Conductor, *bootrecord.Bootrecord) {

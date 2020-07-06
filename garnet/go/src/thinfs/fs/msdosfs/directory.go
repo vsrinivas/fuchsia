@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/node"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/node"
 )
 
 type directory struct {

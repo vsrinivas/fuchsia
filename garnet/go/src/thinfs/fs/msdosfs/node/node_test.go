@@ -10,13 +10,12 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/bootrecord"
-	"thinfs/fs/msdosfs/cluster"
-	"thinfs/fs/msdosfs/direntry"
-	"thinfs/fs/msdosfs/testutil"
-	"thinfs/thinio"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/bootrecord"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/cluster"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/direntry"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/testutil"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/thinio"
 )
 
 func setupFAT32(t *testing.T, size string, readonly bool) (*testutil.FileFAT, *Metadata) {

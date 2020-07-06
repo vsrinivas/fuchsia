@@ -21,9 +21,8 @@ import (
 	"syscall/zx/fdio"
 	"time"
 
-	"thinfs/fs"
-	"thinfs/zircon/rpc"
-
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/zircon/rpc"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/allowlist"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/blobfs"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/index"

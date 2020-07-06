@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/glog"
 
-	"thinfs/bitops"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/bitops"
 )
 
 const (

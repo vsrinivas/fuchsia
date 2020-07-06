@@ -11,7 +11,7 @@ import (
 
 	"github.com/golang/glog"
 
-	"thinfs/thinio"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/thinio"
 )
 
 const (

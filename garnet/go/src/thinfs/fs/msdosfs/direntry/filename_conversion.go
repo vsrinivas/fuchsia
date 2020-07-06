@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"thinfs/bitops"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/bitops"
 )
 
 const (

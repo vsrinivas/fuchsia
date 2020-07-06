@@ -6,8 +6,9 @@ package pkgfs
 
 import (
 	"sort"
-	"thinfs/fs"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 )
 
 // validationDir has two entries, present and missing which represent the blobs

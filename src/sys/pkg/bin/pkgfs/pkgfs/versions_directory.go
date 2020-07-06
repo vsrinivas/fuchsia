@@ -7,8 +7,9 @@ package pkgfs
 import (
 	"path/filepath"
 	"strings"
-	"thinfs/fs"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 )
 
 // versionsDirectory lists packages by merkleroot and enables opening packages

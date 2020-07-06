@@ -11,7 +11,7 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 
 go_library("thinfs_lib") {
-  name = "thinfs"
+  name = "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs"
 
   deps = [
     "//sdk/fidl/fuchsia.io($go_toolchain)",
@@ -23,49 +23,49 @@ go_library("thinfs_lib") {
 }
 
 go_test("thinfs_bitops_test") {
-  gopackages = [ "thinfs/bitops" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/bitops" ]
 
   deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_block_fake_test") {
-  gopackages = [ "thinfs/block/fake" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block/fake" ]
 
   deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_block_file_test") {
-  gopackages = [ "thinfs/block/file" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block/file" ]
 
   deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_cache_test") {
-  gopackages = [ "thinfs/cache" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/cache" ]
 
   deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_gpt_test") {
-  gopackages = [ "thinfs/gpt" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/gpt" ]
 
   deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_mbr_test") {
-  gopackages = [ "thinfs/mbr" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/mbr" ]
 
   deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_thinio_test") {
-  gopackages = [ "thinfs/thinio" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/thinio" ]
 
   deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_zircon_rpc_test") {
-  gopackages = [ "thinfs/zircon/rpc" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/zircon/rpc" ]
 
   deps = [ ":thinfs_lib" ]
 }

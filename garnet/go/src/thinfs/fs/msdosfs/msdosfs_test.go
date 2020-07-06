@@ -11,11 +11,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-
-	"thinfs/block"
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/node"
-	"thinfs/fs/msdosfs/testutil"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/node"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/testutil"
 )
 
 // Without accessing any nodes, mount and unmount the filesystem

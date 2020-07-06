@@ -11,7 +11,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"thinfs/block"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block"
 )
 
 const (

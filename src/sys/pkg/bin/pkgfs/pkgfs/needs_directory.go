@@ -6,8 +6,9 @@ package pkgfs
 
 import (
 	"strings"
-	"thinfs/fs"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 )
 
 // needsRoot presents the following tree:

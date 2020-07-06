@@ -12,13 +12,12 @@ import (
 	"fidl/fuchsia/mem"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
 	zxio "syscall/zx/io"
-
-	"thinfs/fs"
 )
 
 func newMetaFar(blob string, fs *Filesystem) *metaFar {

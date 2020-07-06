@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"thinfs/block/blocktest"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block/blocktest"
 )
 
 const (

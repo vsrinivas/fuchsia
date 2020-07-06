@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/bootrecord"
-	"thinfs/fs/msdosfs/clock"
-	"thinfs/fs/msdosfs/direntry"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/bootrecord"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/clock"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/direntry"
 )
 
 const (

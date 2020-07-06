@@ -5,7 +5,7 @@
 package pkgfs
 
 import (
-	"thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 
 	"fidl/fuchsia/io"
 )

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"unsafe"
 
-	"thinfs/fs/msdosfs/bootrecord"
-	"thinfs/fs/msdosfs/testutil"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/bootrecord"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/testutil"
 )
 
 // Tests the size of the FS Info structure

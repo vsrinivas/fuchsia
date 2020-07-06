@@ -11,7 +11,7 @@ import (
 	"time"
 	"unsafe"
 
-	"thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 )
 
 func TestDirentrySize(t *testing.T) {

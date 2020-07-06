@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"thinfs/block"
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/bootrecord"
-	"thinfs/fs/msdosfs/cluster"
-	"thinfs/fs/msdosfs/direntry"
-	"thinfs/fs/msdosfs/node"
-	"thinfs/thinio"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/bootrecord"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/cluster"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/direntry"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/node"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/thinio"
 )
 
 const (

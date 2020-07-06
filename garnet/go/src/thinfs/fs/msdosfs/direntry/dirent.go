@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/clock"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/clock"
 )
 
 // GetDirentryCallback returns the directory entry at an index.

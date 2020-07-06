@@ -7,8 +7,8 @@ package node
 import (
 	"time"
 
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/direntry"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/direntry"
 )
 
 // Lookup finds a dirent with a given name inside a directory node

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"thinfs/fs/msdosfs/bootrecord"
-	"thinfs/fs/msdosfs/testutil"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/bootrecord"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/testutil"
 )
 
 // Without accessing any clusters, open and close the cluster manager.

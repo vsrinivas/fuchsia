@@ -12,7 +12,7 @@ import (
 	"testing"
 	"unicode/utf16"
 
-	"thinfs/mbr"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/mbr"
 )
 
 func TestReadHeader(t *testing.T) {
@@ -86,7 +86,6 @@ func TestUpdate(t *testing.T) {
 			},
 		},
 	}
-
 
 	alignment := physicalBlockSize / logicalBlockSize
 
@@ -435,7 +434,7 @@ func exampleGPT() GPT {
 		MBR: mbr.MBR{
 			Signature: mbr.GPTSignature,
 			PartitionRecord: [4]mbr.PartitionRecord{
-				mbr.PartitionRecord{
+				{
 					StartingCHS: [3]byte{254, 255, 255},
 					OSType:      mbr.GPTProtective,
 					EndingCHS:   [3]byte{254, 255, 255},

@@ -5,9 +5,9 @@
 package node
 
 import (
-	"thinfs/fs/msdosfs/bootrecord"
-	"thinfs/fs/msdosfs/cluster"
-	"thinfs/thinio"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/bootrecord"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/cluster"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/thinio"
 )
 
 // Metadata describes the important, shared metadata of the filesystem.

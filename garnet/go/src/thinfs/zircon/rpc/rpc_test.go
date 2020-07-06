@@ -7,7 +7,8 @@ package rpc
 import (
 	"syscall/zx"
 	"testing"
-	"thinfs/fs"
+
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 )
 
 type dummyFs struct{}

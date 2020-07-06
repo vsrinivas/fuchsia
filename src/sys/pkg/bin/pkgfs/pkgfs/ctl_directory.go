@@ -8,8 +8,9 @@ import (
 	"log"
 	"strings"
 	"sync"
-	"thinfs/fs"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 )
 
 type ctlDirectory struct {

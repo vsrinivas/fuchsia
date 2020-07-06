@@ -18,11 +18,11 @@ import (
 	"time"
 	"unsafe"
 
-	"go.fuchsia.dev/fuchsia/src/lib/component"
-	"thinfs/fs"
-
 	"fidl/fuchsia/io"
 	"fidl/fuchsia/mem"
+
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 )
 
 const (

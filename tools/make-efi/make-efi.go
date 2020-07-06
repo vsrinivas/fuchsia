@@ -19,10 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"thinfs/block/file"
-	"thinfs/fs"
-	"thinfs/fs/msdosfs"
-	"thinfs/fs/msdosfs/clock"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block/file"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/clock"
 )
 
 var (

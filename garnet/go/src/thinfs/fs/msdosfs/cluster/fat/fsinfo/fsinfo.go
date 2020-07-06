@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"unsafe"
 
-	"thinfs/bitops"
-	"thinfs/thinio"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/bitops"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/thinio"
 )
 
 const (

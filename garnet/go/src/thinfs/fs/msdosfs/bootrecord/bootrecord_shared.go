@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	"thinfs/bitops"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/bitops"
 )
 
 const (

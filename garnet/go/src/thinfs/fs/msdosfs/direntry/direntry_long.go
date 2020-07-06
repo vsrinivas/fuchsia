@@ -7,7 +7,7 @@ package direntry
 import (
 	"unsafe"
 
-	"thinfs/bitops"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/bitops"
 )
 
 const (

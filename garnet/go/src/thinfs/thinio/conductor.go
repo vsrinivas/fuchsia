@@ -11,10 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"thinfs/block"
-	"thinfs/cache"
-
 	"github.com/golang/glog"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/cache"
 )
 
 // ErrClosed is returned if a caller attempts to perform any operations on a Conductor after

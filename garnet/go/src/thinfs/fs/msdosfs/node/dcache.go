@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 )
 
 // Dcache destribes a cache of directories

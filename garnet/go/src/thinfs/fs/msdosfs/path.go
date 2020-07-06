@@ -7,9 +7,9 @@ package msdosfs
 import (
 	"strings"
 
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/direntry"
-	"thinfs/fs/msdosfs/node"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/direntry"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/node"
 )
 
 // Given a path "foo/bar/baz.txt", this function with return a node pointing to "bar" and a string

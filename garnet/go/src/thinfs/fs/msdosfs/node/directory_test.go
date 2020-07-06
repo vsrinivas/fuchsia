@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/direntry"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/direntry"
 )
 
 func checkRead(t *testing.T, d DirectoryNode, index int, goldName string, goldCluster uint32, goldNumSlots int) {

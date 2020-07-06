@@ -20,7 +20,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"thinfs/mbr"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/mbr"
 )
 
 // ErrInvalidGPT aggregates zero or more errors that occur during validation

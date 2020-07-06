@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"thinfs/block"
-	"thinfs/block/file"
-	"thinfs/thinio"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block/file"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/thinio"
 )
 
 // FileFAT describes a file-backed FAT image which can be treated like a FAT filesystem.

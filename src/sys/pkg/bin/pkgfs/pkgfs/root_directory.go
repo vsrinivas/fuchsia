@@ -7,8 +7,9 @@ package pkgfs
 import (
 	"strings"
 	"sync"
-	"thinfs/fs"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 )
 
 type rootDirectory struct {

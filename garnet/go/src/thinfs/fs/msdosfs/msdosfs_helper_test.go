@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"thinfs/block"
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/testutil"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/testutil"
 )
 
 // Functions to set up and shut down FAT filesystems

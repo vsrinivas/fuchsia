@@ -8,8 +8,9 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
-	"thinfs/fs"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 )
 
 type packagesRoot struct {

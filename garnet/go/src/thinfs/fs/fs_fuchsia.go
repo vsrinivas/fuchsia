@@ -7,8 +7,9 @@
 package fs
 
 import (
-	"fidl/fuchsia/mem"
 	"syscall/zx"
+
+	"fidl/fuchsia/mem"
 )
 
 // Remote can be returned by Open in order to hand off the open transaction to another filesystem.

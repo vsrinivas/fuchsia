@@ -7,8 +7,9 @@ package pkgfs
 import (
 	"fmt"
 	"testing"
-	"thinfs/fs"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 )
 
 var (

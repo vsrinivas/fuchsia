@@ -11,10 +11,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"thinfs/fs"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 

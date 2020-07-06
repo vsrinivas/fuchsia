@@ -7,10 +7,10 @@ package msdosfs
 import (
 	"time"
 
-	"thinfs/fs"
-	"thinfs/fs/msdosfs/clock"
-	"thinfs/fs/msdosfs/direntry"
-	"thinfs/fs/msdosfs/node"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/clock"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/direntry"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs/node"
 )
 
 func closeFile(n node.FileNode) error {
