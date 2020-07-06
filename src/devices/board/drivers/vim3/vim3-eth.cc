@@ -178,6 +178,22 @@ zx_status_t Vim3::EthInit() {
   gpio_impl_.SetAltFunction(A311D_GPIOZ(12), A311D_GPIOZ_12_ETH_TXD2_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOZ(13), A311D_GPIOZ_13_ETH_TXD3_FN);
 
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(0), 1);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(1), 1);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(2), 2);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(3), 2);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(4), 2);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(5), 2);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(6), 2);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(7), 2);
+
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(8), 2);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(9), 2);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(10), 2);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(11), 2);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(12), 2);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(13), 2);
+
   // Add a composite device for ethernet board in a new devhost.
   auto status =
       pbus_.CompositeDeviceAdd(&eth_board_dev, eth_fragments, std::size(eth_fragments), UINT32_MAX);

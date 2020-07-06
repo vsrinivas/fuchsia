@@ -126,7 +126,19 @@ zx_status_t AmlEthernet::Bind() {
   // Initialize AMLogic peripheral registers associated with dwmac.
   // Sorry about the magic...rtfm
   periph_mmio_->Write32(0x1621, PER_ETH_REG0);
-  periph_mmio_->Write32(0x20000, PER_ETH_REG1);
+
+  pdev_board_info_t board;
+  bool is_vim3 = false;
+  zx_status_t status = pdev_.GetBoardInfo(&board);
+
+  if (status == ZX_OK) {
+    is_vim3 = ((board.vid == PDEV_VID_KHADAS) &&
+               (board.pid == PDEV_PID_VIM3));
+  }
+
+  if (!is_vim3) {
+    periph_mmio_->Write32(0x20000, PER_ETH_REG1);
+  }
 
   periph_mmio_->Write32(REG2_ETH_REG2_REVERSED | REG2_INTERNAL_PHY_ID, PER_ETH_REG2);
 
@@ -140,7 +152,7 @@ zx_status_t AmlEthernet::Bind() {
 
   // WOL reset enable to MCU
   uint8_t write_buf[2] = {MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE};
-  zx_status_t status = i2c_.WriteSync(write_buf, sizeof(write_buf));
+  status = i2c_.WriteSync(write_buf, sizeof(write_buf));
   if (status) {
     zxlogf(ERROR, "aml-ethernet: WOL reset enable to MCU failed: %d", status);
     return status;
