@@ -12,6 +12,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/types.h>
@@ -223,8 +224,8 @@ bool StartDefaultSession(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"sessionctl"});
-
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
@@ -282,17 +283,19 @@ int main(int argc, const char** argv) {
   PuppetMasterPtr puppet_master = ConnectToPuppetMaster(sessions[0]);
   modular::SessionCtlApp app(std::move(basemgr), std::move(puppet_master), logger,
                              loop.dispatcher());
-  app.ExecuteCommand(cmd, command_line, [cmd, logger, &loop](std::string error) {
-    if (!error.empty()) {
-      if (error == modular::kGetUsageErrorString) {
-        // Print help if command doesn't match a valid command.
-        std::cout << GetUsage() << std::endl;
-      } else {
-        logger.LogError(cmd, error);
-      }
-    }
-    loop.Quit();
-  });
+  app.ExecuteCommand(cmd, command_line,
+                     [cmd, logger, &loop](modular::SessionCtlApp::CommandResult result) {
+                       if (result.is_error()) {
+                         const auto error_string = result.error();
+                         if (error_string.empty()) {
+                           // Print help if command doesn't match a valid command.
+                           std::cout << GetUsage() << std::endl;
+                         } else {
+                           logger.LogError(cmd, result.error());
+                         }
+                       }
+                       loop.Quit();
+                     });
 
   loop.Run();
   return 0;

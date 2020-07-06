@@ -29,10 +29,6 @@ constexpr char kStoryIdFlagString[] = "story_id";
 constexpr char kStoryNameFlagString[] = "story_name";
 constexpr char kWaitForSessionFlagString[] = "wait_for_session";
 
-// Internal error string returned from SessionCtlApp.ExecuteCommand() if
-// the user does not set a required flag.
-constexpr char kGetUsageErrorString[] = "GetUsage";
-
 // Fuchsia package paths for add_mod
 constexpr char kFuchsiaPkgPrefix[] = "fuchsia-pkg://";
 constexpr char kFuchsiaPkgPath[] = "fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx";
@@ -40,6 +36,7 @@ constexpr char kFuchsiaPkgPath[] = "fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx";
 // hub paths to debug services.
 constexpr char kSessionCtlServiceGlobPath[] = "/hub/c/sessionmgr.cmx/*/out/debug/sessionctl";
 constexpr char kBasemgrDebugServiceGlobPath[] = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
+
 }  // namespace modular
 
 #endif  // SRC_MODULAR_BIN_SESSIONCTL_SESSION_CTL_CONSTANTS_H_

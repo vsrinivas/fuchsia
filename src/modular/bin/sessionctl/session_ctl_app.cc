@@ -21,7 +21,7 @@ SessionCtlApp::SessionCtlApp(fuchsia::modular::internal::BasemgrDebugPtr basemgr
       dispatcher_(dispatcher) {}
 
 void SessionCtlApp::ExecuteCommand(std::string cmd, const fxl::CommandLine& command_line,
-                                   fit::function<void(std::string error)> done) {
+                                   CommandDoneCallback done) {
   if (cmd == kAddModCommandString) {
     ExecuteAddModCommand(command_line, std::move(done));
   } else if (cmd == kRemoveModCommandString) {
@@ -35,16 +35,16 @@ void SessionCtlApp::ExecuteCommand(std::string cmd, const fxl::CommandLine& comm
   } else if (cmd == kRestartSessionCommandString) {
     ExecuteRestartSessionCommand(std::move(done));
   } else {
-    done(kGetUsageErrorString);
+    done(fit::error(""));
   }
 }
 
 void SessionCtlApp::ExecuteRemoveModCommand(const fxl::CommandLine& command_line,
-                                            fit::function<void(std::string)> done) {
+                                            CommandDoneCallback done) {
   if (command_line.positional_args().size() == 1) {
     auto parsing_error = "Missing MOD_NAME. Ex: sessionctl remove_mod slider_mod";
     logger_.LogError(kRemoveModCommandString, parsing_error);
-    done(parsing_error);
+    done(fit::error(parsing_error));
     return;
   }
 
@@ -70,11 +70,11 @@ void SessionCtlApp::ExecuteRemoveModCommand(const fxl::CommandLine& command_line
 }
 
 void SessionCtlApp::ExecuteAddModCommand(const fxl::CommandLine& command_line,
-                                         fit::function<void(std::string)> done) {
+                                         CommandDoneCallback done) {
   if (command_line.positional_args().size() == 1) {
     auto parsing_error = "Missing MOD_URL. Ex: sessionctl add_mod slider_mod";
     logger_.LogError(kAddModCommandString, parsing_error);
-    done(parsing_error);
+    done(fit::error(parsing_error));
     return;
   }
 
@@ -96,7 +96,7 @@ void SessionCtlApp::ExecuteAddModCommand(const fxl::CommandLine& command_line,
     if (!std::regex_search(story_name, story_name_match, story_name_regex)) {
       auto parsing_error = "Bad characters in story_name: " + story_name;
       logger_.LogError(kStoryNameFlagString, parsing_error);
-      done(parsing_error);
+      done(fit::error(parsing_error));
       return;
     }
   } else {
@@ -132,11 +132,11 @@ void SessionCtlApp::ExecuteAddModCommand(const fxl::CommandLine& command_line,
 }
 
 void SessionCtlApp::ExecuteDeleteStoryCommand(const fxl::CommandLine& command_line,
-                                              fit::function<void(std::string)> done) {
+                                              CommandDoneCallback done) {
   if (command_line.positional_args().size() == 1) {
     auto parsing_error = "Missing STORY_NAME. Ex. sessionctl delete_story story";
     logger_.LogError(kStoryNameFlagString, parsing_error);
-    done(parsing_error);
+    done(fit::error(parsing_error));
     return;
   }
 
@@ -150,22 +150,22 @@ void SessionCtlApp::ExecuteDeleteStoryCommand(const fxl::CommandLine& command_li
       auto story_exists =
           std::find(story_names.begin(), story_names.end(), story_name) != story_names.end();
       if (!story_exists) {
-        done("Non-existent story_name " + story_name);
+        done(fit::error("Non-existent story_name " + story_name));
         return;
       }
-      puppet_master_->DeleteStory(story_name, [done = std::move(done)] { done(""); });
+      puppet_master_->DeleteStory(story_name, [done = std::move(done)] { done(fit::ok()); });
       logger_.Log(kDeleteStoryCommandString, params);
     });
   });
 }
 
-void SessionCtlApp::ExecuteDeleteAllStoriesCommand(fit::function<void(std::string)> done) {
+void SessionCtlApp::ExecuteDeleteAllStoriesCommand(CommandDoneCallback done) {
   async::PostTask(dispatcher_, [this, done = std::move(done)]() mutable {
     puppet_master_->GetStories(
         [this, done = std::move(done)](std::vector<std::string> story_names) mutable {
           struct BarrierState {
             int remaining;
-            fit::function<void(std::string)> done;
+            CommandDoneCallback done;
           };
           auto shared_state = std::make_shared<BarrierState>();
           shared_state->remaining = story_names.size();
@@ -174,7 +174,7 @@ void SessionCtlApp::ExecuteDeleteAllStoriesCommand(fit::function<void(std::strin
             puppet_master_->DeleteStory(story, [shared_state] {
               --shared_state->remaining;
               if (shared_state->remaining == 0) {
-                shared_state->done("");
+                shared_state->done(fit::ok());
               }
             });
           }
@@ -183,20 +183,20 @@ void SessionCtlApp::ExecuteDeleteAllStoriesCommand(fit::function<void(std::strin
   });
 }
 
-void SessionCtlApp::ExecuteListStoriesCommand(fit::function<void(std::string)> done) {
+void SessionCtlApp::ExecuteListStoriesCommand(CommandDoneCallback done) {
   async::PostTask(dispatcher_, [this, done = std::move(done)]() mutable {
     puppet_master_->GetStories(
         [this, done = std::move(done)](std::vector<std::string> story_names) {
           logger_.Log(kListStoriesCommandString, std::move(story_names));
-          done("");
+          done(fit::ok());
         });
   });
 }
 
-void SessionCtlApp::ExecuteRestartSessionCommand(fit::function<void(std::string)> done) {
+void SessionCtlApp::ExecuteRestartSessionCommand(CommandDoneCallback done) {
   basemgr_debug_->RestartSession([this, done = std::move(done)]() {
     logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
-    done("");
+    done(fit::ok());
   });
 }
 
@@ -251,22 +251,21 @@ std::vector<fuchsia::modular::StoryCommand> SessionCtlApp::MakeRemoveModCommands
 
 void SessionCtlApp::PostTaskExecuteStoryCommand(
     const std::string command_name, std::vector<fuchsia::modular::StoryCommand> commands,
-    std::map<std::string, std::string> params, fit::function<void(std::string)> done) {
+    std::map<std::string, std::string> params, CommandDoneCallback done) {
   async::PostTask(dispatcher_, [this, command_name, commands = std::move(commands), params,
                                 done = std::move(done)]() mutable {
     ExecuteStoryCommand(std::move(commands), params.at(kStoryNameFlagString))
         ->Then([this, command_name, params, done = std::move(done)](bool has_error,
                                                                     std::string result) {
-          std::string error = "";
           if (has_error) {
-            error = result;
             logger_.LogError(command_name, result);
+            done(fit::error(result));
           } else {
             auto params_copy = params;
             params_copy.emplace(kStoryIdFlagString, result);
             logger_.Log(command_name, params_copy);
+            done(fit::ok());
           }
-          done(error);
         });
   });
 }

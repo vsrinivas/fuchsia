@@ -10,6 +10,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
+#include <lib/fit/result.h>
 
 #include <iostream>
 #include <string>
@@ -26,6 +28,11 @@ namespace modular {
 
 class SessionCtlApp {
  public:
+  // A fit::error("") will result in command usage being printed. Any other value
+  // will result in that error string being printed.
+  using CommandResult = fit::result<void, std::string>;
+  using CommandDoneCallback = fit::function<void(CommandResult)>;
+
   // Constructs a SessionCtlApp which can read and execute session commands.
   // |puppet_master| The interface used to execute commands.
   // |basemgr_debug| The BasemgrDebug instance to use to restart sessions.
@@ -41,22 +48,19 @@ class SessionCtlApp {
   // Dispatches the |cmd|. Calls |done| when done with an empty string if
   // execution was successful or with an error string on failure.
   void ExecuteCommand(std::string cmd, const fxl::CommandLine& command_line,
-                      fit::function<void(std::string error)> done);
+                      CommandDoneCallback done);
 
  private:
   // Executes the respective command and returns an empty string on success and
   // a string of missing flags on failure.
-  void ExecuteAddModCommand(const fxl::CommandLine& command_line,
-                            fit::function<void(std::string)> done);
-  void ExecuteRemoveModCommand(const fxl::CommandLine& command_line,
-                               fit::function<void(std::string)> done);
-  void ExecuteDeleteStoryCommand(const fxl::CommandLine& command_line,
-                                 fit::function<void(std::string)> done);
-  void ExecuteDeleteAllStoriesCommand(fit::function<void(std::string)> done);
-  void ExecuteListStoriesCommand(fit::function<void(std::string)> done);
-  void ExecuteRestartSessionCommand(fit::function<void(std::string)> done);
+  void ExecuteAddModCommand(const fxl::CommandLine& command_line, CommandDoneCallback done);
+  void ExecuteRemoveModCommand(const fxl::CommandLine& command_line, CommandDoneCallback done);
+  void ExecuteDeleteStoryCommand(const fxl::CommandLine& command_line, CommandDoneCallback done);
+  void ExecuteDeleteAllStoriesCommand(CommandDoneCallback done);
+  void ExecuteListStoriesCommand(CommandDoneCallback done);
+  void ExecuteRestartSessionCommand(CommandDoneCallback done);
   void ExecuteShutdownBasemgrCommand(const fxl::CommandLine& command_line,
-                                     fit::function<void(std::string)> done);
+                                     CommandDoneCallback done);
 
   // Focus the story to which the mod we are adding belongs.
   fuchsia::modular::StoryCommand MakeFocusStoryCommand();
@@ -80,7 +84,7 @@ class SessionCtlApp {
   void PostTaskExecuteStoryCommand(const std::string command_name,
                                    std::vector<fuchsia::modular::StoryCommand> commands,
                                    std::map<std::string, std::string> params,
-                                   fit::function<void(std::string)> done);
+                                   CommandDoneCallback done);
 
   modular::FuturePtr<bool, std::string> ExecuteStoryCommand(
       std::vector<fuchsia::modular::StoryCommand> commands, const std::string& story_name);
