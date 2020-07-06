@@ -1,15 +1,20 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package affectedtests
 
 import (
 	"encoding/json"
 	"flag"
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
 var testDataFlag = flag.String("test_data_dir", "", "Path to testdata/")

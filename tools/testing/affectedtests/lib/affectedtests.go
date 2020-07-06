@@ -1,12 +1,17 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package affectedtests
 
 import (
 	"container/list"
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
 var (

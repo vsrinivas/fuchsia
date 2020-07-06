@@ -1,20 +1,22 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 package packages
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 )
 
 // CreateTestPackage fills the given directory with a new repository.

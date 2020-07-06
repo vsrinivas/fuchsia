@@ -1,14 +1,19 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package main
 
 import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
-	affectedtests "go.fuchsia.dev/fuchsia/tools/testing/affectedtests/lib"
 	"io/ioutil"
 	"log"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	affectedtests "go.fuchsia.dev/fuchsia/tools/testing/affectedtests/lib"
 )
 
 func main() {
