@@ -235,17 +235,20 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       break;
     case BRCMF_C_DISASSOC: {
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(brcmf_scb_val_le))) == ZX_OK) {
-        if (softap_ifidx_ != std::nullopt && softap_ifidx_ == ifidx) {
+        if (iface_tbl_[kClientIfidx].allocated && kClientIfidx == ifidx) {
           // Initiate Disassoc from AP
           auto scb_val = reinterpret_cast<brcmf_scb_val_le*>(data);
           auto req_bssid = reinterpret_cast<common::MacAddr*>(scb_val->ea);
+          if (!assoc_state_.opts) {
+            BRCMF_DBG(SIM, "BRCMF_C_DISASSOC is triggered without association.");
+            return ZX_ERR_BAD_STATE;
+          }
           common::MacAddr bssid(assoc_state_.opts->bssid);
           ZX_ASSERT(bssid == *req_bssid);
           DisassocLocalClient(scb_val->val);
-        } else if (iface_tbl_[kClientIfidx].allocated && kClientIfidx == ifidx) {
-          if (assoc_state_.state == AssocState::ASSOCIATED) {
-            // TODO(zhiyichen) Handle proactively deauth or disassoc from driver.
-          }
+        } else if (softap_ifidx_ != std::nullopt && softap_ifidx_ == ifidx) {
+          BRCMF_ERR("This iovar is not expected to be used on softAP iface.");
+          return ZX_ERR_IO_REFUSED;
         }
       } else {
         // Triggered by link down event in driver (no data)
