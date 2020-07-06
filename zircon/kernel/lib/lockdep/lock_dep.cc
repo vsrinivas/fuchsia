@@ -135,8 +135,8 @@ void SystemLockValidationError(AcquiredLockEntry* bad_entry, AcquiredLockEntry* 
   char owner_name[ZX_MAX_NAME_LEN];
   current_thread->OwnerName(owner_name);
 
-  const uint64_t user_pid = current_thread->user_pid_;
-  const uint64_t user_tid = current_thread->user_tid_;
+  const uint64_t user_pid = current_thread->user_pid();
+  const uint64_t user_tid = current_thread->user_tid();
 
   DLOG_KERNEL_OOPS("Lock validation failed for thread %p pid %" PRIu64 " tid %" PRIu64
                    " (%s:%s):\n",
