@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_RNDIS_HOST_H_
-#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_RNDIS_HOST_H_
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_HOST_RNDIS_HOST_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_HOST_RNDIS_HOST_H_
 
 #include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
@@ -91,4 +91,4 @@ class RndisHost : public RndisHostType,
   uint8_t control_receive_buffer_[RNDIS_CONTROL_BUFFER_SIZE];
 };
 
-#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_RNDIS_HOST_H_
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_HOST_RNDIS_HOST_H_
