@@ -21,6 +21,7 @@ group("tests") {
     "clock:tests",
     "effects_loader:tests",
     "format:tests",
+    "simple-audio-stream:tests",
     "wav:tests",
   ]
 }

@@ -3,19 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-test("sa-unittest") {
-  output_name = "sa-unittest-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+test("sa-unittest-bin") {
+  defines = [ "_ALL_SOURCE" ]
+  testonly = true
   sources = [ "sas-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
@@ -37,13 +29,11 @@ test("sa-unittest") {
   ]
 }
 
-unittest_package("sa-unittest-package") {
+fuchsia_unittest_package("test-package") {
   package_name = "sa-unittest"
-  deps = [ ":sa-unittest" ]
-
-  tests = [
-    {
-      name = "sa-unittest-test"
-    },
-  ]
+  executable_path = "test/sa-unittest-bin"
+  deps = [ ":sa-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
