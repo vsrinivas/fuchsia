@@ -279,6 +279,41 @@ TEST(BootsvcIntegrationTest, BootItems) {
   }
 }
 
+// Make sure fuchsia.boot.Items::GetBootloaderFile works
+TEST(BootsvcIntegrationTest, BootloaderFiles) {
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  // Check that we can open the fuchsia.boot.Items service.
+  ASSERT_OK(fdio_service_connect(kItemsPath, remote.release()));
+
+  constexpr char kInvalidBootloaderFileName[] = "This filename is too short";
+
+  zx_handle_t vmo_handle;
+  ASSERT_OK(fuchsia_boot_ItemsGetBootloaderFile(local.get(), kInvalidBootloaderFileName,
+                                                strlen(kInvalidBootloaderFileName), &vmo_handle));
+  ASSERT_EQ(ZX_HANDLE_INVALID, vmo_handle);
+
+  constexpr char kValidBootloaderFileName[] = "This is the filename of the file!";
+  constexpr char kValidBootloaderFilePayload[] = "FILE CONTENTS ARE HERE";
+
+  ASSERT_OK(fuchsia_boot_ItemsGetBootloaderFile(local.get(), kValidBootloaderFileName,
+                                                strlen(kValidBootloaderFileName), &vmo_handle));
+  ASSERT_NE(ZX_HANDLE_INVALID, vmo_handle);
+
+  zx::vmo vmo(vmo_handle);
+  ASSERT_TRUE(vmo.is_valid());
+
+  uint64_t size;
+  ASSERT_OK(vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)));
+
+  uint8_t buf[sizeof(kValidBootloaderFilePayload) - 1];
+  ASSERT_EQ(size, sizeof(buf));
+  ASSERT_OK(vmo.read(buf, 0, size));
+
+  ASSERT_BYTES_EQ(buf, kValidBootloaderFilePayload, sizeof(buf));
+}
+
 // Check that the kernel-provided VDSOs were added to /boot/kernel/vdso
 TEST(BootsvcIntegrationTest, VdsosPresent) {
   DIR* dir = opendir("/boot/kernel/vdso");

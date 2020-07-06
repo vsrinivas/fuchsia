@@ -66,8 +66,10 @@ zbi_input("integration-test-deps") {
   visibility = [ ":*" ]
   testonly = true
   deps = [
-    # Include the three additional ZBI items that we test the behavior of in
+    # Include the additional ZBI items that we test the behavior of in
     # the integration test.
+    ":integration-test-bootloader-file-invalid",
+    ":integration-test-bootloader-file-valid",
     ":integration-test-crashlog",
     ":integration-test-factory-item",
     ":integration-test-image-arg",
@@ -144,6 +146,22 @@ zbi_input("integration-test-image-arg") {
   deps = [ ":bootsvc-integration-test-image-arg" ]
   type = "IMAGE_ARGS"
   sources = get_target_outputs(deps[0])
+}
+
+zbi_input("integration-test-bootloader-file-invalid") {
+  visibility = [ ":*" ]
+  testonly = true
+  type = "BOOTLOADER_FILE"
+  contents = "$0x23This filename is too short"
+  args = [ "--entry=$contents" ]
+}
+
+zbi_input("integration-test-bootloader-file-valid") {
+  visibility = [ ":*" ]
+  testonly = true
+  type = "BOOTLOADER_FILE"
+  contents = "$0x21This is the filename of the file!FILE CONTENTS ARE HERE"
+  args = [ "--entry=$contents" ]
 }
 
 generated_file("bootsvc-integration-test-bootfs-arg") {

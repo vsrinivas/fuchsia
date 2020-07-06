@@ -44,10 +44,12 @@ struct FactoryItemValue {
 // Map for boot items.
 using FactoryItemMap = std::map<uint32_t, FactoryItemValue>;
 using ItemMap = std::map<ItemKey, ItemValue>;
+using BootloaderFileMap = std::map<std::string, ItemValue>;
 
 // Retrieve boot image |vmo| from the startup handle table, and add boot items
 // to |out_map| and factory boot items to |out_factory_map|.
-zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap* out_factory_map);
+zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap* out_factory_map,
+                              BootloaderFileMap* out_bootloader_file_map);
 
 // Parse boot arguments in |str|, and add them to |buf|. |buf| is a series of
 // null-separated "key" or "key=value" pairs.

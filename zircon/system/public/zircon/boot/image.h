@@ -134,7 +134,8 @@ typedef struct {
     macro(ZBI_TYPE_IMAGE_ARGS, "IMAGE_ARGS", ".txt") \
     macro(ZBI_TYPE_BOOT_VERSION, "BOOT_VERSION", ".bin") \
     macro(ZBI_TYPE_HW_REBOOT_REASON, "HW_REBOOT_REASON", ".bin") \
-    macro(ZBI_TYPE_SERIAL_NUMBER, "SERIAL_NUMBER", ".txt")
+    macro(ZBI_TYPE_SERIAL_NUMBER, "SERIAL_NUMBER", ".txt") \
+    macro(ZBI_TYPE_BOOTLOADER_FILE, "BOOTLOADER_FILE", ".bin")
 
 // Each ZBI starts with a container header.
 //     length:          Total size of the image after this header.
@@ -657,5 +658,14 @@ using zbi_hw_reboot_reason_t = ZbiHwRebootReason;
 // The serial number, an unterminated ASCII string of printable non-whitespace
 // characters with length zbi_header_t.length.
 #define ZBI_TYPE_SERIAL_NUMBER          (0x4e4c5253) // SRLN
+
+// This type specifies a binary file passed in by the bootloader.
+// The first byte specifies the length of the filename without a NUL terminator.
+// The filename starts on the second byte.
+// The file contents are located immediately after the filename.
+//
+// Layout: | name_len |        name       |   payload
+//           ^(1 byte)  ^(name_len bytes)     ^(length of file)
+#define ZBI_TYPE_BOOTLOADER_FILE        (0x4C465442) // BTFL
 
 #endif  // SYSROOT_ZIRCON_BOOT_IMAGE_H_

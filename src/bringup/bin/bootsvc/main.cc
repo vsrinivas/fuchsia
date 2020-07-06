@@ -353,7 +353,9 @@ int main(int argc, char** argv) {
   zx::vmo image_vmo;
   bootsvc::ItemMap item_map;
   bootsvc::FactoryItemMap factory_item_map;
-  status = bootsvc::RetrieveBootImage(&image_vmo, &item_map, &factory_item_map);
+  bootsvc::BootloaderFileMap bootloader_file_map;
+  status =
+      bootsvc::RetrieveBootImage(&image_vmo, &item_map, &factory_item_map, &bootloader_file_map);
   ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot image failed: %s\n",
                 zx_status_get_string(status));
 
@@ -370,7 +372,8 @@ int main(int argc, char** argv) {
   fbl::RefPtr<bootsvc::SvcfsService> svcfs_svc = bootsvc::SvcfsService::Create(loop.dispatcher());
   svcfs_svc->AddService(
       fuchsia_boot_Items_Name,
-      bootsvc::CreateItemsService(loop.dispatcher(), std::move(image_vmo), std::move(item_map)));
+      bootsvc::CreateItemsService(loop.dispatcher(), std::move(image_vmo), std::move(item_map),
+                                  std::move(bootloader_file_map)));
   svcfs_svc->AddService(
       fuchsia_boot_FactoryItems_Name,
       bootsvc::CreateFactoryItemsService(loop.dispatcher(), std::move(factory_item_map)));

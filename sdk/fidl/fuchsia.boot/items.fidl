@@ -6,13 +6,21 @@ library fuchsia.boot;
 
 using zx;
 
+const uint8 MAX_FILE_NAME_LENGTH = 255;
+
 /// Protocol for retrieving boot item payloads.
 [Discoverable, ForDeprecatedCBindings]
 protocol Items {
     /// Get a `payload` for a boot item of `type` and `extra`.
     /// NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     ///
+    /// TODO: Refactor API: fxbug.dev/34597
+    ///
     /// For a list of `type`s, refer to <zircon/boot/image.h>.
     /// For a list of `extra`s, refer to <zircon/boot/driver-config.h>.
     Get(uint32 type, uint32 extra) -> (zx.handle:VMO? payload, uint32 length);
+
+    /// Gets the `payload` for a `ZBI_TYPE_BOOTLOADER_FILE` boot item.
+    /// Note: ZX_PROP_VMO_CONTENT_SIZE will be set to the actual file content size
+    GetBootloaderFile(string:MAX_FILE_NAME_LENGTH filename) -> (zx.handle:VMO? payload);
 };

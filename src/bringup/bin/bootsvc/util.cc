@@ -30,6 +30,7 @@ bool StoreItem(uint32_t type) {
     case ZBI_TYPE_STORAGE_RAMDISK:
     case ZBI_TYPE_IMAGE_ARGS:
     case ZBI_TYPE_SERIAL_NUMBER:
+    case ZBI_TYPE_BOOTLOADER_FILE:
       return true;
     default:
       return ZBI_TYPE_DRV_METADATA(type);
@@ -108,13 +109,53 @@ zx_status_t ProcessFactoryItem(const zx::vmo& vmo, uint32_t offset, uint32_t len
   return ZX_OK;
 }
 
+zx_status_t ProcessBootloaderFile(const zx::vmo& vmo, uint32_t offset, uint32_t length,
+                                  std::string* out_filename,
+                                  bootsvc::ItemValue* out_bootloader_file) {
+  offset = safemath::CheckAdd(offset, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
+
+  if (length < sizeof(uint8_t)) {
+    printf("bootsvc: Bootloader File ZBI item too small\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  uint8_t name_len;
+  zx_status_t status = vmo.read(&name_len, offset, sizeof(uint8_t));
+  if (status != ZX_OK) {
+    printf("bootsvc: Failed to read input VMO: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  if (length <= sizeof(uint8_t) + name_len) {
+    printf("bootsvc: Bootloader File ZBI item too small.\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  std::string name(name_len, '\0');
+
+  offset = safemath::CheckAdd(offset, sizeof(uint8_t)).ValueOrDie<uint32_t>();
+  status = vmo.read(name.data(), offset, name_len);
+  if (status != ZX_OK) {
+    printf("bootsvc: Failed to read input VMO: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  offset = safemath::CheckAdd(offset, name_len).ValueOrDie<uint32_t>();
+  uint32_t payload_length = length - name_len - sizeof(uint8_t);
+
+  *out_bootloader_file = bootsvc::ItemValue{.offset = offset, .length = payload_length};
+  *out_filename = std::move(name);
+  return ZX_OK;
+}
+
 }  // namespace
 
 namespace bootsvc {
 
 const char* const kLastPanicFilePath = "log/last-panic.txt";
 
-zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap* out_factory_map) {
+zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap* out_factory_map,
+                              BootloaderFileMap* out_bootloader_file_map) {
   // Validate boot image VMO provided by startup handle.
   zx::vmo vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, 0)));
   zbi_header_t header;
@@ -135,6 +176,7 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
   // Read boot items from the boot image VMO.
   ItemMap map;
   FactoryItemMap factory_map;
+  BootloaderFileMap bootloader_file_map;
 
   uint32_t off = sizeof(header);
   uint32_t len = header.length;
@@ -164,6 +206,17 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
         }
 
         factory_map.emplace(header.extra, std::move(factory_item));
+      } else if (header.type == ZBI_TYPE_BOOTLOADER_FILE) {
+        std::string filename;
+        ItemValue bootloader_file;
+
+        status = ProcessBootloaderFile(vmo, off, header.length, &filename, &bootloader_file);
+        if (status == ZX_OK) {
+          bootloader_file_map.emplace(std::move(filename), std::move(bootloader_file));
+        } else {
+          printf("bootsvc: Failed to process bootloader file: %s\n", zx_status_get_string(status));
+        }
+
       } else {
         map.emplace(CreateItemKey(header.type, header.extra),
                     CreateItemValue(header.type, off, header.length));
@@ -190,6 +243,7 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
   *out_vmo = std::move(vmo);
   *out_map = std::move(map);
   *out_factory_map = std::move(factory_map);
+  *out_bootloader_file_map = std::move(bootloader_file_map);
   return ZX_OK;
 }
 

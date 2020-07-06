@@ -51,7 +51,7 @@ fbl::RefPtr<fs::Service> CreateFactoryItemsService(async_dispatcher_t* dispatche
 
 // Create a service to retrieve ZBI items.
 fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
-                                            ItemMap map);
+                                            ItemMap map, BootloaderFileMap bootloader_file_map);
 
 }  // namespace bootsvc
 

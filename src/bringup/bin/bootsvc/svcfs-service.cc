@@ -12,6 +12,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
 
+#include <fbl/algorithm.h>
+
 #include "util.h"
 
 namespace {
@@ -44,17 +46,12 @@ constexpr fuchsia_boot_FactoryItems_ops kFactoryItemsOps = {
 struct ItemsData {
   zx::vmo vmo;
   bootsvc::ItemMap map;
+  bootsvc::BootloaderFileMap bootloader_file_map;
 };
 
-zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
-  auto data = static_cast<const ItemsData*>(ctx);
-  auto it = data->map.find(bootsvc::ItemKey{type, extra});
-  if (it == data->map.end()) {
-    return fuchsia_boot_ItemsGet_reply(txn, ZX_HANDLE_INVALID, 0);
-  }
-  auto& item = it->second;
+zx_status_t CopyItem(const zx::vmo& vmo, const bootsvc::ItemValue& item, zx::vmo* out_vmo) {
   auto buf = std::make_unique<uint8_t[]>(item.length);
-  zx_status_t status = data->vmo.read(buf.get(), item.offset, item.length);
+  zx_status_t status = vmo.read(buf.get(), item.offset, item.length);
   if (status != ZX_OK) {
     printf("bootsvc: Failed to read from boot image VMO: %s\n", zx_status_get_string(status));
     return status;
@@ -70,11 +67,56 @@ zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) 
     printf("bootsvc: Failed to write to payload VMO: %s\n", zx_status_get_string(status));
     return status;
   }
+  *out_vmo = std::move(payload);
+  return ZX_OK;
+}
+
+zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
+  auto data = static_cast<const ItemsData*>(ctx);
+  auto it = data->map.find(bootsvc::ItemKey{type, extra});
+  if (it == data->map.end()) {
+    return fuchsia_boot_ItemsGet_reply(txn, ZX_HANDLE_INVALID, 0);
+  }
+  auto& item = it->second;
+
+  zx::vmo payload;
+  zx_status_t status = CopyItem(data->vmo, item, &payload);
+  if (status) {
+    return status;
+  }
+
   return fuchsia_boot_ItemsGet_reply(txn, payload.release(), item.length);
+}
+
+zx_status_t BootloaderFilesGet(void* ctx, const char* filename_data, size_t filename_size,
+                               fidl_txn_t* txn) {
+  auto data = static_cast<const ItemsData*>(ctx);
+  auto it = data->bootloader_file_map.find(std::string(filename_data, filename_size));
+  if (it == data->bootloader_file_map.end()) {
+    return fuchsia_boot_ItemsGetBootloaderFile_reply(txn, ZX_HANDLE_INVALID);
+  }
+  auto& item = it->second;
+
+  zx::vmo vmo;
+  zx_status_t status = CopyItem(data->vmo, item, &vmo);
+  if (status) {
+    return status;
+  }
+
+  uint64_t size = item.length;
+  status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
+  if (status != ZX_OK) {
+    printf("bootsvc: Failed to set content size of payload VMO: %s\n",
+           zx_status_get_string(status));
+    return status;
+  }
+
+  return fuchsia_boot_ItemsGetBootloaderFile_reply(txn, vmo.release());
 }
 
 constexpr fuchsia_boot_Items_ops kItemsOps = {
     .Get = ItemsGet,
+    .GetBootloaderFile = BootloaderFilesGet,
 };
 
 }  // namespace
@@ -106,8 +148,8 @@ fbl::RefPtr<fs::Service> CreateFactoryItemsService(async_dispatcher_t* dispatche
 }
 
 fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
-                                            ItemMap map) {
-  ItemsData data{std::move(vmo), std::move(map)};
+                                            ItemMap map, BootloaderFileMap bootloader_file_map) {
+  ItemsData data{std::move(vmo), std::move(map), std::move(bootloader_file_map)};
   return fbl::MakeRefCounted<fs::Service>(
       [dispatcher, data = std::move(data)](zx::channel channel) mutable {
         auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
