@@ -324,6 +324,77 @@ unions, and tables). Even in languages where getter/setter methods are
 un-idiomatic, using these methods will allow renaming internal field names
 without breaking usages of that field.
 
+### Request "responders"
+
+When implementing a FIDL protocol using the FIDL bindings in a target language,
+the bindings provide an API to read the request parameters, and a way to write
+the response parameters, if any. For example, the request parameters could be
+provided as the arguments to a function, and the response parameters could be
+provided as the return type of the function.
+
+For a FIDL protocol:
+
+```fidl
+protocol Hasher {
+  Hash(string value) -> (array<uint8>:10 result);
+};
+```
+
+A binding might generate:
+
+```typescript
+// Users would implement this interface to provide an implementation of the
+// Hasher FIDL protocol
+interface Hasher {
+  // Respond to the request by returning the desired response
+  hash: (value: string): Uint8Array;
+};
+```
+
+Bindings MAY provide a responder object that is used to write
+responses. In the example above, this would mean passing an additional
+responder object in the function arguments, and having the function return void:
+
+```typescript
+interface Hasher {
+  hash: (value: string, responder: HashResponder): void;
+};
+
+interface HashResponder {
+  sendResponse(value: Uint8Array);
+};
+```
+
+The use of a responder object has the following benefits:
+
+* Improved ergonomics: responders can be used to provide any type of
+  interaction with the client. For example, responders can have methods that
+  close the channel with an epitaph, or provide APIs for sending events. For
+  two-way methods, the responder could provide the mechanism to send a response.
+* Increased flexibility: encapsulating all these behaviors in a single type
+  makes it possible to add or remove behavior from the bindings without
+  making breaking changes to bindings users, by only changing the responder
+  object, and not the protocol object.
+
+When providing a responder object, bindings should be careful about responders
+being invoked on a different thread than the one the request was processed on.
+Responders may also be invoked much later than the request was processed, for
+instance when implement a handing get pattern. In practice this could be
+implemented by allowing users to move ownership of the responder out of the
+request handler class, e.g. into a callback for an asynchronous function.
+
+The object MAY NOT necessarily be called responder. For example, it could have
+a different name depending on whether the method is fire and forget or two way:
+
+```typescript
+interface Hasher {
+  // the Hash method is a two-way method, so the object is called a responder
+  hash: (value: string, responder: HashResponder): void;
+  // the SetSeed method is a fire and forget method, so it gets a different name
+  setSeed: (seed: number, control: HasherControlHandle): void;
+}
+```
+
 ## Related Documents
 
 * [FTP-024: Mandatory Source Compatibility][ftp024]
