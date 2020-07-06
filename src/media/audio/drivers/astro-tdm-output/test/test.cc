@@ -45,7 +45,6 @@ struct AstroAudioStreamOutCodecInitTest : public AstroAudioStreamOut {
     codec_ = std::move(codec);
     tdm_config_.type = metadata::TdmType::I2s;
     tdm_config_.codec = metadata::Codec::Tas2770;
-
   }
 
   zx_status_t InitPDev() override {
@@ -81,6 +80,7 @@ TEST(AstroAudioStreamOutTest, CodecInitGood) {
   mock_i2c::MockI2c mock_i2c;
   mock_i2c
       .ExpectWriteStop({0x01, 0x01})  // sw reset
+      .ExpectWriteStop({0x02, 0x01})  // Muted
       .ExpectWriteStop({0x3c, 0x10})  // CLOCK_CFG
       .ExpectWriteStop({0x0a, 0x07})  // SetRate
       .ExpectWriteStop({0x0c, 0x12})  // TDM_CFG2
@@ -96,7 +96,6 @@ TEST(AstroAudioStreamOutTest, CodecInitGood) {
       .ExpectWriteStop({0x20, 0xf8})
       .ExpectWriteStop({0x21, 0xff})
       .ExpectWriteStop({0x30, 0x01})
-      .ExpectWriteStop({0x02, 0x00})  // Start()
       .ExpectWrite({0x05})
       .ExpectReadStop({0x00});  // GetGain
 
@@ -130,11 +129,7 @@ TEST(AstroAudioStreamOutTest, CodecInitBad) {
 
   ddk::MockGpio mock_ena;
   ddk::MockGpio mock_fault;
-  mock_ena
-    .ExpectWrite(ZX_OK, 0)
-    .ExpectWrite(ZX_OK, 1)
-    .ExpectWrite(ZX_OK, 0)
-    .ExpectWrite(ZX_OK, 0);
+  mock_ena.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1).ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 0);
 
   auto codec = std::make_unique<Tas27xxInitTest>(mock_i2c.GetProto(), mock_ena.GetProto(),
                                                  mock_fault.GetProto());
@@ -191,7 +186,9 @@ TEST(AstroAudioStreamOutTest, ChangeRate96K) {
   fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
 
-  mock_i2c.ExpectWriteStop({0x02, 0x0c});  // Start
+  mock_i2c
+      .ExpectWriteStop({0x02, 0x0e})   // Stopped no I/V sense.
+      .ExpectWriteStop({0x02, 0x0c});  // Started no I/V sense.
 
   ddk::MockGpio enable_gpio;
   ddk::MockGpio fault_gpio;

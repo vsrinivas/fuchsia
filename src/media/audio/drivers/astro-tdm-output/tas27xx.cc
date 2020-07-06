@@ -106,23 +106,21 @@ zx_status_t Tas27xx::GetVbat(float* voltage) {
   return status;
 }
 
-// Puts in active, but muted state (clocks must be active or TDM error will trigger)
+// Puts in active, but muted/unmuted state (clocks must be active or TDM error will trigger)
 // Sets I and V sense features to proper state
-zx_status_t Tas27xx::Standby() {
-  return ZX_OK;
-  return WriteReg(PWR_CTL,
-                  static_cast<uint8_t>(((!ena_isens_) << 3) | ((!ena_vsens_) << 2) | (0x01 << 0)));
+zx_status_t Tas27xx::Mute(bool mute) {
+  return WriteReg(PWR_CTL, static_cast<uint8_t>(((!ena_isens_) << 3) | ((!ena_vsens_) << 2) |
+                                                (static_cast<uint8_t>(mute) << 0)));
 }
 
-// Shuts down I and V sense feature
-// Puts device in software shutdown state (safe to deactivate clocks after call)
-zx_status_t Tas27xx::SoftwareShutdown() {
-  return ZX_OK;
-  return WriteReg(PWR_CTL, (0x03 << 2) | (0x02 << 0));
+// Shuts down I and V sense feature.
+// Puts device in a shutdown state (safe to deactivate clocks after call).
+zx_status_t Tas27xx::Stop() {
+  return WriteReg(PWR_CTL, (1 << 3) | (1 << 2) | (0x02 << 0));
 }
 
-// Puts in active unmuted state (clocks must be active or TDM error will trigger)
-// Sets I and V sense features to proper state
+// Restores I and V sense feature if previosly set.
+// Puts device in a normal state (started).
 zx_status_t Tas27xx::Start() {
   return WriteReg(PWR_CTL,
                   static_cast<uint8_t>(((!ena_isens_) << 3) | ((!ena_vsens_) << 2) | (0x00 << 0)));
@@ -190,6 +188,10 @@ zx_status_t Tas27xx::Init(uint32_t rate) {
     return status;
   }
 
+  status = Mute(true);
+  if (status != ZX_OK) {
+    return status;
+  }
   // bit[5:2] - SBCLK_FS_RATIO - frame sync to sclk ratio
   //             64 for two channel i2s (32 bits per channel)
   // bit[1:0] - AUTO_CLK - 1=manual, 0=auto
@@ -274,11 +276,6 @@ zx_status_t Tas27xx::Init(uint32_t rate) {
     running_.store(false);
     irq_.destroy();
     return ZX_ERR_NO_RESOURCES;
-  }
-
-  status = Start();
-  if (status != ZX_OK) {
-    return status;
   }
 
   on_error.cancel();

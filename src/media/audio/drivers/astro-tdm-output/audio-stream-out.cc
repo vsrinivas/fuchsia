@@ -366,7 +366,7 @@ zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq
 
   if (req.frames_per_second != frames_per_second_) {
     // Put codec in safe state for rate change
-    zx_status_t status = codec_->SoftwareShutdown();
+    zx_status_t status = codec_->Stop();
     if (status != ZX_OK) {
       return status;
     }
@@ -441,11 +441,12 @@ zx_status_t AstroAudioStreamOut::Start(uint64_t* out_start_time) {
   } else {
     us_per_notification_ = 0;
   }
+  codec_->Mute(false);
   return ZX_OK;
 }
 
 zx_status_t AstroAudioStreamOut::Stop() {
-  codec_->Standby();
+  codec_->Mute(true);
   notify_timer_.Cancel();
   us_per_notification_ = 0;
   aml_audio_->Stop();

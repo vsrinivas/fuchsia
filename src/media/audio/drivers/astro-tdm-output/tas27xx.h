@@ -78,9 +78,9 @@ class Tas27xx : public std::unique_ptr<Tas27xx> {
   virtual zx_status_t Init(uint32_t rate);
   zx_status_t HardwareShutdown();
   zx_status_t SWReset();
-  zx_status_t Standby();
+  zx_status_t Stop();
   zx_status_t Start();
-  zx_status_t SoftwareShutdown();
+  zx_status_t Mute(bool mute);
   zx_status_t GetTemperature(float* temperature);
   zx_status_t GetVbat(float* voltage);
 
