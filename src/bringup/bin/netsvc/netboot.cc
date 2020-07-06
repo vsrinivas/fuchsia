@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -284,20 +284,24 @@ static zx_status_t reboot() {
   if (status != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
-
-  status = fdio_service_connect("/svc/fuchsia.device.manager.Administrator", remote.release());
+  std::string svc_dir = "/svc/";
+  std::string service = svc_dir + llcpp::fuchsia::hardware::power::statecontrol::Admin::Name;
+  status = fdio_service_connect(service.c_str(), remote.release());
   if (status != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
-
-  zx_status_t call_status;
-  status = fuchsia_device_manager_AdministratorSuspend(
-      local.get(), fuchsia_device_manager_SUSPEND_FLAG_REBOOT, &call_status);
-  if (status != ZX_OK) {
-    return status;
+  auto response = llcpp::fuchsia::hardware::power::statecontrol::Admin::Call::Reboot(
+      zx::unowned_channel(local.get()),
+      llcpp::fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST);
+  if (response.status() != ZX_OK) {
+    return response.status();
   }
-
-  return call_status;
+  if (response->result.is_err()) {
+    return response->result.err();
+  }
+  // Wait for the world to end.
+  zx_nanosleep(ZX_TIME_INFINITE);
+  return ZX_ERR_INTERNAL;
 }
 
 static void bootloader_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
