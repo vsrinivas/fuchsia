@@ -202,16 +202,22 @@ impl<'a> Encoder<'a> {
             handles: &'a mut Vec<Handle>,
             ty_inline_size: usize,
         ) -> Encoder<'a> {
-            let aligned_inline_size = round_up_to_align(ty_inline_size, 8);
-            // Safety: The uninitialized elements are assigned in prepare_for_encoding and
-            // x.encode.
-            unsafe {
-                resize_vec_no_zeroing(buf, aligned_inline_size);
+            // An empty response can have size zero.
+            // This if statement is needed to not break the padding write below.
+            if ty_inline_size != 0 {
+                let aligned_inline_size = round_up_to_align(ty_inline_size, 8);
+                // Safety: The uninitialized elements are assigned in prepare_for_encoding and
+                // x.encode.
+                unsafe {
+                    resize_vec_no_zeroing(buf, aligned_inline_size);
+
+                    // Zero the last 8 bytes in the block to ensure padding bytes are zero.
+                    let padding_ptr = buf.get_unchecked_mut(aligned_inline_size - 8);
+                    *std::mem::transmute::<*mut u8, *mut u64>(padding_ptr) = 0;
+                }
             }
             handles.truncate(0);
-            let mut encoder = Encoder { buf, handles, context };
-            encoder.padding(ty_inline_size, aligned_inline_size - ty_inline_size);
-            encoder
+            Encoder { buf, handles, context }
         }
         let mut encoder = prepare_for_encoding(context, buf, handles, x.inline_size(context));
         x.encode(&mut encoder, 0, 0)
@@ -239,9 +245,17 @@ impl<'a> Encoder<'a> {
         let padded_len = round_up_to_align(len, 8);
         // Safety: The uninitialized elements are assigned in self.padding and f.
         unsafe {
-            resize_vec_no_zeroing(self.buf, self.buf.len() + padded_len);
+            // In order to zero bytes for padding, we assume that at least 8 bytes are in the
+            // out-of-line block.
+            debug_assert!(padded_len >= 8);
+
+            let new_len = self.buf.len() + padded_len;
+            resize_vec_no_zeroing(self.buf, new_len);
+
+            // Zero the last 8 bytes in the block to ensure padding bytes are zero.
+            let padding_ptr = self.buf.get_unchecked_mut(new_len - 8);
+            *std::mem::transmute::<*mut u8, *mut u64>(padding_ptr) = 0;
         }
-        self.padding(new_offset + len, padded_len - len);
         f(self, new_offset, new_depth)
     }
 
@@ -1053,6 +1067,7 @@ pub fn encode_vector<T: Encodable>(
             // Two u64: (len, present)
             (slice.len() as u64).encode(encoder, offset, recursion_depth)?;
             ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+            // write_out_of_line must not be called with a zero-sized out-of-line block.
             if slice.len() == 0 {
                 return Ok(());
             }
@@ -2199,6 +2214,10 @@ macro_rules! fidl_table {
                 unsafe {
                     $crate::fidl_unsafe_encode!(&mut (max_ordinal as u64), encoder, offset, recursion_depth)?;
                     $crate::fidl_unsafe_encode!(&mut $crate::encoding::ALLOC_PRESENT_U64, encoder, offset + 8, recursion_depth)?;
+                }
+                // write_out_of_line must not be called with a zero-sized out-of-line block.
+                if max_ordinal == 0 {
+                    return Ok(());
                 }
                 let bytes_len = (max_ordinal as usize) * 16;
                 encoder.write_out_of_line(bytes_len, recursion_depth, |encoder, offset, recursion_depth| {
