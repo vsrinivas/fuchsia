@@ -32,6 +32,7 @@ protocol FactoryDevice {
 ///
 /// This protocol is implemented by the LoWPAN service and used by client tools that need to issue
 /// factory commands.
+[Discoverable]
 protocol FactoryLookup {
     /// Connects the the associated `FactoryDevice` API for the given LoWPAN interface name.
     Lookup(InterfaceName name, request<FactoryDevice> device_factory) -> () error ServiceError;
@@ -44,7 +45,6 @@ protocol FactoryLookup {
 /// This protocol is implemented by LoWPAN drivers and used by the LoWPAN service when
 /// handling calls to `FactoryLookup.Lookup()`. It is registered with the service via
 /// a call to `FactoryRegister.Register()`.
-[Discoverable]
 protocol FactoryDriver {
     /// Used to obtain a `FactoryDevice` protocol instance.
     GetFactoryDevice(request<FactoryDevice> device_factory);
