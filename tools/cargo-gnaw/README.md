@@ -38,10 +38,11 @@ Simple build.rs scripts (ones that only depend upon Rust's `std` library) evalua
 ### GN configs
 Underneath a TOML array, a configuration should be passed as "gn.crate.<Name>.<ExactVersion>"
 
-* `rustflags` - flags to pass through to rustc
+* `configs` - native GN config
 * `deps` - native GN dependency
 * `env_vars` - environment variables, usually used for pretending to be cargo
 * `platform` - platform this configuration targets. Uses the rust cfg format (Ex: cfg(unix))
+* `rustflags` - flags to pass through to rustc
 
 Example:
 ```toml

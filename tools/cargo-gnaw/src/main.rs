@@ -72,6 +72,9 @@ pub struct TargetCfg {
     /// GN Targets that this crate should depend on. Generally for
     /// crates that build C libraries and link against.
     deps: Option<Vec<String>>,
+    /// GN Configs that this crate should depend on.  Used to add
+    /// crate-specific configs.
+    configs: Option<Vec<String>>,
 }
 
 /// Configs added to all GN targets in the BUILD.gn

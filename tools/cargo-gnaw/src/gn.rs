@@ -280,6 +280,11 @@ pub fn write_rule<W: io::Write>(
                     rustenv.add_platform_cfg(dep.platform.clone(), flag.to_string());
                 }
             }
+            if let Some(ref crate_configs) = dep.configs {
+                for config in crate_configs {
+                    configs.add_cfg(config);
+                }
+            }
         }
     }
 
