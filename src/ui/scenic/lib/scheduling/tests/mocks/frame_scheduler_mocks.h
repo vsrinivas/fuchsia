@@ -21,9 +21,9 @@ class MockFrameScheduler : public FrameScheduler {
   MockFrameScheduler() = default;
 
   // |FrameScheduler|
-  void SetFrameRenderer(fxl::WeakPtr<FrameRenderer> frame_renderer) override {}
+  void SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_renderer) override {}
   // |FrameScheduler|
-  void AddSessionUpdater(fxl::WeakPtr<SessionUpdater> session_updater) override {}
+  void AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) override {}
   // |FrameScheduler|
   void SetRenderContinuously(bool render_continuously) override;
 
@@ -104,7 +104,7 @@ class MockFrameScheduler : public FrameScheduler {
 
 class MockSessionUpdater : public SessionUpdater {
  public:
-  MockSessionUpdater() : weak_factory_(this) {}
+  MockSessionUpdater() {}
 
   // |SessionUpdater|
   SessionUpdater::UpdateResults UpdateSessions(
@@ -119,8 +119,6 @@ class MockSessionUpdater : public SessionUpdater {
     update_sessions_return_value_ = new_value;
   }
 
-  fxl::WeakPtr<MockSessionUpdater> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
-
   uint64_t update_sessions_call_count() { return update_sessions_call_count_; }
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> last_sessions_to_update() {
     return last_sessions_to_update_;
@@ -131,13 +129,11 @@ class MockSessionUpdater : public SessionUpdater {
 
   uint64_t update_sessions_call_count_ = 0;
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> last_sessions_to_update_;
-
-  fxl::WeakPtrFactory<MockSessionUpdater> weak_factory_;  // must be last
 };
 
 class MockFrameRenderer : public FrameRenderer {
  public:
-  MockFrameRenderer() : weak_factory_(this) {}
+  MockFrameRenderer() {}
 
   // |FrameRenderer|
   RenderFrameResult RenderFrame(fxl::WeakPtr<FrameTimings> frame_timings,
@@ -167,8 +163,6 @@ class MockFrameRenderer : public FrameRenderer {
   uint32_t render_frame_call_count() { return render_frame_call_count_; }
   size_t pending_frames() { return frames_.size(); }
 
-  fxl::WeakPtr<MockFrameRenderer> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
-
  private:
   void CleanUpFrame(uint64_t frame_number);
 
@@ -185,8 +179,6 @@ class MockFrameRenderer : public FrameRenderer {
   std::unordered_map<uint64_t, Timings> frames_;
 
   uint64_t last_frame_number_ = -1;
-
-  fxl::WeakPtrFactory<MockFrameRenderer> weak_factory_;  // must be last
 };
 
 }  // namespace test

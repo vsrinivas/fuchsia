@@ -24,8 +24,8 @@ class FrameSchedulerTest : public ::gtest::TestLoopFixture {
   void SetupDefaultVsyncValues();
 
   std::shared_ptr<VsyncTiming> vsync_timing_;
-  std::unique_ptr<MockSessionUpdater> mock_updater_;
-  std::unique_ptr<MockFrameRenderer> mock_renderer_;
+  std::shared_ptr<MockSessionUpdater> mock_updater_;
+  std::shared_ptr<MockFrameRenderer> mock_renderer_;
 };
 
 }  // namespace test

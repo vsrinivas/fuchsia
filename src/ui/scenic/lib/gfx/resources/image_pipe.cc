@@ -18,7 +18,7 @@ const ResourceTypeInfo ImagePipe::kTypeInfo = {ResourceType::kImagePipe | Resour
                                                "ImagePipe"};
 
 ImagePipe::ImagePipe(Session* session, ResourceId id,
-                     std::unique_ptr<ImagePipeUpdater> image_pipe_updater,
+                     std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
                      std::shared_ptr<ErrorReporter> error_reporter)
     : ImagePipeBase(session, id, ImagePipe::kTypeInfo),
       image_pipe_updater_(std::move(image_pipe_updater)),
@@ -29,7 +29,7 @@ ImagePipe::ImagePipe(Session* session, ResourceId id,
 
 ImagePipe::ImagePipe(Session* session, ResourceId id,
                      fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
-                     std::unique_ptr<ImagePipeUpdater> image_pipe_updater,
+                     std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
                      std::shared_ptr<ErrorReporter> error_reporter)
     : ImagePipeBase(session, id, ImagePipe::kTypeInfo),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),

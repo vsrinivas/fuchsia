@@ -35,11 +35,11 @@ class ImagePipe : public ImagePipeBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ImagePipe(Session* session, ResourceId id, std::unique_ptr<ImagePipeUpdater> image_pipe_updater,
+  ImagePipe(Session* session, ResourceId id, std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
             std::shared_ptr<ErrorReporter> error_reporter);
   ImagePipe(Session* session, ResourceId id,
             fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
-            std::unique_ptr<ImagePipeUpdater> image_pipe_updater,
+            std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
             std::shared_ptr<ErrorReporter> error_reporter);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
@@ -106,7 +106,7 @@ class ImagePipe : public ImagePipeBase {
   std::unordered_map<ResourceId, ImagePtr> images_;
   bool is_valid_ = true;
 
-  const std::unique_ptr<ImagePipeUpdater> image_pipe_updater_;
+  const std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
   const std::shared_ptr<ErrorReporter> error_reporter_;
 
   fxl::WeakPtrFactory<ImagePipe> weak_ptr_factory_;  // must be last

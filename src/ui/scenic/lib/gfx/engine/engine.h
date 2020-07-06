@@ -40,7 +40,6 @@ namespace gfx {
 
 class Compositor;
 class Engine;
-using EngineWeakPtr = fxl::WeakPtr<Engine>;
 class View;
 class ViewHolder;
 
@@ -109,7 +108,6 @@ class Engine : public scheduling::FrameRenderer {
 
   escher::Escher* escher() const { return escher_.get(); }
   escher::EscherWeakPtr GetEscherWeakPtr() const { return escher_; }
-  EngineWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   vk::Device vk_device() { return escher_ ? escher_->vulkan_context().device : vk::Device(); }
 

@@ -44,7 +44,8 @@ class ImagePipeRenderTest : public VkSessionHandlerTest {
 // Check that ImagePipe attached Material is transparent until the first frame is presented.
 VK_TEST_F(ImagePipeRenderTest, TransparentUntilFirstUpdate) {
   ResourceId next_id = 1;
-  auto image_pipe_updater = std::make_unique<ImagePipeUpdater>(frame_scheduler());
+  auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler());
+  frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
       session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
@@ -75,7 +76,8 @@ VK_TEST_F(ImagePipeRenderTest, TransparentUntilFirstUpdate) {
 // updated only after Visit().
 VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
   ResourceId next_id = 1;
-  auto image_pipe_updater = std::make_unique<ImagePipeUpdater>(frame_scheduler());
+  auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler());
+  frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
       session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
@@ -147,7 +149,8 @@ VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
 // being listened to and release fences are signalled.
 VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   ResourceId next_id = 1;
-  auto image_pipe_updater = std::make_unique<ImagePipeUpdater>(frame_scheduler());
+  auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler());
+  frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
       session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);

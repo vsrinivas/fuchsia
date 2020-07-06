@@ -48,7 +48,8 @@ class ImagePipeUpdaterTest : public ::gtest::TestLoopFixture {
     scheduler_->set_schedule_update_for_session_callback(
         [this](auto...) { ++schedule_call_count_; });
     release_fence_signaller_ = std::make_unique<ReleaseFenceSignallerForTest>();
-    image_pipe_updater_ = std::make_unique<ImagePipeUpdater>(scheduler_);
+    image_pipe_updater_ = std::make_shared<ImagePipeUpdater>(scheduler_);
+    scheduler_->AddSessionUpdater(image_pipe_updater_);
     SessionContext context{};
     session_ = std::make_unique<gfx::Session>(1, context);
     image_pipe_ = fxl::MakeRefCounted<MockImagePipe>(session_.get());
@@ -67,7 +68,7 @@ class ImagePipeUpdaterTest : public ::gtest::TestLoopFixture {
   int64_t remove_session_call_count_ = 0;
 
   std::shared_ptr<scheduling::test::MockFrameScheduler> scheduler_;
-  std::unique_ptr<ImagePipeUpdater> image_pipe_updater_;
+  std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
   fxl::RefPtr<MockImagePipe> image_pipe_;
   std::unique_ptr<gfx::Session> session_;
   std::unique_ptr<ReleaseFenceSignallerForTest> release_fence_signaller_;

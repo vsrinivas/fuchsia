@@ -57,7 +57,7 @@ class App {
   escher::EscherUniquePtr escher_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
-  std::optional<gfx::Engine> engine_;
+  std::shared_ptr<gfx::Engine> engine_;
   Scenic scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
   std::unique_ptr<Watchdog> watchdog_;

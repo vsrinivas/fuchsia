@@ -33,8 +33,7 @@ GfxSystem::GfxSystem(SystemContext context, Engine* engine, Sysmem* sysmem,
       display_manager_(display_manager),
       sysmem_(sysmem),
       engine_(engine),
-      session_manager_(this->context()->inspect_node()->CreateChild("SessionManager")),
-      weak_factory_(this) {
+      session_manager_(this->context()->inspect_node()->CreateChild("SessionManager")) {
   FX_DCHECK(engine_);
 
   // Create a pseudo-file that dumps alls the Scenic scenes.

@@ -13,19 +13,15 @@ namespace gfx {
 
 ImagePipeUpdater::ImagePipeUpdater(
     const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler)
-    : scheduling_id_(scheduling::GetNextSessionId()),
-      frame_scheduler_(frame_scheduler),
-      weak_factory_(this) {
+    : scheduling_id_(scheduling::GetNextSessionId()), frame_scheduler_(frame_scheduler) {
   FX_DCHECK(frame_scheduler);
-  frame_scheduler->AddSessionUpdater(weak_factory_.GetWeakPtr());
   frame_scheduler->SetOnUpdateFailedCallbackForSession(scheduling_id_, [] {
     // ImagePipe updates currently can not fail.
     FX_CHECK(false);
   });
 }
 
-ImagePipeUpdater::ImagePipeUpdater()
-    : scheduling_id_(scheduling::GetNextSessionId()), weak_factory_(this){};
+ImagePipeUpdater::ImagePipeUpdater() : scheduling_id_(scheduling::GetNextSessionId()) {}
 
 ImagePipeUpdater::~ImagePipeUpdater() {
   if (auto scheduler = frame_scheduler_.lock()) {
@@ -60,19 +56,20 @@ scheduling::PresentId ImagePipeUpdater::ScheduleImagePipeUpdate(
     // Set callback for the acquire fence listener.
     auto& fence_listener = it->second;
     fence_listener.WaitReadyAsync(
-        [weak = weak_factory_.GetWeakPtr(), id_pair, presentation_time, trace_id]() mutable {
-          if (!weak)
+        [weak = weak_from_this(), id_pair, presentation_time, trace_id]() mutable {
+          auto this_locked = weak.lock();
+          if (!this_locked)
             return;
           TRACE_DURATION("gfx", "ImagePipeUpdater::ScheduleImagePipeUpdate::fences_ready");
           TRACE_FLOW_END("gfx", "wait_for_fences", trace_id);
 
-          if (auto locked_frame_scheduler = weak->frame_scheduler_.lock()) {
+          if (auto locked_frame_scheduler = this_locked->frame_scheduler_.lock()) {
             locked_frame_scheduler->ScheduleUpdateForSession(presentation_time, id_pair);
           }
 
           // Release fences have been moved into frame scheduler. Delete the remaining fence
           // listener.
-          weak->fence_listeners_.erase(id_pair);
+          this_locked->fence_listeners_.erase(id_pair);
         });
   }
 

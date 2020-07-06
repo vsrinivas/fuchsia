@@ -18,9 +18,6 @@
 namespace scenic_impl {
 namespace gfx {
 
-class GfxSystem;
-using GfxSystemWeakPtr = fxl::WeakPtr<GfxSystem>;
-
 class GfxSystem : public System,
                   public scenic_impl::TakeScreenshotDelegateDeprecated,
                   public scheduling::SessionUpdater {
@@ -30,8 +27,6 @@ class GfxSystem : public System,
 
   GfxSystem(SystemContext context, Engine* engine, Sysmem* sysmem,
             display::DisplayManager* display_manager);
-
-  GfxSystemWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   CommandDispatcherUniquePtr CreateCommandDispatcher(
       scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
@@ -64,8 +59,6 @@ class GfxSystem : public System,
   Sysmem* const sysmem_;
   Engine* const engine_;
   SessionManager session_manager_;
-
-  fxl::WeakPtrFactory<GfxSystem> weak_factory_;  // must be last
 };
 
 }  // namespace gfx

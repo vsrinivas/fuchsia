@@ -34,7 +34,11 @@ using PresentImageCallback = fuchsia::images::ImagePipe::PresentImageCallback;
 //   - Session calls ApplyScheduledUpdates() when a frame is to be rendered.  At this time, all
 //     updates (from all ImagePipes in the Session) are applied, by calling ImagePipe::Update() on
 //     the corresponding ImagePipe.
-class ImagePipeUpdater : public scheduling::SessionUpdater {
+//
+// Note that creating an ImagePipeUpdater does not add it to the FrameScheduler as a
+// SessionUpdater; the creation code should manually do this after construction.
+class ImagePipeUpdater : public scheduling::SessionUpdater,
+                         public std::enable_shared_from_this<ImagePipeUpdater> {
  public:
   ImagePipeUpdater(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
   ~ImagePipeUpdater();
@@ -71,8 +75,6 @@ class ImagePipeUpdater : public scheduling::SessionUpdater {
 
   const scheduling::SessionId scheduling_id_;
   std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
-
-  fxl::WeakPtrFactory<ImagePipeUpdater> weak_factory_;
 };
 
 }  // namespace gfx

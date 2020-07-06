@@ -79,11 +79,11 @@ class FrameScheduler {
 
   // Set the renderer that will be used to render frames.  Can be set exactly once.  Must be set
   // before any frames are rendered.
-  virtual void SetFrameRenderer(fxl::WeakPtr<FrameRenderer> frame_renderer) = 0;
+  virtual void SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_renderer) = 0;
 
   // Add a session updater to the FrameScheduler.  This is safe to do between frames (i.e. not while
   // sessions are being updated before a frame is rendered).
-  virtual void AddSessionUpdater(fxl::WeakPtr<SessionUpdater> session_updater) = 0;
+  virtual void AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) = 0;
 
   // If |render_continuously|, we keep scheduling new frames immediately after each presented frame,
   // regardless of whether they're explicitly requested using RequestFrame().

@@ -15,7 +15,7 @@ void GfxSystemTest::TearDown() {
   ScenicTest::TearDown();
   engine_.reset();
   frame_scheduler_.reset();
-  FX_DCHECK(!gfx_system_);
+  FX_DCHECK(gfx_system_.expired());
 }
 
 void GfxSystemTest::InitializeScenic(Scenic* scenic) {
@@ -26,13 +26,12 @@ void GfxSystemTest::InitializeScenic(Scenic* scenic) {
           scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration,
           scheduling::DefaultFrameScheduler::kInitialRenderDuration,
           scheduling::DefaultFrameScheduler::kInitialUpdateDuration));
-  engine_ = std::make_unique<Engine>(context_provider_.context(), frame_scheduler_,
+  engine_ = std::make_shared<Engine>(context_provider_.context(), frame_scheduler_,
                                      std::move(signaller), escher::EscherWeakPtr());
-  frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
-  auto system = scenic->RegisterSystem<GfxSystem>(engine_.get(),
+  frame_scheduler_->SetFrameRenderer(engine_);
+  gfx_system_ = scenic->RegisterSystem<GfxSystem>(engine_.get(),
                                                   /* sysmem */ nullptr,
                                                   /* display_manager */ nullptr);
-  gfx_system_ = system->GetWeakPtr();
   frame_scheduler_->AddSessionUpdater(gfx_system_);
   scenic_->SetInitialized(engine_->scene_graph());
   scenic_->SetFrameScheduler(frame_scheduler_);

@@ -13,7 +13,7 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-SessionHandlerTest::SessionHandlerTest() : weak_factory_(this) {}
+SessionHandlerTest::SessionHandlerTest() {}
 
 void SessionHandlerTest::SetUp() {
   ErrorReportingTest::SetUp();
@@ -27,6 +27,7 @@ void SessionHandlerTest::SetUp() {
 }
 
 void SessionHandlerTest::TearDown() {
+  session_updater_.reset();
   command_dispatcher_.reset();
   engine_.reset();
   frame_scheduler_.reset();
@@ -47,7 +48,6 @@ void SessionHandlerTest::InitializeCommandDispatcher() {
 
   InitializeScenicSession(session_id);
 
-  session_manager_ = std::make_unique<SessionManager>();
   command_dispatcher_ = session_manager_->CreateCommandDispatcher(
       scenic_session_->id(), std::move(session_context), this->shared_event_reporter(),
       this->shared_error_reporter());
@@ -59,10 +59,13 @@ void SessionHandlerTest::InitializeEngine() {
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       std::make_shared<scheduling::VsyncTiming>(),
       std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
-  engine_ = std::make_unique<Engine>(app_context_.context(), frame_scheduler_,
+  engine_ = std::make_shared<Engine>(app_context_.context(), frame_scheduler_,
                                      std::move(mock_release_fence_signaller), GetEscherWeakPtr());
-  frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
-  frame_scheduler_->AddSessionUpdater(weak_factory_.GetWeakPtr());
+  frame_scheduler_->SetFrameRenderer(engine_);
+
+  session_manager_ = std::make_unique<SessionManager>();
+  session_updater_ = std::make_shared<TestSessionUpdater>(engine_.get(), session_manager_.get());
+  frame_scheduler_->AddSessionUpdater(session_updater_);
 }
 
 void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
@@ -76,7 +79,7 @@ void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
 
 escher::EscherWeakPtr SessionHandlerTest::GetEscherWeakPtr() { return escher::EscherWeakPtr(); }
 
-scheduling::SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
+scheduling::SessionUpdater::UpdateResults SessionHandlerTest::TestSessionUpdater::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t trace_id) {
   UpdateResults update_results;

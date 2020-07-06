@@ -9,7 +9,6 @@
 
 #include <vector>
 
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scheduling {
@@ -30,12 +29,12 @@ class DelegatingFrameScheduler : public FrameScheduler {
   // |FrameScheduler|
   // Calls SetFrameRenderer() immediately if a FrameScheduler has been set; otherwise defers
   // the call until one has been set.
-  void SetFrameRenderer(fxl::WeakPtr<FrameRenderer> frame_renderer) override;
+  void SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_renderer) override;
 
   // |FrameScheduler|
   // Calls AddSessionUpdater() immediately if a FrameScheduler has been set; otherwise defers
   // the call until one has been set.
-  void AddSessionUpdater(fxl::WeakPtr<SessionUpdater> session_updater) override;
+  void AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) override;
 
   // |FrameScheduler|
   // Calls SetRenderContinuously() immediately if a FrameScheduler has been set; otherwise defers

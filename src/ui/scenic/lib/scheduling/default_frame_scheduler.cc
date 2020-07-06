@@ -53,13 +53,12 @@ DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> 
 
 DefaultFrameScheduler::~DefaultFrameScheduler() {}
 
-void DefaultFrameScheduler::SetFrameRenderer(fxl::WeakPtr<FrameRenderer> frame_renderer) {
-  FX_DCHECK(!frame_renderer_ && frame_renderer);
+void DefaultFrameScheduler::SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_renderer) {
+  FX_DCHECK(frame_renderer_.expired() && !frame_renderer.expired());
   frame_renderer_ = frame_renderer;
 }
 
-void DefaultFrameScheduler::AddSessionUpdater(fxl::WeakPtr<SessionUpdater> session_updater) {
-  FX_DCHECK(session_updater);
+void DefaultFrameScheduler::AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) {
   new_session_updaters_.push_back(std::move(session_updater));
 }
 
@@ -177,7 +176,7 @@ void DefaultFrameScheduler::HandleNextFrameRequest() {
 }
 
 void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBase*, zx_status_t) {
-  FX_DCHECK(frame_renderer_);
+  FX_DCHECK(!frame_renderer_.expired());
 
   const uint64_t frame_number = frame_number_;
 
@@ -270,8 +269,11 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   inspect_frame_number_.Set(frame_number);
 
   // Render the frame.
-  auto render_frame_result =
-      frame_renderer_->RenderFrame(frame_timings->GetWeakPtr(), target_presentation_time);
+  RenderFrameResult render_frame_result = kRenderFailed;
+  if (auto renderer = frame_renderer_.lock()) {
+    render_frame_result =
+        renderer->RenderFrame(frame_timings->GetWeakPtr(), target_presentation_time);
+  }
   currently_rendering_ = render_frame_result == kRenderSuccess;
 
   // See SCN-1505 for details of measuring render time.
@@ -496,19 +498,21 @@ SessionUpdater::UpdateResults DefaultFrameScheduler::ApplyUpdatesToEachUpdater(
 
   // Clear any stale SessionUpdaters.
   session_updaters_.erase(
-      std::remove_if(session_updaters_.begin(), session_updaters_.end(), std::logical_not()),
+      std::remove_if(session_updaters_.begin(), session_updaters_.end(),
+                     [](std::weak_ptr<SessionUpdater> updater) { return updater.expired(); }),
       session_updaters_.end());
 
   // Apply updates to each SessionUpdater.
   SessionUpdater::UpdateResults update_results;
   std::for_each(
       session_updaters_.begin(), session_updaters_.end(),
-      [&sessions_to_update, &update_results, frame_number](fxl::WeakPtr<SessionUpdater> updater) {
+      [&sessions_to_update, &update_results, frame_number](std::weak_ptr<SessionUpdater> updater) {
         // We still need to check for dead updaters since more could die inside UpdateSessions.
-        if (!updater) {
+        auto updater_locked = updater.lock();
+        if (!updater_locked) {
           return;
         }
-        auto session_results = updater->UpdateSessions(sessions_to_update, frame_number);
+        auto session_results = updater_locked->UpdateSessions(sessions_to_update, frame_number);
         // Aggregate results from each updater.
         // Note: Currently, only one SessionUpdater handles each SessionId. If this
         // changes, then a SessionId corresponding to a failed update should not be passed

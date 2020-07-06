@@ -35,10 +35,10 @@ class DefaultFrameScheduler : public FrameScheduler {
   ~DefaultFrameScheduler();
 
   // |FrameScheduler|
-  void SetFrameRenderer(fxl::WeakPtr<FrameRenderer> frame_renderer) override;
+  void SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_renderer) override;
 
   // |FrameScheduler|
-  void AddSessionUpdater(fxl::WeakPtr<SessionUpdater> session_updater) override;
+  void AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) override;
 
   // |FrameScheduler|
   //
@@ -184,21 +184,21 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   utils::SequentialFenceSignaller release_fence_signaller_;
 
-  // Set of SessionUpdaters to update. Stored as a WeakPtr: when the updaters become
-  // invalid, the WeakPtr is removed from this list.
-  std::vector<fxl::WeakPtr<SessionUpdater>> session_updaters_;
+  // Set of SessionUpdaters to update. Stored as a weak_ptr: when the updaters become
+  // invalid, the weak_ptr is removed from this list.
+  std::vector<std::weak_ptr<SessionUpdater>> session_updaters_;
 
   // Stores SessionUpdaters we added to the DefaultFrameScheduler. Upon
   // ApplyUpdates() is called, these SessionUpdaters will be moved to
   // the |session_updaters_| vector.
   // Exists to protect against when new session updaters are added mid-update.
-  std::list<fxl::WeakPtr<SessionUpdater>> new_session_updaters_;
+  std::list<std::weak_ptr<SessionUpdater>> new_session_updaters_;
 
   // References.
   async_dispatcher_t* const dispatcher_;
   const std::shared_ptr<const VsyncTiming> vsync_timing_;
 
-  fxl::WeakPtr<FrameRenderer> frame_renderer_;
+  std::weak_ptr<FrameRenderer> frame_renderer_;
 
   // State.
   uint64_t frame_number_ = 0;

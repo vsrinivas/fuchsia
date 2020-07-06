@@ -14,8 +14,8 @@ namespace test {
 
 void FrameSchedulerTest::SetUp() {
   vsync_timing_ = std::make_shared<VsyncTiming>();
-  mock_updater_ = std::make_unique<MockSessionUpdater>();
-  mock_renderer_ = std::make_unique<MockFrameRenderer>();
+  mock_updater_ = std::make_shared<MockSessionUpdater>();
+  mock_renderer_ = std::make_shared<MockFrameRenderer>();
   SetupDefaultVsyncValues();
 }
 
@@ -31,8 +31,8 @@ std::unique_ptr<DefaultFrameScheduler> FrameSchedulerTest::CreateDefaultFrameSch
       std::make_unique<WindowedFramePredictor>(DefaultFrameScheduler::kMinPredictedFrameDuration,
                                                DefaultFrameScheduler::kInitialRenderDuration,
                                                DefaultFrameScheduler::kInitialUpdateDuration));
-  scheduler->SetFrameRenderer(mock_renderer_->GetWeakPtr());
-  scheduler->AddSessionUpdater(mock_updater_->GetWeakPtr());
+  scheduler->SetFrameRenderer(mock_renderer_);
+  scheduler->AddSessionUpdater(mock_updater_);
 
   return scheduler;
 }

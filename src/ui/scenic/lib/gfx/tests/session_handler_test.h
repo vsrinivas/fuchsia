@@ -24,7 +24,7 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-class SessionHandlerTest : public ErrorReportingTest, public scheduling::SessionUpdater {
+class SessionHandlerTest : public ErrorReportingTest {
  public:
   SessionHandlerTest();
 
@@ -51,20 +51,29 @@ class SessionHandlerTest : public ErrorReportingTest, public scheduling::Session
 
   Engine* engine() { return engine_.get(); }
 
-  // |scheduling::SessionUpdater|
-  UpdateResults UpdateSessions(
-      const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
-      uint64_t trace_id) override;
+  class TestSessionUpdater : public scheduling::SessionUpdater {
+   public:
+    TestSessionUpdater(Engine* engine, SessionManager* session_manager)
+        : engine_(engine), session_manager_(session_manager) {}
+
+    // |scheduling::SessionUpdater|
+    UpdateResults UpdateSessions(
+        const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
+        uint64_t trace_id) override;
+
+   private:
+    Engine* engine_;
+    SessionManager* session_manager_;
+  };
 
   sys::testing::ComponentContextProvider app_context_;
   std::unique_ptr<Scenic> scenic_;
-  std::unique_ptr<Engine> engine_;
+  std::shared_ptr<Engine> engine_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<scenic_impl::Session> scenic_session_;
   CommandDispatcherUniquePtr command_dispatcher_;
   std::unique_ptr<SessionManager> session_manager_;
-
-  fxl::WeakPtrFactory<SessionHandlerTest> weak_factory_;  // must be last
+  std::shared_ptr<TestSessionUpdater> session_updater_;
 };
 
 }  // namespace test

@@ -66,7 +66,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // Create and register a new system of the specified type.  At most one System
   // with a given TypeId may be registered.
   template <typename SystemT, typename... Args>
-  SystemT* RegisterSystem(Args&&... args);
+  std::shared_ptr<SystemT> RegisterSystem(Args&&... args);
 
   // Called by Session when it needs to close itself.
   void CloseSession(scheduling::SessionId session_id);
@@ -111,7 +111,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   // Registered systems, indexed by their TypeId. These slots could be null,
   // indicating the System is not available or supported.
-  std::array<std::unique_ptr<System>, System::TypeId::kMaxSystems> systems_;
+  std::array<std::shared_ptr<System>, System::TypeId::kMaxSystems> systems_;
 
   bool initialized_ = false;
   // Closures that will be run when all systems are initialized.
@@ -136,7 +136,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 };
 
 template <typename SystemT, typename... Args>
-SystemT* Scenic::RegisterSystem(Args&&... args) {
+std::shared_ptr<SystemT> Scenic::RegisterSystem(Args&&... args) {
   FX_DCHECK(systems_[SystemT::kTypeId] == nullptr)
       << "System of type: " << SystemT::kTypeId << "was already registered.";
 
@@ -144,8 +144,8 @@ SystemT* Scenic::RegisterSystem(Args&&... args) {
       new SystemT(SystemContext(app_context_, inspect_node_.CreateChild(SystemT::kName),
                                 quit_callback_.share()),
                   std::forward<Args>(args)...);
-  systems_[SystemT::kTypeId] = std::unique_ptr<System>(system);
-  return system;
+  systems_[SystemT::kTypeId] = std::shared_ptr<System>(system);
+  return std::static_pointer_cast<SystemT>(systems_[SystemT::kTypeId]);
 }
 
 }  // namespace scenic_impl

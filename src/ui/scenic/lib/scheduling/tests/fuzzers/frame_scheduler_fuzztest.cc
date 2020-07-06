@@ -41,21 +41,21 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   vsync_timing->set_vsync_interval(vsync_interval);
   vsync_timing->set_last_vsync_time(last_vsync_time);
 
-  MockSessionUpdater updater;
-  MockFrameRenderer renderer;
+  auto updater = std::make_shared<MockSessionUpdater>();
+  auto renderer = std::make_shared<MockFrameRenderer>();
 
   auto frame_scheduler = std::make_unique<DefaultFrameScheduler>(
       vsync_timing, std::make_unique<ConstantFramePredictor>(constant_prediction_offset));
-  frame_scheduler->SetFrameRenderer(renderer.GetWeakPtr());
-  frame_scheduler->AddSessionUpdater(updater.GetWeakPtr());
+  frame_scheduler->SetFrameRenderer(renderer);
+  frame_scheduler->AddSessionUpdater(updater);
 
   const SessionId client_id = 5;
   frame_scheduler->ScheduleUpdateForSession(schedule_present_time, {client_id, 1});
 
   test_loop.RunUntilIdle();
 
-  EXPECT_EQ(1u, updater.update_sessions_call_count());
-  EXPECT_EQ(1u, renderer.render_frame_call_count());
+  EXPECT_EQ(1u, updater->update_sessions_call_count());
+  EXPECT_EQ(1u, renderer->render_frame_call_count());
   return 0;
 }
 

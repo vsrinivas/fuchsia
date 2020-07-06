@@ -34,9 +34,9 @@ class MockFrameScheduler : public scheduling::FrameScheduler {
   MockFrameScheduler() = default;
 
   // |FrameScheduler|
-  void SetFrameRenderer(fxl::WeakPtr<scheduling::FrameRenderer> frame_renderer) override {}
+  void SetFrameRenderer(std::weak_ptr<scheduling::FrameRenderer> frame_renderer) override {}
   // |FrameScheduler|
-  void AddSessionUpdater(fxl::WeakPtr<scheduling::SessionUpdater> session_updater) override {}
+  void AddSessionUpdater(std::weak_ptr<scheduling::SessionUpdater> session_updater) override {}
   // |FrameScheduler|
   void SetRenderContinuously(bool render_continuously) override {}
 

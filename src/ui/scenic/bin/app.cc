@@ -225,25 +225,26 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
-    engine_.emplace(app_context_.get(), frame_scheduler_, escher_->GetWeakPtr(),
-                    scenic_.inspect_node()->CreateChild("Engine"));
+    engine_ =
+        std::make_shared<gfx::Engine>(app_context_.get(), frame_scheduler_, escher_->GetWeakPtr(),
+                                      scenic_.inspect_node()->CreateChild("Engine"));
   }
-  frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
+  frame_scheduler_->SetFrameRenderer(engine_);
   scenic_.SetFrameScheduler(frame_scheduler_);
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(&engine_.value(), &sysmem_, &display_manager_);
+  auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(engine_.get(), &sysmem_, &display_manager_);
   FX_DCHECK(gfx);
 
-  frame_scheduler_->AddSessionUpdater(gfx->GetWeakPtr());
-  scenic_.SetScreenshotDelegate(gfx);
+  frame_scheduler_->AddSessionUpdater(gfx);
+  scenic_.SetScreenshotDelegate(gfx.get());
   display_info_delegate_ = std::make_unique<DisplayInfoDelegate>(display);
   scenic_.SetDisplayInfoDelegate(display_info_delegate_.get());
 #endif
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
-  auto input = scenic_.RegisterSystem<input::InputSystem>(engine_.value().scene_graph());
+  auto input = scenic_.RegisterSystem<input::InputSystem>(engine_->scene_graph());
   FX_DCHECK(input);
 #endif
 

@@ -17,17 +17,17 @@ DelegatingFrameScheduler::DelegatingFrameScheduler(
   }
 }
 
-void DelegatingFrameScheduler::SetFrameRenderer(fxl::WeakPtr<FrameRenderer> frame_renderer) {
+void DelegatingFrameScheduler::SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_renderer) {
   CallWhenFrameSchedulerAvailable(
-      [frame_renderer = frame_renderer](FrameScheduler* frame_scheduler) {
-        frame_scheduler->SetFrameRenderer(frame_renderer);
+      [frame_renderer = std::move(frame_renderer)](FrameScheduler* frame_scheduler) {
+        frame_scheduler->SetFrameRenderer(std::move(frame_renderer));
       });
 };
 
-void DelegatingFrameScheduler::AddSessionUpdater(fxl::WeakPtr<SessionUpdater> session_updater) {
+void DelegatingFrameScheduler::AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) {
   CallWhenFrameSchedulerAvailable(
-      [session_updater = session_updater](FrameScheduler* frame_scheduler) {
-        frame_scheduler->AddSessionUpdater(session_updater);
+      [session_updater = std::move(session_updater)](FrameScheduler* frame_scheduler) {
+        frame_scheduler->AddSessionUpdater(std::move(session_updater));
       });
 };
 

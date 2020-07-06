@@ -26,7 +26,7 @@ class GfxSystemTest : public scenic_impl::test::ScenicTest {
   // ::testing::Test virtual method.
   void TearDown() override;
 
-  GfxSystem* gfx_system() { return gfx_system_.get(); }
+  GfxSystem* gfx_system() { return gfx_system_.lock().get(); }
   Engine* engine() { return engine_.get(); }
   sys::testing::ComponentContextProvider& context_provider() { return context_provider_; }
 
@@ -35,9 +35,9 @@ class GfxSystemTest : public scenic_impl::test::ScenicTest {
 
   sys::testing::ComponentContextProvider context_provider_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
-  std::unique_ptr<Engine> engine_;
+  std::shared_ptr<Engine> engine_;
 
-  GfxSystemWeakPtr gfx_system_;
+  std::weak_ptr<GfxSystem> gfx_system_;
 };
 
 }  // namespace test

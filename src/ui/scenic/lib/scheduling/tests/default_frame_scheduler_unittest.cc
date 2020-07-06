@@ -1400,10 +1400,10 @@ TEST_F(FrameSchedulerTest, MultiUpdaterMultiSession) {
   constexpr SessionId kSession3 = 3;
   constexpr SessionId kSession4 = 4;
 
-  MockSessionUpdater updater1;
-  MockSessionUpdater updater2;
-  scheduler->AddSessionUpdater(updater1.GetWeakPtr());
-  scheduler->AddSessionUpdater(updater2.GetWeakPtr());
+  auto updater1 = std::make_shared<MockSessionUpdater>();
+  auto updater2 = std::make_shared<MockSessionUpdater>();
+  scheduler->AddSessionUpdater(updater1);
+  scheduler->AddSessionUpdater(updater2);
   // Update is not expected to fail.
   scheduler->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
   scheduler->SetOnUpdateFailedCallbackForSession(kSession2, [] { EXPECT_FALSE(true); });
@@ -1419,24 +1419,24 @@ TEST_F(FrameSchedulerTest, MultiUpdaterMultiSession) {
 
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
-  EXPECT_EQ(updater1.last_sessions_to_update().size(), 4u);
-  EXPECT_EQ(updater2.last_sessions_to_update().size(), 4u);
-  EXPECT_TRUE(updater1.last_sessions_to_update().find(kSession1) !=
-              updater1.last_sessions_to_update().end());
-  EXPECT_TRUE(updater1.last_sessions_to_update().find(kSession2) !=
-              updater1.last_sessions_to_update().end());
-  EXPECT_TRUE(updater1.last_sessions_to_update().find(kSession3) !=
-              updater1.last_sessions_to_update().end());
-  EXPECT_TRUE(updater1.last_sessions_to_update().find(kSession4) !=
-              updater1.last_sessions_to_update().end());
-  EXPECT_TRUE(updater2.last_sessions_to_update().find(kSession1) !=
-              updater2.last_sessions_to_update().end());
-  EXPECT_TRUE(updater2.last_sessions_to_update().find(kSession2) !=
-              updater2.last_sessions_to_update().end());
-  EXPECT_TRUE(updater2.last_sessions_to_update().find(kSession3) !=
-              updater2.last_sessions_to_update().end());
-  EXPECT_TRUE(updater2.last_sessions_to_update().find(kSession4) !=
-              updater2.last_sessions_to_update().end());
+  EXPECT_EQ(updater1->last_sessions_to_update().size(), 4u);
+  EXPECT_EQ(updater2->last_sessions_to_update().size(), 4u);
+  EXPECT_TRUE(updater1->last_sessions_to_update().find(kSession1) !=
+              updater1->last_sessions_to_update().end());
+  EXPECT_TRUE(updater1->last_sessions_to_update().find(kSession2) !=
+              updater1->last_sessions_to_update().end());
+  EXPECT_TRUE(updater1->last_sessions_to_update().find(kSession3) !=
+              updater1->last_sessions_to_update().end());
+  EXPECT_TRUE(updater1->last_sessions_to_update().find(kSession4) !=
+              updater1->last_sessions_to_update().end());
+  EXPECT_TRUE(updater2->last_sessions_to_update().find(kSession1) !=
+              updater2->last_sessions_to_update().end());
+  EXPECT_TRUE(updater2->last_sessions_to_update().find(kSession2) !=
+              updater2->last_sessions_to_update().end());
+  EXPECT_TRUE(updater2->last_sessions_to_update().find(kSession3) !=
+              updater2->last_sessions_to_update().end());
+  EXPECT_TRUE(updater2->last_sessions_to_update().find(kSession4) !=
+              updater2->last_sessions_to_update().end());
 }
 
 TEST_F(FrameSchedulerTest, AddSessionUpdatersInSessionUpdater) {
@@ -1450,16 +1450,16 @@ TEST_F(FrameSchedulerTest, AddSessionUpdatersInSessionUpdater) {
   // Creates a mock SessionUpdater that creates 10 SessionUpdaters on every
   // UpdateSessions call.
   constexpr size_t kUpdatersToAddOnEveryUpdate = 10U;
-  std::vector<std::unique_ptr<MockSessionUpdater>> session_updaters_created;
-  auto updater1 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>(
+  std::vector<std::shared_ptr<MockSessionUpdater>> session_updaters_created;
+  auto updater1 = std::make_shared<MockSessionUpdaterWithFunctionOnUpdate>(
       [scheduler = scheduler.get(), &session_updaters_created]() {
         for (size_t i = 0; i < kUpdatersToAddOnEveryUpdate; i++) {
-          auto updater = std::make_unique<MockSessionUpdater>();
-          scheduler->AddSessionUpdater(updater->GetWeakPtr());
+          auto updater = std::make_shared<MockSessionUpdater>();
+          scheduler->AddSessionUpdater(updater);
           session_updaters_created.push_back(std::move(updater));
         }
       });
-  scheduler->AddSessionUpdater(updater1->GetWeakPtr());
+  scheduler->AddSessionUpdater(updater1);
 
   // Frame 1: Updater1 creates 10 new SessionUpdaters this frame, but only
   // updater1 will be called to update sessions.
@@ -1514,9 +1514,9 @@ TEST_F(FrameSchedulerTest, KillingFollowingSessionUpdaterInPreviousSessionUpdate
   constexpr SessionId kSession1 = 1;
   SetSessionUpdateFailedNotExpected(scheduler.get(), kSession1);
 
-  auto updater1 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>(
+  auto updater1 = std::make_shared<MockSessionUpdaterWithFunctionOnUpdate>(
       []() { EXPECT_FALSE(true) << "Should never be called."; });
-  auto updater2 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>([&updater1]() {
+  auto updater2 = std::make_shared<MockSessionUpdaterWithFunctionOnUpdate>([&updater1]() {
     // No call should have been made to UpdateSessions of |updater1|. If this ever fails then the
     // SessionUpdaters are probably out of expected order in the frame scheduler and the test needs
     // to be reworked.
@@ -1525,8 +1525,8 @@ TEST_F(FrameSchedulerTest, KillingFollowingSessionUpdaterInPreviousSessionUpdate
   });
 
   // Add updaters in opposite order to ensure updater1 will be called after updater2.
-  scheduler->AddSessionUpdater(updater2->GetWeakPtr());
-  scheduler->AddSessionUpdater(updater1->GetWeakPtr());
+  scheduler->AddSessionUpdater(updater2);
+  scheduler->AddSessionUpdater(updater1);
 
   // Schedule an update.
   ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(0), [](auto...) {});
@@ -1630,8 +1630,8 @@ TEST_F(FrameSchedulerTest, CanRemoveUpdaterWithQueuedUpdates) {
   constexpr SessionId kSession1 = 1;
   scheduler->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
 
-  auto updater = std::make_unique<MockSessionUpdater>();
-  scheduler->AddSessionUpdater(updater->GetWeakPtr());
+  auto updater = std::make_shared<MockSessionUpdater>();
+  scheduler->AddSessionUpdater(updater);
 
   ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(0));
   updater.reset();
@@ -1647,8 +1647,8 @@ TEST_F(FrameSchedulerTest, CanAddUpdaterWithQueuedUpdates) {
   scheduler->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
   ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(0));
 
-  auto updater = std::make_unique<MockSessionUpdater>();
-  scheduler->AddSessionUpdater(updater->GetWeakPtr());
+  auto updater = std::make_shared<MockSessionUpdater>();
+  scheduler->AddSessionUpdater(updater);
 
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(updater->update_sessions_call_count(), 1u);

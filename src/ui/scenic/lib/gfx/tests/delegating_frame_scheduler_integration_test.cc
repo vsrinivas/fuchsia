@@ -98,7 +98,8 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, SessionIntegration2) {
 TEST_F(DelegatingFrameSchedulerIntegrationTest, ImagePipeUpdaterIntegration) {
   TestSession session = CreateTestSession(shared_event_reporter(), shared_error_reporter());
   // This ImagePipeUpdater is using the same delegating frame scheduler in as |session|.
-  auto image_pipe_updater = std::make_unique<ImagePipeUpdater>(session.delegating_frame_scheduler);
+  auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(session.delegating_frame_scheduler);
+  session.delegating_frame_scheduler->AddSessionUpdater(image_pipe_updater);
 
   constexpr zx::time kPresentationTime = zx::time(5);
   image_pipe_updater->ScheduleImagePipeUpdate(kPresentationTime, /*image_pipe=*/nullptr,
