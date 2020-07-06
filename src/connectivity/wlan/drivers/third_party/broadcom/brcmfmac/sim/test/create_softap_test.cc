@@ -28,25 +28,24 @@ class CreateSoftAPTest : public SimTest {
   zx_status_t StartSoftAP();
   zx_status_t StopSoftAP();
   uint32_t DeviceCount();
-  void TxAssocReq();
-  void TxDisassocReq();
+  void TxAuthReq(simulation::SimAuthType auth_type, common::MacAddr client_mac);
+  void TxAssocReq(common::MacAddr client_mac);
+  void TxDisassocReq(common::MacAddr client_mac);
+  void TxDeauthReq(common::MacAddr client_mac);
+  void VerifyAuth();
   void VerifyAssoc();
-  void VerifyDisassoc();
+  void VerifyNotAssoc();
   void VerifyStartAPConf(uint8_t status);
   void VerifyStopAPConf(uint8_t status);
+  void VerifyNumOfClient(uint16_t expect_client_num);
   void ClearAssocInd();
   void InjectStartAPError();
   void InjectStopAPError();
+  void SetExpectMacForInds(common::MacAddr set_mac);
 
- protected:
-  simulation::WlanTxInfo tx_info_ = {.channel = kDefaultChannel};
-  bool sec_enabled_ = false;
+  // Status field in the last received authentication frame.
+  uint16_t auth_resp_status_;
 
- private:
-  // SME callbacks
-  static wlanif_impl_ifc_protocol_ops_t sme_ops_;
-  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
-  SimInterface softap_ifc_;
   bool auth_ind_recv_ = false;
   bool assoc_ind_recv_ = false;
   bool deauth_ind_recv_ = false;
@@ -55,6 +54,22 @@ class CreateSoftAPTest : public SimTest {
   bool stop_conf_received_ = false;
   uint8_t start_conf_status_;
   uint8_t stop_conf_status_;
+
+  // The expect mac address for indications
+  common::MacAddr ind_expect_mac_ = kFakeMac;
+
+ protected:
+  simulation::WlanTxInfo tx_info_ = {.channel = kDefaultChannel};
+  bool sec_enabled_ = false;
+
+ private:
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override;
+  // SME callbacks
+  static wlanif_impl_ifc_protocol_ops_t sme_ops_;
+  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
+  SimInterface softap_ifc_;
+
   void OnAuthInd(const wlanif_auth_ind_t* ind);
   void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   void OnAssocInd(const wlanif_assoc_ind_t* ind);
@@ -64,6 +79,18 @@ class CreateSoftAPTest : public SimTest {
   void OnChannelSwitch(const wlanif_channel_switch_info_t* info);
   uint16_t CreateRsneIe(uint8_t* buffer);
 };
+
+void CreateSoftAPTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                          std::shared_ptr<const simulation::WlanRxInfo> info) {
+  ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
+
+  auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
+  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_AUTH) {
+    auto auth_frame = std::static_pointer_cast<const simulation::SimAuthFrame>(mgmt_frame);
+    if (auth_frame->seq_num_ == 2)
+      auth_resp_status_ = auth_frame->status_;
+  }
+}
 
 wlanif_impl_ifc_protocol_ops_t CreateSoftAPTest::sme_ops_ = {
     // SME operations
@@ -190,6 +217,8 @@ void CreateSoftAPTest::InjectStopAPError() {
   sim->sim_fw->err_inj_.AddErrInjIovar("bss", ZX_ERR_IO, true, softap_ifc_.iface_id_);
 }
 
+void CreateSoftAPTest::SetExpectMacForInds(common::MacAddr set_mac) { ind_expect_mac_ = set_mac; }
+
 zx_status_t CreateSoftAPTest::StopSoftAP() {
   wlanif_stop_req_t stop_req{
       .ssid = {.len = 6, .data = "Sim_AP"},
@@ -199,19 +228,19 @@ zx_status_t CreateSoftAPTest::StopSoftAP() {
 }
 
 void CreateSoftAPTest::OnAuthInd(const wlanif_auth_ind_t* ind) {
-  ASSERT_EQ(std::memcmp(ind->peer_sta_address, kFakeMac.byte, ETH_ALEN), 0);
+  ASSERT_EQ(std::memcmp(ind->peer_sta_address, ind_expect_mac_.byte, ETH_ALEN), 0);
   auth_ind_recv_ = true;
 }
 void CreateSoftAPTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
-  ASSERT_EQ(std::memcmp(ind->peer_sta_address, kFakeMac.byte, ETH_ALEN), 0);
+  ASSERT_EQ(std::memcmp(ind->peer_sta_address, ind_expect_mac_.byte, ETH_ALEN), 0);
   deauth_ind_recv_ = true;
 }
 void CreateSoftAPTest::OnAssocInd(const wlanif_assoc_ind_t* ind) {
-  ASSERT_EQ(std::memcmp(ind->peer_sta_address, kFakeMac.byte, ETH_ALEN), 0);
+  ASSERT_EQ(std::memcmp(ind->peer_sta_address, ind_expect_mac_.byte, ETH_ALEN), 0);
   assoc_ind_recv_ = true;
 }
 void CreateSoftAPTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
-  ASSERT_EQ(std::memcmp(ind->peer_sta_address, kFakeMac.byte, ETH_ALEN), 0);
+  ASSERT_EQ(std::memcmp(ind->peer_sta_address, ind_expect_mac_.byte, ETH_ALEN), 0);
   disassoc_ind_recv_ = true;
 }
 
@@ -227,48 +256,67 @@ void CreateSoftAPTest::OnStopConf(const wlanif_stop_confirm_t* resp) {
 
 void CreateSoftAPTest::OnChannelSwitch(const wlanif_channel_switch_info_t* info) {}
 
-void CreateSoftAPTest::TxAssocReq() {
+void CreateSoftAPTest::TxAssocReq(common::MacAddr client_mac) {
   // Get the mac address of the SoftAP
   common::MacAddr soft_ap_mac;
   softap_ifc_.GetMacAddr(&soft_ap_mac);
-  simulation::SimAssocReqFrame assoc_req_frame(kFakeMac, soft_ap_mac, kDefaultSsid);
+  simulation::SimAssocReqFrame assoc_req_frame(client_mac, soft_ap_mac, kDefaultSsid);
   env_->Tx(assoc_req_frame, tx_info_, this);
 }
 
-void CreateSoftAPTest::TxDisassocReq() {
+void CreateSoftAPTest::TxAuthReq(simulation::SimAuthType auth_type, common::MacAddr client_mac) {
   // Get the mac address of the SoftAP
   common::MacAddr soft_ap_mac;
   softap_ifc_.GetMacAddr(&soft_ap_mac);
-  // Associate with the SoftAP
-  simulation::SimAssocReqFrame assoc_req_frame(kFakeMac, soft_ap_mac, kDefaultSsid);
-  env_->Tx(assoc_req_frame, tx_info_, this);
+  simulation::SimAuthFrame auth_req_frame(client_mac, soft_ap_mac, 1, auth_type,
+                                          WLAN_STATUS_CODE_SUCCESS);
+  env_->Tx(auth_req_frame, tx_info_, this);
+}
+
+void CreateSoftAPTest::TxDisassocReq(common::MacAddr client_mac) {
+  // Get the mac address of the SoftAP
+  common::MacAddr soft_ap_mac;
+  softap_ifc_.GetMacAddr(&soft_ap_mac);
   // Disassociate with the SoftAP
-  simulation::SimDisassocReqFrame disassoc_req_frame(kFakeMac, soft_ap_mac, 0);
+  simulation::SimDisassocReqFrame disassoc_req_frame(client_mac, soft_ap_mac, 0);
   env_->Tx(disassoc_req_frame, tx_info_, this);
+}
+
+void CreateSoftAPTest::TxDeauthReq(common::MacAddr client_mac) {
+  // Get the mac address of the SoftAP
+  common::MacAddr soft_ap_mac;
+  softap_ifc_.GetMacAddr(&soft_ap_mac);
+  // Disassociate with the SoftAP
+  simulation::SimDeauthFrame deauth_frame(client_mac, soft_ap_mac, 0);
+  env_->Tx(deauth_frame, tx_info_, this);
+}
+
+void CreateSoftAPTest::VerifyAuth() {
+  ASSERT_EQ(auth_ind_recv_, true);
+  // When auth is done, the client is already added into client list.
+  VerifyNumOfClient(1);
 }
 
 void CreateSoftAPTest::VerifyAssoc() {
   // Verify the event indications were received and
   // the number of clients
-  ASSERT_EQ(assoc_ind_recv_, true);
   ASSERT_EQ(auth_ind_recv_, true);
-  brcmf_simdev* sim = device_->GetSim();
-  uint16_t num_clients = sim->sim_fw->GetNumClients(softap_ifc_.iface_id_);
-  ASSERT_EQ(num_clients, 1U);
+  ASSERT_EQ(assoc_ind_recv_, true);
+  VerifyNumOfClient(1);
 }
 
 void CreateSoftAPTest::ClearAssocInd() { assoc_ind_recv_ = false; }
 
-void CreateSoftAPTest::VerifyDisassoc() {
-  // Verify the event indications were received and
-  // the number of clients
-  ASSERT_EQ(assoc_ind_recv_, true);
-  ASSERT_EQ(auth_ind_recv_, true);
-  ASSERT_EQ(disassoc_ind_recv_, true);
-  ASSERT_EQ(deauth_ind_recv_, true);
+void CreateSoftAPTest::VerifyNumOfClient(uint16_t expect_client_num) {
   brcmf_simdev* sim = device_->GetSim();
   uint16_t num_clients = sim->sim_fw->GetNumClients(softap_ifc_.iface_id_);
-  ASSERT_EQ(num_clients, 0);
+  ASSERT_EQ(num_clients, expect_client_num);
+}
+
+void CreateSoftAPTest::VerifyNotAssoc() {
+  ASSERT_EQ(assoc_ind_recv_, false);
+  ASSERT_EQ(auth_ind_recv_, false);
+  VerifyNumOfClient(0);
 }
 
 void CreateSoftAPTest::VerifyStartAPConf(uint8_t status) {
@@ -344,7 +392,11 @@ TEST_F(CreateSoftAPTest, AssociateWithSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
+                kFakeMac);
+  SCHEDULE_CALL(zx::msec(8), &CreateSoftAPTest::VerifyAuth, this);
+
+  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
   SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
   env_->Run();
 }
@@ -354,11 +406,14 @@ TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
+                kFakeMac);
+  SCHEDULE_CALL(zx::msec(8), &CreateSoftAPTest::VerifyAuth, this);
+  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
   SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
   SCHEDULE_CALL(zx::msec(75), &CreateSoftAPTest::ClearAssocInd, this);
   // Reassoc
-  SCHEDULE_CALL(zx::msec(100), &CreateSoftAPTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::msec(100), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
   SCHEDULE_CALL(zx::msec(150), &CreateSoftAPTest::VerifyAssoc, this);
   env_->Run();
 }
@@ -368,8 +423,84 @@ TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::TxDisassocReq, this);
-  SCHEDULE_CALL(zx::msec(75), &CreateSoftAPTest::VerifyDisassoc, this);
+  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
+                kFakeMac);
+  SCHEDULE_CALL(zx::msec(8), &CreateSoftAPTest::VerifyAuth, this);
+  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
+  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
+  SCHEDULE_CALL(zx::msec(60), &CreateSoftAPTest::TxDisassocReq, this, kFakeMac);
+  env_->Run();
+  // Only disassoc ind should be seen.
+  EXPECT_EQ(deauth_ind_recv_, false);
+  EXPECT_EQ(disassoc_ind_recv_, true);
+  VerifyNumOfClient(0);
+}
+
+TEST_F(CreateSoftAPTest, AssocWithWrongAuth) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  StartSoftAP();
+  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_SHARED_KEY,
+                kFakeMac);
+  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
+  SCHEDULE_CALL(zx::msec(20), &CreateSoftAPTest::VerifyNotAssoc, this);
+  env_->Run();
+  EXPECT_EQ(auth_resp_status_, WLAN_STATUS_CODE_REFUSED);
+}
+
+TEST_F(CreateSoftAPTest, DeauthBeforeAssoc) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  StartSoftAP();
+  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
+                kFakeMac);
+  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::VerifyAuth, this);
+  SCHEDULE_CALL(zx::msec(20), &CreateSoftAPTest::TxDeauthReq, this, kFakeMac);
+  env_->Run();
+  // Only deauth ind shoulb be seen.
+  EXPECT_EQ(deauth_ind_recv_, true);
+  EXPECT_EQ(disassoc_ind_recv_, false);
+  VerifyNumOfClient(0);
+}
+
+TEST_F(CreateSoftAPTest, DeauthWhileAssociated) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  StartSoftAP();
+  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
+                kFakeMac);
+  SCHEDULE_CALL(zx::msec(8), &CreateSoftAPTest::VerifyAuth, this);
+  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
+  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
+  SCHEDULE_CALL(zx::msec(60), &CreateSoftAPTest::TxDeauthReq, this, kFakeMac);
+  env_->Run();
+  // Both indication should be seen.
+  EXPECT_EQ(deauth_ind_recv_, true);
+  EXPECT_EQ(disassoc_ind_recv_, true);
+  VerifyNumOfClient(0);
+}
+
+const common::MacAddr kSecondClientMac({0xde, 0xad, 0xbe, 0xef, 0x00, 0x04});
+
+TEST_F(CreateSoftAPTest, DeauthMultiClients) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  StartSoftAP();
+  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
+                kFakeMac);
+  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
+  SCHEDULE_CALL(zx::msec(15), &CreateSoftAPTest::SetExpectMacForInds, this, kSecondClientMac);
+  SCHEDULE_CALL(zx::msec(20), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
+                kSecondClientMac);
+  SCHEDULE_CALL(zx::msec(30), &CreateSoftAPTest::TxAssocReq, this, kSecondClientMac);
+  SCHEDULE_CALL(zx::msec(40), &CreateSoftAPTest::VerifyNumOfClient, this, 2);
+  SCHEDULE_CALL(zx::msec(45), &CreateSoftAPTest::SetExpectMacForInds, this, kFakeMac);
+  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::TxDeauthReq, this, kFakeMac);
+  SCHEDULE_CALL(zx::msec(60), &CreateSoftAPTest::VerifyNumOfClient, this, 1);
   env_->Run();
 }
 

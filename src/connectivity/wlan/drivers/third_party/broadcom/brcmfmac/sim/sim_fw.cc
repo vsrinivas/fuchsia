@@ -439,7 +439,8 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
 void SimFirmware::StopSoftAP(uint16_t ifidx) {
   // Disassoc and remove all the associated clients
   for (auto client : iface_tbl_[ifidx].ap_config.clients) {
-    simulation::SimDisassocReqFrame disassoc_req_frame(iface_tbl_[ifidx].mac_addr, client, 0);
+    simulation::SimDisassocReqFrame disassoc_req_frame(iface_tbl_[ifidx].mac_addr, client->mac_addr,
+                                                       0);
     hw_.Tx(disassoc_req_frame);
   }
   iface_tbl_[ifidx].ap_config.clients.clear();
@@ -461,11 +462,17 @@ void SimFirmware::ScheduleLinkEvent(zx::duration when, uint16_t ifidx) {
 }
 
 uint16_t SimFirmware::GetNumClients(uint16_t ifidx) {
-  if (ifidx >= kMaxIfSupported || !iface_tbl_[ifidx].allocated || !iface_tbl_[ifidx].ap_mode) {
-    BRCMF_DBG(SIM, "GetNumClients: invalid if: %d", ifidx);
+  if (softap_ifidx_ == std::nullopt) {
+    BRCMF_ERR("SoftAP iface has not been allocated or started.");
     return 0;
   }
-  return iface_tbl_[ifidx].ap_config.clients.size();
+
+  if (ifidx != softap_ifidx_) {
+    BRCMF_ERR("Input iface is not SoftAP iface.");
+    return 0;
+  }
+
+  return iface_tbl_[softap_ifidx_.value()].ap_config.clients.size();
 }
 
 // Process an RX CTL message. We simply pass back the results of the previous TX CTL
@@ -553,7 +560,8 @@ zx_status_t SimFirmware::HandleIfaceTblReq(const bool add_entry, const void* dat
           if (iface_tbl_[i].ap_config.ap_started) {
             BRCMF_DBG(SIM, "AP is still started...disassoc all clients");
             for (auto client : iface_tbl_[i].ap_config.clients) {
-              simulation::SimDisassocReqFrame disassoc_req_frame(iface_tbl_[i].mac_addr, client, 0);
+              simulation::SimDisassocReqFrame disassoc_req_frame(iface_tbl_[i].mac_addr,
+                                                                 client->mac_addr, 0);
               hw_.Tx(disassoc_req_frame);
             }
           }
@@ -605,8 +613,7 @@ zx_status_t SimFirmware::HandleIfaceRequest(const bool add_iface, const void* da
 // Handle association request from a client to the SoftAP interface
 // ifidx is expected to be a valid index (allocated and configured as AP)
 #define TWO_ZERO_LEN_TLVS_LEN (4)
-zx_status_t SimFirmware::HandleAssocReq(uint16_t ifidx,
-                                        std::shared_ptr<const simulation::SimAssocReqFrame> frame) {
+void SimFirmware::HandleAssocReq(std::shared_ptr<const simulation::SimAssocReqFrame> frame) {
   auto buf = std::make_unique<std::vector<uint8_t>>(TWO_ZERO_LEN_TLVS_LEN);
   uint8_t* tlv_buf = buf->data();
   // The driver expects ssid and rsne in TLV format, just fake it for now
@@ -614,26 +621,34 @@ zx_status_t SimFirmware::HandleAssocReq(uint16_t ifidx,
   *tlv_buf++ = 0;
   *tlv_buf++ = WLAN_IE_TYPE_RSNE;
   *tlv_buf++ = 0;
-  if (FindClient(ifidx, frame->src_addr_)) {
-    // Client already associated, send a REASSOC_IND event to driver
-    SendEventToDriver(TWO_ZERO_LEN_TLVS_LEN, std::move(buf), BRCMF_E_REASSOC_IND,
-                      BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0, 0, frame->src_addr_);
-  } else {
-    // Indicate Assoc success to driver - by sending AUTH_IND and ASSOC_IND
-    // AUTH_IND is a simple event with the source mac address included
-    SendEventToDriver(0, nullptr, BRCMF_E_AUTH_IND, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0, 0,
-                      frame->src_addr_);
 
-    SendEventToDriver(TWO_ZERO_LEN_TLVS_LEN, std::move(buf), BRCMF_E_ASSOC_IND,
-                      BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0, 0, frame->src_addr_);
-    // Add the client to the list
-    iface_tbl_[ifidx].ap_config.clients.push_back(frame->src_addr_);
+  // Check client state
+  auto client = FindClient(frame->src_addr_);
+  if (client) {
+    if (client->state == Client::ASSOCIATED) {
+      // Client already associated, send a REASSOC_IND event to driver
+      SendEventToDriver(TWO_ZERO_LEN_TLVS_LEN, std::move(buf), BRCMF_E_REASSOC_IND,
+                        BRCMF_E_STATUS_SUCCESS, softap_ifidx_.value(), nullptr, 0, 0,
+                        frame->src_addr_);
+    } else if (client->state == Client::AUTHENTICATED) {
+      // Indicate Assoc success to driver - by sendind ASSOC_IND
+      SendEventToDriver(TWO_ZERO_LEN_TLVS_LEN, std::move(buf), BRCMF_E_ASSOC_IND,
+                        BRCMF_E_STATUS_SUCCESS, softap_ifidx_.value(), nullptr, 0, 0,
+                        frame->src_addr_);
+      client->state = Client::ASSOCIATED;
+    }
+    simulation::SimAssocRespFrame assoc_resp_frame(frame->bssid_, frame->src_addr_,
+                                                   WLAN_ASSOC_RESULT_SUCCESS);
+    hw_.Tx(assoc_resp_frame);
+    BRCMF_DBG(SIM, "Assoc done Num Clients : %lu",
+              iface_tbl_[softap_ifidx_.value()].ap_config.clients.size());
+  } else {
+    // Client cannot start association before getting authenticated.
+    simulation::SimAssocRespFrame assoc_resp_frame(frame->bssid_, frame->src_addr_,
+                                                   WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
+    hw_.Tx(assoc_resp_frame);
+    BRCMF_DBG(SIM, "Assoc fail, should be authenticated first.");
   }
-  simulation::SimAssocRespFrame assoc_resp_frame(frame->bssid_, frame->src_addr_,
-                                                 WLAN_ASSOC_RESULT_SUCCESS);
-  hw_.Tx(assoc_resp_frame);
-  BRCMF_DBG(SIM, "Assoc done Num Clients : %lu", iface_tbl_[ifidx].ap_config.clients.size());
-  return ZX_OK;
 }
 
 void SimFirmware::AssocInit(std::unique_ptr<AssocOpts> assoc_opts, wlan_channel_t& channel) {
@@ -764,7 +779,52 @@ void SimFirmware::AuthStart() {
   hw_.Tx(auth_req_frame);
 }
 
-void SimFirmware::RxAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame) {
+// The authentication frame might be an authentication response for client iface, or it could also
+// be an authentication req from a potential client for softap iface.
+void SimFirmware::RxAuthFrame(std::shared_ptr<const simulation::SimAuthFrame> frame) {
+  if (frame->seq_num_ == 1) {
+    HandleAuthReq(frame);
+  } else {
+    HandleAuthResp(frame);
+  }
+}
+
+// Handling authentication request for potential client of softap iface.
+void SimFirmware::HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> frame) {
+  if (softap_ifidx_ == std::nullopt) {
+    BRCMF_DBG(SIM, "SoftAP iface has not been allocated or started.");
+    return;
+  }
+
+  ZX_ASSERT_MSG(iface_tbl_[softap_ifidx_.value()].ap_config.auth_type == BRCMF_AUTH_MODE_OPEN,
+                "The only auth type we support now is BRCMF_AUTH_MODE_OPEN because softAP iface "
+                "only support OPEN and WPA2.");
+  // Refuse auth req with auth type other than AUTH_TYPE_OPEN.
+  if (frame->auth_type_ != simulation::AUTH_TYPE_OPEN) {
+    BRCMF_DBG(SIM, "SoftAP iface only support OPEN mode for authentication now.");
+    // Send authentication response back
+    simulation::SimAuthFrame auth_resp_frame(iface_tbl_[softap_ifidx_.value()].mac_addr,
+                                             frame->src_addr_, 2, frame->auth_type_,
+                                             WLAN_STATUS_CODE_REFUSED);
+    hw_.Tx(auth_resp_frame);
+    return;
+  }
+
+  auto client = std::make_shared<Client>(frame->src_addr_, Client::AUTHENTICATED);
+  // Add the client to the list
+  iface_tbl_[softap_ifidx_.value()].ap_config.clients.push_back(client);
+
+  // Send authentication response back
+  simulation::SimAuthFrame auth_resp_frame(iface_tbl_[softap_ifidx_.value()].mac_addr,
+                                           frame->src_addr_, 2, simulation::AUTH_TYPE_OPEN,
+                                           WLAN_STATUS_CODE_SUCCESS);
+  hw_.Tx(auth_resp_frame);
+  // AUTH_IND is a simple event with the source mac address included
+  SendEventToDriver(0, nullptr, BRCMF_E_AUTH_IND, BRCMF_E_STATUS_SUCCESS, softap_ifidx_.value(),
+                    nullptr, 0, 0, frame->src_addr_);
+}
+
+void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame) {
   // If we are not expecting auth resp packets, ignore it,
   if (auth_state_.state == AuthState::NOT_AUTHENTICATED ||
       auth_state_.state == AuthState::AUTHENTICATED) {
@@ -835,17 +895,40 @@ void SimFirmware::RxAuthResp(std::shared_ptr<const simulation::SimAuthFrame> fra
 }
 
 // Remove the client from the list. If found return true else false.
-bool SimFirmware::FindAndRemoveClient(const uint16_t ifidx, const common::MacAddr client_mac,
-                                      uint16_t reason) {
-  for (auto client : iface_tbl_[ifidx].ap_config.clients) {
-    if (client == client_mac) {
-      iface_tbl_[ifidx].ap_config.clients.remove(client_mac);
-      // Send DISASSOC_IND and DEAUTH events to driver
-      SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr,
-                        BRCMF_EVENT_MSG_LINK, WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC,
-                        client_mac);
-      SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH_IND, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0,
-                        reason, client_mac);
+bool SimFirmware::FindAndRemoveClient(const common::MacAddr client_mac, bool motivation_deauth,
+                                      uint16_t deauth_reason) {
+  if (softap_ifidx_ == std::nullopt) {
+    BRCMF_ERR("SoftAP iface has not been allocated or started.");
+    return false;
+  }
+  auto& clients = iface_tbl_[softap_ifidx_.value()].ap_config.clients;
+  for (auto client : clients) {
+    if (client->mac_addr == client_mac) {
+      if (motivation_deauth) {
+        // The removal is triggered by a deauth frame.
+        if (client->state == Client::AUTHENTICATED) {
+          // When this client is authenticated but not associated, only send up BRCMF_E_DEAUTH_IND
+          // to driver.
+          SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH_IND, BRCMF_E_STATUS_SUCCESS,
+                            softap_ifidx_.value(), nullptr, 0, deauth_reason, client_mac);
+        } else if (client->state == Client::ASSOCIATED) {
+          // When this client is associated, send both BRCMF_E_DEAUTH_IND and BRCMF_E_DISASSOC_IND
+          // events up to driver.
+          SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH_IND, BRCMF_E_STATUS_SUCCESS,
+                            softap_ifidx_.value(), nullptr, 0, deauth_reason, client_mac);
+          SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS,
+                            softap_ifidx_.value(), nullptr, BRCMF_EVENT_MSG_LINK,
+                            WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC, client_mac);
+        }
+      } else {
+        BRCMF_DBG(SIM, "deauth_reason is not used.");
+        // The removal is triggered by a disassoc frame.
+        SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS,
+                          softap_ifidx_.value(), nullptr, BRCMF_EVENT_MSG_LINK,
+                          WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC, client_mac);
+      }
+
+      clients.remove(client);
       return true;
     }
   }
@@ -853,13 +936,21 @@ bool SimFirmware::FindAndRemoveClient(const uint16_t ifidx, const common::MacAdd
 }
 
 // Return true if client is in the assoc list else false
-bool SimFirmware::FindClient(const uint16_t ifidx, const common::MacAddr client_mac) {
-  for (auto client : iface_tbl_[ifidx].ap_config.clients) {
-    if (client == client_mac) {
-      return true;
+std::shared_ptr<SimFirmware::Client> SimFirmware::FindClient(const common::MacAddr client_mac) {
+  if (softap_ifidx_ == std::nullopt) {
+    BRCMF_ERR("SoftAP iface has not been allocated or started.");
+    return std::shared_ptr<SimFirmware::Client>(nullptr);
+  }
+
+  auto& clients = iface_tbl_[softap_ifidx_.value()].ap_config.clients;
+
+  for (auto it = clients.begin(); it != clients.end(); it++) {
+    if ((*it)->mac_addr == client_mac) {
+      return *it;
     }
   }
-  return false;
+
+  return std::shared_ptr<SimFirmware::Client>(nullptr);
 }
 
 std::vector<brcmf_wsec_key_le> SimFirmware::GetKeyList(uint16_t ifidx) {
@@ -882,7 +973,7 @@ void SimFirmware::RxDeauthReq(std::shared_ptr<const simulation::SimDeauthFrame> 
     return;
   }
   // Remove the client from the list (if found)
-  if (FindAndRemoveClient(ifidx, frame->src_addr_, frame->reason_)) {
+  if (FindAndRemoveClient(frame->src_addr_, true, frame->reason_)) {
     BRCMF_DBG(SIM, "Deauth done Num Clients: %lu", iface_tbl_[ifidx].ap_config.clients.size());
     return;
   }
@@ -944,7 +1035,7 @@ void SimFirmware::RxDisassocReq(std::shared_ptr<const simulation::SimDisassocReq
     return;
   }
   // Remove the client from the list (if found)
-  if (FindAndRemoveClient(ifidx, frame->src_addr_, WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC)) {
+  if (FindAndRemoveClient(frame->src_addr_, false)) {
     BRCMF_DBG(SIM, "Disassoc done Num Clients: %lu", iface_tbl_[ifidx].ap_config.clients.size());
     return;
   }
@@ -1070,14 +1161,17 @@ void SimFirmware::SetStateToDisassociated() {
 // Assoc Request from Client for the SoftAP IF
 void SimFirmware::RxAssocReq(std::shared_ptr<const simulation::SimAssocReqFrame> frame) {
   BRCMF_DBG(SIM, "Assoc from %s for %s", MACSTR(frame->src_addr_), MACSTR(frame->bssid_));
-  for (uint8_t i = 0; i < kMaxIfSupported; i++) {
-    if (iface_tbl_[i].allocated && iface_tbl_[i].ap_mode) {
-      if (std::memcmp(iface_tbl_[i].mac_addr.byte, frame->bssid_.byte, ETH_ALEN) == 0) {
-        // ASSOC_IND contains some TLVs
-        HandleAssocReq(i, frame);
-        break;
-      }
-    }
+
+  if (softap_ifidx_ == std::nullopt) {
+    BRCMF_DBG(SIM,
+              "Received an assoc request but the softap iface has not been allocated or started.");
+    return;
+  }
+
+  if (std::memcmp(iface_tbl_[softap_ifidx_.value()].mac_addr.byte, frame->bssid_.byte, ETH_ALEN) ==
+      0) {
+    // ASSOC_IND contains some TLVs
+    HandleAssocReq(frame);
   }
 }
 
@@ -1455,8 +1549,15 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
     if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_IO;
     }
+
     auto auth = static_cast<const uint32_t*>(value);
-    auth_state_.auth_type = *auth;
+    if (softap_ifidx_ != std::nullopt && ifidx == softap_ifidx_) {
+      iface_tbl_[softap_ifidx_.value()].ap_config.auth_type = *auth;
+    } else if (iface_tbl_[kClientIfidx].allocated && ifidx == kClientIfidx) {
+      auth_state_.auth_type = *auth;
+    } else {
+      BRCMF_ERR("Iface is not allocated.");
+    }
   }
 
   if (!std::strcmp(name, "tlv")) {
@@ -1845,7 +1946,7 @@ void SimFirmware::RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFra
 
     case simulation::SimManagementFrame::FRAME_TYPE_AUTH: {
       auto auth_resp = std::static_pointer_cast<const simulation::SimAuthFrame>(mgmt_frame);
-      RxAuthResp(auth_resp);
+      RxAuthFrame(auth_resp);
       break;
     }
 

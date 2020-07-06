@@ -44,7 +44,7 @@ class DynamicIfTest : public SimTest {
   void StartAssoc();
 
   void ChannelCheck();
-  void TxAssocReq();
+  void TxAuthandAssocReq();
 
   void VerifyAssocWithSoftAP();
   void VerifyClientDisassoc(bool exp_value);
@@ -279,11 +279,15 @@ void DynamicIfTest::StartAssoc() {
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
-void DynamicIfTest::TxAssocReq() {
+void DynamicIfTest::TxAuthandAssocReq() {
   // Get the mac address of the SoftAP
   common::MacAddr soft_ap_mac;
   softap_ifc_.GetMacAddr(&soft_ap_mac);
   wlan_ssid_t ssid = {.len = 6, .ssid = "Sim_AP"};
+  // Pass the auth stop for softAP iface before assoc.
+  simulation::SimAuthFrame auth_req_frame(kFakeMac, soft_ap_mac, 1, simulation::AUTH_TYPE_OPEN,
+                                          WLAN_STATUS_CODE_SUCCESS);
+  env_->Tx(auth_req_frame, kDefaultTxInfo, this);
   simulation::SimAssocReqFrame assoc_req_frame(kFakeMac, soft_ap_mac, ssid);
   env_->Tx(assoc_req_frame, kDefaultTxInfo, this);
 }
@@ -422,7 +426,7 @@ TEST_F(DynamicIfTest, ConnectBothInterfaces) {
   // Associate to FakeAp
   SCHEDULE_CALL(zx::msec(10), &DynamicIfTest::StartAssoc, this);
   // Associate to SoftAP
-  SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAuthandAssocReq, this);
 
   env_->Run();
 
@@ -454,7 +458,7 @@ TEST_F(DynamicIfTest, StopAPDoesntAffectClientIF) {
   // Associate to FakeAp
   SCHEDULE_CALL(zx::msec(10), &DynamicIfTest::StartAssoc, this);
   // Associate to SoftAP
-  SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAuthandAssocReq, this);
 
   // Verify Assoc with SoftAP succeeded
   SCHEDULE_CALL(zx::msec(150), &DynamicIfTest::VerifyAssocWithSoftAP, this);
@@ -489,7 +493,7 @@ TEST_F(DynamicIfTest, UsingCdownDisconnectsClient) {
   // Associate to FakeAp
   SCHEDULE_CALL(zx::msec(10), &DynamicIfTest::StartAssoc, this);
   // Associate to SoftAP
-  SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAuthandAssocReq, this);
 
   // Verify Assoc with SoftAP succeeded
   SCHEDULE_CALL(zx::msec(150), &DynamicIfTest::VerifyAssocWithSoftAP, this);

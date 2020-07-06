@@ -219,6 +219,17 @@ class SimFirmware {
   std::vector<brcmf_wsec_key_le> GetKeyList(uint16_t ifidx);
 
  private:
+  struct Client {
+    // When we receive an authentication request of a client, if it's a reasonable request, we will
+    // directly create the client with AUTHENTICATED state, and if it's not a reasonable request, we
+    // will not record anything for this client, so the first state of a client is AUTHENTICATED, no
+    // INIT or HOME state needed.
+    enum State { AUTHENTICATED, ASSOCIATED };
+
+    Client(common::MacAddr mac_addr, State state) : mac_addr(mac_addr), state(state) {}
+    common::MacAddr mac_addr;
+    State state;
+  };
   /* SoftAP specific config
    * infra_mode - If AP is operating in Infra mode
    * beacon_period - Beacon period
@@ -233,7 +244,8 @@ class SimFirmware {
     uint32_t dtim_period;
     brcmf_ssid_le ssid;
     bool ap_started;
-    std::list<common::MacAddr> clients;
+    std::list<std::shared_ptr<Client>> clients;
+    uint16_t auth_type;
   };
 
   /* This structure contains the variables related to an iface entry in SIM FW.
@@ -291,11 +303,11 @@ class SimFirmware {
   zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id);
   zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
   zx_status_t HandleJoinRequest(const void* value, size_t value_len);
-  zx_status_t HandleAssocReq(uint16_t ifidx,
-                             std::shared_ptr<const simulation::SimAssocReqFrame> frame);
+  void HandleAssocReq(std::shared_ptr<const simulation::SimAssocReqFrame> frame);
   void HandleDisconnectForClientIF(std::shared_ptr<const simulation::SimManagementFrame> frame,
                                    const common::MacAddr& bssid, const uint16_t reason);
-
+  void HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> frame);
+  void HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
   // Generic scan operations
   zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts);
   void ScanNextChannel();
@@ -342,7 +354,7 @@ class SimFirmware {
   void RxProbeResp(const wlan_channel_t& channel,
                    std::shared_ptr<const simulation::SimProbeRespFrame> frame,
                    double signal_strength);
-  void RxAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
+  void RxAuthFrame(std::shared_ptr<const simulation::SimAuthFrame> frame);
 
   // Handler for channel switch.
   void ConductChannelSwitch(const wlan_channel_t& dst_channel, uint8_t mode);
@@ -376,8 +388,12 @@ class SimFirmware {
   int16_t GetIfidxByBsscfgidx(int32_t bsscfgidx);
 
   zx_status_t SetIFChanspec(uint16_t ifidx, uint16_t chanspec);
-  bool FindAndRemoveClient(const uint16_t ifidx, const common::MacAddr client_mac, uint16_t reason);
-  bool FindClient(const uint16_t ifidx, const common::MacAddr client_mac);
+  // motivation_auth means whether this function is triggered by receiving disauth frame, the
+  // value "true" means it is triggered by a deauth frame, and "false" means ut's triggered by a
+  // disassoc frame.
+  bool FindAndRemoveClient(const common::MacAddr client_mac, bool motivation_deauth,
+                           uint16_t deauth_reason = 0);
+  std::shared_ptr<Client> FindClient(const common::MacAddr client_mac);
   void ScheduleLinkEvent(zx::duration when, uint16_t ifidx);
   void SendAPStartLinkEvent(uint16_t ifidx);
   zx_status_t StopInterface(const int32_t bsscfgidx);
@@ -406,14 +422,16 @@ class SimFirmware {
   const uint16_t kClientIfidx = 0;
   std::optional<uint16_t> softap_ifidx_;
 
-  // Internal firmware state variables
-  std::array<uint8_t, ETH_ALEN> mac_addr_;
-  bool mac_addr_set_ = false;
-  common::MacAddr pfn_mac_addr_;
+  // States for client iface
   ScanState scan_state_;
   AssocState assoc_state_;
   AuthState auth_state_;
   ChannelSwitchState channel_switch_state_;
+
+  // Internal firmware state variables
+  std::array<uint8_t, ETH_ALEN> mac_addr_;
+  bool mac_addr_set_ = false;
+  common::MacAddr pfn_mac_addr_;
   bool default_passive_scan_ = true;
   uint32_t default_passive_time_ = -1;  // In ms. -1 indicates value has not been set.
   int32_t power_mode_ = -1;             // -1 indicates value has not been set.

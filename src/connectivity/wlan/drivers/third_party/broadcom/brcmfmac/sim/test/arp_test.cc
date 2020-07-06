@@ -62,7 +62,7 @@ class ArpTest : public SimTest {
   zx_status_t SetMulticastPromisc(bool enable);
 
   // Simulation of client associating to a SoftAP interface
-  void TxAssocReq();
+  void TxAuthandAssocReq();
   void VerifyAssoc();
 
   // Frame processing
@@ -135,11 +135,14 @@ zx_status_t ArpTest::SetMulticastPromisc(bool enable) {
   return ops->set_multicast_promisc(ctx, enable);
 }
 
-void ArpTest::TxAssocReq() {
+void ArpTest::TxAuthandAssocReq() {
   // Get the mac address of the SoftAP
   const common::MacAddr mac(kTheirMac);
-  simulation::SimAssocReqFrame assoc_req_frame(mac, kOurMac, SimInterface::kDefaultSoftApSsid);
   simulation::WlanTxInfo tx_info = {.channel = SimInterface::kDefaultSoftApChannel};
+  simulation::SimAuthFrame auth_req_frame(mac, kOurMac, 1, simulation::AUTH_TYPE_OPEN,
+                                          WLAN_STATUS_CODE_SUCCESS);
+  env_->Tx(auth_req_frame, tx_info, this);
+  simulation::SimAssocReqFrame assoc_req_frame(mac, kOurMac, SimInterface::kDefaultSoftApSsid);
   env_->Tx(assoc_req_frame, tx_info, this);
 }
 
@@ -195,7 +198,7 @@ TEST_F(ArpTest, SoftApArpOffload) {
   sim_ifc_.StartSoftAp();
 
   // Have the test associate with the AP
-  SCHEDULE_CALL(zx::sec(1), &ArpTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::sec(1), &ArpTest::TxAuthandAssocReq, this);
   SCHEDULE_CALL(zx::sec(2), &ArpTest::VerifyAssoc, this);
 
   // Send an ARP frame that we expect to be received
