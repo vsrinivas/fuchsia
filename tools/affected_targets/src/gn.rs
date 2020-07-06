@@ -25,13 +25,17 @@ pub struct DefaultGn {
 
     /// The path to the build directory to use for `gn` commands.
     build_directory: String,
+
+    /// The path to the source directory to use for `gn` commands.
+    source_directory: String,
 }
 
 impl DefaultGn {
-    pub fn new(build_directory: &str, binary_path: &str) -> Self {
+    pub fn new(binary_path: &str, build_directory: &str, source_directory: &str) -> Self {
         DefaultGn {
             binary_path: binary_path.to_string(),
             build_directory: build_directory.to_string(),
+            source_directory: source_directory.to_string(),
         }
     }
 }
@@ -50,6 +54,7 @@ impl Gn for DefaultGn {
             .arg(&self.build_directory) // The path to the build directory to analyze.
             .arg("-") // Signal that the input comes from stdin.
             .arg("-") // Signal that the output should be written to stdout.
+            .arg(format!("--root={}", &self.source_directory))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .spawn()?;
@@ -59,7 +64,10 @@ impl Gn for DefaultGn {
 
         let gn_output = gn_child.wait_with_output()?;
         serde_json::from_slice(&gn_output.stdout).map_err(|err| {
-            Error::new(err).context(format!("Failed to parse GN output: {:?}", &gn_output.stdout))
+            Error::new(err).context(format!(
+                "Failed to parse GN output: {:?}",
+                String::from_utf8(gn_output.stdout)
+            ))
         })
     }
 }

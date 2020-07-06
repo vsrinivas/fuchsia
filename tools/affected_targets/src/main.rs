@@ -7,7 +7,14 @@ use affected_targets_lib::{
 };
 
 fn main() {
-    let ProgramArguments { build_directory, gn_path, changed_files } = ProgramArguments::parse();
+    let ProgramArguments { gn_path, build_directory, source_directory, changed_files } =
+        ProgramArguments::parse();
 
-    println!("{:?}", is_build_required(changed_files, DefaultGn::new(&build_directory, &gn_path)));
+    println!(
+        "{:?}",
+        is_build_required(
+            changed_files,
+            DefaultGn::new(&gn_path, &build_directory, &source_directory)
+        )
+    );
 }
