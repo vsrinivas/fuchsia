@@ -1890,7 +1890,7 @@ inline std::unique_ptr<fidl_codec::Value> GenerateValue(int32_t value) {
 template <>
 inline std::unique_ptr<fidl_codec::Value> GenerateValue(int64_t value) {
   if (value < 0) {
-    return std::make_unique<fidl_codec::IntegerValue>(-value, true);
+    return std::make_unique<fidl_codec::IntegerValue>(-(static_cast<uint64_t>(value)), true);
   }
   return std::make_unique<fidl_codec::IntegerValue>(value, false);
 }

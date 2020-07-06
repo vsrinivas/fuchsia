@@ -39,6 +39,12 @@ PROCESS_EXIT_DISPLAY_TEST(ZxProcessExit1, ZX_OK, 1,
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                           "zx_process_exit(retcode: \x1B[32mint64\x1B[0m = \x1B[34m1\x1B[0m)\n");
 
+PROCESS_EXIT_DISPLAY_TEST(
+    ZxProcessExit2, ZX_OK, std::numeric_limits<int64_t>::min(),
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_process_exit(retcode: \x1B[32mint64\x1B[0m = \x1B[34m-9223372036854775808\x1B[0m)\n");
+
 // zx_process_create tests.
 
 std::unique_ptr<SystemCallTest> ZxProcessCreate(int64_t result, std::string_view result_name,
