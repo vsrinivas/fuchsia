@@ -11,8 +11,15 @@
 
 namespace benchmark_suite {
 
+llcpp::benchmarkfidl::Table1Struct BuildTable_AllSet_1();
+llcpp::benchmarkfidl::Table16Struct BuildTable_AllSet_16();
 llcpp::benchmarkfidl::Table256Struct BuildTable_AllSet_256();
+llcpp::benchmarkfidl::Table1Struct BuildTable_Unset_1();
+llcpp::benchmarkfidl::Table16Struct BuildTable_Unset_16();
 llcpp::benchmarkfidl::Table256Struct BuildTable_Unset_256();
+llcpp::benchmarkfidl::Table1Struct BuildTable_SingleSet_1_of_1();
+llcpp::benchmarkfidl::Table16Struct BuildTable_SingleSet_1_of_16();
+llcpp::benchmarkfidl::Table16Struct BuildTable_SingleSet_16_of_16();
 llcpp::benchmarkfidl::Table256Struct BuildTable_SingleSet_1_of_256();
 llcpp::benchmarkfidl::Table256Struct BuildTable_SingleSet_16_of_256();
 llcpp::benchmarkfidl::Table256Struct BuildTable_SingleSet_256_of_256();

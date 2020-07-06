@@ -22,6 +22,7 @@ func init() {
 				Config: config.Config{
 					"size": 1,
 				},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "Table/AllSet/16",
@@ -29,6 +30,7 @@ func init() {
 				Config: config.Config{
 					"size": 16,
 				},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "Table/AllSet/256",

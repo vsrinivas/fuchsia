@@ -22,7 +22,7 @@ executable("bin") {
   testonly = true
   sources = [
     "main.cc",
-    "table_256.cc",
+    "uint8_table.cc",
   ]
   deps = [
     ":benchmark_suite_reference",
