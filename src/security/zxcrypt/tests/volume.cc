@@ -18,9 +18,9 @@
 #include <crypto/cipher.h>
 #include <crypto/secret.h>
 #include <kms-stateless/kms-stateless.h>
-#include <unittest/unittest.h>
 #include <zxcrypt/fdio-volume.h>
 #include <zxcrypt/volume.h>
+#include <zxtest/zxtest.h>
 
 #include "test-device.h"
 
@@ -29,13 +29,11 @@ namespace testing {
 namespace {
 
 // See test-device.h; the following macros allow reusing tests for each of the supported versions.
-#define EACH_PARAM(OP, Test) OP(Test, Volume, AES256_XTS_SHA256)
+#define EACH_PARAM(OP, TestSuite, Test) OP(TestSuite, Test, Volume, AES256_XTS_SHA256)
 
 // ZX-1948: Dump extra information if encountering an unexpected error during volume creation.
-bool VolumeCreate(const fbl::unique_fd& fd, const fbl::unique_fd& devfs_root,
+void VolumeCreate(const fbl::unique_fd& fd, const fbl::unique_fd& devfs_root,
                   const crypto::Secret& key, bool fvm, zx_status_t expected) {
-  BEGIN_HELPER;
-
   char err[128];
   fdio_cpp::UnownedFdioCaller caller(fd.get());
   fuchsia_hardware_block_BlockInfo block_info;
@@ -61,17 +59,14 @@ bool VolumeCreate(const fbl::unique_fd& fd, const fbl::unique_fd& devfs_root,
 
   fbl::unique_fd new_fd(dup(fd.get()));
   fbl::unique_fd devfs_root_copy(dup(devfs_root.get()));
-  EXPECT_EQ(FdioVolume::Create(std::move(new_fd), std::move(devfs_root_copy), key), expected, err);
-
-  END_HELPER;
+  EXPECT_EQ(FdioVolume::Create(std::move(new_fd), std::move(devfs_root_copy), key), expected, "%s",
+            err);
 }
 
-bool TestInit(Volume::Version version, bool fvm) {
-  BEGIN_TEST;
-
+void TestInit(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm, version));
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Create(kDeviceSize, kBlockSize, fvm, version));
 
   // Invalid arguments
   fbl::unique_fd bad_fd;
@@ -86,17 +81,13 @@ bool TestInit(Volume::Version version, bool fvm) {
   ASSERT_TRUE(!!volume);
   EXPECT_EQ(volume->reserved_blocks(), fvm ? (fvm::kBlockSize / kBlockSize) : 2u);
   EXPECT_EQ(volume->reserved_slices(), fvm ? 1u : 0u);
-
-  END_TEST;
 }
-DEFINE_EACH_DEVICE(TestInit)
+DEFINE_EACH_DEVICE(VolumeTest, TestInit)
 
-bool TestCreate(Volume::Version version, bool fvm) {
-  BEGIN_TEST;
-
+void TestCreate(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm, version));
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Create(kDeviceSize, kBlockSize, fvm, version));
 
   // Invalid file descriptor
   fbl::unique_fd bad_fd;
@@ -106,22 +97,17 @@ bool TestCreate(Volume::Version version, bool fvm) {
   // Weak key
   crypto::Secret short_key;
   ASSERT_OK(short_key.Generate(device.key().len() - 1));
-  EXPECT_TRUE(
-      VolumeCreate(device.parent(), device.devfs_root(), short_key, fvm, ZX_ERR_INVALID_ARGS));
+  VolumeCreate(device.parent(), device.devfs_root(), short_key, fvm, ZX_ERR_INVALID_ARGS);
 
   // Valid
-  EXPECT_TRUE(VolumeCreate(device.parent(), device.devfs_root(), device.key(), fvm, ZX_OK));
-
-  END_TEST;
+  VolumeCreate(device.parent(), device.devfs_root(), device.key(), fvm, ZX_OK);
 }
-DEFINE_EACH_DEVICE(TestCreate)
+DEFINE_EACH_DEVICE(VolumeTest, TestCreate)
 
-bool TestUnlock(Volume::Version version, bool fvm) {
-  BEGIN_TEST;
-
+void TestUnlock(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm, version));
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Create(kDeviceSize, kBlockSize, fvm, version));
 
   // Invalid device
   std::unique_ptr<FdioVolume> volume;
@@ -134,7 +120,8 @@ bool TestUnlock(Volume::Version version, bool fvm) {
             ZX_ERR_INVALID_ARGS);
 
   // Bad key
-  ASSERT_TRUE(VolumeCreate(device.parent(), device.devfs_root(), device.key(), fvm, ZX_OK));
+  ASSERT_NO_FATAL_FAILURES(
+      VolumeCreate(device.parent(), device.devfs_root(), device.key(), fvm, ZX_OK));
 
   crypto::Secret bad_key;
   ASSERT_OK(bad_key.Generate(device.key().len()));
@@ -161,7 +148,7 @@ bool TestUnlock(Volume::Version version, bool fvm) {
     // On FVM, the trailing reserved blocks may just be to pad to a slice, and not have any
     // metdata.  Start from the end and iterate backward to ensure the last block corrupted has
     // metadata.
-    ASSERT_TRUE(device.Corrupt(num_blocks - 1 - i, 0));
+    ASSERT_NO_FATAL_FAILURES(device.Corrupt(num_blocks - 1 - i, 0));
     lseek(parent.get(), off, SEEK_SET);
     read(parent.get(), before, sizeof(before));
 
@@ -180,16 +167,13 @@ bool TestUnlock(Volume::Version version, bool fvm) {
     // Unlock should not modify the parent
     EXPECT_EQ(memcmp(before, after, sizeof(before)), 0);
   }
-
-  END_TEST;
 }
-DEFINE_EACH_DEVICE(TestUnlock)
+DEFINE_EACH_DEVICE(VolumeTest, TestUnlock)
 
-bool TestEnroll(Volume::Version version, bool fvm) {
-  BEGIN_TEST;
+void TestEnroll(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
 
   std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume));
@@ -208,17 +192,13 @@ bool TestEnroll(Volume::Version version, bool fvm) {
   // Valid; existing slot
   EXPECT_OK(volume->Enroll(device.key(), 0));
   EXPECT_OK(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume));
-
-  END_TEST;
 }
-DEFINE_EACH_DEVICE(TestEnroll)
+DEFINE_EACH_DEVICE(VolumeTest, TestEnroll)
 
-bool TestRevoke(Volume::Version version, bool fvm) {
-  BEGIN_TEST;
-
+void TestRevoke(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
 
   std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume));
@@ -233,17 +213,13 @@ bool TestRevoke(Volume::Version version, bool fvm) {
   EXPECT_OK(volume->Revoke(0));
   EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume),
             ZX_ERR_ACCESS_DENIED);
-
-  END_TEST;
 }
-DEFINE_EACH_DEVICE(TestRevoke)
+DEFINE_EACH_DEVICE(VolumeTest, TestRevoke)
 
-bool TestShred(Volume::Version version, bool fvm) {
-  BEGIN_TEST;
-
+void TestShred(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
 
   std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume));
@@ -256,17 +232,13 @@ bool TestShred(Volume::Version version, bool fvm) {
   EXPECT_ZX(volume->Revoke(0), ZX_ERR_BAD_STATE);
   EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume),
             ZX_ERR_ACCESS_DENIED);
-
-  END_TEST;
 }
-DEFINE_EACH_DEVICE(TestShred)
+DEFINE_EACH_DEVICE(VolumeTest, TestShred)
 
-bool TestShredThroughDriver(Volume::Version version, bool fvm) {
-  BEGIN_TEST;
-
+void TestShredThroughDriver(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
 
   std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume));
@@ -280,17 +252,13 @@ bool TestShredThroughDriver(Volume::Version version, bool fvm) {
   // Key should no longer work
   EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume),
             ZX_ERR_ACCESS_DENIED);
-
-  END_TEST;
 }
-DEFINE_EACH_DEVICE(TestShredThroughDriver)
+DEFINE_EACH_DEVICE(VolumeTest, TestShredThroughDriver)
 
-bool TestShredThroughDriverLocked(Volume::Version version, bool fvm) {
-  BEGIN_TEST;
-
+void TestShredThroughDriverLocked(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
 
   std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Init(device.parent(), device.devfs_root(), &volume));
@@ -303,69 +271,38 @@ bool TestShredThroughDriverLocked(Volume::Version version, bool fvm) {
   // Key should no longer work
   EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume),
             ZX_ERR_ACCESS_DENIED);
-
-  END_TEST;
 }
-DEFINE_EACH_DEVICE(TestShredThroughDriverLocked)
+DEFINE_EACH_DEVICE(VolumeTest, TestShredThroughDriverLocked)
 
-
-BEGIN_TEST_CASE(VolumeTest)
-RUN_EACH_DEVICE(TestInit)
-RUN_EACH_DEVICE(TestCreate)
-RUN_EACH_DEVICE(TestUnlock)
-RUN_EACH_DEVICE(TestEnroll)
-RUN_EACH_DEVICE(TestRevoke)
-RUN_EACH_DEVICE(TestShred)
-RUN_EACH_DEVICE(TestShredThroughDriver)
-RUN_EACH_DEVICE(TestShredThroughDriverLocked)
-END_TEST_CASE(VolumeTest)
-
-bool CheckOneCreatePolicy(KeySourcePolicy policy, fbl::Vector<KeySource> expected) {
-  BEGIN_HELPER;
+void CheckOneCreatePolicy(KeySourcePolicy policy, fbl::Vector<KeySource> expected) {
   fbl::Vector<KeySource> actual = ComputeEffectiveCreatePolicy(policy);
   ASSERT_EQ(actual.size(), expected.size());
   for (size_t i = 0; i < actual.size(); i++) {
     ASSERT_EQ(actual[i], expected[i]);
   }
-  END_HELPER;
 }
 
-bool TestCreatePolicy() {
-  BEGIN_TEST;
-
-  EXPECT_TRUE(CheckOneCreatePolicy(NullSource, {kNullSource}));
-  EXPECT_TRUE(CheckOneCreatePolicy(TeeRequiredSource, {kTeeSource}));
-  EXPECT_TRUE(CheckOneCreatePolicy(TeeTransitionalSource, {kTeeSource}));
-  EXPECT_TRUE(CheckOneCreatePolicy(TeeOpportunisticSource, {kTeeSource, kNullSource}));
-
-  END_TEST;
+TEST(PolicyTest, TestCreatePolicy) {
+  CheckOneCreatePolicy(NullSource, {kNullSource});
+  CheckOneCreatePolicy(TeeRequiredSource, {kTeeSource});
+  CheckOneCreatePolicy(TeeTransitionalSource, {kTeeSource});
+  CheckOneCreatePolicy(TeeOpportunisticSource, {kTeeSource, kNullSource});
 }
 
-bool CheckOneUnsealPolicy(KeySourcePolicy policy, fbl::Vector<KeySource> expected) {
-  BEGIN_HELPER;
+void CheckOneUnsealPolicy(KeySourcePolicy policy, fbl::Vector<KeySource> expected) {
   fbl::Vector<KeySource> actual = ComputeEffectiveUnsealPolicy(policy);
   ASSERT_EQ(actual.size(), expected.size());
   for (size_t i = 0; i < actual.size(); i++) {
     ASSERT_EQ(actual[i], expected[i]);
   }
-  END_HELPER;
 }
 
-bool TestUnsealPolicy() {
-  BEGIN_TEST;
-
-  EXPECT_TRUE(CheckOneUnsealPolicy(NullSource, {kNullSource}));
-  EXPECT_TRUE(CheckOneUnsealPolicy(TeeRequiredSource, {kTeeSource}));
-  EXPECT_TRUE(CheckOneUnsealPolicy(TeeTransitionalSource, {kTeeSource, kNullSource}));
-  EXPECT_TRUE(CheckOneUnsealPolicy(TeeOpportunisticSource, {kTeeSource, kNullSource}));
-
-  END_TEST;
+TEST(PolicyTest, TestUnsealPolicy) {
+  CheckOneUnsealPolicy(NullSource, {kNullSource});
+  CheckOneUnsealPolicy(TeeRequiredSource, {kTeeSource});
+  CheckOneUnsealPolicy(TeeTransitionalSource, {kTeeSource, kNullSource});
+  CheckOneUnsealPolicy(TeeOpportunisticSource, {kTeeSource, kNullSource});
 }
-
-BEGIN_TEST_CASE(PolicyTest)
-RUN_TEST(TestCreatePolicy)
-RUN_TEST(TestUnsealPolicy)
-END_TEST_CASE(PolicyTest)
 
 }  // namespace
 }  // namespace testing

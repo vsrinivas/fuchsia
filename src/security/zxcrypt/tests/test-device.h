@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_ZXCRYPT_TEST_DEVICE_H_
-#define ZIRCON_SYSTEM_UTEST_ZXCRYPT_TEST_DEVICE_H_
+#ifndef SRC_SECURITY_ZXCRYPT_TESTS_TEST_DEVICE_H_
+#define SRC_SECURITY_ZXCRYPT_TESTS_TEST_DEVICE_H_
 
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
@@ -28,11 +28,9 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxcrypt/fdio-volume.h>
 
-// TODO(34273): Replace these with *_STATUS, *_OK in zxtest.
+// TODO(34273): Replace these with *_STATUS in zxtest.
 #define EXPECT_ZX(expr, status) EXPECT_EQ(expr, status)
 #define ASSERT_ZX(expr, status) ASSERT_EQ(expr, status)
-#define EXPECT_OK(expr) EXPECT_EQ(expr, ZX_OK)
-#define ASSERT_OK(expr) ASSERT_EQ(expr, ZX_OK)
 
 // Value-parameterized tests: Consumers of this file can define an 'EACH_PARAM' macro as follows:
 //   #define EACH_PARAM(OP, Test)
@@ -44,33 +42,19 @@
 //
 // Consumers can then use the following macros to automatically define and run tests for each
 // parameter:
-//   bool TestSomething(Param param) {
-//       BEGIN_TEST;
+//   void TestSomething(Param param) {
 //       ...
-//       END_TEST;
 //   }
-//   DEFINE_EACH(TestSomething)
-//   ...
-//   BEGIN_TEST_CASE(SomeTest)
-//   RUN_EACH(TestSomething)
-//   END_TEST_CASE(SomeTest)
-#define DEFINE_TEST_PARAM(Test, Class, Param) \
-  bool Test##_##Param(void) { return Test(Class::k##Param); }
-#define RUN_TEST_PARAM(Test, Class, Param) RUN_TEST(Test##_##Param)
-#define DEFINE_EACH(Test) EACH_PARAM(DEFINE_TEST_PARAM, Test)
-#define RUN_EACH(Test) EACH_PARAM(RUN_TEST_PARAM, Test)
+//   DEFINE_EACH(FooTest, TestSomething)
+#define DEFINE_TEST_PARAM(TestSuite, Test, Class, Param) \
+  TEST(TestSuite, Test##_##Param) { return Test(Class::k##Param); }
+#define DEFINE_EACH(TestSuite, Test) EACH_PARAM(DEFINE_TEST_PARAM, TestSuite, Test)
 
-#define DEFINE_EACH_DEVICE(Test)                                                         \
-  bool Test##Raw(Volume::Version version) { return Test(version, false /* not FVM */); } \
-  [[maybe_unused]]                                                                       \
-  DEFINE_EACH(Test##Raw)                                                                 \
-  bool Test##Fvm(Volume::Version version) { return Test(version, true /* FVM */); }      \
-  [[maybe_unused]]                                                                       \
-  DEFINE_EACH(Test##Fvm)
-
-#define RUN_EACH_DEVICE(Test) \
-  RUN_EACH(Test##Raw)         \
-  RUN_EACH(Test##Fvm)
+#define DEFINE_EACH_DEVICE(TestSuite, Test)                                              \
+  void Test##Raw(Volume::Version version) { return Test(version, false /* not FVM */); } \
+  DEFINE_EACH(TestSuite, Test##Raw)                                                      \
+  void Test##Fvm(Volume::Version version) { return Test(version, true /* FVM */); }      \
+  DEFINE_EACH(TestSuite, Test##Fvm)
 
 namespace zxcrypt {
 namespace testing {
@@ -175,48 +159,48 @@ class TestDevice final {
 
   // Launches an isolated devcoordinator.  Must be called before calling
   // any other methods on TestDevice.
-  bool SetupDevmgr();
+  void SetupDevmgr();
 
   // Allocates a new block device of at least |device_size| bytes grouped into blocks of
   // |block_size| bytes each.  If |fvm| is true, it will be formatted as an FVM partition with the
   // appropriates number of slices of |fvm::kBlockSize| each.  A file descriptor for the block
   // device is returned via |out_fd|.
-  bool Create(size_t device_size, size_t block_size, bool fvm, Volume::Version version);
+  void Create(size_t device_size, size_t block_size, bool fvm, Volume::Version version);
 
   // Test helper that generates a key and creates a device according to |version| and |fvm|.  It
   // sets up the device as a zxcrypt volume and binds to it.
-  bool Bind(Volume::Version version, bool fvm);
+  void Bind(Volume::Version version, bool fvm);
 
   // Test helper that rebinds the ramdisk and its children.
-  bool Rebind();
+  void Rebind();
 
   // Tells the underlying ramdisk to sleep until |num| transactions have been received.  If
   // |deferred| is true, the transactions will be handled on waking; else they will be failed.
-  bool SleepUntil(uint64_t num, bool deferred) __TA_EXCLUDES(lock_);
+  void SleepUntil(uint64_t num, bool deferred) __TA_EXCLUDES(lock_);
 
   // Blocks until the ramdisk is awake.
-  bool WakeUp() __TA_EXCLUDES(lock_);
+  void WakeUp() __TA_EXCLUDES(lock_);
 
   // Test helpers that perform a |lseek| and a |read| or |write| together. |off| and |len| are in
   // bytes.  |ReadFd| additionally checks that the data read matches what was written.
-  bool ReadFd(zx_off_t off, size_t len);
-  bool WriteFd(zx_off_t off, size_t len);
+  void ReadFd(zx_off_t off, size_t len);
+  void WriteFd(zx_off_t off, size_t len);
 
   // Test helpers that perform a |lseek| and a |vmo_read| or |vmo_write| together.  |off| and
   // |len| are in blocks.  |ReadVmo| additionally checks that the data read matches what was
   // written.
-  bool ReadVmo(zx_off_t off, size_t len);
-  bool WriteVmo(zx_off_t off, size_t len);
+  void ReadVmo(zx_off_t off, size_t len);
+  void WriteVmo(zx_off_t off, size_t len);
 
   // Test helper that flips a (pseudo)random bit in the key at the given |slot| in the given
   // |block|. The call to |srand| in main.c guarantees the same bit will be chosen for a given
   // test iteration.
-  bool Corrupt(uint64_t block, key_slot_t slot);
+  void Corrupt(uint64_t block, key_slot_t slot);
 
  private:
   // Allocates a new ramdisk of at least |device_size| bytes arranged into blocks of |block_size|
   // bytes, and opens it.
-  bool CreateRamdisk(size_t device_size, size_t block_size);
+  void CreateRamdisk(size_t device_size, size_t block_size);
 
   // Destroys the ramdisk, killing any active transactions
   void DestroyRamdisk();
@@ -224,13 +208,13 @@ class TestDevice final {
   // Creates a ramdisk of with enough blocks of |block_size| bytes to hold both FVM metadata and
   // an FVM partition of at least |device_size| bytes.  It formats the ramdisk to be an FVM
   // device, and allocates a partition with a single slice of size fvm::kBlockSize.
-  bool CreateFvmPart(size_t device_size, size_t block_size);
+  void CreateFvmPart(size_t device_size, size_t block_size);
 
   // Binds the FVM driver to the open ramdisk.
-  bool BindFvmDriver();
+  void BindFvmDriver();
 
   // Connects the block client to the block server.
-  bool Connect();
+  void Connect();
 
   // Disconnects the block client from the block server.
   void Disconnect();
@@ -290,4 +274,4 @@ class TestDevice final {
 }  // namespace testing
 }  // namespace zxcrypt
 
-#endif  // ZIRCON_SYSTEM_UTEST_ZXCRYPT_TEST_DEVICE_H_
+#endif  // SRC_SECURITY_ZXCRYPT_TESTS_TEST_DEVICE_H_

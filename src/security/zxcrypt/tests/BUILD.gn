@@ -34,6 +34,7 @@ test("zxcrypt") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/digest",
@@ -45,7 +46,6 @@ test("zxcrypt") {
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/kms-stateless",
     "//zircon/system/ulib/ramdevice-client",
-    "//zircon/system/ulib/unittest",
   ]
 }
 

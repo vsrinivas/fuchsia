@@ -39,9 +39,9 @@
 #include <fs-management/mount.h>
 #include <fvm/format.h>
 #include <ramdevice-client/ramdisk.h>
-#include <unittest/unittest.h>
 #include <zxcrypt/fdio-volume.h>
 #include <zxcrypt/volume.h>
+#include <zxtest/zxtest.h>
 
 #define ZXDEBUG 0
 
@@ -84,9 +84,7 @@ TestDevice::~TestDevice() {
   }
 }
 
-bool TestDevice::SetupDevmgr() {
-  BEGIN_HELPER;
-
+void TestDevice::SetupDevmgr() {
   devmgr_launcher::Args args;
   // Assume we're using the zxcrypt.so and ramdisk driver from /boot.  It's
   // not quite hermetic the way we might like, but it's good enough in
@@ -111,17 +109,14 @@ bool TestDevice::SetupDevmgr() {
   ASSERT_EQ(
       devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &ctl),
       ZX_OK);
-  END_HELPER;
 }
 
-bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm, Volume::Version version) {
-  BEGIN_HELPER;
-
+void TestDevice::Create(size_t device_size, size_t block_size, bool fvm, Volume::Version version) {
   ASSERT_LT(device_size, SSIZE_MAX);
   if (fvm) {
-    ASSERT_TRUE(CreateFvmPart(device_size, block_size));
+    ASSERT_NO_FATAL_FAILURES(CreateFvmPart(device_size, block_size));
   } else {
-    ASSERT_TRUE(CreateRamdisk(device_size, block_size));
+    ASSERT_NO_FATAL_FAILURES(CreateRamdisk(device_size, block_size));
   }
 
   crypto::digest::Algorithm digest;
@@ -135,29 +130,21 @@ bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm, Volume:
   }
 
   size_t digest_len;
-  zx_status_t rc;
   key_.Clear();
-  if ((rc = crypto::digest::GetDigestLen(digest, &digest_len)) != ZX_OK ||
-      (rc = key_.Generate(digest_len)) != ZX_OK) {
-    return rc;
-  }
-
-  END_HELPER;
+  ASSERT_OK(crypto::digest::GetDigestLen(digest, &digest_len));
+  ASSERT_OK(key_.Generate(digest_len));
 }
 
-bool TestDevice::Bind(Volume::Version version, bool fvm) {
-  BEGIN_HELPER;
-  ASSERT_TRUE(Create(kDeviceSize, kBlockSize, fvm, version));
+void TestDevice::Bind(Volume::Version version, bool fvm) {
+  ASSERT_NO_FATAL_FAILURES(Create(kDeviceSize, kBlockSize, fvm, version));
   ASSERT_OK(FdioVolume::Create(parent(), devfs_root(), key_));
-  ASSERT_TRUE(Connect());
-  END_HELPER;
+  ASSERT_NO_FATAL_FAILURES(Connect());
 }
 
-bool TestDevice::BindFvmDriver() {
-  BEGIN_HELPER;
+void TestDevice::BindFvmDriver() {
   // Binds the FVM driver to the active ramdisk_.
   fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
-  ASSERT_NONNULL(io);
+  ASSERT_NOT_NULL(io);
   auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
       zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
       ::fidl::unowned_str(kFvmDriver, strlen(kFvmDriver)));
@@ -165,14 +152,11 @@ bool TestDevice::BindFvmDriver() {
   fdio_unsafe_release(io);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_TRUE(resp->result.is_response());
-  END_HELPER;
 }
 
-bool TestDevice::Rebind() {
-  BEGIN_HELPER;
-
+void TestDevice::Rebind() {
   const char* sep = strrchr(ramdisk_get_path(ramdisk_), '/');
-  ASSERT_NONNULL(sep);
+  ASSERT_NOT_NULL(sep);
 
   Disconnect();
   zxcrypt_.reset();
@@ -183,7 +167,7 @@ bool TestDevice::Rebind() {
     // relying on the system-wide block-watcher, the driver won't rebind by
     // itself.
     fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
-    ASSERT_NONNULL(io);
+    ASSERT_NOT_NULL(io);
     zx_status_t call_status = ZX_OK;
     ;
     auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(
@@ -204,13 +188,10 @@ bool TestDevice::Rebind() {
     ASSERT_EQ(ramdisk_rebind(ramdisk_), ZX_OK);
     parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
   }
-  ASSERT_TRUE(Connect());
-
-  END_HELPER;
+  ASSERT_NO_FATAL_FAILURES(Connect());
 }
 
-bool TestDevice::SleepUntil(uint64_t num, bool deferred) {
-  BEGIN_HELPER;
+void TestDevice::SleepUntil(uint64_t num, bool deferred) {
   fbl::AutoLock lock(&lock_);
   ASSERT_EQ(wake_after_, 0);
   ASSERT_NE(num, 0);
@@ -224,11 +205,9 @@ bool TestDevice::SleepUntil(uint64_t num, bool deferred) {
   }
   uint64_t sleep_after = 0;
   ASSERT_OK(ramdisk_sleep_after(ramdisk_, sleep_after));
-  END_HELPER;
 }
 
-bool TestDevice::WakeUp() {
-  BEGIN_HELPER;
+void TestDevice::WakeUp() {
   if (need_join_) {
     fbl::AutoLock lock(&lock_);
     ASSERT_NE(wake_after_, 0);
@@ -238,7 +217,6 @@ bool TestDevice::WakeUp() {
     wake_after_ = 0;
     EXPECT_EQ(res, 0);
   }
-  END_HELPER;
 }
 
 int TestDevice::WakeThread(void* arg) {
@@ -265,40 +243,31 @@ int TestDevice::WakeThread(void* arg) {
   return ZX_OK;
 }
 
-bool TestDevice::ReadFd(zx_off_t off, size_t len) {
-  BEGIN_HELPER;
+void TestDevice::ReadFd(zx_off_t off, size_t len) {
   ASSERT_OK(ToStatus(lseek(off)));
   ASSERT_OK(ToStatus(read(off, len)));
   ASSERT_EQ(memcmp(as_read_.get() + off, to_write_.get() + off, len), 0);
-  END_HELPER;
 }
 
-bool TestDevice::WriteFd(zx_off_t off, size_t len) {
-  BEGIN_HELPER;
+void TestDevice::WriteFd(zx_off_t off, size_t len) {
   ASSERT_OK(ToStatus(lseek(off)));
   ASSERT_OK(ToStatus(write(off, len)));
-  END_HELPER;
 }
 
-bool TestDevice::ReadVmo(zx_off_t off, size_t len) {
-  BEGIN_HELPER;
+void TestDevice::ReadVmo(zx_off_t off, size_t len) {
   ASSERT_OK(block_fifo_txn(BLOCKIO_READ, off, len));
   off *= block_size_;
   len *= block_size_;
   ASSERT_OK(vmo_read(off, len));
   ASSERT_EQ(memcmp(as_read_.get() + off, to_write_.get() + off, len), 0);
-  END_HELPER;
 }
 
-bool TestDevice::WriteVmo(zx_off_t off, size_t len) {
-  BEGIN_HELPER;
+void TestDevice::WriteVmo(zx_off_t off, size_t len) {
   ASSERT_OK(vmo_write(off * block_size_, len * block_size_));
   ASSERT_OK(block_fifo_txn(BLOCKIO_WRITE, off, len));
-  END_HELPER;
 }
 
-bool TestDevice::Corrupt(uint64_t blkno, key_slot_t slot) {
-  BEGIN_HELPER;
+void TestDevice::Corrupt(uint64_t blkno, key_slot_t slot) {
   uint8_t block[block_size_];
 
   fbl::unique_fd fd = parent();
@@ -315,14 +284,11 @@ bool TestDevice::Corrupt(uint64_t blkno, key_slot_t slot) {
 
   ASSERT_OK(ToStatus(::lseek(fd.get(), blkno * block_size_, SEEK_SET)));
   ASSERT_OK(ToStatus(::write(fd.get(), block, block_size_)));
-  END_HELPER;
 }
 
 // Private methods
 
-bool TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
-  BEGIN_HELPER;
-
+void TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
   fbl::AllocChecker ac;
   size_t count = fbl::round_up(device_size, block_size) / block_size;
   to_write_.reset(new (&ac) uint8_t[device_size]);
@@ -346,8 +312,6 @@ bool TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
 
   block_size_ = block_size;
   block_count_ = count;
-
-  END_HELPER;
 }
 
 void TestDevice::DestroyRamdisk() {
@@ -358,9 +322,7 @@ void TestDevice::DestroyRamdisk() {
 }
 
 // Creates a ramdisk, formats it, and binds to it.
-bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
-  BEGIN_HELPER;
-
+void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   // Calculate total size of data + metadata.
   device_size = fbl::round_up(device_size, fvm::kBlockSize);
   size_t old_meta = fvm::MetadataSize(device_size, fvm::kBlockSize);
@@ -369,13 +331,13 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     old_meta = new_meta;
     new_meta = fvm::MetadataSize(old_meta + device_size, fvm::kBlockSize);
   }
-  ASSERT_TRUE(CreateRamdisk(device_size + (new_meta * 2), block_size));
+  ASSERT_NO_FATAL_FAILURES(CreateRamdisk(device_size + (new_meta * 2), block_size));
 
   // Format the ramdisk as FVM
   ASSERT_OK(fvm_init(ramdisk_get_block_fd(ramdisk_), fvm::kBlockSize));
 
   // Bind the FVM driver to the now-formatted disk
-  ASSERT_TRUE(BindFvmDriver());
+  ASSERT_NO_FATAL_FAILURES(BindFvmDriver());
 
   // Wait for the FVM driver to expose a block device, then open it
   char path[PATH_MAX];
@@ -426,12 +388,9 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   ASSERT_TRUE(strncmp(fvm_part_path_, "/dev/", header_len) == 0);
   memmove(fvm_part_path_, fvm_part_path_ + header_len, out_len - header_len);
   fvm_part_path_[out_len - header_len] = 0;
-
-  END_HELPER;
 }
 
-bool TestDevice::Connect() {
-  BEGIN_HELPER;
+void TestDevice::Connect() {
   ZX_DEBUG_ASSERT(!zxcrypt_);
 
   ASSERT_OK(FdioVolume::Unlock(parent(), devfs_root(), key_, 0, &volume_));
@@ -470,8 +429,6 @@ bool TestDevice::Connect() {
                                                   &status, &vmoid));
   ASSERT_OK(status);
   req_.vmoid = vmoid.id;
-
-  END_HELPER;
 }
 
 void TestDevice::Disconnect() {
