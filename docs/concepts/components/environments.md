@@ -1,7 +1,7 @@
 # Environments
 
 *Environments* provide a way to configure certain choices the framework makes
-for components in a [realm][docs-realms].
+for components in a [realm][doc-realms].
 [Component manifests][doc-component-manifests] may define environments and
 assign them to child realms. An environment applies to a component instance's
 entire realm, unless some sub-realm overrides it (see
@@ -28,25 +28,25 @@ declaration to a [component manifest][doc-component-manifests].
 For an environment to be used, you must assign it to a child or collection. See
 [Propagation](#propagation).
 
-Environments support two modes of extension, `[REALM][fidl-extends]` or
-`[NONE][fidl-extends]`:
+Environments support two modes of extension, [`REALM`][fidl-extends] or
+[`NONE`][fidl-extends]:
 
--   [`REALM`][fidl-extend]: The environment inherits its properties from the
+-   [`REALM`][fidl-extends]: The environment inherits its properties from the
     environment that was assigned to this component (the "parent environment").
     Any new properties will be added on top of those inherited from the parent
     environment. Any properties that overlap with the parent environment will
     override the parent.
--   [`NONE`][fidl-extend]: The environment starts empty, with no initial
+-   [`NONE`][fidl-extends]: The environment starts empty, with no initial
     properties.
 
 ## Propagation {#propagation}
 
 A component instance is assigned an environment in one of two ways:
 
--   Its [child][doc-child-decl] or [collection][doc-collection-decl] does not
+-   Its [child][doc-children] or [collection][doc-collections] does not
     have `environment` set. In this case, it will receive its parent's
     environment. This is the most common case.
--   Its [child][doc-child-decl] or [collection][doc-collection-decl] sets
+-   Its [child][doc-children] or [collection][doc-collections] sets
     `environment`, which refers to one of the [`environments`][doc-environments]
     defined by this component.
 
