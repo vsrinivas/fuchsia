@@ -15,7 +15,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect,
-    fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
+    fuchsia_syslog::{self as fx_syslog, fx_log_debug, fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
@@ -208,28 +208,33 @@ impl ResolverLookup for Resolver {
     }
 }
 
-fn convert_err(err: ResolveError) -> fnet::LookupError {
+/// Helper function to handle a [`ResolverError`] and convert it into a
+/// [`fnet::LookupError`].
+///
+/// `source` is used for debugging information.
+fn handle_err(source: &'static str, err: ResolveError) -> fnet::LookupError {
     use {trust_dns_proto::error::ProtoErrorKind, trust_dns_resolver::error::ResolveErrorKind};
 
-    match err.kind() {
+    let (lookup_err, ioerr) = match err.kind() {
         // The following mapping is based on the analysis of `ResolveError` enumerations.
         // For cases that are not obvious such as `ResolveErrorKind::Msg` and
         // `ResolveErrorKind::Message`, I (chunyingw) did code searches to have more insights.
-        // `ResolveErrorKind::Msg`: An error with arbitray message, it could be ex. "lock was
+        // `ResolveErrorKind::Msg`: An error with arbitrary message, it could be ex. "lock was
         // poisoned, this is non-recoverable" and ""DNS Error".
-        // `ResolveErrorKind::Message`: An error with arbitray message, it is mostly returned when
+        // `ResolveErrorKind::Message`: An error with arbitrary message, it is mostly returned when
         // there is no name in the input vector to look up with "can not lookup for no names".
         // This is a best-effort mapping.
         ResolveErrorKind::NoRecordsFound { query: _, valid_until: _ } => {
-            fnet::LookupError::NotFound
+            (fnet::LookupError::NotFound, None)
         }
         ResolveErrorKind::Proto(err) => match err.kind() {
             ProtoErrorKind::DomainNameTooLong(_) | ProtoErrorKind::EdnsNameNotRoot(_) => {
-                fnet::LookupError::InvalidArgs
+                (fnet::LookupError::InvalidArgs, None)
             }
-            ProtoErrorKind::Canceled(_) | ProtoErrorKind::Io(_) | ProtoErrorKind::Timeout => {
-                fnet::LookupError::Transient
+            ProtoErrorKind::Canceled(_) | ProtoErrorKind::Timeout => {
+                (fnet::LookupError::Transient, None)
             }
+            ProtoErrorKind::Io(inner) => (fnet::LookupError::Transient, Some(inner)),
             ProtoErrorKind::CharacterDataTooLong { max: _, len: _ }
             | ProtoErrorKind::LabelOverlapsWithOther { label: _, other: _ }
             | ProtoErrorKind::DnsKeyProtocolNot3(_)
@@ -254,11 +259,30 @@ fn convert_err(err: ResolveError) -> fnet::LookupError {
             | ProtoErrorKind::SSL(_)
             | ProtoErrorKind::Timer
             | ProtoErrorKind::UrlParsing(_)
-            | ProtoErrorKind::Utf8(_) => fnet::LookupError::InternalError,
+            | ProtoErrorKind::Utf8(_) => (fnet::LookupError::InternalError, None),
         },
-        ResolveErrorKind::Io(_) | ResolveErrorKind::Timeout => fnet::LookupError::Transient,
-        ResolveErrorKind::Msg(_) | ResolveErrorKind::Message(_) => fnet::LookupError::InternalError,
+        ResolveErrorKind::Io(inner) => (fnet::LookupError::Transient, Some(inner)),
+        ResolveErrorKind::Timeout => (fnet::LookupError::Transient, None),
+        ResolveErrorKind::Msg(_) | ResolveErrorKind::Message(_) => {
+            (fnet::LookupError::InternalError, None)
+        }
+    };
+
+    if let Some(ioerr) = ioerr {
+        match ioerr.raw_os_error() {
+            Some(libc::EHOSTUNREACH) => {
+                fx_log_debug!("{} error: {}; (IO error {:?})", source, err, ioerr)
+            }
+            // TODO(55621): We should log at WARN below, but trust-dns is
+            // erasing raw_os_error for us. Logging to debug for now to reduce
+            // log spam.
+            _ => fx_log_debug!("{} error: {}; (IO error {:?})", source, err, ioerr),
+        }
+    } else {
+        fx_log_warn!("{} error: {}", source, err)
     }
+
+    lookup_err
 }
 
 async fn handle_lookup_ip<T: ResolverLookup>(
@@ -310,10 +334,7 @@ async fn handle_lookup_ip<T: ResolverLookup>(
             }
             Ok(result)
         }
-        Err(error) => {
-            fx_log_err!("failed to LookupIp with error {}", error);
-            Err(convert_err(error))
-        }
+        Err(error) => Err(handle_err("LookupIp", error)),
     }
 }
 
@@ -329,10 +350,7 @@ async fn handle_lookup_hostname<T: ResolverLookup>(
         Ok(response) => {
             response.iter().next().ok_or(fnet::LookupError::NotFound).map(|h| h.to_string())
         }
-        Err(error) => {
-            fx_log_err!("failed to LookupHostname with error {}", error);
-            Err(convert_err(error))
-        }
+        Err(error) => Err(handle_err("LookupHostname", error)),
     }
 }
 
