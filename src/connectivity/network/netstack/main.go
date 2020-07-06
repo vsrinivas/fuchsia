@@ -407,7 +407,7 @@ func Main() {
 						ns.netstackService.mu.Unlock()
 					}()
 					component.ServeExclusive(ctx, &stub, c, func(err error) {
-						_ = syslog.WarnTf(tag, "%s", err)
+						_ = syslog.WarnTf(netstack.NetstackName, "%s", err)
 					})
 				}()
 
@@ -426,7 +426,7 @@ func Main() {
 			name.LookupAdminName,
 			func(ctx fidl.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(tag, "%s", err)
+					_ = syslog.WarnTf(name.LookupAdminName, "%s", err)
 				})
 				return nil
 			},
@@ -442,7 +442,7 @@ func Main() {
 			stack.StackName,
 			func(ctx fidl.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(tag, "%s", err)
+					_ = syslog.WarnTf(stack.StackName, "%s", err)
 				})
 				return nil
 			},
@@ -455,7 +455,7 @@ func Main() {
 			stack.LogName,
 			func(ctx fidl.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(tag, "%s", err)
+					_ = syslog.WarnTf(stack.LogName, "%s", err)
 				})
 				return nil
 			})
@@ -467,7 +467,7 @@ func Main() {
 			net.NameLookupName,
 			func(ctx fidl.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(tag, "%s", err)
+					_ = syslog.WarnTf(net.NameLookupName, "%s", err)
 				})
 				return nil
 			},
@@ -480,7 +480,7 @@ func Main() {
 			socket.ProviderName,
 			func(ctx fidl.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(tag, "%s", err)
+					_ = syslog.WarnTf(socket.ProviderName, "%s", err)
 				})
 				return nil
 			},

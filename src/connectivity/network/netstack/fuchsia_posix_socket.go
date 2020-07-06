@@ -886,7 +886,8 @@ func (s *datagramSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtx
 			s.cancel = cancel
 			stub := socket.DatagramSocketWithCtxStub{Impl: s}
 			component.ServeExclusive(ctx, &stub, object.Channel, func(err error) {
-				_ = syslog.WarnTf(tag, "%s", err)
+				// NB: this protocol is not discoverable, so the bindings do not include its name.
+				_ = syslog.WarnTf("fuchsia.posix.socket.DatagramSocket", "%s", err)
 			})
 		}()
 	}
@@ -1049,7 +1050,8 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxIn
 			s.cancel = cancel
 			stub := socket.StreamSocketWithCtxStub{Impl: s}
 			component.ServeExclusive(ctx, &stub, object.Channel, func(err error) {
-				_ = syslog.WarnTf(tag, "%s", err)
+				// NB: this protocol is not discoverable, so the bindings do not include its name.
+				_ = syslog.WarnTf("fuchsia.posix.socket.StreamSocket", "%s", err)
 			})
 		}()
 	}

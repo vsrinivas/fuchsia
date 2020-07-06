@@ -77,7 +77,7 @@ func (impl *inspectImpl) asService() *component.Service {
 	return &component.Service{
 		AddFn: func(ctx fidl.Context, c zx.Channel) error {
 			go component.ServeExclusive(ctx, &stub, c, func(err error) {
-				_ = syslog.WarnTf(tag, "%s", err)
+				_ = syslog.WarnTf(inspect.InspectName, "%s", err)
 			})
 			return nil
 		},

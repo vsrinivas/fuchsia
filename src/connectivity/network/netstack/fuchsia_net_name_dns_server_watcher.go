@@ -148,7 +148,8 @@ func (c *dnsServerWatcherCollection) Bind(request name.DnsServerWatcherWithCtxIn
 			Impl: &watcher,
 		}
 		component.ServeExclusive(context.Background(), &stub, request.Channel, func(err error) {
-			_ = syslog.WarnTf(tag, "%s", err)
+			// NB: this protocol is not discoverable, so the bindings do not include its name.
+			_ = syslog.WarnTf("fuchsia.net.name.DnsServerWatcher", "%s", err)
 		})
 	}()
 

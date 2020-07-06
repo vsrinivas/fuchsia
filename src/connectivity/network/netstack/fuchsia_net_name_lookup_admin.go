@@ -18,8 +18,6 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
-const tag = "nameLookupAdmin"
-
 func dnsServerToFidl(s dns.Server) name.DnsServer {
 	return name.DnsServer{
 		Address:        fidlconv.ToNetSocketAddress(s.Address),
@@ -42,7 +40,7 @@ func (dns *nameLookupAdminImpl) SetDefaultDnsServers(_ fidl.Context, servers []n
 		ss[i] = fidlconv.ToTCPIPAddress(s)
 	}
 
-	syslog.InfoTf(tag, "setting default name servers: %s", ss)
+	syslog.InfoTf(name.LookupAdminName, "setting default name servers: %s", ss)
 	dns.ns.dnsClient.SetDefaultServers(ss)
 	// NOTE(brunodalbo) we're not bothering checking for invalid server addresses here in expectation that this
 	// implementation will move to dns_resolver.
@@ -55,7 +53,7 @@ func (dns *nameLookupAdminImpl) SetDefaultDnsServers(_ fidl.Context, servers []n
 // the in-netstack DNS client directly. We're not bothering with a full implementation
 // here in expectation that dns_resolver will be used for name resolution.
 func (*nameLookupAdminImpl) SetDnsServers(fidl.Context, []net.SocketAddress) (name.LookupAdminSetDnsServersResult, error) {
-	syslog.ErrorTf(tag, "SetDnsServers not implemented")
+	syslog.ErrorTf(name.LookupAdminName, "SetDnsServers not implemented")
 	return name.LookupAdminSetDnsServersResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
