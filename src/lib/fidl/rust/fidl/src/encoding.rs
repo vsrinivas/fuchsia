@@ -588,6 +588,20 @@ impl<T: Layout> LayoutObject for T {
 /// reduce binary bloat. However, they can only be encoded directly: there are
 /// no implementations of `Encodable` for enclosing types such as
 /// `Vec<&dyn Encodable>`, and similarly for references, arrays, tuples, etc.
+///
+/// Types must implement either `encode` or `unsafe_encoder`:
+///
+/// * `encode`: The implementation cannot skip bounds checks. In particular,
+///   it can only `encode` internal values, not `unsafe_encode` them.
+///
+/// * `unsafe_encode`: The implementation can skip bounds checks when
+///   writing to `encoder.buf`, and can `unsafe_encode` internal values.
+///
+/// (Using both method's default impl will cause infinite recursion.)
+///
+/// We need `unsafe_encode` as a separate method, rather than just writing
+/// unsafe blocks in `encode` implementations, so that we can call it
+/// directly from other `unsafe_encode` methods (skipping the assert).
 pub trait Encodable: LayoutObject {
     /// Encode the object into the buffer. Any handles stored in the object are
     /// swapped for `Handle::INVALID`. Callers should ensure that `offset` is a
@@ -602,7 +616,25 @@ pub trait Encodable: LayoutObject {
         encoder: &mut Encoder<'_>,
         offset: usize,
         recursion_depth: usize,
-    ) -> Result<()>;
+    ) -> Result<()> {
+        assert!(offset + self.inline_size(encoder.context) <= encoder.buf.len());
+        unsafe { self.unsafe_encode(encoder, offset, recursion_depth) }
+    }
+
+    /// Unsafe version of encode that does not check the buffer boundaries.
+    /// This exists for performance.
+    ///
+    /// # Safety:
+    ///   The caller must check that a write to the buffer of this object's
+    ///   size will not exceed the buffer length.
+    unsafe fn unsafe_encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        self.encode(encoder, offset, recursion_depth)
+    }
 }
 
 assert_obj_safe!(Encodable);
@@ -685,8 +717,11 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
     impl_layout_int!($int_ty);
 
     impl Encodable for $int_ty {
-        fn encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
-            encoder.buf[offset..offset+mem::size_of::<Self>()].copy_from_slice(&self.to_le_bytes());
+        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
+            debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$int_ty>());
+            let ptr = encoder.buf.get_unchecked_mut(offset);
+            let int_ptr = std::mem::transmute::<*mut u8, *mut $int_ty>(ptr);
+            *int_ptr = *self;
             Ok(())
         }
     }
@@ -718,8 +753,11 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
     }
 
     impl Encodable for $float_ty {
-        fn encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
-            encoder.buf[offset..offset+mem::size_of::<Self>()].copy_from_slice(&self.to_le_bytes());
+        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
+            debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$float_ty>());
+            let ptr = encoder.buf.get_unchecked_mut(offset);
+            let float_ptr = std::mem::transmute::<*mut u8, *mut $float_ty>(ptr);
+            *float_ptr = *self;
             Ok(())
         }
     }
@@ -808,14 +846,14 @@ macro_rules! impl_slice_encoding_by_copy {
         impl_slice_encoding_base!($prim_ty);
 
         impl Encodable for &[$prim_ty] {
-            fn encode(
+            unsafe fn unsafe_encode(
                 &mut self,
                 encoder: &mut Encoder<'_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> Result<()> {
-                (self.len() as u64).encode(encoder, offset, recursion_depth)?;
-                ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+                (self.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
+                ALLOC_PRESENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
                 Encoder::check_recursion_depth(recursion_depth + 1)?;
                 if self.len() == 0 {
                     return Ok(());
@@ -865,13 +903,14 @@ impl_layout_int!(u8);
 impl_slice_encoding_by_copy!(u8);
 
 impl Encodable for u8 {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
         _recursion_depth: usize,
     ) -> Result<()> {
-        encoder.buf[offset] = *self;
+        debug_assert!(encoder.buf.len() >= offset + 1);
+        *encoder.buf.get_unchecked_mut(offset) = *self;
         Ok(())
     }
 }
@@ -892,13 +931,14 @@ impl_layout_int!(i8);
 impl_slice_encoding_by_copy!(i8);
 
 impl Encodable for i8 {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
         _recursion_depth: usize,
     ) -> Result<()> {
-        encoder.buf[offset] = *self as u8;
+        debug_assert!(encoder.buf.len() >= offset + 1);
+        *std::mem::transmute::<*mut u8, *mut i8>(encoder.buf.get_unchecked_mut(offset)) = *self;
         Ok(())
     }
 }
@@ -1340,6 +1380,17 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
 macro_rules! fidl_encode {
     ($val:expr, $encoder:expr, $offset:expr, $recursion_depth:expr) => {
         $crate::encoding::Encodable::encode($val, $encoder, $offset, $recursion_depth)
+    };
+}
+
+/// An shorthand macro for calling `Encodable::unsafe_encode()` from generated
+/// code with full parameters, without importing the `Encodable` trait.
+/// This is intended to be used only by generated code.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! fidl_unsafe_encode {
+    ($val:expr, $encoder:expr, $offset:expr, $recursion_depth:expr) => {
+        $crate::encoding::Encodable::unsafe_encode($val, $encoder, $offset, $recursion_depth)
     };
 }
 
@@ -1889,11 +1940,11 @@ macro_rules! fidl_struct {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 let mut padding_start = 0;
                 $(
                     encoder.padding(offset + padding_start, $member_offset_v1 - padding_start);
-                    $crate::fidl_encode!(&mut self.$member_name, encoder, offset + $member_offset_v1, recursion_depth)?;
+                    $crate::fidl_unsafe_encode!(&mut self.$member_name, encoder, offset + $member_offset_v1, recursion_depth)?;
                     padding_start = $member_offset_v1 + encoder.inline_size_of::<$member_ty>();
                 )*
                 encoder.padding(offset + padding_start, encoder.inline_size_of::<Self>() - padding_start);
@@ -1957,7 +2008,7 @@ macro_rules! fidl_struct_copy {
             fn inline_size(_context: &$crate::encoding::Context) -> usize {
                 $size_v1
             }
-            
+
             fn slice_as_bytes(slice: &mut [Self]) -> Option<&mut [u8]> {
                 Some(zerocopy::AsBytes::as_bytes_mut(slice))
             }
@@ -2012,8 +2063,8 @@ macro_rules! fidl_empty_struct {
         }
 
         impl $crate::encoding::Encodable for $name {
-          fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
-              $crate::fidl_encode!(&mut 0u8, encoder, offset, recursion_depth)
+          unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+              $crate::fidl_unsafe_encode!(&mut 0u8, encoder, offset, recursion_depth)
           }
         }
 
@@ -2126,15 +2177,10 @@ macro_rules! fidl_table {
                         $member_name: None,
                 )*}
             }
-        }
 
-        impl $crate::encoding::Layout for $name {
-            fn inline_align(_context: &$crate::encoding::Context) -> usize { 8 }
-            fn inline_size(_context: &$crate::encoding::Context) -> usize { 16 }
-        }
-
-        impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+            // Implementation of unsafe_encode that isn't an unsafe function to avoid a large unsafe block that may
+            // lead to unintended unsafe operations.
+            fn unsafe_encode_impl(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 let members: &mut [(u64, Option<&mut dyn $crate::encoding::Encodable>)] = &mut [$(
                     ($ordinal, self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable)),
                 )*];
@@ -2150,8 +2196,10 @@ macro_rules! fidl_table {
 
                 // Vector header
                 let max_ordinal = members.last().map(|v| v.0).unwrap_or(0);
-                (max_ordinal as u64).encode(encoder, offset, recursion_depth)?;
-                $crate::encoding::ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+                unsafe {
+                    $crate::fidl_unsafe_encode!(&mut (max_ordinal as u64), encoder, offset, recursion_depth)?;
+                    $crate::fidl_unsafe_encode!(&mut $crate::encoding::ALLOC_PRESENT_U64, encoder, offset + 8, recursion_depth)?;
+                }
                 let bytes_len = (max_ordinal as usize) * 16;
                 encoder.write_out_of_line(bytes_len, recursion_depth, |encoder, offset, recursion_depth| {
                     let mut prev_end_offset: usize = 0;
@@ -2169,6 +2217,17 @@ macro_rules! fidl_table {
                     }
                     Ok(())
                 })
+            }
+        }
+
+        impl $crate::encoding::Layout for $name {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize { 8 }
+            fn inline_size(_context: &$crate::encoding::Context) -> usize { 16 }
+        }
+
+        impl $crate::encoding::Encodable for $name {
+            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+                self.unsafe_encode_impl(encoder, offset, recursion_depth)
             }
         }
 
@@ -2295,7 +2354,7 @@ where
     O: Encodable,
     E: Encodable,
 {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
@@ -2304,7 +2363,7 @@ where
         match self {
             Ok(val) => {
                 // Encode success ordinal
-                1u64.encode(encoder, offset, recursion_depth)?;
+                1u64.unsafe_encode(encoder, offset, recursion_depth)?;
                 // If the inline size is 0, meaning the type is (),
                 // encode a zero byte instead because () in this context
                 // means an empty struct, not an absent payload.
@@ -2316,7 +2375,7 @@ where
             }
             Err(val) => {
                 // Encode error ordinal
-                2u64.encode(encoder, offset, recursion_depth)?;
+                2u64.unsafe_encode(encoder, offset, recursion_depth)?;
                 encode_in_envelope(&mut Some(val), encoder, offset + 8, recursion_depth)
             }
         }
@@ -2439,7 +2498,7 @@ macro_rules! fidl_xunion {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 let mut ordinal = self.ordinal();
                 // Encode ordinal
                 $crate::fidl_encode!(&mut ordinal, encoder, offset, recursion_depth)?;
@@ -2452,9 +2511,9 @@ macro_rules! fidl_xunion {
                             // Throw the raw data from the unrecognized variant
                             // back onto the wire. This will allow correct proxies even in
                             // the event that they don't yet recognize this union variant.
-                            $crate::fidl_encode!(&mut (bytes.len() as u32), encoder, offset + 8, recursion_depth)?;
-                            $crate::fidl_encode!(&mut (handles.len() as u32), encoder, offset + 12, recursion_depth)?;
-                            $crate::fidl_encode!(
+                            $crate::fidl_unsafe_encode!(&mut (bytes.len() as u32), encoder, offset + 8, recursion_depth)?;
+                            $crate::fidl_unsafe_encode!(&mut (handles.len() as u32), encoder, offset + 12, recursion_depth)?;
+                            $crate::fidl_unsafe_encode!(
                                 &mut $crate::encoding::ALLOC_PRESENT_U64, encoder, offset + 16, recursion_depth
                             )?;
                             $crate::encoding::Encoder::check_recursion_depth(recursion_depth + 1)?;
@@ -2668,14 +2727,14 @@ impl<T: Layout> Layout for TransactionMessage<'_, T> {
 }
 
 impl<T: Encodable> Encodable for TransactionMessage<'_, T> {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        self.header.encode(encoder, offset, recursion_depth)?;
-        (*self.body).encode(
+        self.header.unsafe_encode(encoder, offset, recursion_depth)?;
+        (*self.body).unsafe_encode(
             encoder,
             offset + encoder.inline_size_of::<TransactionHeader>(),
             recursion_depth,
@@ -2786,14 +2845,14 @@ impl<T: Layout> Layout for PersistentMessage<'_, T> {
 }
 
 impl<T: Encodable> Encodable for PersistentMessage<'_, T> {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        self.header.encode(encoder, offset, recursion_depth)?;
-        (*self.body).encode(
+        self.header.unsafe_encode(encoder, offset, recursion_depth)?;
+        (*self.body).unsafe_encode(
             encoder,
             offset + encoder.inline_size_of::<PersistentHeader>(),
             recursion_depth,
@@ -2926,10 +2985,10 @@ macro_rules! tuple_impls {
             where $typ: Encodable,
                   $( $ntyp: Encodable,)*
         {
-            fn encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
+            unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
                 // Tuples are encoded like structs.
                 // $idx is always 0 for the first element.
-                self.$idx.encode(encoder, offset, recursion_depth)?;
+                self.$idx.unsafe_encode(encoder, offset, recursion_depth)?;
                 let mut cur_offset = 0;
                 cur_offset += encoder.inline_size_of::<$typ>();
                 $(
@@ -2937,7 +2996,7 @@ macro_rules! tuple_impls {
                     let member_offset =
                         round_up_to_align(cur_offset, encoder.inline_align_of::<$ntyp>());
                     encoder.padding(offset + cur_offset, member_offset - cur_offset);
-                    self.$nidx.encode(encoder, offset + member_offset, recursion_depth)?;
+                    self.$nidx.unsafe_encode(encoder, offset + member_offset, recursion_depth)?;
                     cur_offset = member_offset + encoder.inline_size_of::<$ntyp>();
                 )*
                 encoder.padding(offset + cur_offset, encoder.inline_size_of::<Self>() - cur_offset);
@@ -3044,6 +3103,15 @@ impl<T: Encodable> Encodable for &mut T {
         recursion_depth: usize,
     ) -> Result<()> {
         (&mut **self).encode(encoder, offset, recursion_depth)
+    }
+
+    unsafe fn unsafe_encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        (&mut **self).unsafe_encode(encoder, offset, recursion_depth)
     }
 }
 
