@@ -27,7 +27,7 @@ def Main():
     if args.version:
         try:
             os.makedirs(
-                os.path.join(args.framework, VERSIONS, args.version), 0744)
+                os.path.join(args.framework, VERSIONS, args.version), 0o744)
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise e

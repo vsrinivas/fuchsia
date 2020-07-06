@@ -6,6 +6,8 @@
 # This script computes the number of concurrent links we want to run in the
 # build as a function of the machine.
 
+from __future__ import print_function
+
 import argparse
 import json
 import multiprocessing
@@ -70,7 +72,7 @@ def main():
         num_concurrent_jobs = int(max(1, mem_total_bytes / memory_per_job))
         concurrent_jobs[job] = min(num_concurrent_jobs, cpu_cap)
 
-    print json.dumps(concurrent_jobs)
+    print(json.dumps(concurrent_jobs))
 
     return 0
 

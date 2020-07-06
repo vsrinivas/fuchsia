@@ -10,7 +10,7 @@ import sys
 def read_contents(manifest):
     with open(manifest, 'r') as manifest_file:
         lines = manifest_file.readlines()
-        return dict(map(lambda l: l.strip().split('=', 1), lines))
+        return dict([l.strip().split('=', 1) for l in lines])
 
 
 def main():

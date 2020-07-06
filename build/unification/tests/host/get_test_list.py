@@ -20,7 +20,7 @@ def main():
 
     with open(args.source, 'r') as source_file:
         specs = json.load(source_file)
-    names = sorted(map(lambda s: s['test']['name'], specs))
+    names = sorted([s['test']['name'] for s in specs])
     with open(args.output, 'w') as output_file:
         json.dump(names, output_file)
 

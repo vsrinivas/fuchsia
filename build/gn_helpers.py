@@ -29,14 +29,14 @@ def ToGNString(value, allow_dicts=True):
   allow_dicts indicates if this function will allow converting dictionaries
   to GN scopes. This is only possible at the top level, you can't nest a
   GN scope in a list, so this should be set to False for recursive calls."""
-    if isinstance(value, basestring):
+    if isinstance(value, str):
         if value.find('\n') >= 0:
             raise GNException("Trying to print a string with a newline in it.")
         return '"' + \
             value.replace('\\', '\\\\').replace('"', '\\"').replace('$', '\\$') + \
             '"'
 
-    if isinstance(value, unicode):
+    if isinstance(value, str):
         return ToGNString(value.encode('utf-8'))
 
     if isinstance(value, bool):
@@ -52,7 +52,7 @@ def ToGNString(value, allow_dicts=True):
             raise GNException("Attempting to recursively print a dictionary.")
         result = ""
         for key in sorted(value):
-            if not isinstance(key, basestring):
+            if not isinstance(key, str):
                 raise GNException("Dictionary key is not a string.")
             result += "%s = %s\n" % (key, ToGNString(value[key], False))
         return result

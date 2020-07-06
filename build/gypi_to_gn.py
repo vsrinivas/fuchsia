@@ -71,7 +71,9 @@ the input will be replaced with "bar":
 
 """
 
-import gn_helpers
+from __future__ import print_function
+
+from . import gn_helpers
 from optparse import OptionParser
 import sys
 
@@ -80,10 +82,10 @@ def LoadPythonDictionary(path):
     file_string = open(path).read()
     try:
         file_data = eval(file_string, {'__builtins__': None}, None)
-    except SyntaxError, e:
+    except SyntaxError as e:
         e.filename = path
         raise
-    except Exception, e:
+    except Exception as e:
         raise Exception(
             "Unexpected error while reading %s: %s" % (path, str(e)))
 
@@ -126,7 +128,7 @@ def ReplaceSubstrings(values, search_for, replace_with):
     if isinstance(values, dict):
         # For dictionaries, do the search for both the key and values.
         result = {}
-        for key, value in values.items():
+        for key, value in list(values.items()):
             new_key = ReplaceSubstrings(key, search_for, replace_with)
             new_value = ReplaceSubstrings(value, search_for, replace_with)
             result[new_key] = new_value
@@ -170,12 +172,12 @@ def main():
             data[key[:-1]] = data[key]
             del data[key]
 
-    print gn_helpers.ToGNString(data)
+    print(gn_helpers.ToGNString(data))
 
 
 if __name__ == '__main__':
     try:
         main()
-    except Exception, e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         sys.exit(1)

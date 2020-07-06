@@ -96,7 +96,7 @@ def main():
         services = config.get('services')
         if not services:
             continue
-        for service in services.iterkeys():
+        for service in services.keys():
             if service in seen_services:
                 if not service in service_conflicts:
                     service_conflicts[service] = [seen_services[service]]
@@ -108,7 +108,7 @@ def main():
     # exit.
     if service_conflicts or diag_conflicts:
         print('Error: conflicts detected in sysmgr configuration')
-        for service, config_files in service_conflicts.items():
+        for service, config_files in list(service_conflicts.items()):
             print(
                 'Duplicate configuration for service {} in files: {}'.format(
                     service, ', '.join(config_files)))
