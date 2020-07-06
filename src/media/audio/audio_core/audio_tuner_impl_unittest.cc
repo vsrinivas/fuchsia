@@ -22,6 +22,25 @@ const auto kDeviceIdUnique = AudioDevice::UniqueIdFromString(kDeviceIdString).ta
 const auto kVolumeCurve = VolumeCurve::DefaultForMinGain(-160.0f);
 const auto kDefaultConfig = ProcessConfig::Builder().SetDefaultVolumeCurve(kVolumeCurve).Build();
 
+std::optional<fuchsia::media::tuning::StreamType> StreamTypeFromRenderUsage(RenderUsage usage) {
+  switch (usage) {
+    case RenderUsage::BACKGROUND:
+      return fuchsia::media::tuning::StreamType::RENDER_BACKGROUND;
+    case RenderUsage::MEDIA:
+      return fuchsia::media::tuning::StreamType::RENDER_MEDIA;
+    case RenderUsage::INTERRUPTION:
+      return fuchsia::media::tuning::StreamType::RENDER_INTERRUPTION;
+    case RenderUsage::SYSTEM_AGENT:
+      return fuchsia::media::tuning::StreamType::RENDER_SYSTEM_AGENT;
+    case RenderUsage::COMMUNICATION:
+      return fuchsia::media::tuning::StreamType::RENDER_COMMUNICATION;
+    case RenderUsage::ULTRASOUND:
+      return fuchsia::media::tuning::StreamType::RENDER_ULTRASOUND;
+    default:
+      return std::nullopt;
+  }
+}
+
 void ExpectEq(const VolumeCurve& expected,
               const std::vector<fuchsia::media::tuning::Volume> result) {
   std::vector<VolumeCurve::VolumeMapping> expected_mappings = expected.mappings();
@@ -34,10 +53,11 @@ void ExpectEq(const VolumeCurve& expected,
 
 void ExpectEq(const PipelineConfig::Effect& expected,
               const fuchsia::media::tuning::AudioEffectConfig& result) {
-  EXPECT_EQ(expected.lib_name, result.type.module_name);
-  EXPECT_EQ(expected.effect_name, result.type.effect_name);
-  EXPECT_EQ(expected.instance_name, result.instance_name);
-  EXPECT_EQ(expected.effect_config, result.configuration);
+  EXPECT_EQ(expected.lib_name, result.type().module_name());
+  EXPECT_EQ(expected.effect_name, result.type().effect_name());
+  EXPECT_EQ(expected.instance_name, result.instance_name());
+  EXPECT_EQ(expected.effect_config, result.configuration());
+  EXPECT_EQ(expected.output_channels, result.output_channels());
 }
 
 void ExpectEq(const PipelineConfig::MixGroup& expected,
@@ -48,7 +68,7 @@ void ExpectEq(const PipelineConfig::MixGroup& expected,
   for (size_t i = 0; i < expected.input_streams.size(); ++i) {
     auto expected_usage = expected.input_streams[i];
     auto result_usage = result.streams[i];
-    EXPECT_EQ(FidlRenderUsageFromRenderUsage(expected_usage), result_usage);
+    EXPECT_EQ(StreamTypeFromRenderUsage(expected_usage), result_usage);
   }
   EXPECT_EQ(expected.effects.size(), result.effects.size());
   for (size_t i = 0; i < expected.effects.size(); ++i) {
@@ -58,6 +78,8 @@ void ExpectEq(const PipelineConfig::MixGroup& expected,
   for (size_t i = 0; i < expected.inputs.size(); ++i) {
     ExpectEq(expected.inputs[i], std::move(*result.inputs[i]));
   }
+  EXPECT_EQ(expected.output_rate, result.output_rate);
+  EXPECT_EQ(expected.output_channels, result.output_channels);
 }
 
 class AudioTunerTest : public gtest::TestLoopFixture {
@@ -81,17 +103,17 @@ TEST_F(AudioTunerTest, GetAvailableAudioEffects) {
   // Create an effect we can load.
   test_effects_.AddEffect("test_effect");
 
-  std::vector<fuchsia::media::tuning::AudioEffectType> available_effects;
+  bool received_test_effect = false;
   under_test.GetAvailableAudioEffects(
-      [&available_effects](std::vector<fuchsia::media::tuning::AudioEffectType> effects) {
-        available_effects = effects;
+      [&received_test_effect](std::vector<fuchsia::media::tuning::AudioEffectType> effects) {
+        for (size_t i = 0; i < effects.size(); ++i) {
+          if (effects[i].module_name() == testing::kTestEffectsModuleName &&
+              effects[i].effect_name() == "test_effect") {
+            received_test_effect = true;
+          }
+        }
       });
-
-  EXPECT_THAT(
-      available_effects,
-      Contains(AllOf(Field(&fuchsia::media::tuning::AudioEffectType::effect_name, "test_effect"),
-                     Field(&fuchsia::media::tuning::AudioEffectType::module_name,
-                           testing::kTestEffectsModuleName))));
+  EXPECT_TRUE(received_test_effect);
 }
 
 TEST_F(AudioTunerTest, GetAudioDeviceTuningProfile) {
@@ -101,31 +123,33 @@ TEST_F(AudioTunerTest, GetAudioDeviceTuningProfile) {
           .AddDeviceProfile(
               {std::vector<audio_stream_unique_id_t>{kDeviceIdUnique},
                DeviceConfig::OutputDeviceProfile(
-                   /* eligible_for_loopback=*/true, /*supported_usages=*/{}, false,
+                   /*eligible_for_loopback=*/true, /*supported_usages=*/{},
+                   /*independent_volume_control=*/false,
                    PipelineConfig(PipelineConfig::MixGroup{
-                       /* name */ "linearize",
-                       /* input_streams */
-                       {RenderUsage::BACKGROUND, RenderUsage::MEDIA},
-                       /* effects */
-                       {PipelineConfig::Effect{"my_effects.so", "equalizer", "eq1", "",
-                                               std::nullopt}},
-                       /* inputs */
-                       {PipelineConfig::MixGroup{
-                           /* name */ "mix",
-                           /* input_streams */ {},
-                           /* effects */ {},
-                           /* inputs */
-                           {PipelineConfig::MixGroup{/* name */ "output_streams",
-                                                     /* input_streams */ {}, /* effects */ {},
-                                                     /* inputs */ {}, /* loopback */ false,
-                                                     /* output_rate */ 48000,
-                                                     /* output_channels */ 2}},
-                           /* loopback */ false,
-                           /* output_rate */ 48000,
-                           /* output_channels */ 2}},
-                       /* loopback */ true,
-                       /* output_rate */ 48000,
-                       /* output_channels */ 2}))})
+                       .name = "linearize",
+                       .input_streams = {RenderUsage::BACKGROUND, RenderUsage::MEDIA},
+                       .effects = {PipelineConfig::Effect{.lib_name = "my_effects.so",
+                                                          .effect_name = "equalizer",
+                                                          .instance_name = "eq1",
+                                                          .effect_config = "",
+                                                          .output_channels = 2}},
+                       .inputs = {PipelineConfig::MixGroup{
+                           .name = "mix",
+                           .input_streams = {},
+                           .effects = {},
+                           .inputs = {PipelineConfig::MixGroup{.name = "output_streams",
+                                                               .input_streams = {},
+                                                               .effects = {},
+                                                               .inputs = {},
+                                                               .loopback = false,
+                                                               .output_rate = 48000,
+                                                               .output_channels = 2}},
+                           .loopback = false,
+                           .output_rate = 48000,
+                           .output_channels = 2}},
+                       .loopback = true,
+                       .output_rate = 48000,
+                       .output_channels = 2}))})
           .Build();
 
   auto context = CreateContext(expected_process_config);

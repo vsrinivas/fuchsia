@@ -15,11 +15,37 @@
 namespace media::audio {
 namespace {
 
+std::optional<fuchsia::media::tuning::StreamType> StreamTypeFromRenderUsage(RenderUsage usage) {
+  switch (usage) {
+    case RenderUsage::BACKGROUND:
+      return fuchsia::media::tuning::StreamType::RENDER_BACKGROUND;
+    case RenderUsage::MEDIA:
+      return fuchsia::media::tuning::StreamType::RENDER_MEDIA;
+    case RenderUsage::INTERRUPTION:
+      return fuchsia::media::tuning::StreamType::RENDER_INTERRUPTION;
+    case RenderUsage::SYSTEM_AGENT:
+      return fuchsia::media::tuning::StreamType::RENDER_SYSTEM_AGENT;
+    case RenderUsage::COMMUNICATION:
+      return fuchsia::media::tuning::StreamType::RENDER_COMMUNICATION;
+    case RenderUsage::ULTRASOUND:
+      return fuchsia::media::tuning::StreamType::RENDER_ULTRASOUND;
+    default:
+      return std::nullopt;
+  }
+}
+
 fuchsia::media::tuning::AudioEffectConfig ToAudioEffectConfig(const PipelineConfig::Effect effect) {
-  std::string instance_name = effect.instance_name;
-  auto type = fuchsia::media::tuning::AudioEffectType{effect.lib_name, effect.effect_name};
-  std::string config = effect.effect_config;
-  return fuchsia::media::tuning::AudioEffectConfig{instance_name, type, config};
+  auto result = fuchsia::media::tuning::AudioEffectConfig();
+  result.set_instance_name(effect.instance_name);
+  fuchsia::media::tuning::AudioEffectType effect_type;
+  effect_type.set_module_name(effect.lib_name);
+  effect_type.set_effect_name(effect.effect_name);
+  result.set_type(std::move(effect_type));
+  result.set_configuration(effect.effect_config);
+  if (effect.output_channels.has_value()) {
+    result.set_output_channels(effect.output_channels.value());
+  }
+  return result;
 }
 
 fuchsia::media::tuning::AudioMixGroup ToAudioMixGroup(const PipelineConfig::MixGroup mix_group) {
@@ -35,14 +61,17 @@ fuchsia::media::tuning::AudioMixGroup ToAudioMixGroup(const PipelineConfig::MixG
     inputs.push_back(
         std::make_unique<fuchsia::media::tuning::AudioMixGroup>(ToAudioMixGroup(input)));
   }
-  std::vector<fuchsia::media::AudioRenderUsage> streams;
+  std::vector<fuchsia::media::tuning::StreamType> streams;
   for (auto usage : mix_group.input_streams) {
-    auto stream = FidlRenderUsageFromRenderUsage(usage);
+    auto stream = StreamTypeFromRenderUsage(usage);
     if (stream.has_value()) {
       streams.push_back(stream.value());
     }
   }
-  return fuchsia::media::tuning::AudioMixGroup{name, loopback, effects, std::move(inputs), streams};
+  uint32_t output_rate = mix_group.output_rate;
+  uint16_t output_channels = mix_group.output_channels;
+  return fuchsia::media::tuning::AudioMixGroup{
+      name, loopback, std::move(effects), std::move(inputs), streams, output_rate, output_channels};
 }
 
 fuchsia::media::tuning::AudioDeviceTuningProfile ToAudioDeviceTuningProfile(
@@ -89,9 +118,10 @@ void AudioTunerImpl::GetAvailableAudioEffects(GetAvailableAudioEffectsCallback c
         continue;
       }
 
-      fuchsia::media::tuning::AudioEffectType effect = {.module_name = lib_name.string(),
-                                                        .effect_name = desc.name};
-      available_effects.push_back(effect);
+      fuchsia::media::tuning::AudioEffectType effect;
+      effect.set_module_name(lib_name.string());
+      effect.set_effect_name(desc.name);
+      available_effects.push_back(std::move(effect));
     }
   }
   callback(std::move(available_effects));
