@@ -130,6 +130,7 @@ zx_library("blobfs") {
     sources += [
       "allocator/allocator.cc",
       "blob-cache.cc",
+      "blob-corruption-notifier.cc",
       "blob-loader.cc",
       "blob-verifier.cc",
       "blob.cc",
@@ -160,6 +161,7 @@ zx_library("blobfs") {
       "//zircon/system/ulib/fs/metrics:metrics-inspect",
     ]
     deps += [
+      "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_llcpp",
       "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",

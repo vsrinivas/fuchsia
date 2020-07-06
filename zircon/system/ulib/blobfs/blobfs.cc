@@ -317,6 +317,12 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     return loader.status_value();
   }
   fs->loader_ = std::move(loader.value());
+  status = BlobCorruptionNotifier::Create(&(fs->blob_corruption_notifier_));
+
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to initialize corruption notifier: %s\n",
+                   zx_status_get_string(status));
+  }
 
   *out = std::move(fs);
   return ZX_OK;

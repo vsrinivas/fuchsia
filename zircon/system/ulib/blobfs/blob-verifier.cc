@@ -4,6 +4,7 @@
 
 #include "blob-verifier.h"
 
+#include <fuchsia/blobfs/c/fidl.h>
 #include <zircon/status.h>
 
 #include <digest/digest.h>
@@ -17,9 +18,11 @@ BlobVerifier::BlobVerifier(BlobfsMetrics* metrics) : metrics_(metrics) {}
 
 zx_status_t BlobVerifier::Create(digest::Digest digest, BlobfsMetrics* metrics, const void* merkle,
                                  size_t merkle_size, size_t data_size,
+                                 const BlobCorruptionNotifier* notifier,
                                  std::unique_ptr<BlobVerifier>* out) {
   std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(metrics));
   verifier->digest_ = std::move(digest);
+  verifier->corruption_notifier_ = notifier;
   zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to set merkle data length: %s\n", zx_status_get_string(status));
@@ -36,15 +39,17 @@ zx_status_t BlobVerifier::Create(digest::Digest digest, BlobfsMetrics* metrics, 
     FS_TRACE_ERROR("blobfs: Failed to create merkle verifier: %s\n", zx_status_get_string(status));
     return status;
   }
-
   *out = std::move(verifier);
   return ZX_OK;
 }
 
 zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest, BlobfsMetrics* metrics,
-                                            size_t data_size, std::unique_ptr<BlobVerifier>* out) {
+                                            size_t data_size,
+                                            const BlobCorruptionNotifier* notifier,
+                                            std::unique_ptr<BlobVerifier>* out) {
   std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(metrics));
   verifier->digest_ = std::move(digest);
+  verifier->corruption_notifier_ = notifier;
   zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to set merkle data length: %s\n", zx_status_get_string(status));
@@ -109,6 +114,16 @@ zx_status_t BlobVerifier::Verify(const void* data, size_t data_size, size_t buff
   }
   metrics_->verification_metrics().Increment(data_size, tree_verifier_.GetTreeLength(),
                                              ticker.End());
+  if (status == ZX_ERR_IO_DATA_INTEGRITY && corruption_notifier_) {
+    // Notify the corruption handler server about the corrupted blob.
+    // If there is any error to do this, we should not fail the verify.
+    zx_status_t notify_status =
+        corruption_notifier_->NotifyCorruptBlob(digest_.get(), digest_.len());
+    if (notify_status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Failed to notify corruptionHandler for blob: %s error: %s\n",
+                     digest_.ToString().c_str(), zx_status_get_string(notify_status));
+    }
+  }
   return status;
 }
 
@@ -130,6 +145,17 @@ zx_status_t BlobVerifier::VerifyPartial(const void* data, size_t length, size_t 
     }
   }
   metrics_->verification_metrics().Increment(length, tree_verifier_.GetTreeLength(), ticker.End());
+
+  if (status == ZX_ERR_IO_DATA_INTEGRITY && corruption_notifier_) {
+    // Notify the corruption handler server about the corrupted blob.
+    // If there is any error to do this, we should not fail the verify.
+    zx_status_t notify_status =
+        corruption_notifier_->NotifyCorruptBlob(digest_.get(), digest_.len());
+    if (notify_status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Failed to notify corruptionHandler for blob: %s error: %s\n",
+                     digest_.ToString().c_str(), zx_status_get_string(notify_status));
+    }
+  }
   return status;
 }
 

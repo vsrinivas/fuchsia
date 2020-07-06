@@ -207,6 +207,7 @@ test("blobfs-integration") {
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fs-test-utils",
     "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/fvm",
@@ -215,6 +216,7 @@ test("blobfs-integration") {
     "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/ramdevice-client",
   ]
+  public_deps = [ "//zircon/system/ulib/fidl-utils" ]
 }
 
 source_set("load-generator") {

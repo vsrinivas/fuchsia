@@ -7,14 +7,17 @@
 #include <fcntl.h>
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/async-loop/loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <utime.h>
 #include <zircon/device/vfs.h>
+#include <zircon/fidl.h>
 
 #include <array>
 #include <atomic>
@@ -25,6 +28,7 @@
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fs/test_support/test_support.h>
+#include <fs/trace.h>
 #include <fvm/format.h>
 #include <zxtest/zxtest.h>
 
@@ -45,6 +49,61 @@ using fs::GetTopologicalPath;
 using fs::RamDisk;
 
 namespace fio = ::llcpp::fuchsia::io;
+
+void VerifyCorruptedBlob(int fd, const char* data, size_t size_data) {
+  // Verify the contents of the Blob
+  fbl::Array<char> buf(new char[size_data], size_data);
+
+  ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+  ASSERT_EQ(StreamAll(read, fd, &buf[0], size_data), -1, "Expected reading to fail");
+}
+
+// Creates a corrupted blob with the provided Merkle tree + Data, and
+// reads to verify the data.
+void ReadBlobCorrupted(BlobInfo* info) {
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd, "Failed to create blob");
+  ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+
+  // Writing corrupted blob to disk.
+  StreamAll(write, fd.get(), info->data.get(), info->size_data);
+
+  ASSERT_NO_FAILURES(VerifyCorruptedBlob(fd.get(), info->data.get(), info->size_data));
+  ASSERT_EQ(close(fd.release()), 0);
+}
+
+// Class emulating the corruption handler service
+class CorruptBlobHandler final {
+ public:
+  using CorruptBlobHandlerBinder = fidl::Binder<CorruptBlobHandler>;
+
+  ~CorruptBlobHandler() {}
+
+  zx_status_t CorruptBlob(const uint8_t* merkleroot_hash, size_t count) {
+    num_calls_++;
+    return ZX_OK;
+  }
+
+  zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
+    static constexpr fuchsia_blobfs_CorruptBlobHandler_ops_t kOps = {
+        .CorruptBlob = CorruptBlobHandlerBinder::BindMember<&CorruptBlobHandler::CorruptBlob>,
+    };
+
+    return CorruptBlobHandlerBinder::BindOps<fuchsia_blobfs_CorruptBlobHandler_dispatch>(
+        dispatcher, std::move(channel), this, &kOps);
+  }
+
+  void UpdateClientHandle(zx::channel client) { client_ = std::move(client); }
+
+  zx_handle_t GetClientHandle() { return client_.get(); }
+
+  // Checks if the corruption handler is called.
+  bool IsCalled(void) { return num_calls_ > 0; }
+
+ private:
+  zx::channel client_, server_;
+  size_t num_calls_;
+};
 
 // Go over the parent device logic and test fixture.
 TEST_F(BlobfsTest, Trivial) {}
@@ -81,6 +140,56 @@ void RunBasicsTest() {
 TEST_F(BlobfsTest, Basics) { RunBasicsTest(); }
 
 TEST_F(BlobfsTestWithFvm, Basics) { RunBasicsTest(); }
+
+void StartMockCorruptionHandlerService(std::unique_ptr<CorruptBlobHandler>* out) {
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  ASSERT_EQ(ZX_OK, status, "");
+
+  async_loop_t* loop = NULL;
+  ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop), "");
+  ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "corruption-dispatcher", NULL), "");
+
+  async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
+  auto handler = std::unique_ptr<CorruptBlobHandler>(new CorruptBlobHandler());
+  ASSERT_EQ(ZX_OK, handler->Bind(dispatcher, std::move(server)));
+
+  handler->UpdateClientHandle(std::move(client));
+  *out = std::move(handler);
+}
+
+void RunBlobCorruptionTest() {
+  // Start the corruption handler server.
+  std::unique_ptr<CorruptBlobHandler> corruption_server;
+  ASSERT_NO_FAILURES(StartMockCorruptionHandlerService(&corruption_server));
+  zx_handle_t blobfs_client = corruption_server->GetClientHandle();
+
+  // Pass the client end to blobfs.
+  fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
+  ASSERT_TRUE(fd);
+  zx_status_t status;
+  fdio_cpp::FdioCaller caller(std::move(fd));
+
+  ASSERT_OK(fuchsia_blobfs_BlobfsSetCorruptBlobHandler(caller.borrow_channel(),
+                                                       std::move(blobfs_client), &status));
+  ASSERT_OK(status);
+
+  // Create a blob, corrupt it and then attempt to read it.
+  std::unique_ptr<BlobInfo> info;
+  GenerateRandomBlob(kMountPath, 1 << 5, &info);
+  // Flip a random bit of the data
+  size_t rand_index = rand() % info->size_data;
+  char old_val = info->data.get()[rand_index];
+  while ((info->data.get()[rand_index] = static_cast<char>(rand())) == old_val) {
+  }
+
+  ASSERT_NO_FAILURES(ReadBlobCorrupted(info.get()));
+  ASSERT_TRUE(corruption_server->IsCalled());
+}
+
+TEST_F(BlobfsTest, CorruptBlobNotify) { RunBlobCorruptionTest(); }
+
+TEST_F(BlobfsTestWithFvm, CorruptBlobNotify) { RunBlobCorruptionTest(); }
 
 void RunUnallocatedBlobTest() {
   std::unique_ptr<BlobInfo> info;

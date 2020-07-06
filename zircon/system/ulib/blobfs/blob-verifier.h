@@ -12,6 +12,7 @@
 #include <digest/merkle-tree.h>
 #include <fbl/macros.h>
 
+#include "blob-corruption-notifier.h"
 #include "metrics.h"
 
 namespace blobfs {
@@ -29,6 +30,7 @@ class BlobVerifier {
   // size for |data_size| bytes is bigger than |merkle_size|.
   [[nodiscard]] static zx_status_t Create(digest::Digest digest, BlobfsMetrics* metrics,
                                           const void* merkle, size_t merkle_size, size_t data_size,
+                                          const BlobCorruptionNotifier* notifier,
                                           std::unique_ptr<BlobVerifier>* out);
 
   // Creates an instance of BlobVerifier for blobs named |digest|, which are small enough to not
@@ -38,6 +40,7 @@ class BlobVerifier {
   // class.
   [[nodiscard]] static zx_status_t CreateWithoutTree(digest::Digest digest, BlobfsMetrics* metrics,
                                                      size_t data_size,
+                                                     const BlobCorruptionNotifier* notifier,
                                                      std::unique_ptr<BlobVerifier>* out);
 
   // Verifies the entire contents of a blob. |buffer_size| is the total size of the buffer and the
@@ -74,6 +77,7 @@ class BlobVerifier {
   [[nodiscard]] zx_status_t VerifyTailZeroed(const void* data, size_t data_size,
                                              size_t buffer_size);
 
+  const BlobCorruptionNotifier* corruption_notifier_;
   digest::Digest digest_;
   digest::MerkleTreeVerifier tree_verifier_;
   BlobfsMetrics* metrics_;

@@ -59,8 +59,8 @@ class BlobLoader {
   //  - The stored merkle tree is well-formed.
   //  - The blob's merkle root in |inode| matches the root of the merkle tree stored on-disk.
   //  - The blob's contents match the merkle tree.
-  zx_status_t LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_out,
-                       fzl::OwnedVmoMapper* merkle_out);
+  zx_status_t LoadBlob(uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier,
+                       fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out);
   // Loads the merkle tree for the blob referenced |inode|, and prepare a pager-backed VMO for
   // data.
   //
@@ -75,7 +75,8 @@ class BlobLoader {
   //
   // This method does *NOT* immediately verify the integrity of the blob's data, this will be
   // lazily verified by the pager as chunks of the blob are loaded.
-  zx_status_t LoadBlobPaged(uint32_t node_index, std::unique_ptr<PageWatcher>* page_watcher_out,
+  zx_status_t LoadBlobPaged(uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier,
+                            std::unique_ptr<PageWatcher>* page_watcher_out,
                             fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out);
 
  private:
@@ -88,6 +89,7 @@ class BlobLoader {
   // contents. (Small blobs may have no stored tree, in which case |vmo_out| is not mapped but
   // |verifier_out| is still initialized.)
   zx_status_t InitMerkleVerifier(uint32_t node_index, const Inode& inode,
+                                 const BlobCorruptionNotifier* corruption_notifier,
                                  fzl::OwnedVmoMapper* vmo_out,
                                  std::unique_ptr<BlobVerifier>* verifier_out);
   // Prepares |decompressor_out| to decompress the blob contents of |inode|.

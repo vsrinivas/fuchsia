@@ -77,18 +77,21 @@ zx_status_t Blob::Verify() const {
 
   zx_status_t status;
   std::unique_ptr<BlobVerifier> verifier;
+
   if (merkle_size == 0) {
     // No merkle tree is stored for small blobs, because the entire blob can be verified based
     // on its merkle root digest (i.e. the blob's merkle tree is just a single root digest).
     // Still verify the blob's contents in this case.
-    if ((status = BlobVerifier::CreateWithoutTree(MerkleRoot(), blobfs_->Metrics(),
-                                                  inode_.blob_size, &verifier)) != ZX_OK) {
+    if ((status = BlobVerifier::CreateWithoutTree(
+             MerkleRoot(), blobfs_->Metrics(), inode_.blob_size, blobfs_->GetCorruptBlobNotifier(),
+             &verifier)) != ZX_OK) {
       return status;
     }
   } else {
     ZX_ASSERT(IsMerkleTreeLoaded());
     if ((status = BlobVerifier::Create(MerkleRoot(), blobfs_->Metrics(), GetMerkleTreeBuffer(),
-                                       merkle_size, inode_.blob_size, &verifier)) != ZX_OK) {
+                                       merkle_size, inode_.blob_size,
+                                       blobfs_->GetCorruptBlobNotifier(), &verifier)) != ZX_OK) {
       return status;
     }
   }
@@ -678,10 +681,12 @@ zx_status_t Blob::LoadVmosFromDisk() {
     return ZX_OK;
   }
   BlobLoader& loader = blobfs_->loader();
-  zx_status_t status =
-      IsPagerBacked()
-          ? loader.LoadBlobPaged(map_index_, &page_watcher_, &data_mapping_, &merkle_mapping_)
-          : loader.LoadBlob(map_index_, &data_mapping_, &merkle_mapping_);
+
+  zx_status_t status = IsPagerBacked()
+                           ? loader.LoadBlobPaged(map_index_, blobfs_->GetCorruptBlobNotifier(),
+                                                  &page_watcher_, &data_mapping_, &merkle_mapping_)
+                           : loader.LoadBlob(map_index_, blobfs_->GetCorruptBlobNotifier(),
+                                             &data_mapping_, &merkle_mapping_);
 
   std::scoped_lock guard(mutex_);
   syncing_state_ = SyncingState::kDone;  // Nothing to sync when blob was loaded from the device.

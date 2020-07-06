@@ -75,8 +75,9 @@ void BlobLoader::Reset() {
   scratch_vmo_.Reset();
 }
 
-zx_status_t BlobLoader::LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_out,
-                                 fzl::OwnedVmoMapper* merkle_out) {
+zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
+                                 const BlobCorruptionNotifier* corruption_notifier,
+                                 fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out) {
   ZX_DEBUG_ASSERT(scratch_vmo_.vmo().is_valid());
   const InodePtr inode = node_finder_->GetNode(node_index);
   // LoadBlob should only be called for Inodes. If this doesn't hold, one of two things happened:
@@ -98,7 +99,8 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_
   fzl::OwnedVmoMapper merkle_mapper;
   std::unique_ptr<BlobVerifier> verifier;
   zx_status_t status;
-  if ((status = InitMerkleVerifier(node_index, *inode, &merkle_mapper, &verifier)) != ZX_OK) {
+  if ((status = InitMerkleVerifier(node_index, *inode, corruption_notifier, &merkle_mapper,
+                                   &verifier)) != ZX_OK) {
     return status;
   }
 
@@ -136,6 +138,7 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_
 }
 
 zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
+                                      const BlobCorruptionNotifier* corruption_notifier,
                                       std::unique_ptr<PageWatcher>* page_watcher_out,
                                       fzl::OwnedVmoMapper* data_out,
                                       fzl::OwnedVmoMapper* merkle_out) {
@@ -161,7 +164,8 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   fzl::OwnedVmoMapper merkle_mapper;
   std::unique_ptr<BlobVerifier> verifier;
   zx_status_t status;
-  if ((status = InitMerkleVerifier(node_index, *inode, &merkle_mapper, &verifier)) != ZX_OK) {
+  if ((status = InitMerkleVerifier(node_index, *inode, corruption_notifier, &merkle_mapper,
+                                   &verifier)) != ZX_OK) {
     return status;
   }
 
@@ -211,12 +215,13 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
 }
 
 zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& inode,
+                                           const BlobCorruptionNotifier* notifier,
                                            fzl::OwnedVmoMapper* out_vmo,
                                            std::unique_ptr<BlobVerifier>* out_verifier) {
   uint64_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   if (num_merkle_blocks == 0) {
     return BlobVerifier::CreateWithoutTree(digest::Digest(inode.merkle_root_hash), metrics_,
-                                           inode.blob_size, out_verifier);
+                                           inode.blob_size, notifier, out_verifier);
   }
 
   fzl::OwnedVmoMapper merkle_mapper;
@@ -244,7 +249,7 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
 
   if ((status = BlobVerifier::Create(digest::Digest(inode.merkle_root_hash), metrics_,
                                      merkle_mapper.start(), merkle_vmo_size, inode.blob_size,
-                                     &verifier)) != ZX_OK) {
+                                     notifier, &verifier)) != ZX_OK) {
     return status;
   }
 

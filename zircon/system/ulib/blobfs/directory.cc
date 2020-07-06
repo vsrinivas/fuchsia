@@ -214,7 +214,8 @@ void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync completer
 
 void Directory::SetCorruptBlobHandler(zx::channel handler,
                                       SetCorruptBlobHandlerCompleter::Sync completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  blobfs_->SetCorruptBlobHandler(std::move(handler));
+  return completer.Reply(ZX_OK);
 }
 
 #endif  // __Fuchsia__

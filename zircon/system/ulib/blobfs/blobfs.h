@@ -198,6 +198,14 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) override;
 
+  // Corruption notifier related.
+  const BlobCorruptionNotifier* GetCorruptBlobNotifier(void) {
+    return blob_corruption_notifier_.get();
+  }
+  void SetCorruptBlobHandler(zx::channel blobfs_handler) {
+    blob_corruption_notifier_->SetCorruptBlobHandler(std::move(blobfs_handler));
+  }
+
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
@@ -205,6 +213,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
  private:
   friend class BlobfsChecker;
+  std::unique_ptr<BlobCorruptionNotifier> blob_corruption_notifier_;
 
   ////////////////
   // UserPager interface.

@@ -233,8 +233,7 @@ void DoTest_NullBlob(BlobLoaderTest* test) {
   BlobLoader loader = test->CreateLoader(nullptr);
 
   fzl::OwnedVmoMapper data, merkle;
-
-  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), &data, &merkle));
+  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
 
   EXPECT_FALSE(data.vmo().is_valid());
   EXPECT_EQ(data.size(), 0);
@@ -257,7 +256,7 @@ void DoTest_SmallBlob(BlobLoaderTest* test) {
   BlobLoader loader = test->CreateLoader(nullptr);
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), &data, &merkle));
+  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
@@ -283,7 +282,7 @@ void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
 
   fzl::OwnedVmoMapper data, merkle;
   std::unique_ptr<PageWatcher> page_watcher;
-  ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), &page_watcher, &data, &merkle));
+  ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle));
   pager.SetVmoToDetachOnFailure(data.vmo());
 
   ASSERT_TRUE(data.vmo().is_valid());
@@ -312,7 +311,7 @@ void DoTest_LargeBlob(BlobLoaderTest* test) {
   BlobLoader loader = test->CreateLoader(nullptr);
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), &data, &merkle));
+  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
@@ -337,7 +336,7 @@ void DoTest_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   BlobLoader loader = test->CreateLoader(nullptr);
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), &data, &merkle));
+  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
@@ -372,7 +371,7 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
 
   fzl::OwnedVmoMapper data, merkle;
   std::unique_ptr<PageWatcher> page_watcher;
-  ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), &page_watcher, &data, &merkle));
+  ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle));
   pager.SetVmoToDetachOnFailure(data.vmo());
 
   ASSERT_TRUE(data.vmo().is_valid());
@@ -404,7 +403,7 @@ void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
 
   fzl::OwnedVmoMapper data, merkle;
   std::unique_ptr<PageWatcher> page_watcher;
-  ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), &page_watcher, &data, &merkle));
+  ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle));
   pager.SetVmoToDetachOnFailure(data.vmo());
 
   ASSERT_TRUE(data.vmo().is_valid());

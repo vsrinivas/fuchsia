@@ -48,8 +48,7 @@ TEST_F(BlobVerifierTest, CreateAndVerify_NullBlob) {
   GenerateTree(nullptr, 0, &digest, &unused_merkle_buf);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_OK(BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), 0ul, &verifier));
-
+  ASSERT_OK(BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), 0ul, nullptr, &verifier));
   EXPECT_OK(verifier->Verify(nullptr, 0ul, 0ul));
   EXPECT_OK(verifier->VerifyPartial(nullptr, 0ul, 0ul, 0ul));
 }
@@ -63,7 +62,8 @@ TEST_F(BlobVerifierTest, CreateAndVerify_SmallBlob) {
   GenerateTree(buf, sizeof(buf), &digest, &unused_merkle_buf);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_OK(BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), sizeof(buf), &verifier));
+  ASSERT_OK(BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), sizeof(buf), nullptr,
+                                            &verifier));
 
   EXPECT_OK(verifier->Verify(buf, sizeof(buf), sizeof(buf)));
 
@@ -88,7 +88,8 @@ TEST_F(BlobVerifierTest, CreateAndVerify_SmallBlob_DataCorrupted) {
   buf[42] = ~(buf[42]);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_OK(BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), sizeof(buf), &verifier));
+  ASSERT_OK(BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), sizeof(buf), nullptr,
+                                            &verifier));
 
   EXPECT_EQ(verifier->Verify(buf, sizeof(buf), sizeof(buf)), ZX_ERR_IO_DATA_INTEGRITY);
   EXPECT_EQ(verifier->VerifyPartial(buf, 8192, 0, 8192), ZX_ERR_IO_DATA_INTEGRITY);
@@ -105,7 +106,7 @@ TEST_F(BlobVerifierTest, CreateAndVerify_BigBlob) {
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_OK(BlobVerifier::Create(std::move(digest), Metrics(), merkle_buf.get(), merkle_buf.size(),
-                                 sz, &verifier));
+                                 sz, nullptr, &verifier));
 
   EXPECT_OK(verifier->Verify(buf.get(), sz, sz));
 
@@ -138,7 +139,7 @@ TEST_F(BlobVerifierTest, CreateAndVerify_BigBlob_DataCorrupted) {
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_OK(BlobVerifier::Create(std::move(digest), Metrics(), merkle_buf.get(), merkle_buf.size(),
-                                 sz, &verifier));
+                                 sz, nullptr, &verifier));
 
   EXPECT_EQ(verifier->Verify(buf.get(), sz, sz), ZX_ERR_IO_DATA_INTEGRITY);
 
@@ -165,7 +166,7 @@ TEST_F(BlobVerifierTest, CreateAndVerify_BigBlob_MerkleCorrupted) {
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_OK(BlobVerifier::Create(std::move(digest), Metrics(), merkle_buf.get(), merkle_buf.size(),
-                                 sz, &verifier));
+                                 sz, nullptr, &verifier));
 
   EXPECT_EQ(verifier->Verify(buf.get(), sz, sz), ZX_ERR_IO_DATA_INTEGRITY);
 
@@ -189,7 +190,8 @@ TEST_F(BlobVerifierTest, NonZeroTailCausesVerifyToFail) {
   GenerateTree(buf, kBlobSize, &digest, &unused_merkle_buf);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_OK(BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), kBlobSize, &verifier));
+  EXPECT_OK(
+      BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), kBlobSize, nullptr, &verifier));
 
   EXPECT_OK(verifier->Verify(buf, kBlobSize, sizeof(buf)));
 
@@ -208,7 +210,7 @@ TEST_F(BlobVerifierTest, NonZeroTailCausesVerifyPartialToFail) {
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_OK(BlobVerifier::Create(std::move(digest), Metrics(), merkle_buf.get(), merkle_buf.size(),
-                                 kBlobSize, &verifier));
+                                 kBlobSize, nullptr, &verifier));
 
   constexpr int kVerifyOffset = kBlobSize - kBlobSize % kBlobfsBlockSize;
   EXPECT_OK(verifier->VerifyPartial(&buf[kVerifyOffset], kBlobSize - kVerifyOffset, kVerifyOffset,

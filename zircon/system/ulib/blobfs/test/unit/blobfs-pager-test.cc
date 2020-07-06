@@ -114,7 +114,7 @@ class MockBlobFactory {
 
     std::unique_ptr<BlobVerifier> verifier;
     EXPECT_OK(BlobVerifier::Create(std::move(root), &metrics_, merkle_tree.get(), tree_len, sz,
-                                   &verifier));
+                                   nullptr, &verifier));
 
     // Generate the contents as they would be stored on disk. (This includes compression if
     // applicable)
