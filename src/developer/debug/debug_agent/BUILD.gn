@@ -42,9 +42,9 @@ static_library("lib") {
     "object_provider.h",
     "process_breakpoint.cc",
     "process_breakpoint.h",
+    "process_handle.h",
     "process_info.cc",
     "process_info.h",
-    "process_memory_accessor.h",
     "remote_api.h",
     "remote_api_adapter.cc",
     "remote_api_adapter.h",
@@ -60,6 +60,8 @@ static_library("lib") {
     "unwind.h",
     "watchpoint.cc",
     "watchpoint.h",
+    "zircon_process_handle.cc",
+    "zircon_process_handle.h",
     "zircon_thread_exception.cc",
     "zircon_thread_exception.h",
     "zircon_thread_handle.cc",
@@ -150,6 +152,7 @@ package("debug_agent") {
 
 # Common functionality used by tests.
 source_set("test_lib") {
+  testonly = true
   sources = [
     "local_stream_backend.cc",
     "local_stream_backend.h",
@@ -159,6 +162,8 @@ source_set("test_lib") {
     "mock_object_provider.h",
     "mock_process.cc",
     "mock_process.h",
+    "mock_process_handle.cc",
+    "mock_process_handle.h",
     "mock_thread.cc",
     "mock_thread.h",
     "mock_thread_exception.h",
@@ -166,7 +171,10 @@ source_set("test_lib") {
     "mock_thread_handle.h",
   ]
 
-  public_deps = [ ":lib" ]
+  public_deps = [
+    ":lib",
+    "//src/developer/debug/shared:test_support",
+  ]
 }
 
 executable("unit_tests") {

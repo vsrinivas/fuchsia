@@ -17,8 +17,7 @@ class ProcessMemoryAccessor;
 
 class SoftwareBreakpoint : public ProcessBreakpoint {
  public:
-  explicit SoftwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
-                              ProcessMemoryAccessor* memory_accessor, uint64_t address);
+  explicit SoftwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process, uint64_t address);
   virtual ~SoftwareBreakpoint();
 
   debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kSoftware; }
@@ -58,8 +57,6 @@ class SoftwareBreakpoint : public ProcessBreakpoint {
   // As stepping over are queued, only one thread should be left running at a time. This makes the
   // breakpoint get a suspend token for each other thread within the system.
   void SuspendAllOtherThreads(zx_koid_t stepping_over_koid);
-
-  ProcessMemoryAccessor* memory_accessor_;  // Not-owning.
 
   // Set to true when the instruction has been replaced.
   bool installed_ = false;

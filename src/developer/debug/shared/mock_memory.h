@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_MOCK_MEMORY_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_MOCK_MEMORY_H_
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_MOCK_MEMORY_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_MOCK_MEMORY_H_
 
 #include <stdint.h>
 
 #include <map>
 #include <vector>
 
-namespace zxdb {
+namespace debug_ipc {
 
 // This helper class keeps blocks of memory that have been manually added and
 // can reply with subsets of those blocks. This is in turn used by other mocks
@@ -36,6 +36,6 @@ class MockMemory {
   RegisteredMemory mem_;
 };
 
-}  // namespace zxdb
+}  // namespace debug_ipc
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_COMMON_MOCK_MEMORY_H_
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_MOCK_MEMORY_H_

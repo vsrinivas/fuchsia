@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/debug_agent/watchpoint.h"
 
+#include <zircon/status.h>
+
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"

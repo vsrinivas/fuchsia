@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/common/largest_less_or_equal.h"
+#include "src/developer/debug/shared/largest_less_or_equal.h"
 
 #include <functional>
 
 #include <gtest/gtest.h>
 
-namespace zxdb {
+namespace debug_ipc {
 
 TEST(LargestLessOrEqual, Empty) {
   std::vector<int> empty;
@@ -67,4 +67,4 @@ TEST(LargestLessOrEqual, Container) {
                                                   pair_first_less, pair_first_equal));
 }
 
-}  // namespace zxdb
+}  // namespace debug_ipc

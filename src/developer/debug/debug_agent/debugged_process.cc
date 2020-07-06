@@ -17,7 +17,6 @@
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_info.h"
-#include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/debug_agent/zircon_thread_exception.h"
@@ -79,11 +78,12 @@ void LogRegisterBreakpoint(debug_ipc::FileLineFunction location, DebuggedProcess
 
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo() = default;
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid,
-                                                     std::string process_name, zx::process handle)
+                                                     std::string process_name,
+                                                     std::unique_ptr<ProcessHandle> handle)
     : koid(process_koid), handle(std::move(handle)), name(std::move(process_name)) {}
 
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(
-    zx_koid_t process_koid, std::string process_name, zx::process handle,
+    zx_koid_t process_koid, std::string process_name, std::unique_ptr<ProcessHandle> handle,
     std::shared_ptr<arch::ArchProvider> arch_provider,
     std::shared_ptr<ObjectProvider> object_provider)
     : koid(process_koid),
@@ -92,45 +92,16 @@ DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(
       object_provider(std::move(object_provider)),
       name(std::move(process_name)) {}
 
-// DebuggedProcessMemoryAccessor -----------------------------------------------------------------
-
-// MemoryAccessor geared towards a particular process. Created by the process if no override is
-// provided at construction time. See DebuggedProcessCreateInfo above for more information.
-class DebuggedProcessMemoryAccessor : public ProcessMemoryAccessor {
- public:
-  explicit DebuggedProcessMemoryAccessor(DebuggedProcess* process) : process_(process) {}
-
-  // ProcessMemoryAccessor implementation.
-  zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
-                                size_t* actual) override {
-    return process_->handle().read_memory(address, buffer, len, actual);
-  }
-
-  zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
-                                 size_t* actual) override {
-    return process_->handle().write_memory(address, buffer, len, actual);
-  }
-
- private:
-  DebuggedProcess* process_;  // Not owning. Must outline.
-};
-
 // DebuggedProcess ---------------------------------------------------------------------------------
 
 DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateInfo&& create_info)
     : arch_provider_(std::move(create_info.arch_provider)),
       object_provider_(std::move(create_info.object_provider)),
-      memory_accessor_(std::move(create_info.memory_accessor)),
       debug_agent_(debug_agent),
       koid_(create_info.koid),
-      handle_(std::move(create_info.handle)),
+      process_handle_(std::move(create_info.handle)),
       name_(std::move(create_info.name)),
       from_limbo_(create_info.from_limbo) {
-  // If no overriden memory accessor was given, we create one that's geared towards this process.
-  // See DebuggedProcessCreateInfo on the header for more information.
-  if (!memory_accessor_)
-    memory_accessor_ = std::make_unique<DebuggedProcessMemoryAccessor>(this);
-
   RegisterDebugState();
 
   // If create_info out or err are not valid, calling Init on the
@@ -173,8 +144,8 @@ zx_status_t DebuggedProcess::Init() {
 
   // Register for debug exceptions.
   debug_ipc::MessageLoopTarget::WatchProcessConfig config;
-  config.process_name = object_provider_->NameForObject(handle_);
-  config.process_handle = handle_.get();
+  config.process_name = object_provider_->NameForObject(handle());
+  config.process_handle = handle().get();
   config.process_koid = koid_;
   config.watcher = this;
   zx_status_t status = loop->WatchProcessExceptions(std::move(config), &process_watch_handle_);
@@ -267,7 +238,7 @@ void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
 
 void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                                    debug_ipc::ReadMemoryReply* reply) {
-  ReadProcessMemoryBlocks(handle_, request.address, request.size, &reply->blocks);
+  reply->blocks = process_handle_->ReadMemoryBlocks(request.address, request.size);
 
   // Remove any breakpoint instructions we've inserted.
   //
@@ -292,7 +263,7 @@ void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request, debug_ipc::K
   // threads. This makes cleanup code more straightforward, as there are no
   // threads to resume/handle.
   threads_.clear();
-  reply->status = object_provider_->Kill(handle_);
+  reply->status = object_provider_->Kill(handle());
 }
 
 DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) const {
@@ -312,14 +283,14 @@ std::vector<DebuggedThread*> DebuggedProcess::GetThreads() const {
 
 void DebuggedProcess::PopulateCurrentThreads() {
   for (zx_koid_t thread_koid :
-       object_provider_->GetChildKoids(handle_.get(), ZX_INFO_PROCESS_THREADS)) {
+       object_provider_->GetChildKoids(handle().get(), ZX_INFO_PROCESS_THREADS)) {
     // We should never populate the same thread twice.
     if (threads_.find(thread_koid) != threads_.end())
       continue;
 
     zx_handle_t handle;
-    if (object_provider_->GetChild(handle_.get(), thread_koid, ZX_RIGHT_SAME_RIGHTS, &handle) ==
-        ZX_OK) {
+    if (object_provider_->GetChild(this->handle().get(), thread_koid, ZX_RIGHT_SAME_RIGHTS,
+                                   &handle) == ZX_OK) {
       DebuggedThread::CreateInfo create_info = {};
       create_info.process = this;
       create_info.koid = thread_koid;
@@ -369,11 +340,11 @@ bool DebuggedProcess::RegisterDebugState() {
     return true;  // Previously set.
 
   uintptr_t debug_addr = 0;
-  if (handle_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr)) != ZX_OK ||
+  if (handle().get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr)) != ZX_OK ||
       debug_addr == 0) {
     // Register for sets on the debug addr by setting the magic value.
     const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
-    handle_.set_property(ZX_PROP_PROCESS_DEBUG_ADDR, &kMagicValue, sizeof(kMagicValue));
+    handle().set_property(ZX_PROP_PROCESS_DEBUG_ADDR, &kMagicValue, sizeof(kMagicValue));
     return false;
   }
   if (debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET)
@@ -403,7 +374,7 @@ void DebuggedProcess::SendModuleNotification(std::vector<uint64_t> paused_thread
   // Notify the client of any libraries.
   debug_ipc::NotifyModules notify;
   notify.process_koid = koid_;
-  GetModulesForProcess(handle_, dl_debug_addr_, &notify.modules);
+  GetModulesForProcess(handle(), dl_debug_addr_, &notify.modules);
   notify.stopped_thread_koids = std::move(paused_thread_koids);
 
   DEBUG_LOG(Process) << LogPreamble(this) << "Sending modules.";
@@ -586,8 +557,8 @@ void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {
   debug_ipc::NotifyProcessExiting notify;
   notify.process_koid = process_koid;
 
-  zx_info_process info;
-  GetProcessInfo(handle_.get(), &info);
+  zx_info_process info = {};
+  process_handle_->GetInfo(&info);
   notify.return_code = info.return_code;
 
   debug_ipc::MessageWriter writer;
@@ -665,40 +636,20 @@ void DebuggedProcess::OnException(zx::exception exception_token,
 
 void DebuggedProcess::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                                      debug_ipc::AddressSpaceReply* reply) {
-  std::vector<zx_info_maps_t> map = GetProcessMaps(handle_);
-  if (request.address != 0u) {
-    for (const auto& entry : map) {
-      if (request.address < entry.base)
-        continue;
-      if (request.address <= (entry.base + entry.size)) {
-        reply->map.push_back({entry.name, entry.base, entry.size, entry.depth});
-      }
-    }
-    return;
-  }
-
-  size_t ix = 0;
-  reply->map.resize(map.size());
-  for (const auto& entry : map) {
-    reply->map[ix].name = entry.name;
-    reply->map[ix].base = entry.base;
-    reply->map[ix].size = entry.size;
-    reply->map[ix].depth = entry.depth;
-    ++ix;
-  }
+  reply->map = process_handle_->GetAddressSpace(request.address);
 }
 
 void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
   // Modules can only be read after the debug state is set.
   if (dl_debug_addr_)
-    GetModulesForProcess(handle_, dl_debug_addr_, &reply->modules);
+    GetModulesForProcess(handle(), dl_debug_addr_, &reply->modules);
 }
 
 void DebuggedProcess::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                                     debug_ipc::WriteMemoryReply* reply) {
   size_t actual = 0;
   reply->status =
-      handle_.write_memory(request.address, &request.data[0], request.data.size(), &actual);
+      process_handle_->WriteMemory(request.address, &request.data[0], request.data.size(), &actual);
   if (reply->status == ZX_OK && actual != request.data.size())
     reply->status = ZX_ERR_IO;  // Convert partial writes to errors.
 }
@@ -707,13 +658,13 @@ void DebuggedProcess::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTable
                                             debug_ipc::LoadInfoHandleTableReply* reply) {
   size_t actual = 0;
   size_t avail = 0;
-  reply->status = handle_.get_info(ZX_INFO_HANDLE_TABLE, nullptr, 0, &actual, &avail);
+  reply->status = handle().get_info(ZX_INFO_HANDLE_TABLE, nullptr, 0, &actual, &avail);
   if (reply->status != ZX_OK) {
     return;
   }
   std::vector<zx_info_handle_extended_t> handles(avail);
-  reply->status = handle_.get_info(ZX_INFO_HANDLE_TABLE, handles.data(),
-                                   avail * sizeof(zx_info_handle_extended_t), &actual, &avail);
+  reply->status = handle().get_info(ZX_INFO_HANDLE_TABLE, handles.data(),
+                                    avail * sizeof(zx_info_handle_extended_t), &actual, &avail);
   reply->handles.resize(actual);
   for (size_t i = 0; i < actual; ++i) {
     reply->handles[i].type = handles[i].type;
@@ -816,8 +767,7 @@ void DebuggedProcess::PruneStepOverQueue() {
 zx_status_t DebuggedProcess::RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address) {
   auto found = software_breakpoints_.find(address);
   if (found == software_breakpoints_.end()) {
-    auto breakpoint =
-        std::make_unique<SoftwareBreakpoint>(bp, this, memory_accessor_.get(), address);
+    auto breakpoint = std::make_unique<SoftwareBreakpoint>(bp, this, address);
     if (zx_status_t status = breakpoint->Init(); status != ZX_OK)
       return status;
 

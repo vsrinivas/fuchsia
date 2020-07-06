@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_PROCESS_H_
 
 #include "src/developer/debug/debug_agent/debugged_process.h"
+#include "src/developer/debug/debug_agent/mock_process_handle.h"
 
 namespace debug_agent {
 
@@ -21,6 +22,11 @@ class MockProcess : public DebuggedProcess {
               std::shared_ptr<arch::ArchProvider> arch_provider,
               std::shared_ptr<ObjectProvider> object_provider);
   ~MockProcess();
+
+  MockProcessHandle& mock_process_handle() {
+    // We create the process handle in our constructor so we can assume its underlying type here.
+    return static_cast<MockProcessHandle&>(process_handle());
+  }
 
   MockThread* AddThread(zx_koid_t koid);
 

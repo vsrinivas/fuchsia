@@ -15,10 +15,10 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/largest_less_or_equal.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
-#include "src/developer/debug/zxdb/common/largest_less_or_equal.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_binary.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
@@ -520,7 +520,7 @@ std::optional<Location> ModuleSymbolsImpl::ElfLocationForAddress(
   // TODO(bug 42243) make sure the address is inside the library. Otherwise this will match
   // random addresses for the largest ELF symbol.
   uint64_t relative_addr = symbol_context.AbsoluteToRelative(absolute_address);
-  auto found = LargestLessOrEqual(
+  auto found = debug_ipc::LargestLessOrEqual(
       elf_addresses_.begin(), elf_addresses_.end(), relative_addr,
       [](const ElfSymbolRecord* r, uint64_t addr) { return r->relative_address < addr; },
       [](const ElfSymbolRecord* r, uint64_t addr) { return r->relative_address == addr; });

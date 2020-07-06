@@ -9,7 +9,7 @@
 
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
-#include "src/developer/debug/debug_agent/process_memory_accessor.h"
+#include "src/developer/debug/debug_agent/process_handle.h"
 #include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
@@ -39,8 +39,8 @@ std::string LogPreamble(ProcessBreakpoint* b) {
 }  // namespace
 
 SoftwareBreakpoint::SoftwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
-                                       ProcessMemoryAccessor* memory_accessor, uint64_t address)
-    : ProcessBreakpoint(breakpoint, process, address), memory_accessor_(memory_accessor) {}
+                                       uint64_t address)
+    : ProcessBreakpoint(breakpoint, process, address) {}
 
 SoftwareBreakpoint::~SoftwareBreakpoint() { Uninstall(); }
 
@@ -67,7 +67,7 @@ zx_status_t SoftwareBreakpoint::Install() {
 
   // Read previous instruction contents.
   size_t actual = 0;
-  zx_status_t status = memory_accessor_->ReadProcessMemory(
+  zx_status_t status = process_->process_handle().ReadMemory(
       address(), &previous_data_, sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK)
     return status;
@@ -75,8 +75,8 @@ zx_status_t SoftwareBreakpoint::Install() {
     return ZX_ERR_UNAVAILABLE;
 
   // Replace with breakpoint instruction.
-  status = memory_accessor_->WriteProcessMemory(address(), &arch::kBreakInstruction,
-                                                sizeof(arch::BreakInstructionType), &actual);
+  status = process_->process_handle().WriteMemory(address(), &arch::kBreakInstruction,
+                                                  sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK)
     return status;
   if (actual != sizeof(arch::BreakInstructionType))
@@ -96,7 +96,7 @@ zx_status_t SoftwareBreakpoint::Uninstall() {
   // breakpoint instruction before doing any writes.
   arch::BreakInstructionType current_contents = 0;
   size_t actual = 0;
-  zx_status_t status = memory_accessor_->ReadProcessMemory(
+  zx_status_t status = process_->process_handle().ReadMemory(
       address(), &current_contents, sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType))
     return ZX_OK;  // Probably unmapped, safe to ignore.
@@ -107,8 +107,8 @@ zx_status_t SoftwareBreakpoint::Uninstall() {
     return ZX_OK;  // Replaced with something else, ignore.
   }
 
-  status = memory_accessor_->WriteProcessMemory(address(), &previous_data_,
-                                                sizeof(arch::BreakInstructionType), &actual);
+  status = process_->process_handle().WriteMemory(address(), &previous_data_,
+                                                  sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType)) {
     FX_LOGS(WARNING) << "Unable to remove breakpoint at 0x" << std::hex << address() << ": "
                      << zx_status_get_string(status);

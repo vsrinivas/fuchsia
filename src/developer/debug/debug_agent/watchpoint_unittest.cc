@@ -3,6 +3,8 @@
 
 #include "src/developer/debug/debug_agent/watchpoint.h"
 
+#include <zircon/status.h>
+
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/breakpoint.h"

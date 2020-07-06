@@ -25,6 +25,7 @@
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/debug_agent/thread_exception.h"
+#include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
@@ -721,7 +722,7 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
   create_info.object_provider = object_provider_;
   create_info.from_limbo = true;
   create_info.name = object_provider_->NameForObject(process.get());
-  create_info.handle = std::move(process);
+  create_info.handle = std::make_unique<ZirconProcessHandle>(process_koid, std::move(process));
 
   DebuggedProcess* debugged_process = nullptr;
   zx_status_t status = AddDebuggedProcess(std::move(create_info), &debugged_process);
@@ -763,7 +764,8 @@ zx_status_t DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t
   DebuggedProcessCreateInfo create_info = {};
   create_info.koid = process_koid;
   create_info.name = object_provider_->NameForObject(process_handle);
-  create_info.handle = std::move(process_handle);
+  create_info.handle =
+      std::make_unique<ZirconProcessHandle>(process_koid, std::move(process_handle));
   create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
 
@@ -798,7 +800,7 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
 
   DebuggedProcessCreateInfo create_info;
   create_info.koid = process_koid;
-  create_info.handle = std::move(process);
+  create_info.handle = std::make_unique<ZirconProcessHandle>(process_koid, std::move(process));
   create_info.out = launcher.ReleaseStdout();
   create_info.err = launcher.ReleaseStderr();
   create_info.arch_provider = arch_provider_;
@@ -936,7 +938,8 @@ void DebugAgent::OnProcessStart(const std::string& filter, zx::process process_h
 
   DebuggedProcessCreateInfo create_info;
   create_info.koid = process_koid;
-  create_info.handle = std::move(process_handle);
+  create_info.handle =
+      std::make_unique<ZirconProcessHandle>(process_koid, std::move(process_handle));
   create_info.name = description.process_name;
   create_info.out = std::move(handles.out);
   create_info.err = std::move(handles.err);

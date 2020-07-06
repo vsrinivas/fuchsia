@@ -15,8 +15,6 @@
 
 namespace debug_agent {
 
-class ProcessMemoryAccessor;
-
 // A single breakpoint may apply to many processes and many addresses (even in
 // the same process). These instances are called ProcessBreakpoints.
 //

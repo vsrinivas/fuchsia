@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "src/developer/debug/debug_agent/debugged_thread.h"
-#include "src/developer/debug/debug_agent/process_memory_accessor.h"
+#include "src/developer/debug/debug_agent/process_handle.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/buffered_zx_socket.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -37,22 +37,18 @@ struct DebuggedProcessCreateInfo {
   DebuggedProcessCreateInfo();
 
   // Constructor with only the required fields.
-  DebuggedProcessCreateInfo(zx_koid_t koid, std::string name, zx::process);
-  DebuggedProcessCreateInfo(zx_koid_t koid, std::string name, zx::process,
+  DebuggedProcessCreateInfo(zx_koid_t koid, std::string name,
+                            std::unique_ptr<ProcessHandle> handle);
+  DebuggedProcessCreateInfo(zx_koid_t koid, std::string name, std::unique_ptr<ProcessHandle> handle,
                             std::shared_ptr<arch::ArchProvider>, std::shared_ptr<ObjectProvider>);
 
   // Required.
   zx_koid_t koid = 0;
-  zx::process handle;
+  std::unique_ptr<ProcessHandle> handle;
 
   // Required.
   std::shared_ptr<arch::ArchProvider> arch_provider;
   std::shared_ptr<ObjectProvider> object_provider;
-
-  // Optional.
-  // This is meant as a way to override the memory accessor that a process uses, mostly for testing.
-  // For the default case, do not set this and the process will create a memory accessor for itself.
-  std::unique_ptr<ProcessMemoryAccessor> memory_accessor;
 
   // Optional.
   std::string name;
@@ -80,7 +76,14 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
 
   zx_koid_t koid() const { return koid_; }
   DebugAgent* debug_agent() const { return debug_agent_; }
-  zx::process& handle() { return handle_; }
+
+  const ProcessHandle& process_handle() const { return *process_handle_; }
+  ProcessHandle& process_handle() { return *process_handle_; }
+
+  // TODO(brettw) remove this and have all callers use thread_handle().
+  zx::process& handle() { return process_handle_->GetNativeHandle(); }
+  const zx::process& handle() const { return process_handle_->GetNativeHandle(); }
+
   uint64_t dl_debug_addr() const { return dl_debug_addr_; }
 
   const std::string& name() const { return name_; }
@@ -192,8 +195,6 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   std::shared_ptr<arch::ArchProvider> arch_provider_;
   std::shared_ptr<ObjectProvider> object_provider_;
 
-  std::unique_ptr<ProcessMemoryAccessor> memory_accessor_;
-
  private:
   // ZirconExceptionWatcher implementation.
   void OnThreadStarting(zx::exception exception_token, zx_exception_info_t exception_info) override;
@@ -233,7 +234,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   DebugAgent* debug_agent_ = nullptr;  // Non-owning.
 
   zx_koid_t koid_;
-  zx::process handle_;
+  std::unique_ptr<ProcessHandle> process_handle_;
 
   std::string name_;
 

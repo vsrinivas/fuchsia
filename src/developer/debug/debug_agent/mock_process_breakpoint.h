@@ -38,8 +38,8 @@ class MockProcessBreakpoint : public ProcessBreakpoint {
 class MockSoftwareBreakpoint : public SoftwareBreakpoint {
  public:
   explicit MockSoftwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
-                                  ProcessMemoryAccessor* memory_accessor, uint64_t address)
-      : SoftwareBreakpoint(breakpoint, process, memory_accessor, address) {}
+                                  uint64_t address)
+      : SoftwareBreakpoint(breakpoint, process, address) {}
 
   debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kSoftware; }
   bool Installed(zx_koid_t thread_koid) const override { return false; }

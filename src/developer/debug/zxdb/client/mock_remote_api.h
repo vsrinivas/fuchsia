@@ -6,8 +6,8 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_REMOTE_API_H_
 
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/mock_memory.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
-#include "src/developer/debug/zxdb/common/mock_memory.h"
 
 namespace zxdb {
 
@@ -93,7 +93,7 @@ class MockRemoteAPI : public RemoteAPI {
   int breakpoint_remove_count_ = 0;
   debug_ipc::AddOrChangeBreakpointRequest last_breakpoint_add_;
   debug_ipc::WriteRegistersRequest last_write_registers_;
-  MockMemory memory_;
+  debug_ipc::MockMemory memory_;
 };
 
 }  // namespace zxdb

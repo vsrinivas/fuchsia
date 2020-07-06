@@ -13,6 +13,8 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/mock_arch_provider.h"
+#include "src/developer/debug/debug_agent/mock_process.h"
+#include "src/developer/debug/debug_agent/mock_process_handle.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/zircon_thread_handle.h"
@@ -124,31 +126,6 @@ class FakeArchProvider : public MockArchProvider {
   std::map<RegisterCategory, std::vector<Register>> regs_written_;
 };
 
-class FakeProcess : public DebuggedProcess {
- public:
-  FakeProcess(zx_koid_t koid, std::shared_ptr<FakeArchProvider> arch_provider)
-      : DebuggedProcess(nullptr, {koid, "", zx::process(), std::move(arch_provider),
-                                  std::make_unique<ObjectProvider>()}) {}
-  ~FakeProcess() = default;
-
-  DebuggedThread* CreateThread(zx_koid_t tid) {
-    if (!thread_) {
-      DebuggedThread::CreateInfo create_info = {};
-      create_info.process = this;
-      create_info.koid = tid;
-      create_info.handle = std::make_unique<MockThreadHandle>(koid(), tid);
-      create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
-      create_info.arch_provider = arch_provider_;
-      create_info.object_provider = std::make_unique<ObjectProvider>();
-      thread_ = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
-    }
-    return thread_.get();
-  }
-
- private:
-  std::unique_ptr<DebuggedThread> thread_;
-};
-
 // Ref-counted Suspension --------------------------------------------------------------------------
 
 TEST(DebuggedThread, NormalSuspension) {
@@ -156,7 +133,7 @@ TEST(DebuggedThread, NormalSuspension) {
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t kProcessKoid = 0x8723456;
-  FakeProcess fake_process(kProcessKoid, arch_provider);
+  MockProcess process(nullptr, kProcessKoid, "", arch_provider, object_provider);
 
   // Create the event for coordination.
   zx::event event;
@@ -171,7 +148,7 @@ TEST(DebuggedThread, NormalSuspension) {
     zx_koid_t current_thread_koid = object_provider->KoidForObject(current_thread);
 
     DebuggedThread::CreateInfo create_info = {};
-    create_info.process = &fake_process;
+    create_info.process = &process;
     create_info.koid = current_thread_koid;
     // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
     // with that in a way that will make the DebuggedThread happy.
@@ -227,7 +204,7 @@ TEST(DebuggedThread, RefCountedSuspension) {
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t kProcessKoid = 0x8723456;
-  FakeProcess fake_process(kProcessKoid, arch_provider);
+  MockProcess process(nullptr, kProcessKoid, "", arch_provider, object_provider);
 
   // Create the event for coordination.
   zx::event event;
@@ -242,7 +219,7 @@ TEST(DebuggedThread, RefCountedSuspension) {
     zx_koid_t current_thread_koid = object_provider->KoidForObject(current_thread);
 
     DebuggedThread::CreateInfo create_info = {};
-    create_info.process = &fake_process;
+    create_info.process = &process;
     create_info.koid = current_thread_koid;
     // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
     // with that in a way that will make the DebuggedThread happy.

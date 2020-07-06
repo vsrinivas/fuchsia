@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <limits>
 
-#include "src/developer/debug/zxdb/common/largest_less_or_equal.h"
+#include "src/developer/debug/shared/largest_less_or_equal.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 
 namespace zxdb {
@@ -50,7 +50,7 @@ LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_con
     return FoundRow();
 
   TargetPointer rel_address = address_context.AbsoluteToRelative(absolute_address);
-  auto found = LargestLessOrEqual(
+  auto found = debug_ipc::LargestLessOrEqual(
       seq.begin(), seq.end(), rel_address,
       [](const Row& row, TargetPointer addr) { return row.Address < addr; },
       [](const Row& row, TargetPointer addr) { return row.Address == addr; });

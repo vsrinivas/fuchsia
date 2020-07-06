@@ -17,7 +17,6 @@ static_library("common") {
     "file_util.h",
     "host_util.h",
     "inet_util.h",
-    "largest_less_or_equal.h",
     "ref_ptr_to.h",
     "scoped_temp_file.h",
     "string_util.h",
@@ -42,14 +41,11 @@ static_library("common") {
 }
 
 source_set("test_support") {
-  sources = [
-    "mock_memory.cc",
-    "mock_memory.h",
-    "test_with_loop.h",
-  ]
+  testonly = true
+  sources = [ "test_with_loop.h" ]
   public_deps = [
     ":common",
-    "//src/developer/debug/shared",
+    "//src/developer/debug/shared:test_support",
   ]
 }
 
@@ -64,7 +60,6 @@ source_set("tests") {
     "err_or_unittest.cc",
     "file_util_unittest.cc",
     "inet_util_unittest.cc",
-    "largest_less_or_equal_unittest.cc",
     "string_util_unittest.cc",
   ]
 

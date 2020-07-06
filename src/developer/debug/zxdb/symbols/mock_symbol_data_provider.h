@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include "src/developer/debug/zxdb/common/mock_memory.h"
+#include "src/developer/debug/shared/mock_memory.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -78,7 +78,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   std::optional<std::tuple<uint8_t*, uint8_t*, uint8_t*>> tls_helpers_;
   std::map<debug_ipc::RegisterID, RegData> regs_;
 
-  MockMemory memory_;
+  debug_ipc::MockMemory memory_;
 
   RegisterWrites register_writes_;  // Logs calls to WriteRegister().
   MemoryWrites memory_writes_;      // Logs calls to WriteMemory().

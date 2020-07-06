@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_LARGEST_LESS_OR_EQUAL_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_LARGEST_LESS_OR_EQUAL_H_
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_LARGEST_LESS_OR_EQUAL_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_LARGEST_LESS_OR_EQUAL_H_
 
 #include <algorithm>
 
-namespace zxdb {
+namespace debug_ipc {
 
 // Returns an iterator pointing to the largest element in [first, last) less than or equal to the
 // given |val|. As with std::lower_bound, the range [first, last) must be sorted according to
@@ -43,6 +43,6 @@ BidirectionalIterator LargestLessOrEqual(BidirectionalIterator first, Bidirectio
   return --lower_bound;
 }
 
-}  // namespace zxdb
+}  // namespace debug_ipc
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_COMMON_LARGEST_LESS_OR_EQUAL_H_
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_LARGEST_LESS_OR_EQUAL_H_

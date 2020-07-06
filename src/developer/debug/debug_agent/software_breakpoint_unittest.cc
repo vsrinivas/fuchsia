@@ -14,87 +14,17 @@
 #include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
-#include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/shared/logging/debug.h"
 
 namespace debug_agent {
 
 namespace {
 
-// Provides a fake view of memory with the given initial contents.
-class FakeMemory : public ProcessMemoryAccessor {
- public:
-  FakeMemory(intptr_t address, const char* data, size_t data_len) : address_(address) {
-    data_.assign(data, data + data_len);
-  }
-
-  const char* data() const { return &data_[0]; }
-
-  zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
-                                size_t* actual) override {
-    *actual = 0;
-    if (address < address_ || address + len > address_ + data_.size())
-      return ZX_ERR_NO_MEMORY;  // We require everything to be mapped.
-
-    memcpy(buffer, &data_[address - address_], len);
-    *actual = len;
-    return ZX_OK;
-  }
-
-  zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
-                                 size_t* actual) override {
-    *actual = 0;
-    if (address < address_ || address + len > address_ + data_.size())
-      return ZX_ERR_NO_MEMORY;  // We require everything to be mapped.
-
-    memcpy(&data_[address - address_], buffer, len);
-    *actual = len;
-    return ZX_OK;
-  }
-
- private:
-  uintptr_t address_;
-  std::vector<char> data_;
-};
-
-// Provides a buffer of known memory for tests below.
-class BreakpointFakeMemory {
- public:
-  // Make a fake memory buffer with enough room to hold a break instruction.
-  static constexpr uintptr_t kAddress = 0x1234;
-  static constexpr size_t kDataSize = 4;
-  static_assert(kDataSize >= sizeof(arch::BreakInstructionType),
-                "Make data bigger for this platform.");
-  static const char kOriginalData[kDataSize];
-
-  BreakpointFakeMemory() : memory_(kAddress, kOriginalData, kDataSize) {}
-  ~BreakpointFakeMemory() {}
-
-  FakeMemory* memory() { return &memory_; }
-
-  // Returns the memory pointer read out as the type required for the
-  // breakpoint instruction.
-  arch::BreakInstructionType AsInstructionType() const {
-    return *reinterpret_cast<const arch::BreakInstructionType*>(memory_.data());
-  }
-
-  // Returns true if the buffer starts with a breakpoint instruction for the
-  // current platform.
-  bool StartsWithBreak() const { return AsInstructionType() == arch::kBreakInstruction; }
-
-  // Returns true if the buffer is in its original state.
-  bool IsOriginal() const { return memcmp(memory_.data(), kOriginalData, kDataSize) == 0; }
-
- private:
-  FakeMemory memory_;
-};
-
 // A no-op process delegate.
 class TestProcessDelegate : public Breakpoint::ProcessDelegate {
  public:
   TestProcessDelegate() = default;
 
-  BreakpointFakeMemory& mem() { return mem_; }
   std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>>& bps() { return bps_; }
 
   void InjectMockProcess(std::unique_ptr<MockProcess> proc) {
@@ -105,8 +35,7 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
   zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t koid, uint64_t address) override {
     auto found = bps_.find(address);
     if (found == bps_.end()) {
-      auto pbp =
-          std::make_unique<SoftwareBreakpoint>(bp, procs_[koid].get(), mem_.memory(), address);
+      auto pbp = std::make_unique<SoftwareBreakpoint>(bp, procs_[koid].get(), address);
 
       zx_status_t status = pbp->Init();
       if (status != ZX_OK) {
@@ -131,16 +60,53 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
   }
 
  private:
-  BreakpointFakeMemory mem_;
-
   std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>> bps_;
   std::map<zx_koid_t, std::unique_ptr<MockProcess>> procs_;
 };
 
-constexpr uintptr_t BreakpointFakeMemory::kAddress;
-constexpr size_t BreakpointFakeMemory::kDataSize;
-const char BreakpointFakeMemory::kOriginalData[BreakpointFakeMemory::kDataSize] = {0x01, 0x02, 0x03,
-                                                                                   0x04};
+constexpr uintptr_t kAddress = 0x1234;
+constexpr size_t kDataSize = 4u;
+const uint8_t kOriginalData[kDataSize] = {0x01, 0x02, 0x03, 0x04};
+
+std::vector<uint8_t> GetOriginalData() {
+  return std::vector<uint8_t>(std::begin(kOriginalData), std::end(kOriginalData));
+}
+
+// Returns the memory data buffer with the beginning overwritten by a software breakpoint.
+std::vector<uint8_t> GetOriginalDataWithBreakpoint() {
+  auto result = GetOriginalData();
+  memcpy(&result[0], &arch::kBreakInstruction, sizeof(arch::kBreakInstruction));
+  return result;
+}
+
+// Writes the original data or breakpoint data at |kAddress| to the mock data backing the given
+// process handle.
+void LoadOriginalMemory(MockProcessHandle& handle) {
+  handle.mock_memory().AddMemory(kAddress, GetOriginalData());
+}
+void LoadBreakMemory(MockProcessHandle& handle) {
+  handle.mock_memory().AddMemory(kAddress, GetOriginalDataWithBreakpoint());
+}
+
+bool MemoryContains(MockProcessHandle& handle, uint64_t address, const void* data,
+                    size_t data_len) {
+  if (data_len == 0)
+    return true;
+
+  std::unique_ptr<uint8_t[]> read(new uint8_t[data_len]);
+  size_t actual = 0;
+  if (handle.ReadMemory(address, read.get(), data_len, &actual) != ZX_OK || actual != data_len)
+    return false;
+
+  return memcmp(data, &read[0], data_len) == 0;
+}
+
+bool MemoryContainsBreak(MockProcessHandle& handle, uint64_t address) {
+  return MemoryContains(handle, address, &arch::kBreakInstruction, sizeof(arch::kBreakInstruction));
+}
+bool MemoryContainsOriginal(MockProcessHandle& handle, uint64_t address) {
+  return MemoryContains(handle, address, kOriginalData, sizeof(arch::kBreakInstruction));
+}
 
 template <typename T>
 std::string ToString(const std::vector<T>& v) {
@@ -171,9 +137,6 @@ void CheckVectorContainsElements(const debug_ipc::FileLineFunction& location,
 }  // namespace
 
 TEST(ProcessBreakpoint, InstallAndFixup) {
-  auto arch_provider = std::make_shared<ArchProviderImpl>();
-  auto object_provider = std::make_shared<ObjectProvider>();
-
   TestProcessDelegate process_delegate;
 
   Breakpoint main_breakpoint(&process_delegate);
@@ -183,35 +146,36 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 
   zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(nullptr, process_koid, process_name, arch_provider, object_provider);
+  MockProcess process(nullptr, process_koid, process_name, std::make_shared<ArchProviderImpl>(),
+                      std::make_shared<ObjectProvider>());
 
-  SoftwareBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
-                        BreakpointFakeMemory::kAddress);
+  LoadOriginalMemory(process.mock_process_handle());
+
+  SoftwareBreakpoint bp(&main_breakpoint, &process, kAddress);
   ASSERT_EQ(ZX_OK, bp.Init());
 
-  // Should have written the breakpoint instruction to the buffer.
-  EXPECT_TRUE(process_delegate.mem().StartsWithBreak());
+  // Should have written the breakpoint instruction.
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress));
 
-  // Make a memory block that contains the address set as the breakpoint.
-  // Offset it by kBlockOffset to make sure non-aligned cases are handled.
+  // Make a memory block that contains the address set as the breakpoint. Offset it by kBlockOffset
+  // to make sure non-aligned cases are handled.
   debug_ipc::MemoryBlock block;
   constexpr size_t kBlockOffset = 4;
-  block.address = BreakpointFakeMemory::kAddress - kBlockOffset;
+  block.address = kAddress - kBlockOffset;
   block.valid = true;
   block.size = 16;
   block.data.resize(block.size);
 
-  // Fill with current memory contents (including breakpoint instruction).
-  memcpy(&block.data[kBlockOffset], process_delegate.mem().memory()->data(),
-         BreakpointFakeMemory::kDataSize);
+  // Fill with memory contents reflecting the breakpoint instruction.
+  auto with_bp = GetOriginalDataWithBreakpoint();
+  memcpy(&block.data[kBlockOffset], &with_bp[0], with_bp.size());
 
   // FixupMemoryBlock should give back the original data.
   bp.FixupMemoryBlock(&block);
-  EXPECT_EQ(0, memcmp(&block.data[kBlockOffset], BreakpointFakeMemory::kOriginalData,
-                      BreakpointFakeMemory::kDataSize));
+  EXPECT_TRUE(
+      std::equal(&block.data[kBlockOffset], &block.data[kBlockOffset + kDataSize], kOriginalData));
 }
 
-// clang-format off
 TEST(ProcessBreakpoint, StepSingle) {
   auto arch_provider = std::make_shared<ArchProviderImpl>();
   auto object_provider = std::make_shared<ObjectProvider>();
@@ -227,11 +191,13 @@ TEST(ProcessBreakpoint, StepSingle) {
   const std::string process_name = "process";
   MockProcess process(nullptr, process_koid, process_name, arch_provider, object_provider);
 
+  process.mock_process_handle().mock_memory().AddMemory(kAddress, GetOriginalData());
+
   // The step over strategy is as follows:
-  // Thread 1, 2, 3 will hit the breakpoint and attempt a step over.
-  // Thread 4 will remain oblivious to the breakpoint, as will 5.
-  // Thread 5 is IsSuspended from the client, so it should not be resumed by the
-  // agent during step over.
+  //  - Thread 1, 2, 3 will hit the breakpoint and attempt a step over.
+  //  - Thread 4 will remain oblivious to the breakpoint, as will 5.
+  //  - Thread 5 is IsSuspended from the client, so it should not be resumed by the agent during
+  //    step over.
 
   constexpr zx_koid_t kThread1Koid = 1;
   constexpr zx_koid_t kThread2Koid = 2;
@@ -247,19 +213,18 @@ TEST(ProcessBreakpoint, StepSingle) {
   mock_thread5->set_client_state(DebuggedThread::ClientState::kPaused);
   mock_thread5->Suspend();
 
-  SoftwareBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
-                       BreakpointFakeMemory::kAddress);
+  SoftwareBreakpoint bp(&main_breakpoint, &process, kAddress);
   ASSERT_EQ(ZX_OK, bp.Init());
 
   // The breakpoint should be installed.
-  EXPECT_TRUE(process_delegate.mem().StartsWithBreak());
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress));
 
   // Thread 1 hits breakpoint ----------------------------------------------------------------------
 
   bp.BeginStepOver(mock_thread1);
 
   // Breakpoint should be removed.
-  EXPECT_TRUE(process_delegate.mem().IsOriginal());
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress));
 
   // There should be one enqueued step over.
   ASSERT_EQ(process.step_over_queue().size(), 1u);
@@ -280,10 +245,8 @@ TEST(ProcessBreakpoint, StepSingle) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(), {kThread2Koid,
-                                                                          kThread3Koid,
-                                                                          kThread4Koid,
-                                                                          kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(),
+                              {kThread2Koid, kThread3Koid, kThread4Koid, kThread5Koid});
 
   // Thread 2 hits breakpoint ----------------------------------------------------------------------
 
@@ -309,10 +272,8 @@ TEST(ProcessBreakpoint, StepSingle) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(), {kThread2Koid,
-                                                                          kThread3Koid,
-                                                                          kThread4Koid,
-                                                                          kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(),
+                              {kThread2Koid, kThread3Koid, kThread4Koid, kThread5Koid});
 
   // Thread 3 hits breakpoint ----------------------------------------------------------------------
 
@@ -337,13 +298,11 @@ TEST(ProcessBreakpoint, StepSingle) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(), {kThread2Koid,
-                                                                          kThread3Koid,
-                                                                          kThread4Koid,
-                                                                          kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(),
+                              {kThread2Koid, kThread3Koid, kThread4Koid, kThread5Koid});
 
-  // Breakpoint should still remain removed.
-  EXPECT_TRUE(process_delegate.mem().IsOriginal());
+  // The memory should be original.
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress));
 
   // Thread 1 steps over ---------------------------------------------------------------------------
 
@@ -370,13 +329,11 @@ TEST(ProcessBreakpoint, StepSingle) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(), {kThread1Koid,
-                                                                          kThread3Koid,
-                                                                          kThread4Koid,
-                                                                          kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(),
+                              {kThread1Koid, kThread3Koid, kThread4Koid, kThread5Koid});
 
-  // The breakpoint should remain removed.
-  EXPECT_TRUE(process_delegate.mem().IsOriginal());
+  // The memory should be original.
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress));
 
   // Thread 2 steps over ---------------------------------------------------------------------------
 
@@ -401,13 +358,11 @@ TEST(ProcessBreakpoint, StepSingle) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(), {kThread1Koid,
-                                                                          kThread2Koid,
-                                                                          kThread4Koid,
-                                                                          kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(),
+                              {kThread1Koid, kThread2Koid, kThread4Koid, kThread5Koid});
 
   // Breakpoint remains removed.
-  EXPECT_TRUE(process_delegate.mem().IsOriginal());
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress));
 
   // Thread 3 steps over ---------------------------------------------------------------------------
 
@@ -433,11 +388,9 @@ TEST(ProcessBreakpoint, StepSingle) {
   EXPECT_TRUE(bp.CurrentlySuspendedThreads().empty());
 
   // Breakpoint is set again.
-  EXPECT_TRUE(process_delegate.mem().StartsWithBreak());
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress));
 }
-// clang-format on
 
-// clang-format off
 TEST(ProcessBreakpoint, MultipleBreakpoints) {
   auto arch_provider = std::make_shared<ArchProviderImpl>();
   auto object_provider = std::make_shared<ObjectProvider>();
@@ -460,6 +413,13 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   const std::string process_name = "process";
   MockProcess process(nullptr, process_koid, process_name, arch_provider, object_provider);
 
+  constexpr uint64_t kAddress1 = kAddress;
+  constexpr uint64_t kAddress2 = kAddress + 0x100;
+  constexpr uint64_t kAddress3 = kAddress + 0x200;
+  process.mock_process_handle().mock_memory().AddMemory(kAddress1, GetOriginalData());
+  process.mock_process_handle().mock_memory().AddMemory(kAddress2, GetOriginalData());
+  process.mock_process_handle().mock_memory().AddMemory(kAddress3, GetOriginalData());
+
   // The step over strategy is as follows:
   // 1. Thread 1 hits breakpoint 1.
   // 2. Thread 2 hits breakpoint 2.
@@ -481,22 +441,18 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   DebuggedThread* mock_thread4 = process.AddThread(kThread4Koid);
   DebuggedThread* mock_thread5 = process.AddThread(kThread5Koid);
 
-  SoftwareBreakpoint breakpoint1(&main_breakpoint1, &process, process_delegate1.mem().memory(),
-                                 BreakpointFakeMemory::kAddress);
-
-  SoftwareBreakpoint breakpoint2(&main_breakpoint2, &process, process_delegate2.mem().memory(),
-                                 BreakpointFakeMemory::kAddress);
-  SoftwareBreakpoint breakpoint3(&main_breakpoint3, &process, process_delegate3.mem().memory(),
-                                 BreakpointFakeMemory::kAddress);
+  SoftwareBreakpoint breakpoint1(&main_breakpoint1, &process, kAddress1);
+  SoftwareBreakpoint breakpoint2(&main_breakpoint2, &process, kAddress2);
+  SoftwareBreakpoint breakpoint3(&main_breakpoint3, &process, kAddress3);
 
   ASSERT_EQ(ZX_OK, breakpoint1.Init());
   ASSERT_EQ(ZX_OK, breakpoint2.Init());
   ASSERT_EQ(ZX_OK, breakpoint3.Init());
 
-  // The breakpoint should be installed
-  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+  // The breakpoint should be installed at all locations.
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress1));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress2));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress3));
 
   // Thread 1 hits breakpoint 1 --------------------------------------------------------------------
 
@@ -521,17 +477,15 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {kThread2Koid,
-                                                                                   kThread3Koid,
-                                                                                   kThread4Koid,
-                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(),
+                              {kThread2Koid, kThread3Koid, kThread4Koid, kThread5Koid});
   CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {});
   CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
 
   // Breakpoint should be removed. Others breakpoints should remain set.
-  EXPECT_TRUE(process_delegate1.mem().IsOriginal());
-  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress1));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress2));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress3));
 
   // Thread 2 hits breakpoint 2 --------------------------------------------------------------------
 
@@ -559,17 +513,15 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {kThread2Koid,
-                                                                                   kThread3Koid,
-                                                                                   kThread4Koid,
-                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(),
+                              {kThread2Koid, kThread3Koid, kThread4Koid, kThread5Koid});
   CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {});
   CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
 
   // Breakpoint should be removed. Others breakpoints should remain set.
-  EXPECT_TRUE(process_delegate1.mem().IsOriginal());
-  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress1));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress2));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress3));
 
   // Thread 3 hits breakpoint ----------------------------------------------------------------------
 
@@ -598,22 +550,15 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {kThread2Koid,
-                                                                                   kThread3Koid,
-                                                                                   kThread4Koid,
-                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(),
+                              {kThread2Koid, kThread3Koid, kThread4Koid, kThread5Koid});
   CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {});
   CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
 
   // Breakpoint should be removed. Others breakpoints should remain set.
-  EXPECT_TRUE(process_delegate1.mem().IsOriginal());
-  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
-
-  // Breakpoint 1 should be removed. Others breakpoints should remain set.
-  EXPECT_TRUE(process_delegate1.mem().IsOriginal());
-  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress1));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress2));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress3));
 
   // Thread 1 steps over ---------------------------------------------------------------------------
 
@@ -640,18 +585,15 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-
   CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {});
-  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {kThread1Koid,
-                                                                                   kThread3Koid,
-                                                                                   kThread4Koid,
-                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(),
+                              {kThread1Koid, kThread3Koid, kThread4Koid, kThread5Koid});
   CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
 
   // Breakpoint 2 should be the only one removed.
-  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate2.mem().IsOriginal());
-  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress1));
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress2));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress3));
 
   // Thread 4 hits breakpoint 2 --------------------------------------------------------------------
 
@@ -681,16 +623,14 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
   CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {});
-  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {kThread1Koid,
-                                                                                   kThread3Koid,
-                                                                                   kThread4Koid,
-                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(),
+                              {kThread1Koid, kThread3Koid, kThread4Koid, kThread5Koid});
   CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
 
   // Breakpoint 2 should be the only one removed.
-  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate2.mem().IsOriginal());
-  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress1));
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress2));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress3));
 
   // Thread 2 steps over ---------------------------------------------------------------------------
 
@@ -719,14 +659,12 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
 
   CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {});
   CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {});
-  CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {kThread1Koid,
-                                                                                   kThread2Koid,
-                                                                                   kThread4Koid,
-                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(),
+                              {kThread1Koid, kThread2Koid, kThread4Koid, kThread5Koid});
   // Breakpoint 3 should be the only one removed.
-  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate3.mem().IsOriginal());
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress1));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress2));
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress3));
 
   // Thread 3 steps over ---------------------------------------------------------------------------
 
@@ -752,16 +690,14 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
   CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {});
-  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {kThread1Koid,
-                                                                                   kThread2Koid,
-                                                                                   kThread3Koid,
-                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(),
+                              {kThread1Koid, kThread2Koid, kThread3Koid, kThread5Koid});
   CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
 
   // Breakpoint 2 should be the only one removed.
-  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate2.mem().IsOriginal());
-  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress1));
+  EXPECT_TRUE(MemoryContainsOriginal(process.mock_process_handle(), kAddress2));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress3));
 
   // Thread 4 steps over ---------------------------------------------------------------------------
 
@@ -786,16 +722,21 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   EXPECT_TRUE(breakpoint3.CurrentlySuspendedThreads().empty());
 
   // All breakpoints are set again.
-  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
-  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress1));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress2));
+  EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress3));
 }
-// clang-format on
 
-// This also tests registration and unregistration of ProcessBreakpoints via
-// the Breakpoint object.
+// This also tests registration and unregistration of ProcessBreakpoints via the Breakpoint object.
 TEST(ProcessBreakpoint, HitCount) {
   TestProcessDelegate process_delegate;
+
+  constexpr zx_koid_t kProcess1 = 1;
+  auto owning_process =
+      std::make_unique<MockProcess>(nullptr, kProcess1, "", std::make_shared<ArchProviderImpl>(),
+                                    std::make_shared<ObjectProvider>());
+  owning_process->mock_process_handle().mock_memory().AddMemory(kAddress, GetOriginalData());
+  process_delegate.InjectMockProcess(std::move(owning_process));
 
   constexpr uint32_t kBreakpointId1 = 12;
   debug_ipc::BreakpointSettings settings;
@@ -803,12 +744,10 @@ TEST(ProcessBreakpoint, HitCount) {
   settings.type = debug_ipc::BreakpointType::kSoftware;
   settings.locations.resize(1);
 
-  constexpr zx_koid_t kProcess1 = 1;
-
   debug_ipc::ProcessBreakpointSettings& pr_settings = settings.locations.back();
   pr_settings.process_koid = kProcess1;
   pr_settings.thread_koid = 0;
-  pr_settings.address = BreakpointFakeMemory::kAddress;
+  pr_settings.address = kAddress;
 
   // Create a ProcessBreakpoint referencing the two Breakpoint objects
   // (corresponds to two logical breakpoints at the same address).
@@ -824,7 +763,7 @@ TEST(ProcessBreakpoint, HitCount) {
 
   // There should only be one address with a breakpoint.
   ASSERT_EQ(1u, process_delegate.bps().size());
-  EXPECT_EQ(BreakpointFakeMemory::kAddress, process_delegate.bps().begin()->first);
+  EXPECT_EQ(kAddress, process_delegate.bps().begin()->first);
 
   // Hitting the ProcessBreakpoint should update both Breakpoints.
   std::vector<debug_ipc::BreakpointStats> stats;
@@ -847,160 +786,5 @@ TEST(ProcessBreakpoint, HitCount) {
   main_breakpoint1.reset();
   ASSERT_EQ(0u, process_delegate.bps().size());
 }
-
-#ifdef PROCESS_BREAKPOINT_TRANSITION
-
-TEST(ProcessBreakpoint, HWBreakpointForAllThreads) {
-  constexpr zx_koid_t kProcessId = 0x1234;
-  constexpr zx_koid_t kThreadId1 = 0x1;
-  constexpr zx_koid_t kThreadId2 = 0x2;
-  constexpr zx_koid_t kThreadId3 = 0x3;
-  constexpr uint32_t kBreakpointId1 = 0x1;
-  constexpr uint64_t kAddress = 0x80000000;
-
-  auto process = std::make_unique<MockProcess>(nullptr, kProcessId, ObjectProvider::Get());
-  process->AddThread(kThreadId1);
-  process->AddThread(kThreadId2);
-  process->AddThread(kThreadId3);
-  TestProcessDelegate process_delegate;
-  process_delegate.InjectMockProcess(std::move(process));
-
-  // Any calls to the architecture will be routed to this instance.
-  ScopedMockArchProvider scoped_arch_provider;
-  MockArchProvider* arch_provider = scoped_arch_provider.get_provider();
-
-  auto breakpoint = std::make_unique<Breakpoint>(&process_delegate);
-  debug_ipc::BreakpointSettings settings1 = {};
-  settings1.id = kBreakpointId1;
-  // This location is for all threads.
-  settings1.locations.push_back({kProcessId, 0, kAddress});
-  zx_status_t status = breakpoint->SetSettings(debug_ipc::BreakpointType::kHardware, settings1);
-  ASSERT_EQ(status, ZX_OK);
-
-  // Should have installed the breakpoint.
-  ASSERT_EQ(process_delegate.bps().size(), 1u);
-  auto& process_bp = process_delegate.bps().begin()->second;
-  ASSERT_EQ(process_bp->address(), kAddress);
-
-  // It should have installed a HW breakpoint for each thread.
-  EXPECT_FALSE(process_bp->SoftwareBreakpointInstalled());
-  EXPECT_TRUE(process_bp->HardwareBreakpointInstalled());
-  EXPECT_EQ(arch_provider->BreakpointInstallCount(kAddress), 3u);
-
-  // Deleting the breakpoint should remove the process breakpoint.
-  breakpoint.reset();
-  EXPECT_EQ(arch_provider->BreakpointUninstallCount(kAddress), 3u);
-  EXPECT_EQ(process_delegate.bps().size(), 0u);
-}
-
-TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
-  constexpr zx_koid_t kProcessId = 0x1234;
-  constexpr zx_koid_t kThreadId1 = 0x1;
-  constexpr zx_koid_t kThreadId2 = 0x2;
-  constexpr zx_koid_t kThreadId3 = 0x3;
-  constexpr uint32_t kBreakpointId1 = 0x1;
-  constexpr uint32_t kBreakpointId2 = 0x2;
-  constexpr uint32_t kSwBreakpointId = 0x3;
-  constexpr uint64_t kAddress = BreakpointFakeMemory::kAddress;
-  constexpr uint64_t kOtherAddress = 0x8fffffff;
-
-  auto process = std::make_unique<MockProcess>(nullptr, kProcessId, ObjectProvider::Get());
-  process->AddThread(kThreadId1);
-  process->AddThread(kThreadId2);
-  process->AddThread(kThreadId3);
-  TestProcessDelegate process_delegate;
-  process_delegate.InjectMockProcess(std::move(process));
-
-  // Any calls to the architecture will be routed to this instance.
-  ScopedMockArchProvider scoped_arch_provider;
-  MockArchProvider* arch_provider = scoped_arch_provider.get_provider();
-
-  auto breakpoint1 = std::make_unique<Breakpoint>(&process_delegate);
-  debug_ipc::BreakpointSettings settings1 = {};
-  settings1.id = kBreakpointId1;
-  settings1.type = debug_ipc::BreakpointType::kHardware;
-  settings1.locations.push_back({kProcessId, kThreadId1, kAddress});
-  zx_status_t status = breakpoint1->SetSettings(settings1);
-  ASSERT_EQ(status, ZX_OK);
-  // Should have installed the process breakpoint.
-  ASSERT_EQ(process_delegate.bps().size(), 1u);
-  auto& process_bp = process_delegate.bps().begin()->second;
-  ASSERT_EQ(process_bp->address(), kAddress);
-  // This should have installed HW breakpoint for only one thread.
-  // This should have installed only a HW breakpoint.
-  ASSERT_EQ(arch_provider->TotalBreakpointInstallCalls(), 1u);
-  ASSERT_EQ(arch_provider->BreakpointInstallCount(kAddress), 1u);
-  ASSERT_EQ(arch_provider->TotalBreakpointUninstallCalls(), 0u);
-  EXPECT_FALSE(process_bp->SoftwareBreakpointInstalled());
-  EXPECT_TRUE(process_bp->HardwareBreakpointInstalled());
-
-  // Register another breakpoint.
-  auto breakpoint2 = std::make_unique<Breakpoint>(&process_delegate);
-  debug_ipc::BreakpointSettings settings2 = {};
-  settings2.id = kBreakpointId2;
-  settings2.type = debug_ipc::BreakpointType::kHardware;
-  settings2.locations.push_back({kProcessId, kThreadId2, kAddress});
-  // This breakpoint has another location for another thread.
-  // In practice, this should not happen, but it's important that no HW
-  // breakpoint get installed if for the wrong location.
-  settings2.locations.push_back({kProcessId, kThreadId3, kOtherAddress});
-  breakpoint2->SetSettings(settings2);
-  // Registering this breakpoint should create a new ProcessBreakpoint.
-  ASSERT_EQ(process_delegate.bps().size(), 2u);
-  auto& process_bp2 = (process_delegate.bps().begin()++)->second;
-  ASSERT_EQ(process_bp2->address(), kOtherAddress);
-  // Registering the second breakpoint should install for the new thread in
-  // the old location and one in the new location.
-  ASSERT_EQ(arch_provider->TotalBreakpointInstallCalls(), 3u);
-  ASSERT_EQ(arch_provider->BreakpointInstallCount(kAddress), 2u);
-  ASSERT_EQ(arch_provider->BreakpointInstallCount(kOtherAddress), 1u);
-  ASSERT_EQ(arch_provider->TotalBreakpointUninstallCalls(), 0u);
-  EXPECT_FALSE(process_bp->SoftwareBreakpointInstalled());
-
-  // Unregistering a breakpoint should only uninstall the HW breakpoint for
-  // one thread.
-  breakpoint1.reset();
-  ASSERT_EQ(arch_provider->TotalBreakpointInstallCalls(), 3u);
-  ASSERT_EQ(arch_provider->TotalBreakpointUninstallCalls(), 1u);
-  ASSERT_EQ(arch_provider->BreakpointUninstallCount(kAddress), 1u);
-  ASSERT_EQ(arch_provider->BreakpointUninstallCount(kOtherAddress), 0u);
-  EXPECT_FALSE(process_bp->SoftwareBreakpointInstalled());
-  EXPECT_FALSE(process_bp->SoftwareBreakpointInstalled());
-  EXPECT_TRUE(process_bp->HardwareBreakpointInstalled());
-  EXPECT_TRUE(process_bp2->HardwareBreakpointInstalled());
-
-  // Adding a SW breakpoint should not install HW locations.
-  auto sw_breakpoint = std::make_unique<Breakpoint>(&process_delegate);
-  debug_ipc::BreakpointSettings sw_settings = {};
-  sw_settings.id = kSwBreakpointId;
-  sw_settings.type = debug_ipc::BreakpointType::kSoftware;
-  sw_settings.locations.push_back({kProcessId, 0, kAddress});
-  sw_breakpoint->SetSettings(sw_settings);
-  // Should have installed only a SW breakpoint.
-  ASSERT_EQ(arch_provider->TotalBreakpointInstallCalls(), 3u);
-  ASSERT_EQ(arch_provider->TotalBreakpointUninstallCalls(), 1u);
-  EXPECT_TRUE(process_bp->SoftwareBreakpointInstalled());
-
-  // Unregistering should remove the other hw breakpoint.
-  // And also the second process breakpoint.
-  breakpoint2.reset();
-  ASSERT_EQ(arch_provider->TotalBreakpointInstallCalls(), 3u);
-  ASSERT_EQ(arch_provider->TotalBreakpointUninstallCalls(), 3u);
-  ASSERT_EQ(arch_provider->BreakpointUninstallCount(kAddress), 2u);
-  ASSERT_EQ(arch_provider->BreakpointUninstallCount(kOtherAddress), 1u);
-  EXPECT_FALSE(process_bp->HardwareBreakpointInstalled());
-  EXPECT_TRUE(process_bp->SoftwareBreakpointInstalled());
-  ASSERT_EQ(process_delegate.bps().size(), 1u);
-  EXPECT_EQ(process_delegate.bps().begin()->second->address(), kAddress);
-
-  // Removing the SW breakpoint should work and would delete the final process
-  // breakpoint.
-  sw_breakpoint.reset();
-  ASSERT_EQ(arch_provider->TotalBreakpointInstallCalls(), 3u);
-  ASSERT_EQ(arch_provider->TotalBreakpointUninstallCalls(), 3u);
-  EXPECT_EQ(process_delegate.bps().size(), 0u);
-}
-
-#endif
 
 }  // namespace debug_agent

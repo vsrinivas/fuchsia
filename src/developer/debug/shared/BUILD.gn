@@ -17,6 +17,7 @@ static_library("shared") {
     "component_utils.h",
     "handle_info.cc",
     "handle_info.h",
+    "largest_less_or_equal.h",
     "message_loop.cc",
     "message_loop.h",
     "regex.cc",
@@ -71,6 +72,16 @@ static_library("shared") {
   }
 }
 
+source_set("test_support") {
+  testonly = true
+  sources = [
+    "mock_memory.cc",
+    "mock_memory.h",
+  ]
+
+  public_deps = [ ":shared" ]
+}
+
 # Unit tests for this directory. These are intended to be referenced by unit
 # test targets for the consumers of this library.
 source_set("tests") {
@@ -79,6 +90,7 @@ source_set("tests") {
     "address_range_unittest.cc",
     "component_utils_unittest.cc",
     "handle_info_unittest.cc",
+    "largest_less_or_equal_unittest.cc",
     "message_loop_unittest.cc",
     "regex_unittest.cc",
     "stream_buffer_unittest.cc",

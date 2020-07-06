@@ -8,6 +8,7 @@
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
+#include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 
 namespace debug_agent {
@@ -24,35 +25,13 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
   void UnregisterWatchpoint(Breakpoint*, zx_koid_t, const debug_ipc::AddressRange&) override {}
 };
 
-class MockProcessMemoryAccessor : public ProcessMemoryAccessor {
- public:
-  // This mock is designed to report that a breakpoint was written to the given memory.
-  zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
-                                size_t* actual) override {
-    if (len != sizeof(arch::BreakInstructionType))
-      return ZX_ERR_INVALID_ARGS;  // Unexpected size to read.
-
-    auto* ptr = static_cast<arch::BreakInstructionType*>(buffer);
-    *ptr = arch::kBreakInstruction;
-    *actual = len;
-    return ZX_OK;
-  }
-  zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
-                                 size_t* actual) override {
-    *actual = len;
-    return ZX_OK;
-  }
-};
-
-DebuggedProcess CreateProcess(zx_koid_t koid, std::string name) {
-  DebuggedProcessCreateInfo create_info = {};
-  create_info.koid = koid;
-  create_info.name = std::move(name);
-  create_info.arch_provider = std::make_unique<MockArchProvider>();
-  create_info.object_provider = CreateDefaultMockObjectProvider();
-  create_info.memory_accessor = std::make_unique<MockProcessMemoryAccessor>();
-
-  return DebuggedProcess(nullptr, std::move(create_info));
+// Fills a vector with the breakpoint instruction for the current architecture. The size will vary
+// by architecture.
+std::vector<uint8_t> GetBreakpointMemory() {
+  std::vector<uint8_t> result;
+  result.resize(sizeof(arch::BreakInstructionType));
+  memcpy(&result[0], &arch::kBreakInstruction, sizeof(arch::BreakInstructionType));
+  return result;
 }
 
 // If |thread| is null, it means a process-wide breakpoint.
@@ -99,7 +78,16 @@ constexpr debug_ipc::AddressRange kAddressRange1 = {0x1, 0x2};
 
 TEST(DebuggedProcess, RegisterBreakpoints) {
   MockProcessDelegate process_delegate;
-  auto process = CreateProcess(kProcessKoid, kProcessName);
+  MockProcess process(nullptr, kProcessKoid, kProcessName, std::make_unique<MockArchProvider>(),
+                      CreateDefaultMockObjectProvider());
+
+  // There needs to be memory backing the breakpoints so set some memory here. When the breakpoint
+  // is uninstalled, the breakpoint expects that it will be the debug break instruction. So we
+  // handle both cases and always report a breakpoint at these addresses.
+  process.mock_process_handle().mock_memory().AddMemory(kAddress1, GetBreakpointMemory());
+  process.mock_process_handle().mock_memory().AddMemory(kAddress2, GetBreakpointMemory());
+  process.mock_process_handle().mock_memory().AddMemory(kAddress3, GetBreakpointMemory());
+  process.mock_process_handle().mock_memory().AddMemory(kAddress4, GetBreakpointMemory());
 
   debug_ipc::BreakpointSettings settings;
   settings.type = debug_ipc::BreakpointType::kSoftware;
@@ -180,7 +168,8 @@ TEST(DebuggedProcess, WatchpointRegistration) {
   MockProcessDelegate process_delegate;
   Breakpoint breakpoint(&process_delegate);
 
-  auto process = CreateProcess(kProcessKoid, kProcessName);
+  MockProcess process(nullptr, kProcessKoid, kProcessName, std::make_unique<MockArchProvider>(),
+                      CreateDefaultMockObjectProvider());
 
   // 1 byte.
   for (uint32_t i = 0; i < 16; i++) {

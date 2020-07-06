@@ -115,7 +115,7 @@ class TestProcess : public MockProcess {
 
   void AppendSofwareBreakpoint(Breakpoint* breakpoint, uint64_t address) {
     software_breakpoints_[address] =
-        std::make_unique<MockSoftwareBreakpoint>(breakpoint, this, nullptr, address);
+        std::make_unique<MockSoftwareBreakpoint>(breakpoint, this, address);
   }
 
   void AppendHardwareBreakpoint(Breakpoint* breakpoint, uint64_t address,
