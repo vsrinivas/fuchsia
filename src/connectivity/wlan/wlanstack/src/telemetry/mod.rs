@@ -1198,6 +1198,10 @@ mod tests {
                 rx_frame: fake_packet_counter(nth_req),
                 assoc_data_rssi: fake_rssi(nth_req),
                 beacon_rssi: fake_rssi(nth_req),
+                noise_floor_histograms: fake_noise_floor_histograms(),
+                rssi_histograms: fake_rssi_histograms(),
+                rx_rate_index_histograms: fake_rx_rate_index_histograms(),
+                snr_histograms: fake_snr_histograms(),
             }))),
         }
     }
@@ -1215,6 +1219,57 @@ mod tests {
 
     fn fake_rssi(nth_req: u64) -> fidl_stats::RssiStats {
         fidl_stats::RssiStats { hist: vec![nth_req] }
+    }
+
+    fn fake_antenna_id() -> Option<Box<fidl_stats::AntennaId>> {
+        Some(Box::new(fidl_stats::AntennaId { freq: fidl_stats::AntennaFreq::Antenna5G, index: 0 }))
+    }
+
+    fn fake_noise_floor_histograms() -> Vec<fidl_stats::NoiseFloorHistogram> {
+        vec![fidl_stats::NoiseFloorHistogram {
+            hist_scope: fidl_stats::HistScope::PerAntenna,
+            antenna_id: fake_antenna_id(),
+            // Noise floor bucket_index 165 indicates -90 dBm.
+            noise_floor_samples: vec![fidl_stats::HistBucket {
+                bucket_index: 165,
+                num_samples: 10,
+            }],
+            invalid_samples: 0,
+        }]
+    }
+
+    fn fake_rssi_histograms() -> Vec<fidl_stats::RssiHistogram> {
+        vec![fidl_stats::RssiHistogram {
+            hist_scope: fidl_stats::HistScope::PerAntenna,
+            antenna_id: fake_antenna_id(),
+            // RSSI bucket_index 225 indicates -30 dBm.
+            rssi_samples: vec![fidl_stats::HistBucket { bucket_index: 225, num_samples: 10 }],
+            invalid_samples: 0,
+        }]
+    }
+
+    fn fake_rx_rate_index_histograms() -> Vec<fidl_stats::RxRateIndexHistogram> {
+        vec![fidl_stats::RxRateIndexHistogram {
+            hist_scope: fidl_stats::HistScope::PerAntenna,
+            antenna_id: fake_antenna_id(),
+            // Rate bucket_index 74 indicates HT BW40 MCS 14 SGI, which is 802.11n 270 Mb/s.
+            // Rate bucket_index 75 indicates HT BW40 MCS 15 SGI, which is 802.11n 300 Mb/s.
+            rx_rate_index_samples: vec![
+                fidl_stats::HistBucket { bucket_index: 74, num_samples: 5 },
+                fidl_stats::HistBucket { bucket_index: 75, num_samples: 5 },
+            ],
+            invalid_samples: 0,
+        }]
+    }
+
+    fn fake_snr_histograms() -> Vec<fidl_stats::SnrHistogram> {
+        vec![fidl_stats::SnrHistogram {
+            hist_scope: fidl_stats::HistScope::PerAntenna,
+            antenna_id: fake_antenna_id(),
+            // Signal to noise ratio bucket_index 60 indicates 60 dB.
+            snr_samples: vec![fidl_stats::HistBucket { bucket_index: 60, num_samples: 10 }],
+            invalid_samples: 0,
+        }]
     }
 
     fn fake_iface_map() -> (IfaceMap, impl Stream<Item = StatsRequest>) {
