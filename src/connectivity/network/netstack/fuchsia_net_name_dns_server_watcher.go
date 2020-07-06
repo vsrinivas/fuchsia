@@ -41,9 +41,9 @@ func (c *broadcastChannel) getChannel() <-chan struct{} {
 }
 
 type dnsServerWatcher struct {
-	dnsClient *dns.Client
-	broadcast *broadcastChannel
-	mu        struct {
+	getServersCache func() []dns.Server
+	broadcast       *broadcastChannel
+	mu              struct {
 		sync.Mutex
 		isHanging    bool
 		isDead       bool
@@ -80,7 +80,7 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 			return nil, fmt.Errorf("dnsServerWatcher: watcher killed")
 		}
 
-		if servers := w.dnsClient.GetServersCache(); !serverListEquals(servers, w.mu.lastObserved) {
+		if servers := w.getServersCache(); !serverListEquals(servers, w.mu.lastObserved) {
 			dnsServer := make([]name.DnsServer, 0, len(servers))
 			for _, v := range servers {
 				dnsServer = append(dnsServer, dnsServerToFidl(v))
@@ -112,17 +112,17 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 }
 
 type dnsServerWatcherCollection struct {
-	dnsClient *dns.Client
-	broadcast broadcastChannel
+	getServersCache func() []dns.Server
+	broadcast       broadcastChannel
 }
 
 // newDnsServerWatcherCollection creates a new dnsServerWatcherCollection that will observe the
-// server configuration of dnsClient.
-// Callers are responsible for installing the notification callback on dnsClient and calling
-// NotifyServersChanged when changes to the client's configuration occur.
-func newDnsServerWatcherCollection(dnsClient *dns.Client) *dnsServerWatcherCollection {
+// server configuration provided by getServersCache.
+//
+// Callers are responsible for calling NotifyServersChanged when the configuration changes.
+func newDnsServerWatcherCollection(getServersCache func() []dns.Server) *dnsServerWatcherCollection {
 	collection := dnsServerWatcherCollection{
-		dnsClient: dnsClient,
+		getServersCache: getServersCache,
 	}
 	collection.broadcast.mu.channel = make(chan struct{})
 	return &collection
@@ -133,8 +133,8 @@ func newDnsServerWatcherCollection(dnsClient *dns.Client) *dnsServerWatcherColle
 func (c *dnsServerWatcherCollection) Bind(request name.DnsServerWatcherWithCtxInterfaceRequest) error {
 	go func() {
 		watcher := dnsServerWatcher{
-			dnsClient: c.dnsClient,
-			broadcast: &c.broadcast,
+			getServersCache: c.getServersCache,
+			broadcast:       &c.broadcast,
 		}
 
 		defer func() {

@@ -57,10 +57,11 @@ func makeDnsServer(address net.SocketAddress, source name.DnsServerSource) name.
 	return s
 }
 
-func createCollection() *dnsServerWatcherCollection {
-	watcherCollection := newDnsServerWatcherCollection(dns.NewClient(nil))
-	watcherCollection.dnsClient.SetOnServersChanged(watcherCollection.NotifyServersChanged)
-	return watcherCollection
+func createCollection() (*dnsServerWatcherCollection, *dns.Client) {
+	dnsClient := dns.NewClient(nil)
+	watcherCollection := newDnsServerWatcherCollection(dnsClient.GetServersCache)
+	dnsClient.SetOnServersChanged(watcherCollection.NotifyServersChanged)
+	return watcherCollection, dnsClient
 }
 
 func bindWatcher(t *testing.T, watcherCollection *dnsServerWatcherCollection) *name.DnsServerWatcherWithCtxInterface {
@@ -75,8 +76,8 @@ func bindWatcher(t *testing.T, watcherCollection *dnsServerWatcherCollection) *n
 }
 
 func TestDnsWatcherResolvesAndBlocks(t *testing.T) {
-	watcherCollection := createCollection()
-	watcherCollection.dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4, defaultServerIpv6})
+	watcherCollection, dnsClient := createCollection()
+	dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4, defaultServerIpv6})
 
 	watcher := bindWatcher(t, watcherCollection)
 	defer func() {
@@ -115,7 +116,7 @@ func TestDnsWatcherResolvesAndBlocks(t *testing.T) {
 	}
 
 	// Clear the list of servers, now we should get something on the channel.
-	watcherCollection.dnsClient.SetDefaultServers(nil)
+	dnsClient.SetDefaultServers(nil)
 
 	result := <-c
 
@@ -129,11 +130,11 @@ func TestDnsWatcherResolvesAndBlocks(t *testing.T) {
 }
 
 func TestDnsWatcherCancelledContext(t *testing.T) {
-	watcherCollection := createCollection()
+	watcherCollection, _ := createCollection()
 
 	watcher := dnsServerWatcher{
-		dnsClient: watcherCollection.dnsClient,
-		broadcast: &watcherCollection.broadcast,
+		getServersCache: watcherCollection.getServersCache,
+		broadcast:       &watcherCollection.broadcast,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -155,7 +156,7 @@ func TestDnsWatcherCancelledContext(t *testing.T) {
 
 func TestDnsWatcherDisallowMultiplePending(t *testing.T) {
 	t.Skip("Go bindings don't currently support simultaneous calls, test is invalid.")
-	watcherCollection := createCollection()
+	watcherCollection, _ := createCollection()
 
 	watcher := bindWatcher(t, watcherCollection)
 	defer func() {
@@ -178,7 +179,7 @@ func TestDnsWatcherDisallowMultiplePending(t *testing.T) {
 }
 
 func TestDnsWatcherMultipleWatchers(t *testing.T) {
-	watcherCollection := createCollection()
+	watcherCollection, dnsClient := createCollection()
 
 	watcher1 := bindWatcher(t, watcherCollection)
 	defer func() {
@@ -210,7 +211,7 @@ func TestDnsWatcherMultipleWatchers(t *testing.T) {
 		}(watcher)
 	}
 
-	watcherCollection.dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4})
+	dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4})
 }
 
 func TestDnsWatcherServerListEquality(t *testing.T) {
@@ -253,15 +254,15 @@ func TestDnsWatcherServerListEquality(t *testing.T) {
 }
 
 func TestDnsWatcherDifferentAddressTypes(t *testing.T) {
-	watcherCollection := createCollection()
+	watcherCollection, dnsClient := createCollection()
 	watcher := bindWatcher(t, watcherCollection)
 	defer func() {
 		_ = watcher.Close()
 	}()
 
-	watcherCollection.dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4})
-	watcherCollection.dnsClient.UpdateDhcpServers(0, &[]tcpip.Address{altServerIpv4})
-	watcherCollection.dnsClient.UpdateNdpServers([]tcpip.FullAddress{defaultServerIpv6FullAddress}, -1)
+	dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4})
+	dnsClient.UpdateDhcpServers(0, &[]tcpip.Address{altServerIpv4})
+	dnsClient.UpdateNdpServers([]tcpip.FullAddress{defaultServerIpv6FullAddress}, -1)
 
 	checkServers := func(expect []net.SocketAddress) {
 		servers, err := watcher.WatchServers(context.Background())
@@ -281,14 +282,14 @@ func TestDnsWatcherDifferentAddressTypes(t *testing.T) {
 	checkServers([]net.SocketAddress{defaultServerIpv6SocketAddress, altServerIpv4SocketAddress, defaultServerIPv4SocketAddress})
 
 	// Remove the expiring server and verify result.
-	watcherCollection.dnsClient.UpdateNdpServers([]tcpip.FullAddress{defaultServerIpv6FullAddress}, 0)
+	dnsClient.UpdateNdpServers([]tcpip.FullAddress{defaultServerIpv6FullAddress}, 0)
 	checkServers([]net.SocketAddress{altServerIpv4SocketAddress, defaultServerIPv4SocketAddress})
 
 	// Remove DHCP server and verify result.
-	watcherCollection.dnsClient.UpdateDhcpServers(0, nil)
+	dnsClient.UpdateDhcpServers(0, nil)
 	checkServers([]net.SocketAddress{defaultServerIPv4SocketAddress})
 
 	// Remove the last server and verify result.
-	watcherCollection.dnsClient.SetDefaultServers(nil)
+	dnsClient.SetDefaultServers(nil)
 	checkServers([]net.SocketAddress{})
 }
