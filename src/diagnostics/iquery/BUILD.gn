@@ -98,8 +98,5 @@ test_package("iquery_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":iquery_tests",
-    "test:iquery_golden_tests",
-  ]
+  deps = [ ":iquery_tests" ]
 }

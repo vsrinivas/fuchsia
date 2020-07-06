@@ -7,10 +7,12 @@ use {
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
+    fidl_fuchsia_io::NodeInfo,
     files_async,
+    fuchsia_inspect::reader::{self, NodeHierarchy, PartialNodeHierarchy},
     fuchsia_zircon::DurationNum,
     futures::stream::StreamExt,
-    io_util,
+    inspect_fidl_load as inspect_fidl, io_util,
     lazy_static::lazy_static,
     std::{convert::TryFrom, path::PathBuf, str::FromStr},
 };
@@ -54,7 +56,6 @@ pub async fn all_locations(root: impl AsRef<str>) -> Result<Vec<InspectLocation>
                             .map(|(_, inspect_type)| InspectLocation {
                                 inspect_type: inspect_type.clone(),
                                 path,
-                                parts: vec![],
                             })
                     }
                 }
@@ -80,10 +81,6 @@ pub struct InspectLocation {
 
     /// The path to the inspect location.
     pub path: PathBuf,
-
-    /// The parts of the inspect object this location cares about.
-    /// If empty, it means all.
-    pub parts: Vec<String>,
 }
 
 impl InspectLocation {
@@ -106,18 +103,8 @@ impl InspectLocation {
         Ok(format!("{}/{}", current_dir, path_string))
     }
 
-    pub fn absolute_path_to_string(&self) -> Result<String, Error> {
-        Ok(strip_service_suffix(self.absolute_path()?))
-    }
-
-    pub fn query_path(&self) -> Vec<String> {
-        let mut path = vec![];
-        if !self.parts.is_empty() {
-            path = self.parts.clone();
-            path.pop(); // Remove the last one given that |hierarchy.name| is that one.
-            path.insert(0, "root".to_string()); // Parts won't contain "root"
-        }
-        path
+    pub async fn load(self) -> Result<InspectObject, Error> {
+        InspectObject::new(self).await
     }
 }
 
@@ -125,43 +112,19 @@ impl FromStr for InspectLocation {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts = s.split("#").collect::<Vec<&str>>();
-        if parts.len() > 2 {
-            return Err(format_err!("Path contains more than one #"));
-        }
-
-        let mut inspect_parts = vec![];
-        if parts.len() == 2 {
-            inspect_parts.extend(parts[1].split("/"));
-        }
-
         // Some valid locations won't include the service name in the name and will be just the
         // directory. Append the name and attempt to load that file.
-        let mut location = InspectLocation::try_from(PathBuf::from(parts[0]))
+        InspectLocation::try_from(PathBuf::from(s))
             .or_else(|_| {
-                let mut path = PathBuf::from(parts[0]);
+                let mut path = PathBuf::from(s);
                 path.push(InspectMarker::SERVICE_NAME);
                 InspectLocation::try_from(path)
             })
             .or_else(|_| {
-                let mut path = PathBuf::from(parts[0]);
+                let mut path = PathBuf::from(s);
                 path.push(TreeMarker::SERVICE_NAME);
                 InspectLocation::try_from(path)
-            })?;
-        location.parts = inspect_parts.into_iter().map(|p| p.to_string()).collect();
-        Ok(location)
-    }
-}
-
-fn strip_service_suffix(string: String) -> String {
-    string
-        .replace(&format!("/{}", InspectMarker::SERVICE_NAME), "")
-        .replace(&format!("/{}", TreeMarker::SERVICE_NAME), "")
-}
-
-impl ToString for InspectLocation {
-    fn to_string(&self) -> String {
-        strip_service_suffix(self.path.to_string_lossy().to_string())
+            })
     }
 }
 
@@ -173,15 +136,11 @@ impl TryFrom<PathBuf> for InspectLocation {
             None => return Err(format_err!("Failed to get filename")),
             Some(filename) => {
                 if filename == InspectMarker::SERVICE_NAME && path.exists() {
-                    Ok(InspectLocation {
-                        inspect_type: InspectType::DeprecatedFidl,
-                        path,
-                        parts: vec![],
-                    })
+                    Ok(InspectLocation { inspect_type: InspectType::DeprecatedFidl, path })
                 } else if filename == TreeMarker::SERVICE_NAME && path.exists() {
-                    Ok(InspectLocation { inspect_type: InspectType::Tree, path, parts: vec![] })
+                    Ok(InspectLocation { inspect_type: InspectType::Tree, path })
                 } else if filename.to_string_lossy().ends_with(".inspect") {
-                    Ok(InspectLocation { inspect_type: InspectType::Vmo, path, parts: vec![] })
+                    Ok(InspectLocation { inspect_type: InspectType::Vmo, path })
                 } else {
                     return Err(format_err!("Not an inspect file"));
                 }
@@ -190,17 +149,56 @@ impl TryFrom<PathBuf> for InspectLocation {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Debug)]
+pub struct InspectObject {
+    pub location: InspectLocation,
+    pub hierarchy: Option<NodeHierarchy>,
+}
 
-    #[test]
-    fn query_path() {
-        let location = InspectLocation {
-            inspect_type: InspectType::Vmo,
-            path: PathBuf::from("/hub/c/test.cmx/123/out/diagnostics"),
-            parts: vec!["a".to_string(), "b".to_string()],
-        };
-        assert_eq!(location.query_path(), vec!["root".to_string(), "a".to_string()]);
+impl InspectObject {
+    async fn new(location: InspectLocation) -> Result<Self, Error> {
+        let mut this = Self { location, hierarchy: None };
+        match this.location.inspect_type {
+            InspectType::Vmo => this.load_from_vmo().await?,
+            InspectType::Tree => this.load_from_tree().await?,
+            InspectType::DeprecatedFidl => this.load_from_fidl().await?,
+        }
+        Ok(this)
+    }
+
+    async fn load_from_tree(&mut self) -> Result<(), Error> {
+        let path = self.location.absolute_path()?;
+        let (tree, server) = fidl::endpoints::create_proxy::<TreeMarker>()?;
+        fdio::service_connect(&path, server.into_channel())?;
+        self.hierarchy = Some(reader::read_from_tree(&tree).await?);
+        Ok(())
+    }
+
+    async fn load_from_vmo(&mut self) -> Result<(), Error> {
+        let proxy = io_util::open_file_in_namespace(
+            &self.location.absolute_path()?,
+            io_util::OPEN_RIGHT_READABLE,
+        )?;
+
+        // Obtain the vmo backing any VmoFiles.
+        let node_info = proxy.describe().await?;
+        match node_info {
+            NodeInfo::Vmofile(vmofile) => {
+                self.hierarchy = Some(PartialNodeHierarchy::try_from(&vmofile.vmo)?.into());
+                Ok(())
+            }
+            NodeInfo::File(_) => {
+                let bytes = io_util::read_file_bytes(&proxy).await?;
+                self.hierarchy = Some(PartialNodeHierarchy::try_from(bytes)?.into());
+                Ok(())
+            }
+            _ => Err(format_err!("Unknown inspect file at {}", self.location.path.display())),
+        }
+    }
+
+    async fn load_from_fidl(&mut self) -> Result<(), Error> {
+        let path = self.location.absolute_path()?;
+        self.hierarchy = Some(inspect_fidl::load_hierarchy_from_path(&path).await?);
+        Ok(())
     }
 }

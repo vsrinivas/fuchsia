@@ -1,5 +1,0 @@
-# Find from the base diagnostics directory retrieves only the top level.
-iquery --find .
-./diagnostics/root.inspect
-./diagnostics
-./diagnostics

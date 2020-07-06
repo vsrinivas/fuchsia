@@ -5,9 +5,8 @@
 use {
     crate::{
         commands::types::*,
-        formatting::text_formatter,
-        location::InspectLocation,
-        result::IqueryResult,
+        location::{InspectLocation, InspectObject},
+        text_formatter,
         types::{Error, ToText},
     },
     argh::FromArgs,
@@ -56,19 +55,19 @@ impl Command for ShowFileCommand {
 
         let mut results = Vec::new();
 
-        // TODO(fxbug.dev/45458): refactor to use cleaner methods than IQueryResult and
-        // IQueryLocation once the deprecated code is removed. For now sharing a bunch of code.
         for path in expand_paths(&self.paths)? {
             let location = match InspectLocation::from_str(&path) {
                 Err(_) => continue,
                 Ok(location) => location,
             };
+
             let path = location.path.to_string_lossy().to_string();
-            match IqueryResult::try_from(location).await {
+
+            match location.load().await {
                 Err(e) => {
                     return Err(Error::ReadLocation(path.to_string(), e));
                 }
-                Ok(IqueryResult { location, hierarchy: Some(mut hierarchy) }) => {
+                Ok(InspectObject { location, hierarchy: Some(mut hierarchy) }) => {
                     hierarchy.sort();
                     results.push(ShowFileResultItem {
                         payload: hierarchy,

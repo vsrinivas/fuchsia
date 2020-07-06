@@ -16,10 +16,10 @@ Documentation on using iquery is available [here][iquery].
 
 ## Testing
 
-Tests for iquery are available in the `iquery_golden_test` package:
+Tests for iquery are available in the `iquery_tests` package:
 
 ```
-$ fx run-test iquery_golden_test
+$ fx run-test iquery_tests
 ```
 
 ## Source layout

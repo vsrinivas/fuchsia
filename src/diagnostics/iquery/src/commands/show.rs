@@ -5,7 +5,7 @@
 use {
     crate::{
         commands::{types::*, utils},
-        formatting::text_formatter,
+        text_formatter,
         types::{Error, ToText},
     },
     argh::FromArgs,

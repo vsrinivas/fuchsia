@@ -50,9 +50,8 @@ test_package("archivist_integration_tests") {
       dest = "observer_with_data_stats.cmx"
     },
     {
-      path = rebase_path(
-              "//src/diagnostics/iquery/test/meta/iquery_example_component.cmx")
-      dest = "iquery_example_component.cmx"
+      path = rebase_path("unified_reader/meta/iquery_test_component.cmx")
+      dest = "iquery_test_component.cmx"
     },
     {
       path =
