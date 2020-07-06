@@ -18,7 +18,7 @@ All [constants][lang-constants] are generated as a `constexpr`. For example, the
  following constants:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="consts" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 ```
 
 Are generated in the header file as:
@@ -89,7 +89,7 @@ it uses the following rules:
 Given the [bits][lang-bits] definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="bits" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="bits" %}
 ```
 
 The FIDL toolchain generates a C++ `enum class` using the specified underlying
@@ -125,7 +125,7 @@ Example usage:
 Given the [enum][lang-enums] definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="enums" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
 The FIDL toolchain generates an equivalent C++ `enum class` using the specified
@@ -150,7 +150,7 @@ Example usage:
 Given a [struct][lang-structs] declaration:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="structs" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
 ```
 
 The FIDL toolchain generates a `Color` type with public members and methods.
@@ -185,7 +185,7 @@ Example usage:
 Given the union definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="unions" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
 ```
 
 FIDL generates a `JsonValue` class. `JsonValue` contains a public tag enum
@@ -284,7 +284,7 @@ unknown variant.
 Given the [table][lang-tables] definition:
 
 ```table
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="tables" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
 ```
 
 The FIDL toolchain generates a `User` class with the following methods:

@@ -26,31 +26,36 @@ convention taken by the libraries defined in the Fuchsia SDK in
 [`//sdk/fidl][sdk].
 
 We can define some examples of the various FIDL language features in
-`examples/fidl/fuchsia.examples/types.fidl`:
+`examples/fidl/fuchsia.examples/types.test.fidl`:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="lib" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="lib" %}
 
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="consts" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="bits" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="bits" %}
 
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="enums" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="structs" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
 
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="unions" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
 
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="tables" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
 
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="protocols" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="protocols" %}
 ```
 
-and also add a protocol to `examples/fidl/fuchsia.examples/echo.fidl`:
+and also add a protocol to `examples/fidl/fuchsia.examples/echo.test.fidl`:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.fidl" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" %}
 ```
+
+The `test.fidl` extension is used instead of just `.fidl`, since
+exemptions to certain requirements like linting or API review are applied to
+`test.fidl` files. You should use `.fidl` when writing your own FIDL files.
+
 ## Create a GN target for the FIDL library
 
 Now we can define a target for our FIDL library that other code can depend on:

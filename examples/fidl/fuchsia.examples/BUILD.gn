@@ -9,7 +9,7 @@ import("//build/fidl/fidl.gni")
 # that make up the library.
 fidl("fuchsia.examples") {
   sources = [
-    "echo.fidl",
-    "types.fidl",
+    "echo.test.fidl",
+    "types.test.fidl",
   ]
 }
