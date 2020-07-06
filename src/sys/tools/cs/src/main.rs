@@ -376,9 +376,9 @@ fn get_component_start_times(inspect_root: &NodeHierarchy) -> Result<HashMap<&st
             if let Some(j) = last_colon_index {
                 let time = event
                     .get_property("@time")
-                    .and_then(|prop| prop.double())
+                    .and_then(|prop| prop.string())
                     .ok_or(format_err!("Missing @time"))?;
-                res.insert(&moniker[i + 1..j], *time);
+                res.insert(&moniker[i + 1..j], time.parse::<f64>()?);
             }
         }
     }
