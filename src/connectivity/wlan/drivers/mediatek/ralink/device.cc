@@ -3489,7 +3489,7 @@ void Device::PhyUnbind() {
   }
 
   StopInterruptPolling();
-  device_remove_deprecated(zxdev_);
+  device_unbind_reply(zxdev_);
 }
 
 void Device::PhyRelease() {
@@ -3502,13 +3502,10 @@ void Device::MacUnbind() {
   zx_device_t* dev;
   {
     std::lock_guard<std::mutex> guard(lock_);
-    if (iface_state_ == IFC_DESTROYING) {
-      return;
-    }
     iface_state_ = IFC_DESTROYING;
     dev = wlanmac_dev_;
   }
-  device_remove_deprecated(dev);
+  device_unbind_reply(dev);
 }
 
 void Device::MacRelease() {
@@ -3756,8 +3753,8 @@ zx_status_t Device::DestroyIface(uint16_t id) {
     dev = wlanmac_dev_;
   }
 
-  // device_remove_deprecated() may invoke MacRelease(), so we can't hold the lock across the call
-  device_remove_deprecated(dev);
+  // device_async_remove() may invoke MacRelease(), so we can't hold the lock across the call
+  device_async_remove(dev);
 
   return ZX_OK;
 }
