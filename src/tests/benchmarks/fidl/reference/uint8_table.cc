@@ -25,7 +25,7 @@ namespace {
 template <size_t N>
 bool EncodeUint8TableStruct(void* value, const char** error,
                             fit::function<void(const uint8_t*, size_t)> callback) {
-  uint8_t out_buf[16 + 24 * N + 8 * N];
+  uint8_t out_buf[sizeof(fidl_vector_t) + sizeof(fidl_envelope_t) * N + 8 * N];
   uint8_t* next = out_buf;
 
   fidl_vector_t* table_vec = reinterpret_cast<fidl_vector_t*>(value);
@@ -59,7 +59,7 @@ bool EncodeUint8TableStruct(void* value, const char** error,
           .num_handles = 0,
           .presence = FIDL_ALLOC_PRESENT,
       };
-      *next_out_of_line = *reinterpret_cast<uint64_t*>(CLEAR_PTR_OWNERSHIP_BIT(envelope->data));
+      *next_out_of_line = *reinterpret_cast<uint8_t*>(CLEAR_PTR_OWNERSHIP_BIT(envelope->data));
       next_out_of_line++;
     }
     next += sizeof(fidl_vector_t);
