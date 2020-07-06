@@ -23,6 +23,7 @@ test_list = [
   "netstack_benchmarks_test",
   "netstack_iperf_test",
   "rust_inspect_benchmarks_test",
+  "rust_inspect_reader_benchmarks_test",
   "tspec_example_test",
 ]
 foreach(target_name, test_list) {

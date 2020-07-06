@@ -36,7 +36,7 @@ package.
 One way to run the benchmarks is with the following command:
 
 ```
-$ fx shell trace record --spec-file=/pkgfs/packages/rust_inspect_benchmarks/0/data/benchmarks.tspec
+$ fx run-e2e-tests rust_inspect_benchmarks_test
 ```
 
 It is possible to run the benchmarks in a fast "unit test mode" with
@@ -45,7 +45,7 @@ iterations without collecting performance results, which can be useful
 for checking that the tests don't fail:
 
 ```
-$ fx shell run rust_inspect_benchmarks
+$ fx shell run rust_inspect_benchmarks --benchmark writer
 ```
 
 You'll need to include `//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy:benchmarks` in your
