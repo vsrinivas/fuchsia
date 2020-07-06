@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fidl_codec/display_handle.h"
+#include "src/lib/fidl_codec/status.h"
 
 namespace fidl_codec {
 
@@ -191,6 +192,43 @@ void PrettyPrinter::DisplayHexa64(uint64_t value) {
   *this << Blue << buffer.data() << ResetColor;
 }
 
+#define TopicNameCase(name)       \
+  case name:                      \
+    *this << #name << ResetColor; \
+    return
+
+void PrettyPrinter::DisplayObjectInfoTopic(uint32_t topic) {
+  *this << Blue;
+  switch (topic) {
+    TopicNameCase(ZX_INFO_NONE);
+    TopicNameCase(ZX_INFO_HANDLE_VALID);
+    TopicNameCase(ZX_INFO_HANDLE_BASIC);
+    TopicNameCase(ZX_INFO_PROCESS);
+    TopicNameCase(ZX_INFO_PROCESS_THREADS);
+    TopicNameCase(ZX_INFO_VMAR);
+    TopicNameCase(ZX_INFO_JOB_CHILDREN);
+    TopicNameCase(ZX_INFO_JOB_PROCESSES);
+    TopicNameCase(ZX_INFO_THREAD);
+    TopicNameCase(ZX_INFO_THREAD_EXCEPTION_REPORT);
+    TopicNameCase(ZX_INFO_TASK_STATS);
+    TopicNameCase(ZX_INFO_PROCESS_MAPS);
+    TopicNameCase(ZX_INFO_PROCESS_VMOS);
+    TopicNameCase(ZX_INFO_THREAD_STATS);
+    TopicNameCase(ZX_INFO_CPU_STATS);
+    TopicNameCase(ZX_INFO_KMEM_STATS);
+    TopicNameCase(ZX_INFO_RESOURCE);
+    TopicNameCase(ZX_INFO_HANDLE_COUNT);
+    TopicNameCase(ZX_INFO_BTI);
+    TopicNameCase(ZX_INFO_PROCESS_HANDLE_STATS);
+    TopicNameCase(ZX_INFO_SOCKET);
+    TopicNameCase(ZX_INFO_VMO);
+    TopicNameCase(ZX_INFO_JOB);
+    default:
+      *this << "topic=" << topic << ResetColor;
+      return;
+  }
+}
+
 void PrettyPrinter::DisplayPaddr(zx_paddr_t addr) {
   std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
 #ifdef __MACH__
@@ -199,6 +237,95 @@ void PrettyPrinter::DisplayPaddr(zx_paddr_t addr) {
   snprintf(buffer.data(), buffer.size(), "%016" PRIx64, addr);
 #endif
   *this << Blue << buffer.data() << ResetColor;
+}
+
+#define PacketGuestVcpuTypeNameCase(name) \
+  case name:                              \
+    *this << #name << ResetColor;         \
+    return
+
+void PrettyPrinter::DisplayPacketGuestVcpuType(uint8_t type) {
+  *this << Blue;
+  switch (type) {
+    PacketGuestVcpuTypeNameCase(ZX_PKT_GUEST_VCPU_INTERRUPT);
+    PacketGuestVcpuTypeNameCase(ZX_PKT_GUEST_VCPU_STARTUP);
+    default:
+      *this << static_cast<uint32_t>(type) << ResetColor;
+      return;
+  }
+}
+
+#define PacketPageRequestCommandNameCase(name) \
+  case name:                                   \
+    *this << #name << ResetColor;              \
+    return
+
+void PrettyPrinter::DisplayPacketPageRequestCommand(uint16_t command) {
+  *this << Blue;
+  switch (command) {
+    PacketPageRequestCommandNameCase(ZX_PAGER_VMO_READ);
+    PacketPageRequestCommandNameCase(ZX_PAGER_VMO_COMPLETE);
+    default:
+      *this << static_cast<uint32_t>(command) << ResetColor;
+      return;
+  }
+}
+
+#define PciBarTypeNameCase(name)  \
+  case name:                      \
+    *this << #name << ResetColor; \
+    return
+
+void PrettyPrinter::DisplayPciBarType(uint32_t type) {
+  *this << Blue;
+  switch (type) {
+    PciBarTypeNameCase(ZX_PCI_BAR_TYPE_UNUSED);
+    PciBarTypeNameCase(ZX_PCI_BAR_TYPE_MMIO);
+    PciBarTypeNameCase(ZX_PCI_BAR_TYPE_PIO);
+    default:
+      *this << static_cast<uint32_t>(type) << ResetColor;
+      return;
+  }
+}
+
+#define ProfileInfoFlagsNameCase(name) \
+  if ((flags & (name)) == (name)) {    \
+    *this << separator << #name;       \
+    separator = " | ";                 \
+  }
+
+void PrettyPrinter::DisplayProfileInfoFlags(uint32_t flags) {
+  *this << Blue;
+  if (flags == 0) {
+    *this << "0" << ResetColor;
+    return;
+  }
+  const char* separator = "";
+  ProfileInfoFlagsNameCase(ZX_PROFILE_INFO_FLAG_PRIORITY);
+  ProfileInfoFlagsNameCase(ZX_PROFILE_INFO_FLAG_CPU_MASK);
+  *this << ResetColor;
+}
+
+#define PortPacketTypeNameCase(name) \
+  case name:                         \
+    *this << #name << ResetColor;    \
+    return
+
+void PrettyPrinter::DisplayPortPacketType(uint32_t type) {
+  *this << Blue;
+  switch (type) {
+    PortPacketTypeNameCase(ZX_PKT_TYPE_USER);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_SIGNAL_ONE);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_BELL);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_MEM);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_IO);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_VCPU);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_INTERRUPT);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_PAGE_REQUEST);
+    default:
+      *this << "port_packet_type=" << type << ResetColor;
+      return;
+  }
 }
 
 // ZX_PROP_REGISTER_GS and ZX_PROP_REGISTER_FS are defined in
@@ -274,6 +401,67 @@ void PrettyPrinter::DisplayRights(uint32_t rights) {
   *this << ResetColor;
 }
 
+#define SignalNameCase(name)          \
+  if ((signals & (name)) == (name)) { \
+    *this << separator << #name;      \
+    separator = " | ";                \
+  }
+
+void PrettyPrinter::DisplaySignals(zx_signals_t signals) {
+  *this << Blue;
+  if (signals == 0) {
+    *this << "0" << ResetColor;
+    return;
+  }
+  if (signals == __ZX_OBJECT_SIGNAL_ALL) {
+    *this << "__ZX_OBJECT_SIGNAL_ALL" << ResetColor;
+    return;
+  }
+  const char* separator = "";
+  SignalNameCase(__ZX_OBJECT_READABLE);
+  SignalNameCase(__ZX_OBJECT_WRITABLE);
+  SignalNameCase(__ZX_OBJECT_PEER_CLOSED);
+  SignalNameCase(__ZX_OBJECT_SIGNALED);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_4);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_5);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_6);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_7);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_8);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_9);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_10);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_11);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_12);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_13);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_14);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_15);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_16);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_17);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_18);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_19);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_20);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_21);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_22);
+  SignalNameCase(__ZX_OBJECT_HANDLE_CLOSED);
+  SignalNameCase(ZX_USER_SIGNAL_0);
+  SignalNameCase(ZX_USER_SIGNAL_1);
+  SignalNameCase(ZX_USER_SIGNAL_2);
+  SignalNameCase(ZX_USER_SIGNAL_3);
+  SignalNameCase(ZX_USER_SIGNAL_4);
+  SignalNameCase(ZX_USER_SIGNAL_5);
+  SignalNameCase(ZX_USER_SIGNAL_6);
+  SignalNameCase(ZX_USER_SIGNAL_7);
+  *this << ResetColor;
+}
+
+void PrettyPrinter::DisplayStatus(zx_status_t status) {
+  if (status == ZX_OK) {
+    *this << Green;
+  } else {
+    *this << Red;
+  }
+  *this << StatusName(status) << ResetColor;
+}
+
 void PrettyPrinter::DisplayString(std::string_view string) {
   if (string.data() == nullptr) {
     *this << "nullptr\n";
@@ -320,11 +508,36 @@ void PrettyPrinter::DisplayTime(zx_time_t time_ns) {
   }
 }
 
+#ifdef __MACH__
+void PrettyPrinter::DisplayUintptr(uintptr_t ptr) {
+  std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
+  snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, ptr);
+  *this << Blue << buffer.data() << ResetColor;
+}
+#else
+void PrettyPrinter::DisplayUintptr(uint64_t ptr) {
+  std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
+  snprintf(buffer.data(), buffer.size(), "%016" PRIx64, ptr);
+  *this << Blue << buffer.data() << ResetColor;
+}
+#endif
+
 void PrettyPrinter::DisplayVaddr(zx_vaddr_t addr) {
   std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
 #ifdef __MACH__
   snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, addr);
 #else
+  snprintf(buffer.data(), buffer.size(), "%016" PRIx64, addr);
+#endif
+  *this << Blue << buffer.data() << ResetColor;
+}
+
+void PrettyPrinter::DisplayGpAddr(zx_gpaddr_t addr) {
+#ifdef __MACH__
+  std::vector<char> buffer(sizeof(uintptr_t) * kCharactersPerByte + 1);
+  snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, addr);
+#else
+  std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
   snprintf(buffer.data(), buffer.size(), "%016" PRIx64, addr);
 #endif
   *this << Blue << buffer.data() << ResetColor;

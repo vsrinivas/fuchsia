@@ -170,52 +170,6 @@ void ObjPropsName(zx_obj_props_t obj_props, fidl_codec::PrettyPrinter& printer) 
   }
 }
 
-#define PacketGuestVcpuTypeNameCase(name) \
-  case name:                              \
-    printer << #name;                     \
-    return
-
-void PacketGuestVcpuTypeName(uint8_t type, fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    PacketGuestVcpuTypeNameCase(ZX_PKT_GUEST_VCPU_INTERRUPT);
-    PacketGuestVcpuTypeNameCase(ZX_PKT_GUEST_VCPU_STARTUP);
-    default:
-      printer << static_cast<uint32_t>(type);
-      return;
-  }
-}
-
-#define PacketPageRequestCommandNameCase(name) \
-  case name:                                   \
-    printer << #name;                          \
-    return
-
-void PacketPageRequestCommandName(uint16_t command, fidl_codec::PrettyPrinter& printer) {
-  switch (command) {
-    PacketPageRequestCommandNameCase(ZX_PAGER_VMO_READ);
-    PacketPageRequestCommandNameCase(ZX_PAGER_VMO_COMPLETE);
-    default:
-      printer << static_cast<uint32_t>(command);
-      return;
-  }
-}
-
-#define PciBarTypeNameCase(name) \
-  case name:                     \
-    printer << #name;            \
-    return
-
-void PciBarTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    PciBarTypeNameCase(ZX_PCI_BAR_TYPE_UNUSED);
-    PciBarTypeNameCase(ZX_PCI_BAR_TYPE_MMIO);
-    PciBarTypeNameCase(ZX_PCI_BAR_TYPE_PIO);
-    default:
-      printer << static_cast<uint32_t>(type);
-      return;
-  }
-}
-
 #define PolicyNameCase(name) \
   case name:                 \
     printer << #name;        \
@@ -267,43 +221,6 @@ void PolicyTopicName(uint32_t topic, fidl_codec::PrettyPrinter& printer) {
   }
 }
 
-#define PortPacketTypeNameCase(name) \
-  case name:                         \
-    printer << #name;                \
-    return
-
-void PortPacketTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    PortPacketTypeNameCase(ZX_PKT_TYPE_USER);
-    PortPacketTypeNameCase(ZX_PKT_TYPE_SIGNAL_ONE);
-    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_BELL);
-    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_MEM);
-    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_IO);
-    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_VCPU);
-    PortPacketTypeNameCase(ZX_PKT_TYPE_INTERRUPT);
-    PortPacketTypeNameCase(ZX_PKT_TYPE_PAGE_REQUEST);
-    default:
-      printer << "port_packet_type=" << type;
-      return;
-  }
-}
-
-#define ProfileInfoFlagsNameCase(name) \
-  if ((flags & (name)) == (name)) {    \
-    printer << separator << #name;     \
-    separator = " | ";                 \
-  }
-
-void ProfileInfoFlagsName(uint32_t flags, fidl_codec::PrettyPrinter& printer) {
-  if (flags == 0) {
-    printer << "0";
-    return;
-  }
-  const char* separator = "";
-  ProfileInfoFlagsNameCase(ZX_PROFILE_INFO_FLAG_PRIORITY);
-  ProfileInfoFlagsNameCase(ZX_PROFILE_INFO_FLAG_CPU_MASK);
-}
-
 #define RsrcKindNameCase(name) \
   case name:                   \
     printer << #name;          \
@@ -323,56 +240,6 @@ void RsrcKindName(zx_rsrc_kind_t kind, fidl_codec::PrettyPrinter& printer) {
       printer << kind;
       return;
   }
-}
-
-#define SignalNameCase(name)          \
-  if ((signals & (name)) == (name)) { \
-    printer << separator << #name;    \
-    separator = " | ";                \
-  }
-
-void SignalName(zx_signals_t signals, fidl_codec::PrettyPrinter& printer) {
-  if (signals == 0) {
-    printer << "0";
-    return;
-  }
-  if (signals == __ZX_OBJECT_SIGNAL_ALL) {
-    printer << "__ZX_OBJECT_SIGNAL_ALL";
-    return;
-  }
-  const char* separator = "";
-  SignalNameCase(__ZX_OBJECT_READABLE);
-  SignalNameCase(__ZX_OBJECT_WRITABLE);
-  SignalNameCase(__ZX_OBJECT_PEER_CLOSED);
-  SignalNameCase(__ZX_OBJECT_SIGNALED);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_4);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_5);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_6);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_7);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_8);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_9);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_10);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_11);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_12);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_13);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_14);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_15);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_16);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_17);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_18);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_19);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_20);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_21);
-  SignalNameCase(__ZX_OBJECT_SIGNAL_22);
-  SignalNameCase(__ZX_OBJECT_HANDLE_CLOSED);
-  SignalNameCase(ZX_USER_SIGNAL_0);
-  SignalNameCase(ZX_USER_SIGNAL_1);
-  SignalNameCase(ZX_USER_SIGNAL_2);
-  SignalNameCase(ZX_USER_SIGNAL_3);
-  SignalNameCase(ZX_USER_SIGNAL_4);
-  SignalNameCase(ZX_USER_SIGNAL_5);
-  SignalNameCase(ZX_USER_SIGNAL_6);
-  SignalNameCase(ZX_USER_SIGNAL_7);
 }
 
 #define SocketCreateOptionsNameCase(name) \
@@ -418,15 +285,6 @@ void SocketShutdownOptionsName(uint32_t options, fidl_codec::PrettyPrinter& prin
   const char* separator = "";
   SocketShutdownOptionsNameCase(ZX_SOCKET_SHUTDOWN_WRITE);
   SocketShutdownOptionsNameCase(ZX_SOCKET_SHUTDOWN_READ);
-}
-
-void StatusName(zx_status_t status, fidl_codec::PrettyPrinter& printer) {
-  if (status == ZX_OK) {
-    printer << fidl_codec::Green;
-  } else {
-    printer << fidl_codec::Red;
-  }
-  printer << fidl_codec::StatusName(status) << fidl_codec::ResetColor;
 }
 
 #define SystemEventTypeNameCase(name) \
@@ -524,42 +382,6 @@ void TimerOptionName(uint32_t option, fidl_codec::PrettyPrinter& printer) {
     TimerOptionNameCase(ZX_TIMER_SLACK_LATE);
     default:
       printer << option;
-      return;
-  }
-}
-
-#define TopicNameCase(name) \
-  case name:                \
-    printer << #name;       \
-    return
-
-void TopicName(uint32_t topic, fidl_codec::PrettyPrinter& printer) {
-  switch (topic) {
-    TopicNameCase(ZX_INFO_NONE);
-    TopicNameCase(ZX_INFO_HANDLE_VALID);
-    TopicNameCase(ZX_INFO_HANDLE_BASIC);
-    TopicNameCase(ZX_INFO_PROCESS);
-    TopicNameCase(ZX_INFO_PROCESS_THREADS);
-    TopicNameCase(ZX_INFO_VMAR);
-    TopicNameCase(ZX_INFO_JOB_CHILDREN);
-    TopicNameCase(ZX_INFO_JOB_PROCESSES);
-    TopicNameCase(ZX_INFO_THREAD);
-    TopicNameCase(ZX_INFO_THREAD_EXCEPTION_REPORT);
-    TopicNameCase(ZX_INFO_TASK_STATS);
-    TopicNameCase(ZX_INFO_PROCESS_MAPS);
-    TopicNameCase(ZX_INFO_PROCESS_VMOS);
-    TopicNameCase(ZX_INFO_THREAD_STATS);
-    TopicNameCase(ZX_INFO_CPU_STATS);
-    TopicNameCase(ZX_INFO_KMEM_STATS);
-    TopicNameCase(ZX_INFO_RESOURCE);
-    TopicNameCase(ZX_INFO_HANDLE_COUNT);
-    TopicNameCase(ZX_INFO_BTI);
-    TopicNameCase(ZX_INFO_PROCESS_HANDLE_STATS);
-    TopicNameCase(ZX_INFO_SOCKET);
-    TopicNameCase(ZX_INFO_VMO);
-    TopicNameCase(ZX_INFO_JOB);
-    default:
-      printer << "topic=" << topic;
       return;
   }
 }

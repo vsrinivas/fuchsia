@@ -10,6 +10,9 @@
 #include <zircon/system/public/zircon/syscalls/debug.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
 #include <zircon/system/public/zircon/syscalls/object.h>
+#include <zircon/system/public/zircon/syscalls/pci.h>
+#include <zircon/system/public/zircon/syscalls/port.h>
+#include <zircon/system/public/zircon/syscalls/profile.h>
 #include <zircon/system/public/zircon/syscalls/resource.h>
 #include <zircon/system/public/zircon/types.h>
 
@@ -86,6 +89,9 @@ class PrettyPrinter {
   // Displays an exception state.
   void DisplayExceptionState(uint32_t state);
 
+  // Displays a gpaddr.
+  void DisplayGpAddr(zx_gpaddr_t addr);
+
   // Displays a uint8_t value in padded hexadecimal format.
   void DisplayHexa8(uint8_t value);
 
@@ -98,20 +104,51 @@ class PrettyPrinter {
   // Displays a uint64_t value in padded hexadecimal format.
   void DisplayHexa64(uint64_t value);
 
+  // Displays an object info topic.
+  void DisplayObjectInfoTopic(uint32_t topic);
+
+  // Displays a packet guest_vcpu type.
+  void DisplayPacketGuestVcpuType(uint8_t type);
+
+  // Displays a packet page request command.
+  void DisplayPacketPageRequestCommand(uint16_t command);
+
   // Displays a paddr.
   void DisplayPaddr(zx_paddr_t addr);
+
+  // Displays PCI bar type.
+  void DisplayPciBarType(uint32_t type);
+
+  // Displays profile info flags name.
+  void DisplayProfileInfoFlags(uint32_t flags);
 
   // Displays prop type.
   void DisplayPropType(uint32_t type);
 
+  // Displays port packet type.
+  void DisplayPortPacketType(uint32_t type);
+
   // Displays rights.
   void DisplayRights(uint32_t rights);
+
+  // Displays signals
+  void DisplaySignals(zx_signals_t signals);
+
+  // Displays status.
+  void DisplayStatus(zx_status_t status);
 
   // Displays string.
   void DisplayString(std::string_view string);
 
   // Displays a time.
   void DisplayTime(zx_time_t time_ns);
+
+  // Displays a uintptr.
+#ifdef __MACH__
+  void DisplayUintptr(uintptr_t ptr);
+#else
+  void DisplayUintptr(uint64_t ptr);
+#endif
 
   // Displays a vaddr.
   void DisplayVaddr(zx_vaddr_t addr);

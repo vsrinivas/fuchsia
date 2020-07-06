@@ -302,7 +302,15 @@ void Int64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
 
 void Int64Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt64Type(this); }
 
-std::string Uint8Type::Name() const { return "uint8"; }
+std::string Uint8Type::Name() const {
+  switch (kind_) {
+    case Kind::kDecimal:
+    case Kind::kHexaDecimal:
+      return "uint8";
+    case Kind::kPacketGuestVcpuType:
+      return "zx.packet_guest_vcpu::type";
+  }
+}
 
 void Uint8Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   uint64_t absolute;
@@ -318,13 +326,23 @@ void Uint8Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
       case Kind::kHexaDecimal:
         printer.DisplayHexa8(absolute);
         break;
+      case Kind::kPacketGuestVcpuType:
+        printer.DisplayPacketGuestVcpuType(absolute);
     }
   }
 }
 
 void Uint8Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint8Type(this); }
 
-std::string Uint16Type::Name() const { return "uint16"; }
+std::string Uint16Type::Name() const {
+  switch (kind_) {
+    case Kind::kDecimal:
+    case Kind::kHexaDecimal:
+      return "uint16";
+    case Kind::kPacketPageRequestCommand:
+      return "zx.packet_page_request::command";
+  }
+}
 
 void Uint16Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   uint64_t absolute;
@@ -339,6 +357,9 @@ void Uint16Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         break;
       case Kind::kHexaDecimal:
         printer.DisplayHexa16(absolute);
+        break;
+      case Kind::kPacketPageRequestCommand:
+        printer.DisplayPacketPageRequestCommand(absolute);
         break;
     }
   }
@@ -359,10 +380,22 @@ std::string Uint32Type::Name() const {
       return "zx.clock";
     case Kind::kRights:
       return "zx.rights";
+    case Kind::kSignals:
+      return "signals";
+    case Kind::kStatus:
+      return "zx.status";
+    case Kind::kObjectInfoTopic:
+      return "zx.object_info_topic";
+    case Kind::kPciBarType:
+      return "zx.pci_bar_type";
+    case Kind::kPortPacketType:
+      return "zx.port_packet::type";
     case Kind::kPropType:
       return "zx.prop_type";
     case Kind::kExceptionState:
       return "zx.exception_state";
+    case Kind::kProfileInfoFlags:
+      return "zx.profile_info_flags";
   }
 }
 
@@ -392,11 +425,29 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
       case Kind::kExceptionState:
         printer.DisplayExceptionState(absolute);
         break;
-      case Kind::kRights:
-        printer.DisplayRights(absolute);
+      case Kind::kObjectInfoTopic:
+        printer.DisplayObjectInfoTopic(absolute);
+        break;
+      case Kind::kProfileInfoFlags:
+        printer.DisplayProfileInfoFlags(absolute);
         break;
       case Kind::kPropType:
         printer.DisplayPropType(absolute);
+        break;
+      case Kind::kPortPacketType:
+        printer.DisplayPortPacketType(absolute);
+        break;
+      case Kind::kPciBarType:
+        printer.DisplayPciBarType(absolute);
+        break;
+      case Kind::kRights:
+        printer.DisplayRights(absolute);
+        break;
+      case Kind::kSignals:
+        printer.DisplaySignals(absolute);
+        break;
+      case Kind::kStatus:
+        printer.DisplayStatus(absolute);
         break;
     }
   }
@@ -409,12 +460,16 @@ std::string Uint64Type::Name() const {
     case Kind::kDecimal:
     case Kind::kHexaDecimal:
       return "uint64";
-    case Kind::kVaddr:
-      return "zx.vaddr";
+    case Kind::kGpAddr:
+      return "zx.gpaddr";
     case Kind::kPaddr:
       return "zx.paddr";
     case Kind::kSize:
       return "size";
+    case Kind::kUintptr:
+      return "uintptr";
+    case Kind::kVaddr:
+      return "zx.vaddr";
   }
 }
 
@@ -429,17 +484,23 @@ void Uint64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
       case Kind::kDecimal:
         printer << Blue << absolute << ResetColor;
         break;
+      case Kind::kGpAddr:
+        printer.DisplayGpAddr(absolute);
+        break;
       case Kind::kHexaDecimal:
         printer.DisplayHexa64(absolute);
+        break;
+      case Kind::kPaddr:
+        printer.DisplayPaddr(absolute);
         break;
       case Kind::kSize:
         printer << Blue << absolute << ResetColor;
         break;
+      case Kind::kUintptr:
+        printer.DisplayUintptr(absolute);
+        break;
       case Kind::kVaddr:
         printer.DisplayVaddr(absolute);
-        break;
-      case Kind::kPaddr:
-        printer.DisplayPaddr(absolute);
         break;
     }
   }

@@ -98,10 +98,10 @@ THREAD_START_DISPLAY_TEST(
     "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_thread_start("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "thread_entry: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m000000000000eeee\x1B[0m, "
-    "stack: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m000000000000aaaa\x1B[0m, "
-    "arg1: \x1B[32muintptr_t\x1B[0m = \x1B[34m0000000000001111\x1B[0m, "
-    "arg2: \x1B[32muintptr_t\x1B[0m = \x1B[34m0000000000002222\x1B[0m)\n"
+    "thread_entry: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m000000000000eeee\x1B[0m, "
+    "stack: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m000000000000aaaa\x1B[0m, "
+    "arg1: \x1B[32muintptr\x1B[0m = \x1B[34m0000000000001111\x1B[0m, "
+    "arg2: \x1B[32muintptr\x1B[0m = \x1B[34m0000000000002222\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_thread_read_state tests.

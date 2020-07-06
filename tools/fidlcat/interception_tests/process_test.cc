@@ -125,10 +125,10 @@ PROCESS_START_DISPLAY_TEST(ZxProcessStart, ZX_OK,
                            "zx_process_start("
                            "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                            "thread: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
-                           "entry: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m0000000000123456\x1B[0m, "
-                           "stack: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m0000000100001234\x1B[0m, "
+                           "entry: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000123456\x1B[0m, "
+                           "stack: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000100001234\x1B[0m, "
                            "arg1: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1333\x1B[0m, "
-                           "arg2: \x1B[32muintptr_t\x1B[0m = \x1B[34m0000000789abcdef\x1B[0m)\n"
+                           "arg2: \x1B[32muintptr\x1B[0m = \x1B[34m0000000789abcdef\x1B[0m)\n"
                            "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_process_read_memory tests.

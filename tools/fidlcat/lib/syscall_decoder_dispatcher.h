@@ -1972,7 +1972,7 @@ inline void DisplayValue<int32_t>(SyscallType type, int32_t value,
       printer << fidl_codec::Red << value << fidl_codec::ResetColor;
       break;
     case SyscallType::kStatus:
-      StatusName(value, printer);
+      printer.DisplayStatus(value);
       break;
     default:
       printer << "unimplemented int32_t value " << static_cast<uint32_t>(type);
@@ -2016,9 +2016,7 @@ inline void DisplayValue<uint8_t>(SyscallType type, uint8_t value,
       printer.DisplayHexa8(value);
       break;
     case SyscallType::kPacketGuestVcpuType:
-      printer << fidl_codec::Blue;
-      PacketGuestVcpuTypeName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayPacketGuestVcpuType(value);
       break;
     default:
       printer << "unimplemented uint8_t value " << static_cast<uint32_t>(type);
@@ -2060,9 +2058,7 @@ inline void DisplayValue<uint16_t>(SyscallType type, uint16_t value,
       printer.DisplayHexa16(value);
       break;
     case SyscallType::kPacketPageRequestCommand:
-      printer << fidl_codec::Blue;
-      PacketPageRequestCommandName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayPacketPageRequestCommand(value);
       break;
     default:
       printer << "unimplemented uint16_t value " << static_cast<uint32_t>(type);
@@ -2159,9 +2155,7 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       printer << fidl_codec::ResetColor;
       break;
     case SyscallType::kObjectInfoTopic:
-      printer << fidl_codec::Blue;
-      TopicName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayObjectInfoTopic(value);
       break;
     case SyscallType::kObjProps:
       printer << fidl_codec::Blue;
@@ -2174,9 +2168,7 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       printer << fidl_codec::ResetColor;
       break;
     case SyscallType::kPciBarType:
-      printer << fidl_codec::Blue;
-      PciBarTypeName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayPciBarType(value);
       break;
     case SyscallType::kPolicyAction:
       printer << fidl_codec::Blue;
@@ -2194,14 +2186,10 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       printer << fidl_codec::ResetColor;
       break;
     case SyscallType::kPortPacketType:
-      printer << fidl_codec::Blue;
-      PortPacketTypeName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayPortPacketType(value);
       break;
     case SyscallType::kProfileInfoFlags:
-      printer << fidl_codec::Blue;
-      ProfileInfoFlagsName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayProfileInfoFlags(value);
       break;
     case SyscallType::kPropType:
       printer.DisplayPropType(value);
@@ -2215,9 +2203,7 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       printer << fidl_codec::ResetColor;
       break;
     case SyscallType::kSignals:
-      printer << fidl_codec::Blue;
-      SignalName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplaySignals(value);
       break;
     case SyscallType::kSocketCreateOptions:
       printer << fidl_codec::Blue;
@@ -2329,12 +2315,9 @@ inline void DisplayValue<uint64_t>(SyscallType type, uint64_t value,
       printer.DisplayHexa64(value);
       break;
 #ifndef __MACH__
-    case SyscallType::kGpAddr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kGpAddr:
+      printer.DisplayGpAddr(value);
       break;
-    }
 #endif
     case SyscallType::kKoid:
       printer << fidl_codec::Red << value << fidl_codec::ResetColor;
@@ -2351,12 +2334,9 @@ inline void DisplayValue<uint64_t>(SyscallType type, uint64_t value,
       printer.DisplayPaddr(value);
       break;
 #ifndef __MACH__
-    case SyscallType::kUintptr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kUintptr:
+      printer.DisplayUintptr(value);
       break;
-    }
     case SyscallType::kVaddr:
       printer.DisplayVaddr(value);
       break;
@@ -2395,24 +2375,18 @@ template <>
 inline void DisplayValue<uintptr_t>(SyscallType type, uintptr_t value,
                                     fidl_codec::PrettyPrinter& printer) {
   switch (type) {
-    case SyscallType::kGpAddr: {
-      std::vector<char> buffer(sizeof(uintptr_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kGpAddr:
+      printer.DisplayGpAddr(value);
       break;
-    }
     case SyscallType::kSize:
       printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
       break;
     case SyscallType::kPaddr:
       printer.DisplayPaddr(value);
       break;
-    case SyscallType::kUintptr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kUintptr:
+      printer.DisplayUintptr(value);
       break;
-    }
     case SyscallType::kVaddr:
       printer.DisplayVaddr(value);
       break;

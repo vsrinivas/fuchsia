@@ -553,7 +553,7 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
       case SyscallReturnType::kVoid:
         break;
       case SyscallReturnType::kStatus:
-        StatusName(static_cast<zx_status_t>(decoder->syscall_return_value()), printer);
+        printer.DisplayStatus(static_cast<zx_status_t>(decoder->syscall_return_value()));
         break;
       case SyscallReturnType::kTicks:
         printer << fidl_codec::Green << "ticks" << fidl_codec::ResetColor << ": "

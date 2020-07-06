@@ -43,7 +43,7 @@ OBJECT_WAIT_ONE_DISPLAY_TEST(ZxObjectWaitOne, ZX_OK,
                              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                              "signals: \x1B[32msignals\x1B[0m = \x1B[34m"
                              "__ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED\x1B[0m, "
-                             "deadline: \x1B[32mtime\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+                             "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
                              "  -> \x1B[32mZX_OK\x1B[0m ("
                              "observed: \x1B[32msignals\x1B[0m = "
                              "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_WRITABLE\x1B[0m)\n");
