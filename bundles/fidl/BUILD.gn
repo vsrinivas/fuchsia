@@ -18,7 +18,7 @@ group("tests") {
     "//garnet/go/src/fidl:fidlgen_common_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_types_test($host_toolchain)",
     "//garnet/tests/fidl-changes",
-    "//garnet/tests/fidl-dangerous-identifiers",
+    "//src/tests/fidl/dangerous_identifiers:tests",
     "//sdk/lib/fidl/cpp:fidl_cpp_host_conformance_test($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl_cpp_host_unittests($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl_tests",
