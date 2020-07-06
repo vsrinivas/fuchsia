@@ -245,18 +245,30 @@ class TestsConfig {
         true, () => ansi.wrapWith(value, codes, forScript: forScript));
   }
 
+  void _maybeAddEnv(Map<String, String> map, String envName,
+      [String newEnvName]) {
+    String envValue = fxEnv.getEnv(envName);
+    if (envValue != null && envValue.isNotEmpty) {
+      map[newEnvName ?? envName] = envValue;
+    }
+  }
+
   /// Environment variables to pass to the spawned process that runs our test.
-  Map<String, String> get environment => flags.e2e
-      ? {
-          'FUCHSIA_DEVICE_ADDR': fxEnv.getEnv('FUCHSIA_DEVICE_ADDR'),
-          'FUCHSIA_SSH_KEY': fxEnv.getEnv('FUCHSIA_SSH_KEY'),
-          'FUCHSIA_SSH_PORT': fxEnv.getEnv('FUCHSIA_SSH_PORT'),
-          'FUCHSIA_TEST_OUTDIR': fxEnv.getEnv('FUCHSIA_TEST_OUTDIR'),
-          'SL4F_HTTP_PORT': fxEnv.getEnv('SL4F_HTTP_PORT'),
-          // Legacy key
-          'FUCHSIA_IPV4_ADDR': fxEnv.getEnv('FUCHSIA_DEVICE_ADDR'),
-        }
-      : const {};
+  Map<String, String> get environment {
+    if (flags.e2e) {
+      Map<String, String> result = {};
+      _maybeAddEnv(result, 'FUCHSIA_DEVICE_ADDR');
+      _maybeAddEnv(result, 'FUCHSIA_SSH_KEY');
+      _maybeAddEnv(result, 'FUCHSIA_SSH_PORT');
+      _maybeAddEnv(result, 'FUCHSIA_TEST_OUTDIR');
+      _maybeAddEnv(result, 'SL4F_HTTP_PORT');
+      // Legacy key
+      _maybeAddEnv(result, 'FUCHSIA_DEVICE_ADDR', 'FUCHSIA_IPV4_ADDR');
+      return result;
+    } else {
+      return const {};
+    }
+  }
 }
 
 /// An expanded set of flags passed to `fx test` against which all available

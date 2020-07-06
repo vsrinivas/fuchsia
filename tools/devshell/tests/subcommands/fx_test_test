@@ -9,6 +9,7 @@ BT_LINKED_DEPS=(
   "third_party"
   "prebuilt/third_party/dart"
   "scripts/fxtest"
+  "scripts/fxutils"
 )
 
 BT_FILE_DEPS=(
@@ -29,6 +30,7 @@ BT_MOCKED_TOOLS=(
   "tools/devshell/update-if-in-base"
   "tools/devshell/shell"
   "tools/devshell/symbolize"
+  "tools/devshell/lib/metrics_custom_report.sh"
 )
 
 declare fx DATA_DIR
@@ -216,6 +218,73 @@ EOF
   # expect "fx shell build"
   BT_EXPECT ${fx} test example_host_test >> "${out}"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "host_x64/example_host_test"
+}
+
+# Test that "fx test" executes an e2e test with the proper env variables set
+TEST_fxtest_e2e_env() {
+  mkdir -p "${BT_TEMP_DIR}/out/default"
+  cat > "${BT_TEMP_DIR}/out/default/tests.json" <<EOF
+  [{"environments": [{"dimensions": {"device_type": "qemu_x64"}}],
+    "test": {
+      "cpu": "x64",
+      "label": "//examples/example_host_test:host_tools_example_pkg(//build/toolchain/host_x64)",
+      "name": "example_host_test",
+      "os": "linux",
+      "path": "host_x64/example_host_test"
+    }
+  }]
+EOF
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+  local test_exec="$(btf::make_hosttools_mock "example_host_test")"
+  # some 'fx test' features call this function to track test execution if the
+  # user has metrics enabled.
+  function track-subcommand-custom-event {
+    :
+  }
+  export -f track-subcommand-custom-event
+
+  # when the test is executed, print out the e2e variables as they are given to the test
+  cat > "${test_exec}.mock_side_effects" <<'EOF'
+  printVar() {
+    local n="$1"
+    # print var if it's set, even if it's empty
+    [[ -n ${!n+x} ]] && echo "TESTING_E2E_VARS: $n=${!n}" > /dev/stderr
+  }
+  printVar FUCHSIA_DEVICE_ADDR
+  printVar FUCHSIA_SSH_KEY
+  printVar FUCHSIA_SSH_PORT
+  printVar FUCHSIA_TEST_OUTDIR
+  printVar SL4F_HTTP_PORT
+  printVar FUCHSIA_IPV4_ADDR
+  exit 0
+EOF
+  # check if environemnt is as expected for a user-defined IPV4 device and SSH port
+  BT_EXPECT ${fx} -d 1.1.1.1:8123 test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_DEVICE_ADDR=1.1.1.1"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_SSH_PORT=8123"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_SSH_KEY=..*"   # ensures no empty definition
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_TEST_OUTDIR=..*" # ensures no empty definition
+
+  # check if environemnt is as expected for a user-defined IPV6 device and SSH port
+  BT_EXPECT ${fx} -d '[::1]:1111' test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_DEVICE_ADDR=[::1]"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_SSH_PORT=1111"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_SSH_KEY=..*"   # ensures no empty definition
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_TEST_OUTDIR=..*" # ensures no empty definition
+
+  # no device set, test should not be given a fuchsia_ssh_port, and fuchsia_device_addr must be defined as empty
+  BT_EXPECT ${fx} test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" 'FUCHSIA_DEVICE_ADDR=$'  # ensures empty definition
+  BT_EXPECT_EMPTY "$(grep FUCHSIA_SSH_PORT "${out}")" "unexpected FUCHSIA_SSH_PORT"
+
+  # if defined in the caller's environment, sl4f_http_port is passed as is
+  BT_EXPECT SL4F_HTTP_PORT=9099 ${fx} test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "SL4F_HTTP_PORT=9099"
+
+  # fuchsia_test_outdir must be a valid and writable directory
+  BT_EXPECT ${fx} test -o --e2e example_host_test > "${out}"
+  local test_out_dir="$(sed -n "s/.* FUCHSIA_TEST_OUTDIR=\(.*\)/\1/p" "${out}")"
+  BT_EXPECT touch "${test_out_dir}/test_file"
 }
 
 BT_RUN_TESTS "$@"
