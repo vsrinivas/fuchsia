@@ -89,6 +89,9 @@ struct ConfiguredSourceTask {
     data_stream_inspect: Arc<Mutex<DataStreamInspect>>,
 }
 
+// TODO(55473): Get this max_sdu from the MediaStream instead.
+const MAX_PACKET_LEN: usize = 672;
+
 impl ConfiguredSourceTask {
     /// The main streaming task. Reads encoded audio from the encoded_stream and packages into RTP
     /// packets, sending the resulting RTP packets using `media_stream`.
@@ -101,6 +104,7 @@ impl ConfiguredSourceTask {
         let frames_per_encoded = codec_config.pcm_frames_per_encoded_frame() as u32;
         let mut packet_builder = RtpPacketBuilder::new(
             codec_config.frames_per_packet() as u8,
+            MAX_PACKET_LEN,
             codec_config.rtp_frame_header().to_vec(),
         );
         loop {
@@ -108,9 +112,13 @@ impl ConfiguredSourceTask {
                 None => continue,
                 Some(encoded) => encoded,
             };
-            let packet = match packet_builder.push_frame(encoded, frames_per_encoded)? {
-                None => continue,
-                Some(packet) => packet,
+            let packet = match packet_builder.push_frame(encoded, frames_per_encoded) {
+                Err(e) => {
+                    fx_log_warn!("Can't add packet to RTP packet: {:?}", e);
+                    continue;
+                }
+                Ok(None) => continue,
+                Ok(Some(packet)) => packet,
             };
 
             trace::duration_begin!("bt-a2dp-source", "Media:PacketSent");

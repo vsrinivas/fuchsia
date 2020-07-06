@@ -20,8 +20,10 @@ use futures::{
 use std::{collections::VecDeque, pin::Pin};
 
 pub struct RtpPacketBuilder {
-    /// The number of frames to be included in each packet
-    frames_per_packet: u8,
+    /// The maximum number of frames to be included in each packet
+    max_frames_per_packet: u8,
+    /// The maximum size of a packet (usually the max TX SDU)
+    max_packet_size: usize,
     /// The next packet's sequence number
     next_sequence_number: u16,
     /// Timestamp of the end of the packets sent so far. This is currently in audio sample units.
@@ -29,7 +31,7 @@ pub struct RtpPacketBuilder {
     /// Frames that will be in the next RtpPacket to be sent.
     frames: VecDeque<Vec<u8>>,
     /// Time that those frames represent, in the same units as `timestamp`
-    frame_time: u32,
+    frame_times: VecDeque<u32>,
     /// Extra header to include in each packet before `frames` are added
     frame_header: Vec<u8>,
 }
@@ -47,42 +49,63 @@ bitfield! {
     u32, ssrc, set_ssrc: 95, 64;
 }
 
+const RTP_HEADER_LEN: usize = 12;
+
 impl RtpPacketBuilder {
     /// Make a new builder that will vend a packet every `frames_per_packet` frames. `frame_header`
     /// are header bytes added to each packet before frames are added.
-    pub fn new(frames_per_packet: u8, frame_header: Vec<u8>) -> Self {
+    pub fn new(max_frames_per_packet: u8, max_packet_size: usize, frame_header: Vec<u8>) -> Self {
         Self {
-            frames_per_packet,
+            max_frames_per_packet,
             next_sequence_number: 1,
             timestamp: 0,
-            frames: VecDeque::with_capacity(frames_per_packet.into()),
-            frame_time: 0,
+            frames: VecDeque::with_capacity(max_frames_per_packet.into()),
+            frame_times: VecDeque::with_capacity(max_frames_per_packet.into()),
+            max_packet_size,
             frame_header,
         }
+    }
+
+    fn header_size(&self) -> usize {
+        self.frame_header.len() + RTP_HEADER_LEN
+    }
+
+    fn pending_total_size(&self) -> usize {
+        self.frames.iter().map(Vec::len).sum::<usize>() + self.header_size()
     }
 
     /// Add a frame that represents `time` pcm audio samples into the builder.
     /// Returns a serialized RTP packet if this frame fills a packet.
     /// or an Error.
     pub fn push_frame(&mut self, frame: Vec<u8>, time: u32) -> Result<Option<Vec<u8>>, Error> {
-        self.frames.push_back(frame);
-        self.frame_time = self.frame_time + time;
-        if self.frames.len() >= self.frames_per_packet.into() {
-            let mut header = RtpHeader([0; 12]);
-            header.set_version(2);
-            header.set_payload_type(96); // Dynamic payload type indicated by RFC 3551, recommended by the spec
-            header.set_sequence_number(self.next_sequence_number);
-            header.set_timestamp(self.timestamp);
-            let header_iter = header.0.iter().cloned();
-            let frame_header_iter = self.frame_header.iter().cloned();
-            let frame_bytes_iter = self.frames.drain(..).flatten();
-            let packet = header_iter.chain(frame_header_iter).chain(frame_bytes_iter).collect();
-            self.next_sequence_number = self.next_sequence_number.wrapping_add(1);
-            self.timestamp = self.timestamp + self.frame_time;
-            self.frame_time = 0;
-            return Ok(Some(packet));
+        if (frame.len() + self.header_size()) > self.max_packet_size {
+            return Err(format_err!("Media packet too large for RTP max size"));
         }
-        Ok(None)
+        self.frames.push_back(frame);
+        self.frame_times.push_back(time);
+        // IF Some(idx), a packet should be produced using the frames 0..idx.
+        let packet_ready_idx = if self.pending_total_size() > self.max_packet_size {
+            // The newest frame put us over the limit, so
+            self.frames.len() - 1
+        } else if self.frames.len() >= self.max_frames_per_packet.into() {
+            self.frames.len()
+        } else {
+            // Don't need to produce a frame
+            return Ok(None);
+        };
+        let mut header = RtpHeader([0; RTP_HEADER_LEN]);
+        header.set_version(2);
+        header.set_payload_type(96); // Dynamic payload type indicated by RFC 3551, recommended by the spec
+        header.set_sequence_number(self.next_sequence_number);
+        header.set_timestamp(self.timestamp);
+        let header_iter = header.0.iter().cloned();
+        let frame_header_iter = self.frame_header.iter().cloned();
+        let frame_bytes_iter = self.frames.drain(..packet_ready_idx).flatten();
+        let packet = header_iter.chain(frame_header_iter).chain(frame_bytes_iter).collect();
+        self.next_sequence_number = self.next_sequence_number.wrapping_add(1);
+        let frame_time: u32 = self.frame_times.drain(..packet_ready_idx).sum();
+        self.timestamp = self.timestamp + frame_time;
+        Ok(Some(packet))
     }
 }
 
@@ -259,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_packet_builder_sbc() {
-        let mut builder = RtpPacketBuilder::new(5, vec![5]);
+        let mut builder = RtpPacketBuilder::new(5, 673, vec![5]);
 
         assert!(builder.push_frame(vec![0xf0], 1).unwrap().is_none());
         assert!(builder.push_frame(vec![0x9f], 2).unwrap().is_none());
@@ -302,5 +325,53 @@ mod tests {
 
         assert_eq!(expected.len(), result.len());
         assert_eq!(expected, &result[0..expected.len()]);
+    }
+
+    #[test]
+    fn test_packet_builder_max_len() {
+        // Max size = header (12) + 4
+        let mut builder = RtpPacketBuilder::new(5, 16, vec![]);
+
+        assert!(builder.push_frame(vec![0xf0], 1).unwrap().is_none());
+        assert!(builder.push_frame(vec![0x9f], 2).unwrap().is_none());
+        assert!(builder.push_frame(vec![0x92], 4).unwrap().is_none());
+        assert!(builder.push_frame(vec![0x96], 8).unwrap().is_none());
+
+        let result = builder.push_frame(vec![0xf0], 16);
+
+        let expected = &[
+            0x80, 0x60, 0x00, 0x01, // Sequence num
+            0x00, 0x00, 0x00, 0x00, // timestamp = 0
+            0x00, 0x00, 0x00, 0x00, // SSRC = 0
+            0xf0, 0x9f, 0x92, 0x96, // 💖
+        ];
+
+        let result = result.unwrap().expect("a packet after the max size is reached");
+
+        println!("{:?}", result);
+
+        assert_eq!(expected.len(), result.len());
+        assert_eq!(expected, &result[0..expected.len()]);
+
+        assert!(builder.push_frame(vec![0x9f, 0x92, 0x96], 32).unwrap().is_none());
+
+        let result = builder.push_frame(vec![0x33], 64);
+        assert!(result.is_ok());
+
+        let expected = &[
+            0x80, 0x60, 0x00, 0x02, // Sequence num
+            0x00, 0x00, 0x00, 0x0F, // timestamp = 2^0 + 2^1 + 2^2 + 2^3 (sent last time)
+            0x00, 0x00, 0x00, 0x00, // SSRC = 0
+            0xf0, 0x9f, 0x92, 0x96, // 💖
+        ];
+
+        let result = result.unwrap().expect("a packet after 4 more bytes");
+
+        assert_eq!(expected.len(), result.len());
+        assert_eq!(expected, &result[0..expected.len()]);
+
+        // Trying to push a packet that will never fit in the max returns an error.
+        let result = builder.push_frame(vec![0x01, 0x02, 0x03, 0x04, 0x05], 512);
+        assert!(result.is_err());
     }
 }
