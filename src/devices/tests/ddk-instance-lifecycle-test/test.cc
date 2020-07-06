@@ -30,7 +30,7 @@ class InstanceLifecycleTest : public zxtest::Test {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
     ASSERT_OK(
-        fdio_open("/pkg/data", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, remote.release()));
+        fdio_open("/pkg/driver", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, remote.release()));
     args.flat_namespace.push_back({"/drivers", std::move(local)});
     args.load_drivers.push_back("/drivers/ddk-instance-lifecycle-test.so");
 

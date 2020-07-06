@@ -254,8 +254,10 @@ template("package") {
 
       assert(pkg.tests == [], "tests are not allowed in /system")
     } else {
-      assert(pkg.drivers == [],
-             "$pkg_desc drivers requires __deprecated_system_image")
+      if (!defined(testonly)) {
+        assert(pkg.drivers == [],
+               "$pkg_desc drivers requires __deprecated_system_image")
+      }
       assert(pkg.libraries == [],
              "$pkg_desc libraries requires __deprecated_system_image")
     }

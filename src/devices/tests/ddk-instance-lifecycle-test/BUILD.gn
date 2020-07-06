@@ -74,10 +74,9 @@ test_package("ddk-instance-lifecycle-test") {
     },
   ]
 
-  resources = [
+  drivers = [
     {
-      path = rebase_path("${root_build_dir}/ddk-instance-lifecycle-test.so")
-      dest = "ddk-instance-lifecycle-test.so"
+      name = "ddk-instance-lifecycle-test.so"
     },
   ]
 }
