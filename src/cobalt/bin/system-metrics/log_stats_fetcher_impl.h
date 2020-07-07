@@ -28,6 +28,7 @@ class LogStatsFetcherImpl : public LogStatsFetcher {
   void OnInspectSnapshotReady(const std::vector<inspect::contrib::DiagnosticsData>& data_vector);
 
   uint64_t last_reported_error_count_ = 0;
+  uint64_t last_reported_klog_count_ = 0;
   MetricsCallback metrics_callback_;
   async::Executor executor_;
   inspect::contrib::ArchiveReader archive_reader_;

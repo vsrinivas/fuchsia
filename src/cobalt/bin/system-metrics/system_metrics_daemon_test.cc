@@ -720,25 +720,35 @@ TEST_F(SystemMetricsDaemonTest, LogTemperatureIfSupportedSucceed2) {
 
 // Check that component log stats are sent to cobalt's logger.
 TEST_F(SystemMetricsDaemonTest, LogLogStats) {
+  // Report 5 error logs, 3 kernel logs, and no per-component error logs.
   fake_log_stats_fetcher_->AddErrorCount(5);
+  fake_log_stats_fetcher_->AddKlogCount(3);
   LogLogStats();
   RunLoopUntilIdle();
-  CheckValues(cobalt::kLogCobaltEvents, 1, fuchsia_system_metrics::kErrorLogCountMetricId, -1, -1,
-              1);
+  CheckValues(cobalt::kLogCobaltEvents, 1, fuchsia_system_metrics::kKernelLogCountMetricId, -1, -1,
+              2);
   EXPECT_EQ(5u, fake_logger_.logged_events()[0].payload.event_count().count);
-
+  EXPECT_EQ(fuchsia_system_metrics::kErrorLogCountMetricId,
+            fake_logger_.logged_events()[0].metric_id);
+  EXPECT_EQ(3u, fake_logger_.logged_events()[1].payload.event_count().count);
   fake_logger_.reset_logged_events();
+
+  // Report 4 error logs,9 0 kernel logs, and 3 logs for appmgr.
   fake_log_stats_fetcher_->AddErrorCount(4);
   fake_log_stats_fetcher_->AddComponentErrorCount(cobalt::ComponentEventCode::Appmgr, 3);
   LogLogStats();
   RunLoopUntilIdle();
   CheckValues(cobalt::kLogCobaltEvents, 2,
               fuchsia_system_metrics::kPerComponentErrorLogCountMetricId,
-              cobalt::ComponentEventCode::Appmgr, -1, 2);
+              cobalt::ComponentEventCode::Appmgr, -1, 3);
   EXPECT_EQ(4u, fake_logger_.logged_events()[0].payload.event_count().count);
   EXPECT_EQ(fuchsia_system_metrics::kErrorLogCountMetricId,
             fake_logger_.logged_events()[0].metric_id);
-  EXPECT_EQ(3u, fake_logger_.logged_events()[1].payload.event_count().count);
+  EXPECT_EQ(0u, fake_logger_.logged_events()[1].payload.event_count().count);
+  EXPECT_EQ(fuchsia_system_metrics::kKernelLogCountMetricId,
+            fake_logger_.logged_events()[1].metric_id);
+  EXPECT_EQ(3u, fake_logger_.logged_events()[2].payload.event_count().count);
+  fake_logger_.reset_logged_events();
 }
 
 // Check that archivist stats are sent to component diagnostics logger.

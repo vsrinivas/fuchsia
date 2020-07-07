@@ -440,6 +440,9 @@ void SystemMetricsDaemon::LogLogStats() {
     events.push_back(CobaltEventBuilder(fuchsia_system_metrics::kErrorLogCountMetricId)
                          .as_count_event(0, metrics.error_count));
 
+    events.push_back(CobaltEventBuilder(fuchsia_system_metrics::kKernelLogCountMetricId)
+                         .as_count_event(0, metrics.klog_count));
+
     for (auto& it : metrics.per_component_error_count) {
       events.push_back(
           CobaltEventBuilder(fuchsia_system_metrics::kPerComponentErrorLogCountMetricId)

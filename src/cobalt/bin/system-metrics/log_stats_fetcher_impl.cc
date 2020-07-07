@@ -47,7 +47,7 @@ LogStatsFetcherImpl::LogStatsFetcherImpl(async_dispatcher_t* dispatcher,
                                          sys::ComponentContext* context)
     : executor_(dispatcher),
       archive_reader_(context->svc()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
-                      {"archivist.cmx:root/log_stats:error_logs",
+                      {"archivist.cmx:root/log_stats:*",
                        "archivist.cmx:root/log_stats/by_component/*:error_logs"}) {
   // This establishes a baseline for error counts so that the next call to FetchMetrics() only
   // includes logs since the daemon started as opposed to since the  boot time. This is especially
@@ -145,6 +145,23 @@ void LogStatsFetcherImpl::OnInspectSnapshotReady(
   FX_LOGS(DEBUG) << "Current aggregated error count: " << new_count
                  << ", since last report: " << metrics.error_count;
   last_reported_error_count_ = new_count;
+
+  // Find the total klog count.
+  const rapidjson::Value& new_klog_count_value =
+      data_vector[0].GetByPath({"root", "log_stats", "kernel_logs"});
+  if (!new_klog_count_value.IsUint64()) {
+    FX_LOGS(ERROR) << "kernel_logs doesn't exist or is not a uint64";
+    return;
+  }
+  uint64_t new_klog_count = new_klog_count_value.GetUint64();
+  if (new_klog_count < last_reported_klog_count_) {
+    metrics.klog_count = new_klog_count;
+  } else {
+    metrics.klog_count = new_klog_count - last_reported_klog_count_;
+  }
+  FX_LOGS(DEBUG) << "Current klog count: " << new_klog_count
+                 << ", since last report: " << metrics.klog_count;
+  last_reported_klog_count_ = new_klog_count;
 
   metrics_callback_(metrics);
 }

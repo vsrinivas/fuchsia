@@ -16,6 +16,7 @@ class FakeLogStatsFetcher : public LogStatsFetcher {
   FakeLogStatsFetcher(async_dispatcher_t* dispatcher);
 
   void AddErrorCount(int error_count);
+  void AddKlogCount(int klog_count);
   void AddComponentErrorCount(ComponentEventCode component_id, uint64_t error_count);
 
   // Overridden from LogStatsFetcher:

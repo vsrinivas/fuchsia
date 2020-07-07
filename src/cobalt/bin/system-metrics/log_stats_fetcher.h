@@ -25,6 +25,9 @@ class LogStatsFetcher {
     // FetchMetrics().
     uint64_t error_count = 0;
 
+    // The number of new kernel logs since the last call to FetchMetrics().
+    uint64_t klog_count = 0;
+
     // A map from component event codes (as defined in metrics.yaml) to the
     // number of error logs since the last call to FetchMetrics().
     std::unordered_map<ComponentEventCode, uint64_t> per_component_error_count;
