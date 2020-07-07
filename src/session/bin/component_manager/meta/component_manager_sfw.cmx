@@ -58,6 +58,7 @@
             "fuchsia.settings.Accessibility",
             "fuchsia.settings.Audio",
             "fuchsia.settings.DoNotDisturb",
+            "fuchsia.settings.Input",
             "fuchsia.settings.Privacy",
             "fuchsia.settings.Setup",
             "fuchsia.stash.Store",

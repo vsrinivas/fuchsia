@@ -67,6 +67,7 @@
                 "/svc/fuchsia.settings.Accessibility",
                 "/svc/fuchsia.settings.Audio",
                 "/svc/fuchsia.settings.DoNotDisturb",
+                "/svc/fuchsia.settings.Input",
                 "/svc/fuchsia.settings.Privacy",
                 "/svc/fuchsia.settings.Setup",
                 "/svc/fuchsia.stash.Store",
