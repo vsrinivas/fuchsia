@@ -2,6 +2,8 @@
 
 #include <fcntl.h>
 #include <lib/fdio/watcher.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -10,8 +12,6 @@
 
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <lib/zx/clock.h>
-#include <lib/zx/time.h>
 #include <ramdevice-client/ramdisk.h>
 
 #include "keysafe/keysafe.h"
@@ -80,7 +80,8 @@ class ScopedTeecContext {
 // Gets a hardware derived key from a tee device at |device_path|.
 //
 // Arguments:
-//    device_path: The path to the tee device.
+//    device_path: The path to the tee device. If device_path is nullptr, we would let tee client
+//                 api select the correct path to connect.
 //    key_info: The key information as part of the input to the key derivation function.
 //    key_info_size: The size of |key_info|.
 //    key_buffer: The caller allocated buffer to store the derived key.
@@ -188,8 +189,8 @@ zx_status_t GetHardwareDerivedKeyFromService(GetHardwareDerivedKeyCallback callb
   // Hardware derived key is expected to be 128-bit AES key.
   std::unique_ptr<uint8_t[]> key_buffer(new uint8_t[kDerivedKeySize]);
   size_t key_size = 0;
-  if (!GetKeyFromTeeDevice("/svc/fuchsia.tee.Device", key_info, kExpectedKeyInfoSize,
-                           key_buffer.get(), &key_size, kDerivedKeySize)) {
+  if (!GetKeyFromTeeDevice(nullptr, key_info, kExpectedKeyInfoSize, key_buffer.get(), &key_size,
+                           kDerivedKeySize)) {
     fprintf(stderr, "Failed to get hardware derived key from TEE!\n");
     return ZX_ERR_IO;
   }
