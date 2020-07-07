@@ -30,7 +30,6 @@ source_set("threads") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/test-exceptions",
-    "//zircon/system/ulib/unittest",
   ]
 }
 

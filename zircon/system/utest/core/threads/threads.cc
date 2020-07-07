@@ -1064,7 +1064,7 @@ TEST(Threads, ReadingGeneralRegisterState) {
   ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS, &regs,
                                  sizeof(regs)),
             ZX_OK);
-  ASSERT_TRUE(general_regs_expect_eq(regs, gen_regs_expected));
+  ASSERT_NO_FATAL_FAILURES(general_regs_expect_eq(regs, gen_regs_expected));
 }
 
 TEST(Threads, ReadingFpRegisterState) {
@@ -1079,7 +1079,7 @@ TEST(Threads, ReadingFpRegisterState) {
       zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs));
 #if defined(__x86_64__)
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_TRUE(fp_regs_expect_eq(regs, fp_regs_expected));
+  ASSERT_NO_FATAL_FAILURES(fp_regs_expect_eq(regs, fp_regs_expected));
 #elif defined(__aarch64__)
   ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 #else
@@ -1101,8 +1101,8 @@ TEST(Threads, ReadingVectorRegisterState) {
       zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs)),
       ZX_OK);
 
-  ASSERT_TRUE(vector_regs_expect_unsupported_are_zero(regs));
-  ASSERT_TRUE(vector_regs_expect_eq(regs, vector_regs_expected));
+  ASSERT_NO_FATAL_FAILURES(vector_regs_expect_unsupported_are_zero(regs));
+  ASSERT_NO_FATAL_FAILURES(vector_regs_expect_eq(regs, vector_regs_expected));
 }
 
 // Procedure:
@@ -1196,7 +1196,7 @@ TEST(Threads, WritingGeneralRegisterState) {
   // Fix up the expected values with the IP/SP required for the register read.
   regs_to_set.REG_PC = ip;
   regs_to_set.REG_STACK_PTR = sp;
-  EXPECT_TRUE(general_regs_expect_eq(regs_to_set, regs));
+  ASSERT_NO_FATAL_FAILURES(general_regs_expect_eq(regs_to_set, regs));
 }
 
 // This tests writing single step state using zx_thread_write_state().
@@ -1254,7 +1254,7 @@ TEST(Threads, WritingFpRegisterState) {
 
   zx_thread_state_fp_regs_t regs;
   setup.DoSave(&save_fp_regs_and_exit_thread, &regs);
-  EXPECT_TRUE(fp_regs_expect_eq(regs_to_set, regs));
+  ASSERT_NO_FATAL_FAILURES(fp_regs_expect_eq(regs_to_set, regs));
 #elif defined(__aarch64__)
   ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 #else
@@ -1268,7 +1268,7 @@ TEST(Threads, WritingVectorRegisterState) {
 
   zx_thread_state_vector_regs_t regs_to_set;
   vector_regs_fill_test_values(&regs_to_set);
-  ASSERT_TRUE(vector_regs_expect_unsupported_are_zero(regs_to_set));
+  ASSERT_NO_FATAL_FAILURES(vector_regs_expect_unsupported_are_zero(regs_to_set));
 
   ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS, &regs_to_set,
                                   sizeof(regs_to_set)),
@@ -1276,7 +1276,7 @@ TEST(Threads, WritingVectorRegisterState) {
 
   zx_thread_state_vector_regs_t regs;
   setup.DoSave(&save_vector_regs_and_exit_thread, &regs);
-  EXPECT_TRUE(vector_regs_expect_eq(regs_to_set, regs));
+  ASSERT_NO_FATAL_FAILURES(vector_regs_expect_eq(regs_to_set, regs));
 }
 
 TEST(Threads, WritingVectorRegisterState_UnsupportedFieldsIgnored) {
@@ -1308,11 +1308,11 @@ TEST(Threads, WritingVectorRegisterState_UnsupportedFieldsIgnored) {
       zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs)),
       ZX_OK);
 
-  ASSERT_TRUE(vector_regs_expect_unsupported_are_zero(regs));
+  ASSERT_NO_FATAL_FAILURES(vector_regs_expect_unsupported_are_zero(regs));
 
   zx_thread_state_vector_regs_t vector_regs_expected;
   vector_regs_fill_test_values(&vector_regs_expected);
-  ASSERT_TRUE(vector_regs_expect_eq(regs, vector_regs_expected));
+  ASSERT_NO_FATAL_FAILURES(vector_regs_expect_eq(regs, vector_regs_expected));
 }
 
 // Test for fxbug.dev/50632: Make sure zx_thread_write_state doesn't overwrite
@@ -1336,7 +1336,7 @@ TEST(Threads, WriteThreadStateWithInvalidMxcsrIsInvalidArgs) {
 
   zx_thread_state_vector_regs_t end_values;
   setup.DoSave(&save_vector_regs_and_exit_thread, &end_values);
-  EXPECT_TRUE(vector_regs_expect_eq(start_values, end_values));
+  ASSERT_NO_FATAL_FAILURES(vector_regs_expect_eq(start_values, end_values));
 #endif  // defined(__x86_64__)
 }
 
@@ -1613,7 +1613,7 @@ TEST(Threads, WriteReadDebugRegisterState) {
       zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs)),
       ZX_OK);
 
-  ASSERT_TRUE(debug_regs_expect_eq(__FILE__, __LINE__, regs, debug_regs_expected));
+  ASSERT_NO_FATAL_FAILURES(debug_regs_expect_eq(__FILE__, __LINE__, regs, debug_regs_expected));
 
 #elif defined(__aarch64__)
   // We get how many breakpoints we have.
@@ -1643,7 +1643,7 @@ TEST(Threads, WriteReadDebugRegisterState) {
       zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs)),
       ZX_OK);
 
-  ASSERT_TRUE(debug_regs_expect_eq(__FILE__, __LINE__, regs, expected));
+  ASSERT_NO_FATAL_FAILURES(debug_regs_expect_eq(__FILE__, __LINE__, regs, expected));
 #endif
 }
 

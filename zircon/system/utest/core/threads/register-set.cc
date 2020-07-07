@@ -10,7 +10,7 @@
 #include <string.h>
 #include <zircon/hw/debug/arm64.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -162,9 +162,8 @@ void debug_regs_fill_test_values(zx_thread_state_debug_regs_t* to_write,
 
 // Expect Eq Functions ----------------------------------------------------------------------------
 
-bool general_regs_expect_eq(const zx_thread_state_general_regs_t& regs1,
+void general_regs_expect_eq(const zx_thread_state_general_regs_t& regs1,
                             const zx_thread_state_general_regs_t& regs2) {
-  BEGIN_HELPER;
 #define CHECK_REG(FIELD) EXPECT_EQ(regs1.FIELD, regs2.FIELD, "Reg " #FIELD)
 #if defined(__x86_64__)
   CHECK_REG(rax);
@@ -187,9 +186,7 @@ bool general_regs_expect_eq(const zx_thread_state_general_regs_t& regs1,
   CHECK_REG(rflags);
 #elif defined(__aarch64__)
   for (int regnum = 0; regnum < 30; ++regnum) {
-    char name[10];
-    snprintf(name, sizeof(name), "Reg r[%d]", regnum);
-    EXPECT_EQ(regs1.r[regnum], regs2.r[regnum], name);
+    EXPECT_EQ(regs1.r[regnum], regs2.r[regnum], "Reg r[%d]", regnum);
   }
   CHECK_REG(lr);
   CHECK_REG(sp);
@@ -199,14 +196,11 @@ bool general_regs_expect_eq(const zx_thread_state_general_regs_t& regs1,
 #error Unsupported architecture
 #endif
 #undef CHECK_REG
-  END_HELPER;
 }
 
-bool fp_regs_expect_eq(const zx_thread_state_fp_regs_t& regs1,
+void fp_regs_expect_eq(const zx_thread_state_fp_regs_t& regs1,
                        const zx_thread_state_fp_regs_t& regs2) {
 #if defined(__x86_64__)
-  BEGIN_HELPER;
-
   // This just tests the MMX registers.
   EXPECT_EQ(regs1.st[0].low, regs2.st[0].low, "Reg st[0].low");
   EXPECT_EQ(regs1.st[1].low, regs2.st[1].low, "Reg st[1].low");
@@ -216,21 +210,17 @@ bool fp_regs_expect_eq(const zx_thread_state_fp_regs_t& regs1,
   EXPECT_EQ(regs1.st[5].low, regs2.st[5].low, "Reg st[5].low");
   EXPECT_EQ(regs1.st[6].low, regs2.st[6].low, "Reg st[6].low");
   EXPECT_EQ(regs1.st[7].low, regs2.st[7].low, "Reg st[7].low");
-
-  END_HELPER;
 #elif defined(__aarch64__)
   // No FP regs on ARM (uses vector regs for FP).
   (void)regs1;
   (void)regs2;
-  return true;
 #else
 #error Unsupported architecture
 #endif
 }
 
-bool vector_regs_expect_unsupported_are_zero(const zx_thread_state_vector_regs_t& regs) {
+void vector_regs_expect_unsupported_are_zero(const zx_thread_state_vector_regs_t& regs) {
 #if defined(__x86_64__)
-  BEGIN_HELPER;
   // For the first 16 ZMM registers, we currently support only the lowest 256-bits.  All others
   // should be 0.
   for (int reg = 0; reg < 16; reg++) {
@@ -244,18 +234,15 @@ bool vector_regs_expect_unsupported_are_zero(const zx_thread_state_vector_regs_t
       EXPECT_EQ(regs.zmm[reg].v[i], 0);
     }
   }
-  END_HELPER;
 #elif defined(__aarch64__)
   // All features/fields are supported on arm64.
-  return true;
 #else
 #error Unsupported architecture
 #endif
 }
 
-bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
+void vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
                            const zx_thread_state_vector_regs_t& regs2) {
-  BEGIN_HELPER;
 #if defined(__x86_64__)
   // Only check the first 16 registers (guaranteed to work).
   for (int reg = 0; reg < 16; reg++) {
@@ -271,26 +258,17 @@ bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
 #else
 #error Unsupported architecture
 #endif
-  END_HELPER;
 }
 
-bool debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debug_regs_t& regs1,
+void debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debug_regs_t& regs1,
                           const zx_thread_state_debug_regs_t& regs2) {
-  BEGIN_HELPER;
 #if defined(__x86_64__)
-  char buf[1024];
-  snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR0");
-  EXPECT_EQ(regs1.dr[0], regs2.dr[0], buf);
-  snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR1");
-  EXPECT_EQ(regs1.dr[1], regs2.dr[1], buf);
-  snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR2");
-  EXPECT_EQ(regs1.dr[2], regs2.dr[2], buf);
-  snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR3");
-  EXPECT_EQ(regs1.dr[3], regs2.dr[3], buf);
-  snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR6");
-  EXPECT_EQ(regs1.dr6, regs2.dr6, buf);
-  snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR7");
-  EXPECT_EQ(regs1.dr7, regs2.dr7, buf);
+  EXPECT_EQ(regs1.dr[0], regs2.dr[0], "%s:%d: %s", file, line, "Reg DR0");
+  EXPECT_EQ(regs1.dr[1], regs2.dr[1], "%s:%d: %s", file, line, "Reg DR1");
+  EXPECT_EQ(regs1.dr[2], regs2.dr[2], "%s:%d: %s", file, line, "Reg DR2");
+  EXPECT_EQ(regs1.dr[3], regs2.dr[3], "%s:%d: %s", file, line, "Reg DR3");
+  EXPECT_EQ(regs1.dr6, regs2.dr6, "%s:%d: %s", file, line, "Reg DR6");
+  EXPECT_EQ(regs1.dr7, regs2.dr7, "%s:%d: %s", file, line, "Reg DR7");
 #elif defined(__aarch64__)
   for (uint32_t i = 0; i < 16; i++) {
     EXPECT_EQ(regs1.hw_bps[i].dbgbcr, regs2.hw_bps[i].dbgbcr);
@@ -307,7 +285,6 @@ bool debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debu
 #else
 #error Unsupported architecture
 #endif
-  END_HELPER;
 }
 
 // Spin Functions --------------------------------------------------------------------------------

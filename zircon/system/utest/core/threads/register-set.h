@@ -38,19 +38,18 @@ void vector_regs_fill_test_values(zx_thread_state_vector_regs* regs);
 void debug_regs_fill_test_values(zx_thread_state_debug_regs_t* to_write,
                                  zx_thread_state_debug_regs_t* expected);
 
-// Returns whether the two register sets' values are equal.
-bool general_regs_expect_eq(const zx_thread_state_general_regs_t& regs1,
+// Checks that the two register sets' values are equal.
+void general_regs_expect_eq(const zx_thread_state_general_regs_t& regs1,
                             const zx_thread_state_general_regs_t& regs2);
-bool fp_regs_expect_eq(const zx_thread_state_fp_regs_t& regs1,
+void fp_regs_expect_eq(const zx_thread_state_fp_regs_t& regs1,
                        const zx_thread_state_fp_regs_t& regs2);
-bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
+void vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
                            const zx_thread_state_vector_regs_t& regs2);
-bool debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debug_regs_t& regs1,
+void debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debug_regs_t& regs1,
                           const zx_thread_state_debug_regs_t& regs2);
 
-// Returns true if fields corresponding to unsupported vector features are 0 or if there are no
-// unsupported vector features.
-bool vector_regs_expect_unsupported_are_zero(const zx_thread_state_vector_regs_t& regs);
+// Checks that fields corresponding to any unsupported vector features are 0.
+void vector_regs_expect_unsupported_are_zero(const zx_thread_state_vector_regs_t& regs);
 
 // The functions below are assembly.
 __BEGIN_CDECLS
