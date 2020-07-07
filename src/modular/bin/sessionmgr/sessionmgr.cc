@@ -33,14 +33,15 @@ fit::deferred_action<fit::closure> SetupCobalt(const bool enable_cobalt,
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"sessionmgr"});
-  FX_LOGS(INFO) << "Using configuration at "
-                << modular::ModularConfigReader::GetOverriddenConfigPath() << " to start Modular.";
-
   if (!modular::ModularConfigReader::OverriddenConfigExists()) {
-    FX_LOGS(WARNING) << "Stopping initialization because configurations couldn't be found. "
-                     << "Basemgr may be shutting down.";
+    FX_LOGS(WARNING) << "Stopping initialization because a configuration couldn't be found at "
+                     << modular::ModularConfigReader::GetOverriddenConfigPath() << ". "
+                     << "This is expected if basemgr is shutting down.";
     return 0;
   }
+
+  FX_LOGS(INFO) << "Using configuration at "
+                << modular::ModularConfigReader::GetOverriddenConfigPath() << " to start Modular.";
 
   // Read configurations from file. This sets default values for any
   // configurations that aren't specified in the configuration.
