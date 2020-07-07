@@ -476,6 +476,141 @@ struct WlanifRssiStats {
     vector<uint64> hist;
 };
 
+// LINT.IfChange
+/// Histogram bucket.
+struct WlanifHistBucket {
+    /// Index into a lookup table for each histogram type. The lookup table for each type is
+    /// described below in the comments for each type.
+    uint16 bucket_index;
+    /// The count of samples in the bucket.
+    uint64 num_samples;
+};
+
+/// All histograms have a fixed number of buckets. To save space, each histogram type
+/// uses a vector to hold only non-empty buckets (a sparse histogram), with these constants as the
+/// max size of each vector.
+/// Noise floor values range from -255 to -1 dBm.
+const uint8 WLANIF_MAX_NOISE_FLOOR_SAMPLES = 255;
+/// Size of RX_RATE_INDEX lookup table (see comments in RxRateIndexHistogram).
+const uint8 WLANIF_MAX_RX_RATE_INDEX_SAMPLES = 196;
+/// RSSI values range from -255 to -1 dBm.
+const uint8 WLANIF_MAX_RSSI_SAMPLES = 255;
+/// SNR values range from 0 to 255 dB.
+const uint16 WLANIF_MAX_SNR_SAMPLES = 256;
+
+/// Antenna frequency.
+enum WlanifAntennaFreq : uint8 {
+    /// 2.4 GHz.
+    ANTENNA_2_G = 1;
+    /// 5 GHz.
+    ANTENNA_5_G = 2;
+};
+
+/// Identifier for antenna.
+struct WlanifAntennaId {
+    WlanifAntennaFreq freq;
+    /// 0 indexed antenna number of freq.
+    uint8 index;
+};
+
+/// The scope of the histogram, e.g. if the histogram contains data for the entire station, or has
+/// data for just a single antenna.
+enum WlanifHistScope : uint8 {
+    STATION = 1;
+    PER_ANTENNA = 2;
+};
+
+/// Histogram for noise floor samples.
+struct WlanifNoiseFloorHistogram {
+    WlanifHistScope hist_scope;
+    /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
+    WlanifAntennaId antenna_id;
+    /// Sparse histogram of noise floor of current channel in dBm. Each sample's bucket_index is an
+    /// index into this list of dBm values: [-255, -254, ... -1]. For example, if
+    /// noise_floor_samples contains a WlanifHistBucket with bucket_index = 165 and num_samples =
+    /// 50, that means there were 50 frames counted that had a noise floor of -90 dBm.
+    vector<WlanifHistBucket>:WLANIF_MAX_NOISE_FLOOR_SAMPLES noise_floor_samples;
+    /// Count of invalid samples encountered, if any.
+    uint64 invalid_samples = 0;
+};
+
+/// Histogram for received data rate.
+struct WlanifRxRateIndexHistogram {
+    WlanifHistScope hist_scope;
+    /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
+    WlanifAntennaId antenna_id;
+    /// Sparse histogram of count of received frames for each rate. Each sample's bucket_index is an
+    /// index into this lookup table:
+    /// 0-3: B-MCS 0-3
+    /// 4-11: G-MCS 0-7
+    /// 12-27: N-MCS 0-15 (BW20)
+    /// 28-43: N-MCS 0-15 (BW40)
+    /// 44-59: N-MCS 0-15 (BW20:SGI)
+    /// 60-75: N-MCS 0-15 (BW40:SGI)
+    /// 76-85: AC-MCS 0-9 (VHT:BW20:NSS1)
+    /// 86-95: AC-MCS 0-9 (VHT:BW20:NSS2)
+    /// 96-105: AC-MCS 0-9 (VHT:BW40:NSS1)
+    /// 106-115: AC-MCS 0-9 (VHT:BW40:NSS2)
+    /// 116-125: AC-MCS 0-9 (VHT:BW80:NSS1)
+    /// 126-135: AC-MCS 0-9 (VHT:BW80:NSS2)
+    /// 136-145: AC-MCS 0-9 (VHT:BW20:NSS1:SGI)
+    /// 146-155: AC-MCS 0-9 (VHT:BW20:NSS2:SGI)
+    /// 156-165: AC-MCS 0-9 (VHT:BW40:NSS1:SGI)
+    /// 166-175: AC-MCS 0-9 (VHT:BW40:NSS2:SGI)
+    /// 176-185: AC-MCS 0-9 (VHT:BW80:NSS1:SGI)
+    /// 186-195: AC-MCS 0-9 (VHT:BW80:NSS2:SGI)
+    ///
+    /// For example, if rx_rate_index_samples contains a WlanifHistBucket with bucket_index = 75
+    /// and num_samples = 50, that means there were 50 frames counted that had a rate corresponding
+    /// to N-MCS 15 (BW40:SGI).
+    vector<WlanifHistBucket>:WLANIF_MAX_RX_RATE_INDEX_SAMPLES rx_rate_index_samples;
+    /// Count of invalid samples encountered, if any.
+    uint64 invalid_samples = 0;
+};
+
+/// Histogram for received signal strength indicator (RSSI).
+struct WlanifRssiHistogram {
+    WlanifHistScope hist_scope;
+    /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
+    WlanifAntennaId antenna_id;
+    /// Sparse histogram of RSSI of AP in dBm. Each sample's bucket_index is an index
+    /// into this list of dBm values: [-255, -254, ... -1]. For example, if rssi_samples
+    /// contains a WlanifHistBucket with bucket_index = 225 and num_samples = 50, that means
+    /// there were 50 frames counted that had a signal level of -30 dBm.
+    vector<WlanifHistBucket>:WLANIF_MAX_RSSI_SAMPLES rssi_samples;
+    /// Count of invalid samples encountered, if any.
+    uint64 invalid_samples = 0;
+};
+
+/// Histogram for signal to noise ratio (SNR).
+struct WlanifSnrHistogram {
+    WlanifHistScope hist_scope;
+    /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
+    WlanifAntennaId antenna_id;
+    /// Sparse histogram of signal to noise ratio in dB. Each sample's bucket_index is an index
+    /// into this list of dB values: [0, 1, ... 255]. For example, if snr_samples contains a
+    /// WlanifHistBucket with value = 60 and num_samples = 50, that means there were 50 frames
+    /// counted that had a SNR of 60 dB.
+    vector<WlanifHistBucket>:WLANIF_MAX_SNR_SAMPLES snr_samples;
+    /// Count of invalid samples encountered, if any.
+    uint64 invalid_samples = 0;
+};
+
+/// For each histogram type (e.g. RSSI), there can be multiple histograms up to this limit. For
+/// example, an interface might have 1 histogram for station-wide RSSI, but also 1 for each of the
+/// antennas used by the interface.
+const uint8 WLANIF_MAX_HISTOGRAMS_PER_TYPE = 8;
+// LINT.ThenChange(//sdk/fidl/fuchsia.wlan.stats/wlan_stats.fidl)
+
+/// The number of 802.11B rates in the WlanifRxRateIndexHistogram lookup table.
+const uint8 WLANIF_NUM_RATES_B = 4;
+/// The number of 802.11G rates in the WlanifRxRateIndexHistogram lookup table.
+const uint8 WLANIF_NUM_RATES_G = 8;
+/// The number of 802.11N rates in the WlanifRxRateIndexHistogram lookup table.
+const uint8 WLANIF_NUM_RATES_N = 64;
+/// The number of 802.11AC rates in the WlanifRxRateIndexHistogram lookup table.
+const uint8 WLANIF_NUM_RATES_AC = 120;
+
 enum WlanifMlmeStatsType : uint8 {
     CLIENT = 0;
     AP = 1;
@@ -489,6 +624,14 @@ struct WlanifClientMlmeStats {
     WlanifPacketCounter rx_frame;
     WlanifRssiStats assoc_data_rssi;
     WlanifRssiStats beacon_rssi;
+    /// Noise floor histogram(s).
+    vector<WlanifNoiseFloorHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE noise_floor_histograms;
+    /// Received signal strength indicator (RSSI) histogram(s).
+    vector<WlanifRssiHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE rssi_histograms;
+    /// Received rate index histogram(s).
+    vector<WlanifRxRateIndexHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE rx_rate_index_histograms;
+    /// Signal to noise ratio (SNR) histogram(s).
+    vector<WlanifSnrHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE snr_histograms;
 };
 
 struct WlanifApMlmeStats {
@@ -590,4 +733,3 @@ protocol WlanifImpl {
                (zx.status status, ddk.protocol.ethernet.EthernetNetbuf? netbuf);
 
 };
-

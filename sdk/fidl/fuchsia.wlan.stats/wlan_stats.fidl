@@ -36,6 +36,7 @@ struct RssiStats {
     vector<uint64>:RSSI_BINS hist;
 };
 
+// LINT.IfChange
 /// Histogram bucket.
 struct HistBucket {
     /// Index into a lookup table for each histogram type. The lookup table for each type is
@@ -159,6 +160,7 @@ struct SnrHistogram {
 /// example, an interface might have 1 histogram for station-wide RSSI, but also 1 for each of the
 /// antennas used by the interface.
 const uint8 MAX_HISTOGRAMS_PER_TYPE = 8;
+// LINT.ThenChange(//sdk/banjo/ddk.protocol.wlanif/wlanif.banjo)
 
 struct ClientMlmeStats {
     PacketCounter svc_msg;
