@@ -712,6 +712,73 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene, event2.gfx().Which());
 }
 
+// When a ViewHolder receives a SetViewPropertiesCmd with invalid bounding box,
+// it should still set the properties, but ignore the bounding box arguments.
+TEST_F(ViewTest, ViewPropertiesWithInvalidBoundingBox) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  const ResourceId view_holder_id = 1u;
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
+  auto view_holder = FindResource<ViewHolder>(view_holder_id);
+
+  // Initialize ViewProperties for the ViewHolder.
+  Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, fuchsia::ui::gfx::ViewProperties{
+                                                            .bounding_box =
+                                                                {
+                                                                    .min = {0, 0, 0},
+                                                                    .max = {100, 100, 100},
+                                                                },
+                                                            .inset_from_min = {0, 0, 0},
+                                                            .inset_from_max = {0, 0, 0},
+                                                            .focus_change = true,
+                                                            .downward_input = true,
+                                                        }));
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
+
+  // Set ViewProperties with an invalid bounding box.
+  Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, fuchsia::ui::gfx::ViewProperties{
+                                                            .bounding_box =
+                                                                {
+                                                                    .min = {1, 1, 1},
+                                                                    .max = {1, 1, 1},
+                                                                },
+                                                            .inset_from_min = {0, 0, 0},
+                                                            .inset_from_max = {0, 0, 0},
+                                                            .focus_change = true,
+                                                            .downward_input = true,
+                                                        }));
+
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);
+  ExpectErrorAt(0,
+                "ViewProperties has invalid or uninitialized bounding box: min = 1,1,1 "
+                "max = 1,1,1 inset_from_min = 0,0,0 inset_from_max = 0,0,0.");
+
+  // Create a Scene and connect the ViewHolder to the Scene.
+  const ResourceId scene_id = 3u;
+  Apply(scenic::NewCreateSceneCmd(scene_id));
+  auto scene = FindResource<Scene>(scene_id);
+  EXPECT_TRUE(scene);
+  Apply(scenic::NewAddChildCmd(scene_id, view_holder_id));
+  EXPECT_EQ(0u, events().size());
+
+  // Link the View to the ViewHolder.
+  const ResourceId view_id = 2u;
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
+  auto view = FindResource<View>(view_id);
+  // No new errors.
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);
+
+  // Verify the ViewPropertiesChanged event was emitted.
+  bool view_properties_changed_event = false;
+  for (const fuchsia::ui::scenic::Event& event : events()) {
+    if (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
+      view_properties_changed_event = true;
+    }
+  }
+  EXPECT_TRUE(view_properties_changed_event);
+}
+
 TEST_F(ViewTest, AnnotationViewReceivesViewPropertiesChangedEvent) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto [annotation_view_token, annotation_view_holder_token] = scenic::ViewTokenPair::New();
