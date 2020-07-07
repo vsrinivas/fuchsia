@@ -218,7 +218,7 @@ group("drivers") {
     "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:vulkan",
     "//garnet/packages/prod:wlan_drivers",
-    "//src/camera/drivers",
+    "//src/camera/drivers:all",
     "//src/connectivity/ppp:drivers",
     "//src/connectivity/telephony:drivers",
     "//src/graphics/drivers",
