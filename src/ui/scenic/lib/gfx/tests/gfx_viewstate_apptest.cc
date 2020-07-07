@@ -11,6 +11,7 @@
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/session.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
@@ -163,6 +164,123 @@ TEST_F(ViewEmbedderTest, DeadBindingShouldKillSession) {
 
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [&view_disconnected_observed]() { return view_disconnected_observed; }));
+}
+
+// Test fixture that sets up an environment suitable for Scenic pixel tests
+// and provides related utilities. The environment includes Scenic and
+// RootPresenter, and their dependencies.
+class AnnotationViewTest : public gfx::PixelTest {
+ public:
+  AnnotationViewTest() : gfx::PixelTest("AnnotationViewTest") {}
+};
+
+// When annotation View and annotation ViewHolder are created within the same
+// frame (i.e. the same SessionUpdate() call), we need to ensure that they are
+// created in the correct order.
+//
+// ViewTree update of annotation ViewHolder should be created earlier before
+// annotation View, since the update of latter one refers to the ViewHolder
+// in ViewTree. Otherwise it will trigger a DCHECK() within ViewTree and lead
+// to a bad tree state.
+TEST_F(AnnotationViewTest, AnnotationViewAndViewHolderInSingleFrame) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+
+  // Initialize second session
+  auto unique_session_view = std::make_unique<scenic::Session>(scenic());
+  auto unique_session_annotation = std::make_unique<scenic::Session>(scenic());
+
+  auto session_view = unique_session_view.get();
+  auto session_annotation = unique_session_annotation.get();
+
+  session_view->set_error_handler([this](zx_status_t status) {
+    FX_LOGS(ERROR) << "Session terminated.";
+    FAIL();
+    QuitLoop();
+  });
+  session_annotation->set_error_handler([this](zx_status_t status) {
+    FX_LOGS(ERROR) << "Annotation Session terminated.";
+    FAIL();
+    QuitLoop();
+  });
+
+  test_session->SetUpCamera().SetProjection(0);
+  scenic::EntityNode entity_node(session);
+  entity_node.SetTranslation(0, 0, 0);
+  test_session->scene.AddChild(entity_node);
+
+  // Create two sets of view/view-holder token pairs.
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [view_control_ref, view_ref] = scenic::ViewRefPair::New();
+  auto [view_token_annotation, view_holder_token_annotation] = scenic::ViewTokenPair::New();
+
+  fuchsia::ui::views::ViewRef view_ref_create;
+  view_ref.Clone(&view_ref_create);
+  scenic::View view(session_view, std::move(view_token), std::move(view_control_ref),
+                    std::move(view_ref_create), "View");
+  scenic::View view_annotation(session_annotation, std::move(view_token_annotation),
+                               "View Annotation");
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ViewHolder");
+
+  // Bounds of each view should be the size of a quarter of the display with
+  // origin at 0,0 relative to its transform node.
+  const std::array<float, 3> bmin = {0.f, 0.f, -2.f};
+  const std::array<float, 3> bmax = {display_width, display_height / 2, 1.f};
+  const std::array<float, 3> imin = {0, 0, 0};
+  const std::array<float, 3> imax = {0, 0, 0};
+  view_holder.SetViewProperties(bmin, bmax, imin, imax);
+  view_holder.SetTranslation(0, display_height / 2, 0);
+
+  // Pane extends across the entire right-side of the display, even though
+  // its containing view is only in the top-right corner.
+  int32_t pane_width = display_width;
+  int32_t pane_height = display_height / 2;
+  scenic::Rectangle pane_shape2(session_view, pane_width / 2, pane_height);
+  scenic::Rectangle pane_shape_annotation(session_annotation, pane_width / 2, pane_height);
+
+  // Create pane materials.
+  scenic::Material pane_material_view(session_view);
+  scenic::Material pane_material_annotation(session_annotation);
+  pane_material_view.SetColor(0, 0, 255, 255);        // Blue
+  pane_material_annotation.SetColor(0, 255, 0, 255);  // Green
+
+  scenic::ShapeNode pane_node(session_view);
+  pane_node.SetShape(pane_shape2);
+  pane_node.SetMaterial(pane_material_view);
+  pane_node.SetTranslation(pane_width / 4, pane_height / 2, 0);
+
+  scenic::ShapeNode pane_node_annotation(session_annotation);
+  pane_node_annotation.SetShape(pane_shape_annotation);
+  pane_node_annotation.SetMaterial(pane_material_annotation);
+  pane_node_annotation.SetTranslation(pane_width * 3 / 4, pane_height / 2, 0);
+
+  // Add view holders to the transform.
+  entity_node.AddChild(view_holder);
+  view.AddChild(pane_node);
+  view_annotation.AddChild(pane_node_annotation);
+
+  Present(session);
+  Present(session_view);
+
+  RunLoopWithTimeout(zx::msec(100));
+
+  // In this way we'll trigger the annotation ViewHolder creation and
+  // annotation View creation in the same UpdateSessions() call and we
+  // should ensure that there is no error nor any gfx crash.
+  bool view_holder_annotation_created = false;
+  fuchsia::ui::views::ViewRef view_ref_annotation;
+  view_ref.Clone(&view_ref_annotation);
+  annotation_registry()->CreateAnnotationViewHolder(
+      std::move(view_ref_annotation), std::move(view_holder_token_annotation),
+      [&view_holder_annotation_created]() { view_holder_annotation_created = true; });
+  EXPECT_FALSE(view_holder_annotation_created);
+
+  session_view->Present(zx::time(0), [this](auto) { QuitLoop(); });
+  session_annotation->Present(zx::time(0), [this](auto) { QuitLoop(); });
+  RunLoopWithTimeout(zx::msec(100));
+
+  EXPECT_TRUE(view_holder_annotation_created);
 }
 
 }  // namespace

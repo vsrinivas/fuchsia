@@ -227,6 +227,23 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
                                  .display_manager = display_manager_,
                                  .scene_graph = engine_->scene_graph()};
 
+  // Update scene graph and stage ViewTree updates of Annotation Views first.
+  //
+  // The ViewTree update of an annotation View may refer to an annotation
+  // ViewHolder created during the same |UpdateSessions()| call, so we should
+  // ensure that the ViewTree update that created ViewHolder's node is staged
+  // earlier than the update that links nodes of annotation ViewHolder and
+  // annotation View (which occurs in |Session::ApplyScheduledUpdates()|).
+
+  // If annotation manager has annotation view holder creation requests, try
+  // fulfilling them by adding the annotation ViewHolders to the SceneGraph.
+  engine_->annotation_manager()->FulfillCreateRequests();
+
+  // Session owned by AnnotationManager can also have ViewTree updates when
+  // AnnotaionViewHolders are created or deleted. We should stage these updates
+  // into SceneGraph manually.
+  engine_->annotation_manager()->StageViewTreeUpdates();
+
   // Apply scheduled updates to each session, and process the changes to the local session scene
   // graph.
   for (auto& [session_id, present_id] : sessions_to_update) {
@@ -238,15 +255,6 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
       }
     }
   }
-
-  // If annotation manager has annotation view holder creation requests, try
-  // fulfilling them by adding the annotation ViewHolders to the SceneGraph.
-  engine_->annotation_manager()->FulfillCreateRequests();
-
-  // Session owned by AnnotationManager can also have ViewTree updates when
-  // AnnotaionViewHolders are created or deleted. We should stage these updates
-  // into SceneGraph manually.
-  engine_->annotation_manager()->StageViewTreeUpdates();
 
   // Run through compositors, find the active Scene, stage it as the view tree root.
   {
