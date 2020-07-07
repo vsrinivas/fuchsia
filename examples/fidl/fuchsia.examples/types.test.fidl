@@ -55,12 +55,14 @@ table User {
 };
 // [END tables]
 
+// [START protocols-preface]
+struct GameState {
+};
+// [END protocols-preface]
+
 // NOTE: a version of this protocol using error types is also used in the
 // bindings reference docs, but is not tested
 // [START protocols]
-struct GameState {
-};
-
 protocol TicTacToe {
     StartGame(bool start_first);
     MakeMove(uint8 row, uint8 col) -> (bool success, GameState? new_state);

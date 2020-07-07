@@ -795,32 +795,30 @@ To heap allocate objects, use the standard `std::make_unique`.
 
 An example with an optional uint32 field represented as a `tracking_ptr`.
 
-```
-MyStruct s;
-s.opt_uint32_field = std::make_unique<uint32_t>(123);
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-field" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 This applies to all union and table fields and data arrays within vectors and strings.
 Vector and string data arrays must use the array specialization of `std::unique_ptr`,
 which takes the element count as an argument.
 
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-vec" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
-VectorView<uint32_t> vec;
-vec.set_data(std::make_unique<uint32_t[]>(10));
-```
+
 
 To copy a collection to a `VectorView`, use `heap_copy_vec`.
 
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-copy-vec" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
-std::vector<uint32_t> vec;
-fidl::VectorView<uint32_t> vv = heap_copy_vec(vec);
-```
+
 
 To copy a string to a `StringView`, use `heap_copy_str`.
 
-```
-std::string_view str = "hello world";
-fidl::StringView sv = heap_copy_str(str);
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-copy-str" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 #### Allocators
@@ -850,35 +848,27 @@ maintained as code and FIDL tables are changed.
 
 Example:
 
-```
-BufferThenHeapAllocator<2048> allocator;
-MyStruct s;
-s.opt_uint32_field = allocator.make<uint32_t>(123);
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="allocator-field" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 The arguments to `allocator.make` are identical to the arguments to `std::make_unique`.
 This also applies to VectorViews.
 
-```
-BufferThenHeapAllocator<2048> allocator;
-fidl::VectorView<uint32_t> vec;
-vec.set_data(allocator.make<uint32_t[]>(10));
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="allocator-vec" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 To copy a collection to a `VectorView` using an allocator, use `copy_vec`.
 
-```
-BufferThenHeapAllocator<2048> allocator;
-std::vector<uint32_t> vec;
-fidl::VectorView<uint32_t> vv = fidl::copy_vec(allocator, vec);
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="copy-vec" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 To create a copy of a string using an allocator, use `copy_str`.
 
-```
-BufferThenHeapAllocator<2048> allocator;
-std::string_view str = "hello world";
-fidl::StringView sv = fidl::copy_str(allocator, str);
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="copy-str" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 #### Unowned pointers
@@ -890,32 +880,28 @@ pointers to FIDL-unowned memory.
 The `unowned_ptr` helper is the recommended way to create `unowned_ptr_t`s,
 which is more ergonomic than using the `unowned_ptr_t` constructor directly.
 
-```
-MyStruct s;
-uint32_t i = 123;
-s.opt_uint32_field = fidl::unowned_ptr(&i);
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-ptr" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 To create a `VectorView` from a collection using an unowned pointer to the
 collection's data array, use `unowned_vec`.
 
-```
-std::vector<uint32_t> vec;
-fidl::VectorView<uint32_t> vv = fidl::unowned_vec(vec);
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-vec" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 To create a `StringView` from unowned memory, use `unowned_str`.
 
-```
-const char arr[] = {'h', 'e', 'l', 'l', 'o'};
-fidl::StringView sv = fidl::unowned_str(arr, 5);
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-str" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 A `StringView` can also be created directly from string literals without using
 `unowned_ptr`.
 
-```
-fidl::StringView sv = "hello world";
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="stringview-assign" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 ## Code generator

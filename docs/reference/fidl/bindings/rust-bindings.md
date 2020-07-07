@@ -19,18 +19,21 @@ full library path with underscores instead of dots.
 For example, given the `library` declaration:
 
 ```fidl
-library games.tictactoe;
+library fuchsia.examples;
 ```
 
-The corresponding FIDL crate is named `fidl_games_tictactoe`.
+The corresponding FIDL crate is named `fidl_fuchsia_examples`:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/fidl_crates_test.rs" region_tag="import" %}
+```
 
 ## Constants {#constants}
 
 Given the [constants][lang-constants]:
 
 ```fidl
-const uint8 BOARD_SIZE = 9;
-const string NAME = "Tic-Tac-Toe";
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 ```
 
 The FIDL toolchain generates the following constants:
@@ -117,11 +120,7 @@ uses the following rules:
 Given the [bits][lang-bits] definition:
 
 ```fidl
-bits FileMode : uint16 {
-    READ = 0b001;
-    WRITE = 0b010;
-    EXECUTE = 0b100;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="bits" %}
 ```
 
 The FIDL toolchain generates an equivalent set of
@@ -133,16 +132,18 @@ camel case in the generated Rust code.
 The generated `bitflags` struct always has the complete set of [`[#derive]`
  rules](#derives).
 
+Example usage:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/fidl_crates_test.rs" region_tag="bits" adjust_indentation="auto" exclude_regexp="^\s+(#\[test\]|fn |})" %}
+```
+
 ### Enums {#types-enums}
 
 Given the [enum][lang-enums] definition:
 
 ```fidl
-enum Color {
-    RED = 1;
-    GREEN = 2;
-    BLUE = 3;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="bits" %}
 ```
 
 The FIDL toolchain generates an equivalent Rust `enum` using the specified
@@ -151,30 +152,33 @@ underlying type, or `u32` if none is specified:
 ```rust
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(u32)]
-pub enum Color {
-    Red = 1,
-    Green = 2,
-    Blue = 3,
+pub enum LocationType {
+    Museum = 1,
+    Airport = 2,
+    Restaurant = 3,
 }
 ```
 
 With the following methods:
 
-* `from_primitive(prim: u32) -> Option<Color>`: Returns `Some` of the enum
+* `from_primitive(prim: u32) -> Option<LocationType>`: Returns `Some` of the enum
   variant corresponding to the discriminant value if any, and `None` otherwise.
 * `into_primitive(&self) -> u32`: Returns the underlying discriminant value.
 
 The generated `enum` always has the complete set of [`[#derive]` rules](#derives).
+
+Example usage:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/fidl_crates_test.rs" region_tag="enums" adjust_indentation="auto" exclude_regexp="^\s+(#\[test\]|fn |})" %}
+```
 
 ### Structs {#types-structs}
 
 Given the [struct][lang-structs] declaration:
 
 ```fidl
-struct Color {
-    uint32 id;
-    string name = "red";
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
 ```
 
 The FIDL toolchain generates an equivalent Rust `struct`:
@@ -192,16 +196,18 @@ bindings, and therefore do not affect the generated Rust `struct`.
 
 The generated `Color` `struct` follows the [`[#derive]` rules](#derives).
 
+Example usage:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/fidl_crates_test.rs" region_tag="structs" adjust_indentation="auto" exclude_regexp="^\s+(#\[test\]|fn |})" %}
+```
+
 ### Unions {#types-unions}
 
 Given the [union][lang-unions] definition:
 
 ```fidl
-union JsonValue {
-    1: reserved;
-    2: int32 int_value;
-    3: string string_value;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
 ```
 
 The FIDL toolchain generates an equivalent Rust `enum`:
@@ -215,6 +221,12 @@ pub enum JsonValue {
 ```
 
 The generated `JsonValue` `enum` follows the [`[#derive]` rules](#derives).
+
+Example usage:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/fidl_crates_test.rs" region_tag="unions" adjust_indentation="auto" exclude_regexp="^\s+(#\[test\]|fn |})" %}
+```
 
 #### Flexible unions
 
@@ -241,12 +253,8 @@ original ordinal back onto the wire.
 
 Given the [table][lang-tables] definition:
 
-```table
-table User {
-    1: reserved;
-    2: uint8 age;
-    3: string name;
-};
+```fidl
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
 ```
 
 The FIDL toolchain generates a `struct` `User` where each member is optional:
@@ -266,18 +274,14 @@ With the following methods:
 
 The generated `User` `struct` follows the [`[#derive]` rules](#derives).
 
-<!-- TODO this should probably go in a guide -->
-#### Table initialization {#table-initialization}
+The recommended way of initializing a table is using the struct update syntax,
+which prevents API breakage when new fields are added.
 
-The recommended way of initializing a table is using the struct update syntax:
+Example usage:
 
 ```rust
-let user = User {
-    age: Some(20),
-    ..User::empty()
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/fidl_crates_test.rs" region_tag="tables" adjust_indentation="auto" exclude_regexp="^\s+(#\[test\]|fn |})" %}
 ```
-This prevents API breakage when new fields are added.
 
 ### Derives {#derives}
 
@@ -301,11 +305,7 @@ rules can be found in
 Given a [protocol][lang-protocols]:
 
 ```fidl
-protocol TicTacToe {
-    StartGame(bool start_first);
-    MakeMove(uint8 row, uint8 col) -> (bool success, GameState? new_state);
-    -> OnOpponentMove(GameState new_state);
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="protocols" %}
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a

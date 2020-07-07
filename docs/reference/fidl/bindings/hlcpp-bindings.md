@@ -319,11 +319,7 @@ Example usage:
 Given the [protocol][lang-protocols]:
 
 ```fidl
-protocol TicTacToe {
-    StartGame(bool start_first);
-    MakeMove(uint8 row, uint8 col) -> (bool success, GameState? new_state);
-    -> OnOpponentMove(GameState new_state);
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="protocols" %}
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a

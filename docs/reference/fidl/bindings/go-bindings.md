@@ -5,16 +5,16 @@
 Given the `library` declaration:
 
 ```fidl
-library games.tictactoe;
+library fuchsia.examples;
 ```
 
-Bindings code is generated into a `tictactoe` Go package, which is obtained by
+Bindings code is generated into a `examples` Go package, which is obtained by
 taking the last component of the FIDL library name.
 
 The package can be imported using the path:
 
 ```golang
-import "fidl/games/tictactoe"
+import "fidl/fuchsia/examples"
 ```
 
 ## Constants {#constants}
@@ -23,8 +23,7 @@ import "fidl/games/tictactoe"
 following constants:
 
 ```fidl
-const uint8 BOARD_SIZE = 9;
-const string NAME = "Tic-Tac-Toe";
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 ```
 
 Are generated as:
@@ -90,11 +89,7 @@ include non-exported fields that cannot be inspected with reflection.
 Given the [bits][lang-bits] definition:
 
 ```fidl
-bits FileMode : uint16 {
-    READ = 0b001;
-    WRITE = 0b010;
-    EXECUTE = 0b100;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 ```
 
 FIDL generates a type alias for the underyling type (or `uint32` if not
@@ -115,50 +110,55 @@ In addition, it provides the following methods for `FileMode`:
 * `func (x FileMode) String() string`: Returns a human readable string of the
   bits.
 
+Example usage:
+
+```go
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="bits" %}
+```
+
 ### Enums {#enums}
 
 Given the [enum][lang-enums] definition:
 
 ```fidl
-enum Color {
-    RED = 1;
-    GREEN = 2;
-    BLUE = 3;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
 FIDL generates a type alias for the underyling type (or `uint32` if not
 specified) and constants for each enum member:
 
 ```golang
-type Color uint32
+type LocationType uint32
 
 const (
-  ColorRed   Color = 1
-  ColorGreen Color = 2
-  ColorBlue  Color = 3
+  LocationTypeMuseum     LocationType = 1
+  LocationTypeAirport    LocationType = 2
+  LocationTypeRestaurant LocationType = 3
 )
 ```
 
-In addition, it provides the following methods for `FileMode`:
+In addition, it provides the following methods for `LocationType`:
 
-* `func (x Color) String() string`: Returns a human readable string of the enum.
+* `func (x LocationType) String() string`: Returns a human readable string of the enum.
+
+Example usage:
+
+```go
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="enums" %}
+```
 
 ### Structs {#structs}
 
 Given the [struct][lang-structs] declaration:
 
 ```fidl
-struct Person {
-    uint32 id;
-    string name = "john";
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
 ```
 
-The FIDL toolchain generates a `Person` struct with matching fields:
+The FIDL toolchain generates a `Color` struct with matching fields:
 
 ```golang
-type Person struct {
+type Color struct {
   Id   uint32
   Name string
 }
@@ -166,16 +166,18 @@ type Person struct {
 
 The Go bindings do not currently support default values on struct fields.
 
+Example usage:
+
+```go
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="structs" %}
+```
+
 ### Unions {#unions}
 
 Given the union definition:
 
 ```fidl
-union JsonValue {
-    1: reserved;
-    2: int32 int_value;
-    3: string string_value;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
 ```
 
 FIDL generates an alias and associated constants representing the
@@ -214,6 +216,12 @@ of `JsonValue`:
 * `func JsonValueWithIntValue(intValue int32) JsonValue`
 * `func JsonValueWithStringValue(stringValue string) JsonValue`
 
+Example usage:
+
+```go
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="unions" %}
+```
+
 #### Flexible unions and unknown variants
 
 [Flexible unions][lang-unions] (that is, unions that are prefixed with the
@@ -241,12 +249,8 @@ unknown variant.
 
 Given the following [table][lang-tables] definition:
 
-```table
-table User {
-    1: reserved;
-    2: uint8 age;
-    3: string name;
-};
+```fidl
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
 ```
 
 The FIDL toolchain generates a `User` struct that with presence fields for each
@@ -275,16 +279,18 @@ type User struct {
 * `func (u *User) ClearAge()` and `func (u *User) ClearName()`: Clears the
   presence of a field.
 
+Example usage:
+
+```go
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="tables" %}
+```
+
 ## Protocols {#protocols}
 
 Given the [protocol][lang-protocols]:
 
 ```fidl
-protocol TicTacToe {
-    StartGame(bool start_first);
-    MakeMove(uint8 row, uint8 col) -> (bool success, GameState? new_state);
-    -> OnOpponentMove(GameState new_state);
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="protocols" %}
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a

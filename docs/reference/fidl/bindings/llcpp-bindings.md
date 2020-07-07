@@ -5,10 +5,10 @@
 Given the library declaration:
 
 ```fidl
-library games.tictactoe;
+library fuchsia.examples;
 ```
 
-Bindings code for this library is generated in the `llcpp::games::tictactoe`
+Bindings code for this library is generated in the `llcpp::fuchsia::examples`
 namespace.
 
 ## Constants {#constants}
@@ -17,8 +17,7 @@ namespace.
 following constants:
 
 ```fidl
-const uint8 BOARD_SIZE = 9;
-const string NAME = "Tic-Tac-Toe";
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 ```
 
 Are generated in the header file as:
@@ -81,11 +80,7 @@ for information about `tracking_ptr`.
 Given the [bits][lang-bits] definition:
 
 ```fidl
-bits FileMode : uint16 {
-    READ = 0b001;
-    WRITE = 0b010;
-    EXECUTE = 0b100;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="bits" %}
 ```
 
 The FIDL toolchain generates a `FileMode` class with a static member for each
@@ -107,28 +102,35 @@ this example `0b111`):
 * Comparison operators `==` and `!=`.
 * Explicit conversion functions for `uint16_t` and `bool`.
 
+Example usage:
+
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="bits" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+```
 
 ### Enums {#enums}
 
 Given the [enum][lang-enums] definition:
 
 ```fidl
-enum Color {
-    RED = 1;
-    GREEN = 2;
-    BLUE = 3;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
 The FIDL toolchain generates an equivalent C++ `enum class` using the specified
 underlying type, or `uint32_t` if none is specified:
 
 ```c++
-enum class Color : uint32_t {
-    RED = 1u;
-    GREEN = 2u;
-    BLUE = 3u;
+enum class LocationType : uint32_t {
+    MUSEUM = 1u;
+    AIRPORT = 2u;
+    RESTAURANT = 3u;
 };
+```
+
+Example usage:
+
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="enums" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Structs {#structs}
@@ -136,16 +138,13 @@ enum class Color : uint32_t {
 Given the [struct][lang-structs] declaration:
 
 ```fidl
-struct Person {
-    uint32 id;
-    string name = "john";
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
 ```
 
 The FIDL toolchain generates an equivalent `struct`:
 
 ```c++
-struct Person {
+struct Color {
     uint32_t id = {};
     fidl::StringView name = {};
 }
@@ -154,16 +153,18 @@ struct Person {
 LLCPP does not currently support default values, and instead zero-initializes
 all fields of the struct.
 
+Example usage:
+
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="structs" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+```
+
 ### Unions {#unions}
 
 Given the union definition:
 
 ```fidl
-union JsonValue {
-    1: reserved;
-    2: int32 int_value;
-    3: string string_value;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
 ```
 
 FIDL will generate a `JsonValue` class. `JsonValue` contains a public tag enum
@@ -210,6 +211,12 @@ definition. Reserved fields do not have any generated code
   `JsonValue`. Calling this method without first setting the variant leads to an
   assertion error.
 
+Example usage:
+
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unions" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+```
+
 #### Flexible unions and unknown variants
 
 [Flexible unions][lang-unions] (that is, unions that are prefixed with the
@@ -242,11 +249,7 @@ non-flexible union type.
 Given the [table][lang-tables] definition:
 
 ```fidl
-table User {
-    1: reserved;
-    2: uint8 age;
-    3: string name;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
 ```
 
 The FIDL toolchain `User` class with the following methods:
@@ -294,13 +297,10 @@ takes in a Frame:
 Builder(fidl::tracking_ptr<User::Frame>&& frame_ptr)
 ```
 
-An example of using all of these pieces together would be:
+Example usage:
 
 ```c++
-User user = User::Builder(std::make_unique<User::Frame>())
-                 .set_age(std::make_unique<uint8_t>(30))
-                 .set_name(std::make_unique<fidl::StringView>("john doe"))
-                 .build();
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="tables" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 In addition to assigning fields with `std::unique_ptr`, any of the allocation
@@ -311,11 +311,7 @@ strategies described in the [tutorial][llcpp-allocation] can also be used.
 Given the [protocol][lang-protocols]:
 
 ```fidl
-protocol TicTacToe {
-    StartGame(bool start_first);
-    MakeMove(uint8 row, uint8 col) -> (bool success, GameState? new_state);
-    -> OnOpponentMove(GameState new_state);
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="protocols" %}
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a

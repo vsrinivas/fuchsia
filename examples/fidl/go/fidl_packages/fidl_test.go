@@ -10,6 +10,7 @@ import (
 	"fidl/fuchsia/examples"
 )
 
+// [START bits]
 func ExampleFileMode() {
 	fmt.Println(examples.FileModeRead.String())
 	fmt.Println(examples.FileModeWrite | examples.FileModeExecute)
@@ -19,11 +20,17 @@ func ExampleFileMode() {
 	// Unknown
 }
 
+// [END bits]
+
+// [START enums]
 func ExampleLocationType() {
 	fmt.Println(examples.LocationTypeMuseum.String())
 	// Output: Museum
 }
 
+// [END enums]
+
+// [START structs]
 func ExampleColor() {
 	red := examples.Color{Id: 1, Name: "ruby"}
 	fmt.Println(red.Id)
@@ -34,6 +41,9 @@ func ExampleColor() {
 	// ruby
 }
 
+// [END structs]
+
+// [START unions]
 func ExampleJsonValue() {
 	val := examples.JsonValueWithStringValue("hi")
 	fmt.Println(val.Which() == examples.JsonValueStringValue)
@@ -49,6 +59,9 @@ func ExampleJsonValue() {
 	// 1
 }
 
+// [END unions]
+
+// [START tables]
 func ExampleUser() {
 	var user examples.User
 	fmt.Println(user.HasAge(), user.HasName())
@@ -66,3 +79,5 @@ func ExampleUser() {
 	// false false
 	// Unknown
 }
+
+// [END tables]
