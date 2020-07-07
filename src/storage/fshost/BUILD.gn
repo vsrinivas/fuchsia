@@ -68,7 +68,6 @@ source_set("inspect") {
 }
 
 source_set("metrics") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "metrics.cc",
     "metrics.h",
@@ -81,6 +80,7 @@ source_set("metrics") {
   deps = [
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/fs/metrics:metrics-cobalt",
+    "//zircon/system/ulib/fs/metrics:metrics-inspect",
   ]
 }
 
@@ -195,6 +195,7 @@ test("fshost-test") {
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
@@ -254,6 +255,7 @@ test("fshost-metrics-test") {
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fs/metrics:metrics-cobalt",
+    "//zircon/system/ulib/fs/metrics:metrics-inspect",
   ]
 }
 
