@@ -115,8 +115,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
 
   // Methods to handle routing policy -- when an existing device is unplugged or completely removed,
   // or when a new device is plugged or added to the system.
-  void RemoveDeviceFromRouteGraph(const std::shared_ptr<AudioDevice>& device, zx::time plug_time);
-  void AddDeviceToRouteGraph(const std::shared_ptr<AudioDevice>& device, zx::time plug_time);
+  void OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& device, zx::time plug_time);
+  void OnDevicePlugged(const std::shared_ptr<AudioDevice>& device, zx::time plug_time);
 
   // Send notification to users that this device's gain settings have changed.
   void NotifyDeviceGainChanged(const AudioDevice& device);

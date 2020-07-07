@@ -153,7 +153,7 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
   }
 
   if (device->plugged()) {
-    AddDeviceToRouteGraph(device, device->plug_time());
+    OnDevicePlugged(device, device->plug_time());
   }
 }
 
@@ -195,9 +195,9 @@ void AudioDeviceManager::OnPlugStateChanged(const std::shared_ptr<AudioDevice>& 
   }
 
   if (plugged) {
-    AddDeviceToRouteGraph(device, plug_time);
+    OnDevicePlugged(device, plug_time);
   } else {
-    RemoveDeviceFromRouteGraph(device, plug_time);
+    OnDeviceUnplugged(device, plug_time);
   }
 }
 
@@ -297,9 +297,9 @@ std::shared_ptr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Ty
   return best;
 }
 
-void AudioDeviceManager::RemoveDeviceFromRouteGraph(const std::shared_ptr<AudioDevice>& device,
-                                                    zx::time plug_time) {
-  TRACE_DURATION("audio", "AudioDeviceManager::RemoveDeviceFromRouteGraph");
+void AudioDeviceManager::OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& device,
+                                           zx::time plug_time) {
+  TRACE_DURATION("audio", "AudioDeviceManager::OnDeviceUnplugged");
   FX_DCHECK(device);
 
   device->UpdatePlugState(/*plugged=*/false, plug_time);
@@ -308,9 +308,9 @@ void AudioDeviceManager::RemoveDeviceFromRouteGraph(const std::shared_ptr<AudioD
   UpdateDefaultDevice(device->is_input());
 }
 
-void AudioDeviceManager::AddDeviceToRouteGraph(const std::shared_ptr<AudioDevice>& device,
-                                               zx::time plug_time) {
-  TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceToRouteGraph");
+void AudioDeviceManager::OnDevicePlugged(const std::shared_ptr<AudioDevice>& device,
+                                         zx::time plug_time) {
+  TRACE_DURATION("audio", "AudioDeviceManager::OnDevicePlugged");
   FX_DCHECK(device);
 
   device->UpdatePlugState(/*plugged=*/true, plug_time);
