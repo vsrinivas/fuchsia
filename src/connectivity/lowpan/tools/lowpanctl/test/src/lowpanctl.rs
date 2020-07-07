@@ -18,6 +18,7 @@ pub async fn test_lowpanctl() {
     test_lowpanctl_leave().await;
     test_lowpanctl_reset().await;
     test_lowpanctl_list().await;
+    test_lowpanctl_mfg().await;
     test_lowpanctl_provision().await;
     test_lowpanctl_join_network().await;
     test_lowpanctl_form_network().await;
@@ -47,6 +48,12 @@ pub async fn test_lowpanctl_list() {
     test_lowpanctl_command(vec!["list".to_string()])
         .await
         .expect("Call to `lowpanctl list` failed.");
+}
+
+pub async fn test_lowpanctl_mfg() {
+    test_lowpanctl_command(vec!["mfg".to_string(), "help".to_string()])
+        .await
+        .expect("Call to `lowpanctl mfg help` failed.");
 }
 
 pub async fn test_lowpanctl_provision() {

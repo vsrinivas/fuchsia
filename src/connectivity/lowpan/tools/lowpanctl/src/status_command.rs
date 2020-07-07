@@ -113,6 +113,7 @@ impl StatusCommand {
                             device: Some(server),
                             device_extra: Some(server_extra),
                             device_test: Some(server_test),
+                            ..Protocols::empty()
                         },
                     )
                     .await

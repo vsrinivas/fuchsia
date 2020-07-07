@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.factory.lowpan.FactoryLookup",
             "fuchsia.lowpan.device.Lookup"
         ]
     }
