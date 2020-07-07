@@ -8,6 +8,7 @@
                     "fuchsia-pkg://fuchsia.com/intl_services#meta/intl_services.cmx",
                     "--verbose=4"
                 ],
+                "fuchsia.media.AudioCore": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx",
                 "fuchsia.settings.Intl": [
                     "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx",
                     "--verbose=4"
@@ -23,6 +24,7 @@
         "services": [
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
+            "fuchsia.media.AudioCore",
             "fuchsia.settings.Intl",
             "fuchsia.stash.Store",
             "fuchsia.sys.Environment"

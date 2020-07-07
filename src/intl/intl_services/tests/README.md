@@ -24,6 +24,6 @@ fx set core.x64 --with=//src/intl/tests && fx build
 To run the test``:
 
 ```
-fx run-test intl_services_test
+fx test intl_services_test
 ```
 
