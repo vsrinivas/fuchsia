@@ -11,7 +11,7 @@ test("handle-alias") {
   sources = [ "handle-alias.c" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
   libs = [ "zircon" ]
 }

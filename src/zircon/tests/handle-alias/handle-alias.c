@@ -8,7 +8,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // How many times to try a given window size.
 #define NUM_PASSES_PER_WINDOW 100
@@ -20,10 +20,10 @@ static int handle_cmp(const void* left, const void* right) {
 
 // Prints a message and exits the process with a non-zero status.
 // This will stop any further tests in this file from running.
-#define FATALF(str, x...)                                                     \
-  do {                                                                        \
-    unittest_printf_critical("\nFATAL:%s:%d: " str, __FILE__, __LINE__, ##x); \
-    exit(-2);                                                                 \
+#define FATALF(str, x...)                                   \
+  do {                                                      \
+    printf("\nFATAL:%s:%d: " str, __FILE__, __LINE__, ##x); \
+    exit(-2);                                               \
   } while (false)
 
 // Creates/closes |window_size| handles as quickly as possible and looks
@@ -80,18 +80,20 @@ static size_t find_handle_alias_window_size(void) {
     if (cur_win <= max_pass) {
       return max_pass;
     }
-    unittest_printf("    window_size %4zd: ", cur_win);
+    printf("    window_size %4zd: ", cur_win);
     fflush(stdout);
     if (find_handle_value_aliases(cur_win)) {
-      unittest_printf("ALIAS FOUND\n");
+      printf("ALIAS FOUND\n");
       min_fail = cur_win;
     } else {
-      unittest_printf("no alias found\n");
+      printf("no alias found\n");
       max_pass = cur_win;
     }
   }
 }
 
+// This test is disabled because it is potentially flaky.
+//
 // This test isn't deterministic, because its behavior depends on the
 // system-wide usage of the kernel's handle arena.
 // It can produce a false failure if someone else consumes/recycles handle
@@ -99,20 +101,14 @@ static size_t find_handle_alias_window_size(void) {
 // It can produce a false success if someone else consumes and holds onto
 // handle slots, so that this test never gets a chance to see the same
 // slot each time.
-static bool handle_value_alias_test(void) {
-  BEGIN_TEST;
-  unittest_printf("\n");
+TEST(HandleReuse, DISABLED_handle_value_alias_test) {
+  printf("\n");
   size_t window_size = find_handle_alias_window_size();
-  unittest_printf("    Converged at %zd (largest window_size with no aliases)\n", window_size);
+  printf("    Converged at %zd (largest window_size with no aliases)\n", window_size);
 
   // The handle table as of 13 Mar 2017 should let us re-use a handle
   // slot 4096 times before producing an alias. Use half that as our
   // target to bias the test away from false failures.
   const size_t min_window_size = 2048;
   EXPECT_GE(window_size, min_window_size, "");
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(handle_reuse)
-RUN_TEST_LARGE(handle_value_alias_test);  // Potentially flaky => large test
-END_TEST_CASE(handle_reuse)
