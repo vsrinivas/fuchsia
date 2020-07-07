@@ -28,6 +28,7 @@ source_set("testing") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.hardware.audio",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/clock:clone_mono",
