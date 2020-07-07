@@ -25,6 +25,7 @@ enum {
   BTI_EMMC,
   BTI_ETHERNET,
   BTI_SD,
+  BTI_SDIO,
   BTI_SYSMEM,
 };
 
@@ -52,6 +53,7 @@ class Vim3 : public Vim3Type {
   zx_status_t GpioInit();
   zx_status_t I2cInit();
   zx_status_t SdInit();
+  zx_status_t SdioInit();
   zx_status_t Start();
   zx_status_t SysmemInit();
 

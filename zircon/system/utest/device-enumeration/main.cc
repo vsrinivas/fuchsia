@@ -204,6 +204,8 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "dwmac/eth_phy/phy_null_device",
       "dwmac/Designware MAC/ethernet",
       "aml_sd/aml-sd-emmc",
+      "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

@@ -75,6 +75,14 @@
 #define A311D_GPIOC_4_SDCARD_CLK_FN 1
 #define A311D_GPIOC_5_SDCARD_CMD_FN 1
 
+// GPIOC pin alternate functions
+#define A311D_GPIOX_0_SDIO_D0_FN 1
+#define A311D_GPIOX_1_SDIO_D1_FN 1
+#define A311D_GPIOX_2_SDIO_D2_FN 1
+#define A311D_GPIOX_3_SDIO_D3_FN 1
+#define A311D_GPIOX_4_SDIO_CLK_FN 1
+#define A311D_GPIOX_5_SDIO_CMD_FN 1
+
 // GPIOZ pin alternate functions
 #define A311D_GPIOZ_0_ETH_MDIO_FN 1
 #define A311D_GPIOZ_1_ETH_MDC_FN 1
