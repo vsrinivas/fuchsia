@@ -192,7 +192,7 @@ class MockBlobFactory {
 // mock blobs can be verified.
 class MockPager : public UserPager {
  public:
-  MockPager() : UserPager(&metrics_), factory_(this) { ASSERT_OK(InitPager()); }
+  MockPager() : factory_(this) { ASSERT_OK(InitPager()); }
 
   void SetFailureMode(PagerErrorStatus mode) {
     switch (mode) {
@@ -273,7 +273,6 @@ class MockPager : public UserPager {
   bool do_partial_transfer_ = false;
   fzl::VmoMapper mapping_;
   PagerErrorStatus failure_mode_ = PagerErrorStatus::kOK;
-  BlobfsMetrics metrics_ = {};
 };
 
 class BlobfsPagerTest : public zxtest::Test {

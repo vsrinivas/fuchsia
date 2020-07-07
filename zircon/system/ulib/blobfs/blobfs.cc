@@ -707,8 +707,7 @@ void Blobfs::Sync(SyncCallback cb) {
 Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                const Superblock* info, Writability writable,
                CompressionSettings write_compression_settings, zx::resource vmex_resource)
-    : UserPager(&metrics_),
-      info_(*info),
+    : info_(*info),
       dispatcher_(dispatcher),
       block_device_(std::move(device)),
       writability_(writable),
@@ -891,14 +890,7 @@ zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length,
                    zx_status_get_string(status));
     return status;
   }
-  if (info.decompressor == nullptr) {
-    metrics_.paged_read_metrics().IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED,
-                                                    block_count * kBlobfsBlockSize, ticker.End());
-  } else {
-    // TODO: Get the correct compression algorithm. We're making an assumption here.
-    metrics_.paged_read_metrics().IncrementDiskRead(CompressionAlgorithm::CHUNKED,
-                                                    block_count * kBlobfsBlockSize, ticker.End());
-  }
+  metrics_.read_metrics().IncrementDiskRead(block_count * kBlobfsBlockSize, ticker.End());
   return ZX_OK;
 }
 

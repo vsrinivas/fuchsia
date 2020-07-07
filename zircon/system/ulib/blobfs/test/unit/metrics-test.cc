@@ -17,52 +17,67 @@
 namespace blobfs {
 namespace {
 
-constexpr int kNumOperations = 5;
 constexpr size_t kNumThreads = 5;
 constexpr size_t MB = 1 << 20;
 const zx_ticks_t ms = fzl::NsToTicks(zx::nsec(zx::msec(1).to_nsecs())).get();
 
-TEST(ReadMetricsTest, UncompressedDiskRead) {
+TEST(MetricsTest, MerkleDiskReadMultithreaded) {
   ReadMetrics read_metrics;
 
-  auto stats = read_metrics.GetSnapshot(CompressionAlgorithm::UNCOMPRESSED);
-  EXPECT_EQ(stats.read_bytes, 0);
-  EXPECT_EQ(stats.read_ticks, 0);
+  auto stats = read_metrics.GetDiskRead();
+  EXPECT_EQ(stats.read_size, 0);
+  EXPECT_EQ(stats.read_time, 0);
 
   constexpr uint64_t kReadBytes = 1 * MB;
   const zx_ticks_t kReadDuration = 10 * ms;
 
-  for (int i = 0; i < kNumOperations; i++) {
-    read_metrics.IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED, kReadBytes,
-                                   zx::ticks(kReadDuration));
+  std::array<std::thread, kNumThreads> threads;
+  for (auto &thread : threads) {
+    thread = std::thread(
+        [&]() { read_metrics.IncrementDiskRead(kReadBytes, zx::ticks(kReadDuration)); });
   }
 
-  stats = read_metrics.GetSnapshot(CompressionAlgorithm::UNCOMPRESSED);
-  EXPECT_EQ(stats.read_bytes, kReadBytes * kNumOperations);
-  EXPECT_EQ(stats.read_ticks, kReadDuration * kNumOperations);
+  for (auto &thread : threads) {
+    thread.join();
+  }
+
+  stats = read_metrics.GetDiskRead();
+  EXPECT_EQ(stats.read_size, kReadBytes * kNumThreads);
+  EXPECT_EQ(stats.read_time, kReadDuration * kNumThreads);
 }
 
-TEST(ReadMetricsTest, ChunkedDecompression) {
+TEST(MetricsTest, MerkleDecompressMultithreaded) {
   ReadMetrics read_metrics;
 
-  auto stats = read_metrics.GetSnapshot(CompressionAlgorithm::CHUNKED);
-  EXPECT_EQ(stats.decompress_bytes, 0);
-  EXPECT_EQ(stats.decompress_ticks, 0);
+  auto stats = read_metrics.GetDecompression();
+  EXPECT_EQ(stats.compr_size, 0);
+  EXPECT_EQ(stats.decompr_size, 0);
+  EXPECT_EQ(stats.compr_read_time, 0);
+  EXPECT_EQ(stats.decompr_time, 0);
 
-  constexpr uint64_t kDecompressBytes = 1 * MB;
-  const zx_ticks_t kDecompressDuration = 10 * ms;
+  constexpr uint64_t kComprBytes = 1 * MB, kUncomprBytes = 2 * MB;
+  const zx_ticks_t kReadDuration = 20 * ms, kDecomprDuration = 10 * ms;
 
-  for (int i = 0; i < kNumOperations; i++) {
-    read_metrics.IncrementDecompression(CompressionAlgorithm::CHUNKED, kDecompressBytes,
-                                        zx::ticks(kDecompressDuration));
+  std::array<std::thread, kNumThreads> threads;
+  for (auto &thread : threads) {
+    thread = std::thread([&]() {
+      read_metrics.IncrementDecompression(kComprBytes, kUncomprBytes, zx::ticks(kReadDuration),
+                                          zx::ticks(kDecomprDuration));
+    });
   }
 
-  stats = read_metrics.GetSnapshot(CompressionAlgorithm::CHUNKED);
-  EXPECT_EQ(stats.decompress_bytes, kDecompressBytes * kNumOperations);
-  EXPECT_EQ(stats.decompress_ticks, kDecompressDuration * kNumOperations);
+  for (auto &thread : threads) {
+    thread.join();
+  }
+
+  stats = read_metrics.GetDecompression();
+  EXPECT_EQ(stats.compr_size, kComprBytes * kNumThreads);
+  EXPECT_EQ(stats.decompr_size, kUncomprBytes * kNumThreads);
+  EXPECT_EQ(stats.compr_read_time, kReadDuration * kNumThreads);
+  EXPECT_EQ(stats.decompr_time, kDecomprDuration * kNumThreads);
 }
 
-TEST(VerificationMetricsTest, MerkleVerifyMultithreaded) {
+TEST(MetricsTest, MerkleVerifyMultithreaded) {
   VerificationMetrics verification_metrics;
 
   auto stats = verification_metrics.Get();
