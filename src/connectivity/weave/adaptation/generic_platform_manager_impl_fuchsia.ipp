@@ -15,6 +15,7 @@
 // clang-format on
 
 #include <lib/syslog/cpp/macros.h>
+#include <Warm/Warm.h>
 
 namespace nl {
 namespace Weave {
@@ -235,6 +236,7 @@ GenericPlatformManagerImpl_Fuchsia<ImplClass>::GetDeviceControl()
 template<class ImplClass>
 void GenericPlatformManagerImpl_Fuchsia<ImplClass>::_ShutdownWeaveStack(void)
 {
+  Warm::Shutdown(FabricState);
   EchoSvr().Shutdown();
   ServiceProvisioningSvr().Shutdown();
   FabricProvisioningSvr().Shutdown();

@@ -177,7 +177,16 @@ void ConnectivityManagerImpl::StopServiceTunnel(void) {
 WEAVE_ERROR ConnectivityManagerImpl::_Init() {
   mServiceTunnelMode = kServiceTunnelMode_Enabled;
   flags_ = 0;
-  WEAVE_ERROR err = InitServiceTunnelAgent();
+  WEAVE_ERROR err;
+
+  // Initialize the Weave Addressing and Routing Module.
+  err = Warm::Init(FabricState);
+  if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(ERROR) << "Warm Init failed : " << nl::ErrorStr(err);
+    return err;
+  }
+
+  err = InitServiceTunnelAgent();
   if (err != WEAVE_NO_ERROR) {
     FX_LOGS(ERROR) << "InitServiceTunnelAgent failed : " << nl::ErrorStr(err);
     return err;
