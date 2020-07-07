@@ -118,7 +118,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitMany, ZX_OK, 3, false,
                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                               "zx_object_wait_many("
                               "deadline: \x1B[32mtime\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
-                              "  items: vector<\x1B[32mzx_wait_item_t\x1B[0m> =  {\n"
+                              "  items: vector<\x1B[32mzx_wait_item_t\x1B[0m> =  [\n"
                               "    {\n"
                               "      handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m\n"
                               "      waitfor: \x1B[32msignals\x1B[0m = "
@@ -137,9 +137,9 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitMany, ZX_OK, 3, false,
                               "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED\x1B[0m\n"
                               "      pending: \x1B[32msignals\x1B[0m = \x1B[34m0\x1B[0m\n"
                               "    }\n"
-                              "  }\n"
+                              "  ]\n"
                               "  -> \x1B[32mZX_OK\x1B[0m\n"
-                              "    items: vector<\x1B[32mzx_wait_item_t\x1B[0m> =  {\n"
+                              "    items: vector<\x1B[32mzx_wait_item_t\x1B[0m> =  [\n"
                               "      {\n"
                               "        handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m\n"
                               "        waitfor: \x1B[32msignals\x1B[0m = "
@@ -161,23 +161,23 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitMany, ZX_OK, 3, false,
                               "        pending: \x1B[32msignals\x1B[0m = "
                               "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_WRITABLE\x1B[0m\n"
                               "      }\n"
-                              "    }\n");
+                              "    ]\n");
 
 OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitManyCanceled, ZX_ERR_CANCELED, 1, true,
                               "\n"
                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                               "zx_object_wait_many("
                               "deadline: \x1B[32mtime\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
-                              "  items: vector<\x1B[32mzx_wait_item_t\x1B[0m> =  {\n"
+                              "  items: vector<\x1B[32mzx_wait_item_t\x1B[0m> =  [\n"
                               "    {\n"
                               "      handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m\n"
                               "      waitfor: \x1B[32msignals\x1B[0m = "
                               "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED\x1B[0m\n"
                               "      pending: \x1B[32msignals\x1B[0m = \x1B[34m0\x1B[0m\n"
                               "    }\n"
-                              "  }\n"
+                              "  ]\n"
                               "  -> \x1B[31mZX_ERR_CANCELED\x1B[0m\n"
-                              "    items: vector<\x1B[32mzx_wait_item_t\x1B[0m> =  {\n"
+                              "    items: vector<\x1B[32mzx_wait_item_t\x1B[0m> =  [\n"
                               "      {\n"
                               "        handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m\n"
                               "        waitfor: \x1B[32msignals\x1B[0m = "
@@ -185,7 +185,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitManyCanceled, ZX_ERR_CANCELED, 1, true
                               "        pending: \x1B[32msignals\x1B[0m = "
                               "\x1B[34m__ZX_OBJECT_HANDLE_CLOSED\x1B[0m\n"
                               "      }\n"
-                              "    }\n");
+                              "    ]\n");
 
 // zx_object_wait_async tests.
 
@@ -1388,7 +1388,7 @@ OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST(
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m288\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize_t\x1B[0m = \x1B[34m3\x1B[0m/\x1B[34m10\x1B[0m)\n"
-    "    info: vector<\x1B[32mzx_info_maps_t\x1B[0m> =  {\n"
+    "    info: vector<\x1B[32mzx_info_maps_t\x1B[0m> =  [\n"
     "      {\n"
     "        name: \x1B[32mchar[]\x1B[0m = \x1B[31m\"map1\"\x1B[0m\n"
     "        base: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m0000000000010000\x1B[0m\n"
@@ -1417,7 +1417,7 @@ OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST(
     "        depth: \x1B[32msize_t\x1B[0m = \x1B[34m2\x1B[0m\n"
     "        type: \x1B[32mzx_info_maps_type_t\x1B[0m = \x1B[31mZX_INFO_MAPS_TYPE_VMAR\x1B[0m\n"
     "      }\n"
-    "    }\n");
+    "    ]\n");
 
 #define OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST_CONTENT(result, expected)                      \
   std::vector<zx_info_vmo_t> buffer(2);                                                          \
@@ -1468,7 +1468,7 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m208\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize_t\x1B[0m = \x1B[34m2\x1B[0m/\x1B[34m2\x1B[0m)\n"
-    "    info: vector<\x1B[32mzx_info_vmo_t\x1B[0m> =  {\n"
+    "    info: vector<\x1B[32mzx_info_vmo_t\x1B[0m> =  [\n"
     "      {\n"
     "        koid: \x1B[32mzx_koid_t\x1B[0m = \x1B[31m4252\x1B[0m\n"
     "        name: \x1B[32mchar[]\x1B[0m = \x1B[31m\"my_vmo1\"\x1B[0m\n"
@@ -1499,7 +1499,7 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
     "        cache_policy: \x1B[32mzx_cache_policy_t\x1B[0m = "
     "\x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
     "      }\n"
-    "    }\n");
+    "    ]\n");
 
 #define OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST_CONTENT(result, expected)                  \
   constexpr size_t kTotalBytes = 16384;                                                    \
