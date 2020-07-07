@@ -441,37 +441,37 @@ void TestVmoManyToOne(Volume::Version version, bool fvm) {
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestVmoManyToOne)
 
-// Disabled (See fxb/31974)
-// void TestVmoStall(Volume::Version version, bool fvm) {
-//  TestDevice device;
-//  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-//  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
-//  auto zxcrypt = device.zxcrypt_channel();
-//
-//  // The device can have up to 4 * max_transfer_size bytes in flight before it begins queuing them
-//  // internally.
-//  fuchsia_hardware_block_BlockInfo zxcrypt_blk;
-//  zx_status_t status;
-//  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(zxcrypt->get(), &status, &zxcrypt_blk), ZX_OK);
-//  ASSERT_EQ(status, ZX_OK);
-//  size_t blks_per_req = 4;
-//  size_t max = Volume::kBufferSize / (device.block_size() * blks_per_req);
-//  size_t num = max + 1;
-//  fbl::AllocChecker ac;
-//  std::unique_ptr<block_fifo_request_t[]> requests(new (&ac) block_fifo_request_t[num]);
-//  ASSERT_TRUE(ac.check());
-//  for (size_t i = 0; i < num; ++i) {
-//    requests[i].opcode = (i % 2 == 0 ? BLOCKIO_WRITE : BLOCKIO_READ);
-//    requests[i].length = static_cast<uint32_t>(blks_per_req);
-//    requests[i].dev_offset = 0;
-//    requests[i].vmo_offset = 0;
-//  }
-//
-//  ASSERT_NO_FATAL_FAILURES(device.SleepUntil(max, true /* defer transactions */));
-//  EXPECT_EQ(device.block_fifo_txn(requests.get(), num), ZX_OK);
-//  ASSERT_NO_FATAL_FAILURES(device.WakeUp());
-//}
-// DEFINE_EACH_DEVICE(ZxcryptTest, TestVmoStall)
+// Disabled due to flakiness (see fxb/31974).
+void DISABLED_TestVmoStall(Volume::Version version, bool fvm) {
+  TestDevice device;
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  auto zxcrypt = device.zxcrypt_channel();
+
+  // The device can have up to 4 * max_transfer_size bytes in flight before it begins queuing them
+  // internally.
+  fuchsia_hardware_block_BlockInfo zxcrypt_blk;
+  zx_status_t status;
+  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(zxcrypt->get(), &status, &zxcrypt_blk), ZX_OK);
+  ASSERT_EQ(status, ZX_OK);
+  size_t blks_per_req = 4;
+  size_t max = Volume::kBufferSize / (device.block_size() * blks_per_req);
+  size_t num = max + 1;
+  fbl::AllocChecker ac;
+  std::unique_ptr<block_fifo_request_t[]> requests(new (&ac) block_fifo_request_t[num]);
+  ASSERT_TRUE(ac.check());
+  for (size_t i = 0; i < num; ++i) {
+    requests[i].opcode = (i % 2 == 0 ? BLOCKIO_WRITE : BLOCKIO_READ);
+    requests[i].length = static_cast<uint32_t>(blks_per_req);
+    requests[i].dev_offset = 0;
+    requests[i].vmo_offset = 0;
+  }
+
+  ASSERT_NO_FATAL_FAILURES(device.SleepUntil(max, true /* defer transactions */));
+  EXPECT_EQ(device.block_fifo_txn(requests.get(), num), ZX_OK);
+  ASSERT_NO_FATAL_FAILURES(device.WakeUp());
+}
+DEFINE_EACH_DEVICE(ZxcryptTest, DISABLED_TestVmoStall)
 
 void TestWriteAfterFvmExtend(Volume::Version version) {
   TestDevice device;
