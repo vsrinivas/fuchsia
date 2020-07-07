@@ -37,11 +37,11 @@ pub enum Descriptor {
     Component(&'static str),
 }
 
-/// TODO(fxb/52428): Move lifecycle stage context contents here.
 pub struct Context {
     pub receptor: Receptor,
     publisher: event::Publisher,
     switchboard_messenger_factory: switchboard::message::Factory,
+    pub available_components: HashSet<SettingType>,
 }
 
 impl Context {
@@ -50,12 +50,14 @@ impl Context {
         descriptor: Descriptor,
         switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
+        available_components: HashSet<SettingType>,
     ) -> Self {
         Self {
             receptor,
             publisher: event::Publisher::create(&event_factory, event::Address::Agent(descriptor))
                 .await,
             switchboard_messenger_factory,
+            available_components,
         }
     }
 
@@ -79,22 +81,12 @@ impl Context {
 /// The scope of an agent's life. Initialization components should
 /// only run at the beginning of the service. Service components follow
 /// initialization and run for the duration of the service.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Lifespan {
-    Initialization(InitializationContext),
+    Initialization,
     Service,
 }
 
-#[derive(Clone, Debug)]
-pub struct InitializationContext {
-    pub available_components: HashSet<SettingType>,
-}
-
-impl InitializationContext {
-    pub fn new(components: HashSet<SettingType>) -> Self {
-        Self { available_components: components }
-    }
-}
 /// Struct of information passed to the agent during each invocation.
 #[derive(Clone, Debug)]
 pub struct Invocation {

@@ -61,34 +61,34 @@ impl Agent {
 
     async fn handle(&mut self, invocation: Invocation) -> InvocationResult {
         // Only process service lifespans.
-        if let Lifespan::Initialization(_context) = invocation.lifespan {
-            let common_earcons_params = CommonEarconsParams {
-                service_context: invocation.service_context,
-                sound_player_added_files: Arc::new(Mutex::new(HashSet::new())),
-                sound_player_connection: self.sound_player_connection.clone(),
-            };
-
-            if VolumeChangeHandler::create(
-                common_earcons_params.clone(),
-                self.switchboard_messenger.clone(),
-            )
-            .await
-            .is_err()
-            {
-                // For now, report back as an error to prevent issues on
-                // platforms that don't support the handler's dependencies.
-                fx_log_err!("Could not set up VolumeChangeHandler");
-            }
-
-            fasync::spawn(async move {
-                // Watch for bluetooth connections and play sounds on change.
-                let bluetooth_connection_active = Arc::new(AtomicBool::new(true));
-                watch_bluetooth_connections(common_earcons_params, bluetooth_connection_active);
-            });
-
-            return Ok(());
-        } else {
+        if Lifespan::Initialization != invocation.lifespan {
             return Err(AgentError::UnhandledLifespan);
         }
+
+        let common_earcons_params = CommonEarconsParams {
+            service_context: invocation.service_context,
+            sound_player_added_files: Arc::new(Mutex::new(HashSet::new())),
+            sound_player_connection: self.sound_player_connection.clone(),
+        };
+
+        if VolumeChangeHandler::create(
+            common_earcons_params.clone(),
+            self.switchboard_messenger.clone(),
+        )
+        .await
+        .is_err()
+        {
+            // For now, report back as an error to prevent issues on
+            // platforms that don't support the handler's dependencies.
+            fx_log_err!("Could not set up VolumeChangeHandler");
+        }
+
+        fasync::spawn(async move {
+            // Watch for bluetooth connections and play sounds on change.
+            let bluetooth_connection_active = Arc::new(AtomicBool::new(true));
+            watch_bluetooth_connections(common_earcons_params, bluetooth_connection_active);
+        });
+
+        return Ok(());
     }
 }

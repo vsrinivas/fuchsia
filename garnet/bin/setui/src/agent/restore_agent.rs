@@ -10,10 +10,11 @@ use crate::internal::agent::Payload;
 use crate::internal::event::{restore, Event, Publisher};
 use crate::internal::switchboard;
 use crate::message::base::{Audience, MessageEvent};
-use crate::switchboard::base::{SettingRequest, SwitchboardError};
+use crate::switchboard::base::{SettingRequest, SettingType, SwitchboardError};
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::StreamExt;
+use std::collections::HashSet;
 
 blueprint_definition!(
     crate::agent::base::Descriptor::Component("restore_agent"),
@@ -24,6 +25,7 @@ blueprint_definition!(
 pub struct RestoreAgent {
     switchboard_messenger: switchboard::message::Messenger,
     event_publisher: Publisher,
+    available_components: HashSet<SettingType>,
 }
 
 impl RestoreAgent {
@@ -40,6 +42,7 @@ impl RestoreAgent {
         let mut agent = RestoreAgent {
             switchboard_messenger: messenger,
             event_publisher: context.get_publisher(),
+            available_components: context.available_components.clone(),
         };
 
         fasync::spawn(async move {
@@ -52,9 +55,9 @@ impl RestoreAgent {
     }
 
     async fn handle(&mut self, invocation: Invocation) -> InvocationResult {
-        match invocation.lifespan.clone() {
-            Lifespan::Initialization(context) => {
-                for component in context.available_components {
+        match invocation.lifespan {
+            Lifespan::Initialization => {
+                for component in self.available_components.clone() {
                     let mut receptor = self
                         .switchboard_messenger
                         .message(

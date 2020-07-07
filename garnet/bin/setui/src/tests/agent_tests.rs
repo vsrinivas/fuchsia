@@ -5,8 +5,7 @@
 #[cfg(test)]
 use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::{
-    AgentError, Authority, BlueprintHandle, Context, InitializationContext, Invocation,
-    InvocationResult, Lifespan,
+    AgentError, Authority, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan,
 };
 use crate::internal::agent;
 use crate::internal::event;
@@ -117,7 +116,7 @@ impl TestAgent {
 
     async fn handle(&mut self, invocation: Invocation) -> InvocationResult {
         match invocation.lifespan.clone() {
-            Lifespan::Initialization(_) => {
+            Lifespan::Initialization => {
                 if self.lifespan_target != LifespanTarget::Initialization {
                     return Err(AgentError::UnhandledLifespan);
                 }
@@ -208,6 +207,7 @@ async fn create_authority() -> AuthorityImpl {
         agent::message::create_hub(),
         switchboard::message::create_hub(),
         event::message::create_hub(),
+        HashSet::new(),
     )
     .await
     .unwrap()
@@ -248,11 +248,7 @@ async fn test_sequential() {
 
     // Ensure lifespan execution completes.
     assert!(authority
-        .execute_lifespan(
-            Lifespan::Initialization(InitializationContext::new(HashSet::new(),)),
-            service_context,
-            true,
-        )
+        .execute_lifespan(Lifespan::Initialization, service_context, true,)
         .await
         .is_ok());
 }
@@ -289,11 +285,7 @@ async fn test_simultaneous() {
 
     // Execute lifespan non-sequentially.
     assert!(authority
-        .execute_lifespan(
-            Lifespan::Initialization(InitializationContext::new(HashSet::new(),)),
-            service_context,
-            false,
-        )
+        .execute_lifespan(Lifespan::Initialization, service_context, false,)
         .await
         .is_ok());
 }
@@ -339,68 +331,11 @@ async fn test_err_handling() {
 
     // Execute lifespan sequentially. Should fail since agent 2 returns an error.
     assert!(authority
-        .execute_lifespan(
-            Lifespan::Initialization(InitializationContext::new(HashSet::new(),)),
-            service_context,
-            true,
-        )
+        .execute_lifespan(Lifespan::Initialization, service_context, true,)
         .await
         .is_err());
 
     assert!(agent2_lock.lock().await.last_invocation().is_none());
-}
-
-/// Checks to see if available components are passed properly from
-/// execute_lifespan.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_available_components() {
-    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
-    let mut authority = create_authority().await;
-    let service_context = ServiceContext::create(None);
-    let mut rng = rand::thread_rng();
-
-    let agent_id = TestAgent::create_and_register(
-        rng.gen(),
-        LifespanTarget::Initialization,
-        &mut authority,
-        tx.clone(),
-    )
-    .await
-    .unwrap()
-    .lock()
-    .await
-    .id();
-
-    let mut available_components = HashSet::new();
-
-    available_components.insert(SettingType::Display);
-    available_components.insert(SettingType::Intl);
-
-    let available_components_clone = available_components.clone();
-    fasync::spawn(async move {
-        // Ensure the first agent received an invocation and verify components match
-        if let Some((id, invocation, tx)) = rx.next().await {
-            assert_eq!(agent_id, id);
-            if let Lifespan::Initialization(context) = invocation.lifespan.clone() {
-                assert_eq!(available_components_clone, context.available_components);
-                assert!(tx.send(Ok(())).is_ok());
-            } else {
-                panic!("should have encountered initialization lifespan");
-            }
-        } else {
-            panic!("did not receive expected response from agent");
-        }
-    });
-
-    // Execute lifespan sequentially
-    assert!(authority
-        .execute_lifespan(
-            Lifespan::Initialization(InitializationContext::new(available_components.clone(),)),
-            service_context,
-            true,
-        )
-        .await
-        .is_ok());
 }
 
 async fn create_agents(

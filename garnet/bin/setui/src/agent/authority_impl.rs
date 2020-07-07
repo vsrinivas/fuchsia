@@ -9,8 +9,10 @@ use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::{Audience, MessengerType};
 use crate::service_context::ServiceContextHandle;
+use crate::switchboard::base::SettingType;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
+use std::collections::HashSet;
 
 /// AuthorityImpl is the default implementation of the Authority trait. It
 /// provides the ability to execute agents sequentially or simultaneously for a
@@ -26,6 +28,8 @@ pub struct AuthorityImpl {
     messenger: agent::message::Messenger,
     // Factory to generate event messengers
     event_factory: event::message::Factory,
+    // Available components
+    available_components: HashSet<SettingType>,
 }
 
 impl AuthorityImpl {
@@ -33,6 +37,7 @@ impl AuthorityImpl {
         messenger_factory: agent::message::Factory,
         switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
+        available_components: HashSet<SettingType>,
     ) -> Result<AuthorityImpl, Error> {
         let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
 
@@ -47,6 +52,7 @@ impl AuthorityImpl {
             switchboard_messenger_factory,
             messenger: client,
             event_factory,
+            available_components,
         });
     }
 
@@ -128,6 +134,7 @@ impl Authority for AuthorityImpl {
                     blueprint.get_descriptor(),
                     self.switchboard_messenger_factory.clone(),
                     self.event_factory.clone(),
+                    self.available_components.clone(),
                 )
                 .await,
             )

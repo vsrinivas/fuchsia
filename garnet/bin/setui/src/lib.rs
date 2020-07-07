@@ -9,9 +9,7 @@ use {
     crate::accessibility::accessibility_controller::AccessibilityController,
     crate::account::account_controller::AccountController,
     crate::agent::authority_impl::AuthorityImpl,
-    crate::agent::base::{
-        Authority, BlueprintHandle as AgentBlueprintHandle, InitializationContext, Lifespan,
-    },
+    crate::agent::base::{Authority, BlueprintHandle as AgentBlueprintHandle, Lifespan},
     crate::audio::audio_controller::AudioController,
     crate::config::base::ControllerFlag,
     crate::device::device_controller::DeviceController,
@@ -446,6 +444,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         internal::agent::message::create_hub(),
         switchboard_messenger_factory.clone(),
         event_messenger_factory.clone(),
+        components.clone(),
     )
     .await?;
 
@@ -575,11 +574,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Execute initialization agents sequentially
     if agent_authority
-        .execute_lifespan(
-            Lifespan::Initialization(InitializationContext { available_components: components }),
-            service_context_handle.clone(),
-            true,
-        )
+        .execute_lifespan(Lifespan::Initialization, service_context_handle.clone(), true)
         .await
         .is_err()
     {
