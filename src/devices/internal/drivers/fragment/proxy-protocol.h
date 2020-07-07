@@ -70,6 +70,8 @@ struct rpc_pdev_metadata_rsp_t {
 // ZX_PROTOCOL_CODEC proxy support.
 enum class CodecOp {
   RESET,
+  STOP,
+  START,
   GET_INFO,
   IS_BRIDGEABLE,
   SET_BRIDGED_MODE,

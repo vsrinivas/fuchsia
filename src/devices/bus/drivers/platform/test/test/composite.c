@@ -304,6 +304,16 @@ static void test_codec_reset_callback(void* ctx, zx_status_t status) {
   *out = status;
 }
 
+static void test_codec_stop_callback(void* ctx, zx_status_t status) {
+  zx_status_t* out = (zx_status_t*)ctx;
+  *out = status;
+}
+
+static void test_codec_start_callback(void* ctx, zx_status_t status) {
+  zx_status_t* out = (zx_status_t*)ctx;
+  *out = status;
+}
+
 static void test_codec_get_info_callback(void* ctx, const info_t* info) {
   zx_status_t* out = (zx_status_t*)ctx;
   if (strcmp(info->unique_id, "test_id")) {
@@ -402,6 +412,14 @@ static void test_codec_get_plug_state_callback(void* ctx, const plug_state_t* pl
 static zx_status_t test_codec(codec_protocol_t* codec) {
   zx_status_t status = ZX_OK;
   codec_reset(codec, test_codec_reset_callback, (void*)&status);
+  if (status != ZX_OK) {
+    return status;
+  }
+  codec_stop(codec, test_codec_stop_callback, (void*)&status);
+  if (status != ZX_OK) {
+    return status;
+  }
+  codec_start(codec, test_codec_start_callback, (void*)&status);
   if (status != ZX_OK) {
     return status;
   }

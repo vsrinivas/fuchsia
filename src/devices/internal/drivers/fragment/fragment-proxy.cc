@@ -302,6 +302,26 @@ void FragmentProxy::CodecReset(codec_reset_callback callback, void* cookie) {
   callback(cookie, status);
 }
 
+void FragmentProxy::CodecStop(codec_stop_callback callback, void* cookie) {
+  CodecProxyRequest req = {};
+  ProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_CODEC;
+  req.op = CodecOp::STOP;
+
+  auto status = Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+  callback(cookie, status);
+}
+
+void FragmentProxy::CodecStart(codec_start_callback callback, void* cookie) {
+  CodecProxyRequest req = {};
+  ProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_CODEC;
+  req.op = CodecOp::START;
+
+  auto status = Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+  callback(cookie, status);
+}
+
 void FragmentProxy::CodecGetInfo(codec_get_info_callback callback, void* cookie) {
   CodecProxyRequest req = {};
   CodecInfoProxyResponse resp = {};

@@ -51,6 +51,12 @@ class Max98373 : public DeviceType,  // Not final for unit tests.
   // Codec protocol.
   void CodecReset(codec_reset_callback callback, void* cookie);
   void CodecGetInfo(codec_get_info_callback callback, void* cookie);
+  void CodecStop(codec_stop_callback callback, void* cookie) {
+    callback(cookie, ZX_ERR_NOT_SUPPORTED);
+  }
+  void CodecStart(codec_start_callback callback, void* cookie) {
+    callback(cookie, ZX_ERR_NOT_SUPPORTED);
+  }
   void CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie);
   void CodecSetBridgedMode(bool enable_bridged_mode, codec_set_bridged_mode_callback callback,
                            void* cookie);

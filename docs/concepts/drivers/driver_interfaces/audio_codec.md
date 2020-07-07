@@ -31,6 +31,7 @@ In this document:
 The functionality provided by the codecs is divided into:
 
 -   [Main controls](#main-controls)
+-   [Bridged Mode](#bridged-mode)
 -   [DAI format](#dai-format)
 -   [Gain control](#gain-control)
 -   [Plug detect](#plug-detect)
@@ -72,7 +73,13 @@ The `GetInfo` function retrieves information from the codec including:
 1.  The manufacturer name.
 1.  The product name.
 
-### Bridged Mode
+The codec operation can be started and stopped at any time with the `Start` and
+`Stop` functions. By default the codec state is stopped, so 'Start' must be
+issued at least once for the codec to be fully operational. Stopping the codec
+operation can be used for example to change the DAI configuration safely avoiding
+glitches or errors in the codec operation.
+
+### Bridged Mode {#bridged-mode}
 
 Before specifying the DAI format the controller must query the codec for its
 bridging capabilites. If the codec is bridgeable, then the controller must

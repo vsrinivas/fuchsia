@@ -128,6 +128,8 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider);
 
   void CodecReset(codec_reset_callback callback, void* cookie);
+  void CodecStop(codec_stop_callback callback, void* cookie);
+  void CodecStart(codec_start_callback callback, void* cookie);
   void CodecGetInfo(codec_get_info_callback callback, void* cookie);
   void CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie);
   void CodecSetBridgedMode(bool enable_bridged_mode, codec_set_bridged_mode_callback callback,

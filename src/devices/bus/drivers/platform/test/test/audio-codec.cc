@@ -29,6 +29,8 @@ class TestAudioCodecDevice : public DeviceType,
   zx_status_t Create(std::unique_ptr<TestAudioCodecDevice>* out);
 
   void CodecReset(codec_reset_callback callback, void* cookie) { callback(cookie, ZX_OK); }
+  void CodecStop(codec_reset_callback callback, void* cookie) { callback(cookie, ZX_OK); }
+  void CodecStart(codec_reset_callback callback, void* cookie) { callback(cookie, ZX_OK); }
   void CodecGetInfo(codec_get_info_callback callback, void* cookie) {
     info_t info = {};
     info.unique_id = "test_id";

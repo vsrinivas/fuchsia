@@ -680,6 +680,42 @@ zx_status_t Fragment::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_
       }
       return status;
     }
+    case CodecOp::STOP: {
+      struct AsyncOut {
+        sync_completion_t completion;
+        zx_status_t status;
+      } out;
+      codec_client_.proto_client().Stop(
+          [](void* cookie, zx_status_t status) {
+            auto* out = reinterpret_cast<AsyncOut*>(cookie);
+            out->status = status;
+            sync_completion_signal(&out->completion);
+          },
+          &out);
+      auto status = sync_completion_wait(&out.completion, zx::sec(kTimeoutSecs).get());
+      if (status == ZX_OK) {
+        status = out.status;
+      }
+      return status;
+    }
+    case CodecOp::START: {
+      struct AsyncOut {
+        sync_completion_t completion;
+        zx_status_t status;
+      } out;
+      codec_client_.proto_client().Start(
+          [](void* cookie, zx_status_t status) {
+            auto* out = reinterpret_cast<AsyncOut*>(cookie);
+            out->status = status;
+            sync_completion_signal(&out->completion);
+          },
+          &out);
+      auto status = sync_completion_wait(&out.completion, zx::sec(kTimeoutSecs).get());
+      if (status == ZX_OK) {
+        status = out.status;
+      }
+      return status;
+    }
     case CodecOp::GET_INFO: {
       auto* resp = reinterpret_cast<CodecInfoProxyResponse*>(resp_buf);
       *out_resp_size = sizeof(*resp);

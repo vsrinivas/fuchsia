@@ -116,6 +116,12 @@ protocol Codec {
     /// Retrieves textual information about the codec.
     [Async]
     GetInfo() -> (Info info);
+    /// Stops the codec operation.
+    [Async]
+    Stop() -> (zx.status status);
+    /// Start/Re-start the codec operation.
+    [Async]
+    Start() -> (zx.status status);
 
 
     // Bridged mode.
