@@ -29,7 +29,7 @@ struct SmcResult {
 [Transport = "Syscall"]
 protocol smc {
     // TODO(ZX-2967): handle No rights required?
-    // TODO(scottmg): No handle type?
     /// Make Secure Monitor Call (SMC) from user space.
-    smc_call(handle handle, SmcParameters parameters) -> (status status, SmcResult out_smc_result);
+    smc_call(handle:RESOURCE handle, SmcParameters parameters)
+        -> (status status, SmcResult out_smc_result);
 };
