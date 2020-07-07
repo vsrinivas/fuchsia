@@ -344,6 +344,22 @@ source_set("settings") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
+source_set("store") {
+  sources = [
+    "store.cc",
+    "store.h",
+  ]
+
+  public_deps = [ ":report" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/fit",
+  ]
+}
+
 ###############################################################################
 # RESOURCES
 ###############################################################################

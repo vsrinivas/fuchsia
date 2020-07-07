@@ -26,15 +26,16 @@ class Report {
                                           std::map<std::string, fuchsia::mem::Buffer> attachments,
                                           std::optional<fuchsia::mem::Buffer> minidump);
 
+  Report(const std::string& program_shortname,
+         const std::map<std::string, std::string>& annotations,
+         std::map<std::string, SizedData> attachments, std::optional<SizedData> minidump);
+
+  std::string ProgramShortname() const { return program_shortname_; }
   const std::map<std::string, std::string>& Annotations() const { return annotations_; }
   const std::map<std::string, SizedData>& Attachments() const { return attachments_; }
   const std::optional<SizedData>& Minidump() const { return minidump_; }
 
  private:
-  Report(const std::string& program_shortname,
-         const std::map<std::string, std::string>& annotations,
-         std::map<std::string, SizedData> attachments, std::optional<SizedData> minidump);
-
   std::string program_shortname_;
   std::map<std::string, std::string> annotations_;
   std::map<std::string, SizedData> attachments_;

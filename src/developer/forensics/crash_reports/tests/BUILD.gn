@@ -237,6 +237,24 @@ executable("queue_unittest_exe") {
   ]
 }
 
+executable("store_unittest_exe") {
+  testonly = true
+
+  # "store_unittest" is rather generic for the default_output_dir that is set
+  # to root_out_dir so instead we write the binary to target_out_dir.
+  sources = [ "store_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/crash_reports:store",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/utils:sized_data",
+    "//src/lib/files",
+    "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
+  ]
+}
+
 ###############################################################################
 # RESOURCES
 ###############################################################################
@@ -375,6 +393,14 @@ fuchsia_component("queue_unittest") {
   deps = [ ":queue_unittest_exe" ]
 }
 
+fuchsia_component("store_unittest") {
+  testonly = true
+
+  manifest = "meta/store_unittest.cmx"
+
+  deps = [ ":store_unittest_exe" ]
+}
+
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -391,6 +417,7 @@ fuchsia_test_package("crash-reports-tests") {
     ":main_service_unittest",
     ":privacy_settings_ptr_unittest",
     ":queue_unittest",
+    ":store_unittest",
   ]
 }
 

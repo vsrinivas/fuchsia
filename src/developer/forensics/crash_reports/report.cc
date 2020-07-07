@@ -16,8 +16,7 @@ std::optional<SizedData> MakeAttachment(const fuchsia::mem::Buffer& buffer) {
     return std::nullopt;
   }
 
-  SizedData data;
-  data.reserve(buffer.size);
+  SizedData data(buffer.size, 0u);
   if (const zx_status_t status = buffer.vmo.read(data.data(), /*offset=*/0u, /*len=*/data.size());
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to read vmo";
