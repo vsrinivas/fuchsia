@@ -55,9 +55,7 @@ package("bt-snoop") {
   ]
 }
 
-unittest_package("tests") {
-  package_name = "bt-snoop-tests"
-
+test_package("bt-snoop-tests") {
   deps = [ ":bin_test" ]
 
   tests = [

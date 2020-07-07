@@ -26,12 +26,16 @@ type IterMut<'a, T> = vec_deque::IterMut<'a, T>;
 /// bytes) of the collection and how long it will hold elements. If both the `eviction_size_minimum`
 /// and the `eviction_age_minimum` are exceeded, the oldest elements will be dropped until either
 /// the size of the collection or the age of the oldest element no longer exceed the requested
-/// minimum.
+/// minimum. `eviction_size_maximum` is the maximum possible size of all data stored in a
+/// `BoundedQueue` regardless of age or number of elements stored. This value can never be
+/// exceeded, even if this results in zero packets being stored. A `eviction_size_maximum` of
+/// 0 indicates no maximum.
 ///
 /// The `BoundedQueue` only supports inserting new elements to the end of the queue.
 pub(crate) struct BoundedQueue<T> {
     eviction_age_minimum: Duration,
     eviction_size_minimum: usize,
+    eviction_size_maximum: usize,
     current_size: usize,
     /// A monotonically increasing count of the total number of items inserted over the lifetime of
     /// the queue.
@@ -51,12 +55,14 @@ where
     /// Create an empty `BoundedQueue` with the specified eviction minimums.
     pub fn new(
         eviction_size_minimum: usize,
+        eviction_size_maximum: usize,
         eviction_age_minimum: Duration,
         inspect: inspect::Node,
     ) -> BoundedQueue<T> {
         BoundedQueue {
             eviction_age_minimum,
             eviction_size_minimum,
+            eviction_size_maximum,
             current_size: 0,
             monotonic_count: 0,
             inner: vec_deque::VecDeque::new(),
@@ -71,6 +77,16 @@ where
         self.current_size + item.size_of() > self.eviction_size_minimum
     }
 
+    /// Calculate whether adding `item` would make this queue large enough to force eviction of
+    /// old packets.
+    fn eviction_size_maximum_reached(&self, item: &T) -> bool {
+        if self.eviction_size_maximum == 0 {
+            false
+        } else {
+            self.current_size + item.size_of() > self.eviction_size_maximum
+        }
+    }
+
     /// When `item` is added, returns true if the oldest item will be too old.
     fn oldest_item_will_expire(&self, item: &T) -> bool {
         if self.inner.is_empty() {
@@ -81,9 +97,18 @@ where
 
     /// Insert a new item to the end of the `BoundedQueue`, removing items as needed to make room.
     pub fn insert(&mut self, item: T) {
-        while self.eviction_size_minimum_reached(&item) && self.oldest_item_will_expire(&item) {
+        // Keep removing items until the new one fits.
+        while self.eviction_size_maximum_reached(&item)
+            || (self.eviction_size_minimum_reached(&item) && self.oldest_item_will_expire(&item))
+        {
+            // return early without insertion if the buffer is empty but the item still will not
+            // fit.
+            if self.inner.is_empty() {
+                return;
+            }
             self.current_size -= self.inner.pop_front().map(|item| item.size_of()).unwrap_or(0);
         }
+
         self.monotonic_count += 1;
         self.current_size += item.size_of();
         self.size_metric.set(self.current_size as u64);
@@ -159,6 +184,7 @@ mod tests {
         let queue_inspect = inspect.root().create_child("queue");
         let mut queue: BoundedQueue<Record> = BoundedQueue::new(
             3 * std::mem::size_of::<Record>(),
+            3 * std::mem::size_of::<Record>(),
             Duration::new(0, 0),
             queue_inspect,
         );
@@ -183,6 +209,7 @@ mod tests {
         let root = inspect.root();
         // create a queue with age 0 and test inserting elements into it
         let mut queue: BoundedQueue<Record> = BoundedQueue::new(
+            3 * std::mem::size_of::<Record>(),
             3 * std::mem::size_of::<Record>(),
             Duration::new(0, 0),
             root.create_child(""),
@@ -209,8 +236,12 @@ mod tests {
         assert_eq!(queue.get_monotonic_count(), 5);
 
         // create a queue with size 0 and test inserting elements into it
-        let mut queue: BoundedQueue<Record> =
-            BoundedQueue::new(0, Duration::new(2, 0), root.create_child(""));
+        let mut queue: BoundedQueue<Record> = BoundedQueue::new(
+            0,
+            10 * std::mem::size_of::<Record>(),
+            Duration::new(2, 0),
+            root.create_child(""),
+        );
         assert!(!queue.oldest_item_will_expire(&0.into()));
         assert_eq!(to_values(&mut queue), Vec::<u64>::new());
         queue.insert(0.into());
@@ -228,6 +259,7 @@ mod tests {
         // Create a queue with some size and some age test inserting elements into it
         let mut queue: BoundedQueue<Record> = BoundedQueue::new(
             3 * std::mem::size_of::<Record>(),
+            5 * std::mem::size_of::<Record>(),
             Duration::new(3, 0),
             root.create_child(""),
         );
@@ -270,6 +302,7 @@ mod tests {
 
         let mut queue: BoundedQueue<Record> = BoundedQueue::new(
             2 * std::mem::size_of::<Record>(),
+            2 * std::mem::size_of::<Record>(),
             Duration::new(3, 0),
             root.create_child(""),
         );
@@ -288,5 +321,39 @@ mod tests {
         assert!(queue.oldest_item_will_expire(&5.into()));
         queue.insert(5.into());
         assert_eq!(to_values(&mut queue), vec![4, 5]);
+
+        let mut queue: BoundedQueue<Record> = BoundedQueue::new(
+            0 * std::mem::size_of::<Record>(),
+            2 * std::mem::size_of::<Record>(),
+            Duration::new(3, 0),
+            root.create_child(""),
+        );
+        queue.insert(0.into());
+
+        // Maximum space limit is exceeded.
+        // The expected behavior is that old items are evicted as new ones are added.
+        // Space is not allowed to grow larger than the maximum space limit regardless
+        // of age.
+        let record = Record { created_at: Duration::new(1, 0), value: 1 };
+        assert!(queue.eviction_size_minimum_reached(&record));
+        assert!(!queue.eviction_size_maximum_reached(&record));
+        assert!(!queue.oldest_item_will_expire(&record));
+        queue.insert(record);
+        assert_eq!(to_values(&mut queue), vec![0, 1]);
+        queue.insert(Record { created_at: Duration::new(1, 1), value: 2 });
+        assert_eq!(to_values(&mut queue), vec![1, 2]);
+
+        // A queue with a hard max size of 1 will not accept any items inserted into it
+        // because it is too small to fit any.
+        let mut queue: BoundedQueue<Record> =
+            BoundedQueue::new(0, 1, Duration::new(3, 0), root.create_child(""));
+
+        let record = 0.into();
+        assert!(queue.eviction_size_minimum_reached(&record));
+        assert!(queue.eviction_size_maximum_reached(&record));
+
+        // This element will be evicted immediately a.k.a. not inserted.
+        queue.insert(record);
+        assert_eq!(queue.len(), 0);
     }
 }

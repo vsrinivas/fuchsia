@@ -63,7 +63,8 @@ pub(crate) type PacketLog = BoundedQueue<SnoopPacket>;
 // method returns.
 pub(crate) struct PacketLogs {
     max_device_count: usize,
-    log_size_bytes: usize,
+    log_size_soft_max_bytes: usize,
+    log_size_hard_max_bytes: usize,
     log_age: Duration,
     device_logs: HashMap<DeviceId, PacketLog>,
     insertion_order: VecDeque<DeviceId>,
@@ -75,16 +76,17 @@ pub(crate) struct PacketLogs {
 
 impl PacketLogs {
     /// Create a new `PacketLogs` struct. `max_device_count` sets the number of hci devices the
-    /// logger will store packets for. `log_size_bytes` sets the size limit associated with each
+    /// logger will store packets for. `log_size_soft_max_bytes` sets the size limit associated with each
     /// device (see `BoundedQueue` documentation for more information). `log_age` sets the age limit
     /// associated with each device (see `BoundedQueue` documentation for more information).
     ///
-    /// Note that the `log_size_bytes` and `log_age` values are set on a _per device_ basis.
+    /// Note that the `log_size_soft_max_bytes` and `log_age` values are set on a _per device_ basis.
     ///
     /// Panics if `max_device_count` is 0.
     pub fn new(
         max_device_count: usize,
-        log_size_bytes: usize,
+        log_size_soft_max_bytes: usize,
+        log_size_hard_max_bytes: usize,
         log_age: Duration,
         inspect: inspect::Node,
     ) -> PacketLogs {
@@ -92,7 +94,8 @@ impl PacketLogs {
         let logging_for_devices = inspect.create_string("logging_active_for_devices", "");
         PacketLogs {
             max_device_count,
-            log_size_bytes,
+            log_size_soft_max_bytes,
+            log_size_hard_max_bytes,
             log_age,
             device_logs: HashMap::new(),
             insertion_order: VecDeque::new(),
@@ -113,7 +116,12 @@ impl PacketLogs {
         let bounded_queue_metrics = self.inspect.create_child(&format!("device_{}", device));
         self.device_logs.insert(
             device.clone(),
-            BoundedQueue::new(self.log_size_bytes, self.log_age, bounded_queue_metrics),
+            BoundedQueue::new(
+                self.log_size_soft_max_bytes,
+                self.log_size_hard_max_bytes,
+                self.log_age,
+                bounded_queue_metrics,
+            ),
         );
 
         // Remove old log and its insertion order metadata if there are too many logs

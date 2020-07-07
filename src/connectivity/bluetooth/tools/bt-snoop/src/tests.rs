@@ -27,7 +27,13 @@ fn setup() -> (
     (
         fasync::Executor::new().unwrap(),
         ConcurrentSnooperPacketFutures::new(),
-        PacketLogs::new(10, 10, Duration::new(10, 0), inspect.root().create_child("packet_log")),
+        PacketLogs::new(
+            10,
+            10,
+            10,
+            Duration::new(10, 0),
+            inspect.root().create_child("packet_log"),
+        ),
         SubscriptionManager::new(),
         ConcurrentClientRequestFutures::new(),
         inspect,
@@ -75,7 +81,8 @@ fn unwrap_response<T, E>(response: Poll<Result<T, E>>) -> T {
 #[test]
 fn test_snoop_default_command_line_args() {
     let args = Args::from_args(&["bt-snoop.cmx"], &[]).expect("Args created from empty args");
-    assert_eq!(args.log_size_kib, 256);
+    assert_eq!(args.log_size_soft_kib, 32);
+    assert_eq!(args.log_size_hard_kib, 256);
     assert_eq!(args.log_time_seconds, 60);
     assert_eq!(args.max_device_count, 8);
     assert_eq!(args.truncate_payload, None);
@@ -90,7 +97,9 @@ fn test_snoop_command_line_args() {
     let truncate_payload = 4;
     let verbosity = 2;
     let raw_args = &[
-        "--log-size-kib",
+        "--log-size-soft-kib",
+        &log_size_kib.to_string(),
+        "--log-size-hard-kib",
         &log_size_kib.to_string(),
         "--log-time-seconds",
         &log_time_seconds.to_string(),
@@ -102,7 +111,8 @@ fn test_snoop_command_line_args() {
         "-v",
     ];
     let args = Args::from_args(&["bt-snoop.cmx"], raw_args).expect("Args created from args");
-    assert_eq!(args.log_size_kib, log_size_kib);
+    assert_eq!(args.log_size_soft_kib, log_size_kib);
+    assert_eq!(args.log_size_hard_kib, log_size_kib);
     assert_eq!(args.log_time_seconds, log_time_seconds);
     assert_eq!(args.max_device_count, max_device_count);
     assert_eq!(args.truncate_payload, Some(truncate_payload));
@@ -116,7 +126,8 @@ fn test_packet_logs_inspect() {
     // is found in bounded_queue.rs
     let inspect = Inspector::new();
     let runtime_metrics_node = inspect.root().create_child("runtime_metrics");
-    let mut packet_logs = PacketLogs::new(2, 256, Duration::from_secs(60), runtime_metrics_node);
+    let mut packet_logs =
+        PacketLogs::new(2, 256, 256, Duration::from_secs(60), runtime_metrics_node);
 
     assert_inspect_tree!(inspect, root: {
         runtime_metrics: {
@@ -165,7 +176,8 @@ fn test_packet_logs_inspect() {
 #[test]
 fn test_snoop_config_inspect() {
     let args = Args {
-        log_size_kib: 1,
+        log_size_soft_kib: 1,
+        log_size_hard_kib: 1,
         log_time_seconds: 2,
         max_device_count: 3,
         truncate_payload: Some(4),
@@ -176,7 +188,8 @@ fn test_snoop_config_inspect() {
     let config = SnoopConfig::from_args(args, snoop_config_node);
     assert_inspect_tree!(inspect, root: {
         configuration: {
-            log_size_bytes: 1024u64,
+            log_size_soft_max_bytes: 1024u64,
+            log_size_hard_max_bytes: "1024",
             log_time: 2u64,
             max_device_count: 3u64,
             truncate_payload: "4 bytes",

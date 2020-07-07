@@ -58,7 +58,7 @@ group("tests") {
     "bt-fct-hci:tests",
     "bt-le-central:tests",
     "bt-le-peripheral:tests",
-    "bt-snoop:tests",
+    "bt-snoop:bt-snoop-tests",
     "tests",
   ]
 }

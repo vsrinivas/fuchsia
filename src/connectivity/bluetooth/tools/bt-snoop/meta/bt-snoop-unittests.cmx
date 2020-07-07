@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/bt-snoop-unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

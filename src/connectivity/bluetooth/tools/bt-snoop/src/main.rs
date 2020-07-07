@@ -239,16 +239,18 @@ fn handle_packet(
 }
 
 struct SnoopConfig {
-    log_size_bytes: usize,
+    log_size_soft_max_bytes: usize,
+    log_size_hard_max_bytes: usize,
     log_time: Duration,
     max_device_count: usize,
     truncate_payload: Option<usize>,
 
     // Inspect tree
     _config_inspect: inspect::Node,
-    _log_size_bytes_metric: inspect::UintProperty,
-    _log_time_metric: inspect::UintProperty,
-    _max_device_count_metric: inspect::UintProperty,
+    _log_size_soft_max_bytes_property: inspect::UintProperty,
+    _log_size_hard_max_bytes_property: inspect::StringProperty,
+    _log_time_property: inspect::UintProperty,
+    _max_device_count_property: inspect::UintProperty,
     _truncate_payload_property: inspect::StringProperty,
     _hci_dir_property: inspect::StringProperty,
 }
@@ -256,12 +258,20 @@ struct SnoopConfig {
 impl SnoopConfig {
     /// Creates a strongly typed `SnoopConfig` out of primitives parsed from the command line
     fn from_args(args: Args, config_inspect: inspect::Node) -> SnoopConfig {
-        let log_size_bytes = args.log_size_kib * 1024;
+        let log_size_soft_max_bytes = args.log_size_soft_kib * 1024;
+        let log_size_hard_max_bytes = args.log_size_hard_kib * 1024;
         let log_time = Duration::from_secs(args.log_time_seconds);
-        let _log_size_bytes_metric =
-            config_inspect.create_uint("log_size_bytes", log_size_bytes as u64);
-        let _log_time_metric = config_inspect.create_uint("log_time", log_time.as_secs());
-        let _max_device_count_metric =
+        let _log_size_soft_max_bytes_property =
+            config_inspect.create_uint("log_size_soft_max_bytes", log_size_soft_max_bytes as u64);
+        let hard_max = if log_size_hard_max_bytes == 0 {
+            "No Hard Max".to_string()
+        } else {
+            log_size_hard_max_bytes.to_string()
+        };
+        let _log_size_hard_max_bytes_property =
+            config_inspect.create_string("log_size_hard_max_bytes", &hard_max);
+        let _log_time_property = config_inspect.create_uint("log_time", log_time.as_secs());
+        let _max_device_count_property =
             config_inspect.create_uint("max_device_count", args.max_device_count as u64);
         let truncate = args
             .truncate_payload
@@ -273,14 +283,16 @@ impl SnoopConfig {
         let _hci_dir_property = config_inspect.create_string("hci_dir", HCI_DEVICE_CLASS_PATH);
 
         SnoopConfig {
-            log_size_bytes,
+            log_size_soft_max_bytes,
+            log_size_hard_max_bytes,
             log_time,
             max_device_count: args.max_device_count,
             truncate_payload: args.truncate_payload,
             _config_inspect: config_inspect,
-            _log_size_bytes_metric,
-            _log_time_metric,
-            _max_device_count_metric,
+            _log_size_soft_max_bytes_property,
+            _log_size_hard_max_bytes_property,
+            _log_time_property,
+            _max_device_count_property,
             _truncate_payload_property,
             _hci_dir_property,
         }
@@ -290,9 +302,13 @@ impl SnoopConfig {
 #[derive(FromArgs)]
 /// Log bluetooth snoop packets and provide them to clients.
 struct Args {
+    #[argh(option, default = "32")]
+    /// packet storage buffer size after which packets will start aging off.
+    log_size_soft_kib: usize,
     #[argh(option, default = "256")]
-    /// size in KiB of the buffer to store packets in.
-    log_size_kib: usize,
+    /// hard maximum size in KiB of the buffer to store packets in.
+    /// a value of "0" indicates no limit. Defaults to 0.
+    log_size_hard_kib: usize,
     #[argh(option, default = "60")]
     /// minimum time to store packets in a snoop log in seconds.
     log_time_seconds: u64,
@@ -327,8 +343,13 @@ async fn run(
     let mut client_requests = ConcurrentClientRequestFutures::new();
     let mut subscribers = SubscriptionManager::new();
     let mut snoopers = ConcurrentSnooperPacketFutures::new();
-    let mut packet_logs =
-        PacketLogs::new(config.max_device_count, config.log_size_bytes, config.log_time, inspect);
+    let mut packet_logs = PacketLogs::new(
+        config.max_device_count,
+        config.log_size_soft_max_bytes,
+        config.log_size_hard_max_bytes,
+        config.log_time,
+        inspect,
+    );
 
     fx_vlog!(1, "Capturing snoop packets...");
 
