@@ -16,7 +16,6 @@ pub mod light;
 pub mod night_mode;
 pub mod privacy;
 pub mod setup;
-pub mod system;
 
 /// SettingClient exercises the functionality found in SetUI service. Currently,
 /// action parameters are specified at as individual arguments, but the goal is
@@ -25,12 +24,6 @@ pub mod system;
 #[structopt(name = "setui_client", about = "set setting values")]
 pub enum SettingClient {
     // Operations that use the new interfaces.
-    #[structopt(name = "system")]
-    System {
-        #[structopt(short = "m", long = "login_mode")]
-        login_mode: Option<String>,
-    },
-
     #[structopt(name = "accessibility")]
     Accessibility(AccessibilityOptions),
 
@@ -287,12 +280,6 @@ impl Into<Vec<LightState>> for LightGroup {
 
 pub async fn run_command(command: SettingClient) -> Result<(), Error> {
     match command {
-        SettingClient::System { login_mode } => {
-            let system_service = connect_to_service::<fidl_fuchsia_settings::SystemMarker>()
-                .context("Failed to connect to system service")?;
-            let output = system::command(system_service, login_mode).await?;
-            println!("System: {}", output);
-        }
         SettingClient::Device { build_tag } => {
             let _build_tag = build_tag.clone();
             if let Some(_build_tag_val) = build_tag {

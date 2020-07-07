@@ -9,39 +9,22 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;
 use parking_lot::RwLock;
-use std::{collections::VecDeque, sync::Arc};
+use std::sync::Arc;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
 pub enum Action {
     Reboot,
 }
 
-#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
-pub enum Response {
-    Fail,
-}
-
-impl Response {
-    fn to_zx_status_result(self) -> Result<(), i32> {
-        match self {
-            Response::Fail => Err(-1),
-        }
-    }
-}
-
 /// An implementation of hardware power statecontrol services that records the
 /// actions invoked on it.
 pub struct HardwarePowerStatecontrolService {
     recorded_actions: Arc<RwLock<Vec<Action>>>,
-    planned_actions: Arc<RwLock<VecDeque<(Action, Response)>>>,
 }
 
 impl HardwarePowerStatecontrolService {
     pub fn new() -> Self {
-        Self {
-            recorded_actions: Arc::new(RwLock::new(Vec::new())),
-            planned_actions: Arc::new(RwLock::new(VecDeque::new())),
-        }
+        Self { recorded_actions: Arc::new(RwLock::new(Vec::new())) }
     }
 
     pub fn verify_action_sequence(&self, actions: Vec<Action>) -> bool {
@@ -51,11 +34,6 @@ impl HardwarePowerStatecontrolService {
                 .iter()
                 .zip(actions.iter())
                 .all(|(action1, action2)| action1 == action2)
-    }
-
-    pub fn plan_action_response(&self, action: Action, response: Response) {
-        let mut planned_actions = self.planned_actions.write();
-        planned_actions.push_front((action, response));
     }
 }
 
@@ -73,28 +51,14 @@ impl Service for HardwarePowerStatecontrolService {
             ServerEnd::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>::new(channel)
                 .into_stream()?;
 
-        let planned_actions = self.planned_actions.clone();
         let recorded_actions_clone = self.recorded_actions.clone();
         fasync::spawn(async move {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
                     AdminRequest::Reboot { reason: RebootReason::UserRequest, responder } => {
-                        let mut response = {
-                            let mut planned_actions = planned_actions.write();
-                            if let Some((Action::Reboot, _)) = planned_actions.back() {
-                                let (_, response) = planned_actions.pop_back().unwrap();
-                                response.to_zx_status_result()
-                            } else {
-                                Ok(())
-                            }
-                        };
-
-                        if let Ok(_) = response {
-                            recorded_actions_clone.write().push(Action::Reboot);
-                        }
-
-                        responder.send(&mut response).unwrap();
+                        recorded_actions_clone.write().push(Action::Reboot);
+                        responder.send(&mut Ok(())).unwrap();
                     }
                     _ => {}
                 }

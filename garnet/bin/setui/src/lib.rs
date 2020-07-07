@@ -36,12 +36,11 @@ use {
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
         AudioInfo, DisplayInfo, DoNotDisturbInfo, InputInfo, NightModeInfo, PrivacyInfo,
-        SettingType, SetupInfo, SystemInfo,
+        SettingType, SetupInfo,
     },
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::light_types::LightInfo,
     crate::switchboard::switchboard_impl::SwitchboardBuilder,
-    crate::system::system_controller::SystemController,
     anyhow::{format_err, Error},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
@@ -73,7 +72,6 @@ mod night_mode;
 mod power;
 mod privacy;
 mod setup;
-mod system;
 
 pub mod agent;
 pub mod config;
@@ -387,12 +385,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             SettingType::Privacy,
             DataHandler::<PrivacyInfo, PrivacyController>::spawn
         );
-        // System
-        register_handler!(
-            factory_handle,
-            SettingType::System,
-            DataHandler::<SystemInfo, SystemController>::spawn
-        );
         // Setup
         register_handler!(
             factory_handle,
@@ -537,15 +529,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         Privacy,
         privacy,
         Privacy
-    );
-
-    register_fidl_handler!(
-        components,
-        service_dir,
-        switchboard_messenger_factory,
-        System,
-        system,
-        System
     );
 
     register_fidl_handler!(
