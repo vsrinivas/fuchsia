@@ -1,8 +1,0 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# TODO(54226): remove once core.gni is updated at once.
-group("feedback_agent") {
-  deps = [ "//src/developer/forensics/feedback_data:feedback_agent" ]
-}
