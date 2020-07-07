@@ -196,7 +196,8 @@ protocol Flatland {
     /// presented operations have been executed.
     UnlinkFromParent() -> (GraphLinkToken token);
 
-    /// This function will reset all state on this interface.
+    /// This function will reset all state on this interface. This includes destroying all existing
+    /// Links without returning the associated Token to the caller.
     ClearGraph();
 
     // ***** Transforms *****

@@ -1006,6 +1006,54 @@ TEST_F(FlatlandTest, ContentLinkIdCollision) {
   PRESENT(flatland, false);
 }
 
+TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const ContentId kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(graph_link.is_bound());
+
+  // Clearing the parent graph should not unbind the interfaces until Present().
+  parent.ClearGraph();
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(graph_link.is_bound());
+
+  PRESENT(parent, true);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(content_link.is_bound());
+  EXPECT_FALSE(graph_link.is_bound());
+
+  // Recreate the Link. The parent graph was cleared so we can reuse the LinkId.
+  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(graph_link.is_bound());
+
+  // Clearing the child graph should not unbind the interfaces until Present().
+  child.ClearGraph();
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(graph_link.is_bound());
+
+  PRESENT(child, true);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(content_link.is_bound());
+  EXPECT_FALSE(graph_link.is_bound());
+}
+
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
 TEST_F(FlatlandTest, ValidParentToChildFlow) {
@@ -2560,7 +2608,7 @@ TEST_F(FlatlandTest, DeregisteredBufferCollectionIdCanBeReused) {
   flatland.SignalBufferReleaseFence();
   RunLoopUntilIdle();
 
-  // Deregister the second one, signal the release fences, and verify the second global id was
+  // Deregister the second one, signal the release fences, and verify the second global ID was
   // deregistered.
   flatland.DeregisterBufferCollection(kBufferCollectionId);
   PRESENT(flatland, true);
@@ -2775,6 +2823,53 @@ TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
   data = ProcessMainLoop(flatland.GetRoot());
   EXPECT_EQ(data.image_vector.size(), 1ul);
   EXPECT_EQ(data.image_vector[0].collection_id, global_collection_id1);
+}
+
+TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
+  Flatland flatland = CreateFlatland();
+
+  // Setup a valid image.
+  const ContentId kImageId = 1;
+  const BufferCollectionId kBufferCollectionId = 1;
+
+  ImageProperties properties1;
+  properties1.set_width(100);
+  properties1.set_height(200);
+
+  const GlobalBufferCollectionId global_collection_id1 =
+      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties1));
+
+  // Create a transform, make it the root transform, and attach the Image.
+  const TransformId kTransformId = 2;
+
+  flatland.CreateTransform(kTransformId);
+  flatland.SetRootTransform(kTransformId);
+  flatland.SetContentOnTransform(kImageId, kTransformId);
+  PRESENT(flatland, true);
+
+  // Clear the graph, then signal the release fence and ensure the buffer collection is released.
+  flatland.ClearGraph();
+  PRESENT(flatland, true);
+
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id1)).Times(1);
+  flatland.SignalBufferReleaseFence();
+  RunLoopUntilIdle();
+
+  // The buffer collection and Image ID should be available for re-use.
+  ImageProperties properties2;
+  properties2.set_width(400);
+  properties2.set_height(800);
+
+  const GlobalBufferCollectionId global_collection_id2 =
+      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties2));
+
+  EXPECT_NE(global_collection_id1, global_collection_id2);
+
+  // Verify that the Image is valid and can be attached to a transform.
+  flatland.CreateTransform(kTransformId);
+  flatland.SetRootTransform(kTransformId);
+  flatland.SetContentOnTransform(kImageId, kTransformId);
+  PRESENT(flatland, true);
 }
 
 #undef EXPECT_MATRIX

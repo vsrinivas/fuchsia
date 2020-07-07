@@ -88,7 +88,6 @@ void TransformGraph::ResetGraph(TransformHandle exception) {
   FX_DCHECK(working_set_.count(exception));
   working_set_.clear();
   working_set_.insert(exception);
-  live_set_.clear();
   children_.clear();
   is_valid_ = true;
 }

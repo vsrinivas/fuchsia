@@ -135,8 +135,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // TODO(36161): Tune this number once we have a non-synchronous present flow.
   static constexpr uint32_t kMaxPresents = 1;
 
-  using TransformMap = std::map<TransformId, TransformHandle>;
-
   // A Renderer shared between Flatland instances. Flatland registers buffer collections with the
   // Renderer and references them by ID when submitting data in an UberStruct.
   std::shared_ptr<Renderer> renderer_;
@@ -160,7 +158,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A map from user-generated ID to global handle. This map constitutes the set of transforms that
   // can be referenced by the user through method calls. Keep in mind that additional transforms may
   // be kept alive through child references.
-  TransformMap transforms_;
+  std::unordered_map<TransformId, TransformHandle> transforms_;
 
   // A unique ID from the UberStructSystem representing this Flatland instance.
   const TransformHandle::InstanceId instance_id_;

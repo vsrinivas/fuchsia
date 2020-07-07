@@ -273,7 +273,7 @@ TEST(TransformGraphTest, ClearOperations) {
   graph.ResetGraph(transforms[0]);
   data = graph.ComputeAndCleanup(transforms[0], kLongIterationLength);
   EXPECT_EQ(data.sorted_transforms.size(), 1u);
-  EXPECT_EQ(data.dead_transforms.size(), 0u);
+  EXPECT_EQ(data.dead_transforms.size(), 2u);
 
   // Old children no longer exist.
   EXPECT_FALSE(graph.RemoveChild(transforms[0], transforms[1]));

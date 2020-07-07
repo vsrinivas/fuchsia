@@ -95,7 +95,8 @@ class TransformGraph {
   // Clears all data from this entire graph, with one exception. The passed in handle is maintained
   // as a member of the working set, but with all existing children removed.
   //
-  // This operation does not result in handles being reported as dead via ComputeAndCleanup().
+  // This operation results in all handles other than |exception| showing up in dead_transforms on
+  // the next call to ComputeAndCleanup().
   void ResetGraph(TransformHandle exception);
 
   // The return value type for ComputeAndCleanup().

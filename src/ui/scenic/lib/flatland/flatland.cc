@@ -210,7 +210,7 @@ void Flatland::UnlinkFromParent(
   auto local_link = std::move(parent_link_.value());
   parent_link_.reset();
 
-  // Delay the actual destruction of the link until the next Present().
+  // Delay the actual destruction of the Link until the next Present().
   pending_link_operations_.push_back(
       [local_link = std::move(local_link), callback = std::move(callback)]() mutable {
         GraphLinkToken return_token;
@@ -231,11 +231,37 @@ void Flatland::UnlinkFromParent(
 }
 
 void Flatland::ClearGraph() {
+  // Clear user-defined mappings and local matrices.
   transforms_.clear();
-  // We always preserve the link origin when clearing the graph.
+  content_handles_.clear();
+  buffer_collection_ids_.clear();
+  matrices_.clear();
+
+  // List all global buffer collection IDs as "released", which will trigger cleanup in Present().
+  for (const auto& [collection_id, buffer_collection] : buffer_collections_) {
+    released_buffer_collection_ids_.insert(collection_id);
+  }
+
+  // We always preserve the link origin when clearing the graph. This call will place all other
+  // TransformHandles in the dead_transforms set in the next Present(), which will trigger cleanup
+  // of Images and BufferCollections.
   transform_graph_.ResetGraph(local_root_);
+
+  // If a parent Link exists, delay its destruction until Present().
+  if (parent_link_.has_value()) {
+    auto local_link = std::move(parent_link_);
+    parent_link_.reset();
+
+    pending_link_operations_.push_back(
+        [local_link = std::move(local_link)]() mutable { local_link.reset(); });
+  }
+
+  // Delay destruction of all child Links until Present().
+  auto local_links = std::move(child_links_);
   child_links_.clear();
-  parent_link_.reset();
+
+  pending_link_operations_.push_back(
+      [local_links = std::move(local_links)]() mutable { local_links.clear(); });
 }
 
 void Flatland::CreateTransform(TransformId transform_id) {
