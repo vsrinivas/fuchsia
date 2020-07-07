@@ -7,6 +7,7 @@
 pub mod service;
 
 use anyhow::{format_err, Context as _, Error};
+use fidl_fuchsia_factory_lowpan::{FactoryLookupRequestStream, FactoryRegisterRequestStream};
 use fidl_fuchsia_lowpan_device::{LookupRequestStream, RegisterRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -19,7 +20,9 @@ use std::default::Default;
 
 enum IncomingService {
     Lookup(LookupRequestStream),
-    Registry(RegisterRequestStream),
+    Register(RegisterRequestStream),
+    FactoryLookup(FactoryLookupRequestStream),
+    FactoryRegister(FactoryRegisterRequestStream),
 }
 
 const MAX_CONCURRENT: usize = 100;
@@ -47,14 +50,20 @@ async fn main() -> Result<(), Error> {
 
     fs.dir("svc")
         .add_fidl_service(IncomingService::Lookup)
-        .add_fidl_service(IncomingService::Registry);
+        .add_fidl_service(IncomingService::Register);
+
+    fs.dir("svc")
+        .add_fidl_service(IncomingService::FactoryLookup)
+        .add_fidl_service(IncomingService::FactoryRegister);
 
     fs.take_and_serve_directory_handle()?;
 
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, |request| async {
         if let Err(err) = match request {
             IncomingService::Lookup(stream) => service.serve_to(stream).await,
-            IncomingService::Registry(stream) => service.serve_to(stream).await,
+            IncomingService::Register(stream) => service.serve_to(stream).await,
+            IncomingService::FactoryLookup(stream) => service.serve_to(stream).await,
+            IncomingService::FactoryRegister(stream) => service.serve_to(stream).await,
         } {
             fx_log_err!("{:?}", err);
         }

@@ -5,6 +5,10 @@
 use super::*;
 
 use anyhow::Context as _;
+use fidl_fuchsia_factory_lowpan::{
+    FactoryDriverMarker, FactoryDriverProxy, FactoryLookupRequest, FactoryLookupRequestStream,
+    FactoryRegisterRequest, FactoryRegisterRequestStream,
+};
 use fidl_fuchsia_lowpan_device::{
     DeviceChanges, DriverMarker, DriverProxy, LookupRequest, LookupRequestStream, RegisterRequest,
     RegisterRequestStream, ServiceError, MAX_LOWPAN_DEVICES,
@@ -25,6 +29,7 @@ lazy_static::lazy_static! {
 
 pub struct LowpanService<S> {
     pub devices: Arc<Mutex<HashMap<String, DriverProxy>>>,
+    pub devices_factory: Arc<Mutex<HashMap<String, FactoryDriverProxy>>>,
     pub added_removed_cond: Arc<AsyncCondition>,
     pub spawner: S,
 }
@@ -33,6 +38,7 @@ impl<S: Spawn> LowpanService<S> {
     pub fn with_spawner(spawner: S) -> LowpanService<S> {
         LowpanService {
             devices: Default::default(),
+            devices_factory: Default::default(),
             added_removed_cond: Default::default(),
             spawner,
         }
@@ -92,6 +98,7 @@ impl<S: Spawn> LowpanService<S> {
         self.added_removed_cond.trigger();
 
         let devices = self.devices.clone();
+        let devices_factory = self.devices_factory.clone();
         let added_removed_cond = self.added_removed_cond.clone();
 
         // The following code provides a way to automatically
@@ -104,6 +111,7 @@ impl<S: Spawn> LowpanService<S> {
                 fx_log_info!("Removing device {:?}", &name);
 
                 devices.lock().remove(&name);
+                devices_factory.lock().remove(&name);
 
                 // Indicate that the device was removed.
                 added_removed_cond.trigger();
@@ -254,13 +262,117 @@ impl<S: Spawn> ServeTo<RegisterRequestStream> for LowpanService<S> {
                             .send(&mut response)
                             .context("error sending response to register request")?;
 
-                        fx_log_info!("Responded to lookup request {:?}", name);
+                        fx_log_info!("Responded to register request {:?}", name);
                     }
                 }
                 Result::<(), anyhow::Error>::Ok(())
             })
             .inspect_err(|e| fx_log_err!("{:?}", e))
             .await
+    }
+}
+
+mod factory {
+    use super::*;
+
+    impl<S: Spawn> LowpanService<S> {
+        pub fn lookup_factory(&self, name: &str) -> Result<FactoryDriverProxy, ServiceError> {
+            let devices = self.devices_factory.lock();
+            if let Some(device) = devices.get(name) {
+                Ok(device.clone())
+            } else {
+                Err(ServiceError::DeviceNotFound)
+            }
+        }
+
+        pub fn register_factory(
+            &self,
+            name: &str,
+            driver: fidl::endpoints::ClientEnd<FactoryDriverMarker>,
+        ) -> Result<(), ServiceError> {
+            let driver = driver.into_proxy().map_err(|_| ServiceError::InvalidArgument)?;
+
+            if !DEVICE_NAME_REGEX.is_match(name) {
+                fx_log_err!("Attempted to register LoWPAN device with invalid name {:?}", name);
+                return Err(ServiceError::InvalidInterfaceName);
+            }
+
+            let name = name.to_string();
+
+            // Lock the device list.
+            let mut devices = self.devices_factory.lock();
+
+            // Check to make sure there already aren't too many devices.
+            if devices.len() >= MAX_LOWPAN_DEVICES as usize {
+                return Err(ServiceError::TooManyDevices);
+            }
+
+            // Check for existing devices with the same name.
+            if devices.contains_key(&name) {
+                return Err(ServiceError::DeviceAlreadyExists);
+            }
+
+            // Insert the new device into the list.
+            devices.insert(name.clone(), driver.clone());
+
+            Ok(())
+        }
+    }
+
+    #[async_trait::async_trait(?Send)]
+    impl<S: Spawn> ServeTo<FactoryLookupRequestStream> for LowpanService<S> {
+        async fn serve_to(&self, request_stream: FactoryLookupRequestStream) -> anyhow::Result<()> {
+            request_stream
+                .err_into::<Error>()
+                .try_for_each_concurrent(MAX_CONCURRENT, |command| async {
+                    match command {
+                        FactoryLookupRequest::Lookup { name, device_factory, responder } => {
+                            fx_log_info!("Received lookup factory request for {:?}", name);
+
+                            let mut ret = self.lookup_factory(&name).and_then(|dev| {
+                                dev.get_factory_device(device_factory)
+                                    .map_err(|_| ServiceError::DeviceNotFound)
+                            });
+
+                            responder.send(&mut ret)?;
+
+                            fx_log_info!("Responded to lookup factory request {:?}", name);
+                        }
+                    }
+                    Result::<(), anyhow::Error>::Ok(())
+                })
+                .inspect_err(|e| fx_log_err!("{:?}", e))
+                .await
+        }
+    }
+
+    #[async_trait::async_trait(?Send)]
+    impl<S: Spawn> ServeTo<FactoryRegisterRequestStream> for LowpanService<S> {
+        async fn serve_to(
+            &self,
+            request_stream: FactoryRegisterRequestStream,
+        ) -> anyhow::Result<()> {
+            request_stream
+                .err_into::<Error>()
+                .try_for_each_concurrent(MAX_CONCURRENT, |command| async {
+                    match command {
+                        FactoryRegisterRequest::Register { name, driver, responder } => {
+                            fx_log_info!("Received register factory request for {:?}", name);
+
+                            let mut response = self.register_factory(&name, driver);
+
+                            responder
+                                .send(&mut response)
+                                .context("error sending response to register factory request")?;
+
+                            fx_log_info!("Responded to register factory request {:?}", name);
+                        }
+                    }
+                    Result::<(), anyhow::Error>::Ok(())
+                })
+                .inspect_err(|e| fx_log_err!("{:?}", e))
+                .await
+        }
     }
 }
 
@@ -288,6 +400,14 @@ mod tests {
 
         let (client_ep, _) = create_endpoints::<DriverMarker>().unwrap();
         assert_eq!(service.register("l", client_ep), Err(ServiceError::InvalidInterfaceName));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_factory_interface() {
+        let service = LowpanService::with_spawner(FuchsiaGlobalExecutor);
+
+        let (client_ep, _) = create_endpoints::<FactoryDriverMarker>().unwrap();
+        assert_eq!(service.register_factory("lowpan0", client_ep), Ok(()));
     }
 
     #[fasync::run_until_stalled(test)]
