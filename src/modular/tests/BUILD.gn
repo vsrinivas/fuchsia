@@ -127,6 +127,7 @@ executable("inspect_session_test") {
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fsl",
