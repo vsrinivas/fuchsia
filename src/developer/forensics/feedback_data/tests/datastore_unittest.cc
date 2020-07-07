@@ -36,6 +36,7 @@
 #include "src/developer/forensics/testing/stubs/product_info_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/log_format.h"
 #include "src/developer/forensics/utils/time.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -45,6 +46,7 @@ namespace forensics {
 namespace feedback_data {
 namespace {
 
+using stubs::BuildLogMessage;
 using testing::Contains;
 using testing::ElementsAreArray;
 using testing::Eq;
@@ -453,7 +455,7 @@ TEST_F(DatastoreTest, GetAttachments_Inspect) {
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
   std::string previous_log_contents = "";
   for (const auto& filepath : kCurrentLogsFilePaths) {
-    const std::string str = "Log for file:" + filepath + "\n";
+    const std::string str = Format(BuildLogMessage(FX_LOG_INFO, "Log for file: " + filepath));
     previous_log_contents = str + previous_log_contents;
     WriteFile(filepath, str);
   }
@@ -461,7 +463,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
 
   ::fit::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
-  EXPECT_THAT(attachments.take_value(),
+  EXPECT_THAT(attachments.value(),
               ElementsAreArray(
                   {Pair(kAttachmentLogSystemPrevious, AttachmentValue(previous_log_contents))}));
 

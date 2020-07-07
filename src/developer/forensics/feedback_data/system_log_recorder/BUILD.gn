@@ -64,6 +64,7 @@ source_set("reader") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/trace",

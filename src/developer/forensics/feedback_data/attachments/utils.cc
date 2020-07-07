@@ -21,7 +21,7 @@ std::vector<fuchsia::feedback::Attachment> ToFeedbackAttachmentVector(
     const Attachments& attachments) {
   std::vector<fuchsia::feedback::Attachment> vec;
   for (const auto& [key, value] : attachments) {
-    if (!value.HasValue()) {
+    if (!value.HasValue() || value.Value().empty()) {
       continue;
     }
 

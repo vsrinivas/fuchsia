@@ -466,6 +466,84 @@ TEST(WriterTest, WritesMessages) {
 )");
 }
 
+TEST(ReaderTest, SortsMessages) {
+  files::ScopedTempDir temp_dir;
+  const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/1);
+
+  LogMessageStore store(8 * 1024, 8 * 1024, MakeIdentityEncoder());
+  SystemLogWriter writer(file_paths, &store);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::msec(0))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3", zx::msec(3))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2", zx::msec(2))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1", zx::msec(1))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1.1", zx::msec(1))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "duplicated line", zx::msec(5))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "duplicated line", zx::msec(6))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "duplicated line", zx::msec(7))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "multi\nline\nmessage", zx::msec(4))));
+  writer.Write();
+
+  const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
+  IdentityDecoder decoder;
+
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+
+  std::string contents;
+  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
+  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
+[15604.001][07559][07687][] INFO: line 1
+[15604.001][07559][07687][] INFO: line 1.1
+[15604.002][07559][07687][] INFO: line 2
+[15604.003][07559][07687][] INFO: line 3
+[15604.004][07559][07687][] INFO: multi
+line
+message
+[15604.005][07559][07687][] INFO: duplicated line
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+)");
+}
+
+TEST(ReaderTest, SortsMessagesMultipleFiles) {
+  files::ScopedTempDir temp_dir;
+  const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/8);
+
+  // Set the block and buffer to both hold 4 log messages.
+  LogMessageStore store(kMaxLogLineSize * 4, kMaxLogLineSize * 4, MakeIdentityEncoder());
+  SystemLogWriter writer(file_paths, &store);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::msec(0))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3", zx::msec(3))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2", zx::msec(2))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1", zx::msec(1))));
+  writer.Write();
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line11", zx::msec(1))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "dup", zx::msec(5))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "dup", zx::msec(6))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "dup", zx::msec(7))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line\n4", zx::msec(4))));
+  writer.Write();
+
+  const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
+  IdentityDecoder decoder;
+
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+
+  std::string contents;
+  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
+  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
+[15604.001][07559][07687][] INFO: line 1
+[15604.001][07559][07687][] INFO: line11
+[15604.002][07559][07687][] INFO: line 2
+[15604.003][07559][07687][] INFO: line 3
+[15604.004][07559][07687][] INFO: line
+4
+[15604.005][07559][07687][] INFO: dup
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+)");
+}
+
 using SystemLogRecorderTest = UnitTestFixture;
 
 TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
