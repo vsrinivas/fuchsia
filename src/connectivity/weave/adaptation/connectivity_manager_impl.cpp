@@ -79,7 +79,9 @@ bool ConnectivityManagerImpl::_HaveServiceConnectivityViaTunnel(void) { return t
 
 // ==================== ConnectivityManager Platform Internal Methods ====================
 
-WEAVE_ERROR ConnectivityManagerImpl::_Init() { return WEAVE_NO_ERROR; }
+WEAVE_ERROR ConnectivityManagerImpl::_Init() {
+  return InitServiceTunnelAgent();
+}
 
 void ConnectivityManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {}
 

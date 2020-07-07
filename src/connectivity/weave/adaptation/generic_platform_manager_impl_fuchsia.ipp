@@ -51,6 +51,8 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
+    InetLayer.SetPlatformData(PlatformMgrImpl().GetPlatformData());
+
     // Initialize the Weave fabric state object.
     new (&FabricState) WeaveFabricState();
     err = FabricState.Init();
@@ -148,6 +150,18 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
     err = EchoSvr().Init();
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "EchoSvr init failed: " << ErrorStr(err);
+      return err;
+    }
+
+    err = ConnectivityMgr().Init();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "ConnectivityMgr init failed: " << ErrorStr(err);
+      return err;
+    }
+
+    err = TimeSyncMgr().Init();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "TimeSyncMgr init failed: " << ErrorStr(err);
       return err;
     }
 

@@ -52,6 +52,12 @@ void PlatformManagerImpl::ShutdownWeaveStack(void) {
   context_.reset();
 }
 
+InetLayer::FuchsiaPlatformData* PlatformManagerImpl::GetPlatformData(void) {
+  platform_data_.ctx = GetComponentContextForProcess();
+  platform_data_.dispatcher = dispatcher_;
+  return &platform_data_;
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl

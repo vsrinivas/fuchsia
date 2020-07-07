@@ -38,6 +38,10 @@ class PlatformManagerImpl final
   // This method will panic if |dispatcher| is NULL.
   void SetDispatcher(async_dispatcher_t* dispatcher);
 
+  // Gets the platform data required for openweave.
+  // Platform data contains component context and dispatcher.
+  InetLayer::FuchsiaPlatformData* GetPlatformData(void);
+
  private:
   // ===== Methods that implement the PlatformManager abstract interface.
 
@@ -57,6 +61,7 @@ class PlatformManagerImpl final
   static PlatformManagerImpl sInstance;
   std::unique_ptr<sys::ComponentContext> context_;
   async_dispatcher_t* dispatcher_;
+  InetLayer::FuchsiaPlatformData platform_data_;
 };
 
 /**

@@ -2,7 +2,9 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx",
+                "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cmx",
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx"
             },
             "system-services": [
                 "fuchsia.boot.FactoryItems"
@@ -21,6 +23,8 @@
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.net.tun.Control",
             "fuchsia.posix.socket.Provider",
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.wlan.device.service.DeviceService"
