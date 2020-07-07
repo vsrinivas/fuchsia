@@ -5,7 +5,7 @@
 use {
     super::{
         config::DiagnosticData,
-        metrics::{Metric, MetricState, MetricValue, Metrics},
+        metrics::{Fetcher, FileDataFetcher, Metric, MetricState, MetricValue, Metrics},
     },
     serde::{self, Deserialize},
     std::collections::HashMap,
@@ -24,9 +24,10 @@ impl<'a> ActionContext<'a> {
         actions: &'a Actions,
         diagnostic_data: &'a DiagnosticData,
     ) -> ActionContext<'a> {
+        let fetcher = Fetcher::FileData(FileDataFetcher::new(&diagnostic_data.inspect));
         ActionContext {
             actions,
-            metric_state: MetricState::new(metrics, &diagnostic_data.inspect),
+            metric_state: MetricState::new(metrics, fetcher),
             action_results: ActionResults::new(&diagnostic_data.source),
         }
     }
@@ -148,7 +149,7 @@ impl ActionContext<'_> {
 
     /// Update warnings if condition is met.
     fn update_warnings(&mut self, action: &Warning, namespace: &String, name: &String) {
-        let was_triggered = match self.metric_state.metric_value(namespace, &action.trigger) {
+        let was_triggered = match self.metric_state.eval_action_metric(namespace, &action.trigger) {
             MetricValue::Bool(true) => {
                 self.action_results.add_warning(format!("[WARNING] {}.", action.print));
                 true
@@ -170,7 +171,7 @@ impl ActionContext<'_> {
 
     /// Update gauges.
     fn update_gauges(&mut self, action: &Gauge, namespace: &String, name: &String) {
-        let value = self.metric_state.metric_value(namespace, &action.value);
+        let value = self.metric_state.eval_action_metric(namespace, &action.value);
         self.action_results.add_gauge(format!("{}: {}", name, action.get_formatted_value(value)));
     }
 }

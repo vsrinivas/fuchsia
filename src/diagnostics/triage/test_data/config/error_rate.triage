@@ -19,34 +19,20 @@
                 "error_rate_too_high",
             ],
             no: [],
-            inspect: [
-                {
-                    moniker: "session-3/app.cmx",
-                    payload: {
-                        root: {
-                            requests: 100,
-                            errors: 95,
-                        },
-                    },
-                },
-            ],
+            values: {
+                requests: 100,
+                errors: 95,
+            },
         },
         error_rate_not_triggered: {
             yes: [],
             no: [
                 "error_rate_too_high",
             ],
-            inspect: [
-                {
-                    moniker: "session-3/app.cmx",
-                    payload: {
-                        root: {
-                            requests: 100,
-                            errors: 80,
-                        },
-                    },
-                },
-            ],
+            values: {
+                requests: 100,
+                errors: 80,
+            },
         },
     },
 }

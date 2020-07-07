@@ -6,7 +6,10 @@ use {
     super::{
         act::{Action, Actions},
         config::ParseResult,
-        metrics::{fetch::InspectFetcher, MetricState, MetricValue},
+        metrics::{
+            fetch::InspectFetcher, Fetcher, FileDataFetcher, MetricState, MetricValue,
+            TrialDataFetcher,
+        },
     },
     anyhow::{format_err, Error},
     serde::Deserialize,
@@ -15,10 +18,19 @@ use {
 };
 
 #[derive(Clone, Deserialize, Debug)]
+pub enum TrialValuesHolder {
+    #[serde(rename = "values")]
+    Values(HashMap<String, json::Value>),
+    #[serde(rename = "inspect")]
+    Inspect(Vec<json::Value>),
+}
+
+#[derive(Clone, Deserialize, Debug)]
 pub struct Trial {
     yes: Vec<String>,
     no: Vec<String>,
-    inspect: Vec<json::Value>,
+    #[serde(flatten)]
+    values: TrialValuesHolder,
 }
 
 // Outer String is namespace, inner String is trial name
@@ -30,14 +42,23 @@ pub fn validate(parse_result: &ParseResult) -> Result<(), Error> {
     let mut failed = false;
     for (namespace, trial_map) in tests {
         for (trial_name, trial) in trial_map {
-            let inspect = InspectFetcher::try_from(trial.inspect.clone())?;
-            let state = MetricState { metrics, inspect: &inspect };
-            for action_name in trial.yes.clone().into_iter() {
-                failed = check_failure(namespace, trial_name, &action_name, actions, &state, true)
+            let inspect_fetcher: InspectFetcher;
+            let fetcher = match &trial.values {
+                TrialValuesHolder::Values(values) => {
+                    Fetcher::TrialData(TrialDataFetcher::new(values))
+                }
+                TrialValuesHolder::Inspect(inspect_data) => {
+                    inspect_fetcher = InspectFetcher::try_from(inspect_data.clone())?;
+                    Fetcher::FileData(FileDataFetcher::new(&inspect_fetcher))
+                }
+            };
+            let state = MetricState { metrics, fetcher };
+            for action_name in trial.yes.iter() {
+                failed = check_failure(namespace, trial_name, action_name, actions, &state, true)
                     || failed;
             }
-            for action_name in trial.no.clone().into_iter() {
-                failed = check_failure(namespace, trial_name, &action_name, actions, &state, false)
+            for action_name in trial.no.iter() {
+                failed = check_failure(namespace, trial_name, action_name, actions, &state, false)
                     || failed;
             }
         }
@@ -70,7 +91,7 @@ fn check_failure(
             }
             Some(action) => match action {
                 Action::Warning(properties) => {
-                    match metric_state.metric_value(namespace, &properties.trigger) {
+                    match metric_state.eval_action_metric(namespace, &properties.trigger) {
                         MetricValue::Bool(actual) if actual == expected => return false,
                         other => {
                             println!(
@@ -138,7 +159,7 @@ mod test {
                     })
                 ),
                 (
-                    "inert",
+                    "no_fire",
                     Action::Warning(Warning {
                         trigger: Metric::Eval("false".to_string()),
                         print: "what?!?".to_string(),
@@ -149,8 +170,8 @@ mod test {
         ));
         let good_trial = Trial {
             yes: vec!["fires".to_string()],
-            no: vec!["inert".to_string()],
-            inspect: vec![],
+            no: vec!["no_fire".to_string()],
+            values: TrialValuesHolder::Values(HashMap::new()),
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,
@@ -161,14 +182,14 @@ mod test {
         // Make sure it objects if a trial that should fire doesn't.
         // Also, make sure it signals failure if there's both a good and a bad trial.
         let bad_trial = Trial {
-            yes: vec!["fires".to_string(), "inert".to_string()],
+            yes: vec!["fires".to_string(), "no_fire".to_string()],
             no: vec![],
-            inspect: vec![],
+            values: TrialValuesHolder::Values(HashMap::new()),
         };
         let good_trial = Trial {
             yes: vec!["fires".to_string()],
-            no: vec!["inert".to_string()],
-            inspect: vec![],
+            no: vec!["no_fire".to_string()],
+            values: TrialValuesHolder::Values(HashMap::new()),
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,
@@ -179,8 +200,8 @@ mod test {
         // Make sure it objects if a trial fires when it shouldn't.
         let bad_trial = Trial {
             yes: vec![],
-            no: vec!["fires".to_string(), "inert".to_string()],
-            inspect: vec![],
+            no: vec!["fires".to_string(), "no_fire".to_string()],
+            values: TrialValuesHolder::Values(HashMap::new()),
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,

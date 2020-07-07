@@ -52,11 +52,69 @@ impl std::fmt::Display for Metric {
 pub type Metrics = HashMap<String, HashMap<String, Metric>>;
 
 /// Contains all the information needed to look up and evaluate a Metric - other
-/// [Metric]s that may be referred to, and Inspect data (entries for each
-/// component) that can be accessed by Selector-type Metrics.
+/// [Metric]s that may be referred to, and a source of input values to calculate on.
 pub struct MetricState<'a> {
     pub metrics: &'a Metrics,
-    pub inspect: &'a InspectFetcher,
+    pub fetcher: Fetcher<'a>,
+}
+
+/// [Fetcher] is a source of values to feed into the calculations. It may contain data either
+/// from bugreport.zip files (e.g. inspect.json data that can be accessed via "select" entries)
+/// or supplied in the specification of a trial.
+pub enum Fetcher<'a> {
+    FileData(FileDataFetcher<'a>),
+    TrialData(TrialDataFetcher<'a>),
+}
+
+/// [FileDataFetcher] contains fetchers for data in bugreport.zip files.
+#[derive(Clone)]
+pub struct FileDataFetcher<'a> {
+    inspect: &'a InspectFetcher,
+}
+
+impl<'a> FileDataFetcher<'a> {
+    pub fn new(inspect: &'a InspectFetcher) -> FileDataFetcher<'a> {
+        FileDataFetcher { inspect }
+    }
+
+    fn fetch(&self, selector: &SelectorString) -> MetricValue {
+        match selector.selector_type {
+            SelectorType::Inspect => {
+                let values = self.inspect.fetch(&selector);
+                match values.len() {
+                    0 => MetricValue::Missing(format!(
+                        "{} not found in Inspect data",
+                        selector.body()
+                    )),
+                    1 => values[0].clone(),
+                    _ => MetricValue::Missing(format!(
+                        "Multiple {} found in Inspect data",
+                        selector.body()
+                    )),
+                }
+            }
+        }
+    }
+}
+
+/// [TrialDataFetcher] stores the key-value lookup for metric names whose values are given as
+/// part of a trial (under the "test" section of the .triage files).
+#[derive(Clone)]
+pub struct TrialDataFetcher<'a> {
+    values: &'a HashMap<String, JsonValue>,
+}
+
+impl<'a> TrialDataFetcher<'a> {
+    pub fn new(values: &'a HashMap<String, JsonValue>) -> TrialDataFetcher<'a> {
+        TrialDataFetcher { values }
+    }
+
+    fn fetch(&self, name: &str) -> MetricValue {
+        match self.values.get(name) {
+            Some(value) => MetricValue::from(value),
+            None => MetricValue::Missing(format!("Value {} not overridden in test", name)),
+        }
+    }
 }
 
 /// The calculated or selected value of a Metric.
@@ -143,6 +201,25 @@ impl From<JsonValue> for MetricValue {
         match value {
             JsonValue::String(value) => Self::String(value),
             JsonValue::Bool(value) => Self::Bool(value),
+            JsonValue::Number(value) => {
+                if value.is_i64() {
+                    Self::Int(value.as_i64().unwrap())
+                } else if value.is_f64() {
+                    Self::Float(value.as_f64().unwrap())
+                } else {
+                    Self::Missing("Unable to convert JSON number".to_owned())
+                }
+            }
+            _ => Self::Missing("Unsupported JSON type".to_owned()),
+        }
+    }
+}
+
+impl From<&JsonValue> for MetricValue {
+    fn from(value: &JsonValue) -> Self {
+        match value {
+            JsonValue::String(value) => Self::String(value.clone()),
+            JsonValue::Bool(value) => Self::Bool(*value),
             JsonValue::Number(value) => {
                 if value.is_i64() {
                     Self::Int(value.as_i64().unwrap())
@@ -253,15 +330,15 @@ pub enum Expression {
 
 impl<'a> MetricState<'a> {
     /// Create an initialized MetricState.
-    pub fn new(metrics: &'a Metrics, inspect: &'a InspectFetcher) -> MetricState<'a> {
-        MetricState { metrics, inspect }
+    pub fn new(metrics: &'a Metrics, fetcher: Fetcher<'a>) -> MetricState<'a> {
+        MetricState { metrics, fetcher }
     }
 
     /// Calculate the value of a Metric specified by name and namespace.
     ///
     /// If [name] is of the form "namespace::name" then [namespace] is ignored.
     /// If [name] is just "name" then [namespace] is used.
-    pub fn metric_value_by_name(&self, namespace: &str, name: &String) -> MetricValue {
+    fn metric_value_by_name(&self, namespace: &str, name: &String) -> MetricValue {
         // TODO(cphoenix): When historical metrics are added, change semantics to refresh()
         // TODO(cphoenix): cache values
         // TODO(cphoenix): Detect infinite cycles/depth.
@@ -292,41 +369,40 @@ impl<'a> MetricState<'a> {
                         real_name, real_namespace
                     ))
                 }
-                Some(metric) => self.metric_value(real_namespace, &metric),
+                Some(metric) => match metric {
+                    Metric::Selector(selector) => match &self.fetcher {
+                        Fetcher::FileData(fetcher) => fetcher.fetch(selector),
+                        Fetcher::TrialData(fetcher) => fetcher.fetch(name),
+                    },
+                    Metric::Eval(expression) => self.eval_value(real_namespace, &expression),
+                },
             },
         }
     }
 
-    /// Fetches or computes the value of a Metric.
-    pub fn metric_value(&self, namespace: &str, metric: &Metric) -> MetricValue {
+    /// Fetch or compute the value of a Metric expression from an action.
+    pub fn eval_action_metric(&self, namespace: &str, metric: &Metric) -> MetricValue {
         match metric {
-            Metric::Selector(selector) => match selector.selector_type {
-                SelectorType::Inspect => {
-                    let values = self.inspect.fetch(&selector);
-                    match values.len() {
-                        0 => MetricValue::Missing(format!(
-                            "{} not found in Inspect data",
-                            selector.body()
-                        )),
-                        1 => values[0].clone(),
-                        _ => MetricValue::Missing(format!(
-                            "Multiple {} found in Inspect data",
-                            selector.body()
-                        )),
-                    }
-                }
-            },
-            Metric::Eval(expression) => match config::parse::parse_expression(expression) {
-                Ok(expr) => self.evaluate(namespace, &expr),
-                Err(e) => MetricValue::Missing(format!("Expression parse error\n{}", e)),
-            },
+            Metric::Selector(_) => {
+                MetricValue::Missing("Selectors aren't allowed in action triggers".to_owned())
+            }
+            Metric::Eval(string) => self.eval_value(namespace, string),
+        }
+    }
+
+    fn eval_value(&self, namespace: &str, expression: &str) -> MetricValue {
+        match config::parse::parse_expression(expression) {
+            Ok(expr) => self.evaluate(namespace, &expr),
+            Err(e) => MetricValue::Missing(format!("Expression parse error\n{}", e)),
         }
     }
 
     /// Evaluate an Expression which contains only base values, not referring to other Metrics.
     #[cfg(test)]
     pub fn evaluate_math(e: &Expression) -> MetricValue {
-        MetricState::new(&HashMap::new(), &InspectFetcher::new_empty()).evaluate(&"".to_string(), e)
+        let map = HashMap::new();
+        let fetcher = Fetcher::TrialData(TrialDataFetcher::new(&map));
+        MetricState::new(&HashMap::new(), fetcher).evaluate(&"".to_string(), e)
     }
 
     fn evaluate_function(
@@ -536,13 +612,12 @@ impl<'a> MetricState<'a> {
 
 // The use of metric names in expressions and actions, with and without namespaces, is tested in
 // the integration test.
-//   $ fx triage --test
-// TODO(cphoenix): Test metric names in unit tests also, since integration tests aren't
-// run automatically.
+//   $ fx test triage_lib_test
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use lazy_static::lazy_static;
 
     #[test]
     fn test_equality() {
@@ -638,6 +713,91 @@ mod test {
         assert_eq!(
             format!("{}", MetricValue::Missing("Where is Waldo?".to_string())),
             "Missing(Where is Waldo?)"
+        );
+    }
+
+    lazy_static! {
+        static ref LOCAL_M: HashMap<String, JsonValue> = {
+            let mut m = HashMap::new();
+            m.insert("foo".to_owned(), JsonValue::try_from(42).unwrap());
+            m
+        };
+        static ref FOO_42_TRIAL_FETCHER: TrialDataFetcher<'static> =
+            TrialDataFetcher::new(&LOCAL_M);
+        static ref LOCAL_F: InspectFetcher = {
+            let s = r#"[{
+                "data_source": "Inspect",
+                "moniker": "bar.cmx",
+                "payload": { "root": { "bar": 99 }}
+            }]"#;
+            InspectFetcher::try_from(&*s.to_owned()).unwrap()
+        };
+        static ref BAR_99_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&LOCAL_F);
+        static ref BAR_SELECTOR: SelectorString =
+            SelectorString::try_from("INSPECT:bar.cmx:root:bar".to_owned()).unwrap();
+        static ref WRONG_SELECTOR: SelectorString =
+            SelectorString::try_from("INSPECT:bar.cmx:root:oops".to_owned()).unwrap();
+    }
+
+    fn assert_missing(value: MetricValue, message: &'static str) {
+        match value {
+            MetricValue::Missing(_) => {}
+            _ => assert!(false, message),
+        }
+    }
+
+    #[test]
+    fn test_file_fetch() {
+        assert_eq!(BAR_99_FILE_FETCHER.fetch(&BAR_SELECTOR), MetricValue::Int(99));
+        assert_missing(
+            BAR_99_FILE_FETCHER.fetch(&WRONG_SELECTOR),
+            "File fetcher found bogus selector",
+        );
+    }
+
+    #[test]
+    fn test_trial_fetch() {
+        assert_eq!(FOO_42_TRIAL_FETCHER.fetch("foo"), MetricValue::Int(42));
+        assert_missing(FOO_42_TRIAL_FETCHER.fetch("oops"), "Trial fetcher found bogus selector");
+    }
+
+    #[test]
+    fn test_eval_with_file() {
+        let mut file_map = HashMap::new();
+        file_map.insert("bar".to_owned(), Metric::Selector(BAR_SELECTOR.clone()));
+        file_map.insert("bar_plus_one".to_owned(), Metric::Eval("bar+1".to_owned()));
+        file_map.insert("oops_plus_one".to_owned(), Metric::Eval("oops+1".to_owned()));
+        let mut metrics = HashMap::new();
+        metrics.insert("bar_file".to_owned(), file_map);
+        let file_state = MetricState::new(&metrics, Fetcher::FileData(BAR_99_FILE_FETCHER.clone()));
+        assert_eq!(
+            file_state.metric_value_by_name("bar_file", &"bar_plus_one".to_owned()),
+            MetricValue::Int(100)
+        );
+        assert_missing(
+            file_state.metric_value_by_name("bar_file", &"oops_plus_one".to_owned()),
+            "File found nonexistent name",
+        );
+    }
+
+    #[test]
+    fn test_eval_with_trial() {
+        let mut trial_map = HashMap::new();
+        // The (broken) "foo" selector should be ignored in favor of the "foo" fetched value.
+        trial_map.insert("foo".to_owned(), Metric::Selector(BAR_SELECTOR.clone()));
+        trial_map.insert("foo_plus_one".to_owned(), Metric::Eval("foo+1".to_owned()));
+        trial_map.insert("oops_plus_one".to_owned(), Metric::Eval("oops+1".to_owned()));
+        let mut metrics = HashMap::new();
+        metrics.insert("foo_file".to_owned(), trial_map);
+        let trial_state =
+            MetricState::new(&metrics, Fetcher::TrialData(FOO_42_TRIAL_FETCHER.clone()));
+        assert_eq!(
+            trial_state.metric_value_by_name("foo_file", &"foo_plus_one".to_owned()),
+            MetricValue::Int(43)
+        );
+        assert_missing(
+            trial_state.metric_value_by_name("foo_file", &"oops_plus_one".to_owned()),
+            "Trial found nonexistent name",
         );
     }
 }

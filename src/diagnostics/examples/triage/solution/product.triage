@@ -1,7 +1,5 @@
 {
-    "metrics": {
-        "max_widgets": {"Eval": "4"}
+    eval: {
+        max_components: "40",
     },
-    "actions": {},
-    "tests": {}
 }

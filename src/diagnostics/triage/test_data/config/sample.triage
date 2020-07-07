@@ -41,41 +41,19 @@
                 "more_disk",
             ],
             no: [],
-            inspect: [
-                {
-                    path: "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
-                    contents: {
-                        root: {
-                            data_stats: {
-                                global_data: {
-                                    stats: {
-                                        total_bytes: 10,
-                                        used_bytes: 9,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            ],
+            values: {
+                total: 10,
+                used: 9,
+            },
         },
         trial2: {
             yes: [
                 "unhealthy",
             ],
             no: [],
-            inspect: [
-                {
-                    path: "/hub/c/foo.cmx/13141/out/global_data/storage_stats.inspect",
-                    contents: {
-                        root: {
-                            "fuchsia.inspect.Health": {
-                                status: "UNHEALTHY",
-                            },
-                        },
-                    },
-                },
-            ],
+            values: {
+                foo_health: "UNHEALTHY",
+            },
         },
     },
 }

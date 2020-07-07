@@ -27,6 +27,7 @@ const INSPECT_FILENAME: &str = "inspect.json";
 /// Schema for JSON triage configuration. This structure is parsed directly from the configuration
 /// files using serde_json.
 #[derive(Deserialize, Default, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigFileSchema {
     /// Map of named Selectors. Each Selector selects a value from Diagnostic data.
     #[serde(rename = "select")]
