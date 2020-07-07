@@ -1779,6 +1779,7 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
       if (brcmf_sdio_hdparse(bus, bus->rxhdr, &rd_new, BRCMF_SDIO_FT_NORMAL) != ZX_OK) {
         rd->len = 0;
         brcmu_pkt_buf_free_netbuf(pkt);
+        continue;
       }
       bus->sdcnt.rx_readahead_cnt++;
       if (rd->len != roundup(rd_new.len, 16)) {

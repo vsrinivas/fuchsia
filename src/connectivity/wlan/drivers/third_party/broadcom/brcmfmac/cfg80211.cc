@@ -4056,6 +4056,9 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
     conn_info->req_ie_len = req_len;
     conn_info->req_ie = static_cast<decltype(conn_info->req_ie)>(
         brcmu_alloc_and_copy(cfg->extra_buf, conn_info->req_ie_len));
+    if (conn_info->req_ie == NULL) {
+      conn_info->req_ie_len = 0;
+    }
   } else {
     conn_info->req_ie_len = 0;
     conn_info->req_ie = NULL;
@@ -4071,6 +4074,9 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
     conn_info->resp_ie_len = resp_len;
     conn_info->resp_ie = static_cast<decltype(conn_info->resp_ie)>(
         brcmu_alloc_and_copy(cfg->extra_buf, conn_info->resp_ie_len));
+    if (conn_info->resp_ie == NULL) {
+      conn_info->resp_ie_len = 0;
+    }
   } else {
     conn_info->resp_ie_len = 0;
     conn_info->resp_ie = NULL;
