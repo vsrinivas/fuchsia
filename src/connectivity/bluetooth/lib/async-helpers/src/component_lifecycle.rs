@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::hanging_get::{
+    asynchronous::{HangingGetBroker, Publisher, SubscriptionRegistrar, DEFAULT_CHANNEL_SIZE},
     error::HangingGetServerError,
-    server::{HangingGetBroker, Publisher, SubscriptionRegistrar, DEFAULT_CHANNEL_SIZE},
 };
 use {
     fidl_fuchsia_bluetooth_component::{

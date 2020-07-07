@@ -11,5 +11,8 @@
 
 pub mod error;
 pub mod server;
+// publicly exported through the `server` module.
+pub mod async_server;
+pub use async_server as asynchronous;
 #[cfg(test)]
 pub(crate) mod test_util;

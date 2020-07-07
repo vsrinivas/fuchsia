@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    async_helpers::hanging_get::server as hanging_get,
+    async_helpers::hanging_get::asynchronous as hanging_get,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_host::{HostMarker, HostRequest},
     fidl_fuchsia_bluetooth_sys::AccessMarker,

@@ -3,267 +3,102 @@
 // found in the LICENSE file.
 
 use {
-    crate::{hanging_get::error::HangingGetServerError, responding_channel as responding},
-    async_utils::stream_epitaph::*,
+    crate::hanging_get::error::HangingGetServerError,
     core::hash::Hash,
-    futures::{channel::mpsc, select, SinkExt, StreamExt},
-    std::collections::HashMap,
+    parking_lot::Mutex,
+    std::{collections::HashMap, sync::Arc},
 };
 
-/// Default value that can be passed to `HangingGetBroker::new` by clients.
-/// If passed in, this will be used for all MPSC channels created by the broker.
-pub const DEFAULT_CHANNEL_SIZE: usize = 128;
-
-/// A `Send` wrapper for a `HangingGet` that can receive messages via an async channel.
-/// The `HangingGetBroker` is the primary way of implementing server side hanging get using
-/// this library. It manages all state and reacts to inputs sent over channels.
-///
-/// ### Example Usage:
-///
-/// Assuming some fidl protocol with a hanging get method:
-///
-/// ```fidl
-/// protocol SheepCounter {
-///     /// Returns the current number of sheep that have jumped the fence
-///     /// when that number changes.
-///     WatchCount() -> (uint64 count);
-/// }
-/// ```
-///
-/// A server implementation might include the following:
-///
-/// ```rust
-/// let broker = HangingGetBroker::new(
-///     0u64, // Initial state
-///     |s, o: SheepCounterWatchCountResponder| {
-///         o.send(s.clone()).unwrap();
-///         true
-///     }, // notify function with fidl auto-generated responder
-///     DEFAULT_CHANNEL_SIZE, // Size of channels used by Publishers and Subscribers
-/// );
-///
-/// // Create a new publisher that can be used to publish updates to the state
-/// let mut publisher = broker.new_publisher();
-/// // Create a new registrar that can be used to register subscribers
-/// let mut registrar = broker.new_registrar();
-///
-/// // Spawn broker as an async task that will run until there are not any more
-/// // `SubscriptionRegistrar`, `Publisher`, or `Subscriber` objects that can update the system.
-/// fuchsia_async::spawn(broker.run());
-///
-/// // Spawn a background task to count sheep
-/// fuchsia_async::spawn(async move {
-///     let interval = fuchsia_async::Interval::new(1.second);
-///     loop {
-///         interval.next.await();
-///         publisher.update(|sheep_count| *sheep_count += 1);
-///     }
-/// });
-///
-/// // Create a new `ServiceFs` and register SheepCounter fidl service
-/// let mut fs = ServiceFs::new();
-/// fs.dir("svc").add_fidl_service(|s: SheepCounterRequestStream| s);
-///
-/// // SubscriptionRegistrar new client connections sequentially
-/// while let Some(mut stream) = fs.next().await {
-///
-///     // Create a new subscriber associated with this client's request stream
-///     let mut subscriber = registrar.new_subscriber().await.unwrap();
-///
-///     // SubscriptionRegistrar requests from this client by registering new observers
-///     fuchsia_async::spawn(async move {
-///         while let Some(Ok(SheepCounterWatchCountRequest { responder })) = stream.next().await {
-///             subscriber.register(responder).await.unwrap();
-///         }
-///     });
-/// }
-/// ```
-pub struct HangingGetBroker<S, O: Unpin + 'static, F: Fn(&S, O) -> bool> {
-    inner: HangingGet<S, subscriber_key::Key, O, F>,
-    publisher: Publisher<S>,
-    updates: mpsc::Receiver<UpdateFn<S>>,
-    registrar: SubscriptionRegistrar<O>,
-    subscription_requests: responding::Receiver<(), Subscriber<O>>,
+/// A broker used to create `Publishers` and `Subscribers` of updates to some state.
+pub struct HangingGet<S, O, F: Fn(&S, O) -> bool> {
+    inner: Arc<Mutex<HangingGetInner<S, subscriber_key::Key, O, F>>>,
     /// A `subscriber_key::Key` held by the broker to track the next unique key that the broker can
     /// assign to a `Subscriber`.
     subscriber_key_generator: subscriber_key::Generator,
-    channel_size: usize,
 }
 
-impl<S, O, F> HangingGetBroker<S, O, F>
+impl<S, O, F> HangingGet<S, O, F>
 where
-    S: Clone + Send,
-    O: Send + Unpin + 'static,
     F: Fn(&S, O) -> bool,
 {
     /// Create a new broker.
     /// `state` is the initial state of the HangingGet
     /// `notify` is a `Fn` that is used to notify observers of state.
-    /// `channel_size` is the maximum queue size of unprocessed messages from an individual object.
-    pub fn new(state: S, notify: F, channel_size: usize) -> Self {
-        let (sender, updates) = mpsc::channel(channel_size);
-        let publisher = Publisher { sender };
-        let (sender, subscription_requests) = responding::channel(channel_size);
-        let registrar = SubscriptionRegistrar { sender };
+    pub fn new(state: S, notify: F) -> Self {
         Self {
-            inner: HangingGet::new(state, notify),
-            publisher,
-            updates,
-            registrar,
-            subscription_requests,
+            inner: Arc::new(Mutex::new(HangingGetInner::new(state, notify))),
             subscriber_key_generator: subscriber_key::Generator::default(),
-            channel_size,
         }
     }
 
-    /// Create a new `Publisher` that can be used to communicate state updates
-    /// with this `HangingGetBroker` from another thread or async task.
-    pub fn new_publisher(&self) -> Publisher<S> {
-        self.publisher.clone()
+    /// Create a new `Publisher` that can make atomic updates to the state value.
+    pub fn new_publisher(&self) -> Publisher<S, O, F> {
+        Publisher { inner: self.inner.clone() }
     }
 
-    /// Create a new `SubscriptionRegistrar` that can be used to register new subscribers
-    /// with this `HangingGetBroker` from another thread or async task.
-    pub fn new_registrar(&self) -> SubscriptionRegistrar<O> {
-        self.registrar.clone()
-    }
-
-    /// Consume `HangingGetBroker`, returning a Future object that can be polled to drive updates
-    /// to the HangingGet object. The Future completes when there are no remaining
-    /// `SubscriptionRegistrars` for this object.
-    pub async fn run(mut self) {
-        // Drop internally held references to incoming registrar.
-        // They are no longer externally reachable and will prevent the
-        // select! macro from completing if they are not dropped.
-        drop(self.publisher);
-        drop(self.registrar);
-
-        // A combined stream of all active subscribers which yields
-        // `observer` objects from those subscribers as they request
-        // observations.
-        let mut subscriptions = futures::stream::SelectAll::new();
-
-        loop {
-            select! {
-                // An update has been sent to the broker from a `Publisher`.
-                update = self.updates.next() => {
-                    if let Some(update) = update {
-                        self.inner.update(update)
-                    }
-                }
-                // A request for a new subscriber as been requested from a `SubscriptionRegistrar`.
-                subscriber = self.subscription_requests.next() => {
-                    if let Some((_, responder)) = subscriber {
-                        let (sender, mut receiver) = responding::channel(self.channel_size);
-                        let key = self.subscriber_key_generator.next().unwrap();
-                        if let Ok(()) = responder.respond(sender.into()) {
-                            subscriptions.push(receiver.map(move |o| (key, o)).with_epitaph(key));
-                        }
-                    }
-                }
-                // An observation request has been made by a `Subscriber`.
-                observer = subscriptions.next() => {
-                    match observer {
-                        Some(StreamItem::Item((key, (observer, responder)))) => {
-                            let _ = responder.respond(self.inner.subscribe(key, observer));
-                        },
-                        Some(StreamItem::Epitaph(key)) => {
-                            self.inner.unsubscribe(key);
-                        },
-                        None => (),
-                    }
-                }
-                // There are no live objects that can inject new inputs into the system.
-                complete => break,
-            }
-        }
+    /// Create a unique `Subscriber` that represents a single hanging get client.
+    pub fn new_subscriber(&mut self) -> Subscriber<S, O, F> {
+        Subscriber { inner: self.inner.clone(), key: self.subscriber_key_generator.next().unwrap() }
     }
 }
 
-/// A cheaply copyable handle that can be used to register new `Subscriber`s with
-/// the `HangingGetBroker`.
-pub struct SubscriptionRegistrar<O> {
-    sender: responding::Sender<(), Subscriber<O>>,
-}
-
-impl<O> Clone for SubscriptionRegistrar<O> {
-    fn clone(&self) -> Self {
-        Self { sender: self.sender.clone() }
-    }
-}
-
-impl<O> SubscriptionRegistrar<O> {
-    /// Register a new subscriber
-    pub async fn new_subscriber(&mut self) -> Result<Subscriber<O>, HangingGetServerError> {
-        Ok(self.sender.request(()).await?)
-    }
-}
-
-/// A `Subscriber` can be used to register observation requests with the `HangingGetBroker`.
+/// A `Subscriber` can be used to register observation requests with the `HangingGet`.
 /// These observations will be fulfilled when the state changes or immediately the first time
 /// a `Subscriber` registers an observation.
-pub struct Subscriber<O> {
-    sender: responding::Sender<O, Result<(), HangingGetServerError>>,
+pub struct Subscriber<S, O, F: Fn(&S, O) -> bool> {
+    inner: Arc<Mutex<HangingGetInner<S, subscriber_key::Key, O, F>>>,
+    key: subscriber_key::Key,
 }
 
-impl<O> From<responding::Sender<O, Result<(), HangingGetServerError>>> for Subscriber<O> {
-    fn from(sender: responding::Sender<O, Result<(), HangingGetServerError>>) -> Self {
-        Self { sender }
-    }
-}
-
-impl<O> Subscriber<O> {
+impl<S, O, F> Subscriber<S, O, F>
+where
+    F: Fn(&S, O) -> bool,
+{
     /// Register a new observation.
     /// Errors occur when:
-    /// * A `Subscriber` is sending observation requests at too high a rate.
-    /// * The `HangingGetBroker` has been dropped by the server.
-    pub async fn register(&mut self, observation: O) -> Result<(), HangingGetServerError> {
-        self.sender.request(observation).await?
+    /// * A Subscriber attempts to register an observation when there is already an outstanding
+    ///   observation waiting on updates.
+    pub fn register(&self, observation: O) -> Result<(), HangingGetServerError> {
+        self.inner.lock().subscribe(self.key, observation)
     }
 }
 
-/// `FnOnce` type that can be used by library consumers to make in-place modifications to
-/// the hanging get state.
-type UpdateFn<S> = Box<dyn FnOnce(&mut S) -> bool + Send + 'static>;
-
-/// A `Publisher` is used to make changes to the state contained within a `HangingGetBroker`.
+/// A `Publisher` is used to make changes to the state contained within a `HangingGet`.
 /// It is designed to be cheaply cloned and `Send`.
-pub struct Publisher<S> {
-    sender: mpsc::Sender<UpdateFn<S>>,
+pub struct Publisher<S, O, F: Fn(&S, O) -> bool> {
+    inner: Arc<Mutex<HangingGetInner<S, subscriber_key::Key, O, F>>>,
 }
 
-impl<S> Clone for Publisher<S> {
+impl<S, O, F: Fn(&S, O) -> bool> Clone for Publisher<S, O, F> {
     fn clone(&self) -> Self {
-        Publisher { sender: self.sender.clone() }
+        Self { inner: self.inner.clone() }
     }
 }
 
-impl<S> Publisher<S>
+impl<S, O, F> Publisher<S, O, F>
 where
-    S: Send + 'static,
+    F: Fn(&S, O) -> bool,
 {
     /// `set` is a specialized form of `update` that sets the hanging get state to the value
     /// passed in as the `state` parameter.
-    pub async fn set(&mut self, state: S) -> Result<(), HangingGetServerError> {
-        Ok(self
-            .sender
-            .send(Box::new(move |s| {
-                *s = state;
-                true
-            }))
-            .await?)
+    /// Any subscriber that has registered an observer will immediately be notified of the
+    /// update.
+    pub fn set(&mut self, state: S) {
+        self.inner.lock().set(state)
     }
 
     /// Pass a function to the hanging get that can update the hanging get state in place.
-    pub async fn update<F>(&mut self, update: F) -> Result<(), HangingGetServerError>
+    /// Any subscriber that has registered an observer will immediately be notified of the
+    /// update.
+    pub fn update<UpdateFn>(&mut self, update: UpdateFn)
     where
-        F: FnOnce(&mut S) -> bool + Send + 'static,
+        UpdateFn: FnOnce(&mut S) -> bool,
     {
-        Ok(self.sender.send(Box::new(update)).await?)
+        self.inner.lock().update(update)
     }
 }
 
-/// A `HangingGet` object manages some internal state `S` and notifies observers of type `O`
+/// A `HangingGetInner` object manages some internal state `S` and notifies observers of type `O`
 /// when their view of the state is outdated.
 ///
 /// `S` - the type of State to be watched
@@ -272,15 +107,15 @@ where
 /// `K` - the Key by which Observers are identified
 ///
 /// While it _can_ be used directly, most API consumers will want to use the higher level
-/// `HangingGetBroker` object. `HangingGetBroker` and its companion types provide `Send`
+/// `HangingGet` object. `HangingGet` and its companion types provide `Send`
 /// for use from multiple threads or async tasks.
-pub struct HangingGet<S, K, O, F: Fn(&S, O) -> bool> {
+pub struct HangingGetInner<S, K, O, F: Fn(&S, O) -> bool> {
     state: S,
     notify: F,
     observers: HashMap<K, Window<O>>,
 }
 
-impl<S, K, O, F> HangingGet<S, K, O, F>
+impl<S, K, O, F> HangingGetInner<S, K, O, F>
 where
     K: Eq + Hash,
     F: Fn(&S, O) -> bool,
@@ -291,8 +126,8 @@ where
         }
     }
 
-    /// Create a new `HangingGet`.
-    /// `state` is the initial state of the HangingGet
+    /// Create a new `HangingGetInner`.
+    /// `state` is the initial state of the HangingGetInner
     /// `notify` is a `Fn` that is used to notify observers of state.
     pub fn new(state: S, notify: F) -> Self {
         Self { state, notify, observers: HashMap::new() }
@@ -301,7 +136,7 @@ where
     /// Set the internal state value to `state` and notify all observers.
     /// Note that notification is not conditional on the _value_ set by calling the `set` function.
     /// Notification will occur regardless of whether the `state` value differs from the value
-    /// currently stored by `HangingGet`.
+    /// currently stored by `HangingGetInner`.
     pub fn set(&mut self, state: S) {
         self.state = state;
         self.notify_all();
@@ -419,11 +254,11 @@ mod subscriber_key {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::hanging_get::test_util::TestObserver, fuchsia_async as fasync,
-        futures::channel::oneshot, std::task::Poll,
+        super::*,
+        crate::{hanging_get::test_util::TestObserver, traits::PollExt},
+        fuchsia_async as fasync,
+        futures::channel::oneshot,
     };
-
-    const TEST_CHANNEL_SIZE: usize = 128;
 
     #[test]
     fn subscriber_key_generator_creates_unique_keys() {
@@ -506,16 +341,16 @@ mod tests {
     }
 
     #[test]
-    fn hanging_get_subscribe() {
-        let mut hanging = HangingGet::new(0, TestObserver::observe);
+    fn hanging_get_inner_subscribe() {
+        let mut hanging = HangingGetInner::new(0, TestObserver::observe);
         let o = TestObserver::expect_value(0);
         assert!(!o.has_value());
         hanging.subscribe(0, o.clone()).unwrap();
     }
 
     #[test]
-    fn hanging_get_subscribe_then_set() {
-        let mut hanging = HangingGet::new(0, TestObserver::observe);
+    fn hanging_get_inner_subscribe_then_set() {
+        let mut hanging = HangingGetInner::new(0, TestObserver::observe);
         let o = TestObserver::expect_value(0);
         hanging.subscribe(0, o.clone()).unwrap();
 
@@ -524,8 +359,8 @@ mod tests {
     }
 
     #[test]
-    fn hanging_get_subscribe_twice_then_set() {
-        let mut hanging = HangingGet::new(0, TestObserver::observe);
+    fn hanging_get_inner_subscribe_twice_then_set() {
+        let mut hanging = HangingGetInner::new(0, TestObserver::observe);
         hanging.subscribe(0, TestObserver::expect_value(0)).unwrap();
 
         hanging.subscribe(0, TestObserver::expect_value(1)).unwrap();
@@ -533,8 +368,8 @@ mod tests {
     }
 
     #[test]
-    fn hanging_get_subscribe_multiple_then_set() {
-        let mut hanging = HangingGet::new(0, TestObserver::observe);
+    fn hanging_get_inner_subscribe_multiple_then_set() {
+        let mut hanging = HangingGetInner::new(0, TestObserver::observe);
         hanging.subscribe(0, TestObserver::expect_value(0)).unwrap();
 
         // A second subscription with the same client key should not be notified
@@ -550,8 +385,8 @@ mod tests {
     }
 
     #[test]
-    fn hanging_get_subscribe_with_two_clients_then_set() {
-        let mut hanging = HangingGet::new(0, TestObserver::observe);
+    fn hanging_get_inner_subscribe_with_two_clients_then_set() {
+        let mut hanging = HangingGetInner::new(0, TestObserver::observe);
         hanging.subscribe(0, TestObserver::expect_value(0)).unwrap();
         hanging.subscribe(0, TestObserver::expect_value(1)).unwrap();
         hanging.subscribe(1, TestObserver::expect_value(0)).unwrap();
@@ -560,8 +395,8 @@ mod tests {
     }
 
     #[test]
-    fn hanging_get_unsubscribe() {
-        let mut hanging = HangingGet::new(0, TestObserver::observe);
+    fn hanging_get_inner_unsubscribe() {
+        let mut hanging = HangingGetInner::new(0, TestObserver::observe);
         hanging.subscribe(0, TestObserver::expect_value(0)).unwrap();
         hanging.subscribe(0, TestObserver::expect_no_value()).unwrap();
         hanging.unsubscribe(0);
@@ -569,8 +404,8 @@ mod tests {
     }
 
     #[test]
-    fn hanging_get_unsubscribe_one_of_many() {
-        let mut hanging = HangingGet::new(0, TestObserver::observe);
+    fn hanging_get_inner_unsubscribe_one_of_many() {
+        let mut hanging = HangingGetInner::new(0, TestObserver::observe);
 
         hanging.subscribe(0, TestObserver::expect_value(0)).unwrap();
         hanging.subscribe(0, TestObserver::expect_no_value()).unwrap();
@@ -583,122 +418,73 @@ mod tests {
         assert!(hanging.observers.contains_key(&1));
     }
 
-    #[fasync::run_until_stalled(test)]
-    async fn publisher_set_value() {
-        let (sender, mut receiver) = mpsc::channel(128);
-        let mut p = Publisher { sender };
-        let mut value = 1i32;
-        p.set(2i32).await.unwrap();
-        let f = receiver.next().await.unwrap();
-        f(&mut value);
-        assert_eq!(value, 2);
-    }
+    #[test]
+    fn sync_pub_sub_updates_and_observes() {
+        let mut ex = fasync::Executor::new().unwrap();
+        let mut broker = HangingGet::new(0i32, |s, o: oneshot::Sender<_>| {
+            o.send(s.clone()).map(|()| true).unwrap()
+        });
+        let mut publisher = broker.new_publisher();
+        let subscriber = broker.new_subscriber();
 
-    #[fasync::run_until_stalled(test)]
-    async fn publisher_update_value() {
-        let (sender, mut receiver) = mpsc::channel(128);
-        let mut p = Publisher { sender };
-        let mut value = 1i32;
-        p.update(|v| {
-            *v += 1;
-            true
-        })
-        .await
-        .unwrap();
-        let f = receiver.next().await.unwrap();
-        f(&mut value);
-        assert_eq!(value, 2);
+        // Initial observation is immediate
+        let (sender, mut receiver) = oneshot::channel();
+        subscriber.register(sender).unwrap();
+        let observation =
+            ex.run_until_stalled(&mut receiver).expect("received initial observation");
+        assert_eq!(observation, Ok(0));
+
+        // Subsequent observations do not happen until after an update
+        let (sender, mut receiver) = oneshot::channel();
+        subscriber.register(sender).unwrap();
+        assert!(ex.run_until_stalled(&mut receiver).is_pending());
+
+        publisher.set(1);
+
+        let observation =
+            ex.run_until_stalled(&mut receiver).expect("received subsequent observation");
+        assert_eq!(observation, Ok(1));
     }
 
     #[test]
-    fn pub_sub_empty_completes() {
+    fn sync_pub_sub_multiple_subscribers() {
         let mut ex = fasync::Executor::new().unwrap();
-        let broker = HangingGetBroker::new(
-            0i32,
-            |s, o: oneshot::Sender<_>| o.send(s.clone()).map(|()| true).unwrap(),
-            TEST_CHANNEL_SIZE,
-        );
-        let publisher = broker.new_publisher();
-        let registrar = broker.new_registrar();
-        let broker_future = broker.run();
-        futures::pin_mut!(broker_future);
-
-        // Broker future is still pending when registrars are live.
-        assert_eq!(ex.run_until_stalled(&mut broker_future), Poll::Pending);
-
-        drop(publisher);
-        drop(registrar);
-
-        // Broker future completes when registrars are dropped.
-        assert_eq!(ex.run_until_stalled(&mut broker_future), Poll::Ready(()));
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn pub_sub_updates_and_observes() {
-        let broker = HangingGetBroker::new(
-            0i32,
-            |s, o: oneshot::Sender<_>| o.send(s.clone()).map(|()| true).unwrap(),
-            TEST_CHANNEL_SIZE,
-        );
+        let mut broker = HangingGet::new(0i32, |s, o: oneshot::Sender<_>| {
+            o.send(s.clone()).map(|()| true).unwrap()
+        });
         let mut publisher = broker.new_publisher();
-        let mut registrar = broker.new_registrar();
-        let fut = async move {
-            let mut subscriber = registrar.new_subscriber().await.unwrap();
 
-            // Initial observation is immediate
-            let (sender, receiver) = oneshot::channel();
-            subscriber.register(sender).await.unwrap();
-            assert_eq!(receiver.await.unwrap(), 0);
+        let sub1 = broker.new_subscriber();
+        let sub2 = broker.new_subscriber();
 
-            // Subsequent observations do not happen until after an update
-            let (sender, mut receiver) = oneshot::channel();
-            subscriber.register(sender).await.unwrap();
-            assert!(receiver.try_recv().unwrap().is_none());
-            publisher.set(1).await.unwrap();
-            assert_eq!(receiver.await.unwrap(), 1);
-        };
+        // Initial observation for subscribers is immediate
+        let (sender, mut receiver) = oneshot::channel();
+        sub1.register(sender).unwrap();
+        let observation =
+            ex.run_until_stalled(&mut receiver).expect("received initial observation");
+        assert_eq!(observation, Ok(0));
 
-        // Broker future will complete when `fut` has complete
-        futures::join!(fut, broker.run());
-    }
+        let (sender, mut receiver) = oneshot::channel();
+        sub2.register(sender).unwrap();
+        let observation =
+            ex.run_until_stalled(&mut receiver).expect("received initial observation");
+        assert_eq!(observation, Ok(0));
 
-    #[fasync::run_until_stalled(test)]
-    async fn pub_sub_multiple_subscribers() {
-        let broker = HangingGetBroker::new(
-            0i32,
-            |s, o: oneshot::Sender<_>| o.send(s.clone()).map(|()| true).unwrap(),
-            TEST_CHANNEL_SIZE,
-        );
-        let mut publisher = broker.new_publisher();
-        let mut registrar = broker.new_registrar();
-        let fut = async move {
-            let mut sub1 = registrar.new_subscriber().await.unwrap();
-            let mut sub2 = registrar.new_subscriber().await.unwrap();
+        // Subsequent observations do not happen until after an update
+        let (sender, mut recv1) = oneshot::channel();
+        sub1.register(sender).unwrap();
+        assert!(ex.run_until_stalled(&mut recv1).is_pending());
 
-            // Initial observation for subscribers is immediate
-            let (sender, receiver) = oneshot::channel();
-            sub1.register(sender).await.unwrap();
-            assert_eq!(receiver.await.unwrap(), 0);
+        let (sender, mut recv2) = oneshot::channel();
+        sub2.register(sender).unwrap();
+        assert!(ex.run_until_stalled(&mut recv2).is_pending());
 
-            let (sender, receiver) = oneshot::channel();
-            sub2.register(sender).await.unwrap();
-            assert_eq!(receiver.await.unwrap(), 0);
-
-            // Subsequent observations do not happen until after an update
-            let (sender, mut recv1) = oneshot::channel();
-            sub1.register(sender).await.unwrap();
-            assert!(recv1.try_recv().unwrap().is_none());
-
-            let (sender, mut recv2) = oneshot::channel();
-            sub2.register(sender).await.unwrap();
-            assert!(recv2.try_recv().unwrap().is_none());
-
-            publisher.set(1).await.unwrap();
-            assert_eq!(recv1.await.unwrap(), 1);
-            assert_eq!(recv2.await.unwrap(), 1);
-        };
-
-        // Broker future will complete when `fut` has complete
-        futures::join!(fut, broker.run());
+        publisher.set(1);
+        let obs1 =
+            ex.run_until_stalled(&mut recv1).expect("receiver 1 received subsequent observation");
+        assert_eq!(obs1, Ok(1));
+        let obs2 =
+            ex.run_until_stalled(&mut recv2).expect("receiver 2 received subsequent observation");
+        assert_eq!(obs2, Ok(1));
     }
 }

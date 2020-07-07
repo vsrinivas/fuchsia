@@ -190,7 +190,7 @@ mod tests {
     use {
         super::*,
         crate::store::stash::Stash,
-        async_helpers::hanging_get::server as hanging_get,
+        async_helpers::hanging_get::asynchronous as hanging_get,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream},
         fidl_fuchsia_bluetooth::Appearance,
         fidl_fuchsia_bluetooth_gatt::{

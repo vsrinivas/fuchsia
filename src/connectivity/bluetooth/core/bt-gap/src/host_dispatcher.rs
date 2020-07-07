@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    async_helpers::hanging_get::server as hanging_get,
+    async_helpers::hanging_get::asynchronous as hanging_get,
     fidl::endpoints::{self, ServerEnd},
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,

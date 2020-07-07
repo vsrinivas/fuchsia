@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    async_helpers::hanging_get::server as hanging_get,
+    async_helpers::hanging_get::asynchronous as hanging_get,
     fidl_fuchsia_bluetooth_sys::{self as sys, AccessRequest, AccessRequestStream},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{
