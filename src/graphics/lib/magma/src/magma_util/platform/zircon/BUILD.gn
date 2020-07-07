@@ -387,7 +387,10 @@ source_set("trace_provider") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-static-engine",
   ]
 
-  assert_no_deps = [ "//sdk/lib/fdio" ]
+  assert_no_deps = [
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/async-default",
+  ]
 }
 
 source_set("trace_provider_with_fdio") {
