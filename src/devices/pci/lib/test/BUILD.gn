@@ -40,7 +40,6 @@ unittest_package("pci-roothost-package") {
   tests = [
     {
       name = "pci-roothost"
-      dest = "pci-roothost-test"
     },
   ]
 }
