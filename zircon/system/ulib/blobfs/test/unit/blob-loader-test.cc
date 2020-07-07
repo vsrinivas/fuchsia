@@ -43,8 +43,8 @@ std::set<uint64_t> AddressRange(uint64_t start, uint64_t len) {
 // data source (rather than a block device).
 class FakeUserPager : public UserPager {
  public:
-  FakeUserPager() : UserPager(&metrics_) { ASSERT_OK(InitPager()); }
-  FakeUserPager(const char* data, size_t len) : UserPager(&metrics_), data_(new uint8_t[len], len) {
+  FakeUserPager() { ASSERT_OK(InitPager()); }
+  FakeUserPager(const char* data, size_t len) : data_(new uint8_t[len], len) {
     memcpy(data_.get(), data, len);
     ASSERT_OK(InitPager());
   }
@@ -123,7 +123,6 @@ class FakeUserPager : public UserPager {
   std::set<uint64_t> verified_addresses_;
   zx::unowned_vmo vmo_;
   zx_handle_t handle_to_close_on_failure_;
-  BlobfsMetrics metrics_ = {};
 };
 
 class BlobLoaderTest : public zxtest::Test {
