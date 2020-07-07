@@ -24,7 +24,7 @@ func TestExpand(t *testing.T) {
 	defer os.RemoveAll(parentDir)
 	log.Printf("TestExpand working dir: %s", parentDir)
 
-	_, expandDir, err := CreateAndExpandPackage(parentDir)
+	_, expandDir, err := createAndExpandPackage(parentDir)
 	if err != nil {
 		t.Fatalf("Failed to create and expand package. %s", err)
 	}

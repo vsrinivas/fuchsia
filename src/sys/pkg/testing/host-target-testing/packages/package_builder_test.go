@@ -19,8 +19,8 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 )
 
-// CreateTestPackage fills the given directory with a new repository.
-func CreateTestPackage(dir string) (*Repository, string, error) {
+// createTestPackage fills the given directory with a new repository.
+func createTestPackage(dir string) (*Repository, string, error) {
 	// Initialize a repo.
 	fmt.Printf("Creating repo at %s.\n", dir)
 	pmRepo, err := repo.New(dir)
@@ -73,8 +73,8 @@ func CreateTestPackage(dir string) (*Repository, string, error) {
 	return pkgRepo, metaMerkle, nil
 }
 
-// ExpandPackage expands the given merkle from the given repository into the given directory.
-func ExpandPackage(pkgRepo *Repository, merkle string, dir string) error {
+// expandPackage expands the given merkle from the given repository into the given directory.
+func expandPackage(pkgRepo *Repository, merkle string, dir string) error {
 	// Parse the package we want.
 	pkg, err := newPackage(pkgRepo, merkle)
 	if err != nil {
@@ -88,13 +88,13 @@ func ExpandPackage(pkgRepo *Repository, merkle string, dir string) error {
 	return nil
 }
 
-// CreateAndExpandPackage creates temporary directories and expands a test package, returning the expand directory.
-func CreateAndExpandPackage(parentDir string) (*Repository, string, error) {
+// createAndExpandPackage creates temporary directories and expands a test package, returning the expand directory.
+func createAndExpandPackage(parentDir string) (*Repository, string, error) {
 	dir, err := ioutil.TempDir(parentDir, "package")
 	if err != nil {
 		return nil, "", fmt.Errorf("Failed to create directory %s. %w", dir, err)
 	}
-	pkgRepo, metaMerkle, err := CreateTestPackage(dir)
+	pkgRepo, metaMerkle, err := createTestPackage(dir)
 	if err != nil {
 		return nil, "", fmt.Errorf("Failed to create test package. %w", err)
 	}
@@ -102,7 +102,7 @@ func CreateAndExpandPackage(parentDir string) (*Repository, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("Failed to create directory %s. %w", dir, err)
 	}
-	err = ExpandPackage(pkgRepo, metaMerkle, dir)
+	err = expandPackage(pkgRepo, metaMerkle, dir)
 	if err != nil {
 		return nil, "", fmt.Errorf("Failed to expand package to directory %s. %w", dir, err)
 	}
@@ -116,7 +116,7 @@ func TestAddResource(t *testing.T) {
 	}
 	defer os.RemoveAll(parentDir)
 
-	_, expandDir, err := CreateAndExpandPackage(parentDir)
+	_, expandDir, err := createAndExpandPackage(parentDir)
 	if err != nil {
 		t.Fatalf("Failed to create and expand package. %s", err)
 	}
@@ -179,7 +179,7 @@ func TestPublish(t *testing.T) {
 	}
 	defer os.RemoveAll(parentDir)
 
-	pkgRepo, expandDir, err := CreateAndExpandPackage(parentDir)
+	pkgRepo, expandDir, err := createAndExpandPackage(parentDir)
 	if err != nil {
 		t.Fatalf("Failed to create and expand package. %s", err)
 	}
