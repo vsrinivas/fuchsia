@@ -331,8 +331,8 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);
 #define KTRACE_DEFAULT_BUFSIZE 32  // MB
 #define KTRACE_DEFAULT_GRPMASK 0xFFF
 
-void ktrace_report_live_threads(void);
-void ktrace_report_live_processes(void);
+void ktrace_report_live_threads();
+void ktrace_report_live_processes();
 
 // RAII type that emits begin/end duration events covering the lifetime of the
 // instance for use in tracing scopes.

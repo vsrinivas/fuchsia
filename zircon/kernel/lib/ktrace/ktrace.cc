@@ -24,9 +24,27 @@
 #include <object/thread_dispatcher.h>
 #include <vm/vm_aspace.h>
 
-#define ktrace_ticks_per_ms() (ticks_per_second() / 1000)
-
 namespace {
+
+struct ktrace_state {
+  // where the next record will be written
+  ktl::atomic<uint32_t> offset;
+
+  // mask of groups we allow, 0 == tracing disabled
+  ktl::atomic<int> grpmask;
+
+  // total size of the trace buffer
+  uint32_t bufsize;
+
+  // offset where tracing was stopped, 0 if tracing active
+  uint32_t marker;
+
+  // raw trace buffer
+  uint8_t* buffer;
+
+  // buffer is full or not
+  ktl::atomic<bool> buffer_full;
+};
 
 // One of these macros is invoked by kernel.inc for each syscall.
 
@@ -53,9 +71,9 @@ void ktrace_report_syscalls() {
   }
 }
 
-}  // namespace
+zx_ticks_t ktrace_ticks_per_ms() { return ticks_per_second() / 1000; }
 
-static StringRef* ktrace_find_probe(const char* name) {
+StringRef* ktrace_find_probe(const char* name) {
   for (StringRef* ref = StringRef::head(); ref != nullptr; ref = ref->next) {
     if (!strcmp(name, ref->string)) {
       return ref;
@@ -64,41 +82,57 @@ static StringRef* ktrace_find_probe(const char* name) {
   return nullptr;
 }
 
-static void ktrace_add_probe(StringRef* string_ref) {
+void ktrace_add_probe(StringRef* string_ref) {
   // Register and emit the string ref.
   string_ref->GetId();
 }
 
-static void ktrace_report_probes(void) {
+void ktrace_report_probes() {
   for (StringRef* ref = StringRef::head(); ref != nullptr; ref = ref->next) {
     ktrace_name_etc(TAG_PROBE_NAME, ref->id, 0, ref->string, true);
   }
 }
 
-typedef struct ktrace_state {
-  // where the next record will be written
-  ktl::atomic<uint32_t> offset;
+inline bool ktrace_enabled(uint32_t tag, ktrace_state* ks) {
+  if (tag & ks->grpmask.load())
+    return true;
+  return false;
+}
 
-  // mask of groups we allow, 0 == tracing disabled
-  ktl::atomic<int> grpmask;
+inline void ktrace_disable(ktrace_state* ks) {
+  ks->grpmask.store(0);
+  ks->buffer_full.store(true);
+}
 
-  // total size of the trace buffer
-  uint32_t bufsize;
+// The global ktrace state.
+ktrace_state KTRACE_STATE;
 
-  // offset where tracing was stopped, 0 if tracing active
-  uint32_t marker;
+}  // namespace
 
-  // raw trace buffer
-  uint8_t* buffer;
+void* ktrace_open(uint32_t tag, uint64_t ts) {
+  ktrace_state* ks = &KTRACE_STATE;
+  if (!ktrace_enabled(tag, ks)) {
+    return nullptr;
+  }
 
-  // buffer is full or not
-  ktl::atomic<bool> buffer_full;
-} ktrace_state_t;
+  uint32_t off;
+  if ((off = ks->offset.fetch_add(KTRACE_LEN(tag))) >= (ks->bufsize)) {
+    // if we arrive at the end, stop
+    ktrace_disable(ks);
+    return nullptr;
+  }
 
-static ktrace_state_t KTRACE_STATE;
+  ktrace_header_t* hdr = reinterpret_cast<ktrace_header_t*>(ks->buffer + off);
+  hdr->ts = ts;
+  hdr->tag = tag;
+  hdr->tid = KTRACE_FLAGS(tag) & KTRACE_FLAGS_CPU
+                 ? arch_curr_cpu_num()
+                 : static_cast<uint32_t>(Thread::Current::Get()->user_tid());
+  return hdr + 1;
+}
 
 ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len) {
-  ktrace_state_t* ks = &KTRACE_STATE;
+  ktrace_state* ks = &KTRACE_STATE;
 
   // Buffer size is limited by the marker if set,
   // otherwise limited by offset (last written point).
@@ -134,7 +168,7 @@ ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len) {
 }
 
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
-  ktrace_state_t* ks = &KTRACE_STATE;
+  ktrace_state* ks = &KTRACE_STATE;
 
   switch (action) {
     case KTRACE_ACTION_START:
@@ -201,7 +235,7 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
 }
 
 void ktrace_init(unsigned level) {
-  ktrace_state_t* ks = &KTRACE_STATE;
+  ktrace_state* ks = &KTRACE_STATE;
 
   // There's no utility in setting up ktrace if there's no syscalls to access
   // it. See zircon/kernel/syscalls/debug.cc for the corresponding syscalls.
@@ -263,19 +297,8 @@ void ktrace_init(unsigned level) {
   ktrace_probe(TraceAlways, TraceContext::Thread, "ktrace_ready"_stringref);
 }
 
-static inline bool ktrace_enabled(uint32_t tag, ktrace_state_t* ks) {
-  if (tag & ks->grpmask.load())
-    return true;
-  return false;
-}
-
-static inline void ktrace_disable(ktrace_state_t* ks) {
-  ks->grpmask.store(0);
-  ks->buffer_full.store(true);
-}
-
 void ktrace_tiny(uint32_t tag, uint32_t arg) {
-  ktrace_state_t* ks = &KTRACE_STATE;
+  ktrace_state* ks = &KTRACE_STATE;
   if (ktrace_enabled(tag, ks)) {
     tag = (tag & 0xFFFFFFF0) | 2;
     uint32_t off;
@@ -291,29 +314,8 @@ void ktrace_tiny(uint32_t tag, uint32_t arg) {
   }
 }
 
-void* ktrace_open(uint32_t tag, uint64_t ts) {
-  ktrace_state_t* ks = &KTRACE_STATE;
-  if (!ktrace_enabled(tag, ks))
-    return nullptr;
-
-  uint32_t off;
-  if ((off = ks->offset.fetch_add(KTRACE_LEN(tag))) >= (ks->bufsize)) {
-    // if we arrive at the end, stop
-    ktrace_disable(ks);
-    return nullptr;
-  }
-
-  ktrace_header_t* hdr = reinterpret_cast<ktrace_header_t*>(ks->buffer + off);
-  hdr->ts = ts;
-  hdr->tag = tag;
-  hdr->tid = KTRACE_FLAGS(tag) & KTRACE_FLAGS_CPU
-                 ? arch_curr_cpu_num()
-                 : static_cast<uint32_t>(Thread::Current::Get()->user_tid());
-  return hdr + 1;
-}
-
 void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
-  ktrace_state_t* ks = &KTRACE_STATE;
+  ktrace_state* ks = &KTRACE_STATE;
   if (ktrace_enabled(tag, ks) || (always && !ks->buffer_full.load())) {
     const uint32_t len = static_cast<uint32_t>(strnlen(name, ZX_MAX_NAME_LEN - 1));
 
