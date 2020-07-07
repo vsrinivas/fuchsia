@@ -86,8 +86,10 @@ abstract class OutputFormatter {
   }
 
   String get ratioDisplay {
-    var passed = wrapWith('PASS: $_numPassed', [green]);
-    var failed = wrapWith('FAIL: $_numFailed', [red]);
+    var passed =
+        wrapWith('PASS: $_numPassed', _numPassed > 0 ? [green] : [darkGray]);
+    var failed =
+        wrapWith('FAIL: $_numFailed', _numFailed > 0 ? [red] : [darkGray]);
     return '$passed $failed';
   }
 
