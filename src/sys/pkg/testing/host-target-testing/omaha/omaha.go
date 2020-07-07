@@ -10,20 +10,16 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
-	"regexp"
 	"strings"
-
-	//	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb/avb"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
-// TODO(vfcc): Waiting on fxr/382977
-// avbtool      *avb.AVBTool
 type OmahaServer struct {
-	url          string
+	serverURL    string
 	updateHost   string
 	updatePkg    string
 	server       *http.Server
@@ -36,12 +32,12 @@ type timestamp struct {
 	ElapsedDays    int `json:"elapsed_days"`
 }
 
-type url struct {
+type omahaURL struct {
 	Codebase string `json:"codebase"`
 }
 
-type urls struct {
-	Url []url `json:"url"`
+type omahaURLs struct {
+	Url []omahaURL `json:"url"`
 }
 
 type pkg struct {
@@ -70,9 +66,9 @@ type manifest struct {
 }
 
 type updateCheck struct {
-	Status   string   `json:"status"`
-	Urls     urls     `json:"urls"`
-	Manifest manifest `json:"manifest"`
+	Status   string    `json:"status"`
+	Urls     omahaURLs `json:"urls"`
+	Manifest manifest  `json:"manifest"`
 }
 
 type app struct {
@@ -84,11 +80,15 @@ type app struct {
 	UpdateCheck updateCheck `json:"updatecheck"`
 }
 
-type ResponseConfig struct {
+type responseConfig struct {
 	Server   string    `json:"server"`
 	Protocol string    `json:"protocol"`
 	DayStart timestamp `json:"timestamp"`
 	App      []app     `json:"app"`
+}
+
+type response struct {
+	Response responseConfig `json:"response"`
 }
 
 // NewOmahaServer starts an http server that serves the omaha response.
@@ -145,51 +145,60 @@ func NewOmahaServer(ctx context.Context, localHostname string) (*OmahaServer, er
 		}
 	}()
 
-	o := OmahaServer{url: serverURL, updateHost: "", updatePkg: "", server: server, mux: mux, shuttingDown: shuttingDown}
+	o := OmahaServer{
+		serverURL:    serverURL,
+		updateHost:   "",
+		updatePkg:    "",
+		server:       server,
+		mux:          mux,
+		shuttingDown: shuttingDown,
+	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		if len(o.updateHost) == 0 || len(o.updatePkg) == 0 {
 			w.Write([]byte(`{"status": "noupdate"}`))
 		} else {
-			j, err := json.Marshal(&ResponseConfig{
-				Server:   "prod",
-				Protocol: "3.0",
-				DayStart: timestamp{
-					ElapsedSeconds: 400,
-					ElapsedDays:    200,
-				},
-				App: []app{{
-					CohortHint: "a-cohort-hint",
-					AppId:      "some-id",
-					Cohort:     "1:1:",
-					Status:     "ok",
-					CohortName: "a-cohort-name",
-					UpdateCheck: updateCheck{
-						Status: "ok",
-						Urls: urls{
-							Url: []url{{Codebase: o.updateHost}},
-						},
-						Manifest: manifest{
-							Version: "0.1.2.3",
-							Actions: actions{
-								Action: []action{{
-									Run:   o.updatePkg,
-									Event: "update",
+			j, err := json.Marshal(&response{
+				Response: responseConfig{
+					Server:   "prod",
+					Protocol: "3.0",
+					DayStart: timestamp{
+						ElapsedSeconds: 400,
+						ElapsedDays:    200,
+					},
+					App: []app{{
+						CohortHint: "a-cohort-hint",
+						AppId:      "some-id",
+						Cohort:     "1:1:",
+						Status:     "ok",
+						CohortName: "a-cohort-name",
+						UpdateCheck: updateCheck{
+							Status: "ok",
+							Urls: omahaURLs{
+								Url: []omahaURL{{Codebase: o.updateHost}},
+							},
+							Manifest: manifest{
+								Version: "0.1.2.3",
+								Actions: actions{
+									Action: []action{{
+										Run:   o.updatePkg,
+										Event: "update",
+									},
+										{
+											Event: "postinstall",
+										}},
 								},
-									{
-										Event: "postinstall",
+								Packages: packages{
+									Pkg: []pkg{{
+										Name:     o.updatePkg,
+										Fp:       "2.0.1.2.3",
+										Required: true,
 									}},
+								},
 							},
-							Packages: packages{
-								Pkg: []pkg{{
-									Name:     o.updatePkg,
-									Fp:       "2.0.1.2.3",
-									Required: true,
-								}},
-							},
-						},
-					}},
+						}},
+					},
 				},
 			})
 			if err != nil {
@@ -209,18 +218,33 @@ func (o *OmahaServer) Shutdown(ctx context.Context) {
 
 // URL returns the URL of the Omaha Server that the target can use to talk to Omaha.
 func (o *OmahaServer) URL() string {
-	return o.url
+	return o.serverURL
 }
 
 // Service this update package URL as the current update package.
-func (o *OmahaServer) SetUpdatePkgURL(updatePkgURL string) error {
+func (o *OmahaServer) SetUpdatePkgURL(ctx context.Context, updatePkgURL string) error {
 	// Expected input format: fuchsia-pkg://fuchsia.com/update?hash=abcdef
-	urlMatcher := regexp.MustCompile("(fuchsia-pkg://.+)/(.+)")
-	matches := urlMatcher.FindStringSubmatch(updatePkgURL)
-	if matches != nil && len(matches) == 3 {
-		o.updateHost = matches[1]
-		o.updatePkg = matches[2]
-		return nil
+	u, err := url.Parse(updatePkgURL)
+	if err != nil {
+		return fmt.Errorf("invalid update package URL %q: %w", updatePkgURL, err)
 	}
-	return fmt.Errorf("invalid updatePkgURL: %s", updatePkgURL)
+
+	if u.Scheme != "fuchsia-pkg" {
+		return fmt.Errorf("scheme must be fuchsia-pkg, not %q", u.Scheme)
+	}
+
+	if u.Host == "" {
+		return fmt.Errorf("update package URL's host must not be empty")
+	}
+
+	logger.Infof(ctx, "Omaha Server update package set to %q", u.String())
+
+	o.updateHost = fmt.Sprintf("fuchsia-pkg://%s", u.Host)
+
+	// The updatePkg field is the URL with the scheme and host stripped off.
+	u.Scheme = ""
+	u.Host = ""
+	o.updatePkg = u.String()
+
+	return nil
 }

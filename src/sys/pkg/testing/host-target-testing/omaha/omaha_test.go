@@ -28,19 +28,19 @@ func readExpected(t *testing.T, reader io.Reader, expected string) {
 func TestSetPkgURL(t *testing.T) {
 	ctx := context.Background()
 	o, err := NewOmahaServer(ctx, "localhost")
-	err = o.SetUpdatePkgURL("bad")
+	err = o.SetUpdatePkgURL(ctx, "bad")
 	if err == nil {
 		t.Fatalf("SetUpdatePkgURL should fail when given string 'bad'.")
 	}
-	err = o.SetUpdatePkgURL("fuchsia-pkg://fuchsia.com/update?hash=abcdef")
+	err = o.SetUpdatePkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=abcdef")
 	if err != nil {
 		t.Fatalf("SetUpdatePkgURL should not fail with the given input. %s", err)
 	}
 	if o.updateHost != "fuchsia-pkg://fuchsia.com" {
 		t.Fatalf("updateHost does not match. Got %s expect %s", o.updateHost, "fuchsia-pkg://fuchsia.com")
 	}
-	if o.updatePkg != "update?hash=abcdef" {
-		t.Fatalf("updatePkg does not match. Got %s expect %s", o.updatePkg, "update?hash=abcdef")
+	if o.updatePkg != "/update/0?hash=abcdef" {
+		t.Fatalf("updatePkg does not match. Got %s expect %s", o.updatePkg, "/update/0?hash=abcdef")
 	}
 }
 
@@ -56,7 +56,7 @@ func TestBeforeAfterSetPkgURL(t *testing.T) {
 	}
 	readExpected(t, resp.Body, `{"status": "noupdate"}`)
 
-	err = o.SetUpdatePkgURL("fuchsia-pkg://fuchsia.com/update?hash=abcdef")
+	err = o.SetUpdatePkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=abcdef")
 	if err != nil {
 		t.Fatalf("SetUpdatePkgURL should not fail with the given input. %s", err)
 	}
@@ -67,38 +67,41 @@ func TestBeforeAfterSetPkgURL(t *testing.T) {
 	}
 
 	dec := json.NewDecoder(resp.Body)
-	var data ResponseConfig
+	var data response
 	err = dec.Decode(&data)
 	if err != nil {
 		t.Fatalf("Could not decode")
 	}
-	if data.App[0].UpdateCheck.Status != "ok" {
-		t.Fatalf("Status should be 'ok', is %s", data.App[0].UpdateCheck.Status)
+	updateCheck := data.Response.App[0].UpdateCheck
+	if updateCheck.Status != "ok" {
+		t.Fatalf("Status should be 'ok', is %s", updateCheck.Status)
 	}
-	if data.App[0].UpdateCheck.Urls.Url[0].Codebase != "fuchsia-pkg://fuchsia.com" {
+	if updateCheck.Urls.Url[0].Codebase != "fuchsia-pkg://fuchsia.com" {
 		t.Fatalf(
 			"Update package host should be 'fuchsia-pkg://fuchsia.com', is %s",
-			data.App[0].UpdateCheck.Urls.Url[0].Codebase)
+			updateCheck.Urls.Url[0].Codebase)
 	}
-	if data.App[0].UpdateCheck.Manifest.Actions.Action[0].Run != "update?hash=abcdef" {
+	action := updateCheck.Manifest.Actions.Action[0]
+	if action.Run != "/update/0?hash=abcdef" {
 		t.Fatalf(
-			"Manifest action should have 'update?hash=abcdef', is %s",
-			data.App[0].UpdateCheck.Manifest.Actions.Action[0].Run)
+			"Manifest action should have '/update/0?hash=abcdef', is %s",
+			action.Run)
 	}
-	if data.App[0].UpdateCheck.Manifest.Actions.Action[0].Event != "update" {
+	if action.Event != "update" {
 		t.Fatalf(
 			"First manifest action should have event 'update', is %s",
-			data.App[0].UpdateCheck.Manifest.Actions.Action[0].Event)
+			action.Event)
 	}
-	if data.App[0].UpdateCheck.Manifest.Actions.Action[1].Event != "postinstall" {
+	action = data.Response.App[0].UpdateCheck.Manifest.Actions.Action[1]
+	if action.Event != "postinstall" {
 		t.Fatalf(
 			"Second manifest action should have event 'postinstall', is %s",
-			data.App[0].UpdateCheck.Manifest.Actions.Action[1].Event)
+			action.Event)
 	}
-	if data.App[0].UpdateCheck.Manifest.Packages.Pkg[0].Name != "update?hash=abcdef" {
+	if updateCheck.Manifest.Packages.Pkg[0].Name != "/update/0?hash=abcdef" {
 		t.Fatalf(
-			"Manifest package should have 'update?hash=abcdef', is %s",
-			data.App[0].UpdateCheck.Manifest.Packages.Pkg[0].Name)
+			"Manifest package should have '/update?hash=abcdef', is %s",
+			updateCheck.Manifest.Packages.Pkg[0].Name)
 	}
 }
 
