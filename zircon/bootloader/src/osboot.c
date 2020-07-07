@@ -24,9 +24,7 @@
 #include <efi/protocol/simple-text-input.h>
 #include <efi/system-table.h>
 
-#include "abr.h"
 #include "bootbyte.h"
-#include "diskio.h"
 
 #define DEFAULT_TIMEOUT 10
 
@@ -36,12 +34,6 @@
 static nbfile nbkernel;
 static nbfile nbramdisk;
 static nbfile nbcmdline;
-
-static char cmdbuf[CMDLINE_MAX];
-void print_cmdline(void) {
-  cmdline_to_string(cmdbuf, sizeof(cmdbuf));
-  printf("cmdline: %s\n", cmdbuf);
-}
 
 nbfile* netboot_get_buffer(const char* name, size_t size) {
   if (!strcmp(name, NB_KERNEL_FILENAME)) {
@@ -170,21 +162,6 @@ char key_prompt(const char* valid_keys, int timeout_s) {
   return valid_keys[0];
 }
 
-void list_abr_info(void) {
-  for (uint32_t i = 0; i <= kAbrSlotIndexR; i++) {
-    AbrSlotInfo info;
-    AbrResult result;
-    result = zircon_abr_get_slot_info(i, &info);
-    if (result != kAbrResultOk) {
-      printf("Failed to get zircon%s slot info: %d\n", AbrGetSlotSuffix(i), result);
-      return;
-    }
-    printf("Slot zircon%s : Bootable? %d, Successful boot? %d, Active? %d, Retry# %d\n",
-           AbrGetSlotSuffix(i), info.is_bootable, info.is_marked_successful, info.is_active,
-           info.num_tries_remaining);
-  }
-}
-
 void do_select_fb(void) {
   uint32_t cur_mode = get_gfx_mode();
   uint32_t max_mode = get_gfx_max_mode();
@@ -213,38 +190,36 @@ void do_select_fb(void) {
 
 void do_bootmenu(bool have_fb) {
   const char* menukeys;
-  if (have_fb) {
-    menukeys = "rfax";
-  } else {
-    menukeys = "rax";
-  }
-
-  while (true) {
-    printf("  BOOT MENU  \n");
-    printf("  ---------  \n");
-    if (have_fb)
-      printf("  (f) list framebuffer modes\n");
-    printf("  (a) List abr info\n");
-    printf("  (r) reset\n");
-    printf("  (x) exit menu\n");
-    printf("\n");
-    char key = key_prompt(menukeys, INT_MAX);
-    switch (key) {
-      case 'f': {
-        do_select_fb();
-        break;
-      }
-      case 'a':
-        list_abr_info();
-        break;
-      case 'r':
-        gSys->RuntimeServices->ResetSystem(EfiResetCold, EFI_SUCCESS, 0, NULL);
-        break;
-      case 'x':
-      default:
-        return;
+  if (have_fb)
+    menukeys = "rfx";
+  else
+    menukeys = "rx";
+  printf("  BOOT MENU  \n");
+  printf("  ---------  \n");
+  if (have_fb)
+    printf("  (f) list framebuffer modes\n");
+  printf("  (r) reset\n");
+  printf("  (x) exit menu\n");
+  printf("\n");
+  char key = key_prompt(menukeys, INT_MAX);
+  switch (key) {
+    case 'f': {
+      do_select_fb();
+      break;
     }
+    case 'r':
+      gSys->RuntimeServices->ResetSystem(EfiResetCold, EFI_SUCCESS, 0, NULL);
+      break;
+    case 'x':
+    default:
+      break;
   }
+}
+
+static char cmdbuf[CMDLINE_MAX];
+void print_cmdline(void) {
+  cmdline_to_string(cmdbuf, sizeof(cmdbuf));
+  printf("cmdline: %s\n", cmdbuf);
 }
 
 static char netboot_cmdline[CMDLINE_MAX];
@@ -623,33 +598,14 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
   //
   // The first entry in valid_keys will be the default after the timeout.
-
-  // Move the current slot according to ABR to the top.
-  // Then check the bootbyte to override abr decision if necessary.
-  // Lastly use the value of bootloader.default to determine the first entry. If
+  // Check the bootbyte before checking bootloader.default
+  // Use the value of bootloader.default to determine the first entry. If
   // bootloader.default is not set, use "network".
-  // TODO(47049) : Make this logic more simpler
-
-  switch (zircon_abr_get_boot_slot()) {
-    case kAbrSlotIndexA:
-      swap_to_head('1', valid_keys, key_idx);
-      break;
-    case kAbrSlotIndexB:
-      swap_to_head('2', valid_keys, key_idx);
-      break;
-    case kAbrSlotIndexR:
-      swap_to_head('r', valid_keys, key_idx);
-      break;
-    default:
-      printf("Fatal error in ABR metadata!!");
-  }
-
+  //
   if (bootbyte == RTC_BOOT_RECOVERY) {
     swap_to_head('z', valid_keys, key_idx);
   } else if (bootbyte == RTC_BOOT_NORMAL) {
-    // TODO(47049) Commented out to use the ABR choice. Refactor to use a simple boot selection
-    // code.
-    // swap_to_head('m', valid_keys, key_idx);
+    swap_to_head('m', valid_keys, key_idx);
   } else if (bootbyte == RTC_BOOT_BOOTLOADER) {
     // swap_to_head('b', valid_keys, key_idx);
     printf("ERROR: booting to bootloader is not supported!\n");
@@ -657,10 +613,6 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     swap_to_head('m', valid_keys, key_idx);
   } else if (!memcmp(defboot, "zedboot", 7)) {
     swap_to_head('z', valid_keys, key_idx);
-  } else if (!memcmp(defboot, "local", 5)) {
-    // TODO(47049) Commented out to use the ABR choice. Refactor to use a simple boot selection
-    // code.
-    // swap_to_head('m', valid_keys, key_idx);
   } else {
     swap_to_head('n', valid_keys, key_idx);
   }
@@ -706,13 +658,6 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         break;
       case '1':
       case 'm':
-        printf("Booting ZIRCON-A...\n");
-        // Update current boot slot, in case the user chose differenlty than the ABR data
-        if (zircon_abr_get_boot_slot() != kAbrSlotIndexA) {
-          zircon_abr_set_slot_active(kAbrSlotIndexA);
-        }
-        zircon_abr_update_boot_slot_metadata();
-
         if (ktype == IMAGE_COMBO) {
           zedboot(img, sys, kernel, ksz);
         } else {
@@ -733,36 +678,12 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         }
         goto fail;
       case '2':
-        printf("Booting ZIRCON-B...\n");
-        // Update current boot slot, in case the user chose differenlty than the ABR data
-        if (zircon_abr_get_boot_slot() != kAbrSlotIndexB) {
-          zircon_abr_set_slot_active(kAbrSlotIndexB);
-        }
-        zircon_abr_update_boot_slot_metadata();
-
         if (ktype_b == IMAGE_COMBO) {
           zedboot(img, sys, kernel_b, ksz_b);
-        } else {
-          size_t rsz = 0;
-          void* ramdisk = NULL;
-          efi_file_protocol* ramdisk_file = xefi_open_file(L"bootdata.bin");
-          const char* ramdisk_name = "bootdata.bin";
-          if (ramdisk_file == NULL) {
-            ramdisk_file = xefi_open_file(L"ramdisk.bin");
-            ramdisk_name = "ramdisk.bin";
-          }
-          if (ramdisk_file) {
-            printf("Loading %s...\n", ramdisk_name);
-            ramdisk = xefi_read_file(ramdisk_file, &rsz, FRONT_BYTES);
-            ramdisk_file->Close(ramdisk_file);
-          }
-          boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz);
         }
-        goto fail;
+        __FALLTHROUGH;
       case 'r':
       case 'z':
-        printf("Booting Recovery...\n");
-        zircon_abr_update_boot_slot_metadata();
         if (zedboot_ktype == IMAGE_COMBO) {
           zedboot(img, sys, zedboot_kernel, zedboot_size);
         } else {

@@ -81,30 +81,13 @@ typedef struct {
 } disk_t;
 
 static efi_status disk_read(disk_t* disk, size_t offset, void* data, size_t length) {
-  if (disk->first > disk->last) {
-    return EFI_VOLUME_CORRUPTED;
-  }
-
   uint64_t size = (disk->last - disk->first) * disk->blksz;
+
   if ((offset > size) || ((size - offset) < length)) {
     return EFI_INVALID_PARAMETER;
   }
 
   return disk->io->ReadDisk(disk->io, disk->id, (disk->first * disk->blksz) + offset, length, data);
-}
-
-static efi_status disk_write(disk_t* disk, size_t offset, void* data, size_t length) {
-  if (disk->first > disk->last) {
-    return EFI_VOLUME_CORRUPTED;
-  }
-
-  uint64_t size = (disk->last - disk->first) * disk->blksz;
-  if ((offset > size) || ((size - offset) < length)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  return disk->io->WriteDisk(disk->io, disk->id, (disk->first * disk->blksz) + offset, length,
-                             data);
 }
 
 static void disk_close(disk_t* disk) {
@@ -215,8 +198,8 @@ fail_open_devpath:
 
 // Given a disk structure, find the kernel on that disk by reading the partition table
 // and looking for the partition with the supplied guid_name.
-static int disk_find_partition(disk_t* disk, bool verbose, const uint8_t* guid_value,
-                               const char* guid_name) {
+static int disk_find_kernel(disk_t* disk, bool verbose, const uint8_t* guid_value,
+                            const char* guid_name) {
   gpt_header_t gpt;
   efi_status status = disk_read(disk, disk->blksz, &gpt, sizeof(gpt));
   if (status != EFI_SUCCESS) {
@@ -309,7 +292,7 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz,
     return NULL;
   }
 
-  if (disk_find_partition(&disk, verbose, guid_value, guid_name)) {
+  if (disk_find_kernel(&disk, verbose, guid_value, guid_name)) {
     printf("Cannot find %s partition on bootloader disk.\n", guid_name);
     goto fail0;
   }
@@ -352,48 +335,4 @@ fail1:
 fail0:
   disk_close(&disk);
   return NULL;
-}
-
-efi_status read_partition(efi_handle img, efi_system_table* sys, const uint8_t* guid_value,
-                          const char* guid_name, uint64_t offset, unsigned char* data,
-                          size_t size) {
-  static bool verbose = false;
-  disk_t disk;
-
-  if (disk_find_boot(img, sys, verbose, &disk) < 0) {
-    printf("Cannot find bootloader disk.\n");
-    return EFI_NOT_FOUND;
-  }
-
-  if (disk_find_partition(&disk, verbose, guid_value, guid_name)) {
-    printf("Cannot find %s partition on bootloader disk.\n", guid_name);
-    disk_close(&disk);
-    return EFI_NOT_FOUND;
-  }
-
-  efi_status status = disk_read(&disk, offset, data, size);
-  disk_close(&disk);
-  return status;
-}
-
-efi_status write_partition(efi_handle img, efi_system_table* sys, const uint8_t* guid_value,
-                           const char* guid_name, uint64_t offset, const unsigned char* data,
-                           size_t size) {
-  static bool verbose = false;
-  disk_t disk;
-
-  if (disk_find_boot(img, sys, verbose, &disk) < 0) {
-    printf("Cannot find bootloader disk.\n");
-    return EFI_NOT_FOUND;
-  }
-
-  if (disk_find_partition(&disk, verbose, guid_value, guid_name)) {
-    printf("Cannot find %s partition on bootloader disk.\n", guid_name);
-    disk_close(&disk);
-    return EFI_NOT_FOUND;
-  }
-
-  efi_status status = disk_write(&disk, offset, (void*)data, size);
-  disk_close(&disk);
-  return status;
 }

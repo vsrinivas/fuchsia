@@ -138,10 +138,10 @@ template("vbmeta") {
       # so, we do not care about a partition size checking.
       # `partition_size' is a mandatory option, thus let
       # use obviously big number for the partition size to pass
-      # verification. 200M should be good enough.
+      # verification. 100M should be good enough.
       # TODO (dmitryya@) fix avbtool to do not check partition
       # size if --do_not_append_vbmeta_image is specified.
-      "209715200",
+      "104857600",
     ]
   }
 
