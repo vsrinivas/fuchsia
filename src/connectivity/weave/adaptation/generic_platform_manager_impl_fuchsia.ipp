@@ -112,6 +112,12 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       FX_LOGS(ERROR) << "ConfigurationManager dynamic config failed: " << ErrorStr(err);
     }
 
+    // Initialize the service directory manager.
+    err = InitServiceDirectoryManager();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "ServiceDirectoryManager init failed: " << ErrorStr(err);
+    }
+
     err = DeviceDescriptionSvr().Init();
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "DeviceDescriptionServer init failed: "<< ErrorStr(err);

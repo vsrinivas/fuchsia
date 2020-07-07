@@ -140,7 +140,24 @@ class ConnectivityManagerImpl final
   ServiceTunnelMode mServiceTunnelMode;
   uint32_t mWiFiStationReconnectIntervalMS;
   uint32_t mWiFiAPIdleTimeoutMS;
-  uint16_t mFlags;
+  uint16_t flags_;
+
+  // Handle service tunnel notifications.
+  // |reason| specifies the reason for the notification.
+  // |err| specifies if there was an error during a tunnel related operation.
+  // |app_ctx| provides application context.
+  static void HandleServiceTunnelNotification(
+      Profiles::WeaveTunnel::WeaveTunnelConnectionMgr::TunnelConnNotifyReasons reason,
+      WEAVE_ERROR err, void* app_ctx);
+
+  // Returns a boolean to specify if the tunnel should be started.
+  bool ShouldStartServiceTunnel(void);
+
+  // Start the service tunnel.
+  void StartServiceTunnel(void);
+
+  // Stop the service tunnel.
+  void StopServiceTunnel(void);
 };
 
 inline bool ConnectivityManagerImpl::_IsWiFiStationApplicationControlled(void) {
@@ -172,11 +189,11 @@ inline uint32_t ConnectivityManagerImpl::_GetWiFiAPIdleTimeoutMS(void) {
 }
 
 inline bool ConnectivityManagerImpl::_HaveIPv4InternetConnectivity(void) {
-  return ::nl::GetFlag(mFlags, kFlag_HaveIPv4InternetConnectivity);
+  return ::nl::GetFlag(flags_, kFlag_HaveIPv4InternetConnectivity);
 }
 
 inline bool ConnectivityManagerImpl::_HaveIPv6InternetConnectivity(void) {
-  return ::nl::GetFlag(mFlags, kFlag_HaveIPv6InternetConnectivity);
+  return ::nl::GetFlag(flags_, kFlag_HaveIPv6InternetConnectivity);
 }
 
 inline ConnectivityManager::ServiceTunnelMode ConnectivityManagerImpl::_GetServiceTunnelMode(void) {
