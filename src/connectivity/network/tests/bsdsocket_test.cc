@@ -252,9 +252,7 @@ class SocketOptsTest : public SocketKindTest {
     return {.level = IPPROTO_IP, .option = IP_RECVTOS};
   }
 
-  SockOption GetNoChecksum() {
-    return {.level = SOL_SOCKET, .option = SO_NO_CHECK};
-  }
+  SockOption GetNoChecksum() { return {.level = SOL_SOCKET, .option = SO_NO_CHECK}; }
 };
 
 // The SocketOptsTest is adapted from gvisor/tests/syscalls/linux/socket_ip_unbound.cc
@@ -1259,11 +1257,9 @@ void TestHangupDuringConnect(void (*hangup)(fbl::unique_fd*)) {
     pfd.fd = client.get();
     pfd.events = POLLIN;
 
-    int poll_result = poll(&pfd, 1, kTimeout);
-    if (poll_result == 0) {
-      FAIL() << "poll timed out";
-    }
-    ASSERT_EQ(poll_result, 1) << strerror(errno);
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
   }
 
   ASSERT_EQ(close(client.release()), 0) << strerror(errno);
@@ -1620,7 +1616,9 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
       .fd = acptfd,
       .events = POLLIN,
   };
-  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+  int n = poll(&pfd, 1, kTimeout);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
 
   int connfd;
   ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
@@ -1659,7 +1657,9 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
       .fd = acptfd,
       .events = POLLIN,
   };
-  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+  int n = poll(&pfd, 1, kTimeout);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
 
   int connfd;
   ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
@@ -1706,7 +1706,9 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
         .fd = connfd,
         .events = POLLOUT,
     };
-    ASSERT_EQ(1, poll(&pfd, 1, kTimeout));
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
 
     int val;
     socklen_t vallen = sizeof(val);
@@ -1764,7 +1766,9 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
         .fd = connfd,
         .events = POLLIN,
     };
-    ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
 
     int val;
     socklen_t vallen = sizeof(val);
@@ -1809,7 +1813,9 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
         .fd = connfd,
         .events = POLLOUT,
     };
-    ASSERT_EQ(1, poll(&pfd, 1, kTimeout));
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
 
     int val;
     socklen_t vallen = sizeof(val);
@@ -1891,11 +1897,13 @@ TEST(NetStreamTest, Shutdown) {
 
   EXPECT_EQ(shutdown(inbound, SHUT_WR), 0) << strerror(errno);
 
-  struct pollfd fds = {};
-  fds.fd = outbound;
-  fds.events = POLLRDHUP;
-  EXPECT_EQ(poll(&fds, 1, kTimeout), 1) << strerror(errno);
-  EXPECT_EQ(fds.revents, POLLRDHUP);
+  struct pollfd pfd = {};
+  pfd.fd = outbound;
+  pfd.events = POLLRDHUP;
+  int n = poll(&pfd, 1, kTimeout);
+  EXPECT_GE(n, 0) << strerror(errno);
+  EXPECT_EQ(n, 1);
+  EXPECT_EQ(pfd.revents, POLLRDHUP);
 
   EXPECT_EQ(close(listener), 0) << strerror(errno);
   EXPECT_EQ(close(outbound), 0) << strerror(errno);
@@ -1915,7 +1923,8 @@ class NetStreamSocketsTest : public ::testing::Test {
         << strerror(errno);
 
     socklen_t addrlen = sizeof(addr);
-    ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0) << strerror(errno);
+    ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+        << strerror(errno);
     ASSERT_EQ(addrlen, sizeof(addr));
 
     ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
@@ -1992,11 +2001,13 @@ TEST_F(NetStreamSocketsTest, ShutdownReset) {
   EXPECT_EQ(write(client.get(), &c, sizeof(c)), static_cast<ssize_t>(sizeof(c))) << strerror(errno);
 
   // Expect the client application socket to be notified of the RST.
-  struct pollfd fds = {};
-  fds.fd = client.get();
-  fds.events = POLLHUP;
-  EXPECT_EQ(poll(&fds, 1, kTimeout), 1) << strerror(errno);
-  EXPECT_EQ(fds.revents, POLLHUP|POLLERR);
+  struct pollfd pfd = {};
+  pfd.fd = client.get();
+  pfd.events = POLLHUP;
+  int n = poll(&pfd, 1, kTimeout);
+  EXPECT_GE(n, 0) << strerror(errno);
+  EXPECT_EQ(n, 1);
+  EXPECT_EQ(pfd.revents, POLLHUP | POLLERR);
 }
 
 // ShutdownPendingWrite tests for all of the application writes that
@@ -2013,7 +2024,8 @@ TEST_F(NetStreamSocketsTest, ShutdownPendingWrite) {
   // read on receiving a FIN. Keeping a timeout for unexpected failures.
   struct timeval tv = {};
   tv.tv_sec = kTimeout;
-  EXPECT_EQ(setsockopt(client.get(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
+  EXPECT_EQ(setsockopt(client.get(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0)
+      << strerror(errno);
 
   ssize_t rcvd = 0;
   ssize_t ret;
@@ -2427,7 +2439,9 @@ TEST(NetDatagramTest, DatagramConnectWrite) {
       .fd = recvfd,
       .events = POLLIN,
   };
-  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+  int n = poll(&pfd, 1, kTimeout);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(recvfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_STREQ(buf, msg);
@@ -2495,9 +2509,13 @@ TEST(NetDatagramTest, DatagramPOLLOUT) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
-  struct pollfd fds = {fd.get(), POLLOUT, 0};
-  int nfds = poll(&fds, 1, kTimeout);
-  EXPECT_EQ(1, nfds) << "poll returned: " << nfds << " errno: " << strerror(errno);
+  struct pollfd pfd = {
+      .fd = fd.get(),
+      .events = POLLOUT,
+  };
+  int n = poll(&pfd, 1, kTimeout);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
 
   EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
@@ -2990,7 +3008,9 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
             .fd = recvfd.get(),
             .events = POLLIN,
         };
-        ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+        int n = poll(&pfd, 1, kTimeout);
+        ASSERT_GE(n, 0) << strerror(errno);
+        ASSERT_EQ(n, 1);
         char buf[sizeof(msg) + 1] = {};
         ASSERT_EQ(read(recvfd.get(), buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
         ASSERT_STREQ(buf, msg);
