@@ -17,5 +17,7 @@ source_set("util") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",
     "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

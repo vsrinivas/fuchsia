@@ -46,6 +46,7 @@ test("virtio-input-test") {
     "input_touch.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",

@@ -139,6 +139,7 @@ source_set("semantics_integration_test_fixture") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/zx",
   ]
 }
