@@ -90,20 +90,29 @@ impl EventSource {
         Ok(EventLog::new(event_stream))
     }
 
-    // This is a convenience method that subscribes to the `CapabilityRouted` event,
-    // spawns a new task, and injects the service provided by the injector if requested
-    // by the event.
-    pub async fn install_injector<I: 'static>(&self, injector: Arc<I>) -> Result<AbortHandle, Error>
+    /// This is a convenience method that subscribes to the `CapabilityRouted` event,
+    /// spawns a new task, and injects the service provided by the injector if requested
+    /// by the event. A `matcher` can be optionally supplied allowing the caller to choose
+    /// the target that gets the injected capability.
+    pub async fn install_injector<I: 'static>(
+        &self,
+        injector: Arc<I>,
+        matcher: Option<EventMatcher>,
+    ) -> Result<AbortHandle, Error>
     where
         I: Injector,
     {
         let mut event_stream = self.subscribe(vec![CapabilityRouted::NAME]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        let matcher = matcher.unwrap_or(EventMatcher::new());
         fasync::spawn(
             Abortable::new(
                 async move {
                     loop {
-                        let event = match event_stream.wait_until_type::<CapabilityRouted>().await {
+                        let event = match event_stream
+                            .wait_until_exact::<CapabilityRouted>(matcher.clone())
+                            .await
+                        {
                             Ok(e) => e,
                             Err(e) => match e.downcast::<EventStreamError>() {
                                 Ok(EventStreamError::StreamClosed) => return,
@@ -279,70 +288,6 @@ impl EventStream {
             if event_matcher.matches(&event) {
                 return Ok(event);
             }
-            event.resume().await?;
-        }
-    }
-
-    /// Waits for a component capability to be routed matching a particular
-    /// target moniker and capability. Implicitly resumes all other events.
-    /// Returns the casted type if successful and an error otherwise.
-    pub async fn wait_until_component_capability(
-        &mut self,
-        expected_target_moniker: &str,
-        expected_capability_id: &str,
-    ) -> Result<CapabilityRouted, Error> {
-        loop {
-            let event = self
-                .wait_until_exact::<CapabilityRouted>(
-                    EventMatcher::new().expect_moniker(expected_target_moniker),
-                )
-                .await?;
-            if let Ok(payload) = &event.result {
-                if expected_capability_id == payload.capability_id {
-                    match payload.source {
-                        fsys::CapabilitySource::Component(_) => return Ok(event),
-                        _ => {}
-                    }
-                }
-            }
-            event.resume().await?;
-        }
-    }
-
-    /// Waits for a framework capability to be routed matching a particular
-    /// target moniker, scope moniker and capability. Implicitly resumes all other events.
-    /// Returns the casted type if successful and an error otherwise.
-    pub async fn wait_until_framework_capability(
-        &mut self,
-        expected_target_moniker: &str,
-        expected_capability_id: &str,
-        expected_scope_moniker: Option<&str>,
-    ) -> Result<CapabilityRouted, Error> {
-        loop {
-            let event = self
-                .wait_until_exact::<CapabilityRouted>(
-                    EventMatcher::new().expect_moniker(expected_target_moniker),
-                )
-                .await?;
-
-            // If the capability ID matches and the capability source is framework
-            // with a matching optional scope moniker, then return the event.
-            if let Ok(payload) = &event.result {
-                if expected_capability_id == payload.capability_id {
-                    match &payload.source {
-                        fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
-                            scope_moniker,
-                            ..
-                        }) if scope_moniker.as_ref().map(|s| s.as_str())
-                            == expected_scope_moniker =>
-                        {
-                            return Ok(event)
-                        }
-                        _ => {}
-                    }
-                }
-            }
-
             event.resume().await?;
         }
     }

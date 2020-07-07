@@ -69,7 +69,7 @@ async fn builtin_time_service_routed() -> Result<(), Error> {
     debug!("injecting TestOutcomeCapability");
     let (capability, test_case) = test_outcome_report();
     event_source
-        .install_injector(capability)
+        .install_injector(capability, None)
         .await
         .expect("failed to install TestOutcomeCapability");
 

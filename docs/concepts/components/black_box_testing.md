@@ -311,33 +311,12 @@ impl Injector for EchoCapability {
 }
 ```
 
-It is possible to listen for a `CapabilityRouted` event and install the injector:
-
-```rust
-// Create the server end of EchoService
-let echo_capability = EchoCapability::new();
-
-// Subscribe to CapabilityRouted events
-let event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
-
-// Wait until ./foo:0 attempts to connect to the EchoService component capability
-let event = event_stream.wait_until_component_capability(
-    "./foo:0",
-    "/svc/fuchsia.echo.EchoService",
-).await?;
-
-event.inject(echo_capability).await?;
-
-// Resume from the event
-event.resume().await?;
-```
-
-Alternatively, the `BlockingEventSource` can automatically install an injector
+The `BlockingEventSource` can automatically install an injector
 matching the capability requested by any component in the test.
 
 ```rust
 let echo_capability = EchoCapability::new();
-event_source.install_injector(echo_capability).await?;
+event_source.install_injector(echo_capability, None).await?;
 
 // Subscribe to other events.
 
@@ -387,28 +366,14 @@ impl Interposer for EchoInterposer {
 }
 ```
 
-The test can use `EchoInterposer` on any `CapabilityRouted` event:
-
-```rust
-// Wait for echo_looper to attempt to connect to the Echo service
-let event = event_stream
-    .wait_until_component_capability("/echo_looper:0", "/svc/fidl.examples.routing.echo.Echo")
-    .await?;
-
-// Setup the interposer
-let (interposer, mut rx) = EchoInterposer::new();
-event.interpose(interposer).await?;
-event.resume().await?;
-```
-
-Alternatively, the `BlockingEventSource` can automatically install an interposer
+The `BlockingEventSource` can automatically install an interposer
 matching the capability requested by any component in the test.
 
 ```rust
 let (interposer, mut rx) = EchoInterposer::new();
-event_source.install_interposer(interposer).await?;
+event_source.install_interposer(interposer, None).await?;
 
-// Subscribe to othere events.
+// Subscribe to other events.
 
 event_source.start_component_tree().await?;
 ```

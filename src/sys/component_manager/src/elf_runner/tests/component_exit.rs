@@ -48,7 +48,7 @@ async fn test_exit_after_rendezvous() {
     // component tree.
     let event_source = EventSource::new_sync().unwrap();
     let rendezvous_service = Arc::new(RendezvousService { call_count: Mutex::new(0) });
-    event_source.install_injector(rendezvous_service.clone()).await.unwrap();
+    event_source.install_injector(rendezvous_service.clone(), None).await.unwrap();
     event_source.start_component_tree().await.unwrap();
 
     // Launch the component under test.

@@ -29,8 +29,10 @@ async fn setup_harness_connection(
     // Install HarnessReceiver injector for the child component to connect and to send
     // the harness to run the test through.
     let (capability, mut rx) = Io1HarnessReceiver::new();
-    let injector =
-        event_source.install_injector(capability).await.context("Cannot install injector.")?;
+    let injector = event_source
+        .install_injector(capability, None)
+        .await
+        .context("Cannot install injector.")?;
 
     event_source.start_component_tree().await?;
 

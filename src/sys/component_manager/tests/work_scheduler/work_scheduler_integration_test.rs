@@ -18,7 +18,7 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    event_source.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
+    event_source.install_injector(work_scheduler_dispatch_reporter.clone(), None).await?;
 
     event_source.start_component_tree().await?;
 
@@ -45,7 +45,7 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    event_source.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
+    event_source.install_injector(work_scheduler_dispatch_reporter.clone(), None).await?;
 
     event_source.start_component_tree().await?;
 

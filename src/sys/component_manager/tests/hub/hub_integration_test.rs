@@ -51,7 +51,7 @@ impl TestRunner {
             let event_stream = event_source.subscribe(event_names).await?;
 
             // Inject HubReportCapability wherever it's requested.
-            event_source.install_injector(hub_report_capability.clone()).await?;
+            event_source.install_injector(hub_report_capability.clone(), None).await?;
 
             // Unblock component manager
             event_source.start_component_tree().await?;

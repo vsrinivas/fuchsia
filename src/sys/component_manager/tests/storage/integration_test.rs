@@ -86,7 +86,7 @@ async fn storage_from_collection() -> Result<(), Error> {
     // rendezvous so the test can inspect storage before the child is
     // destroyed.
     let trigger_capability = TriggerCapability::new(trigger_lock.clone());
-    event_source.install_injector(trigger_capability).await?;
+    event_source.install_injector(trigger_capability, None).await?;
 
     event_source.start_component_tree().await?;
 

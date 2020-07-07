@@ -31,7 +31,7 @@ async fn run_single_test(url: &str, expected_output: &str) -> Result<(), Error> 
 
     let event_source = test.connect_to_event_source().await?;
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability).await?;
+    let injector = event_source.install_injector(capability, None).await?;
     event_source.start_component_tree().await?;
 
     let event = echo_rx.next().await.unwrap();

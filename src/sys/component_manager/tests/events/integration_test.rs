@@ -21,7 +21,7 @@ async fn async_event_source_test() -> Result<(), Error> {
     let event_source = test.connect_to_event_source().await?;
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability).await?;
+    let injector = event_source.install_injector(capability, None).await?;
 
     event_source.start_component_tree().await?;
 
@@ -76,27 +76,12 @@ async fn scoped_events_test() -> Result<(), Error> {
     let event_source = test.connect_to_event_source().await?;
 
     // Inject an echo capability for `echo_reporter` so that we can observe its messages here.
-    let mut echo_rx = {
-        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::NAME]).await?;
+    let (capability, mut echo_rx) = EchoCapability::new();
+    let injector = event_source
+        .install_injector(capability, Some(EventMatcher::new().expect_moniker("./echo_reporter:0")))
+        .await?;
 
-        event_source.start_component_tree().await?;
-
-        // Wait for `echo_reporter` to attempt to connect to the Echo service
-        let event = event_stream
-            .wait_until_framework_capability(
-                "./echo_reporter:0",
-                "/svc/fidl.examples.routing.echo.Echo",
-                Some("./echo_reporter:0"),
-            )
-            .await?;
-
-        // Setup the echo capability.
-        let (capability, echo_rx) = EchoCapability::new();
-        event.inject(capability).await?;
-        event.resume().await?;
-
-        echo_rx
-    };
+    event_source.start_component_tree().await?;
 
     // Wait to receive the start trigger that echo_reporter recieved. This
     // indicates to `echo_reporter` that it should start collecting `CapabilityRouted`
@@ -127,6 +112,8 @@ async fn scoped_events_test() -> Result<(), Error> {
     );
     events_echo.resume();
 
+    injector.abort();
+
     Ok(())
 }
 
@@ -141,27 +128,14 @@ async fn realm_offered_event_source_test() -> Result<(), Error> {
 
     // Inject echo capability for `root/nested_realm/reporter` so that we can observe its messages
     // here.
-    let mut echo_rx = {
-        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::NAME]).await?;
-
-        event_source.start_component_tree().await?;
-
-        // Wait for `reporter` to connect to the service.
-        let event = event_stream
-            .wait_until_framework_capability(
-                "./nested_realm:0/reporter:0",
-                "/svc/fidl.examples.routing.echo.Echo",
-                Some("./nested_realm:0/reporter:0"),
-            )
-            .await?;
-
-        // Setup the echo capability.
-        let (capability, echo_rx) = EchoCapability::new();
-        event.inject(capability).await?;
-        event.resume().await?;
-
-        echo_rx
-    };
+    let (capability, mut echo_rx) = EchoCapability::new();
+    let injector = event_source
+        .install_injector(
+            capability,
+            Some(EventMatcher::new().expect_moniker("./nested_realm:0/reporter:0")),
+        )
+        .await?;
+    event_source.start_component_tree().await?;
 
     // Verify that the `reporter` sees `Started` for the three components started under the
     // `nested_realm`.
@@ -170,6 +144,8 @@ async fn realm_offered_event_source_test() -> Result<(), Error> {
         assert_eq!(events_echo.message, format!("./child_{}:0", child));
         events_echo.resume();
     }
+
+    injector.abort();
 
     Ok(())
 }
@@ -184,7 +160,7 @@ async fn nested_event_source_test() -> Result<(), Error> {
     let event_source = test.connect_to_event_source().await?;
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability).await?;
+    let injector = event_source.install_injector(capability, None).await?;
 
     event_source.start_component_tree().await?;
 
@@ -277,7 +253,7 @@ async fn event_capability_ready() -> Result<(), Error> {
     let event_source = test.connect_to_event_source().await?;
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability).await?;
+    let injector = event_source.install_injector(capability, None).await?;
 
     event_source.start_component_tree().await?;
 
@@ -311,7 +287,7 @@ async fn resolved_error_test() -> Result<(), Error> {
     let event_source = test.connect_to_event_source().await?;
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability).await?;
+    let injector = event_source.install_injector(capability, None).await?;
 
     event_source.start_component_tree().await?;
 
@@ -332,7 +308,7 @@ async fn synthesis_test() -> Result<(), Error> {
     let event_source = test.connect_to_event_source().await?;
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability).await?;
+    let injector = event_source.install_injector(capability, None).await?;
 
     event_source.start_component_tree().await?;
     let mut events = vec![];
@@ -369,7 +345,7 @@ async fn static_event_stream_capability_requested_test() -> Result<(), Error> {
     let event_source = test.connect_to_event_source().await?;
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = event_source.install_injector(capability).await?;
+    let injector = event_source.install_injector(capability, None).await?;
 
     event_source.start_component_tree().await?;
 
