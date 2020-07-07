@@ -8,7 +8,8 @@
         ],
         "features": [
             "build-info",
-            "config-data"
+            "config-data",
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.bluetooth.sys.Access",

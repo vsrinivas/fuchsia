@@ -21,3 +21,6 @@ pub mod device_storage;
 /// This mod implements a factory that can be populated to provide the registry
 /// with handlers on demand.
 pub mod setting_handler_factory_impl;
+
+/// This mod implements persistent storage.
+pub mod store_accessor;
