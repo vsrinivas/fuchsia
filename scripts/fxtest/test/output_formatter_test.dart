@@ -14,7 +14,7 @@ void main() {
     var formatter = StandardOutputFormatter(
         hasRealTimeOutput: false, wrapWith: config.wrapWith);
     expect(formatter.ratioDisplay,
-        '${green.escape}PASS: 0${resetAll.escape} ${red.escape}FAIL: 0${resetAll.escape}');
+        '${darkGray.escape}PASS: 0${resetAll.escape} ${darkGray.escape}FAIL: 0${resetAll.escape}');
   });
 
   test('info formatter displays ratio correctly', () {

@@ -98,9 +98,13 @@ dart_test("test_runner_test") {
 dart_test("fxtest_tests") {
   sources = [
     "args_test.dart",
+    "helper_test.dart",
+    "output_formatter_test.dart",
     "output_test.dart",
     "package_repository_test.dart",
     "parsing_test.dart",
+    "process_output_test.dart",
+    "test_bundle_test.dart",
     "setup_test.dart",
     "utils_test.dart",
   ]
