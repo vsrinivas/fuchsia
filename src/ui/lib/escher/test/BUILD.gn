@@ -129,6 +129,7 @@ if (is_mac) {
     if (is_fuchsia) {
       sources += [
         "flib/fence_listener_unittest.cc",
+        "flib/fence_queue_unittest.cc",
         "flib/fence_set_listener_unittest.cc",
         "flib/release_fence_signaller_unittest.cc",
         "flib/util.cc",

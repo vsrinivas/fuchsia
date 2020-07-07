@@ -426,6 +426,8 @@ template("escher_library") {
         "flib/fence.h",
         "flib/fence_listener.cc",
         "flib/fence_listener.h",
+        "flib/fence_queue.cc",
+        "flib/fence_queue.h",
         "flib/fence_set_listener.cc",
         "flib/fence_set_listener.h",
         "flib/release_fence_signaller.cc",
