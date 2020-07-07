@@ -39,7 +39,7 @@ func parsePackageJSON(path string) (string, string, error) {
 	return packageInfo.Name, packageInfo.Version, nil
 }
 
-// NewPackage returns a PackageBuilder
+// NewPackageBuilder returns a PackageBuilder
 // Must call `Close()` to clean up PackageBuilder
 func NewPackageBuilder(name string, version string) (*PackageBuilder, error) {
 	if name == "" || version == "" {
@@ -60,7 +60,7 @@ func NewPackageBuilder(name string, version string) (*PackageBuilder, error) {
 	}, nil
 }
 
-// NewPackageFromDir returns a PackageBuilder that initializes from the `dir` package directory.
+// NewPackageBuilderFromDir returns a PackageBuilder that initializes from the `dir` package directory.
 // Must call `Close()` to clean up PackageBuilder
 func NewPackageBuilderFromDir(dir string, name string, version string) (*PackageBuilder, error) {
 	pkg, err := NewPackageBuilder(name, version)
@@ -90,7 +90,7 @@ func (p *PackageBuilder) Close() {
 	os.RemoveAll(p.Cache)
 }
 
-// Add a resource to the package at the given path.
+// AddResource adds a resource to the package at the given path.
 func (p *PackageBuilder) AddResource(path string, contents io.Reader) error {
 	if _, ok := p.Contents[path]; ok {
 		return fmt.Errorf("a resource already exists at path %s", path)
