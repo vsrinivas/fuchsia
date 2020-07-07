@@ -244,6 +244,8 @@ TEST_F(IntegrationTest, SendVsyncsAfterClientsBail) {
       },
       zx::sec(1)));
 
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get()]() { return p->vsync_count() == 1; }, zx::sec(1)));
   // Send the controller a vsync for an image it won't recognize anymore.
   const uint64_t handles[] = {0UL};
   controller()->DisplayControllerInterfaceOnDisplayVsync(primary_client->display_id(), 0u, handles,
