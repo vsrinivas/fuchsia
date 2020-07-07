@@ -195,7 +195,7 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
 
 TEST_F(DeviceEnumerationTest, Vim3Test) {
   static const char* kDevicePaths[] = {
-      "sys/platform/vim",
+      "sys/platform/vim3",
       "sys/platform/00:00:1b/sysmem",
       "sys/platform/05:06:1/aml-axg-gpio",
       "sys/platform/05:00:14/clocks",
