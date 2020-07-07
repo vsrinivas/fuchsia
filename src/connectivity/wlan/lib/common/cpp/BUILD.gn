@@ -37,6 +37,7 @@ source_set("common") {
     "include/wlan/common/stats.h",
     "include/wlan/common/tx_vector.h",
     "include/wlan/common/write_element.h",
+    "logging.cc",
     "mac_frame.cc",
     "macaddr.cc",
     "mcs_rate_lookup.cc",

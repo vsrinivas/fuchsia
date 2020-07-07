@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <cstdio>
 
+#include <ddk/hw/wlan/wlaninfo.h>
+
 // TODO(hahnr): Allow change of logging prefix.
 // TODO(tkilbourn): use standard logging infrastructure
 namespace wlan {
@@ -38,6 +40,7 @@ LOG_CATEGORY(kLogClt, 25);
 LOG_CATEGORY(kLogBuffer, 26);
 LOG_CATEGORY(kLogScan, 27);
 LOG_CATEGORY(kLogMinstrel, 28);
+LOG_CATEGORY(kLogFlags, 29);
 
 #undef LOG_CATEGORY
 
@@ -69,7 +72,11 @@ constexpr bool kBufferDebugEnabled = kLogLevel & kLogBuffer;
 #define debugbuf(args...)  wlogf(wlan::kLogBuffer, "[V:buf ]", args)
 #define debugscan(args...)  wlogf(wlan::kLogScan, "[V:scan]", args)
 #define debugmstl(args...)  wlogf(wlan::kLogMinstrel, "[V:mstl] ", args)
+#define debugflags(args...)  wlogf(wlan::kLogFlags, "[V:flags] ", args)
 // clang-format on
+
+void DebugDriverFeatureFlags(wlan_info_driver_feature_t flags);
+void DebugHardwareCapabilityFlags(wlan_info_hardware_capability_t flags);
 
 #define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
 #define MAC_ADDR_ARGS(a) ((a)[0]), ((a)[1]), ((a)[2]), ((a)[3]), ((a)[4]), ((a)[5])

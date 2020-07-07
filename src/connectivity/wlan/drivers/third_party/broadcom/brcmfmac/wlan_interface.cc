@@ -18,10 +18,15 @@
 #include <cstdio>
 #include <cstring>
 
+#include <ddk/hw/wlan/wlaninfo.h>
+#include <wlan/common/logging.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
 
 namespace wlan {
@@ -170,19 +175,144 @@ void WlanInterface::DdkAsyncRemove() {
 void WlanInterface::DdkRelease() { delete this; }
 
 // static
+wlan_info_mac_role_t WlanInterface::GetMacRoles(struct brcmf_pub* drvr) {
+  wlan_info_mac_role_t mac_role = 0;
+  if (brcmf_feat_is_enabled(drvr, BRCMF_FEAT_STA)) {
+    mac_role |= WLAN_INFO_MAC_ROLE_CLIENT;
+  }
+  if (brcmf_feat_is_enabled(drvr, BRCMF_FEAT_AP)) {
+    mac_role |= WLAN_INFO_MAC_ROLE_AP;
+  }
+  return mac_role;
+}
+
+// static
+bool WlanInterface::IsPhyTypeSupported(struct brcmf_pub* drvr, wlan_info_phy_type_t phy_type) {
+  char* iovar_name;
+  uint32_t iovar_data;
+  int32_t iovar_fwerr;
+  char vhtmode[] = "vhtmode";
+  char nmode[] = "nmode";
+  zx_status_t iovar_zx_status;
+
+  switch (phy_type) {
+    case WLAN_INFO_PHY_TYPE_DSSS:
+    case WLAN_INFO_PHY_TYPE_CCK:
+    case WLAN_INFO_PHY_TYPE_OFDM:  // and  WLAN_INFO_PHY_TYPE_ERP
+      // Broadcom has mandatory support for DSSS, CCK, ERP, and OFDM. See b/158857812.
+      return true;
+    case WLAN_INFO_PHY_TYPE_HT:
+      iovar_name = nmode;
+      break;
+    case WLAN_INFO_PHY_TYPE_VHT:
+      iovar_name = vhtmode;
+      break;
+    default:
+      BRCMF_ERR("wlan_info_phy_type_t value %d not recognized", phy_type);
+      return false;
+  }
+
+  iovar_zx_status = brcmf_fil_iovar_int_get(drvr->iflist[0], iovar_name, &iovar_data, &iovar_fwerr);
+  if (iovar_zx_status != ZX_OK) {
+    return false;
+  }
+
+  BRCMF_DBG(INFO, "%s=%d", iovar_name, iovar_data);
+  return iovar_data;
+}
+
+// static
+wlan_info_phy_type_t WlanInterface::GetSupportedPhyTypes(struct brcmf_pub* drvr) {
+  wlan_info_phy_type_t supported_phys = 0;
+  wlan_info_phy_type_t phy_type_list[] = {WLAN_INFO_PHY_TYPE_DSSS, WLAN_INFO_PHY_TYPE_CCK,
+                                          WLAN_INFO_PHY_TYPE_ERP,  WLAN_INFO_PHY_TYPE_OFDM,
+                                          WLAN_INFO_PHY_TYPE_HT,   WLAN_INFO_PHY_TYPE_VHT};
+  for (auto phy_type : phy_type_list) {
+    if (IsPhyTypeSupported(drvr, phy_type)) {
+      supported_phys |= phy_type;
+    }
+  }
+  return supported_phys;
+}
+
+// static
+wlan_info_driver_feature_t WlanInterface::GetSupportedDriverFeatures(struct brcmf_pub* drvr) {
+  wlan_info_driver_feature_t driver_features = 0;
+
+  // Temporary feature flag for incrementally transitioning drivers to use SME channel on iface
+  // creation.
+  driver_features |= WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
+
+  if (brcmf_feat_is_enabled(drvr->iflist[0], BRCMF_FEAT_DFS)) {
+    driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
+  }
+  if (brcmf_feat_is_enabled(drvr->iflist[0], BRCMF_FEAT_PNO) ||
+      brcmf_feat_is_enabled(drvr->iflist[0], BRCMF_FEAT_EPNO)) {
+    driver_features |= WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
+  }
+
+  // The driver features associated with WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION,
+  // WLAN_INFO_DRIVER_FEATURE_SYNTH, WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT, and
+  // WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD are not supported.
+
+  return driver_features;
+}
+
+// TODO(chcl): Learn *all* capability flags from the firmware itself.
+// See fxb/29107 and b/158857812.
+// static
+wlan_info_hardware_capability_t WlanInterface::GetSupportedHardwareCapabilities(
+    struct brcmf_pub* drvr) {
+  uint32_t iovar_data;
+  int32_t iovar_fwerr;
+  zx_status_t iovar_zx_status;
+  wlan_info_hardware_capability_t hardware_capability_flags = 0;
+
+  // Short Preamble support is mandatory. See b/158857812.
+  hardware_capability_flags |= WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE;
+
+  // Enabled in AP mode by default when 802.11h is in the firmware capability string.
+  if (brcmf_feat_is_enabled(drvr->iflist[0], BRCMF_FEAT_DOT11H)) {
+    hardware_capability_flags |= WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT;
+  }
+
+  // Enabled by default on 11g so it is a capability of the PHY.
+  hardware_capability_flags |= WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
+
+  // Radio Resource Management is enabled when 802.11k is included. This is indicated
+  // by the "rrm" iovar.
+  iovar_zx_status = brcmf_fil_iovar_int_get(drvr->iflist[0], "rrm", &iovar_data, &iovar_fwerr);
+  if (iovar_zx_status == ZX_OK && iovar_data) {
+    hardware_capability_flags |= WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT;
+  }
+
+  hardware_capability_flags |= WLAN_INFO_HARDWARE_CAPABILITY_SIMULTANEOUS_CLIENT_AP;
+
+  return hardware_capability_flags;
+}
+
+// static
 zx_status_t WlanInterface::Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info) {
   wlan_info_t info = {};
+  std::memset(&info, 0, sizeof(info));
 
-  // TODO(sheu): find a good MAC address to return.
-  std::memcpy(&info.mac_addr, drvr->iflist[0]->mac_addr, sizeof(info.mac_addr));
-  info.mac_role = WLAN_INFO_MAC_ROLE_CLIENT | WLAN_INFO_MAC_ROLE_AP;
-  info.supported_phys = 0x1f;  // WLAN_INFO_PHY_TYPE_;
-  info.driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_DFS |
-                         WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
-  info.caps =
-      WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE | WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |
-      WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME | WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT |
-      WLAN_INFO_HARDWARE_CAPABILITY_SIMULTANEOUS_CLIENT_AP;
+  // The default client iface at bsscfgidx 0 is always assumed to exist by the driver.
+  if (!drvr->iflist[0]) {
+    BRCMF_ERR("drvr->iflist[0] is NULL. This should never happen.");
+    return false;
+  }
+
+  // Skip setting the info.mac_addr field since this is a PHY query. See fxb/53991
+
+  info.mac_role = GetMacRoles(drvr);
+  info.supported_phys = GetSupportedPhyTypes(drvr);
+
+  info.driver_features = GetSupportedDriverFeatures(drvr);
+  DebugDriverFeatureFlags(info.driver_features);
+
+  info.caps = GetSupportedHardwareCapabilities(drvr);
+  DebugHardwareCapabilityFlags(info.caps);
+
   info.bands_count = 1;
   info.bands[0].band = WLAN_INFO_BAND_2GHZ;
   // TODO(cphoenix): Once this isn't temp/stub code anymore, remove unnecessary "= 0" lines.

@@ -41,7 +41,7 @@ enum WlanInfoPhyType {
     hew = 0x20;
 };
 
-enum WlanInfoDriverFeature {
+enum WlanInfoDriverFeature : uint32 {
     /// Device or driver implements scanning.
     scan_offload = 0x00000001;
 

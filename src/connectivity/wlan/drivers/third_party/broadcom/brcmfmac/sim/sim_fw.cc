@@ -1586,6 +1586,10 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
 }
 
 const char* kFirmwareVer = "wl0: Sep 10 2018 16:37:38 version 7.35.79 (r487924) FWID 01-c76ab99a";
+const char* kFirmwareCap =
+    "ap sta wme 802.11d 802.11h rm cqa cac dualband ampdu ampdu_tx ampdu_rx amsdurx tdls "
+    "radio_pwrsave btamp p2p proptxstatus mchan wds dwds p2po anqpo vht-prop-rates dfrts "
+    "txpwrcache stbc-tx stbc-rx-1ss epno pfnx wnm bsstrans mfp ndoe rssi_mon cptlv-4";
 
 zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value_out,
                                    size_t value_len) {
@@ -1714,6 +1718,34 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
       return ZX_ERR_INVALID_ARGS;
     }
     memcpy(value_out, assoc_resp_ies_, assoc_resp_ies_len_);
+  } else if (!std::strcmp(name, "cap")) {
+    if (value_len >= (strlen(kFirmwareCap) + 1)) {
+      // TODO: Provide means to simulate hardware with different capabilities.
+      strlcpy(static_cast<char*>(value_out), kFirmwareCap, value_len);
+    } else {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  } else if (!std::strcmp(name, "nmode")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    // TODO: Provide means to simulate hardware without nmode.
+    uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+    *result_ptr = 1;
+  } else if (!std::strcmp(name, "vhtmode")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    // TODO: Provide means to simulate hardware without vhtmode.
+    uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+    *result_ptr = 1;
+  } else if (!std::strcmp(name, "rrm")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    // TODO: Provide means to simulate hardware without rrm.
+    uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+    *result_ptr = 1;
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable
     BRCMF_DBG(SIM, "Ignoring request to read iovar '%s'", name);

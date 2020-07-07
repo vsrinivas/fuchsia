@@ -169,6 +169,7 @@ source_set("core") {
     "regs.h",
     "soc.h",
     "timer.h",
+    "wlan_interface.h",
   ]
   deps = [
     ":debug",

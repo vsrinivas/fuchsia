@@ -21,9 +21,15 @@
 /*
  * Features:
  *
+ * AP: access point mode
+ * STA: station functionality
  * MBSS: multiple BSSID support (eg. guest network in AP mode).
  * MCHAN: multi-channel for concurrent P2P.
  * PNO: preferred network offload.
+ * EPNO: enhanced preferred network offload
+ * DFS: Dynamic Frequency Selection
+ * TPC: Transmit Power Control
+ * DOT11H: 802.11h features
  * WOWL: Wake-On-WLAN.
  * P2P: peer-to-peer
  * RSDB: Real Simultaneous Dual Band
@@ -37,9 +43,15 @@
  * FWSUP: Firmware supplicant.
  */
 #define BRCMF_FEAT_LIST           \
+  BRCMF_FEAT_DEF(AP)              \
+  BRCMF_FEAT_DEF(STA)             \
   BRCMF_FEAT_DEF(MBSS)            \
   BRCMF_FEAT_DEF(MCHAN)           \
   BRCMF_FEAT_DEF(PNO)             \
+  BRCMF_FEAT_DEF(EPNO)            \
+  BRCMF_FEAT_DEF(DFS)             \
+  BRCMF_FEAT_DEF(TPC)             \
+  BRCMF_FEAT_DEF(DOT11H)          \
   BRCMF_FEAT_DEF(WOWL)            \
   BRCMF_FEAT_DEF(P2P)             \
   BRCMF_FEAT_DEF(RSDB)            \
@@ -84,6 +96,16 @@ enum brcmf_feat_quirk { BRCMF_QUIRK_LIST BRCMF_FEAT_QUIRK_LAST };
  * @drvr: driver instance.
  */
 void brcmf_feat_attach(struct brcmf_pub* drvr);
+
+/**
+ * brcmf_feat_is_enabled() - query feature.
+ *
+ * @drvr: driver instance.
+ * @id: feature id to check.
+ *
+ * Return: true is feature is enabled; otherwise false.
+ */
+bool brcmf_feat_is_enabled(struct brcmf_pub* drvr, enum brcmf_feat_id id);
 
 /**
  * brcmf_feat_is_enabled() - query feature.

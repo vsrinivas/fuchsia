@@ -42,9 +42,10 @@ struct brcmf_feat_fwcap {
 };
 
 static const struct brcmf_feat_fwcap brcmf_fwcap_map[] = {
-    {BRCMF_FEAT_MBSS, "mbss"},
-    {BRCMF_FEAT_MCHAN, "mchan"},
-    {BRCMF_FEAT_P2P, "p2p"},
+    {BRCMF_FEAT_AP, "ap"},          {BRCMF_FEAT_STA, "sta"},     {BRCMF_FEAT_MBSS, "mbss"},
+    {BRCMF_FEAT_MCHAN, "mchan"},    {BRCMF_FEAT_P2P, "p2p"},     {BRCMF_FEAT_PNO, "pno"},
+    {BRCMF_FEAT_EPNO, "epno"},      {BRCMF_FEAT_DFS, "802.11h"}, {BRCMF_FEAT_TPC, "802.11h"},
+    {BRCMF_FEAT_DOT11H, "802.11h"},
 };
 
 /**
@@ -112,7 +113,7 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
   for (i = 0; i < (int)countof(brcmf_fwcap_map); i++) {
     if (strstr(caps, brcmf_fwcap_map[i].fwcap_id)) {
       id = brcmf_fwcap_map[i].feature;
-      BRCMF_DBG(INFO, "enabling feature: %s", brcmf_feat_names[id]);
+      BRCMF_DBG(INFO, "enabling driver feature: %s", brcmf_feat_names[id]);
       ifp->drvr->feat_flags |= BIT(id);
     }
   }
@@ -184,8 +185,12 @@ void brcmf_feat_attach(struct brcmf_pub* drvr) {
   }
 }
 
+bool brcmf_feat_is_enabled(brcmf_pub* drvr, enum brcmf_feat_id id) {
+  return (drvr->feat_flags & BIT(id));
+}
+
 bool brcmf_feat_is_enabled(struct brcmf_if* ifp, enum brcmf_feat_id id) {
-  return (ifp->drvr->feat_flags & BIT(id));
+  return brcmf_feat_is_enabled(ifp->drvr, id);
 }
 
 bool brcmf_feat_is_quirk_enabled(struct brcmf_if* ifp, enum brcmf_feat_quirk quirk) {
