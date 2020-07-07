@@ -41,6 +41,7 @@ source_set("use_media_decoder_source_set") {
     "//src/lib/ui/base_view",
     "//src/media/audio/lib/wav",
     "//src/media/lib/raw_video_writer:raw_video_writer",
+    "//src/media/lib/test:codec_buffer",
     "//src/media/lib/test:codec_client",
     "//src/media/lib/test:frame_sink",
     "//src/media/lib/test:one_shot_event",
