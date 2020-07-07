@@ -36,7 +36,6 @@ class AudioCoreHardwareTest : public TestFixture {
   static constexpr uint32_t kBytesPerSample = 4;
 
   void SetUp() override;
-  void TearDown() override;
 
   bool WaitForCaptureDevice();
 

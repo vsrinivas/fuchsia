@@ -44,9 +44,6 @@ class HermeticAudioTest : public TestFixture {
   void SetUp() override;
   void TearDown() override;
 
-  void ExpectCallback() override;
-  void ExpectDisconnect() override;
-
   // Register that the test expects no audio underflows. This expectation will be checked by
   // TearDown().
   void FailUponUnderflows() { disallow_underflows_ = true; }

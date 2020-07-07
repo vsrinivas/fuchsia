@@ -11,6 +11,7 @@
 #include <memory>
 #include <vector>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/format.h"
@@ -125,7 +126,7 @@ class AudioRendererShim : public RendererShimImpl {
                     size_t payload_frame_count, fuchsia::media::AudioRenderUsage usage)
       : RendererShimImpl(format, payload_frame_count) {
     audio_core->CreateAudioRenderer(renderer_.NewRequest());
-    renderer_.set_error_handler(fixture->ErrorHandler());
+    fixture->AddErrorHandler(renderer_, "AudioRenderer");
     WatchEvents();
 
     renderer_->SetUsage(usage);
@@ -163,7 +164,7 @@ class UltrasoundRendererShim : public RendererShimImpl {
           EXPECT_EQ(stream_type.channels, format_.channels());
           EXPECT_EQ(stream_type.frames_per_second, format_.frames_per_second());
         });
-    renderer_.set_error_handler(fixture->ErrorHandler());
+    fixture->AddErrorHandler(renderer_, "UltrasoundRenderer");
 
     WatchEvents();
     SetPtsUnits(format_.frames_per_second(), 1);
@@ -171,7 +172,7 @@ class UltrasoundRendererShim : public RendererShimImpl {
   }
 
   void WaitForDevice() {
-    fixture_->RunLoopUntil([this] { return created_ || fixture_->error_occurred(); });
+    fixture_->RunLoopUntil([this] { return created_ || fixture_->ErrorOccurred(); });
   }
 
   bool created() const { return created_; }

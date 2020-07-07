@@ -30,9 +30,8 @@ class AudioTunerTest : public HermeticAudioTest {
 TEST_F(AudioTunerTest, ConnectToAudioTuner) {
   fuchsia::media::tuning::AudioTunerPtr audio_tuner;
   environment()->ConnectToService(audio_tuner.NewRequest());
-  audio_tuner.set_error_handler(ErrorHandler());
-  audio_tuner->GetAvailableAudioEffects(
-      CompletionCallback([](std::vector<fuchsia::media::tuning::AudioEffectType>) {}));
+  AddErrorHandler(audio_tuner, "AudioTuner");
+  audio_tuner->GetAvailableAudioEffects(AddCallback("GetAvailableAudioEffects"));
   ExpectCallback();
 }
 

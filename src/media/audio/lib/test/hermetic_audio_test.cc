@@ -50,13 +50,13 @@ void HermeticAudioTest::SetUp() {
   TestFixture::SetUp();
 
   environment_->ConnectToService(audio_core_.NewRequest());
-  audio_core_.set_error_handler(ErrorHandler());
+  AddErrorHandler(audio_core_, "AudioCore");
 
   environment_->ConnectToService(ultrasound_factory_.NewRequest());
-  ultrasound_factory_.set_error_handler(ErrorHandler());
+  AddErrorHandler(ultrasound_factory_, "UltrasoundFactory");
 
   environment_->ConnectToService(audio_dev_enum_.NewRequest());
-  audio_dev_enum_.set_error_handler(ErrorHandler());
+  AddErrorHandler(audio_dev_enum_, "AudioDeviceEnumerator");
   WatchForDeviceArrivals();
 }
 
@@ -118,18 +118,6 @@ void HermeticAudioTest::TearDown() {
   TestFixture::TearDown();
 }
 
-void HermeticAudioTest::ExpectCallback() {
-  TestFixture::ExpectCallback();
-
-  EXPECT_TRUE(audio_core_.is_bound());
-}
-
-void HermeticAudioTest::ExpectDisconnect() {
-  TestFixture::ExpectDisconnect();
-
-  EXPECT_TRUE(audio_core_.is_bound());
-}
-
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
     const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
@@ -165,7 +153,7 @@ VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
 
   // Wait for device to become the default.
   RunLoopUntil([this, id]() { return devices_[id].is_default; });
-  EXPECT_FALSE(error_occurred_);
+  ExpectNoUnexpectedErrors("during CreateOutput");
   return out;
 }
 
@@ -197,7 +185,7 @@ AudioRendererShim<SampleFormat>* HermeticAudioTest::CreateAudioRenderer(
   renderers_.push_back(std::move(ptr));
 
   // Wait until the renderer is connected.
-  RunLoopUntil([this, out]() { return error_occurred_ || (out->GetMinLeadTime() > 0); });
+  RunLoopUntil([this, out]() { return ErrorOccurred() || (out->GetMinLeadTime() > 0); });
   return out;
 }
 

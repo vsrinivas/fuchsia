@@ -12,6 +12,14 @@
 
 namespace media::audio::test {
 
+// For operations expected to generate a response, wait __1 minute__. We do this to avoid flaky
+// results when testing on high-load (high-latency) environments. For reference, in mid-2018 when
+// observing highly-loaded local QEMU instances running code that generated correct completion
+// responses, we observed timeouts if waiting 20 ms, but not if waiting 50 ms. This value is 3000x
+// that (!) -- WELL beyond the limit of human acceptability. Thus, intermittent failures (rather
+// than being a "potentially flaky test") mean that the system is, intermittently, UNACCEPTABLE.
+constexpr zx::duration kDurationResponseExpected = zx::sec(60);
+
 void AudioCoreHardwareTest::SetUp() {
   TestFixture::SetUp();
 
@@ -29,16 +37,11 @@ void AudioCoreHardwareTest::SetUp() {
   RunLoopUntilIdle();
 }
 
-void AudioCoreHardwareTest::TearDown() { ASSERT_FALSE(error_occurred()); }
-
 bool AudioCoreHardwareTest::WaitForCaptureDevice() {
   audio_device_enumerator_ = sys::ServiceDirectory::CreateFromNamespace()
                                  ->Connect<fuchsia::media::AudioDeviceEnumerator>();
 
-  audio_device_enumerator_.set_error_handler(ErrorHandler([](zx_status_t status) {
-    FAIL() << "Client connection to fuchsia.media.AudioDeviceEnumerator: "
-           << zx_status_get_string(status) << " (" << status << ")";
-  }));
+  AddErrorHandler(audio_device_enumerator_, "AudioDeviceEnumerator");
 
   audio_device_enumerator_.events().OnDeviceAdded =
       ([this](fuchsia::media::AudioDeviceInfo device) {
@@ -78,18 +81,14 @@ bool AudioCoreHardwareTest::WaitForCaptureDevice() {
         }
       });
 
-  RunLoopWithTimeoutOrUntil([this]() { return error_occurred_ || capture_device_is_default_; },
+  RunLoopWithTimeoutOrUntil([this]() { return ErrorOccurred() || capture_device_is_default_; },
                             kDurationResponseExpected);
   return capture_device_is_default_;
 }
 
 void AudioCoreHardwareTest::ConnectToAudioCore() {
   audio_core_ = sys::ServiceDirectory::CreateFromNamespace()->Connect<fuchsia::media::AudioCore>();
-
-  audio_core_.set_error_handler(ErrorHandler([](zx_status_t status) {
-    FAIL() << "Client connection to fuchsia.media.AudioCore: " << zx_status_get_string(status)
-           << " (" << status << ")";
-  }));
+  AddErrorHandler(audio_core_, "AudioCore");
 }
 
 void AudioCoreHardwareTest::ConnectToAudioCapturer() {
@@ -97,11 +96,7 @@ void AudioCoreHardwareTest::ConnectToAudioCapturer() {
 
   constexpr bool kNotLoopback = false;
   audio_core_->CreateAudioCapturer(kNotLoopback, audio_capturer_.NewRequest());
-
-  audio_capturer_.set_error_handler(ErrorHandler([](zx_status_t status) {
-    FAIL() << "Client connection to fuchsia.media.AudioCapturer: " << zx_status_get_string(status)
-           << " (" << status << ")";
-  }));
+  AddErrorHandler(audio_capturer_, "AudioCapturer");
 
   audio_capturer_->SetUsage(kUsage);
 }
@@ -110,11 +105,7 @@ void AudioCoreHardwareTest::ConnectToGainControl() {
   ASSERT_TRUE(audio_capturer_.is_bound());
 
   audio_capturer_->BindGainControl(stream_gain_control_.NewRequest());
-
-  stream_gain_control_.set_error_handler(ErrorHandler([](zx_status_t status) {
-    FAIL() << "Client connection to (capture stream) fuchsia.media.audio.GainControl: "
-           << zx_status_get_string(status) << " (" << status << ")";
-  }));
+  AddErrorHandler(stream_gain_control_, "AudioCapturer::GainControl");
 }
 
 // Set gain for this capturer gain control, capture usage and all capture devices.
@@ -133,13 +124,14 @@ void AudioCoreHardwareTest::SetGainsToUnity() {
 
 // Fetch the initial media type and adjust channel_count_ and frames_per_second_ if needed.
 void AudioCoreHardwareTest::GetDefaultCaptureFormat() {
-  audio_capturer_->GetStreamType(CompletionCallback([this](fuchsia::media::StreamType stream_type) {
-    ASSERT_TRUE(stream_type.medium_specific.is_audio()) << "Default format is not audio!";
-    const auto& format = stream_type.medium_specific.audio();
+  audio_capturer_->GetStreamType(
+      AddCallback("GetStreamType", [this](fuchsia::media::StreamType stream_type) {
+        ASSERT_TRUE(stream_type.medium_specific.is_audio()) << "Default format is not audio!";
+        const auto& format = stream_type.medium_specific.audio();
 
-    channel_count_ = format.channels;
-    frames_per_second_ = format.frames_per_second;
-  }));
+        channel_count_ = format.channels;
+        frames_per_second_ = format.frames_per_second;
+      }));
 
   ExpectCallback();
 
@@ -213,7 +205,7 @@ TEST_F(AudioCoreHardwareTest, ZeroesInLiveCapture) {
   const uint32_t payload_offset = 0u;
 
   audio_capturer_->CaptureAt(kPayloadBufferId, payload_offset, vmo_buffer_frame_count_,
-                             CompletionCallback([this](fuchsia::media::StreamPacket packet) {
+                             AddCallback("CaptureAt", [this](fuchsia::media::StreamPacket packet) {
                                OnPacketProduced(packet);
                              }));
   // Wait for the capture buffer to be returned.

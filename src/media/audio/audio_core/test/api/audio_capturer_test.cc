@@ -4,6 +4,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/zx/clock.h>
+#include <zircon/device/audio.h>
 
 #include "lib/media/audio/cpp/types.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
@@ -23,21 +24,14 @@ class AudioCapturerTest : public HermeticAudioTest {
     HermeticAudioTest::SetUp();
 
     audio_core_->CreateAudioCapturer(false, audio_capturer_.NewRequest());
-    audio_capturer_.set_error_handler(ErrorHandler());
+    AddErrorHandler(audio_capturer_, "AudioCapturer");
   }
 
   void TearDown() override {
     gain_control_.Unbind();
-
-    EXPECT_EQ(bound_capturer_expected_, audio_capturer_.is_bound());
     audio_capturer_.Unbind();
 
     HermeticAudioTest::TearDown();
-  }
-
-  void SetNegativeExpectations() override {
-    HermeticAudioTest::SetNegativeExpectations();
-    bound_capturer_expected_ = false;
   }
 
   void SetFormat() {
@@ -56,8 +50,6 @@ class AudioCapturerTest : public HermeticAudioTest {
 
   fuchsia::media::AudioCapturerPtr audio_capturer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
-
-  bool bound_capturer_expected_ = true;
 };
 
 class AudioCapturerClockTest : public AudioCapturerTest {
@@ -68,8 +60,9 @@ class AudioCapturerClockTest : public AudioCapturerTest {
   zx::clock GetAndValidateReferenceClock() {
     zx::clock clock;
 
-    audio_capturer_->GetReferenceClock(CompletionCallback(
-        [&clock](zx::clock received_clock) { clock = std::move(received_clock); }));
+    audio_capturer_->GetReferenceClock(
+        AddCallback("GetReferenceClock",
+                    [&clock](zx::clock received_clock) { clock = std::move(received_clock); }));
 
     ExpectCallback();
     EXPECT_TRUE(clock.is_valid());
@@ -112,27 +105,21 @@ TEST_F(AudioCapturerTest, DiscardAll_ReturnsAfterAllPackets) {
   SetFormat();
   SetUpPayloadBuffer();
 
-  auto callbacks = 0u;
-  audio_capturer_->CaptureAt(
-      0, 0, 4000, [&callbacks](fuchsia::media::StreamPacket) { EXPECT_EQ(0u, callbacks++); });
-  audio_capturer_->CaptureAt(
-      0, 4000, 4000, [&callbacks](fuchsia::media::StreamPacket) { EXPECT_EQ(1u, callbacks++); });
-  audio_capturer_->CaptureAt(
-      0, 8000, 4000, [&callbacks](fuchsia::media::StreamPacket) { EXPECT_EQ(2u, callbacks++); });
-  audio_capturer_->CaptureAt(
-      0, 12000, 4000, [&callbacks](fuchsia::media::StreamPacket) { EXPECT_EQ(3u, callbacks++); });
+  audio_capturer_->CaptureAt(0, 0, 4000, AddCallback("CaptureAt 0"));
+  audio_capturer_->CaptureAt(0, 4000, 4000, AddCallback("CaptureAt 4000"));
+  audio_capturer_->CaptureAt(0, 8000, 4000, AddCallback("CaptureAt 8000"));
+  audio_capturer_->CaptureAt(0, 12000, 4000, AddCallback("CaptureAt 12000"));
 
   // Packets should complete in strict order, with DiscardAllPackets' completion afterward.
-  audio_capturer_->DiscardAllPackets(
-      CompletionCallback([&callbacks]() { EXPECT_EQ(4u, callbacks); }));
+  audio_capturer_->DiscardAllPackets(AddCallback("DiscardAllPackets"));
   ExpectCallback();
 }
 
 TEST_F(AudioCapturerTest, DiscardAll_WithNoVmoShouldDisconnect) {
   SetFormat();
 
-  audio_capturer_->DiscardAllPackets(CompletionCallback());
-  ExpectDisconnect();
+  audio_capturer_->DiscardAllPackets(AddUnexpectedCallback("DiscardAllPackets"));
+  ExpectDisconnect(audio_capturer_);
 }
 
 // DiscardAllPackets should fail, if async capture is active
@@ -140,13 +127,12 @@ TEST_F(AudioCapturerTest, DiscardAll_DuringAsyncCaptureShouldDisconnect) {
   SetFormat();
   SetUpPayloadBuffer();
 
-  audio_capturer_.events().OnPacketProduced =
-      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
   ExpectCallback();
 
-  audio_capturer_->DiscardAllPackets(CompletionCallback());
-  ExpectDisconnect();
+  audio_capturer_->DiscardAllPackets(AddUnexpectedCallback("DiscardAllPackets"));
+  ExpectDisconnect(audio_capturer_);
 }
 
 // DiscardAllPackets should fail, if async capture is in the process of stopping
@@ -154,14 +140,13 @@ TEST_F(AudioCapturerTest, DISABLED_DiscardAll_AsyncCaptureStoppingShouldDisconne
   SetFormat();
   SetUpPayloadBuffer();
 
-  audio_capturer_.events().OnPacketProduced =
-      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
   ExpectCallback();
 
   audio_capturer_->StopAsyncCaptureNoReply();
-  audio_capturer_->DiscardAllPackets(CompletionCallback());
-  ExpectDisconnect();
+  audio_capturer_->DiscardAllPackets(AddUnexpectedCallback("DiscardAllPackets"));
+  ExpectDisconnect(audio_capturer_);
 }
 
 // DiscardAllPackets should succeed, if async capture is completely stopped
@@ -169,15 +154,14 @@ TEST_F(AudioCapturerTest, DiscardAll_AfterAsyncCapture) {
   SetFormat();
   SetUpPayloadBuffer();
 
-  audio_capturer_.events().OnPacketProduced =
-      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
   ExpectCallback();
 
-  audio_capturer_->StopAsyncCapture(CompletionCallback());
+  audio_capturer_->StopAsyncCapture(AddCallback("StopAsyncCapture"));
   ExpectCallback();
 
-  audio_capturer_->DiscardAllPackets(CompletionCallback());
+  audio_capturer_->DiscardAllPackets(AddCallback("DiscardAllPackets"));
   ExpectCallback();
 }
 
@@ -186,7 +170,7 @@ TEST_F(AudioCapturerTest, DiscardAllNoReply_WithNoVmoShouldDisconnect) {
   SetFormat();
 
   audio_capturer_->DiscardAllPacketsNoReply();
-  ExpectDisconnect();
+  ExpectDisconnect(audio_capturer_);
 }
 
 // DiscardAllPacketsNoReply should fail, if async capture is active
@@ -194,13 +178,12 @@ TEST_F(AudioCapturerTest, DiscardAllNoReply_DuringAsyncCaptureShouldDisconnect) 
   SetFormat();
   SetUpPayloadBuffer();
 
-  audio_capturer_.events().OnPacketProduced =
-      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
   ExpectCallback();
 
   audio_capturer_->DiscardAllPacketsNoReply();
-  ExpectDisconnect();
+  ExpectDisconnect(audio_capturer_);
 }
 
 // DiscardAllPacketsNoReply should fail, if async capture is in the process of stopping
@@ -208,14 +191,13 @@ TEST_F(AudioCapturerTest, DISABLED_DiscardAllNoReply_AsyncCaptureStoppingShouldD
   SetFormat();
   SetUpPayloadBuffer();
 
-  audio_capturer_.events().OnPacketProduced =
-      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
   ExpectCallback();
 
   audio_capturer_->StopAsyncCaptureNoReply();
   audio_capturer_->DiscardAllPacketsNoReply();
-  ExpectDisconnect();
+  ExpectDisconnect(audio_capturer_);
 }
 
 // DiscardAllPacketsNoReply should succeed, if async capture is completely stopped
@@ -223,12 +205,11 @@ TEST_F(AudioCapturerTest, DiscardAllNoReply_AfterAsyncCapture) {
   SetFormat();
   SetUpPayloadBuffer();
 
-  audio_capturer_.events().OnPacketProduced =
-      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
   ExpectCallback();
 
-  audio_capturer_->StopAsyncCapture(CompletionCallback());
+  audio_capturer_->StopAsyncCapture(AddCallback("StopAsyncCapture"));
   ExpectCallback();
 
   audio_capturer_->DiscardAllPacketsNoReply();
@@ -252,14 +233,14 @@ TEST_F(AudioCapturerTest, DiscardAllNoReply_AfterAsyncCapture) {
 // Also negative testing: 0/tiny/huge num frames (bigger than packet)
 
 TEST_F(AudioCapturerTest, Stop_WhenStoppedShouldDisconnect) {
-  audio_capturer_->StopAsyncCapture(CompletionCallback());
-  ExpectDisconnect();
+  audio_capturer_->StopAsyncCapture(AddUnexpectedCallback("StopAsyncCapture"));
+  ExpectDisconnect(audio_capturer_);
 }
 // Also test before format set, before packets submitted
 
 TEST_F(AudioCapturerTest, StopNoReply_WhenStoppedShouldDisconnect) {
   audio_capturer_->StopAsyncCaptureNoReply();
-  ExpectDisconnect();
+  ExpectDisconnect(audio_capturer_);
 }
 // Also before format set, before packets submitted
 
@@ -268,27 +249,16 @@ TEST_F(AudioCapturerTest, StopNoReply_WhenStoppedShouldDisconnect) {
 // or GainControl binding a chance to disconnect, if an error occurred.
 TEST_F(AudioCapturerTest, BindGainControl) {
   // Validate AudioCapturers can create GainControl interfaces.
-  bool capturer_error_occurred = false;
-  bool capturer_error_occurred_2 = false;
-  bool gain_error_occurred = false;
-  bool gain_error_occurred_2 = false;
-
-  audio_capturer_.set_error_handler(
-      ErrorHandler([&capturer_error_occurred](zx_status_t) { capturer_error_occurred = true; }));
-
   audio_capturer_->BindGainControl(gain_control_.NewRequest());
-  gain_control_.set_error_handler(
-      ErrorHandler([&gain_error_occurred](zx_status_t) { gain_error_occurred = true; }));
+  AddErrorHandler(gain_control_, "AudioCapturer::GainControl");
 
   fuchsia::media::AudioCapturerPtr audio_capturer_2;
   audio_core_->CreateAudioCapturer(true, audio_capturer_2.NewRequest());
-  audio_capturer_2.set_error_handler(ErrorHandler(
-      [&capturer_error_occurred_2](zx_status_t) { capturer_error_occurred_2 = true; }));
+  AddErrorHandler(audio_capturer_2, "AudioCapturer2");
 
   fuchsia::media::audio::GainControlPtr gain_control_2;
   audio_capturer_2->BindGainControl(gain_control_2.NewRequest());
-  gain_control_2.set_error_handler(
-      ErrorHandler([&gain_error_occurred_2](zx_status_t) { gain_error_occurred_2 = true; }));
+  AddErrorHandler(gain_control_2, "AudioCapturer::GainControl2");
 
   // What happens to a child gain_control, when a capturer is unbound?
   audio_capturer_.Unbind();
@@ -297,27 +267,11 @@ TEST_F(AudioCapturerTest, BindGainControl) {
   gain_control_2.Unbind();
 
   // Give audio_capturer_ a chance to disconnect gain_control_
-  ExpectDisconnect();
-
-  // If gain_control_ disconnected as expected, reset errors for the next step.
-  if (gain_error_occurred) {
-    error_expected_ = false;
-    error_occurred_ = false;
-  }
+  ExpectDisconnect(gain_control_);
 
   // Give time for other Disconnects to occur, if they must.
-  audio_capturer_2->GetStreamType(CompletionCallback([](fuchsia::media::StreamType) {}));
+  audio_capturer_2->GetStreamType(AddCallback("GetStreamType"));
   ExpectCallback();
-
-  // Explicitly unbinding audio_capturer_ should disconnect gain_control_.
-  EXPECT_FALSE(capturer_error_occurred);
-  EXPECT_TRUE(gain_error_occurred);
-  EXPECT_FALSE(gain_control_.is_bound());
-
-  // gain_2's parent should NOT disconnect, nor a gain_2 disconnect callback.
-  EXPECT_FALSE(capturer_error_occurred_2);
-  EXPECT_FALSE(gain_error_occurred_2);
-  EXPECT_TRUE(audio_capturer_2.is_bound());
 }
 
 // Null requests to BindGainControl should have no effect.
@@ -325,7 +279,7 @@ TEST_F(AudioCapturerTest, BindGainControlNull) {
   audio_capturer_->BindGainControl(nullptr);
 
   // Give time for Disconnect to occur, if it must.
-  audio_capturer_->GetStreamType(CompletionCallback([](fuchsia::media::StreamType) {}));
+  audio_capturer_->GetStreamType(AddCallback("GetStreamType"));
   ExpectCallback();
 }
 
@@ -415,7 +369,7 @@ TEST_F(AudioCapturerClockTest, SetRefClock_CustomNoDuplicateShouldDisconnect) {
 
   audio_capturer_->SetReferenceClock(std::move(dupe_clock));
 
-  ExpectDisconnect();
+  ExpectDisconnect(audio_capturer_);
 }
 
 // inadequate ZX_RIGHTS -- no READ should cause GetReferenceClock to fail.
@@ -425,7 +379,7 @@ TEST_F(AudioCapturerClockTest, SetRefClock_CustomNoReadShouldDisconnect) {
 
   audio_capturer_->SetReferenceClock(std::move(dupe_clock));
 
-  ExpectDisconnect();
+  ExpectDisconnect(audio_capturer_);
 }
 
 // If client-submitted clock has ZX_RIGHT_WRITE, this should be removed upon GetReferenceClock
@@ -455,7 +409,7 @@ TEST_F(AudioCapturerClockTest, SetRefClock_DuringCaptureShouldDisconnect) {
 
   audio_capturer_->CaptureAt(0, 0, 8000, [](fuchsia::media::StreamPacket) { FAIL(); });
   audio_capturer_->SetReferenceClock(clock::CloneOfMonotonic());
-  ExpectDisconnect();
+  ExpectDisconnect(audio_capturer_);
 }
 
 // Setting the reference clock should succeed, after all active capture packets have returned
@@ -463,7 +417,7 @@ TEST_F(AudioCapturerClockTest, SetRefClock_AfterCapture) {
   SetFormat();
   SetUpPayloadBuffer();
 
-  audio_capturer_->CaptureAt(0, 0, 8000, CompletionCallback([](fuchsia::media::StreamPacket) {}));
+  audio_capturer_->CaptureAt(0, 0, 8000, AddCallback("CaptureAt"));
   ExpectCallback();
 
   audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
@@ -476,7 +430,7 @@ TEST_F(AudioCapturerClockTest, SetRefClock_CaptureCancelled) {
   SetUpPayloadBuffer();
 
   audio_capturer_->CaptureAt(0, 0, 8000, [](fuchsia::media::StreamPacket) {});
-  audio_capturer_->DiscardAllPackets(CompletionCallback());
+  audio_capturer_->DiscardAllPackets(AddCallback("DiscardAllPackets"));
   ExpectCallback();
 
   audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
@@ -488,13 +442,12 @@ TEST_F(AudioCapturerClockTest, SetRefClock_DuringAsyncCaptureShouldDisconnect) {
   SetFormat();
   SetUpPayloadBuffer();
 
-  audio_capturer_.events().OnPacketProduced =
-      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
   ExpectCallback();
 
   audio_capturer_->SetReferenceClock(clock::CloneOfMonotonic());
-  ExpectDisconnect();
+  ExpectDisconnect(audio_capturer_);
 }
 
 // Setting the reference clock should succeed, after all active capture packets have returned
@@ -502,12 +455,11 @@ TEST_F(AudioCapturerClockTest, SetRefClock_AfterAsyncCapture) {
   SetFormat();
   SetUpPayloadBuffer();
 
-  audio_capturer_.events().OnPacketProduced =
-      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
   ExpectCallback();
 
-  audio_capturer_->StopAsyncCapture(CompletionCallback());
+  audio_capturer_->StopAsyncCapture(AddCallback("StopAsyncCapture"));
   ExpectCallback();
 
   audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());

@@ -76,7 +76,7 @@ class AudioCapturerShim : public CapturerShimImpl {
       : CapturerShimImpl(format, payload_frame_count) {
     audio_core->CreateAudioCapturerWithConfiguration(format.stream_type(), std::move(config),
                                                      capturer_.NewRequest());
-    capturer_.set_error_handler(fixture->ErrorHandler());
+    fixture->AddErrorHandler(capturer_, "AudioCapturer");
 
     capturer_->SetPcmStreamType({.sample_format = format_.sample_format(),
                                  .channels = format_.channels(),
@@ -114,11 +114,11 @@ class UltrasoundCapturerShim : public CapturerShimImpl {
           // TODO(55243): Enable AddPayloadBuffer before the capturer is created.
           capturer_->AddPayloadBuffer(0, std::move(vmo));
         });
-    capturer_.set_error_handler(fixture->ErrorHandler());
+    fixture->AddErrorHandler(capturer_, "UltrasoundCapturer");
   }
 
   void WaitForDevice() {
-    fixture_->RunLoopUntil([this] { return created_ || fixture_->error_occurred(); });
+    fixture_->RunLoopUntil([this] { return created_ || fixture_->ErrorOccurred(); });
   }
 
   bool created() const { return created_; }

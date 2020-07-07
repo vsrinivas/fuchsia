@@ -4,80 +4,126 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_TEST_TEST_FIXTURE_H_
 #define SRC_MEDIA_AUDIO_LIB_TEST_TEST_FIXTURE_H_
 
+#include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <zircon/errors.h>
 
+#include <deque>
+#include <initializer_list>
 #include <optional>
+#include <unordered_map>
 
 namespace media::audio::test {
 
-// For operations expected to generate a response, wait __1 minute__. We do this to avoid flaky
-// results when testing on high-load (high-latency) environments. For reference, in mid-2018 when
-// observing highly-loaded local QEMU instances running code that generated correct completion
-// responses, we observed timeouts if waiting 20 ms, but not if waiting 50 ms. This value is 3000x
-// that (!) -- WELL beyond the limit of human acceptability. Thus, intermittent failures (rather
-// than being a "potentially flaky test") mean that the system is, intermittently, UNACCEPTABLE.
+// TestFixture wraps a RealLoopFixture with methods to check for FIDL errors and callbacks.
+// For example, to check for disconnection:
 //
-// Also, when expecting a response we can save time by checking more frequently. Restated,
-// kDurationResponseExpected should ALWAYS use kDurationGranularity.
+//     SomeInterfacePtr ptr;
+//     environment->ConnectToService(ptr.NewRequest());
+//     AddErrorHandler(ptr, "SomeInterface");
 //
-// These two values codify the following ordered priorities:
-//   1) False-positive test failures are expensive and must be eliminated.
-//   2) Having done that, streamline test run-time (time=resources=cost);
-constexpr zx::duration kDurationResponseExpected = zx::sec(60);
-constexpr zx::duration kDurationGranularity = zx::duration::infinite();
-
-constexpr char kDisconnectErr[] = "Connection to fuchsia.media FIDL interface was lost!\n";
-constexpr char kTimeoutErr[] = "Timeout -- no callback received!\n";
-constexpr char kCallbackErr[] = "Unexpected callback received!\n";
-
+//     ... do something that should disconnect ptr ...
 //
-// TestFixture
+//     ExpectDisconnect(ptr);
+//
+// Or, to check that a sequence of callbacks are executed as expected:
+//
+//     SomeInterfacePtr ptr;
+//     environment->ConnectToService(ptr.NewRequest());
+//     AddErrorHandler(ptr, "SomeInterface");
+//
+//     int b;
+//     ptr.events().OnA = AddCallback("A")
+//     ptr.events().OnB = AddCallback("B", [&b](int x) { b = x; });
+//
+//     // This verifies that callbacks A and B are executed, in that order, that B
+//     // is called with the correct argument, and that the ErrorHandler is not called.
+//     ExpectCallback();
+//     EXPECT_EQ(b, 42);
 //
 class TestFixture : public ::gtest::RealLoopFixture {
  public:
-  bool error_occurred() const { return error_occurred_; }
+  struct ErrorHandler {
+    std::string name;
+    zx_status_t error_code = ZX_OK;           // set after the ErrorHandler is triggered
+    zx_status_t expected_error_code = ZX_OK;  // expected error for ExpectErrors
+  };
 
-  // Simple handler, when the only required response is to record the error.
-  auto ErrorHandler() {
-    return [this](zx_status_t error) {
-      error_occurred_ = true;
-      error_code_ = error;
-    };
+  // Add a new ErrorHandler for the given protocol. If this ErrorHandler triggers unexpectedly,
+  // the given name will be included in the test failure message. The InterfacePtr must
+  // live for the duration of this TestFixture.
+  template <class T>
+  void AddErrorHandler(fidl::InterfacePtr<T>& ptr, std::string name) {
+    auto [h, cb] = NewErrorHandler(name);
+    ptr.set_error_handler(std::move(cb));
+    error_handlers_[ptr.channel().get()] = h;
   }
 
-  // Accept (and call) a custom handler, for more nuanced error responses.
+  // Retrieves a previously-added error handler.
+  // Useful for direct calls to ExpectErrors or ExpectDisconnects. Tests that
+  // use ExpectError or ExpectDisconnect won't need this.
+  template <class T>
+  std::shared_ptr<ErrorHandler> ErrorHandlerFor(fidl::InterfacePtr<T>& ptr) {
+    auto eh = error_handlers_[ptr.channel().get()];
+    FX_CHECK(eh);
+    return eh;
+  }
+
+  // Add an expected callback to the pending set.
+  // Callbacks are expected to occur in the order in which they are added.
+  // Optionally, providew a custom function to invoke when the expected callback is triggered.
+  auto AddCallback(const std::string& name);
   template <typename Callable>
-  auto ErrorHandler(Callable err_handler) {
-    return [this, err_handler = std::move(err_handler)](zx_status_t error) {
-      error_occurred_ = true;
-      error_code_ = error;
-      err_handler(error);
-    };
-  }
+  auto AddCallback(const std::string& name, Callable callback);
 
-  // Simple callback, when the only requirement is to record the callback.
-  auto CompletionCallback() {
-    return [this]() { callback_received_ = true; };
-  }
-
-  // Accept (and call) a custom callback, for more nuanced behavior.
+  // Like AddCallback, but allow the callback to happen in any order.
+  auto AddCallbackUnordered(const std::string& name);
   template <typename Callable>
-  auto CompletionCallback(Callable callback) {
-    return [this, callback = std::move(callback)](auto&&... args) {
-      callback_received_ = true;
-      callback(std::forward<decltype(args)>(args)...);
-    };
+  auto AddCallbackUnordered(const std::string& name, Callable callback);
+
+  // Add an unexpected callback. The test will fail if this callback is triggered.
+  auto AddUnexpectedCallback(const std::string& name) {
+    return [name](auto&&...) { ADD_FAILURE() << "Got unexpected callback " << name; };
   }
 
-  // The below methods contain gtest EXPECT checks that verify basic outcomes.
-  //
-  // Wait for CompletionCallback or ErrorHandler, expecting callback.
-  virtual void ExpectCallback();
+  // Wait until all pending callbacks are drained. Fails if an error is encountered.
+  // Callbacks are expected to occur in the order they are added. After this method
+  // returns, the pending callback set is emptied and new callbacks may be added for
+  // a future call to ExpectCallback.
+  void ExpectCallback();
 
-  // Wait for CompletionCallback or ErrorHandler, expecting the specified error.
-  virtual void ExpectDisconnect() { ExpectError(ZX_ERR_PEER_CLOSED); }
-  void ExpectError(zx_status_t expect_error);
+  // Wait for the given ErrorHandlers to trigger with their expected errors. Fails if
+  // different errors are found or if errors are triggered in different ErrorHandlers.
+  void ExpectErrors(const std::vector<std::shared_ptr<ErrorHandler>>& errors);
+
+  // Shorthand to expect many disconnect errors.
+  void ExpectDisconnects(const std::vector<std::shared_ptr<ErrorHandler>>& errors) {
+    std::vector<std::shared_ptr<ErrorHandler>> handlers;
+    for (auto eh : errors) {
+      eh->expected_error_code = ZX_ERR_PEER_CLOSED;
+    }
+    ExpectErrors(errors);
+  }
+
+  // Shorthand to expect a single error.
+  template <class T>
+  void ExpectError(fidl::InterfacePtr<T>& ptr, zx_status_t expected_error) {
+    auto eh = ErrorHandlerFor(ptr);
+    eh->expected_error_code = expected_error;
+    ExpectErrors({eh});
+  }
+  template <class T>
+  void ExpectDisconnect(fidl::InterfacePtr<T>& ptr) {
+    ExpectError(ptr, ZX_ERR_PEER_CLOSED);
+  }
+
+  // Verifies that no unexpected errors have occurred so far.
+  void ExpectNoUnexpectedErrors(const std::string& msg_for_failure);
+
+  // Reports whether any ErrorHandlers have triggered.
+  bool ErrorOccurred();
 
   // Promote to public so that non-subclasses can advance through time.
   using ::gtest::RealLoopFixture::RunLoop;
@@ -87,19 +133,60 @@ class TestFixture : public ::gtest::RealLoopFixture {
   using ::gtest::RealLoopFixture::RunLoopWithTimeoutOrUntil;
 
  protected:
-  void SetUp() override;
   void TearDown() override;
 
-  // Set expectations for negative test cases. Called by ExpectError/Disconnect.
-  virtual void SetNegativeExpectations() { error_expected_ = true; }
-
-  bool error_expected_ = false;
-  bool error_occurred_ = false;
-  zx_status_t error_code_ = ZX_OK;
-
  private:
-  bool callback_received_ = false;
+  struct PendingCallback {
+    std::string name;
+    int64_t seqno = 0;
+    bool ordered;
+  };
+
+  auto AddCallbackInternal(const std::string& name, bool ordered) {
+    auto pb = NewPendingCallback(name, ordered);
+    return [this, pb](auto&&...) { pb->seqno = next_seqno_++; };
+  }
+
+  template <typename Callable>
+  auto AddCallbackInternal(const std::string& name, Callable callback, bool ordered) {
+    auto pb = NewPendingCallback(name, ordered);
+    return [this, pb, callback = std::move(callback)](auto&&... args) {
+      pb->seqno = next_seqno_++;
+      callback(std::forward<decltype(args)>(args)...);
+    };
+  }
+
+  std::pair<std::shared_ptr<ErrorHandler>, fit::function<void(zx_status_t)>> NewErrorHandler(
+      const std::string& name);
+  std::shared_ptr<PendingCallback> NewPendingCallback(const std::string& name, bool ordered);
+
+  void ExpectErrorsInternal(const std::vector<std::shared_ptr<ErrorHandler>>& errors);
+
+  std::unordered_map<zx_handle_t, std::shared_ptr<ErrorHandler>> error_handlers_;
+  std::deque<std::shared_ptr<PendingCallback>> pending_callbacks_;
+  int64_t next_seqno_ = 1;
+  bool new_error_ = false;
 };
+
+// These must be defined in the header file, because of the auto return type, but
+// also must be defined after AddCallbackInternal.
+inline auto TestFixture::AddCallback(const std::string& name) {
+  return AddCallbackInternal(name, true);
+}
+
+template <typename Callable>
+inline auto TestFixture::AddCallback(const std::string& name, Callable callback) {
+  return AddCallbackInternal(name, callback, true);
+}
+
+inline auto TestFixture::AddCallbackUnordered(const std::string& name) {
+  return AddCallbackInternal(name, false);
+}
+
+template <typename Callable>
+inline auto TestFixture::AddCallbackUnordered(const std::string& name, Callable callback) {
+  return AddCallbackInternal(name, callback, false);
+}
 
 }  // namespace media::audio::test
 

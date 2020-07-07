@@ -74,7 +74,7 @@ class UsageGainReporterTest : public HermeticAudioTest {
 // Test that the user is connected to the usage gain reporter.
 // TODO(50645): Also test muted
 TEST_F(UsageGainReporterTest, ConnectToUsageGainReporter) {
-  fit::closure completer = CompletionCallback([] {});
+  fit::closure completer = AddCallback("OnGainMuteChanged", [] {});
 
   // The specific choice of format doesn't matter here, any output device will do.
   constexpr auto kSampleFormat = fuchsia::media::AudioSampleFormat::SIGNED_16;
@@ -90,7 +90,7 @@ TEST_F(UsageGainReporterTest, ConnectToUsageGainReporter) {
 
   fuchsia::media::UsageGainReporterPtr gain_reporter;
   environment()->ConnectToService(gain_reporter.NewRequest());
-  gain_reporter.set_error_handler(ErrorHandler());
+  AddErrorHandler(gain_reporter, "GainReporter");
 
   auto fake_listener = std::make_unique<FakeGainListener>(std::move(completer));
   gain_reporter->RegisterListener(device_id_string_, fidl::Clone(usage),

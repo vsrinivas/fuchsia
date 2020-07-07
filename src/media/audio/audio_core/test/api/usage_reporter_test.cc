@@ -35,11 +35,11 @@ class UsageReporterTest : public HermeticAudioTest {
 
 // TODO(50645): More complete testing of the integration with renderers
 TEST_F(UsageReporterTest, ConnectToUsageReporter) {
-  fit::closure completer = CompletionCallback([] {});
+  fit::closure completer = AddCallback("OnStateChanged", [] {});
 
   fuchsia::media::UsageReporterPtr audio_core;
   environment()->ConnectToService(audio_core.NewRequest());
-  audio_core.set_error_handler(ErrorHandler());
+  AddErrorHandler(audio_core, "AudioCore");
 
   fuchsia::media::Usage usage;
   usage.set_render_usage(fuchsia::media::AudioRenderUsage::MEDIA);

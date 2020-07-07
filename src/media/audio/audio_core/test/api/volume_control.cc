@@ -18,7 +18,7 @@ class VolumeControlTest : public HermeticAudioTest {};
 TEST_F(VolumeControlTest, ConnectToRenderUsageVolume) {
   fuchsia::media::AudioCorePtr audio_core;
   environment()->ConnectToService(audio_core.NewRequest());
-  audio_core.set_error_handler(ErrorHandler());
+  AddErrorHandler(audio_core, "AudioCore");
 
   fuchsia::media::audio::VolumeControlPtr client1;
   fuchsia::media::audio::VolumeControlPtr client2;
@@ -31,20 +31,25 @@ TEST_F(VolumeControlTest, ConnectToRenderUsageVolume) {
 
   float volume = 0.0;
   bool muted = false;
-  client2.events().OnVolumeMuteChanged =
-      CompletionCallback([&volume, &muted](float new_volume, bool new_muted) {
-        volume = new_volume;
-        muted = new_muted;
-      });
+  auto add_callback = [this, &client2, &volume, &muted]() {
+    client2.events().OnVolumeMuteChanged =
+        AddCallback("OnVolumeMuteChanged", [&volume, &muted](float new_volume, bool new_muted) {
+          volume = new_volume;
+          muted = new_muted;
+        });
+  };
 
+  add_callback();
   ExpectCallback();
   EXPECT_FLOAT_EQ(volume, 1.0);
 
+  add_callback();
   client1->SetVolume(0.5);
   ExpectCallback();
   EXPECT_FLOAT_EQ(volume, 0.5);
   EXPECT_EQ(muted, false);
 
+  add_callback();
   client1->SetMute(true);
   ExpectCallback();
   EXPECT_EQ(muted, true);

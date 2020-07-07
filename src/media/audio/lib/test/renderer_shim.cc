@@ -39,12 +39,8 @@ void RendererShimImpl::SetPtsUnits(uint32_t ticks_per_second_numerator,
 }
 
 void RendererShimImpl::Play(TestFixture* fixture, int64_t reference_time, int64_t media_time) {
-  bool played = false;
-  renderer_->Play(reference_time, media_time,
-                  [&played](int64_t reference_time, int64_t media_time) { played = true; });
-
-  fixture->RunLoopUntil([&played]() { return played; });
-  ASSERT_FALSE(fixture->error_occurred());
+  renderer_->Play(reference_time, media_time, fixture->AddCallback("Play"));
+  fixture->ExpectCallback();
 }
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -114,7 +110,7 @@ void RendererShimImpl::WaitForPackets(TestFixture* fixture, int64_t reference_ti
     }
     return true;
   });
-  ASSERT_FALSE(fixture->error_occurred());
+  fixture->ExpectNoUnexpectedErrors("during WaitForPackets");
 }
 
 // Explicitly instantiate all possible implementations.

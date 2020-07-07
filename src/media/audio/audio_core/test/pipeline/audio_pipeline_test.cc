@@ -122,14 +122,9 @@ TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
   renderer_->Play(this, first_time, 0);
   renderer_->WaitForPackets(this, first_time, {first_packets[0], first_packets[1]});
 
-  auto received_discard_all_callback = false;
-  renderer_->renderer()->DiscardAllPackets(CompletionCallback([&received_discard_all_callback]() {
-    received_discard_all_callback = true;
-    AUDIO_LOG(DEBUG) << "DiscardAllPackets #1 complete";
-  }));
-  RunLoopUntil([this, &received_discard_all_callback]() {
-    return (error_occurred_ || received_discard_all_callback);
-  });
+  renderer_->renderer()->DiscardAllPackets(AddCallback(
+      "DiscardAllPackets", []() { AUDIO_LOG(DEBUG) << "DiscardAllPackets #1 complete"; }));
+  ExpectCallback();
 
   // The entire first two packets must have been written. Subsequent packets may have been partially
   // written, depending on exactly when the DiscardAllPackets command is received. The remaining

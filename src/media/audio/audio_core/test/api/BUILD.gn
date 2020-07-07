@@ -39,7 +39,6 @@ executable("audio-core-api-tests-bin") {
     "audio_renderer_test.cc",
     "audio_tuner_test.cc",
     "gain_control_test.cc",
-    "gain_control_test.h",
     "usage_gain_reporter_test.cc",
     "usage_reporter_test.cc",
     "volume_control.cc",

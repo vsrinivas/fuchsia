@@ -25,7 +25,7 @@ VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironme
       inspect_id_(inspect_id),
       rb_(format, frame_count) {
   environment->ConnectToService(device_.NewRequest());
-  device_.set_error_handler(fixture->ErrorHandler());
+  fixture->AddErrorHandler(device_, "VirtualAudioDevice");
   WatchEvents();
 
   std::array<uint8_t, 16> device_id_array;

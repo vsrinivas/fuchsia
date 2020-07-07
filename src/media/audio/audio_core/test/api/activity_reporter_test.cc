@@ -30,11 +30,9 @@ class ActivityReporterTest : public HermeticAudioTest {
 TEST_F(ActivityReporterTest, ConnectToActivityReporter) {
   fuchsia::media::ActivityReporterPtr activity_reporter;
   environment()->ConnectToService(activity_reporter.NewRequest());
-  activity_reporter.set_error_handler(ErrorHandler());
+  AddErrorHandler(activity_reporter, "ActivityReporter");
 
-  activity_reporter->WatchRenderActivity(
-      CompletionCallback([&](const std::vector<fuchsia::media::AudioRenderUsage>& activity) {}));
-
+  activity_reporter->WatchRenderActivity(AddCallback("WatchRenderActivity"));
   ExpectCallback();
 }
 
