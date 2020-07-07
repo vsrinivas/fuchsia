@@ -40,7 +40,7 @@ config("compiler") {
   rustflags = [
     "-Clinker=" + rebase_path("$clang_prefix/clang++", "", root_build_dir),
     "-Clink-arg=--target=$clang_target",
-    "-Clink-arg=--sysroot=$sysroot",
+    "-Clink-arg=--sysroot=" + rebase_path(sysroot, root_build_dir),
     "-Cdefault-linker-libraries",
   ]
 
@@ -63,7 +63,7 @@ config("compiler") {
 }
 
 config("sysroot") {
-  cflags = [ "--sysroot=$sysroot" ]
+  cflags = [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
   ldflags = cflags
   asmflags = cflags
 }

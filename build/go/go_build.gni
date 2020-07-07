@@ -214,7 +214,7 @@ template("go_build") {
         "--objcopy",
         rebase_path("$clang_prefix/llvm-objcopy", "", root_build_dir),
         "--sysroot",
-        sysroot,
+        rebase_path(sysroot),
         "--target",
         clang_target,
       ]

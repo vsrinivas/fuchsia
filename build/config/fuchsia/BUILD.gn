@@ -70,10 +70,10 @@ config("compiler") {
 
   rustflags = [
     "-L",
-    sysroot + "/lib",
+    rebase_path(sysroot, root_build_dir) + "/lib",
     "-Clinker=" + rebase_path("$clang_prefix/lld", "", root_build_dir),
-    "-Clink-arg=--sysroot=" + sysroot,
-    "-Clink-arg=-L" + sysroot + "/lib",
+    "-Clink-arg=--sysroot=" + rebase_path(sysroot, root_build_dir),
+    "-Clink-arg=-L" + rebase_path(sysroot, root_build_dir) + "/lib",
     "-Clink-arg=-L" + clang_resource_dir + "/" + rust_target + "/lib",
     "-Clink-arg=--pack-dyn-relocs=relr",
     "-Clink-arg=-dynamic-linker=ld.so.1",
