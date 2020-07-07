@@ -119,5 +119,9 @@ if (have_prebuilt_libvulkan) {
     public_configs = [ ":libvulkan_config" ]
     sources = [ prebuilt_libvulkan_goldfish_path ]
     outputs = [ "$libvulkan_gen_path/libvulkan_goldfish.so" ]
+
+    # TODO(fxb/55650): Remove this once goldfish no longer depends on the
+    # library.
+    deps = [ "//zircon/system/ulib/async-default" ]
   }
 }

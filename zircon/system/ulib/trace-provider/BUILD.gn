@@ -88,7 +88,6 @@ template("trace_provider_library") {
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/zx",
-      "//zircon/system/ulib/async-default",
     ]
   }
 }
@@ -168,7 +167,10 @@ trace_provider_library("trace-provider-with-static-engine") {
 
   # This is used by magma client drivers, so it can't depend on fdio (or other shared libraries
   # besides libc).
-  assert_no_deps = [ "//sdk/lib/fdio" ]
+  assert_no_deps = [
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/async-default",
+  ]
 }
 
 # Version for the DDK.

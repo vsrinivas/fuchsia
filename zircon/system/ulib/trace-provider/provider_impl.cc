@@ -6,7 +6,6 @@
 
 #include <fuchsia/tracing/provider/c/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/process.h>
 #include <stdio.h>
