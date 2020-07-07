@@ -170,7 +170,20 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
         Err(ZxStatus::NOT_SUPPORTED)
     }
 
-    async fn send_mfg_command(&self, _command: &str) -> ZxResult<String> {
-        Err(ZxStatus::NOT_SUPPORTED)
+    async fn send_mfg_command(&self, command: &str) -> ZxResult<String> {
+        fx_log_info!("Got send_mfg_command");
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.apply_standard_combinators(
+            self.frame_handler
+                .send_request(
+                    CmdPropValueSet(PropStream::Mfg.into(), command.to_string())
+                        .returning::<String>(),
+                )
+                .boxed(),
+        )
+        .await
     }
 }

@@ -167,6 +167,7 @@ pub enum PropStream {
     Raw,
     Net,
     NetInsecure,
+    Mfg,
     Unknown(u32),
 }
 impl_sub_enum!(Prop::Stream, PropStream);
@@ -354,6 +355,7 @@ impl From<Prop> for u32 {
             Stream(PropStream::Raw) => 113,
             Stream(PropStream::Net) => 114,
             Stream(PropStream::NetInsecure) => 115,
+            Stream(PropStream::Mfg) => 0x3BC0,
             Stream(PropStream::Unknown(x)) => x,
 
             Phy(PropPhy::Enabled) => 0x20,
@@ -465,6 +467,7 @@ impl From<u32> for Prop {
             113 => Stream(PropStream::Raw),
             114 => Stream(PropStream::Net),
             115 => Stream(PropStream::NetInsecure),
+            0x3Bc0 => Stream(PropStream::Mfg),
 
             0x1000 => Gpio(PropGpio::Config),
             0x1002 => Gpio(PropGpio::State),

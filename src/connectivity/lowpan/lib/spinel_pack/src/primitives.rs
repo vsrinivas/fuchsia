@@ -126,6 +126,26 @@ impl TryPack for str {
     }
 }
 
+impl TryPack for &str {
+    fn pack_len(&self) -> io::Result<usize> {
+        TryPackAs::<str>::pack_as_len(*self)
+    }
+
+    fn try_pack<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> io::Result<usize> {
+        TryPackAs::<str>::try_pack_as(*self, buffer)
+    }
+}
+
+impl TryPack for String {
+    fn pack_len(&self) -> io::Result<usize> {
+        TryPackAs::<str>::pack_as_len(self.as_str())
+    }
+
+    fn try_pack<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> io::Result<usize> {
+        TryPackAs::<str>::try_pack_as(self.as_str(), buffer)
+    }
+}
+
 impl TryPackAs<str> for str {
     fn pack_as_len(&self) -> io::Result<usize> {
         Ok(self.as_bytes().len() + 1)
