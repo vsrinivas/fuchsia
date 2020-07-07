@@ -48,7 +48,7 @@ test("tftp-test") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/tftp",
-    "//zircon/system/ulib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
   include_dirs = [ ".." ]
 

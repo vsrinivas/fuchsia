@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <tftp/tftp.h>
-#include <unittest/unittest.h>
-
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -12,6 +9,9 @@
 #include <unistd.h>
 
 #include <atomic>
+
+#include <tftp/tftp.h>
+#include <zxtest/zxtest.h>
 
 // This test simulates a tftp file transfer by running two threads. Both the
 // file and transport interfaces are implemented in memory buffers.
@@ -234,14 +234,12 @@ int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) { return 
 
 /// SEND THREAD
 
-bool run_client_test(struct test_params* tp) {
-  BEGIN_HELPER;
-
+void run_client_test(struct test_params* tp) {
   // Configure TFTP session
   tftp_session* session;
   size_t session_size = tftp_sizeof_session();
   void* session_buf = malloc(session_size);
-  ASSERT_NONNULL(session_buf, "memory allocation failed");
+  ASSERT_NOT_NULL(session_buf, "memory allocation failed");
 
   tftp_status status = tftp_init(&session, session_buf, session_size);
   ASSERT_EQ(status, TFTP_NO_ERROR, "unable to initialize a tftp session");
@@ -266,9 +264,9 @@ bool run_client_test(struct test_params* tp) {
   // Allocate intermediate buffers
   size_t buf_sz = tp->blksz > PATH_MAX ? tp->blksz + 2 : PATH_MAX + 2;
   char* msg_in_buf = reinterpret_cast<char*>(malloc(buf_sz));
-  ASSERT_NONNULL(msg_in_buf, "memory allocation failure");
+  ASSERT_NOT_NULL(msg_in_buf, "memory allocation failure");
   char* msg_out_buf = reinterpret_cast<char*>(malloc(buf_sz));
-  ASSERT_NONNULL(msg_out_buf, "memory allocation failure");
+  ASSERT_NOT_NULL(msg_out_buf, "memory allocation failure");
 
   char err_msg_buf[128];
 
@@ -292,7 +290,6 @@ bool run_client_test(struct test_params* tp) {
   }
 
   free(session);
-  END_HELPER;
 }
 
 void* tftp_client_main(void* arg) {
@@ -303,14 +300,12 @@ void* tftp_client_main(void* arg) {
 
 /// RECV THREAD
 
-bool run_server_test(struct test_params* tp) {
-  BEGIN_HELPER;
-
+void run_server_test(struct test_params* tp) {
   // Configure TFTP session
   tftp_session* session;
   size_t session_size = tftp_sizeof_session();
   void* session_buf = malloc(session_size);
-  ASSERT_NONNULL(session_buf, "memory allocation failed");
+  ASSERT_NOT_NULL(session_buf, "memory allocation failed");
 
   tftp_status status = tftp_init(&session, session_buf, session_size);
   ASSERT_EQ(status, TFTP_NO_ERROR, "unable to initiate a tftp session");
@@ -334,9 +329,9 @@ bool run_server_test(struct test_params* tp) {
   // Allocate intermediate buffers
   size_t buf_sz = tp->blksz > PATH_MAX ? tp->blksz + 2 : PATH_MAX + 2;
   char* msg_in_buf = reinterpret_cast<char*>(malloc(buf_sz));
-  ASSERT_NONNULL(msg_in_buf, "memory allocation failure");
+  ASSERT_NOT_NULL(msg_in_buf, "memory allocation failure");
   char* msg_out_buf = reinterpret_cast<char*>(malloc(buf_sz));
-  ASSERT_NONNULL(msg_out_buf, "memory allocation failure");
+  ASSERT_NOT_NULL(msg_out_buf, "memory allocation failure");
 
   char err_msg_buf[128];
   tftp_handler_opts opts = {.inbuf = msg_in_buf,
@@ -350,7 +345,6 @@ bool run_server_test(struct test_params* tp) {
   } while (status == TFTP_NO_ERROR);
   EXPECT_EQ(status, TFTP_TRANSFER_COMPLETED, "failed to receive file");
   free(session);
-  END_HELPER;
 }
 
 void* tftp_server_main(void* arg) {
@@ -359,8 +353,7 @@ void* tftp_server_main(void* arg) {
   pthread_exit(NULL);
 }
 
-bool run_one_test(struct test_params* tp) {
-  BEGIN_TEST;
+void run_one_test(struct test_params* tp) {
   int init_result = initialize_files(tp);
   ASSERT_EQ(init_result, 0, "failure to initialize state");
 
@@ -375,49 +368,39 @@ bool run_one_test(struct test_params* tp) {
 
   int compare_result = compare_files(tp->filesz);
   EXPECT_EQ(compare_result, 0, "output file mismatch");
-  END_TEST;
 }
 
-bool test_tftp_send_file(void) {
+TEST(TftpTransferFile, test_tftp_send_file) {
   struct test_params tp = {.direction = DIR_SEND, .filesz = 1000000, .winsz = 20, .blksz = 1000};
-  return run_one_test(&tp);
+  run_one_test(&tp);
 }
 
-bool test_tftp_send_file_wrapping_block_count(void) {
+TEST(TftpTransferFile, test_tftp_send_file_wrapping_block_count) {
   // Wraps block count 4 times
   struct test_params tp = {.direction = DIR_SEND, .filesz = 2100000, .winsz = 9999, .blksz = 8};
-  return run_one_test(&tp);
+  run_one_test(&tp);
 }
 
-bool test_tftp_send_file_lg_window(void) {
+TEST(TftpTransferFile, test_tftp_send_file_lg_window) {
   // Make sure that a window size > 255 works properly
   struct test_params tp = {.direction = DIR_SEND, .filesz = 1000000, .winsz = 1024, .blksz = 1024};
-  return run_one_test(&tp);
+  run_one_test(&tp);
 }
 
-bool test_tftp_receive_file(void) {
+TEST(TftpTransferFile, test_tftp_receive_file) {
   struct test_params tp = {.direction = DIR_RECEIVE, .filesz = 1000000, .winsz = 20, .blksz = 1000};
-  return run_one_test(&tp);
+  run_one_test(&tp);
 }
 
-bool test_tftp_receive_file_wrapping_block_count(void) {
+TEST(TftpTransferFile, test_tftp_receive_file_wrapping_block_count) {
   // Wraps block count 4 times
   struct test_params tp = {.direction = DIR_RECEIVE, .filesz = 2100000, .winsz = 8192, .blksz = 8};
-  return run_one_test(&tp);
+  run_one_test(&tp);
 }
 
-bool test_tftp_receive_file_lg_window(void) {
+TEST(TftpTransferFile, test_tftp_receive_file_lg_window) {
   // Make sure that a window size > 255 works properly
   struct test_params tp = {
       .direction = DIR_RECEIVE, .filesz = 1000000, .winsz = 1024, .blksz = 1024};
-  return run_one_test(&tp);
+  run_one_test(&tp);
 }
-
-BEGIN_TEST_CASE(tftp_transfer_file)
-RUN_TEST(test_tftp_send_file)
-RUN_TEST(test_tftp_send_file_wrapping_block_count)
-RUN_TEST(test_tftp_send_file_lg_window)
-RUN_TEST(test_tftp_receive_file)
-RUN_TEST(test_tftp_receive_file_wrapping_block_count)
-RUN_TEST(test_tftp_receive_file_lg_window)
-END_TEST_CASE(tftp_transfer_file)
