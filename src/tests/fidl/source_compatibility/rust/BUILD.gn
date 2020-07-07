@@ -9,9 +9,9 @@ rustc_binary("rust") {
   edition = "2018"
 
   deps = [
-    "//garnet/tests/fidl-changes:fidl.test.after-rustc",
-    "//garnet/tests/fidl-changes:fidl.test.before-rustc",
-    "//garnet/tests/fidl-changes:fidl.test.during-rustc",
+    "../:fidl.test.after-rustc",
+    "../:fidl.test.before-rustc",
+    "../:fidl.test.during-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",

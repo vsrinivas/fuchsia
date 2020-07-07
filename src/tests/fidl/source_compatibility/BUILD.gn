@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-group("fidl-changes") {
+group("tests") {
   deps = [
     ":fidl.test.after",
     ":fidl.test.before",

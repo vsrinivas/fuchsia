@@ -15,9 +15,9 @@ go_binary("go") {
 go_library("fidl_changes_go_lib") {
   name = "fidl_changes_go_lib"
   deps = [
-    "//garnet/tests/fidl-changes:fidl.test.after($go_toolchain)",
-    "//garnet/tests/fidl-changes:fidl.test.before($go_toolchain)",
-    "//garnet/tests/fidl-changes:fidl.test.during($go_toolchain)",
+    "../:fidl.test.after($go_toolchain)",
+    "../:fidl.test.before($go_toolchain)",
+    "../:fidl.test.during($go_toolchain)",
     "//src/lib/component",
   ]
 }

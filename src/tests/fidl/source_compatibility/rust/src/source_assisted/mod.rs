@@ -19,7 +19,7 @@ mod during;
 mod after;
 
 // This file tests source-assisted transitions in Rust. For details on the
-// steps, see garnet/tests/fidl-changes/README.md#source-assisted.
+// steps, see src/tests/fidl/source_compatibility/README.md#source-assisted.
 
 // Step 1: test that the original code compiles against the original library.
 mod before_before {

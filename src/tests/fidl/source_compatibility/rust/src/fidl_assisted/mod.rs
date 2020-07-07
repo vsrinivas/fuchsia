@@ -14,7 +14,7 @@ mod before;
 mod after;
 
 // This file tests FIDL-assisted transitions in Rust. For details on the steps,
-// see garnet/tests/fidl-changes/README.md#fidl-assisted.
+// see src/tests/fidl/source_compatibility/README.md#fidl-assisted.
 
 // Step 1: test that the original code compiles against the original library.
 mod before_before {
