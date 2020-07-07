@@ -288,10 +288,11 @@ func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration s
 	n.obs.mu.seen[configuration] += 1
 	hasEvents := n.obs.mu.hasEvents
 	n.obs.mu.Unlock()
-	if hasEvents != nil {
-		hasEvents()
+	if hasEvents == nil {
+		panic("ndp dispatcher: dhcpV6Observation: hasEvents callback unspecified (ensure setHasEvents has been called)")
 	}
-	syslog.Infof("ndp: OnDHCPv6Configuration(%d, %d)", nicID, configuration)
+	hasEvents()
+	syslog.Infof("ndp: OnDHCPv6Configuration(%d, %s)", nicID, configuration)
 }
 
 // addEvent adds an event to be handled by the ndpDispatcher goroutine.
