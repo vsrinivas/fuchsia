@@ -189,14 +189,7 @@ zx_status_t sys_ktrace_write(zx_handle_t handle, uint32_t event_id, uint32_t arg
     return ZX_ERR_INVALID_ARGS;
   }
 
-  uint32_t* args = static_cast<uint32_t*>(ktrace_open(TAG_PROBE_24(event_id)));
-  if (!args) {
-    //  There is not a single reason for failure. Assume it reached the end.
-    return ZX_ERR_UNAVAILABLE;
-  }
-
-  args[0] = arg0;
-  args[1] = arg1;
+  ktrace_write_record(TAG_PROBE_24(event_id), ktrace_timestamp(), arg0, arg1);
   return ZX_OK;
 }
 

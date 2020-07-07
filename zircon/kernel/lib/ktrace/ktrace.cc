@@ -30,9 +30,6 @@ struct ktrace_state {
   // where the next record will be written
   ktl::atomic<uint32_t> offset;
 
-  // mask of groups we allow, 0 == tracing disabled
-  ktl::atomic<int> grpmask;
-
   // total size of the trace buffer
   uint32_t bufsize;
 
@@ -93,28 +90,18 @@ void ktrace_report_probes() {
   }
 }
 
-inline bool ktrace_enabled(uint32_t tag, ktrace_state* ks) {
-  if (tag & ks->grpmask.load())
-    return true;
-  return false;
-}
-
 inline void ktrace_disable(ktrace_state* ks) {
-  ks->grpmask.store(0);
+  ktrace_grpmask.store(0);
   ks->buffer_full.store(true);
 }
 
 // The global ktrace state.
 ktrace_state KTRACE_STATE;
 
-}  // namespace
-
+// Allocates a new trace record in the trace buffer. Returns a pointer to the
+// start of the record or nullptr the end of the buffer is reached.
 void* ktrace_open(uint32_t tag, uint64_t ts) {
   ktrace_state* ks = &KTRACE_STATE;
-  if (!ktrace_enabled(tag, ks)) {
-    return nullptr;
-  }
-
   uint32_t off;
   if ((off = ks->offset.fetch_add(KTRACE_LEN(tag))) >= (ks->bufsize)) {
     // if we arrive at the end, stop
@@ -130,6 +117,10 @@ void* ktrace_open(uint32_t tag, uint64_t ts) {
                  : static_cast<uint32_t>(Thread::Current::Get()->user_tid());
   return hdr + 1;
 }
+
+}  // namespace
+
+ktl::atomic<uint32_t> ktrace_grpmask;
 
 ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len) {
   ktrace_state* ks = &KTRACE_STATE;
@@ -174,13 +165,13 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     case KTRACE_ACTION_START:
       options = KTRACE_GRP_TO_MASK(options);
       ks->marker = 0;
-      ks->grpmask.store(options ? options : KTRACE_GRP_TO_MASK(KTRACE_GRP_ALL));
+      ktrace_grpmask.store(options ? options : KTRACE_GRP_TO_MASK(KTRACE_GRP_ALL));
       ktrace_report_live_processes();
       ktrace_report_live_threads();
       break;
 
     case KTRACE_ACTION_STOP: {
-      ks->grpmask.store(0);
+      ktrace_grpmask.store(0);
       uint32_t n = ks->offset.load();
       if (n > ks->bufsize) {
         ks->marker = ks->bufsize;
@@ -282,7 +273,7 @@ void ktrace_init(unsigned level) {
   ks->offset.store(KTRACE_RECSIZE * 2);
   ktrace_report_syscalls();
   ktrace_report_probes();
-  ks->grpmask.store(KTRACE_GRP_TO_MASK(grpmask));
+  ktrace_grpmask.store(KTRACE_GRP_TO_MASK(grpmask));
 
   // report names of existing threads
   ktrace_report_live_threads();
@@ -297,26 +288,24 @@ void ktrace_init(unsigned level) {
   ktrace_probe(TraceAlways, TraceContext::Thread, "ktrace_ready"_stringref);
 }
 
-void ktrace_tiny(uint32_t tag, uint32_t arg) {
+void ktrace_write_record_tiny(uint32_t tag, uint32_t arg) {
   ktrace_state* ks = &KTRACE_STATE;
-  if (ktrace_enabled(tag, ks)) {
-    tag = (tag & 0xFFFFFFF0) | 2;
-    uint32_t off;
-    if ((off = (ks->offset.fetch_add(KTRACE_HDRSIZE))) >= (ks->bufsize)) {
-      // if we arrive at the end, stop
-      ktrace_disable(ks);
-    } else {
-      ktrace_header_t* hdr = reinterpret_cast<ktrace_header_t*>(ks->buffer + off);
-      hdr->ts = ktrace_timestamp();
-      hdr->tag = tag;
-      hdr->tid = arg;
-    }
+  tag = (tag & 0xFFFFFFF0) | 2;
+  uint32_t off;
+  if ((off = (ks->offset.fetch_add(KTRACE_HDRSIZE))) >= (ks->bufsize)) {
+    // if we arrive at the end, stop
+    ktrace_disable(ks);
+  } else {
+    ktrace_header_t* hdr = reinterpret_cast<ktrace_header_t*>(ks->buffer + off);
+    hdr->ts = ktrace_timestamp();
+    hdr->tag = tag;
+    hdr->tid = arg;
   }
 }
 
 void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
   ktrace_state* ks = &KTRACE_STATE;
-  if (ktrace_enabled(tag, ks) || (always && !ks->buffer_full.load())) {
+  if (ktrace_enabled(tag) || (always && !ks->buffer_full.load())) {
     const uint32_t len = static_cast<uint32_t>(strnlen(name, ZX_MAX_NAME_LEN - 1));
 
     // set size to: sizeof(hdr) + len + 1, round up to multiple of 8
@@ -336,6 +325,48 @@ void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, 
     }
   }
 }
+
+// Write out a ktrace record with no payload.
+template <>
+void ktrace_write_record(uint32_t effective_tag, uint64_t explicit_ts) {
+  if (explicit_ts == kRecordCurrentTimestamp) {
+    explicit_ts = ktrace_timestamp();
+  }
+
+  (void)ktrace_open(effective_tag, explicit_ts);
+}
+
+// Write out a ktrace record with the given arguments as a payload.
+//
+// Arguments must be of the same type.
+template <typename... Args>
+inline void ktrace_write_record(uint32_t effective_tag, uint64_t explicit_ts, Args... args) {
+  if (explicit_ts == kRecordCurrentTimestamp) {
+    explicit_ts = ktrace_timestamp();
+  }
+
+  // Write out each arg.
+  auto payload = {args...};
+  if (auto* data = static_cast<typename decltype(payload)::value_type*>(
+          ktrace_open(effective_tag, explicit_ts))) {
+    int i = 0;
+    for (auto arg : payload) {
+      data[i++] = arg;
+    }
+  }
+}
+
+// Instantiate used versions of |ktrace_write_record|.
+template void ktrace_write_record(uint32_t effective_tag, uint64_t explicit_ts, uint32_t a);
+template void ktrace_write_record(uint32_t effective_tag, uint64_t explicit_ts, uint32_t a,
+                                  uint32_t b);
+template void ktrace_write_record(uint32_t effective_tag, uint64_t explicit_ts, uint32_t a,
+                                  uint32_t b, uint32_t c);
+template void ktrace_write_record(uint32_t effective_tag, uint64_t explicit_ts, uint32_t a,
+                                  uint32_t b, uint32_t c, uint32_t d);
+template void ktrace_write_record(uint32_t effective_tag, uint64_t explicit_ts, uint64_t a);
+template void ktrace_write_record(uint32_t effective_tag, uint64_t explicit_ts, uint64_t a,
+                                  uint64_t b);
 
 // Finish initialization before starting userspace (i.e. before debug syscalls can occur).
 LK_INIT_HOOK(ktrace, ktrace_init, LK_INIT_LEVEL_USER - 1)
