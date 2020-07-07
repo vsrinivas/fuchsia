@@ -15,6 +15,7 @@ executable("log_validator_cpp_puppet_bin") {
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
     "//sdk/lib/sys/cpp",
     "//src/diagnostics/lib/streams/cpp:streams",
+    "//src/diagnostics/lib/streams/cpp:streams-encoder",
     "//src/diagnostics/log-validator/fidl:validate",
     "//src/lib/fsl",
     "//zircon/public/lib/fidl",
