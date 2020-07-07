@@ -23,6 +23,7 @@ source_set("util") {
   ]
 
   deps = [
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
   ]
