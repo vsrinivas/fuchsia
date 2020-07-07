@@ -369,33 +369,33 @@ void Uint16Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint16Type(th
 
 std::string Uint32Type::Name() const {
   switch (kind_) {
-    case Kind::kDecimal:
-    case Kind::kHexaDecimal:
-      return "uint32";
     case Kind::kBtiPerm:
       return "zx.bti_perm";
     case Kind::kCachePolicy:
       return "zx.cache_policy";
     case Kind::kClock:
       return "zx.clock";
-    case Kind::kRights:
-      return "zx.rights";
-    case Kind::kSignals:
-      return "signals";
-    case Kind::kStatus:
-      return "zx.status";
+    case Kind::kDecimal:
+    case Kind::kHexaDecimal:
+      return "uint32";
+    case Kind::kExceptionState:
+      return "zx.exception_state";
     case Kind::kObjectInfoTopic:
       return "zx.object_info_topic";
     case Kind::kPciBarType:
       return "zx.pci_bar_type";
     case Kind::kPortPacketType:
       return "zx.port_packet::type";
-    case Kind::kPropType:
-      return "zx.prop_type";
-    case Kind::kExceptionState:
-      return "zx.exception_state";
     case Kind::kProfileInfoFlags:
       return "zx.profile_info_flags";
+    case Kind::kPropType:
+      return "zx.prop_type";
+    case Kind::kRights:
+      return "zx.rights";
+    case Kind::kSignals:
+      return "signals";
+    case Kind::kStatus:
+      return "zx.status";
   }
 }
 
@@ -407,12 +407,6 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   } else {
     FX_DCHECK(!negative);
     switch (kind_) {
-      case Kind::kDecimal:
-        printer << Blue << absolute << ResetColor;
-        break;
-      case Kind::kHexaDecimal:
-        printer.DisplayHexa32(absolute);
-        break;
       case Kind::kBtiPerm:
         printer.DisplayBtiPerm(absolute);
         break;
@@ -422,11 +416,20 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
       case Kind::kClock:
         printer.DisplayClock(absolute);
         break;
+      case Kind::kDecimal:
+        printer << Blue << absolute << ResetColor;
+        break;
       case Kind::kExceptionState:
         printer.DisplayExceptionState(absolute);
         break;
+      case Kind::kHexaDecimal:
+        printer.DisplayHexa32(absolute);
+        break;
       case Kind::kObjectInfoTopic:
         printer.DisplayObjectInfoTopic(absolute);
+        break;
+      case Kind::kPciBarType:
+        printer.DisplayPciBarType(absolute);
         break;
       case Kind::kProfileInfoFlags:
         printer.DisplayProfileInfoFlags(absolute);
@@ -436,9 +439,6 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         break;
       case Kind::kPortPacketType:
         printer.DisplayPortPacketType(absolute);
-        break;
-      case Kind::kPciBarType:
-        printer.DisplayPciBarType(absolute);
         break;
       case Kind::kRights:
         printer.DisplayRights(absolute);

@@ -25,20 +25,60 @@ std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallTyp
   switch (syscall_type) {
     case SyscallType::kBool:
       return std::make_unique<fidl_codec::BoolType>();
+    case SyscallType::kBtiPerm:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kBtiPerm);
+    case SyscallType::kCachePolicy:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kCachePolicy);
+    case SyscallType::kClock:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kClock);
+    case SyscallType::kDuration:
+      return std::make_unique<fidl_codec::Int64Type>(fidl_codec::Int64Type::Kind::kDuration);
+    case SyscallType::kExceptionState:
+      return std::make_unique<fidl_codec::Uint32Type>(
+          fidl_codec::Uint32Type::Kind::kExceptionState);
+    case SyscallType::kGpAddr:
+      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kGpAddr);
+    case SyscallType::kHandle:
+      return std::make_unique<fidl_codec::HandleType>();
     case SyscallType::kInt32:
       return std::make_unique<fidl_codec::Int32Type>();
     case SyscallType::kInt64:
       return std::make_unique<fidl_codec::Int64Type>();
-    case SyscallType::kUint8:
-      return std::make_unique<fidl_codec::Uint8Type>();
-    case SyscallType::kUint8Hexa:
-      return std::make_unique<fidl_codec::Uint8Type>(fidl_codec::Uint8Type::Kind::kHexaDecimal);
+    case SyscallType::kObjectInfoTopic:
+      return std::make_unique<fidl_codec::Uint32Type>(
+          fidl_codec::Uint32Type::Kind::kObjectInfoTopic);
     case SyscallType::kPacketGuestVcpuType:
       return std::make_unique<fidl_codec::Uint8Type>(
           fidl_codec::Uint8Type::Kind::kPacketGuestVcpuType);
     case SyscallType::kPacketPageRequestCommand:
       return std::make_unique<fidl_codec::Uint16Type>(
           fidl_codec::Uint16Type::Kind::kPacketPageRequestCommand);
+    case SyscallType::kPaddr:
+      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kPaddr);
+    case SyscallType::kPciBarType:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kPciBarType);
+    case SyscallType::kPortPacketType:
+      return std::make_unique<fidl_codec::Uint32Type>(
+          fidl_codec::Uint32Type::Kind::kPortPacketType);
+    case SyscallType::kProfileInfoFlags:
+      return std::make_unique<fidl_codec::Uint32Type>(
+          fidl_codec::Uint32Type::Kind::kProfileInfoFlags);
+    case SyscallType::kPropType:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kPropType);
+    case SyscallType::kRights:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kRights);
+    case SyscallType::kSignals:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kSignals);
+    case SyscallType::kSize:
+      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kSize);
+    case SyscallType::kStatus:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kStatus);
+    case SyscallType::kTime:
+      return std::make_unique<fidl_codec::Int64Type>(fidl_codec::Int64Type::Kind::kTime);
+    case SyscallType::kUint8:
+      return std::make_unique<fidl_codec::Uint8Type>();
+    case SyscallType::kUint8Hexa:
+      return std::make_unique<fidl_codec::Uint8Type>(fidl_codec::Uint8Type::Kind::kHexaDecimal);
     case SyscallType::kUint16:
       return std::make_unique<fidl_codec::Uint16Type>();
     case SyscallType::kUint16Hexa:
@@ -47,54 +87,14 @@ std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallTyp
       return std::make_unique<fidl_codec::Uint32Type>();
     case SyscallType::kUint32Hexa:
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kHexaDecimal);
-    case SyscallType::kObjectInfoTopic:
-      return std::make_unique<fidl_codec::Uint32Type>(
-          fidl_codec::Uint32Type::Kind::kObjectInfoTopic);
-    case SyscallType::kPciBarType:
-      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kPciBarType);
-    case SyscallType::kProfileInfoFlags:
-      return std::make_unique<fidl_codec::Uint32Type>(
-          fidl_codec::Uint32Type::Kind::kProfileInfoFlags);
     case SyscallType::kUint64:
       return std::make_unique<fidl_codec::Uint64Type>();
     case SyscallType::kUint64Hexa:
       return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kHexaDecimal);
-    case SyscallType::kVaddr:
-      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kVaddr);
-    case SyscallType::kPaddr:
-      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kPaddr);
-    case SyscallType::kGpAddr:
-      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kGpAddr);
-    case SyscallType::kSignals:
-      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kSignals);
-    case SyscallType::kSize:
-      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kSize);
     case SyscallType::kUintptr:
       return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kUintptr);
-    case SyscallType::kStatus:
-      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kStatus);
-    case SyscallType::kHandle:
-      return std::make_unique<fidl_codec::HandleType>();
-    case SyscallType::kBtiPerm:
-      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kBtiPerm);
-    case SyscallType::kRights:
-      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kRights);
-    case SyscallType::kExceptionState:
-      return std::make_unique<fidl_codec::Uint32Type>(
-          fidl_codec::Uint32Type::Kind::kExceptionState);
-    case SyscallType::kPortPacketType:
-      return std::make_unique<fidl_codec::Uint32Type>(
-          fidl_codec::Uint32Type::Kind::kPortPacketType);
-    case SyscallType::kPropType:
-      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kPropType);
-    case SyscallType::kCachePolicy:
-      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kCachePolicy);
-    case SyscallType::kClock:
-      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kClock);
-    case SyscallType::kDuration:
-      return std::make_unique<fidl_codec::Int64Type>(fidl_codec::Int64Type::Kind::kDuration);
-    case SyscallType::kTime:
-      return std::make_unique<fidl_codec::Int64Type>(fidl_codec::Int64Type::Kind::kTime);
+    case SyscallType::kVaddr:
+      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kVaddr);
     default:
       return nullptr;
   }
