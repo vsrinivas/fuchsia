@@ -37,11 +37,58 @@ Future<ProcessResult> createArchive(
       workingDirectory: workingDirectory);
 }
 
+/// Make sure there's only one instance of the item in the input.
+///
+/// Example expected input:
+/// Rule {
+///     host_match: "fuchsia.com",
+///     host_replacement: "devhost",
+///     path_prefix_match: "/",
+///     path_prefix_replacement: "/",
+/// }
+///
+/// We want to make sure there is only one instance of a given key:value.
+bool hasExclusivelyOneItem(
+    String input, String expectedKey, String expectedValue) {
+  return 1 ==
+      RegExp('($expectedKey):\\s+\\"($expectedValue)\\"')
+          .allMatches(input)
+          .length;
+}
+
+/// Find the redirect rule for `fuchsia.com`, if there is one.
+///
+/// Example expected input:
+/// Rule {
+///     host_match: "fuchsia.com",
+///     host_replacement: "devhost",
+///     path_prefix_match: "/",
+///     path_prefix_replacement: "/",
+/// }
+///
+/// Returns `"devhost"` for the above example input.
+/// Returns `null` if there are no rules for `"fuchsia.com"`.
+String getCurrentRewriteRule(String ruleList) {
+  String fuchsiaRule = '';
+  var matches = RegExp('Rule (\{.+?\})', dotAll: true).allMatches(ruleList);
+  for (final match in matches) {
+    if (hasExclusivelyOneItem(match.group(0), 'host_match', 'fuchsia.com')) {
+      fuchsiaRule = match.group(0);
+      break;
+    }
+  }
+  matches = RegExp('host_replacement:\\s+\\"(.+)\\"').allMatches(fuchsiaRule);
+  for (final match in matches) {
+    // There should only be one match. If not, just take the first one.
+    return match.group(1);
+  }
+  return null;
+}
+
 void main() {
   final log = Logger('package_manager_test');
   final pmPath = Platform.script.resolve('runtime_deps/pm').toFilePath();
 
-  Directory tempDir;
   sl4f.Sl4f sl4fDriver;
   Process serveProcess;
 
@@ -49,22 +96,35 @@ void main() {
     Logger.root
       ..level = Level.ALL
       ..onRecord.listen((rec) => print('[${rec.level}]: ${rec.message}'));
-    tempDir = await Directory.systemTemp.createTemp('repo');
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
   });
 
   tearDownAll(() async {
-    tempDir.deleteSync(recursive: true);
     serveProcess.kill();
     await sl4fDriver.stopServer();
     sl4fDriver.close();
   });
   group('Package Manager', () {
+    Directory tempDir;
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('repo');
+    });
+    tearDown(() async {
+      // TODO(vfcc): Write generic logic to observe the state of the repos and restore them to
+      // expected defaults.
+      tempDir.deleteSync(recursive: true);
+    });
     test(
         'Test that creates a repository, deploys a package, and '
         'validates that the deployed package is visible from the server',
         () async {
+      // Covers these commands (success cases only):
+      // amberctl add_src -n <path> -f http://<host>:<port>/config.json
+      // amberctl enable_src -n devhost
+      // amberctl rm_src -n <name>
+      // pkgctl repo
+      // pm serve -repo=<path> -l :<port>
       final repoPath = tempDir.path;
       log.info('Initializing repo: $repoPath');
       final initializeRepoResponse = await initializeRepo(pmPath, repoPath);
@@ -110,20 +170,68 @@ void main() {
       log.info('Getting Host Address');
       final hostAddress = await formattedHostAddress(sl4fDriver);
 
+      // Typically, there is a pre-existing rule pointing to `devhost`, but it isn't
+      // guaranteed. Record what the rule list is before we begin, and confirm that is
+      // the rule list when we are finished.
+
+      log.info('Recording the current rule list');
+      var ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
+      expect(ruleListResponse.exitCode, 0);
+      final originalRuleList = ruleListResponse.stdout.toString();
+
+      var originalRewriteRule = getCurrentRewriteRule(originalRuleList);
+
       log.info(
           'Adding the new repository as an update source with http://$hostAddress:$port');
       final addRepoCfgResponse = await sl4fDriver.ssh.run(
           'amberctl add_src -n $repoPath -f http://$hostAddress:$port/config.json');
       expect(addRepoCfgResponse.exitCode, 0);
 
-      log.info('Running list_srcs');
-      final listSrcsResponse = await sl4fDriver.ssh.run('amberctl list_srcs');
+      log.info('Running pkgctl repo to list sources');
+      var listSrcsResponse = await sl4fDriver.ssh.run('pkgctl repo');
       expect(listSrcsResponse.exitCode, 0);
 
-      final listSrcsResponseOutput = listSrcsResponse.stdout.toString();
-      String repoUrl = repoPath.replaceAll('/', '_');
-      repoUrl = 'fuchsia-pkg://$repoUrl';
+      var listSrcsResponseOutput = listSrcsResponse.stdout.toString();
+      String repoName = repoPath.replaceAll('/', '_');
+      String repoUrl = 'fuchsia-pkg://$repoName';
+
       expect(listSrcsResponseOutput.contains(repoUrl), isTrue);
+
+      log.info('Confirm rule list points to $repoName');
+      ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
+      expect(ruleListResponse.exitCode, 0);
+
+      var ruleListResponseOutput = ruleListResponse.stdout.toString();
+      expect(
+          hasExclusivelyOneItem(
+              ruleListResponseOutput, 'host_replacement', repoName),
+          isTrue);
+
+      log.info('Cleaning up temp repo');
+      final rmSrcResponse =
+          await sl4fDriver.ssh.run('amberctl rm_src -n $repoName');
+      expect(rmSrcResponse.exitCode, 0);
+
+      log.info('Checking that $repoUrl is gone');
+      listSrcsResponse = await sl4fDriver.ssh.run('pkgctl repo');
+      expect(listSrcsResponse.exitCode, 0);
+
+      listSrcsResponseOutput = listSrcsResponse.stdout.toString();
+      expect(listSrcsResponseOutput.contains(repoUrl), isFalse);
+
+      if (originalRewriteRule != null) {
+        log.info('Re-enabling original repo source');
+        final enableSrcResponse = await sl4fDriver.ssh
+            .run('amberctl enable_src -n $originalRewriteRule');
+        expect(enableSrcResponse.exitCode, 0);
+      }
+
+      log.info('Confirm rule list is back to its original set.');
+      ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
+      expect(ruleListResponse.exitCode, 0);
+
+      ruleListResponseOutput = ruleListResponse.stdout.toString();
+      expect(ruleListResponseOutput, originalRuleList);
     });
   }, timeout: _timeout);
 }
