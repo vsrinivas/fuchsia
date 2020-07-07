@@ -37,12 +37,18 @@ template("modular_config_validate") {
 }
 
 # Packages a modular framework configuration after validating the configuration.
-# Configuration will be found in basemgr's /config/data/startup.config.
+# Configuration will be found in basemgr's /config/data directory.
 #
 # Parameters
 #   config (required)
 #     This is a file containing configuration for the modular framework.
 #     It will be schema-validated.
+#
+#   output_name (optional)
+#     The output name for the configuration file.
+#     For example, if output_name is `foo.config`, basemgr can read this
+#     configuration file from `/config/data/foo.config`.
+#     Default: startup.config
 #
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
@@ -73,10 +79,15 @@ template("modular_config") {
     config_data_deps += [ ":" + target_name + "_basemgr.config" ]
   }
 
+  output_name = "startup.config"
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  }
+
   config_data(invoker.target_name) {
     for_pkg = "basemgr"
     sources = [ rebase_path(invoker.config) ]
-    outputs = [ "startup.config" ]
+    outputs = [ output_name ]
 
     deps = config_data_deps
   }
