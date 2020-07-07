@@ -77,7 +77,7 @@ def main():
         ["git", "rev-parse", "--show-toplevel"], encoding="UTF-8").strip()
     for path in modified.splitlines():
         p = pathlib.Path(git_base, path)
-        if p.exists():
+        if p.exists() and not path.endswith("BUILD.gn"):
             p.touch()
 
     # Find all stale stamps
