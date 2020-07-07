@@ -454,7 +454,9 @@ bool Dockyard::StartCollectingFrom(ConnectionRequest&& request,
     return false;
   }
   ResetHarvesterData();
-  Initialize();
+  if (!Initialize()) {
+    return false;
+  }
   on_connection_request_ = request;
   on_connection_handler_ = callback;
   server_thread_ = std::thread([this]() { RunGrpcServer(); });
@@ -488,11 +490,11 @@ void Dockyard::IgnoreSamplesLocked(const std::string& starting,
   }
 }
 
-void Dockyard::Initialize() {
+bool Dockyard::Initialize() {
   std::lock_guard<std::mutex> guard(mutex_);
   if (server_thread_.joinable()) {
     GT_LOG(INFO) << "Dockyard server already initialized";
-    return;
+    return true;
   }
 
   GT_LOG(INFO) << "Starting dockyard server";
@@ -502,16 +504,27 @@ void Dockyard::Initialize() {
 
   std::string server_address(DEFAULT_SERVER_ADDRESS);
   grpc::ServerBuilder builder;
+  int selected_port = -1;
   // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials(),
+                           &selected_port);
   // Register "service" as the instance through which we'll communicate with
   // clients. In this case it corresponds to a *synchronous* service. The
   // builder (and server) will hold a weak pointer to the service.
   builder.RegisterService(protocol_buffer_service_.get());
   // Finally assemble the server.
   std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+  if (selected_port <= 0) {
+    GT_LOG(ERROR) << "Error binding the gRPC server to the port";
+    return false;
+  } else if (server.get() == nullptr) {
+    // All other start errors are flagged by a null server.
+    GT_LOG(ERROR) << "Error starting the gRPC server";
+    return false;
+  }
   grpc_server_ = std::move(server);
   GT_LOG(INFO) << "Server listening on " << server_address;
+  return true;
 }
 
 void Dockyard::RunGrpcServer() {

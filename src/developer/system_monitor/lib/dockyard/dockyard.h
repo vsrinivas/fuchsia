@@ -680,7 +680,9 @@ class Dockyard {
                            const std::string& ending);
 
   // Listen for incoming samples.
-  void Initialize();
+  //
+  // Returns |false| on problems with starting the gRPC server.
+  bool Initialize();
 
   // A private version of MatchPaths that expects that a lock has already been
   // acquired.
