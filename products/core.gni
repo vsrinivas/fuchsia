@@ -51,7 +51,7 @@ base_package_labels += [
   "//src/connectivity/network:config",
   "//src/connectivity/wlan:packages",
   "//src/connectivity/wlan/config:default",
-  "//src/developer/feedback/bugreport",
+  "//src/developer/forensics/bugreport",
   "//src/developer/forensics/crash_reports:crash-reports",
   "//src/developer/forensics/exceptions",
   "//src/developer/forensics/feedback_data:feedback_agent",
