@@ -355,6 +355,31 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 			tcpi_rttvar: C.uint(v.RTTVar.Nanoseconds() / 1000),
 		}, nil
 
+	case C.TCP_SYNCNT:
+		v, err := ep.GetSockOptInt(tcpip.TCPSynCountOption)
+		if err != nil {
+			return nil, err
+		}
+		return int32(v), nil
+
+	case C.TCP_WINDOW_CLAMP:
+		v, err := ep.GetSockOptInt(tcpip.TCPWindowClampOption)
+		if err != nil {
+			return nil, err
+		}
+		return int32(v), nil
+
+	case C.TCP_LINGER2:
+		var v tcpip.TCPLingerTimeoutOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+		// Linux uses this socket option to override `tcp_fin_timeout`, which is in
+		// seconds.
+		//
+		// See the man page for details: https://man7.org/linux/man-pages/man7/tcp.7.html
+		return int32(time.Duration(v) / time.Second), nil
+
 	case
 		C.TCP_CC_INFO,
 		C.TCP_NOTSENT_LOWAT:
@@ -718,6 +743,29 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 			v = 0
 		}
 		return ep.SetSockOpt(tcpip.TCPDeferAcceptOption(time.Second * time.Duration(v)))
+
+	case C.TCP_SYNCNT:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+		return ep.SetSockOptInt(tcpip.TCPSynCountOption, int(binary.LittleEndian.Uint32(optVal)))
+
+	case C.TCP_WINDOW_CLAMP:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+		return ep.SetSockOptInt(tcpip.TCPWindowClampOption, int(binary.LittleEndian.Uint32(optVal)))
+
+	case C.TCP_LINGER2:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+		v := binary.LittleEndian.Uint32(optVal)
+		// Linux uses this socket option to override `tcp_fin_timeout`, which is in
+		// seconds.
+		//
+		// See the man page for details: https://man7.org/linux/man-pages/man7/tcp.7.html
+		return ep.SetSockOpt(tcpip.TCPLingerTimeoutOption(time.Second * time.Duration(v)))
 
 	case C.TCP_REPAIR_OPTIONS:
 
