@@ -30,7 +30,6 @@ fn initialize() -> Scoped<zx::Job> {
 
 #[cfg(rust_panic = "abort")]
 fn install_panic_hook() {
-    println!("installing panic hook");
     let old_hook = panic::take_hook();
     let new_hook = Box::new(move |panic_info: &panic::PanicInfo<'_>| {
         exit_hook();
