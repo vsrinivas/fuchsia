@@ -4,6 +4,9 @@
 
 #include "aml-cpu.h"
 
+#include <lib/device-protocol/pdev.h>
+#include <lib/mmio/mmio.h>
+
 #include <memory>
 
 #include <ddk/binding.h>
@@ -12,15 +15,17 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/composite.h>
+#include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/thermal.h>
 
 namespace {
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
 using llcpp::fuchsia::hardware::thermal::PowerDomain;
 
-__UNUSED constexpr size_t kFragmentPdev = 0;
+constexpr size_t kFragmentPdev = 0;
 constexpr size_t kFragmentThermal = 1;
 constexpr size_t kFragmentCount = 2;
+constexpr zx_off_t kCpuVersionOffset = 0x220;
 
 uint16_t PstateToOperatingPoint(const uint32_t pstate, const size_t n_operating_points) {
   ZX_ASSERT(pstate < n_operating_points);
@@ -46,10 +51,29 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   size_t actual;
   composite.GetFragments(devices, kFragmentCount, &actual);
   if (actual != kFragmentCount) {
-    zxlogf(ERROR, "%s: Expected to get %lu fragments, actually got %lu", __func__,
-           kFragmentCount, actual);
+    zxlogf(ERROR, "%s: Expected to get %lu fragments, actually got %lu", __func__, kFragmentCount,
+           actual);
     return ZX_ERR_INTERNAL;
   }
+
+  zx_device_t* platform_device = devices[kFragmentPdev];
+  ddk::PDev pdev_client(platform_device);
+
+  // Map AOBUS registers
+  std::optional<ddk::MmioBuffer> mmio_buffer;
+
+  if ((status = pdev_client.MapMmio(0, &mmio_buffer)) != ZX_OK) {
+    zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", status);
+    return status;
+  }
+
+  const uint32_t cpu_version_packed = mmio_buffer->Read32(kCpuVersionOffset);
+  const uint8_t major_revision = (cpu_version_packed >> 24) & 0xff;
+  const uint8_t minor_revision = (cpu_version_packed >> 8) & 0xff;
+  const uint8_t cpu_package_id = (cpu_version_packed >> 20) & 0x0f;
+  zxlogf(INFO, "major revision number: 0x%x", major_revision);
+  zxlogf(INFO, "minor revision number: 0x%x", minor_revision);
+  zxlogf(INFO, "cpu package id number: 0x%x", cpu_package_id);
 
   // Initialize an array with the maximum possible number of PStates since we
   // determine the actual number of PStates at runtime by querying the thermal
@@ -116,7 +140,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   }
 
   const uint8_t perf_state_count = static_cast<uint8_t>(opps.count);
-  zxlogf(INFO, "aml-cpu: Creating CPU Device with %u operating poitns", opps.count);
+  zxlogf(INFO, "aml-cpu: Creating CPU Device with %u operating points", opps.count);
 
   auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(thermal_fidl_client));
 
@@ -190,8 +214,8 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
 
   // Make sure that the state is in bounds?
   if (state >= opps.count) {
-    zxlogf(ERROR, "%s: requested pstate index out of bounds, requested = %u, count = %u",
-           __func__, state, opps.count);
+    zxlogf(ERROR, "%s: requested pstate index out of bounds, requested = %u, count = %u", __func__,
+           state, opps.count);
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
   }

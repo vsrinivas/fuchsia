@@ -8,6 +8,8 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
 #include <fuchsia/hardware/thermal/llcpp/fidl.h>
+#include <lib/device-protocol/platform-device.h>
+#include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>

@@ -8,10 +8,20 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <soc/aml-s905d2/s905d2-hw.h>
 
+#include "astro-gpios.h"
 #include "astro.h"
 
 namespace {
+
+constexpr pbus_mmio_t cpu_mmios[]{
+    {
+        // AOBUS
+        .base = S905D2_AOBUS_BASE,
+        .length = S905D2_AOBUS_LENGTH,
+    },
+};
 
 constexpr pbus_dev_t cpu_dev = []() {
   pbus_dev_t result = {};
@@ -19,6 +29,8 @@ constexpr pbus_dev_t cpu_dev = []() {
   result.vid = PDEV_VID_AMLOGIC;
   result.pid = PDEV_PID_AMLOGIC_S905D2;
   result.did = PDEV_DID_AMLOGIC_CPU;
+  result.mmio_list = cpu_mmios;
+  result.mmio_count = countof(cpu_mmios);
   return result;
 }();
 
