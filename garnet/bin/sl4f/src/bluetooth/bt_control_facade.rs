@@ -120,7 +120,7 @@ impl BluetoothControlFacade {
                         displayed_passkey,
                         responder,
                     } => {
-                        if let Some(key) = displayed_passkey {
+                        if let Some(key) = displayed_passkey.clone() {
                             let _res = pin_sender.try_send(key);
                         }
                         fx_log_info!(
@@ -136,7 +136,18 @@ impl BluetoothControlFacade {
                         let (confirm, entered_passkey) = match method {
                             PairingMethod::Consent => (consent, None),
                             PairingMethod::PasskeyComparison => (consent, None),
-                            PairingMethod::PasskeyDisplay => (consent, None),
+                            PairingMethod::PasskeyDisplay => {
+                                if let Some(key) = displayed_passkey.clone() {
+                                    fx_log_info!(
+                                        "Passkey {:?} provided for 'Passkey Display`.",
+                                        key
+                                    );
+                                    (true, None)
+                                } else {
+                                    fx_log_info!("No passkey provided for 'Passkey Display`.");
+                                    (false, None)
+                                }
+                            }
                             PairingMethod::PasskeyEntry => {
                                 let timeout = 10.seconds();
                                 let pin = match pin_receiver
@@ -509,22 +520,26 @@ impl BluetoothControlFacade {
             transport: Some(transport),
         };
 
-        match &self.inner.read().control_interface_proxy {
-            Some(proxy) => {
-                let resp = proxy.pair(&mut PeerId { value: peer_id }, pairing_options).await?;
-                match resp.error {
-                    Some(err) => {
-                        let err_msg = format!("Error: {:?}", Sl4fError::from(*err));
-                        fx_err_and_bail!(&with_line!(tag), err_msg)
-                    }
-                    None => Ok(()),
-                }
-            }
+        let proxy = match &self.inner.read().control_interface_proxy {
+            Some(p) => p.clone(),
             None => fx_err_and_bail!(
                 &with_line!(tag),
                 format!("{:?}", ERR_NO_CONTROL_PROXY_DETECTED.to_string())
             ),
-        }
+        };
+
+        let fut = async move {
+            let result = proxy.pair(&mut PeerId { value: peer_id }, pairing_options).await;
+            if let Err(err) = result {
+                fx_log_err!(
+                    tag: &with_line!("BluetoothControlFacade::pair"),
+                    "Failed to pair with: {:?}",
+                    err
+                );
+            }
+        };
+        fasync::spawn(fut);
+        Ok(())
     }
 
     /// Disconnects an active BR/EDR connection by input device ID.
