@@ -10,11 +10,11 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_component,
     test_utils_lib::{
         events::*,
-        test_utils::{BlackBoxTest, BlackBoxTestBuilder},
+        test_utils::{OpaqueTest, OpaqueTestBuilder},
     },
 };
 
-fn connect_to_root_service<S: DiscoverableService>(test: &BlackBoxTest) -> Result<S::Proxy, Error> {
+fn connect_to_root_service<S: DiscoverableService>(test: &OpaqueTest) -> Result<S::Proxy, Error> {
     let mut service_path = test.get_hub_v2_path();
     service_path.extend(&["exec", "expose", "svc", S::SERVICE_NAME]);
     fuchsia_component::client::connect_to_service_at_path::<S>(service_path.to_str().unwrap())
@@ -24,8 +24,8 @@ pub async fn start_policy_test(
     component_manager_url: &str,
     root_component_url: &str,
     config_path: &str,
-) -> Result<(BlackBoxTest, fsys::RealmProxy), Error> {
-    let test = BlackBoxTestBuilder::new(root_component_url)
+) -> Result<(OpaqueTest, fsys::RealmProxy), Error> {
+    let test = OpaqueTestBuilder::new(root_component_url)
         .component_manager_url(component_manager_url)
         .config_file(config_path)
         .build()

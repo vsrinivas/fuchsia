@@ -10,7 +10,7 @@
 /// Allows logging of requests from a io.Directory channel.
 pub mod directory_request_logger;
 
-/// Injector for child components started by component manager BlackBoxTest
+/// Injector for child components started by component manager OpaqueTest
 /// to connect and provide Io1TestHarness to the test.
 pub mod io1_harness_receiver;
 

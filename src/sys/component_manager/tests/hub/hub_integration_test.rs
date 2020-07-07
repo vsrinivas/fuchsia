@@ -15,7 +15,7 @@ use {
 };
 
 pub struct TestRunner {
-    pub test: BlackBoxTest,
+    pub test: OpaqueTest,
     external_hub_v2_path: PathBuf,
     hub_report_capability: Arc<HubReportCapability>,
     channel_close_rx: mpsc::Receiver<()>,
@@ -33,7 +33,7 @@ impl TestRunner {
             "There must always be at least one eager static component (the root)"
         );
 
-        let test = BlackBoxTest::default(root_component_url).await?;
+        let test = OpaqueTest::default(root_component_url).await?;
 
         let (hub_report_capability, channel_close_rx) = HubReportCapability::new();
 

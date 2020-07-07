@@ -10,7 +10,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased},
     scoped_task,
     std::ffi::CString,
-    test_utils_lib::test_utils::BlackBoxTestBuilder,
+    test_utils_lib::test_utils::OpaqueTestBuilder,
 };
 
 const COMPONENT_MANAGER_URL: &str =
@@ -25,7 +25,7 @@ async fn run_test_with_extra_dirs(
     dir_handles: Vec<(String, zx::Handle)>,
     expected_result: &str,
 ) {
-    let test = BlackBoxTestBuilder::new(url)
+    let test = OpaqueTestBuilder::new(url)
         .component_manager_url(COMPONENT_MANAGER_URL)
         .extend_dir_handles(dir_handles)
         .build()

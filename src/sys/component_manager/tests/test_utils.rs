@@ -20,9 +20,9 @@ use {
     std::path::PathBuf,
 };
 
-/// This static string is used by BlackBoxTest to start Component Manager v2.
+/// This static string is used by OpaqueTest to start Component Manager v2.
 /// A fuchsia system is expected to have Component Manager v2 at this URL for
-/// BlackBoxTest::default to work correctly.
+/// OpaqueTest::default to work correctly.
 pub static COMPONENT_MANAGER_URL: &str =
     "fuchsia-pkg://fuchsia.com/component-manager#meta/component_manager.cmx";
 
@@ -30,7 +30,7 @@ pub static COMPONENT_MANAGER_URL: &str =
 /// of Component Manager v2. If this object is dropped, the component manager
 /// will be killed, ending the test.
 ///
-/// Any component using BlackBoxTest must satisfy the following minimal requirements
+/// Any component using OpaqueTest must satisfy the following minimal requirements
 /// in its manifest:
 ///
 /// "sandbox": {
@@ -46,7 +46,7 @@ pub static COMPONENT_MANAGER_URL: &str =
 /// }
 ///
 /// Component manager requires the process.Launcher and LogSink services, so
-/// BlackBoxTest passes them into component manager from the parent component.
+/// OpaqueTest passes them into component manager from the parent component.
 ///
 /// The Environment service is required to ensure hermeticity. This is important
 /// for integration tests, where a single component runs multiple tests simultaneously.
@@ -57,7 +57,7 @@ pub static COMPONENT_MANAGER_URL: &str =
 ///
 /// Usage: /src/sys/component_manager/tests contains multiple tests such as
 /// routing, base_resolver and shutdown which use this class.
-pub struct BlackBoxTest {
+pub struct OpaqueTest {
     /// The environment under which component manager runs
     pub env: EnvironmentControllerProxy,
 
@@ -74,7 +74,7 @@ pub struct BlackBoxTest {
     pub label: String,
 }
 
-impl BlackBoxTest {
+impl OpaqueTest {
     /// Creates a black box test with the default component manager URL and no
     /// additional directory handles that are passed in to component manager.
     /// The output of component manager is not redirected.
@@ -82,9 +82,9 @@ impl BlackBoxTest {
     /// At the end of this function call, a component manager has been created
     /// in a hermetic environment and its execution is halted.
     ///
-    /// For greater control over test setup parameters, use [`BlackBoxTestBuilder`].
+    /// For greater control over test setup parameters, use [`OpaqueTestBuilder`].
     pub async fn default(root_component_url: &str) -> Result<Self, Error> {
-        BlackBoxTestBuilder::new(root_component_url).build().await
+        OpaqueTestBuilder::new(root_component_url).build().await
     }
 
     /// The path from Hub v1 to component manager.
@@ -108,8 +108,8 @@ impl BlackBoxTest {
     }
 }
 
-/// Configures a [`BlackBoxTest`].
-pub struct BlackBoxTestBuilder {
+/// Configures a [`OpaqueTest`].
+pub struct OpaqueTestBuilder {
     root_component_url: String,
     component_manager_url: Option<String>,
     dir_handles: Vec<(String, zx::Handle)>,
@@ -117,11 +117,11 @@ pub struct BlackBoxTestBuilder {
     extra_args: Vec<String>,
 }
 
-impl BlackBoxTestBuilder {
-    /// Creates a new BlackBoxTestBuilder instance configured to launch the root component
+impl OpaqueTestBuilder {
+    /// Creates a new OpaqueTestBuilder instance configured to launch the root component
     /// identified by the URL `root_component_url`.
     pub fn new(root_component_url: impl Into<String>) -> Self {
-        BlackBoxTestBuilder {
+        OpaqueTestBuilder {
             root_component_url: root_component_url.into(),
             component_manager_url: None,
             dir_handles: Vec::new(),
@@ -167,9 +167,9 @@ impl BlackBoxTestBuilder {
         self
     }
 
-    /// Builds a BlackBoxTest. Upon success, a component manager has been created
+    /// Builds a OpaqueTest. Upon success, a component manager has been created
     /// in a hermetic environment and its execution is halted.
-    pub async fn build(self) -> Result<BlackBoxTest, Error> {
+    pub async fn build(self) -> Result<OpaqueTest, Error> {
         // Use a random integer to identify this component manager
         let random_num = random::<u32>();
         let label = format!("test_{}", random_num);
@@ -187,7 +187,7 @@ impl BlackBoxTestBuilder {
         )
         .await?;
 
-        Ok(BlackBoxTest {
+        Ok(OpaqueTest {
             env,
             component_manager_app,
             component_manager_url,

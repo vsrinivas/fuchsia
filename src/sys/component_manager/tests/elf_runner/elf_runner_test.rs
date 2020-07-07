@@ -27,7 +27,7 @@ async fn echo_without_args() -> Result<(), Error> {
 }
 
 async fn run_single_test(url: &str, expected_output: &str) -> Result<(), Error> {
-    let test = BlackBoxTest::default(url).await?;
+    let test = OpaqueTest::default(url).await?;
 
     let event_source = test.connect_to_event_source().await?;
     let (capability, mut echo_rx) = EchoCapability::new();

@@ -13,7 +13,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn async_event_source_test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/async_reporter.cm",
     )
     .await?;
@@ -42,7 +42,7 @@ async fn async_event_source_test() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn echo_interposer_test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/interpose_echo_realm.cm",
     )
     .await?;
@@ -68,10 +68,9 @@ async fn echo_interposer_test() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn scoped_events_test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_realm.cm",
-    )
-    .await?;
+    let test =
+        OpaqueTest::default("fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_realm.cm")
+            .await?;
 
     let event_source = test.connect_to_event_source().await?;
 
@@ -119,7 +118,7 @@ async fn scoped_events_test() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn realm_offered_event_source_test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/realm_offered_root.cm",
     )
     .await?;
@@ -152,7 +151,7 @@ async fn realm_offered_event_source_test() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn nested_event_source_test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/nested_reporter.cm",
     )
     .await?;
@@ -180,7 +179,7 @@ async fn nested_event_source_test() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn chained_interposer_test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/chained_interpose_echo_realm.cm",
     )
     .await?;
@@ -217,7 +216,7 @@ async fn expect_and_get_timestamp<T: Event>(
 #[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn event_dispatch_order_test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/event_dispatch_order_root.cm",
     )
     .await?;
@@ -245,7 +244,7 @@ async fn event_dispatch_order_test() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn event_capability_ready() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_root.cm",
     )
     .await?;
@@ -279,7 +278,7 @@ async fn event_capability_ready() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn resolved_error_test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/resolved_error_reporter.cm",
     )
     .await?;
@@ -300,7 +299,7 @@ async fn resolved_error_test() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn synthesis_test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/synthesis_reporter.cm",
     )
     .await?;
@@ -337,7 +336,7 @@ async fn synthesis_test() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn static_event_stream_capability_requested_test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/trigger_realm.cm",
     )
     .await?;

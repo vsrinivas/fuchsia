@@ -21,7 +21,7 @@ fn expect_next(events: &mut Vec<EventMatcher>, expected: Vec<EventMatcher>) {
 
 #[fasync::run_singlethreaded(test)]
 async fn destruction() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/collection_realm.cm",
     )
     .await?;

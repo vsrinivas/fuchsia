@@ -6,7 +6,7 @@ use {anyhow::Error, fuchsia_async as fasync, test_utils_lib::test_utils::*};
 
 #[fasync::run_singlethreaded(test)]
 async fn test() -> Result<(), Error> {
-    let mut test = BlackBoxTest::default(
+    let mut test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/shutdown_integration_test#meta/shutdown_integration_root.cm",
     )
     .await?;

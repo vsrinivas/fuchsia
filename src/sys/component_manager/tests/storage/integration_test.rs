@@ -32,7 +32,7 @@ impl Logger {
 async fn storage() -> Result<(), Error> {
     LOGGER.init();
 
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm.cm",
     )
     .await?;
@@ -67,7 +67,7 @@ async fn storage() -> Result<(), Error> {
 async fn storage_from_collection() -> Result<(), Error> {
     LOGGER.init();
 
-    let test = BlackBoxTest::default(
+    let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm_coll.cm",
     )
     .await?;

@@ -27,7 +27,7 @@ fn compare_output(actual: Vec<String>, expected: Vec<&str>) {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn empty_component() -> Result<(), Error> {
-    let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/empty.cm").await?;
+    let test = OpaqueTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/empty.cm").await?;
     let event_source = test.connect_to_event_source().await?;
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
 
@@ -57,7 +57,7 @@ async fn empty_component() -> Result<(), Error> {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn tree() -> Result<(), Error> {
-    let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/root.cm").await?;
+    let test = OpaqueTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/root.cm").await?;
     let event_source = test.connect_to_event_source().await?;
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
 
@@ -141,8 +141,7 @@ async fn tree() -> Result<(), Error> {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn echo_realm() -> Result<(), Error> {
-    let test =
-        BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_realm.cm").await?;
+    let test = OpaqueTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_realm.cm").await?;
     let event_source = test.connect_to_event_source().await?;
 
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;

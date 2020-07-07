@@ -18,10 +18,10 @@ async fn base_resolver_test() -> Result<(), Error> {
     )?;
     let pkg_channel = pkg_proxy.into_channel().unwrap().into_zx_channel();
 
-    // A custom BlackBoxTest is required because
+    // A custom OpaqueTest is required because
     // 1. the /pkg dir of this component has to be passed in to component manager as /boot
     // 2. the component manager needs a manifest without fuchsia.sys.Loader
-    let test = BlackBoxTestBuilder::new("fuchsia-boot:///#meta/root.cm")
+    let test = OpaqueTestBuilder::new("fuchsia-boot:///#meta/root.cm")
         .component_manager_url("fuchsia-pkg://fuchsia.com/base_resolver_test#meta/component_manager_without_loader.cmx")
         .add_dir_handle("/boot", pkg_channel.into())
         .build().await?;

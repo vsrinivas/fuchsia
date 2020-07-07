@@ -8,7 +8,7 @@ use {
     log::*,
     test_utils_lib::{
         events::{EventMatcher, Ordering, Stopped},
-        test_utils::BlackBoxTest,
+        test_utils::OpaqueTest,
     },
 };
 
@@ -16,7 +16,7 @@ use {
 async fn scoped_instances() -> Result<(), Error> {
     syslog::init_with_tags(&["fuchsia_component_v2_test"]).expect("could not initialize logging");
     let test =
-        BlackBoxTest::default("fuchsia-pkg://fuchsia.com/fuchsia-component-tests#meta/realm.cm")
+        OpaqueTest::default("fuchsia-pkg://fuchsia.com/fuchsia-component-tests#meta/realm.cm")
             .await?;
 
     let event_source = test.connect_to_event_source().await?;

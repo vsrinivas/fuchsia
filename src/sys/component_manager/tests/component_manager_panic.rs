@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Error, fuchsia_async as fasync, test_utils_lib::test_utils::BlackBoxTest};
+use {anyhow::Error, fuchsia_async as fasync, test_utils_lib::test_utils::OpaqueTest};
 
 #[fasync::run_singlethreaded(test)]
 async fn test() -> Result<(), Error> {
     // For the root component manifest, pass in the path the component manager
     // itself, which should be completely invalid.
     let mut test =
-        BlackBoxTest::default("fuchsia-pkg://fuchsia.com/component_manager#bin/component_manager")
+        OpaqueTest::default("fuchsia-pkg://fuchsia.com/component_manager#bin/component_manager")
             .await?;
 
     let event_source = test.connect_to_event_source().await?;

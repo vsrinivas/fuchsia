@@ -12,7 +12,7 @@ use fuchsia_zircon as zx;
 use futures::{channel::oneshot, lock::Mutex, prelude::*};
 use log::*;
 use std::sync::Arc;
-use test_utils_lib::{events::*, test_utils::BlackBoxTestBuilder};
+use test_utils_lib::{events::*, test_utils::OpaqueTestBuilder};
 use vfs::{
     directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::pcb::read_only_static,
     pseudo_directory,
@@ -49,14 +49,14 @@ async fn builtin_time_service_routed() -> Result<(), Error> {
 
     // Start a component_manager as a v1 component, with the extra `--maintain-utc-clock` flag.
     debug!("starting component_manager");
-    let test = BlackBoxTestBuilder::new(
+    let test = OpaqueTestBuilder::new(
         "fuchsia-pkg://fuchsia.com/utc-time-tests#meta/consumer-component.cm",
     )
     .add_extra_arg("--maintain-utc-clock")
     .add_dir_handle("/boot", client.into())
     .build()
     .await
-    .expect("failed to start the BlackBoxTest");
+    .expect("failed to start the OpaqueTest");
     let event_source = test
         .connect_to_event_source()
         .await

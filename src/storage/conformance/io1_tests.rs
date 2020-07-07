@@ -12,17 +12,17 @@ use {
         io1_harness_receiver::Io1HarnessReceiver,
         io1_request_logger_factory::Io1RequestLoggerFactory,
     },
-    test_utils_lib::test_utils::BlackBoxTest,
+    test_utils_lib::test_utils::OpaqueTest,
 };
 
-// Creates a BlackBoxTest component from the |url|, listens for the child component to connect
+// Creates a OpaqueTest component from the |url|, listens for the child component to connect
 // to a HarnessReceiver injector, and returns the connected HarnessProxy.
 async fn setup_harness_connection(
     url: String,
-) -> Result<(io_test::Io1HarnessProxy, BlackBoxTest), Error> {
-    let test = BlackBoxTest::default(&url)
+) -> Result<(io_test::Io1HarnessProxy, OpaqueTest), Error> {
+    let test = OpaqueTest::default(&url)
         .await
-        .context(format!("Cannot create BlackBoxTest with url {}", &url))?;
+        .context(format!("Cannot create OpaqueTest with url {}", &url))?;
     let event_source =
         test.connect_to_event_source().await.context("Cannot connect to event source.")?;
 

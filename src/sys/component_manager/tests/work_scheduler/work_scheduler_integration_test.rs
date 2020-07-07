@@ -12,7 +12,7 @@ use {
 async fn basic_work_scheduler_test() -> Result<(), Error> {
     let root_component_url =
         "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/bound_worker.cm";
-    let test = BlackBoxTest::default(root_component_url).await?;
+    let test = OpaqueTest::default(root_component_url).await?;
 
     let event_source = test.connect_to_event_source().await?;
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
@@ -39,7 +39,7 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
 async fn unbound_work_scheduler_test() -> Result<(), Error> {
     let root_component_url =
         "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/unbound_child_worker_parent.cm";
-    let test = BlackBoxTest::default(root_component_url).await?;
+    let test = OpaqueTest::default(root_component_url).await?;
 
     let event_source = test.connect_to_event_source().await?;
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
