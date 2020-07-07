@@ -40,13 +40,14 @@ use crate::prelude::*;
 
 use crate::driver::SpinelDriver;
 use anyhow::Error;
+use fidl_fuchsia_factory_lowpan::{FactoryRegisterMarker, FactoryRegisterProxyInterface};
 use fidl_fuchsia_lowpan_device::{RegisterMarker, RegisterProxyInterface};
 use fidl_fuchsia_lowpan_spinel::{
     DeviceMarker as SpinelDeviceMarker, DeviceProxy as SpinelDeviceProxy,
     DeviceSetupProxy as SpinelDeviceSetupProxy,
 };
 use fuchsia_component::client::connect_to_service_at;
-use lowpan_driver_common::register_and_serve_driver;
+use lowpan_driver_common::{register_and_serve_driver, register_and_serve_driver_factory};
 
 /// This struct contains the arguments decoded from the command
 /// line invocation of the driver.
@@ -72,24 +73,45 @@ struct DriverArgs {
     pub name: String,
 }
 
-async fn run_driver<N, RP>(
+async fn run_driver<N, RP, RFP>(
     name: N,
     registry: RP,
+    factory_registry: Option<RFP>,
     spinel_device_proxy: SpinelDeviceProxy,
 ) -> Result<(), Error>
 where
     N: AsRef<str>,
     RP: RegisterProxyInterface,
+    RFP: FactoryRegisterProxyInterface,
 {
+    let name = name.as_ref();
     let driver = SpinelDriver::from(spinel_device_proxy);
+    let driver_ref = &driver;
 
-    let lowpan_device_task =
-        register_and_serve_driver(name.as_ref(), registry, &driver).boxed_local();
+    let lowpan_device_task = register_and_serve_driver(name, registry, driver_ref).boxed_local();
 
-    fx_log_info!("Registered Spinel LoWPAN device {:?}", name.as_ref());
+    fx_log_info!("Registered Spinel LoWPAN device {:?}", name);
+
+    let lowpan_device_factory_task = async move {
+        if let Some(factory_registry) = factory_registry {
+            if let Err(err) =
+                register_and_serve_driver_factory(name, factory_registry, driver_ref).await
+            {
+                fx_log_warn!(
+                    "Unable to register and serve factory commands for {:?}: {:?}",
+                    name,
+                    err
+                );
+            }
+        }
+
+        // If the factory interface throws an error, don't kill the driver;
+        // just let the rest keep running.
+        futures::future::pending::<Result<(), Error>>().await
+    }
+    .boxed_local();
 
     let driver_stream = driver.take_inbound_stream().try_collect::<()>();
-    //        driver.take_inbound_stream().try_for_each(|_| futures::future::ready(Ok(())));
 
     // All three of these tasks will run indefinitely
     // as long as there are no irrecoverable problems.
@@ -100,9 +122,10 @@ where
     (futures::select! {
         ret = driver_stream.fuse() => ret,
         ret = lowpan_device_task.fuse() => ret,
+        _ = lowpan_device_factory_task.fuse() => unreachable!(),
     })?;
 
-    fx_log_info!("Spinel LoWPAN device {:?} has shutdown.", name.as_ref());
+    fx_log_info!("Spinel LoWPAN device {:?} has shutdown.", name);
 
     Ok(())
 }
@@ -166,6 +189,7 @@ async fn main() -> Result<(), Error> {
         args.name,
         connect_to_service_at::<RegisterMarker>(args.service_prefix.as_str())
             .context("Failed to connect to Lowpan Registry service")?,
+        connect_to_service_at::<FactoryRegisterMarker>(args.service_prefix.as_str()).ok(),
         spinel_device,
     )
     .await

@@ -7,6 +7,7 @@
             "class/ot-radio"
         ],
         "services": [
+            "fuchsia.factory.lowpan.FactoryRegister",
             "fuchsia.logger.LogSink",
             "fuchsia.lowpan.device.Register",
             "fuchsia.lowpan.spinel.Device"

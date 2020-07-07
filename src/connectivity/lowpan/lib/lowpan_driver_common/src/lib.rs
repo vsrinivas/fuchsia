@@ -18,7 +18,7 @@ pub use serve_to::*;
 
 use anyhow::{format_err, Context as _};
 use async_trait::async_trait;
-use fidl_fuchsia_lowpan_device::DriverRequest;
+use fidl::endpoints::create_endpoints;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon_status::Status as ZxStatus;
 use futures::future::{join_all, ready};
@@ -40,8 +40,8 @@ where
     R: fidl_fuchsia_lowpan_device::RegisterProxyInterface,
     D: Driver + 'a,
 {
-    use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_lowpan_device::DriverMarker;
+    use fidl_fuchsia_lowpan_device::DriverRequest;
 
     let (client_ep, server_ep) =
         create_endpoints::<DriverMarker>().context("Failed to create FIDL endpoints")?;
@@ -85,6 +85,52 @@ where
         .await?;
 
     fx_log_info!("LoWPAN Driver {:?} Stopped.", name);
+
+    Ok(())
+}
+
+/// Registers a driver instance with the given LoWPAN service factory registrar
+/// and returns a future which services factory requests for the driver.
+pub async fn register_and_serve_driver_factory<'a, R, D>(
+    name: &str,
+    registry: R,
+    driver: &'a D,
+) -> anyhow::Result<()>
+where
+    R: fidl_fuchsia_factory_lowpan::FactoryRegisterProxyInterface,
+    D: Driver + 'a,
+{
+    use fidl_fuchsia_factory_lowpan::FactoryDriverMarker;
+    use fidl_fuchsia_factory_lowpan::FactoryDriverRequest;
+
+    let (client_ep, server_ep) =
+        create_endpoints::<FactoryDriverMarker>().context("Failed to create FIDL endpoints")?;
+
+    registry
+        .register(name, client_ep)
+        .map(|x| match x {
+            Ok(Ok(x)) => Ok(x),
+            Ok(Err(err)) => Err(format_err!("Service Error: {:?}", err)),
+            Err(err) => Err(err.into()),
+        })
+        .await
+        .context("Failed to register LoWPAN factory driver")?;
+
+    server_ep
+        .into_stream()?
+        .try_for_each_concurrent(MAX_CONCURRENT, |cmd| async {
+            match cmd {
+                FactoryDriverRequest::GetFactoryDevice { device_factory, .. } => {
+                    if let Some(stream) = device_factory.into_stream().ok() {
+                        let _ = driver.serve_to(stream).await;
+                    }
+                }
+            }
+            Ok(())
+        })
+        .await?;
+
+    fx_log_info!("LoWPAN FactoryDriver {:?} Stopped.", name);
 
     Ok(())
 }

@@ -10,6 +10,7 @@ rustc_library("lowpan_driver_common") {
   edition = "2018"
   with_unit_tests = true
   deps = [
+    "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan-rustc",
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
     "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
     "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",

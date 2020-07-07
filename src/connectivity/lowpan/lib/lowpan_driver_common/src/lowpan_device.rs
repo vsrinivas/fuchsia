@@ -6,6 +6,7 @@ use super::*;
 
 use anyhow::Error;
 use fidl::endpoints::RequestStream;
+use fidl_fuchsia_factory_lowpan::*;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
     DeviceExtraRequest, DeviceExtraRequestStream, DeviceRequest, DeviceRequestStream, DeviceState,
@@ -112,6 +113,10 @@ pub trait Driver: Send + Sync {
 
     /// Performs a device reset.
     ///
+    /// If the device is in [manufacturing mode](driver::send_mfg_command),
+    /// calling this method will restore the device back into its normal
+    /// operating state.
+    ///
     /// See [`fidl_fuchsia_lowpan_test::DeviceTest::reset`] for more information.
     async fn reset(&self) -> ZxResult<()>;
 
@@ -155,6 +160,17 @@ pub trait Driver: Send + Sync {
     ///
     /// See [`fidl_fuchsia_lowpan_test::DeviceTest::get_thread_router_id`] for more information.
     async fn get_thread_router_id(&self) -> ZxResult<u8>;
+
+    /// Send a proprietary manufacturing command to the device and return the response.
+    ///
+    /// This method is intended to be used to facilitate device testing on the assembly line and is
+    /// typically only used during device manufacturing.
+    ///
+    /// Commands are given as strings (command + arguments) and the response is also a string. The
+    /// usage and format of the commands is dependent on the firmware on the LoWPAN device.
+    ///
+    /// See [`fidl_fuchsia_factory_lowpan::FactoryDevice::send_mfg_command`] for more information.
+    async fn send_mfg_command(&self, command: &str) -> ZxResult<String>;
 }
 
 #[async_trait(?Send)]
@@ -559,6 +575,45 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
     }
 }
 
+#[async_trait(?Send)]
+impl<T: Driver> ServeTo<FactoryDeviceRequestStream> for T {
+    async fn serve_to(&self, request_stream: FactoryDeviceRequestStream) -> anyhow::Result<()> {
+        let closure = |command| async {
+            match command {
+                FactoryDeviceRequest::SendMfgCommand { responder, command, .. } => {
+                    self.send_mfg_command(&command)
+                        .err_into::<Error>()
+                        .and_then(|response| ready(responder.send(&response).map_err(Error::from)))
+                        .await
+                        .context("error in send_mfg_command request")?;
+                }
+            }
+            Result::<(), Error>::Ok(())
+        };
+
+        if let Some(err) =
+            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
+        {
+            fx_log_err!("Error serving DeviceTestRequestStream: {:?}", err);
+
+            // TODO: Properly route epitaph codes. This is tricky to do because
+            //       `request_stream` is consumed by `try_for_each_concurrent`,
+            //       which means that code like the code below will not work:
+            //
+            // ```
+            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+            //     request_stream.into_inner().0
+            //         .shutdown_with_epitaph(*epitaph);
+            // }
+            // ```
+
+            Err(err)
+        } else {
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -567,6 +622,31 @@ mod tests {
     use fidl_fuchsia_lowpan_device::{EnergyScanParameters, EnergyScanResultStreamMarker};
     use fuchsia_async as fasync;
     use matches::assert_matches;
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_send_mfg_command() {
+        let device = DummyDevice::default();
+
+        let (client_ep, server_ep) = create_endpoints::<FactoryDeviceMarker>().unwrap();
+
+        let server_future = device.serve_to(server_ep.into_stream().unwrap());
+
+        let proxy = client_ep.into_proxy().unwrap();
+
+        let client_future = async move {
+            let command = "help";
+
+            match proxy.send_mfg_command(command).await {
+                Ok(result) => println!("mfg_command({:?}) result: {:?}", command, result),
+                Err(err) => panic!("mfg_command({:?}) error: {:?}", command, err),
+            }
+        };
+
+        futures::select! {
+            err = server_future.boxed_local().fuse() => panic!("Server task stopped: {:?}", err),
+            _ = client_future.boxed().fuse() => (),
+        }
+    }
 
     #[fasync::run_until_stalled(test)]
     async fn test_energy_scan() {

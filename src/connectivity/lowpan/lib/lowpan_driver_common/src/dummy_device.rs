@@ -325,4 +325,10 @@ impl Driver for DummyDevice {
 
         Ok(0)
     }
+
+    async fn send_mfg_command(&self, command: &str) -> ZxResult<String> {
+        fx_log_info!("Got send_mfg_command command: {:?}", command);
+
+        Ok("error: The dummy driver currently has no manufacturing commands.".to_string())
+    }
 }

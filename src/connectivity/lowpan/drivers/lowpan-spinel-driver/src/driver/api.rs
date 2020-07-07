@@ -169,4 +169,8 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     async fn get_thread_router_id(&self) -> ZxResult<u8> {
         Err(ZxStatus::NOT_SUPPORTED)
     }
+
+    async fn send_mfg_command(&self, _command: &str) -> ZxResult<String> {
+        Err(ZxStatus::NOT_SUPPORTED)
+    }
 }
