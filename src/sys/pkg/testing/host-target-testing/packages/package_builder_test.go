@@ -121,7 +121,7 @@ func TestAddResource(t *testing.T) {
 		t.Fatalf("Failed to create and expand package. %s", err)
 	}
 
-	pkgBuilder, err := NewPackageBuilderFromDir(expandDir)
+	pkgBuilder, err := NewPackageBuilderFromDir(expandDir, "testpackage", "0")
 	if err != nil {
 		t.Fatalf("Failed to parse package from %s. %s", expandDir, err)
 	}
@@ -184,7 +184,7 @@ func TestPublish(t *testing.T) {
 		t.Fatalf("Failed to create and expand package. %s", err)
 	}
 
-	pkgBuilder, err := NewPackageBuilderFromDir(expandDir)
+	pkgBuilder, err := NewPackageBuilderFromDir(expandDir, "testpackage", "0")
 	if err != nil {
 		t.Fatalf("Failed to parse package from %s. %s", expandDir, err)
 	}

@@ -41,49 +41,45 @@ func parsePackageJSON(path string) (string, string, error) {
 
 // NewPackage returns a PackageBuilder
 // Must call `Close()` to clean up PackageBuilder
-func NewPackageBuilder() *PackageBuilder {
+func NewPackageBuilder(name string, version string) (*PackageBuilder, error) {
+	if name == "" || version == "" {
+		return nil, fmt.Errorf("missing package info and version information")
+	}
+
 	// Create temporary directory to store any additions that come in.
 	tempDir, err := ioutil.TempDir("", "pm-temp-resource")
 	if err != nil {
 		log.Fatalf("Failed to create temp directory. %s", err)
 	}
+
 	return &PackageBuilder{
-		Name:     "",
-		Version:  "",
+		Name:     name,
+		Version:  version,
 		Cache:    tempDir,
-		Contents: make(map[string]string)}
+		Contents: make(map[string]string),
+	}, nil
 }
 
 // NewPackageFromDir returns a PackageBuilder that initializes from the `dir` package directory.
 // Must call `Close()` to clean up PackageBuilder
-func NewPackageBuilderFromDir(dir string) (*PackageBuilder, error) {
-	pkg := NewPackageBuilder()
+func NewPackageBuilderFromDir(dir string, name string, version string) (*PackageBuilder, error) {
+	pkg, err := NewPackageBuilder(name, version)
+	if err != nil {
+		return nil, err
+	}
 
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("walk of %s failed. %w", dir, err)
 		}
 		if !info.IsDir() {
 			relativePath := strings.Replace(path, dir+"/", "", 1)
 			pkg.Contents[relativePath] = path
-
-			if strings.HasSuffix(path, "meta/package") {
-				// Grab the package name and version from the package JSON.
-				name, version, err := parsePackageJSON(path)
-				if err != nil {
-					return fmt.Errorf("failed to parse package manifest. %w", err)
-				}
-				pkg.Name = name
-				pkg.Version = version
-			}
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error when walking the directory. %w", err)
-	}
-	if pkg.Name == "" || pkg.Version == "" {
-		return nil, fmt.Errorf("missing package info and version information.")
 	}
 
 	return pkg, nil
@@ -149,21 +145,9 @@ func (p *PackageBuilder) Publish(pkgRepo *Repository) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp config to fill with our data. %w", err)
 	}
-	pack, err := cfg.Package()
-	if err != nil {
-		return fmt.Errorf("failed to create package for the given config. %w", err)
-	}
 	pkgPath := filepath.Join(filepath.Dir(cfg.ManifestPath), "package")
 	if err := os.MkdirAll(filepath.Join(pkgPath, "meta"), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to make parent dirs for meta/package. %w", err)
-	}
-	pkgJSON := filepath.Join(pkgPath, "meta", "package")
-	b, err := json.Marshal(&pack)
-	if err != nil {
-		return fmt.Errorf("failed to marshal package into JSON. %w", err)
-	}
-	if err := ioutil.WriteFile(pkgJSON, b, os.ModePerm); err != nil {
-		return fmt.Errorf("failed to write JSON to package file. %w", err)
 	}
 	mfst, err := os.Create(cfg.ManifestPath)
 	if err != nil {
@@ -171,13 +155,9 @@ func (p *PackageBuilder) Publish(pkgRepo *Repository) error {
 	}
 	defer mfst.Close()
 
-	if _, err := fmt.Fprintf(mfst, "meta/package=%s\n", pkgJSON); err != nil {
-		return fmt.Errorf("failed to write package JSON to file. %w", err)
-	}
-
 	// Fill config with our contents.
 	for relativePath, sourcePath := range p.Contents {
-		if relativePath == "meta/contents" || relativePath == "meta/package" {
+		if relativePath == "meta/contents" {
 			continue
 		}
 		if _, err := fmt.Fprintf(mfst, "%s=%s\n", relativePath, sourcePath); err != nil {
