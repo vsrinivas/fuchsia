@@ -77,10 +77,6 @@ test_package("a11y_lib_tests") {
       path = rebase_path("$target_gen_dir/screen_reader/i18n/en/l10n.json")
       dest = "assets/locales/en/l10n.json"
     },
-    {
-      path = rebase_path("$target_gen_dir/screen_reader/i18n/en/l10n.json")
-      dest = "assets/locales/en/l10n.json"
-    },
 
     # [START icudata_resource]
     {
