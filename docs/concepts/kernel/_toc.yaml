@@ -48,6 +48,8 @@ toc:
     path: /docs/concepts/kernel/exceptions.md
   - title: "Kernel internal errors"
     path: /docs/concepts/kernel/kernel_internal_errors.md
+  - title: "IPC Limits"
+    path: /docs/concepts/kernel/ipc_limits.md
 - title: "Waiting"
   section:
   - title: "Timer slack"

@@ -501,32 +501,6 @@ TEST(Guest, guest_set_trap_with_bell_and_user) {
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_USER);
 }
 
-// Test for ZX-4220.
-TEST(Guest, guest_set_trap_with_bell_and_max_user) {
-  zx::port port;
-  ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
-
-  // Keep queueing packets until we receive ZX_ERR_SHOULD_WAIT.
-  zx_port_packet packet = {};
-  packet.type = ZX_PKT_TYPE_USER;
-  zx_status_t status = ZX_OK;
-  while ((status = port.queue(&packet)) == ZX_OK) {
-  }
-  ASSERT_EQ(status, ZX_ERR_SHOULD_WAIT);
-
-  test_t test;
-  ASSERT_NO_FATAL_FAILURES(setup(&test, guest_set_trap_start, guest_set_trap_end));
-  if (!test.supported) {
-    // The hypervisor isn't supported, so don't run the test.
-    return;
-  }
-
-  // Trap on access of TRAP_ADDR.
-  ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
-
-  ASSERT_NO_FATAL_FAILURES(resume_and_clean_exit(&test));
-}
-
 // See that zx::vcpu::resume returns ZX_ERR_BAD_STATE if the port has been closed.
 TEST(Guest, guest_set_trap_close_port) {
   zx::port port;

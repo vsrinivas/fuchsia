@@ -8,6 +8,7 @@
 #include <string.h>
 #include <threads.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
 
 // defined in cpp_specific.cpp.
 int cpp_out_of_mem(void);
@@ -204,8 +205,35 @@ int channel_overflow(volatile unsigned int* arg) {
   return 0;
 }
 
+int port_overflow(volatile unsigned int* arg) {
+  zx_handle_t port;
+  zx_status_t status = zx_port_create(0u, &port);
+  if (status != ZX_OK) {
+    printf("port creation failed. error: %d\n", status);
+    return 1;
+  }
+
+  zx_port_packet_t packet = {1ull, ZX_PKT_TYPE_USER, 0, {{}}};
+
+  int count = 0;
+  for (;;) {
+    status = zx_port_queue(port, &packet);
+    if (status != ZX_OK) {
+      printf("packet queue failed. error: %d after %d writes\n", status, count);
+      break;
+    }
+    ++count;
+    if ((count % 100) == 0) {
+      write(1, ".", 1);
+    }
+  }
+
+  zx_handle_close(port);
+  return 0;
+}
+
 command_t commands[] = {
-    {"write0", blind_write, "write to address 0x0"},
+    {"write0", blind_write, "write to address 0x0"},  // Default command.
     {"read0", blind_read, "read address 0x0"},
     {"execute0", blind_execute, "execute address 0x0"},
     {"writero", ro_write, "write to read only code segment"},
@@ -215,38 +243,48 @@ command_t commands[] = {
     {"nx_run", nx_run, "run in no-execute memory"},
     {"oom", oom, "out of memory c++ death"},
     {"mem", mem, "out of memory"},
-    {"channelw", channel_overflow, "overflow a channel with writes"},
+    {"channelw", channel_overflow, "overflow a channel with messages"},
+    {"portq", port_overflow, "overflow a port with packets"},
     {"use_after_free", use_after_free, "use memory after freeing it"},
     {"write0_mt", blind_write_multithreaded,
      "write to address 0x0 in one thread, sleeping in 5 others"},
     {NULL, NULL, NULL},
 };
 
+void print_help(void) {
+  printf(
+      "usage: crasher [command]\n"
+      "known commands are:\n");
+  for (command_t* cmd = commands; cmd->name != NULL; ++cmd) {
+    printf("  %s : %s\n", cmd->name, cmd->desc);
+  }
+}
+
 int main(int argc, char** argv) {
   printf("=@ crasher @=\n");
 
-  if (argc < 2) {
-    printf("default to write0  (use 'help' for more options).\n");
-    blind_write(NULL);
-  } else {
-    if (strcmp("help", argv[1])) {
-      for (command_t* cmd = commands; cmd->name != NULL; ++cmd) {
-        if (strcmp(cmd->name, argv[1]) == 0) {
-          printf("doing : %s\n", cmd->desc);
-          cmd->func(NULL);
-          goto exit;  // should not reach here.
-        }
-      }
-    }
+  const char* user_cmd = NULL;
 
-    printf("known commands are:\n");
-    for (command_t* cmd = commands; cmd->name != NULL; ++cmd) {
-      printf("%s : %s\n", cmd->name, cmd->desc);
+  if (argc < 2) {
+    user_cmd = commands[0].name;
+    printf("default to %s (use 'help' for more options).\n", user_cmd);
+  } else {
+    user_cmd = argv[1];
+    if (strcmp("help", user_cmd) == 0) {
+      print_help();
+      return 0;
     }
-    return 0;
   }
 
-exit:
+  for (command_t* cmd = commands; cmd->name != NULL; ++cmd) {
+    if (strcmp(cmd->name, user_cmd) == 0) {
+      printf("doing : %s\n", cmd->desc);
+      cmd->func(NULL);
+      break;
+    }
+  }
+
+  // Should not reach here.
   printf("crasher: exiting normally ?!!\n");
   return 0;
 }

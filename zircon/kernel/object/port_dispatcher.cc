@@ -53,15 +53,25 @@ class ArenaPortAllocator final : public PortAllocator {
 };
 
 namespace {
-constexpr size_t kMaxAllocatedPacketCount = 16 * 1024u;
-
+// BUG(53762) Increase from 16k packets to 32k packets.
 // TODO(maniscalco): Enforce this limit per process via the job policy.
-constexpr size_t kMaxAllocatedPacketCountPerPort = kMaxAllocatedPacketCount / 8;
+constexpr size_t kMaxAllocatedPacketCountPerPort = 4096u;
+constexpr size_t kMaxAllocatedPacketCount = 8u * kMaxAllocatedPacketCountPerPort;
+
 ArenaPortAllocator port_allocator;
 
 bool IsDefaultAllocatedEphemeral(const PortPacket& port_packet) {
   return port_packet.allocator == &port_allocator && port_packet.is_ephemeral();
 }
+
+void RaisePacketLimitException(zx_koid_t koid, size_t num_packets) {
+  auto process = ProcessDispatcher::GetCurrent();
+  char pname[ZX_MAX_NAME_LEN];
+  process->get_name(pname);
+  printf("KERN: port (%zu) has %zu packets (%s). Raising exception\n", koid, num_packets, pname);
+  Thread::Current::SignalPolicyException();
+}
+
 }  // namespace.
 
 zx_status_t ArenaPortAllocator::Init() { return arena_.Init("packets", kMaxAllocatedPacketCount); }
@@ -264,6 +274,8 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
     if (IsDefaultAllocatedEphemeral(*port_packet) &&
         num_ephemeral_packets_ > kMaxAllocatedPacketCountPerPort) {
       kcounter_add(port_full_count, 1);
+      RaisePacketLimitException(get_koid(), num_ephemeral_packets_);
+      // The usermode caller sees the exception, not the return code.
       return ZX_ERR_SHOULD_WAIT;
     }
 

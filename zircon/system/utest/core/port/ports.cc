@@ -69,25 +69,6 @@ TEST(PortTest, QueueAndClose) {
   EXPECT_OK(port.queue(&kPortUserPacket));
 }
 
-TEST(PortTest, QueueTooMany) {
-  zx::port port;
-  ASSERT_OK(zx::port::create(0u, &port));
-  constexpr uint32_t kNumberPortQueueSize = 2049;
-
-  constexpr zx_port_packet_t kPortUserPacket = {2ull, ZX_PKT_TYPE_USER, 0, {{}}};
-
-  size_t count;
-  // First kNumberPortQueueSize will queue up till full.
-  for (count = 0; count < kNumberPortQueueSize; ++count) {
-    EXPECT_OK(port.queue(&kPortUserPacket));
-  }
-
-  // next kNumberPortQueueSize will fail since queue is full.
-  for (count = 0; count < kNumberPortQueueSize; ++count) {
-    EXPECT_EQ(port.queue(&kPortUserPacket), ZX_ERR_SHOULD_WAIT);
-  }
-}
-
 TEST(PortTest, AsyncWaitChannelTimedOut) {
   constexpr uint64_t kEventKey = 6567;
 

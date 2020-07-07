@@ -19,8 +19,11 @@ zx_status_t zx_port_queue(zx_handle_t handle, const zx_port_packet_t* packet);
 
 ## DESCRIPTION
 
-`zx_port_queue()` queues a *packet* to the port specified
-by *handle*.
+`zx_port_queue()` queues a user *packet* to the port specified by *handle*.
+
+User packets are drained by [`zx_port_wait()`]. Failure to drain packets in a
+timely fashion can cause excessive kernel memory to be used which might generate
+an exception. See [ipc limits](/docs/concepts/kernel/ipc_limits.md) for details.
 
 ```
 typedef struct zx_port_packet {
@@ -67,24 +70,6 @@ typedef union zx_packet_user {
 **ZX_ERR_WRONG_TYPE** *handle* is not a port handle.
 
 **ZX_ERR_ACCESS_DENIED** *handle* does not have **ZX_RIGHT_WRITE**.
-
-**ZX_ERR_SHOULD_WAIT** the port has too many pending packets. See [Full Port
-Queue](#full-port-queue).
-
-## NOTES
-
-The queue is drained by calling [`zx_port_wait()`].
-
-### Full Port Queue
-
-`zx_port_queue()` may return **ZX_ERR_SHOULD_WAIT** indicating that
-there is no more space available in the queue for new port packets.
-It is guaranteed that there are packets in the queue available for
-reading when this occurs. Calling code should arrange to read packets
-from the queue until at least one **ZX_PKT_TYPE_USER** packet has
-been removed from the queue before attempting to enqueue another
-packet.
-
 
 ## SEE ALSO
 
