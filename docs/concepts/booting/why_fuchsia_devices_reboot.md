@@ -66,6 +66,28 @@ reboot was cold and will consider the reboot a result of a brief power loss. It
 is important to note that there is _not_ a quantitative measure of what brief is
 and is hardware dependent.
 
+### User request
+
+A user or a component acting on behalf of a user, such as SL4F or RCS,
+determines a reboot is necessary.
+
+### System update
+
+A component responsible for system updates must update a package, or multiple
+packages, that cannot be updated ephemerally. These packages are canonically
+know as base packages.
+
+### High temperature
+
+A component responsible for power management detects that a device's temperature
+is too high and the system cannot adequately reduce the device's temperature by
+throttling the CPU or reducing the audio volume.
+
+### Session failure
+
+If the session manager is unable to restart a crashed session or a session
+determines it has failed in an unrecoverable manner, the device reboots.
+
 ### Generic graceful
 
 The platform can know whether the reboot was graceful, but cannot distinguish
@@ -99,6 +121,10 @@ Brownout                     | `BROWNOUT`                    | `Brownout`       
 Hardware watchdog timeout    | `HARDWARE_WATCHDOG_TIMEOUT`   | `HardwareWatchdogTimeout` | `fuchsia-hw-watchdog-timeout`
 Software watchdog timeout    | `SOFTWARE_WATCHDOG_TIMEOUT`   | `SoftwareWatchdogTimeout` | `fuchsia-sw-watchdog-timeout`
 Brief power loss             | `BRIEF POWER LOSS`            | `BriefPowerLoss`          | `fuchsia-brief-power-loss`
+User request                 | `USER_REQUEST`                | `UserRequest`             | N/A\*
+System update                | `SYSTEM_UPDATE`               | `SystemUpdate`            | N/A\*
+High temperature             | `HIGH_TEMPERATURE`            | `HighTemperature`         | N/A\*
+Session failure              | `SESSION_FAILURE`             | `SessionFailure`          | N/A\*
 Generic graceful             | *graceful* field set to true  | `GenericGraceful`         | N/A\*
 Generic ungraceful           | *graceful* field set to false | `GenericUngraceful`       | N/A\*\*
 Unknown                      | *graceful* field not set      | `Unknown`                 | N/A\*\*
