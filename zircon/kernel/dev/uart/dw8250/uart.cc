@@ -110,7 +110,7 @@ static interrupt_eoi dw8250_uart_irq(void* arg) {
 
   // read interrupt status and mask
   while (UARTREG(UART_LSR) & UART_LSR_DR) {
-    if (uart_rx_buf.SpaceAvail() == 0) {
+    if (uart_rx_buf.Full()) {
       break;
     }
     char c = UARTREG(UART_RBR) & 0xFF;

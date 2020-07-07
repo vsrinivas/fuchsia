@@ -73,7 +73,7 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
     /* while fifo is not empty, read chars out of it */
     while ((UARTREG(uart_base, UART_FR) & (1 << 4)) == 0) {
       /* if we're out of rx buffer, mask the irq instead of handling it */
-      if (uart_rx_buf.SpaceAvail() == 0) {
+      if (uart_rx_buf.Full()) {
         UARTREG(uart_base, UART_IMSC) &= ~((1 << 4) | (1 << 6));  // !rxim
         break;
       }

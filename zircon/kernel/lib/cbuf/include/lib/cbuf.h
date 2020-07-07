@@ -37,12 +37,11 @@ class Cbuf {
   void Initialize(size_t len, void* buf);
 
   /**
-   * SpaceAvail
+   * Full
    *
-   * @return The number of free space available in the Cbuf (IOW - the maximum
-   * number of bytes which can currently be written)
+   * Whether the Cbuf has free space available.
    */
-  size_t SpaceAvail() const;
+  bool Full() const;
 
   /* Special cases for dealing with a single char of data. */
   size_t ReadChar(char* c, bool block);

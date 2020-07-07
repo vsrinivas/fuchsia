@@ -111,7 +111,7 @@ static interrupt_eoi uart_irq(void* arg) {
 
   /* read interrupt status and mask */
   while ((UARTREG(base, S905_UART_STATUS) & S905_UART_STATUS_RXCOUNT_MASK) > 0) {
-    if (uart_rx_buf.SpaceAvail() == 0) {
+    if (uart_rx_buf.Full()) {
       // Drop the data if our buffer is full
       // NOTE: This breaks flow control, but allows
       // serial to work when disconnecting/reconnecting the cable.

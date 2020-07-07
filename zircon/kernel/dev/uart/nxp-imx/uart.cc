@@ -80,7 +80,7 @@ static SpinLock uart_spinlock;
 static interrupt_eoi uart_irq_handler(void* arg) {
   /* read interrupt status and mask */
   while ((UARTREG(MX8_USR1) & USR1_RRDY)) {
-    if (uart_rx_buf.SpaceAvail() == 0) {
+    if (uart_rx_buf.Full()) {
       break;
     }
     char c = UARTREG(MX8_URXD) & 0xFF;
