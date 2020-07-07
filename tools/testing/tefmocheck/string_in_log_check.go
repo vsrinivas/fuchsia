@@ -123,6 +123,11 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			Type:        lt,
 			ExceptBlock: &logBlock{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
 		})
+		ret = append(ret, stringInLogCheck{
+			String:      "ZIRCON KERNEL OOPS",
+			Type:        lt,
+			ExceptBlock: &logBlock{startString: "RUN   TestKillCriticalProcess", endString: "TestKillCriticalProcess"},
+		})
 		ret = append(ret, stringInLogCheck{String: "ZIRCON KERNEL PANIC", Type: lt})
 	}
 	// These may be in the output of tests, but the syslogType doesn't contain any test output.
