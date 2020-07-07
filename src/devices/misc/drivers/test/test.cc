@@ -25,7 +25,7 @@
 namespace {
 
 class TestDevice;
-using TestDeviceType = ddk::Device<TestDevice, ddk::Messageable, ddk::UnbindableDeprecated>;
+using TestDeviceType = ddk::Device<TestDevice, ddk::Messageable, ddk::UnbindableNew>;
 
 class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, ddk::base_protocol> {
  public:
@@ -34,7 +34,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
   // Methods required by the ddk mixins
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   // Methods required by the TestProtocol mixin
   void TestSetOutputSocket(zx::socket socket);
@@ -47,17 +47,13 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
   void SetChannel(zx::channel c);
 
  private:
-  // Lock that synchronizes calls to DdkRemoveDeprecated()
-  fbl::Mutex remove_lock_;
-  bool has_been_removed_ TA_GUARDED(remove_lock_) = false;
-
   zx::socket output_;
   zx::channel channel_;
   test_func_t test_func_;
 };
 
 class TestRootDevice;
-using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Messageable, ddk::UnbindableDeprecated>;
+using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Messageable, ddk::UnbindableNew>;
 
 class TestRootDevice : public TestRootDeviceType {
  public:
@@ -68,7 +64,7 @@ class TestRootDevice : public TestRootDeviceType {
   // Methods required by the ddk mixins
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
   static zx_status_t FidlCreateDevice(void* ctx, const char* name_data, size_t name_len,
                                       zx_handle_t client_remote_raw, fidl_txn_t* txn);
@@ -97,12 +93,8 @@ zx_status_t TestDevice::TestRunTests(test_report_t* report) {
 }
 
 void TestDevice::TestDestroy() {
-  fbl::AutoLock guard(&remove_lock_);
-  if (!has_been_removed_) {
-    output_.reset();
-    DdkRemoveDeprecated();
-    has_been_removed_ = true;
-  }
+  output_.reset();
+  DdkAsyncRemove();
 }
 
 static zx_status_t fidl_SetOutputSocket(void* ctx, zx_handle_t raw_socket) {
@@ -153,7 +145,10 @@ zx_status_t TestDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 void TestDevice::DdkRelease() { delete this; }
 
-void TestDevice::DdkUnbindDeprecated() { TestDestroy(); }
+void TestDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
+  TestDestroy();
+  txn.Reply();
+}
 
 zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name, zx::channel client_remote,
                                          char* path_out, size_t path_size, size_t* path_actual) {
