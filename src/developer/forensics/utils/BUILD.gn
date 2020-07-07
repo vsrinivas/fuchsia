@@ -79,6 +79,10 @@ source_set("sized_data") {
   sources = [ "sized_data.h" ]
 }
 
+source_set("storage_size") {
+  sources = [ "storage_size.h" ]
+}
+
 source_set("time") {
   sources = [
     "time.cc",
