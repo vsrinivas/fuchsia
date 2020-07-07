@@ -55,7 +55,7 @@ SimFirmware::SimFirmware(brcmf_simdev* simdev, simulation::Environment* env)
 
   // The real FW always creates the first interface
   struct brcmf_mbss_ssid_le default_mbss = {};
-  if (HandleIfaceTblReq(true, &default_mbss, nullptr) != ZX_OK) {
+  if (HandleIfaceTblReq(true, &default_mbss, nullptr, 0) != ZX_OK) {
     ZX_PANIC("Unable to create default interface");
   }
 }
@@ -537,25 +537,22 @@ void SimFirmware::BcdcResponse::Set(uint8_t* data, size_t new_len) {
 }
 
 zx_status_t SimFirmware::HandleIfaceTblReq(const bool add_entry, const void* data,
-                                           uint8_t* iface_id) {
+                                           uint8_t* iface_id, int32_t bsscfgidx) {
   if (add_entry) {
-    auto ssid_info = static_cast<const brcmf_mbss_ssid_le*>(data);
-
     // Allocate the first available entry
     for (int i = 0; i < kMaxIfSupported; i++) {
       if (!iface_tbl_[i].allocated) {
         iface_tbl_[i].allocated = true;
         iface_tbl_[i].iface_id = i;
-        iface_tbl_[i].bsscfgidx = ssid_info->bsscfgidx;
+        iface_tbl_[i].bsscfgidx = bsscfgidx;
         if (iface_id)
           *iface_id = i;
         return ZX_OK;
       }
     }
   } else {
-    auto bsscfgidx = static_cast<const int32_t*>(data);
     for (int i = 0; i < kMaxIfSupported; i++) {
-      if (iface_tbl_[i].allocated && iface_tbl_[i].bsscfgidx == *bsscfgidx) {
+      if (iface_tbl_[i].allocated && iface_tbl_[i].bsscfgidx == bsscfgidx) {
         if (iface_id)
           *iface_id = iface_tbl_[i].iface_id;
         // If AP is in started state, send disassoc req to all clients
@@ -582,7 +579,7 @@ zx_status_t SimFirmware::HandleIfaceTblReq(const bool add_entry, const void* dat
 }
 
 zx_status_t SimFirmware::HandleIfaceRequest(const bool add_iface, const void* data,
-                                            const size_t len) {
+                                            const size_t len, int32_t bsscfgidx) {
   uint8_t iface_id;
   size_t payload_size = sizeof(brcmf_if_event);
   auto buf = std::make_unique<std::vector<uint8_t>>(payload_size);
@@ -592,15 +589,13 @@ zx_status_t SimFirmware::HandleIfaceRequest(const bool add_iface, const void* da
 
   ifevent->role = 1;
 
-  if (HandleIfaceTblReq(add_iface, data, &iface_id) == ZX_OK) {
+  if (HandleIfaceTblReq(add_iface, data, &iface_id, bsscfgidx) == ZX_OK) {
     if (add_iface) {
-      auto ssid_info = static_cast<const brcmf_mbss_ssid_le*>(data);
       ifevent->action = BRCMF_E_IF_ADD;
-      ifevent->bsscfgidx = ssid_info->bsscfgidx;
+      ifevent->bsscfgidx = bsscfgidx;
     } else {
-      auto bsscfgidx = static_cast<const int32_t*>(data);
       ifevent->action = BRCMF_E_IF_DEL;
-      ifevent->bsscfgidx = static_cast<const uint8_t>(*bsscfgidx);
+      ifevent->bsscfgidx = bsscfgidx;
     }
     ifevent->ifidx = iface_id;
     char ifname[IFNAMSIZ];
@@ -1336,138 +1331,90 @@ zx_status_t SimFirmware::StopInterface(const int32_t bsscfgidx) {
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::HandleBssCfgSet(const uint16_t ifidx, const char* name, const void* value,
-                                         size_t value_len) {
-  if (!std::strcmp(name, "interface_remove")) {
-    if (value_len < sizeof(int32_t)) {
-      return ZX_ERR_IO;
-    }
-    return HandleIfaceRequest(false, value, value_len);
-  }
-
-  if (!std::strcmp(name, "ssid")) {
-    if (value_len < sizeof(brcmf_mbss_ssid_le)) {
-      return ZX_ERR_IO;
-    }
-    return HandleIfaceRequest(true, value, value_len);
-  }
-
-  if (!std::strcmp(name, "wsec")) {
-    // bsscfgidx is in the first 4 bytes
-    if (value_len < sizeof(int32_t) * 2) {
-      return ZX_ERR_IO;
-    }
-    auto wsec = static_cast<const uint32_t*>(value);
-    wsec++;
-    iface_tbl_[ifidx].wsec = *wsec;
-  }
-
-  if (!std::strcmp(name, "wpa_auth")) {
-    // bsscfgidx is in the first 4 bytes
-    if (value_len < sizeof(int32_t) * 2) {
-      return ZX_ERR_IO;
-    }
-    auto wpa_auth = static_cast<const uint32_t*>(value);
-    wpa_auth++;
-    iface_tbl_[ifidx].wpa_auth = *wpa_auth;
-  }
-
-  if (!std::strcmp(name, "wsec_key")) {
-    // bsscfgidx is in the first 4 bytes
-    if (value_len < sizeof(brcmf_wsec_key_le) + sizeof(uint32_t)) {
-      return ZX_ERR_IO;
-    }
-    auto key_buf = static_cast<const uint8_t*>(value);
-    auto key = reinterpret_cast<const struct brcmf_wsec_key_le*>(key_buf + sizeof(uint32_t));
-    std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[ifidx].wsec_key_list;
-
-    auto key_iter = std::find_if(key_list.begin(), key_list.end(),
-                                 [=](brcmf_wsec_key_le& k) { return k.index == key->index; });
-    // If the key with same index exists, override it, if not, add a new key.
-    if (key_iter != key_list.end()) {
-      *key_iter = *key;
-    } else {
-      // Use the first key index as current key index, in real case it will only change by AP.
-      if (key_list.empty())
-        iface_tbl_[ifidx].cur_key_idx = key->index;
-
-      key_list.push_back(*key);
-    }
-  }
-
-  if (!std::strcmp(name, "bss")) {
-    if (value_len < sizeof(brcmf_bss_ctrl)) {
-      return ZX_ERR_IO;
-    }
-    auto data_buf = static_cast<const uint8_t*>(value);
-    auto bss_info = reinterpret_cast<const struct brcmf_bss_ctrl*>(data_buf + sizeof(uint32_t));
-    // We do not know how non-zero value is handled in real FW.
-    ZX_ASSERT(bss_info->value == 0);
-    return StopInterface(bss_info->bsscfgidx);
-  }
-  BRCMF_DBG(SIM, "Ignoring request to set bsscfg iovar '%s'", name);
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void* value,
+zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const void* value_buf,
                                    size_t value_len) {
+  uint8_t* value = (uint8_t*)value_buf;
+  int32_t bsscfgidx = 0;
+  char* name = (char*)name_buf;
+
+  // If it is a bsscfg iovar, handle it accordingly (strip the prefix and extract the
+  // bsscfgidx.
+  const size_t bsscfg_prefix_len = strlen(BRCMF_FWIL_BSSCFG_PREFIX);
+  if (!std::strncmp(name, BRCMF_FWIL_BSSCFG_PREFIX, bsscfg_prefix_len)) {
+    bsscfgidx = *(reinterpret_cast<const int32_t*>(value));
+    value += sizeof(bsscfgidx);
+    ZX_ASSERT(value_len >= sizeof(bsscfgidx));
+    value_len -= sizeof(bsscfgidx);
+    if (!value_len)
+      value = nullptr;
+    name += bsscfg_prefix_len;
+  }
   // If Error Injection is enabled return with the appropriate status right away
   zx_status_t status;
   if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, ifidx)) {
     return status;
   }
 
-  const size_t bsscfg_prefix_len = strlen(BRCMF_FWIL_BSSCFG_PREFIX);
-  if (!std::strncmp(name, BRCMF_FWIL_BSSCFG_PREFIX, bsscfg_prefix_len)) {
-    return HandleBssCfgSet(ifidx, name + bsscfg_prefix_len, value, value_len);
+  // Check against the entire command string.
+  size_t cmd_len = strlen(name);
+
+  if (!std::strncmp(name, "interface_remove", cmd_len)) {
+    return HandleIfaceRequest(false, value, value_len, bsscfgidx);
   }
 
-  if (!std::strcmp(name, "arp_ol")) {
+  if (!std::strncmp(name, "ssid", cmd_len)) {
+    if (value_len < sizeof(brcmf_ssid_le)) {
+      return ZX_ERR_IO;
+    }
+    return HandleIfaceRequest(true, value, value_len, bsscfgidx);
+  }
+
+  if (!std::strncmp(name, "arp_ol", cmd_len)) {
     if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_IO;
     }
     if (!iface_tbl_[ifidx].allocated) {
       return ZX_ERR_INVALID_ARGS;
     }
-    iface_tbl_[ifidx].arp_ol = *(static_cast<const uint32_t*>(value));
+    iface_tbl_[ifidx].arp_ol = *(reinterpret_cast<const uint32_t*>(value));
     return ZX_OK;
   }
 
-  if (!std::strcmp(name, "arpoe")) {
+  if (!std::strncmp(name, "arpoe", cmd_len)) {
     if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_IO;
     }
     if (!iface_tbl_[ifidx].allocated) {
       return ZX_ERR_INVALID_ARGS;
     }
-    iface_tbl_[ifidx].arpoe = *(static_cast<const uint32_t*>(value));
+    iface_tbl_[ifidx].arpoe = *(reinterpret_cast<const uint32_t*>(value));
     return ZX_OK;
   }
 
-  if (!std::strcmp(name, "country")) {
-    auto cc_req = static_cast<const brcmf_fil_country_le*>(value);
+  if (!std::strncmp(name, "country", cmd_len)) {
+    auto cc_req = reinterpret_cast<const brcmf_fil_country_le*>(value);
     country_code_ = *cc_req;
     return ZX_OK;
   }
 
-  if (!std::strcmp(name, "cur_etheraddr")) {
+  if (!std::strncmp(name, "cur_etheraddr", cmd_len)) {
     if (value_len == ETH_ALEN) {
-      return SetMacAddr(ifidx, static_cast<const uint8_t*>(value));
+      return SetMacAddr(ifidx, reinterpret_cast<const uint8_t*>(value));
     } else {
       return ZX_ERR_INVALID_ARGS;
     }
   }
 
-  if (!std::strcmp(name, "escan")) {
+  if (!std::strncmp(name, "escan", cmd_len)) {
     // For now scanning on softAP iface is not supported yet.
     if (ifidx != kClientIfidx) {
       BRCMF_ERR("Not scanning with client iface.");
       return ZX_ERR_INVALID_ARGS;
     }
-    return HandleEscanRequest(static_cast<const brcmf_escan_params_le*>(value), value_len);
+    return HandleEscanRequest(reinterpret_cast<const brcmf_escan_params_le*>(value), value_len);
   }
 
-  if (!std::strcmp(name, "join")) {
+  if (!std::strncmp(name, "join", cmd_len)) {
     if (value_len < sizeof(brcmf_ext_join_params_le)) {
       return ZX_ERR_IO;
     }
@@ -1479,24 +1426,26 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
     return HandleJoinRequest(value, value_len);
   }
 
-  if (!std::strcmp(name, "pfn_macaddr")) {
-    auto pfn_mac = static_cast<const brcmf_pno_macaddr_le*>(value);
+  if (!std::strncmp(name, "pfn_macaddr", cmd_len)) {
+    auto pfn_mac = reinterpret_cast<const brcmf_pno_macaddr_le*>(value);
     memcpy(pfn_mac_addr_.byte, pfn_mac->mac, ETH_ALEN);
+    return ZX_OK;
   }
 
-  if (!std::strcmp(name, "wsec")) {
+  if (!std::strncmp(name, "wsec", cmd_len)) {
     if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_IO;
     }
-    auto wsec = static_cast<const uint32_t*>(value);
+    auto wsec = reinterpret_cast<const uint32_t*>(value);
     iface_tbl_[ifidx].wsec = *wsec;
+    return ZX_OK;
   }
 
-  if (!std::strcmp(name, "wsec_key")) {
+  if (!std::strncmp(name, "wsec_key", cmd_len)) {
     if (value_len < sizeof(brcmf_wsec_key_le)) {
       return ZX_ERR_IO;
     }
-    auto wk_req = static_cast<const brcmf_wsec_key_le*>(value);
+    auto wk_req = reinterpret_cast<const brcmf_wsec_key_le*>(value);
     std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[ifidx].wsec_key_list;
     auto key_iter = std::find_if(key_list.begin(), key_list.end(),
                                  [=](brcmf_wsec_key_le& k) { return k.index == wk_req->index; });
@@ -1510,50 +1459,57 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
 
       key_list.push_back(*wk_req);
     }
+    return ZX_OK;
   }
 
-  if (!std::strcmp(name, "assoc_retry_max")) {
-    auto assoc_max_retries = static_cast<const uint32_t*>(value);
+  if (!std::strncmp(name, "assoc_retry_max", cmd_len)) {
+    auto assoc_max_retries = reinterpret_cast<const uint32_t*>(value);
     assoc_max_retries_ = *assoc_max_retries;
+    return ZX_OK;
   }
 
-  if (!std::strcmp(name, "chanspec")) {
+  if (!std::strncmp(name, "chanspec", cmd_len)) {
     if (value_len < sizeof(uint16_t)) {
       return ZX_ERR_IO;
     }
-    auto chanspec = static_cast<const uint16_t*>(value);
+    auto chanspec = reinterpret_cast<const uint16_t*>(value);
     // TODO(karthikrish) Add multi channel support in SIM Env. For now ensure all IFs use the same
     // channel
     return (SetIFChanspec(ifidx, *chanspec));
   }
 
-  if (!std::strcmp(name, "mpc")) {
+  if (!std::strncmp(name, "mpc", cmd_len)) {
     if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_IO;
     }
-    auto mpc = static_cast<const uint32_t*>(value);
+    auto mpc = reinterpret_cast<const uint32_t*>(value);
     // Ensure that mpc is never enabled when AP has been started
     if (softap_ifidx_ != std::nullopt) {
       // Ensure that mpc is 0 if the SoftAP has been started
       ZX_ASSERT_MSG(*mpc == 0, "mpc should be 0 when SoftAP is active");
     }
     mpc_ = *mpc;
+    return ZX_OK;
   }
 
-  if (!std::strcmp(name, "wpa_auth")) {
+  if (!std::strncmp(name, "wpa_auth", cmd_len)) {
     if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_IO;
     }
-    auto wpa_auth = static_cast<const uint32_t*>(value);
+    auto wpa_auth = reinterpret_cast<const uint32_t*>(value);
     iface_tbl_[ifidx].wpa_auth = *wpa_auth;
+    return ZX_OK;
   }
 
-  if (!std::strcmp(name, "auth")) {
+  if (!std::strncmp(name, "auth", cmd_len)) {
     if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_IO;
     }
 
-    auto auth = static_cast<const uint32_t*>(value);
+    auto auth = reinterpret_cast<const uint32_t*>(value);
+    // TODO - IF operating mode maynot be set yet. Might need to save the value
+    // in the IF table and act on it at the appropriate time (that is the reason
+    // for not returning an error below.
     if (softap_ifidx_ != std::nullopt && ifidx == softap_ifidx_) {
       iface_tbl_[softap_ifidx_.value()].ap_config.auth_type = *auth;
     } else if (iface_tbl_[kClientIfidx].allocated && ifidx == kClientIfidx) {
@@ -1561,21 +1517,23 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
     } else {
       BRCMF_ERR("Iface is not allocated.");
     }
+    return ZX_OK;
   }
 
-  if (!std::strcmp(name, "tlv")) {
+  if (!std::strncmp(name, "tlv", cmd_len)) {
     if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_IO;
     }
-    auto tlv = static_cast<const uint32_t*>(value);
+    auto tlv = reinterpret_cast<const uint32_t*>(value);
     iface_tbl_[ifidx].tlv = *tlv;
+    return ZX_OK;
   }
 
   if (!std::strcmp(name, "bss")) {
     if (value_len < sizeof(brcmf_bss_ctrl)) {
       return ZX_ERR_IO;
     }
-    auto bss_info = static_cast<const brcmf_bss_ctrl*>(value);
+    auto bss_info = reinterpret_cast<const brcmf_bss_ctrl*>(value);
     // We do not know how non-zero value is handled in real FW.
     ZX_ASSERT(bss_info->value == 0);
     return StopInterface(bss_info->bsscfgidx);

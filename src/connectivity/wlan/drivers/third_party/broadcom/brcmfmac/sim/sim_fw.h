@@ -192,8 +192,6 @@ class SimFirmware {
   // Firmware iovar accessors
   zx_status_t IovarsSet(uint16_t ifidx, const char* name, const void* value, size_t value_len);
   zx_status_t IovarsGet(uint16_t ifidx, const char* name, void* value_out, size_t value_len);
-  zx_status_t HandleBssCfgSet(const uint16_t ifidx, const char* name, const void* data,
-                              size_t value_len);
 
   // Firmware error injection related methods
   void ErrorInjectSetBit(size_t inject_bit);
@@ -300,8 +298,10 @@ class SimFirmware {
   // Iovar handlers
   zx_status_t SetMacAddr(uint16_t ifidx, const uint8_t* mac_addr);
   zx_status_t HandleEscanRequest(const brcmf_escan_params_le* value, size_t value_len);
-  zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id);
-  zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
+  zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id,
+                                int32_t bsscfgidx);
+  zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len,
+                                 int32_t bsscfgidx);
   zx_status_t HandleJoinRequest(const void* value, size_t value_len);
   void HandleAssocReq(std::shared_ptr<const simulation::SimAssocReqFrame> frame);
   void HandleDisconnectForClientIF(std::shared_ptr<const simulation::SimManagementFrame> frame,

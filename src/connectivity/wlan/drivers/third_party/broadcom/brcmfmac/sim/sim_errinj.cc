@@ -57,10 +57,10 @@ void SimErrorInjector::DelErrInjCmd(uint32_t cmd) {
   BRCMF_DBG(SIMERRINJ, "Cmd: %d not found", cmd);
 }
 
-void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status, bool bsscfg,
+void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status,
                                       std::optional<uint16_t> ifidx) {
   for (auto it = iovars_.begin(); it != iovars_.end(); ++it) {
-    if (it->iovar.size() == strlen(iovar) + 1 && (it->bsscfg == bsscfg) &&
+    if (it->iovar.size() == strlen(iovar) + 1 &&
         (memcmp(iovar, it->iovar.data(), it->iovar.size()) == 0)) {
       // Entry already present
       BRCMF_DBG(SIMERRINJ, "entry iovar: %s if:%d status:%d present, replace", iovar,
@@ -70,7 +70,7 @@ void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status, boo
       return;
     }
   }
-  ErrInjIovar err_inj_iovar(iovar, status, bsscfg, ifidx);
+  ErrInjIovar err_inj_iovar(iovar, status, ifidx);
   iovars_.push_back(err_inj_iovar);
   BRCMF_DBG(SIMERRINJ, "Num entries in list: %lu\n", iovars_.size());
 }
@@ -106,29 +106,16 @@ bool SimErrorInjector::CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_st
 
 bool SimErrorInjector::CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t* ret_status,
                                                  uint16_t ifidx) {
-  bool entry_found = false;
   for (auto it = iovars_.begin(); it != iovars_.end(); ++it) {
-    if ((it->ifidx.has_value() && (it->ifidx == ifidx)) || !it->ifidx.has_value()) {
-      // Handle bsscfg iovar if set
-      if (it->bsscfg) {
-        const size_t bsscfg_prefix_len = strlen(BRCMF_FWIL_BSSCFG_PREFIX);
-        if ((it->iovar.size() == strlen(iovar) + 1 - bsscfg_prefix_len) &&
-            (!std::memcmp(iovar, BRCMF_FWIL_BSSCFG_PREFIX, bsscfg_prefix_len)) &&
-            (!std::memcmp(iovar + bsscfg_prefix_len, it->iovar.data(), it->iovar.size()))) {
-          entry_found = true;
-        }
-      } else if (it->iovar.size() == strlen(iovar) + 1 &&
-                 (!std::memcmp(it->iovar.data(), iovar, it->iovar.size()))) {
-        entry_found = true;
+    if (((it->ifidx.has_value() && (it->ifidx == ifidx)) || !it->ifidx.has_value()) &&
+        it->iovar.size() == strlen(iovar) + 1 &&
+        (!std::memcmp(it->iovar.data(), iovar, it->iovar.size()))) {
+      BRCMF_DBG(SIMERRINJ, "Err Inj entry found if:%d status:%d iovar:%s", ifidx, it->ret_status,
+                iovar);
+      if (ret_status) {
+        *ret_status = it->ret_status;
       }
-      if (entry_found) {
-        BRCMF_DBG(SIMERRINJ, "Err Inj entry found if:%d status:%d iovar:%s", ifidx, it->ret_status,
-                  iovar);
-        if (ret_status) {
-          *ret_status = it->ret_status;
-        }
-        return true;
-      }
+      return true;
     }
   }
   BRCMF_DBG(SIMERRINJ, "iovar: %s ifidx: %d not found", iovar, ifidx);

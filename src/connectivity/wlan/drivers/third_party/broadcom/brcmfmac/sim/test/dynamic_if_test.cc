@@ -203,7 +203,7 @@ void DynamicIfTest::StopSoftAP() {
 
 void DynamicIfTest::InjectStopAPError() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjIovar("bss", ZX_ERR_IO, true, softap_ifc_.iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjIovar("bss", ZX_ERR_IO, softap_ifc_.iface_id_);
 }
 
 void DynamicIfTest::ChannelCheck() {
