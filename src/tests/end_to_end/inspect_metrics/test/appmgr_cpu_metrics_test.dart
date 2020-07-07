@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+@Timeout(Duration(seconds: 60))
+
 import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'util.dart';
