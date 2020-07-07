@@ -75,13 +75,13 @@ where
     DP: fidl_fuchsia_lowpan_spinel::DeviceProxyInterface + Unpin + Clone,
 {
     async fn open(&self) -> Result<(), Error> {
+        self.send_window.reset();
         self.device_proxy
             .open()
             .await
             .context("device_proxy.open(): FIDL Error")?
             .map_err(SpinelError)
             .context("device_proxy.open(): Spinel Error")?;
-        self.send_window.reset();
         self.device_proxy
             .ready_to_receive_frames(INBOUND_FRAME_WINDOW_SIZE.try_into().unwrap())
             .context("device_proxy.ready_to_receive_frames(): FIDL Error")?;
