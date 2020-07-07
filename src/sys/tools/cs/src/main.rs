@@ -8,20 +8,15 @@
 
 use {
     anyhow::{format_err, Error},
-    cs::inspect::{generate_inspect_object_tree, InspectObject},
+    cs::{
+        inspect::{generate_inspect_object_tree, InspectObject},
+        log_stats::{LogSeverity, LogStats},
+    },
     fidl_fuchsia_inspect_deprecated::{InspectMarker, MetricValue, PropertyValue},
     fuchsia_async as fasync,
-    fuchsia_inspect::{
-        reader::{NodeHierarchy, Property},
-        testing::InspectDataFetcher,
-    },
-    fuchsia_zircon as zx,
     std::{
-        cmp::Reverse,
-        collections::HashMap,
         fmt, fs,
         path::{Path, PathBuf},
-        str::FromStr,
     },
     structopt::StructOpt,
 };
@@ -253,31 +248,6 @@ fn inspect_component(
     Ok(())
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum LogSeverity {
-    TRACE = 0,
-    DEBUG,
-    INFO,
-    WARN,
-    ERROR,
-    FATAL,
-}
-
-impl FromStr for LogSeverity {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Error> {
-        match s.to_lowercase().as_str() {
-            "fatal" => Ok(LogSeverity::FATAL),
-            "error" => Ok(LogSeverity::ERROR),
-            "warn" | "warning" => Ok(LogSeverity::WARN),
-            "info" => Ok(LogSeverity::INFO),
-            "debug" => Ok(LogSeverity::DEBUG),
-            "trace" => Ok(LogSeverity::TRACE),
-            _ => Err(format_err!("{} is not a valid log severity", s)),
-        }
-    }
-}
-
 #[derive(StructOpt, Debug)]
 #[structopt(
     name = "Component Statistics (cs) Reporting Tool",
@@ -307,159 +277,6 @@ struct Opt {
     min_severity: LogSeverity,
 }
 
-// Number of log messages broken down by severity for a given component.
-struct ComponentLogStats {
-    component_url: String,
-    log_counts: Vec<u64>,
-    total_logs: u64,
-}
-
-impl ComponentLogStats {
-    fn get_sort_key(&self) -> (u64, u64, u64, u64, u64) {
-        (
-            // Fatal logs are reported separately. They shouldn't affect the order of the output.
-            self.get_count(LogSeverity::ERROR),
-            self.get_count(LogSeverity::WARN),
-            self.get_count(LogSeverity::INFO),
-            self.get_count(LogSeverity::DEBUG),
-            self.get_count(LogSeverity::TRACE),
-        )
-    }
-
-    fn get_count(&self, severity: LogSeverity) -> u64 {
-        self.log_counts[severity as usize]
-    }
-}
-
-impl From<&NodeHierarchy> for ComponentLogStats {
-    fn from(node: &NodeHierarchy) -> ComponentLogStats {
-        let map = node
-            .properties
-            .iter()
-            .map(|x| match x {
-                Property::Int(name, value) => (name.as_str(), *value as u64),
-                _ => ("", 0),
-            })
-            .collect::<HashMap<_, _>>();
-        ComponentLogStats {
-            component_url: node.name.clone(),
-            log_counts: vec![
-                map["trace_logs"],
-                map["debug_logs"],
-                map["info_logs"],
-                map["warning_logs"],
-                map["error_logs"],
-                map["fatal_logs"],
-            ],
-            total_logs: map["total_logs"],
-        }
-    }
-}
-
-// Extracts the component start times from the inspect hierarchy.
-fn get_component_start_times(inspect_root: &NodeHierarchy) -> Result<HashMap<&str, f64>, Error> {
-    let mut res = HashMap::new();
-    let events_node = inspect_root
-        .get_child_by_path(&vec!["event_stats", "recent_events"])
-        .ok_or(format_err!("Missing event_stats/recent_events"))?;
-
-    for event in &events_node.children {
-        // Extract the component name from the moniker. This allows us to match against the
-        // component url from log stats.
-        let moniker = event
-            .get_property("moniker")
-            .and_then(|prop| prop.string())
-            .ok_or(format_err!("Missing moniker"))?;
-        let last_slash_index = moniker.rfind("/");
-        if let Some(i) = last_slash_index {
-            let last_colon_index = moniker.rfind(":");
-            if let Some(j) = last_colon_index {
-                let time = event
-                    .get_property("@time")
-                    .and_then(|prop| prop.string())
-                    .ok_or(format_err!("Missing @time"))?;
-                res.insert(&moniker[i + 1..j], time.parse::<f64>()?);
-            }
-        }
-    }
-
-    Ok(res)
-}
-
-async fn print_log_stats(opt: Opt) -> Result<(), Error> {
-    let mut response = InspectDataFetcher::new()
-        .add_selector("archivist.cmx:root/log_stats/by_component/*:*")
-        .add_selector("archivist.cmx:root/event_stats/recent_events/*:*")
-        .get()
-        .await?;
-
-    if response.len() != 1 {
-        return Err(format_err!("Expected one inspect tree, received {}", response.len()));
-    }
-
-    let hierarchy = response.pop().unwrap();
-
-    let stats_node = hierarchy
-        .get_child_by_path(&vec!["log_stats", "by_component"])
-        .ok_or(format_err!("Missing log_stats/by_component"))?;
-    let mut stats_list =
-        stats_node.children.iter().map(|x| ComponentLogStats::from(x)).collect::<Vec<_>>();
-    stats_list.sort_by_key(|x| Reverse(x.get_sort_key()));
-
-    let start_times = get_component_start_times(&hierarchy)?;
-
-    // Number of fatal logs is expected to be zero. If that's not the case, report it here.
-    for stats in &stats_list {
-        if stats.get_count(LogSeverity::FATAL) != 0 {
-            println!(
-                "Found {} fatal log messages for component {}",
-                stats.get_count(LogSeverity::FATAL),
-                stats.component_url
-            );
-        }
-    }
-
-    //  Min severity cannot be FATAL.
-    let min_severity =
-        if opt.min_severity == LogSeverity::FATAL { LogSeverity::ERROR } else { opt.min_severity };
-
-    let min_severity_int = min_severity as usize;
-    let max_severity_int = LogSeverity::ERROR as usize;
-
-    let severity_strs = vec!["TRACE", "DEBUG", "INFO", "WARN", "ERROR"];
-    let mut table_str = String::new();
-    for i in (min_severity_int..=max_severity_int).rev() {
-        table_str.push_str(&format!("{:<7}", severity_strs[i]));
-    }
-    table_str.push_str(&format!("{:<7}{:<10}{}\n", "Total", "ERROR/h", "Component"));
-
-    let now = zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000_000;
-
-    for stats in stats_list {
-        let last_slash_index = stats.component_url.rfind("/");
-        let short_name = match last_slash_index {
-            Some(index) => &stats.component_url[index + 1..],
-            None => stats.component_url.as_str(),
-        };
-        for i in (min_severity_int..=max_severity_int).rev() {
-            table_str.push_str(&format!("{:<7}", stats.log_counts[i]));
-        }
-        table_str.push_str(&format!("{:<7}", stats.total_logs));
-        let start_time = match start_times.get(short_name) {
-            Some(s) => *s as i64,
-            None => 0,
-        };
-        let uptime_in_hours = (now - start_time) as f64 / 3600.0;
-        let error_rate = stats.get_count(LogSeverity::ERROR) as f64 / uptime_in_hours;
-        table_str.push_str(&format!("{:<10.4}", error_rate));
-        table_str.push_str(&format!("{}\n", short_name));
-    }
-
-    print!("{}", table_str);
-
-    Ok(())
-}
-
 #[fasync::run_singlethreaded]
 async fn main() -> TraversalResult {
     // Visit the directory /hub and recursively traverse it, outputting information about the
@@ -468,7 +285,8 @@ async fn main() -> TraversalResult {
     let opt = Opt::from_args();
 
     if opt.log_stats {
-        print_log_stats(opt).await?;
+        let log_stats = LogStats::new(opt.min_severity).await?;
+        println!("{}", log_stats);
         return Ok(());
     }
 

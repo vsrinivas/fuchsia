@@ -3,15 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    cs::log_stats::{LogSeverity, LogStats},
     fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
-    fuchsia_inspect::{
-        reader::{NodeHierarchy, Property},
-        testing::{assert_inspect_tree, AnyProperty, InspectDataFetcher},
-    },
+    fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty, InspectDataFetcher},
     log::info,
     selectors,
-    std::collections::HashMap,
 };
 
 const TEST_COMPONENT: &str =
@@ -24,27 +21,16 @@ async fn verify_component_attributed(url: &str, expected_info_count: u64) {
             "archivist:root/log_stats/by_component/{}:*",
             selectors::sanitize_string_for_selectors(&url)
         ))
+        .add_selector("archivist:root/event_stats/recent_events/*:*")
         .get()
         .await
         .unwrap();
     let hierarchy = response.pop().unwrap();
-    let stats_node = hierarchy.get_child_by_path(&vec!["log_stats", "by_component"]).unwrap();
-    let component_stats = stats_node
-        .children
-        .iter()
-        .map(|node| node.clone())
-        .collect::<Vec<NodeHierarchy>>()
-        .pop()
-        .unwrap();
-    let counts = component_stats
-        .properties
-        .iter()
-        .map(|x| match x {
-            Property::Int(name, value) => (name.as_str(), *value as u64),
-            _ => ("", 0),
-        })
-        .collect::<HashMap<_, _>>();
-    assert_eq!(expected_info_count, counts["info_logs"]);
+    let log_stats = LogStats::new_with_root(LogSeverity::INFO, &hierarchy).await.unwrap();
+    let component_log_stats = log_stats.get_by_url(url).unwrap();
+    let info_log_count = component_log_stats.get_count(LogSeverity::INFO);
+
+    assert_eq!(expected_info_count, info_log_count);
 }
 
 #[fasync::run_singlethreaded(test)]
