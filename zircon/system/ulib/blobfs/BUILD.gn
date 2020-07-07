@@ -53,6 +53,7 @@ source_set("private_headers") {
     ]
   }
   public_configs = [ ":headers_config" ]
+  deps = [ "//src/lib/chunked-compression" ]
 }
 
 zx_library("blobfs") {

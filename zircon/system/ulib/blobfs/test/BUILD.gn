@@ -125,6 +125,7 @@ test("blobfs-unit") {
   deps = [
     ":test-utils",
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
+    "//src/lib/chunked-compression",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/safemath",
@@ -203,6 +204,7 @@ test("blobfs-integration") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/block-client:fake-device",
