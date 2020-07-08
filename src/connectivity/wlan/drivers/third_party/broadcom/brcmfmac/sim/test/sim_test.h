@@ -51,6 +51,7 @@ class SimInterface {
     std::list<wlanif_assoc_ind_t> assoc_indications;
     std::list<wlanif_auth_ind_t> auth_indications;
     std::list<wlanif_deauth_indication_t> deauth_indications;
+    std::list<wlanif_disassoc_indication_t> disassoc_indications;
     std::list<wlanif_channel_switch_info_t> csa_indications;
     std::list<wlanif_start_confirm_t> start_confirmations;
     std::list<wlanif_stop_confirm_t> stop_confirmations;
@@ -85,7 +86,7 @@ class SimInterface {
   virtual void OnAssocConf(const wlanif_assoc_confirm_t* resp);
   virtual void OnAssocInd(const wlanif_assoc_ind_t* ind);
   virtual void OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {}
-  virtual void OnDisassocInd(const wlanif_disassoc_indication_t* ind) {}
+  virtual void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
   virtual void OnStartConf(const wlanif_start_confirm_t* resp);
   virtual void OnStopConf(const wlanif_stop_confirm_t* resp);
   virtual void OnEapolConf(const wlanif_eapol_confirm_t* resp) {}
@@ -115,7 +116,7 @@ class SimInterface {
                    const wlan_channel_t& channel = kDefaultSoftApChannel,
                    uint32_t beacon_period = kDefaultSoftApBeaconPeriod,
                    uint32_t dtim_period = kDefaultSoftApDtimPeriod);
-  void StopSoftAp(std::optional<wlan_ssid_t> ssid = std::nullopt);
+  void StopSoftAp();
 
   std::shared_ptr<simulation::Environment> env_;
 

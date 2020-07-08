@@ -154,6 +154,10 @@ void SimInterface::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
   stats_.deauth_indications.push_back(*ind);
 }
 
+void SimInterface::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
+  stats_.disassoc_indications.push_back(*ind);
+}
+
 void SimInterface::OnJoinConf(const wlanif_join_confirm_t* resp) {
   ZX_ASSERT(assoc_ctx_.state == AssocContext::kJoining);
 
@@ -258,21 +262,19 @@ void SimInterface::StartSoftAp(const wlan_ssid_t& ssid, const wlan_channel_t& ch
   // Return value is handled asynchronously in OnStartConf
 }
 
-void SimInterface::StopSoftAp(std::optional<wlan_ssid_t> ssid) {
+void SimInterface::StopSoftAp() {
   // This should only be performed on an AP interface
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
 
   wlanif_stop_req_t stop_req;
 
   ZX_ASSERT(sizeof(stop_req.ssid.data) == WLAN_MAX_SSID_LEN);
-  if (ssid) {
-    stop_req.ssid.len = ssid->len;
-    memcpy(stop_req.ssid.data, ssid->ssid, WLAN_MAX_SSID_LEN);
-  } else {
-    // If not otherwise specified, use the ssid from the last call to StartSoftAp
-    stop_req.ssid.len = soft_ap_ctx_.ssid.len;
-    memcpy(stop_req.ssid.data, soft_ap_ctx_.ssid.ssid, WLAN_MAX_SSID_LEN);
-  }
+  // Use the ssid from the last call to StartSoftAp
+  stop_req.ssid.len = soft_ap_ctx_.ssid.len;
+  memcpy(stop_req.ssid.data, soft_ap_ctx_.ssid.ssid, WLAN_MAX_SSID_LEN);
+
+  // Send request to driver
+  if_impl_ops_->stop_req(if_impl_ctx_, &stop_req);
 }
 
 SimTest::SimTest() {
