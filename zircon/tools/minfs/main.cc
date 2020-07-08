@@ -101,7 +101,7 @@ zx_status_t CopyFile(const char* src_path, const char* dst_path) {
     return ZX_ERR_IO;
   }
 
-  if (FileWrapper::Open(dst_path, O_WRONLY | O_CREAT | O_EXCL, 0644, &dst) < 0) {
+  if (FileWrapper::Open(dst_path, O_WRONLY | O_CREAT | O_TRUNC, 0644, &dst) < 0) {
     fprintf(stderr, "error: cannot open file '%s'\n", dst_path);
     return ZX_ERR_IO;
   }
