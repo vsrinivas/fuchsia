@@ -27,6 +27,26 @@ NodeDescriber::UtteranceAndContext DescribeButton(a11y::i18n::MessageFormatter* 
   return utterance;
 }
 
+// Returns a message that describes a node where Role == HEADER.
+NodeDescriber::UtteranceAndContext DescribeHeader(a11y::i18n::MessageFormatter* formatter) {
+  NodeDescriber::UtteranceAndContext utterance;
+  auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_HEADER));
+  FX_DCHECK(message);
+  utterance.utterance.set_message(std::move(*message));
+  utterance.delay = kDefaultDelay;
+  return utterance;
+}
+
+// Returns a message that describes a node where Role == IMAGE.
+NodeDescriber::UtteranceAndContext DescribeImage(a11y::i18n::MessageFormatter* formatter) {
+  NodeDescriber::UtteranceAndContext utterance;
+  auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_IMAGE));
+  FX_DCHECK(message);
+  utterance.utterance.set_message(std::move(*message));
+  utterance.delay = kDefaultDelay;
+  return utterance;
+}
+
 }  // namespace
 
 NodeDescriber::NodeDescriber(std::unique_ptr<i18n::MessageFormatter> message_formatter)
@@ -51,6 +71,10 @@ std::vector<NodeDescriber::UtteranceAndContext> NodeDescriber::DescribeNode(
     if (node->has_role()) {
       if (node->role() == Role::BUTTON) {
         description.emplace_back(DescribeButton(message_formatter_.get()));
+      } else if (node->role() == Role::HEADER) {
+        description.emplace_back(DescribeHeader(message_formatter_.get()));
+      } else if (node->role() == Role::IMAGE) {
+        description.emplace_back(DescribeImage(message_formatter_.get()));
       }
     }
   }

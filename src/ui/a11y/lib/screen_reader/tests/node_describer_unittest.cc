@@ -64,5 +64,33 @@ TEST_F(NodeDescriberTest, NodeButton) {
   ASSERT_EQ(result[1].utterance.message(), "button");
 }
 
+TEST_F(NodeDescriberTest, NodeHeader) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::HEADER);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_HEADER),
+                                               "header");
+  auto result = node_describer_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "header");
+}
+
+TEST_F(NodeDescriberTest, NodeImage) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::IMAGE);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_IMAGE),
+                                               "image");
+  auto result = node_describer_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "image");
+}
+
 }  // namespace
 }  // namespace accessibility_test
