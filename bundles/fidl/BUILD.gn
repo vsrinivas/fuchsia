@@ -24,6 +24,7 @@ group("tests") {
     "//src/lib/fidl/c:tests",
     "//src/lib/fidl/llcpp/tests",
     "//src/lib/fidl/rust:tests",
+    "//src/lib/fidl_table_validation/fidl_table_validation_tests",
     "//src/tests/benchmarks/fidl:benchmarks",
     "//src/tests/fidl/dangerous_identifiers:tests",
     "//src/tests/fidl/source_compatibility:tests",

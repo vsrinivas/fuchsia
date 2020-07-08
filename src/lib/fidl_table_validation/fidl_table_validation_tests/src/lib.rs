@@ -28,7 +28,11 @@ macro_rules! dummy_impl_decodable {
             fn new_empty() -> Self {
                 Self::default()
             }
-            fn decode(&mut self, _decoder: &mut fidl::encoding::Decoder<'_>) -> fidl::Result<()> {
+            fn decode(
+                &mut self,
+                _decoder: &mut fidl::encoding::Decoder<'_>,
+                _offset: usize,
+            ) -> fidl::Result<()> {
                 Ok(())
             }
         }
