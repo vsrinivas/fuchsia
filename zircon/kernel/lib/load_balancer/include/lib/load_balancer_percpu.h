@@ -159,10 +159,11 @@ static cpu_num_t FindTargetCpuLocked(Thread* thread) {
     return initial_cpu;
   }
 
-  if (unlikely(thread->has_migrate_fn() && initial_cpu_available)) {
+  if (unlikely(last_cpu != INVALID_CPU && last_cpu != lowest_cpu &&
+               thread->has_migrate_fn() && (mp_get_active_mask() & ToMask(last_cpu)))) {
     // Stay where we are, the migrate_fn_ will migrate us later.
     thread->scheduler_state().set_next_cpu(lowest_cpu);
-    return initial_cpu;
+    return last_cpu;
   }
 
   return lowest_cpu;
