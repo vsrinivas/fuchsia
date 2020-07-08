@@ -12,10 +12,6 @@ using fuchsia.media;
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol Audio {
-    /// TO BE DEPRECATED: new watches will use Watch2 in the future.
-    [Transitional = "To be deprecated in favor of Watch2"]
-    Watch() -> (AudioSettings settings) error Error;
-
     /// Gets the current [AudioSettings]. Returns immediately on first call;
     /// subsequent calls return when the value changes.
     ///

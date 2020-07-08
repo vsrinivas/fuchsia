@@ -440,13 +440,6 @@ async fn test_persisted_values_applied_at_start() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_channel_failure_watch() {
-    let audio_proxy = create_audio_test_env_with_failures(InMemoryStorageFactory::create()).await;
-    let result = audio_proxy.watch().await.ok();
-    assert_eq!(result, Some(Err(Error::Failed)));
-}
-
-#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch2() {
     let audio_proxy = create_audio_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = audio_proxy.watch2().await;
@@ -455,29 +448,4 @@ async fn test_channel_failure_watch2() {
         ClientChannelClosed(Status::INTERNAL).to_string(),
         result.err().unwrap().to_string()
     );
-}
-
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_simultaneous_watch() {
-    let (service_registry, _) = create_services().await;
-    let (env, _) = create_environment(service_registry).await;
-
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    let settings2 = audio_proxy.watch2().await.expect("watch completed");
-    verify_audio_stream(
-        settings.clone(),
-        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
-    );
-    verify_audio_stream(
-        settings2.clone(),
-        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
-    );
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    let settings2 = audio_proxy.watch2().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
-    verify_audio_stream(settings2.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
 }
