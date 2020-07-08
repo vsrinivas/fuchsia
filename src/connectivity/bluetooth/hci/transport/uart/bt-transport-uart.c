@@ -253,8 +253,10 @@ static void hci_handle_uart_read_events(hci_t* hci, const uint8_t* buf, size_t l
 
       size_t remaining = end - src;
       size_t copy = packet_length - hci->event_buffer_offset;
-      if (copy > remaining)
+      if (copy > remaining) {
         copy = remaining;
+      }
+      ZX_ASSERT((hci->event_buffer_offset + copy) <= sizeof(hci->event_buffer));
       memcpy(hci->event_buffer + hci->event_buffer_offset, src, copy);
       src += copy;
       hci->event_buffer_offset += copy;
@@ -290,21 +292,44 @@ static void hci_handle_uart_read_events(hci_t* hci, const uint8_t* buf, size_t l
         hci->event_buffer_offset = 1;
       }
     } else {  // HCI_ACL_DATA
-      size_t packet_length = EVENT_PACKET_LENGTH(hci);
+      size_t packet_length = ACL_PACKET_LENGTH(hci);
 
       while (!packet_length && src < end) {
         // read until we have enough to compute packet length
         hci->acl_buffer[hci->acl_buffer_offset++] = *src++;
         packet_length = ACL_PACKET_LENGTH(hci);
       }
+
+      // Out of bytes, but we still don't know the packet length.  Just wait for
+      // the next packet.
       if (!packet_length) {
+        break;
+      }
+
+      // Sanity check out packet length.  The value computed by
+      // ACL_PACKET_LENGTH includes not only the packet payload size (as read
+      // from the packet itself), but also the 5 bytes of packet overhead.  We
+      // should be able to simply check packet_length against the size of the
+      // reassembly buffer.
+      if (packet_length > sizeof(hci->acl_buffer)) {
+        zxlogf(ERROR,
+               "bt-transport-uart: packet_length is too large (%zu > %zu) during ACL packet "
+               "reassembly.  Dropping and attempting to re-sync.\n",
+               packet_length, sizeof(hci->acl_buffer_offset));
+
+        // reset the reassembly state machine.
+        packet_type = HCI_NONE;
+        hci->acl_buffer_offset = 1;
         break;
       }
 
       size_t remaining = end - src;
       size_t copy = packet_length - hci->acl_buffer_offset;
-      if (copy > remaining)
+      if (copy > remaining) {
         copy = remaining;
+      }
+
+      ZX_ASSERT((hci->acl_buffer_offset + copy) <= sizeof(hci->acl_buffer));
       memcpy(hci->acl_buffer + hci->acl_buffer_offset, src, copy);
       src += copy;
       hci->acl_buffer_offset += copy;
@@ -613,8 +638,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
 
   hci->serial = serial;
   if (status != ZX_OK) {
-    zxlogf(ERROR, "bt-transport-uart: serial_open_socket failed: %s",
-           zx_status_get_string(status));
+    zxlogf(ERROR, "bt-transport-uart: serial_open_socket failed: %s", zx_status_get_string(status));
     goto fail;
   }
 
