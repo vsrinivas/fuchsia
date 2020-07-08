@@ -287,7 +287,7 @@ mod test {
     }
 
     fn spawn_fake_iterator_server(values: Vec<String>, mut stream: CaseIteratorRequestStream) {
-        let mut iter = values.into_iter().map(|name| Case { name: Some(name) });
+        let mut iter = values.into_iter().map(|name| Case { name: Some(name), enabled: None });
         fuchsia_async::spawn(async move {
             while let Ok(Some(CaseIteratorRequest::GetNext { responder })) = stream.try_next().await
             {

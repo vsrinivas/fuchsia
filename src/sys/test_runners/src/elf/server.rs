@@ -75,8 +75,9 @@ pub trait SuiteServer: Sized + Sync {
 
                     fasync::spawn(
                         async move {
-                            let mut iter = tests.iter().map(|TestCaseInfo { name }| ftest::Case {
-                                name: Some(name.clone()),
+                            let mut iter = tests.iter().map(|TestCaseInfo { name }| {
+                                // TODO(fxb/45852): Support disabled tests.
+                                ftest::Case { name: Some(name.clone()), enabled: None }
                             });
                             while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
                                 stream.try_next().await?

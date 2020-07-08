@@ -17,6 +17,9 @@ table Case {
     /// Uniquely identifies a test case within a test suite.
     /// This member is required.
     1: Name name;
+    /// Whether the test is enabled or disabled (marked ignored/skipped) by the developer.
+    /// If the member is omitted, the test is assumed to be enabled.
+    2: bool enabled;
 };
 
 /// Represents success, failure, or other possible conditions following a test invocation.
@@ -50,6 +53,9 @@ table Invocation {
 
 /// Optional additional instructions for running test cases.
 table RunOptions {
+    /// If set to true, test cases that have been disabled by the test author will nonetheless be
+    /// executed.
+    1: bool include_disabled_tests;
 };
 
 /// Result of invoking a single test case.

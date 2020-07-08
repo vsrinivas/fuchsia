@@ -462,8 +462,13 @@ mod tests {
                 .expect("Failed to run test suite")
         });
 
+        // TODO(fxb/45852): Support disabled tests.
         suite_proxy
-            .run(&mut invocations.into_iter().map(|i| i.into()), RunOptions {}, run_listener_client)
+            .run(
+                &mut invocations.into_iter().map(|i| i.into()),
+                RunOptions::empty(),
+                run_listener_client,
+            )
             .context("cannot call run")?;
 
         collect_listener_event(run_listener).await.context("Failed to collect results")

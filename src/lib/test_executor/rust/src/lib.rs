@@ -289,7 +289,10 @@ async fn run_invocations(
             .context("creating request stream")?;
     suite.run(
         &mut invocations.into_iter().map(|i| i.into()),
-        fidl_fuchsia_test::RunOptions {},
+        fidl_fuchsia_test::RunOptions {
+            // TODO(fxb/45852): Support disabled tests.
+            include_disabled_tests: None,
+        },
         run_listener_client,
     )?;
 
