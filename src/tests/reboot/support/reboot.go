@@ -55,7 +55,7 @@ func RebootWithCommand(t *testing.T, cmd string) {
 	i.RunCommand(cmd)
 
 	// Make sure the file system is notified and unmounts.
-	i.WaitForLogMessage("Successfully waited for VFS exit completion")
+	i.WaitForLogMessage("fshost: shutdown complete")
 
 	// Is the target rebooting?
 	i.WaitForLogMessage("Shutting down debuglog")

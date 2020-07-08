@@ -153,7 +153,9 @@ void Coordinator::ShutdownFilesystems() {
   }
   auto result = fshost_admin_client_->Shutdown();
   if (result.status() != ZX_OK) {
-    LOGF(ERROR, "Failed to cause VFS exit: %s", zx_status_get_string(result.status()));
+    LOGF(WARNING,
+         "Failed to cause VFS exit ourselves, this is expected during orderly shutdown: %s",
+         zx_status_get_string(result.status()));
     return;
   }
 
