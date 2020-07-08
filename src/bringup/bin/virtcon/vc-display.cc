@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -33,10 +34,11 @@
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 namespace sysmem = ::llcpp::fuchsia::sysmem;
 
-// At any point, |dc_ph| will either be waiting on the display controller device directory
+static async_dispatcher_t* dc_dispatcher = nullptr;
+// At any point, |dc_wait| will either be waiting on the display controller device directory
 // for a display controller instance or it will be waiting on a display controller interface
 // for messages.
-static port_handler_t dc_ph;
+static async::Wait dc_wait;
 
 static std::unique_ptr<fhd::Controller::SyncClient> dc_client;
 
@@ -514,7 +516,7 @@ static zx_status_t handle_displays_changed(fidl::VectorView<fhd::Info> added,
   return rebind_display(true);
 }
 
-zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+zx_status_t dc_callback_handler(zx_signals_t signals) {
   if (signals & ZX_CHANNEL_PEER_CLOSED) {
     printf("vc: Displays lost\n");
     while (!list_is_empty(&display_list)) {
@@ -523,13 +525,13 @@ zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32
     vc_change_graphics(nullptr);
 
     zx_handle_close(dc_device);
-    dc_ph.handle = ZX_HANDLE_INVALID;
     dc_client.reset();
 
     vc_find_display_controller();
 
     return ZX_ERR_STOP;
   }
+
   ZX_DEBUG_ASSERT(signals & ZX_CHANNEL_READABLE);
 
   return dc_client->HandleEvents(fhd::Controller::EventHandlers{
@@ -556,7 +558,7 @@ zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32
 void initialize_display_channel(zx::channel channel) {
   dc_client = std::make_unique<fhd::Controller::SyncClient>(std::move(channel));
 
-  dc_ph.handle = dc_client->channel().get();
+  dc_wait.set_object(dc_client->channel().get());
 }
 
 #else
@@ -599,10 +601,9 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
   }
 
   dc_device = device_client.release();
-  zx_handle_close(dc_ph.handle);
   dc_client = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client_channel));
 
-  dc_ph.handle = dc_client->channel().get();
+  zx_handle_close(dc_wait.object());
 
   status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr ? fhd::VirtconMode::FALLBACK
                                                                  : fhd::VirtconMode::INACTIVE);
@@ -612,9 +613,23 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
     return ZX_ERR_STOP;
   }
 
-  dc_ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-  dc_ph.func = dc_callback_handler;
-  if ((status = port_wait(&port, &dc_ph)) != ZX_OK) {
+  ZX_DEBUG_ASSERT(!dc_wait.is_pending());
+  dc_wait.set_object(dc_client->channel().get());
+  dc_wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  dc_wait.set_handler([](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                         const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+      return;
+    }
+    status = dc_callback_handler(signal->observed);
+    if (status != ZX_OK) {
+      return;
+    }
+    wait->Begin(dispatcher);
+  });
+
+  status = dc_wait.Begin(dc_dispatcher);
+  if (status != ZX_OK) {
     printf("vc: Failed to set port waiter %d\n", status);
     vc_find_display_controller();
   }
@@ -623,11 +638,59 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
 
 #endif  // BUILD_FOR_DISPLAY_TEST
 
-static zx_status_t vc_dc_dir_event_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+zx_status_t handle_device_dir_event(zx_handle_t handle, zx_signals_t signals,
+                                    zx_status_t (*event_handler)(unsigned event, const char* msg)) {
+  if (!(signals & ZX_CHANNEL_READABLE)) {
+    printf("vc: device directory died\n");
+    return ZX_ERR_STOP;
+  }
+
+  // Buffer contains events { Opcode, Len, Name[Len] }
+  // See zircon/device/vfs.h for more detail
+  // extra byte is for temporary NUL
+  uint8_t buf[fuchsia_io_MAX_BUF + 1];
+  uint32_t len;
+  if (zx_channel_read(handle, 0, buf, nullptr, sizeof(buf) - 1, 0, &len, nullptr) < 0) {
+    printf("vc: failed to read from device directory\n");
+    return ZX_ERR_STOP;
+  }
+
+  uint8_t* msg = buf;
+  while (len >= 2) {
+    uint8_t event = *msg++;
+    uint8_t namelen = *msg++;
+    if (len < (namelen + 2u)) {
+      printf("vc: malformed device directory message\n");
+      return ZX_ERR_STOP;
+    }
+    // add temporary nul
+    uint8_t tmp = msg[namelen];
+    msg[namelen] = 0;
+    zx_status_t status = event_handler(event, reinterpret_cast<char*>(msg));
+    if (status != ZX_OK) {
+      return status;
+    }
+    msg[namelen] = tmp;
+    msg += namelen;
+    len -= (namelen + 2u);
+  }
+  return ZX_OK;
+}
+
+static zx_status_t vc_dc_dir_event_cb(async_dispatcher_t* dispatcher, async::Wait* wait,
+                                      zx_status_t status, const zx_packet_signal_t* signal) {
 #if BUILD_FOR_DISPLAY_TEST
   return ZX_ERR_NOT_SUPPORTED;
 #else
-  return handle_device_dir_event(ph, signals, vc_dc_event);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = handle_device_dir_event(wait->object(), signal->observed, vc_dc_event);
+  if (status != ZX_OK) {
+    return status;
+  }
+  wait->Begin(dispatcher);
+  return ZX_OK;
 #endif
 }
 
@@ -649,22 +712,30 @@ static void vc_find_display_controller() {
     return;
   }
 
-  ZX_DEBUG_ASSERT(dc_ph.handle == ZX_HANDLE_INVALID);
-  dc_ph.handle = client.release();
-  dc_ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-  dc_ph.func = vc_dc_dir_event_cb;
-  if (port_wait(&port, &dc_ph) != ZX_OK) {
+  ZX_DEBUG_ASSERT(!dc_wait.is_pending());
+
+  dc_wait.set_object(client.release());
+  dc_wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  dc_wait.set_handler([](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                         const zx_packet_signal_t* signal) {
+    vc_dc_dir_event_cb(dispatcher, wait, status, signal);
+  });
+
+  status = dc_wait.Begin(dc_dispatcher);
+  if (status != ZX_OK) {
     printf("vc: Failed to wait on dc directory\n");
   }
 }
 
-bool vc_display_init() {
+bool vc_display_init(async_dispatcher_t* dispatcher) {
   fbl::unique_fd fd(open(kDisplayControllerDir, O_DIRECTORY | O_RDONLY));
   if (!fd) {
     return false;
   }
   dc_dir_fd = fd.release();
 
+  ZX_DEBUG_ASSERT(dc_dispatcher == nullptr);
+  dc_dispatcher = dispatcher;
   vc_find_display_controller();
 
   return true;

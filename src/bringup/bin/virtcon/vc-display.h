@@ -53,8 +53,7 @@ zx_status_t alloc_display_info_vmo(display_info_t* display);
 zx_status_t apply_configuration();
 zx_status_t import_vmo(zx_handle_t vmo, llcpp::fuchsia::hardware::display::ImageConfig* config,
                        uint64_t* id);
-zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
-
+zx_status_t dc_callback_handler(zx_signals_t signals);
 #if BUILD_FOR_DISPLAY_TEST
 
 struct list_node* get_display_list();

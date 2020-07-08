@@ -6,6 +6,9 @@
 #define SRC_BRINGUP_BIN_VIRTCON_VC_H_
 
 #include <assert.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
@@ -15,7 +18,6 @@
 #include <gfx/gfx.h>
 #include <hid/hid.h>
 
-#include "src/bringup/bin/virtcon/port/port.h"
 #include "textcon.h"
 #include "vc-colors.h"
 #include "vc-gfx.h"
@@ -90,7 +92,9 @@ typedef struct vc {
   vc_gfx_t* graphics;
 
 #if !BUILD_FOR_TEST
-  port_fd_handler fh;
+  // This has to be a pointer since vc has to have a standard layout.
+  std::unique_ptr<async::Wait> pty_wait;
+  fdio_t* io;
   zx_handle_t proc;
   bool is_shell;
 #endif
@@ -139,7 +143,6 @@ static inline uint32_t palette_to_color(vc_t* vc, uint8_t color) {
   return vc->palette[color];
 }
 
-extern port_t port;
 extern bool g_vc_owns_display;
 extern vc_t* g_active_vc;
 extern int g_status_width;
@@ -156,18 +159,15 @@ void vc_show_active();
 void vc_change_graphics(vc_gfx_t* graphics);
 
 void set_log_listener_active(bool active);
-int log_start(void);
-zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
+int log_start(async_dispatcher_t* dispatcher);
 zx_status_t log_create_vc(vc_gfx_t* graphics, vc_t** vc_out);
 void log_delete_vc(vc_t* vc);
 
-bool vc_display_init(void);
+bool vc_display_init(async_dispatcher_t* dispatcher);
 bool vc_sysmem_connect(void);
 void vc_attach_to_main_display(vc_t* vc);
 bool is_primary_bound();
 
 void set_log_listener_active(bool active);
-zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,
-                                    zx_status_t (*event_handler)(unsigned event, const char* msg));
 
 #endif  // SRC_BRINGUP_BIN_VIRTCON_VC_H_

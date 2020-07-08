@@ -290,8 +290,6 @@ class StubMultiBufferDisplayController : public StubDisplayController {
 };
 }  // namespace
 
-port_t port;
-
 zx_status_t log_create_vc(vc_gfx_t* graphics, vc_t** vc_out) { return ZX_OK; }
 
 void log_delete_vc(vc_t* vc) {}
@@ -349,7 +347,8 @@ class VcDisplayTest : public zxtest::Test {
         zx::unowned_channel(server_end_), fidl::VectorView<fhd::Info>(),
         fidl::VectorView<uint64_t>(fidl::unowned_ptr(&id), 1));
   }
-  void ProcessEvent() { ASSERT_OK(dc_callback_handler(nullptr, ZX_CHANNEL_READABLE, 0)); }
+
+  void ProcessEvent() { ASSERT_OK(dc_callback_handler(ZX_CHANNEL_READABLE)); }
   std::unique_ptr<StubDisplayController> controller_;
   // Loop needs to be torn down before controller, because that causes the
   // binding to close.

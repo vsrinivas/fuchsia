@@ -7,6 +7,8 @@
 
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zx/timer.h>
 #include <stdint.h>
@@ -30,7 +32,8 @@
 #define MOD_CTRL (MOD_LCTRL | MOD_RCTRL)
 
 // Global function which sets up the global keyboard watcher.
-zx_status_t setup_keyboard_watcher(keypress_handler_t handler, bool repeat_keys);
+zx_status_t setup_keyboard_watcher(async_dispatcher_t* dispatcher, keypress_handler_t handler,
+                                   bool repeat_keys);
 
 // A |Keyboard| is created with a callback to handle keypresses.
 // The Keyboard is responsible for watching the keyboard device, parsing
@@ -38,9 +41,8 @@ zx_status_t setup_keyboard_watcher(keypress_handler_t handler, bool repeat_keys)
 // the |keypress_handler_t|.
 class Keyboard {
  public:
-  Keyboard(keypress_handler_t handler, bool repeat_keys)
-      : handler_(handler), repeat_enabled_(repeat_keys) {}
-  ~Keyboard();
+  Keyboard(async_dispatcher_t* dispatcher, keypress_handler_t handler, bool repeat_keys)
+      : dispatcher_(dispatcher), handler_(handler), repeat_enabled_(repeat_keys) {}
 
   // Have the keyboard start watching a given device.
   // |caller| represents the keyboard device.
@@ -51,15 +53,17 @@ class Keyboard {
 
  private:
   // The callback for when key-repeat is triggered.
-  zx_status_t TimerCallback(zx_signals_t signals, uint32_t evt);
+  void TimerCallback(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
   // The callback for when the device has a new input event.
-  zx_status_t InputCallback(unsigned pollevt, uint32_t evt);
+  void InputCallback(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                     const zx_packet_signal_t* signal);
+
   // Send a report to the device that enables/disables the capslock LED.
   void SetCapsLockLed(bool caps_lock);
 
-  port_handler_t input_notifier_ = {};
-  port_handler_t timer_notifier_ = {};
-  zx::timer timer_;
+  async_dispatcher_t* dispatcher_;
+  async::TaskMethod<Keyboard, &Keyboard::TimerCallback> timer_task_{this};
+  async::WaitMethod<Keyboard, &Keyboard::InputCallback> input_wait_{this};
 
   keypress_handler_t handler_ = {};
 
@@ -81,12 +85,13 @@ class Keyboard {
 // It will create a |Keyboard| for each input device that is a keyboard.
 class KeyboardWatcher {
  public:
-  zx_status_t Setup(keypress_handler_t handler, bool repeat_keys);
-
-  // Callback when a new file is created in the directory.
-  zx_status_t DirCallback(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
+  zx_status_t Setup(async_dispatcher_t* dispatcher, keypress_handler_t handler, bool repeat_keys);
 
  private:
+  // Callback when a new file is created in the directory.
+  void DirCallback(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                   const zx_packet_signal_t* signal);
+
   // Attempts to open the file and create a new Keyboard.
   zx_status_t OpenFile(uint8_t evt, char* name);
 
@@ -97,7 +102,8 @@ class KeyboardWatcher {
   keypress_handler_t handler_ = {};
 
   fdio_cpp::FdioCaller dir_caller_;
-  port_handler_t dir_handler_ = {};
+  async_dispatcher_t* dispatcher_ = nullptr;
+  async::WaitMethod<KeyboardWatcher, &KeyboardWatcher::DirCallback> dir_wait_{this};
 };
 
 #endif  // SRC_BRINGUP_BIN_VIRTCON_KEYBOARD_H_

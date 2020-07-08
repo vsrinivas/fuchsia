@@ -31,7 +31,6 @@
 
 namespace {
 
-constexpr zx::duration kSlackDuration = zx::msec(1);
 constexpr zx::duration kHighRepeatKeyFreq = zx::msec(50);
 constexpr zx::duration kLowRepeatKeyFreq = zx::msec(250);
 
@@ -39,10 +38,6 @@ constexpr zx::duration kLowRepeatKeyFreq = zx::msec(250);
 // take a raw function pointer. I think once we move this library to libasync we can
 // remove the global watcher and use lambdas.
 KeyboardWatcher main_watcher;
-
-zx_status_t keyboard_main_callback(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-  return main_watcher.DirCallback(ph, signals, evt);
-}
 
 int modifiers_from_fuchsia_key(llcpp::fuchsia::ui::input2::Key key) {
   switch (key) {
@@ -95,21 +90,20 @@ bool is_key_in_set(llcpp::fuchsia::ui::input2::Key key,
 
 }  // namespace
 
-zx_status_t setup_keyboard_watcher(keypress_handler_t handler, bool repeat_keys) {
-  return main_watcher.Setup(handler, repeat_keys);
+zx_status_t setup_keyboard_watcher(async_dispatcher_t* dispatcher, keypress_handler_t handler,
+                                   bool repeat_keys) {
+  return main_watcher.Setup(dispatcher, handler, repeat_keys);
 }
 
-zx_status_t Keyboard::TimerCallback(zx_signals_t signals, uint32_t evt) {
+void Keyboard::TimerCallback(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                             zx_status_t status) {
   handler_(repeating_key_, modifiers_);
 
   // increase repeat rate if we're not yet at the fastest rate
   if ((repeat_interval_ = repeat_interval_ * 3 / 4) < kHighRepeatKeyFreq) {
     repeat_interval_ = kHighRepeatKeyFreq;
   }
-
-  timer_.set(zx::deadline_after(repeat_interval_), kSlackDuration);
-
-  return ZX_OK;
+  task->PostDelayed(dispatcher, repeat_interval_);
 }
 
 void Keyboard::SetCapsLockLed(bool caps_lock) {
@@ -165,7 +159,7 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
           *key_util::fuchsia_key_to_hid_key(static_cast<::fuchsia::ui::input2::Key>(prev_key));
       if (repeat_enabled_ && is_repeating_ && (repeating_key_ == hid_prev_key)) {
         is_repeating_ = false;
-        timer_.cancel();
+        timer_task_.Cancel();
       }
     }
   }
@@ -183,9 +177,9 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
       if (repeat_enabled_ && !keycode_is_modifier(hid_key)) {
         is_repeating_ = true;
         repeat_interval_ = kLowRepeatKeyFreq;
-        timer_.cancel();
-        timer_.set(zx::deadline_after(repeat_interval_), kSlackDuration);
         repeating_key_ = hid_key;
+        timer_task_.Cancel();
+        timer_task_.PostDelayed(dispatcher_, repeat_interval_);
       }
       handler_(hid_key, modifiers_);
     }
@@ -199,30 +193,28 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
   last_pressed_keys_size_ = i;
 }
 
-Keyboard::~Keyboard() {
-  if (input_notifier_.func != nullptr) {
-    port_cancel(&port, &input_notifier_);
+void Keyboard::InputCallback(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                             zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    return;
   }
-  if (timer_notifier_.func != nullptr) {
-    port_cancel(&port, &timer_notifier_);
-  }
-}
 
-zx_status_t Keyboard::InputCallback(zx_signals_t signals, uint32_t evt) {
-  if (!(signals & DEV_STATE_READABLE)) {
-    return ZX_ERR_STOP;
+  if (!(signal->observed & DEV_STATE_READABLE)) {
+    return;
   }
 
   llcpp::fuchsia::input::report::InputDevice::ResultOf::GetReports result =
       keyboard_client_->GetReports();
   if (result.status() != ZX_OK) {
-    return result.status();
+    return;
   }
 
   for (auto& report : result->reports) {
     ProcessInput(report);
   }
-  return ZX_OK;
+
+  // Queue ourselves up for another callback.
+  wait->Begin(dispatcher);
 }
 
 zx_status_t Keyboard::Setup(
@@ -231,40 +223,19 @@ zx_status_t Keyboard::Setup(
 
   // XXX - check for LEDS here.
 
-  zx_status_t status;
-  if ((status = zx::timer::create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &timer_)) != ZX_OK) {
-    return status;
-  }
-
   llcpp::fuchsia::input::report::InputDevice::ResultOf::GetReportsEvent result =
       keyboard_client_->GetReportsEvent();
   if (result.status() != ZX_OK) {
-    return status;
+    return result.status();
   }
   keyboard_event_ = std::move(result->event);
 
-  input_notifier_.handle = keyboard_event_.get();
-  input_notifier_.waitfor = DEV_STATE_READABLE;
-  input_notifier_.func = [](port_handler* input_notifier, zx_signals_t signals, uint32_t evt) {
-    Keyboard* kbd = containerof(input_notifier, Keyboard, input_notifier_);
-    zx_status_t status = kbd->InputCallback(signals, evt);
-    if (status == ZX_ERR_STOP) {
-      delete kbd;
-    }
-    return status;
-  };
+  input_wait_.set_object(keyboard_event_.get());
+  input_wait_.set_trigger(DEV_STATE_READABLE);
+  input_wait_.Begin(dispatcher_);
 
-  if ((status = port_wait(&port, &input_notifier_)) != ZX_OK) {
-    return status;
-  }
+  timer_task_.PostDelayed(dispatcher_, kLowRepeatKeyFreq);
 
-  timer_notifier_.handle = timer_.get();
-  timer_notifier_.waitfor = ZX_TIMER_SIGNALED;
-  timer_notifier_.func = [](port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    Keyboard* kbd = containerof(ph, Keyboard, timer_notifier_);
-    return kbd->TimerCallback(signals, evt);
-  };
-  port_wait(&port, &timer_notifier_);
   return ZX_OK;
 }
 
@@ -299,7 +270,7 @@ zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
 
   // This is not a memory leak, because keyboards free themselves when their underlying
   // devices close.
-  Keyboard* keyboard = new Keyboard(handler_, repeat_keys_);
+  Keyboard* keyboard = new Keyboard(dispatcher_, handler_, repeat_keys_);
   status = keyboard->Setup(std::move(keyboard_client));
   if (status != ZX_OK) {
     delete keyboard;
@@ -308,10 +279,11 @@ zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
   return ZX_OK;
 }
 
-zx_status_t KeyboardWatcher::DirCallback(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-  if (!(signals & ZX_CHANNEL_READABLE)) {
+void KeyboardWatcher::DirCallback(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                  zx_status_t status, const zx_packet_signal_t* signal) {
+  if (!(signal->observed & ZX_CHANNEL_READABLE)) {
     printf("vc: device directory died\n");
-    return ZX_ERR_STOP;
+    return;
   }
 
   // Buffer contains events { Opcode, Len, Name[Len] }
@@ -319,9 +291,10 @@ zx_status_t KeyboardWatcher::DirCallback(port_handler_t* ph, zx_signals_t signal
   // extra byte is for temporary NUL
   std::array<uint8_t, fuchsia_io_MAX_BUF + 1> buffer;
   uint32_t len;
-  if (zx_channel_read(ph->handle, 0, buffer.data(), NULL, buffer.size() - 1, 0, &len, NULL) < 0) {
+  if (zx_channel_read(wait->object(), 0, buffer.data(), nullptr, buffer.size() - 1, 0, &len,
+                      nullptr) < 0) {
     printf("vc: failed to read from device directory\n");
-    return ZX_ERR_STOP;
+    return;
   }
 
   uint32_t index = 0;
@@ -331,7 +304,7 @@ zx_status_t KeyboardWatcher::DirCallback(port_handler_t* ph, zx_signals_t signal
     index += 2;
     if ((namelen + index) > len) {
       printf("vc: malformed device directory message\n");
-      return ZX_ERR_STOP;
+      return;
     }
     // add temporary nul
     uint8_t tmp = buffer[index + namelen];
@@ -340,10 +313,15 @@ zx_status_t KeyboardWatcher::DirCallback(port_handler_t* ph, zx_signals_t signal
     buffer[index + namelen] = tmp;
     index += namelen;
   }
-  return ZX_OK;
+
+  wait->Begin(dispatcher);
 }
 
-zx_status_t KeyboardWatcher::Setup(keypress_handler_t handler, bool repeat_keys) {
+zx_status_t KeyboardWatcher::Setup(async_dispatcher_t* dispatcher, keypress_handler_t handler,
+                                   bool repeat_keys) {
+  ZX_DEBUG_ASSERT(dispatcher_ == nullptr);
+  dispatcher_ = dispatcher;
+
   repeat_keys_ = repeat_keys;
   handler_ = handler;
   fbl::unique_fd fd(open("/dev/class/input-report", O_DIRECTORY | O_RDONLY));
@@ -363,10 +341,9 @@ zx_status_t KeyboardWatcher::Setup(keypress_handler_t handler, bool repeat_keys)
     return io_status;
   }
 
-  dir_handler_.handle = client.release();
-  dir_handler_.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-  dir_handler_.func = keyboard_main_callback;
-  port_wait(&port, &dir_handler_);
+  dir_wait_.set_object(client.release());
+  dir_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  dir_wait_.Begin(dispatcher_);
 
   return ZX_OK;
 }

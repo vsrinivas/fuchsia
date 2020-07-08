@@ -14,9 +14,6 @@
 #include "src/ui/input/lib/hid-input-report/keyboard.h"
 #include "src/ui/lib/key_util/key_util.h"
 
-// Global port needed for IPC calls.
-port_t port;
-
 namespace {
 
 namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
@@ -52,7 +49,8 @@ void expect_keypress(uint8_t expected_keycode, int expected_modifiers, uint8_t e
 
 class KeyboardInputHelper {
  public:
-  KeyboardInputHelper() : keyboard_(keypress_handler, true) {}
+  KeyboardInputHelper(async_dispatcher_t* dispatcher)
+      : keyboard_(dispatcher, keypress_handler, true) {}
 
   ~KeyboardInputHelper() {}
 
@@ -86,7 +84,8 @@ class KeyboardInputHelper {
 };
 
 TEST(GfxConsoleKeyboardTests, KeyboardInputThread) {
-  KeyboardInputHelper helper;
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
+  KeyboardInputHelper helper(loop.dispatcher());
   std::vector<uint32_t> keypresses;
 
   // Test pressing keys without any modifiers.
@@ -147,7 +146,8 @@ TEST(GfxConsoleKeyboardTests, KeyboardInputThread) {
 }
 
 TEST(GfxConsoleKeyboardTests, CapsLock) {
-  KeyboardInputHelper helper;
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
+  KeyboardInputHelper helper(loop.dispatcher());
   std::vector<uint32_t> keypresses;
 
   keypresses = {HID_USAGE_KEY_CAPSLOCK};
@@ -175,7 +175,8 @@ TEST(GfxConsoleKeyboardTests, CapsLock) {
 }
 
 TEST(GfxConsoleKeyboardTests, CapsLockWithShift) {
-  KeyboardInputHelper helper;
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
+  KeyboardInputHelper helper(loop.dispatcher());
   std::vector<uint32_t> keypresses;
 
   keypresses = {HID_USAGE_KEY_LEFT_SHIFT};

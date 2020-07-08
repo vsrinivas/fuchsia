@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/virtualconsole/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -41,8 +42,6 @@
 #include "keyboard.h"
 #include "vc.h"
 
-port_t port;
-static port_handler_t new_vc_ph;
 static bool keep_log;
 
 static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
@@ -71,25 +70,28 @@ static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
 }
 
 static void session_destroy(vc_t* vc) {
-  if (vc->fd >= 0) {
-    port_fd_handler_done(&vc->fh);
-    // vc_destroy() closes the fd
+  if (vc->io != nullptr) {
+    fdio_unsafe_release(vc->io);
   }
   if (vc->proc != ZX_HANDLE_INVALID) {
     zx_task_kill(vc->proc);
   }
+  // vc_destroy() closes the vc->fd.
   vc_destroy(vc);
 }
 
-static zx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t evt) {
-  vc_t* vc = containerof(fh, vc_t, fh);
+static void session_io_cb(vc_t* vc, async_dispatcher_t* dispatcher, async::Wait* wait,
+                          zx_status_t status, const zx_packet_signal_t* signal) {
+  uint32_t pollevt = 0;
+  fdio_unsafe_wait_end(vc->io, signal->observed, &pollevt);
 
   if (pollevt & POLLIN) {
     char data[1024];
     ssize_t r = read(vc->fd, data, sizeof(data));
     if (r > 0) {
       vc_write(vc, data, r, 0);
-      return ZX_OK;
+      wait->Begin(dispatcher);
+      return;
     }
   }
 
@@ -101,19 +103,18 @@ static zx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32
 
       int fd = openat(vc->fd, "0", O_RDWR);
       if (fd < 0) {
-        goto fail;
+        session_destroy(vc);
+        return;
       }
 
       if (launch_shell(vc, fd, NULL) < 0) {
-        goto fail;
+        session_destroy(vc);
+        return;
       }
-      return ZX_OK;
+      wait->Begin(dispatcher);
+      return;
     }
   }
-
-fail:
-  session_destroy(vc);
-  return ZX_ERR_STOP;
 }
 
 static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool make_active,
@@ -169,27 +170,29 @@ static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool m
   if (vc_create(&vc, color_scheme)) {
     return ZX_ERR_INTERNAL;
   }
-  zx_status_t r;
-  if ((r = port_fd_handler_init(&vc->fh, fd.get(), POLLIN | POLLRDHUP | POLLHUP)) < 0) {
-    vc_destroy(vc);
-    return r;
-  }
+
+  zx_handle_t handle;
+  zx_signals_t signals;
+  fdio_unsafe_wait_begin(io, POLLIN | POLLRDHUP | POLLHUP, &handle, &signals);
+  vc->pty_wait =
+      std::make_unique<async::Wait>(handle, signals, 0,
+                                    [vc](async_dispatcher_t* dispatcher, async::Wait* wait,
+                                         zx_status_t status, const zx_packet_signal_t* signal) {
+                                      session_io_cb(vc, dispatcher, wait, status, signal);
+                                    });
 
   fuchsia_hardware_pty_WindowSize wsz = {
       .width = vc->columns,
       .height = vc->rows,
   };
 
-  io = fdio_unsafe_fd_to_io(fd.get());
-  fuchsia_hardware_pty_DeviceSetWindowSize(fdio_unsafe_borrow_channel(io), &wsz, &status);
-  fdio_unsafe_release(io);
+  vc->io = fdio_unsafe_fd_to_io(fd.get());
+  fuchsia_hardware_pty_DeviceSetWindowSize(fdio_unsafe_borrow_channel(vc->io), &wsz, &status);
 
   vc->fd = fd.release();
   if (make_active) {
     vc_set_active(-1, vc);
   }
-
-  vc->fh.func = session_io_cb;
 
   *out = vc;
   return ZX_OK;
@@ -219,7 +222,8 @@ static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active,
   return ZX_OK;
 }
 
-static void start_shell(bool make_active, const char* cmd, const color_scheme_t* color_scheme) {
+static void start_shell(async_dispatcher_t* dispatcher, bool make_active, const char* cmd,
+                        const color_scheme_t* color_scheme) {
   vc_t* vc = nullptr;
   int fd = 0;
 
@@ -232,11 +236,12 @@ static void start_shell(bool make_active, const char* cmd, const color_scheme_t*
   if (launch_shell(vc, fd, cmd) < 0) {
     session_destroy(vc);
   } else {
-    port_wait(&port, &vc->fh.ph);
+    vc->pty_wait->Begin(dispatcher);
   }
 }
 
-static zx_status_t new_vc_cb(void*, zx_handle_t session, fidl_txn_t* txn) {
+static zx_status_t new_vc_cb(void* void_dispatcher, zx_handle_t session, fidl_txn_t* txn) {
+  async_dispatcher_t* dispatcher = static_cast<async_dispatcher_t*>(void_dispatcher);
   zx::channel session_channel(session);
 
   bool make_active = !(keep_log && g_active_vc && g_active_vc == g_log_vc && g_active_vc);
@@ -246,7 +251,7 @@ static zx_status_t new_vc_cb(void*, zx_handle_t session, fidl_txn_t* txn) {
     return ZX_OK;
   }
 
-  port_wait(&port, &vc->fh.ph);
+  vc->pty_wait->Begin(dispatcher);
 
   return fuchsia_virtualconsole_SessionManagerCreateSession_reply(txn, ZX_OK);
 }
@@ -255,105 +260,74 @@ static zx_status_t has_primary_cb(void*, fidl_txn_t* txn) {
   return fuchsia_virtualconsole_SessionManagerHasPrimaryConnected_reply(txn, is_primary_bound());
 }
 
-static zx_status_t fidl_message_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-  if ((signals & ZX_CHANNEL_PEER_CLOSED) && !(signals & ZX_CHANNEL_READABLE)) {
-    zx_handle_close(ph->handle);
-    delete ph;
-    return ZX_ERR_STOP;
+static void fidl_message_cb(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                            const zx_packet_signal_t* signal) {
+  if ((signal->observed & ZX_CHANNEL_PEER_CLOSED) && !(signal->observed & ZX_CHANNEL_READABLE)) {
+    zx_handle_close(wait->object());
+    delete wait;
+    return;
   }
 
-  auto status = fs::ReadMessage(ph->handle, [](fidl_msg_t* message, fs::FidlConnection* txn) {
-    static constexpr fuchsia_virtualconsole_SessionManager_ops_t kOps{
-        .CreateSession = new_vc_cb,
-        .HasPrimaryConnected = has_primary_cb,
-    };
+  status =
+      fs::ReadMessage(wait->object(), [dispatcher](fidl_msg_t* message, fs::FidlConnection* txn) {
+        static constexpr fuchsia_virtualconsole_SessionManager_ops_t kOps{
+            .CreateSession = new_vc_cb,
+            .HasPrimaryConnected = has_primary_cb,
+        };
 
-    return fuchsia_virtualconsole_SessionManager_dispatch(
-        nullptr, reinterpret_cast<fidl_txn_t*>(txn), message, &kOps);
-  });
+        return fuchsia_virtualconsole_SessionManager_dispatch(
+            dispatcher, reinterpret_cast<fidl_txn_t*>(txn), message, &kOps);
+      });
 
   if (status != ZX_OK) {
     printf("Failed to dispatch fidl message from client: %s\n", zx_status_get_string(status));
-    zx_handle_close(ph->handle);
-    delete ph;
-    return ZX_ERR_STOP;
+    zx_handle_close(wait->object());
+    delete wait;
+    return;
   }
 
-  return ZX_OK;
+  status = wait->Begin(dispatcher);
+  if (status != ZX_OK) {
+    printf("Failed to reinitialize fidl_message_cb: %s\n", zx_status_get_string(status));
+    zx_handle_close(wait->object());
+    delete wait;
+    return;
+  }
 }
 
-static zx_status_t fidl_connection_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+static void fidl_connection_cb(async_dispatcher_t* dispatcher, async::Wait* wait,
+                               zx_status_t status, const zx_packet_signal_t* signal) {
   constexpr size_t kBufferSize = 256;
   char buffer[kBufferSize];
 
   uint32_t bytes_read, handles_read;
   zx_handle_t client_raw;
-  auto status = zx_channel_read(ph->handle, 0, buffer, &client_raw, kBufferSize, 1, &bytes_read,
-                                &handles_read);
+  status = zx_channel_read(wait->object(), 0, buffer, &client_raw, kBufferSize, 1, &bytes_read,
+                           &handles_read);
   if (status != ZX_OK) {
     printf("Failed to read from channel: %s\n", zx_status_get_string(status));
-    return ZX_OK;
+    return;
   }
 
   if (handles_read < 1) {
     printf("Fidl connection with no channel.\n");
-    return ZX_OK;
+    return;
   }
   zx::channel client(client_raw);
 
   if (fbl::StringPiece(fuchsia_virtualconsole_SessionManager_Name) ==
       fbl::StringPiece(buffer, bytes_read)) {
-    auto handler = std::unique_ptr<port_handler_t>(new port_handler_t{
-        .handle = client.release(),
-        .waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-        .func = fidl_message_cb,
-    });
-
-    port_wait(&port, handler.release());
+    // This fidl_wait is freed on error in fidl_message_cb.
+    async::Wait* fidl_wait = new async::Wait(
+        client.release(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0, fidl_message_cb);
+    status = fidl_wait->Begin(dispatcher);
+    if (status != ZX_OK) {
+      printf("Error starting fidl_wait: %d\n", status);
+    }
   } else {
     printf("Unsupported fidl interface: %.*s\n", bytes_read, buffer);
   }
-
-  return ZX_OK;
-}
-
-zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,
-                                    zx_status_t (*event_handler)(unsigned event, const char* msg)) {
-  if (!(signals & ZX_CHANNEL_READABLE)) {
-    printf("vc: device directory died\n");
-    return ZX_ERR_STOP;
-  }
-
-  // Buffer contains events { Opcode, Len, Name[Len] }
-  // See zircon/device/vfs.h for more detail
-  // extra byte is for temporary NUL
-  uint8_t buf[fuchsia_io_MAX_BUF + 1];
-  uint32_t len;
-  if (zx_channel_read(ph->handle, 0, buf, NULL, sizeof(buf) - 1, 0, &len, NULL) < 0) {
-    printf("vc: failed to read from device directory\n");
-    return ZX_ERR_STOP;
-  }
-
-  uint8_t* msg = buf;
-  while (len >= 2) {
-    uint8_t event = *msg++;
-    uint8_t namelen = *msg++;
-    if (len < (namelen + 2u)) {
-      printf("vc: malformed device directory message\n");
-      return ZX_ERR_STOP;
-    }
-    // add temporary nul
-    uint8_t tmp = msg[namelen];
-    msg[namelen] = 0;
-    zx_status_t status = event_handler(event, (char*)msg);
-    if (status != ZX_OK) {
-      return status;
-    }
-    msg[namelen] = tmp;
-    msg += namelen;
-    len -= (namelen + 2u);
-  }
-  return ZX_OK;
+  wait->Begin(dispatcher);
 }
 
 int main(int argc, char** argv) {
@@ -396,18 +370,21 @@ int main(int argc, char** argv) {
     color_scheme = &color_schemes[kSpecialColorScheme];
   }
 
-  if (port_init(&port) < 0) {
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  if (log_start(loop.dispatcher()) < 0) {
     return -1;
   }
 
-  if (log_start() < 0) {
-    return -1;
-  }
-
-  if ((new_vc_ph.handle = zx_take_startup_handle(PA_HND(PA_USER0, 0))) != ZX_HANDLE_INVALID) {
-    new_vc_ph.func = fidl_connection_cb;
-    new_vc_ph.waitfor = ZX_CHANNEL_READABLE;
-    port_wait(&port, &new_vc_ph);
+  async::Wait new_vc_wait;
+  {
+    zx_handle_t startup_handle = zx_take_startup_handle(PA_HND(PA_USER0, 0));
+    if (startup_handle != ZX_HANDLE_INVALID) {
+      new_vc_wait.set_object(startup_handle);
+      new_vc_wait.set_trigger(ZX_CHANNEL_READABLE);
+      new_vc_wait.set_handler(fidl_connection_cb);
+      new_vc_wait.Begin(loop.dispatcher());
+    }
   }
 
   bool repeat_keys = true;
@@ -419,7 +396,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  zx_status_t status = setup_keyboard_watcher(handle_key_press, repeat_keys);
+  zx_status_t status = setup_keyboard_watcher(loop.dispatcher(), handle_key_press, repeat_keys);
   if (status != ZX_OK) {
     printf("vc: setup_keyboard_watcher failed with %d\n", status);
   }
@@ -428,7 +405,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  if (!vc_display_init()) {
+  if (!vc_display_init(loop.dispatcher())) {
     return -1;
   }
 
@@ -436,12 +413,12 @@ int main(int argc, char** argv) {
 
   for (int i = 0; i < shells; ++i) {
     if (i == 0)
-      start_shell(!keep_log, cmd, color_scheme);
+      start_shell(loop.dispatcher(), !keep_log, cmd, color_scheme);
     else
-      start_shell(false, NULL, color_scheme);
+      start_shell(loop.dispatcher(), false, NULL, color_scheme);
   }
 
-  zx_status_t r = port_dispatch(&port, ZX_TIME_INFINITE, false);
-  printf("vc: port failure: %d\n", r);
+  status = loop.Run();
+  printf("vc: loop stopped: %d\n", status);
   return -1;
 }
