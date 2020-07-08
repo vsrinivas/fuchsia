@@ -2951,13 +2951,13 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
 void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
-  const uint8_t* bssid = req->selected_bss.bssid;
+  const wlanif_bss_description_t& sme_bss = req->selected_bss;
 
-  BRCMF_DBG(WLANIF, "Join request from SME. ssid: %.*s, bssid: " MAC_FMT_STR "",
-            req->selected_bss.ssid.len, req->selected_bss.ssid.data, MAC_FMT_ARGS(bssid));
+  BRCMF_DBG(WLANIF, "Join request from SME. ssid: %.*s, bssid: " MAC_FMT_STR ", channel: %u",
+            sme_bss.ssid.len, sme_bss.ssid.data, MAC_FMT_ARGS(sme_bss.bssid), sme_bss.chan.primary);
 
-  memcpy(&ifp->bss, &req->selected_bss, sizeof(ifp->bss));
-  memcpy(profile->bssid, bssid, ETH_ALEN);
+  memcpy(&ifp->bss, &sme_bss, sizeof(ifp->bss));
+  memcpy(profile->bssid, sme_bss.bssid, ETH_ALEN);
   wlanif_join_confirm_t result;
   result.result_code = WLAN_JOIN_RESULT_SUCCESS;
 
