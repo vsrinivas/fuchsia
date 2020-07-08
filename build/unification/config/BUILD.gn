@@ -37,13 +37,7 @@ config("zircon-migrated") {
     "-fno-threadsafe-statics",
   ]
 
-  ldflags = compiler_flags + [
-              "-Wl,-z,combreloc",
-              "-Wl,-z,relro",
-              "-Wl,-z,now",
-              "-Wl,-z,text",
-              "-Wl,-z,max-page-size=4096",
-            ]
+  ldflags = compiler_flags
 
   asmflags = compiler_flags
 
