@@ -4,5 +4,5 @@
 
 name:
 dependencies:
-  image: ^2.0.7
+  image: ^2.1.14
   webdriver: ^2.1.0
