@@ -8,7 +8,10 @@ import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [ ":weavestack_unittests" ]
+  public_deps = [
+    ":weavestack_unittests",
+    "//src/connectivity/network/netstack:debug",
+  ]
 }
 
 test_package("weavestack_unittests") {
