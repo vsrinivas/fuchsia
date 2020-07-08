@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
@@ -120,17 +120,26 @@ static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers) {
     case HID_USAGE_KEY_DELETE:
       // Provide a CTRL-ALT-DEL reboot sequence
       if ((modifiers & MOD_CTRL) && (modifiers & MOD_ALT)) {
-        zx::channel channel;
-        if (connect_to_service("/svc/fuchsia.device.manager.Administrator", &channel)) {
-          zx_status_t call_status;
-          const auto flag = fuchsia_device_manager_SUSPEND_FLAG_REBOOT;
-          auto status =
-              fuchsia_device_manager_AdministratorSuspend(channel.get(), flag, &call_status);
-          if (status != ZX_OK || call_status != ZX_OK) {
-            fprintf(stderr, "Failed to reboot, statuses: local: %d remote: %d\n", status,
-                    call_status);
-          }
+        zx::channel local, remote;
+        std::string svc_dir = "/svc/";
+        std::string service = svc_dir + llcpp::fuchsia::hardware::power::statecontrol::Admin::Name;
+        zx_status_t status = fdio_service_connect(service.c_str(), remote.release());
+        if (status != ZX_OK) {
+          return true;
         }
+        auto response = llcpp::fuchsia::hardware::power::statecontrol::Admin::Call::Reboot(
+            zx::unowned_channel(local.get()),
+            llcpp::fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST);
+        if (response.status() != ZX_OK) {
+          fprintf(stderr, "Failed to reboot, status:%d\n", response.status());
+          return true;
+        }
+        if (response->result.is_err()) {
+          fprintf(stderr, "Failed to reboot, status:%d\n", response->result.err());
+          return true;
+        }
+        // Wait for the world to end.
+        zx_nanosleep(ZX_TIME_INFINITE);
         return true;
       }
       break;
