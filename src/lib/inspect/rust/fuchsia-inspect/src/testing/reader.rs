@@ -5,8 +5,9 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_diagnostics::{
-        ArchiveAccessorMarker, BatchIteratorMarker, ClientSelectorConfiguration, DataType, Format,
-        FormattedContent, SelectorArgument, StreamMode, StreamParameters,
+        ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker,
+        ClientSelectorConfiguration, DataType, Format, FormattedContent, SelectorArgument,
+        StreamMode, StreamParameters,
     },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client,
@@ -85,6 +86,7 @@ impl ToSelectorArguments for ComponentSelector {
 /// Utility for reading inspect data of a running component using the injected observer.cmx Archive
 /// Reader service.
 pub struct InspectDataFetcher {
+    archive: Option<ArchiveAccessorProxy>,
     selectors: Vec<String>,
     should_retry: bool,
     timeout: Option<Duration>,
@@ -95,7 +97,12 @@ impl InspectDataFetcher {
     ///  - Maximum retries: 2^64-1
     ///  - Timeout: Never. Use with_timeout() to set a timeout.
     pub fn new() -> Self {
-        Self { timeout: None, selectors: vec![], should_retry: true }
+        Self { timeout: None, selectors: vec![], should_retry: true, archive: None }
+    }
+
+    pub fn with_archive(mut self, archive: ArchiveAccessorProxy) -> Self {
+        self.archive = Some(archive);
+        self
     }
 
     /// Requests a single component tree (or sub-tree).
@@ -160,8 +167,9 @@ impl InspectDataFetcher {
     }
 
     async fn get_inspect_data(self) -> Result<Vec<serde_json::Value>, Error> {
-        let archive =
-            client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?;
+        let archive = self.archive.unwrap_or(
+            client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?,
+        );
 
         let mut retry = 0;
 
@@ -234,12 +242,15 @@ mod tests {
     use {
         super::*,
         anyhow::format_err,
+        fidl_fuchsia_diagnostics as fdiagnostics,
         fidl_fuchsia_sys::ComponentControllerEvent,
         fuchsia_component::{
             client::App,
             server::{NestedEnvironment, ServiceFs},
         },
+        fuchsia_zircon as zx,
         futures::StreamExt,
+        futures::TryStreamExt,
     };
 
     const TEST_COMPONENT_URL: &str =
@@ -346,5 +357,69 @@ mod tests {
             arguments,
             vec!["b/c/a.cmx:root/b/c:d".to_string(), "b/c/a.cmx:root/e:f".to_string(),]
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn custom_archive() {
+        let proxy = spawn_fake_archive();
+        let result = InspectDataFetcher::new().with_archive(proxy).get().await.expect("got result");
+        assert_eq!(result.len(), 1);
+        assert_inspect_tree!(result[0], root: { x: 1i64 });
+    }
+
+    fn spawn_fake_archive() -> fdiagnostics::ArchiveAccessorProxy {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdiagnostics::ArchiveAccessorMarker>()
+                .expect("create proxy");
+        fasync::spawn(async move {
+            while let Some(request) = stream.try_next().await.expect("stream request") {
+                match request {
+                    fdiagnostics::ArchiveAccessorRequest::StreamDiagnostics {
+                        result_stream,
+                        ..
+                    } => {
+                        fasync::spawn(async move {
+                            let mut called = false;
+                            let mut stream = result_stream.into_stream().expect("into stream");
+                            while let Some(req) = stream.try_next().await.expect("stream request") {
+                                match req {
+                                    fdiagnostics::BatchIteratorRequest::GetNext { responder } => {
+                                        if called {
+                                            responder
+                                                .send(&mut Ok(Vec::new()))
+                                                .expect("send response");
+                                            continue;
+                                        }
+                                        called = true;
+                                        let content =
+                                            serde_json::to_string_pretty(&serde_json::json!({
+                                                "moniker": "a",
+                                                "payload": {
+                                                    "root": {
+                                                        "x": 1,
+                                                    }
+                                                }
+                                            }))
+                                            .expect("json pretty");
+                                        let vmo_size = content.len() as u64;
+                                        let vmo =
+                                            zx::Vmo::create(vmo_size as u64).expect("create vmo");
+                                        vmo.write(content.as_bytes(), 0).expect("write vmo");
+                                        let buffer =
+                                            fidl_fuchsia_mem::Buffer { vmo, size: vmo_size };
+                                        responder
+                                            .send(&mut Ok(vec![
+                                                fdiagnostics::FormattedContent::Json(buffer),
+                                            ]))
+                                            .expect("send response");
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        });
+        return proxy;
     }
 }
