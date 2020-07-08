@@ -800,9 +800,15 @@ templates. These unsupported features include:
     directory)
 *   Marking a test as disabled. Instead, change the test source code to mark it
     as disabled, or comment out the disabled test component from the build file.
+*   The [Component Index][component-index]. Components using the new templates
+    cannot be launched using `run` followed by a fuzzy match with their launch
+    URL. Components can still be launched using their full launch URL. Tests
+    can still be launched with `fx test` followed by the short name of the
+    test.
 
 [cml-format]: /docs/concepts/components/component_manifests.md
 [cmx-format]: /docs/concepts/storage/component_manifest.md
+[component-index]: /src/sys/component_index/component_index.gni
 [executable]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_executable
 [fx-test]: https://www.fuchsia.dev/reference/tools/fx/cmd/test.md
 [glossary-component]: /docs/glossary.md#component
