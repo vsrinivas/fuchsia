@@ -68,6 +68,7 @@ source_set("metrics-test") {
     "//zircon/system/ulib/cobalt-client:cobalt-collector",
     "//zircon/system/ulib/cobalt-client:cobalt-metrics",
     "//zircon/system/ulib/cobalt-client:cobalt-types-internal",
+    "//zircon/system/ulib/cobalt-client:in-memory-logger",
   ]
 
   # TODO(42493): UBSan has found an instance of undefined behavior in this target.
