@@ -116,13 +116,16 @@ std::string GetStableSessionId() {
 
 }  // namespace
 
-SessionContextImpl::SessionContextImpl(
-    fuchsia::sys::Launcher* const launcher, bool use_random_id,
-    fuchsia::modular::AppConfig sessionmgr_config, fuchsia::modular::AppConfig session_shell_config,
-    fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
-    fuchsia::ui::views::ViewToken view_token, fuchsia::sys::ServiceListPtr additional_services,
-    zx::channel config_handle, GetPresentationCallback get_presentation,
-    OnSessionShutdownCallback on_session_shutdown)
+SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher, bool use_random_id,
+                                       fuchsia::modular::session::AppConfig sessionmgr_config,
+                                       fuchsia::modular::session::AppConfig session_shell_config,
+                                       fuchsia::modular::session::AppConfig story_shell_config,
+                                       bool use_session_shell_for_story_shell_factory,
+                                       fuchsia::ui::views::ViewToken view_token,
+                                       fuchsia::sys::ServiceListPtr additional_services,
+                                       zx::channel config_handle,
+                                       GetPresentationCallback get_presentation,
+                                       OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
       get_presentation_(std::move(get_presentation)),
       on_session_shutdown_(std::move(on_session_shutdown)),
@@ -146,8 +149,18 @@ SessionContextImpl::SessionContextImpl(
 
   // 3. Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
-  sessionmgr_->Initialize(session_id, std::move(session_shell_config),
-                          std::move(story_shell_config), use_session_shell_for_story_shell_factory,
+
+  // TODO(fxbug.dev/53364): Update the Sessionmgr protocol to accept
+  // fuchsia.modular.session.AppConfig tables.
+  fuchsia::modular::AppConfig session_shell_config_copy{.url = session_shell_config.url()};
+  if (session_shell_config.has_args())
+    session_shell_config_copy.args = session_shell_config.args();
+  fuchsia::modular::AppConfig story_shell_config_copy{.url = story_shell_config.url()};
+  if (story_shell_config.has_args())
+    story_shell_config_copy.args = story_shell_config.args();
+  sessionmgr_->Initialize(session_id, std::move(session_shell_config_copy),
+                          std::move(story_shell_config_copy),
+                          use_session_shell_for_story_shell_factory,
                           session_context_binding_.NewBinding(), std::move(view_token));
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {

@@ -130,9 +130,9 @@ source_set("component_context") {
     "component_context_impl.h",
   ]
 
+  public_deps = [ "//sdk/fidl/fuchsia.modular" ]
+
   deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fsl",
     "//src/modular/bin/sessionmgr/agent_runner:public",
     "//src/modular/lib/async/cpp:operation",

@@ -21,8 +21,8 @@ using SessionContextImplTest = gtest::TestLoopFixture;
 TEST_F(SessionContextImplTest, StartSessionmgr) {
   FakeLauncher launcher;
   std::string url = "test_url_string";
-  fuchsia::modular::AppConfig app_config;
-  app_config.url = url;
+  fuchsia::modular::session::AppConfig app_config;
+  app_config.set_url(url);
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   bool callback_called = false;
@@ -51,8 +51,8 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
   // done_callback.
   FakeLauncher launcher;
   std::string url = "test_url_string";
-  fuchsia::modular::AppConfig app_config;
-  app_config.url = url;
+  fuchsia::modular::session::AppConfig app_config;
+  app_config.set_url(url);
 
   launcher.RegisterComponent(url, [](fuchsia::sys::LaunchInfo,
                                      fidl::InterfaceRequest<fuchsia::sys::ComponentController>) {});

@@ -37,8 +37,9 @@ class SessionProvider {
   // meant to be a callback for BasemgrImpl to start a new session.
   SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
                   fuchsia::hardware::power::statecontrol::AdminPtr administrator,
-                  fuchsia::modular::AppConfig sessionmgr, fuchsia::modular::AppConfig session_shell,
-                  fuchsia::modular::AppConfig story_shell,
+                  fuchsia::modular::session::AppConfig sessionmgr,
+                  fuchsia::modular::session::AppConfig session_shell,
+                  fuchsia::modular::session::AppConfig story_shell,
                   bool use_session_shell_for_story_shell_factory,
                   std::unique_ptr<intl::IntlPropertyProviderImpl> intl_property_provider,
                   fuchsia::modular::session::ModularConfig config,
@@ -64,9 +65,9 @@ class SessionProvider {
   Delegate* const delegate_;                // Neither owned nor copied.
   fuchsia::sys::Launcher* const launcher_;  // Not owned.
   fuchsia::hardware::power::statecontrol::AdminPtr administrator_;
-  const fuchsia::modular::AppConfig sessionmgr_;
-  const fuchsia::modular::AppConfig session_shell_;
-  const fuchsia::modular::AppConfig story_shell_;
+  const fuchsia::modular::session::AppConfig sessionmgr_;
+  const fuchsia::modular::session::AppConfig session_shell_;
+  const fuchsia::modular::session::AppConfig story_shell_;
   bool use_session_shell_for_story_shell_factory_;
 
   // The number of times that session had to be recovered from a crash, during a

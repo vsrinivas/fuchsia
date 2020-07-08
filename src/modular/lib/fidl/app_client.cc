@@ -16,8 +16,16 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
+AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
+                             fuchsia::modular::session::AppConfig config, std::string data_origin,
+                             fuchsia::sys::ServiceListPtr additional_services,
+                             fuchsia::sys::FlatNamespacePtr flat_namespace)
+    : AppClientBase(launcher, CloneStruct(fidl::To<fuchsia::modular::AppConfig>(config)),
+                    data_origin, std::move(additional_services), std::move(flat_namespace)) {}
+
 AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
                              fuchsia::modular::AppConfig config, std::string data_origin,
                              fuchsia::sys::ServiceListPtr additional_services,

@@ -6,6 +6,7 @@
 #define SRC_MODULAR_LIB_FIDL_APP_CLIENT_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
@@ -14,8 +15,30 @@
 #include <memory>
 #include <string>
 
+#include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/common/async_holder.h"
+
+namespace fidl {
+template <>
+// fidl::TypeConverter specialization for fuchsia::modular::session::AppConfig
+// TODO(fxbug.dev/53364) Convert all usages of fuchsia::modular::AppConfig to
+// fuchsia::modular::session::AppConfig and remove this converter.
+struct TypeConverter<fuchsia::modular::AppConfig, fuchsia::modular::session::AppConfig> {
+  // Converts fuchsia::modular::session::AppConfig to
+  // fuchsia::modular::AppConfig
+  static fuchsia::modular::AppConfig Convert(const fuchsia::modular::session::AppConfig& config) {
+    fuchsia::modular::AppConfig app_config;
+    app_config.url = config.url().c_str();
+
+    if (config.has_args()) {
+      app_config.args = fidl::To<fidl::VectorPtr<std::string>>(config.args());
+    }
+
+    return app_config;
+  }
+};
+}  // namespace fidl
 
 namespace modular {
 
@@ -41,6 +64,11 @@ namespace modular {
 class AppClientBase : public AsyncHolderBase {
  public:
   AppClientBase(fuchsia::sys::Launcher* launcher, fuchsia::modular::AppConfig config,
+                std::string data_origin = "",
+                fuchsia::sys::ServiceListPtr additional_services = nullptr,
+                fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr);
+
+  AppClientBase(fuchsia::sys::Launcher* launcher, fuchsia::modular::session::AppConfig config,
                 std::string data_origin = "",
                 fuchsia::sys::ServiceListPtr additional_services = nullptr,
                 fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr);
@@ -80,6 +108,15 @@ template <class Service>
 class AppClient : public AppClientBase {
  public:
   AppClient(fuchsia::sys::Launcher* const launcher, fuchsia::modular::AppConfig config,
+            std::string data_origin = "",
+            fuchsia::sys::ServiceListPtr additional_services = nullptr,
+            fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr)
+      : AppClientBase(launcher, std::move(config), std::move(data_origin),
+                      std::move(additional_services), std::move(flat_namespace)) {
+    services().ConnectToService(lifecycle_service_.NewRequest());
+  }
+
+  AppClient(fuchsia::sys::Launcher* const launcher, fuchsia::modular::session::AppConfig config,
             std::string data_origin = "",
             fuchsia::sys::ServiceListPtr additional_services = nullptr,
             fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr)

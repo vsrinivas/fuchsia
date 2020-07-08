@@ -7,6 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -47,9 +48,9 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // Sessionmgr's namespace, including an implementation of
   // `fuchsia.intl.PropertyProvider`.
   SessionContextImpl(fuchsia::sys::Launcher* const launcher, bool use_random_id,
-                     fuchsia::modular::AppConfig sessionmgr_config,
-                     fuchsia::modular::AppConfig session_shell_config,
-                     fuchsia::modular::AppConfig story_shell_config,
+                     fuchsia::modular::session::AppConfig sessionmgr_config,
+                     fuchsia::modular::session::AppConfig session_shell_config,
+                     fuchsia::modular::session::AppConfig story_shell_config,
                      bool use_session_shell_for_story_shell_factory,
                      fuchsia::ui::views::ViewToken view_token,
                      fuchsia::sys::ServiceListPtr additional_services, zx::channel config_handle,

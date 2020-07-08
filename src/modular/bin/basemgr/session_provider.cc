@@ -27,9 +27,9 @@ const zx::duration kMaxCrashRecoveryDuration = zx::msec(3600 * 1000);  // 1 hour
 
 SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
                                  fuchsia::hardware::power::statecontrol::AdminPtr administrator,
-                                 fuchsia::modular::AppConfig sessionmgr,
-                                 fuchsia::modular::AppConfig session_shell,
-                                 fuchsia::modular::AppConfig story_shell,
+                                 fuchsia::modular::session::AppConfig sessionmgr,
+                                 fuchsia::modular::session::AppConfig session_shell,
+                                 fuchsia::modular::session::AppConfig story_shell,
                                  bool use_session_shell_for_story_shell_factory,
                                  std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
                                  fuchsia::modular::session::ModularConfig config,
