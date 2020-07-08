@@ -15,6 +15,12 @@ const (
 	ObjTypeChannel ObjType = 4
 )
 
+func (_ ObjType) I_EnumValues() []ObjType {
+	return []ObjType{
+		ObjTypeNone,
+		ObjTypeChannel,
+	}
+}
 func (x ObjType) String() string {
 	switch x {
 	case 0:

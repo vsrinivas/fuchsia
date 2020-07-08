@@ -42,6 +42,40 @@ const (
 	ObjTypeMsiInterrupt  ObjType = 33
 )
 
+func (_ ObjType) I_EnumValues() []ObjType {
+	return []ObjType{
+		ObjTypeNone,
+		ObjTypeProcess,
+		ObjTypeThread,
+		ObjTypeVmo,
+		ObjTypeChannel,
+		ObjTypeEvent,
+		ObjTypePort,
+		ObjTypeInterrupt,
+		ObjTypePciDevice,
+		ObjTypeLog,
+		ObjTypeSocket,
+		ObjTypeResource,
+		ObjTypeEventpair,
+		ObjTypeJob,
+		ObjTypeVmar,
+		ObjTypeFifo,
+		ObjTypeGuest,
+		ObjTypeVcpu,
+		ObjTypeTimer,
+		ObjTypeIommu,
+		ObjTypeBti,
+		ObjTypeProfile,
+		ObjTypePmt,
+		ObjTypeSuspendToken,
+		ObjTypePager,
+		ObjTypeException,
+		ObjTypeClock,
+		ObjTypeStream,
+		ObjTypeMsiAllocation,
+		ObjTypeMsiInterrupt,
+	}
+}
 func (x ObjType) String() string {
 	switch x {
 	case 0:

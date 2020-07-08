@@ -14,6 +14,12 @@ const (
 	ObjTypeSocket ObjType = 14
 )
 
+func (_ ObjType) I_EnumValues() []ObjType {
+	return []ObjType{
+		ObjTypeNone,
+		ObjTypeSocket,
+	}
+}
 func (x ObjType) String() string {
 	switch x {
 	case 0:
@@ -31,6 +37,12 @@ const (
 	ErrorEnunErrBar ErrorEnun = 2
 )
 
+func (_ ErrorEnun) I_EnumValues() []ErrorEnun {
+	return []ErrorEnun{
+		ErrorEnunErrFoo,
+		ErrorEnunErrBar,
+	}
+}
 func (x ErrorEnun) String() string {
 	switch x {
 	case 1:

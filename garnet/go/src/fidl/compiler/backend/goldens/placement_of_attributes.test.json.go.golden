@@ -17,6 +17,11 @@ const (
 	ExampleEnumMember ExampleEnum = 1
 )
 
+func (_ ExampleEnum) I_EnumValues() []ExampleEnum {
+	return []ExampleEnum{
+		ExampleEnumMember,
+	}
+}
 func (x ExampleEnum) String() string {
 	switch x {
 	case 1:

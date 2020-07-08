@@ -15,6 +15,13 @@ const (
 	{{ $.Name }}{{ .Name }} {{ $.Name }} = {{ .Value }}
 	{{- end }}
 )
+func (_ {{.Name}}) I_EnumValues() []{{.Name}} {
+	return []{{.Name}}{
+		{{- range .Members }}
+		{{ $.Name }}{{ .Name }},
+		{{- end }}
+	}
+}
 func (x {{.Name}}) String() string {
 	switch x {
 	{{- range .Members }}

@@ -14,6 +14,12 @@ const (
 	ObjTypeVmo  ObjType = 3
 )
 
+func (_ ObjType) I_EnumValues() []ObjType {
+	return []ObjType{
+		ObjTypeNone,
+		ObjTypeVmo,
+	}
+}
 func (x ObjType) String() string {
 	switch x {
 	case 0:

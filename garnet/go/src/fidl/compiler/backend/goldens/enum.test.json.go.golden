@@ -9,6 +9,12 @@ const (
 	MyStrictEnumBar MyStrictEnum = 2
 )
 
+func (_ MyStrictEnum) I_EnumValues() []MyStrictEnum {
+	return []MyStrictEnum{
+		MyStrictEnumFoo,
+		MyStrictEnumBar,
+	}
+}
 func (x MyStrictEnum) String() string {
 	switch x {
 	case 1:

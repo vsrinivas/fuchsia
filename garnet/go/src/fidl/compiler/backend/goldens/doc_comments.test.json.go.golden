@@ -23,6 +23,12 @@ const (
 	MyEnumBar MyEnum = 2
 )
 
+func (_ MyEnum) I_EnumValues() []MyEnum {
+	return []MyEnum{
+		MyEnumFoo,
+		MyEnumBar,
+	}
+}
 func (x MyEnum) String() string {
 	switch x {
 	case 1:

@@ -25,6 +25,11 @@ const (
 	EnumTypeValue EnumType = 1
 )
 
+func (_ EnumType) I_EnumValues() []EnumType {
+	return []EnumType{
+		EnumTypeValue,
+	}
+}
 func (x EnumType) String() string {
 	switch x {
 	case 1:
@@ -39,6 +44,11 @@ const (
 	BitsTypeValue BitsType = 1
 )
 
+func (_ BitsType) I_EnumValues() []BitsType {
+	return []BitsType{
+		BitsTypeValue,
+	}
+}
 func (x BitsType) String() string {
 	switch x {
 	case 1:
