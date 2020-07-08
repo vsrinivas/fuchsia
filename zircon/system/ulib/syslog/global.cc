@@ -48,14 +48,3 @@ zx_status_t fx_log_reconfigure(const fx_logger_config_t* config) {
 
 // This is here to force a definition to be included here for C99.
 extern inline bool fx_log_is_enabled(fx_log_severity_t severity);
-
-__BEGIN_CDECLS
-
-SYSLOG_EXPORT
-// This clears out global logger. This is used from tests
-void fx_log_reset_global_for_testing() {
-  // TODO(samans): Remove this function since it is no longer necessary to destroy the
-  // global logger in order to reconfigure logging. https://fxbug.dev/49001
-}
-
-__END_CDECLS

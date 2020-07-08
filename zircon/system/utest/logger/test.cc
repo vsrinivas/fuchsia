@@ -15,13 +15,6 @@
 
 #include <zxtest/zxtest.h>
 
-__BEGIN_CDECLS
-
-// This does not come from header file as this function should only be used in
-// tests and is not for general use.
-void fx_log_reset_global_for_testing(void);
-
-__END_CDECLS
 namespace {
 
 bool ends_with(const char* str, const char* suffix) {
@@ -39,7 +32,6 @@ class Fixture {
   Fixture()
       : fds_valid_(false), loop_(&kAsyncLoopConfigNoAttachToCurrentThread), error_status_(0) {}
   ~Fixture() {
-    fx_log_reset_global_for_testing();
     if (fds_valid_) {
       close(pipefd_[0]);
       close(pipefd_[1]);

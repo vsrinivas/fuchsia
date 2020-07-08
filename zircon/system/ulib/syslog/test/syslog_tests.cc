@@ -12,14 +12,6 @@
 
 #include <zxtest/zxtest.h>
 
-__BEGIN_CDECLS
-
-// This does not come from header file as this function should only be used in
-// tests and is not for general use.
-void fx_log_reset_global_for_testing(void);
-
-__END_CDECLS
-
 static bool ends_with(const char* str, const char* suffix) {
   if (strlen(str) < strlen(suffix)) {
     return false;
@@ -46,12 +38,10 @@ TEST(SyslogTests, test_log_init_with_socket) {
                                .log_service_channel = socket1.release(),
                                .tags = nullptr,
                                .num_tags = 0};
-  fx_log_reset_global_for_testing();
   EXPECT_EQ(ZX_OK, fx_log_reconfigure(&config), "");
 }
 
 TEST(SyslogTests, test_log_enabled_macro) {
-  fx_log_reset_global_for_testing();
   zx::socket socket0, socket1;
   EXPECT_EQ(ZX_OK, zx::socket::create(0, &socket0, &socket1));
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
@@ -69,7 +59,6 @@ TEST(SyslogTests, test_log_enabled_macro) {
   if (!FX_LOG_IS_ENABLED(ERROR)) {
     EXPECT_TRUE(false, "control should not reach this line");
   }
-  fx_log_reset_global_for_testing();
 }
 
 static inline zx_status_t init_helper(int fd, const char** tags, size_t ntags) {
@@ -83,7 +72,6 @@ static inline zx_status_t init_helper(int fd, const char** tags, size_t ntags) {
 }
 
 TEST(SyslogTests, test_log_simple_write) {
-  fx_log_reset_global_for_testing();
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
@@ -94,11 +82,9 @@ TEST(SyslogTests, test_log_simple_write) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "test message\n"), "%s", buf);
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTests, test_log_write) {
-  fx_log_reset_global_for_testing();
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
@@ -109,11 +95,9 @@ TEST(SyslogTests, test_log_write) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "INFO: 10, just some number\n"), "%s", buf);
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTests, test_log_preprocessed_message) {
-  fx_log_reset_global_for_testing();
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
@@ -124,12 +108,10 @@ TEST(SyslogTests, test_log_preprocessed_message) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "INFO: %d, %s\n"), "%s", buf);
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTests, test_log_severity) {
   struct pollfd fd;
-  fx_log_reset_global_for_testing();
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
@@ -139,11 +121,9 @@ TEST(SyslogTests, test_log_severity) {
   fd.events = POLLIN;
   EXPECT_EQ(poll(&fd, 1, 1), 0, "");
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTests, test_log_severity_invalid) {
-  fx_log_reset_global_for_testing();
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
@@ -155,7 +135,6 @@ TEST(SyslogTests, test_log_severity_invalid) {
 
 TEST(SyslogTests, test_log_write_with_tag) {
   int pipefd[2];
-  fx_log_reset_global_for_testing();
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
@@ -165,12 +144,10 @@ TEST(SyslogTests, test_log_write_with_tag) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "[tag] INFO: 10, just some string\n"), "%s", buf);
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTests, test_log_write_with_global_tag) {
   int pipefd[2];
-  fx_log_reset_global_for_testing();
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   const char* tags[] = {"gtag"};
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], tags, 1), "");
@@ -181,12 +158,10 @@ TEST(SyslogTests, test_log_write_with_global_tag) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "[gtag, tag] INFO: 10, just some string\n"), "%s", buf);
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTests, test_log_write_with_multi_global_tag) {
   int pipefd[2];
-  fx_log_reset_global_for_testing();
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   const char* tags[] = {"gtag", "gtag2"};
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], tags, 2), "");
@@ -197,17 +172,13 @@ TEST(SyslogTests, test_log_write_with_multi_global_tag) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "[gtag, gtag2, tag] INFO: 10, just some string\n"), "%s", buf);
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTestsEdgeCases, test_global_tag_limit) {
-  fx_log_reset_global_for_testing();
   EXPECT_NE(ZX_OK, init_helper(-1, NULL, FX_LOG_MAX_TAGS + 1), "");
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTestsEdgeCases, test_msg_length_limit) {
-  fx_log_reset_global_for_testing();
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
@@ -228,11 +199,9 @@ TEST(SyslogTestsEdgeCases, test_msg_length_limit) {
   msg[n] = 0;
   EXPECT_TRUE(ends_with(buf, "a...\n"), "%s", buf);
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTests, test_vlog_simple_write) {
-  fx_log_reset_global_for_testing();
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
@@ -244,11 +213,9 @@ TEST(SyslogTests, test_vlog_simple_write) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "VLOG(5): test message\n"), "%s", buf);
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTests, test_vlog_write) {
-  fx_log_reset_global_for_testing();
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
@@ -260,11 +227,9 @@ TEST(SyslogTests, test_vlog_write) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "VLOG(1): 10, just some number\n"), "%s", buf);
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTests, test_log_reconfiguration) {
-  fx_log_reset_global_for_testing();
 
   // Initialize with no tags.
   int pipefd[2];
@@ -287,7 +252,6 @@ TEST(SyslogTests, test_log_reconfiguration) {
   EXPECT_TRUE(ends_with(buf, "[tag1, tag2] INFO: Hi\n"), "%s", buf);
 
   close(pipefd[1]);
-  fx_log_reset_global_for_testing();
 }
 
 TEST(SyslogTests, test_log_dont_dup) {

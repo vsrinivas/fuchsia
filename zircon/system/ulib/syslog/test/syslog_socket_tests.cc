@@ -17,14 +17,6 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-__BEGIN_CDECLS
-
-// This does not come from header file as this function should only be used in
-// tests and is not for general use.
-void fx_log_reset_global_for_testing(void);
-
-__END_CDECLS
-
 inline zx_status_t init_helper(zx_handle_t handle, const char** tags, size_t ntags) {
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
@@ -34,16 +26,6 @@ inline zx_status_t init_helper(zx_handle_t handle, const char** tags, size_t nta
 
   return fx_log_reconfigure(&config);
 }
-
-namespace {
-
-class Cleanup {
- public:
-  Cleanup() { fx_log_reset_global_for_testing(); }
-  ~Cleanup() { fx_log_reset_global_for_testing(); }
-};
-
-}  // namespace
 
 bool ends_with(const char* str, const char* suffix) {
   size_t str_len = strlen(str);
@@ -75,7 +57,6 @@ void output_compare_helper(zx::socket local, fx_log_severity_t severity, const c
 }
 
 TEST(SyslogSocketTests, TestLogSimpleWrite) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -85,7 +66,6 @@ TEST(SyslogSocketTests, TestLogSimpleWrite) {
 }
 
 TEST(SyslogSocketTests, TestLogWrite) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -94,7 +74,6 @@ TEST(SyslogSocketTests, TestLogWrite) {
 }
 
 TEST(SyslogSocketTests, TestLogPreprocessedMessage) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -113,7 +92,6 @@ static zx_status_t GetAvailableBytes(const zx::socket& socket, size_t* out_avail
 }
 
 TEST(SyslogSocketTests, TestLogSeverity) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -129,7 +107,6 @@ TEST(SyslogSocketTests, TestLogSeverity) {
 }
 
 TEST(SyslogSocketTests, TestLogWriteWithTag) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -139,7 +116,6 @@ TEST(SyslogSocketTests, TestLogWriteWithTag) {
 }
 
 TEST(SyslogSocketTests, TestLogWriteWithGlobalTag) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag"};
@@ -150,7 +126,6 @@ TEST(SyslogSocketTests, TestLogWriteWithGlobalTag) {
 }
 
 TEST(SyslogSocketTests, TestLogWriteWithMultiGlobalTag) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag", "gtag2"};
@@ -161,7 +136,6 @@ TEST(SyslogSocketTests, TestLogWriteWithMultiGlobalTag) {
 }
 
 TEST(SyslogSocketTests, TestLogFallback) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag", "gtag2"};
@@ -183,7 +157,6 @@ TEST(SyslogSocketTests, TestLogFallback) {
 }
 
 TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimit) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag", "gtag2"};
@@ -202,7 +175,6 @@ TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimit) {
 }
 
 TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimitForPreprocessedMsg) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag", "gtag2"};
@@ -225,7 +197,6 @@ TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimitForPreprocessedMsg) {
 }
 
 TEST(SyslogSocketTestsEdgeCases, TestTagLengthLimit) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   char gtags_buffer[FX_LOG_MAX_TAGS][FX_LOG_MAX_TAG_LEN + 1];
@@ -254,7 +225,6 @@ TEST(SyslogSocketTestsEdgeCases, TestTagLengthLimit) {
 }
 
 TEST(SyslogSocketTests, TestVlogSimpleWrite) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -265,7 +235,6 @@ TEST(SyslogSocketTests, TestVlogSimpleWrite) {
 }
 
 TEST(SyslogSocketTests, TestVlogWrite) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -275,7 +244,6 @@ TEST(SyslogSocketTests, TestVlogWrite) {
 }
 
 TEST(SyslogSocketTests, TestVlogWriteWithTag) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -286,7 +254,6 @@ TEST(SyslogSocketTests, TestVlogWriteWithTag) {
 }
 
 TEST(SyslogSocketTests, TestLogVerbosity) {
-  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));

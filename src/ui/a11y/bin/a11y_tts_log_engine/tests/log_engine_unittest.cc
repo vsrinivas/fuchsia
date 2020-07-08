@@ -14,12 +14,6 @@
 
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
-__BEGIN_CDECLS
-// This does not come from header file as this function should only be used in
-// tests and is not for general use.
-void fx_log_reset_global_for_testing(void);
-__END_CDECLS
-
 namespace a11y {
 namespace {
 
@@ -28,7 +22,6 @@ class LogEngineTest : public gtest::TestLoopFixture {
   void SetUp() override {
     startup_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     tts_manager_ = std::make_unique<TtsManager>(startup_context_.get());
-    fx_log_reset_global_for_testing();
     ASSERT_EQ(ZX_OK, InitLogger());
   }
 

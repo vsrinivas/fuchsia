@@ -1,6 +1,5 @@
 fx_log_get_logger
 fx_log_reconfigure
-fx_log_reset_global_for_testing
 fx_logger_activate_fallback
 fx_logger_create
 fx_logger_destroy
