@@ -35,6 +35,9 @@ benchmark("{{ .Name }}") {
 	{{- if .EnableSendEventBenchmark }}
 	enable_send_event_benchmark = true,
 	{{- end }}
+	{{- if .EnableEchoCallBenchmark }}
+	enable_echo_call_benchmark = true,
+	{{- end }}
     value = {{ .Value }},
 }
 {{- end }}
@@ -51,6 +54,7 @@ type gidlTmplBenchmark struct {
 	Value                    string
 	Allowlist, Denylist      string
 	EnableSendEventBenchmark bool
+	EnableEchoCallBenchmark  bool
 }
 
 func genGidlFile(filepath string, gidl config.GidlFile) error {
@@ -67,6 +71,7 @@ func genGidlFile(filepath string, gidl config.GidlFile) error {
 			Allowlist:                formatBindingList(benchmark.Allowlist),
 			Denylist:                 formatBindingList(benchmark.Denylist),
 			EnableSendEventBenchmark: benchmark.EnableSendEventBenchmark,
+			EnableEchoCallBenchmark:  benchmark.EnableEchoCallBenchmark,
 		})
 	}
 

@@ -130,6 +130,7 @@ const (
 	isBindingsAllowlist
 	isBindingsDenylist
 	isEnableSendEventBenchmark
+	isEnableEchoCallBenchmark
 )
 
 func (kind bodyElement) String() string {
@@ -148,6 +149,8 @@ func (kind bodyElement) String() string {
 		return "bindings_denylist"
 	case isEnableSendEventBenchmark:
 		return "enable_send_event_benchmark"
+	case isEnableEchoCallBenchmark:
+		return "enable_echo_call_benchmark"
 	default:
 		panic("unsupported kind")
 	}
@@ -161,6 +164,7 @@ type body struct {
 	BindingsAllowlist        *ir.LanguageList
 	BindingsDenylist         *ir.LanguageList
 	EnableSendEventBenchmark bool
+	EnableEchoCallBenchmark  bool
 }
 
 type sectionMetadata struct {
@@ -253,7 +257,7 @@ var sections = map[string]sectionMetadata{
 	},
 	"benchmark": {
 		requiredKinds: map[bodyElement]bool{isValue: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true, isEnableSendEventBenchmark: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true, isEnableSendEventBenchmark: true, isEnableEchoCallBenchmark: true},
 		setter: func(name string, body body, all *ir.All) {
 			benchmark := ir.Benchmark{
 				Name:                     name,
@@ -261,6 +265,7 @@ var sections = map[string]sectionMetadata{
 				BindingsAllowlist:        body.BindingsAllowlist,
 				BindingsDenylist:         body.BindingsDenylist,
 				EnableSendEventBenchmark: body.EnableSendEventBenchmark,
+				EnableEchoCallBenchmark:  body.EnableEchoCallBenchmark,
 			}
 			all.Benchmark = append(all.Benchmark, benchmark)
 		},
@@ -400,6 +405,17 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 		}
 		result.EnableSendEventBenchmark = boolValue
 		kind = isEnableSendEventBenchmark
+	case "enable_echo_call_benchmark":
+		value, err := p.parseValue()
+		if err != nil {
+			return err
+		}
+		boolValue, ok := value.(bool)
+		if !ok {
+			return p.newParseError(tok, "expected boolean value")
+		}
+		result.EnableEchoCallBenchmark = boolValue
+		kind = isEnableEchoCallBenchmark
 	default:
 		return p.newParseError(tok, "must be type, value, bytes, err, bindings_allowlist or bindings_denylist")
 	}

@@ -56,6 +56,7 @@ type Benchmark struct {
 	BindingsAllowlist        *LanguageList
 	BindingsDenylist         *LanguageList
 	EnableSendEventBenchmark bool
+	EnableEchoCallBenchmark  bool
 }
 
 type LanguageList []string

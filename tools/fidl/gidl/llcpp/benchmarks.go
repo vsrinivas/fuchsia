@@ -23,6 +23,7 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include "src/tests/benchmarks/fidl/llcpp/builder_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/decode_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/encode_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/llcpp/echo_call_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/send_event_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/memcpy_benchmark_util.h"
 
@@ -47,6 +48,11 @@ bool BenchmarkSendEvent{{ .Name }}(perftest::RepeatState* state) {
 	return llcpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }}Heap);
 }
 {{- end -}}
+{{ if .EnableEchoCallBenchmark }}
+bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
+	return llcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }}Heap);
+}
+{{- end -}}
 bool BenchmarkMemcpy{{ .Name }}(perftest::RepeatState* state) {
 	return llcpp_benchmarks::MemcpyBenchmark(state, Build{{ .Name }}Heap);
 }
@@ -58,6 +64,9 @@ void RegisterTests() {
 	{{ if .EnableSendEventBenchmark }}
 	perftest::RegisterTest("LLCPP/SendEvent/{{ .Path }}/Steps", BenchmarkSendEvent{{ .Name }});
 	{{- end -}}
+	{{ if .EnableEchoCallBenchmark }}
+	perftest::RegisterTest("LLCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
+	{{- end -}}
 	perftest::RegisterTest("Memcpy/{{ .Path }}", BenchmarkMemcpy{{ .Name }});
 }
 PERFTEST_CTOR(RegisterTests)
@@ -66,9 +75,9 @@ PERFTEST_CTOR(RegisterTests)
 `))
 
 type benchmarkTmplInput struct {
-	Path, Name, Type, EventProtocolType string
-	ValueBuildHeap, ValueVarHeap        string
-	EnableSendEventBenchmark            bool
+	Path, Name, Type, EventProtocolType, EchoCallProtocolType string
+	ValueBuildHeap, ValueVarHeap                              string
+	EnableSendEventBenchmark, EnableEchoCallBenchmark         bool
 }
 
 // Generate generates Low-Level C++ benchmarks.
@@ -90,9 +99,11 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, e
 			Name:                     benchmarkName(gidlBenchmark.Name),
 			Type:                     benchmarkTypeFromValue(gidlBenchmark.Value),
 			EventProtocolType:        benchmarkTypeFromValue(gidlBenchmark.Value) + "EventProtocol",
+			EchoCallProtocolType:     benchmarkTypeFromValue(gidlBenchmark.Value) + "EchoCall",
 			ValueBuildHeap:           valBuildHeap,
 			ValueVarHeap:             valVarHeap,
 			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
+			EnableEchoCallBenchmark:  gidlBenchmark.EnableEchoCallBenchmark,
 		}); err != nil {
 			return nil, err
 		}

@@ -11,3 +11,7 @@ struct ByteVector {
 protocol ByteVectorEventProtocol {
     -> Send(ByteVector vec);
 };
+
+protocol ByteVectorEchoCall {
+    Echo(ByteVector vec) -> (ByteVector vec);
+};

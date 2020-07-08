@@ -30,6 +30,7 @@ func init() {
 					"size": 256,
 				},
 				EnableSendEventBenchmark: true,
+				EnableEchoCallBenchmark:  true,
 			},
 			{
 				Name:    "ByteVector/4096",
@@ -38,6 +39,7 @@ func init() {
 					"size": 4096,
 				},
 				EnableSendEventBenchmark: true,
+				EnableEchoCallBenchmark:  true,
 			},
 			{
 				Name: "ByteVector/65536",

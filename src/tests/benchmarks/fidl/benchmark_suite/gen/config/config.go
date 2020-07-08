@@ -54,6 +54,7 @@ type Benchmark struct {
 	Allowlist                []Binding
 	Denylist                 []Binding
 	EnableSendEventBenchmark bool
+	EnableEchoCallBenchmark  bool
 }
 
 type FidlFile struct {
