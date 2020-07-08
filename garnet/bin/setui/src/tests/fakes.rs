@@ -7,6 +7,7 @@ pub mod base;
 pub mod bluetooth_service;
 pub mod fake_hanging_get_handler;
 pub mod fake_hanging_get_types;
+pub mod hardware_light_service;
 pub mod hardware_power_statecontrol_service;
 pub mod input_device_registry_service;
 pub mod service_registry;
