@@ -26,6 +26,8 @@ namespace nelson {
 #define GPIO_SPICC1_SS0 S905D3_GPIOH(6)
 #define GPIO_SOC_WIFI_LPO_32k768 S905D3_GPIOX(16)
 #define GPIO_SOC_BT_REG_ON S905D3_GPIOX(17)
+#define GPIO_SELINA_RESET S905D3_GPIOH(2)
+#define GPIO_SELINA_IRQ S905D3_GPIOH(3)
 
 }  // namespace nelson
 

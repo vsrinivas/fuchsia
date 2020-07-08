@@ -98,6 +98,9 @@ static const gpio_pin_t gpio_pins[] = {
     // For Bluetooth.
     {GPIO_SOC_WIFI_LPO_32k768},
     {GPIO_SOC_BT_REG_ON},
+    // For radar sensor.
+    {GPIO_SELINA_RESET},
+    {GPIO_SELINA_IRQ},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

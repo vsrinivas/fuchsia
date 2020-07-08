@@ -130,6 +130,9 @@ zx_status_t Nelson::SpiInit() {
     // SPICC1 clock enable @200MHz (fclk_div2(1GHz) / N(5)).  For final SCLK frequency, see
     // CONREG[16:18] in the SPI controller.  This clock config produces a SCLK frequency of 50MHz
     // assuming a default value for CONREG[16:18].
+    //
+    // Some timing instability was observed which may have been an individual board artifact.  To
+    // debug, consider configuring the SCLK=25MHz (i.e. set spicc1_cli_div(10)).
     buf->Write32(spicc1_clk_sel_fclk_div2 | spicc1_clk_en | spicc1_clk_div(5), HHI_SPICC_CLK_CNTL);
   }
 
