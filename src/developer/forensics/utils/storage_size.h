@@ -16,6 +16,8 @@ namespace forensics {
 // prevent integer under/over flow and should be used with caution.
 class StorageSize final {
  public:
+  constexpr StorageSize() = default;
+
   explicit constexpr StorageSize(uint64_t bytes) : bytes_(bytes) {}
 
   static constexpr StorageSize Bytes(uint64_t bytes) { return StorageSize(bytes); }

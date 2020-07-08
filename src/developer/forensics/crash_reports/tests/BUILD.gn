@@ -249,7 +249,9 @@ executable("store_unittest_exe") {
     "//src/developer/forensics/crash_reports:store",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/utils:sized_data",
+    "//src/developer/forensics/utils:storage_size",
     "//src/lib/files",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
   ]

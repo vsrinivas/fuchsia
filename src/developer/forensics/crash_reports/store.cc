@@ -48,8 +48,7 @@ std::vector<std::string> GetDirectoryContents(const std::string& dir) {
   return contents;
 }
 
-bool WriteAnnotationsAsJson(const std::string& path,
-                            const std::map<std::string, std::string>& annotations) {
+std::string FormatAnnotationsAsJson(const std::map<std::string, std::string>& annotations) {
   rapidjson::Document json(rapidjson::kObjectType);
   auto& allocator = json.GetAllocator();
 
@@ -64,8 +63,7 @@ bool WriteAnnotationsAsJson(const std::string& path,
 
   json.Accept(writer);
 
-  const std::string annotations_json = buffer.GetString();
-  return files::WriteFile(path, annotations_json);
+  return buffer.GetString();
 }
 
 bool ReadAnnotations(const std::string& path, std::map<std::string, std::string>* annotations) {
@@ -105,7 +103,8 @@ bool ReadAttachment(const std::string& path, SizedData* attachment) {
 
 }  // namespace
 
-Store::Store(const std::string& root_dir) : root_dir_(root_dir) {}
+Store::Store(const std::string& root_dir, StorageSize max_size)
+    : root_dir_(root_dir), max_size_(max_size), current_size_(0u) {}
 
 std::optional<Store::Uid> Store::Add(const Report report) {
   for (const auto& key : kReservedAttachmentNames) {
@@ -125,20 +124,36 @@ std::optional<Store::Uid> Store::Add(const Report report) {
     return std::nullopt;
   }
 
-  auto MakeFilepath = [dir](const std::string& filename) { return files::JoinPath(dir, filename); };
+  const std::string annotations_json = FormatAnnotationsAsJson(report.Annotations());
 
-  if (!WriteAnnotationsAsJson(MakeFilepath(kAnnotationsFilename), report.Annotations())) {
-    FX_LOGS(ERROR) << "Failed to write annotations";
+  // Determine the size of the report.
+  StorageSize report_size = StorageSize::Bytes(annotations_json.size());
+  for (const auto& [_, v] : report.Attachments()) {
+    report_size += StorageSize::Bytes(v.size());
+  }
+  if (report.Minidump().has_value()) {
+    report_size += StorageSize::Bytes(report.Minidump().value().size());
+  }
+
+  // Ensure there's enough space in the store for the report.
+  if (!MakeFreeSpace(report_size)) {
+    FX_LOGS(ERROR) << "Failed to make space for report";
     return std::nullopt;
   }
 
+  auto MakeFilepath = [dir](const std::string& filename) { return files::JoinPath(dir, filename); };
+
+  // Write the report's content to the the filesystem.
+  if (!files::WriteFile(MakeFilepath(kAnnotationsFilename), annotations_json)) {
+    FX_LOGS(ERROR) << "Failed to write annotations";
+    return std::nullopt;
+  }
   for (const auto& [filename, attachment] : report.Attachments()) {
     if (!WriteAttachment(MakeFilepath(filename), attachment)) {
       FX_LOGS(ERROR) << "Failed to write attachment " << filename;
       return std::nullopt;
     }
   }
-
   if (report.Minidump().has_value()) {
     if (!WriteAttachment(MakeFilepath(kMinidumpFilename), report.Minidump().value())) {
       FX_LOGS(ERROR) << "Failed to write minidump";
@@ -148,8 +163,12 @@ std::optional<Store::Uid> Store::Add(const Report report) {
 
   id_to_metadata_[id] = ReportMetadata{
       .dir = dir,
+      .size = report_size,
       .program_shortname = report.ProgramShortname(),
   };
+  uids_.push_back(id);
+  current_size_ += report_size;
+
   cleanup_on_error.cancel();
   return id;
 }
@@ -221,7 +240,9 @@ void Store::Remove(const Uid& id) {
     }
   }
 
+  current_size_ -= id_to_metadata_[id].size;
   id_to_metadata_.erase(id);
+  uids_.erase(std::remove(uids_.begin(), uids_.end(), id), uids_.end());
 }
 
 void Store::RemoveAll() {
@@ -229,7 +250,22 @@ void Store::RemoveAll() {
     FX_LOGS(ERROR) << "Failed to delete all reports";
   }
   files::CreateDirectory(root_dir_);
+
+  current_size_ = StorageSize::Bytes(0u);
   id_to_metadata_.clear();
+  uids_.clear();
+}
+
+bool Store::MakeFreeSpace(const StorageSize required_space) {
+  if (required_space > max_size_) {
+    return false;
+  }
+
+  while ((current_size_ + required_space) > max_size_ && !uids_.empty()) {
+    Remove(uids_.front());
+  }
+
+  return true;
 }
 
 }  // namespace crash_reports

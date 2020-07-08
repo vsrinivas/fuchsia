@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/utils/sized_data.h"
@@ -23,15 +24,21 @@ namespace forensics {
 namespace crash_reports {
 namespace {
 
+using testing::UnorderedElementsAreArray;
+
 SizedData MakeSizedData(const std::string& content) {
   return SizedData(content.begin(), content.end());
 }
 
 class StoreTest : public testing::Test {
  public:
-  StoreTest() : store_(tmp_dir_.path()) {}
+  StoreTest() : store_(std::make_unique<Store>(tmp_dir_.path(), StorageSize::Megabytes(1))) {}
 
  protected:
+  void MakeNewStore(const StorageSize max_size) {
+    store_ = std::make_unique<Store>(tmp_dir_.path(), max_size);
+  }
+
   std::optional<Store::Uid> Add(const std::string& program_shortname,
                                 const std::map<std::string, std::string>& annotations,
                                 const std::map<std::string, std::string>& attachments,
@@ -49,13 +56,13 @@ class StoreTest : public testing::Test {
     auto report = Report(program_shortname, annotations, std::move(attachments_data),
                          std::move(minidump_data));
 
-    return store_.Add(std::move(report));
+    return store_->Add(std::move(report));
   }
 
   bool Get(const Store::Uid& id, std::string* program_shortname,
            std::map<std::string, std::string>* annotations,
            std::map<std::string, std::string>* attachments, std::optional<std::string>* minidump) {
-    const auto report = store_.Get(id);
+    const auto report = store_->Get(id);
     if (!report.has_value()) {
       return false;
     }
@@ -143,7 +150,7 @@ class StoreTest : public testing::Test {
   files::ScopedTempDir tmp_dir_;
 
  protected:
-  Store store_;
+  std::unique_ptr<Store> store_;
 };
 
 TEST_F(StoreTest, Succeed_Add) {
@@ -171,7 +178,7 @@ TEST_F(StoreTest, Succeed_Add) {
   std::map<std::string, std::string> attachments;
   std::optional<std::string> minidump;
 
-  ASSERT_TRUE(store_.Contains(id.value()));
+  ASSERT_TRUE(store_->Contains(id.value()));
   ASSERT_TRUE(Read(expected_program_shortname, id.value(), &annotations, &attachments, &minidump));
 
   EXPECT_EQ(expected_annotations, annotations);
@@ -229,11 +236,33 @@ TEST_F(StoreTest, Succeed_Remove) {
   const auto id =
       Add("program_shortname", /*annotations=*/{}, /*attachments=*/{}, /*minidump=*/std::nullopt);
   EXPECT_TRUE(id.has_value());
-  ASSERT_TRUE(store_.Contains(id.value()));
+  ASSERT_TRUE(store_->Contains(id.value()));
 
-  store_.Remove(id.value());
-  EXPECT_FALSE(store_.Contains(id.value()));
+  store_->Remove(id.value());
+  EXPECT_FALSE(store_->Contains(id.value()));
   EXPECT_TRUE(GetProgramShortnames().empty());
+}
+
+TEST_F(StoreTest, Succeed_GarbageCollection) {
+  const std::string minidump = "minidump";
+
+  // We set up the store so it can only hold one report at most, evicting the oldest ones first.
+  MakeNewStore(StorageSize::Bytes(minidump.size() + 4u /*the empty annotations.json*/));
+
+  const auto id1 = Add("program_name1", /*annotations=*/{}, /*attachments=*/{}, minidump);
+  const auto id2 = Add("program_name2", /*annotations=*/{}, /*attachments=*/{}, minidump);
+
+  EXPECT_FALSE(store_->Contains(id1.value()));
+  EXPECT_TRUE(store_->Contains(id2.value()));
+
+  EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({"program_name2"}));
+
+  const auto id3 = Add("program_name3", /*annotations=*/{}, /*attachments=*/{}, minidump);
+
+  EXPECT_FALSE(store_->Contains(id2.value()));
+  EXPECT_TRUE(store_->Contains(id3.value()));
+
+  EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({"program_name3"}));
 }
 
 }  // namespace

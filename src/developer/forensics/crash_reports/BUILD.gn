@@ -350,7 +350,10 @@ source_set("store") {
     "store.h",
   ]
 
-  public_deps = [ ":report" ]
+  public_deps = [
+    ":report",
+    "//src/developer/forensics/utils:storage_size",
+  ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
