@@ -59,7 +59,7 @@ TEST(Memory, WorkloadGenerator) {
 TEST(Memory, StressMemory) {
   // Exercise the main StressMemory function for a tiny amount of time and memory.
   CommandLineArgs args;
-  args.ram_to_test_megabytes = 1;
+  args.mem_to_test_megabytes = 1;
 
   StatusLine status;
   EXPECT_TRUE(StressMemory(&status, args, zx::msec(1)));

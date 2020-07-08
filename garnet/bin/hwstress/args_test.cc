@@ -60,10 +60,10 @@ TEST(Args, ParseMemory) {
   // No optional arguments.
   CommandLineArgs args = ParseArgs({{"hwstress", "memory"}}).value();
   EXPECT_EQ(args.ram_to_test_percent, std::nullopt);
-  EXPECT_EQ(args.ram_to_test_megabytes, std::nullopt);
+  EXPECT_EQ(args.mem_to_test_megabytes, std::nullopt);
 
   // Arguments given.
-  EXPECT_EQ(ParseArgs({{"hwstress", "memory", "--memory", "123"}})->ram_to_test_megabytes,
+  EXPECT_EQ(ParseArgs({{"hwstress", "memory", "--memory", "123"}})->mem_to_test_megabytes,
             std::optional<uint64_t>(123));
   EXPECT_EQ(ParseArgs({{"hwstress", "memory", "--percent-memory", "12"}})->ram_to_test_percent,
             std::optional<uint64_t>(12));

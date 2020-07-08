@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "flash_stress.h"
+
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
@@ -10,6 +12,7 @@
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/lib/testing/predicates/status.h"
+#include "status.h"
 
 namespace hwstress {
 namespace {
@@ -18,7 +21,7 @@ constexpr size_t kBlockSize = 512;
 constexpr size_t kDefaultRamDiskSize = 64 * 1024 * 1024;
 constexpr size_t kDefaultFvmSliceSize = 1024 * 1024;
 
-TEST(FlashStress, CreateDeletePartition) {
+TEST(Flash, FlashStress) {
   // Create a RAM disk.
   zx::status<isolated_devmgr::RamDisk> ramdisk = isolated_devmgr::RamDisk::Create(
       /*block_size=*/kBlockSize, /*block_count=*/kDefaultRamDiskSize / kBlockSize);
@@ -29,11 +32,8 @@ TEST(FlashStress, CreateDeletePartition) {
       isolated_devmgr::CreateFvmInstance(ramdisk->path(), kDefaultFvmSliceSize);
   ASSERT_TRUE(fvm_path.is_ok());
 
-#if 0
-  // TODO(smpham): Implement.
   StatusLine status;
-  ASSERT_TRUE(StressFlash(&status, fvm_path.value()));
-#endif
+  ASSERT_TRUE(StressFlash(&status, fvm_path.value(), /*bytes_to_test=*/16 * 1024 * 1024));
 }
 
 }  // namespace

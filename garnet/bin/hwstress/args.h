@@ -57,6 +57,9 @@ struct CommandLineArgs {
   // A value of "0" indicates forever.
   double test_duration_seconds = 0.0;
 
+  // Amount of RAM or flash memory to test.
+  OptionalInt64 mem_to_test_megabytes;
+
   //
   // Flash-specific arguments.
   //
@@ -70,7 +73,6 @@ struct CommandLineArgs {
 
   // Amount of RAM to test.
   OptionalInt64 ram_to_test_percent;
-  OptionalInt64 ram_to_test_megabytes;
 
   //
   // CPU-specific arguments.

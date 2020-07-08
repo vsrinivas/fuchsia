@@ -27,7 +27,7 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
   parser->AddSwitch("help", 'h', "Show this help.", &CommandLineArgs::help);
   parser->AddSwitch("verbose", 'v', "Show verbose logging.", &CommandLineArgs::verbose);
   parser->AddSwitch("memory", 'm', "Amount of memory to test in megabytes.",
-                    &CommandLineArgs::ram_to_test_megabytes);
+                    &CommandLineArgs::mem_to_test_megabytes);
   parser->AddSwitch("percent-memory", 0, "Percent of memory to test.",
                     &CommandLineArgs::ram_to_test_percent);
   parser->AddSwitch("utilization", 'u', "Target CPU utilization percent.",
@@ -71,6 +71,7 @@ CPU test options:
 
 Flash test options:
   -f, --fvm-path=<path>  Path to Fuchsia Volume Manager
+  -m, --memory=<size>    Amount of flash memory to test, in megabytes.
 
 Memory test options:
   -m, --memory=<size>    Amount of RAM to test, in megabytes.
@@ -132,29 +133,29 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
     return fitx::error("Test duration cannot be negative.");
   }
 
-  // Ensure mandatory flash test argument is provided
-  if (result.subcommand == StressTest::kFlash && result.fvm_path.empty()) {
-    return fitx::error("Path to Fuchsia Volume Manager must be specified");
-  }
-
   // Validate memory flags.
   if (result.ram_to_test_percent.has_value()) {
     if (result.ram_to_test_percent.value() <= 0 || result.ram_to_test_percent.value() >= 100) {
       return fitx::error("Percent of RAM to test must be between 1 and 99, inclusive.");
     }
   }
-  if (result.ram_to_test_megabytes.has_value()) {
-    if (result.ram_to_test_megabytes.value() <= 0) {
+  if (result.mem_to_test_megabytes.has_value()) {
+    if (result.mem_to_test_megabytes.value() <= 0) {
       return fitx::error("RAM to test must be strictly positive.");
     }
   }
-  if (result.ram_to_test_megabytes.has_value() && result.ram_to_test_percent.has_value()) {
+  if (result.mem_to_test_megabytes.has_value() && result.ram_to_test_percent.has_value()) {
     return fitx::error("--memory and --percent-memory cannot both be specified.");
   }
 
   // Validate utilization.
   if (result.utilization_percent <= 0.0 || result.utilization_percent > 100.0) {
     return fitx::error("--utilization must be greater than 0%%, and no more than 100%%.");
+  }
+
+  // Ensure mandatory flash test argument is provided
+  if (result.subcommand == StressTest::kFlash && result.fvm_path.empty()) {
+    return fitx::error(fxl::StringPrintf("Path to Fuchsia Volume Manager must be specified"));
   }
 
   // Ensure no more parameters were given.

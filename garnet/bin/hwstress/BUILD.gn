@@ -12,6 +12,7 @@ source_set("lib") {
     "cpu_stressor.cc",
     "cpu_workloads.cc",
     "device.cc",
+    "flash_stress.cc",
     "hwstress.cc",
     "light_stress.cc",
     "memory_patterns.cc",
@@ -25,6 +26,8 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.block",
+    "//sdk/fidl/fuchsia.hardware.block.volume",
     "//sdk/fidl/fuchsia.hardware.light",
     "//sdk/fidl/fuchsia.hardware.thermal",
     "//sdk/fidl/fuchsia.kernel",
@@ -32,11 +35,15 @@ source_set("lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/uuid",
     "//zircon/public/lib/cmdline",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fs-management",
   ]
 
   # We want to optimize as much as possible for speed, under the assumption

@@ -262,8 +262,8 @@ fitx::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
   }
 
   // If a value was specified, and doesn't exceed total system RAM, use that.
-  if (args.ram_to_test_megabytes.has_value()) {
-    size_t requested = MiB(args.ram_to_test_megabytes.value());
+  if (args.mem_to_test_megabytes.has_value()) {
+    size_t requested = MiB(args.mem_to_test_megabytes.value());
     if (requested > maybe_stats->total_bytes()) {
       return fitx::error(fxl::StringPrintf(
           "Specified memory size (%ld bytes) exceeds system memory size (%ld bytes).", requested,

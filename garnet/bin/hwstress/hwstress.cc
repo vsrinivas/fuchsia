@@ -15,6 +15,7 @@
 
 #include "args.h"
 #include "cpu_stress.h"
+#include "flash_stress.h"
 #include "light_stress.h"
 #include "memory_stress.h"
 #include "util.h"
@@ -22,6 +23,8 @@
 namespace hwstress {
 
 constexpr std::string_view kDefaultTemperatureSensorPath = "/dev/class/thermal/000";
+
+constexpr uint64_t kDefaultFlashToTest = 16 * 1024 * 1024;
 
 int Run(int argc, const char** argv) {
   // Parse arguments
@@ -45,6 +48,12 @@ int Run(int argc, const char** argv) {
                               ? zx::duration::infinite()
                               : SecsToDuration(args.test_duration_seconds);
 
+  // Calculate the amount of flash memory to test.
+  uint64_t flash_to_test = kDefaultFlashToTest;
+  if (args.mem_to_test_megabytes.has_value()) {
+    flash_to_test = args.mem_to_test_megabytes.value() * 1024 * 1024;
+  }
+
   // Attempt to create a hardware sensor.
   std::unique_ptr<TemperatureSensor> sensor =
       CreateSystemTemperatureSensor(kDefaultTemperatureSensorPath);
@@ -60,7 +69,7 @@ int Run(int argc, const char** argv) {
       success = StressCpu(&status, args, duration, sensor.get());
       break;
     case StressTest::kFlash:
-      fprintf(stderr, "Error: flash test not yet implemented\n");
+      success = StressFlash(&status, args.fvm_path, flash_to_test);
       break;
     case StressTest::kLight:
       success = StressLight(&status, args, duration);
