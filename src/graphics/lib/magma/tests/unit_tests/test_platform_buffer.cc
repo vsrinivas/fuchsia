@@ -143,7 +143,8 @@ class TestPlatformBuffer {
     // Test basic mapping.
     EXPECT_TRUE(buffer->MapCpuConstrained(&va_out, kLength, k4GLimit, kDefaultAlignment));
     EXPECT_NE(nullptr, va_out);
-    EXPECT_TRUE(reinterpret_cast<uint64_t>(va_out) < k4GLimit);
+    EXPECT_LT(reinterpret_cast<uint64_t>(va_out), k4GLimit);
+    EXPECT_LE(reinterpret_cast<uint64_t>(va_out) + kLength, k4GLimit);
 
     // Test map counting.
     void* const original_va = va_out;

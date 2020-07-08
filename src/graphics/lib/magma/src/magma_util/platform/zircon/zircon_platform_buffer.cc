@@ -194,8 +194,15 @@ bool ZirconPlatformBuffer::MapCpuConstrained(void** va_out, uint64_t length, uin
   if ((alignment_log2 << ZX_VM_ALIGN_BASE) > ZX_VM_ALIGN_4GB) {
     return DRETF(false, "alignment 0x%lx is too large", alignment);
   }
-  if (upper_limit < length) {
-    return DRETF(false, "upper_limit 0x%lx is too small for the length 0x%lx", upper_limit, length);
+  const uint64_t base_addr = parent_vmar_->Base();
+  if (upper_limit < base_addr) {
+    return DRETF(false, "upper_limit 0x%lx is below the base_addr 0x%lx of the mapping range",
+                 upper_limit, base_addr);
+  }
+  if (upper_limit < length || (upper_limit - length) < base_addr) {
+    return DRETF(false,
+                 "upper_limit 0x%lx incompatible with mapping length 0x%lx above base_addr 0x%lx",
+                 upper_limit, length, base_addr);
   }
 
   if (map_count_ == 0) {
@@ -204,19 +211,23 @@ bool ZirconPlatformBuffer::MapCpuConstrained(void** va_out, uint64_t length, uin
     uintptr_t child_addr;
     zx::vmar child_vmar;
 
+    const uint64_t upper_limit_offset = upper_limit - base_addr;
     const zx_vm_option_t alignment_flag = alignment_log2 << ZX_VM_ALIGN_BASE;
     const zx_vm_option_t flags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC |
                                  ZX_VM_OFFSET_IS_UPPER_LIMIT | alignment_flag;
     zx_status_t status =
-        parent_vmar_->get()->allocate(upper_limit, length, flags, &child_vmar, &child_addr);
+        parent_vmar_->get()->allocate(upper_limit_offset, length, flags, &child_vmar, &child_addr);
     if (status != ZX_OK) {
       return DRETF(false,
-                   "failed to make vmar: upper_limit=0x%zx size=0x%zx alignment=%zx status=%d",
-                   upper_limit, length, alignment, status);
+                   "failed to make vmar: base_addr=0x%zx upper_limit=0x%zx size=0x%zx "
+                   "alignment=%zx status=%d",
+                   base_addr, upper_limit, length, alignment, status);
     }
 
-    DLOG("allocated vmar: child_addr=0x%zx length=0x%zx alignment=0x%zx upper_limit=0x%zx",
-         child_addr, length, alignment, upper_limit);
+    DLOG(
+        "allocated vmar: base_addr=0x%zx child_addr=0x%zx length=0x%zx alignment=0x%zx "
+        "upper_limit=0x%zx",
+        base_addr, child_addr, length, alignment, upper_limit);
 
     uintptr_t ptr;
     status = child_vmar.map(0, vmo_, 0, length, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr);
