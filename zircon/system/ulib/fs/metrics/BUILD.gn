@@ -18,7 +18,10 @@ import("//build/unification/zx_library.gni")
 zx_library("metrics-cobalt") {
   sdk = "source"
   sdk_headers = [ "fs/metrics/cobalt_metrics.h" ]
-  sources = [ "cobalt_metrics.cc" ]
+  sources = [
+    "cobalt_metrics.cc",
+    "include/fs/metrics/events.h",
+  ]
   public_deps = [
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/cobalt-client",
