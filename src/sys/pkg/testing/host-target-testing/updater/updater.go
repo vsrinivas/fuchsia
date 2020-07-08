@@ -9,11 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -43,7 +43,8 @@ func NewSystemUpdateChecker(repo *packages.Repository) *SystemUpdateChecker {
 }
 
 func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
-	log.Printf("Triggering OTA")
+	logger.Infof(ctx, "Triggering OTA")
+
 	startTime := time.Now()
 	basePackages, err := c.ReadBasePackages(ctx)
 	if err != nil {
@@ -81,7 +82,9 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("OTA completed in %s", time.Now().Sub(startTime))
+
+	logger.Infof(ctx, "OTA completed in %s", time.Now().Sub(startTime))
+
 	return nil
 }
 
@@ -96,7 +99,8 @@ func NewSystemUpdater(repo *packages.Repository, updatePackageUrl string) *Syste
 }
 
 func (u *SystemUpdater) Update(ctx context.Context, c client) error {
-	log.Printf("Downloading OTA")
+	logger.Infof(ctx, "Downloading OTA")
+
 	startTime := time.Now()
 	server, err := c.ServePackageRepository(ctx, u.repo, "download-ota", true)
 	if err != nil {
@@ -104,7 +108,8 @@ func (u *SystemUpdater) Update(ctx context.Context, c client) error {
 	}
 	defer server.Shutdown(ctx)
 
-	log.Printf("Downloading system OTA")
+	logger.Infof(ctx, "Downloading system OTA")
+
 	cmd := []string{
 		"update",
 		"force-install",
@@ -114,6 +119,8 @@ func (u *SystemUpdater) Update(ctx context.Context, c client) error {
 	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		return fmt.Errorf("failed to run system updater: %w", err)
 	}
-	log.Printf("OTA successfully downloaded in %s", time.Now().Sub(startTime))
+
+	logger.Infof(ctx, "OTA successfully downloaded in %s", time.Now().Sub(startTime))
+
 	return nil
 }
