@@ -10,7 +10,7 @@
         }
     },
     "program": {
-        "binary": "test/audio-core-api-tests"
+        "binary": "bin/{binary}"
     },
     "sandbox": {
         "features": [

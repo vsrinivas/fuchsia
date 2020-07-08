@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/media/tuning/cpp/fidl.h>
-#include <fuchsia/virtualaudio/cpp/fidl.h>
-#include <lib/zx/vmo.h>
 
 #include <cmath>
 

@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/media/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/media/tuning/cpp/fidl.h>
-#include <fuchsia/virtualaudio/cpp/fidl.h>
 
 #include <cmath>
 #include <memory>

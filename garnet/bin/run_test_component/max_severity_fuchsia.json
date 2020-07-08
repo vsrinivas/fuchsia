@@ -37,7 +37,11 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/audio-core-api-tests#meta/audio-core-api-tests.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/audio-core-api-tests#meta/audio-renderer-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/audio-core-api-tests#meta/audio-tuner-test.cmx",
          "max_severity": "ERROR"
       },
       {

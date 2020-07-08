@@ -2,57 +2,71 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This directory contains two kinds of audio_core integration tests, in two
-# different binaries:
-#
-#   audio-core-api-tests
-#     Validates the "control plane" subset of the API. These tests do not
-#     check how data flows through the system.
-#
-#   audio-core-api-pipeline-tests
-#     Validates the flow of audio data. Verifying correct data flow requires
-#     timers, so these tests are run on real hardware only.
-#     TODO(50645): this binary doesn't exist yet
-#
-# For convenience, both tests are available in the same package.
+import("//build/testing/environments.gni")
+import("//src/media/audio/audio_core/test/api/api_test_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
-import("//build/test/test_package.gni")
-
-test_package("audio-core-api-tests") {
-  deps = [ ":audio-core-api-tests-bin" ]
-
-  tests = [
-    {
-      name = "audio-core-api-tests"
-      environments = basic_envs
-    },
-  ]
+audio_core_api_test_component("activity-reporter-test") {
+  sources = [ "activity_reporter_test.cc" ]
 }
 
-executable("audio-core-api-tests-bin") {
-  testonly = true
-  output_name = "audio-core-api-tests"
-
-  sources = [
-    "activity_reporter_test.cc",
-    "audio_capturer_test.cc",
-    "audio_renderer_test.cc",
-    "audio_tuner_test.cc",
-    "gain_control_test.cc",
-    "usage_gain_reporter_test.cc",
-    "usage_reporter_test.cc",
-    "volume_control.cc",
-  ]
-
+audio_core_api_test_component("audio-capturer-test") {
+  sources = [ "audio_capturer_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/media/audio/cpp",
-    "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/clock:clone_mono",
     "//src/media/audio/lib/clock/testing",
-    "//src/media/audio/lib/logging",
-    "//src/media/audio/lib/test:hermetic_audio_test",
-    "//third_party/googletest:gmock",
   ]
 }
+
+audio_core_api_test_component("audio-renderer-test") {
+  sources = [ "audio_renderer_test.cc" ]
+  deps = [
+    "//sdk/lib/media/audio/cpp",
+    "//src/media/audio/lib/clock:clone_mono",
+    "//src/media/audio/lib/clock/testing",
+  ]
+}
+
+audio_core_api_test_component("audio-tuner-test") {
+  sources = [ "audio_tuner_test.cc" ]
+  deps = [ "//sdk/fidl/fuchsia.media.tuning" ]
+}
+
+audio_core_api_test_component("gain-control-test") {
+  sources = [ "gain_control_test.cc" ]
+}
+
+audio_core_api_test_component("usage-gain-reporter-test") {
+  sources = [ "usage_gain_reporter_test.cc" ]
+  deps = [ "//sdk/fidl/fuchsia.media.audio" ]
+}
+
+audio_core_api_test_component("usage-reporter-test") {
+  sources = [ "usage_reporter_test.cc" ]
+}
+
+audio_core_api_test_component("volume-control-test") {
+  sources = [ "volume_control_test.cc" ]
+}
+
+# These tests can run anywhere, including in emulators.
+fuchsia_test_package("audio-core-api-tests") {
+  test_components = [
+    ":activity-reporter-test",
+    ":audio-capturer-test",
+    ":audio-renderer-test",
+    ":audio-tuner-test",
+    ":gain-control-test",
+    ":usage-gain-reporter-test",
+    ":usage-reporter-test",
+    ":volume-control-test",
+  ]
+}
+# TODO(50645): add after tests have been moved
+# These tests must run on real hardware because they depend on real time.
+#fuchsia_test_package("audio-core-api-tests-hw-only") {
+#  test_specs = [
+#    environments = hardware_envs
+#  ]
+#}

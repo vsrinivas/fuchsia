@@ -9,7 +9,6 @@
 #include "lib/media/audio/cpp/types.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
-#include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {

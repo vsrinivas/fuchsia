@@ -4,7 +4,6 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/tuning/cpp/fidl.h>
-#include <fuchsia/virtualaudio/cpp/fidl.h>
 
 #include <cmath>
 
