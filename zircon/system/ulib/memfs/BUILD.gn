@@ -25,6 +25,7 @@ zx_library("memfs-cpp") {
     "directory.cc",
     "dnode.cc",
     "file.cc",
+    "include/lib/memfs/memfs.h",
     "memfs.cc",
     "vmo.cc",
   ]
