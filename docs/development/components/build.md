@@ -804,13 +804,14 @@ templates. These unsupported features include:
     cannot be launched using `run` followed by a fuzzy match with their launch
     URL. Components can still be launched using their full launch URL. Tests
     can still be launched with `fx test` followed by the short name of the
-    test.
+    test. See [fxb/55739][fxb-55739] for more details.
 
 [cml-format]: /docs/concepts/components/component_manifests.md
 [cmx-format]: /docs/concepts/storage/component_manifest.md
 [component-index]: /src/sys/component_index/component_index.gni
 [executable]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_executable
 [fx-test]: https://www.fuchsia.dev/reference/tools/fx/cmd/test.md
+[fxb-55739]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=55739
 [glossary-component]: /docs/glossary.md#component
 [glossary-component-instance]: /docs/glossary.md#component-instance
 [glossary-component-manifest]: /docs/glossary.md#component-manifest
