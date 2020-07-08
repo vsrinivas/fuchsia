@@ -54,11 +54,11 @@ PROFILE_CREATE_DISPLAY_TEST(
     "\x1B[34mZX_PROFILE_INFO_FLAG_PRIORITY | ZX_PROFILE_INFO_FLAG_CPU_MASK\x1B[0m\n"
     "    priority: \x1B[32mint32\x1B[0m = \x1B[34m-1\x1B[0m\n"
     "    cpu_affinity_mask: \x1B[32mzx_cpu_set_t\x1B[0m = {\n"
-    "      mask: \x1B[32muint64[]\x1B[0m = "
+    "      mask: vector<\x1B[32muint64\x1B[0m> = [ "
     "\x1B[34m000000000000000e\x1B[0m, \x1B[34m0000000000000000\x1B[0m, "
     "\x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m, "
     "\x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m, "
-    "\x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m\n"
+    "\x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m ]\n"
     "    }\n"
     "  }\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");

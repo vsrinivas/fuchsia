@@ -543,8 +543,6 @@ std::string_view TypeName(SyscallType type) {
       return "bool";
     case SyscallType::kChar:
       return "char";
-    case SyscallType::kCharArray:
-      return "char[]";
     case SyscallType::kInt32:
       return "int32";
     case SyscallType::kInt64:
@@ -552,31 +550,17 @@ std::string_view TypeName(SyscallType type) {
     case SyscallType::kUint8:
     case SyscallType::kUint8Hexa:
       return "uint8";
-    case SyscallType::kUint8ArrayDecimal:
-    case SyscallType::kUint8ArrayHexa:
-      return "uint8[]";
     case SyscallType::kUint16:
     case SyscallType::kUint16Hexa:
       return "uint16";
-    case SyscallType::kUint16ArrayDecimal:
-    case SyscallType::kUint16ArrayHexa:
-      return "uint16[]";
     case SyscallType::kUint32:
     case SyscallType::kUint32Hexa:
       return "uint32";
-    case SyscallType::kUint32ArrayDecimal:
-    case SyscallType::kUint32ArrayHexa:
-      return "uint32[]";
     case SyscallType::kUint64:
     case SyscallType::kUint64Hexa:
       return "uint64";
-    case SyscallType::kUint64ArrayDecimal:
-    case SyscallType::kUint64ArrayHexa:
-      return "uint64[]";
     case SyscallType::kUint128Hexa:
       return "uint128";
-    case SyscallType::kUint128ArrayHexa:
-      return "uint128[]";
     case SyscallType::kBtiPerm:
       return "zx_bti_perm_t";
     case SyscallType::kCachePolicy:

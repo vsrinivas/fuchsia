@@ -493,8 +493,8 @@ class ZxInfoMaps : public Class<zx_info_maps_t> {
 
  private:
   ZxInfoMaps() : Class("zx_info_maps_t") {
-    AddField(std::make_unique<ClassField<zx_info_maps_t, std::pair<const char*, size_t>>>(
-        "name", SyscallType::kCharArray, name));
+    AddField(std::make_unique<DynamicArrayField<zx_info_maps_t, char, size_t>>(
+        "name", SyscallType::kChar, name));
     AddField(std::make_unique<ClassField<zx_info_maps_t, zx_vaddr_t>>("base", SyscallType::kVaddr,
                                                                       base));
     AddField(
@@ -566,9 +566,8 @@ class ZxInfoProcessHandleStats : public Class<zx_info_process_handle_stats_t> {
 
  private:
   ZxInfoProcessHandleStats() : Class("zx_info_process_handle_stats_t") {
-    AddField(std::make_unique<
-             ClassField<zx_info_process_handle_stats_t, std::pair<const uint32_t*, int>>>(
-        "handle_count", SyscallType::kUint32ArrayDecimal, handle_count));
+    AddField(std::make_unique<DynamicArrayField<zx_info_process_handle_stats_t, uint32_t, int>>(
+        "handle_count", SyscallType::kUint32, handle_count));
   }
   ZxInfoProcessHandleStats(const ZxInfoProcessHandleStats&) = delete;
   ZxInfoProcessHandleStats& operator=(const ZxInfoProcessHandleStats&) = delete;
@@ -606,8 +605,8 @@ class ZxInfoResource : public Class<zx_info_resource_t> {
         "base", SyscallType::kUint64, base));
     AddField(
         std::make_unique<ClassField<zx_info_resource_t, size_t>>("size", SyscallType::kSize, size));
-    AddField(std::make_unique<ClassField<zx_info_resource_t, std::pair<const char*, size_t>>>(
-        "name", SyscallType::kCharArray, name));
+    AddField(std::make_unique<DynamicArrayField<zx_info_resource_t, char, size_t>>(
+        "name", SyscallType::kChar, name));
   }
   ZxInfoResource(const ZxInfoResource&) = delete;
   ZxInfoResource& operator=(const ZxInfoResource&) = delete;
@@ -716,8 +715,8 @@ class ZxCpuSet : public Class<zx_cpu_set_t> {
 
  private:
   ZxCpuSet() : Class("zx_cpu_set_t") {
-    AddField(std::make_unique<ClassField<zx_cpu_set_t, std::pair<const uint64_t*, int>>>(
-        "mask", SyscallType::kUint64ArrayHexa, mask));
+    AddField(std::make_unique<DynamicArrayField<zx_cpu_set_t, uint64_t, int>>(
+        "mask", SyscallType::kUint64Hexa, mask));
   }
   ZxCpuSet(const ZxCpuSet&) = delete;
   ZxCpuSet& operator=(const ZxCpuSet&) = delete;
@@ -881,8 +880,8 @@ class ZxInfoVmo : public Class<zx_info_vmo_t> {
   ZxInfoVmo() : Class("zx_info_vmo_t") {
     AddField(
         std::make_unique<ClassField<zx_info_vmo_t, zx_koid_t>>("koid", SyscallType::kKoid, koid));
-    AddField(std::make_unique<ClassField<zx_info_vmo_t, std::pair<const char*, size_t>>>(
-        "name", SyscallType::kCharArray, name));
+    AddField(std::make_unique<DynamicArrayField<zx_info_vmo_t, char, size_t>>(
+        "name", SyscallType::kChar, name));
     AddField(std::make_unique<ClassField<zx_info_vmo_t, uint64_t>>(
         "size_bytes", SyscallType::kUint64, size_bytes));
     AddField(std::make_unique<ClassField<zx_info_vmo_t, zx_koid_t>>(
@@ -978,14 +977,14 @@ class ZxPacketUser : public Class<zx_packet_user_t> {
 
  private:
   ZxPacketUser() : Class("zx_packet_user_t") {
-    AddField(std::make_unique<ClassField<zx_packet_user_t, std::pair<const uint64_t*, int>>>(
-        "u64", SyscallType::kUint64ArrayHexa, u64));
-    AddField(std::make_unique<ClassField<zx_packet_user_t, std::pair<const uint32_t*, int>>>(
-        "u32", SyscallType::kUint32ArrayHexa, u32));
-    AddField(std::make_unique<ClassField<zx_packet_user_t, std::pair<const uint16_t*, int>>>(
-        "u16", SyscallType::kUint16ArrayHexa, u16));
-    AddField(std::make_unique<ClassField<zx_packet_user_t, std::pair<const uint8_t*, int>>>(
-        "u8", SyscallType::kUint8ArrayHexa, c8));
+    AddField(std::make_unique<DynamicArrayField<zx_packet_user_t, uint64_t, int>>(
+        "u64", SyscallType::kUint64Hexa, u64));
+    AddField(std::make_unique<DynamicArrayField<zx_packet_user_t, uint32_t, int>>(
+        "u32", SyscallType::kUint32Hexa, u32));
+    AddField(std::make_unique<DynamicArrayField<zx_packet_user_t, uint16_t, int>>(
+        "u16", SyscallType::kUint16Hexa, u16));
+    AddField(std::make_unique<DynamicArrayField<zx_packet_user_t, uint8_t, int>>(
+        "u8", SyscallType::kUint8Hexa, c8));
   }
   ZxPacketUser(const ZxPacketUser&) = delete;
   ZxPacketUser& operator=(const ZxPacketUser&) = delete;
@@ -1141,14 +1140,12 @@ class ZxPacketGuestMemX86 : public Class<zx_packet_guest_mem_x86_t> {
         "addr", SyscallType::kGpAddr, addr));
     AddField(std::make_unique<ClassField<zx_packet_guest_mem_x86_t, uint8_t>>(
         "inst_len", SyscallType::kUint8, inst_len));
-    AddField(
-        std::make_unique<ClassField<zx_packet_guest_mem_x86_t, std::pair<const uint8_t*, int>>>(
-            "inst_buf", SyscallType::kUint8ArrayHexa, inst_buf));
+    AddField(std::make_unique<DynamicArrayField<zx_packet_guest_mem_x86_t, uint8_t, int>>(
+        "inst_buf", SyscallType::kUint8Hexa, inst_buf));
     AddField(std::make_unique<ClassField<zx_packet_guest_mem_x86_t, uint8_t>>(
         "default_operand_size", SyscallType::kUint8, default_operand_size));
-    AddField(
-        std::make_unique<ClassField<zx_packet_guest_mem_x86_t, std::pair<const uint8_t*, int>>>(
-            "reserved", SyscallType::kUint8ArrayHexa, reserved));
+    AddField(std::make_unique<DynamicArrayField<zx_packet_guest_mem_x86_t, uint8_t, int>>(
+        "reserved", SyscallType::kUint8Hexa, reserved));
   }
   ZxPacketGuestMemX86(const ZxPacketGuestMemX86&) = delete;
   ZxPacketGuestMemX86& operator=(const ZxPacketGuestMemX86&) = delete;
@@ -1196,8 +1193,8 @@ class ZxPacketGuestIo : public Class<zx_packet_guest_io_t> {
         "u16", SyscallType::kUint16, u16));
     AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint32_t>>(
         "u32", SyscallType::kUint32, u32));
-    AddField(std::make_unique<ClassField<zx_packet_guest_io_t, std::pair<const uint8_t*, int>>>(
-        "data", SyscallType::kUint8ArrayHexa, data));
+    AddField(std::make_unique<DynamicArrayField<zx_packet_guest_io_t, uint8_t, int>>(
+        "data", SyscallType::kUint8Hexa, data));
     AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint64_t>>(
         "reserved0", SyscallType::kUint64, reserved0));
     AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint64_t>>(
@@ -2079,9 +2076,8 @@ class ZxThreadStateDebugRegsX86 : public Class<zx_thread_state_debug_regs_x86_t>
 
  private:
   ZxThreadStateDebugRegsX86() : Class("zx_thread_state_debug_regs_x86_t") {
-    AddField(std::make_unique<
-             ClassField<zx_thread_state_debug_regs_x86_t, std::pair<const uint64_t*, int>>>(
-        "dr", SyscallType::kUint64ArrayHexa, dr));
+    AddField(std::make_unique<DynamicArrayField<zx_thread_state_debug_regs_x86_t, uint64_t, int>>(
+        "dr", SyscallType::kUint64Hexa, dr));
     AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_x86_t, uint64_t>>(
         "dr6", SyscallType::kUint64Hexa, dr6));
     AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_x86_t, uint64_t>>(
@@ -2117,9 +2113,9 @@ class ZxThreadStateGeneralRegsAArch64 : public Class<zx_thread_state_general_reg
 
  private:
   ZxThreadStateGeneralRegsAArch64() : Class("zx_thread_state_general_regs_aarch64_t") {
-    AddField(std::make_unique<
-             ClassField<zx_thread_state_general_regs_aarch64_t, std::pair<const uint64_t*, int>>>(
-        "r", SyscallType::kUint64ArrayHexa, r));
+    AddField(
+        std::make_unique<DynamicArrayField<zx_thread_state_general_regs_aarch64_t, uint64_t, int>>(
+            "r", SyscallType::kUint64Hexa, r));
     AddField(std::make_unique<ClassField<zx_thread_state_general_regs_aarch64_t, uint64_t>>(
         "lr", SyscallType::kUint64Hexa, lr));
     AddField(std::make_unique<ClassField<zx_thread_state_general_regs_aarch64_t, uint64_t>>(
@@ -2256,9 +2252,8 @@ class ZxThreadStateFpRegsX86 : public Class<zx_thread_state_fp_regs_x86_t> {
         "fip", SyscallType::kUint64Hexa, fip));
     AddField(std::make_unique<ClassField<zx_thread_state_fp_regs_x86_t, uint64_t>>(
         "fdp", SyscallType::kUint64Hexa, fdp));
-    AddField(std::make_unique<
-             ClassField<zx_thread_state_fp_regs_x86_t, std::pair<const zx_uint128_t*, int>>>(
-        "st", SyscallType::kUint128ArrayHexa, st));
+    AddField(std::make_unique<DynamicArrayField<zx_thread_state_fp_regs_x86_t, zx_uint128_t, int>>(
+        "st", SyscallType::kUint128Hexa, st));
   }
   ZxThreadStateFpRegsX86(const ZxThreadStateFpRegsX86&) = delete;
   ZxThreadStateFpRegsX86& operator=(const ZxThreadStateFpRegsX86&) = delete;
@@ -2291,10 +2286,9 @@ class ZxThreadStateVectorRegsAArch64 : public Class<zx_thread_state_vector_regs_
         "fpcr", SyscallType::kUint32Hexa, fpcr));
     AddField(std::make_unique<ClassField<zx_thread_state_vector_regs_aarch64_t, uint32_t>>(
         "fpsr", SyscallType::kUint32Hexa, fpsr));
-    AddField(
-        std::make_unique<
-            ClassField<zx_thread_state_vector_regs_aarch64_t, std::pair<const zx_uint128_t*, int>>>(
-            "v", SyscallType::kUint128ArrayHexa, v));
+    AddField(std::make_unique<
+             DynamicArrayField<zx_thread_state_vector_regs_aarch64_t, zx_uint128_t, int>>(
+        "v", SyscallType::kUint128Hexa, v));
   }
   ZxThreadStateVectorRegsAArch64(const ZxThreadStateVectorRegsAArch64&) = delete;
   ZxThreadStateVectorRegsAArch64& operator=(const ZxThreadStateVectorRegsAArch64&) = delete;
@@ -2321,9 +2315,9 @@ class ZxThreadStateVectorRegsX86Zmm : public Class<zx_thread_state_vector_regs_x
 
  private:
   ZxThreadStateVectorRegsX86Zmm() : Class("zx_thread_state_vector_regs_x86_zmm_t") {
-    AddField(std::make_unique<
-             ClassField<zx_thread_state_vector_regs_x86_zmm_t, std::pair<const uint64_t*, int>>>(
-        "v", SyscallType::kUint64ArrayHexa, v));
+    AddField(
+        std::make_unique<DynamicArrayField<zx_thread_state_vector_regs_x86_zmm_t, uint64_t, int>>(
+            "v", SyscallType::kUint64Hexa, v));
   }
   ZxThreadStateVectorRegsX86Zmm(const ZxThreadStateVectorRegsX86Zmm&) = delete;
   ZxThreadStateVectorRegsX86Zmm& operator=(const ZxThreadStateVectorRegsX86Zmm&) = delete;
@@ -2359,9 +2353,8 @@ class ZxThreadStateVectorRegsX86 : public Class<zx_thread_state_vector_regs_x86_
     AddField(std::make_unique<ArrayClassField<zx_thread_state_vector_regs_x86_t,
                                               zx_thread_state_vector_regs_x86_zmm_t>>(
         "zmm", zmm, ZxThreadStateVectorRegsX86Zmm::GetClass()));
-    AddField(std::make_unique<
-             ClassField<zx_thread_state_vector_regs_x86_t, std::pair<const uint64_t*, int>>>(
-        "opmask", SyscallType::kUint64ArrayHexa, opmask));
+    AddField(std::make_unique<DynamicArrayField<zx_thread_state_vector_regs_x86_t, uint64_t, int>>(
+        "opmask", SyscallType::kUint64Hexa, opmask));
     AddField(std::make_unique<ClassField<zx_thread_state_vector_regs_x86_t, uint32_t>>(
         "mxcsr", SyscallType::kUint32Hexa, mxcsr));
   }
@@ -2402,8 +2395,8 @@ class ZxVcpuIo : public Class<zx_vcpu_io_t> {
         std::make_unique<ClassField<zx_vcpu_io_t, uint16_t>>("u16", SyscallType::kUint16Hexa, u16));
     AddField(
         std::make_unique<ClassField<zx_vcpu_io_t, uint32_t>>("u32", SyscallType::kUint32Hexa, u32));
-    AddField(std::make_unique<ClassField<zx_vcpu_io_t, std::pair<const uint8_t*, int>>>(
-        "data", SyscallType::kUint8ArrayHexa, data));
+    AddField(std::make_unique<DynamicArrayField<zx_vcpu_io_t, uint8_t, int>>(
+        "data", SyscallType::kUint8Hexa, data));
   }
   ZxVcpuIo(const ZxVcpuIo&) = delete;
   ZxVcpuIo& operator=(const ZxVcpuIo&) = delete;
@@ -2432,8 +2425,8 @@ class ZxVcpuStateAArch64 : public Class<zx_vcpu_state_aarch64_t> {
 
  private:
   ZxVcpuStateAArch64() : Class("zx_vcpu_state_aarch64_t") {
-    AddField(std::make_unique<ClassField<zx_vcpu_state_aarch64_t, std::pair<const uint64_t*, int>>>(
-        "x", SyscallType::kUint64ArrayHexa, x));
+    AddField(std::make_unique<DynamicArrayField<zx_vcpu_state_aarch64_t, uint64_t, int>>(
+        "x", SyscallType::kUint64Hexa, x));
     AddField(std::make_unique<ClassField<zx_vcpu_state_aarch64_t, uint64_t>>(
         "sp", SyscallType::kUint64Hexa, sp));
     AddField(std::make_unique<ClassField<zx_vcpu_state_aarch64_t, uint32_t>>(

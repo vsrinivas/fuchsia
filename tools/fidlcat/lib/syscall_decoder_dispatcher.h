@@ -190,6 +190,22 @@ class ArrayField : public ClassFieldBase<ClassType> {
   std::pair<const Type*, int> (*get_)(const ClassType* from);
 };
 
+// Define a class field which is an array of base type items. The size of the array is dynamic.
+template <typename ClassType, typename Type, typename SizeType>
+class DynamicArrayField : public ClassFieldBase<ClassType> {
+ public:
+  DynamicArrayField(std::string_view name, SyscallType syscall_type,
+                    std::pair<const Type*, SizeType> (*get)(const ClassType* from))
+      : ClassFieldBase<ClassType>(name, syscall_type), get_(get) {}
+
+  void Display(const ClassType* object, debug_ipc::Arch arch,
+               fidl_codec::PrettyPrinter& printer) const override;
+
+ private:
+  // Function which can extract the address of the field for a given object.
+  std::pair<const Type*, SizeType> (*get_)(const ClassType* from);
+};
+
 // Define a class field which is a class.
 template <typename ClassType, typename Type>
 class ClassClassField : public ClassFieldBase<ClassType> {
@@ -280,6 +296,14 @@ class Class {
 
   template <typename Type>
   ArrayField<ClassType, Type>* AddField(std::unique_ptr<ArrayField<ClassType, Type>> field) {
+    auto result = field.get();
+    fields_.push_back(std::move(field));
+    return result;
+  }
+
+  template <typename Type, typename SizeType>
+  DynamicArrayField<ClassType, Type, SizeType>* AddField(
+      std::unique_ptr<DynamicArrayField<ClassType, Type, SizeType>> field) {
     auto result = field.get();
     fields_.push_back(std::move(field));
     return result;
@@ -1989,27 +2013,6 @@ inline void DisplayValue<bool>(SyscallType type, bool value, fidl_codec::PrettyP
 }
 
 template <>
-inline void DisplayValue<std::pair<const char*, size_t>>(SyscallType type,
-                                                         std::pair<const char*, size_t> value,
-                                                         fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kCharArray:
-      printer << fidl_codec::Red << '"';
-      for (size_t i = 0; i < value.second; ++i) {
-        if (value.first[i] == 0) {
-          break;
-        }
-        printer << value.first[i];
-      }
-      printer << '"' << fidl_codec::ResetColor;
-      break;
-    default:
-      printer << "unimplemented char array value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
 inline void DisplayValue<int32_t>(SyscallType type, int32_t value,
                                   fidl_codec::PrettyPrinter& printer) {
   switch (type) {
@@ -2073,29 +2076,6 @@ inline void DisplayValue<uint8_t>(SyscallType type, uint8_t value,
 }
 
 template <>
-inline void DisplayValue<std::pair<const uint8_t*, int>>(SyscallType type,
-                                                         std::pair<const uint8_t*, int> value,
-                                                         fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kUint8ArrayDecimal:
-    case SyscallType::kUint8ArrayHexa: {
-      const char* separator = "";
-      for (int i = 0; i < value.second; ++i) {
-        printer << separator;
-        DisplayValue(
-            (type == SyscallType::kUint8ArrayHexa) ? SyscallType::kUint8Hexa : SyscallType::kUint8,
-            value.first[i], printer);
-        separator = ", ";
-      }
-      break;
-    }
-    default:
-      printer << "unimplemented uint8_t array value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
 inline void DisplayValue<uint16_t>(SyscallType type, uint16_t value,
                                    fidl_codec::PrettyPrinter& printer) {
   switch (type) {
@@ -2110,29 +2090,6 @@ inline void DisplayValue<uint16_t>(SyscallType type, uint16_t value,
       break;
     default:
       printer << "unimplemented uint16_t value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
-inline void DisplayValue<std::pair<const uint16_t*, int>>(SyscallType type,
-                                                          std::pair<const uint16_t*, int> value,
-                                                          fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kUint16ArrayDecimal:
-    case SyscallType::kUint16ArrayHexa: {
-      const char* separator = "";
-      for (int i = 0; i < value.second; ++i) {
-        printer << separator;
-        DisplayValue((type == SyscallType::kUint16ArrayHexa) ? SyscallType::kUint16Hexa
-                                                             : SyscallType::kUint16,
-                     value.first[i], printer);
-        separator = ", ";
-      }
-      break;
-    }
-    default:
-      printer << "unimplemented uint16_t array value " << static_cast<uint32_t>(type);
       break;
   }
 }
@@ -2330,29 +2287,6 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
 }
 
 template <>
-inline void DisplayValue<std::pair<const uint32_t*, int>>(SyscallType type,
-                                                          std::pair<const uint32_t*, int> value,
-                                                          fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kUint32ArrayDecimal:
-    case SyscallType::kUint32ArrayHexa: {
-      const char* separator = "";
-      for (int i = 0; i < value.second; ++i) {
-        printer << separator;
-        DisplayValue((type == SyscallType::kUint32ArrayHexa) ? SyscallType::kUint32Hexa
-                                                             : SyscallType::kUint32,
-                     value.first[i], printer);
-        separator = ", ";
-      }
-      break;
-    }
-    default:
-      printer << "unimplemented uint32_t array value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
 inline void DisplayValue<uint64_t>(SyscallType type, uint64_t value,
                                    fidl_codec::PrettyPrinter& printer) {
   switch (type) {
@@ -2391,29 +2325,6 @@ inline void DisplayValue<uint64_t>(SyscallType type, uint64_t value,
 #endif
     default:
       printer << "unimplemented uint64_t value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
-inline void DisplayValue<std::pair<const uint64_t*, int>>(SyscallType type,
-                                                          std::pair<const uint64_t*, int> value,
-                                                          fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kUint64ArrayDecimal:
-    case SyscallType::kUint64ArrayHexa: {
-      const char* separator = "";
-      for (int i = 0; i < value.second; ++i) {
-        printer << separator;
-        DisplayValue((type == SyscallType::kUint64ArrayHexa) ? SyscallType::kUint64Hexa
-                                                             : SyscallType::kUint64,
-                     value.first[i], printer);
-        separator = ", ";
-      }
-      break;
-    }
-    default:
-      printer << "unimplemented uint64_t array value " << static_cast<uint32_t>(type);
       break;
   }
 }
@@ -2463,26 +2374,6 @@ inline void DisplayValue<zx_uint128_t>(SyscallType type, zx_uint128_t value,
   }
 }
 
-template <>
-inline void DisplayValue<std::pair<const zx_uint128_t*, int>>(
-    SyscallType type, std::pair<const zx_uint128_t*, int> value,
-    fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kUint128ArrayHexa: {
-      const char* separator = "";
-      for (int i = 0; i < value.second; ++i) {
-        printer << separator;
-        DisplayValue(SyscallType::kUint128Hexa, value.first[i], printer);
-        separator = ", ";
-      }
-      break;
-    }
-    default:
-      printer << "unimplemented zx_uint128_t array value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
 template <typename ClassType, typename Type>
 bool ClassFieldCondition<ClassType, Type>::True(const ClassType* object, debug_ipc::Arch /*arch*/) {
   return field_->get()(object) == value_;
@@ -2522,6 +2413,41 @@ void ArrayField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Ar
     separator = ", ";
   }
   printer << " ]\n";
+}
+
+template <typename Type, typename SizeType>
+inline void DisplayArrayValue(fidl_codec::PrettyPrinter& printer, SyscallType syscall_type,
+                              const Type* vector, const SizeType size) {
+  printer << "[";
+  const char* separator = " ";
+  for (SizeType i = 0; i < size; ++i) {
+    printer << separator;
+    DisplayValue<Type>(syscall_type, vector[i], printer);
+    separator = ", ";
+  }
+  printer << " ]\n";
+}
+
+template <>
+inline void DisplayArrayValue<char, size_t>(fidl_codec::PrettyPrinter& printer,
+                                            SyscallType syscall_type, const char* vector,
+                                            const size_t size) {
+  printer.DisplayString(std::string_view(vector, size));
+  printer << "\n";
+}
+
+template <typename ClassType, typename Type, typename SizeType>
+void DynamicArrayField<ClassType, Type, SizeType>::Display(
+    const ClassType* object, debug_ipc::Arch /*arch*/, fidl_codec::PrettyPrinter& printer) const {
+  printer << ClassFieldBase<ClassType>::name() << ": ";
+  printer << "vector<";
+  printer << fidl_codec::Green;
+  printer << TypeName(ClassFieldBase<ClassType>::syscall_type());
+  printer << fidl_codec::ResetColor << "> = ";
+
+  std::pair<const Type*, SizeType> vector_and_size = get_(object);
+  DisplayArrayValue<Type, SizeType>(printer, ClassFieldBase<ClassType>::syscall_type(),
+                                    vector_and_size.first, vector_and_size.second);
 }
 
 template <typename ClassType, typename Type>
