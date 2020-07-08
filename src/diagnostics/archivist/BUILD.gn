@@ -19,6 +19,7 @@ rustc_library("lib") {
     "fidl:controller-rustc",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream-rustc",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",

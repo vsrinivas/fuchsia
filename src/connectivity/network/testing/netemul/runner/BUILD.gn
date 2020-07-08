@@ -83,6 +83,7 @@ source_set("src") {
 
   public_deps = [
     "model",
+    "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger",
     "//sdk/lib/sys/cpp",

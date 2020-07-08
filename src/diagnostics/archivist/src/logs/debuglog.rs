@@ -5,9 +5,12 @@
 // Read debug logs, convert them to LogMessages and serve them.
 
 use super::message::{Field, LogHierarchy, LogProperty, Message, Severity, METADATA_SIZE};
+use anyhow::Error;
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
+use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::stream::{unfold, Stream, TryStreamExt};
 use log::error;
@@ -38,11 +41,11 @@ impl DebugLog for KernelDebugLog {
 }
 
 impl KernelDebugLog {
-    pub fn new() -> Result<Self, zx::Status> {
-        let resource = zx::Resource::from(zx::Handle::invalid());
-        Ok(KernelDebugLog {
-            debuglogger: zx::DebugLog::create(&resource, zx::DebugLogOpts::READABLE)?,
-        })
+    /// Connects to `fuchsia.boot.ReadOnlyLog` to retrieve a handle.
+    pub async fn new() -> Result<Self, Error> {
+        let boot_log = connect_to_service::<ReadOnlyLogMarker>()?;
+        let debuglogger = boot_log.get().await?;
+        Ok(KernelDebugLog { debuglogger })
     }
 }
 

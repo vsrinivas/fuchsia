@@ -1,9 +1,17 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.ReadOnlyLog"
+            ]
+        }
+    },
     "program": {
         "binary": "bin/sandbox_unittest"
     },
     "sandbox": {
         "services": [
+            "fuchsia.boot.ReadOnlyLog",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"

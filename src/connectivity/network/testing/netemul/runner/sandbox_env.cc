@@ -4,6 +4,7 @@
 
 #include "sandbox_env.h"
 
+#include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -68,6 +69,10 @@ void SandboxEnv::ConnectNetworkTun(fidl::InterfaceRequest<fuchsia::net::tun::Con
   }
 
   network_tun_->Connect(std::move(req));
+}
+
+void SandboxEnv::ConnectToReadOnlyLog(fidl::InterfaceRequest<fuchsia::boot::ReadOnlyLog> req) {
+  env_services_->Connect(std::move(req));
 }
 
 SandboxEnv::SandboxEnv(std::shared_ptr<sys::ServiceDirectory> env_services,

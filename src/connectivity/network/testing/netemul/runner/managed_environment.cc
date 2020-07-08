@@ -4,6 +4,7 @@
 
 #include "managed_environment.h"
 
+#include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/netemul/guest/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
@@ -111,6 +112,13 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
       }));
 
   bool disable_klog = !LogListener::IsKlogsEnabled(options);
+  if (!disable_klog) {
+    services->AddService(fidl::InterfaceRequestHandler<fuchsia::boot::ReadOnlyLog>(
+        [this](fidl::InterfaceRequest<fuchsia::boot::ReadOnlyLog> request) {
+          // Connect the sandbox to our namespace rather than its sandbox parent.
+          sandbox_env_->ConnectToReadOnlyLog(std::move(request));
+        }));
+  }
 
   // Inject LogSink service
   services->AddServiceWithLaunchInfo(

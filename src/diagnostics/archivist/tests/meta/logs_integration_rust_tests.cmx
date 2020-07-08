@@ -4,7 +4,11 @@
             "injected-services": {
                 "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
                 "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
-            }
+            },
+            "system-services": [
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog"
+            ]
         }
     },
     "program": {
@@ -12,6 +16,8 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.boot.ReadOnlyLog",
+            "fuchsia.boot.WriteOnlyLog",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",

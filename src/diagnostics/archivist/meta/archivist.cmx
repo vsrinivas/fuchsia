@@ -12,6 +12,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.boot.ReadOnlyLog",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.internal.ComponentEventProvider",
             "fuchsia.sys.internal.LogConnector",

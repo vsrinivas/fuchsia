@@ -7,6 +7,7 @@ use fidl::{
     endpoints::{ClientEnd, ServerEnd, ServiceMarker},
     Socket, SocketOpts,
 };
+use fidl_fuchsia_boot::WriteOnlyLogMarker;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fidl_fuchsia_sys::LauncherMarker;
@@ -108,12 +109,9 @@ async fn listen_for_klog_routed_stdio() {
         "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/stdio_puppet.cmx",
     );
 
-    let stdout_resource = zx::Resource::from(zx::Handle::invalid());
-    let stdout_debuglog =
-        zx::DebugLog::create(&stdout_resource, zx::DebugLogOpts::empty()).unwrap();
-    let stderr_resource = zx::Resource::from(zx::Handle::invalid());
-    let stderr_debuglog =
-        zx::DebugLog::create(&stderr_resource, zx::DebugLogOpts::empty()).unwrap();
+    let boot_log = connect_to_service::<WriteOnlyLogMarker>().unwrap();
+    let stdout_debuglog = boot_log.get().await.unwrap();
+    let stderr_debuglog = boot_log.get().await.unwrap();
 
     let app = app_builder
         .stdout(stdout_debuglog)

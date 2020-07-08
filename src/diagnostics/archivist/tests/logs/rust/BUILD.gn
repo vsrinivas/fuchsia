@@ -15,6 +15,7 @@ group("rust") {
 rustc_test("bin") {
   name = "logs_integration_rust_tests"
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",

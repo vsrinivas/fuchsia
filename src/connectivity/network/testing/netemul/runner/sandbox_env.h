@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_SANDBOX_ENV_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_SANDBOX_ENV_H_
 
+#include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include <memory>
@@ -57,6 +58,7 @@ class SandboxEnv {
   std::weak_ptr<ManagedEnvironment> guest_env_;
 
   void ConnectNetworkTun(fidl::InterfaceRequest<fuchsia::net::tun::Control> req);
+  void ConnectToReadOnlyLog(fidl::InterfaceRequest<fuchsia::boot::ReadOnlyLog> req);
 
  private:
   void ConnectDevfs(zx::channel req);

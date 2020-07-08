@@ -83,7 +83,9 @@ fn main() -> Result<(), Error> {
     }
 
     if !opt.disable_klog {
-        let debuglog = logs::KernelDebugLog::new().context("Failed to read kernel logs")?;
+        let debuglog = executor
+            .run_singlethreaded(logs::KernelDebugLog::new())
+            .context("Failed to read kernel logs")?;
         fasync::spawn(archivist.log_manager().clone().drain_debuglog(debuglog));
     }
 
