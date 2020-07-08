@@ -5,35 +5,83 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/tuning/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
+#include <lib/zx/vmo.h>
 
 #include <cmath>
 
+#include <gmock/gmock.h>
+
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
+
+using AudioRenderUsage = fuchsia::media::AudioRenderUsage;
+using AudioSampleFormat = fuchsia::media::AudioSampleFormat;
+using testing::UnorderedElementsAre;
+using testing::UnorderedElementsAreArray;
 
 namespace media::audio::test {
 
 class ActivityReporterTest : public HermeticAudioTest {
  protected:
-  void TearDown() override {
-    audio_renderer_.Unbind();
-    audio_capturer_.Unbind();
+  void SetUp() override {
+    HermeticAudioTest::SetUp();
 
-    HermeticAudioTest::TearDown();
+    environment()->ConnectToService(activity_reporter_.NewRequest());
+    AddErrorHandler(activity_reporter_, "ActivityReporter");
   }
 
-  fuchsia::media::AudioRendererPtr audio_renderer_;
-  fuchsia::media::AudioCapturerPtr audio_capturer_;
+  AudioRendererShim<AudioSampleFormat::SIGNED_16>* CreateAndPlayWithUsage(AudioRenderUsage usage) {
+    auto format = Format::Create<AudioSampleFormat::SIGNED_16>(1, 8000).value();  // arbitrary
+    auto r = CreateAudioRenderer(format, 1024, usage);
+    r->renderer()->PlayNoReply(0, 0);
+    return r;
+  }
+
+  fuchsia::media::ActivityReporterPtr activity_reporter_;
 };
 
 // Test that the user is connected to the activity reporter.
-// TODO(50645): More complete testing of the integration with renderers
-TEST_F(ActivityReporterTest, ConnectToActivityReporter) {
-  fuchsia::media::ActivityReporterPtr activity_reporter;
-  environment()->ConnectToService(activity_reporter.NewRequest());
-  AddErrorHandler(activity_reporter, "ActivityReporter");
+TEST_F(ActivityReporterTest, AddAndRemove) {
+  std::vector<AudioRenderUsage> active_usages;
+  auto add_callback = [this, &active_usages](std::string name) {
+    active_usages.clear();
+    activity_reporter_->WatchRenderActivity(AddCallback(
+        name, [&active_usages](std::vector<AudioRenderUsage> u) { active_usages = u; }));
+  };
 
-  activity_reporter->WatchRenderActivity(AddCallback("WatchRenderActivity"));
+  // First call should return immediately, others should wait for updates.
+  add_callback("WatchRenderActivity InitalCall");
   ExpectCallback();
+  EXPECT_EQ(active_usages, std::vector<AudioRenderUsage>{});
+
+  add_callback("WatchRenderActivity AfterPlayBackground");
+  auto r1 = CreateAndPlayWithUsage(AudioRenderUsage::BACKGROUND);
+  ExpectCallback();
+  EXPECT_THAT(active_usages, UnorderedElementsAreArray({AudioRenderUsage::BACKGROUND}));
+
+  add_callback("WatchRenderActivity AfterPlayMedia");
+  auto r2 = CreateAndPlayWithUsage(AudioRenderUsage::MEDIA);
+  ExpectCallback();
+  EXPECT_THAT(active_usages,
+              UnorderedElementsAreArray({AudioRenderUsage::BACKGROUND, AudioRenderUsage::MEDIA}));
+
+  add_callback("WatchRenderActivity AfterPauseBackground");
+  r1->renderer()->PauseNoReply();
+  ExpectCallback();
+  EXPECT_THAT(active_usages, UnorderedElementsAreArray({AudioRenderUsage::MEDIA}));
+
+  add_callback("WatchRenderActivity AfterDisconnectMedia");
+  UnbindRenderer(r2);
+  ExpectCallback();
+  EXPECT_THAT(active_usages, UnorderedElementsAre());
+}
+
+TEST_F(ActivityReporterTest, DisconnectOnMultipleConcurrentCalls) {
+  activity_reporter_->WatchRenderActivity(AddCallback("WatchRenderActivity"));
+  ExpectCallback();
+
+  activity_reporter_->WatchRenderActivity(AddUnexpectedCallback("WatchRenderActivity Unexpected1"));
+  activity_reporter_->WatchRenderActivity(AddUnexpectedCallback("WatchRenderActivity Unexpected2"));
+  ExpectDisconnect(activity_reporter_);
 }
 
 }  // namespace media::audio::test

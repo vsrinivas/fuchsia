@@ -4,8 +4,8 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_TEST_TEST_FIXTURE_H_
 #define SRC_MEDIA_AUDIO_LIB_TEST_TEST_FIXTURE_H_
 
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
-#include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <zircon/errors.h>
@@ -60,6 +60,12 @@ class TestFixture : public ::gtest::RealLoopFixture {
     ptr.set_error_handler(std::move(cb));
     error_handlers_[ptr.channel().get()] = h;
   }
+  template <class T>
+  void AddErrorHandler(fidl::Binding<T>& binding, std::string name) {
+    auto [h, cb] = NewErrorHandler(name);
+    binding.set_error_handler(std::move(cb));
+    error_handlers_[binding.channel().get()] = h;
+  }
 
   // Retrieves a previously-added error handler.
   // Useful for direct calls to ExpectErrors or ExpectDisconnects. Tests that
@@ -67,6 +73,12 @@ class TestFixture : public ::gtest::RealLoopFixture {
   template <class T>
   std::shared_ptr<ErrorHandler> ErrorHandlerFor(fidl::InterfacePtr<T>& ptr) {
     auto eh = error_handlers_[ptr.channel().get()];
+    FX_CHECK(eh);
+    return eh;
+  }
+  template <class T>
+  std::shared_ptr<ErrorHandler> ErrorHandlerFor(fidl::Binding<T>& binding) {
+    auto eh = error_handlers_[binding.channel().get()];
     FX_CHECK(eh);
     return eh;
   }

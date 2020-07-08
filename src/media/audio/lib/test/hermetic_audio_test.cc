@@ -227,6 +227,26 @@ UltrasoundCapturerShim<SampleFormat>* HermeticAudioTest::CreateUltrasoundCapture
   return out;
 }
 
+void HermeticAudioTest::UnbindRenderer(RendererShimImpl* renderer) {
+  auto it = std::find_if(
+      renderers_.begin(), renderers_.end(),
+      [renderer](const std::unique_ptr<RendererShimImpl>& p) { return p.get() == renderer; });
+  FX_CHECK(it != renderers_.end());
+
+  renderer->renderer().Unbind();
+  renderers_.erase(it);
+}
+
+void HermeticAudioTest::UnbindCapturer(CapturerShimImpl* capturer) {
+  auto it = std::find_if(
+      capturers_.begin(), capturers_.end(),
+      [capturer](const std::unique_ptr<CapturerShimImpl>& p) { return p.get() == capturer; });
+  FX_CHECK(it != capturers_.end());
+
+  capturer->capturer().Unbind();
+  capturers_.erase(it);
+}
+
 void HermeticAudioTest::WatchForDeviceArrivals() {
   audio_dev_enum_.events().OnDeviceAdded = [this](fuchsia::media::AudioDeviceInfo info) {
     if (token_to_unique_id_.count(info.token_id) > 0) {

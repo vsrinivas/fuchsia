@@ -77,6 +77,10 @@ class HermeticAudioTest : public TestFixture {
                                                                  size_t frame_count,
                                                                  bool wait_for_creation = true);
 
+  // Unbind and forget about the given renderer/capturer.
+  void UnbindRenderer(RendererShimImpl* renderer);
+  void UnbindCapturer(CapturerShimImpl* capturer);
+
   // Takes ownership of the AudioDeviceEnumerator. This is useful when tests need to watch for
   // low-level device enumeration events. This is incompatible with CreateInput and CreateOutput.
   fuchsia::media::AudioDeviceEnumeratorPtr TakeOwnershipOfAudioDeviceEnumerator();
