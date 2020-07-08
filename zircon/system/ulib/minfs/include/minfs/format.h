@@ -130,6 +130,16 @@ struct Superblock {
   uint32_t oldest_revision;
 
   uint32_t reserved[2018];
+
+  uint32_t BlockSize() const {
+    // Either intentionally or unintenttionally, we do not want to change block
+    // size to anything other than kMinfsBlockSize yet. This is because changing
+    // block size might lead to format change and also because anything other
+    // than 8k is not well tested. So assert when we find block size other
+    // than 8k.
+    ZX_ASSERT(block_size == kMinfsBlockSize);
+    return block_size;
+  }
 };
 
 static_assert(sizeof(Superblock) == kMinfsBlockSize, "minfs info size is wrong");

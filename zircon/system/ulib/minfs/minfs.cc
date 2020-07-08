@@ -55,7 +55,7 @@ void FreeSlices(const Superblock* info, block_client::BlockDevice* device) {
     return;
   }
   extend_request_t request;
-  const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
+  const size_t kBlocksPerSlice = info->slice_size / info->BlockSize();
   if (info->ibm_slices) {
     request.length = info->ibm_slices;
     request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
@@ -180,12 +180,12 @@ zx_status_t CreateFvmData(const MountOptions& options, Superblock* info,
   info->slice_size = static_cast<uint32_t>(fvm_info.slice_size);
   SetMinfsFlagFvm(*info);
 
-  if (info->slice_size % kMinfsBlockSize) {
+  if (info->slice_size % info->BlockSize()) {
     FS_TRACE_ERROR("minfs mkfs: Slice size not multiple of minfs block: %u\n", info->slice_size);
     return ZX_ERR_IO_INVALID;
   }
 
-  const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
+  const size_t kBlocksPerSlice = info->slice_size / info->BlockSize();
   extend_request_t request;
   request.length = 1;
   request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
@@ -443,7 +443,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
       return ZX_ERR_BAD_STATE;
     }
   } else {
-    const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
+    const size_t kBlocksPerSlice = info->slice_size / info->BlockSize();
     zx_status_t status;
 #ifdef __Fuchsia__
     status = CheckSlices(info, kBlocksPerSlice, device, /*repair_slices=*/false);
@@ -463,13 +463,13 @@ zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
 BlockOffsets::BlockOffsets(const Bcache& bc, const SuperblockManager& sb) {
   if (bc.extent_lengths_.size() > 0) {
     ZX_ASSERT(bc.extent_lengths_.size() == kExtentCount);
-    ibm_block_count_ = static_cast<blk_t>(bc.extent_lengths_[1] / kMinfsBlockSize);
-    abm_block_count_ = static_cast<blk_t>(bc.extent_lengths_[2] / kMinfsBlockSize);
-    ino_block_count_ = static_cast<blk_t>(bc.extent_lengths_[3] / kMinfsBlockSize);
-    integrity_block_count_ = static_cast<blk_t>(bc.extent_lengths_[4] / kMinfsBlockSize);
-    dat_block_count_ = static_cast<blk_t>(bc.extent_lengths_[5] / kMinfsBlockSize);
+    ibm_block_count_ = static_cast<blk_t>(bc.extent_lengths_[1] / sb.Info().BlockSize());
+    abm_block_count_ = static_cast<blk_t>(bc.extent_lengths_[2] / sb.Info().BlockSize());
+    ino_block_count_ = static_cast<blk_t>(bc.extent_lengths_[3] / sb.Info().BlockSize());
+    integrity_block_count_ = static_cast<blk_t>(bc.extent_lengths_[4] / sb.Info().BlockSize());
+    dat_block_count_ = static_cast<blk_t>(bc.extent_lengths_[5] / sb.Info().BlockSize());
 
-    ibm_start_block_ = static_cast<blk_t>(bc.extent_lengths_[0] / kMinfsBlockSize);
+    ibm_start_block_ = static_cast<blk_t>(bc.extent_lengths_[0] / sb.Info().BlockSize());
     abm_start_block_ = ibm_start_block_ + ibm_block_count_;
     ino_start_block_ = abm_start_block_ + abm_block_count_;
     integrity_start_block_ = ino_start_block_ + ino_block_count_;
@@ -1033,10 +1033,11 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
 
   std::unique_ptr<PersistentStorage> storage(
 #ifdef __Fuchsia__
-      new PersistentStorage(bc->device(), sb.get(), kMinfsBlockSize, nullptr,
+      new PersistentStorage(bc->device(), sb.get(), sb->Info().BlockSize(), nullptr,
                             std::move(block_allocator_meta)));
 #else
-      new PersistentStorage(sb.get(), kMinfsBlockSize, nullptr, std::move(block_allocator_meta)));
+      new PersistentStorage(sb.get(), sb->Info().BlockSize(), nullptr,
+                            std::move(block_allocator_meta)));
 #endif
 
   std::unique_ptr<Allocator> block_allocator;
@@ -1170,7 +1171,7 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
   if (options.repair_filesystem) {
     if (info.flags & kMinfsFlagFVM) {
       // After replaying the journal, it's now safe to repair the FVM slices.
-      const size_t kBlocksPerSlice = info.slice_size / kMinfsBlockSize;
+      const size_t kBlocksPerSlice = info.slice_size / info.BlockSize();
       zx_status_t status;
       status = CheckSlices(&info, kBlocksPerSlice, device, /*repair_slices=*/true);
       if (status != ZX_OK) {
@@ -1223,8 +1224,8 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
 zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperblock* out) {
   FS_TRACE_INFO("minfs: Replaying journal\n");
 
-  zx_status_t status =
-      fs::ReplayJournal(bc, bc, JournalStartBlock(info), JournalBlocks(info), kMinfsBlockSize, out);
+  zx_status_t status = fs::ReplayJournal(bc, bc, JournalStartBlock(info), JournalBlocks(info),
+                                         info.BlockSize(), out);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Failed to replay journal\n");
     return status;
@@ -1242,18 +1243,18 @@ zx_status_t Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) {
 
   std::unique_ptr<storage::BlockingRingBuffer> journal_buffer;
   const uint64_t journal_entry_blocks = JournalBlocks(sb_->Info()) - fs::kJournalMetadataBlocks;
-  zx_status_t status =
-      storage::BlockingRingBuffer::Create(GetMutableBcache(), journal_entry_blocks, kMinfsBlockSize,
-                                          "minfs-journal-buffer", &journal_buffer);
+  zx_status_t status = storage::BlockingRingBuffer::Create(GetMutableBcache(), journal_entry_blocks,
+                                                           sb_->Info().BlockSize(),
+                                                           "minfs-journal-buffer", &journal_buffer);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Cannot create journal buffer\n");
     return status;
   }
 
   std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer;
-  status =
-      storage::BlockingRingBuffer::Create(GetMutableBcache(), WritebackCapacity(), kMinfsBlockSize,
-                                          "minfs-writeback-buffer", &writeback_buffer);
+  status = storage::BlockingRingBuffer::Create(GetMutableBcache(), WritebackCapacity(),
+                                               sb_->Info().BlockSize(), "minfs-writeback-buffer",
+                                               &writeback_buffer);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Cannot create writeback buffer\n");
     return status;
@@ -1273,7 +1274,7 @@ zx_status_t Minfs::InitializeUnjournalledWriteback() {
   }
   std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer;
   zx_status_t status = storage::BlockingRingBuffer::Create(
-      bc_.get(), WritebackCapacity(), kMinfsBlockSize, "minfs-writeback-buffer", &writeback_buffer);
+      bc_.get(), WritebackCapacity(), BlockSize(), "minfs-writeback-buffer", &writeback_buffer);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Cannot create data writeback buffer\n");
     return status;
@@ -1430,7 +1431,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
   }
 
   inodes = static_cast<uint32_t>(info.ino_slices * info.slice_size / kMinfsInodeSize);
-  blocks = static_cast<uint32_t>(info.dat_slices * info.slice_size / kMinfsBlockSize);
+  blocks = static_cast<uint32_t>(info.dat_slices * info.slice_size / info.BlockSize());
 #endif
   if ((info.flags & kMinfsFlagFVM) == 0) {
     inodes = kMinfsDefaultInodeCount;
@@ -1475,7 +1476,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
       non_dat_blocks += journal_blocks;
       if (non_dat_blocks >= blocks) {
         FS_TRACE_ERROR("mkfs: Partition size (%" PRIu64 " bytes) is too small\n",
-                       static_cast<uint64_t>(blocks) * kMinfsBlockSize);
+                       static_cast<uint64_t>(blocks) * info.BlockSize());
         return ZX_ERR_INVALID_ARGS;
       }
 
@@ -1530,7 +1531,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
   }
 
   // Write rootdir
-  uint8_t blk[kMinfsBlockSize];
+  uint8_t blk[info.BlockSize()];
   memset(blk, 0, sizeof(blk));
   InitializeDirectory(blk, kMinfsRootIno, kMinfsRootIno);
   if ((status = bc->Writeblk(info.dat_block + 1, blk)) != ZX_OK) {
@@ -1551,8 +1552,8 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
 
   // Write allocation bitmap
   for (uint32_t n = 0; n < abmblks; n++) {
-    void* bmdata = fs::GetBlock(kMinfsBlockSize, abm.StorageUnsafe()->GetData(), n);
-    memcpy(blk, bmdata, kMinfsBlockSize);
+    void* bmdata = fs::GetBlock(info.BlockSize(), abm.StorageUnsafe()->GetData(), n);
+    memcpy(blk, bmdata, info.BlockSize());
     if ((status = bc->Writeblk(info.abm_block + n, blk)) != ZX_OK) {
       return status;
     }
@@ -1560,8 +1561,8 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
 
   // Write inode bitmap
   for (uint32_t n = 0; n < ibmblks; n++) {
-    void* bmdata = fs::GetBlock(kMinfsBlockSize, ibm.StorageUnsafe()->GetData(), n);
-    memcpy(blk, bmdata, kMinfsBlockSize);
+    void* bmdata = fs::GetBlock(info.BlockSize(), ibm.StorageUnsafe()->GetData(), n);
+    memcpy(blk, bmdata, info.BlockSize());
     if ((status = bc->Writeblk(info.ibm_block + n, blk)) != ZX_OK) {
       return status;
     }
@@ -1578,7 +1579,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
   // Setup root inode
   Inode* ino = reinterpret_cast<Inode*>(&blk[0]);
   ino[kMinfsRootIno].magic = kMinfsMagicDir;
-  ino[kMinfsRootIno].size = kMinfsBlockSize;
+  ino[kMinfsRootIno].size = info.BlockSize();
   ino[kMinfsRootIno].block_count = 1;
   ino[kMinfsRootIno].link_count = 2;
   ino[kMinfsRootIno].dirent_count = 2;
@@ -1602,7 +1603,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
   fs::WriteBlockFn write_block_fn = [bc, info](fbl::Span<const uint8_t> buffer,
                                                uint64_t block_offset) {
     ZX_ASSERT(block_offset < JournalBlocks(info));
-    ZX_ASSERT(buffer.size() == kMinfsBlockSize);
+    ZX_ASSERT(buffer.size() == info.BlockSize());
     return bc->Writeblk(static_cast<blk_t>(JournalStartBlock(info) + block_offset), buffer.data());
   };
   ZX_ASSERT(fs::MakeJournal(JournalBlocks(info), write_block_fn) == ZX_OK);
@@ -1631,7 +1632,7 @@ zx_status_t Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_ma
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (bno >= soft_max) {
-    memset(data, 0, kMinfsBlockSize);
+    memset(data, 0, BlockSize());
     return ZX_OK;
   }
 

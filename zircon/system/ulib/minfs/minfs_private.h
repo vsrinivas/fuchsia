@@ -347,6 +347,16 @@ class Minfs :
   // InspectableFilesystem interface.
   const Superblock& Info() const final { return sb_->Info(); }
 
+  uint64_t BlockSize() const {
+    // Either intentionally or unintenttionally, we do not want to change block
+    // size to anything other than kMinfsBlockSize yet. This is because changing
+    // block size might lead to format change and also because anything other
+    // than 8k is not well tested. So assert when we find block size other
+    // than 8k.
+    ZX_ASSERT(Info().BlockSize() == kMinfsBlockSize);
+    return Info().BlockSize();
+  }
+
   const InspectableInodeManager* GetInodeManager() const final { return inodes_.get(); }
 
   const Allocator& GetBlockAllocator() const final { return *block_allocator_; }

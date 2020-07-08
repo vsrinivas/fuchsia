@@ -12,6 +12,7 @@
 #include <minfs/superblock.h>
 #include <zxtest/zxtest.h>
 
+#include "minfs/format.h"
 #include "minfs_private.h"
 
 namespace minfs {
@@ -193,8 +194,8 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
 
-  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.get(),
-                   request);
+  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup,
+                   vmoid.get(), request);
   ASSERT_OK(device.FifoTransaction(request, 2));
 
   // Try to correct the corrupted superblock.
@@ -236,8 +237,8 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
-  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.get(),
-                   request);
+  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup,
+                   vmoid.get(), request);
   ASSERT_OK(device.FifoTransaction(request, 2));
   // Try to correct the corrupted superblock.
   zx_status_t status = RepairSuperblock(transaction_handler.get(), &device,
@@ -272,8 +273,8 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
-  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.get(),
-                   request);
+  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup,
+                   vmoid.get(), request);
   ASSERT_OK(device.FifoTransaction(request, 2));
 
   uint8_t block[minfs::kMinfsBlockSize];
@@ -305,6 +306,22 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   ASSERT_GT(info.alloc_inode_count, 0);
   ASSERT_GT(backup.alloc_block_count, 0);
   ASSERT_GT(backup.alloc_inode_count, 0);
+}
+
+TEST(SuperblockTest, UnsupportedBlockSize) {
+  ASSERT_DEATH(([]() {
+    Superblock info = {};
+    info.block_size = kMinfsBlockSize - 1;
+    info.BlockSize();
+  }));
+}
+
+TEST(SuperblockTest, SupportedBlockSize) {
+  ASSERT_NO_DEATH(([]() {
+    Superblock info = {};
+    info.block_size = kMinfsBlockSize;
+    info.BlockSize();
+  }));
 }
 
 }  // namespace
