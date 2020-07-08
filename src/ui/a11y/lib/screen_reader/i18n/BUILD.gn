@@ -52,7 +52,6 @@ intl_strings("l10n") {
     "nb",
     "nl",
     "no",
-    "sv",
   ]
   library = "fuchsia.intl.l10n"
 }
