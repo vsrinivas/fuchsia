@@ -48,6 +48,11 @@ class Type {
   // Returns a readable representation of the type.
   virtual std::string Name() const = 0;
 
+  // Prints a colorized representation of the type.
+  virtual void PrettyPrint(PrettyPrinter& printer) const {
+    printer << Green << Name() << ResetColor;
+  };
+
   // Returns the size of this type when embedded in another object.
   virtual size_t InlineSize() const = 0;
 
@@ -473,6 +478,8 @@ class ArrayType : public ElementSequenceType {
 
   std::string Name() const override;
 
+  void PrettyPrint(PrettyPrinter& printer) const override;
+
   size_t InlineSize() const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
@@ -489,6 +496,8 @@ class VectorType : public ElementSequenceType {
       : ElementSequenceType(std::move(component_type)) {}
 
   std::string Name() const override;
+
+  void PrettyPrint(PrettyPrinter& printer) const override;
 
   size_t InlineSize() const override;
 

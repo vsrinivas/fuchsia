@@ -398,19 +398,19 @@ std::vector<int32_t> two_param_vector = {1, 2};
 }  // namespace
 
 TEST_DECODE_WIRE(Array1, Array1, R"({"b_1":["1"]})",
-                 "{ b_1: #gre#array<int32>#rst# = [ #blu#1#rst# ] }", one_param_array);
+                 "{ b_1: array<#gre#int32#rst#> = [ #blu#1#rst# ] }", one_param_array);
 
 TEST_DECODE_WIRE(Array2, Array2, R"({"b_2":["1", "2"]})",
-                 "{ b_2: #gre#array<int32>#rst# = [ #blu#1#rst#, #blu#2#rst# ] }", two_param_array);
+                 "{ b_2: array<#gre#int32#rst#> = [ #blu#1#rst#, #blu#2#rst# ] }", two_param_array);
 
 TEST_DECODE_WIRE(NullVector, Vector, R"({"v_1": null})",
-                 "{ v_1: #gre#vector<int32>#rst# = #red#null#rst# }", nullptr)
+                 "{ v_1: vector<#gre#int32#rst#> = #red#null#rst# }", nullptr)
 
 TEST_DECODE_WIRE(VectorOneElt, Vector, R"({"v_1":["1"]})",
-                 "{ v_1: #gre#vector<int32>#rst# = [ #blu#1#rst# ] }", one_param_vector);
+                 "{ v_1: vector<#gre#int32#rst#> = [ #blu#1#rst# ] }", one_param_vector);
 
 TEST_DECODE_WIRE(VectorTwoElt, Vector, R"({"v_1":["1", "2"]})",
-                 "{ v_1: #gre#vector<int32>#rst# = [ #blu#1#rst#, #blu#2#rst# ] }",
+                 "{ v_1: vector<#gre#int32#rst#> = [ #blu#1#rst#, #blu#2#rst# ] }",
                  two_param_vector);
 
 std::array<std::string, 2> TwoStringArrayFromVals(const std::string& v1, const std::string& v2) {
@@ -421,7 +421,7 @@ std::array<std::string, 2> TwoStringArrayFromVals(const std::string& v1, const s
 }
 
 TEST_DECODE_WIRE(TwoStringArrayInt, TwoStringArrayInt, R"({"arr":["harpo","chico"], "i32":"1"})",
-                 R"({ arr: #gre#array<string>#rst# = [ #red#"harpo"#rst#, #red#"chico"#rst# ], )" +
+                 R"({ arr: array<#gre#string#rst#> = [ #red#"harpo"#rst#, #red#"chico"#rst# ], )" +
                      ValueToPretty("i32", "int32", 1) + " }",
                  TwoStringArrayFromVals("harpo", "chico"), 1)
 
@@ -461,15 +461,15 @@ std::vector<uint32_t> VectorUint32() {
 }  // namespace
 
 TEST_DECODE_WIRE(TwoStringVectorInt, TwoStringVectorInt, R"({"vec":["harpo", "chico"], "i32":"1"})",
-                 R"({ vec: #gre#vector<string>#rst# = [ #red#"harpo"#rst#, #red#"chico"#rst# ], )" +
+                 R"({ vec: vector<#gre#string#rst#> = [ #red#"harpo"#rst#, #red#"chico"#rst# ], )" +
                      ValueToPretty("i32", "int32", 1) + " }",
                  TwoStringVectorFromVals("harpo", "chico"), 1)
 
 TEST_DECODE_WIRE(TwoStringVectors, TwoStringVectors,
                  R"({"v_1":["harpo","chico"],"v_2":["groucho","zeppo"]})",
-                 "{\n  v_1: #gre#vector<string>#rst# = "
+                 "{\n  v_1: vector<#gre#string#rst#> = "
                  R"([ #red#"harpo"#rst#, #red#"chico"#rst# ])"
-                 "\n  v_2: #gre#vector<string>#rst# = "
+                 "\n  v_2: vector<#gre#string#rst#> = "
                  R"([ #red#"groucho"#rst#, #red#"zeppo"#rst# ])"
                  "\n}",
                  TwoStringVectorFromVals("harpo", "chico"),
@@ -479,7 +479,7 @@ TEST_DECODE_WIRE(
     VectorUint8, VectorUint8,
     R"({"v":["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40"]})",
     "{\n"
-    "  v: #gre#vector<uint8>#rst# = [\n"
+    "  v: vector<#gre#uint8#rst#> = [\n"
     "    #blu#0#rst#, #blu#1#rst#, #blu#2#rst#, #blu#3#rst#, #blu#4#rst#, #blu#5#rst#, "
     "#blu#6#rst#, #blu#7#rst#, #blu#8#rst#, #blu#9#rst#, #blu#10#rst#, #blu#11#rst#, #blu#12#rst#, "
     "#blu#13#rst#, #blu#14#rst#, #blu#15#rst#, #blu#16#rst#, #blu#17#rst#, #blu#18#rst#, "
@@ -496,14 +496,14 @@ TEST_DECODE_WIRE(
 TEST_DECODE_WIRE(
     VectorUint8String, VectorUint8,
     R"({"v":["72","101","108","108","111","32","116","101","115","116","105","110","103","32","119","111","114","108","100","33"]})",
-    "{ v: #gre#vector<uint8>#rst# = #red#\"Hello testing world!\"#rst# }",
+    "{ v: vector<#gre#uint8#rst#> = #red#\"Hello testing world!\"#rst# }",
     VectorUint8("Hello testing world!"))
 
 TEST_DECODE_WIRE(
     VectorUint8MultilineString, VectorUint8,
     R"({"v":["72","101","108","108","111","32","116","101","115","116","105","110","103","32","119","111","114","108","100","33","10","72","111","119","32","97","114","101","32","121","111","117","32","116","111","100","97","121", "63","10","73","39","109","32","116","101","115","116","105","110","103","32","102","105","100","108","95","99","111","100","101","99","46"]})",
     "{\n"
-    "  v: #gre#vector<uint8>#rst# = [\n"
+    "  v: vector<#gre#uint8#rst#> = [\n"
     "    #red#Hello testing world!\n"
     "    How are you today?\n"
     "    I'm testing fidl_codec.#rst#\n"
@@ -515,7 +515,7 @@ TEST_DECODE_WIRE(
     VectorUint32, VectorUint32,
     R"({"v":["0","65537","2","65539","4","65541","6","65543","8","65545","10","65547","12","65549","14","65551","16","65553","18","65555","20","65557","22","65559","24","65561"]})",
     "{\n"
-    "  v: #gre#vector<uint32>#rst# = [\n"
+    "  v: vector<#gre#uint32#rst#> = [\n"
     "    #blu#0#rst#, #blu#65537#rst#, #blu#2#rst#, #blu#65539#rst#, #blu#4#rst#, #blu#65541#rst#, "
     "#blu#6#rst#, #blu#65543#rst#, #blu#8#rst#, #blu#65545#rst#, #blu#10#rst#, #blu#65547#rst#, "
     "#blu#12#rst#, #blu#65549#rst#, #blu#14#rst#\n"
@@ -529,7 +529,7 @@ TEST_DECODE_WIRE_PATCHED(
     VectorUint32BadSize, VectorUint32, 16, 100000,
     R"({"v":["0","65537","2","65539","4","65541","6","65543","8","65545","10","65547","12","65549","14","65551","16","65553","18","65555","20","65557","22","65559","24","65561"]})",
     "{\n"
-    "  v: #gre#vector<uint32>#rst# = [\n"
+    "  v: vector<#gre#uint32#rst#> = [\n"
     "    #blu#0#rst#, #blu#65537#rst#, #blu#2#rst#, #blu#65539#rst#, #blu#4#rst#, #blu#65541#rst#, "
     "#blu#6#rst#, #blu#65543#rst#, #blu#8#rst#, #blu#65545#rst#, #blu#10#rst#, #blu#65547#rst#, "
     "#blu#12#rst#, #blu#65549#rst#, #blu#14#rst#\n"
@@ -639,7 +639,7 @@ TEST_DECODE_WIRE(
     ArrayNullableStruct, ArrayNullableStruct,
     R"({"a":[{"value1":"harpo","value2":"chico"},null,{"value1":"groucho","value2":"zeppo"}]})",
     "{\n"
-    "  a: #gre#array<test.fidlcodec.examples/TwoStringStruct>#rst# = [\n"
+    "  a: array<#gre#test.fidlcodec.examples/TwoStringStruct#rst#> = [\n"
     "    { value1: #gre#string#rst# = #red#\"harpo\"#rst#, "
     "value2: #gre#string#rst# = #red#\"chico\"#rst# }, #red#null#rst#\n"
     "    { value1: #gre#string#rst# = #red#\"groucho\"#rst#, "
@@ -722,7 +722,7 @@ TEST_DECODE_WIRE(VectorStruct, VectorStruct,
                  R"({"v":[{"a":"1","b":"2","c":"3"},{"a":"2","b":"4","c":"6"},)"
                  R"({"a":"3","b":"6","c":"9"}]})",
                  "{\n"
-                 "  v: #gre#vector<test.fidlcodec.examples/SmallStruct>#rst# = [\n"
+                 "  v: vector<#gre#test.fidlcodec.examples/SmallStruct#rst#> = [\n"
                  "    { a: #gre#uint8#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst#, c: "
                  "#gre#uint8#rst# = #blu#3#rst# }\n"
                  "    { a: #gre#uint8#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst#, c: "
@@ -738,7 +738,7 @@ TEST_DECODE_WIRE(ArrayStruct, ArrayStruct,
                  R"({"a":[{"a":"1","b":"2","c":"3"},{"a":"2","b":"4","c":"6"},)"
                  R"({"a":"3","b":"6","c":"9"}]})",
                  "{\n"
-                 "  a: #gre#array<test.fidlcodec.examples/SmallStruct>#rst# = [\n"
+                 "  a: array<#gre#test.fidlcodec.examples/SmallStruct#rst#> = [\n"
                  "    { a: #gre#uint8#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst#, c: "
                  "#gre#uint8#rst# = #blu#3#rst# }\n"
                  "    { a: #gre#uint8#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst#, c: "
@@ -764,7 +764,7 @@ test::fidlcodec::examples::SmallUnevenStruct SmallUnevenStructFromVals(uint8_t a
 TEST_DECODE_WIRE(VectorStruct2, VectorStruct2,
                  R"({"v":[{"a":"1","b":"2"},{"a":"2","b":"4"},{"a":"3","b":"6"}]})",
                  "{\n"
-                 "  v: #gre#vector<test.fidlcodec.examples/SmallUnevenStruct>#rst# = [\n"
+                 "  v: vector<#gre#test.fidlcodec.examples/SmallUnevenStruct#rst#> = [\n"
                  "    { a: #gre#uint32#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst# },"
                  " { a: #gre#uint32#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst# }\n"
                  "    { a: #gre#uint32#rst# = #blu#3#rst#, b: #gre#uint8#rst# = #blu#6#rst# }\n"
@@ -776,7 +776,7 @@ TEST_DECODE_WIRE(VectorStruct2, VectorStruct2,
 TEST_DECODE_WIRE(ArrayStruct2, ArrayStruct2,
                  R"({"a":[{"a":"1","b":"2"},{"a":"2","b":"4"},{"a":"3","b":"6"}]})",
                  "{\n"
-                 "  a: #gre#array<test.fidlcodec.examples/SmallUnevenStruct>#rst# = [\n"
+                 "  a: array<#gre#test.fidlcodec.examples/SmallUnevenStruct#rst#> = [\n"
                  "    { a: #gre#uint32#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst# },"
                  " { a: #gre#uint32#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst# }\n"
                  "    { a: #gre#uint32#rst# = #blu#3#rst#, b: #gre#uint8#rst# = #blu#6#rst# }\n"
@@ -946,7 +946,7 @@ TEST_DECODE_WIRE(
     RecursiveUnion, RecursiveUnion, R"({"e":{"alternatives":[{"int32":"-10"},{"uint8":"200"}]}})",
     "{\n"
     "  e: #gre#test.fidlcodec.examples/DataElement#rst# = {\n"
-    "    alternatives: #gre#vector<test.fidlcodec.examples/DataElement>#rst# = [\n"
+    "    alternatives: vector<#gre#test.fidlcodec.examples/DataElement#rst#> = [\n"
     "      { int32: #gre#int32#rst# = #blu#-10#rst# }, { uint8: #gre#uint8#rst# = #blu#200#rst# }\n"
     "    ]\n"
     "  }\n"
@@ -972,7 +972,7 @@ TEST_DECODE_WIRE(
     ArrayNullableUnion, ArrayNullableUnion,
     R"({"a":[{"variant_i":"1234"},null,{"variant_tss":{"value1":"harpo","value2":"chico"}}]})",
     "{\n"
-    "  a: #gre#array<test.fidlcodec.examples/IntStructUnion>#rst# = [\n"
+    "  a: array<#gre#test.fidlcodec.examples/IntStructUnion#rst#> = [\n"
     "    { variant_i: #gre#int32#rst# = #blu#1234#rst# }, #red#null#rst#\n"
     "    {\n"
     "      variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = {\n"
@@ -1418,7 +1418,7 @@ class TraversalMainSupport {
             R"JSON(}}],"s":{"a":"50","b":"00000000"}})JSON";
     pretty_ =
         "{\n"
-        "  v: #gre#vector<test.fidlcodec.examples/TraversalMain>#rst# = [\n"
+        "  v: vector<#gre#test.fidlcodec.examples/TraversalMain#rst#> = [\n"
         "    {\n"
         "      x: #gre#uint32#rst# = #blu#10#rst#\n"
         "      y: #gre#test.fidlcodec.examples/TraversalStruct#rst# = {\n"

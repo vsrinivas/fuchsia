@@ -155,16 +155,18 @@ int UnionValue::DisplaySize(const Type* for_type, int remaining_size) const {
 
 void UnionValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
   if (DisplaySize(for_type, printer.remaining_size()) <= printer.remaining_size()) {
-    std::string type_name = member_.type()->Name();
-    printer << "{ " << member_.name() << ": " << Green << type_name << ResetColor << " = ";
+    printer << "{ " << member_.name() << ": ";
+    member_.type()->PrettyPrint(printer);
+    printer << " = ";
     value_->PrettyPrint(member_.type(), printer);
     printer << " }";
   } else {
-    std::string type_name = member_.type()->Name();
     printer << "{\n";
     {
       Indent indent(printer);
-      printer << member_.name() << ": " << Green << type_name << ResetColor << " = ";
+      printer << member_.name() << ": ";
+      member_.type()->PrettyPrint(printer);
+      printer << " = ";
       value_->PrettyPrint(member_.type(), printer);
       printer << '\n';
     }
@@ -233,8 +235,9 @@ void StructValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) cons
       auto it = fields_.find(member.get());
       if (it == fields_.end())
         continue;
-      printer << separator << member->name() << ": " << Green << member->type()->Name()
-              << ResetColor << " = ";
+      printer << separator << member->name() << ": ";
+      member->type()->PrettyPrint(printer);
+      printer << " = ";
       it->second->PrettyPrint(member->type(), printer);
       separator = ", ";
     }
@@ -248,7 +251,9 @@ void StructValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) cons
         if (it == fields_.end())
           continue;
         std::string type_name = member->type()->Name();
-        printer << member->name() << ": " << Green << type_name << ResetColor << " = ";
+        printer << member->name() << ": ";
+        member->type()->PrettyPrint(printer);
+        printer << " = ";
         it->second->PrettyPrint(member->type(), printer);
         printer << "\n";
       }

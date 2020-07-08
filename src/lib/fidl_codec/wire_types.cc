@@ -688,6 +688,10 @@ std::string ArrayType::Name() const {
   return std::string("array<") + component_type_->Name() + ">";
 }
 
+void ArrayType::PrettyPrint(PrettyPrinter& printer) const {
+  printer << "array<" << Green << component_type_->Name() << ResetColor << ">";
+}
+
 size_t ArrayType::InlineSize() const { return component_type_->InlineSize() * count_; }
 
 std::unique_ptr<Value> ArrayType::Decode(MessageDecoder* decoder, uint64_t offset) const {
@@ -703,6 +707,10 @@ void ArrayType::Visit(TypeVisitor* visitor) const { visitor->VisitArrayType(this
 
 std::string VectorType::Name() const {
   return std::string("vector<") + component_type_->Name() + ">";
+}
+
+void VectorType::PrettyPrint(PrettyPrinter& printer) const {
+  printer << "vector<" << Green << component_type_->Name() << ResetColor << ">";
 }
 
 size_t VectorType::InlineSize() const { return sizeof(uint64_t) + sizeof(uint64_t); }
