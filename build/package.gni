@@ -5,6 +5,7 @@
 import("//build/images/args.gni")
 import("//build/images/manifest.gni")
 import("//build/testing/test_spec.gni")
+import("//build/unification/zbi/resource.gni")
 import("//src/sys/cmc/build/cml.gni")
 import("//src/sys/cmc/build/cmx.gni")
 import("//src/sys/cmc/build/validate_component_manifest_references.gni")
@@ -166,7 +167,6 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #
 template("package") {
   if (current_toolchain == target_toolchain) {
-    forward_variables_from(invoker, [ "testonly" ])
     pkg_target_name = target_name
     pkg = {
       package_version = "0"  # placeholder
@@ -188,6 +188,7 @@ template("package") {
             "resources",
             "visibility",
             "tests",
+            "testonly",
           ])
       if (!defined(binaries)) {
         binaries = []
@@ -254,7 +255,7 @@ template("package") {
 
       assert(pkg.tests == [], "tests are not allowed in /system")
     } else {
-      if (!defined(testonly)) {
+      if (!defined(pkg.testonly) || !pkg.testonly) {
         assert(pkg.drivers == [],
                "$pkg_desc drivers requires __deprecated_system_image")
       }
@@ -263,6 +264,7 @@ template("package") {
     }
 
     formatted_manifest = []
+    meta_deps = []
     foreach(meta, pkg.meta) {
       manifest_target = pkg_target_name + "_" + get_path_info(meta.dest, "file")
       manifest_output = []
@@ -300,9 +302,23 @@ template("package") {
         manifest_output = get_target_outputs(":$manifest_target")
         meta.path = manifest_output[0]
         pkg.deps += [ ":$manifest_target" ]
+      } else {
+        manifest_target = false
       }
 
       formatted_manifest += [ meta ]
+
+      resource_target =
+          pkg_target_name + "_resource_" + get_path_info(meta.dest, "file")
+      resource(resource_target) {
+        forward_variables_from(pkg, [ "testonly" ])
+        if (manifest_target != false) {
+          deps = [ ":$manifest_target" ]
+        }
+        sources = [ meta.path ]
+        outputs = [ "meta/${meta.dest}" ]
+      }
+      meta_deps += [ ":$resource_target" ]
     }
 
     # Collect the package's primary manifest.  For a system_image package,
@@ -455,37 +471,63 @@ template("package") {
         },
       ]
     }
+
+    resources_deps = []
+
     foreach(resource, pkg.resources) {
-      pkg_manifest += [
-        {
-          dest = "data/${resource.dest}"
-          source = rebase_path(resource.path)
-        },
-      ]
+      resource_entry = {
+      }
+      resource_entry = {
+        dest = "data/${resource.dest}"
+        source = rebase_path(resource.path)
+      }
+      pkg_manifest += [ resource_entry ]
+
+      resource_name = string_replace(resource.dest, "/", "_")
+      resource_target = "$target_name.resource.resource.$resource_name"
+      resource(resource_target) {
+        forward_variables_from(pkg, [ "testonly" ])
+        deps = pkg.deps
+        sources = [ resource_entry.source ]
+        outputs = [ resource_entry.dest ]
+      }
+      resources_deps += [ ":$resource_target" ]
     }
+
+    library_deps = []
 
     # TODO(mcgrathr): Remove this when we can!  Packages installing
     # libraries in the system image is all kinds of wrong.
     foreach(library, pkg.libraries) {
-      pkg_manifest += [
-        {
-          if (defined(library.dest)) {
-            dest = library.dest
-          } else {
-            dest = library.name
-          }
-          dest = "lib/${dest}"
-          if (defined(library.source)) {
-            source = library.source
-          } else {
-            # TODO(mcgrathr): This breaks when everything is a variant so
-            # that only this here is using the non-variant shlib build.
-            source = get_label_info(shlib_toolchain, "name")
-            source += "/${library.name}"
-          }
-          source = rebase_path(source, "", root_out_dir)
-        },
-      ]
+      library_entry = {
+      }
+      library_entry = {
+        if (defined(library.dest)) {
+          dest = library.dest
+        } else {
+          dest = library.name
+        }
+        dest = "lib/${dest}"
+        if (defined(library.source)) {
+          source = library.source
+        } else {
+          # TODO(mcgrathr): This breaks when everything is a variant so
+          # that only this here is using the non-variant shlib build.
+          source = get_label_info(shlib_toolchain, "name")
+          source += "/${library.name}"
+        }
+        source = rebase_path(source, "", root_out_dir)
+      }
+      pkg_manifest += [ library_entry ]
+
+      resource_target = "$target_name.library.resource.${library.name}"
+      resource(resource_target) {
+        forward_variables_from(pkg, [ "testonly" ])
+        deps = pkg.deps
+        sources = [ library_entry.source ]
+        outputs = [ library_entry.dest ]
+      }
+      library_deps += [ ":$resource_target" ]
     }
 
     # Collect all the arguments describing input manifest files
@@ -536,9 +578,11 @@ template("package") {
 
       # System image packages just donate manifest arguments
       generate_response_file(system_rsp_label) {
-        if (defined(pkg.visibility)) {
-          visibility = pkg.visibility
-        }
+        forward_variables_from(pkg,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
         deps = pkg.deps
         data_deps = pkg.data_deps
         public_deps = pkg.public_deps
@@ -570,6 +614,7 @@ template("package") {
     # metadata archive.
     manifest = "${pkg_target_name}.manifest"
     generate_manifest(manifest) {
+      forward_variables_from(pkg, [ "testonly" ])
       visibility = [ ":*" ]
       sources = manifest_sources + [ pkg_meta_output ]
       args =
@@ -601,6 +646,7 @@ template("package") {
 
     # Next generate a sealed package file.
     pm_build(pkg_target_name) {
+      forward_variables_from(pkg, [ "testonly" ])
       if (defined(pkg.visibility)) {
         visibility = pkg.visibility
       }
@@ -610,7 +656,7 @@ template("package") {
         forward_variables_from(pkg.metadata, "*")
       }
 
-      deps = pkg.deps
+      deps = pkg.deps + meta_deps + resources_deps + library_deps
       data_deps = pkg.data_deps
       public_deps = pkg.public_deps
 
