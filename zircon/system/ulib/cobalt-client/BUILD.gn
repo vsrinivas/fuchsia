@@ -26,6 +26,7 @@ source_set("cobalt-types-internal") {
   public = [ "include/cobalt-client/cpp/types_internal.h" ]
   public_deps = [ "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp" ]
   public_configs = [ ":includes" ]
+  sources = [ "include/cobalt-client/cpp/metric_options.h" ]
 }
 
 source_set("cobalt-collector") {
@@ -40,6 +41,9 @@ source_set("cobalt-collector") {
   sources = [
     "cobalt_logger.cc",
     "collector.cc",
+    "include/cobalt-client/cpp/counter_internal.h",
+    "include/cobalt-client/cpp/histogram_internal.h",
+    "include/cobalt-client/cpp/metric_options.h",
   ]
   public_deps = [
     ":cobalt-types-internal",
