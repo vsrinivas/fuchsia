@@ -6,7 +6,6 @@
 #define LIB_FIDL_ASYNC_CPP_BIND_H_
 
 #include <lib/async/wait.h>
-#include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
