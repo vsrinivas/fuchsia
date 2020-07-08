@@ -64,6 +64,9 @@ class SimInterface {
   static constexpr uint32_t kDefaultSoftApBeaconPeriod = 100;
   static constexpr uint32_t kDefaultSoftApDtimPeriod = 100;
 
+  SimInterface() = default;
+  SimInterface(const SimInterface&) = delete;
+
   zx_status_t Init(std::shared_ptr<simulation::Environment> env, wlan_info_mac_role_t role);
 
   virtual ~SimInterface() {

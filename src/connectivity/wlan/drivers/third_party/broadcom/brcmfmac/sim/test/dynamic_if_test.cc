@@ -251,7 +251,7 @@ void DynamicIfTest::TestApStop(bool use_cdown) {
 
   // Verify Assoc with SoftAP succeeded
   SCHEDULE_CALL(zx::msec(150), &DynamicIfTest::VerifyAssocWithSoftAP, this);
-  SCHEDULE_CALL(zx::msec(160), &SimInterface::StopSoftAp, softap_ifc_);
+  SCHEDULE_CALL(zx::msec(160), &SimInterface::StopSoftAp, &softap_ifc_);
 
   env_->Run(kTestDuration);
 
