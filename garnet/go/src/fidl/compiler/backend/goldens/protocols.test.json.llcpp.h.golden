@@ -1086,7 +1086,7 @@ class ChannelProtocol final {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
 
      public:
-      MutateSocket_Impl(::zx::unowned_channel _client_end, ::zx::socket a);
+      MutateSocket_Impl(::zx::unowned_channel _client_end, ::zx::socket& a);
       ~MutateSocket_Impl() = default;
       MutateSocket_Impl(MutateSocket_Impl&& other) = default;
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
@@ -1813,7 +1813,7 @@ class WithAndWithoutRequestResponse final {
 
      public:
       WithRequestNoResponse_Impl(::zx::unowned_channel _client_end,
-                                 ::fidl::StringView arg);
+                                 const ::fidl::StringView& arg);
       ~WithRequestNoResponse_Impl() = default;
       WithRequestNoResponse_Impl(WithRequestNoResponse_Impl&& other) = default;
       WithRequestNoResponse_Impl& operator=(
@@ -1831,7 +1831,7 @@ class WithAndWithoutRequestResponse final {
 
      public:
       WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end,
-                                    ::fidl::StringView arg);
+                                    const ::fidl::StringView& arg);
       ~WithRequestEmptyResponse_Impl() = default;
       WithRequestEmptyResponse_Impl(WithRequestEmptyResponse_Impl&& other) =
           default;
@@ -1854,7 +1854,7 @@ class WithAndWithoutRequestResponse final {
 
      public:
       WithRequestWithResponse_Impl(::zx::unowned_channel _client_end,
-                                   ::fidl::StringView arg);
+                                   const ::fidl::StringView& arg);
       ~WithRequestWithResponse_Impl() = default;
       WithRequestWithResponse_Impl(WithRequestWithResponse_Impl&& other) =
           default;

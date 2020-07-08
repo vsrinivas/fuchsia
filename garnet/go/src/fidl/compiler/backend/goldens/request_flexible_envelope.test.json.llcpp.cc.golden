@@ -54,8 +54,9 @@ extern "C" const fidl_type_t
 template <>
 Protocol::ResultOf::RequestStrictResponseFlexible_Impl<
     Protocol::RequestStrictResponseFlexibleResponse>::
-    RequestStrictResponseFlexible_Impl(::zx::unowned_channel _client_end,
-                                       ::llcpp::fidl::test::json::StrictFoo s) {
+    RequestStrictResponseFlexible_Impl(
+        ::zx::unowned_channel _client_end,
+        ::llcpp::fidl::test::json::StrictFoo& s) {
   RequestStrictResponseFlexibleRequest _request(0, s);
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<
@@ -76,14 +77,13 @@ Protocol::ResultOf::RequestStrictResponseFlexible
 Protocol::SyncClient::RequestStrictResponseFlexible(
     ::llcpp::fidl::test::json::StrictFoo s) {
   return ResultOf::RequestStrictResponseFlexible(
-      ::zx::unowned_channel(this->channel_), std::move(s));
+      ::zx::unowned_channel(this->channel_), s);
 }
 
 Protocol::ResultOf::RequestStrictResponseFlexible
 Protocol::Call::RequestStrictResponseFlexible(
     ::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::StrictFoo s) {
-  return ResultOf::RequestStrictResponseFlexible(std::move(_client_end),
-                                                 std::move(s));
+  return ResultOf::RequestStrictResponseFlexible(std::move(_client_end), s);
 }
 
 template <>
@@ -175,7 +175,7 @@ Protocol::ResultOf::RequestFlexibleResponseStrict_Impl<
     Protocol::RequestFlexibleResponseStrictResponse>::
     RequestFlexibleResponseStrict_Impl(
         ::zx::unowned_channel _client_end,
-        ::llcpp::fidl::test::json::FlexibleFoo s) {
+        ::llcpp::fidl::test::json::FlexibleFoo& s) {
   RequestFlexibleResponseStrictRequest _request(0, s);
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<
@@ -196,15 +196,14 @@ Protocol::ResultOf::RequestFlexibleResponseStrict
 Protocol::SyncClient::RequestFlexibleResponseStrict(
     ::llcpp::fidl::test::json::FlexibleFoo s) {
   return ResultOf::RequestFlexibleResponseStrict(
-      ::zx::unowned_channel(this->channel_), std::move(s));
+      ::zx::unowned_channel(this->channel_), s);
 }
 
 Protocol::ResultOf::RequestFlexibleResponseStrict
 Protocol::Call::RequestFlexibleResponseStrict(
     ::zx::unowned_channel _client_end,
     ::llcpp::fidl::test::json::FlexibleFoo s) {
-  return ResultOf::RequestFlexibleResponseStrict(std::move(_client_end),
-                                                 std::move(s));
+  return ResultOf::RequestFlexibleResponseStrict(std::move(_client_end), s);
 }
 
 template <>
@@ -296,8 +295,7 @@ Protocol::ResultOf::RequestStrictResponseFlexible
 Protocol::ClientImpl::RequestStrictResponseFlexible_Sync(
     ::llcpp::fidl::test::json::StrictFoo s) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::RequestStrictResponseFlexible(_binding->channel(),
-                                                   std::move(s));
+    return ResultOf::RequestStrictResponseFlexible(_binding->channel(), s);
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
@@ -387,8 +385,7 @@ Protocol::ResultOf::RequestFlexibleResponseStrict
 Protocol::ClientImpl::RequestFlexibleResponseStrict_Sync(
     ::llcpp::fidl::test::json::FlexibleFoo s) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::RequestFlexibleResponseStrict(_binding->channel(),
-                                                   std::move(s));
+    return ResultOf::RequestFlexibleResponseStrict(_binding->channel(), s);
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }

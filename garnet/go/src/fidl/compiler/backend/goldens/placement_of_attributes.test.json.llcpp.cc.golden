@@ -18,7 +18,7 @@ extern "C" const fidl_type_t example_ExampleProtocolMethodResponseTable;
 }  // namespace
 
 ExampleProtocol::ResultOf::Method_Impl::Method_Impl(
-    ::zx::unowned_channel _client_end, ::llcpp::exampleusing::Empty arg) {
+    ::zx::unowned_channel _client_end, ::llcpp::exampleusing::Empty& arg) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
@@ -39,13 +39,12 @@ ExampleProtocol::ResultOf::Method_Impl::Method_Impl(
 
 ExampleProtocol::ResultOf::Method ExampleProtocol::SyncClient::Method(
     ::llcpp::exampleusing::Empty arg) {
-  return ResultOf::Method(::zx::unowned_channel(this->channel_),
-                          std::move(arg));
+  return ResultOf::Method(::zx::unowned_channel(this->channel_), arg);
 }
 
 ExampleProtocol::ResultOf::Method ExampleProtocol::Call::Method(
     ::zx::unowned_channel _client_end, ::llcpp::exampleusing::Empty arg) {
-  return ResultOf::Method(std::move(_client_end), std::move(arg));
+  return ResultOf::Method(std::move(_client_end), arg);
 }
 
 ExampleProtocol::UnownedResultOf::Method_Impl::Method_Impl(
@@ -114,7 +113,7 @@ ExampleProtocol::UnownedResultOf::Method ExampleProtocol::Call::Method(
 ::fidl::StatusAndError ExampleProtocol::ClientImpl::Method(
     ::llcpp::exampleusing::Empty arg) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::Method(_binding->channel(), std::move(arg));
+    auto _res = ResultOf::Method(_binding->channel(), arg);
     return ::fidl::StatusAndError(_res.status(), _res.error());
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);

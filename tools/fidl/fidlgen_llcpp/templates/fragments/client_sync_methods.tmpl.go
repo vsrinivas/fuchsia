@@ -38,8 +38,7 @@ const ClientSyncMethods = `
   {{- template "SyncRequestManagedMethodArguments" . }}) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     return ResultOf::{{ .Name }}(_binding->channel()
-      {{- if .Request }}, {{ end }}
-      {{- template "SyncClientMoveParams" .Request -}}
+      {{- template "CommaPassthroughMessageParams" .Request -}}
     );
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -49,8 +48,7 @@ const ClientSyncMethods = `
   {{- template "SyncRequestManagedMethodArguments" . }}) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     auto _res = ResultOf::{{ .Name }}(_binding->channel()
-      {{- if .Request }}, {{ end }}
-      {{- template "SyncClientMoveParams" .Request -}}
+      {{- template "CommaPassthroughMessageParams" .Request -}}
     );
     return ::fidl::StatusAndError(_res.status(), _res.error());
   }

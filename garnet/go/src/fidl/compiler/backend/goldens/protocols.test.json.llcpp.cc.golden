@@ -68,12 +68,12 @@ Transitional::ResultOf::Request_Impl<Transitional::RequestResponse>::
 }
 
 Transitional::ResultOf::Request Transitional::SyncClient::Request(int64_t x) {
-  return ResultOf::Request(::zx::unowned_channel(this->channel_), std::move(x));
+  return ResultOf::Request(::zx::unowned_channel(this->channel_), x);
 }
 
 Transitional::ResultOf::Request Transitional::Call::Request(
     ::zx::unowned_channel _client_end, int64_t x) {
-  return ResultOf::Request(std::move(_client_end), std::move(x));
+  return ResultOf::Request(std::move(_client_end), x);
 }
 
 template <>
@@ -168,12 +168,12 @@ Transitional::ResultOf::OneWay_Impl::OneWay_Impl(
 }
 
 Transitional::ResultOf::OneWay Transitional::SyncClient::OneWay(int64_t x) {
-  return ResultOf::OneWay(::zx::unowned_channel(this->channel_), std::move(x));
+  return ResultOf::OneWay(::zx::unowned_channel(this->channel_), x);
 }
 
 Transitional::ResultOf::OneWay Transitional::Call::OneWay(
     ::zx::unowned_channel _client_end, int64_t x) {
-  return ResultOf::OneWay(std::move(_client_end), std::move(x));
+  return ResultOf::OneWay(std::move(_client_end), x);
 }
 
 Transitional::UnownedResultOf::OneWay_Impl::OneWay_Impl(
@@ -242,7 +242,7 @@ Transitional::UnownedResultOf::OneWay Transitional::Call::OneWay(
 Transitional::ResultOf::Request Transitional::ClientImpl::Request_Sync(
     int64_t x) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::Request(_binding->channel(), std::move(x));
+    return ResultOf::Request(_binding->channel(), x);
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
@@ -324,7 +324,7 @@ Transitional::UnownedResultOf::Request Transitional::ClientImpl::Request_Sync(
 
 ::fidl::StatusAndError Transitional::ClientImpl::OneWay(int64_t x) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::OneWay(_binding->channel(), std::move(x));
+    auto _res = ResultOf::OneWay(_binding->channel(), x);
     return ::fidl::StatusAndError(_res.status(), _res.error());
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -648,13 +648,12 @@ ChannelProtocol::ResultOf::MethodA_Impl::MethodA_Impl(
 
 ChannelProtocol::ResultOf::MethodA ChannelProtocol::SyncClient::MethodA(
     int64_t a, int64_t b) {
-  return ResultOf::MethodA(::zx::unowned_channel(this->channel_), std::move(a),
-                           std::move(b));
+  return ResultOf::MethodA(::zx::unowned_channel(this->channel_), a, b);
 }
 
 ChannelProtocol::ResultOf::MethodA ChannelProtocol::Call::MethodA(
     ::zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  return ResultOf::MethodA(std::move(_client_end), std::move(a), std::move(b));
+  return ResultOf::MethodA(std::move(_client_end), a, b);
 }
 
 ChannelProtocol::UnownedResultOf::MethodA_Impl::MethodA_Impl(
@@ -746,13 +745,12 @@ ChannelProtocol::ResultOf::MethodB_Impl<ChannelProtocol::MethodBResponse>::
 
 ChannelProtocol::ResultOf::MethodB ChannelProtocol::SyncClient::MethodB(
     int64_t a, int64_t b) {
-  return ResultOf::MethodB(::zx::unowned_channel(this->channel_), std::move(a),
-                           std::move(b));
+  return ResultOf::MethodB(::zx::unowned_channel(this->channel_), a, b);
 }
 
 ChannelProtocol::ResultOf::MethodB ChannelProtocol::Call::MethodB(
     ::zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  return ResultOf::MethodB(std::move(_client_end), std::move(a), std::move(b));
+  return ResultOf::MethodB(std::move(_client_end), a, b);
 }
 
 template <>
@@ -829,7 +827,7 @@ ChannelProtocol::InPlace::MethodB(::zx::unowned_channel _client_end,
 template <>
 ChannelProtocol::ResultOf::
     MutateSocket_Impl<ChannelProtocol::MutateSocketResponse>::MutateSocket_Impl(
-        ::zx::unowned_channel _client_end, ::zx::socket a) {
+        ::zx::unowned_channel _client_end, ::zx::socket& a) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MutateSocketRequest)];
@@ -851,13 +849,12 @@ ChannelProtocol::ResultOf::
 
 ChannelProtocol::ResultOf::MutateSocket
 ChannelProtocol::SyncClient::MutateSocket(::zx::socket a) {
-  return ResultOf::MutateSocket(::zx::unowned_channel(this->channel_),
-                                std::move(a));
+  return ResultOf::MutateSocket(::zx::unowned_channel(this->channel_), a);
 }
 
 ChannelProtocol::ResultOf::MutateSocket ChannelProtocol::Call::MutateSocket(
     ::zx::unowned_channel _client_end, ::zx::socket a) {
-  return ResultOf::MutateSocket(std::move(_client_end), std::move(a));
+  return ResultOf::MutateSocket(std::move(_client_end), a);
 }
 
 template <>
@@ -940,8 +937,7 @@ ChannelProtocol::InPlace::MutateSocket(
 ::fidl::StatusAndError ChannelProtocol::ClientImpl::MethodA(int64_t a,
                                                             int64_t b) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res =
-        ResultOf::MethodA(_binding->channel(), std::move(a), std::move(b));
+    auto _res = ResultOf::MethodA(_binding->channel(), a, b);
     return ::fidl::StatusAndError(_res.status(), _res.error());
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -961,7 +957,7 @@ ChannelProtocol::InPlace::MutateSocket(
 ChannelProtocol::ResultOf::MethodB ChannelProtocol::ClientImpl::MethodB_Sync(
     int64_t a, int64_t b) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::MethodB(_binding->channel(), std::move(a), std::move(b));
+    return ResultOf::MethodB(_binding->channel(), a, b);
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
@@ -1045,7 +1041,7 @@ ChannelProtocol::ClientImpl::MethodB_Sync(::fidl::BytePart _request_buffer,
 ChannelProtocol::ResultOf::MutateSocket
 ChannelProtocol::ClientImpl::MutateSocket_Sync(::zx::socket a) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::MutateSocket(_binding->channel(), std::move(a));
+    return ResultOf::MutateSocket(_binding->channel(), a);
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
@@ -1742,7 +1738,7 @@ WithAndWithoutRequestResponse::InPlace::NoRequestWithResponse(
 
 WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse_Impl::
     WithRequestNoResponse_Impl(::zx::unowned_channel _client_end,
-                               ::fidl::StringView arg) {
+                               const ::fidl::StringView& arg) {
   WithRequestNoResponseRequest _request(0, arg);
 
   auto _encoded =
@@ -1764,14 +1760,13 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse
 WithAndWithoutRequestResponse::SyncClient::WithRequestNoResponse(
     ::fidl::StringView arg) {
   return ResultOf::WithRequestNoResponse(::zx::unowned_channel(this->channel_),
-                                         std::move(arg));
+                                         arg);
 }
 
 WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse
 WithAndWithoutRequestResponse::Call::WithRequestNoResponse(
     ::zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  return ResultOf::WithRequestNoResponse(std::move(_client_end),
-                                         std::move(arg));
+  return ResultOf::WithRequestNoResponse(std::move(_client_end), arg);
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse_Impl::
@@ -1850,7 +1845,7 @@ template <>
 WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse_Impl<
     WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>::
     WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end,
-                                  ::fidl::StringView arg) {
+                                  const ::fidl::StringView& arg) {
   WithRequestEmptyResponseRequest _request(0, arg);
 
   auto _encoded =
@@ -1873,14 +1868,13 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse
 WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(
     ::fidl::StringView arg) {
   return ResultOf::WithRequestEmptyResponse(
-      ::zx::unowned_channel(this->channel_), std::move(arg));
+      ::zx::unowned_channel(this->channel_), arg);
 }
 
 WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse
 WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(
     ::zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  return ResultOf::WithRequestEmptyResponse(std::move(_client_end),
-                                            std::move(arg));
+  return ResultOf::WithRequestEmptyResponse(std::move(_client_end), arg);
 }
 
 template <>
@@ -1973,7 +1967,7 @@ template <>
 WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse_Impl<
     WithAndWithoutRequestResponse::WithRequestWithResponseResponse>::
     WithRequestWithResponse_Impl(::zx::unowned_channel _client_end,
-                                 ::fidl::StringView arg) {
+                                 const ::fidl::StringView& arg) {
   WithRequestWithResponseRequest _request(0, arg);
 
   auto _encoded =
@@ -1996,14 +1990,13 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse
 WithAndWithoutRequestResponse::SyncClient::WithRequestWithResponse(
     ::fidl::StringView arg) {
   return ResultOf::WithRequestWithResponse(
-      ::zx::unowned_channel(this->channel_), std::move(arg));
+      ::zx::unowned_channel(this->channel_), arg);
 }
 
 WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse
 WithAndWithoutRequestResponse::Call::WithRequestWithResponse(
     ::zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  return ResultOf::WithRequestWithResponse(std::move(_client_end),
-                                           std::move(arg));
+  return ResultOf::WithRequestWithResponse(std::move(_client_end), arg);
 }
 
 template <>
@@ -2248,8 +2241,7 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse(
 WithAndWithoutRequestResponse::ClientImpl::WithRequestNoResponse(
     ::fidl::StringView arg) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res =
-        ResultOf::WithRequestNoResponse(_binding->channel(), std::move(arg));
+    auto _res = ResultOf::WithRequestNoResponse(_binding->channel(), arg);
     return ::fidl::StatusAndError(_res.status(), _res.error());
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -2270,8 +2262,7 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse
 WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
     ::fidl::StringView arg) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::WithRequestEmptyResponse(_binding->channel(),
-                                              std::move(arg));
+    return ResultOf::WithRequestEmptyResponse(_binding->channel(), arg);
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
@@ -2357,8 +2348,7 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse
 WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
     ::fidl::StringView arg) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::WithRequestWithResponse(_binding->channel(),
-                                             std::move(arg));
+    return ResultOf::WithRequestWithResponse(_binding->channel(), arg);
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }

@@ -390,7 +390,7 @@ class Protocol final {
      public:
       RequestStrictResponseFlexible_Impl(
           ::zx::unowned_channel _client_end,
-          ::llcpp::fidl::test::json::StrictFoo s);
+          ::llcpp::fidl::test::json::StrictFoo& s);
       ~RequestStrictResponseFlexible_Impl() = default;
       RequestStrictResponseFlexible_Impl(
           RequestStrictResponseFlexible_Impl&& other) = default;
@@ -415,7 +415,7 @@ class Protocol final {
      public:
       RequestFlexibleResponseStrict_Impl(
           ::zx::unowned_channel _client_end,
-          ::llcpp::fidl::test::json::FlexibleFoo s);
+          ::llcpp::fidl::test::json::FlexibleFoo& s);
       ~RequestFlexibleResponseStrict_Impl() = default;
       RequestFlexibleResponseStrict_Impl(
           RequestFlexibleResponseStrict_Impl&& other) = default;

@@ -104,7 +104,7 @@ class super final {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
 
      public:
-      foo_Impl(::zx::unowned_channel _client_end, ::fidl::StringView s);
+      foo_Impl(::zx::unowned_channel _client_end, const ::fidl::StringView& s);
       ~foo_Impl() = default;
       foo_Impl(foo_Impl&& other) = default;
       foo_Impl& operator=(foo_Impl&& other) = default;
@@ -339,7 +339,7 @@ class sub final {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
 
      public:
-      foo_Impl(::zx::unowned_channel _client_end, ::fidl::StringView s);
+      foo_Impl(::zx::unowned_channel _client_end, const ::fidl::StringView& s);
       ~foo_Impl() = default;
       foo_Impl(foo_Impl&& other) = default;
       foo_Impl& operator=(foo_Impl&& other) = default;

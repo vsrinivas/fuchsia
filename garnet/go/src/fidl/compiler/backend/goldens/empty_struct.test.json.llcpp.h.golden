@@ -185,7 +185,7 @@ class EmptyProtocol final {
 
      public:
       Send_Impl(::zx::unowned_channel _client_end,
-                ::llcpp::fidl::test::json::Empty e);
+                ::llcpp::fidl::test::json::Empty& e);
       ~Send_Impl() = default;
       Send_Impl(Send_Impl&& other) = default;
       Send_Impl& operator=(Send_Impl&& other) = default;
@@ -202,7 +202,7 @@ class EmptyProtocol final {
 
      public:
       SendAndReceive_Impl(::zx::unowned_channel _client_end,
-                          ::llcpp::fidl::test::json::Empty e);
+                          ::llcpp::fidl::test::json::Empty& e);
       ~SendAndReceive_Impl() = default;
       SendAndReceive_Impl(SendAndReceive_Impl&& other) = default;
       SendAndReceive_Impl& operator=(SendAndReceive_Impl&& other) = default;

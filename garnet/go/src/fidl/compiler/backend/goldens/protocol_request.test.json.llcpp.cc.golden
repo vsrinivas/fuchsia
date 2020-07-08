@@ -196,7 +196,7 @@ Parent::InPlace::GetChildRequest(::zx::unowned_channel _client_end,
 }
 
 Parent::ResultOf::TakeChild_Impl::TakeChild_Impl(
-    ::zx::unowned_channel _client_end, ::zx::channel c) {
+    ::zx::unowned_channel _client_end, ::zx::channel& c) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(TakeChildRequest)];
@@ -216,13 +216,12 @@ Parent::ResultOf::TakeChild_Impl::TakeChild_Impl(
 }
 
 Parent::ResultOf::TakeChild Parent::SyncClient::TakeChild(::zx::channel c) {
-  return ResultOf::TakeChild(::zx::unowned_channel(this->channel_),
-                             std::move(c));
+  return ResultOf::TakeChild(::zx::unowned_channel(this->channel_), c);
 }
 
 Parent::ResultOf::TakeChild Parent::Call::TakeChild(
     ::zx::unowned_channel _client_end, ::zx::channel c) {
-  return ResultOf::TakeChild(std::move(_client_end), std::move(c));
+  return ResultOf::TakeChild(std::move(_client_end), c);
 }
 
 Parent::UnownedResultOf::TakeChild_Impl::TakeChild_Impl(
@@ -289,7 +288,7 @@ Parent::UnownedResultOf::TakeChild Parent::Call::TakeChild(
 }
 
 Parent::ResultOf::TakeChildRequest_Impl::TakeChildRequest_Impl(
-    ::zx::unowned_channel _client_end, ::zx::channel r) {
+    ::zx::unowned_channel _client_end, ::zx::channel& r) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(TakeChildRequestRequest)];
@@ -311,13 +310,12 @@ Parent::ResultOf::TakeChildRequest_Impl::TakeChildRequest_Impl(
 
 Parent::ResultOf::TakeChildRequest Parent::SyncClient::TakeChildRequest(
     ::zx::channel r) {
-  return ResultOf::TakeChildRequest(::zx::unowned_channel(this->channel_),
-                                    std::move(r));
+  return ResultOf::TakeChildRequest(::zx::unowned_channel(this->channel_), r);
 }
 
 Parent::ResultOf::TakeChildRequest Parent::Call::TakeChildRequest(
     ::zx::unowned_channel _client_end, ::zx::channel r) {
-  return ResultOf::TakeChildRequest(std::move(_client_end), std::move(r));
+  return ResultOf::TakeChildRequest(std::move(_client_end), r);
 }
 
 Parent::UnownedResultOf::TakeChildRequest_Impl::TakeChildRequest_Impl(
@@ -532,7 +530,7 @@ Parent::ClientImpl::GetChildRequest_Sync(::fidl::BytePart _response_buffer) {
 
 ::fidl::StatusAndError Parent::ClientImpl::TakeChild(::zx::channel c) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::TakeChild(_binding->channel(), std::move(c));
+    auto _res = ResultOf::TakeChild(_binding->channel(), c);
     return ::fidl::StatusAndError(_res.status(), _res.error());
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -550,7 +548,7 @@ Parent::ClientImpl::GetChildRequest_Sync(::fidl::BytePart _response_buffer) {
 
 ::fidl::StatusAndError Parent::ClientImpl::TakeChildRequest(::zx::channel r) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::TakeChildRequest(_binding->channel(), std::move(r));
+    auto _res = ResultOf::TakeChildRequest(_binding->channel(), r);
     return ::fidl::StatusAndError(_res.status(), _res.error());
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);

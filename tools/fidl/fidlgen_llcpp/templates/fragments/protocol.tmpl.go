@@ -236,7 +236,7 @@ class {{ .Name }} final {
     class {{ .Name }}_Impl final : private ::fidl::internal::{{ if .HasResponse -}} OwnedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }} {
       using Super = ::fidl::internal::{{ if .HasResponse -}} OwnedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }};
      public:
-      {{ .Name }}_Impl({{ template "StaticCallSyncRequestManagedMethodArguments" . }});
+      {{ .Name }}_Impl(::zx::unowned_channel _client_end {{- template "CommaMessagePrototype" .Request }});
       ~{{ .Name }}_Impl() = default;
       {{ .Name }}_Impl({{ .Name }}_Impl&& other) = default;
       {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;

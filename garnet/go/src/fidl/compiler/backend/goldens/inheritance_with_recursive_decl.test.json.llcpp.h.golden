@@ -80,7 +80,7 @@ class Parent final {
       using Super = ::fidl::internal::StatusAndError;
 
      public:
-      First_Impl(::zx::unowned_channel _client_end, ::zx::channel request);
+      First_Impl(::zx::unowned_channel _client_end, ::zx::channel& request);
       ~First_Impl() = default;
       First_Impl(First_Impl&& other) = default;
       First_Impl& operator=(First_Impl&& other) = default;
@@ -295,7 +295,7 @@ class Child final {
       using Super = ::fidl::internal::StatusAndError;
 
      public:
-      First_Impl(::zx::unowned_channel _client_end, ::zx::channel request);
+      First_Impl(::zx::unowned_channel _client_end, ::zx::channel& request);
       ~First_Impl() = default;
       First_Impl(First_Impl&& other) = default;
       First_Impl& operator=(First_Impl&& other) = default;
@@ -309,7 +309,7 @@ class Child final {
       using Super = ::fidl::internal::StatusAndError;
 
      public:
-      Second_Impl(::zx::unowned_channel _client_end, ::zx::channel request);
+      Second_Impl(::zx::unowned_channel _client_end, ::zx::channel& request);
       ~Second_Impl() = default;
       Second_Impl(Second_Impl&& other) = default;
       Second_Impl& operator=(Second_Impl&& other) = default;

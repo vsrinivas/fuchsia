@@ -28,7 +28,7 @@ const SyncRequestManaged = `
 {{- define "SyncRequestManagedMethodDefinition" }}
 {{ if .HasResponse -}} template <> {{- end }}
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}_Impl {{- if .HasResponse -}} <{{ .LLProps.ProtocolName }}::{{ .Name }}Response> {{- end }}::{{ .Name }}_Impl(
-  {{- template "StaticCallSyncRequestManagedMethodArguments" . }}) {
+  ::zx::unowned_channel _client_end {{- template "CommaMessagePrototype" .Request }}) {
 
   {{- if .LLProps.LinearizeRequest }}
   {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
@@ -71,8 +71,7 @@ const SyncRequestManaged = `
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::SyncClient::{{ .Name }}(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
     return ResultOf::{{ .Name }}(::zx::unowned_channel(this->channel_)
-    {{- if .Request }}, {{ end }}
-    {{- template "SyncClientMoveParams" .Request -}}
+    {{- template "CommaPassthroughMessageParams" .Request -}}
   );
 }
 {{- end }}
@@ -81,8 +80,8 @@ const SyncRequestManaged = `
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::Call::{{ .Name }}(
   {{- template "StaticCallSyncRequestManagedMethodArguments" . }}) {
   return ResultOf::{{ .Name }}(std::move(_client_end)
-    {{- if .Request }}, {{ end }}
-    {{- template "SyncClientMoveParams" .Request }});
+    {{- template "CommaPassthroughMessageParams" .Request -}}
+  );
 }
 {{- end }}
 `

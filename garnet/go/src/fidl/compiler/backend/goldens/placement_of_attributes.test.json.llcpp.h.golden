@@ -465,7 +465,7 @@ class ExampleProtocol final {
 
      public:
       Method_Impl(::zx::unowned_channel _client_end,
-                  ::llcpp::exampleusing::Empty arg);
+                  ::llcpp::exampleusing::Empty& arg);
       ~Method_Impl() = default;
       Method_Impl(Method_Impl&& other) = default;
       Method_Impl& operator=(Method_Impl&& other) = default;

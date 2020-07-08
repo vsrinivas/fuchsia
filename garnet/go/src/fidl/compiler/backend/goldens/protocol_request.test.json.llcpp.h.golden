@@ -244,7 +244,7 @@ class Parent final {
       using Super = ::fidl::internal::StatusAndError;
 
      public:
-      TakeChild_Impl(::zx::unowned_channel _client_end, ::zx::channel c);
+      TakeChild_Impl(::zx::unowned_channel _client_end, ::zx::channel& c);
       ~TakeChild_Impl() = default;
       TakeChild_Impl(TakeChild_Impl&& other) = default;
       TakeChild_Impl& operator=(TakeChild_Impl&& other) = default;
@@ -259,7 +259,8 @@ class Parent final {
       using Super = ::fidl::internal::StatusAndError;
 
      public:
-      TakeChildRequest_Impl(::zx::unowned_channel _client_end, ::zx::channel r);
+      TakeChildRequest_Impl(::zx::unowned_channel _client_end,
+                            ::zx::channel& r);
       ~TakeChildRequest_Impl() = default;
       TakeChildRequest_Impl(TakeChildRequest_Impl&& other) = default;
       TakeChildRequest_Impl& operator=(TakeChildRequest_Impl&& other) = default;

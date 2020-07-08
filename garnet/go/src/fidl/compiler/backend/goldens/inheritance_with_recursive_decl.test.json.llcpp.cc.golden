@@ -20,7 +20,7 @@ extern "C" const fidl_type_t fidl_test_json_ParentFirstResponseTable;
 }  // namespace
 
 Parent::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
-                                         ::zx::channel request) {
+                                         ::zx::channel& request) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
@@ -40,13 +40,12 @@ Parent::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
 }
 
 Parent::ResultOf::First Parent::SyncClient::First(::zx::channel request) {
-  return ResultOf::First(::zx::unowned_channel(this->channel_),
-                         std::move(request));
+  return ResultOf::First(::zx::unowned_channel(this->channel_), request);
 }
 
 Parent::ResultOf::First Parent::Call::First(::zx::unowned_channel _client_end,
                                             ::zx::channel request) {
-  return ResultOf::First(std::move(_client_end), std::move(request));
+  return ResultOf::First(std::move(_client_end), request);
 }
 
 Parent::UnownedResultOf::First_Impl::First_Impl(
@@ -114,7 +113,7 @@ Parent::UnownedResultOf::First Parent::Call::First(
 
 ::fidl::StatusAndError Parent::ClientImpl::First(::zx::channel request) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::First(_binding->channel(), std::move(request));
+    auto _res = ResultOf::First(_binding->channel(), request);
     return ::fidl::StatusAndError(_res.status(), _res.error());
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -195,7 +194,7 @@ extern "C" const fidl_type_t fidl_test_json_ChildSecondResponseTable;
 }  // namespace
 
 Child::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
-                                        ::zx::channel request) {
+                                        ::zx::channel& request) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
@@ -215,13 +214,12 @@ Child::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
 }
 
 Child::ResultOf::First Child::SyncClient::First(::zx::channel request) {
-  return ResultOf::First(::zx::unowned_channel(this->channel_),
-                         std::move(request));
+  return ResultOf::First(::zx::unowned_channel(this->channel_), request);
 }
 
 Child::ResultOf::First Child::Call::First(::zx::unowned_channel _client_end,
                                           ::zx::channel request) {
-  return ResultOf::First(std::move(_client_end), std::move(request));
+  return ResultOf::First(std::move(_client_end), request);
 }
 
 Child::UnownedResultOf::First_Impl::First_Impl(
@@ -288,7 +286,7 @@ Child::UnownedResultOf::First Child::Call::First(
 }
 
 Child::ResultOf::Second_Impl::Second_Impl(::zx::unowned_channel _client_end,
-                                          ::zx::channel request) {
+                                          ::zx::channel& request) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)];
@@ -308,13 +306,12 @@ Child::ResultOf::Second_Impl::Second_Impl(::zx::unowned_channel _client_end,
 }
 
 Child::ResultOf::Second Child::SyncClient::Second(::zx::channel request) {
-  return ResultOf::Second(::zx::unowned_channel(this->channel_),
-                          std::move(request));
+  return ResultOf::Second(::zx::unowned_channel(this->channel_), request);
 }
 
 Child::ResultOf::Second Child::Call::Second(::zx::unowned_channel _client_end,
                                             ::zx::channel request) {
-  return ResultOf::Second(std::move(_client_end), std::move(request));
+  return ResultOf::Second(std::move(_client_end), request);
 }
 
 Child::UnownedResultOf::Second_Impl::Second_Impl(
@@ -383,7 +380,7 @@ Child::UnownedResultOf::Second Child::Call::Second(
 
 ::fidl::StatusAndError Child::ClientImpl::First(::zx::channel request) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::First(_binding->channel(), std::move(request));
+    auto _res = ResultOf::First(_binding->channel(), request);
     return ::fidl::StatusAndError(_res.status(), _res.error());
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -401,7 +398,7 @@ Child::UnownedResultOf::Second Child::Call::Second(
 
 ::fidl::StatusAndError Child::ClientImpl::Second(::zx::channel request) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::Second(_binding->channel(), std::move(request));
+    auto _res = ResultOf::Second(_binding->channel(), request);
     return ::fidl::StatusAndError(_res.status(), _res.error());
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);

@@ -19,7 +19,7 @@ extern "C" const fidl_type_t fidl_test_json_superfooResponseTable;
 }  // namespace
 template <>
 super::ResultOf::foo_Impl<super::fooResponse>::foo_Impl(
-    ::zx::unowned_channel _client_end, ::fidl::StringView s) {
+    ::zx::unowned_channel _client_end, const ::fidl::StringView& s) {
   fooRequest _request(0, s);
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<fooRequest>(&_request);
@@ -36,12 +36,12 @@ super::ResultOf::foo_Impl<super::fooResponse>::foo_Impl(
 }
 
 super::ResultOf::foo super::SyncClient::foo(::fidl::StringView s) {
-  return ResultOf::foo(::zx::unowned_channel(this->channel_), std::move(s));
+  return ResultOf::foo(::zx::unowned_channel(this->channel_), s);
 }
 
 super::ResultOf::foo super::Call::foo(::zx::unowned_channel _client_end,
                                       ::fidl::StringView s) {
-  return ResultOf::foo(std::move(_client_end), std::move(s));
+  return ResultOf::foo(std::move(_client_end), s);
 }
 
 template <>
@@ -113,7 +113,7 @@ super::UnownedResultOf::foo super::Call::foo(
 
 super::ResultOf::foo super::ClientImpl::foo_Sync(::fidl::StringView s) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::foo(_binding->channel(), std::move(s));
+    return ResultOf::foo(_binding->channel(), s);
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
@@ -312,7 +312,7 @@ extern "C" const fidl_type_t fidl_test_json_subfooResponseTable;
 }  // namespace
 template <>
 sub::ResultOf::foo_Impl<sub::fooResponse>::foo_Impl(
-    ::zx::unowned_channel _client_end, ::fidl::StringView s) {
+    ::zx::unowned_channel _client_end, const ::fidl::StringView& s) {
   fooRequest _request(0, s);
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<fooRequest>(&_request);
@@ -329,12 +329,12 @@ sub::ResultOf::foo_Impl<sub::fooResponse>::foo_Impl(
 }
 
 sub::ResultOf::foo sub::SyncClient::foo(::fidl::StringView s) {
-  return ResultOf::foo(::zx::unowned_channel(this->channel_), std::move(s));
+  return ResultOf::foo(::zx::unowned_channel(this->channel_), s);
 }
 
 sub::ResultOf::foo sub::Call::foo(::zx::unowned_channel _client_end,
                                   ::fidl::StringView s) {
-  return ResultOf::foo(std::move(_client_end), std::move(s));
+  return ResultOf::foo(std::move(_client_end), s);
 }
 
 template <>
@@ -407,7 +407,7 @@ sub::UnownedResultOf::foo sub::Call::foo(::zx::unowned_channel _client_end,
 
 sub::ResultOf::foo sub::ClientImpl::foo_Sync(::fidl::StringView s) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::foo(_binding->channel(), std::move(s));
+    return ResultOf::foo(_binding->channel(), s);
   }
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
