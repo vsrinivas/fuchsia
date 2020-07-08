@@ -206,6 +206,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "aml_sd/aml-sd-emmc",
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
+      "sys/platform/05:06:1c/aml-nna",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -431,7 +432,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sherlock-sd-emmc/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "wifi/brcmfmac-wlanphy",
       "sys/platform/05:04:15/aml-mipi",
-      "sys/platform/05:04:1c",  // nna
+      "sys/platform/05:04:1c/aml-nna",
       "sys/platform/05:04:1d",  // pwm
       "gdc",
       "ge2d",

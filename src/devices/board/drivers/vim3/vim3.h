@@ -27,6 +27,7 @@ enum {
   BTI_SD,
   BTI_SDIO,
   BTI_SYSMEM,
+  BTI_NNA,
 };
 
 class Vim3;
@@ -56,6 +57,7 @@ class Vim3 : public Vim3Type {
   zx_status_t SdioInit();
   zx_status_t Start();
   zx_status_t SysmemInit();
+  zx_status_t NnaInit();
 
   int Thread();
 
