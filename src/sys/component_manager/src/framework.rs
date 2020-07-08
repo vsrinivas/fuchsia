@@ -145,8 +145,10 @@ impl RealmCapabilityHost {
         collection: fsys::CollectionRef,
         child_decl: fsys::ChildDecl,
     ) -> Result<(), fcomponent::Error> {
-        cm_fidl_validator::validate_child(&child_decl)
-            .map_err(|_| fcomponent::Error::InvalidArguments)?;
+        cm_fidl_validator::validate_child(&child_decl).map_err(|e| {
+            error!("validate_child() failed: {}", e);
+            fcomponent::Error::InvalidArguments
+        })?;
         if child_decl.environment.is_some() {
             return Err(fcomponent::Error::InvalidArguments);
         }
@@ -159,8 +161,7 @@ impl RealmCapabilityHost {
                 error!("add_dynamic_child() failed: {:?}", e);
                 fcomponent::Error::Internal
             }
-        })?;
-        Ok(())
+        })
     }
 
     async fn bind_child(
