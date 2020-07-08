@@ -78,13 +78,13 @@ pub struct RegistryImpl {
 }
 
 impl RegistryImpl {
-    /// Returns a handle to a RegistryImpl which is listening to SettingAction from the
+    /// Creates a RegistryImpl that is listening to SettingAction from the
     /// provided receiver and will send responses/updates on the given sender.
     pub async fn create(
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
         messenger_factory: core::message::Factory,
         controller_messenger_factory: handler::message::Factory,
-    ) -> Result<Arc<Mutex<RegistryImpl>>, Error> {
+    ) -> Result<(), Error> {
         let messenger_result =
             messenger_factory.create(MessengerType::Addressable(core::Address::Registry)).await;
         if let Err(error) = messenger_result {
@@ -107,16 +107,14 @@ impl RegistryImpl {
 
         // We must create handle here rather than return back the value as we
         // reference the registry in the async tasks below.
-        // TODO (fxb/53819): Remove the Arc(Mutex).
-        let registry = Arc::new(Mutex::new(Self {
+        let mut registry = Self {
             handler_factory,
             messenger_client: registry_messenger_client,
             active_controllers: HashMap::new(),
             controller_messenger_client,
             controller_messenger_factory,
             active_controller_sender,
-        }));
-        let registry_clone = registry.clone();
+        };
 
         fasync::spawn(async move {
             loop {
@@ -130,7 +128,7 @@ impl RegistryImpl {
                         if let Some(
                             MessageEvent::Message(handler::Payload::Changed(setting), _)
                         )= controller_event {
-                            registry_clone.lock().await.notify(setting);
+                            registry.notify(setting);
                         }
                     }
 
@@ -139,14 +137,13 @@ impl RegistryImpl {
                         if let Some(
                             MessageEvent::Message(core::Payload::Action(action), message_client)
                         ) = registry_event {
-                            registry_clone.lock().await.process_action(action, message_client).await;
+                            registry.process_action(action, message_client).await;
                         }
                     }
 
                     // Handle messages for dealing with the active_controllers.
                     request = active_controller_receiver.next() => {
                         if let Some(request) = request {
-                            let mut registry = registry_clone.lock().await;
                             match request {
                                 ActiveControllerRequest::AddActive(setting_type, id) => {
                                     registry.add_active_request(id, setting_type).await;
@@ -163,7 +160,7 @@ impl RegistryImpl {
                 }
             }
         });
-        Ok(registry)
+        Ok(())
     }
 
     /// Interpret action from switchboard into registry actions.
