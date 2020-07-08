@@ -308,7 +308,7 @@ struct Publication {
 
 const uint16 DEFAULT_SRV_PRIORITY = 0;
 const uint16 DEFAULT_SRV_WEIGHT = 0;
-const zx.duration DEFAULT_PTR_TTL = 4500000000000; // 75 minutes
+const zx.duration DEFAULT_PTR_TTL = 120000000000; // 2 minutes
 const zx.duration DEFAULT_SRV_TTL = 120000000000; // 2 minutes
 const zx.duration DEFAULT_TXT_TTL = 4500000000000; // 75 minutes
 const uint32 MAX_TEXT_STRINGS = 256;

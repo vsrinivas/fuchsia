@@ -71,7 +71,7 @@ class Mdns : public MdnsAgent::Host {
     std::vector<std::string> text_;
     uint16_t srv_priority_ = 0;
     uint16_t srv_weight_ = 0;
-    uint32_t ptr_ttl_seconds_ = 4500;  // default 75 minutes
+    uint32_t ptr_ttl_seconds_ = 120;   // default 2 minutes
     uint32_t srv_ttl_seconds_ = 120;   // default 2 minutes
     uint32_t txt_ttl_seconds_ = 4500;  // default 75 minutes
   };
