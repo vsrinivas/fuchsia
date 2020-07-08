@@ -861,6 +861,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
 						},
 					},
 				},
@@ -878,10 +879,12 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
 						},
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.ManagedAddress)},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
 						},
 					},
 				},
@@ -898,6 +901,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
 						},
 					},
 				},
@@ -909,6 +913,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
 						},
 					},
 				},
@@ -926,10 +931,12 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
 						},
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
 						},
 					},
 				},
