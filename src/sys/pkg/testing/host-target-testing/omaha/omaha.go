@@ -91,8 +91,11 @@ type response struct {
 	Response responseConfig `json:"response"`
 }
 
-// NewOmahaServer starts an http server that serves the omaha response.
-func NewOmahaServer(ctx context.Context, localHostname string) (*OmahaServer, error) {
+// NewOmahaServer starts an http server that serves the omaha response. The
+// `serverAddress` is the address the server will listen on. The
+// `localHostname` is the hostname running the server from the perspective of
+// the test device.
+func NewOmahaServer(ctx context.Context, serverAddress string, localHostname string) (*OmahaServer, error) {
 	l := logger.NewLogger(
 		logger.DebugLevel,
 		color.NewColor(color.ColorAuto),
@@ -102,7 +105,7 @@ func NewOmahaServer(ctx context.Context, localHostname string) (*OmahaServer, er
 	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
 	ctx = logger.WithLogger(ctx, l)
 
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", serverAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -237,9 +240,11 @@ func (o *OmahaServer) SetUpdatePkgURL(ctx context.Context, updatePkgURL string) 
 		return fmt.Errorf("update package URL's host must not be empty")
 	}
 
-	logger.Infof(ctx, "Omaha Server update package set to %q", u.String())
+	logger.Infof(ctx, "Omaha Server update package set to %q %q", u.Host, u.String())
 
 	o.updateHost = fmt.Sprintf("fuchsia-pkg://%s", u.Host)
+
+	logger.Infof(ctx, "Omaha Server update package set to %q", u.String())
 
 	// The updatePkg field is the URL with the scheme and host stripped off.
 	u.Scheme = ""

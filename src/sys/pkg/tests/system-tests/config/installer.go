@@ -33,6 +33,7 @@ type InstallerConfig struct {
 	avbTool         *avb.AVBTool
 	updater         updater.Updater
 	omahaServer     *omaha.OmahaServer
+	omahaAddress    string
 }
 
 func NewInstallerConfig(fs *flag.FlagSet) (*InstallerConfig, error) {
@@ -45,6 +46,7 @@ func NewInstallerConfig(fs *flag.FlagSet) (*InstallerConfig, error) {
 		"path to the avbtool binary")
 	fs.StringVar(&c.keyPath, "vbmeta-key", filepath.Join(testDataPath, "atx_psk.pem"), "path to the vbmeta private key")
 	fs.StringVar(&c.keyMetadataPath, "vbmeta-key-metadata", filepath.Join(testDataPath, "avb_atx_metadata.bin"), "path to the vbmeta public key metadata")
+	fs.StringVar(&c.omahaAddress, "omaha-address", ":0", "which address to serve omaha server on (default random)")
 
 	return c, nil
 }
@@ -65,7 +67,7 @@ func (c *InstallerConfig) ConfigureBuild(ctx context.Context, build artifacts.Bu
 	switch c.installerMode {
 	case Omaha:
 		if c.omahaServer == nil {
-			omahaServer, err := omaha.NewOmahaServer(ctx, "localhost")
+			omahaServer, err := omaha.NewOmahaServer(ctx, c.omahaAddress, "localhost")
 			if err != nil {
 				return nil, err
 			}
