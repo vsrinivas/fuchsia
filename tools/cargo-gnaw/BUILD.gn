@@ -4,11 +4,21 @@
 
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 if (is_host) {
   rustc_binary("cargo-gnaw-bin") {
-    name = "gnaw"
+    output_name = "gnaw"
+
+    deps = [
+      ":cargo-gnaw-lib",
+      "//third_party/rust_crates:anyhow",
+    ]
+  }
+
+  rustc_library("cargo-gnaw-lib") {
+    name = "gnaw_lib"
 
     deps = [
       "//third_party/rust_crates:anyhow",
@@ -23,7 +33,7 @@ if (is_host) {
   }
 
   rustc_test("cargo-gnaw-tests") {
-    source_root = "src/main.rs"
+    source_root = "src/lib.rs"
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
@@ -37,20 +47,24 @@ if (is_host) {
   }
 }
 
-install_host_tools("cargo-gnaw") {
+install_host_tools("install-cargo-gnaw") {
   deps = [ ":cargo-gnaw-bin" ]
   outputs = [ "gnaw" ]
 }
 
-# This is not visible outside of this file. CQ cannot use these tests currently
-# since they depend on environment variables.
-#
-# They are still available for local testing
-group("tests") {
-  visibility = [
-    ":*",
-    "//:additional_universe_packages",
-  ]
+group("cargo-gnaw") {
   testonly = true
-  deps = [ ":cargo-gnaw-tests($host_toolchain)" ]
+  deps = [
+    ":cargo-gnaw-bin($host_toolchain)",
+    ":install-cargo-gnaw",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":cargo-gnaw-tests($host_toolchain)",
+    "tests",
+  ]
 }
