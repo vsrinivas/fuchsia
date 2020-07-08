@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_DESCRIPTOR_H_
+#define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_DESCRIPTOR_H_
 
 #include <hwreg/bitfields.h>
 
@@ -107,7 +108,9 @@ struct Desc64 : public Desc32 {
   uint32_t base_hi32;
   uint32_t rsvdz;
 
-  constexpr uint64_t base() const { return (static_cast<uint64_t>(base_hi32) << 32) | Desc32::base(); }
+  constexpr uint64_t base() const {
+    return (static_cast<uint64_t>(base_hi32) << 32) | Desc32::base();
+  }
 
   constexpr auto& set_base(uint64_t base) {
     base_hi32 = static_cast<uint32_t>(base >> 32);
@@ -116,3 +119,5 @@ struct Desc64 : public Desc32 {
 };
 
 }  // namespace arch
+
+#endif  // ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_DESCRIPTOR_H_
