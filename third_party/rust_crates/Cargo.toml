@@ -26,7 +26,7 @@ version = "0.1.0"
 anyhow = "1.0.25"
 arbitrary = { version = "0.4.0", features = ["derive"] }
 argh = "0.1"
-async-trait = "0.1.11"
+async-trait = "0.1.36"
 base64 = "0.9"
 bincode = "1"
 bitfield = "0.13"
