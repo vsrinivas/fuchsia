@@ -165,8 +165,8 @@ void Screenshotter::TakeScreenshot(
   image_info.format = kScenicScreenshotFormat;
   image_info.width = width;
   image_info.height = height;
-  image_info.usage =
-      vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
+  image_info.usage = vk::ImageUsageFlagBits::eColorAttachment |
+                     vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
 
   // TODO(ES-7): cache is never trimmed.
   escher::ImagePtr image = escher->image_cache()->NewImage(image_info);
