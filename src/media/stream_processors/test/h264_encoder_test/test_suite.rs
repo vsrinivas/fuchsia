@@ -12,9 +12,9 @@ use std::rc::Rc;
 use stream_processor_decoder_factory::*;
 use stream_processor_encoder_factory::*;
 use stream_processor_test::*;
+use video_frame_stream::*;
 
 use crate::h264::*;
-use crate::video_frame::*;
 
 pub struct H264NalValidator {
     pub expected_nals: Option<Vec<H264NalKind>>,
@@ -196,6 +196,7 @@ impl H264EncoderTestCase {
             self.settings.clone(),
             /*frames_per_second=*/ 30,
             /*timebase=*/ Some(zx::Duration::from_seconds(1).into_nanos() as u64),
+            /*mime_type=*/ "video/h264",
         )?))
     }
 }

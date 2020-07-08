@@ -4,7 +4,6 @@
 
 mod h264;
 mod test_suite;
-mod video_frame;
 
 use crate::h264::*;
 use crate::test_suite::*;

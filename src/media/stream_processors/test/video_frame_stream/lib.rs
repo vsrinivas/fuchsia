@@ -5,7 +5,6 @@
 use fidl::encoding::Decodable;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
-use fuchsia_zircon as zx;
 use std::rc::Rc;
 use stream_processor_test::*;
 
@@ -15,6 +14,7 @@ pub struct VideoFrame {
     data: Vec<u8>,
 }
 
+/// Container for raw video frame and associated format
 impl VideoFrame {
     /// Generates a frame with specified `format`.
     /// `step` is for diagonally shifting the checkerboard pattern.
@@ -66,12 +66,15 @@ impl TimestampGenerator {
     }
 }
 
+/// Implements an `ElementaryStream` of raw video frames with the specified `format`, intended to be
+/// fed to an encoder StreamProcessor.
 pub struct VideoFrameStream {
     pub num_frames: usize,
     pub format: sysmem::ImageFormat2,
     pub encoder_settings: Rc<dyn Fn() -> EncoderSettings>,
     pub frames_per_second: usize,
     pub timebase: Option<u64>,
+    pub mime_type: String,
 }
 
 impl VideoFrameStream {
@@ -81,8 +84,16 @@ impl VideoFrameStream {
         encoder_settings: Rc<dyn Fn() -> EncoderSettings>,
         frames_per_second: usize,
         timebase: Option<u64>,
+        mime_type: &str,
     ) -> Result<Self> {
-        Ok(Self { num_frames, format, encoder_settings, frames_per_second, timebase })
+        Ok(Self {
+            num_frames,
+            format,
+            encoder_settings,
+            frames_per_second,
+            timebase,
+            mime_type: mime_type.to_string(),
+        })
     }
 
     pub fn timestamp_generator(&self) -> Option<TimestampGenerator> {
@@ -102,7 +113,7 @@ impl ElementaryStream for VideoFrameStream {
             }))),
             encoder_settings: Some((self.encoder_settings)()),
             format_details_version_ordinal: Some(format_details_version_ordinal),
-            mime_type: Some("video/h264".to_string()),
+            mime_type: Some(self.mime_type.to_string()),
             oob_bytes: None,
             pass_through_parameters: None,
             timebase: self.timebase,
@@ -133,6 +144,7 @@ impl ElementaryStream for VideoFrameStream {
 #[cfg(test)]
 mod test {
     use super::*;
+    use fuchsia_zircon as zx;
 
     #[derive(Debug, Copy, Clone)]
     struct TestSpec {
@@ -193,6 +205,7 @@ mod test {
             }),
             /*frames_per_second=*/ 60,
             /*timebase=*/ Some(zx::Duration::from_seconds(1).into_nanos() as u64),
+            /*mime_type=*/ "video/h264",
         )
         .expect("stream");
         let mut chunks = stream.stream();
