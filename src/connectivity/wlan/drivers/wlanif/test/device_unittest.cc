@@ -176,6 +176,36 @@ TEST(SmeChannel, Bound) {
   device.EthUnbind();
 }
 
+// Tests that the device will be unbound following a failed device bind.
+TEST(SmeChannel, FailedBind) {
+  wlanif_impl_protocol_ops_t proto_ops = EmptyProtoOps();
+  proto_ops.start = [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
+                       zx_handle_t* out_sme_channel) -> zx_status_t {
+    *out_sme_channel = static_cast<SmeChannelTestContext*>(ctx)->sme.release();
+    return ZX_OK;
+  };
+
+  SmeChannelTestContext ctx;
+  wlanif_impl_protocol_t proto = {
+      .ops = &proto_ops,
+      .ctx = &ctx,
+  };
+
+  fake_ddk::Bind ddk;
+  auto device = wlanif::Device{fake_ddk::kFakeParent, proto};
+
+  // Connect a mock channel so that the next device bind will fail.
+  zx::channel local, remote;
+  ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
+  ASSERT_EQ(device.Connect(std::move(remote)), ZX_OK);
+
+  // This should fail and request the device be unbound.
+  auto status = device.Bind();
+  ASSERT_NE(status, ZX_OK);
+  ASSERT_EQ(ddk.WaitUntilRemove(), ZX_OK);
+  ASSERT_TRUE(ddk.Ok());
+}
+
 struct AssocReqTestContext {
   AssocReqTestContext() {
     auto [new_sme, new_mlme] = make_channel();
