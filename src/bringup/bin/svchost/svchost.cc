@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/component/runner/c/fidl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
@@ -231,11 +232,12 @@ static constexpr const char* devcoordinator_services[] = {
 
 // List of services which are re-routed to devmgr.
 static constexpr const char* devmgr_services[] = {
-    llcpp::fuchsia::device::manager::SystemStateTransition::Name,
+    fuchsia_component_runner_ComponentRunner_Name,
     fuchsia_device_manager_Administrator_Name,
     fuchsia_device_manager_DebugDumper_Name,
     fuchsia_hardware_power_statecontrol_RebootMethodsWatcherRegister_Name,
     llcpp::fuchsia::device::manager::BindDebugger::Name,
+    llcpp::fuchsia::device::manager::SystemStateTransition::Name,
     nullptr,
 };
 

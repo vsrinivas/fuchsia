@@ -42,6 +42,7 @@ executable("svchost") {
   deps = [
     ":crashsvc",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
