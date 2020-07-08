@@ -25,7 +25,7 @@ use {
     },
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
+    fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::future::TryFutureExt,
@@ -376,8 +376,8 @@ impl Realm {
                         .map_err(|_| ModelError::InsufficientResources)?;
                 let mut server_channel = server_channel.into_channel();
                 routing::route_use_capability(
-                    /*flags=*/ 0,
-                    /*open_mode=*/ 0,
+                    OPEN_RIGHT_READABLE,
+                    MODE_TYPE_SERVICE,
                     String::new(),
                     &UseDecl::Runner(runner_decl.clone()),
                     self,
