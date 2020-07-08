@@ -88,7 +88,6 @@ TEST(NodePopulatorTest, WalkOne) {
   const InodePtr inode = allocator->GetNode(node_index);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->header.next_node);
   ASSERT_EQ(0, inode->blob_size);
   ASSERT_EQ(0, inode->extent_count);
 
@@ -99,7 +98,6 @@ TEST(NodePopulatorTest, WalkOne) {
   // After walking, observe that the node is allocated.
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->header.next_node);
   ASSERT_EQ(0, inode->blob_size);
   ASSERT_EQ(1, inode->extent_count);
   ASSERT_EQ(allocated_extent.Start(), inode->extents[0].Start());
@@ -144,7 +142,6 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
   const InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->header.next_node);
   ASSERT_EQ(0, inode->blob_size);
   ASSERT_EQ(0, inode->extent_count);
 
@@ -155,7 +152,6 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
   // After walking, observe that the node is allocated.
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->header.next_node);
   ASSERT_EQ(0, inode->blob_size);
   ASSERT_EQ(kInlineMaxExtents, inode->extent_count);
   for (size_t i = 0; i < kInlineMaxExtents; i++) {
@@ -204,7 +200,6 @@ TEST(NodePopulatorTest, WalkManyNodes) {
   InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->header.next_node);
   ASSERT_EQ(0, inode->blob_size);
   ASSERT_EQ(0, inode->extent_count);
 
@@ -227,7 +222,6 @@ TEST(NodePopulatorTest, WalkManyNodes) {
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_TRUE(inode->header.IsExtentContainer());
   const ExtentContainer* container = inode->AsExtentContainer();
-  ASSERT_EQ(0, container->header.next_node);
   ASSERT_EQ(allocated_nodes[0], container->previous_node);
   ASSERT_EQ(1, container->extent_count);
   ASSERT_TRUE(allocated_extents[kInlineMaxExtents] == container->extents[0]);
@@ -263,7 +257,6 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->header.next_node);
   ASSERT_EQ(0, inode->blob_size);
   ASSERT_EQ(0, inode->extent_count);
 
@@ -310,7 +303,6 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_TRUE(inode->header.IsExtentContainer());
   container = inode->AsExtentContainer();
-  ASSERT_EQ(0, container->header.next_node);
   ASSERT_EQ(allocated_nodes[1], container->previous_node);
   ASSERT_EQ(1, container->extent_count);
   ASSERT_TRUE(allocated_extents[kInlineMaxExtents + kContainerMaxExtents] == container->extents[0]);
@@ -348,7 +340,6 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->header.next_node);
   ASSERT_EQ(0, inode->blob_size);
   ASSERT_EQ(0, inode->extent_count);
 
@@ -373,7 +364,6 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   // After walking, observe that the inode is allocated.
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->header.next_node);
   ASSERT_EQ(0, inode->blob_size);
   ASSERT_EQ(kUsedExtents, inode->extent_count);
   for (size_t i = 0; i < kInlineMaxExtents; i++) {
@@ -421,7 +411,6 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->header.next_node);
   ASSERT_EQ(0, inode->blob_size);
   ASSERT_EQ(0, inode->extent_count);
 
@@ -449,7 +438,6 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   // After walking, observe that the inode is allocated.
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->header.next_node);
   ASSERT_EQ(0, inode->blob_size);
   ASSERT_EQ(kUsedExtents, inode->extent_count);
   for (size_t i = 0; i < kInlineMaxExtents; i++) {

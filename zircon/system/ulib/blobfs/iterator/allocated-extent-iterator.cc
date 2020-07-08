@@ -83,6 +83,10 @@ uint32_t AllocatedExtentIterator::GetNextNode() const {
 zx_status_t AllocatedExtentIterator::NextContainer() {
   ZX_DEBUG_ASSERT(!Done());
   uint32_t node_index = GetNextNode();
+  // Our implementation uses 0xffffffffu as an end of list indicator to spot
+  // attempts to iterate past the end of the list. This value is technically
+  // valid but not in any existing practical or debugging use cases.
+  ZX_DEBUG_ASSERT(node_index != kMaxNodeId);
 
   local_index_ = 0;
   extent_node_ = finder_->GetNode(node_index)->AsExtentContainer();

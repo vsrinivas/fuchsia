@@ -111,8 +111,8 @@ blob's data starts and some other metadata about the blob.
 Figure 4: Layout of a Blobfs Inode.
 
 For small blobs, the Inode may be the only node necessary to describe where the
-blob is on disk. In this case, `inline_extent` describes the blob's single
-extent and `next_node` is set to zero.
+blob is on disk. In this case `extent_count` is one, `next_node` must not be
+used, and `inline_extent` describes the blob's single extent.
 
 Larger blobs will likely occupy multiple extents, especially on a fragmented
 Blobfs image. In this case, the first extent of the blob is stored in
@@ -143,7 +143,7 @@ Figure 6: Layout of a Blobfs ExtentContainer.
 ##### Properties of the node linked-list
 
 A blob's extents are held in a linked-list of a single Inode (which holds the
-first extent) and one or more ExtentContainers (each of which holds up to 6
+first extent) and zero or more ExtentContainers (each of which holds up to 6
 extents).
 
 This linked list has the following properties. Violating any of these properties
@@ -156,12 +156,14 @@ results in blobfs treating the blob as corrupted.
         extent 𝑥 has a lower logical offset into the blob's contents than extent
         𝑦.
 *   Nodes are packed before a new node is linked. That is, if a Node has a
-    non-null `next_node`, then it must be full of extents (*extent for INodes
+    non-null `next_node`, then it must be full of extents (*extent for Inodes
     and 6 extents for ExtentContainers).
 *   The total number of extents in the linked-list must equal to the Inode's
     `extent_count`.
 *   The sum of the size of all extents in the linked-list must equal to the
     Inode's `block_count`.
+*   The end of the list is determined based on the `extent_count` in the Inode
+    being satisfied. `next_node` in the final node should not be used.
 
 ##### Example Node layouts
 

@@ -88,10 +88,6 @@ inline size_t WriteBufferSize() {
 }
 #endif
 
-// Notes:
-// - block 0 is always allocated
-// - inode 0 is never used, should be marked allocated but ignored
-
 struct __PACKED Superblock {
   uint64_t magic0;
   uint64_t magic1;
@@ -234,6 +230,9 @@ typedef uint16_t ExtentCountType;
 // The largest number of extents which can compose a blob.
 constexpr size_t kMaxBlobExtents = std::numeric_limits<ExtentCountType>::max();
 
+// The largest node id representable in a node list.
+constexpr uint32_t kMaxNodeId = 0xffffffffu;
+
 // Identifies that the node is allocated.
 // Both inodes and extent containers can be allocated.
 constexpr uint16_t kBlobFlagAllocated = 1 << 0;
@@ -269,7 +268,7 @@ struct __PACKED NodePrelude {
   uint16_t flags;
   uint16_t version;
   // The next node containing this blob's extents.
-  // Zero if there are no more extents.
+  // Should not be used or read if there are no more extents.
   uint32_t next_node;
 
   bool IsAllocated() const { return flags & kBlobFlagAllocated; }
@@ -289,6 +288,7 @@ struct __PACKED alignas(8) Inode {
   // The total number of Blocks used to represent this blob.
   uint32_t block_count;
   // The total number of Extent objects necessary to represent this blob.
+  // Identifies when to stop iterating through the node list.
   ExtentCountType extent_count;
   uint16_t reserved;
   Extent extents[kInlineMaxExtents];

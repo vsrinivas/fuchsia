@@ -205,7 +205,10 @@ void Allocator::MarkInodeAllocated(const ReservedNode& node) {
   InodePtr mapped_inode = GetNode(node.index());
   ZX_ASSERT((mapped_inode->header.flags & kBlobFlagAllocated) == 0);
   mapped_inode->header.flags = kBlobFlagAllocated;
-  mapped_inode->header.next_node = 0;
+  // This value should not be relied upon as it is not part of the
+  // specification, it is chosen to trigger crashing when used. This will be
+  // updated to a usable value when another node is appended to the list.
+  mapped_inode->header.next_node = kMaxNodeId;
 }
 
 void Allocator::MarkContainerNodeAllocated(const ReservedNode& node, uint32_t previous_node) {
@@ -214,7 +217,10 @@ void Allocator::MarkContainerNodeAllocated(const ReservedNode& node, uint32_t pr
   ExtentContainer* container = GetNode(index)->AsExtentContainer();
   ZX_ASSERT((container->header.flags & kBlobFlagAllocated) == 0);
   container->header.flags = kBlobFlagAllocated | kBlobFlagExtentContainer;
-  container->header.next_node = 0;
+  // This value should not be relied upon as it is not part of the
+  // specification, it is chosen to trigger crashing when used. This will be
+  // updated to a usable value when another node is appended to the list.
+  container->header.next_node = kMaxNodeId;
   container->previous_node = previous_node;
   container->extent_count = 0;
 }
