@@ -40,7 +40,11 @@ BT_SET_UP() {
   btf::add_binary_to_path "${mycurl}"
   metrics_log="${BT_TEMP_DIR}/metrics_log"
   BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/.fx-metrics-config"
-  ${fx} metrics enable "--log=${metrics_log}" > /dev/null
+
+  source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
+  source "${BT_TEMP_DIR}/tools/devshell/lib/metrics.sh"
+  metrics-write-config 1 TESTUUID "${metrics_log}"
+  metrics-read-config
 }
 
 verify_execution_event() {
@@ -65,8 +69,8 @@ verify_execution_event() {
 TEST_metrics_doesnt_match_cmd_substring() {
   local cmd="fidl"
   local arg="someargs"
-  ${fx} ${cmd} "${arg}"
-  sleep 0.1  # sleep is required because metrics are collected as background jobs
+  track-command-execution "${cmd}" "$arg"
+  track-command-finished "200" "0" "${cmd}" "$arg"
   verify_execution_event ${cmd}
 
   # verify that the "fidl" command doesn't trigger the all args tracking that
@@ -83,9 +87,9 @@ TEST_metrics_doesnt_match_cmd_substring() {
 TEST_metrics_no_arguments_tracking() {
   local cmd="build"
   local arg="something"
-  ${fx} ${cmd} "${arg}"
-  sleep 0.1  # sleep is required because metrics are collected as background jobs
-  verify_execution_event ${cmd}
+  track-command-execution "${cmd}" "$arg"
+  track-command-finished "200" "0" "${cmd}" "$arg"
+  verify_execution_event "${cmd}"
   # the "build" command does not track arguments:
   for f in "${mycurl}".mock_state*; do
     if btf::does-mock-args-contain "${f}" "--data-urlencode" "el=${arg}"; then
@@ -99,10 +103,10 @@ TEST_metrics_no_arguments_tracking() {
 TEST_metrics_track_arguments() {
   local cmd="set"
   local arg="some argument"
-  ${fx} ${cmd} "${arg}"
-  # The "set" command tracks all arguments, let's verify:
-  sleep 0.1  # sleep is required because metrics are collected as background jobs
+  track-command-execution "${cmd}" "$arg"
+  track-command-finished "200" "0" "${cmd}" "$arg"
   verify_execution_event ${cmd}
+  # The "set" command tracks all arguments, let's verify:
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${metrics_log}" "el=${arg}"
   for f in "${mycurl}".mock_state*; do
     if btf::does-mock-args-contain "${f}" "--data-urlencode" "el=${arg}"; then
@@ -118,13 +122,9 @@ TEST_metrics_custom_track() {
   local action="myaction"
   local label="mylabel"
 
-  cat > "${BT_TEMP_DIR}/tools/devshell/${cmd}.mock_side_effects" <<EOF
-source "\${FUCHSIA_DIR}/tools/devshell/lib/metrics.sh" || exit $?
-track-subcommand-custom-event "${cmd}" "${action}" "${label}"
-EOF
-  ${fx} ${cmd}
-  # The "set" command tracks all arguments, let's verify:
-  sleep 0.1  # sleep is required because metrics are collected as background jobs
+  track-command-execution "${cmd}" "$arg"
+  track-subcommand-custom-event "${cmd}" "${action}" "${label}"
+  track-command-finished "200" "0" "${cmd}" "$arg"
   verify_execution_event ${cmd}
   for f in "${mycurl}".mock_state*; do
     if btf::does-mock-args-contain "${f}" "--data-urlencode" "ec=fx_custom_${cmd}"; then
@@ -140,13 +140,9 @@ TEST_metrics_no_custom_track() {
   local action="myaction"
   local label="mylabel"
 
-  cat > "${BT_TEMP_DIR}/tools/devshell/${cmd}.mock_side_effects" <<EOF
-source "\${FUCHSIA_DIR}/tools/devshell/lib/metrics.sh" || exit $?
-track-subcommand-custom-event "${cmd}" "${action}" "${label}"
-EOF
-  ${fx} ${cmd}
-  # The "set" command tracks all arguments, let's verify:
-  sleep 0.1  # sleep is required because metrics are collected as background jobs
+  track-command-execution "${cmd}" "$arg"
+  track-subcommand-custom-event "${cmd}" "${action}" "${label}"
+  track-command-finished "200" "0" "${cmd}" "$arg"
   verify_execution_event ${cmd}
   for f in "${mycurl}".mock_state*; do
     if btf::does-mock-args-contain "${f}" "--data-urlencode" "ec=fx_custom_${cmd}"; then

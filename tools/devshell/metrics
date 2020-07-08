@@ -48,14 +48,14 @@ the session and user workflow in order to improve the user experience:
    - (in the future) Imports in BUILDDIR/args.gn for product and board
    - (in the future) Value FUCHSIA_ARCH from BUILDDIR/fx.config
 
-2. For the following subcomand(s) [${TRACK_ALL_ARGS}]:
+2. For the subcomand(s) [${_METRICS_TRACK_ALL_ARGS[@]}]:
    - All arguments passed to the subcommand
 
-3. For the following subcomand(s) [${TRACK_RESULTS}]:
+3. For the subcomand(s) [${_METRICS_TRACK_RESULTS[@]}]:
    - Time taken to complete
    - Exit status
 
-4. Custom events for the following subcommand(s): [${ALLOWS_CUSTOM_REPORTING}]
+4. Custom events for the subcommand(s): [${_METRICS_ALLOWS_CUSTOM_REPORTING[@]}]
 
 When metrics collection is disabled, any existing UUID is deleted, and a
 new UUID will be created if metrics is later re-enabled.
@@ -122,19 +122,19 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
+# Read config in a way that exit code is preserved but doesn't exit because
+# of "set -e" if config file doesn't exist
+__successfully_read_config=0
+metrics-read-config || __successfully_read_config=$?
+
 if [[ "$has_debug_logfile" -eq 1 ]]; then
   if [[ $action != "enable" ]]; then
     fx-error "Invalid syntax, you can only specify --log when enabling metrics"
     fx-command-help
     exit 1
   fi
-  metrics-set-debug-logfile "$debug_logfile"
+  metrics-set-debug-logfile "${debug_logfile}"
 fi
-
-# Read config in a way that exit code is preserved but doesn't exit because
-# of "set -e" if config file doesn't exist
-__successfully_read_config=0
-metrics-read-config || __successfully_read_config=$?
 
 if [[ $action == "status" ]]; then
   echo "Collection of metrics is currently $(styled-status "$METRICS_ENABLED") for ${FUCHSIA_DIR}"
@@ -178,6 +178,6 @@ elif [[ $action == "disable" ]]; then
   metrics-maybe-log "Metrics collection disabled at user's request"
 fi
 
-metrics-write-config "${METRICS_ENABLED}" "${METRICS_UUID}"
+metrics-write-config "${METRICS_ENABLED}" "${METRICS_UUID}" "${debug_logfile}"
 echo "Collection of metrics is now $(styled-status $METRICS_ENABLED) for ${FUCHSIA_DIR}"
 
