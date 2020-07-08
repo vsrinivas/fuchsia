@@ -20,9 +20,9 @@ using ::test::peridot::lib::fidl::appclient::TerminateService;
 constexpr char kServiceName[] = "service1";
 constexpr char kTestUrl[] = "some/test/url";
 
-fuchsia::modular::AppConfig GetTestAppConfig() {
-  fuchsia::modular::AppConfig app_config;
-  app_config.url = kTestUrl;
+fuchsia::modular::session::AppConfig GetTestAppConfig() {
+  fuchsia::modular::session::AppConfig app_config;
+  app_config.set_url(kTestUrl);
   return app_config;
 }
 

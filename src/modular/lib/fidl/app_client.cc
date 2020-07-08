@@ -23,21 +23,14 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
                              fuchsia::modular::session::AppConfig config, std::string data_origin,
                              fuchsia::sys::ServiceListPtr additional_services,
                              fuchsia::sys::FlatNamespacePtr flat_namespace)
-    : AppClientBase(launcher, CloneStruct(fidl::To<fuchsia::modular::AppConfig>(config)),
-                    data_origin, std::move(additional_services), std::move(flat_namespace)) {}
-
-AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
-                             fuchsia::modular::AppConfig config, std::string data_origin,
-                             fuchsia::sys::ServiceListPtr additional_services,
-                             fuchsia::sys::FlatNamespacePtr flat_namespace)
-    : AsyncHolderBase(config.url) {
+    : AsyncHolderBase(config.url()) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.directory_request = services_.NewRequest();
-  launch_info.url = config.url;
+  launch_info.url = config.url();
   std::vector<std::string> args;
-  if (config.args.has_value()) {
+  if (config.has_args()) {
     launch_info.arguments.emplace();
-    for (const auto& arg : *config.args) {
+    for (const auto& arg : config.args()) {
       launch_info.arguments->push_back(arg);
     }
   }

@@ -19,7 +19,6 @@ fidl("fuchsia.modular") {
     "agent/agent_controller/agent_controller.fidl",
     "annotation/annotation.fidl",
     "component/component_context.fidl",
-    "config/config.fidl",
     "intent/intent.fidl",
     "lifecycle/lifecycle.fidl",
     "module/module_context.fidl",
