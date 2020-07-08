@@ -42,8 +42,8 @@ Some of these require hardware; those that don't are included in pre-submit chec
     * Coverage 100% of magma_util/platform
 * magma_system_tests
     * Coverage 100% of magma system
-    * Uses mock msd
-* vendor msd
+    * Uses mock MSD
+* vendor MSD
     * Coverage 80-100% (may not be worth mocking out some portions of the hardware interacting code)
     * Several mocks used in place of hardware
         * platform mmio
@@ -53,6 +53,11 @@ Some of these require hardware; those that don't are included in pre-submit chec
 * libvulkan
     * Supplied by vendor
     * Uses mock magma system (if not sufficient, becomes a hardware interaction test)
+
+Unit tests that require hardware may be built into a test MSD which runs the
+tests when bound. A vendor-specific test harness unbinds the production driver,
+binds the test driver in its place, and queries the results of the tests. The
+test harness then unbinds the test driver and rebinds the production driver.
 
 ## Hardware Interaction Tests
 
