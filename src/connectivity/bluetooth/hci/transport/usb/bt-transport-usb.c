@@ -133,6 +133,12 @@ static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes
   }
 }
 
+static void remove_device_locked(hci_t* hci) {
+  if (hci->zxdev) {
+    device_async_remove(hci->zxdev);
+  }
+}
+
 static void hci_event_complete(void* ctx, usb_request_t* req) {
   hci_t* hci = (hci_t*)ctx;
   zxlogf(TRACE, "bt-transport-usb: Event received");
@@ -141,7 +147,7 @@ static void hci_event_complete(void* ctx, usb_request_t* req) {
   if (req->response.status != ZX_OK) {
     zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device",
            req->response.status, zx_status_get_string(req->response.status));
-    device_async_remove(hci->zxdev);
+    remove_device_locked(hci);
     goto out2;
   }
 
@@ -223,7 +229,7 @@ static void hci_acl_read_complete(void* ctx, usb_request_t* req) {
   if (req->response.status != ZX_OK) {
     zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device",
            req->response.status, zx_status_get_string(req->response.status));
-    device_async_remove(hci->zxdev);
+    remove_device_locked(hci);
     mtx_unlock(&hci->mutex);
     return;
   }
@@ -265,7 +271,7 @@ static void hci_acl_write_complete(void* ctx, usb_request_t* req) {
   if (req->response.status != ZX_OK) {
     zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device",
            req->response.status, zx_status_get_string(req->response.status));
-    device_async_remove(hci->zxdev);
+    remove_device_locked(hci);
     mtx_unlock(&hci->mutex);
     return;
   }
@@ -497,13 +503,16 @@ static void hci_unbind(void* ctx) {
   // Close the transport channels so that the host stack is notified of device removal.
   mtx_lock(&hci->mutex);
 
+  zx_device_t* unbinding_zxdev = hci->zxdev;
+  hci->zxdev = NULL;
+
   channel_cleanup_locked(hci, &hci->cmd_channel);
   channel_cleanup_locked(hci, &hci->acl_channel);
   channel_cleanup_locked(hci, &hci->snoop_channel);
 
   mtx_unlock(&hci->mutex);
 
-  device_unbind_reply(hci->zxdev);
+  device_unbind_reply(unbinding_zxdev);
 }
 
 static void hci_release(void* ctx) {
