@@ -16,7 +16,7 @@ const (
 	StrictUnionFieldNotSet                = "STRICT_UNION_FIELD_NOT_SET"
 	StrictUnionUnknownField               = "STRICT_UNION_UNKNOWN_FIELD"
 	StrictBitsUnknownBit                  = "STRICT_BITS_UNKNOWN_BIT"
-	StrictEnumUnknownValue                = "STRICT_ENUM_UNKOWN_VALUE"
+	StrictEnumUnknownValue                = "STRICT_ENUM_UNKNOWN_VALUE"
 	ExceededMaxOutOfLineDepth             = "EXCEEDED_MAX_OUT_OF_LINE_DEPTH"
 	InvalidNumBytesInEnvelope             = "INVALID_NUM_BYTES_IN_ENVELOPE"
 	InvalidNumHandlesInEnvelope           = "INVALID_NUM_HANDLES_IN_ENVELOPE"

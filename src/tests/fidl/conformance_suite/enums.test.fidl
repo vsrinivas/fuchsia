@@ -4,7 +4,42 @@
 
 library conformance;
 
-strict enum StrictEnum {
+strict enum StrictEnumInt8 : int8 {
+    FIRST = 1;
+    SECOND = 2;
+};
+
+strict enum StrictEnumInt16 : int16 {
+    FIRST = 1;
+    SECOND = 2;
+};
+
+strict enum StrictEnumInt32 : int32 {
+    FIRST = 1;
+    SECOND = 2;
+};
+
+strict enum StrictEnumInt64 : int64 {
+    FIRST = 1;
+    SECOND = 2;
+};
+
+strict enum StrictEnumUint8 : uint8 {
+    FIRST = 1;
+    SECOND = 2;
+};
+
+strict enum StrictEnumUint16 : uint16 {
+    FIRST = 1;
+    SECOND = 2;
+};
+
+strict enum StrictEnumUint32 : uint32 {
+    FIRST = 1;
+    SECOND = 2;
+};
+
+strict enum StrictEnumUint64 : uint64 {
     FIRST = 1;
     SECOND = 2;
 };
@@ -19,8 +54,36 @@ enum FlexibleEnumUint64 : uint64 {
     SECOND = 2;
 };
 
-struct StrictEnumStruct {
-    StrictEnum e;
+struct StrictEnumInt8Struct {
+    StrictEnumInt8 e;
+};
+
+struct StrictEnumInt16Struct {
+    StrictEnumInt16 e;
+};
+
+struct StrictEnumInt32Struct {
+    StrictEnumInt32 e;
+};
+
+struct StrictEnumInt64Struct {
+    StrictEnumInt64 e;
+};
+
+struct StrictEnumUint8Struct {
+    StrictEnumUint8 e;
+};
+
+struct StrictEnumUint16Struct {
+    StrictEnumUint16 e;
+};
+
+struct StrictEnumUint32Struct {
+    StrictEnumUint32 e;
+};
+
+struct StrictEnumUint64Struct {
+    StrictEnumUint64 e;
 };
 
 struct FlexibleEnumStruct {

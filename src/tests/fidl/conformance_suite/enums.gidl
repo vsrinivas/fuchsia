@@ -1,0 +1,304 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("StrictEnumInt8Struct") {
+    value = StrictEnumInt8Struct {
+        e: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, padding:7,
+        ],
+    },
+}
+
+success("StrictEnumInt16Struct") {
+    value = StrictEnumInt16Struct {
+        e: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, padding:6,
+        ],
+    },
+}
+
+success("StrictEnumInt32Struct") {
+    value = StrictEnumInt32Struct {
+        e: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, 0x00, 0x00, padding:4,
+        ],
+    },
+}
+
+success("StrictEnumInt64Struct") {
+    value = StrictEnumInt64Struct {
+        e: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+}
+
+success("StrictEnumUint8Struct") {
+    value = StrictEnumUint8Struct {
+        e: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, padding:7,
+        ],
+    },
+}
+
+success("StrictEnumUint16Struct") {
+    value = StrictEnumUint16Struct {
+        e: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, padding:6,
+        ],
+    },
+}
+
+success("StrictEnumUint32Struct") {
+    value = StrictEnumUint32Struct {
+        e: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, 0x00, 0x00, padding:4,
+        ],
+    },
+}
+
+success("StrictEnumUint64Struct") {
+    value = StrictEnumUint64Struct {
+        e: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+}
+
+success("FlexibleEnumKnownValue") {
+    value = FlexibleEnumStruct {
+        e: 1,
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+}
+
+success("FlexibleEnumUnknownValue") {
+    // TODO(fxb/7847): Implement flexible enums in Go, Dart, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,dart,rust,cpp,llcpp],
+    value = FlexibleEnumStruct {
+        e: 0xffffffff,
+    },
+    bytes = {
+        v1 = [
+            0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+}
+
+success("FlexibleEnumUint64UnknownValue") {
+    // TODO(fxb/7847): Implement flexible enums in Go, Dart, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,dart,rust,cpp,llcpp],
+    value = FlexibleEnumUint64Struct {
+        e: 0x0102030405060708,
+    },
+    bytes = {
+        v1 = [
+            0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        ],
+    },
+}
+
+encode_failure("StrictEnumInt8StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    // Rust: cannot construct invalid enum.
+    bindings_denylist = [dart,rust],
+    value = StrictEnumInt8Struct {
+        e: 3,
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+encode_failure("StrictEnumInt16StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    // Rust: cannot construct invalid enum.
+    bindings_denylist = [dart,rust],
+    value = StrictEnumInt16Struct {
+        e: 3,
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+encode_failure("StrictEnumInt32StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    // Rust: cannot construct invalid enum.
+    bindings_denylist = [dart,rust],
+    value = StrictEnumInt32Struct {
+        e: 3,
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+encode_failure("StrictEnumInt64StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    // Rust: cannot construct invalid enum.
+    bindings_denylist = [dart,rust],
+    value = StrictEnumInt64Struct {
+        e: 3,
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+encode_failure("StrictEnumUint8StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    // Rust: cannot construct invalid enum.
+    bindings_denylist = [dart,rust],
+    value = StrictEnumUint8Struct {
+        e: 3,
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+encode_failure("StrictEnumUint16StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    // Rust: cannot construct invalid enum.
+    bindings_denylist = [dart,rust],
+    value = StrictEnumUint16Struct {
+        e: 3,
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+encode_failure("StrictEnumUint32StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    // Rust: cannot construct invalid enum.
+    bindings_denylist = [dart,rust],
+    value = StrictEnumUint32Struct {
+        e: 3,
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+encode_failure("StrictEnumUint64StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    // Rust: cannot construct invalid enum.
+    bindings_denylist = [dart,rust],
+    value = StrictEnumUint64Struct {
+        e: 3,
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+decode_failure("StrictEnumInt8StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    bindings_denylist = [dart],
+    type = StrictEnumInt8Struct,
+    bytes = {
+        v1 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+decode_failure("StrictEnumInt16StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    bindings_denylist = [dart],
+    type = StrictEnumInt16Struct,
+    bytes = {
+        v1 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+decode_failure("StrictEnumInt32StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    bindings_denylist = [dart],
+    type = StrictEnumInt32Struct,
+    bytes = {
+        v1 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+decode_failure("StrictEnumInt64StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    bindings_denylist = [dart],
+    type = StrictEnumInt64Struct,
+    bytes = {
+        v1 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+decode_failure("StrictEnumUint8StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    bindings_denylist = [dart],
+    type = StrictEnumUint8Struct,
+    bytes = {
+        v1 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+decode_failure("StrictEnumUint16StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    bindings_denylist = [dart],
+    type = StrictEnumUint16Struct,
+    bytes = {
+        v1 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+decode_failure("StrictEnumUint32StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    bindings_denylist = [dart],
+    type = StrictEnumUint32Struct,
+    bytes = {
+        v1 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
+
+decode_failure("StrictEnumUint64StructUnknownValue") {
+    // TODO(fxb/8008): Validate enums in Dart bindings
+    bindings_denylist = [dart],
+    type = StrictEnumUint64Struct,
+    bytes = {
+        v1 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+    err = STRICT_ENUM_UNKNOWN_VALUE,
+}
