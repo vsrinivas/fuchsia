@@ -16,7 +16,11 @@ func TestStringInLogCheck(t *testing.T) {
 		startString: "skip_test",
 		endString:   "end_test",
 	}
-	c := stringInLogCheck{String: killerString, ExceptString: exceptString, ExceptBlock: exceptBlock, Type: serialLogType}
+	exceptBlock2 := &logBlock{
+		startString: "block_start",
+		endString:   "block_end",
+	}
+	c := stringInLogCheck{String: killerString, ExceptString: exceptString, ExceptBlocks: []*logBlock{exceptBlock, exceptBlock2}, Type: serialLogType}
 	gotName := c.Name()
 	wantName := "string_in_log/serial_log.txt/KILLER_STRING"
 	if gotName != wantName {
@@ -62,13 +66,21 @@ func TestStringInLogCheck(t *testing.T) {
 		}, {
 			name: "should not match if string in except_block",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(fmt.Sprintf("PREFIX %s %s output %s SUFFIX", exceptBlock.startString, killerString, exceptBlock.endString)),
+				SerialLog: []byte(
+					fmt.Sprintf(
+						"PREFIX %s %s output %s SUFFIX %s %s %s",
+						exceptBlock.startString, killerString, exceptBlock.endString,
+						exceptBlock2.startString, killerString, exceptBlock2.endString)),
 			},
 			shouldMatch: false,
 		}, {
 			name: "should match if string in both except_block and outside except_block",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(fmt.Sprintf("PREFIX %s ... %s %s %s SUFFIX", killerString, exceptBlock.startString, killerString, exceptBlock.endString)),
+				SerialLog: []byte(fmt.Sprintf(
+					"PREFIX %s ... %s %s %s %s %s %s SUFFIX",
+					killerString, exceptBlock.startString, killerString, exceptBlock.endString,
+					exceptBlock2.startString, killerString, exceptBlock2.endString,
+				)),
 			},
 			shouldMatch: true,
 		},

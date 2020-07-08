@@ -21,9 +21,9 @@ type stringInLogCheck struct {
 	String string
 	// ExceptString will cause Check() to return false if present.
 	ExceptString string
-	// ExceptBlock will cause Check() to return false if the string is only within this block.
-	ExceptBlock *logBlock
-	Type        logType
+	// ExceptBlocks will cause Check() to return false if the string is only within these blocks.
+	ExceptBlocks []*logBlock
+	Type         logType
 }
 
 func (c stringInLogCheck) Check(to *TestingOutputs) bool {
@@ -40,22 +40,45 @@ func (c stringInLogCheck) Check(to *TestingOutputs) bool {
 		return false
 	}
 	stringBytes := []byte(c.String)
-	if c.ExceptBlock == nil {
+	if len(c.ExceptBlocks) == 0 {
 		return bytes.Contains(toCheck, stringBytes)
 	}
-	blocks := bytes.Split(toCheck, []byte(c.ExceptBlock.startString))
-	// blocks[0] is everything before the first StartString.
-	if bytes.Contains(blocks[0], stringBytes) {
-		return true
-	}
-	for _, block := range blocks[1:] {
-		// Each block will have started with the StartString of the ExceptBlock.
-		subBlocks := bytes.SplitN(block, []byte(c.ExceptBlock.endString), 2)
-		if len(subBlocks) > 1 {
-			// Check the logs after the EndString.
-			if bytes.Contains(subBlocks[1], stringBytes) {
-				return true
+	index := bytes.Index(toCheck, stringBytes)
+	for index >= 0 {
+		foundString := true
+		beforeBlock := toCheck[:index]
+		nextStartIndex := index + len(stringBytes)
+		if nextStartIndex > len(toCheck) {
+			// The string was found at the end of the log, so it won't be included in
+			// any exceptBlocks.
+			return true
+		}
+		afterBlock := toCheck[nextStartIndex:]
+		for _, block := range c.ExceptBlocks {
+			closestStartIndex := bytes.LastIndex(beforeBlock, []byte(block.startString))
+			if closestStartIndex < 0 {
+				// There is no start string before this occurence, so it must not be
+				// included in this exceptBlock. Check the next exceptBlock.
+				continue
 			}
+			closestEndIndex := bytes.LastIndex(beforeBlock, []byte(block.endString))
+			if closestEndIndex < closestStartIndex {
+				// There is no end string between the start string and the string to
+				// check, so check if end string appears after. If so, then this
+				// occurence is included in this exceptBlock, so we can break and
+				// check the next occurence of the string.
+				if bytes.Index(afterBlock, []byte(block.endString)) >= 0 {
+					foundString = false
+					break
+				}
+			}
+		}
+		if foundString {
+			return true
+		}
+		index = bytes.Index(afterBlock, stringBytes)
+		if index >= 0 {
+			index += nextStartIndex
 		}
 	}
 	return false
@@ -71,8 +94,10 @@ func (c stringInLogCheck) DebugText() string {
 	if c.ExceptString != "" {
 		debugStr += fmt.Sprintf("\nDid not find the exception string \"%s\"", c.ExceptString)
 	}
-	if c.ExceptBlock != nil {
-		debugStr += fmt.Sprintf("\nDid not occur inside a block delimited by:\nSTART: %s\nEND: %s", c.ExceptBlock.startString, c.ExceptBlock.endString)
+	if len(c.ExceptBlocks) > 0 {
+		for _, block := range c.ExceptBlocks {
+			debugStr += fmt.Sprintf("\nDid not occur inside a block delimited by:\nSTART: %s\nEND: %s", block.startString, block.endString)
+		}
 	}
 	return debugStr
 }
@@ -119,14 +144,12 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 		ret = append(ret, stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt})
 		ret = append(ret, stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Type: lt})
 		ret = append(ret, stringInLogCheck{
-			String:      "ZIRCON KERNEL OOPS",
-			Type:        lt,
-			ExceptBlock: &logBlock{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
-		})
-		ret = append(ret, stringInLogCheck{
-			String:      "ZIRCON KERNEL OOPS",
-			Type:        lt,
-			ExceptBlock: &logBlock{startString: "RUN   TestKillCriticalProcess", endString: "TestKillCriticalProcess"},
+			String: "ZIRCON KERNEL OOPS",
+			Type:   lt,
+			ExceptBlocks: []*logBlock{
+				{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
+				{startString: "RUN   TestKillCriticalProcess", endString: ": TestKillCriticalProcess"},
+			},
 		})
 		ret = append(ret, stringInLogCheck{String: "ZIRCON KERNEL PANIC", Type: lt})
 	}
