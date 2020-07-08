@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit = "512"]
+#![recursion_limit = "256"]
 
 use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
-    bt_a2dp::{codec::MediaCodecConfig, media_types::*, stream},
+    bt_a2dp::{codec::MediaCodecConfig, media_types::*, peer::Peer, stream},
     bt_avdtp::{self as avdtp, AvdtpControllerPool, ServiceCapability, ServiceCategory},
     fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr::*,
@@ -33,13 +33,11 @@ use {
 
 mod encoding;
 mod pcm_audio;
-mod peer;
 mod source_task;
 mod sources;
 
 use crate::encoding::EncodedStream;
 use crate::pcm_audio::PcmAudio;
-use crate::peer::Peer;
 use sources::AudioSourceType;
 
 /// Make the SDP definition for the A2DP source service.
@@ -178,7 +176,7 @@ impl Peers {
         Peers { peers: DetachableMap::new(), profile, streams }
     }
 
-    pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<peer::Peer>> {
+    pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<Peer>> {
         self.peers.get(id).and_then(|p| p.upgrade())
     }
 
@@ -420,7 +418,7 @@ async fn start_streaming(peer: &DetachableWeak<PeerId, Peer>) -> Result<(), anyh
 
     let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
     strong
-        .start_stream(
+        .stream_start(
             selected_stream.seid.try_into()?,
             selected_stream.remote_stream.local_id().clone(),
             selected_stream.codec_settings.clone(),
@@ -525,7 +523,7 @@ async fn handle_profile_events(
                     continue;
                 }
                 if let Some(peer) = peers.get(&peer_id) {
-                    controller_pool.lock().peer_connected(peer_id, peer.avdtp_peer());
+                    controller_pool.lock().peer_connected(peer_id, peer.avdtp());
                 }
             },
             results_request = results_requests.try_next() => {

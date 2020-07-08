@@ -16,3 +16,6 @@ pub mod stream;
 
 /// Structures to support inspection
 pub mod inspect;
+
+/// Peer tracking and signaling procedures
+pub mod peer;

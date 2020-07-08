@@ -259,7 +259,7 @@ impl Inspect for &mut Streams {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     use fuchsia_async as fasync;
@@ -290,7 +290,7 @@ mod tests {
         }
     }
 
-    fn make_sbc_endpoint(seid: u8) -> StreamEndpoint {
+    pub(crate) fn make_sbc_endpoint(seid: u8) -> StreamEndpoint {
         StreamEndpoint::new(
             seid,
             avdtp::MediaType::Audio,
