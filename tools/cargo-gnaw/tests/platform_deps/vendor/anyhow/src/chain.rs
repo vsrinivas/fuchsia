@@ -25,9 +25,7 @@ pub(crate) enum ChainState<'a> {
 
 impl<'a> Chain<'a> {
     pub fn new(head: &'a (dyn StdError + 'static)) -> Self {
-        Chain {
-            state: ChainState::Linked { next: Some(head) },
-        }
+        Chain { state: ChainState::Linked { next: Some(head) } }
     }
 }
 
@@ -92,10 +90,6 @@ impl ExactSizeIterator for Chain<'_> {
 #[cfg(feature = "std")]
 impl Default for Chain<'_> {
     fn default() -> Self {
-        Chain {
-            state: ChainState::Buffered {
-                rest: Vec::new().into_iter(),
-            },
-        }
+        Chain { state: ChainState::Buffered { rest: Vec::new().into_iter() } }
     }
 }

@@ -11,9 +11,7 @@ pub struct Flag {
 
 impl Flag {
     pub fn new() -> Self {
-        Flag {
-            atomic: Arc::new(AtomicBool::new(false)),
-        }
+        Flag { atomic: Arc::new(AtomicBool::new(false)) }
     }
 
     pub fn get(&self) -> bool {
@@ -28,11 +26,7 @@ pub struct DetectDrop {
 
 impl DetectDrop {
     pub fn new(has_dropped: &Flag) -> Self {
-        DetectDrop {
-            has_dropped: Flag {
-                atomic: Arc::clone(&has_dropped.atomic),
-            },
-        }
+        DetectDrop { has_dropped: Flag { atomic: Arc::clone(&has_dropped.atomic) } }
     }
 }
 

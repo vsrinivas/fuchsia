@@ -189,11 +189,7 @@
 #![doc(html_root_url = "https://docs.rs/anyhow/1.0.27")]
 #![cfg_attr(backtrace, feature(backtrace))]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(
-    clippy::needless_doctest_main,
-    clippy::new_ret_no_self,
-    clippy::wrong_self_convention
-)]
+#![allow(clippy::needless_doctest_main, clippy::new_ret_no_self, clippy::wrong_self_convention)]
 
 mod alloc {
     #[cfg(not(feature = "std"))]

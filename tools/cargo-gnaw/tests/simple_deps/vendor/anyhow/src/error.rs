@@ -189,11 +189,7 @@ impl Error {
     where
         E: StdError + Send + Sync + 'static,
     {
-        let inner = Box::new(ErrorImpl {
-            vtable,
-            backtrace,
-            _object: error,
-        });
+        let inner = Box::new(ErrorImpl { vtable, backtrace, _object: error });
         // Erase the concrete type of E from the compile-time type system. This
         // is equivalent to the safe unsize coersion from Box<ErrorImpl<E>> to
         // Box<ErrorImpl<dyn StdError + Send + Sync + 'static>> except that the
@@ -263,10 +259,7 @@ impl Error {
     where
         C: Display + Send + Sync + 'static,
     {
-        let error: ContextError<C, Error> = ContextError {
-            context,
-            error: self,
-        };
+        let error: ContextError<C, Error> = ContextError { context, error: self };
 
         let vtable = &ErrorVTable {
             object_drop: object_drop::<ContextError<C, Error>>,
