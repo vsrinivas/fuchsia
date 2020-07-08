@@ -10,9 +10,9 @@
 #include <fstream>
 #include <regex>
 #include <sstream>
+#include <string>
 
 #include "src/lib/files/file.h"
-#include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace forensics {
@@ -96,9 +96,12 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder
 
   std::string log;
   for (auto path = input_file_paths.crbegin(); path != input_file_paths.crend(); ++path) {
-    fsl::SizedVmo vmo;
-    fsl::VmoFromFilename(*path, &vmo);
-    log += decoder->Decode(vmo);
+    std::string block;
+    if (!files::ReadFileToString(*path, &block)) {
+      continue;
+    }
+
+    log += decoder->Decode(block);
   }
 
   if (log.empty()) {

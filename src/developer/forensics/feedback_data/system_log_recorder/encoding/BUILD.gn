@@ -7,8 +7,6 @@
 ###############################################################################
 source_set("decoder") {
   sources = [ "decoder.h" ]
-
-  public_deps = [ "//src/lib/fsl" ]
 }
 
 source_set("encoder") {
@@ -16,10 +14,7 @@ source_set("encoder") {
 }
 
 source_set("identity_decoder") {
-  sources = [
-    "identity_decoder.cc",
-    "identity_decoder.h",
-  ]
+  sources = [ "identity_decoder.h" ]
 
   deps = [ ":decoder" ]
 }

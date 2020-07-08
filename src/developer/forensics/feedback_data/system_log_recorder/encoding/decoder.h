@@ -7,8 +7,6 @@
 
 #include <string>
 
-#include "src/lib/fsl/vmo/sized_vmo.h"
-
 namespace forensics {
 namespace feedback_data {
 namespace system_log_recorder {
@@ -20,7 +18,7 @@ class Decoder {
  public:
   virtual ~Decoder(){};
 
-  virtual std::string Decode(const fsl::SizedVmo& block) = 0;
+  virtual std::string Decode(const std::string& block) = 0;
 };
 
 }  // namespace system_log_recorder

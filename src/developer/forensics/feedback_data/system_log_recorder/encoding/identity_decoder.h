@@ -20,7 +20,7 @@ class IdentityDecoder : public Decoder {
   virtual ~IdentityDecoder(){};
 
   // |Decoder|
-  virtual std::string Decode(const fsl::SizedVmo& vmo);
+  virtual std::string Decode(const std::string& block) { return block; }
 };
 
 }  // namespace system_log_recorder
