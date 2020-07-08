@@ -48,7 +48,7 @@ def get_sources(dep_files, extra_sources=None):
             print(' - %s (%s)' % (src.path, src.file))
         raise Exception('Could not aggregate sources')
 
-    return dict([(s.name, s.path) for s in sources])
+    return {s.name: s.path for s in sources}
 
 
 def main():

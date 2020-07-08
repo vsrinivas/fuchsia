@@ -126,33 +126,55 @@ def main():
     project_path = os.path.join(
         args.root_out_dir, 'gen', 'gopaths', args.binname)
 
-    # Clean up any old project path to avoid leaking old dependencies
-    shutil.rmtree(os.path.join(project_path, 'src'), ignore_errors=True)
-    os.makedirs(os.path.join(project_path, 'src'))
+    # Clean up any old project path to avoid leaking old dependencies.
+    gopath_src = os.path.join(project_path, 'src')
+    if os.path.exists(gopath_src):
+        shutil.rmtree(gopath_src)
+    os.makedirs(gopath_src)
 
     if args.go_dep_files:
-        # Create a gopath for the packages dependency tree
-        for dst, src in list(get_sources(args.go_dep_files).items()):
-            dstdir = os.path.join(project_path, 'src', os.path.dirname(dst))
-            try:
+        # Create a GOPATH for the packages dependency tree.
+        for dst, src in sorted(get_sources(args.go_dep_files).items()):
+            # Determine if the package should be mapped recursively or only the
+            # package source itself should be mapped.
+            #
+            # There are cases (e.g for fidl generated source) where a single
+            # source is directly mapped instead of a formal Go package path.
+            # This is incorrect but happened to work, so people started to
+            # depend on that. In this case, we use the recurse mode, which
+            # happens to do what is needed; map the file directly as a symlink.
+            recurse = dst.endswith('.go')
+            # - src can have a '/...' suffix like with
+            #   'github.com/google/go-cmp/...'.
+            # - dst have the suffix when defining a package.
+            # - src can only have the suffix if dst has it too.
+            assert dst.endswith('/...') >= src.endswith('/...'), (dst, src)
+            if dst.endswith('/...'):
+                dst = dst[:-4]
+                recurse = True
+                if src.endswith('/...'):
+                  src = src[:-4]
+            dstdir = os.path.join(gopath_src, dst)
+
+            # TODO(fxb/55387): Enable non-recursive mode.
+            recurse = True
+
+            if recurse:
+                # Map the whole directory, which implicitly makes Go subpackages
+                # (subdirectories) available.
+                parent = os.path.dirname(dstdir)
+                if not os.path.exists(parent):
+                    os.makedirs(parent)
+                os.symlink(src, dstdir)
+            else:
+                # Map individual files since the dependency is only on the
+                # package itself, not Go subpackages. The only exception is
+                # 'testdata'.
                 os.makedirs(dstdir)
-            except OSError as e:
-                # EEXIST occurs if two gopath entries share the same parent name
-                if e.errno != errno.EEXIST:
-                    raise
-            # TODO(BLD-228): the following check might not be necessary anymore.
-            tgt = os.path.join(dstdir, os.path.basename(dst))
-            # The source tree is effectively read-only once the build begins.
-            # Therefore it is an error if tgt is in the source tree. At first
-            # glance this may seem impossible, but it can happen if dst is foo/bar
-            # and foo is a symlink back to the source tree.
-            canon_root_out_dir = os.path.realpath(args.root_out_dir)
-            canon_tgt = os.path.realpath(tgt)
-            if not canon_tgt.startswith(canon_root_out_dir):
-                raise ValueError(
-                    "Dependency destination not in --root-out-dir: provided=%s, path=%s, realpath=%s"
-                    % (dst, tgt, canon_tgt))
-            os.symlink(os.path.relpath(src, os.path.dirname(tgt)), tgt)
+                for filename in os.listdir(src):
+                    src_file = os.path.join(src, filename)
+                    if filename == 'testdata' or os.path.isfile(src_file):
+                        os.symlink(src_file, os.path.join(dstdir, filename))
 
     cflags = []
     if args.sysroot:
@@ -222,7 +244,7 @@ def main():
         cmd += ['-ldflags=' + ' '.join(args.ldflag)]
     cmd += [
         '-pkgdir',
-        os.path.join(project_path, 'pkg'), '-o', args.output_path, args.package
+        os.path.join(project_path, 'pkg'), '-o', args.output_path, args.package, 
     ]
     retcode = subprocess.call(cmd, env=env)
 
