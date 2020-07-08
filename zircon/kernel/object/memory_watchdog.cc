@@ -95,9 +95,13 @@ void MemoryWatchdog::OnOom() {
       // It is important that we don't hang while trying to reboot.  Set a deadline by which we must
       // successfully reboot, else panic.
       //
-      // How long should we wait?  If the system is OOMing chances are there are a lot of usermode
-      // tasks so it make take a while for the shutdown threads to be scheduled.
-      zx_time_t deadline = current_time() + ZX_SEC(10);
+      // TODO(55673): How long should we wait?  Part of the reboot process includes shutting down
+      // the debuglog subsystem (|dlog_shutdown|), which involves writing out any buffered debuglog
+      // messages the serial port (if present).  Writing to a serial port can be slow.  Assuming we
+      // have a full debuglog buffer of 128KB, at 115200 bps, with 8-N-1, it will take roughly 11.4
+      // seconds to drain the buffer.  The timeout should be long enough to allow a full DLOG buffer
+      // to be drained.
+      zx_time_t deadline = current_time() + ZX_SEC(20);
       platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::Oom, deadline);
   }
 }
