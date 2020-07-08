@@ -43,8 +43,6 @@ namespace {
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::ComponentDataRegisterSyncPtr;
-using fuchsia::feedback::Data;
-using fuchsia::feedback::DataProvider_GetData_Result;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::DeviceIdProvider_GetId_Result;
 using fuchsia::feedback::DeviceIdProviderSyncPtr;
@@ -389,7 +387,7 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckCobalt) {
 }
 
 TEST_F(FeedbackDataIntegrationTest,
-       DataProvider_GetData_NonPlatformAnnotationsFromComponentDataRegister) {
+       DataProvider_GetBugreport_NonPlatformAnnotationsFromComponentDataRegister) {
   // We make sure the components serving the services GetBugreport() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
@@ -416,23 +414,6 @@ TEST_F(FeedbackDataIntegrationTest,
 
   ASSERT_TRUE(bugreport.has_annotations());
   EXPECT_THAT(bugreport.annotations(), testing::Contains(MatchesAnnotation("namespace.k", "v")));
-}
-
-// TOOD(41004): remove once no longer in the API.
-TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_SmokeTest) {
-  // We make sure the components serving the services GetData() connects to are up and running.
-  WaitForLogger();
-  WaitForChannelProvider();
-  WaitForInspect();
-  WaitForBoardProvider();
-  WaitForProductProvider();
-  WaitForLastRebootInfoProvider();
-
-  DataProviderSyncPtr data_provider;
-  environment_services_->Connect(data_provider.NewRequest());
-
-  DataProvider_GetData_Result out_result;
-  ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
 }
 
 TEST_F(FeedbackDataIntegrationTest, DeviceIdProvider_GetId_CheckValue) {

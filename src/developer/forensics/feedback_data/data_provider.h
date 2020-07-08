@@ -28,8 +28,6 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   // |fuchsia::feedback::DataProvider|
   void GetBugreport(fuchsia::feedback::GetBugreportParameters params,
                     GetBugreportCallback callback) override;
-  // TOOD(41004): remove once no longer in the API.
-  void GetData(GetDataCallback callback) override;
   void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,
                      GetScreenshotCallback callback) override;
 

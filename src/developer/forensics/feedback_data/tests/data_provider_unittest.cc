@@ -49,7 +49,6 @@ namespace {
 
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Bugreport;
-using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 using testing::UnorderedElementsAreArray;

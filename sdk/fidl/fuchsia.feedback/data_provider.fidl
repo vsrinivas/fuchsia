@@ -11,15 +11,10 @@ using zx;
 /// Provides data useful to attach in feedback reports (crash, user feedback or bug reports).
 [Discoverable]
 protocol DataProvider {
-    /// Returns all the feedback data except the screenshot, which is provided separately.
-    [Transitional = "deprecated in favor of GetBugreport() "]
-    GetData() -> (Data data) error zx.status;
-
     /// Returns a bugreport containing all the feedback data except the screenshot, which is
     /// provided separately.
     ///
     /// `bugreport` may be empty if there was an issue generating the bugreport.
-    [Transitional = "replacement for GetData() "]
     GetBugreport(GetBugreportParameters params) -> (Bugreport bugreport);
 
     /// Returns an image of the current view encoded in the provided `encoding`.
@@ -34,23 +29,6 @@ protocol DataProvider {
 };
 
 const uint32 MAX_NUM_ANNOTATIONS_PROVIDED = 64;
-
-/// Data to attach to feedback reports.
-///
-/// Clients typically upload the data straight to servers without expecting some
-/// particular fields. So the data comes in the form of arbitrary key-value pairs
-/// that clients can directly forward to the servers.
-table Data {
-    /// A vector of key-value string pairs. Keys are guaranteed to be unique.
-    1: vector<Annotation>:MAX_NUM_ANNOTATIONS_PROVIDED annotations;
-
-    /// A bundle of Attachments objects stored as an Attachment itself, e.g., it
-    /// could be a ZIP archive bundling a vector of Attachment objects.
-    3: Attachment attachment_bundle;
-
-    // Deprecated.
-    2: reserved;
-};
 
 /// Parameters for the DataProvider::GetBugreport() method.
 table GetBugreportParameters {

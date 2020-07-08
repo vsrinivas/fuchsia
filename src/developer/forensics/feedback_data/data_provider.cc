@@ -30,7 +30,6 @@ namespace feedback_data {
 namespace {
 
 using fuchsia::feedback::Bugreport;
-using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 
@@ -122,20 +121,6 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
           });
 
   executor_.schedule_task(std::move(promise));
-}
-
-void DataProvider::GetData(GetDataCallback callback) {
-  GetBugreport(fuchsia::feedback::GetBugreportParameters(),
-               [callback = std::move(callback)](Bugreport bugreport) {
-                 Data data;
-                 if (bugreport.has_annotations()) {
-                   data.set_annotations(bugreport.annotations());
-                 }
-                 if (bugreport.has_bugreport()) {
-                   data.set_attachment_bundle(std::move(*bugreport.mutable_bugreport()));
-                 }
-                 callback(::fit::ok(std::move(data)));
-               });
 }
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
