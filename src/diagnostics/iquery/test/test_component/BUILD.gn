@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("iquery_example_component") {
+rustc_binary("iquery_test_component") {
   edition = "2018"
   source_root = "main.rs"
 

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/iquery_example_component"
+        "binary": "bin/iquery_test_component"
     },
     "sandbox": {
         "services": [
