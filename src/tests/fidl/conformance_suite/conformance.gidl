@@ -647,7 +647,7 @@ encode_failure("StrictXUnion Field Not Set") {
 
 decode_failure("StrictXUnion Field Unknown") {
     // TODO(8047) Enable this. Currently only go supports this error.
-    bindings_allowlist = [dart,go,],
+    bindings_allowlist = [go,],
     type = TestStrictXUnionInStruct,
     bytes = {
         v1 = [
