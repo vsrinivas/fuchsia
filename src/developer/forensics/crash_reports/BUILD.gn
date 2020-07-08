@@ -355,6 +355,7 @@ source_set("store") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
+    "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/fit",
   ]

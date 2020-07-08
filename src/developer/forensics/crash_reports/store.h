@@ -40,16 +40,16 @@ class Store {
   bool Contains(const Uid& id) const;
 
  private:
-  struct Metadata {
+  struct ReportMetadata {
     // The directory containing the report's files, e.g., /tmp/crashes/foo/<report Uid>
-    std::string report_dir;
+    std::string dir;
 
     // "foo" in the above example, it shouldn't contain forward slashes.
     std::string program_shortname;
   };
 
   std::string root_dir_;
-  std::map<Uid, Metadata> id_to_metadata_;
+  std::map<Uid, ReportMetadata> id_to_metadata_;
 
   // TODO(47137): Uids may collide across component instances, however this will no longer happen
   // once we rebuild the store's metadata when the component starts up.

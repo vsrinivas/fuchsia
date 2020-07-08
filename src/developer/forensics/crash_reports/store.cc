@@ -14,6 +14,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/strings/join_strings.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 #include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
@@ -29,6 +30,23 @@ const std::set<std::string> kReservedAttachmentNames = {
     kAnnotationsFilename,
     kMinidumpFilename,
 };
+
+// Join |paths| in order into a single path.
+std::string JoinPaths(const std::vector<std::string>& paths) {
+  return fxl::JoinStrings(paths, "/");
+}
+
+// Recursively delete |path|.
+bool DeletePath(const std::string& path) { return files::DeletePath(path, /*recursive=*/true); }
+
+// Get the contents of a directory without ".".
+std::vector<std::string> GetDirectoryContents(const std::string& dir) {
+  std::vector<std::string> contents;
+  files::ReadDirContents(dir, &contents);
+
+  contents.erase(std::remove(contents.begin(), contents.end(), "."), contents.end());
+  return contents;
+}
 
 bool WriteAnnotationsAsJson(const std::string& path,
                             const std::map<std::string, std::string>& annotations) {
@@ -85,15 +103,6 @@ bool ReadAttachment(const std::string& path, SizedData* attachment) {
   return files::ReadFileToVector(path, attachment);
 }
 
-// Get the contents of a directory without ".".
-std::vector<std::string> GetDirectoryContents(const std::string& dir) {
-  std::vector<std::string> contents;
-  files::ReadDirContents(dir, &contents);
-
-  contents.erase(std::remove(contents.begin(), contents.end(), "."), contents.end());
-  return contents;
-}
-
 }  // namespace
 
 Store::Store(const std::string& root_dir) : root_dir_(root_dir) {}
@@ -107,20 +116,16 @@ std::optional<Store::Uid> Store::Add(const Report report) {
   }
 
   const Uid id = next_id_++;
-  const std::string report_dir =
-      files::JoinPath(files::JoinPath(root_dir_, report.ProgramShortname()), std::to_string(id));
+  const std::string dir = JoinPaths({root_dir_, report.ProgramShortname(), std::to_string(id)});
 
-  auto cleanup_on_error =
-      fit::defer([report_dir] { files::DeletePath(report_dir, /*recursive=*/true); });
+  auto cleanup_on_error = fit::defer([dir] { DeletePath(dir); });
 
-  if (!files::CreateDirectory(report_dir)) {
-    FX_LOGS(ERROR) << "Failed to create directory for report: " << report_dir;
+  if (!files::CreateDirectory(dir)) {
+    FX_LOGS(ERROR) << "Failed to create directory for report: " << dir;
     return std::nullopt;
   }
 
-  auto MakeFilepath = [report_dir](const std::string& filename) {
-    return files::JoinPath(report_dir, filename);
-  };
+  auto MakeFilepath = [dir](const std::string& filename) { return files::JoinPath(dir, filename); };
 
   if (!WriteAnnotationsAsJson(MakeFilepath(kAnnotationsFilename), report.Annotations())) {
     FX_LOGS(ERROR) << "Failed to write annotations";
@@ -141,8 +146,10 @@ std::optional<Store::Uid> Store::Add(const Report report) {
     }
   }
 
-  id_to_metadata_[id] =
-      Metadata{.report_dir = report_dir, .program_shortname = report.ProgramShortname()};
+  id_to_metadata_[id] = ReportMetadata{
+      .dir = dir,
+      .program_shortname = report.ProgramShortname(),
+  };
   cleanup_on_error.cancel();
   return id;
 }
@@ -152,15 +159,14 @@ std::optional<Report> Store::Get(const Store::Uid& id) {
     return std::nullopt;
   }
 
-  const std::vector<std::string> report_files =
-      GetDirectoryContents(id_to_metadata_[id].report_dir);
+  const std::vector<std::string> report_files = GetDirectoryContents(id_to_metadata_[id].dir);
 
   if (report_files.empty()) {
     return std::nullopt;
   }
 
-  auto MakeFilepath = [report_dir = id_to_metadata_[id].report_dir](const std::string& filename) {
-    return files::JoinPath(report_dir, filename);
+  auto MakeFilepath = [dir = id_to_metadata_[id].dir](const std::string& filename) {
+    return files::JoinPath(dir, filename);
   };
 
   std::map<std::string, std::string> annotations;
@@ -202,15 +208,15 @@ void Store::Remove(const Uid& id) {
   //  The report is stored under /tmp/store/<program shortname>/$id.
   //  We first delete /tmp/store/<program shortname>/$id and then if $id was the only report for
   // <program shortname>, we also delete /tmp/store/<program name>.
-  if (!files::DeletePath(id_to_metadata_.at(id).report_dir, /*recursive=*/true)) {
-    FX_LOGS(ERROR) << "Failed to delete reports at " << id_to_metadata_.at(id).report_dir;
+  if (!DeletePath(id_to_metadata_.at(id).dir)) {
+    FX_LOGS(ERROR) << "Failed to delete report at " << id_to_metadata_.at(id).dir;
   }
 
   const std::string program_path =
       files::JoinPath(root_dir_, id_to_metadata_.at(id).program_shortname);
   const std::vector<std::string> dir_contents = GetDirectoryContents(program_path);
   if (dir_contents.empty()) {
-    if (!files::DeletePath(program_path, /*recursive=*/true)) {
+    if (!DeletePath(program_path)) {
       FX_LOGS(ERROR) << "Failed to delete " << program_path;
     }
   }
@@ -219,7 +225,7 @@ void Store::Remove(const Uid& id) {
 }
 
 void Store::RemoveAll() {
-  if (!files::DeletePath(root_dir_, /*recursive=*/true)) {
+  if (!DeletePath(root_dir_)) {
     FX_LOGS(ERROR) << "Failed to delete all reports";
   }
   files::CreateDirectory(root_dir_);
