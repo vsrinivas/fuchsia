@@ -295,8 +295,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   void Launch(FlowToken /*flow*/) {
     FX_LOGS(INFO) << "StoryControllerImpl::LaunchModule() " << module_data_.module_url() << " "
                   << ModulePathToSurfaceID(module_data_.module_path());
-    fuchsia::modular::AppConfig module_config;
-    module_config.url = module_data_.module_url();
+    fuchsia::modular::session::AppConfig module_config;
+    module_config.set_url(module_data_.module_url());
 
     fuchsia::sys::ServiceProviderPtr module_context_provider;
     auto module_context_provider_request = module_context_provider.NewRequest();

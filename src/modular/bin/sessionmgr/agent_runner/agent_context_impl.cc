@@ -187,9 +187,9 @@ class AgentContextImpl::OnAppErrorCall : public Operation<> {
 };
 
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
-                                   fuchsia::modular::AppConfig agent_config,
+                                   fuchsia::modular::session::AppConfig agent_config,
                                    inspect::Node agent_node, std::function<void()> on_crash)
-    : url_(agent_config.url),
+    : url_(agent_config.url()),
       component_context_impl_(info.component_context_info, url_, url_),
       agent_runner_(info.component_context_info.agent_runner),
       agent_services_factory_(info.agent_services_factory),

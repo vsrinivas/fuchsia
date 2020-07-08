@@ -44,7 +44,7 @@ class StoryStorage;
 class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::FocusWatcher {
  public:
   StoryProviderImpl(Environment* session_environment, SessionStorage* session_storage,
-                    fuchsia::modular::AppConfig story_shell_config,
+                    fuchsia::modular::session::AppConfig story_shell_config,
                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
                     const ComponentContextInfo& component_context_info,
                     fuchsia::modular::FocusProviderPtr focus_provider,
@@ -76,7 +76,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   AgentServicesFactory* agent_services_factory() { return agent_services_factory_; }
 
   // Called by StoryControllerImpl.
-  const fuchsia::modular::AppConfig& story_shell_config() const { return story_shell_config_; }
+  const fuchsia::modular::session::AppConfig& story_shell_config() const {
+    return story_shell_config_;
+  }
 
   // Called by SessionmgrImpl.
   //
@@ -166,7 +168,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   fidl::BindingSet<fuchsia::modular::StoryProvider> bindings_;
 
   // Component URL and arguments used to launch story shells.
-  fuchsia::modular::AppConfig story_shell_config_;
+  fuchsia::modular::session::AppConfig story_shell_config_;
 
   // Services that story shells can connect to from their environment.
   component::ServiceProviderImpl story_shell_services_;

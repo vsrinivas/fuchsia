@@ -31,7 +31,7 @@ class StoryControllerImpl;
 class ModuleControllerImpl : fuchsia::modular::ModuleController {
  public:
   ModuleControllerImpl(StoryControllerImpl* story_controller_impl, fuchsia::sys::Launcher* launcher,
-                       fuchsia::modular::AppConfig module_config,
+                       fuchsia::modular::session::AppConfig module_config,
                        const fuchsia::modular::ModuleData* module_data,
                        fuchsia::sys::ServiceListPtr service_list,
                        fuchsia::ui::views::ViewToken view_token);

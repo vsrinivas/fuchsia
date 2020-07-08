@@ -20,7 +20,7 @@ namespace modular {
 
 ModuleControllerImpl::ModuleControllerImpl(StoryControllerImpl* const story_controller_impl,
                                            fuchsia::sys::Launcher* const launcher,
-                                           fuchsia::modular::AppConfig module_config,
+                                           fuchsia::modular::session::AppConfig module_config,
                                            const fuchsia::modular::ModuleData* const module_data,
                                            fuchsia::sys::ServiceListPtr service_list,
                                            fuchsia::ui::views::ViewToken view_token)

@@ -120,13 +120,12 @@ void AgentRunner::PublishAgentServices(const std::string& requestor_url,
 }
 
 void AgentRunner::AddRunningAgent(
-    std::string agent_url,
-    std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client) {
+    std::string agent_url, std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client) {
   // Start the agent and issue all callbacks.
   ComponentContextInfo component_info = {this, session_agents_};
   AgentContextInfo info = {component_info, launcher_, agent_services_factory_, sessionmgr_context_};
-  fuchsia::modular::AppConfig agent_config;
-  agent_config.url = agent_url;
+  fuchsia::modular::session::AppConfig agent_config;
+  agent_config.set_url(agent_url);
 
   // AgentContextImpl will call on_critical_agent_crash if this agent is listed
   // in |restart_session_on_agent_crash_| and terminates unexpectedly.
@@ -170,8 +169,8 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   // Start the agent and issue all callbacks.
   ComponentContextInfo component_info = {this, session_agents_};
   AgentContextInfo info = {component_info, launcher_, agent_services_factory_, sessionmgr_context_};
-  fuchsia::modular::AppConfig agent_config;
-  agent_config.url = agent_url;
+  fuchsia::modular::session::AppConfig agent_config;
+  agent_config.set_url(agent_url);
 
   // AgentContextImpl will call on_critical_agent_crash if this agent is listed
   // in |restart_session_on_agent_crash_| and terminates unexpectedly.

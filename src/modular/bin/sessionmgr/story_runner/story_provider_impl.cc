@@ -203,7 +203,7 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
 
 StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
                                      SessionStorage* const session_storage,
-                                     fuchsia::modular::AppConfig story_shell_config,
+                                     fuchsia::modular::session::AppConfig story_shell_config,
                                      fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
                                      const ComponentContextInfo& component_context_info,
                                      fuchsia::modular::FocusProviderPtr focus_provider,
@@ -337,7 +337,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   for (auto service_name : component_context_info_.agent_runner->GetAgentServices()) {
     service_list->names.push_back(service_name);
   }
-  component_context_info_.agent_runner->PublishAgentServices(story_shell_config_.url,
+  component_context_info_.agent_runner->PublishAgentServices(story_shell_config_.url(),
                                                              &story_shell_services_);
 
   fuchsia::sys::ServiceProviderPtr service_provider;

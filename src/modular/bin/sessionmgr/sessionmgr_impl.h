@@ -53,8 +53,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
  private:
   // |Sessionmgr|
-  void Initialize(std::string session_id, fuchsia::modular::AppConfig session_shell_config,
-                  fuchsia::modular::AppConfig story_shell_config,
+  void Initialize(std::string session_id, fuchsia::modular::session::AppConfig session_shell_config,
+                  fuchsia::modular::session::AppConfig story_shell_config,
                   bool use_session_shell_for_story_shell_factory,
                   fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
                   fuchsia::ui::views::ViewToken view_token) override;
@@ -65,12 +65,12 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeAgentRunner(std::string session_shell_url);
   void InitializeIntlPropertyProvider();
   void InitializeDeviceMap();
-  void InitializeModular(fuchsia::modular::AppConfig story_shell_config,
+  void InitializeModular(fuchsia::modular::session::AppConfig story_shell_config,
                          bool use_session_shell_for_story_shell_factory);
-  void InitializeSessionShell(fuchsia::modular::AppConfig session_shell_config,
+  void InitializeSessionShell(fuchsia::modular::session::AppConfig session_shell_config,
                               fuchsia::ui::views::ViewToken view_token);
 
-  void RunSessionShell(fuchsia::modular::AppConfig session_shell_config);
+  void RunSessionShell(fuchsia::modular::session::AppConfig session_shell_config);
 
   // |fuchsia::modular::SessionShellContext|
   void GetComponentContext(
@@ -112,13 +112,13 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   // Connects to service Interface from the session shell. If the shell is not
   // running, closes the request.
-  template<class Interface>
+  template <class Interface>
   void ConnectToSessionShellService(fidl::InterfaceRequest<Interface> request) {
-      auto services = agent_runner_->GetAgentOutgoingServices(session_shell_url_);
-      if (!services) {
-          return;
-      }
-      services->ConnectToService(std::move(request));
+    auto services = agent_runner_->GetAgentOutgoingServices(session_shell_url_);
+    if (!services) {
+      return;
+    }
+    services->ConnectToService(std::move(request));
   }
 
   // The device-local unique identifier for this session. The uniqueness

@@ -128,8 +128,9 @@ SessionmgrImpl::~SessionmgrImpl() = default;
 // |finitish_initialization_| lambda does initialize some Sessionmgr-scoped resources only once,
 // upon demand.)
 void SessionmgrImpl::Initialize(
-    std::string session_id, fuchsia::modular::AppConfig session_shell_config,
-    fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
+    std::string session_id, fuchsia::modular::session::AppConfig session_shell_config,
+    fuchsia::modular::session::AppConfig story_shell_config,
+    bool use_session_shell_for_story_shell_factory,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
     fuchsia::ui::views::ViewToken view_token) {
   FX_LOGS(INFO) << "SessionmgrImpl::Initialize() called.";
@@ -138,7 +139,7 @@ void SessionmgrImpl::Initialize(
   OnTerminate(Reset(&session_context_));
 
   InitializeSessionEnvironment(session_id);
-  InitializeAgentRunner(session_shell_config.url);
+  InitializeAgentRunner(session_shell_config.url());
   InitializeSessionShell(std::move(session_shell_config), std::move(view_token));
   InitializeIntlPropertyProvider();
 
@@ -261,7 +262,7 @@ void SessionmgrImpl::InitializeAgentRunner(std::string session_shell_url) {
   OnTerminate(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 }
 
-void SessionmgrImpl::InitializeModular(fuchsia::modular::AppConfig story_shell_config,
+void SessionmgrImpl::InitializeModular(fuchsia::modular::session::AppConfig story_shell_config,
                                        bool use_session_shell_for_story_shell_factory) {
   ComponentContextInfo component_context_info{agent_runner_.get(), config_.session_agents()};
 
@@ -334,9 +335,10 @@ void SessionmgrImpl::InitializeModular(fuchsia::modular::AppConfig story_shell_c
   OnTerminate(Reset(&focus_handler_));
 }
 
-void SessionmgrImpl::InitializeSessionShell(fuchsia::modular::AppConfig session_shell_config,
-                                            fuchsia::ui::views::ViewToken view_token) {
-  session_shell_url_ = session_shell_config.url;
+void SessionmgrImpl::InitializeSessionShell(
+    fuchsia::modular::session::AppConfig session_shell_config,
+    fuchsia::ui::views::ViewToken view_token) {
+  session_shell_url_ = session_shell_config.url();
   // We setup our own view and make the fuchsia::modular::SessionShell a child
   // of it.
   auto scenic = sessionmgr_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
@@ -351,7 +353,7 @@ void SessionmgrImpl::InitializeSessionShell(fuchsia::modular::AppConfig session_
   RunSessionShell(std::move(session_shell_config));
 }
 
-void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_config) {
+void SessionmgrImpl::RunSessionShell(fuchsia::modular::session::AppConfig session_shell_config) {
   ComponentContextInfo component_context_info{agent_runner_.get(), config_.session_agents()};
   session_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
       component_context_info, session_shell_url_, session_shell_url_);

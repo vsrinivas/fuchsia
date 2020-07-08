@@ -422,8 +422,8 @@ TEST_F(AgentRunnerTest, AddRunningAgent_CanConnectToAgentService) {
   set_agent_service_index({{fuchsia::testing::modular::TestProtocol::Name_, kTestAgentUrl}});
   auto agent_runner = GetOrCreateAgentRunner();
 
-  fuchsia::modular::AppConfig agent_app_config;
-  agent_app_config.url = kTestAgentUrl;
+  fuchsia::modular::session::AppConfig agent_app_config;
+  agent_app_config.set_url(kTestAgentUrl);
   auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
       launcher(), std::move(agent_app_config));
   agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
@@ -451,8 +451,8 @@ TEST_F(AgentRunnerTest, AddRunningAgent_IsGracefullyTornDown) {
       });
 
   auto agent_runner = GetOrCreateAgentRunner();
-  fuchsia::modular::AppConfig agent_app_config;
-  agent_app_config.url = kTestAgentUrl;
+  fuchsia::modular::session::AppConfig agent_app_config;
+  agent_app_config.set_url(kTestAgentUrl);
   auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
       launcher(), std::move(agent_app_config), /* data_origin = */ "");
   agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
@@ -482,8 +482,8 @@ TEST_F(AgentRunnerTest, AddRunningAgent_CanBeCriticalAgent) {
   set_on_session_restart_callback([&is_restart_called] { is_restart_called = true; });
 
   auto agent_runner = GetOrCreateAgentRunner();
-  fuchsia::modular::AppConfig agent_app_config;
-  agent_app_config.url = kTestAgentUrl;
+  fuchsia::modular::session::AppConfig agent_app_config;
+  agent_app_config.set_url(kTestAgentUrl);
   auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
       launcher(), std::move(agent_app_config), /* data_origin = */ "");
   agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));

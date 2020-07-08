@@ -48,7 +48,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext, fuchsia::modular::Agent
   // to clients through ConnectToService().
   //
   // If |on_crash| is not null, it will be called if the agent unexpectedly terminates.
-  AgentContextImpl(const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
+  AgentContextImpl(const AgentContextInfo& info, fuchsia::modular::session::AppConfig agent_config,
                    inspect::Node agent_node, std::function<void()> on_crash = nullptr);
 
   // Manages the lifecycle of the already-running component |app_client| as an agent.
