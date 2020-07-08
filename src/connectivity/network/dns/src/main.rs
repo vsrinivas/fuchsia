@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{Context as _, Error},
     async_trait::async_trait,
     dns::{
         async_resolver::{Handle, Resolver},
@@ -14,14 +14,13 @@ use {
     fidl_fuchsia_net_name::{LookupAdminRequest, LookupAdminRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_inspect,
-    fuchsia_syslog::{self as fx_syslog, fx_log_debug, fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_zircon as zx,
+    fuchsia_inspect, fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         task::{Context, Poll},
         FutureExt as _, Sink, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _,
     },
+    log::{debug, error, info, warn},
     parking_lot::RwLock,
     std::pin::Pin,
     std::sync::Arc,
@@ -270,16 +269,14 @@ fn handle_err(source: &'static str, err: ResolveError) -> fnet::LookupError {
 
     if let Some(ioerr) = ioerr {
         match ioerr.raw_os_error() {
-            Some(libc::EHOSTUNREACH) => {
-                fx_log_debug!("{} error: {}; (IO error {:?})", source, err, ioerr)
-            }
+            Some(libc::EHOSTUNREACH) => debug!("{} error: {}; (IO error {:?})", source, err, ioerr),
             // TODO(55621): We should log at WARN below, but trust-dns is
             // erasing raw_os_error for us. Logging to debug for now to reduce
             // log spam.
-            _ => fx_log_debug!("{} error: {}; (IO error {:?})", source, err, ioerr),
+            _ => debug!("{} error: {}; (IO error {:?})", source, err, ioerr),
         }
     } else {
-        fx_log_warn!("{} error: {}", source, err)
+        warn!("{} error: {}", source, err)
     }
 
     lookup_err
@@ -469,8 +466,8 @@ fn add_config_state_inspect(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fx_syslog::init_with_tags(&["dns_resolver"]).expect("cannot init logger");
-    fx_log_info!("dns_resolver started");
+    let () = fuchsia_syslog::init_with_tags(&["dns_resolver"]).context("cannot init logger")?;
+    info!("dns_resolver started");
 
     // Creates a handle to a thead-local executor which is used to spawn a background
     // task to resolve DNS requests.
@@ -505,15 +502,11 @@ async fn main() -> Result<(), Error> {
                 IncomingRequest::LookupAdmin(stream) => {
                     run_lookup_admin(servers_config_sink.clone(), config_state.clone(), stream)
                         .await
-                        .unwrap_or_else(|e| {
-                            fx_log_err!("run_lookup_admin finished with error: {:?}", e)
-                        })
+                        .unwrap_or_else(|e| error!("run_lookup_admin finished with error: {:?}", e))
                 }
-                IncomingRequest::NameLookup(stream) => {
-                    run_name_lookup(&resolver, stream).await.unwrap_or_else(|e| {
-                        fx_log_err!("run_name_lookup finished with error: {:?}", e)
-                    })
-                }
+                IncomingRequest::NameLookup(stream) => run_name_lookup(&resolver, stream)
+                    .await
+                    .unwrap_or_else(|e| error!("run_name_lookup finished with error: {:?}", e)),
             }
         })
         .map(Ok);
