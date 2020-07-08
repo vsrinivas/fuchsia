@@ -39,6 +39,34 @@ async fn test_spinel_lowpan_driver() {
             traceln!("app_task: Supported channels: {:?}", channels);
             assert_eq!(channels.map(|_| ()), Ok(()));
 
+            let fact_mac = driver.get_factory_mac_address().await;
+            traceln!("app_task: Factory MAC: {:?}", fact_mac);
+            assert_eq!(fact_mac.map(|_| ()), Ok(()));
+
+            let curr_mac = driver.get_current_mac_address().await;
+            traceln!("app_task: Current MAC: {:?}", curr_mac);
+            assert_eq!(curr_mac.map(|_| ()), Ok(()));
+
+            let ncp_ver = driver.get_ncp_version().await;
+            traceln!("app_task: NCP Version: {:?}", ncp_ver);
+            assert_eq!(ncp_ver.map(|_| ()), Ok(()));
+
+            let curr_chan = driver.get_current_channel().await;
+            traceln!("app_task: Current Channel: {:?}", curr_chan);
+            assert_eq!(curr_chan.map(|_| ()), Ok(()));
+
+            let curr_rssi = driver.get_current_rssi().await;
+            traceln!("app_task: Current RSSI: {:?}", curr_rssi);
+            assert_eq!(curr_rssi.map(|_| ()), Ok(()));
+
+            let part_id = driver.get_partition_id().await;
+            traceln!("app_task: partition id: {:?}", part_id);
+            assert_eq!(part_id.map(|_| ()), Ok(()));
+
+            let thread_rloc16 = driver.get_thread_rloc16().await;
+            traceln!("app_task: thread_rloc16: {:?}", thread_rloc16);
+            assert_eq!(thread_rloc16.map(|_| ()), Ok(()));
+
             traceln!("app_task: Attempting a reset...");
             assert_eq!(driver.reset().await, Ok(()));
             traceln!("app_task: Did reset!");

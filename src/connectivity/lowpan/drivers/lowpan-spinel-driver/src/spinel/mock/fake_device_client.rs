@@ -108,6 +108,65 @@ pub fn new_fake_spinel_pair() -> (
                 )
                 .unwrap();
             }
+            Prop::HwAddr => {
+                spinel_write!(
+                    &mut response,
+                    "CiiCCCCCCCC",
+                    frame.header,
+                    Cmd::PropValueIs,
+                    prop,
+                    0x02,
+                    0xAA,
+                    0xBB,
+                    0xCC,
+                    0x11,
+                    0x22,
+                    0x33,
+                    0x44,
+                )
+                .unwrap();
+            }
+            Prop::Mac(PropMac::LongAddr) => {
+                spinel_write!(
+                    &mut response,
+                    "CiiCCCCCCCC",
+                    frame.header,
+                    Cmd::PropValueIs,
+                    prop,
+                    0x02,
+                    0x00,
+                    0x00,
+                    0x00,
+                    0x00,
+                    0x00,
+                    0x00,
+                    0x01,
+                )
+                .unwrap();
+            }
+            Prop::Phy(PropPhy::Chan) => {
+                spinel_write!(&mut response, "CiiC", frame.header, Cmd::PropValueIs, prop, 11,)
+                    .unwrap();
+            }
+            Prop::Phy(PropPhy::Rssi) => {
+                spinel_write!(&mut response, "Ciic", frame.header, Cmd::PropValueIs, prop, -128,)
+                    .unwrap();
+            }
+            Prop::Net(PropNet::PartitionId) => {
+                spinel_write!(
+                    &mut response,
+                    "CiiL",
+                    frame.header,
+                    Cmd::PropValueIs,
+                    prop,
+                    0x00000000,
+                )
+                .unwrap();
+            }
+            Prop::Thread(PropThread::Rloc16) => {
+                spinel_write!(&mut response, "CiiS", frame.header, Cmd::PropValueIs, prop, 0x0000,)
+                    .unwrap();
+            }
             _ => {
                 spinel_write!(
                     &mut response,

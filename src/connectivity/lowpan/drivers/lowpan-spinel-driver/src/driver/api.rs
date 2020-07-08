@@ -139,31 +139,60 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     }
 
     async fn get_factory_mac_address(&self) -> ZxResult<Vec<u8>> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        fx_log_info!("Got get_factory_mac_address command");
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.get_property_simple::<Vec<u8>, _>(Prop::HwAddr).await
     }
 
     async fn get_current_mac_address(&self) -> ZxResult<Vec<u8>> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        fx_log_info!("Got get_current_mac_address command");
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.get_property_simple::<Vec<u8>, _>(PropMac::LongAddr).await
     }
 
     async fn get_ncp_version(&self) -> ZxResult<String> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        fx_log_info!("Got get_ncp_version command");
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.get_property_simple::<String, _>(Prop::NcpVersion).await
     }
 
     async fn get_current_channel(&self) -> ZxResult<u16> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.get_property_simple::<u8, _>(PropPhy::Chan).map_ok(|x| x as u16).await
     }
 
+    // Returns the current RSSI measured by the radio.
+    // <fxb/44668>
     async fn get_current_rssi(&self) -> ZxResult<i32> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.get_property_simple::<i8, _>(PropPhy::Rssi).map_ok(|x| x as i32).await
     }
 
     async fn get_partition_id(&self) -> ZxResult<u32> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.get_property_simple::<u32, _>(PropNet::PartitionId).await
     }
 
     async fn get_thread_rloc16(&self) -> ZxResult<u16> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.get_property_simple::<u16, _>(PropThread::Rloc16).await
     }
 
     async fn get_thread_router_id(&self) -> ZxResult<u8> {
