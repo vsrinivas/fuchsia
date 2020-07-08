@@ -18,11 +18,11 @@ void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ templa
 
   {{- if .LLProps.LinearizeResponse }}
   {{ .Name }}Response _response{
-  {{- template "PassthroughResponseParams" .Response -}}
+  {{- template "PassthroughMessageParams" .Response -}}
   };
   {{- else }}
   new (_buffer.data()) {{ .Name }}Response{
-  {{- template "PassthroughResponseParams" .Response -}}
+  {{- template "PassthroughMessageParams" .Response -}}
   };
   {{- end }}
 

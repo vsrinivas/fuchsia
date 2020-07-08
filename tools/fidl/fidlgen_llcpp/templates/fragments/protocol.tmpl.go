@@ -5,35 +5,29 @@
 package fragments
 
 const Protocol = `
+{{- define "ArgumentDeclaration" -}}
+  {{- if eq .Type.LLFamily TrivialCopy }}
+  {{ .Type.LLDecl }} {{ .Name }}
+  {{- else if eq .Type.LLFamily Reference }}
+  {{ .Type.LLDecl }}& {{ .Name }}
+  {{- else if eq .Type.LLFamily String }}
+  const {{ .Type.LLDecl }}& {{ .Name }}
+  {{- else if eq .Type.LLFamily Vector }}
+  {{ .Type.LLDecl }}& {{ .Name }}
+  {{- end }}
+{{- end }}
+
 {{- /* Defines the arguments for a response method/constructor. */}}
-{{- define "ResponsePrototype" -}}
+{{- define "MessagePrototype" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{- end}}
-    {{- if eq $param.Type.LLFamily TrivialCopy }}
-    {{ $param.Type.LLDecl }} {{ $param.Name }}
-    {{- else if eq $param.Type.LLFamily Reference }}
-    {{ $param.Type.LLDecl }}& {{ $param.Name }}
-    {{- else if eq $param.Type.LLFamily String }}
-    const {{ $param.Type.LLDecl }}& {{ $param.Name }}
-    {{- else if eq $param.Type.LLFamily Vector }}
-    {{ $param.Type.LLDecl }}& {{ $param.Name }}
-    {{- end }}
+    {{- if $index }}, {{ end}}{{ template "ArgumentDeclaration" $param }}
   {{- end -}}
 {{- end }}
 
 {{- /* Defines the arguments for a request method/constructor. */}}
-{{- define "RequestPrototype" -}}
-  zx_txid_t _txid
-  {{- range $index, $param := . -}}
-    {{- if eq $param.Type.LLFamily TrivialCopy }}
-    , {{ $param.Type.LLDecl }} {{ $param.Name }}
-    {{- else if eq $param.Type.LLFamily Reference }}
-    , {{ $param.Type.LLDecl }}& {{ $param.Name }}
-    {{- else if eq $param.Type.LLFamily String }}
-    , const {{ $param.Type.LLDecl }}& {{ $param.Name }}
-    {{- else if eq $param.Type.LLFamily Vector }}
-    , {{ $param.Type.LLDecl }}& {{ $param.Name }}
-    {{- end }}
+{{- define "CommaMessagePrototype" -}}
+  {{- range $param := . -}}
+    , {{ template "ArgumentDeclaration" $param }}
   {{- end -}}
 {{- end }}
 
@@ -74,7 +68,7 @@ class {{ .Name }};
 
 {{- /* All the parameters for a response method/constructor which uses values with references */}}
 {{- /* or trivial copy. */}}
-{{- define "PassthroughResponseParams" -}}
+{{- define "PassthroughMessageParams" -}}
   {{- range $index, $param := . }}
     {{- if $index }}, {{- end }} {{ $param.Name }}
   {{- end }}
@@ -82,7 +76,7 @@ class {{ .Name }};
 
 {{- /* All the parameters for a request method/constructor which uses values with references */}}
 {{- /* or trivial copy. */}}
-{{- define "PassthroughRequestParams" -}}
+{{- define "CommaPassthroughMessageParams" -}}
   {{- range $index, $param := . }}
     , {{ $param.Name }}
   {{- end }}
@@ -137,7 +131,7 @@ class {{ .Name }} final {
         {{- end }}
 
     {{- if .Response }}
-    explicit {{ .Name }}Response({{ template "ResponsePrototype" .Response }})
+    explicit {{ .Name }}Response({{ template "MessagePrototype" .Response }})
     {{ template "InitMessage" .Response }} {
       _InitHeader();
     }
@@ -176,7 +170,7 @@ class {{ .Name }} final {
         {{- end }}
 
     {{- if .Request }}
-    explicit {{ .Name }}Request({{ template "RequestPrototype" .Request }})
+    explicit {{ .Name }}Request(zx_txid_t _txid {{- template "CommaMessagePrototype" .Request }})
     {{ template "InitMessage" .Request }} {
       _InitHeader(_txid);
     }

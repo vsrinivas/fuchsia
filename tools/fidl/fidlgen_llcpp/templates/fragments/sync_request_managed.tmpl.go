@@ -33,7 +33,7 @@ const SyncRequestManaged = `
   {{- if .LLProps.LinearizeRequest }}
   {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
   {{ .Name }}Request _request(0
-  {{- template "PassthroughRequestParams" .Request -}}
+  {{- template "CommaPassthroughMessageParams" .Request -}}
   );
   {{- else }}
   {{/* tracking_ptrs won't free allocated memory because destructors aren't called.
@@ -43,7 +43,7 @@ const SyncRequestManaged = `
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof({{ .Name }}Request)];
   auto& _request = *new (_request_buffer) {{ .Name }}Request(0
-  {{- template "PassthroughRequestParams" .Request -}}
+  {{- template "CommaPassthroughMessageParams" .Request -}}
   );
   {{- end }}
 

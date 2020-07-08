@@ -14,7 +14,7 @@ zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCFlavorMethodSign
   {{- if .LLProps.LinearizeResponse }}
   {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
   {{ .Name }}Response _response{
-  {{- template "PassthroughResponseParams" .Response -}}
+  {{- template "PassthroughMessageParams" .Response -}}
   };
   {{- else }}
   {{/* tracking_ptrs won't free allocated memory because destructors aren't called.
@@ -24,7 +24,7 @@ zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCFlavorMethodSign
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _response_buffer[sizeof({{ .Name }}Response)];
   auto& _response = *new (_response_buffer) {{ .Name }}Response{
-  {{- template "PassthroughResponseParams" .Response -}}
+  {{- template "PassthroughMessageParams" .Response -}}
   };
   {{- end }}
 

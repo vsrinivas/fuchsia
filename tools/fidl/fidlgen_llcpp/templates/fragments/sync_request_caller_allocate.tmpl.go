@@ -41,11 +41,11 @@ const SyncRequestCallerAllocate = `
   {{- end }}
   {{- if .LLProps.LinearizeRequest }}
   {{ .Name }}Request _request(0
-  {{- template "PassthroughRequestParams" .Request -}}
+  {{- template "CommaPassthroughMessageParams" .Request -}}
   );
   {{- else }}
   new (_request_buffer.data()) {{ .Name }}Request(0
-  {{- template "PassthroughRequestParams" .Request -}}
+  {{- template "CommaPassthroughMessageParams" .Request -}}
   );
   {{- end }}
 

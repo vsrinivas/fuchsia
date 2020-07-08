@@ -46,11 +46,11 @@ const ClientAsyncMethods = `
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{- if .LLProps.LinearizeRequest }}
   {{ .Name }}Request _request(_context->Txid()
-  {{- template "PassthroughRequestParams" .Request -}}
+  {{- template "CommaPassthroughMessageParams" .Request -}}
   );
   {{- else }}
   new (_request_buffer.data()) {{ .Name }}Request(_context->Txid()
-  {{- template "PassthroughRequestParams" .Request -}}
+  {{- template "CommaPassthroughMessageParams" .Request -}}
   );
   {{- end }}
 
