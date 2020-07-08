@@ -411,7 +411,10 @@ void I2cHidbus::Shutdown() {
   if (irq_.is_valid()) {
     irq_.destroy();
   }
-  thrd_join(worker_thread_, NULL);
+  if (worker_thread_started_) {
+    worker_thread_started_ = false;
+    thrd_join(worker_thread_, NULL);
+  }
 
   {
     fbl::AutoLock lock(&ifc_lock_);
@@ -419,9 +422,9 @@ void I2cHidbus::Shutdown() {
   }
 }
 
-void I2cHidbus::DdkUnbindDeprecated() {
+void I2cHidbus::DdkUnbindNew(ddk::UnbindTxn txn) {
   Shutdown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void I2cHidbus::DdkRelease() { delete this; }
@@ -481,8 +484,20 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
     i2c_.GetInterrupt(0, &irq_);
   }
 
+  status = DdkAdd("i2c-hid");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "i2c-hid: could not add device: %d", status);
+    return status;
+  }
+  return ZX_OK;
+}
+
+void I2cHidbus::DdkInit(ddk::InitTxn txn) {
+  init_txn_ = std::move(txn);
+
   auto worker_thread = [](void* arg) -> int {
     auto dev = reinterpret_cast<I2cHidbus*>(arg);
+    dev->worker_thread_started_ = true;
     zx_status_t status = ZX_OK;
     // Retry the first transaction a few times; in some cases (e.g. on Slate) the device was powered
     // on explicitly during enumeration, and there is a warmup period after powering on the device
@@ -497,11 +512,14 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
       zx::nanosleep(zx::deadline_after(zx::msec(100)));
       zxlogf(INFO, "i2c-hid: Retrying reading HID descriptor");
     }
+    ZX_ASSERT(dev->init_txn_);
+    // This will make the device visible and able to be unbound.
+    dev->init_txn_->Reply(status);
+    // No need to remove the device, as replying to init_txn_ with an error will schedule
+    // unbinding.
     if (status != ZX_OK) {
-      dev->DdkRemoveDeprecated();
       return thrd_error;
     }
-    dev->DdkMakeVisible();
 
     if (dev->irq_.is_valid()) {
       dev->WorkerThreadIrq();
@@ -509,27 +527,21 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
       dev->WorkerThreadNoIrq();
     }
     // If |stop_worker_thread_| is not set, than we exited the worker thread because
-    // of an error and not a shutdown. Call DdkRemove directly.
+    // of an error and not a shutdown. Call DdkAsyncRemove directly. This is a valid
+    // call even if the device is currently unbinding.
     if (!dev->stop_worker_thread_) {
-      dev->DdkRemoveDeprecated();
+      dev->DdkAsyncRemove();
       return thrd_error;
     }
     return thrd_success;
   };
 
-  status = DdkAdd("i2c-hid", DEVICE_ADD_INVISIBLE);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-hid: could not add device: %d", status);
-    return status;
-  }
-
   int rc = thrd_create_with_name(&worker_thread_, worker_thread, this, "i2c-hid-worker-thread");
   if (rc != thrd_success) {
-    DdkRemoveDeprecated();
-    return ZX_ERR_INTERNAL;
+    return init_txn_->Reply(ZX_ERR_INTERNAL);
   }
-
-  return ZX_OK;
+  // If the worker thread was created successfully, it is in charge of replying to the init txn,
+  // which will make the device visible.
 }
 
 static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* parent) {

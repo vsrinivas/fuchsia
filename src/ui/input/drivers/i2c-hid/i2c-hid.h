@@ -10,6 +10,7 @@
 #include <threads.h>
 
 #include <memory>
+#include <optional>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
@@ -45,7 +46,7 @@ struct I2cHidDesc {
 } __PACKED;
 
 class I2cHidbus;
-using DeviceType = ddk::Device<I2cHidbus, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<I2cHidbus, ddk::Initializable, ddk::UnbindableNew>;
 
 class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::base_protocol> {
  public:
@@ -68,13 +69,12 @@ class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::
   zx_status_t HidbusGetProtocol(uint8_t* protocol) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
-  void DdkUnbindDeprecated();
+  void DdkInit(ddk::InitTxn txn);
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t Bind(ddk::I2cChannel i2c);
 
   zx_status_t ReadI2cHidDesc(I2cHidDesc* hiddesc);
-
-  void Shutdown();
 
   // Must be called with i2c_lock held.
   void WaitForReadyLocked() __TA_REQUIRES(i2c_lock_);
@@ -82,12 +82,17 @@ class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::
   zx_status_t Reset(bool force) __TA_EXCLUDES(i2c_lock_);
 
  private:
+  void Shutdown();
+
   I2cHidDesc hiddesc_ = {};
 
   // Signaled when reset received.
   fbl::ConditionVariable i2c_reset_cnd_;
 
-  std::atomic<bool> stop_worker_thread_ = false;
+  std::optional<ddk::InitTxn> init_txn_;
+
+  std::atomic_bool worker_thread_started_ = false;
+  std::atomic_bool stop_worker_thread_ = false;
   thrd_t worker_thread_;
   zx::interrupt irq_;
   // The functions to be run in the worker thread. They are responsible for initializing the

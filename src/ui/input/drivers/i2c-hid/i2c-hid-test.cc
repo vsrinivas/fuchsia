@@ -224,7 +224,7 @@ class I2cHidTest : public zxtest::Test {
   }
 
   void TearDown() override {
-    device_->DdkUnbindDeprecated();
+    device_->DdkAsyncRemove();
     EXPECT_TRUE(ddk_.Ok());
 
     // This should delete the object, which means this test should not leak.
@@ -241,7 +241,12 @@ class I2cHidTest : public zxtest::Test {
   ddk::I2cChannel channel_;
 };
 
-TEST_F(I2cHidTest, HidTestBind) { ASSERT_OK(device_->Bind(channel_)); }
+TEST_F(I2cHidTest, HidTestBind) {
+  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(ddk_.WaitUntilInitComplete());
+  EXPECT_TRUE(ddk_.init_reply().has_value());
+  EXPECT_OK(ddk_.init_reply().value());
+}
 
 TEST_F(I2cHidTest, HidTestQuery) {
   ASSERT_OK(device_->Bind(channel_));
@@ -291,6 +296,8 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
 
   EXPECT_OK(ddk_.WaitUntilRemove());
   EXPECT_TRUE(ddk_.Ok());
+  EXPECT_TRUE(ddk_.init_reply().has_value());
+  EXPECT_NOT_OK(ddk_.init_reply().value());
 
   device_->DdkRelease();
 }
