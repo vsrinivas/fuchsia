@@ -7,7 +7,6 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <lib/console.h>
-#include <lib/debuglog.h>
 #include <string.h>
 
 #include <new>
@@ -138,9 +137,8 @@ void SystemLockValidationError(AcquiredLockEntry* bad_entry, AcquiredLockEntry* 
   const uint64_t user_pid = current_thread->user_pid();
   const uint64_t user_tid = current_thread->user_tid();
 
-  DLOG_KERNEL_OOPS("Lock validation failed for thread %p pid %" PRIu64 " tid %" PRIu64
-                   " (%s:%s):\n",
-                   current_thread, user_pid, user_tid, owner_name, current_thread->name());
+  KERNEL_OOPS("Lock validation failed for thread %p pid %" PRIu64 " tid %" PRIu64 " (%s:%s):\n",
+              current_thread, user_pid, user_tid, owner_name, current_thread->name());
   printf("Reason: %s\n", ToString(result));
   printf("Bad lock: name=%s order=%" PRIu64 "\n", LockClassState::GetName(bad_entry->id()),
          bad_entry->order());
@@ -161,7 +159,7 @@ void SystemLockValidationFatal(AcquiredLockEntry* lock_entry, ThreadLockState* s
 
 // Prints a kernel oops when a circular lock dependency is detected.
 void SystemCircularLockDependencyDetected(LockClassState* connected_set_root) {
-  DLOG_KERNEL_OOPS("Circular lock dependency detected:\n");
+  KERNEL_OOPS("Circular lock dependency detected:\n");
 
   for (auto& node : lockdep::LockClassState::Iter()) {
     if (node.connected_set() == connected_set_root)

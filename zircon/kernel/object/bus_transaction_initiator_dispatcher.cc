@@ -148,6 +148,6 @@ void BusTransactionInitiatorDispatcher::PrintQuarantineWarningLocked() {
     num_entries++;
   }
 
-  DLOG_KERNEL_OOPS("Bus Transaction Initiator 0x%lx has leaked %" PRIu64 " pages in %zu VMOs\n",
-                   bti_id_, leaked_pages, num_entries);
+  KERNEL_OOPS("Bus Transaction Initiator 0x%lx has leaked %" PRIu64 " pages in %zu VMOs\n", bti_id_,
+              leaked_pages, num_entries);
 }

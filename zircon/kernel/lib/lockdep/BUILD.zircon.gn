@@ -8,7 +8,6 @@ source_set("lockdep") {
   sources = [ "lock_dep.cc" ]
   deps = [
     "$zx/kernel/lib/console",
-    "$zx/kernel/lib/debuglog",
     "$zx/kernel/lib/init",
     "$zx/kernel/lib/ktl",
   ]

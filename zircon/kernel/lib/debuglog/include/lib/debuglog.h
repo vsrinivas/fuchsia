@@ -123,10 +123,4 @@ void dlog_bypass_init_early(void);
 void dlog_bypass_init(void);
 bool dlog_bypass(void);
 
-// A printf-like macro which prepend's the user's message with the special
-// "ZIRCON KERNEL OOPS" tag.  zbi_test bots look for tags like this and consider
-// their presence to indicate test failures, even if the higher level test
-// framework code thinks the test passed.
-#define DLOG_KERNEL_OOPS(fmt, ...) printf("\nZIRCON KERNEL OOPS\n" fmt, ##__VA_ARGS__)
-
 #endif  // ZIRCON_KERNEL_LIB_DEBUGLOG_INCLUDE_LIB_DEBUGLOG_H_

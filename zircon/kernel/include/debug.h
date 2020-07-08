@@ -55,6 +55,15 @@ void spin(uint32_t usecs);
 /* spin the cpu for a certain number of cpu cycles */
 void spin_cycles(uint32_t usecs);
 
+// A printf-like macro which prepend's the user's message with the special
+// "ZIRCON KERNEL OOPS" tag.  zbi_test bots look for tags like this and consider
+// their presence to indicate test failures, even if the higher level test
+// framework code thinks the test passed.
+//
+// A KERNEL_OOPS indicates the presence of a bug, however, the bug may not be in
+// the kernel itself.
+#define KERNEL_OOPS(fmt, ...) printf("\nZIRCON KERNEL OOPS\n" fmt, ##__VA_ARGS__)
+
 __END_CDECLS
 
 #endif  // ZIRCON_KERNEL_INCLUDE_DEBUG_H_
