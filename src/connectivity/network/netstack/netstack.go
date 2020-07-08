@@ -128,7 +128,10 @@ func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithC
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			cobaltLogger.LogCobaltEvents(context.Background(), c.Collect())
+			events := c.Collect()
+			if status, err := cobaltLogger.LogCobaltEvents(context.Background(), events); err != nil || status != cobalt.StatusOk {
+				syslog.Warnf("cobaltLogger.LogCobaltEvents(_, %+v) = %s, %s", events, status, err)
+			}
 		}
 	}
 }
