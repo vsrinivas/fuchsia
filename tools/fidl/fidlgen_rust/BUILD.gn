@@ -39,6 +39,15 @@ if (is_host) {
     non_go_deps = [ ":test_data" ]
   }
 
+  go_test("fidlgen_rust_ir_test") {
+    gopackages = [ "fidlgen_rust/ir" ]
+
+    deps = [
+      ":lib",
+      "//garnet/go/src/fidl:fidlgen_test_lib",
+    ]
+  }
+
   host_test_data("test_data") {
     sources = [
       "//prebuilt/third_party/rust/$host_platform/bin/rustfmt",

@@ -158,6 +158,15 @@ nullable.test.json.llcpp.h.golden
 nullable.test.json.rs.golden
 nullable.test.json.syz.txt.golden
 nullable.test.json_test_base.h.golden
+padding.test.json
+padding.test.json.cc.golden
+padding.test.json.go.golden
+padding.test.json.h.golden
+padding.test.json.llcpp.cc.golden
+padding.test.json.llcpp.h.golden
+padding.test.json.rs.golden
+padding.test.json.syz.txt.golden
+padding.test.json_test_base.h.golden
 placement_of_attributes.test.json
 placement_of_attributes.test.json.cc.golden
 placement_of_attributes.test.json.go.golden

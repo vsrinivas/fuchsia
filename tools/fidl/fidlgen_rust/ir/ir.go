@@ -5,6 +5,8 @@
 package ir
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"sort"
@@ -87,10 +89,11 @@ type Result struct {
 
 type Struct struct {
 	types.Attributes
-	ECI     EncodedCompoundIdentifier
-	Derives derives
-	Name    string
-	Members []StructMember
+	ECI            EncodedCompoundIdentifier
+	Derives        derives
+	Name           string
+	Members        []StructMember
+	PaddingMarkers []PaddingMarker
 	// Store size and alignment for Old and V1 versions of the wire format. The
 	// numbers will be different if the struct contains a union within it. Only
 	// structs have this information because fidl::encoding only uses these
@@ -107,6 +110,13 @@ type StructMember struct {
 	Offset       int
 	HasDefault   bool
 	DefaultValue string
+}
+
+type PaddingMarker struct {
+	Type   string
+	Offset int
+	// Mask is a string so it can be in hex.
+	Mask string
 }
 
 type Table struct {
@@ -780,15 +790,84 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	}
 }
 
+func buildPaddingMarkers(val types.Struct) []PaddingMarker {
+	var paddingMarkers []PaddingMarker
+
+	// Construct a mask across the whole struct with 0xff bytes where there is padding.
+	fullStructMask := make([]byte, val.TypeShapeV1.InlineSize)
+	paddingEnd := val.TypeShapeV1.InlineSize - 1
+	for i := len(val.Members) - 1; i >= 0; i-- {
+		member := val.Members[i]
+		for j := 0; j < member.FieldShapeV1.Padding; j++ {
+			fullStructMask[paddingEnd-j] = 0xff
+		}
+		paddingEnd = member.FieldShapeV1.Offset - 1
+	}
+
+	// Split up the mask into aligned integer mask segments that can be outputted in the
+	// fidl_struct! macro.
+	// Only the sections needing padding are outputted.
+	// e.g. 00ffff0000ffff000000000000000000 -> 00ffff0000ffff00, 0000000000000000
+	//                                       -> []PaddingMarker{"u64", 0, "0x00ffff0000ffff00u64"}
+	extractNonzeroSliceOffsets := func(stride int) []int {
+		var offsets []int
+		for endi := stride - 1; endi < len(fullStructMask); endi += stride {
+			i := endi - (stride - 1)
+			if bytes.Contains(fullStructMask[i:i+stride], []byte{0xff}) {
+				offsets = append(offsets, i)
+			}
+		}
+		return offsets
+	}
+	zeroSlice := func(s []byte) {
+		for i := range s {
+			s[i] = 0
+		}
+	}
+	for _, i := range extractNonzeroSliceOffsets(8) {
+		s := fullStructMask[i : i+8]
+		paddingMarkers = append(paddingMarkers, PaddingMarker{
+			Type:   "u64",
+			Offset: i,
+			Mask:   fmt.Sprintf("0x%016xu64", binary.LittleEndian.Uint64(s)),
+		})
+		zeroSlice(s) // Reset the buffer for the next iteration.
+	}
+	for _, i := range extractNonzeroSliceOffsets(4) {
+		s := fullStructMask[i : i+4]
+		paddingMarkers = append(paddingMarkers, PaddingMarker{
+			Type:   "u32",
+			Offset: i,
+			Mask:   fmt.Sprintf("0x%08xu32", binary.LittleEndian.Uint32(s)),
+		})
+		zeroSlice(s) // Reset the buffer for the next iteration.
+	}
+	for _, i := range extractNonzeroSliceOffsets(2) {
+		s := fullStructMask[i : i+2]
+		paddingMarkers = append(paddingMarkers, PaddingMarker{
+			Type:   "u16",
+			Offset: i,
+			Mask:   fmt.Sprintf("0x%04xu16", binary.LittleEndian.Uint16(s)),
+		})
+		zeroSlice(s) // Reset the buffer for the next iteration.
+	}
+	if bytes.Contains(fullStructMask, []byte{0xff}) {
+		// This shouldn't be possible because it requires an alignment 1 struct to have padding.
+		panic(fmt.Sprintf("expected mask to be zero, was %v", fullStructMask))
+	}
+	return paddingMarkers
+}
+
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
-		Attributes: val.Attributes,
-		ECI:        val.Name,
-		Name:       name,
-		Members:    []StructMember{},
-		Size:       val.TypeShapeV1.InlineSize,
-		Alignment:  val.TypeShapeV1.Alignment,
+		Attributes:     val.Attributes,
+		ECI:            val.Name,
+		Name:           name,
+		Members:        []StructMember{},
+		Size:           val.TypeShapeV1.InlineSize,
+		Alignment:      val.TypeShapeV1.Alignment,
+		PaddingMarkers: buildPaddingMarkers(val),
 	}
 
 	for _, v := range val.Members {

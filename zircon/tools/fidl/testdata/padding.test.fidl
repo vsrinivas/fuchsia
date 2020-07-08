@@ -1,0 +1,110 @@
+library fidl.test.padding;
+
+struct Padding1ByteEnd {
+    uint16 a;
+    uint8 b;
+    // 1 byte padding
+};
+
+struct Padding2ByteEnd {
+    uint32 a;
+    uint16 b;
+    // 2 byte padding
+};
+
+struct Padding3ByteEnd {
+    uint32 a;
+    uint8 b;
+    // 3 byte padding
+};
+
+struct Padding4ByteEnd {
+    uint64 a;
+    uint32 b;
+    // 4 byte padding
+};
+
+struct Padding5ByteEnd {
+    uint64 a;
+    uint16 b;
+    uint8 c;
+    // 5 byte padding
+};
+
+struct Padding6ByteEnd {
+    uint64 a;
+    uint16 b;
+    // 6 byte padding
+};
+
+struct Padding7ByteEnd {
+    uint64 a;
+    uint8 b;
+    // 7 byte padding
+};
+
+struct Padding1ByteMiddle {
+    uint8 a;
+    // 1 byte padding
+    uint16 b;
+};
+
+struct Padding2ByteMiddle {
+    uint16 a;
+    // 2 byte padding
+    uint32 b;
+};
+
+struct Padding3ByteMiddle {
+    uint8 a;
+    // 3 byte padding
+    uint32 b;
+};
+
+struct Padding4ByteMiddle {
+    uint32 a;
+    // 4 byte padding
+    uint64 b;
+};
+
+struct Padding5ByteMiddle {
+    uint16 a;
+    uint8 b;
+    // 5 byte padding
+    uint64 c;
+};
+
+struct Padding6ByteMiddle {
+    uint16 a;
+    // 6 byte padding
+    uint64 b;
+};
+
+struct Padding7ByteMiddle {
+    uint8 a;
+    // 7 byte padding
+    uint64 b;
+};
+
+// The following structs test generation of padding masks for bindings that use
+// them. For example, for a 4-byte aligned struct with length 12, two masks
+// might be generated to cover the length - an 8-byte and 4-byte mask.
+
+struct Padding4ByteAlignmentLength12 {
+    uint32 a;
+    uint8 b;
+    // 1 byte padding
+    uint16 c;
+    uint16 d;
+    // 2 bytes padding
+};
+
+struct Padding2ByteAlignmentLength6 {
+    // 4 byte padding mask starts here.
+    uint8 a;
+    // 1 byte padding
+    uint16 b;
+    // 2 byte padding mask starts here.
+    uint8 c;
+    // 1 byte padding
+};

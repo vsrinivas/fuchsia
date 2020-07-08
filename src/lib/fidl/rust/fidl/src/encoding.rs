@@ -306,6 +306,11 @@ impl<'a> Encoder<'a> {
             std::ptr::write_bytes(self.buf.as_mut_ptr().offset(offset as isize), 0, len);
         }
     }
+
+    /// Acquires a mutable reference to the buffer in the encoder.
+    pub fn mut_buffer(&mut self) -> &mut [u8] {
+        self.buf
+    }
 }
 
 /// Decoding state
@@ -357,8 +362,7 @@ impl<'a> Decoder<'a> {
         if next_out_of_line > buf.len() {
             return Err(Error::OutOfRange);
         }
-        let mut decoder =
-            Decoder { depth: 0, next_out_of_line, buf, handles, context };
+        let mut decoder = Decoder { depth: 0, next_out_of_line, buf, handles, context };
         value.decode(&mut decoder, 0)?;
 
         // Put this in a non-polymorphic helper function to reduce binary bloat.
@@ -1892,6 +1896,13 @@ macro_rules! fidl_struct {
                 offset_v1: $member_offset_v1:expr,
             },
         )*],
+        padding: [$(
+            {
+                ty: $padding_ty:ty,
+                offset: $padding_offset:expr,
+                mask: $padding_mask:expr,
+            },
+        )*],
         size_v1: $size_v1:expr,
         align_v1: $align_v1:expr,
     ) => {
@@ -1907,13 +1918,12 @@ macro_rules! fidl_struct {
 
         impl $crate::encoding::Encodable for $name {
             unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
-                let mut padding_start = 0;
                 $(
-                    encoder.padding(offset + padding_start, $member_offset_v1 - padding_start);
-                    $crate::fidl_unsafe_encode!(&mut self.$member_name, encoder, offset + $member_offset_v1, recursion_depth)?;
-                    padding_start = $member_offset_v1 + encoder.inline_size_of::<$member_ty>();
+                    *std::mem::transmute::<*mut u8, *mut $padding_ty>(encoder.mut_buffer().as_mut_ptr().offset(offset as isize).offset($padding_offset)) = 0;
                 )*
-                encoder.padding(offset + padding_start, encoder.inline_size_of::<Self>() - padding_start);
+                $(
+                    $crate::fidl_unsafe_encode!(&mut self.$member_name, encoder, offset + $member_offset_v1, recursion_depth)?;
+                )*
                 Ok(())
             }
         }
@@ -1928,6 +1938,7 @@ macro_rules! fidl_struct {
             }
 
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
+                // TODO(bprosnitz) Use generated padding mask here.
                 let mut padding_start = 0;
                 $(
                     decoder.check_padding(offset + padding_start, $member_offset_v1 - padding_start)?;
@@ -2620,6 +2631,7 @@ fidl_struct! {
             offset_v1: 8,
         },
     ],
+    padding: [],
     size_v1: 16,
     align_v1: 8,
 }
@@ -2762,6 +2774,18 @@ fidl_struct! {
         magic_number {
             ty: u8,
             offset_v1: 7,
+        },
+    ],
+    padding: [
+        {
+            ty: u32,
+            offset: 0,
+            mask: 0xffffffffu32,
+        },
+        {
+            ty: u64,
+            offset: 8,
+            mask: 0xffffffffffffffffu64,
         },
     ],
     size_v1: 16,
@@ -3442,6 +3466,13 @@ mod test {
                 offset_v1: 16,
             },
         ],
+        padding: [
+            {
+                ty: u64,
+                offset: 0,
+                mask: 0xffffffffffffff00,
+            },
+        ],
         size_v1: 32,
         align_v1: 8,
     }
@@ -3975,6 +4006,7 @@ mod test {
                 offset_v1: 0,
             },
         ],
+        padding: [],
         size_v1: 8,
         align_v1: 8,
     }

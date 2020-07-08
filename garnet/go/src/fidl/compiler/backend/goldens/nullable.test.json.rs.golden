@@ -43,6 +43,8 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
+  padding: [
+  ],
   size_v1: 16,
   align_v1: 8,
 }
@@ -59,6 +61,8 @@ fidl_struct! {
       ty: Option<Vec<i32>>,
       offset_v1: 0,
     },
+  ],
+  padding: [
   ],
   size_v1: 16,
   align_v1: 8,
@@ -77,6 +81,8 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
+  padding: [
+  ],
   size_v1: 4,
   align_v1: 4,
 }
@@ -93,6 +99,8 @@ fidl_struct! {
       ty: Option<fidl::endpoints::ClientEnd<SimpleProtocolMarker>>,
       offset_v1: 0,
     },
+  ],
+  padding: [
   ],
   size_v1: 4,
   align_v1: 4,
@@ -111,6 +119,8 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
+  padding: [
+  ],
   size_v1: 4,
   align_v1: 4,
 }
@@ -127,6 +137,8 @@ fidl_struct! {
       ty: i32,
       offset_v1: 0,
     },
+  ],
+  padding: [
   ],
   size_v1: 4,
   align_v1: 4,
@@ -145,6 +157,8 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
+  padding: [
+  ],
   size_v1: 8,
   align_v1: 8,
 }
@@ -161,6 +175,8 @@ fidl_struct! {
       ty: Option<Box<SimpleUnion>>,
       offset_v1: 0,
     },
+  ],
+  padding: [
   ],
   size_v1: 24,
   align_v1: 8,

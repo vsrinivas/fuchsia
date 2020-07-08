@@ -33,6 +33,8 @@ fidl_struct! {
       offset_v1: 1,
     },
   ],
+  padding: [
+  ],
   size_v1: 2,
   align_v1: 1,
 }
@@ -54,6 +56,13 @@ fidl_struct! {
       ty: String,
       offset_v1: 8,
     },
+  ],
+  padding: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffff00000000u64,
+  },
   ],
   size_v1: 24,
   align_v1: 8,

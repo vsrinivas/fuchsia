@@ -15,6 +15,7 @@ handles.test.json.golden
 inheritance.test.json.golden
 inheritance_with_recursive_decl.test.json.golden
 nullable.test.json.golden
+padding.test.json.golden
 placement_of_attributes.test.json.golden
 protocol_request.test.json.golden
 protocols.test.json.golden

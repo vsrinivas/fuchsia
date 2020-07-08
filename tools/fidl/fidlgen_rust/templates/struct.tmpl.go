@@ -32,6 +32,15 @@ fidl_struct! {
     },
   {{- end }}
   ],
+  padding: [
+  {{- range .PaddingMarkers }}
+  {
+      ty: {{ .Type }},
+      offset: {{ .Offset }},
+      mask: {{ .Mask }},
+  },
+  {{- end }}
+  ],
   size_v1: {{ .Size }},
   align_v1: {{ .Alignment }},
 }

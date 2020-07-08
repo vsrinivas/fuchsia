@@ -33,6 +33,13 @@ fidl_struct! {
       offset_v1: 4,
     },
   ],
+  padding: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0x00000000ffffff00u64,
+  },
+  ],
   size_v1: 8,
   align_v1: 4,
 }
@@ -55,6 +62,13 @@ fidl_struct! {
       offset_v1: 2,
     },
   ],
+  padding: [
+  {
+      ty: u32,
+      offset: 0,
+      mask: 0xff000000u32,
+  },
+  ],
   size_v1: 4,
   align_v1: 2,
 }
@@ -71,6 +85,8 @@ fidl_struct! {
       ty: [Int16Int8; 3],
       offset_v1: 0,
     },
+  ],
+  padding: [
   ],
   size_v1: 12,
   align_v1: 2,
@@ -99,6 +115,8 @@ fidl_struct! {
       offset_v1: 12,
     },
   ],
+  padding: [
+  ],
   size_v1: 24,
   align_v1: 4,
 }
@@ -121,6 +139,13 @@ fidl_struct! {
       offset_v1: 8,
     },
   ],
+  padding: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffff00000000u64,
+  },
+  ],
   size_v1: 16,
   align_v1: 8,
 }
@@ -142,6 +167,8 @@ fidl_struct! {
       ty: NonInlineStructTestStruct,
       offset_v1: 24,
     },
+  ],
+  padding: [
   ],
   size_v1: 40,
   align_v1: 8,
