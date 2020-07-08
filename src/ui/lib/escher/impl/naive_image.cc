@@ -19,14 +19,10 @@ ImagePtr NaiveImage::AdoptVkImage(ResourceManager* image_owner, ImageInfo info, 
   FX_CHECK(mem);
 
   // Check image memory requirements before binding the image to memory.
-  auto mem_requirements = image_owner->vk_device()
-                              .getImageMemoryRequirements2KHR<vk::MemoryRequirements2KHR,
-                                                              vk::MemoryDedicatedRequirementsKHR>(
-                                  vk_image, image_owner->vulkan_context().loader);
+  auto mem_requirements = image_owner->vk_device().getImageMemoryRequirements(vk_image);
 
-  auto size_required = mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.size;
-  auto alignment_required =
-      mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.alignment;
+  auto size_required = mem_requirements.size;
+  auto alignment_required = mem_requirements.alignment;
 
   if (mem->size() < size_required) {
     FX_LOGS(ERROR) << "AdoptVkImage failed: Image requires " << size_required

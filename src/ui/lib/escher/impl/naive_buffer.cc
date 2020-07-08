@@ -15,14 +15,10 @@ namespace {
 
 bool CheckBufferMemoryRequirements(ResourceManager* manager, vk::Buffer vk_buffer,
                                    const GpuMemPtr& mem) {
-  auto mem_requirements = manager->vk_device()
-                              .getBufferMemoryRequirements2KHR<vk::MemoryRequirements2KHR,
-                                                               vk::MemoryDedicatedRequirementsKHR>(
-                                  vk_buffer, manager->vulkan_context().loader);
+  auto mem_requirements = manager->vk_device().getBufferMemoryRequirements(vk_buffer);
 
-  auto size_required = mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.size;
-  auto alignment_required =
-      mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.alignment;
+  auto size_required = mem_requirements.size;
+  auto alignment_required = mem_requirements.alignment;
 
   if (mem->size() < size_required) {
     FX_LOGS(ERROR) << "Memory requirements check failed: Buffer requires " << size_required
