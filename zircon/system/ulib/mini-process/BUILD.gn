@@ -41,7 +41,10 @@ if (toolchain_variant.instrumented) {
 
     # TODO(44278): Revert to true when converting this file to proper GN build idioms.
     testonly = false
-    sources = [ "subprocess.c" ]
+    sources = [
+      "include/mini-process/mini-process.h",
+      "subprocess.c",
+    ]
     deps = [ "//zircon/system/ulib/backtrace-request" ]
 
     configs += [
