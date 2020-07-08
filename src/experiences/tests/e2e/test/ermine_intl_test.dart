@@ -4,19 +4,19 @@
 
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:flutter_driver_sl4f/flutter_driver_sl4f.dart';
-import 'package:sl4f/sl4f.dart';
+import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
 
 /// Tests that the DUT running ermine can do the following:
 ///   - Change locale via setui_client and that change takes effect
 void main() {
-  Sl4f sl4f;
+  sl4f.Sl4f sl4fDriver;
+  sl4f.SetUi setUi;
   FlutterDriverConnector connector;
   FlutterDriver driver;
 
   Future<void> setLocale(String localeId) async {
-    var result = await sl4f.ssh.run('run setui_client.cm intl -l $localeId');
-    expect(result.exitCode, 0);
+    await setUi.setLocale(localeId);
   }
 
   void findTextOnScreen(String text) {
@@ -24,10 +24,12 @@ void main() {
   }
 
   setUpAll(() async {
-    sl4f = Sl4f.fromEnvironment();
-    await sl4f.startServer();
+    sl4fDriver = sl4f.Sl4f.fromEnvironment();
+    await sl4fDriver.startServer();
 
-    connector = FlutterDriverConnector(sl4f);
+    setUi = sl4f.SetUi(sl4fDriver);
+
+    connector = FlutterDriverConnector(sl4fDriver);
     await connector.initialize();
 
     // Check if ermine is running.
@@ -49,8 +51,8 @@ void main() {
     // Any of these may end up being null if the test fails in setup.
     await driver?.close();
     await connector?.tearDown();
-    await sl4f?.stopServer();
-    sl4f?.close();
+    await sl4fDriver?.stopServer();
+    sl4fDriver?.close();
   });
 
   test('Locale can be switched and takes effect', () async {
