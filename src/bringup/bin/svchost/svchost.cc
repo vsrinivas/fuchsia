@@ -287,18 +287,8 @@ void publish_service(const fbl::RefPtr<fs::PseudoDir>& dir, const char* name,
 void publish_services(const fbl::RefPtr<fs::PseudoDir>& dir, const char* const* names,
                       zx::unowned_channel svc) {
   for (size_t i = 0; names[i] != nullptr; ++i) {
-    const char* service_name = names[i];
-    publish_service(dir, service_name, zx::unowned_channel(svc->get()));
+    publish_service(dir, names[i], zx::unowned_channel(svc->get()));
   }
-}
-
-void publish_remote_service(const fbl::RefPtr<fs::PseudoDir>& dir, const char* name,
-                            zx::unowned_channel forwarding_channel) {
-  dir->AddEntry(
-      name, fbl::MakeRefCounted<fs::Service>([name, forwarding_channel = std::move(
-                                                        forwarding_channel)](zx::channel request) {
-        return fdio_service_connect_at(forwarding_channel->get(), name, request.release());
-      }));
 }
 
 // TODO(edcoyne): remove this and make virtcon talk virtual filesystems too.
