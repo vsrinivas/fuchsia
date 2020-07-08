@@ -31,103 +31,96 @@ use {
 const ENV_NAME: &str = "settings_service_setting_handler_test_environment";
 const CONTEXT_ID: u64 = 0;
 
-/// The Control trait provides static functions that control the behavior of
-/// test controllers. Since controllers are created from a trait themselves,
-/// we must specify this functionality as a trait so that the impl types can
-/// be supplied as generic parameters.
-trait Control {
-    fn should_init_succeed() -> bool;
-}
+macro_rules! gen_controller {
+    ($name:ident, $succeed:expr) => {
+        /// Controller is a simple controller test implementation that refers to a
+        /// Control type for how to behave.
+        struct $name {}
 
-/// SucceedControl provides a Control implementation that will succeed on
-/// initialization.
-struct SucceedControl {}
-
-impl Control for SucceedControl {
-    fn should_init_succeed() -> bool {
-        true
-    }
-}
-
-/// FailControl provides a Control implementation that will fail on
-/// initialization.
-struct FailControl {}
-
-impl Control for FailControl {
-    fn should_init_succeed() -> bool {
-        false
-    }
-}
-
-/// Controller is a simple controller test implementation that refers to a
-/// Control type for how to behave.
-struct Controller<C: Control + Sync + Send + 'static> {
-    _data: PhantomData<C>,
-}
-
-#[async_trait]
-impl<C: Control + Sync + Send + 'static> controller::Create for Controller<C> {
-    async fn create(_: ClientProxy) -> Result<Self, ControllerError> {
-        if C::should_init_succeed() {
-            Ok(Self { _data: PhantomData })
-        } else {
-            Err(ControllerError::InitFailure { description: "failure".to_string() })
+        #[async_trait]
+        impl controller::Create for $name {
+            async fn create(_: ClientProxy) -> Result<Self, ControllerError> {
+                if $succeed {
+                    Ok(Self {})
+                } else {
+                    Err(ControllerError::InitFailure { description: "failure".to_string() })
+                }
+            }
         }
-    }
-}
 
-#[async_trait]
-impl<C: Control + Sync + Send + 'static> controller::Handle for Controller<C> {
-    async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
-        return None;
-    }
+        #[async_trait]
+        impl controller::Handle for $name {
+            async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+                return None;
+            }
 
-    async fn change_state(&mut self, _: State) -> Option<ControllerStateResult> {
-        return None;
-    }
-}
-
-/// The DataController is a controller implementation with storage that
-/// defers to a Control type for how to behave.
-struct DataController<C: Control + Sync + Send + 'static, S: Storage> {
-    _control: PhantomData<C>,
-    _storage: PhantomData<S>,
-}
-
-#[async_trait]
-impl<C: Control + Sync + Send + 'static, S: Storage> data_controller::Create<S>
-    for DataController<C, S>
-{
-    async fn create(_: DataClientProxy<S>) -> Result<Self, ControllerError> {
-        if C::should_init_succeed() {
-            Ok(Self { _control: PhantomData, _storage: PhantomData })
-        } else {
-            Err(ControllerError::InitFailure { description: "failure".to_string() })
+            async fn change_state(&mut self, _: State) -> Option<ControllerStateResult> {
+                return None;
+            }
         }
-    }
+    };
 }
 
-#[async_trait]
-impl<C: Control + Sync + Send + 'static, S: Storage> controller::Handle for DataController<C, S> {
-    async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
-        return None;
-    }
+gen_controller!(SucceedController, true);
+gen_controller!(FailController, false);
 
-    async fn change_state(&mut self, _: State) -> Option<ControllerStateResult> {
-        return None;
-    }
+macro_rules! gen_data_controller {
+    ($name:ident, $succeed:expr) => {
+        /// The DataController is a controller implementation with storage that
+        /// defers to a Control type for how to behave.
+        struct $name<S: Storage> {
+            _storage: PhantomData<S>,
+        }
+
+        #[async_trait]
+        impl<S: Storage> data_controller::Create<S> for $name<S> {
+            async fn create(_: DataClientProxy<S>) -> Result<Self, ControllerError> {
+                if $succeed {
+                    Ok(Self { _storage: PhantomData })
+                } else {
+                    Err(ControllerError::InitFailure { description: "failure".to_string() })
+                }
+            }
+        }
+
+        #[async_trait]
+        impl<S: Storage> controller::Handle for $name<S> {
+            async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+                return None;
+            }
+
+            async fn change_state(&mut self, _: State) -> Option<ControllerStateResult> {
+                return None;
+            }
+        }
+    };
+}
+
+gen_data_controller!(SucceedDataController, true);
+gen_data_controller!(FailDataController, false);
+
+macro_rules! verify_handle {
+    ($spawn:expr) => {
+        assert!(EnvironmentBuilder::new(InMemoryStorageFactory::create())
+            .handler(SettingType::Unknown, Box::new($spawn))
+            .agents(&[restore_agent::blueprint::create()])
+            .settings(&[SettingType::Unknown])
+            .spawn_nested(ENV_NAME)
+            .await
+            .is_ok());
+    };
 }
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_spawn() {
     // Exercises successful spawn of a simple controller.
-    verify_handler::<SucceedControl>(true).await;
+    verify_handle!(Handler::<SucceedController>::spawn);
     // Exercises failed spawn of a simple controller.
-    verify_handler::<FailControl>(true).await;
+    verify_handle!(Handler::<FailController>::spawn);
     // Exercises successful spawn of a data controller.
-    verify_data_handler::<SucceedControl>(true).await;
+    verify_handle!(DataHandler::<DoNotDisturbInfo, SucceedDataController<DoNotDisturbInfo>>::spawn);
     // Exercises failed spawn of a data controller.
-    verify_data_handler::<FailControl>(true).await;
+    verify_handle!(DataHandler::<DoNotDisturbInfo, FailDataController<DoNotDisturbInfo>>::spawn);
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -219,37 +212,6 @@ async fn verify_write_behavior<S: DeviceStorageCompatible + Send + Sync>(
 
     assert_eq!(notified, result.notified());
     assert!(result.is_ok() && result.into_response_result().is_ok());
-}
-
-async fn verify_handler<C: Control + Sync + Send + 'static>(should_succeed: bool) {
-    assert_eq!(
-        should_succeed,
-        EnvironmentBuilder::new(InMemoryStorageFactory::create())
-            .handler(SettingType::Unknown, Box::new(Handler::<Controller<C>>::spawn))
-            .agents(&[restore_agent::blueprint::create()])
-            .settings(&[SettingType::Unknown])
-            .spawn_nested(ENV_NAME)
-            .await
-            .is_ok()
-    );
-}
-
-async fn verify_data_handler<C: Control + Sync + Send + 'static>(should_succeed: bool) {
-    assert_eq!(
-        should_succeed,
-        EnvironmentBuilder::new(InMemoryStorageFactory::create())
-            .handler(
-                SettingType::Unknown,
-                Box::new(
-                    DataHandler::<DoNotDisturbInfo, DataController<C, DoNotDisturbInfo>>::spawn,
-                ),
-            )
-            .agents(&[restore_agent::blueprint::create()])
-            .settings(&[SettingType::Unknown])
-            .spawn_nested(ENV_NAME)
-            .await
-            .is_ok()
-    );
 }
 
 /// StateController allows for exposing incoming handler state to an outside
