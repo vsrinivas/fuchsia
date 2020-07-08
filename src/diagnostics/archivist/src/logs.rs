@@ -73,6 +73,13 @@ impl LogManager {
     where
         K: debuglog::DebugLog + Send + Sync + 'static,
     {
+        let mut source = SourceIdentity::empty();
+        source.component_name = Some("(klog)".to_string());
+        source.component_url = Some("fuchsia-boot://klog".to_string());
+        let component_log_stats = {
+            let inner = self.inner.lock().await;
+            inner.stats.get_component_log_stats(&source).await
+        };
         let mut kernel_logger = debuglog::DebugLogBridge::create(klog_reader);
         let messages = match kernel_logger.existing_logs().await {
             Ok(messages) => messages,
@@ -82,12 +89,19 @@ impl LogManager {
             }
         };
         for message in messages {
+            component_log_stats.lock().await.record_log(&message);
             self.ingest_message(message, LogSource::Kernel).await;
         }
 
         let res = kernel_logger
             .listen()
-            .try_for_each(|message| self.ingest_message(message, LogSource::Kernel).map(Ok))
+            .try_for_each(|message| {
+                async {
+                    component_log_stats.clone().lock().await.record_log(&message);
+                    self.ingest_message(message, LogSource::Kernel).await
+                }
+                .map(Ok)
+            })
             .await;
         if let Err(e) = res {
             error!("failed to drain kernel log, important logs may be missing: {}", e);
@@ -1093,6 +1107,17 @@ mod tests {
                     fatal_logs: 0u64,
                     closed_streams: 0u64,
                     unattributed_log_sinks: 0u64,
+                    by_component: {
+                        "fuchsia-boot://klog": {
+                            total_logs: 3u64,
+                            trace_logs: 0u64,
+                            debug_logs: 0u64,
+                            info_logs: 3u64,
+                            warning_logs: 0u64,
+                            error_logs: 0u64,
+                            fatal_logs: 0u64,
+                        },
+                    }
                 }
             }
         );
