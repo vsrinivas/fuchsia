@@ -48,6 +48,27 @@ std::vector<std::string> GetDirectoryContents(const std::string& dir) {
   return contents;
 }
 
+// Recursively delete empty directories under |root|, including |root| if it is empty or becomes
+// empty.
+void RemoveEmptyDirectories(const std::string& root) {
+  std::vector<std::string> contents = GetDirectoryContents(root);
+  if (contents.empty()) {
+    DeletePath(root);
+    return;
+  }
+
+  for (const auto& content : contents) {
+    const std::string path = files::JoinPath(root, content);
+    if (files::IsDirectory(path)) {
+      RemoveEmptyDirectories(path);
+    }
+  }
+
+  if (GetDirectoryContents(root).empty()) {
+    DeletePath(root);
+  }
+}
+
 std::string FormatAnnotationsAsJson(const std::map<std::string, std::string>& annotations) {
   rapidjson::Document json(rapidjson::kObjectType);
   auto& allocator = json.GetAllocator();
@@ -104,7 +125,48 @@ bool ReadAttachment(const std::string& path, SizedData* attachment) {
 }  // namespace
 
 Store::Store(const std::string& root_dir, StorageSize max_size)
-    : root_dir_(root_dir), max_size_(max_size), current_size_(0u) {}
+    : root_dir_(root_dir), max_size_(max_size), current_size_(0u) {
+  // Clean up any empty directories under |root_dir_|. This may happen if the component stops
+  // running while it is deleting a report.
+  RemoveEmptyDirectories(root_dir_);
+
+  RebuildMetadata();
+}
+
+void Store::RebuildMetadata() {
+  // Rebuild the store's metadata by iterating through each reports filed and determining its
+  // Uid, size, location in the filesystem, and program shortname. Additionally, determine what the
+  // id of the next report filed should be incrementing the maximum report id found by 1.
+  for (const auto& program_shortname : GetDirectoryContents(root_dir_)) {
+    const auto report_ids = GetDirectoryContents(files::JoinPath(root_dir_, program_shortname));
+    for (const auto& id_str : report_ids) {
+      const Uid id = std::stoull(id_str);
+      const std::string dir = JoinPaths({root_dir_, program_shortname, id_str});
+
+      // Get the size of the files in the report.
+      StorageSize size = StorageSize::Bytes(0);
+      for (const auto& filename : GetDirectoryContents(dir)) {
+        size_t file_size{0};
+        files::GetFileSize(files::JoinPath(dir, filename), &file_size);
+        size += StorageSize::Bytes(file_size);
+      }
+
+      id_to_metadata_[id] = ReportMetadata{
+          .dir = dir,
+          .size = size,
+          .program_shortname = program_shortname,
+      };
+
+      current_size_ += size;
+      uids_.push_back(id);
+    }
+  }
+
+  std::sort(uids_.begin(), uids_.end());
+  if (!uids_.empty()) {
+    next_id_ = uids_.back() + 1;
+  }
+}
 
 std::optional<Store::Uid> Store::Add(const Report report) {
   for (const auto& key : kReservedAttachmentNames) {

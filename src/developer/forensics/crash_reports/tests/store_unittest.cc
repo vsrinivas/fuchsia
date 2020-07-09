@@ -146,10 +146,7 @@ class StoreTest : public testing::Test {
     return programs;
   }
 
- private:
   files::ScopedTempDir tmp_dir_;
-
- protected:
   std::unique_ptr<Store> store_;
 };
 
@@ -263,6 +260,73 @@ TEST_F(StoreTest, Succeed_GarbageCollection) {
   EXPECT_TRUE(store_->Contains(id3.value()));
 
   EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({"program_name3"}));
+}
+
+TEST_F(StoreTest, Succeed_RebuildsMetadata) {
+  const std::string expected_program_shortname = "program_shortname";
+
+  const std::map<std::string, std::string> expected_annotations = {
+      {"annotation_key0", "annotation_value0"},
+      {"annotation_key1", "annotation_value1"},
+      {"annotation_key2", "annotation_value2"},
+  };
+
+  const std::map<std::string, std::string> expected_attachments = {
+      {"attachment_key0", "attachment_value0"},
+      {"attachment_key1", "attachment_value1"},
+      {"attachment_key2", "attachment_value2"},
+  };
+
+  const std::string expected_minidump = "mindump";
+
+  std::vector<Store::Uid> ids;
+  for (size_t i = 0; i < 5u; ++i) {
+    const auto id = Add(expected_program_shortname, expected_annotations, expected_attachments,
+                        expected_minidump);
+    ASSERT_TRUE(id.has_value());
+    ids.push_back(id.value());
+  }
+
+  MakeNewStore(StorageSize::Megabytes(1));
+
+  for (const auto& id : ids) {
+    std::string program_shortname;
+    std::map<std::string, std::string> annotations;
+    std::map<std::string, std::string> attachments;
+    std::optional<std::string> minidump;
+
+    ASSERT_TRUE(store_->Contains(id));
+    ASSERT_TRUE(Get(id, &program_shortname, &annotations, &attachments, &minidump));
+
+    EXPECT_EQ(expected_program_shortname, program_shortname);
+    EXPECT_EQ(expected_annotations, annotations);
+    EXPECT_EQ(expected_attachments, attachments);
+    ASSERT_TRUE(minidump.has_value());
+    EXPECT_EQ(expected_minidump, minidump.value());
+  }
+
+  // Check the next report added has the expected id.
+  const auto id = Add(expected_program_shortname, expected_attachments, expected_attachments,
+                      expected_minidump);
+  ASSERT_TRUE(id.has_value());
+  EXPECT_EQ(id.value(), ids.back() + 1u);
+}
+
+TEST_F(StoreTest, Succeed_RebuildCleansEmptyDirectories) {
+  std::vector<Store::Uid> ids;
+  for (size_t i = 0; i < 5u; ++i) {
+    const auto id =
+        Add("program_shortname", /*annotations=*/{}, /*attachments=*/{}, /*minidump=*/"minidump");
+    ASSERT_TRUE(id.has_value());
+    ids.push_back(id.value());
+  }
+
+  const std::string empty_dir = files::JoinPath(tmp_dir_.path(), "empty");
+  ASSERT_TRUE(files::CreateDirectory(empty_dir));
+
+  MakeNewStore(StorageSize::Megabytes(1));
+
+  EXPECT_FALSE(files::IsDirectory(empty_dir));
 }
 
 }  // namespace

@@ -44,6 +44,10 @@ class Store {
   bool Contains(const Uid& id) const;
 
  private:
+  // Rebuilds the non-persistent metadata about the store, e.g. |ids_to_metadata_|, from the
+  // store present under |root_dir_|.
+  void RebuildMetadata();
+
   // Remove reports until |required_space| is free in the store.
   //
   // Return false if |required_space| cannot be freed.
@@ -70,8 +74,6 @@ class Store {
   // We store the Uids in FIFO order for easy garbage collection.
   std::deque<Uid> uids_;
 
-  // TODO(47137): Uids may collide across component instances, however this will no longer happen
-  // once we rebuild the store's metadata when the component starts up.
   Uid next_id_{0};
 };
 
