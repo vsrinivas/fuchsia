@@ -34,6 +34,7 @@ test("memfs") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -44,6 +45,5 @@ test("memfs") {
     "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/unittest",
   ]
 }

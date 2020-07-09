@@ -24,13 +24,11 @@
 
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool TestMemfsNull() {
-  BEGIN_TEST;
-
+TEST(MemfsTests, TestMemfsNull) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
   memfs_filesystem_t* vfs;
@@ -41,13 +39,9 @@ bool TestMemfsNull() {
   sync_completion_t unmounted;
   memfs_free_filesystem(vfs, &unmounted);
   ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
-
-  END_TEST;
 }
 
-bool TestMemfsBasic() {
-  BEGIN_TEST;
-
+TEST(MemfsTests, TestMemfsBasic) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
@@ -76,9 +70,9 @@ bool TestMemfsBasic() {
 
   // Readdir the file
   struct dirent* de;
-  ASSERT_NONNULL((de = readdir(d)));
+  ASSERT_NOT_NULL((de = readdir(d)));
   ASSERT_EQ(strcmp(de->d_name, "."), 0);
-  ASSERT_NONNULL((de = readdir(d)));
+  ASSERT_NOT_NULL((de = readdir(d)));
   ASSERT_EQ(strcmp(de->d_name, filename), 0);
   ASSERT_NULL(readdir(d));
 
@@ -86,13 +80,9 @@ bool TestMemfsBasic() {
   sync_completion_t unmounted;
   memfs_free_filesystem(vfs, &unmounted);
   ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
-
-  END_TEST;
 }
 
-bool TestMemfsAppend() {
-  BEGIN_TEST;
-
+TEST(MemfsTests, TestMemfsAppend) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
@@ -130,13 +120,9 @@ bool TestMemfsAppend() {
   sync_completion_t unmounted;
   memfs_free_filesystem(vfs, &unmounted);
   ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
-
-  END_TEST;
 }
 
-bool TestMemfsInstall() {
-  BEGIN_TEST;
-
+TEST(MemfsTests, TestMemfsInstall) {
   memfs_filesystem_t* fs;
   memfs_filesystem_t* fs_2;
   {
@@ -165,9 +151,9 @@ bool TestMemfsInstall() {
 
     // Readdir the file
     struct dirent* de;
-    ASSERT_NONNULL((de = readdir(d)));
+    ASSERT_NOT_NULL((de = readdir(d)));
     ASSERT_EQ(strcmp(de->d_name, "."), 0);
-    ASSERT_NONNULL((de = readdir(d)));
+    ASSERT_NOT_NULL((de = readdir(d)));
     ASSERT_EQ(strcmp(de->d_name, filename), 0);
     ASSERT_NULL(readdir(d));
 
@@ -184,13 +170,9 @@ bool TestMemfsInstall() {
   memfs_uninstall_unsafe(fs, "/mytmp");
 
   // No way to clean up the namespace entry. See ZX-2013 for more details.
-
-  END_TEST;
 }
 
-bool TestMemfsCloseDuringAccess() {
-  BEGIN_TEST;
-
+TEST(MemfsTests, TestMemfsCloseDuringAccess) {
   for (int i = 0; i < 100; i++) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
@@ -204,7 +186,7 @@ bool TestMemfsCloseDuringAccess() {
 
     // Access files within the filesystem.
     DIR* d = fdopendir(fd);
-    ASSERT_NONNULL(d);
+    ASSERT_NOT_NULL(d);
     thrd_t worker;
 
     struct thread_args {
@@ -253,13 +235,9 @@ bool TestMemfsCloseDuringAccess() {
     // only close the client side of the connection.
     ASSERT_EQ(closedir(d), 0);
   }
-
-  END_TEST;
 }
 
-bool TestMemfsOverflow() {
-  BEGIN_TEST;
-
+TEST(MemfsTests, TestMemfsOverflow) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
@@ -272,7 +250,7 @@ bool TestMemfsOverflow() {
 
   // Access files within the filesystem.
   DIR* d = fdopendir(root_fd);
-  ASSERT_NONNULL(d);
+  ASSERT_NOT_NULL(d);
 
   // Issue writes to the file in an order that previously would have triggered
   // an overflow in the memfs write path.
@@ -290,12 +268,9 @@ bool TestMemfsOverflow() {
   sync_completion_t unmounted;
   memfs_free_filesystem(vfs, &unmounted);
   ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
-  END_TEST;
 }
 
-bool TestMemfsDetachLinkedFilesystem() {
-  BEGIN_TEST;
-
+TEST(MemfsTests, TestMemfsDetachLinkedFilesystem) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
@@ -308,7 +283,7 @@ bool TestMemfsDetachLinkedFilesystem() {
 
   // Access files within the filesystem.
   DIR* d = fdopendir(root_fd);
-  ASSERT_NONNULL(d);
+  ASSERT_NOT_NULL(d);
 
   // Leave a regular file.
   fbl::unique_fd fd(openat(dirfd(d), "file", O_CREAT | O_RDWR));
@@ -326,17 +301,6 @@ bool TestMemfsDetachLinkedFilesystem() {
   sync_completion_t unmounted;
   memfs_free_filesystem(vfs, &unmounted);
   ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(memfs_tests)
-RUN_TEST(TestMemfsNull)
-RUN_TEST(TestMemfsBasic)
-RUN_TEST(TestMemfsAppend)
-RUN_TEST(TestMemfsInstall)
-RUN_TEST(TestMemfsCloseDuringAccess)
-RUN_TEST(TestMemfsOverflow)
-RUN_TEST(TestMemfsDetachLinkedFilesystem)
-END_TEST_CASE(memfs_tests)

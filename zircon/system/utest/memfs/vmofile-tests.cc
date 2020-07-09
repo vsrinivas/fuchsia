@@ -25,7 +25,7 @@
 #include <zircon/syscalls.h>
 
 #include <fbl/unique_fd.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -59,9 +59,7 @@ void shutdown_vfs(std::unique_ptr<memfs::Vfs> vfs) {
   sync_completion_wait(&completion, zx::sec(5).get());
 }
 
-bool test_vmofile_basic() {
-  BEGIN_TEST;
-
+TEST(VmofileTests, test_vmofile_basic) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
   async_dispatcher_t* dispatcher = loop.dispatcher();
@@ -133,13 +131,9 @@ bool test_vmofile_basic() {
   }
 
   shutdown_vfs(std::move(vfs));
-
-  END_TEST;
 }
 
-bool test_vmofile_exec() {
-  BEGIN_TEST;
-
+TEST(VmofileTests, test_vmofile_exec) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
   async_dispatcher_t* dispatcher = loop.dispatcher();
@@ -207,13 +201,6 @@ bool test_vmofile_exec() {
   }
 
   shutdown_vfs(std::move(vfs));
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(vmofile_tests)
-RUN_TEST(test_vmofile_basic)
-RUN_TEST(test_vmofile_exec)
-END_TEST_CASE(vmofile_tests)

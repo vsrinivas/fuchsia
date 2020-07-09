@@ -25,15 +25,13 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-bool TestFidlBasic() {
-  BEGIN_TEST;
-
+TEST(FidlTests, TestFidlBasic) {
   memfs_filesystem_t* fs;
   {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -67,13 +65,9 @@ bool TestFidlBasic() {
   ASSERT_EQ(memfs_uninstall_unsafe(fs, "/fidltmp"), ZX_OK);
 
   // No way to clean up the namespace entry. See ZX-2013 for more details.
-
-  END_TEST;
 }
 
-bool TestFidlOpenReadOnly() {
-  BEGIN_TEST;
-
+TEST(FidlTests, TestFidlOpenReadOnly) {
   memfs_filesystem_t* fs;
   {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -104,12 +98,9 @@ bool TestFidlOpenReadOnly() {
   memfs_uninstall_unsafe(fs, "/fidltmp-ro");
 
   // No way to clean up the namespace entry. See ZX-2013 for more details.
-
-  END_TEST;
 }
 
-bool QueryInfo(const char* path, fio::FilesystemInfo* info) {
-  BEGIN_HELPER;
+void QueryInfo(const char* path, fio::FilesystemInfo* info) {
   fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
   fdio_cpp::FdioCaller caller(std::move(fd));
@@ -126,12 +117,9 @@ bool QueryInfo(const char* path, fio::FilesystemInfo* info) {
   ASSERT_EQ(info->fs_type, VFS_TYPE_MEMFS);
   ASSERT_NE(info->fs_id, 0);
   ASSERT_EQ(info->used_bytes % info->block_size, 0);
-  END_HELPER;
 }
 
-bool TestFidlQueryFilesystem() {
-  BEGIN_TEST;
-
+TEST(FidlTests, TestFidlQueryFilesystem) {
   {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
@@ -142,7 +130,7 @@ bool TestFidlQueryFilesystem() {
 
     // Sanity checks
     fio::FilesystemInfo info;
-    ASSERT_TRUE(QueryInfo("/fidltmp-basic", &info));
+    ASSERT_NO_FATAL_FAILURES(QueryInfo("/fidltmp-basic", &info));
 
     // These values are nonsense, but they're the nonsense we expect memfs to generate.
     ASSERT_EQ(info.total_bytes, UINT64_MAX);
@@ -153,14 +141,6 @@ bool TestFidlQueryFilesystem() {
   }
 
   // No way to clean up the namespace entry. See ZX-2013 for more details.
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(fidl_tests)
-RUN_TEST(TestFidlBasic)
-RUN_TEST(TestFidlOpenReadOnly)
-RUN_TEST(TestFidlQueryFilesystem)
-END_TEST_CASE(fidl_tests)
