@@ -50,6 +50,7 @@ class SimInterface {
     std::list<wlanif_assoc_confirm_t> assoc_results;
     std::list<wlanif_assoc_ind_t> assoc_indications;
     std::list<wlanif_auth_ind_t> auth_indications;
+    std::list<wlanif_deauth_confirm_t> deauth_results;
     std::list<wlanif_deauth_indication_t> deauth_indications;
     std::list<wlanif_disassoc_indication_t> disassoc_indications;
     std::list<wlanif_channel_switch_info_t> csa_indications;
@@ -84,7 +85,7 @@ class SimInterface {
   virtual void OnJoinConf(const wlanif_join_confirm_t* resp);
   virtual void OnAuthConf(const wlanif_auth_confirm_t* resp);
   virtual void OnAuthInd(const wlanif_auth_ind_t* resp);
-  virtual void OnDeauthConf(const wlanif_deauth_confirm_t* resp) {}
+  virtual void OnDeauthConf(const wlanif_deauth_confirm_t* resp);
   virtual void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   virtual void OnAssocConf(const wlanif_assoc_confirm_t* resp);
   virtual void OnAssocInd(const wlanif_assoc_ind_t* ind);
@@ -113,6 +114,9 @@ class SimInterface {
                   const wlan_channel_t& channel);
   void AssociateWith(const simulation::FakeAp& ap,
                      std::optional<zx::duration> delay = std::nullopt);
+
+  void DeauthenticateFrom(const common::MacAddr& bssid,
+                          wlan_deauth_reason_t reason = WLAN_DEAUTH_REASON_UNSPECIFIED);
 
   // SoftAP operation
   void StartSoftAp(const wlan_ssid_t& ssid = kDefaultSoftApSsid,

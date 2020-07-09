@@ -150,6 +150,10 @@ void SimInterface::OnChannelSwitch(const wlanif_channel_switch_info_t* ind) {
   stats_.csa_indications.push_back(*ind);
 }
 
+void SimInterface::OnDeauthConf(const wlanif_deauth_confirm_t* resp) {
+  stats_.deauth_results.push_back(*resp);
+}
+
 void SimInterface::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
   stats_.deauth_indications.push_back(*ind);
 }
@@ -232,6 +236,16 @@ void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx:
   } else {
     StartAssoc(ap.GetBssid(), ap.GetSsid(), ap.GetChannel());
   }
+}
+
+void SimInterface::DeauthenticateFrom(const common::MacAddr& bssid, wlan_deauth_reason_t reason) {
+  // This should only be performed on a Client interface
+  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
+
+  wlanif_deauth_req_t deauth_req = {.reason_code = reason};
+  memcpy(deauth_req.peer_sta_address, bssid.byte, ETH_ALEN);
+
+  if_impl_ops_->deauth_req(if_impl_ctx_, &deauth_req);
 }
 
 void SimInterface::StartSoftAp(const wlan_ssid_t& ssid, const wlan_channel_t& channel,
