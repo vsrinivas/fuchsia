@@ -14,17 +14,24 @@ rustc_library("test_executor") {
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fidl_fuchsia_test_ext/rust:fidl_fuchsia_test_ext",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:glob",
+    "//third_party/rust_crates:linked-hash-map-v0_5_2",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
   if (is_fuchsia) {
     deps += [ "//src/lib/fuchsia-component" ]
   }
+
+  test_deps = [
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:pretty_assertions",
+  ]
 }
 
 group("tests") {

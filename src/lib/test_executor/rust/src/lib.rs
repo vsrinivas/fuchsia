@@ -12,6 +12,7 @@ use {
         CaseListenerRequestStream, Invocation,
         RunListenerRequest::{OnFinished, OnTestCaseStarted},
     },
+    fidl_fuchsia_test_ext::CloneExt as _,
     fidl_fuchsia_test_manager::{HarnessProxy, LaunchOptions},
     fuchsia_zircon_status as zx_status,
     futures::{
@@ -24,12 +25,54 @@ use {
         task::{Context, Poll},
     },
     glob,
+    linked_hash_map::LinkedHashMap,
     log::*,
-    std::{cell::RefCell, marker::Unpin, pin::Pin},
+    std::{cell::RefCell, collections::HashMap, marker::Unpin, pin::Pin},
 };
 
 #[cfg(target_os = "fuchsia")]
 use fidl_fuchsia_sys::LauncherProxy;
+
+/// Options that apply when executing a test suite.
+///
+/// For the FIDL equivalent, see [`fidl_fuchsia_test::RunOptions`].
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct TestRunOptions {
+    /// How to handle tests that were marked disabled/ignored by the developer.
+    pub disabled_tests: DisabledTestHandling,
+}
+
+/// How to handle tests that were marked disabled/ignored by the developer.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum DisabledTestHandling {
+    /// Skip tests that were marked disabled/ignored by the developer.
+    Exclude,
+    /// Explicitly include tests that were marked disabled/ignored by the developer.
+    Include,
+}
+
+impl Default for DisabledTestHandling {
+    fn default() -> Self {
+        DisabledTestHandling::Exclude
+    }
+}
+
+impl From<TestRunOptions> for fidl_fuchsia_test::RunOptions {
+    #[allow(unreachable_patterns)]
+    fn from(test_run_options: TestRunOptions) -> Self {
+        // Note: This will *not* break if new members are added to the FIDL table.
+        let mut run_options = fidl_fuchsia_test::RunOptions::empty();
+        match test_run_options.disabled_tests {
+            DisabledTestHandling::Exclude => {
+                run_options.include_disabled_tests = Some(false);
+            }
+            DisabledTestHandling::Include => {
+                run_options.include_disabled_tests = Some(true);
+            }
+        }
+        run_options
+    }
+}
 
 /// Defines the result of a test case run.
 #[derive(PartialEq, Debug, Eq, Hash, Ord, PartialOrd, Copy, Clone)]
@@ -45,7 +88,7 @@ pub enum TestResult {
 }
 
 /// Event to send to caller of `run_test_component`
-#[derive(PartialEq, Debug, Eq, Hash, Ord, PartialOrd)]
+#[derive(PartialEq, Debug, Eq, Hash, Ord, PartialOrd, Clone)]
 pub enum TestEvent {
     /// A new test case is started.
     TestCaseStarted { test_case_name: String },
@@ -76,7 +119,76 @@ impl TestEvent {
     pub fn test_finished() -> TestEvent {
         TestEvent::Finish
     }
+
+    /// Returns the name of the test case to which the event belongs, if applicable.
+    pub fn test_case_name(&self) -> Option<&String> {
+        match self {
+            TestEvent::TestCaseStarted { test_case_name } => Some(test_case_name),
+            TestEvent::TestCaseFinished { test_case_name, result: _ } => Some(test_case_name),
+            TestEvent::LogMessage { test_case_name, msg: _ } => Some(test_case_name),
+            TestEvent::Finish => None,
+            // NOTE: If new global event types (not tied to a specific test case) are added,
+            // `GroupByTestCase` must also be updated so as to preserve correct event ordering.
+            // Otherwise, all such events will end up with a key of `None` in the map, and might
+            // therefore be spuriously bunched together.
+        }
+    }
+
+    /// Same as `test_case_name`, but returns an owned `Option<String>`.
+    pub fn owned_test_case_name(&self) -> Option<String> {
+        self.test_case_name().map(String::from)
+    }
 }
+
+/// Trait allowing iterators over `TestEvent` to be partitioned by test case name.
+///
+/// Note that the current implementation assumes that the only `TestEvent` type that occurs
+/// _outside of test cases_ is `TestEvent::Finish`. If new global `TestEvent` types are added,
+/// the implementation will have to be changed.
+pub trait GroupByTestCase: Iterator<Item = TestEvent> + Sized {
+    /// Groups the `TestEvent`s by test case name into a map that preserves insertion order.
+    /// The overall order of test cases (by first event) and the orders of events within each test
+    /// case are preserved, but events from different test cases are effectively de-interleaved.
+    ///
+    /// Example:
+    /// ```rust
+    /// use test_executor::{TestEvent, GroupByTestCase as _};
+    /// use linked_hash_map::LinkedHashMap;
+    ///
+    /// let events: Vec<TestEvent> = get_events();
+    /// let grouped: LinkedHashMap<Option<String>, TestEvent> =
+    ///     events.into_iter().group_by_test_case();
+    /// ```
+    fn group_by_test_case_ordered(self) -> LinkedHashMap<Option<String>, Vec<TestEvent>> {
+        let mut map = LinkedHashMap::new();
+        for test_event in self {
+            map.entry(test_event.owned_test_case_name()).or_insert(Vec::new()).push(test_event);
+        }
+        map
+    }
+
+    /// De-interleaves the `TestEvents` by test case. The overall order of test cases (by first
+    /// event) and the orders of events within each test case are preserved.
+    fn deinterleave(self) -> Box<dyn Iterator<Item = TestEvent>> {
+        Box::new(
+            self.group_by_test_case_ordered()
+                .into_iter()
+                .flat_map(|(_, events)| events.into_iter()),
+        )
+    }
+
+    /// Groups the `TestEvent`s by test case name into an unordered map. The orders of events within
+    /// each test case are preserved, but the test cases themselves are not in a defined order.
+    fn group_by_test_case_unordered(self) -> HashMap<Option<String>, Vec<TestEvent>> {
+        let mut map = HashMap::new();
+        for test_event in self {
+            map.entry(test_event.owned_test_case_name()).or_insert(Vec::new()).push(test_event);
+        }
+        map
+    }
+}
+
+impl<T> GroupByTestCase for T where T: Iterator<Item = TestEvent> + Sized {}
 
 #[must_use = "futures/streams"]
 pub struct LoggerStream {
@@ -223,6 +335,7 @@ pub async fn run_and_collect_results(
     suite: fidl_fuchsia_test::SuiteProxy,
     sender: mpsc::Sender<TestEvent>,
     test_filter: Option<&str>,
+    run_options: TestRunOptions,
 ) -> Result<(), anyhow::Error> {
     debug!("enumerating tests");
     let (case_iterator, server_end) = fidl::endpoints::create_proxy()?;
@@ -249,8 +362,9 @@ pub async fn run_and_collect_results(
             invocations.push(Invocation { name: Some(case_name), tag: None });
         }
     }
+
     debug!("invocations: {:#?}", invocations);
-    run_and_collect_results_for_invocations(suite, sender, invocations).await
+    run_and_collect_results_for_invocations(suite, sender, invocations, run_options).await
 }
 
 /// Runs the test component using `suite` and collects logs and results.
@@ -258,18 +372,21 @@ pub async fn run_and_collect_results_for_invocations(
     suite: fidl_fuchsia_test::SuiteProxy,
     mut sender: mpsc::Sender<TestEvent>,
     invocations: Vec<Invocation>,
+    run_options: TestRunOptions,
 ) -> Result<(), anyhow::Error> {
     debug!("running tests");
     let mut successful_completion = true; // will remain true, if there are no tests to run.
     let mut invocations_iter = invocations.into_iter();
+    let run_options: fidl_fuchsia_test::RunOptions = run_options.into();
     loop {
         const INVOCATIONS_CHUNK: usize = 50;
         let chunk = invocations_iter.by_ref().take(INVOCATIONS_CHUNK).collect::<Vec<_>>();
         if chunk.is_empty() {
             break;
         }
-        successful_completion &=
-            run_invocations(&suite, chunk, &mut sender).await.context("running test cases")?;
+        successful_completion &= run_invocations(&suite, chunk, run_options.clone(), &mut sender)
+            .await
+            .context("running test cases")?;
     }
     if successful_completion {
         let () =
@@ -282,19 +399,13 @@ pub async fn run_and_collect_results_for_invocations(
 async fn run_invocations(
     suite: &fidl_fuchsia_test::SuiteProxy,
     invocations: Vec<Invocation>,
+    run_options: fidl_fuchsia_test::RunOptions,
     sender: &mut mpsc::Sender<TestEvent>,
 ) -> Result<bool, anyhow::Error> {
     let (run_listener_client, mut run_listener) =
         fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()
             .context("creating request stream")?;
-    suite.run(
-        &mut invocations.into_iter().map(|i| i.into()),
-        fidl_fuchsia_test::RunOptions {
-            // TODO(fxb/45852): Support disabled tests.
-            include_disabled_tests: None,
-        },
-        run_listener_client,
-    )?;
+    suite.run(&mut invocations.into_iter().map(|i| i.into()), run_options, run_listener_client)?;
 
     let mut test_case_processors = Vec::new();
     let mut successful_completion = false;
@@ -350,7 +461,10 @@ pub async fn run_v1_test_component(
         .connect_to_service::<fidl_fuchsia_test::SuiteMarker>()
         .context("connecting to service")?;
 
-    run_and_collect_results(suite, sender, None).await?;
+    // No custom run options for v1 tests.
+    let run_options = TestRunOptions::default();
+
+    run_and_collect_results(suite, sender, None, run_options).await?;
 
     Ok(())
 }
@@ -361,6 +475,7 @@ pub async fn run_v2_test_component(
     test_url: String,
     sender: mpsc::Sender<TestEvent>,
     test_filter: Option<&str>,
+    run_options: TestRunOptions,
 ) -> Result<(), anyhow::Error> {
     if !test_url.ends_with(".cm") {
         return Err(anyhow::anyhow!(
@@ -380,7 +495,7 @@ pub async fn run_v2_test_component(
             anyhow::anyhow!("error launching test: {:?}", e)
         })?;
 
-    run_and_collect_results(suite_proxy, sender, test_filter).await
+    run_and_collect_results(suite_proxy, sender, test_filter, run_options).await
 }
 
 fn suite_error(err: fidl::Error) -> anyhow::Error {
@@ -405,6 +520,8 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
 mod tests {
     use super::*;
     use fidl::HandleBased;
+    use maplit::hashmap;
+    use pretty_assertions::assert_eq;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn collect_logs() {
@@ -447,5 +564,120 @@ mod tests {
         // socket was closed, this should return None
         msg = recv.next().await;
         assert_eq!(msg, None);
+    }
+
+    #[test]
+    fn group_by_test_case_ordered() {
+        let events = vec![
+            TestEvent::test_case_started("a::a"),
+            TestEvent::test_case_started("b::b"),
+            TestEvent::log_message("a::a", "log"),
+            TestEvent::test_case_started("c::c"),
+            TestEvent::log_message("b::b", "log"),
+            TestEvent::test_case_finished("c::c", TestResult::Passed),
+            TestEvent::test_case_finished("a::a", TestResult::Failed),
+            TestEvent::test_case_finished("b::b", TestResult::Passed),
+            TestEvent::test_finished(),
+        ];
+
+        let actual: Vec<(Option<String>, Vec<TestEvent>)> =
+            events.into_iter().group_by_test_case_ordered().into_iter().collect();
+
+        let expected = vec![
+            (
+                Some("a::a".to_string()),
+                vec![
+                    TestEvent::test_case_started("a::a"),
+                    TestEvent::log_message("a::a", "log"),
+                    TestEvent::test_case_finished("a::a", TestResult::Failed),
+                ],
+            ),
+            (
+                Some("b::b".to_string()),
+                vec![
+                    TestEvent::test_case_started("b::b"),
+                    TestEvent::log_message("b::b", "log"),
+                    TestEvent::test_case_finished("b::b", TestResult::Passed),
+                ],
+            ),
+            (
+                Some("c::c".to_string()),
+                vec![
+                    TestEvent::test_case_started("c::c"),
+                    TestEvent::test_case_finished("c::c", TestResult::Passed),
+                ],
+            ),
+            (None, vec![TestEvent::test_finished()]),
+        ];
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn deinterleave() {
+        let events = vec![
+            TestEvent::test_case_started("a::a"),
+            TestEvent::test_case_started("b::b"),
+            TestEvent::log_message("a::a", "log"),
+            TestEvent::test_case_started("c::c"),
+            TestEvent::log_message("b::b", "log"),
+            TestEvent::test_case_finished("c::c", TestResult::Passed),
+            TestEvent::test_case_finished("a::a", TestResult::Failed),
+            TestEvent::test_case_finished("b::b", TestResult::Passed),
+            TestEvent::test_finished(),
+        ];
+
+        let expected = vec![
+            TestEvent::test_case_started("a::a"),
+            TestEvent::log_message("a::a", "log"),
+            TestEvent::test_case_finished("a::a", TestResult::Failed),
+            TestEvent::test_case_started("b::b"),
+            TestEvent::log_message("b::b", "log"),
+            TestEvent::test_case_finished("b::b", TestResult::Passed),
+            TestEvent::test_case_started("c::c"),
+            TestEvent::test_case_finished("c::c", TestResult::Passed),
+            TestEvent::test_finished(),
+        ];
+
+        let actual: Vec<TestEvent> = events.into_iter().deinterleave().collect();
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn group_by_test_case_unordered() {
+        let events = vec![
+            TestEvent::test_case_started("a::a"),
+            TestEvent::test_case_started("b::b"),
+            TestEvent::log_message("a::a", "log"),
+            TestEvent::test_case_started("c::c"),
+            TestEvent::log_message("b::b", "log"),
+            TestEvent::test_case_finished("c::c", TestResult::Passed),
+            TestEvent::test_case_finished("a::a", TestResult::Failed),
+            TestEvent::test_case_finished("b::b", TestResult::Passed),
+            TestEvent::test_finished(),
+        ];
+
+        let expected = hashmap! {
+            Some("a::a".to_string()) => vec![
+                TestEvent::test_case_started("a::a"),
+                TestEvent::log_message("a::a", "log"),
+                TestEvent::test_case_finished("a::a", TestResult::Failed),
+            ],
+            Some("b::b".to_string()) => vec![
+                TestEvent::test_case_started("b::b"),
+                TestEvent::log_message("b::b", "log"),
+                TestEvent::test_case_finished("b::b", TestResult::Passed),
+            ],
+            Some("c::c".to_string()) => vec![
+                TestEvent::test_case_started("c::c"),
+                TestEvent::test_case_finished("c::c", TestResult::Passed),
+            ],
+            None => vec![TestEvent::Finish],
+        };
+
+        let actual = events.into_iter().group_by_test_case_unordered();
+
+        assert_eq!(actual, expected)
     }
 }

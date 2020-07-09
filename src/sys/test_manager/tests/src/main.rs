@@ -21,8 +21,7 @@ use {
     std::collections::HashSet,
     std::iter::FromIterator,
     std::mem::drop,
-    test_executor::TestEvent,
-    test_executor::TestResult,
+    test_executor::{TestEvent, TestResult, TestRunOptions},
 };
 
 async fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
@@ -62,9 +61,11 @@ async fn run_test(test_url: &str) -> Result<HashSet<TestEvent>, Error> {
 
     let (sender, recv) = mpsc::channel(1);
 
+    // TODO(fxb/45852): Support disabled tests.
+    let test_run_options = TestRunOptions::default();
     let (events, ()) = futures::future::try_join(
         recv.collect::<Vec<_>>().map(Ok),
-        test_executor::run_and_collect_results(suite_proxy, sender, None),
+        test_executor::run_and_collect_results(suite_proxy, sender, None, test_run_options),
     )
     .await
     .context("running test")?;

@@ -16,7 +16,7 @@ use {
     std::collections::HashSet,
     std::fmt,
     std::io::Write,
-    test_executor::TestEvent,
+    test_executor::{TestEvent, TestRunOptions},
 };
 
 #[derive(PartialEq, Debug)]
@@ -86,7 +86,11 @@ pub async fn run_test<W: Write>(
 
     let mut successful_completion = false;
 
-    let test_fut = test_executor::run_v2_test_component(harness, url, sender, test_filter).fuse();
+    // TODO(fxb/45852): Support disabled tests.
+    let run_options = TestRunOptions::default();
+
+    let test_fut =
+        test_executor::run_v2_test_component(harness, url, sender, test_filter, run_options).fuse();
     futures::pin_mut!(test_fut);
 
     loop {

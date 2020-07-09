@@ -14,6 +14,7 @@ use {
     std::io::{stdout, Write},
     test_executor::{
         run_and_collect_results_for_invocations as run_tests_and_collect, TestEvent, TestResult,
+        TestRunOptions,
     },
 };
 
@@ -150,9 +151,11 @@ async fn run_tests<W: Write>(
         return Ok(());
     }
     writeln!(writer, "Running tests...")?;
+    // TODO(fxb/45852): Add handling for disabled tests.
+    let run_options = TestRunOptions::default();
     let (successful_completion, ()) = futures::future::try_join(
         collect_events(writer, recv).map(Ok),
-        run_tests_and_collect(suite_proxy, sender, invocations),
+        run_tests_and_collect(suite_proxy, sender, invocations, run_options),
     )
     .await
     .context("running test")?;
