@@ -16,9 +16,6 @@
 
 constexpr zx::duration kWritePeriod = zx::sec(1);
 
-// At most 16KB of logs will be persisted each second.
-constexpr size_t kMaxWriteSizeInBytes = 16 * 1024;
-
 int main(int argc, const char** argv) {
   using namespace ::forensics::feedback_data::system_log_recorder;
 
@@ -39,7 +36,7 @@ int main(int argc, const char** argv) {
       write_loop.dispatcher(), context->svc(),
       SystemLogRecorder::WriteParameters{
           .period = kWritePeriod,
-          .max_write_size_bytes = kMaxWriteSizeInBytes,
+          .max_write_size_bytes = ::forensics::feedback_data::kMaxWriteSizeInBytes,
           .log_file_paths = ::forensics::feedback_data::kCurrentLogsFilePaths,
           .total_log_size_bytes = ::forensics::feedback_data::kPersistentLogsMaxSizeInKb * 1024,
       },

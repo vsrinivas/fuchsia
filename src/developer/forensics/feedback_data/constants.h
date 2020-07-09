@@ -104,6 +104,9 @@ const std::vector<const std::string> kCurrentLogsFilePaths({
     "/cache/current_system_log_7.txt",
 });
 
+// At most 16KB of logs will be persisted each second.
+constexpr size_t kMaxWriteSizeInBytes = 16 * 1024;
+
 }  // namespace feedback_data
 }  // namespace forensics
 

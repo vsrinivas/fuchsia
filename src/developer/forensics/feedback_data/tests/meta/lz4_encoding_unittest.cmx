@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/lz4_encoding_unittest_exe"
+    }
+}
