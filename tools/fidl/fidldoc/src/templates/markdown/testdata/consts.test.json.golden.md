@@ -21,12 +21,16 @@ Type: <code>int32</code>
             <td><code>VALUE</code></td>
             <td><code>1</code></td>
             <td></td>
+        </tr><tr>
+            <td><code>true</code></td>
+            <td><code>2</code></td>
+            <td></td>
         </tr></table>
 
 ### BitsType {#BitsType}
 Type: <code>int32</code>
 
-*Defined in [test.name/consts.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#21)*
+*Defined in [test.name/consts.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#23)*
 
 
 
@@ -34,6 +38,10 @@ Type: <code>int32</code>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
             <td><code>VALUE</code></td>
             <td><code>1</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>true</code></td>
+            <td><code>2</code></td>
             <td></td>
         </tr></table>
 
@@ -127,27 +135,53 @@ Type: <code>int32</code>
             <td></td>
         </tr>
     <tr id="enumVal">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#17">enumVal</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#18">enumVal</a></td>
             
             <td></td>
         </tr>
     <tr id="enumPrimitiveVal">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#18">enumPrimitiveVal</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#19">enumPrimitiveVal</a></td>
             <td>
                     <code><a class='link' href='#EnumType.VALUE'>EnumType.VALUE</a></code>
                 </td>
                 <td><code>int32</code></td>
             <td></td>
         </tr>
+    <tr id="enumTrue">
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#20">enumTrue</a></td>
+            
+            <td></td>
+        </tr>
+    <tr id="enumPrimitiveTrue">
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#21">enumPrimitiveTrue</a></td>
+            <td>
+                    <code><a class='link' href='#EnumType.true'>EnumType.true</a></code>
+                </td>
+                <td><code>int32</code></td>
+            <td></td>
+        </tr>
     <tr id="bitsVal">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#24">bitsVal</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#27">bitsVal</a></td>
             
             <td></td>
         </tr>
     <tr id="bitsPrimitiveVal">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#25">bitsPrimitiveVal</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#28">bitsPrimitiveVal</a></td>
             <td>
                     <code><a class='link' href='#BitsType.VALUE'>BitsType.VALUE</a></code>
+                </td>
+                <td><code>int32</code></td>
+            <td></td>
+        </tr>
+    <tr id="bitsTrue">
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#29">bitsTrue</a></td>
+            
+            <td></td>
+        </tr>
+    <tr id="bitsPrimitiveTrue">
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#30">bitsPrimitiveTrue</a></td>
+            <td>
+                    <code><a class='link' href='#BitsType.true'>BitsType.true</a></code>
                 </td>
                 <td><code>int32</code></td>
             <td></td>

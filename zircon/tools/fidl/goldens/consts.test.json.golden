@@ -238,7 +238,7 @@
       "name": "test.name/enumVal",
       "location": {
         "filename": "consts.test.fidl",
-        "line": 17,
+        "line": 18,
         "column": 16,
         "length": 7
       },
@@ -258,7 +258,7 @@
       "name": "test.name/enumPrimitiveVal",
       "location": {
         "filename": "consts.test.fidl",
-        "line": 18,
+        "line": 19,
         "column": 13,
         "length": 16
       },
@@ -274,10 +274,49 @@
       }
     },
     {
+      "name": "test.name/enumTrue",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 20,
+        "column": 16,
+        "length": 8
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.name/EnumType",
+        "nullable": false
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "2",
+        "expression": "EnumType.true",
+        "identifier": "test.name/EnumType.true"
+      }
+    },
+    {
+      "name": "test.name/enumPrimitiveTrue",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 21,
+        "column": 13,
+        "length": 17
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int32"
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "2",
+        "expression": "EnumType.true",
+        "identifier": "test.name/EnumType.true"
+      }
+    },
+    {
       "name": "test.name/bitsVal",
       "location": {
         "filename": "consts.test.fidl",
-        "line": 24,
+        "line": 27,
         "column": 16,
         "length": 7
       },
@@ -297,7 +336,7 @@
       "name": "test.name/bitsPrimitiveVal",
       "location": {
         "filename": "consts.test.fidl",
-        "line": 25,
+        "line": 28,
         "column": 13,
         "length": 16
       },
@@ -310,6 +349,45 @@
         "value": "1",
         "expression": "BitsType.VALUE",
         "identifier": "test.name/BitsType.VALUE"
+      }
+    },
+    {
+      "name": "test.name/bitsTrue",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 29,
+        "column": 16,
+        "length": 8
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.name/BitsType",
+        "nullable": false
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "2",
+        "expression": "BitsType.true",
+        "identifier": "test.name/BitsType.true"
+      }
+    },
+    {
+      "name": "test.name/bitsPrimitiveTrue",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 30,
+        "column": 13,
+        "length": 17
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int32"
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "2",
+        "expression": "BitsType.true",
+        "identifier": "test.name/BitsType.true"
       }
     }
   ],
@@ -342,6 +420,25 @@
               "expression": "1"
             }
           }
+        },
+        {
+          "name": "true",
+          "location": {
+            "filename": "consts.test.fidl",
+            "line": 16,
+            "column": 5,
+            "length": 4
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
         }
       ],
       "strict": true
@@ -350,7 +447,7 @@
       "name": "test.name/BitsType",
       "location": {
         "filename": "consts.test.fidl",
-        "line": 21,
+        "line": 23,
         "column": 6,
         "length": 8
       },
@@ -360,7 +457,7 @@
           "name": "VALUE",
           "location": {
             "filename": "consts.test.fidl",
-            "line": 22,
+            "line": 24,
             "column": 5,
             "length": 5
           },
@@ -372,6 +469,25 @@
               "kind": "numeric",
               "value": "1",
               "expression": "0x00000001"
+            }
+          }
+        },
+        {
+          "name": "true",
+          "location": {
+            "filename": "consts.test.fidl",
+            "line": 25,
+            "column": 5,
+            "length": 4
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
             }
           }
         }
@@ -394,13 +510,17 @@
     "test.name/FUCHSIA",
     "test.name/EnumType",
     "test.name/enumVal",
+    "test.name/enumTrue",
     "test.name/enumPrimitiveVal",
+    "test.name/enumPrimitiveTrue",
     "test.name/ENABLED_FLAG",
     "test.name/DIAMOND",
     "test.name/CONVERSION_FACTOR",
     "test.name/BitsType",
     "test.name/bitsVal",
+    "test.name/bitsTrue",
     "test.name/bitsPrimitiveVal",
+    "test.name/bitsPrimitiveTrue",
     "test.name/ANSWER_IN_BINARY",
     "test.name/ANSWER"
   ],
@@ -417,8 +537,12 @@
     "test.name/CONVERSION_FACTOR": "const",
     "test.name/enumVal": "const",
     "test.name/enumPrimitiveVal": "const",
+    "test.name/enumTrue": "const",
+    "test.name/enumPrimitiveTrue": "const",
     "test.name/bitsVal": "const",
     "test.name/bitsPrimitiveVal": "const",
+    "test.name/bitsTrue": "const",
+    "test.name/bitsPrimitiveTrue": "const",
     "test.name/EnumType": "enum",
     "test.name/BitsType": "enum"
   }

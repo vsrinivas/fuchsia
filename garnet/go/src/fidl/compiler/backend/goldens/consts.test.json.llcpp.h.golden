@@ -34,10 +34,12 @@ namespace name {
 
 enum class EnumType : int32_t {
   VALUE = 1u,
+  true_ = 2u,
 };
 
 enum class BitsType : int32_t {
   VALUE = 1u,
+  true_ = 2u,
 };
 
 extern const char USERNAME[];
@@ -52,7 +54,11 @@ constexpr uint64_t FUCHSIA = 4054509061583223046u;
 
 constexpr ::llcpp::test::name::EnumType enumVal = EnumType::VALUE;
 
+constexpr ::llcpp::test::name::EnumType enumTrue = EnumType::true_;
+
 constexpr int32_t enumPrimitiveVal = EnumType::VALUE;
+
+constexpr int32_t enumPrimitiveTrue = EnumType::true_;
 
 constexpr bool ENABLED_FLAG = true;
 
@@ -62,7 +68,11 @@ constexpr double CONVERSION_FACTOR = 1.41421;
 
 constexpr ::llcpp::test::name::BitsType bitsVal = BitsType::VALUE;
 
+constexpr ::llcpp::test::name::BitsType bitsTrue = BitsType::true_;
+
 constexpr int32_t bitsPrimitiveVal = BitsType::VALUE;
+
+constexpr int32_t bitsPrimitiveTrue = BitsType::true_;
 
 constexpr uint16_t ANSWER_IN_BINARY = 42u;
 

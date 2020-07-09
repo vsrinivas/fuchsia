@@ -8,9 +8,9 @@ extern const struct FidlCodedEnum test_name_BitsTypeTable;
 
 
 
-static bool EnumValidatorFor_test_name_EnumType(uint64_t v) { return (v == 1ul) || false; }
+static bool EnumValidatorFor_test_name_EnumType(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
 const struct FidlCodedEnum test_name_EnumTypeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Int32, .validate=&EnumValidatorFor_test_name_EnumType, .name="test.name/EnumType"};
 
-static bool EnumValidatorFor_test_name_BitsType(uint64_t v) { return (v == 1ul) || false; }
+static bool EnumValidatorFor_test_name_BitsType(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
 const struct FidlCodedEnum test_name_BitsTypeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Int32, .validate=&EnumValidatorFor_test_name_BitsType, .name="test.name/BitsType"};
 

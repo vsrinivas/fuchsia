@@ -13,27 +13,35 @@ const (
 	Username          string   = "\"squeenze\""
 	MinTemp           float32  = -273.15
 	ConversionFactor  float64  = 1.41421
-	EnumVal           EnumType = EnumType.VALUE
-	EnumPrimitiveVal  int32    = EnumType.VALUE
-	BitsVal           BitsType = BitsType.VALUE
-	BitsPrimitiveVal  int32    = BitsType.VALUE
+	EnumVal           EnumType = EnumTypeValue
+	EnumPrimitiveVal  int32    = EnumTypeValue
+	EnumTrue          EnumType = EnumTypeTrue
+	EnumPrimitiveTrue int32    = EnumTypeTrue
+	BitsVal           BitsType = BitsTypeValue
+	BitsPrimitiveVal  int32    = BitsTypeValue
+	BitsTrue          BitsType = BitsTypeTrue
+	BitsPrimitiveTrue int32    = BitsTypeTrue
 )
 
 type EnumType int32
 
 const (
 	EnumTypeValue EnumType = 1
+	EnumTypeTrue  EnumType = 2
 )
 
 func (_ EnumType) I_EnumValues() []EnumType {
 	return []EnumType{
 		EnumTypeValue,
+		EnumTypeTrue,
 	}
 }
 func (x EnumType) String() string {
 	switch x {
 	case 1:
 		return "Value"
+	case 2:
+		return "True"
 	}
 	return "Unknown"
 }
@@ -42,17 +50,21 @@ type BitsType int32
 
 const (
 	BitsTypeValue BitsType = 1
+	BitsTypeTrue  BitsType = 2
 )
 
 func (_ BitsType) I_EnumValues() []BitsType {
 	return []BitsType{
 		BitsTypeValue,
+		BitsTypeTrue,
 	}
 }
 func (x BitsType) String() string {
 	switch x {
 	case 1:
 		return "Value"
+	case 2:
+		return "True"
 	}
 	return "Unknown"
 }

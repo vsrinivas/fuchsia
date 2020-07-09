@@ -39,18 +39,28 @@ pub const ENUM_VAL: EnumType = EnumType::Value;
 
 pub const ENUM_PRIMITIVE_VAL: i32 = EnumType::Value;
 
+pub const ENUM_TRUE: EnumType = EnumType::True_;
+
+pub const ENUM_PRIMITIVE_TRUE: i32 = EnumType::True_;
+
 pub const BITS_VAL: BitsType = BitsType::Value;
 
 pub const BITS_PRIMITIVE_VAL: i32 = BitsType::Value;
 
+pub const BITS_TRUE: BitsType = BitsType::True_;
+
+pub const BITS_PRIMITIVE_TRUE: i32 = BitsType::True_;
+
 fidl_enum! {
   EnumType(i32) {
     Value = 1,
+    True_ = 2,
   }
 }
 
 fidl_enum! {
   BitsType(i32) {
     Value = 1,
+    True_ = 2,
   }
 }

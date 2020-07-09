@@ -579,8 +579,8 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 		strs = append(strs, c.namespaceFormatter(val.Library, appendNamespace))
 	}
 	strs = append(strs, changeIfReserved(val.Name, ext))
-	if string(val.Member) != "" {
-		strs = append(strs, string(val.Member))
+	if len(val.Member) != 0 {
+		strs = append(strs, changeIfReserved(val.Member, ext))
 	}
 	return strings.Join(strs, "::")
 }

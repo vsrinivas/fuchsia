@@ -606,7 +606,7 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 	}
 	strs = append(strs, changeIfReserved(types.Identifier(name), ext))
 	if ci.Member != "" {
-		strs = append(strs, string(ci.Member))
+		strs[len(strs)-1] += c.compileIdentifier(ci.Member, true, "")
 	}
 	return strings.Join(strs, ".")
 }

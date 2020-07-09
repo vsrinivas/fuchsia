@@ -10,6 +10,8 @@ namespace name {
 enum class EnumType : int32_t {
 
   VALUE = 1u,
+
+  true_ = 2u,
 };
 
 inline zx_status_t Clone(::test::name::EnumType value,
@@ -21,6 +23,8 @@ inline zx_status_t Clone(::test::name::EnumType value,
 enum class BitsType : int32_t {
 
   VALUE = 1u,
+
+  true_ = 2u,
 };
 
 inline zx_status_t Clone(::test::name::BitsType value,
@@ -41,7 +45,11 @@ constexpr uint64_t FUCHSIA = 4054509061583223046u;
 
 constexpr EnumType enumVal = EnumType::VALUE;
 
+constexpr EnumType enumTrue = EnumType::true_;
+
 constexpr int32_t enumPrimitiveVal = EnumType::VALUE;
+
+constexpr int32_t enumPrimitiveTrue = EnumType::true_;
 
 constexpr bool ENABLED_FLAG = true;
 
@@ -51,7 +59,11 @@ constexpr double CONVERSION_FACTOR = 1.41421;
 
 constexpr BitsType bitsVal = BitsType::VALUE;
 
+constexpr BitsType bitsTrue = BitsType::true_;
+
 constexpr int32_t bitsPrimitiveVal = BitsType::VALUE;
+
+constexpr int32_t bitsPrimitiveTrue = BitsType::true_;
 
 constexpr uint16_t ANSWER_IN_BINARY = 42u;
 
