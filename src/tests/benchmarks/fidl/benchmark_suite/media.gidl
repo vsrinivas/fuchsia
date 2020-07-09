@@ -4,6 +4,8 @@
 // found in the LICENSE file.
 
 benchmark("Media/StreamPacket") {
+    enable_send_event_benchmark = true,
+    enable_echo_call_benchmark = true,
     value = StreamPacket{
         pts: 0x7fffffffffffffff,
         payload_buffer_id: 1,

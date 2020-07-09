@@ -15,3 +15,11 @@ struct StreamPacket {
     uint64 buffer_config = 0;
     uint64 stream_segment_id = 0;
 };
+
+protocol StreamPacketEventProtocol {
+    -> Send(StreamPacket val);
+};
+
+protocol StreamPacketEchoCall {
+    Echo(StreamPacket val) -> (StreamPacket val);
+};
