@@ -794,7 +794,7 @@ TEST(Threads, SuspendSelf) {
   EXPECT_EQ(zx_task_suspend(zx_thread_self(), &suspend_token), ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST(Thread, SuspendAfterDeath) {
+TEST(Threads, SuspendAfterDeath) {
   zxr_thread_t thread;
   zx_handle_t thread_h;
   ASSERT_TRUE(start_thread(threads_test_infinite_sleep_fn, nullptr, &thread, &thread_h));
