@@ -4,11 +4,15 @@
 
 use {
     anyhow::Context,
-    bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpointId},
+    bt_avdtp::{
+        self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint, StreamEndpointId,
+    },
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::{ChannelParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP},
     fuchsia_async as fasync,
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::{inspect::DebugExt, types::PeerId},
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     futures::{
         task::{Context as TaskContext, Poll, Waker},
@@ -26,18 +30,24 @@ use crate::stream::{Stream, Streams};
 
 /// A Peer represents an A2DP peer which can be connected to this device.
 /// A2DP peers are specific to a Bluetooth peer and only one should exist for each unique PeerId.
+#[derive(Inspect)]
 pub struct Peer {
     /// The id of the peer we are connected to.
+    #[inspect(skip)]
     id: PeerId,
     /// Inner keeps track of the peer and the streams.
+    #[inspect(forward)]
     inner: Arc<Mutex<PeerInner>>,
     /// Profile Proxy to connect new transport sockets.
+    #[inspect(skip)]
     profile: ProfileProxy,
     /// The profile descriptor for this peer, if it has been discovered.
+    #[inspect(skip)]
     descriptor: Mutex<Option<ProfileDescriptor>>,
     /// Wakers that are to be woken when the peer disconnects.  If None, the peers have been woken
     /// and this peer is disconnected.  Shared weakly with ClosedPeer future objects that complete
     /// when the peer disconnects.
+    #[inspect(skip)]
     closed_wakers: Arc<Mutex<Option<Vec<Waker>>>>,
 }
 
@@ -75,7 +85,7 @@ impl Peer {
         lock.peer.clone()
     }
 
-    /// Perform Discovery and Collect Capabilities to enumaerate the endpoints and capabilities of
+    /// Perform Discovery and Collect Capabilities to enumerate the endpoints and capabilities of
     /// the connected peer.
     /// Returns a future which performs the work and resolves to a vector of peer stream endpoints.
     pub fn collect_capabilities(
@@ -83,7 +93,11 @@ impl Peer {
     ) -> impl Future<Output = avdtp::Result<Vec<avdtp::StreamEndpoint>>> {
         let avdtp = self.avdtp();
         let get_all = self.descriptor.lock().map_or(false, a2dp_version_check);
+        let inner = self.inner.clone();
         async move {
+            if let Some(caps) = inner.lock().remote_endpoints() {
+                return Ok(caps);
+            }
             trace!("Discovering peer streams..");
             let infos = avdtp.discover().await?;
             trace!("Discovered {} streams", infos.len());
@@ -107,6 +121,7 @@ impl Peer {
                     }
                 };
             }
+            inner.lock().set_remote_endpoints(&remote_streams);
             Ok(remote_streams)
         }
     }
@@ -246,16 +261,55 @@ struct PeerInner {
     opening: Option<StreamEndpointId>,
     /// The local stream endpoint collection
     local: Streams,
+    /// The inspect node for this peer
+    inspect: fuchsia_inspect::Node,
+    /// The set of discovered remote endpoints. None until set.
+    remote_endpoints: Option<Vec<StreamEndpoint>>,
+    /// The inspect node representing the remote endpoints.
+    remote_inspect: fuchsia_inspect::Node,
+}
+
+impl Inspect for &mut PeerInner {
+    // Set up the StreamEndpoint to update the state
+    // The MediaTask node will be created when the media task is started.
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect = parent.create_child(name);
+        self.inspect.record_string("id", self.peer_id.to_string());
+        self.local.iattach(&self.inspect, "local_streams")
+    }
 }
 
 impl PeerInner {
     pub fn new(peer: avdtp::Peer, peer_id: PeerId, local: Streams) -> Self {
-        Self { peer: Arc::new(peer), opening: None, local, peer_id }
+        Self {
+            peer: Arc::new(peer),
+            local,
+            peer_id,
+            opening: None,
+            remote_endpoints: None,
+            inspect: Default::default(),
+            remote_inspect: Default::default(),
+        }
     }
 
     /// Returns an endpoint from the local set or a BadAcpSeid error if it doesn't exist.
     fn get_mut(&mut self, local_id: &StreamEndpointId) -> Result<&mut Stream, avdtp::ErrorCode> {
         self.local.get_mut(&local_id).ok_or(avdtp::ErrorCode::BadAcpSeid)
+    }
+
+    fn set_remote_endpoints(&mut self, endpoints: &[StreamEndpoint]) {
+        self.remote_inspect = self.inspect.create_child("remote_endpoints");
+        for endpoint in endpoints {
+            let id_str = endpoint.local_id().to_string();
+            let caps_str = endpoint.capabilities().debug();
+            self.remote_inspect.record_string(id_str, caps_str);
+        }
+        self.remote_endpoints = Some(endpoints.iter().map(StreamEndpoint::as_new).collect());
+    }
+
+    /// If the remote endpoints have been set, returns a copy of the endpoints.
+    fn remote_endpoints(&self) -> Option<Vec<StreamEndpoint>> {
+        self.remote_endpoints.as_ref().map(|v| v.iter().map(StreamEndpoint::as_new).collect())
     }
 
     fn set_opening(
@@ -598,10 +652,7 @@ mod tests {
         expect_get_capabilities_and_respond(&remote, 0x01, capabilities_rsp);
 
         // Should finish!
-        let res = exec.run_until_stalled(&mut collect_future);
-        assert!(res.is_ready());
-
-        match res {
+        match exec.run_until_stalled(&mut collect_future) {
             Poll::Pending => panic!("collect capabilities should be complete"),
             Poll::Ready(Err(e)) => panic!("collect capabilities should have succeeded: {}", e),
             Poll::Ready(Ok(endpoints)) => {
@@ -627,6 +678,15 @@ mod tests {
                 }
             }
         }
+
+        // The second time, we don't expect to ask the peer again.
+        let collect_future = peer.collect_capabilities();
+        pin_mut!(collect_future);
+
+        match exec.run_until_stalled(&mut collect_future) {
+            Poll::Ready(Ok(endpoints)) => assert_eq!(2, endpoints.len()),
+            x => panic!("Expected get remote capabilities to be done, got {:?}", x),
+        };
     }
 
     #[test]
@@ -690,10 +750,7 @@ mod tests {
         expect_get_all_capabilities_and_respond(&remote, 0x01, capabilities_rsp);
 
         // Should finish!
-        let res = exec.run_until_stalled(&mut collect_future);
-        assert!(res.is_ready());
-
-        match res {
+        match exec.run_until_stalled(&mut collect_future) {
             Poll::Pending => panic!("collect capabilities should be complete"),
             Poll::Ready(Err(e)) => panic!("collect capabilities should have succeeded: {}", e),
             Poll::Ready(Ok(endpoints)) => {
@@ -719,6 +776,15 @@ mod tests {
                 }
             }
         }
+
+        // The second time, we don't expect to ask the peer again.
+        let collect_future = peer.collect_capabilities();
+        pin_mut!(collect_future);
+
+        match exec.run_until_stalled(&mut collect_future) {
+            Poll::Ready(Ok(endpoints)) => assert_eq!(2, endpoints.len()),
+            x => panic!("Expected get remote capabilities to be done, got {:?}", x),
+        };
     }
 
     #[test]
@@ -751,8 +817,7 @@ mod tests {
 
         // Should be done with an error.
         // Should finish!
-        let res = exec.run_until_stalled(&mut collect_future);
-        match res {
+        match exec.run_until_stalled(&mut collect_future) {
             Poll::Pending => panic!("Should be ready after discovery failure"),
             Poll::Ready(Ok(x)) => panic!("Should be an error but returned {:?}", x),
             Poll::Ready(Err(e)) => assert_matches!(e, avdtp::Error::RemoteRejected(0x31)),
@@ -829,8 +894,7 @@ mod tests {
         assert!(remote.write(response).is_ok());
 
         // Should be done without an error, but with no streams.
-        let res = exec.run_until_stalled(&mut collect_future);
-        match res {
+        match exec.run_until_stalled(&mut collect_future) {
             Poll::Pending => panic!("Should be ready after discovery failure"),
             Poll::Ready(Err(e)) => panic!("Shouldn't be an error but returned {:?}", e),
             Poll::Ready(Ok(map)) => assert_eq!(0, map.len()),
@@ -914,8 +978,7 @@ mod tests {
 
         // Should return the media stream (which should be connected)
         // Should be done without an error, but with no streams.
-        let res = exec.run_until_stalled(&mut start_future);
-        match res {
+        match exec.run_until_stalled(&mut start_future) {
             Poll::Pending => panic!("Should be ready after start succeeds"),
             Poll::Ready(Err(e)) => panic!("Shouldn't be an error but returned {:?}", e),
             // TODO: confirm the stream is usable
@@ -968,8 +1031,7 @@ mod tests {
 
         // Should return an error.
         // Should be done without an error, but with no streams.
-        let res = exec.run_until_stalled(&mut start_future);
-        match res {
+        match exec.run_until_stalled(&mut start_future) {
             Poll::Pending => panic!("Should be ready after start fails"),
             Poll::Ready(Ok(_stream)) => panic!("Shouldn't have succeeded stream here"),
             Poll::Ready(Err(_)) => {}
