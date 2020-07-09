@@ -10,12 +10,12 @@
 #![recursion_limit = "512"]
 
 use {
-    fidl_fuchsia_test_manager::HarnessMarker,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_test_manager::HarnessProxy,
+    fuchsia_async as fasync,
     futures::{channel::mpsc, prelude::*},
     std::collections::HashSet,
     std::fmt,
-    std::io::Write,
+    std::io::{self, Write},
     test_executor::{TestEvent, TestRunOptions},
 };
 
@@ -59,25 +59,23 @@ pub struct RunResult {
 
 /// Runs test defined by `url`, and writes logs to writer.
 /// |timeout|: Test timeout.should be more than zero.
+/// |harness|: HarnessProxy that manages running the tests.
 pub async fn run_test<W: Write>(
     url: String,
     writer: &mut W,
     timeout: Option<std::num::NonZeroU32>,
     test_filter: Option<&str>,
     disabled_tests: DisabledTestHandling,
+    harness: HarnessProxy,
 ) -> Result<RunResult, anyhow::Error> {
     let mut timeout = match timeout {
         Some(timeout) => futures::future::Either::Left(
-            fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(
-                timeout.get().into(),
-            )))
-            .map(|()| Err(())),
+            fasync::Timer::new(std::time::Duration::from_secs(timeout.get().into()))
+                .map(|()| Err(())),
         ),
         None => futures::future::Either::Right(futures::future::ready(Ok(()))),
     }
     .fuse();
-
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()?;
 
     let (sender, mut recv) = mpsc::channel(1);
 
@@ -199,4 +197,52 @@ pub async fn run_test<W: Write>(
         passed: test_cases_passed,
         successful_completion,
     })
+}
+
+/// Runs test defined by `test_url`, and writes logs to stdout.
+/// |timeout|: Test timeout.should be more than zero.
+/// |test_filter|: Glob filter for matching tests to run.
+/// |harness|: HarnessProxy that manages running the tests.
+pub async fn run_tests_and_get_outcome(
+    test_url: String,
+    timeout: Option<std::num::NonZeroU32>,
+    test_filter: Option<String>,
+    also_run_disabled_tests: bool,
+    harness: HarnessProxy,
+) -> Outcome {
+    println!("\nRunning test '{}'", &test_url);
+
+    let mut stdout = io::stdout();
+
+    let disabled_tests = if also_run_disabled_tests {
+        DisabledTestHandling::Include
+    } else {
+        DisabledTestHandling::Exclude
+    };
+
+    let RunResult { outcome, executed, passed, successful_completion } = match run_test(
+        test_url.clone(),
+        &mut stdout,
+        timeout,
+        test_filter.as_ref().map(String::as_str),
+        disabled_tests,
+        harness,
+    )
+    .await
+    {
+        Ok(run_result) => run_result,
+        Err(err) => {
+            println!("Test suite encountered error trying to run tests: {:?}", err);
+            return Outcome::Error;
+        }
+    };
+
+    println!("{} out of {} tests passed...", passed.len(), executed.len());
+    println!("{} completed with result: {}", &test_url, outcome);
+
+    if !successful_completion {
+        println!("{} did not complete successfully.", &test_url);
+    }
+
+    outcome
 }

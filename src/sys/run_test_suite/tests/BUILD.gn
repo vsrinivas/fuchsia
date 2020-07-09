@@ -12,7 +12,9 @@ rustc_test("tests_bin") {
   name = "run_test_suite_integration_tests"
 
   deps = [
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/sys/run_test_suite:lib",
     "//third_party/rust_crates:serde_json",
   ]

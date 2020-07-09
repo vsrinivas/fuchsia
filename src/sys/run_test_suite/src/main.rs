@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, run_test_suite_lib::DisabledTestHandling, std::io};
+use {argh::FromArgs, fidl_fuchsia_test_manager::HarnessMarker};
 
 #[derive(FromArgs)]
 /// Arguments
@@ -27,41 +27,18 @@ struct Args {
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
     let Args { timeout, test_url, test_filter, also_run_disabled_tests } = argh::from_env();
+    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+        .expect("connecting to HarnessProxy");
 
-    println!("\nRunning test '{}'", &test_url);
-
-    let disabled_tests = if also_run_disabled_tests {
-        DisabledTestHandling::Include
-    } else {
-        DisabledTestHandling::Exclude
-    };
-
-    let mut stdout = io::stdout();
-    let run_test_suite_lib::RunResult { outcome, executed, passed, successful_completion } =
-        match run_test_suite_lib::run_test(
-            test_url.clone(),
-            &mut stdout,
-            timeout.and_then(std::num::NonZeroU32::new),
-            test_filter.as_ref().map(String::as_str),
-            disabled_tests,
-        )
-        .await
-        {
-            Ok(run_result) => run_result,
-            Err(err) => {
-                println!("Test suite encountered error trying to run tests: {:?}", err);
-                std::process::exit(1);
-            }
-        };
-
-    println!("{} out of {} tests passed...", passed.len(), executed.len());
-    println!("{} completed with result: {}", &test_url, outcome);
-
-    if !successful_completion {
-        println!("{} did not complete successfully.", &test_url);
-    }
-
-    match outcome {
+    match run_test_suite_lib::run_tests_and_get_outcome(
+        test_url,
+        timeout.and_then(std::num::NonZeroU32::new),
+        test_filter,
+        also_run_disabled_tests,
+        harness,
+    )
+    .await
+    {
         run_test_suite_lib::Outcome::Passed => {}
         run_test_suite_lib::Outcome::Timedout => {
             std::process::exit(-fuchsia_zircon::Status::TIMED_OUT.into_raw());
