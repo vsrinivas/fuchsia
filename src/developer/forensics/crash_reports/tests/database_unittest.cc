@@ -56,7 +56,7 @@ using testing::UnorderedElementsAreArray;
 constexpr zx::time_utc kTime((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
 constexpr char kTimeStr[] = "1970-01-01 07:14:52 GMT";
 
-constexpr uint64_t kMaxTotalReportsSizeInKb = 1024u;
+constexpr StorageSize kMaxTotalReportsSize = StorageSize::Kilobytes(1u);
 
 constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
 constexpr char kCrashpadAttachmentsDir[] = "attachments";
@@ -87,9 +87,9 @@ std::map<std::string, fuchsia::mem::Buffer> CreateAttachments(
   return new_attachments;
 }
 
-std::string GenerateString(const uint64_t string_size_in_kb) {
+std::string GenerateString(const StorageSize string_size) {
   std::string str;
-  for (size_t i = 0; i < string_size_in_kb * 1024; ++i) {
+  for (size_t i = 0; i < string_size.ToBytes(); ++i) {
     str.push_back(static_cast<char>(i % 128));
   }
   return str;
@@ -104,7 +104,7 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
     info_context_ =
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
 
-    ASSERT_TRUE(SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb));
+    ASSERT_TRUE(SetUpDatabase(/*max_size=*/kMaxTotalReportsSize));
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
   }
@@ -114,8 +114,8 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
  protected:
-  bool SetUpDatabase(const uint64_t max_size_in_kb) {
-    auto new_database = Database::TryCreate(info_context_, max_size_in_kb);
+  bool SetUpDatabase(const StorageSize max_size) {
+    auto new_database = Database::TryCreate(info_context_, max_size);
     if (!new_database) {
       return false;
     }
@@ -211,7 +211,7 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
 TEST_F(DatabaseTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
   // Set up the database with a max size of 0, meaning any reports in the database with size > 0
   // will get garbage collected.
-  SetUpDatabase(/*max_size_in_kb=*/0u);
+  SetUpDatabase(/*max_size=*/StorageSize::Kilobytes(0u));
 
   // Add a crash report.
   UUID local_report_id;
@@ -232,9 +232,9 @@ TEST_F(DatabaseTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
 TEST_F(DatabaseTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSizeForOnlyOneReport) {
   // We set up the database with a max size equivalent to the expected size of a report plus the
   // value of a rather large attachment.
-  const uint64_t crash_log_size_in_kb = 2u * kMaxTotalReportsSizeInKb;
-  const std::string large_string = GenerateString(crash_log_size_in_kb);
-  SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb + crash_log_size_in_kb);
+  const StorageSize crash_log_size = 2u * kMaxTotalReportsSize;
+  const std::string large_string = GenerateString(crash_log_size);
+  SetUpDatabase(/*max_size=*/kMaxTotalReportsSize + crash_log_size);
 
   // Add a crash report.
   UUID local_report_id_1;
@@ -414,9 +414,9 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterArchive) {
 TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterReportIsPruned) {
   // We set up the database with a max size equivalent to the expected size of a report plus the
   // value of a rather large attachment.
-  const uint64_t crash_log_size_in_kb = 2u * kMaxTotalReportsSizeInKb;
-  const std::string large_string = GenerateString(crash_log_size_in_kb);
-  SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb + crash_log_size_in_kb);
+  const StorageSize crash_log_size = 2u * kMaxTotalReportsSize;
+  const std::string large_string = GenerateString(crash_log_size);
+  SetUpDatabase(/*max_size=*/kMaxTotalReportsSize + crash_log_size);
 
   // Add a crash report.
   UUID local_report_id_1;
@@ -461,9 +461,9 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterReportIsPruned) {
 TEST_F(DatabaseTest, Attempt_Archive_AfterReportIsPruned) {
   // We set up the database with a max size equivalent to the expected size of a report plus the
   // value of a rather large attachment.
-  const uint64_t crash_log_size_in_kb = 2u * kMaxTotalReportsSizeInKb;
-  const std::string large_string = GenerateString(crash_log_size_in_kb);
-  SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb + crash_log_size_in_kb);
+  const StorageSize crash_log_size = 2u * kMaxTotalReportsSize;
+  const std::string large_string = GenerateString(crash_log_size);
+  SetUpDatabase(/*max_size=*/kMaxTotalReportsSize + crash_log_size);
 
   // Add a crash report.
   UUID local_report_id_1;
@@ -585,7 +585,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportArchived) {
 TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
   // Set up the database with a max size of 0, meaning any reports in the database with size > 0
   // will get garbage collected.
-  SetUpDatabase(/*max_size_in_kb=*/0u);
+  SetUpDatabase(/*max_size=*/StorageSize::Kilobytes(0u));
   clock_.Set(kTime);
 
   // Add a crash report.
@@ -631,7 +631,7 @@ TEST_F(DatabaseTest, Check_CobaltLogsInitializeFailure) {
 
   gremlin.BreakInitialize();
 
-  EXPECT_FALSE(SetUpDatabase(/*max_size_in_kb=*/1024u));
+  EXPECT_FALSE(SetUpDatabase(/*max_size=*/StorageSize::Kilobytes(1u)));
 
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(),

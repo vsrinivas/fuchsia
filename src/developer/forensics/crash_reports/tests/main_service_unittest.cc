@@ -120,19 +120,19 @@ TEST_F(MainServiceTest, Check_InitialInspectTree) {
                                        ToString(CrashServerConfig::UploadPolicy::ENABLED)),
                               StringIs(kCrashServerUrlKey, kCrashServerUrl),
                           }))))))),
-          AllOf(
-              NodeMatches(NameMatches("crash_reporter")),
-              ChildrenMatch(UnorderedElementsAreArray({
-                  NodeMatches(AllOf(NameMatches("database"), PropertyList(ElementsAre(UintIs(
-                                                                 "max_crashpad_database_size_in_kb",
-                                                                 kCrashpadDatabaseMaxSizeInKb))))),
-                  NodeMatches(
-                      AllOf(NameMatches("settings"),
-                            PropertyList(ElementsAre(StringIs(
-                                "upload_policy", ToString(Settings::UploadPolicy::ENABLED)))))),
-                  NodeMatches(NameMatches("reports")),
-                  NodeMatches(NameMatches("queue")),
-              }))),
+          AllOf(NodeMatches(NameMatches("crash_reporter")),
+                ChildrenMatch(UnorderedElementsAreArray({
+                    NodeMatches(AllOf(
+                        NameMatches("database"),
+                        PropertyList(ElementsAre(UintIs("max_crashpad_database_size_in_kb",
+                                                        kCrashpadDatabaseMaxSize.ToKilobytes()))))),
+                    NodeMatches(
+                        AllOf(NameMatches("settings"),
+                              PropertyList(ElementsAre(StringIs(
+                                  "upload_policy", ToString(Settings::UploadPolicy::ENABLED)))))),
+                    NodeMatches(NameMatches("reports")),
+                    NodeMatches(NameMatches("queue")),
+                }))),
           AllOf(NodeMatches(NameMatches("fidl")),
                 ChildrenMatch(UnorderedElementsAreArray({
                     NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),

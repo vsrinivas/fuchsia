@@ -209,6 +209,7 @@ source_set("database") {
   public_deps = [
     "//sdk/fidl/fuchsia.mem",
     "//src/developer/forensics/crash_reports/info",
+    "//src/developer/forensics/utils:storage_size",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl",
     "//third_party/crashpad/client",

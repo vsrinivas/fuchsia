@@ -22,14 +22,14 @@
 namespace forensics {
 namespace crash_reports {
 
-extern const uint64_t kCrashpadDatabaseMaxSizeInKb;
+extern const StorageSize kCrashpadDatabaseMaxSize;
 
 // Wrapper around the Crashpad database that also stores annotations.
 class Database {
  public:
   static std::unique_ptr<Database> TryCreate(
       std::shared_ptr<InfoContext> info_context,
-      uint64_t max_crashpad_database_size_in_kb = kCrashpadDatabaseMaxSizeInKb);
+      StorageSize max_crashpad_database_size = kCrashpadDatabaseMaxSize);
 
   // Make a new report in |database_|.
   //
@@ -65,7 +65,7 @@ class Database {
   // Return the number of reports that are removed from |database_|.
   size_t GarbageCollect();
 
-  uint64_t MaxCrashpadDatabaseSizeInKb() { return max_crashpad_database_size_in_kb_; }
+  StorageSize MaxCrashpadDatabaseSize() { return max_crashpad_database_size_; }
 
   ~Database() = default;
 
@@ -86,13 +86,13 @@ class Database {
   };
 
   Database(std::unique_ptr<crashpad::CrashReportDatabase> database,
-           uint64_t max_crashpad_database_size_in_kb, std::shared_ptr<InfoContext> info_context);
+           StorageSize max_crashpad_database_size, std::shared_ptr<InfoContext> info_context);
 
   // Removes |local_report_id| from |additional_data_|.
   void CleanUp(const crashpad::UUID& local_report_id);
 
   std::unique_ptr<crashpad::CrashReportDatabase> database_;
-  const uint64_t max_crashpad_database_size_in_kb_;
+  const StorageSize max_crashpad_database_size_;
   DatabaseInfo info_;
   std::unordered_map<crashpad::UUID, AdditionalData, UUIDHasher> additional_data_;
 

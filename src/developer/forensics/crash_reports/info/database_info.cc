@@ -17,8 +17,8 @@ void DatabaseInfo::CrashpadError(const cobalt::CrashpadFunctionError function) {
   context_->Cobalt().LogOccurrence(function);
 }
 
-void DatabaseInfo::LogMaxCrashpadDatabaseSize(const uint64_t max_crashpad_database_size_in_kb) {
-  context_->InspectManager().ExposeDatabase(max_crashpad_database_size_in_kb);
+void DatabaseInfo::LogMaxCrashpadDatabaseSize(const StorageSize max_crashpad_database_size) {
+  context_->InspectManager().ExposeDatabase(max_crashpad_database_size.ToKilobytes());
 }
 
 void DatabaseInfo::LogGarbageCollection(const uint64_t num_cleaned, const uint64_t num_pruned) {

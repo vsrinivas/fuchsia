@@ -82,6 +82,10 @@ class StorageSize final {
   uint64_t bytes_{0};
 };
 
+constexpr StorageSize operator*(uint64_t scalar, StorageSize size) {
+  return StorageSize(size.Get() * scalar);
+}
+
 }  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FORENSICS_UTILS_STORAGE_SIZE_H_

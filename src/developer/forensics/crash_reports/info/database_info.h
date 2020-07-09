@@ -9,6 +9,7 @@
 
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/storage_size.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -20,7 +21,7 @@ struct DatabaseInfo {
 
   void CrashpadError(cobalt::CrashpadFunctionError function);
 
-  void LogMaxCrashpadDatabaseSize(uint64_t max_crashpad_database_size_in_kb);
+  void LogMaxCrashpadDatabaseSize(StorageSize max_crashpad_database_size);
   void LogGarbageCollection(uint64_t num_cleaned, uint64_t num_pruned);
 
   void RecordUploadAttemptNumber(const std::string& local_report_id, uint64_t upload_attempt);
