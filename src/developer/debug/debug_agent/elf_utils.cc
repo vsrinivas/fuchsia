@@ -87,37 +87,36 @@ zx_status_t WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_addr,
 }
 
 std::vector<debug_ipc::Module> GetElfModulesForProcess(const ProcessHandle& process,
-                        uint64_t dl_debug_addr) {
+                                                       uint64_t dl_debug_addr) {
   std::vector<debug_ipc::Module> modules;
-  WalkElfModules(
-      process, dl_debug_addr, [&process, &modules](uint64_t base, uint64_t lmap) {
-        debug_ipc::Module module;
-        module.base = base;
-        module.debug_address = lmap;
+  WalkElfModules(process, dl_debug_addr, [&process, &modules](uint64_t base, uint64_t lmap) {
+    debug_ipc::Module module;
+    module.base = base;
+    module.debug_address = lmap;
 
-        uint64_t str_addr;
-        size_t num_read;
-        if (process.ReadMemory(lmap + offsetof(link_map, l_name), &str_addr, sizeof(str_addr),
-                               &num_read) != ZX_OK)
-          return false;
+    uint64_t str_addr;
+    size_t num_read;
+    if (process.ReadMemory(lmap + offsetof(link_map, l_name), &str_addr, sizeof(str_addr),
+                           &num_read) != ZX_OK)
+      return false;
 
-        if (ReadNullTerminatedString(process, str_addr, &module.name) != ZX_OK)
-          return false;
+    if (ReadNullTerminatedString(process, str_addr, &module.name) != ZX_OK)
+      return false;
 
-        auto elf = elflib::ElfLib::Create([&process, base = module.base](
-                                              uint64_t offset, std::vector<uint8_t>* buf) {
+    auto elf = elflib::ElfLib::Create(
+        [&process, base = module.base](uint64_t offset, std::vector<uint8_t>* buf) {
           size_t num_read = 0;
           if (process.ReadMemory(base + offset, buf->data(), buf->size(), &num_read) != ZX_OK)
             return false;
           return num_read == buf->size();
         });
 
-        if (elf)
-          module.build_id = elf->GetGNUBuildID();
+    if (elf)
+      module.build_id = elf->GetGNUBuildID();
 
-        modules.push_back(std::move(module));
-        return true;
-      });
+    modules.push_back(std::move(module));
+    return true;
+  });
   return modules;
 }
 

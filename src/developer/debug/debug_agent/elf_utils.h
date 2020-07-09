@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <zircon/status.h>
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ELF_UTILS_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ELF_UTILS_H_
 
 #include <stdint.h>
+#include <zircon/status.h>
 
 #include <functional>
 #include <vector>
@@ -26,6 +26,8 @@ zx_status_t WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_addr,
 
 // Computes the modules for the given process.
 std::vector<debug_ipc::Module> GetElfModulesForProcess(const ProcessHandle& process,
-                        uint64_t dl_debug_addr);
+                                                       uint64_t dl_debug_addr);
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ELF_UTILS_H_
