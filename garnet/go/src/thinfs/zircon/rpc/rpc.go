@@ -100,9 +100,7 @@ func (vfs *ThinVFS) addFile(file fs.File, node io.NodeWithCtxInterfaceRequest) {
 	}()
 }
 
-// TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type directoryWrapper struct {
-	*io.DirectoryWithCtxTransitionalBase
 	vfs     *ThinVFS
 	token   key
 	cancel  context.CancelFunc
@@ -408,9 +406,23 @@ func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemI
 	return int32(zx.ErrOk), &info, nil
 }
 
-// TODO(fxb/37419): Remove TransitionalBase after methods landed.
+// NodeGetFlags is a transitional method, and if it's unimplemented the current behavior
+// of the FIDL bindings is to crash the server, which is undesirable.
+// Given that it's a transitional method, we can choose not to implement it fully.
+// TODO(55663): remove this method when the default behavior of the FIDL bindings is changed
+func (d *directoryWrapper) NodeGetFlags(fidl.Context) (int32, uint32, error) {
+	return int32(zx.ErrNotSupported), uint32(0), nil
+}
+
+// NodeSetFlags is a transitional method, and if it's unimplemented the current behavior
+// of the FIDL bindings is to crash the server, which is undesirable.
+// Given that it's a transitional method, we can choose not to implement it fully.
+// TODO(55663): remove this method when the default behavior of the FIDL bindings is changed
+func (d *directoryWrapper) NodeSetFlags(fidl.Context, uint32) (int32, error) {
+	return int32(zx.ErrNotSupported), nil
+}
+
 type fileWrapper struct {
-	*io.FileWithCtxTransitionalBase
 	vfs    *ThinVFS
 	cancel context.CancelFunc
 	file   fs.File
@@ -520,9 +532,25 @@ func (f *fileWrapper) Truncate(_ fidl.Context, length uint64) (int32, error) {
 	return int32(errorToZx(f.file.Truncate(length))), nil
 }
 
-func (f *fileWrapper) GetFlags(fidl.Context) (int32, uint32, error) {
+func (f *fileWrapper) getFlagsInternal(fidl.Context) (int32, uint32, error) {
 	oflags := uint32(f.file.GetOpenFlags())
 	return int32(zx.ErrOk), oflags & (rightFlags | statusFlags), nil
+}
+
+func (f *fileWrapper) GetFlags(ctx fidl.Context) (int32, uint32, error) {
+	return f.getFlagsInternal(ctx)
+}
+
+func (f *fileWrapper) NodeGetFlags(ctx fidl.Context) (int32, uint32, error) {
+	return f.getFlagsInternal(ctx)
+}
+
+// NodeSetFlags is a transitional method, and if it's unimplemented the current behavior
+// of the FIDL bindings is to crash the server, which is undesirable.
+// Given that it's a transitional method, we can choose not to implement it fully.
+// TODO(55663): remove this method when the default behavior of the FIDL bindings is changed
+func (f *fileWrapper) NodeSetFlags(ctx fidl.Context, flags uint32) (int32, error) {
+	return int32(zx.ErrNotSupported), nil
 }
 
 func (f *fileWrapper) SetFlags(_ fidl.Context, inFlags uint32) (int32, error) {

@@ -15,6 +15,7 @@ use {
     std::{
         collections::HashSet,
         fmt::Debug,
+        fs,
         future::Future,
         io::{self, Read, Write},
     },
@@ -1785,4 +1786,63 @@ async fn open_executable_allowed_when_statically_disabled() {
     verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;
 
     pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+// A previous version of pkgfs/thinfs crashed on a call to node_get_flags on the /pkg directory, since node_get_flags
+// was an unimplemented transitional method.
+// TODO(55663): remove this test when unimplemented transitional methods do not crash the server.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_pkgfs_node_get_flags() {
+    // Try node_get_flags on our own package directory.
+    // thinfs returns an error for this call, which closes the channel.
+    let this_pkg_dir = io_util::open_directory_in_namespace("/pkg", io_util::OPEN_RIGHT_READABLE)
+        .expect("opening /pkg");
+    let (status, flags) = this_pkg_dir.node_get_flags().await.expect("getting directory flags");
+    assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
+    assert_eq!(flags, 0);
+
+    // Try node_get_flags on a file within our package directory.
+    // thinfs maps NodeGetFlags to GetFlags, so this should not close the channel.
+    let meta_far_file_proxy =
+        io_util::open_file_in_namespace("/pkg/meta", io_util::OPEN_RIGHT_READABLE)
+            .expect("opening /pkg/meta as file");
+    let (zx_result, flags) =
+        meta_far_file_proxy.node_get_flags().await.expect("getting file flags");
+    assert_eq!(zx_result, Status::OK.into_raw());
+    assert_eq!(flags, io_util::OPEN_RIGHT_READABLE);
+
+    // We should still be able to read our own package directory and read our own merkle root,
+    // which means pkgfs hasn't crashed.
+    assert!(fs::read_to_string("/pkg/meta").expect("read to string").len() > 0);
+}
+
+// A previous version of pkgfs/thinfs crashed on a call to node_set_flags, since node_set_flags
+// was an unimplemented transitional method.
+// TODO(55663): remove this test when unimplemented transitional methods do not crash the server.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_pkgfs_node_set_flags() {
+    // Try node_set_flags on our own package directory.
+    // thinfs returns an error for this call, which closes the channel.
+    let this_pkg_dir = io_util::open_directory_in_namespace("/pkg", io_util::OPEN_RIGHT_READABLE)
+        .expect("opening /pkg");
+    let status = this_pkg_dir
+        .node_set_flags(fidl_fuchsia_io::OPEN_FLAG_APPEND)
+        .await
+        .expect("setting directory flags");
+    assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
+
+    // Try node_set_flags on a file within our package directory.
+    // thinfs returns an error for this call, which closes the channel
+    let meta_far_file_proxy =
+        io_util::open_file_in_namespace("/pkg/meta", io_util::OPEN_RIGHT_READABLE)
+            .expect("opening /pkg/meta as file");
+    let status = meta_far_file_proxy
+        .node_set_flags(fidl_fuchsia_io::OPEN_FLAG_APPEND)
+        .await
+        .expect("setting file flags");
+    assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
+
+    // We should still be able to read our own package directory and read our own merkle root,
+    // which means pkgfs hasn't crashed.
+    assert!(fs::read_to_string("/pkg/meta").expect("read to string").len() > 0);
 }
