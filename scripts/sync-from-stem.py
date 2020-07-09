@@ -255,6 +255,11 @@ stored in the integration repo.
     f_to_i = update_stem_history(env)
 
     fuchsia_rev = find_first_non_local_commit(env)
+    if fuchsia_rev not in f_to_i:
+        message(
+            'fuchsia rev %s not found in integration, not rolled yet?' %
+            fuchsia_rev)
+        return 1
     to_revision(env, fuchsia_rev, f_to_i[fuchsia_rev])
     message(
         'synced integration to %s, which matches fuchsia rev %s' %
