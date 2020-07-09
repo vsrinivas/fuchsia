@@ -7,7 +7,6 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
-#include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_breakpoint.h"
@@ -25,16 +24,9 @@ namespace {
 
 constexpr uint64_t kWatchpointLength = 8;
 
-class MockBreakpointArchProvider : public MockArchProvider {
+// TODO(brettw) this should be removed and the necessary mocks provided by the MockThreadHandle.
+class MockBreakpointArchProvider : public arch::ArchProvider {
  public:
-  zx_status_t GetInfo(const zx::thread&, zx_object_info_topic_t topic, void* buffer,
-                      size_t buffer_size, size_t* actual, size_t* avail) const override {
-    zx_info_thread* info = reinterpret_cast<zx_info_thread*>(buffer);
-    info->state = ZX_THREAD_STATE_BLOCKED_EXCEPTION;
-
-    return ZX_OK;
-  }
-
   debug_ipc::ExceptionType DecodeExceptionType(const DebuggedThread&,
                                                uint32_t exception_type) override {
     return exception_type_;
@@ -56,7 +48,7 @@ class MockBreakpointArchProvider : public MockArchProvider {
   }
 
   std::pair<debug_ipc::AddressRange, int> InstructionForWatchpointHit(
-      const DebuggedThread&) const override {
+      const DebugRegisters&) const override {
     return {{exception_addr_, exception_addr_ + kWatchpointLength}, slot_};
   }
 

@@ -223,9 +223,6 @@ class DebuggedThread {
                                      ProcessBreakpoint* process_breakpoint,
                                      std::vector<debug_ipc::BreakpointStats>& hit_breakpoints);
 
-  // Sets or clears the single step bit on the thread.
-  void SetSingleStep(bool single_step);
-
   DebugAgent* debug_agent_;   // Non-owning.
   DebuggedProcess* process_;  // Non-owning.
 

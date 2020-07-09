@@ -87,6 +87,14 @@ ThreadHandle::State ZirconThreadHandle::GetState() const {
   return State(debug_ipc::ThreadRecord::State::kDead);  // Assume failures mean the thread is dead.
 }
 
+debug_ipc::ExceptionRecord ZirconThreadHandle::GetExceptionRecord() const {
+  zx_exception_report_t report = {};
+  if (thread_.get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr,
+                       nullptr) == ZX_OK)
+    return arch::ArchProvider::FillExceptionRecord(report);
+  return debug_ipc::ExceptionRecord();
+}
+
 zx::suspend_token ZirconThreadHandle::Suspend() {
   zx::suspend_token result;
   thread_.suspend(&result);
@@ -121,6 +129,24 @@ std::optional<GeneralRegisters> ZirconThreadHandle::GetGeneralRegisters() const 
 void ZirconThreadHandle::SetGeneralRegisters(const GeneralRegisters& regs) {
   thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs.GetNativeRegisters(),
                       sizeof(zx_thread_state_general_regs));
+}
+
+std::optional<DebugRegisters> ZirconThreadHandle::GetDebugRegisters() const {
+  zx_thread_state_debug_regs regs;
+  if (thread_.read_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs)) == ZX_OK)
+    return DebugRegisters(regs);
+  return std::nullopt;
+}
+
+void ZirconThreadHandle::SetDebugRegisters(const DebugRegisters& regs) {
+  thread_.write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs.GetNativeRegisters(),
+                      sizeof(zx_thread_state_debug_regs));
+}
+
+void ZirconThreadHandle::SetSingleStep(bool single_step) {
+  zx_thread_state_single_step_t value = single_step ? 1 : 0;
+  // This could fail for legitimate reasons, like the process could have just closed the thread.
+  thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
 }
 
 std::vector<debug_ipc::Register> ZirconThreadHandle::ReadRegisters(

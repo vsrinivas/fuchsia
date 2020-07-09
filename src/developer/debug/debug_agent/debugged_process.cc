@@ -553,10 +553,7 @@ void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {
   DEBUG_LOG(Process) << LogPreamble(this) << "Terminating.";
   debug_ipc::NotifyProcessExiting notify;
   notify.process_koid = process_koid;
-
-  zx_info_process info = {};
-  process_handle_->GetInfo(&info);
-  notify.return_code = info.return_code;
+  notify.return_code = process_handle_->GetReturnCode();
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyProcessExiting(notify, &writer);

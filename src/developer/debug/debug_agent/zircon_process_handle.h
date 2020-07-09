@@ -17,7 +17,7 @@ class ZirconProcessHandle final : public ProcessHandle {
   const zx::process& GetNativeHandle() const override { return process_; }
   zx::process& GetNativeHandle() override { return process_; }
   zx_koid_t GetKoid() const override { return process_koid_; }
-  zx_status_t GetInfo(zx_info_process* info) const override;
+  int64_t GetReturnCode() const override;
   std::vector<debug_ipc::AddressRegion> GetAddressSpace(uint64_t address) const override;
   std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const override;
   zx_status_t ReadMemory(uintptr_t address, void* buffer, size_t len,

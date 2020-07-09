@@ -10,12 +10,11 @@
 #include <vector>
 
 #include "src/developer/debug/debug_agent/arch_helpers.h"
+#include "src/developer/debug/debug_agent/debug_registers.h"
 #include "src/developer/debug/debug_agent/general_registers.h"
 #include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
-
-class GeneralRegisters;
 
 // An abstract wrapper around an OS thread primitive. This abstraction is to allow mocking.
 class ThreadHandle {
@@ -56,6 +55,9 @@ class ThreadHandle {
   // Fills in everything but the stack into the returned thread record.
   virtual debug_ipc::ThreadRecord GetThreadRecord() const = 0;
 
+  // ExceptionRecord.valid will be false on failure.
+  virtual debug_ipc::ExceptionRecord GetExceptionRecord() const = 0;
+
   // TODO(brettw) probably needs a suspension wait timeout.
   virtual zx::suspend_token Suspend() = 0;
 
@@ -64,6 +66,13 @@ class ThreadHandle {
   // Reads and writes the general thread registers.
   virtual std::optional<GeneralRegisters> GetGeneralRegisters() const = 0;
   virtual void SetGeneralRegisters(const GeneralRegisters& regs) = 0;
+
+  // Reads and writes the debug thread registers.
+  virtual std::optional<DebugRegisters> GetDebugRegisters() const = 0;
+  virtual void SetDebugRegisters(const DebugRegisters& regs) = 0;
+
+  // Puts the thread in or out of single-step mode.
+  virtual void SetSingleStep(bool single_step) = 0;
 
   // Returns the current values of the given register categories.
   virtual std::vector<debug_ipc::Register> ReadRegisters(

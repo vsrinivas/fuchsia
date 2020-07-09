@@ -8,10 +8,9 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/debug_agent/arch_provider_impl.h"
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
-#include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
 #include "src/developer/debug/shared/logging/debug.h"
@@ -146,7 +145,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 
   zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(nullptr, process_koid, process_name, std::make_shared<ArchProviderImpl>(),
+  MockProcess process(nullptr, process_koid, process_name, std::make_shared<arch::ArchProvider>(),
                       std::make_shared<ObjectProvider>());
 
   LoadOriginalMemory(process.mock_process_handle());
@@ -177,7 +176,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 }
 
 TEST(ProcessBreakpoint, StepSingle) {
-  auto arch_provider = std::make_shared<ArchProviderImpl>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   TestProcessDelegate process_delegate;
@@ -392,7 +391,7 @@ TEST(ProcessBreakpoint, StepSingle) {
 }
 
 TEST(ProcessBreakpoint, MultipleBreakpoints) {
-  auto arch_provider = std::make_shared<ArchProviderImpl>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   TestProcessDelegate process_delegate1;
@@ -733,7 +732,7 @@ TEST(ProcessBreakpoint, HitCount) {
 
   constexpr zx_koid_t kProcess1 = 1;
   auto owning_process =
-      std::make_unique<MockProcess>(nullptr, kProcess1, "", std::make_shared<ArchProviderImpl>(),
+      std::make_unique<MockProcess>(nullptr, kProcess1, "", std::make_shared<arch::ArchProvider>(),
                                     std::make_shared<ObjectProvider>());
   owning_process->mock_process_handle().mock_memory().AddMemory(kAddress, GetOriginalData());
   process_delegate.InjectMockProcess(std::move(owning_process));

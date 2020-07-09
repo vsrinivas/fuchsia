@@ -7,8 +7,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
-#include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
 
@@ -64,7 +64,7 @@ bool ContainsKoids(const Watchpoint& watchpoint, const std::vector<zx_koid_t>& k
 const AddressRange kAddressRange = {0x1000, 0x2000};
 
 TEST(Watchpoint, SimpleInstallAndRemove) {
-  auto arch_provider = std::make_shared<MockArchProvider>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
@@ -212,7 +212,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
 }
 
 TEST(Watchpoint, InstalledRanges) {
-  auto arch_provider = std::make_shared<MockArchProvider>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
@@ -262,7 +262,7 @@ TEST(Watchpoint, InstalledRanges) {
 }
 
 TEST(Watchpoint, MatchesException) {
-  auto arch_provider = std::make_shared<MockArchProvider>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
@@ -325,7 +325,7 @@ TEST(Watchpoint, MatchesException) {
 }
 
 TEST(Watchpoint, DifferentTypes) {
-  auto arch_provider = std::make_shared<MockArchProvider>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);

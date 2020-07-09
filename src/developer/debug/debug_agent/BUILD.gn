@@ -17,9 +17,6 @@ static_library("lib") {
     "arch.h",
     "arch_helpers.cc",
     "arch_helpers.h",
-    "arch_provider_fuchsia.cc",
-    "arch_provider_fuchsia.h",
-    "arch_provider_impl.h",
     "binary_launcher.cc",
     "binary_launcher.h",
     "breakpoint.cc",
@@ -28,6 +25,7 @@ static_library("lib") {
     "component_launcher.h",
     "debug_agent.cc",
     "debug_agent.h",
+    "debug_registers.h",
     "debugged_job.cc",
     "debugged_job.h",
     "debugged_process.cc",
@@ -72,8 +70,6 @@ static_library("lib") {
 
   if (current_cpu == "x64") {
     sources += [
-      "arch_provider_x64.cc",
-      "arch_provider_x64.h",
       "arch_x64.cc",
       "arch_x64_helpers.cc",
       "arch_x64_helpers.h",
@@ -83,8 +79,6 @@ static_library("lib") {
       "arch_arm64.cc",
       "arch_arm64_helpers.cc",
       "arch_arm64_helpers.h",
-      "arch_provider_arm64.cc",
-      "arch_provider_arm64.h",
     ]
   } else {
     assert(false, "Un-supported CPU: ${current_cpu}")
@@ -158,8 +152,6 @@ source_set("test_lib") {
   sources = [
     "local_stream_backend.cc",
     "local_stream_backend.h",
-    "mock_arch_provider.cc",
-    "mock_arch_provider.h",
     "mock_object_provider.cc",
     "mock_object_provider.h",
     "mock_process.cc",
@@ -201,8 +193,6 @@ executable("unit_tests") {
 
   if (current_cpu == "x64") {
     sources += [
-      "arch_provider_x64.cc",
-      "arch_provider_x64.h",
       "arch_x64_helpers_unittest.cc",
       "arch_x64_unittest.cc",
     ]
@@ -211,8 +201,6 @@ executable("unit_tests") {
       "arch_arm64_helpers_unittest.cc",
       "arch_arm64_helpers_unittest.h",
       "arch_arm64_unittest.cc",
-      "arch_provider_arm64.cc",
-      "arch_provider_arm64.h",
     ]
   } else {
     assert(false, "Un-supported CPU: ${current_cpu}")

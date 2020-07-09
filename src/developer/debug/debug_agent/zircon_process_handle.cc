@@ -14,8 +14,11 @@ namespace {}  // namespace
 ZirconProcessHandle::ZirconProcessHandle(zx_koid_t process_koid, zx::process p)
     : process_koid_(process_koid), process_(std::move(p)) {}
 
-zx_status_t ZirconProcessHandle::GetInfo(zx_info_process* info) const {
-  return process_.get_info(ZX_INFO_PROCESS, info, sizeof(zx_info_process), nullptr, nullptr);
+int64_t ZirconProcessHandle::GetReturnCode() const {
+  zx_info_process info = {};
+  if (process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr) == ZX_OK)
+    return info.return_code;
+  return 0;
 }
 
 std::vector<debug_ipc::AddressRegion> ZirconProcessHandle::GetAddressSpace(uint64_t address) const {

@@ -5,8 +5,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
-#include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
@@ -57,7 +57,7 @@ constexpr uint64_t kAddress = 0x1234;
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
-  auto arch_provider = std::make_shared<MockArchProvider>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
@@ -206,7 +206,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
 }
 
 TEST(HardwareBreakpoint, StepSimple) {
-  auto arch_provider = std::make_shared<MockArchProvider>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t process_koid = 0x1234;
@@ -270,7 +270,7 @@ TEST(HardwareBreakpoint, StepSimple) {
 }
 
 TEST(HardwareBreakpoint, MultipleSteps) {
-  auto arch_provider = std::make_shared<MockArchProvider>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t process_koid = 0x1234;

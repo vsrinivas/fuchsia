@@ -185,6 +185,17 @@ class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
 
 const BreakInstructionType kBreakInstruction = 0xCC;
 
+debug_ipc::ExceptionRecord ArchProvider::FillExceptionRecord(const zx_exception_report_t& in) {
+  debug_ipc::ExceptionRecord record;
+
+  record.valid = true;
+  record.arch.x64.vector = in.context.arch.u.x86_64.vector;
+  record.arch.x64.err_code = in.context.arch.u.x86_64.err_code;
+  record.arch.x64.cr2 = in.context.arch.u.x86_64.cr2;
+
+  return record;
+}
+
 uint64_t ArchProvider::BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
   // An X86 exception is 1 byte and a breakpoint exception is triggered with
   // RIP pointing to the following instruction.
@@ -237,10 +248,8 @@ void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
 }
 
 std::pair<debug_ipc::AddressRange, int> ArchProvider::InstructionForWatchpointHit(
-    const DebuggedThread& thread) const {
-  zx_thread_state_debug_regs_t debug_regs;
-  if (zx_status_t status = ReadDebugState(thread.handle(), &debug_regs); status != ZX_OK)
-    return {{}, -1};
+    const DebugRegisters& in_regs) const {
+  const zx_thread_state_debug_regs_t& debug_regs = in_regs.GetNativeRegisters();
 
   // HW breakpoints have priority over single-step.
   uint64_t addr = 0;

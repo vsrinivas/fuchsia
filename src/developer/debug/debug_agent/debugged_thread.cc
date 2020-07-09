@@ -150,7 +150,7 @@ void DebuggedThread::OnException(std::unique_ptr<ThreadException> exception_hand
 
   debug_ipc::NotifyException exception;
   exception.type = arch_provider_->DecodeExceptionType(*this, exception_info.type);
-  arch_provider_->FillExceptionRecord(thread_handle_->GetNativeHandle(), &exception.exception);
+  exception.exception = thread_handle_->GetExceptionRecord();
 
   std::optional<GeneralRegisters> regs = thread_handle_->GetGeneralRegisters();
   if (!regs) {
@@ -213,7 +213,7 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     //       keeping the exception until *after* the breakpoint has been told to step over, we
     //       ensure that any installs have already occured and thus the thread won't miss any
     //       breakpoints.
-    SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
+    thread_handle_->SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
     current_breakpoint_->EndStepOver(this);
     current_breakpoint_ = nullptr;
     ResumeException();
@@ -290,7 +290,13 @@ void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* except
 
 void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
                                       const GeneralRegisters& regs) {
-  auto [range, slot] = arch_provider_->InstructionForWatchpointHit(*this);
+  std::optional<DebugRegisters> debug_regs = thread_handle_->GetDebugRegisters();
+  if (!debug_regs) {
+    DEBUG_LOG(Thread) << "Could not load debug registers to handle watchpoint.";
+    return;
+  }
+
+  auto [range, slot] = arch_provider_->InstructionForWatchpointHit(*debug_regs);
   DEBUG_LOG(Thread) << "Found watchpoint hit at 0x" << std::hex << range.ToString() << " on slot "
                     << std::dec << slot;
 
@@ -613,7 +619,7 @@ void DebuggedThread::ResumeForRunMode() {
   if (IsInException() && current_breakpoint_) {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping over breakpoint: 0x" << std::hex
                       << current_breakpoint_->address();
-    SetSingleStep(true);
+    thread_handle_->SetSingleStep(true);
     current_breakpoint_->BeginStepOver(this);
 
     // In this case, the breakpoint takes control of the thread lifetime and has already set the
@@ -628,13 +634,9 @@ void DebuggedThread::ResumeForRunMode() {
     return;
 
   // All non-continue resumptions require single stepping.
-  SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
+  thread_handle_->SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
   ResumeException();
   ResumeSuspension();
-}
-
-void DebuggedThread::SetSingleStep(bool single_step) {
-  arch_provider_->WriteSingleStep(thread_handle_->GetNativeHandle(), single_step);
 }
 
 const char* DebuggedThread::ClientStateToString(ClientState client_state) {

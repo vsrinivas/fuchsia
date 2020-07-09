@@ -12,7 +12,6 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
-#include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_handle.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
@@ -77,12 +76,12 @@ std::pair<std::unique_ptr<DebuggedThread>, MockThreadHandle*> CreateThread(zx_ko
   create_info.koid = thread_koid;
   create_info.handle = std::move(owning_handle);
   create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
-  create_info.arch_provider = std::make_shared<MockArchProvider>();
+  create_info.arch_provider = std::make_shared<arch::ArchProvider>();
   create_info.object_provider = std::make_unique<ObjectProvider>();
   return {std::make_unique<DebuggedThread>(nullptr, std::move(create_info)), handle};
 }
 
-class FakeArchProvider : public MockArchProvider {
+class FakeArchProvider : public arch::ArchProvider {
  public:
   zx_status_t ReadRegisters(const debug_ipc::RegisterCategory& type, const zx::thread&,
                             std::vector<debug_ipc::Register>* out) override {

@@ -31,7 +31,9 @@ class ProcessHandle {
 
   virtual zx_koid_t GetKoid() const = 0;
 
-  virtual zx_status_t GetInfo(zx_info_process* process) const = 0;
+  // Retrieves the return code for an exited process. Returns some default value if the process is
+  // still running (as defined by the kernel).
+  virtual int64_t GetReturnCode() const = 0;
 
   // Returns the address space information. If the address is non-null, only the regions covering
   // that address will be returned. Otherwise all regions will be returned.

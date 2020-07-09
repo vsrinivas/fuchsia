@@ -16,7 +16,6 @@
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
-#include "src/developer/debug/debug_agent/arch_provider_impl.h"
 #include "src/developer/debug/debug_agent/binary_launcher.h"
 #include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
@@ -41,7 +40,7 @@ namespace debug_agent {
 
 SystemProviders SystemProviders::CreateDefaults(std::shared_ptr<sys::ServiceDirectory> services) {
   SystemProviders system_providers;
-  system_providers.arch_provider = std::make_shared<ArchProviderImpl>();
+  system_providers.arch_provider = std::make_shared<arch::ArchProvider>();
   system_providers.limbo_provider = std::make_shared<LimboProvider>(std::move(services));
   system_providers.object_provider = std::make_shared<ObjectProvider>();
 

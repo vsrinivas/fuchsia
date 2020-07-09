@@ -8,6 +8,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <zircon/syscalls/debug.h>
+#include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/debug_agent/arch_helpers.h"
 #include "src/developer/debug/debug_agent/arch_types.h"
@@ -16,13 +17,17 @@
 namespace debug_agent {
 
 class DebuggedThread;
+class DebugRegisters;
+class ThreadHandle;
 
 namespace arch {
 
 extern const BreakInstructionType kBreakInstruction;
 
 // Class in charge of abstracting the low-level functionalities of the platform.
-// This permits a virtual interface for your testing convenience.
+//
+// TODO(brettw) TRhis object is not currently used for any abstractions so we should be able to make
+// all functions standalone in the arch namespace.
 class ArchProvider {
  public:
   ArchProvider() = default;
@@ -36,25 +41,10 @@ class ArchProvider {
   uint32_t watchpoint_count() const { return watchpoint_count_; }
   void set_watchpoint_count(uint32_t count) { watchpoint_count_ = count; }
 
-  // Thread Management -----------------------------------------------------------------------------
-
-  // Read/write debug registers.
-  virtual zx_status_t ReadDebugState(const zx::thread& handle,
-                                     zx_thread_state_debug_regs* regs) const = 0;
-  virtual zx_status_t WriteDebugState(const zx::thread& handle,
-                                      const zx_thread_state_debug_regs& regs) = 0;
-
-  virtual zx_status_t WriteSingleStep(const zx::thread& thread, bool single_step) = 0;
-
-  // zx_object_get_info.
-  virtual zx_status_t GetInfo(const zx::thread&, zx_object_info_topic_t topic, void* buffer,
-                              size_t buffer_size, size_t* actual = nullptr,
-                              size_t* avail = nullptr) const = 0;
-
   // General Exceptions ----------------------------------------------------------------------------
 
-  // Converts a system exception info to an IPC exception record.
-  virtual void FillExceptionRecord(const zx::thread&, debug_ipc::ExceptionRecord* out) const = 0;
+  // Converts an architecture-specific exception record to a cross-platform one.
+  static debug_ipc::ExceptionRecord FillExceptionRecord(const zx_exception_report_t& in);
 
   // Software Exceptions ---------------------------------------------------------------------------
 
@@ -73,7 +63,7 @@ class ArchProvider {
   //
   // Returns {0, -1} on error or not found.
   virtual std::pair<debug_ipc::AddressRange, int> InstructionForWatchpointHit(
-      const DebuggedThread&) const;
+      const DebugRegisters& regs) const;
 
   // Returns true if there is a breakpoint instruction at the given address.
   // This doesn't just check equality of kBreakInstruction which is guaranteed

@@ -80,6 +80,11 @@ debug_ipc::ThreadRecord MockThreadHandle::GetThreadRecord() const {
   return record;
 }
 
+debug_ipc::ExceptionRecord MockThreadHandle::GetExceptionRecord() const {
+  // Currently not implemented by this mock.
+  return debug_ipc::ExceptionRecord();
+}
+
 zx::suspend_token MockThreadHandle::Suspend() { return zx::suspend_token(); }
 
 std::optional<GeneralRegisters> MockThreadHandle::GetGeneralRegisters() const {
@@ -88,6 +93,16 @@ std::optional<GeneralRegisters> MockThreadHandle::GetGeneralRegisters() const {
 
 void MockThreadHandle::SetGeneralRegisters(const GeneralRegisters& regs) {
   general_registers_ = regs;
+}
+
+std::optional<DebugRegisters> MockThreadHandle::GetDebugRegisters() const {
+  return debug_registers_;
+}
+
+void MockThreadHandle::SetDebugRegisters(const DebugRegisters& regs) { debug_registers_ = regs; }
+
+void MockThreadHandle::SetSingleStep(bool single_step) {
+  // Not implemented by this mock.
 }
 
 std::vector<debug_ipc::Register> MockThreadHandle::ReadRegisters(

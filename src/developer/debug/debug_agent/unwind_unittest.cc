@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/debug_agent/arch_provider_impl.h"
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 
@@ -54,7 +54,7 @@ void __attribute__((noinline)) ThreadFunc1(ThreadData* data) {
   zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
 
   // Here we use fake koids for the process and thread because those aren't necessary for the test.
-  data->thread = std::make_unique<ZirconThreadHandle>(std::make_shared<ArchProviderImpl>(), 1, 2,
+  data->thread = std::make_unique<ZirconThreadHandle>(std::make_shared<arch::ArchProvider>(), 1, 2,
                                                       std::move(handle));
 
   // Put another function on the stack.
@@ -82,7 +82,7 @@ zx::suspend_token SyncSuspendThread(ThreadHandle& thread) {
 }
 
 void DoUnwindTest() {
-  ArchProviderImpl arch_provider;
+  arch::ArchProvider arch_provider;
 
   zx::process handle;
   zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);

@@ -230,6 +230,16 @@ class ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
 //   zero).
 const BreakInstructionType kBreakInstruction = 0xd4200000;
 
+debug_ipc::ExceptionRecord ArchProvider::FillExceptionRecord(const zx_exception_report_t& in) {
+  debug_ipc::ExceptionRecord record;
+
+  record.valid = true;
+  record.arch.arm64.esr = in.context.arch.u.arm_64.esr;
+  record.arch.arm64.far = in.context.arch.u.arm_64.far;
+
+  return record;
+}
+
 uint64_t ArchProvider::BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
   // ARM reports the exception for the exception instruction itself.
   return exception_addr;
@@ -252,12 +262,8 @@ uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t) {
 }
 
 std::pair<debug_ipc::AddressRange, int> ArchProvider::InstructionForWatchpointHit(
-    const DebuggedThread& thread) const {
-  zx_thread_state_debug_regs_t debug_regs;
-  if (zx_status_t status = ReadDebugState(thread.handle(), &debug_regs); status != ZX_OK) {
-    DEBUG_LOG(ArchArm64) << "Could not read debug state: " << zx_status_get_string(status);
-    return {{}, -1};
-  }
+    const DebugRegisters& in_regs) const {
+  const zx_thread_state_debug_regs_t& debug_regs = in_regs.GetNativeRegisters();
 
   DEBUG_LOG(ArchArm64) << "Got FAR: 0x" << std::hex << debug_regs.far;
 

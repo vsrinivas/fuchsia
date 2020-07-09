@@ -12,10 +12,7 @@ namespace debug_agent {
 
 MockProcessHandle::MockProcessHandle(zx_koid_t process_koid) : process_koid_(process_koid) {}
 
-zx_status_t MockProcessHandle::GetInfo(zx_info_process* info) const {
-  // Not currently implemented in this mock.
-  return ZX_ERR_INVALID_ARGS;
-}
+int64_t MockProcessHandle::GetReturnCode() const { return 0; }
 
 std::vector<debug_ipc::AddressRegion> MockProcessHandle::GetAddressSpace(uint64_t address) const {
   // Not currently implemented in this mock.

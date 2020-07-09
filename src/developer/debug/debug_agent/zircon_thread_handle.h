@@ -27,9 +27,13 @@ class ZirconThreadHandle final : public ThreadHandle {
   zx_koid_t GetKoid() const override { return thread_koid_; }
   State GetState() const override;
   debug_ipc::ThreadRecord GetThreadRecord() const override;
+  debug_ipc::ExceptionRecord GetExceptionRecord() const override;
   zx::suspend_token Suspend() override;
   std::optional<GeneralRegisters> GetGeneralRegisters() const override;
   void SetGeneralRegisters(const GeneralRegisters& regs) override;
+  std::optional<DebugRegisters> GetDebugRegisters() const override;
+  void SetDebugRegisters(const DebugRegisters& regs) override;
+  void SetSingleStep(bool single_step) override;
   std::vector<debug_ipc::Register> ReadRegisters(
       const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const override;
   std::vector<debug_ipc::Register> WriteRegisters(
