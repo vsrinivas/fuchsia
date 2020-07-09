@@ -29,7 +29,7 @@
 ##
 ## Ensures Goma is ready (if Goma is enabled).
 ##
-## This is a wrapper around running `gn gen --check=system BUILDDIR --args ...`.
+## This is a wrapper around running `gn gen --check BUILDDIR --args ...`.
 ## If GN fails with an error, `fx set` does not change anything.
 ##
 ## optional arguments:
@@ -179,7 +179,7 @@ function main {
   shift
 
   local gn_cmd='gen'
-  local -a gn_switches=(--check=system --export-rust-project --export-compile-commands=default)
+  local -a gn_switches=(--check --export-rust-project --export-compile-commands=default)
   local gn_after_args=""
   local base=()
   local universe=()
