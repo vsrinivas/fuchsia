@@ -21,6 +21,7 @@
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
+#include <ktl/atomic.h>
 #include <lk/main.h>
 #include <vm/vm_aspace.h>
 
@@ -45,7 +46,7 @@ static void free_thread(Thread* t) {
 }
 
 zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
-  volatile int aps_still_booting = 0;
+  ktl::atomic<unsigned int> aps_still_booting = {0};
   zx_status_t status = ZX_ERR_INTERNAL;
 
   // if being asked to bring up 0 cpus, move on
@@ -63,7 +64,7 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
     if (mp_is_cpu_online(cpu)) {
       return ZX_ERR_BAD_STATE;
     }
-    aps_still_booting |= 1U << cpu;
+    aps_still_booting.fetch_or(1U << cpu);
   }
 
   struct x86_ap_bootstrap_data* bootstrap_data = nullptr;
@@ -128,7 +129,7 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
       apic_send_ipi(vec, apic_id, DELIVERY_MODE_STARTUP);
     }
 
-    if (aps_still_booting == 0) {
+    if (aps_still_booting.load() == 0) {
       break;
     }
     // Wait 1ms for cores to boot.  The docs recommend 200us between STARTUP
@@ -138,12 +139,12 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
 
   // The docs recommend waiting 200us for cores to boot.  We do a bit more
   // work before the cores report in, so wait longer (up to 1 second).
-  for (int tries_left = 200; aps_still_booting != 0 && tries_left > 0; --tries_left) {
+  for (int tries_left = 200; aps_still_booting.load() != 0 && tries_left > 0; --tries_left) {
     Thread::Current::SleepRelative(ZX_MSEC(5));
   }
 
   uint failed_aps;
-  failed_aps = (uint)atomic_swap(&aps_still_booting, 0);
+  failed_aps = aps_still_booting.exchange(0);
   if (failed_aps != 0) {
     printf("Failed to boot CPUs: mask %x\n", failed_aps);
     for (uint i = 0; i < count; ++i) {

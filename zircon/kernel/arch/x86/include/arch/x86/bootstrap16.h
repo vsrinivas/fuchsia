@@ -81,7 +81,7 @@ struct __PACKED x86_ap_bootstrap_data {
   // Counter for APs to use to determine which stack to take
   uint32_t cpu_id_counter;
   // Pointer to value to use to determine when APs are done with boot
-  volatile int* cpu_waiting_mask;
+  ktl::atomic<unsigned int>* cpu_waiting_mask;
 
   // Per-cpu data
   struct __PACKED {

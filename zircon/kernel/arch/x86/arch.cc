@@ -128,13 +128,13 @@ void arch_resume(void) {
   apic_io_restore();
 }
 
-[[noreturn, gnu::noinline]] static void finish_secondary_entry(volatile int* aps_still_booting,
+[[noreturn, gnu::noinline]] static void finish_secondary_entry(ktl::atomic<unsigned int>* aps_still_booting,
                                                                Thread* thread, uint cpu_num) {
   // Signal that this CPU is initialized.  It is important that after this
   // operation, we do not touch any resources associated with bootstrap
   // besides our Thread and stack, since this is the checkpoint the
   // bootstrap process uses to identify completion.
-  int old_val = atomic_and(aps_still_booting, ~(1U << cpu_num));
+  unsigned int old_val = aps_still_booting->fetch_and(~(1U << cpu_num));
   if (old_val == 0) {
     // If the value is already zero, then booting this CPU timed out.
     goto fail;
@@ -174,7 +174,7 @@ fail:
 // this function is simple enough that the compiler won't
 // want to generate stack-protector prologue/epilogue code,
 // which would use %gs.
-__NO_SAFESTACK __NO_RETURN void x86_secondary_entry(volatile int* aps_still_booting,
+__NO_SAFESTACK __NO_RETURN void x86_secondary_entry(ktl::atomic<unsigned int>* aps_still_booting,
                                                     Thread* thread) {
   // Would prefer this to be in init_percpu, but there is a dependency on a
   // page mapping existing, and the BP calls that before the VM subsystem is
