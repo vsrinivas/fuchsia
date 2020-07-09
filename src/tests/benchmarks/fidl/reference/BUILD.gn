@@ -21,6 +21,7 @@ executable("bin") {
   output_name = "reference_fidl_microbenchmarks"
   testonly = true
   sources = [
+    "byte_vector.cc",
     "main.cc",
     "uint8_table.cc",
   ]

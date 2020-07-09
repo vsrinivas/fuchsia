@@ -31,13 +31,13 @@ benchmark("{{ .Name }}") {
     {{- end -}}
     {{- if .Denylist }}
     bindings_denylist = {{ .Denylist }},
-	{{- end }}
-	{{- if .EnableSendEventBenchmark }}
-	enable_send_event_benchmark = true,
-	{{- end }}
-	{{- if .EnableEchoCallBenchmark }}
-	enable_echo_call_benchmark = true,
-	{{- end }}
+    {{- end }}
+    {{- if .EnableSendEventBenchmark }}
+    enable_send_event_benchmark = true,
+    {{- end }}
+    {{- if .EnableEchoCallBenchmark }}
+    enable_echo_call_benchmark = true,
+    {{- end }}
     value = {{ .Value }},
 }
 {{- end }}

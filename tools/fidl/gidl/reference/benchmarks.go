@@ -22,7 +22,7 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 
 namespace benchmark_suite {
 
-[[maybe_unused]] {{ .Type }} Build{{ .Name }}() {
+[[maybe_unused]] {{ .Type }} Build_{{ .Name }}() {
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
 	return obj;
