@@ -2936,16 +2936,10 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             };
 
                             let now = ctx.now();
-                            // TODO(52349): Immediately deprecate the prefix when it has a 0
-                            // preferred lifetime.
-                            let preferred_until = now
-                                .checked_add(
-                                    prefix_info
-                                        .preferred_lifetime()
-                                        .map(|l| l.get())
-                                        .unwrap_or(Duration::from_secs(0)),
-                                )
-                                .unwrap();
+                            let preferred_until = prefix_info
+                                .preferred_lifetime()
+                                .map(|l| now.checked_add(l.get()).unwrap());
+
                             let valid_for = prefix_info
                                 .valid_lifetime()
                                 .map(|l| l.get())
@@ -2985,16 +2979,25 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 //
                                 // Must not have reached this point if the address was not already
                                 // assigned to a device.
-                                assert!(ctx
-                                    .schedule_timer_instant(
-                                        preferred_until,
+                                if let Some(preferred_until_duration) = preferred_until {
+                                    if entry.state().is_deprecated() {
+                                        ctx.unique_address_determined(device_id, addr.get());
+                                    }
+                                    ctx.schedule_timer_instant(
+                                        preferred_until_duration,
                                         NdpTimerId::new_deprecate_slaac_address(
                                             device_id,
                                             addr.get(),
                                         )
                                         .into(),
-                                    )
-                                    .is_some());
+                                    );
+                                } else if !entry.state().is_deprecated() {
+                                    ctx.deprecate_slaac_addr(device_id, &addr.get());
+                                    ctx.cancel_timer(NdpTimerId::new_deprecate_slaac_address(
+                                        device_id,
+                                        addr.get(),
+                                    ));
+                                }
 
                                 // As per RFC 4862 section 5.5.3.e, the specific action to perform
                                 // for the valid lifetime of the address depends on the Valid
@@ -3118,21 +3121,6 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 } else {
                                     trace!("receive_ndp_packet_inner: Successfully configured new IPv6 address {:?} on device {:?} via SLAAC", address, device_id);
 
-                                    // Set the preferred lifetime for this address.
-                                    //
-                                    // Must not have reached this point if the address was already
-                                    // assigned to a device.
-                                    assert!(ctx
-                                        .schedule_timer_instant(
-                                            preferred_until,
-                                            NdpTimerId::new_deprecate_slaac_address(
-                                                device_id,
-                                                address.addr().get()
-                                            )
-                                            .into(),
-                                        )
-                                        .is_none());
-
                                     // Set the valid lifetime for this address.
                                     //
                                     // Must not have reached this point if the address was already
@@ -3147,6 +3135,31 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                             .into(),
                                         )
                                         .is_none());
+
+                                    let timer_id = NdpTimerId::new_deprecate_slaac_address(
+                                        device_id,
+                                        address.addr().get(),
+                                    );
+
+                                    // Set the preferred lifetime for this address.
+                                    //
+                                    // Must not have reached this point if the address was already
+                                    // assigned to a device.
+                                    match preferred_until {
+                                        Some(preferred_until_duration) => assert!(ctx
+                                            .schedule_timer_instant(
+                                                preferred_until_duration,
+                                                timer_id.into()
+                                            )
+                                            .is_none()),
+                                        None => {
+                                            ctx.deprecate_slaac_addr(
+                                                device_id,
+                                                &address.addr().get(),
+                                            );
+                                            assert!(ctx.cancel_timer(timer_id.into()).is_none());
+                                        }
+                                    };
                                 }
                             }
                         }
@@ -7589,8 +7602,10 @@ mod tests {
         //
         // Should be marked as deprecated.
         //
-
-        run_for(&mut ctx, Duration::from_secs(preferred_lifetime.into()));
+        assert_eq!(
+            run_for(&mut ctx, Duration::from_secs(preferred_lifetime.into())),
+            vec!(NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr).into())
+        );
         let entry =
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .last()
@@ -7604,7 +7619,496 @@ mod tests {
         // Should be deleted.
         //
 
-        run_for(&mut ctx, Duration::from_secs((valid_lifetime - preferred_lifetime).into()));
+        assert_eq!(
+            run_for(&mut ctx, Duration::from_secs((valid_lifetime - preferred_lifetime).into())),
+            vec!(
+                NdpTimerId::new_prefix_invalidation(device.id().into(), addr_subnet).into(),
+                NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr).into()
+            )
+        );
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
+
+        // No more timers.
+        assert!(trigger_next_timer(&mut ctx).is_none());
+    }
+
+    #[test]
+    fn test_host_stateless_address_autoconfiguration_new_ra_with_preferred_lifetime_zero() {
+        let config = Ipv6::DUMMY_CONFIG;
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        crate::device::initialize_device(&mut ctx, device);
+
+        let src_mac = config.remote_mac;
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
+        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix_length = 64;
+        let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
+        let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
+        expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
+        let expected_addr = Ipv6Addr::new(expected_addr);
+
+        // Enable DAD for future IPs.
+        let mut ndp_configs = NdpConfigurations::default();
+        ndp_configs.set_max_router_solicitations(None);
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs);
+
+        //
+        // Receive a new RA with new prefix (autonomous).
+        //
+        // Should get a new IP.
+        //
+
+        let valid_lifetime = 10000;
+
+        let mut icmpv6_packet_buf = slaac_packet_buf(
+            src_ip,
+            config.local_ip.get(),
+            prefix,
+            prefix_length,
+            true,
+            true,
+            valid_lifetime,
+            0,
+        );
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        let ndp_state =
+            StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
+                &mut ctx,
+                device.id().into(),
+            );
+        assert!(ndp_state.has_prefix(&addr_subnet));
+
+        // Should NOT have gotten a new ip.
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
+
+        // Make sure deprecate and invalidation timers are set.
+        let now = ctx.now();
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.1
+                    == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
+                        .into()))
+                .count(),
+            0
+        );
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0
+                    == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
+                    && (*x.1
+                        == NdpTimerId::new_invalidate_slaac_address(
+                            device.id().into(),
+                            expected_addr
+                        )
+                        .into()))
+                .count(),
+            0
+        );
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.1
+                    == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr)
+                        .into()))
+                .count(),
+            0
+        );
+
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1)).len(), 0);
+
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
+    }
+
+    #[test]
+    fn test_host_stateless_address_autoconfiguration_updated_ra_with_preferred_lifetime_zero() {
+        let config = Ipv6::DUMMY_CONFIG;
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        crate::device::initialize_device(&mut ctx, device);
+
+        let src_mac = config.remote_mac;
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
+        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix_length = 64;
+        let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
+        let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
+        expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
+        let expected_addr = Ipv6Addr::new(expected_addr);
+        let expected_addr_sub = AddrSubnet::new(expected_addr, prefix_length).unwrap();
+
+        // Enable DAD for future IPs.
+        let mut ndp_configs = NdpConfigurations::default();
+        ndp_configs.set_max_router_solicitations(None);
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs);
+
+        //
+        // Receive a new RA with new prefix (autonomous).
+        //
+        // Should get a new IP.
+        //
+
+        let valid_lifetime = 10000;
+        let preferred_lifetime = 9000;
+
+        let mut icmpv6_packet_buf = slaac_packet_buf(
+            src_ip,
+            config.local_ip.get(),
+            prefix,
+            prefix_length,
+            true,
+            true,
+            valid_lifetime,
+            preferred_lifetime,
+        );
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        let ndp_state =
+            StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
+                &mut ctx,
+                device.id().into(),
+            );
+        assert!(ndp_state.has_prefix(&addr_subnet));
+
+        // Should have gotten a new ip.
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
+        let entry =
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
+        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.state(), AddressState::Tentative);
+        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+
+        // Make sure deprecate and invalidation timers are set.
+        let now = ctx.now();
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0
+                    == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
+                    && (*x.1
+                        == NdpTimerId::new_deprecate_slaac_address(
+                            device.id().into(),
+                            expected_addr
+                        )
+                        .into()))
+                .count(),
+            1
+        );
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0
+                    == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
+                    && (*x.1
+                        == NdpTimerId::new_invalidate_slaac_address(
+                            device.id().into(),
+                            expected_addr
+                        )
+                        .into()))
+                .count(),
+            1
+        );
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.1
+                    == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr)
+                        .into()))
+                .count(),
+            1
+        );
+
+        assert_eq!(
+            run_for(&mut ctx, Duration::from_secs(1)),
+            vec!(NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr).into())
+        );
+
+        let entry =
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
+        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.state(), AddressState::Assigned);
+        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+
+        //
+        // Receive the same RA, now with preferred_lifetime = 0
+        //
+        // Should not get a new IP, but keep the one generated before.
+        //
+        let mut icmpv6_packet_buf = slaac_packet_buf(
+            src_ip,
+            config.local_ip.get(),
+            prefix,
+            prefix_length,
+            true,
+            true,
+            valid_lifetime,
+            0,
+        );
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        let ndp_state =
+            StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
+                &mut ctx,
+                device.id().into(),
+            );
+        assert!(ndp_state.has_prefix(&addr_subnet));
+
+        // Should not have changed.
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
+        let entry =
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
+        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.state(), AddressState::Deprecated);
+        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+
+        // Timers should have been reset.
+        let now = ctx.now();
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.1
+                    == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
+                        .into()))
+                .count(),
+            0
+        );
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0
+                    == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
+                    && (*x.1
+                        == NdpTimerId::new_invalidate_slaac_address(
+                            device.id().into(),
+                            expected_addr
+                        )
+                        .into()))
+                .count(),
+            1
+        );
+
+        //
+        // Receive the same RA (again), still with preferred_lifetime = 0
+        //
+        // Should not get a new IP, but keep the one generated before.
+        //
+        let mut icmpv6_packet_buf = slaac_packet_buf(
+            src_ip,
+            config.local_ip.get(),
+            prefix,
+            prefix_length,
+            true,
+            true,
+            valid_lifetime,
+            0,
+        );
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        let ndp_state =
+            StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
+                &mut ctx,
+                device.id().into(),
+            );
+        assert!(ndp_state.has_prefix(&addr_subnet));
+
+        // Should not have changed.
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
+        let entry =
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
+        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.state(), AddressState::Deprecated);
+        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+
+        // Timers should have been reset.
+        let now = ctx.now();
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.1
+                    == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
+                        .into()))
+                .count(),
+            0
+        );
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0
+                    == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
+                    && (*x.1
+                        == NdpTimerId::new_invalidate_slaac_address(
+                            device.id().into(),
+                            expected_addr
+                        )
+                        .into()))
+                .count(),
+            1
+        );
+
+        //
+        // Receive the same RA, now with preferred_lifetime > 0
+        //
+        // Should not get a new IP, but keep the one generated before.
+        //
+        let mut icmpv6_packet_buf = slaac_packet_buf(
+            src_ip,
+            config.local_ip.get(),
+            prefix,
+            prefix_length,
+            true,
+            true,
+            valid_lifetime,
+            preferred_lifetime,
+        );
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        let ndp_state =
+            StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
+                &mut ctx,
+                device.id().into(),
+            );
+        assert!(ndp_state.has_prefix(&addr_subnet));
+
+        // Should not have changed.
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
+        let entry =
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
+        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.state(), AddressState::Assigned);
+        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+
+        // Make sure deprecate and invalidation timers are set.
+        let now = ctx.now();
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0
+                    == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
+                    && (*x.1
+                        == NdpTimerId::new_deprecate_slaac_address(
+                            device.id().into(),
+                            expected_addr
+                        )
+                        .into()))
+                .count(),
+            1
+        );
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0
+                    == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
+                    && (*x.1
+                        == NdpTimerId::new_invalidate_slaac_address(
+                            device.id().into(),
+                            expected_addr
+                        )
+                        .into()))
+                .count(),
+            1
+        );
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.1
+                    == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr)
+                        .into()))
+                .count(),
+            0
+        );
+
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), vec!());
+
+        let entry =
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
+        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.state(), AddressState::Assigned);
+        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+
+        //
+        // Preferred lifetime expiration.
+        //
+        // Should be marked as deprecated.
+        //
+        assert_eq!(
+            run_for(&mut ctx, Duration::from_secs(preferred_lifetime.into())),
+            vec!(NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr).into())
+        );
+
+        let entry =
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
+        assert_eq!(entry.state(), AddressState::Deprecated);
+        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+
+        //
+        // Valid lifetime expiration.
+        //
+        // Should be deleted.
+        //
+        assert_eq!(
+            run_for(&mut ctx, Duration::from_secs((valid_lifetime - preferred_lifetime).into())),
+            vec!(
+                NdpTimerId::new_prefix_invalidation(device.id().into(), addr_subnet).into(),
+                NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr).into()
+            )
+        );
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .count(),
