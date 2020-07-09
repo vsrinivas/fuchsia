@@ -3311,7 +3311,7 @@ void SyscallDecoderDispatcher::Populate() {
                                            std::make_unique<ArgumentAccess<zx_handle_t>>(out0));
     zx_channel_create->Output<zx_handle_t>(ZX_OK, "out1",
                                            std::make_unique<ArgumentAccess<zx_handle_t>>(out1));
-    zx_channel_create->set_displayed_action(&SyscallDecoderDispatcher::ZxChannelCreate);
+    zx_channel_create->set_inference(&SyscallDecoderDispatcher::ZxChannelCreate);
   }
 
   {
@@ -3347,7 +3347,7 @@ void SyscallDecoderDispatcher::Populate() {
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes));
     zx_channel_read->Output<uint32_t>(ZX_ERR_BUFFER_TOO_SMALL, "actual_handles",
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
-    zx_channel_read->set_displayed_action(&SyscallDecoderDispatcher::ZxChannelRead);
+    zx_channel_read->set_inference(&SyscallDecoderDispatcher::ZxChannelRead);
   }
 
   {
@@ -3384,7 +3384,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_read_etc->Output<uint32_t>(
         ZX_ERR_BUFFER_TOO_SMALL, "actual_handles",
         std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
-    zx_channel_read_etc->set_displayed_action(&SyscallDecoderDispatcher::ZxChannelRead);
+    zx_channel_read_etc->set_inference(&SyscallDecoderDispatcher::ZxChannelRead);
   }
 
   {
@@ -3408,7 +3408,7 @@ void SyscallDecoderDispatcher::Populate() {
                                        std::make_unique<ArgumentAccess<uint32_t>>(num_bytes),
                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
                                        std::make_unique<ArgumentAccess<uint32_t>>(num_handles));
-    zx_channel_write->set_displayed_action(&SyscallDecoderDispatcher::ZxChannelWrite);
+    zx_channel_write->set_inference(&SyscallDecoderDispatcher::ZxChannelWrite);
   }
   {
     Syscall* zx_channel_call =
@@ -3458,7 +3458,7 @@ void SyscallDecoderDispatcher::Populate() {
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes));
     zx_channel_call->Output<uint32_t>(ZX_ERR_BUFFER_TOO_SMALL, "actual_handles",
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
-    zx_channel_call->set_displayed_action(&SyscallDecoderDispatcher::ZxChannelCall);
+    zx_channel_call->set_inference(&SyscallDecoderDispatcher::ZxChannelCall);
   }
 
   {
@@ -4165,7 +4165,7 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_port_create->Output<zx_handle_t>(ZX_OK, "out",
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(out));
-    zx_port_create->set_displayed_action(&SyscallDecoderDispatcher::ZxPortCreate);
+    zx_port_create->set_inference(&SyscallDecoderDispatcher::ZxPortCreate);
   }
 
   {
@@ -4226,7 +4226,7 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_timer_create->Output<zx_handle_t>(ZX_OK, "out",
                                          std::make_unique<ArgumentAccess<zx_handle_t>>(out));
-    zx_timer_create->set_displayed_action(&SyscallDecoderDispatcher::ZxTimerCreate);
+    zx_timer_create->set_inference(&SyscallDecoderDispatcher::ZxTimerCreate);
   }
 
   {

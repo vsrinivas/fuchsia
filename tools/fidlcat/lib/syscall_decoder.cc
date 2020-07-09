@@ -451,6 +451,12 @@ void SyscallDecoder::DecodeOutputs() {
     }
   }
   if (output_event_ != nullptr) {
+    if (syscall_->inference() != nullptr) {
+      // Executes the inference associated with the syscall.
+      // This is used to infer semantic about handles.
+      (dispatcher_->*(syscall_->inference()))(output_event_.get(), semantic());
+    }
+
     // If we have been able to generate an invoked event, directly call the dispatcher.
     dispatcher_->AddOutputEvent(output_event_);
   } else {
@@ -464,11 +470,6 @@ void SyscallDecoder::DecodeOutputs() {
 
 void SyscallDecoder::Destroy() {
   if (pending_request_count_ == 0) {
-    if (syscall_->displayed_action() != nullptr) {
-      // Calls the action associated with the syscall. This is used to infer semantic about handles.
-      (dispatcher_->*(syscall_->displayed_action()))(this);
-    }
-
     dispatcher_->DeleteDecoder(this);
   }
 }

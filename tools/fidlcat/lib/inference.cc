@@ -113,64 +113,95 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
   }
 }
 
-void Inference::InferMessage(SyscallDecoder* decoder,
+void Inference::InferMessage(const OutputEvent* event,
+                             const fidl_codec::semantic::MethodSemantic* semantic,
                              fidl_codec::semantic::ContextType context_type) {
-  if (decoder->semantic() == nullptr) {
+  if (semantic == nullptr) {
     return;
   }
-  constexpr int kHandle = 0;
-  zx_handle_t handle = decoder->ArgumentValue(kHandle);
-  if (handle != ZX_HANDLE_INVALID) {
+  const fidl_codec::HandleValue* handle_value = event->invoked_event()->GetHandleValue(
+      event->syscall()->SearchInlineMember("handle", /*invoked=*/true));
+  if (handle_value->handle().handle != ZX_HANDLE_INVALID) {
+    const fidl_codec::FidlMessageValue* sent = event->invoked_event()->GetMessage();
+    const fidl_codec::FidlMessageValue* received = event->GetMessage();
+    const fidl_codec::StructValue* request = nullptr;
+    const fidl_codec::StructValue* response = nullptr;
+    switch (context_type) {
+      case fidl_codec::semantic::ContextType::kRead:
+        if (received != nullptr) {
+          request = received->decoded_request();
+          response = received->decoded_response();
+        }
+        break;
+      case fidl_codec::semantic::ContextType::kWrite:
+        if (sent != nullptr) {
+          request = sent->decoded_request();
+          response = sent->decoded_response();
+        }
+        break;
+      case fidl_codec::semantic::ContextType::kCall:
+        if (sent != nullptr) {
+          request = sent->decoded_request();
+          response = received->decoded_response();
+        }
+        break;
+    }
     fidl_codec::semantic::SemanticContext context(
-        this, decoder->fidlcat_thread()->process()->koid(), decoder->fidlcat_thread()->koid(),
-        handle, context_type, decoder->decoded_request(), decoder->decoded_response());
-    decoder->semantic()->ExecuteAssignments(&context);
+        this, event->thread()->process()->koid(), event->thread()->koid(),
+        handle_value->handle().handle, context_type, request, response);
+    semantic->ExecuteAssignments(&context);
   }
 }
 
-void Inference::ZxChannelCreate(SyscallDecoder* decoder) {
-  constexpr int kOut0 = 1;
-  constexpr int kOut1 = 2;
-  zx_handle_t* out0 = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut0));
-  zx_handle_t* out1 = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut1));
-  if ((out0 != nullptr) && (*out0 != ZX_HANDLE_INVALID) && (out1 != nullptr) &&
-      (*out1 != ZX_HANDLE_INVALID)) {
+void Inference::ZxChannelCreate(const OutputEvent* event) {
+  const fidl_codec::HandleValue* out0 =
+      event->GetHandleValue(event->syscall()->SearchInlineMember("out0", /*invoked=*/false));
+  FX_DCHECK(out0 != nullptr);
+  const fidl_codec::HandleValue* out1 =
+      event->GetHandleValue(event->syscall()->SearchInlineMember("out1", /*invoked=*/false));
+  FX_DCHECK(out1 != nullptr);
+  if ((out0->handle().handle != ZX_HANDLE_INVALID) &&
+      (out1->handle().handle != ZX_HANDLE_INVALID)) {
     int64_t timestamp = time(NULL);
-    dispatcher_->CreateHandle(decoder->fidlcat_thread(), *out0, timestamp,
+    dispatcher_->CreateHandle(event->thread(), out0->handle().handle, timestamp,
                               /*startup=*/false);
-    dispatcher_->CreateHandle(decoder->fidlcat_thread(), *out1, timestamp,
+    dispatcher_->CreateHandle(event->thread(), out1->handle().handle, timestamp,
                               /*startup=*/false);
     // Provides the minimal semantic for both handles (that is they are channels).
-    AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out0, "channel",
+    AddHandleDescription(event->thread()->process()->koid(), out0->handle().handle, "channel",
                          next_channel_++);
-    AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out1, "channel",
+    AddHandleDescription(event->thread()->process()->koid(), out1->handle().handle, "channel",
                          next_channel_++);
     // Links the two channels.
-    AddLinkedHandles(decoder->fidlcat_thread()->process()->koid(), *out0, *out1);
+    AddLinkedHandles(event->thread()->process()->koid(), out0->handle().handle,
+                     out1->handle().handle);
   }
 }
 
-void Inference::ZxPortCreate(SyscallDecoder* decoder) {
-  constexpr int kOut = 1;
-  zx_handle_t* out = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut));
-  if ((out != nullptr) && (*out != ZX_HANDLE_INVALID)) {
+void Inference::ZxPortCreate(const OutputEvent* event) {
+  const fidl_codec::HandleValue* out =
+      event->GetHandleValue(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+  FX_DCHECK(out != nullptr);
+  if (out->handle().handle != ZX_HANDLE_INVALID) {
     int64_t timestamp = time(NULL);
-    dispatcher_->CreateHandle(decoder->fidlcat_thread(), *out, timestamp,
+    dispatcher_->CreateHandle(event->thread(), out->handle().handle, timestamp,
                               /*startup=*/false);
     // Provides the minimal semantic for the handle (that is it's a port).
-    AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out, "port", next_port_++);
+    AddHandleDescription(event->thread()->process()->koid(), out->handle().handle, "port",
+                         next_port_++);
   }
 }
 
-void Inference::ZxTimerCreate(SyscallDecoder* decoder) {
-  constexpr int kOut = 2;
-  zx_handle_t* out = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut));
-  if ((out != nullptr) && (*out != ZX_HANDLE_INVALID)) {
+void Inference::ZxTimerCreate(const OutputEvent* event) {
+  const fidl_codec::HandleValue* out =
+      event->GetHandleValue(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+  FX_DCHECK(out != nullptr);
+  if (out->handle().handle != ZX_HANDLE_INVALID) {
     int64_t timestamp = time(NULL);
-    dispatcher_->CreateHandle(decoder->fidlcat_thread(), *out, timestamp,
+    dispatcher_->CreateHandle(event->thread(), out->handle().handle, timestamp,
                               /*startup=*/false);
     // Provides the minimal semantic for the handle (that is it's a timer).
-    AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out, "timer",
+    AddHandleDescription(event->thread()->process()->koid(), out->handle().handle, "timer",
                          next_timer_++);
   }
 }

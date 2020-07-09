@@ -15,6 +15,7 @@
 
 namespace fidlcat {
 
+class OutputEvent;
 class SyscallDecoder;
 class SyscallDecoderDispatcher;
 
@@ -33,16 +34,17 @@ class Inference : public fidl_codec::semantic::HandleSemantic {
 
   // Function call for channel functions which read/write FILD messages to try to infer some
   // semantic.
-  void InferMessage(SyscallDecoder* decoder, fidl_codec::semantic::ContextType context_type);
+  void InferMessage(const OutputEvent* event, const fidl_codec::semantic::MethodSemantic* semantic,
+                    fidl_codec::semantic::ContextType context_type);
 
   // Called after a zx_channel_create syscall has been displayed.
-  void ZxChannelCreate(SyscallDecoder* decoder);
+  void ZxChannelCreate(const OutputEvent* event);
 
   // Called after a zx_port_create syscall has been displayed.
-  void ZxPortCreate(SyscallDecoder* decoder);
+  void ZxPortCreate(const OutputEvent* event);
 
   // Called after a zx_timer_create syscall has been displayed.
-  void ZxTimerCreate(SyscallDecoder* decoder);
+  void ZxTimerCreate(const OutputEvent* event);
 
  private:
   // The dispatcher which owns the inference.

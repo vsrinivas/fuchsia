@@ -79,6 +79,18 @@ const fidl_codec::FidlMessageValue* SyscallEvent::GetMessage() const {
   return outline_fields_.begin()->second->AsFidlMessageValue();
 }
 
+const fidl_codec::HandleValue* SyscallEvent::GetHandleValue(
+    const fidl_codec::StructMember* member) const {
+  if (member == nullptr) {
+    return nullptr;
+  }
+  auto result = inline_fields_.find(member);
+  if (result == inline_fields_.end()) {
+    return nullptr;
+  }
+  return result->second->AsHandleValue();
+}
+
 void ProcessLaunchedEvent::Write(proto::Event* dst) const {
   dst->set_timestamp(timestamp());
   proto::ProcessLaunchedEvent* event = dst->mutable_process_launched();

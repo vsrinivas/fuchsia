@@ -216,6 +216,8 @@ class SyscallEvent : public ThreadEvent {
 
   const fidl_codec::FidlMessageValue* GetMessage() const;
 
+  const fidl_codec::HandleValue* GetHandleValue(const fidl_codec::StructMember* member) const;
+
  private:
   const Syscall* const syscall_;
   std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> inline_fields_;

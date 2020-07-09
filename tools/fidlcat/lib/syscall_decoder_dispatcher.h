@@ -1330,12 +1330,13 @@ class Syscall {
     inputs_decoded_action_ = inputs_decoded_action;
   }
 
-  [[nodiscard]] void (SyscallDecoderDispatcher::*displayed_action() const)(SyscallDecoder*) {
-    return displayed_action_;
+  [[nodiscard]] void (SyscallDecoderDispatcher::*inference()
+                          const)(const OutputEvent*, const fidl_codec::semantic::MethodSemantic*) {
+    return inference_;
   }
-  void set_displayed_action(
-      void (SyscallDecoderDispatcher::*displayed_action)(SyscallDecoder* decoder)) {
-    displayed_action_ = displayed_action;
+  void set_inference(void (SyscallDecoderDispatcher::*inference)(
+      const OutputEvent*, const fidl_codec::semantic::MethodSemantic*)) {
+    inference_ = inference;
   }
 
   // Adds an argument definition to the syscall.
@@ -1595,7 +1596,8 @@ class Syscall {
   std::vector<std::unique_ptr<fidl_codec::StructMember>> output_inline_members_;
   std::vector<std::unique_ptr<fidl_codec::StructMember>> output_outline_members_;
   bool (SyscallDecoderDispatcher::*inputs_decoded_action_)(SyscallDecoder* decoder) = nullptr;
-  void (SyscallDecoderDispatcher::*displayed_action_)(SyscallDecoder* decoder) = nullptr;
+  void (SyscallDecoderDispatcher::*inference_)(
+      const OutputEvent* event, const fidl_codec::semantic::MethodSemantic* semantic) = nullptr;
 };
 
 // Decoder for syscalls. This creates the breakpoints for all the syscalls we
@@ -1778,28 +1780,40 @@ class SyscallDecoderDispatcher {
   }
 
   // Called when we intercept zx_channel_create.
-  void ZxChannelCreate(SyscallDecoder* decoder) { inference_.ZxChannelCreate(decoder); }
+  void ZxChannelCreate(const OutputEvent* event,
+                       const fidl_codec::semantic::MethodSemantic* semantic) {
+    inference_.ZxChannelCreate(event);
+  }
 
   // Called when we intercept zx_channel_read or a zx_channel_read_etc.
-  void ZxChannelRead(SyscallDecoder* decoder) {
-    inference_.InferMessage(decoder, fidl_codec::semantic::ContextType::kRead);
+  void ZxChannelRead(const OutputEvent* event,
+                     const fidl_codec::semantic::MethodSemantic* semantic) {
+    inference_.InferMessage(event, semantic, fidl_codec::semantic::ContextType::kRead);
   }
 
   // Called when we intercept zx_channel_write.
-  void ZxChannelWrite(SyscallDecoder* decoder) {
-    inference_.InferMessage(decoder, fidl_codec::semantic::ContextType::kWrite);
+  void ZxChannelWrite(const OutputEvent* event,
+                      const fidl_codec::semantic::MethodSemantic* semantic) {
+    inference_.InferMessage(event, semantic, fidl_codec::semantic::ContextType::kWrite);
   }
 
   // Called when we intercept zx_channel_call.
-  void ZxChannelCall(SyscallDecoder* decoder) {
-    inference_.InferMessage(decoder, fidl_codec::semantic::ContextType::kCall);
+  void ZxChannelCall(const OutputEvent* event,
+                     const fidl_codec::semantic::MethodSemantic* semantic) {
+    inference_.InferMessage(event, semantic, fidl_codec::semantic::ContextType::kCall);
   }
 
   // Called when we intercept zx_port_create.
-  void ZxPortCreate(SyscallDecoder* decoder) { inference_.ZxPortCreate(decoder); }
+  void ZxPortCreate(const OutputEvent* event,
+                    const fidl_codec::semantic::MethodSemantic* semantic) {
+    inference_.ZxPortCreate(event);
+  }
 
   // Called when we intercept zx_timer_create.
-  void ZxTimerCreate(SyscallDecoder* decoder) { inference_.ZxTimerCreate(decoder); }
+  void ZxTimerCreate(const OutputEvent* event,
+                     const fidl_codec::semantic::MethodSemantic* semantic) {
+    inference_.ZxTimerCreate(event);
+  }
 
   // Decoding options.
   const DecodeOptions& decode_options_;
