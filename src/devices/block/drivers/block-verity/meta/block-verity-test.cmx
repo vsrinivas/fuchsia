@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "test/block-verity-test"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "services": [
+            "fuchsia.exception.Handler",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
