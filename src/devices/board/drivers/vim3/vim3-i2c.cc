@@ -57,8 +57,8 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = PDEV_PID_VIM3,
         .did = PDEV_DID_VIM3_MCU,
     },
-#if 0  // placeholder until driver implemented and vid/pid/did assigned
-       // bus_ids and addresses are correct
+    // placeholder until driver implemented and vid/pid/did assigned
+    // bus_ids and addresses are correct
     // TCA6408 (U17) IO expander (used for various lcd/cam signals and LEDs)
     {
         .bus_id = 0,
@@ -67,6 +67,7 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = 0,
         .did = 0,
     },
+#if 0
     // KXTJ3 (U18) 3 axis accelerometer
     {
         .bus_id = 0,

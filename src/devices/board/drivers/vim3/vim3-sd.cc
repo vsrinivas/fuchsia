@@ -42,7 +42,7 @@ static aml_sdmmc_config_t config = {
     .min_freq = 400'000,
     .max_freq = 50'000'000,
     .version_3 = true,
-    .prefs = 0,
+    .prefs = 0x1000'0000,  // Magic number to detect the SD slot.
 };
 
 static const pbus_metadata_t sd_metadata[] = {
@@ -51,6 +51,22 @@ static const pbus_metadata_t sd_metadata[] = {
         .data_buffer = reinterpret_cast<const uint8_t*>(&config),
         .data_size = sizeof(config),
     },
+};
+
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t i2c_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
+      BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x20),
+};
+static const device_fragment_part_t i2c_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(i2c_match), i2c_match},
+};
+static const device_fragment_t fragments[] = {
+    {"i2c", countof(i2c_fragment), i2c_fragment},
 };
 
 zx_status_t Vim3::SdInit() {
@@ -77,7 +93,8 @@ zx_status_t Vim3::SdInit() {
   gpio_impl_.SetAltFunction(A311D_GPIOC(4), A311D_GPIOC_4_SDCARD_CLK_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOC(5), A311D_GPIOC_5_SDCARD_CMD_FN);
 
-  if ((status = pbus_.CompositeDeviceAdd(&sd_dev, /* nullptr */ 0, 0, UINT32_MAX)) != ZX_OK) {
+  if ((status = pbus_.CompositeDeviceAdd(&sd_dev, reinterpret_cast<uint64_t>(fragments),
+                                         countof(fragments), UINT32_MAX)) != ZX_OK) {
     zxlogf(ERROR, "SdInit could not add sd_dev: %d", status);
     return status;
   }

@@ -16,6 +16,7 @@
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/phys-iter.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fit/defer.h>
@@ -1395,6 +1396,18 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
   if (!reset_gpio.is_valid()) {
     // Alternative name.
     reset_gpio = ddk::GpioProtocolClient(parent, "gpio");
+  }
+
+  ddk::I2cChannel i2c(parent, "i2c");
+  if (i2c.is_valid()) {
+    uint8_t buf[2] = {1, 0x80};
+    i2c.WriteSync(buf, 2);
+    buf[0] = 2;
+    buf[1] = 0x00;
+    i2c.WriteSync(buf, 2);
+    buf[0] = 3;
+    buf[1] = 0x00;
+    i2c.WriteSync(buf, 2);
   }
 
   auto dev =
