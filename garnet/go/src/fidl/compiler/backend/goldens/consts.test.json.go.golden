@@ -46,19 +46,13 @@ func (x EnumType) String() string {
 	return "Unknown"
 }
 
-type BitsType int32
+type BitsType uint32
 
 const (
 	BitsTypeValue BitsType = 1
 	BitsTypeTrue  BitsType = 2
 )
 
-func (_ BitsType) I_EnumValues() []BitsType {
-	return []BitsType{
-		BitsTypeValue,
-		BitsTypeTrue,
-	}
-}
 func (x BitsType) String() string {
 	switch x {
 	case 1:

@@ -27,29 +27,28 @@ Type: <code>int32</code>
             <td></td>
         </tr></table>
 
+
+
+
+
+
+
+## **BITS**
+
 ### BitsType {#BitsType}
-Type: <code>int32</code>
-
-*Defined in [test.name/consts.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#23)*
-
+Type: <code>uint32</code>
 
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
-            <td><code>VALUE</code></td>
-            <td><code>1</code></td>
+            <td>VALUE</td>
+            <td>1</td>
             <td></td>
         </tr><tr>
-            <td><code>true</code></td>
-            <td><code>2</code></td>
+            <td>true</td>
+            <td>2</td>
             <td></td>
         </tr></table>
-
-
-
-
-
-
 
 
 

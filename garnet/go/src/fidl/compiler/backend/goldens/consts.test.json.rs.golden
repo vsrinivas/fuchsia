@@ -15,6 +15,13 @@ use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
 
+fidl_bits! {
+  BitsType(u32) {
+    Value = 1,
+    True_ = 2,
+  }
+}
+
 pub const ENABLED_FLAG: bool = true;
 
 pub const OFFSET: i8 = -33;
@@ -53,13 +60,6 @@ pub const BITS_PRIMITIVE_TRUE: i32 = BitsType::True_;
 
 fidl_enum! {
   EnumType(i32) {
-    Value = 1,
-    True_ = 2,
-  }
-}
-
-fidl_enum! {
-  BitsType(i32) {
     Value = 1,
     True_ = 2,
   }

@@ -2,7 +2,63 @@
   "version": "0.0.1",
   "name": "test.name",
   "library_dependencies": [],
-  "bits_declarations": [],
+  "bits_declarations": [
+    {
+      "name": "test.name/BitsType",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 23,
+        "column": 6,
+        "length": 8
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "mask": "3",
+      "members": [
+        {
+          "name": "VALUE",
+          "location": {
+            "filename": "consts.test.fidl",
+            "line": 24,
+            "column": 5,
+            "length": 5
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "0x00000001",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "0x00000001"
+            }
+          }
+        },
+        {
+          "name": "true",
+          "location": {
+            "filename": "consts.test.fidl",
+            "line": 25,
+            "column": 5,
+            "length": 4
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
+        }
+      ],
+      "strict": true
+    }
+  ],
   "const_declarations": [
     {
       "name": "test.name/ENABLED_FLAG",
@@ -442,57 +498,6 @@
         }
       ],
       "strict": true
-    },
-    {
-      "name": "test.name/BitsType",
-      "location": {
-        "filename": "consts.test.fidl",
-        "line": 23,
-        "column": 6,
-        "length": 8
-      },
-      "type": "int32",
-      "members": [
-        {
-          "name": "VALUE",
-          "location": {
-            "filename": "consts.test.fidl",
-            "line": 24,
-            "column": 5,
-            "length": 5
-          },
-          "value": {
-            "kind": "literal",
-            "value": "1",
-            "expression": "0x00000001",
-            "literal": {
-              "kind": "numeric",
-              "value": "1",
-              "expression": "0x00000001"
-            }
-          }
-        },
-        {
-          "name": "true",
-          "location": {
-            "filename": "consts.test.fidl",
-            "line": 25,
-            "column": 5,
-            "length": 4
-          },
-          "value": {
-            "kind": "literal",
-            "value": "2",
-            "expression": "2",
-            "literal": {
-              "kind": "numeric",
-              "value": "2",
-              "expression": "2"
-            }
-          }
-        }
-      ],
-      "strict": true
     }
   ],
   "experimental_resource_declarations": [],
@@ -525,6 +530,7 @@
     "test.name/ANSWER"
   ],
   "declarations": {
+    "test.name/BitsType": "bits",
     "test.name/ENABLED_FLAG": "const",
     "test.name/OFFSET": "const",
     "test.name/ANSWER": "const",
@@ -543,7 +549,6 @@
     "test.name/bitsPrimitiveVal": "const",
     "test.name/bitsTrue": "const",
     "test.name/bitsPrimitiveTrue": "const",
-    "test.name/EnumType": "enum",
-    "test.name/BitsType": "enum"
+    "test.name/EnumType": "enum"
   }
 }

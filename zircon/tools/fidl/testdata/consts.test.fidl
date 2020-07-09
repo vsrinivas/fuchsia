@@ -20,7 +20,7 @@ const int32 enumPrimitiveVal = EnumType.VALUE;
 const EnumType enumTrue = EnumType.true;
 const int32 enumPrimitiveTrue = EnumType.true;
 
-enum BitsType : int32 {
+bits BitsType : uint32 {
     VALUE = 0x00000001;
     true = 2;
 };
