@@ -169,6 +169,7 @@ if (target_cpu == "arm64") {
     deps = [
       ":test_support",
       "third_party/libvpx",
+      "//sdk/banjo/ddk.protocol.clock",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_c",
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/fidl/cpp",

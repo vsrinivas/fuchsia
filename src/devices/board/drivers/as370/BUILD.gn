@@ -27,8 +27,10 @@ driver_module("as370") {
     "as370.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.shareddma",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
     "//src/devices/lib/as370",
