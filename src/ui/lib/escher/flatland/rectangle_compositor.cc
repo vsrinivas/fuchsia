@@ -162,12 +162,7 @@ vk::ImageCreateInfo RectangleCompositor::GetDefaultImageConstraints(const vk::Fo
   vk::ImageCreateInfo create_info;
   create_info.imageType = vk::ImageType::e2D;
   create_info.extent = vk::Extent3D{1, 1, 1};
-
-  // Specifies that the image can be used to create a VkImageView with a different
-  // format from the image. Clients may need to have strict needs regarding acceptable
-  // image formats that we don't necessarily need to follow ourselves when creating
-  // ImageViews from those images.
-  create_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+  create_info.flags = {};
   create_info.format = vk_format;
   create_info.mipLevels = 1;
   create_info.arrayLayers = 1;
