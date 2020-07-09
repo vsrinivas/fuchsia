@@ -182,6 +182,30 @@ void SimInterface::OnJoinConf(const wlanif_join_confirm_t* resp) {
   if_impl_ops_->auth_req(if_impl_ctx_, &auth_req);
 }
 
+void SimInterface::OnScanEnd(const wlanif_scan_end_t* end) {
+  auto results = scan_results_.find(end->txn_id);
+
+  // Verify that we started a scan on this interface
+  ZX_ASSERT(results != scan_results_.end());
+
+  // Verify that the scan hasn't already received a completion notice
+  ZX_ASSERT(!results->second.result_code);
+
+  results->second.result_code = end->code;
+}
+
+void SimInterface::OnScanResult(const wlanif_scan_result_t* result) {
+  auto results = scan_results_.find(result->txn_id);
+
+  // Verify that we started a scan on this interface
+  ZX_ASSERT(results != scan_results_.end());
+
+  // Verify that the scan hasn't sent a completion notice
+  ZX_ASSERT(!results->second.result_code);
+
+  results->second.result_list.push_back(result->bss);
+}
+
 void SimInterface::OnStartConf(const wlanif_start_confirm_t* resp) {
   stats_.start_confirmations.push_back(*resp);
 }
@@ -246,6 +270,51 @@ void SimInterface::DeauthenticateFrom(const common::MacAddr& bssid, wlan_deauth_
   memcpy(deauth_req.peer_sta_address, bssid.byte, ETH_ALEN);
 
   if_impl_ops_->deauth_req(if_impl_ctx_, &deauth_req);
+}
+
+void SimInterface::StartScan(uint64_t txn_id, bool active) {
+  wlan_scan_type_t scan_type = active ? WLAN_SCAN_TYPE_ACTIVE : WLAN_SCAN_TYPE_PASSIVE;
+  uint32_t dwell_time = active ? kDefaultActiveScanDwellTimeMs : kDefaultPassiveScanDwellTimeMs;
+  size_t num_channels = kDefaultScanChannels.size();
+  wlanif_scan_req_t req = {
+      .txn_id = txn_id,
+      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .scan_type = scan_type,
+      .num_channels = num_channels,
+      .min_channel_time = dwell_time,
+      .max_channel_time = dwell_time,
+      .num_ssids = 0,
+  };
+
+  // Initialize the channel list
+  ZX_ASSERT(num_channels <= WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
+  memcpy(req.channel_list, kDefaultScanChannels.data(), kDefaultScanChannels.size());
+  memset(&req.channel_list[num_channels], 0, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS - num_channels);
+
+  // Create an entry for tracking results
+  ScanStatus scan_status;
+  scan_results_.insert_or_assign(txn_id, scan_status);
+
+  // Start the scan
+  if_impl_ops_->start_scan(if_impl_ctx_, &req);
+}
+
+std::optional<wlan_scan_result_t> SimInterface::ScanResultCode(uint64_t txn_id) {
+  auto results = scan_results_.find(txn_id);
+
+  // Verify that we started a scan on this interface
+  ZX_ASSERT(results != scan_results_.end());
+
+  return results->second.result_code;
+}
+
+const std::list<wlanif_bss_description_t>* SimInterface::ScanResultBssList(uint64_t txn_id) {
+  auto results = scan_results_.find(txn_id);
+
+  // Verify that we started a scan on this interface
+  ZX_ASSERT(results != scan_results_.end());
+
+  return &results->second.result_list;
 }
 
 void SimInterface::StartSoftAp(const wlan_ssid_t& ssid, const wlan_channel_t& channel,

@@ -22,8 +22,6 @@ const uint16_t kDefaultCSACount = 3;
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
-constexpr uint32_t kDwellTimeMs = 120;
-
 class ChannelSwitchTest : public SimTest {
  public:
   // How long an individual test will run for. We need an end time because tests run until no more
@@ -37,9 +35,6 @@ class ChannelSwitchTest : public SimTest {
 
   // Send one fake CSA beacon using the identification consistent of default ssid and bssid.
   void SendFakeCSABeacon(wlan_channel_t& dst_channel);
-
-  // Start a passive scan.
-  void StartScan();
 
  protected:
   // Number of received assoc responses.
@@ -57,20 +52,6 @@ void ChannelSwitchTest::SendFakeCSABeacon(wlan_channel_t& dst_channel) {
   fake_csa_beacon.AddCSAIE(dst_channel, kDefaultCSACount);
 
   env_->Tx(fake_csa_beacon, kDefaultTxInfo, this);
-}
-
-void ChannelSwitchTest::StartScan() {
-  wlanif_scan_req_t req = {
-      .txn_id = 0,
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-      .scan_type = WLAN_SCAN_TYPE_PASSIVE,
-      .num_channels = 11,
-      .channel_list = {9, 10},
-      .min_channel_time = kDwellTimeMs,
-      .max_channel_time = kDwellTimeMs,
-      .num_ssids = 0,
-  };
-  client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, &req);
 }
 
 // Create our device instance and hook up the callbacks
@@ -240,9 +221,13 @@ TEST_F(ChannelSwitchTest, ChannelSwitchWhileScanning) {
 
   client_ifc_.AssociateWith(ap, zx::msec(10));
 
-  SCHEDULE_CALL(zx::msec(20), &ChannelSwitchTest::StartScan, this);
+  constexpr uint32_t kScanStartTimeMs = 20;
+  SCHEDULE_CALL(zx::msec(kScanStartTimeMs), &SimInterface::StartScan, &client_ifc_, 0, false);
 
-  SCHEDULE_CALL(zx::msec(100), &ChannelSwitchTest::SendFakeCSABeacon, this, kSwitchedChannel);
+  constexpr uint32_t kCsaBeaconDelayMs =
+      kScanStartTimeMs + (SimInterface::kDefaultPassiveScanDwellTimeMs / 2);
+  SCHEDULE_CALL(zx::msec(kCsaBeaconDelayMs), &ChannelSwitchTest::SendFakeCSABeacon, this,
+                kSwitchedChannel);
 
   env_->Run(kTestDuration);
 

@@ -58,6 +58,13 @@ class SimInterface {
     std::list<wlanif_stop_confirm_t> stop_confirmations;
   };
 
+  // Default scan options
+  const std::vector<uint8_t> kDefaultScanChannels = {
+      1,  2,   3,   4,   5,   6,   7,   8,   9,   10,  11,  32,  36,  40,  44,  48,  52,  56, 60,
+      64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165};
+  static constexpr uint32_t kDefaultActiveScanDwellTimeMs = 40;
+  static constexpr uint32_t kDefaultPassiveScanDwellTimeMs = 120;
+
   // SoftAP defaults
   static constexpr wlan_ssid_t kDefaultSoftApSsid = {.len = 10, .ssid = "Sim_SoftAP"};
   static constexpr wlan_channel_t kDefaultSoftApChannel = {
@@ -80,8 +87,8 @@ class SimInterface {
   }
 
   // Default SME Callbacks
-  virtual void OnScanResult(const wlanif_scan_result_t* result) {}
-  virtual void OnScanEnd(const wlanif_scan_end_t* end) {}
+  virtual void OnScanResult(const wlanif_scan_result_t* result);
+  virtual void OnScanEnd(const wlanif_scan_end_t* end);
   virtual void OnJoinConf(const wlanif_join_confirm_t* resp);
   virtual void OnAuthConf(const wlanif_auth_confirm_t* resp);
   virtual void OnAuthInd(const wlanif_auth_ind_t* resp);
@@ -118,6 +125,11 @@ class SimInterface {
   void DeauthenticateFrom(const common::MacAddr& bssid,
                           wlan_deauth_reason_t reason = WLAN_DEAUTH_REASON_UNSPECIFIED);
 
+  // Scan operations
+  void StartScan(uint64_t txn_id = 0, bool active = false);
+  std::optional<wlan_scan_result_t> ScanResultCode(uint64_t txn_id);
+  const std::list<wlanif_bss_description_t>* ScanResultBssList(uint64_t txn_id);
+
   // SoftAP operation
   void StartSoftAp(const wlan_ssid_t& ssid = kDefaultSoftApSsid,
                    const wlan_channel_t& channel = kDefaultSoftApChannel,
@@ -153,6 +165,15 @@ class SimInterface {
 
  private:
   wlan_info_mac_role_t role_ = 0;
+
+  // Track scan results
+  struct ScanStatus {
+    // If not present, indicates that the scan has not completed yet
+    std::optional<wlan_scan_result_t> result_code = std::nullopt;
+    std::list<wlanif_bss_description_t> result_list;
+  };
+  // One entry per scan started
+  std::map<uint64_t, ScanStatus> scan_results_;
 };
 
 // A base class that can be used for creating simulation tests. It provides functionality that
