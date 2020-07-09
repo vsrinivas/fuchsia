@@ -15,6 +15,8 @@ constexpr uint64_t kInputBufferLifetimeOrdinal = 1;
 constexpr uint32_t kMinOutputBufferSize = 100 * 4096;
 constexpr uint32_t kMinOutputPacketsForClient = 1;
 constexpr uint32_t kMinOutputBufferCount = 1;
+constexpr char kH264MimeType[] = "video/h264";
+constexpr char kH265MimeType[] = "video/h265";
 }  // namespace
 
 static void FatalError(std::string message) {
@@ -30,8 +32,9 @@ static void SetAbortOnError(fidl::InterfacePtr<T>& p, std::string message) {
 
 fit::result<std::unique_ptr<EncoderClient>, zx_status_t> EncoderClient::Create(
     fuchsia::mediacodec::CodecFactoryHandle codec_factory,
-    fuchsia::sysmem::AllocatorHandle allocator, uint32_t bitrate, uint32_t gop_size) {
-  auto encoder = std::unique_ptr<EncoderClient>(new EncoderClient(bitrate, gop_size));
+    fuchsia::sysmem::AllocatorHandle allocator, uint32_t bitrate, uint32_t gop_size,
+    const std::string& mime_type) {
+  auto encoder = std::unique_ptr<EncoderClient>(new EncoderClient(bitrate, gop_size, mime_type));
   zx_status_t status = encoder->codec_factory_.Bind(std::move(codec_factory));
   if (status != ZX_OK) {
     return fit::error(status);
@@ -45,8 +48,8 @@ fit::result<std::unique_ptr<EncoderClient>, zx_status_t> EncoderClient::Create(
   return fit::ok(std::move(encoder));
 }
 
-EncoderClient::EncoderClient(uint32_t bitrate, uint32_t gop_size)
-    : bitrate_(bitrate), gop_size_(gop_size) {
+EncoderClient::EncoderClient(uint32_t bitrate, uint32_t gop_size, const std::string& mime_type)
+    : bitrate_(bitrate), gop_size_(gop_size), mime_type_(mime_type) {
   SetAbortOnError(codec_factory_, "fuchsia.mediacodec.CodecFactory disconnected.");
   SetAbortOnError(sysmem_, "fuchsia.sysmem.Allocator disconnected.");
   SetAbortOnError(codec_, "fuchsia.media.StreamProcessor disconnected.");
@@ -81,20 +84,29 @@ zx_status_t EncoderClient::Start(fuchsia::sysmem::BufferCollectionTokenHandle to
   video_format.set_uncompressed(uncompressed);
 
   fuchsia::media::DomainFormat domain;
+  fuchsia::media::EncoderSettings encoder_settings;
   domain.set_video(std::move(video_format));
 
-  fuchsia::media::H264EncoderSettings h264_settings;
-  h264_settings.set_bit_rate(bitrate_);
-  h264_settings.set_frame_rate(framerate);
-  h264_settings.set_gop_size(gop_size_);
-
-  fuchsia::media::EncoderSettings encoder_settings;
-  encoder_settings.set_h264(std::move(h264_settings));
+  if (mime_type_ == kH264MimeType) {
+    fuchsia::media::H264EncoderSettings h264_settings;
+    h264_settings.set_bit_rate(bitrate_);
+    h264_settings.set_frame_rate(framerate);
+    h264_settings.set_gop_size(gop_size_);
+    encoder_settings.set_h264(std::move(h264_settings));
+  } else if (mime_type_ == kH265MimeType) {
+    fuchsia::media::HevcEncoderSettings hevc_settings;
+    hevc_settings.set_bit_rate(bitrate_);
+    hevc_settings.set_frame_rate(framerate);
+    hevc_settings.set_gop_size(gop_size_);
+    encoder_settings.set_hevc(std::move(hevc_settings));
+  } else {
+    std::cout << "Unsupported codec" << std::endl;
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   fuchsia::media::FormatDetails input_details;
-  const char* mime_type = "video/h264";
   input_details.set_format_details_version_ordinal(0)
-      .set_mime_type(mime_type)
+      .set_mime_type(mime_type_)
       .set_encoder_settings(std::move(encoder_settings))
       .set_domain(std::move(domain));
 

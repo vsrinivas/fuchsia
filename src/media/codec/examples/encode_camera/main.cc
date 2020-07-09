@@ -30,13 +30,17 @@ constexpr char kCameraConfigOption[] = "camera-config";
 constexpr char kCameraStreamOption[] = "camera-stream";
 constexpr char kCameraListOption[] = "camera-list";
 constexpr char kEncoderBitrateOption[] = "encoder-bitrate";
+constexpr char kEncoderCodecOption[] = "encoder-codec";
 constexpr char kEncoderGopSizeOption[] = "encoder-gop";
 constexpr char kDefaultOutputFile[] = "/tmp/out.h264";
 constexpr char kDefaultDuration[] = "30";
 constexpr char kDefaultCameraConfiguration[] = "1";
 constexpr char kDefaultCameraStream[] = "1";
 constexpr char kDefaultEncoderBitrate[] = "700000";
+constexpr char kDefaultEncoderCodec[] = "h264";
 constexpr char kDefaultEncoderGop[] = "30";
+constexpr char kH264[] = "h264";
+constexpr char kH265[] = "h265";
 }  // namespace
 
 static void Usage(const fxl::CommandLine& command_line) {
@@ -57,6 +61,8 @@ static void Usage(const fxl::CommandLine& command_line) {
   printf("\n    By default will select encoded bitrate of %s\n", kDefaultEncoderBitrate);
   printf("  --%s=<bitrate>\tTarget encoded bitrate\n", kEncoderBitrateOption);
   printf("\n    By default will select encoded GOP size of %s\n", kDefaultEncoderGop);
+  printf("  --%s=<codec>\tWhich codec to encode with. Can be h264 or h265.\n", kEncoderCodecOption);
+  printf("\n    By default will select %s\n", kDefaultEncoderCodec);
   printf("  --%s=<gop>\tThe number of frames between key frames\n", kEncoderGopSizeOption);
 }
 
@@ -77,6 +83,8 @@ int main(int argc, char* argv[]) {
       command_line.GetOptionValueWithDefault(kCameraStreamOption, kDefaultCameraStream);
   auto bitrate_str =
       command_line.GetOptionValueWithDefault(kEncoderBitrateOption, kDefaultEncoderBitrate);
+  auto codec_str =
+      command_line.GetOptionValueWithDefault(kEncoderCodecOption, kDefaultEncoderCodec);
   auto gop_str = command_line.GetOptionValueWithDefault(kEncoderGopSizeOption, kDefaultEncoderGop);
   bool list_camera = command_line.HasOption(kCameraListOption);
 
@@ -85,6 +93,15 @@ int main(int argc, char* argv[]) {
   uint32_t stream = fxl::StringToNumber<uint32_t>(stream_str);
   uint32_t bitrate = fxl::StringToNumber<uint32_t>(bitrate_str);
   uint32_t gop_size = fxl::StringToNumber<uint32_t>(gop_str);
+
+  if (codec_str != kH264 && codec_str != kH265) {
+    std::cerr << "Invalid codec" << std::endl;
+    Usage(command_line);
+    return EXIT_FAILURE;
+  }
+
+  std::string mime_type = "video/";
+  mime_type.append(codec_str);
 
   if (!duration.get()) {
     std::cerr << "Invalid duration" << std::endl;
@@ -146,8 +163,8 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  auto encoder_result =
-      EncoderClient::Create(std::move(codec_factory), std::move(allocator), bitrate, gop_size);
+  auto encoder_result = EncoderClient::Create(std::move(codec_factory), std::move(allocator),
+                                              bitrate, gop_size, mime_type);
   if (encoder_result.is_error()) {
     std::cerr << "Failed to create encoder client" << std::endl;
     return EXIT_FAILURE;

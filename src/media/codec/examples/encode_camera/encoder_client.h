@@ -21,7 +21,8 @@ class EncoderClient {
   ~EncoderClient();
   static fit::result<std::unique_ptr<EncoderClient>, zx_status_t> Create(
       fuchsia::mediacodec::CodecFactoryHandle codec_factory,
-      fuchsia::sysmem::AllocatorHandle allocator, uint32_t bitrate, uint32_t gop_size);
+      fuchsia::sysmem::AllocatorHandle allocator, uint32_t bitrate, uint32_t gop_size,
+      const std::string& mime_type);
 
   // Connects to codec factory and sets up an encoder stream processor with the given buffer
   // collection and image format as input.
@@ -36,7 +37,7 @@ class EncoderClient {
   }
 
  private:
-  EncoderClient(uint32_t bitrate, uint32_t gop_size);
+  EncoderClient(uint32_t bitrate, uint32_t gop_size, const std::string& mime_type);
 
   using BoundBufferCollectionCallback =
       fit::callback<void(fuchsia::sysmem::BufferCollectionTokenHandle&&)>;
@@ -109,6 +110,7 @@ class EncoderClient {
 
   uint32_t bitrate_ = 0;
   uint32_t gop_size_ = 0;
+  std::string mime_type_;
 
   EncoderClient(const EncoderClient&) = delete;
   EncoderClient(EncoderClient&&) = delete;
