@@ -5,13 +5,6 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/goldfish/control.h>
-#include <ddktl/protocol/goldfish/pipe.h>
-#include <fbl/condition_variable.h>
-#include <fbl/mutex.h>
 #include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -21,11 +14,19 @@
 
 #include <map>
 
+#include <ddk/device.h>
+#include <ddk/io-buffer.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/goldfish/control.h>
+#include <ddktl/protocol/goldfish/pipe.h>
+#include <fbl/condition_variable.h>
+#include <fbl/mutex.h>
+
 namespace goldfish {
 
 class Control;
-using ControlType = ddk::Device<Control, ddk::UnbindableNew, ddk::Messageable,
-                                ddk::GetProtocolable>;
+using ControlType =
+    ddk::Device<Control, ddk::UnbindableNew, ddk::Messageable, ddk::GetProtocolable>;
 
 class Control : public ControlType,
                 public ddk::GoldfishControlProtocol<Control, ddk::base_protocol> {
@@ -37,12 +38,14 @@ class Control : public ControlType,
 
   zx_status_t Bind();
 
-  void RegisterColorBuffer(zx_koid_t koid);
-  void FreeColorBuffer(zx_koid_t koid);
+  void RegisterBufferHandle(zx_koid_t koid);
+  void FreeBufferHandle(zx_koid_t koid);
 
   zx_status_t FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t width, uint32_t height,
                                     uint32_t format, fidl_txn_t* txn);
+  zx_status_t FidlCreateBuffer(zx_handle_t vmo_handle, uint32_t size, fidl_txn_t* txn);
   zx_status_t FidlGetColorBuffer(zx_handle_t vmo_handle, fidl_txn_t* txn);
+  zx_status_t FidlGetBufferHandle(zx_handle_t vmo_handle, fidl_txn_t* txn);
 
   // Device protocol implementation.
   void DdkUnbindNew(ddk::UnbindTxn txn);
@@ -59,8 +62,11 @@ class Control : public ControlType,
   void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
   zx_status_t ReadResultLocked(uint32_t* result) TA_REQ(lock_);
   zx_status_t ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) TA_REQ(lock_);
+  zx_status_t CreateBufferLocked(uint32_t size, uint32_t* id) TA_REQ(lock_);
   zx_status_t CreateColorBufferLocked(uint32_t width, uint32_t height, uint32_t format,
                                       uint32_t* id) TA_REQ(lock_);
+  void CloseBufferOrColorBufferLocked(uint32_t id) TA_REQ(lock_);
+  void CloseBufferLocked(uint32_t id) TA_REQ(lock_);
   void CloseColorBufferLocked(uint32_t id) TA_REQ(lock_);
   zx_status_t SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode, uint32_t* result)
       TA_REQ(lock_);
@@ -74,7 +80,9 @@ class Control : public ControlType,
   ddk::IoBuffer cmd_buffer_ TA_GUARDED(lock_);
   ddk::IoBuffer io_buffer_ TA_GUARDED(lock_);
   // TODO(TC-383): This should be std::unordered_map.
-  std::map<zx_koid_t, uint32_t> color_buffers_ TA_GUARDED(lock_);
+  std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);
+  std::map<uint32_t, fuchsia_hardware_goldfish_BufferHandleType> buffer_handle_types_
+      TA_GUARDED(lock_);
   async::Loop heap_loop_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Control);

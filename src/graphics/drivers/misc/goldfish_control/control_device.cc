@@ -61,6 +61,22 @@ struct SetColorBufferVulkanModeCmd {
 constexpr uint32_t kOP_rcSetColorBufferVulkanMode = 10045;
 constexpr uint32_t kSize_rcSetColorBufferVulkanMode = 16;
 
+struct CreateBufferCmd {
+  uint32_t op;
+  uint32_t size;
+  uint32_t buffer_size;
+};
+constexpr uint32_t kOP_rcCreateBuffer = 10049;
+constexpr uint32_t kSize_rcCreateBuffer = 12;
+
+struct CloseBufferCmd {
+  uint32_t op;
+  uint32_t size;
+  uint32_t id;
+};
+constexpr uint32_t kOP_rcCloseBuffer = 10050;
+constexpr uint32_t kSize_rcCloseBuffer = 12;
+
 zx_koid_t GetKoidForVmo(const zx::vmo& vmo) {
   zx_info_handle_basic_t info;
   zx_status_t status =
@@ -133,14 +149,14 @@ class Heap : public FidlServer<
       return fuchsia_sysmem_HeapCreateResource_reply(txn, ZX_ERR_INVALID_ARGS, 0);
     }
 
-    control_->RegisterColorBuffer(id);
+    control_->RegisterBufferHandle(id);
     return fuchsia_sysmem_HeapCreateResource_reply(txn, ZX_OK, id);
   }
 
   zx_status_t DestroyResource(uint64_t id, fidl_txn* txn) {
     BindingType::Txn::RecognizeTxn(txn);
 
-    control_->FreeColorBuffer(id);
+    control_->FreeBufferHandle(id);
     return fuchsia_sysmem_HeapDestroyResource_reply(txn);
   }
 
@@ -178,8 +194,8 @@ Control::~Control() {
   if (id_) {
     fbl::AutoLock lock(&lock_);
     if (cmd_buffer_.is_valid()) {
-      for (auto& buffer : color_buffers_) {
-        CloseColorBufferLocked(buffer.second);
+      for (auto& buffer : buffer_handles_) {
+        CloseBufferOrColorBufferLocked(buffer.second);
       }
       auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
       buffer->id = id_;
@@ -285,24 +301,25 @@ zx_status_t Control::Bind() {
   return DdkAdd(ddk::DeviceAddArgs("goldfish-control").set_proto_id(ZX_PROTOCOL_GOLDFISH_CONTROL));
 }
 
-void Control::RegisterColorBuffer(zx_koid_t koid) {
+void Control::RegisterBufferHandle(zx_koid_t koid) {
   fbl::AutoLock lock(&lock_);
-  color_buffers_[koid] = kInvalidColorBuffer;
+  buffer_handles_[koid] = kInvalidColorBuffer;
 }
 
-void Control::FreeColorBuffer(zx_koid_t koid) {
+void Control::FreeBufferHandle(zx_koid_t koid) {
   fbl::AutoLock lock(&lock_);
 
-  auto it = color_buffers_.find(koid);
-  if (it == color_buffers_.end()) {
+  auto it = buffer_handles_.find(koid);
+  if (it == buffer_handles_.end()) {
     zxlogf(ERROR, "%s: invalid key", kTag);
     return;
   }
 
   if (it->second) {
-    CloseColorBufferLocked(it->second);
+    CloseBufferOrColorBufferLocked(it->second);
   }
-  color_buffers_.erase(it);
+  buffer_handle_types_.erase(it->second);
+  buffer_handles_.erase(it);
 }
 
 zx_status_t Control::FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t width, uint32_t height,
@@ -317,8 +334,8 @@ zx_status_t Control::FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t widt
 
   fbl::AutoLock lock(&lock_);
 
-  auto it = color_buffers_.find(koid);
-  if (it == color_buffers_.end()) {
+  auto it = buffer_handles_.find(koid);
+  if (it == buffer_handles_.end()) {
     return fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer_reply(txn, ZX_ERR_INVALID_ARGS);
   }
 
@@ -346,7 +363,41 @@ zx_status_t Control::FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t widt
 
   close_color_buffer.cancel();
   it->second = id;
+  buffer_handle_types_[id] = fuchsia_hardware_goldfish_BufferHandleType_COLOR_BUFFER;
   return fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer_reply(txn, ZX_OK);
+}
+
+zx_status_t Control::FidlCreateBuffer(zx_handle_t vmo_handle, uint32_t size, fidl_txn_t* txn) {
+  TRACE_DURATION("gfx", "Control::FidlCreateBuffer", "size", size);
+
+  zx::vmo vmo(vmo_handle);
+  zx_koid_t koid = GetKoidForVmo(vmo);
+  if (koid == ZX_KOID_INVALID) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fbl::AutoLock lock(&lock_);
+
+  auto it = buffer_handles_.find(koid);
+  if (it == buffer_handles_.end()) {
+    return fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer_reply(txn, ZX_ERR_INVALID_ARGS);
+  }
+
+  if (it->second != kInvalidColorBuffer) {
+    return fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer_reply(txn,
+                                                                          ZX_ERR_ALREADY_EXISTS);
+  }
+
+  uint32_t id;
+  zx_status_t status = CreateBufferLocked(size, &id);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to create buffer: %d", kTag, status);
+    return status;
+  }
+  zxlogf(ERROR, "%s: create success! create buffer id = %u\n", kTag, id);
+  it->second = id;
+  buffer_handle_types_[id] = fuchsia_hardware_goldfish_BufferHandleType_BUFFER;
+  return fuchsia_hardware_goldfish_ControlDeviceCreateBuffer_reply(txn, ZX_OK);
 }
 
 zx_status_t Control::FidlGetColorBuffer(zx_handle_t vmo_handle, fidl_txn_t* txn) {
@@ -360,8 +411,8 @@ zx_status_t Control::FidlGetColorBuffer(zx_handle_t vmo_handle, fidl_txn_t* txn)
 
   fbl::AutoLock lock(&lock_);
 
-  auto it = color_buffers_.find(koid);
-  if (it == color_buffers_.end()) {
+  auto it = buffer_handles_.find(koid);
+  if (it == buffer_handles_.end()) {
     return fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer_reply(txn, ZX_ERR_INVALID_ARGS, 0);
   }
 
@@ -373,6 +424,46 @@ zx_status_t Control::FidlGetColorBuffer(zx_handle_t vmo_handle, fidl_txn_t* txn)
   return fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer_reply(txn, ZX_OK, it->second);
 }
 
+zx_status_t Control::FidlGetBufferHandle(zx_handle_t vmo_handle, fidl_txn_t* txn) {
+  TRACE_DURATION("gfx", "Control::FidlGetBufferHandle");
+
+  zx::vmo vmo(vmo_handle);
+  zx_koid_t koid = GetKoidForVmo(vmo);
+  if (koid == ZX_KOID_INVALID) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint32_t handle = kInvalidColorBuffer;
+  fuchsia_hardware_goldfish_BufferHandleType handle_type =
+      fuchsia_hardware_goldfish_BufferHandleType_INVALID;
+
+  fbl::AutoLock lock(&lock_);
+
+  auto it = buffer_handles_.find(koid);
+  if (it == buffer_handles_.end()) {
+    return fuchsia_hardware_goldfish_ControlDeviceGetBufferHandle_reply(txn, ZX_ERR_INVALID_ARGS,
+                                                                        handle, handle_type);
+  }
+
+  handle = it->second;
+  if (handle == kInvalidColorBuffer) {
+    // Color buffer not created yet.
+    return fuchsia_hardware_goldfish_ControlDeviceGetBufferHandle_reply(txn, ZX_ERR_NOT_FOUND,
+                                                                        handle, handle_type);
+  }
+
+  auto it_types = buffer_handle_types_.find(handle);
+  if (it_types == buffer_handle_types_.end()) {
+    // Color buffer type not registered yet.
+    return fuchsia_hardware_goldfish_ControlDeviceGetBufferHandle_reply(txn, ZX_ERR_NOT_FOUND,
+                                                                        handle, handle_type);
+  }
+  handle_type = it_types->second;
+
+  return fuchsia_hardware_goldfish_ControlDeviceGetBufferHandle_reply(txn, ZX_OK, handle,
+                                                                      handle_type);
+}
+
 void Control::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Control::DdkRelease() { delete this; }
@@ -382,7 +473,9 @@ zx_status_t Control::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
   static const fuchsia_hardware_goldfish_ControlDevice_ops_t kOps = {
       .CreateColorBuffer = Binder::BindMember<&Control::FidlCreateColorBuffer>,
+      .CreateBuffer = Binder::BindMember<&Control::FidlCreateBuffer>,
       .GetColorBuffer = Binder::BindMember<&Control::FidlGetColorBuffer>,
+      .GetBufferHandle = Binder::BindMember<&Control::FidlGetBufferHandle>,
   };
 
   return fuchsia_hardware_goldfish_ControlDevice_dispatch(this, txn, msg, &kOps);
@@ -413,8 +506,8 @@ zx_status_t Control::GoldfishControlGetColorBuffer(zx::vmo vmo, uint32_t* out_id
 
   fbl::AutoLock lock(&lock_);
 
-  auto it = color_buffers_.find(koid);
-  if (it == color_buffers_.end()) {
+  auto it = buffer_handles_.find(koid);
+  if (it == buffer_handles_.end()) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -505,6 +598,17 @@ zx_status_t Control::ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) {
   return ReadResultLocked(result);
 }
 
+zx_status_t Control::CreateBufferLocked(uint32_t size, uint32_t* id) {
+  TRACE_DURATION("gfx", "Control::CreateBuffer", "size", size);
+
+  auto cmd = static_cast<CreateBufferCmd*>(io_buffer_.virt());
+  cmd->op = kOP_rcCreateBuffer;
+  cmd->size = kSize_rcCreateBuffer;
+  cmd->buffer_size = size;
+
+  return ExecuteCommandLocked(kSize_rcCreateBuffer, id);
+}
+
 zx_status_t Control::CreateColorBufferLocked(uint32_t width, uint32_t height, uint32_t format,
                                              uint32_t* id) {
   TRACE_DURATION("gfx", "Control::CreateColorBuffer", "width", width, "height", height);
@@ -519,6 +623,21 @@ zx_status_t Control::CreateColorBufferLocked(uint32_t width, uint32_t height, ui
   return ExecuteCommandLocked(kSize_rcCreateColorBuffer, id);
 }
 
+void Control::CloseBufferOrColorBufferLocked(uint32_t id) {
+  ZX_DEBUG_ASSERT(buffer_handle_types_.find(id) != buffer_handle_types_.end());
+  auto buffer_type = buffer_handle_types_.at(id);
+  switch (buffer_type) {
+    case fuchsia_hardware_goldfish_BufferHandleType_BUFFER:
+      CloseBufferLocked(id);
+      break;
+    case fuchsia_hardware_goldfish_BufferHandleType_COLOR_BUFFER:
+      CloseColorBufferLocked(id);
+      break;
+      // Otherwise buffer/colorBuffer was not created. We don't need to do
+      // anything.
+  }
+}
+
 void Control::CloseColorBufferLocked(uint32_t id) {
   TRACE_DURATION("gfx", "Control::CloseColorBuffer", "id", id);
 
@@ -528,6 +647,17 @@ void Control::CloseColorBufferLocked(uint32_t id) {
   cmd->id = id;
 
   WriteLocked(kSize_rcCloseColorBuffer);
+}
+
+void Control::CloseBufferLocked(uint32_t id) {
+  TRACE_DURATION("gfx", "Control::CloseBuffer", "id", id);
+
+  auto cmd = static_cast<CloseBufferCmd*>(io_buffer_.virt());
+  cmd->op = kOP_rcCloseBuffer;
+  cmd->size = kSize_rcCloseBuffer;
+  cmd->id = id;
+
+  WriteLocked(kSize_rcCloseBuffer);
 }
 
 zx_status_t Control::SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode, uint32_t* result) {

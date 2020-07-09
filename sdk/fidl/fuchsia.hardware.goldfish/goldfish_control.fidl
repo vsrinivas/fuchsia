@@ -6,26 +6,51 @@ library fuchsia.hardware.goldfish;
 
 using zx;
 
+enum BufferHandleType : uint32 {
+    INVALID = 0;
+    BUFFER = 1;
+    COLOR_BUFFER = 2;
+};
+
 /// Color buffer formats.
 enum ColorBufferFormatType : uint32 {
     RGBA = 0x1908;
     BGRA = 0x80E1;
 };
 
-/// Interface for the Goldfish control driver providing color buffers.
+/// Interface for the Goldfish control driver providing color buffers and
+/// data buffers.
 [ForDeprecatedCBindings]
 protocol ControlDevice {
     /// Create shared color buffer. Color buffer is automatically freed when
     /// all references to `vmo` have been closed. Fails if VMO is not
     /// associated with goldfish heap memory.
-    /// Returns ZX_ERR_ALREADY_EXISTS if color buffer has already been created.
+    ///
+    /// Returns ZX_ERR_ALREADY_EXISTS if a buffer or color buffer has
+    /// already been created for this VMO.
     CreateColorBuffer(zx.handle:VMO vmo,
                       uint32 width,
                       uint32 height,
                       ColorBufferFormatType format)
         -> (zx.status res);
 
+    /// Create shared data buffer. Buffer is automatically freed when
+    /// all references to `vmo` have been closed. Fails if VMO is not
+    /// associated with goldfish heap memory.
+    ///
+    /// Returns ZX_ERR_ALREADY_EXISTS if a buffer or color buffer has
+    /// already been created for this VMO.
+    CreateBuffer(zx.handle:VMO vmo, uint32 size) -> (zx.status res);
+
     /// Get color buffer for VMO. Fails if VMO is not associated with a color
     /// buffer.
+    ///
+    /// This method is deprecated. Please use |GetBufferHandle| instead.
+    [Deprecated]
     GetColorBuffer(zx.handle:VMO vmo) -> (zx.status res, uint32 id);
+
+    /// Get a buffer handle for VMO and the type of the handle.
+    /// Fails if VMO is not associated with neither a color buffer nor a buffer.
+    GetBufferHandle(zx.handle:VMO vmo)
+        -> (zx.status res, uint32 id, BufferHandleType type);
 };
