@@ -19,5 +19,41 @@ void QueueInfo::LogReport(const std::string& program_name, const std::string& lo
 
 void QueueInfo::SetSize(const uint64_t size) { context_->InspectManager().SetQueueSize(size); }
 
+void QueueInfo::RecordUploadAttemptNumber(const std::string& local_report_id,
+                                          const uint64_t upload_attempt) {
+  context_->InspectManager().SetUploadAttempt(local_report_id, upload_attempt);
+  context_->Cobalt().LogCount(cobalt::UploadAttemptState::kUploadAttempt, upload_attempt);
+}
+
+void QueueInfo::MarkReportAsUploaded(const std::string& local_report_id,
+                                     const std::string& server_report_id,
+                                     const uint64_t upload_attempts) {
+  context_->InspectManager().MarkReportAsUploaded(local_report_id, server_report_id);
+  context_->Cobalt().LogOccurrence(cobalt::CrashState::kUploaded);
+  context_->Cobalt().LogCount(cobalt::UploadAttemptState::kUploaded, upload_attempts);
+}
+
+void QueueInfo::MarkReportAsArchived(const std::string& local_report_id,
+                                     const uint64_t upload_attempts) {
+  context_->InspectManager().MarkReportAsArchived(local_report_id);
+  context_->Cobalt().LogOccurrence(cobalt::CrashState::kArchived);
+
+  // We log if it was attempted at least once.
+  if (upload_attempts > 0) {
+    context_->Cobalt().LogCount(cobalt::UploadAttemptState::kArchived, upload_attempts);
+  }
+}
+
+void QueueInfo::MarkReportAsGarbageCollected(const std::string& local_report_id,
+                                             const uint64_t upload_attempts) {
+  context_->InspectManager().MarkReportAsGarbageCollected(local_report_id);
+  context_->Cobalt().LogOccurrence(cobalt::CrashState::kGarbageCollected);
+
+  // We log if it was attempted at least once.
+  if (upload_attempts > 0) {
+    context_->Cobalt().LogCount(cobalt::UploadAttemptState::kGarbageCollected, upload_attempts);
+  }
+}
+
 }  // namespace crash_reports
 }  // namespace forensics

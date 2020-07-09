@@ -91,7 +91,7 @@ bool Database::MakeNewReport(const std::map<std::string, fuchsia::mem::Buffer>& 
     return false;
   }
 
-  additional_data_[*local_report_id] = {minidump.has_value(), /*upload_attempts=*/0u, annotations};
+  additional_data_[*local_report_id] = {minidump.has_value(), annotations};
   return true;
 }
 
@@ -118,16 +118,6 @@ std::unique_ptr<UploadReport> Database::GetUploadReport(const UUID& local_report
                                         additional_data_.at(local_report_id).has_minidump);
 }
 
-void Database::IncrementUploadAttempt(const crashpad::UUID& local_report_id) {
-  if (!Contains(local_report_id)) {
-    return;
-  }
-
-  additional_data_.at(local_report_id).upload_attempts += 1;
-  info_.RecordUploadAttemptNumber(local_report_id.ToString(),
-                                  additional_data_.at(local_report_id).upload_attempts);
-}
-
 bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
                               const std::string& server_report_id) {
   if (!upload_report) {
@@ -136,9 +126,6 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
   }
 
   const UUID local_report_id = upload_report->GetUUID();
-
-  info_.MarkReportAsUploaded(local_report_id.ToString(), server_report_id,
-                             additional_data_.at(local_report_id).upload_attempts);
 
   // We need to clean up before finalizing the report in the crashpad database as the operation may
   // fail.
@@ -166,8 +153,6 @@ bool Database::Archive(const crashpad::UUID& local_report_id) {
 
   FX_LOGS(INFO) << fxl::StringPrintf("Archiving local report %s under %s",
                                      local_report_id.ToString().c_str(), kCrashpadDatabasePath);
-  info_.MarkReportAsArchived(local_report_id.ToString(),
-                             additional_data_.at(local_report_id).upload_attempts);
 
   // We need to clean up before finalizing the report in the crashpad database as the operation may
   // fail.
@@ -221,14 +206,17 @@ size_t Database::GarbageCollect() {
     }
 
     for (const auto& uuid : clean_up) {
-      info_.MarkReportAsGarbageCollected(uuid.ToString(),
-                                         additional_data_.at(uuid).upload_attempts);
+      garbage_collected_reports_.insert(uuid);
       CleanUp(uuid);
     }
   }
 
   info_.LogGarbageCollection(num_cleaned, num_pruned);
   return num_cleaned + num_pruned;
+}
+
+bool Database::IsGarbageCollected(const crashpad::UUID& local_report_id) const {
+  return garbage_collected_reports_.find(local_report_id) != garbage_collected_reports_.end();
 }
 
 }  // namespace crash_reports

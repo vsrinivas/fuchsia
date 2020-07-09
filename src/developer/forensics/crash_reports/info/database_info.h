@@ -24,13 +24,6 @@ struct DatabaseInfo {
   void LogMaxCrashpadDatabaseSize(StorageSize max_crashpad_database_size);
   void LogGarbageCollection(uint64_t num_cleaned, uint64_t num_pruned);
 
-  void RecordUploadAttemptNumber(const std::string& local_report_id, uint64_t upload_attempt);
-
-  void MarkReportAsUploaded(const std::string& local_report_id, const std::string& server_report_id,
-                            uint64_t upload_attempts);
-  void MarkReportAsArchived(const std::string& local_report_id, uint64_t upload_attempts);
-  void MarkReportAsGarbageCollected(const std::string& local_report_id, uint64_t upload_attempts);
-
  private:
   std::shared_ptr<InfoContext> context_;
 };

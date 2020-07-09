@@ -9,6 +9,7 @@
 #include <lib/async/dispatcher.h>
 
 #include <map>
+#include <unordered_map>
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/crash_server.h"
@@ -99,6 +100,14 @@ class Queue {
   State state_ = State::LeaveAsPending;
 
   std::vector<crashpad::UUID> pending_reports_;
+
+  // Allows for crashpad::UUID to be used as the key in an |std::unordered_{map,set}|.
+  struct UUIDHasher {
+    size_t operator()(const crashpad::UUID& uuid) const {
+      return std::hash<std::string>()(uuid.ToString());
+    }
+  };
+  std::unordered_map<crashpad::UUID, uint64_t, UUIDHasher> upload_attempts_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Queue);
 };

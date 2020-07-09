@@ -80,7 +80,7 @@ std::map<std::string, std::string> MakeAnnotations() {
   return {{kAnnotationKey, kAnnotationValue}};
 }
 
-class QueueTest : public UnitTestFixture, CobaltTestFixture {
+class QueueTest : public UnitTestFixture, public CobaltTestFixture {
  public:
   QueueTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
 
@@ -529,7 +529,7 @@ TEST_F(QueueTest, Check_ProcessAll_OnReconnect_NetworkReachable) {
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_InspectTree) {
+TEST_F(QueueTest, Check_InspectTreeAndCobalt) {
   SetUpQueue({
       kUploadSuccessful,
       kUploadSuccessful,
@@ -548,77 +548,97 @@ TEST_F(QueueTest, Check_InspectTree) {
       QueueOps::DeleteOneReport,
       QueueOps::DeleteOneReport,
       QueueOps::SetStateToUpload,
+      QueueOps::SetStateToArchive,
   });
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches("crash_reporter")),
-          ChildrenMatch(IsSupersetOf({
-              AllOf(
-                  NodeMatches(NameMatches("reports")),
+
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(AllOf(
+                  NodeMatches(NameMatches("crash_reporter")),
                   ChildrenMatch(IsSupersetOf({
-                      AllOf(NodeMatches(NameMatches("program_1")),
-                            ChildrenMatch(ElementsAre(AllOf(
-                                NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
-                                    StringIs("creation_time", Not(IsEmpty())),
-                                    StringIs("final_state", "uploaded"),
-                                    UintIs("upload_attempts", 1u),
-                                })))),
-                                ChildrenMatch(ElementsAre(
-                                    NodeMatches(AllOf(NameMatches("crash_server"),
-                                                      PropertyList(UnorderedElementsAreArray({
-                                                          StringIs("creation_time", Not(IsEmpty())),
-                                                          StringIs("id", kStubServerReportId),
-                                                      })))))))))),
-                      AllOf(NodeMatches(NameMatches("program_2")),
-                            ChildrenMatch(ElementsAre(AllOf(
-                                NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
-                                    StringIs("creation_time", Not(IsEmpty())),
-                                    StringIs("final_state", "uploaded"),
-                                    UintIs("upload_attempts", 1u),
-                                })))),
-                                ChildrenMatch(ElementsAre(
-                                    NodeMatches(AllOf(NameMatches("crash_server"),
-                                                      PropertyList(UnorderedElementsAreArray({
-                                                          StringIs("creation_time", Not(IsEmpty())),
-                                                          StringIs("id", kStubServerReportId),
-                                                      })))))))))),
-                      AllOf(
-                          NodeMatches(NameMatches("program_3")),
-                          ChildrenMatch(UnorderedElementsAreArray({
-                              NodeMatches(AllOf(NameMatches(expected_queue_contents_[0].ToString()),
-                                                PropertyList(UnorderedElementsAreArray({
-                                                    StringIs("creation_time", Not(IsEmpty())),
-                                                    UintIs("upload_attempts", 1u),
-                                                })))),
-                          }))),
-                      AllOf(
-                          NodeMatches(NameMatches("program_4")),
-                          ChildrenMatch(UnorderedElementsAreArray({
-                              NodeMatches(AllOf(NameMatches(expected_queue_contents_[1].ToString()),
-                                                PropertyList(UnorderedElementsAreArray({
-                                                    StringIs("creation_time", Not(IsEmpty())),
-                                                    UintIs("upload_attempts", 1u),
-                                                })))),
-                          }))),
-                      AllOf(NodeMatches(NameMatches("program_5")),
-                            ChildrenMatch(ElementsAre(AllOf(
-                                NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
-                                    StringIs("creation_time", Not(IsEmpty())),
-                                    StringIs("final_state", "uploaded"),
-                                    UintIs("upload_attempts", 1u),
-                                })))),
-                                ChildrenMatch(ElementsAre(
-                                    NodeMatches(AllOf(NameMatches("crash_server"),
-                                                      PropertyList(UnorderedElementsAreArray({
-                                                          StringIs("creation_time", Not(IsEmpty())),
-                                                          StringIs("id", kStubServerReportId),
-                                                      })))))))))),
-                  }))),
-              AllOf(NodeMatches(
-                        AllOf(NameMatches("queue"), PropertyList(ElementsAre(UintIs("size", 2u))))),
-                    ChildrenMatch(IsEmpty())),
-          }))))));
+                      AllOf(NodeMatches(NameMatches("reports")),
+                            ChildrenMatch(IsSupersetOf({
+                                AllOf(NodeMatches(NameMatches("program_1")),
+                                      ChildrenMatch(ElementsAre(AllOf(
+                                          NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
+                                              StringIs("creation_time", Not(IsEmpty())),
+                                              StringIs("final_state", "uploaded"),
+                                              UintIs("upload_attempts", 1u),
+                                          })))),
+                                          ChildrenMatch(ElementsAre(NodeMatches(
+                                              AllOf(NameMatches("crash_server"),
+                                                    PropertyList(UnorderedElementsAreArray({
+                                                        StringIs("creation_time", Not(IsEmpty())),
+                                                        StringIs("id", kStubServerReportId),
+                                                    })))))))))),
+                                AllOf(NodeMatches(NameMatches("program_2")),
+                                      ChildrenMatch(ElementsAre(AllOf(
+                                          NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
+                                              StringIs("creation_time", Not(IsEmpty())),
+                                              StringIs("final_state", "uploaded"),
+                                              UintIs("upload_attempts", 1u),
+                                          })))),
+                                          ChildrenMatch(ElementsAre(NodeMatches(
+                                              AllOf(NameMatches("crash_server"),
+                                                    PropertyList(UnorderedElementsAreArray({
+                                                        StringIs("creation_time", Not(IsEmpty())),
+                                                        StringIs("id", kStubServerReportId),
+                                                    })))))))))),
+                                AllOf(NodeMatches(NameMatches("program_3")),
+                                      ChildrenMatch(UnorderedElementsAreArray({
+                                          NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
+                                              StringIs("creation_time", Not(IsEmpty())),
+                                              StringIs("final_state", "archived"),
+                                              UintIs("upload_attempts", 1u),
+                                          })))),
+                                      }))),
+                                AllOf(NodeMatches(NameMatches("program_4")),
+                                      ChildrenMatch(UnorderedElementsAreArray({
+                                          NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
+                                              StringIs("creation_time", Not(IsEmpty())),
+                                              StringIs("final_state", "archived"),
+                                              UintIs("upload_attempts", 1u),
+                                          })))),
+                                      }))),
+                                AllOf(NodeMatches(NameMatches("program_5")),
+                                      ChildrenMatch(ElementsAre(AllOf(
+                                          NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
+                                              StringIs("creation_time", Not(IsEmpty())),
+                                              StringIs("final_state", "uploaded"),
+                                              UintIs("upload_attempts", 1u),
+                                          })))),
+                                          ChildrenMatch(ElementsAre(NodeMatches(
+                                              AllOf(NameMatches("crash_server"),
+                                                    PropertyList(UnorderedElementsAreArray({
+                                                        StringIs("creation_time", Not(IsEmpty())),
+                                                        StringIs("id", kStubServerReportId),
+                                                    })))))))))),
+                            }))),
+                      AllOf(NodeMatches(AllOf(NameMatches("queue"),
+                                              PropertyList(ElementsAre(UintIs("size", 0u))))),
+                            ChildrenMatch(IsEmpty())),
+                  }))))));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::CrashState::kArchived),
+                  cobalt::Event(cobalt::CrashState::kArchived),
+                  cobalt::Event(cobalt::CrashpadFunctionError::kGetReportForUploading),
+                  cobalt::Event(cobalt::CrashpadFunctionError::kGetReportForUploading),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kArchived, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kArchived, 1u),
+              }));
 }
 
 }  // namespace

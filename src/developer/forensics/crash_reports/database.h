@@ -11,6 +11,7 @@
 #include <map>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "src/developer/forensics/crash_reports/info/database_info.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
@@ -44,8 +45,6 @@ class Database {
   // If there's an error with |database_| return nullptr.
   std::unique_ptr<UploadReport> GetUploadReport(const crashpad::UUID& local_report_id);
 
-  void IncrementUploadAttempt(const crashpad::UUID& local_report_id);
-
   // Record |upload_report| as uploaded and clean up the report's annotations
   //
   // Return false if there is an error with |database_|.
@@ -67,11 +66,13 @@ class Database {
 
   StorageSize MaxCrashpadDatabaseSize() { return max_crashpad_database_size_; }
 
+  bool IsGarbageCollected(const crashpad::UUID& local_report_id) const;
+
   ~Database() = default;
 
  private:
   bool Contains(const crashpad::UUID& local_report_id);
-  // Allows for crashpad::UUID to be used as the key in an |std::unordered_map|.
+  // Allows for crashpad::UUID to be used as the key in an |std::unordered_{map,set}|.
   struct UUIDHasher {
     size_t operator()(const crashpad::UUID& uuid) const {
       return std::hash<std::string>()(uuid.ToString());
@@ -81,7 +82,6 @@ class Database {
   // Data pertinent to a crash report not stored in |database_|.
   struct AdditionalData {
     bool has_minidump;
-    uint64_t upload_attempts;
     std::map<std::string, std::string> annotations;
   };
 
@@ -94,7 +94,9 @@ class Database {
   std::unique_ptr<crashpad::CrashReportDatabase> database_;
   const StorageSize max_crashpad_database_size_;
   DatabaseInfo info_;
+
   std::unordered_map<crashpad::UUID, AdditionalData, UUIDHasher> additional_data_;
+  std::unordered_set<crashpad::UUID, UUIDHasher> garbage_collected_reports_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Database);
 };

@@ -80,6 +80,16 @@ bool Queue::Add(const std::string& program_name,
                                    [this] {
                                      ProcessAll();
                                      database_->GarbageCollect();
+
+                                     // Mark reports that were garbage collected.
+                                     for (const auto& local_report_id : pending_reports_) {
+                                       if (database_->IsGarbageCollected(local_report_id)) {
+                                         info_.MarkReportAsGarbageCollected(
+                                             local_report_id.ToString(),
+                                             upload_attempts_[local_report_id]);
+                                         upload_attempts_.erase(local_report_id);
+                                       }
+                                     }
                                    });
 
       status != ZX_OK) {
@@ -108,13 +118,17 @@ bool Queue::Upload(const UUID& local_report_id) {
     return true;
   }
 
-  database_->IncrementUploadAttempt(local_report_id);
+  upload_attempts_[local_report_id]++;
+  info_.RecordUploadAttemptNumber(local_report_id.ToString(), upload_attempts_[local_report_id]);
 
   std::string server_report_id;
   if (crash_server_->MakeRequest(report->GetAnnotations(), report->GetAttachments(),
                                  &server_report_id)) {
     FX_LOGS(INFO) << "Successfully uploaded report at https://crash.corp.google.com/"
                   << server_report_id;
+    info_.MarkReportAsUploaded(local_report_id.ToString(), server_report_id,
+                               upload_attempts_[local_report_id]);
+    upload_attempts_.erase(local_report_id);
     database_->MarkAsUploaded(std::move(report), server_report_id);
     return true;
   }
@@ -144,6 +158,7 @@ size_t Queue::ArchiveAll() {
   for (const auto& local_report_id : pending_reports_) {
     if (database_->Archive(local_report_id)) {
       ++successful;
+      info_.MarkReportAsArchived(local_report_id.ToString(), upload_attempts_[local_report_id]);
     }
   }
 
