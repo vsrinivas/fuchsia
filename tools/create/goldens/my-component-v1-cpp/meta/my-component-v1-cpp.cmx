@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "bin/my-component-v1-cpp"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }
