@@ -297,13 +297,7 @@ void Device::DdkRelease() {
   Release();
 }
 
-zx_status_t Device::Unbind() { return DdkRemoveDeprecated(); }
-
 void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
-  zx_status_t result = Unbind();
-  if (result != ZX_OK) {
-    zxlogf(ERROR, "Failed to unbind qmi-usb-transport driver. Cannot remove device: %u", result);
-  }
   txn.Reply();
 }
 

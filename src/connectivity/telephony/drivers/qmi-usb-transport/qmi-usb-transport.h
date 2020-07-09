@@ -125,7 +125,6 @@ class Device : public ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>,
   ~Device() = default;
 
   zx_status_t Bind();
-  zx_status_t Unbind();
   void Release();
 
   zx_status_t SetChannelToDevice(zx_handle_t transport);
