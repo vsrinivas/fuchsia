@@ -33,7 +33,20 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     }
 
     async fn get_supported_network_types(&self) -> ZxResult<Vec<String>> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        fx_log_info!("Got get_supported_network_types command");
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.get_property_simple::<InterfaceType, _>(Prop::InterfaceType)
+            .map_ok(|x| match x {
+                InterfaceType::ZigbeeIp => {
+                    vec![fidl_fuchsia_lowpan::NET_TYPE_ZIGBEE_IP_1_X.to_string()]
+                }
+                InterfaceType::Thread => vec![fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()],
+                _ => vec![],
+            })
+            .await
     }
 
     async fn get_supported_channels(&self) -> ZxResult<Vec<ChannelInfo>> {

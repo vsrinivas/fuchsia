@@ -51,6 +51,13 @@ async fn test_spinel_lowpan_driver() {
             traceln!("app_task: NCP Version: {:?}", ncp_ver);
             assert_eq!(ncp_ver.map(|_| ()), Ok(()));
 
+            let network_types = driver.get_supported_network_types().await;
+            traceln!("app_task: Supported Network Types: {:?}", network_types);
+            assert_eq!(
+                network_types,
+                Ok(vec![fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()])
+            );
+
             let curr_chan = driver.get_current_channel().await;
             traceln!("app_task: Current Channel: {:?}", curr_chan);
             assert_eq!(curr_chan.map(|_| ()), Ok(()));
