@@ -4,13 +4,14 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
-#include <getopt.h>
+#include <lib/cmdline/args_parser.h>
 #include <lib/fdio/fdio.h>
 #include <stdio.h>
 #include <zircon/status.h>
 
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <sstream>
 
 #include <block-client/cpp/block-device.h>
@@ -24,54 +25,74 @@
 #include <minfs/command_handler.h>
 #include <minfs/minfs_inspector.h>
 
+#include "src/lib/line_input/modal_line_input.h"
+
 namespace {
 
-constexpr char kUsageMessage[] = R"""(
-Tool for inspecting a block device as a filesystem.
+bool should_quit = false;
 
-disk-inspect --device /dev/class/block/002 --name minfs
+constexpr char kHelpIntro[] =
+    R"(Tool for inspecting a block device as a filesystem. Typical usage:
 
-Options:
-  --device (-d) path : Specifies the block device to use.
-  --name (-n) : What filesystem type to represent the block device. Only
-                supports "minfs" for now.
-)""";
+  disk-inspect --device /dev/class/block/002 --name minfs
+
+Options
+
+)";
+
+const char kDeviceHelp[] =
+    "  --device (-d) <device-name>\n"
+    "      The path to the block device to use. For example,\n"
+    "      \"/dev/class/block/000\".";
+const char kHelpHelp[] =
+    "  --help (-h)\n"
+    "      Prints usage instructions.";
+const char kNameHelp[] =
+    "  --name (-n) <format>\n"
+    "      The filesystem type of the block device. Only \"minfs\" is currently\n"
+    "      supported.";
 
 // Configuration info (what to do).
 struct Config {
-  const char* path;
-  const char* name;
+  std::string path;
+  std::string name;
 };
 
-bool GetOptions(int argc, char** argv, Config* config) {
-  while (true) {
-    struct option options[] = {
-        {"device", required_argument, nullptr, 'd'},
-        {"name", required_argument, nullptr, 'n'},
-        {"help", no_argument, nullptr, 'h'},
-        {nullptr, 0, nullptr, 0},
-    };
-    int opt_index;
-    int c = getopt_long(argc, argv, "d:n:h", options, &opt_index);
-    if (c < 0) {
-      break;
-    }
-    switch (c) {
-      case 'd':
-        config->path = optarg;
-        break;
-      case 'n':
-        config->name = optarg;
-        break;
-      case 'h':
-        std::cout << kUsageMessage << "\n";
-        return false;
-    }
-  }
-  return argc == optind;
-}
+std::optional<Config> GetOptions(int argc, char** argv) {
+  cmdline::ArgsParser<Config> parser;
 
-bool ValidateOptions(const Config& config) { return !(!config.path || !config.name); }
+  bool print_help = argc == 1;  // Default to showing help if nothing is specified.
+  parser.AddSwitch("device", 'd', kDeviceHelp, &Config::path);
+  parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&print_help]() { print_help = true; });
+  parser.AddSwitch("name", 'n', kNameHelp, &Config::name);
+
+  std::vector<std::string> params;
+  Config config;
+  if (auto status = parser.Parse(argc, argv, &config, &params); status.has_error()) {
+    std::cerr << status.error_message() << "\n\n";
+    return std::nullopt;
+  }
+
+  // Check for explicitly-requested help.
+  if (print_help) {
+    std::cout << kHelpIntro << parser.GetHelp();
+    return std::nullopt;
+  }
+
+  // There should be no non-switch args.
+  if (!params.empty()) {
+    std::cerr << "This program takes no non-switch arguments. See --help.\n\n";
+    return std::nullopt;
+  }
+
+  // Validate.
+  if (config.path.empty() || config.name.empty()) {
+    std::cerr << "Both --device and --name are required.\n\n";
+    return std::nullopt;
+  }
+
+  return config;
+}
 
 fit::result<uint32_t, std::string> GetBlockSize(const std::string& name) {
   if (name == "minfs") {
@@ -131,58 +152,72 @@ std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path, con
   return handler;
 }
 
+void OnLineTyped(line_input::ModalLineInputStdout& input, disk_inspector::CommandHandler* handler,
+                 const std::string& line) {
+  if (line.find_first_not_of(' ') == std::string::npos)
+    return;
+
+  input.AddToHistory(line);
+
+  // Hide the input line so output gets appended without the lines of typing.
+  input.Hide();
+
+  std::stringstream ss(line);
+  std::istream_iterator<std::string> begin(ss);
+  std::istream_iterator<std::string> end;
+  std::vector<std::string> command_args(begin, end);
+  if (command_args[0] == "exit" || command_args[0] == "quit" || command_args[0] == "q") {
+    should_quit = true;
+    return;  // Don't unhide when exiting.
+  }
+
+  if (command_args[0] == "help" || command_args[0] == "h" || command_args[0] == "?") {
+    handler->PrintSupportedCommands();
+  } else {
+    if (zx_status_t status = handler->CallCommand(command_args); status != ZX_OK) {
+      switch (status) {
+        case ZX_ERR_NOT_SUPPORTED:
+          std::cerr << "Command not supported.\n";
+          break;
+        default:
+          std::cerr << "Call command failed with error: " << zx_status_get_string(status) << " ("
+                    << status << ")\n";
+          break;
+      }
+    }
+  }
+
+  // Re-show to match Hide() call at the top.
+  input.Show();
+}
+
 }  //  namespace
 
 int main(int argc, char** argv) {
-  Config config = {};
-  if (!GetOptions(argc, argv, &config)) {
-    std::cout << kUsageMessage << "\n";
+  auto option_result = GetOptions(argc, argv);
+  if (!option_result)
     return -1;
-  }
 
-  if (!ValidateOptions(config)) {
-    std::cout << kUsageMessage << "\n";
-    return -1;
-  }
-
-  std::unique_ptr<disk_inspector::CommandHandler> handler = GetHandler(config.path, config.name);
-  if (handler == nullptr) {
+  const Config& config = *option_result;
+  std::unique_ptr<disk_inspector::CommandHandler> handler =
+      GetHandler(config.path.c_str(), config.name.c_str());
+  if (!handler) {
     std::cerr << "Could not get inspector at path. Closing.\n";
     return -1;
   }
 
   std::cout << "Starting " << config.name
             << " inspector. Type \"help\" to get available commands.\n";
-  std::cout << "Type \"exit\" to quit the application.\n";
-  while (true) {
-    std::string command_str;
-    getline(std::cin, command_str);
-    if (command_str.find_first_not_of(' ') == std::string::npos) {
-      continue;
-    }
-    std::stringstream ss(command_str);
-    std::istream_iterator<std::string> begin(ss);
-    std::istream_iterator<std::string> end;
-    std::vector<std::string> command_args(begin, end);
-    if (command_args[0] == "exit") {
-      return 0;
-    }
-    if (command_args[0] == "help") {
-      handler->PrintSupportedCommands();
-      continue;
-    }
-    zx_status_t status = handler->CallCommand(command_args);
-    if (status != ZX_OK) {
-      switch (status) {
-        case ZX_ERR_NOT_SUPPORTED: {
-          std::cerr << "Command not supported.\n";
-          break;
-        }
-        default: {
-          std::cerr << "Call command failed with error: " << status << "\n";
-        }
-      }
-    }
-  }
+  std::cout << "Type \"exit\" or \"quit\" to quit the application.\n";
+
+  line_input::ModalLineInputStdout input;
+  input.Init(
+      [&input, &handler](const std::string& line) { OnLineTyped(input, handler.get(), line); },
+      "[disk-inspect] ");
+
+  input.Show();
+  while (!should_quit)
+    input.OnInput(static_cast<char>(getc(stdin)));
+
   return 0;
 }
