@@ -150,6 +150,11 @@ impl InspectDataFetcher {
         self
     }
 
+    // TODO: remove, just for soft-migration.
+    pub async fn get_hierarchy(self) -> Result<Vec<NodeHierarchy>, Error> {
+        self.get().await
+    }
+
     /// Connects to the archivist observer.cmx and returns inspect data associated with the given
     /// component under the relative realm path given.
     pub async fn get(self) -> Result<Vec<NodeHierarchy>, Error> {
