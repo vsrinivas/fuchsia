@@ -475,7 +475,8 @@ TEST(PortTest, Timestamp) {
 
 // Queue a packet while another thread is closing the port.  See that queuing thread observes
 // ZX_ERR_BAD_HANDLE.  This test is inherently racy.
-TEST(PortTest, CloseQueueRace) {
+// TODO(55824): Disabled as this asserts when the port is full.
+TEST(PortTest, DISABLED_CloseQueueRace) {
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
 
