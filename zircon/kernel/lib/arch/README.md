@@ -173,6 +173,11 @@ to any operating system.  That makes it possible to use these headers in
 Such declarations may also be useful in unit test code that can sometimes be
 built and tested on a different machine and/or operating system.
 
+There is also a `host` subdirectory akin to the machine subdirectories.  This
+is used in lieu of a particular machine when compiling for host environments.
+This makes it possible to write code using the machine-independent lib/arch API
+that can be built on host for purposes lock mock testing.
+
 ### C++
 
 Only C++ 17 with modern style is supported.

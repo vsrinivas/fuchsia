@@ -76,7 +76,7 @@ group("ulib-host") {
   testonly = true
   deps = [
     "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/arch/$zircon_cpu",
+    "$zx/kernel/lib/arch/host",
     "$zx/kernel/lib/heap/cmpctmalloc",
     "$zx/third_party/ulib/boringssl",
     "$zx/third_party/ulib/cksum",

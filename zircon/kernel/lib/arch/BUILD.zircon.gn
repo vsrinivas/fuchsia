@@ -4,21 +4,40 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-library("arch") {
-  kernel = true
-  static = true
+import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
 
-  # Not much is actually usable on host, but hwreg definitions and such are.
-  host = true
+if (current_toolchain != default_toolchain) {
+  library("arch") {
+    kernel = true
+    static = true
 
-  sdk = "source"
-  sdk_headers = [ "lib/arch/asm.h" ]
+    # Not much is actually usable on host, but hwreg definitions and such are.
+    host = true
 
-  sources = []
+    sdk = "source"
+    sdk_headers = [ "lib/arch/asm.h" ]
 
-  # The per-CPU subdirectory is a separate library() target but it shares
-  # (and overrides) the <lib/arch/...> header name space and users of this
-  # library need never realize it's distinct.
-  deps = [ zircon_cpu ]
-  public_deps = [ "$zircon_cpu:headers" ]
+    sources = []
+
+    if (is_host) {
+      deps = [ "host" ]
+      public_deps = [ "host:headers" ]
+    } else {
+      # The per-CPU subdirectory is a separate library() target but it shares
+      # (and overrides) the <lib/arch/...> header name space and users of this
+      # library need never realize it's distinct.
+      deps = [ zircon_cpu ]
+      public_deps = [
+        ":gen-x86-msr-asm",
+        "$zircon_cpu:headers",
+      ]
+    }
+  }
+}
+
+hwreg_asm_header("gen-x86-msr-asm") {
+  visibility = [ ":*" ]
+  output_name = "lib/arch/x86/msr-asm.h"
+  sources = [ "gen-x86-msr-asm.cc" ]
+  deps = [ ":arch" ]
 }

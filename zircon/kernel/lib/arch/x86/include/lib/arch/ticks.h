@@ -32,7 +32,7 @@ struct EarlyTicks {
 .macro sample_ticks
   rdtsc
 #ifdef __x86_64__
-  lsh $32, %rdx
+  shl $32, %rdx
   or %rdx, %rax
 #endif
 .endm
