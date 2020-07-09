@@ -787,15 +787,6 @@ From //build/images/factory.gni:9
 
 From //build/images/args.gni:91
 
-### fidl_write_v1_wireformat
-TODO(fxb/41298): This is a temporary change to activate writing the
-v1 FIDL wire-format selectively. Remove this when all bindings start
-writing v1 wire-format by default.
-
-**Current value (from the default):** `true`
-
-From //build/fidl/wireformat.gni:9
-
 ### filter_out_of_astro
 Use this flag to exclude artifacts from Astro builds.
 This is a very hacky way of ensuring that the resulting fuchsia.zbi fits

@@ -76,7 +76,6 @@ TEST(SimpleTable, SerializeAndDeserialize) {
   EXPECT_EQ(1, RoundTrip<NewerSimpleTable>(input).x());
 }
 
-#ifndef FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
 TEST(SimpleTable, SerializeAndDeserializeWithReserved) {
   SimpleTable input;
   input.set_y(1);
@@ -89,8 +88,6 @@ TEST(SimpleTable, SerializeAndDeserializeWithReserved) {
   // We should be able to decode to it.
   EXPECT_EQ(1, RoundTrip<NewerSimpleTable>(input).y());
 }
-
-#endif  // FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
 
 TEST(Empty, SerializeAndDeserialize) {
   Empty input{};
@@ -153,8 +150,6 @@ TEST(XUnion, Int32) {
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
 
-#ifndef FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
-// TODO(39159): Enable this test when writing v1 by default.
 TEST(XUnion, SimpleUnion) {
   SimpleUnion su;
   su.set_str("hello");
@@ -163,11 +158,14 @@ TEST(XUnion, SimpleUnion) {
   input.set_su(std::move(su));
 
   auto expected = std::vector<uint8_t>{
-      0x53, 0x76, 0x31, 0x6f, 0x00, 0x00, 0x00, 0x00,  // xunion discriminator + padding
-      0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes + num handles
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // xunion discriminator + padding
+      0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes + num handles
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data is present
       // secondary object 0
-      0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // union discriminant + padding
+      0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // xunion discriminator + padding
+      0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes + num handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data is present
+      // secondary object 1
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // string size
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // string pointer is present
       // secondary object 1
@@ -176,8 +174,6 @@ TEST(XUnion, SimpleUnion) {
 
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
-
-#endif  // FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
 
 TEST(XUnion, SimpleTable) {
   SimpleTable st;
@@ -205,8 +201,6 @@ TEST(XUnion, SerializeAndDeserializeInt32) {
   EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
 }
 
-#ifndef FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
-// TODO(39159): Enable this test when writing v1 by default.
 TEST(XUnion, SerializeAndDeserializeSimpleUnion) {
   SimpleUnion su;
   su.set_str("hello");
@@ -216,8 +210,6 @@ TEST(XUnion, SerializeAndDeserializeSimpleUnion) {
 
   EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
 }
-
-#endif  // FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
 
 TEST(XUnion, SerializeAndDeserializeSimpleTable) {
   SimpleTable st;

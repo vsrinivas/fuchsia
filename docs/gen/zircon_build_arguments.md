@@ -227,12 +227,6 @@ If true, excludes syscalls with the [testonly] attribute.
 
 From //vdso/vdso.gni:7
 
-### fidl_write_v1_wireformat
-
-**Current value (from the default):** `false`
-
-From //system/ulib/fidl/BUILD.zircon.gn:6
-
 ### fidlc_deprecate_c_unions
 
 **Current value (from the default):** `false`

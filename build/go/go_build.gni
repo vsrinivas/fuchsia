@@ -5,7 +5,6 @@
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/config/sysroot.gni")
-import("//build/fidl/wireformat.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
 
@@ -236,12 +235,6 @@ template("go_build") {
 
       # Go build tags
       tags = []
-
-      # Temporarily add a go tag if this GN arg is true.
-      # This is for the FIDL union/xunion migration.
-      if (fidl_write_v1_wireformat) {
-        tags += [ "write_xunion_bytes_for_union" ]
-      }
 
       if (defined(invoker.tags)) {
         tags += invoker.tags
