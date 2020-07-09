@@ -18,7 +18,13 @@ using fuchsia::test::Case;
 using fuchsia::test::Result;
 
 TestSuite::TestSuite(async::Loop* loop, std::vector<TestInput> inputs, Options options)
-    : binding_(this), test_inputs_(std::move(inputs)), options_(options), loop_(loop) {}
+    : binding_(this), test_inputs_(std::move(inputs)), options_(options), loop_(loop) {
+  for (auto& test_input : test_inputs_) {
+    if (test_input.disabled) {
+      disabled_tests_.insert(test_input.name);
+    }
+  }
+}
 
 void TestSuite::GetTests(::fidl::InterfaceRequest<fuchsia::test::CaseIterator> request) {
   if (options_.close_channel_get_tests) {
@@ -34,6 +40,7 @@ void TestSuite::GetTests(::fidl::InterfaceRequest<fuchsia::test::CaseIterator> r
   for (auto& test_input : test_inputs_) {
     Case test_case;
     test_case.set_name(test_input.name);
+    test_case.set_enabled(!test_input.disabled);
     cases.push_back(std::move(test_case));
   }
 
@@ -43,7 +50,7 @@ void TestSuite::GetTests(::fidl::InterfaceRequest<fuchsia::test::CaseIterator> r
 }
 
 void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
-                    fuchsia::test::RunOptions /*unused*/,
+                    fuchsia::test::RunOptions run_options,
                     fidl::InterfaceHandle<fuchsia::test::RunListener> run_listener) {
   if (options_.close_channel_run) {
     binding_.Close(ZX_ERR_PEER_CLOSED);
@@ -62,23 +69,26 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
     fuchsia::test::CaseListenerPtr case_list_ptr;
     ptr->OnTestCaseStarted(fidl::Clone(test_invocation), std::move(log_sock),
                            case_list_ptr.NewRequest());
-    std::string msg1 = "log1 for " + test_name + "\n";
-    std::string msg2 = "log2 for " + test_name + "\n";
-    std::string msg3 = "log3 for " + test_name + "\n";
-    zx_status_t status;
-    FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg1.data(), msg1.length(), nullptr)))
-        << status;
-    FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg2.data(), msg2.length(), nullptr)))
-        << status;
-    FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg3.data(), msg3.length(), nullptr)))
-        << status;
+    const bool should_skip_test = ShouldSkipTest(run_options, test_name);
+    if (!should_skip_test) {
+      std::string msg1 = "log1 for " + test_name + "\n";
+      std::string msg2 = "log2 for " + test_name + "\n";
+      std::string msg3 = "log3 for " + test_name + "\n";
+      zx_status_t status;
+      FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg1.data(), msg1.length(), nullptr)))
+          << status;
+      FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg2.data(), msg2.length(), nullptr)))
+          << status;
+      FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg3.data(), msg3.length(), nullptr)))
+          << status;
+    }
     Result result;
 
     bool send_finished_event = true;
     for (auto& test_input : test_inputs_) {
       if (test_input.name == test_name) {
         if (test_input.set_result_status) {
-          result.set_status(test_input.status);
+          result.set_status(should_skip_test ? fuchsia::test::Status::SKIPPED : test_input.status);
         }
         send_finished_event = !test_input.incomplete_test;
         break;
@@ -91,6 +101,13 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
   if (!options_.dont_send_on_finish_event) {
     ptr->OnFinished();
   }
+}
+
+bool TestSuite::ShouldSkipTest(const fuchsia::test::RunOptions& run_options,
+                               const std::string& test_name) const {
+  // Disabled tests are excluded && this test is disabled.
+  return !run_options.include_disabled_tests() &&
+         (disabled_tests_.find(test_name) != disabled_tests_.end());
 }
 
 fidl::InterfaceRequestHandler<fuchsia::test::Suite> TestSuite::GetHandler() {

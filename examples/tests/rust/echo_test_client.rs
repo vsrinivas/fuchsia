@@ -50,10 +50,11 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                 let mut stream = iterator.into_stream()?;
                 fasync::spawn(
                     async move {
-                        // TODO(fxb/45852): Support disabled tests.
-                        let mut cases_iter =
-                            vec![ftest::Case { name: Some("EchoTest".to_string()), enabled: None }]
-                                .into_iter();
+                        let mut cases_iter = vec![ftest::Case {
+                            name: Some("EchoTest".to_string()),
+                            enabled: Some(true),
+                        }]
+                        .into_iter();
                         while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
                             stream.try_next().await?
                         {

@@ -11,6 +11,9 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 
+#include <string>
+#include <unordered_set>
+
 namespace example {
 
 struct Options {
@@ -24,6 +27,8 @@ struct Options {
 struct TestInput {
   std::string name;
   fuchsia::test::Status status;
+  // Treat as disabled by developer if true
+  bool disabled = false;
   /// Skips OnTestCaseFinished if true
   bool incomplete_test = false;
   // will not set status if false.
@@ -58,10 +63,14 @@ class TestSuite : public fuchsia::test::Suite {
   fidl::InterfaceRequestHandler<fuchsia::test::Suite> GetHandler();
 
  private:
+  bool ShouldSkipTest(const fuchsia::test::RunOptions& run_options,
+                      const std::string& test_name) const;
+
   fidl::Binding<fuchsia::test::Suite> binding_;
   fidl::BindingSet<fuchsia::test::CaseIterator, std::unique_ptr<CaseIterator>>
       case_iterator_bindings_;
   const std::vector<TestInput> test_inputs_;
+  std::unordered_set<std::string> disabled_tests_;
   Options options_;
   async::Loop* loop_;
 };

@@ -46,6 +46,16 @@ executable("no-onfinished-after-test-example") {
   sources = [ "no_onfinished_after_test_example.cc" ]
 }
 
+executable("disabled-test-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+  sources = [ "disabled_test_example.cc" ]
+}
+
 executable("failing-test-example") {
   deps = [
     ":test_suite_lib",
@@ -136,6 +146,7 @@ executable("run-closes-channel-example") {
 
 group("all_bins") {
   public_deps = [
+    ":disabled-test-example",
     ":failing-test-example",
     ":get-tests-closes-channel-example",
     ":get-tests-hangs-example",
@@ -165,6 +176,9 @@ package("example-tests") {
     },
     {
       name = "huge-test-example"
+    },
+    {
+      name = "disabled-test-example"
     },
     {
       name = "failing-test-example"
@@ -224,6 +238,10 @@ package("example-tests") {
     {
       path = "meta/huge-test-example.cml"
       dest = "huge-test-example.cm"
+    },
+    {
+      path = "meta/disabled-test-example.cml"
+      dest = "disabled-test-example.cm"
     },
     {
       path = "meta/failing-test-example.cml"

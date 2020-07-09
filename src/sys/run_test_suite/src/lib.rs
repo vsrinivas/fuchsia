@@ -19,6 +19,8 @@ use {
     test_executor::{TestEvent, TestRunOptions},
 };
 
+pub use test_executor::DisabledTestHandling;
+
 #[derive(PartialEq, Debug)]
 pub enum Outcome {
     Passed,
@@ -62,6 +64,7 @@ pub async fn run_test<W: Write>(
     writer: &mut W,
     timeout: Option<std::num::NonZeroU32>,
     test_filter: Option<&str>,
+    disabled_tests: DisabledTestHandling,
 ) -> Result<RunResult, anyhow::Error> {
     let mut timeout = match timeout {
         Some(timeout) => futures::future::Either::Left(
@@ -86,8 +89,7 @@ pub async fn run_test<W: Write>(
 
     let mut successful_completion = false;
 
-    // TODO(fxb/45852): Support disabled tests.
-    let run_options = TestRunOptions::default();
+    let run_options = TestRunOptions { disabled_tests };
 
     let test_fut =
         test_executor::run_v2_test_component(harness, url, sender, test_filter, run_options).fuse();

@@ -41,6 +41,10 @@ test_package("run_test_suite_integration_tests") {
       dest = "failing-test-example.cm"
     },
     {
+      path = rebase_path("//examples/tests/meta/disabled-test-example.cml")
+      dest = "disabled-test-example.cm"
+    },
+    {
       path = rebase_path("//examples/tests/meta/incomplete-test-example.cml")
       dest = "incomplete-test-example.cm"
     },
@@ -91,6 +95,9 @@ test_package("run_test_suite_integration_tests") {
     },
     {
       name = "no-onfinished-after-test-example"
+    },
+    {
+      name = "disabled-test-example"
     },
     {
       name = "failing-test-example"

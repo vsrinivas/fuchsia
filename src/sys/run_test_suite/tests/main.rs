@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use run_test_suite_lib::{run_test, Outcome};
+use run_test_suite_lib::{run_test, DisabledTestHandling, Outcome};
 use std::str::from_utf8;
 
 /// split and sort output as output can come in any order.
@@ -28,7 +28,7 @@ async fn launch_and_test_no_clean_exit() {
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm"
             .to_string(),
-        &mut output, None, None
+        &mut output, None, None, DisabledTestHandling::Exclude
     )
     .await
     .expect("Running test should not fail");
@@ -65,7 +65,7 @@ async fn launch_and_test_passing_v2_test() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm"
-            .to_string(), &mut output, None, None
+            .to_string(), &mut output, None, None, DisabledTestHandling::Exclude
     )
     .await
     .expect("Running test should not fail");
@@ -102,7 +102,7 @@ async fn launch_and_test_with_filter() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm"
-            .to_string(), &mut output, None, Some("*Test3")
+            .to_string(), &mut output, None, Some("*Test3"), DisabledTestHandling::Exclude
     )
     .await
     .expect("Running test should not fail");
@@ -133,6 +133,7 @@ async fn launch_and_test_empty_test() {
         &mut output,
         None,
         None,
+        DisabledTestHandling::Exclude,
     )
     .await
     .expect("Running test should not fail");
@@ -152,12 +153,95 @@ async fn launch_and_test_huge_test() {
         &mut output,
         None,
         None,
+        DisabledTestHandling::Exclude,
     )
     .await
     .expect("Running test should not fail");
 
     assert_eq!(run_result.executed.len(), 1_000);
     assert_eq!(run_result.passed.len(), 1_000);
+    assert!(run_result.successful_completion);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_disabled_test_exclude_disabled() {
+    let mut output: Vec<u8> = vec![];
+    let run_result = run_test(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm"
+            .to_string(),
+        &mut output,
+        None,
+        None,
+        DisabledTestHandling::Exclude,
+    )
+    .await
+    .expect("Running test should not fail");
+
+    let expected_output = "[RUNNING]	Example.Test1
+[Example.Test1]	log1 for Example.Test1
+[Example.Test1]	log2 for Example.Test1
+[Example.Test1]	log3 for Example.Test1
+[PASSED]	Example.Test1
+[RUNNING]	Example.Test2
+[SKIPPED]	Example.Test2
+[RUNNING]	Example.Test3
+[SKIPPED]	Example.Test3
+";
+    assert_output!(output, expected_output);
+
+    assert_eq!(run_result.outcome, Outcome::Passed);
+
+    // "skipped" is a form of "executed"
+    let expected_executed = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
+    let expected_passed = vec!["Example.Test1"];
+
+    assert_eq!(run_result.executed, expected_executed);
+    assert_eq!(run_result.passed, expected_passed);
+
+    assert!(run_result.successful_completion);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_disabled_test_include_disabled() {
+    let mut output: Vec<u8> = vec![];
+    let run_result = run_test(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm"
+            .to_string(),
+        &mut output,
+        None,
+        None,
+        DisabledTestHandling::Include,
+    )
+    .await
+    .expect("Running test should not fail");
+
+    let expected_output = "[RUNNING]	Example.Test1
+[Example.Test1]	log1 for Example.Test1
+[Example.Test1]	log2 for Example.Test1
+[Example.Test1]	log3 for Example.Test1
+[PASSED]	Example.Test1
+[RUNNING]	Example.Test2
+[Example.Test2]	log1 for Example.Test2
+[Example.Test2]	log2 for Example.Test2
+[Example.Test2]	log3 for Example.Test2
+[PASSED]	Example.Test2
+[RUNNING]	Example.Test3
+[Example.Test3]	log1 for Example.Test3
+[Example.Test3]	log2 for Example.Test3
+[Example.Test3]	log3 for Example.Test3
+[FAILED]	Example.Test3
+";
+    assert_output!(output, expected_output);
+
+    assert_eq!(run_result.outcome, Outcome::Failed);
+
+    // "skipped" is a form of "executed"
+    let expected_executed = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
+    let expected_passed = vec!["Example.Test1", "Example.Test2"];
+
+    assert_eq!(run_result.executed, expected_executed);
+    assert_eq!(run_result.passed, expected_passed);
+
     assert!(run_result.successful_completion);
 }
 
@@ -170,6 +254,7 @@ async fn launch_and_test_failing_test() {
         &mut output,
         None,
         None,
+        DisabledTestHandling::Exclude,
     )
     .await
     .expect("Running test should not fail");
@@ -206,7 +291,8 @@ async fn launch_and_test_incomplete_test() {
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm"
             .to_string(),
-            &mut output, None, None
+            &mut output, None, None,
+            DisabledTestHandling::Exclude
     )
     .await
     .expect("Running test should not fail");
@@ -248,6 +334,7 @@ async fn launch_and_test_invalid_test() {
         &mut output,
         None,
         None,
+        DisabledTestHandling::Exclude,
     )
     .await
     .expect("Running test should not fail");
@@ -289,6 +376,7 @@ async fn launch_and_run_echo_test() {
         &mut output,
         None,
         None,
+        DisabledTestHandling::Exclude,
     )
     .await
     .expect("Running test should not fail");
@@ -314,6 +402,7 @@ async fn test_timeout() {
         &mut output,
         std::num::NonZeroU32::new(1),
         None,
+        DisabledTestHandling::Exclude,
     )
     .await
     .expect("Running test should not fail");
@@ -333,6 +422,7 @@ async fn test_passes_with_large_timeout() {
         &mut output,
         std::num::NonZeroU32::new(600), // make timeout 10 minutes.
         None,
+        DisabledTestHandling::Exclude,
     )
     .await
     .expect("Running test should not fail");
