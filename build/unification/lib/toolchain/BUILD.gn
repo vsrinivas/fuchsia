@@ -4,11 +4,6 @@
 
 import("//build/unification/lib/zircon_runtime_library.gni")
 
-# The sysroot currently only provides a single library, libc.
-zircon_runtime_library("sysroot") {
-  library = "c"
-}
-
 compiler_libs = [
   "libcpp.so.2",
   "libcppabi.so.1",

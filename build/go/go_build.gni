@@ -278,6 +278,7 @@ template("go_build") {
 
       if (is_fuchsia) {
         deps += [
+          "//build/unification/lib/sysroot",
           "//sdk/lib/fdio",
           "//third_party/go:go_runtime",
         ]

@@ -1121,7 +1121,7 @@ template("variant_target") {
         if (!defined(data_deps)) {
           data_deps = []
         }
-        data_deps += [ "//build/unification/lib:sysroot" ]
+        data_deps += [ "//build/unification/lib/sysroot" ]
         should_add_toolchain_deps = true
         if (defined(configs)) {
           # Do not add runtime dependencies if compiling statically.
@@ -1132,7 +1132,7 @@ template("variant_target") {
           }
         }
         if (should_add_toolchain_deps) {
-          data_deps += [ "//build/unification/lib:toolchain" ]
+          data_deps += [ "//build/unification/lib/toolchain" ]
         }
       }
     }
