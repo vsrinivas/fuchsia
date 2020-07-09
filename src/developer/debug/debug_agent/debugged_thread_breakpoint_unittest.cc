@@ -27,16 +27,6 @@ constexpr uint64_t kWatchpointLength = 8;
 
 class MockBreakpointArchProvider : public MockArchProvider {
  public:
-  zx_status_t ReadGeneralState(const zx::thread&, zx_thread_state_general_regs* r) const override {
-    *arch::IPInRegs(r) = exception_addr_;
-    return ZX_OK;
-  }
-
-  zx_status_t WriteGeneralState(const zx::thread&,
-                                const zx_thread_state_general_regs& regs) override {
-    return ZX_OK;
-  }
-
   zx_status_t GetInfo(const zx::thread&, zx_object_info_topic_t topic, void* buffer,
                       size_t buffer_size, size_t* actual, size_t* avail) const override {
     zx_info_thread* info = reinterpret_cast<zx_info_thread*>(buffer);
@@ -251,9 +241,15 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
 
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
-  mock_thread_handle->set_state(ZX_THREAD_STATE_BLOCKED_EXCEPTION);
   context.arch_provider->set_exception_addr(kAddress);
   context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kPageFault);
+
+  // The current thread address should agree with the exception.
+  GeneralRegisters regs;
+  regs.set_ip(kAddress);
+  mock_thread_handle->SetGeneralRegisters(regs);
+  mock_thread_handle->set_state(
+      ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Trigger the exception.
   zx_exception_info exception_info = {};
@@ -301,9 +297,15 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
 
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
-  mock_thread_handle->set_state(ZX_THREAD_STATE_BLOCKED_EXCEPTION);
   context.arch_provider->set_exception_addr(kAddress);
   context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kSoftware);
+
+  // The current thread address should agree with the exception.
+  GeneralRegisters regs;
+  regs.set_ip(kAddress);
+  mock_thread_handle->SetGeneralRegisters(regs);
+  mock_thread_handle->set_state(
+      ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Trigger the exception.
   zx_exception_info exception_info = {};
@@ -389,9 +391,15 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
 
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
-  mock_thread_handle->set_state(ZX_THREAD_STATE_BLOCKED_EXCEPTION);
   context.arch_provider->set_exception_addr(kAddress);
   context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kHardware);
+
+  // The current thread address should agree with the exception.
+  GeneralRegisters regs;
+  regs.set_ip(kAddress);
+  mock_thread_handle->SetGeneralRegisters(regs);
+  mock_thread_handle->set_state(
+      ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Add a breakpoint on that address.
   constexpr uint32_t kBreakpointId = 1000;
@@ -471,10 +479,16 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   // Set the exception information the arch provider is going to return.
   const uint64_t kAddress = kRange.begin();
   constexpr uint64_t kSlot = 0;
-  mock_thread_handle->set_state(ZX_THREAD_STATE_BLOCKED_EXCEPTION);
   context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kWatchpoint);
   context.arch_provider->set_exception_addr(kAddress);
   context.arch_provider->set_slot(kSlot);
+
+  // The current thread address should agree with the exception.
+  GeneralRegisters regs;
+  regs.set_ip(kAddress);
+  mock_thread_handle->SetGeneralRegisters(regs);
+  mock_thread_handle->set_state(
+      ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Trigger the exception.
   zx_exception_info exception_info = {};

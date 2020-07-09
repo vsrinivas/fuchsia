@@ -23,7 +23,7 @@ class MockThreadHandle final : public ThreadHandle {
   MockThreadHandle(zx_koid_t process_koid, zx_koid_t thread_koid)
       : process_koid_(process_koid), thread_koid_(thread_koid) {}
 
-  void set_state(uint32_t state) { state_ = state; }
+  void set_state(State s) { state_ = s; }
 
   // Sets the values to be returned for the given register category query.
   void SetRegisterCategory(debug_ipc::RegisterCategory cat,
@@ -56,9 +56,11 @@ class MockThreadHandle final : public ThreadHandle {
   const zx::thread& GetNativeHandle() const override { return null_handle_; }
   zx::thread& GetNativeHandle() override { return null_handle_; }
   zx_koid_t GetKoid() const override { return thread_koid_; }
-  uint32_t GetState() const override { return state_; }
+  State GetState() const override { return state_; }
   debug_ipc::ThreadRecord GetThreadRecord() const override;
   zx::suspend_token Suspend() override;
+  std::optional<GeneralRegisters> GetGeneralRegisters() const override;
+  void SetGeneralRegisters(const GeneralRegisters& regs) override;
   std::vector<debug_ipc::Register> ReadRegisters(
       const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const override;
   std::vector<debug_ipc::Register> WriteRegisters(
@@ -79,7 +81,9 @@ class MockThreadHandle final : public ThreadHandle {
 
   std::vector<debug_ipc::Register>
       registers_[static_cast<size_t>(debug_ipc::RegisterCategory::kLast)];
-  uint32_t state_ = ZX_THREAD_STATE_RUNNING;
+
+  State state_;
+  GeneralRegisters general_registers_;
 
   debug_ipc::AddressRange watchpoint_range_to_return_;
   int watchpoint_slot_to_return_ = 0;

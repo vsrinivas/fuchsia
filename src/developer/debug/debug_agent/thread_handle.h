@@ -10,13 +10,36 @@
 #include <vector>
 
 #include "src/developer/debug/debug_agent/arch_helpers.h"
+#include "src/developer/debug/debug_agent/general_registers.h"
 #include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
 
+class GeneralRegisters;
+
 // An abstract wrapper around an OS thread primitive. This abstraction is to allow mocking.
 class ThreadHandle {
  public:
+  struct State {
+    explicit State(debug_ipc::ThreadRecord::State s = debug_ipc::ThreadRecord::State::kRunning,
+                   debug_ipc::ThreadRecord::BlockedReason br =
+                       debug_ipc::ThreadRecord::BlockedReason::kNotBlocked)
+        : state(s), blocked_reason(br) {}
+
+    // Creates a blocked state with the given reason.
+    explicit State(debug_ipc::ThreadRecord::BlockedReason br)
+        : state(debug_ipc::ThreadRecord::State::kBlocked), blocked_reason(br) {}
+
+    // This state is common to check for and requires a combination of things to check.
+    bool is_blocked_on_exception() const {
+      return state == debug_ipc::ThreadRecord::State::kBlocked &&
+             blocked_reason == debug_ipc::ThreadRecord::BlockedReason::kException;
+    }
+
+    debug_ipc::ThreadRecord::State state;
+    debug_ipc::ThreadRecord::BlockedReason blocked_reason;
+  };
+
   virtual ~ThreadHandle() = default;
 
   // Access to the underlying native thread object. This is for porting purposes, ideally this
@@ -28,8 +51,7 @@ class ThreadHandle {
 
   virtual zx_koid_t GetKoid() const = 0;
 
-  // Returns a ZX_THREAD_STATE_* enum for the thread.
-  virtual uint32_t GetState() const = 0;
+  virtual State GetState() const = 0;
 
   // Fills in everything but the stack into the returned thread record.
   virtual debug_ipc::ThreadRecord GetThreadRecord() const = 0;
@@ -38,6 +60,10 @@ class ThreadHandle {
   virtual zx::suspend_token Suspend() = 0;
 
   // Registers -------------------------------------------------------------------------------------
+
+  // Reads and writes the general thread registers.
+  virtual std::optional<GeneralRegisters> GetGeneralRegisters() const = 0;
+  virtual void SetGeneralRegisters(const GeneralRegisters& regs) = 0;
 
   // Returns the current values of the given register categories.
   virtual std::vector<debug_ipc::Register> ReadRegisters(

@@ -122,9 +122,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   // thread state according to the underlying zircon truth.
   void PopulateCurrentThreads();
 
-  // Appends the information for all current threads. This writes minimal
-  // stacks.
-  void FillThreadRecords(std::vector<debug_ipc::ThreadRecord>* threads);
+  // Returns the information for all current threads. This gets minimal stacks.
+  std::vector<debug_ipc::ThreadRecord> GetThreadRecords() const;
 
   // Attempts to load the debug_state_ value from the
   // ZX_PROP_PROCESS_DEBUG_ADDR of the debugged process. Returns true if it

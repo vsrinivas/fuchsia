@@ -13,6 +13,7 @@
 namespace debug_ipc {
 struct AddressRegion;
 struct MemoryBlock;
+struct Module;
 }  // namespace debug_ipc
 
 namespace debug_agent {
@@ -35,6 +36,14 @@ class ProcessHandle {
   // Returns the address space information. If the address is non-null, only the regions covering
   // that address will be returned. Otherwise all regions will be returned.
   virtual std::vector<debug_ipc::AddressRegion> GetAddressSpace(uint64_t address) const = 0;
+
+  // Returns the modules (shared libraries and the main binary) for the process. Will be empty on
+  // failure.
+  //
+  // Prefer this version to calling the elf_utils variant because this one allows mocking.
+  //
+  // TODO(brettw) consider moving dl_debug_addr to be internally managed by ZirconProcessInfo.
+  virtual std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const = 0;
 
   virtual zx_status_t ReadMemory(uintptr_t address, void* buffer, size_t len,
                                  size_t* actual) const = 0;

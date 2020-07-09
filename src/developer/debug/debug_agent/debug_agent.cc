@@ -22,7 +22,6 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
-#include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
@@ -182,10 +181,8 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
     auto threads = proc->GetThreads();
     process_record.threads.reserve(threads.size());
     for (auto* thread : threads) {
-      debug_ipc::ThreadRecord thread_record;
-      thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kNone, nullptr,
-                               &thread_record);
-      process_record.threads.emplace_back(std::move(thread_record));
+      process_record.threads.emplace_back(
+          thread->GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kNone));
     }
 
     reply->processes.emplace_back(std::move(process_record));
@@ -345,7 +342,7 @@ void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
   if (found == procs_.end())
     return;
 
-  found->second->FillThreadRecords(&reply->threads);
+  reply->threads = found->second->GetThreadRecords();
 }
 
 void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
@@ -438,7 +435,7 @@ void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                                 debug_ipc::ThreadStatusReply* reply) {
   DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
-    thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kFull, nullptr, &reply->record);
+    reply->record = thread->GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kFull);
   } else {
     // When the thread is not found the thread record is set to "dead".
     reply->record.process_koid = request.process_koid;

@@ -9,18 +9,6 @@
 namespace debug_agent {
 namespace arch {
 
-zx_status_t ArchProviderFuchsia::ReadGeneralState(const zx::thread& thread,
-                                                  zx_thread_state_general_regs* regs) const {
-  return thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, regs,
-                           sizeof(zx_thread_state_general_regs));
-}
-
-zx_status_t ArchProviderFuchsia::WriteGeneralState(const zx::thread& thread,
-                                                   const zx_thread_state_general_regs& regs) {
-  return thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs,
-                            sizeof(zx_thread_state_general_regs));
-}
-
 zx_status_t ArchProviderFuchsia::ReadDebugState(const zx::thread& thread,
                                                 zx_thread_state_debug_regs* regs) const {
   return thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, regs, sizeof(zx_thread_state_debug_regs));

@@ -16,7 +16,6 @@
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
-#include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/debug_agent/zircon_thread_exception.h"
@@ -191,12 +190,11 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
       thread->Suspend(true);
       thread->set_client_state(DebuggedThread::ClientState::kPaused);
 
-      // The Suspend call could have failed though most failures should be
-      // rare (perhaps we raced with the thread being destroyed). Either way,
-      // send our current knowledge of the thread's state.
-      debug_ipc::ThreadRecord record;
-      thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr, &record);
-      reply->threads.push_back(std::move(record));
+      // The Suspend call could have failed though most failures should be rare (perhaps we raced
+      // with the thread being destroyed). Either way, send our current knowledge of the thread's
+      // state.
+      reply->threads.push_back(
+          thread->GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal));
     }
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
@@ -212,7 +210,7 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
       thread->set_client_state(DebuggedThread::ClientState::kPaused);
     }
 
-    FillThreadRecords(&reply->threads);
+    reply->threads = GetThreadRecords();
   }
 }
 
@@ -306,12 +304,11 @@ void DebuggedProcess::PopulateCurrentThreads() {
   }
 }
 
-void DebuggedProcess::FillThreadRecords(std::vector<debug_ipc::ThreadRecord>* threads) {
-  for (const auto& pair : threads_) {
-    debug_ipc::ThreadRecord record;
-    pair.second->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr, &record);
-    threads->push_back(std::move(record));
-  }
+std::vector<debug_ipc::ThreadRecord> DebuggedProcess::GetThreadRecords() const {
+  std::vector<debug_ipc::ThreadRecord> result;
+  for (const auto& pair : threads_)
+    result.push_back(pair.second->GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal));
+  return result;
 }
 
 bool DebuggedProcess::RegisterDebugState() {
@@ -374,7 +371,7 @@ void DebuggedProcess::SendModuleNotification(std::vector<uint64_t> paused_thread
   // Notify the client of any libraries.
   debug_ipc::NotifyModules notify;
   notify.process_koid = koid_;
-  GetModulesForProcess(handle(), dl_debug_addr_, &notify.modules);
+  notify.modules = process_handle_->GetModules(dl_debug_addr_);
   notify.stopped_thread_koids = std::move(paused_thread_koids);
 
   DEBUG_LOG(Process) << LogPreamble(this) << "Sending modules.";
@@ -608,8 +605,7 @@ void DebuggedProcess::OnThreadExiting(zx::exception exception, zx_exception_info
 
   threads_.erase(exception_info.tid);
 
-  // Notify the client. Can't call FillThreadRecord since the thread doesn't
-  // exist any more.
+  // Notify the client. Can't call GetThreadRecord since the thread doesn't exist any more.
   debug_ipc::NotifyThread notify;
   notify.record.process_koid = exception_info.pid;
   notify.record.thread_koid = exception_info.tid;
@@ -642,7 +638,7 @@ void DebuggedProcess::OnAddressSpace(const debug_ipc::AddressSpaceRequest& reque
 void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
   // Modules can only be read after the debug state is set.
   if (dl_debug_addr_)
-    GetModulesForProcess(handle(), dl_debug_addr_, &reply->modules);
+    reply->modules = process_handle_->GetModules(dl_debug_addr_);
 }
 
 void DebuggedProcess::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,

@@ -13,6 +13,8 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/arch_provider_impl.h"
+#include "src/developer/debug/debug_agent/zircon_process_handle.h"
+#include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 
 namespace debug_agent {
 
@@ -25,7 +27,7 @@ struct ThreadData {
 
   // Set by thread itself before thread_ready is signaled. zx::thread::native_handle doesn't seem to
   // do what we want.
-  zx::thread thread;
+  std::unique_ptr<ThreadHandle> thread;
 
   bool thread_ready = false;
   std::condition_variable thread_ready_cv;
@@ -48,7 +50,12 @@ void __attribute__((noinline)) ThreadFunc2(ThreadData* data) {
 
 void __attribute__((noinline)) ThreadFunc1(ThreadData* data) {
   // Fill in our thread handle.
-  zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &data->thread);
+  zx::thread handle;
+  zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
+
+  // Here we use fake koids for the process and thread because those aren't necessary for the test.
+  data->thread = std::make_unique<ZirconThreadHandle>(std::make_shared<ArchProviderImpl>(), 1, 2,
+                                                      std::move(handle));
 
   // Put another function on the stack.
   ThreadFunc2(data);
@@ -59,14 +66,14 @@ void __attribute__((noinline)) ThreadFunc1(ThreadData* data) {
 }
 
 // Synchronously suspends the thread. Returns a valid suspend token on success.
-zx::suspend_token SyncSuspendThread(zx::thread& thread) {
-  zx::suspend_token token;
-  zx_status_t status = thread.suspend(&token);
-  EXPECT_EQ(ZX_OK, status);
+zx::suspend_token SyncSuspendThread(ThreadHandle& thread) {
+  // TODO(brettw) add a synchronous suspend to the ThreadHandle API.
+  zx::suspend_token token = thread.Suspend();
 
   // Need long timeout when running on shared bots on QEMU.
   zx_signals_t observed = 0;
-  status = thread.wait_one(ZX_THREAD_SUSPENDED, zx::deadline_after(zx::sec(10)), &observed);
+  zx_status_t status = thread.GetNativeHandle().wait_one(
+      ZX_THREAD_SUSPENDED, zx::deadline_after(zx::sec(10)), &observed);
   EXPECT_TRUE(observed & ZX_THREAD_SUSPENDED);
   if (status != ZX_OK)
     return zx::suspend_token();
@@ -76,6 +83,11 @@ zx::suspend_token SyncSuspendThread(zx::thread& thread) {
 
 void DoUnwindTest() {
   ArchProviderImpl arch_provider;
+
+  zx::process handle;
+  zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
+  // This uses a fake KOID since we don't need it for this test.
+  ZirconProcessHandle process(1, std::move(handle));
 
   ThreadData data;
   std::thread background(ThreadFunc1, &data);
@@ -88,23 +100,21 @@ void DoUnwindTest() {
       data.thread_ready_cv.wait(lock, [&data]() { return data.thread_ready; });
 
     // Thread query functions require it to be suspended.
-    zx::suspend_token suspend = SyncSuspendThread(data.thread);
+    zx::suspend_token suspend = SyncSuspendThread(*data.thread);
 
     // Get the registers for the unwinder.
-    zx_thread_state_general_regs regs;
-    zx_status_t status = data.thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
-    ASSERT_EQ(ZX_OK, status);
+    std::optional<GeneralRegisters> regs = data.thread->GetGeneralRegisters();
+    ASSERT_TRUE(regs);
 
     // The debug addr is necessary to find the unwind information.
     uintptr_t debug_addr = 0;
-    status = zx::process::self()->get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr,
-                                               sizeof(debug_addr));
+    zx_status_t status = zx::process::self()->get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr,
+                                                           sizeof(debug_addr));
     ASSERT_EQ(ZX_OK, status);
     ASSERT_NE(0u, debug_addr);
 
     // Do the unwinding.
-    status = UnwindStack(&arch_provider, *zx::process::self(), debug_addr, data.thread, regs, 16,
-                         &stack);
+    status = UnwindStack(&arch_provider, process, debug_addr, *data.thread, *regs, 16, &stack);
     ASSERT_EQ(ZX_OK, status);
 
     data.backtrace_done = true;

@@ -7,6 +7,8 @@
 
 #include <lib/zx/thread.h>
 
+#include <optional>
+
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/thread_handle.h"
 
@@ -23,9 +25,11 @@ class ZirconThreadHandle final : public ThreadHandle {
   const zx::thread& GetNativeHandle() const override { return thread_; }
   zx::thread& GetNativeHandle() override { return thread_; }
   zx_koid_t GetKoid() const override { return thread_koid_; }
-  uint32_t GetState() const override;
+  State GetState() const override;
   debug_ipc::ThreadRecord GetThreadRecord() const override;
   zx::suspend_token Suspend() override;
+  std::optional<GeneralRegisters> GetGeneralRegisters() const override;
+  void SetGeneralRegisters(const GeneralRegisters& regs) override;
   std::vector<debug_ipc::Register> ReadRegisters(
       const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const override;
   std::vector<debug_ipc::Register> WriteRegisters(

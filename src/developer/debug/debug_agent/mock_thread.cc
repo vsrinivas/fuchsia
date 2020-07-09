@@ -43,13 +43,6 @@ bool MockThread::WaitForSuspension(zx::time deadline) {
   return true;
 }
 
-void MockThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
-                                  const zx_thread_state_general_regs* optional_regs,
-                                  debug_ipc::ThreadRecord* record) const {
-  record->process_koid = process()->koid();
-  record->thread_koid = koid();
-}
-
 void MockThread::IncreaseSuspend() {
   suspend_count_++;
   DEBUG_LOG(Test) << "Thread " << koid() << ": Increased suspend count to " << suspend_count_;

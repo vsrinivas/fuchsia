@@ -32,6 +32,7 @@ class MockProcessHandle final : public ProcessHandle {
   zx_koid_t GetKoid() const override { return process_koid_; }
   zx_status_t GetInfo(zx_info_process* info) const override;
   std::vector<debug_ipc::AddressRegion> GetAddressSpace(uint64_t address) const override;
+  std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const override;
   zx_status_t ReadMemory(uintptr_t address, void* buffer, size_t len,
                          size_t* actual) const override;
   zx_status_t WriteMemory(uintptr_t address, const void* buffer, size_t len,

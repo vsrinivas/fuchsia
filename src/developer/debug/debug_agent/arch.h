@@ -38,12 +38,6 @@ class ArchProvider {
 
   // Thread Management -----------------------------------------------------------------------------
 
-  // Read/write general-purpose registers.
-  virtual zx_status_t ReadGeneralState(const zx::thread& handle,
-                                       zx_thread_state_general_regs* regs) const = 0;
-  virtual zx_status_t WriteGeneralState(const zx::thread& handle,
-                                        const zx_thread_state_general_regs& regs) = 0;
-
   // Read/write debug registers.
   virtual zx_status_t ReadDebugState(const zx::thread& handle,
                                      zx_thread_state_debug_regs* regs) const = 0;

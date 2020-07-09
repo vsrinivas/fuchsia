@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 
-#include "src/developer/debug/debug_agent/process_info.h"
+#include "src/developer/debug/debug_agent/elf_utils.h"
 #include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
@@ -44,6 +44,10 @@ std::vector<debug_ipc::AddressRegion> ZirconProcessHandle::GetAddressSpace(uint6
   }
 
   return regions;
+}
+
+std::vector<debug_ipc::Module> ZirconProcessHandle::GetModules(uint64_t dl_debug_addr) const {
+  return GetElfModulesForProcess(*this, dl_debug_addr);
 }
 
 zx_status_t ZirconProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_t len,

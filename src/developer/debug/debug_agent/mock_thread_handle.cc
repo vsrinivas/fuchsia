@@ -6,8 +6,6 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/debug/debug_agent/process_info.h"
-
 namespace debug_agent {
 
 void MockThreadHandle::SetRegisterCategory(debug_ipc::RegisterCategory cat,
@@ -77,11 +75,20 @@ debug_ipc::ThreadRecord MockThreadHandle::GetThreadRecord() const {
   record.process_koid = process_koid_;
   record.thread_koid = thread_koid_;
   record.name = "test thread";
-  record.state = ThreadStateToEnums(GetState(), &record.blocked_reason);
+  record.state = state_.state;
+  record.blocked_reason = state_.blocked_reason;
   return record;
 }
 
 zx::suspend_token MockThreadHandle::Suspend() { return zx::suspend_token(); }
+
+std::optional<GeneralRegisters> MockThreadHandle::GetGeneralRegisters() const {
+  return general_registers_;
+}
+
+void MockThreadHandle::SetGeneralRegisters(const GeneralRegisters& regs) {
+  general_registers_ = regs;
+}
 
 std::vector<debug_ipc::Register> MockThreadHandle::ReadRegisters(
     const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const {

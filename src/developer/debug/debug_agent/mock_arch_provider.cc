@@ -8,20 +8,6 @@
 
 namespace debug_agent {
 
-zx_status_t MockArchProvider::ReadGeneralState(const zx::thread& handle,
-                                               zx_thread_state_general_regs* regs) const {
-  // Not implemented by this mock.
-  FX_NOTREACHED();
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t MockArchProvider::WriteGeneralState(const zx::thread& handle,
-                                                const zx_thread_state_general_regs& regs) {
-  // Not implemented by this mock.
-  FX_NOTREACHED();
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t MockArchProvider::ReadDebugState(const zx::thread& handle,
                                              zx_thread_state_debug_regs* regs) const {
   // Not implemented by this mock.

@@ -10,6 +10,7 @@
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/debug_agent/general_registers.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/developer/debug/debug_agent/thread_handle.h"
@@ -17,8 +18,6 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-
-struct zx_thread_state_general_regs;
 
 namespace debug_agent {
 
@@ -146,15 +145,15 @@ class DebuggedThread {
   // suspended or on an exception). False if timeout or error.
   virtual bool WaitForSuspension(zx::time deadline = DefaultSuspendDeadline());
 
-  // Fills the thread status record. If full_stack is set, a full backtrace
-  // will be generated, otherwise a minimal one will be generated.
+  // Fills the thread status record. If full_stack is set, a full backtrace will be generated,
+  // otherwise a minimal one will be generated.
   //
-  // If optional_regs is non-null, it should point to the current registers of
-  // the thread. If null, these will be fetched automatically (this is an
-  // optimization for cases where the caller has already requested registers).
-  virtual void FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
-                                const zx_thread_state_general_regs* optional_regs,
-                                debug_ipc::ThreadRecord* record) const;
+  // If the optional registers is set, will contain the current registers of the thread. If null,
+  // these will be fetched automatically (this is an optimization for cases where the caller has
+  // already requested registers).
+  debug_ipc::ThreadRecord GetThreadRecord(
+      debug_ipc::ThreadRecord::StackAmount stack_amount,
+      std::optional<GeneralRegisters> regs = std::nullopt) const;
 
   // Register reading and writing. The "write" command also returns the contents of the register
   // categories written do.
@@ -195,32 +194,34 @@ class DebuggedThread {
     kResume,  // The thread should be resumed from this exception.
   };
 
-  void HandleSingleStep(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
-  void HandleGeneralException(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
-  void HandleSoftwareBreakpoint(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
-  void HandleHardwareBreakpoint(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
-  void HandleWatchpoint(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
+  // Some of these need to update the general registers in response to handling the exception. These
+  // ones take a non-const GeneralRegisters reference.
+  void HandleSingleStep(debug_ipc::NotifyException*, const GeneralRegisters& regs);
+  void HandleGeneralException(debug_ipc::NotifyException*, const GeneralRegisters& regs);
+  void HandleSoftwareBreakpoint(debug_ipc::NotifyException*, GeneralRegisters& regs);
+  void HandleHardwareBreakpoint(debug_ipc::NotifyException*, GeneralRegisters& regs);
+  void HandleWatchpoint(debug_ipc::NotifyException*, const GeneralRegisters& regs);
 
-  void SendExceptionNotification(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
+  void SendExceptionNotification(debug_ipc::NotifyException*, const GeneralRegisters& regs);
 
-  OnStop UpdateForSoftwareBreakpoint(zx_thread_state_general_regs* regs,
-                                     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+  // Updates the registers and the thread state for hitting the breakpoint, and fills in the
+  // given breakpoint array for all matches.
+  OnStop UpdateForSoftwareBreakpoint(GeneralRegisters& regs,
+                                     std::vector<debug_ipc::BreakpointStats>& hit_breakpoints);
 
-  // When hitting a SW breakpoint, the PC needs to be correctly re-set depending
-  // on where the CPU leaves the PC after a SW exception.
-  void FixSoftwareBreakpointAddress(ProcessBreakpoint* process_breakpoint,
-                                    zx_thread_state_general_regs* regs);
+  // When hitting a SW breakpoint, the PC needs to be correctly re-set depending on where the CPU
+  // leaves the PC after a SW exception. This updates both the given register record and syncs it
+  // to the actual thread.
+  void FixSoftwareBreakpointAddress(ProcessBreakpoint* process_breakpoint, GeneralRegisters& regs);
 
-  // Handles an exception corresponding to a ProcessBreakpoint. All
-  // Breakpoints affected will have their updated stats added to
-  // *hit_breakpoints.
+  // Handles an exception corresponding to a ProcessBreakpoint. All Breakpoints affected will have
+  // their updated stats added to *hit_breakpoints.
   //
   // WARNING: The ProcessBreakpoint argument could be deleted in this call if it was a one-shot
   //          breakpoint, so it must not be used after this call.
   void UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType exception_type,
                                      ProcessBreakpoint* process_breakpoint,
-                                     zx_thread_state_general_regs* regs,
-                                     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+                                     std::vector<debug_ipc::BreakpointStats>& hit_breakpoints);
 
   // Sets or clears the single step bit on the thread.
   void SetSingleStep(bool single_step);

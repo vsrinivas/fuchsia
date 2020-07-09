@@ -6,7 +6,6 @@
 
 #include <map>
 
-#include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
 
@@ -18,6 +17,62 @@
 
 namespace debug_agent {
 
+namespace {
+
+debug_ipc::ThreadRecord::BlockedReason ThreadStateBlockedReasonToEnum(uint32_t state) {
+  FX_DCHECK(ZX_THREAD_STATE_BASIC(state) == ZX_THREAD_STATE_BLOCKED);
+
+  switch (state) {
+    case ZX_THREAD_STATE_BLOCKED_EXCEPTION:
+      return debug_ipc::ThreadRecord::BlockedReason::kException;
+    case ZX_THREAD_STATE_BLOCKED_SLEEPING:
+      return debug_ipc::ThreadRecord::BlockedReason::kSleeping;
+    case ZX_THREAD_STATE_BLOCKED_FUTEX:
+      return debug_ipc::ThreadRecord::BlockedReason::kFutex;
+    case ZX_THREAD_STATE_BLOCKED_PORT:
+      return debug_ipc::ThreadRecord::BlockedReason::kPort;
+    case ZX_THREAD_STATE_BLOCKED_CHANNEL:
+      return debug_ipc::ThreadRecord::BlockedReason::kChannel;
+    case ZX_THREAD_STATE_BLOCKED_WAIT_ONE:
+      return debug_ipc::ThreadRecord::BlockedReason::kWaitOne;
+    case ZX_THREAD_STATE_BLOCKED_WAIT_MANY:
+      return debug_ipc::ThreadRecord::BlockedReason::kWaitMany;
+    case ZX_THREAD_STATE_BLOCKED_INTERRUPT:
+      return debug_ipc::ThreadRecord::BlockedReason::kInterrupt;
+    case ZX_THREAD_STATE_BLOCKED_PAGER:
+      return debug_ipc::ThreadRecord::BlockedReason::kPager;
+    default:
+      FX_NOTREACHED();
+      return debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
+  }
+}
+
+ThreadHandle::State ThreadStateToEnums(uint32_t input) {
+  struct Mapping {
+    uint32_t int_state;
+    debug_ipc::ThreadRecord::State enum_state;
+  };
+  static const Mapping mappings[] = {
+      {ZX_THREAD_STATE_NEW, debug_ipc::ThreadRecord::State::kNew},
+      {ZX_THREAD_STATE_RUNNING, debug_ipc::ThreadRecord::State::kRunning},
+      {ZX_THREAD_STATE_SUSPENDED, debug_ipc::ThreadRecord::State::kSuspended},
+      {ZX_THREAD_STATE_BLOCKED, debug_ipc::ThreadRecord::State::kBlocked},
+      {ZX_THREAD_STATE_DYING, debug_ipc::ThreadRecord::State::kDying},
+      {ZX_THREAD_STATE_DEAD, debug_ipc::ThreadRecord::State::kDead}};
+
+  const uint32_t basic_state = ZX_THREAD_STATE_BASIC(input);
+  for (const Mapping& mapping : mappings) {
+    if (mapping.int_state == basic_state) {
+      if (mapping.enum_state == debug_ipc::ThreadRecord::State::kBlocked)
+        return ThreadHandle::State(mapping.enum_state, ThreadStateBlockedReasonToEnum(input));
+      return ThreadHandle::State(mapping.enum_state);
+    }
+  }
+  return ThreadHandle::State(debug_ipc::ThreadRecord::State::kDead);
+}
+
+}  // namespace
+
 ZirconThreadHandle::ZirconThreadHandle(std::shared_ptr<arch::ArchProvider> arch_provider,
                                        zx_koid_t process_koid, zx_koid_t thread_koid, zx::thread t)
     : arch_provider_(std::move(arch_provider)),
@@ -25,11 +80,11 @@ ZirconThreadHandle::ZirconThreadHandle(std::shared_ptr<arch::ArchProvider> arch_
       thread_koid_(thread_koid),
       thread_(std::move(t)) {}
 
-uint32_t ZirconThreadHandle::GetState() const {
+ThreadHandle::State ZirconThreadHandle::GetState() const {
   zx_info_thread info;
   if (thread_.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) == ZX_OK)
-    return info.state;
-  return ZX_THREAD_STATE_DEAD;  // Assume failures mean the thread is dead.
+    return ThreadStateToEnums(info.state);
+  return State(debug_ipc::ThreadRecord::State::kDead);  // Assume failures mean the thread is dead.
 }
 
 zx::suspend_token ZirconThreadHandle::Suspend() {
@@ -49,9 +104,23 @@ debug_ipc::ThreadRecord ZirconThreadHandle::GetThreadRecord() const {
     record.name = name;
 
   // State (running, blocked, etc.).
-  record.state = ThreadStateToEnums(GetState(), &record.blocked_reason);
+  auto state = GetState();
+  record.state = state.state;
+  record.blocked_reason = state.blocked_reason;
 
   return record;
+}
+
+std::optional<GeneralRegisters> ZirconThreadHandle::GetGeneralRegisters() const {
+  zx_thread_state_general_regs r;
+  if (thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &r, sizeof(r)) == ZX_OK)
+    return GeneralRegisters(r);
+  return std::nullopt;
+}
+
+void ZirconThreadHandle::SetGeneralRegisters(const GeneralRegisters& regs) {
+  thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs.GetNativeRegisters(),
+                      sizeof(zx_thread_state_general_regs));
 }
 
 std::vector<debug_ipc::Register> ZirconThreadHandle::ReadRegisters(

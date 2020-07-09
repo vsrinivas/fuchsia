@@ -28,10 +28,6 @@ class MockThread : public DebuggedThread {
   bool Suspend(bool synchronous = false) override;
   bool WaitForSuspension(zx::time deadline = DefaultSuspendDeadline()) override;
 
-  void FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
-                        const zx_thread_state_general_regs* optional_regs,
-                        debug_ipc::ThreadRecord* record) const override;
-
   bool IsSuspended() const override { return internal_suspension_ || suspend_count_ > 0; }
   bool IsInException() const override { return in_exception_; }
 

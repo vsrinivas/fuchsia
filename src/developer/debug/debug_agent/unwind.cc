@@ -12,7 +12,9 @@
 #include <ngunwind/libunwind.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
-#include "src/developer/debug/debug_agent/process_info.h"
+#include "src/developer/debug/debug_agent/general_registers.h"
+#include "src/developer/debug/debug_agent/process_handle.h"
+#include "src/developer/debug/debug_agent/thread_handle.h"
 #include "src/developer/debug/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
 #include "src/developer/debug/third_party/libunwindstack/fuchsia/RegsFuchsia.h"
 #include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Unwinder.h"
@@ -94,13 +96,14 @@ containers::array_view<NGUnwindRegisterMap> GetNGUnwindGeneralRegisters() {
   return containers::array_view<NGUnwindRegisterMap>(std::begin(kGeneral), std::end(kGeneral));
 }
 
-zx_status_t UnwindStackAndroid(const zx::process& process, uint64_t dl_debug_addr,
-                               const zx::thread& thread, const zx_thread_state_general_regs& regs,
+zx_status_t UnwindStackAndroid(const ProcessHandle& process, uint64_t dl_debug_addr,
+                               const ThreadHandle& thread, const GeneralRegisters& regs,
                                size_t max_depth, std::vector<debug_ipc::StackFrame>* stack) {
+  // The modules are sorted by load address.
+  //
   // Ignore errors getting modules, the empty case can at least give the current location, and maybe
   // more if there are stack pointers.
-  ModuleVector modules;  // Sorted by load address.
-  GetModulesForProcess(process, dl_debug_addr, &modules);
+  ModuleVector modules = process.GetModules(dl_debug_addr);
   std::sort(modules.begin(), modules.end(), [](auto& a, auto& b) { return a.base < b.base; });
 
   unwindstack::Maps maps;
@@ -127,9 +130,9 @@ zx_status_t UnwindStackAndroid(const zx::process& process, uint64_t dl_debug_add
   }
 
   unwindstack::RegsFuchsia unwind_regs;
-  unwind_regs.Set(regs);
+  unwind_regs.Set(regs.GetNativeRegisters());
 
-  auto memory = std::make_shared<unwindstack::MemoryFuchsia>(process.get());
+  auto memory = std::make_shared<unwindstack::MemoryFuchsia>(process.GetNativeHandle().get());
 
   // Always ask for one more frame than requested so we can get the canonical frame address for the
   // frames we do return (the CFA is the previous frame's stack pointer at the time of the call).
@@ -195,21 +198,22 @@ int LookupDso(void* context, unw_word_t pc, unw_word_t* base, const char** name)
   return 0;
 }
 
-zx_status_t UnwindStackNgUnwind(arch::ArchProvider* arch_provider, const zx::process& process,
-                                uint64_t dl_debug_addr, const zx::thread& thread,
-                                const zx_thread_state_general_regs& regs, size_t max_depth,
+zx_status_t UnwindStackNgUnwind(arch::ArchProvider* arch_provider, const ProcessHandle& process,
+                                uint64_t dl_debug_addr, const ThreadHandle& thread,
+                                const GeneralRegisters& regs, size_t max_depth,
                                 std::vector<debug_ipc::StackFrame>* stack) {
   stack->clear();
 
+  // The modules are sorted by load address.
+  //
   // Ignore errors getting modules, the empty case can at least give the current location, and maybe
   // more if there are stack pointers.
-  ModuleVector modules;  // Sorted by load address.
-  GetModulesForProcess(process, dl_debug_addr, &modules);
+  ModuleVector modules = process.GetModules(dl_debug_addr);
   std::sort(modules.begin(), modules.end(), [](auto& a, auto& b) { return a.base < b.base; });
 
   // Any of these functions can fail if the program or thread was killed out from under us.
-  unw_fuchsia_info_t* fuchsia =
-      unw_create_fuchsia(process.get(), thread.get(), &modules, &LookupDso);
+  unw_fuchsia_info_t* fuchsia = unw_create_fuchsia(
+      process.GetNativeHandle().get(), thread.GetNativeHandle().get(), &modules, &LookupDso);
   if (!fuchsia)
     return ZX_ERR_INTERNAL;
 
@@ -229,10 +233,10 @@ zx_status_t UnwindStackNgUnwind(arch::ArchProvider* arch_provider, const zx::pro
 
   // Top stack frame.
   debug_ipc::StackFrame frame;
-  frame.ip = *arch::IPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
-  frame.sp = *arch::SPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
+  frame.ip = regs.ip();
+  frame.sp = regs.sp();
   frame.cfa = 0;
-  arch_provider->SaveGeneralRegs(regs, &frame.regs);
+  regs.CopyTo(frame.regs);
   stack->push_back(std::move(frame));
 
   while (frame.sp >= 0x1000000 && stack->size() < max_depth + 1) {
@@ -281,9 +285,9 @@ zx_status_t UnwindStackNgUnwind(arch::ArchProvider* arch_provider, const zx::pro
 
 void SetUnwinderType(UnwinderType type) { unwinder_type = type; }
 
-zx_status_t UnwindStack(arch::ArchProvider* arch_provider, const zx::process& process,
-                        uint64_t dl_debug_addr, const zx::thread& thread,
-                        const zx_thread_state_general_regs& regs, size_t max_depth,
+zx_status_t UnwindStack(arch::ArchProvider* arch_provider, const ProcessHandle& process,
+                        uint64_t dl_debug_addr, const ThreadHandle& thread,
+                        const GeneralRegisters& regs, size_t max_depth,
                         std::vector<debug_ipc::StackFrame>* stack) {
   switch (unwinder_type) {
     case UnwinderType::kNgUnwind:

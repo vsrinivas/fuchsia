@@ -22,6 +22,11 @@ std::vector<debug_ipc::AddressRegion> MockProcessHandle::GetAddressSpace(uint64_
   return {};
 }
 
+std::vector<debug_ipc::Module> MockProcessHandle::GetModules(uint64_t dl_debug_addr) const {
+  // Not currently implemented in this mock.
+  return {};
+}
+
 zx_status_t MockProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_t len,
                                           size_t* actual) const {
   auto vect = mock_memory_.ReadMemory(address, len);

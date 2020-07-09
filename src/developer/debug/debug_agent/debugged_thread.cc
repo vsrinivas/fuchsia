@@ -19,7 +19,6 @@
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
-#include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
@@ -153,36 +152,34 @@ void DebuggedThread::OnException(std::unique_ptr<ThreadException> exception_hand
   exception.type = arch_provider_->DecodeExceptionType(*this, exception_info.type);
   arch_provider_->FillExceptionRecord(thread_handle_->GetNativeHandle(), &exception.exception);
 
-  zx_thread_state_general_regs regs;
-  zx_status_t status = arch_provider_->ReadGeneralState(thread_handle_->GetNativeHandle(), &regs);
-  if (status != ZX_OK) {
+  std::optional<GeneralRegisters> regs = thread_handle_->GetGeneralRegisters();
+  if (!regs) {
     // This can happen, for example, if the thread was killed during the time the exception message
     // was waiting to be delivered to us.
-    FX_LOGS(WARNING) << "Could not read registers from thread: " << zx_status_get_string(status);
+    FX_LOGS(WARNING) << "Could not read registers from thread.";
     return;
   }
 
-  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Exception @ 0x" << std::hex
-                    << *arch::IPInRegs(&regs) << std::dec << ": "
-                    << ExceptionTypeToString(exception_info.type) << " -> "
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Exception @ 0x" << std::hex << regs->ip()
+                    << std::dec << ": " << ExceptionTypeToString(exception_info.type) << " -> "
                     << debug_ipc::ExceptionTypeToString(exception.type);
 
   switch (exception.type) {
     case debug_ipc::ExceptionType::kSingleStep:
-      return HandleSingleStep(&exception, &regs);
+      return HandleSingleStep(&exception, *regs);
     case debug_ipc::ExceptionType::kSoftware:
-      return HandleSoftwareBreakpoint(&exception, &regs);
+      return HandleSoftwareBreakpoint(&exception, *regs);
     case debug_ipc::ExceptionType::kHardware:
-      return HandleHardwareBreakpoint(&exception, &regs);
+      return HandleHardwareBreakpoint(&exception, *regs);
     case debug_ipc::ExceptionType::kWatchpoint:
-      return HandleWatchpoint(&exception, &regs);
+      return HandleWatchpoint(&exception, *regs);
     case debug_ipc::ExceptionType::kNone:
     case debug_ipc::ExceptionType::kLast:
       break;
     // TODO(donosoc): Should synthetic be general or invalid?
     case debug_ipc::ExceptionType::kSynthetic:
     default:
-      return HandleGeneralException(&exception, &regs);
+      return HandleGeneralException(&exception, *regs);
   }
 
   FX_NOTREACHED() << "Invalid exception notification type: "
@@ -195,7 +192,7 @@ void DebuggedThread::OnException(std::unique_ptr<ThreadException> exception_hand
 }
 
 void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
-                                      zx_thread_state_general_regs* regs) {
+                                      const GeneralRegisters& regs) {
   if (current_breakpoint_) {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Ending single stepped over 0x" << std::hex
                       << current_breakpoint_->address();
@@ -237,7 +234,7 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
   // When stepping in a range, automatically continue as long as we're
   // still in range.
   if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInRange &&
-      *arch::IPInRegs(regs) >= step_in_range_begin_ && *arch::IPInRegs(regs) < step_in_range_end_) {
+      regs.ip() >= step_in_range_begin_ && regs.ip() < step_in_range_end_) {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping in range. Continuing.";
     ResumeForRunMode();
     return;
@@ -248,13 +245,13 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
 }
 
 void DebuggedThread::HandleGeneralException(debug_ipc::NotifyException* exception,
-                                            zx_thread_state_general_regs* regs) {
+                                            const GeneralRegisters& regs) {
   SendExceptionNotification(exception, regs);
 }
 
 void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* exception,
-                                              zx_thread_state_general_regs* regs) {
-  auto on_stop = UpdateForSoftwareBreakpoint(regs, &exception->hit_breakpoints);
+                                              GeneralRegisters& regs) {
+  auto on_stop = UpdateForSoftwareBreakpoint(regs, exception->hit_breakpoints);
   switch (on_stop) {
     case OnStop::kIgnore:
       return;
@@ -272,27 +269,27 @@ void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* except
 }
 
 void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* exception,
-                                              zx_thread_state_general_regs* regs) {
+                                              GeneralRegisters& regs) {
   uint64_t breakpoint_address =
-      arch_provider_->BreakpointInstructionForHardwareExceptionAddress(*arch::IPInRegs(regs));
+      arch_provider_->BreakpointInstructionForHardwareExceptionAddress(regs.ip());
   HardwareBreakpoint* found_bp = process_->FindHardwareBreakpoint(breakpoint_address);
   if (found_bp) {
-    UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp, regs,
-                                  &exception->hit_breakpoints);
+    UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp,
+                                  exception->hit_breakpoints);
   } else {
-    // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint.
-    // This is probably a race between the removal and the exception handler.
-    *arch::IPInRegs(regs) = breakpoint_address;
+    // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint. This is probably a
+    // race between the removal and the exception handler.
+    regs.set_ip(breakpoint_address);
   }
 
-  // The ProcessBreakpoint could've been deleted if it was a one-shot, so must
-  // not be derefereced below this.
+  // The ProcessBreakpoint could've been deleted if it was a one-shot, so must not be derefereced
+  // below this.
   found_bp = nullptr;
   SendExceptionNotification(exception, regs);
 }
 
 void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
-                                      zx_thread_state_general_regs* regs) {
+                                      const GeneralRegisters& regs) {
   auto [range, slot] = arch_provider_->InstructionForWatchpointHit(*this);
   DEBUG_LOG(Thread) << "Found watchpoint hit at 0x" << std::hex << range.ToString() << " on slot "
                     << std::dec << slot;
@@ -314,15 +311,15 @@ void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
   }
 
   // TODO(donosoc): Plumb in R/RW types.
-  UpdateForHitProcessBreakpoint(watchpoint->Type(), watchpoint, regs, &exception->hit_breakpoints);
+  UpdateForHitProcessBreakpoint(watchpoint->Type(), watchpoint, exception->hit_breakpoints);
   // The ProcessBreakpoint could'be been deleted, so we cannot use it anymore.
   watchpoint = nullptr;
   SendExceptionNotification(exception, regs);
 }
 
 void DebuggedThread::SendExceptionNotification(debug_ipc::NotifyException* exception,
-                                               zx_thread_state_general_regs* regs) {
-  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, regs, &exception->thread);
+                                               const GeneralRegisters& regs) {
+  exception->thread = GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, regs);
 
   // Keep the thread suspended for the client.
 
@@ -402,7 +399,7 @@ zx::time DebuggedThread::DefaultSuspendDeadline() {
 
 bool DebuggedThread::WaitForSuspension(zx::time deadline) {
   // The thread could already be suspended. This bypasses a wait cycle in that case.
-  if (thread_handle_->GetState() == ZX_THREAD_STATE_SUSPENDED)
+  if (thread_handle_->GetState().state == debug_ipc::ThreadRecord::State::kSuspended)
     return true;  // Already suspended, success.
 
   // This function is complex because a thread in an exception state can't be suspended (ZX-3772).
@@ -424,7 +421,7 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
   zx_status_t status = ZX_OK;
   do {
     // Before waiting, check the thread state from the kernel because of queue described above.
-    if (thread_handle_->GetState() == ZX_THREAD_STATE_BLOCKED_EXCEPTION)
+    if (thread_handle_->GetState().is_blocked_on_exception())
       return true;
 
     zx_signals_t observed;
@@ -439,46 +436,37 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
 
 // Note that everything in this function is racy because the thread state can change at any time,
 // even while processing an exception (an external program can kill it out from under us).
-void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
-                                      const zx_thread_state_general_regs* optional_regs,
-                                      debug_ipc::ThreadRecord* record) const {
-  *record = thread_handle_->GetThreadRecord();
+debug_ipc::ThreadRecord DebuggedThread::GetThreadRecord(
+    debug_ipc::ThreadRecord::StackAmount stack_amount, std::optional<GeneralRegisters> regs) const {
+  debug_ipc::ThreadRecord record = thread_handle_->GetThreadRecord();
 
   // Unwind the stack if requested. This requires the registers which are available when suspended
   // or blocked in an exception.
-  if ((record->state == debug_ipc::ThreadRecord::State::kSuspended ||
-       (record->state == debug_ipc::ThreadRecord::State::kBlocked &&
-        record->blocked_reason == debug_ipc::ThreadRecord::BlockedReason::kException)) &&
+  if ((record.state == debug_ipc::ThreadRecord::State::kSuspended ||
+       (record.state == debug_ipc::ThreadRecord::State::kBlocked &&
+        record.blocked_reason == debug_ipc::ThreadRecord::BlockedReason::kException)) &&
       stack_amount != debug_ipc::ThreadRecord::StackAmount::kNone) {
     // Only record this when we actually attempt to query the stack.
-    record->stack_amount = stack_amount;
+    record.stack_amount = stack_amount;
 
     // The registers are required, fetch them if the caller didn't provide.
-    zx_thread_state_general_regs queried_regs;  // Storage for fetched regs.
-    zx_thread_state_general_regs* regs = nullptr;
-    if (!optional_regs) {
-      if (arch_provider_->ReadGeneralState(thread_handle_->GetNativeHandle(), &queried_regs) ==
-          ZX_OK)
-        regs = &queried_regs;
-    } else {
-      // We don't change the values here but *InRegs below returns mutable
-      // references so we need a mutable pointer.
-      regs = const_cast<zx_thread_state_general_regs*>(optional_regs);
-    }
+    if (!regs)
+      regs = thread_handle_->GetGeneralRegisters();  // Note this could still fail.
 
     if (regs) {
-      // Minimal stacks are 2 (current frame and calling one). Full stacks max
-      // out at 256 to prevent edge cases, especially around corrupted stacks.
+      // Minimal stacks are 2 (current frame and calling one). Full stacks max out at 256 to prevent
+      // edge cases, especially around corrupted stacks.
       uint32_t max_stack_depth =
           stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2 : 256;
 
-      UnwindStack(arch_provider_.get(), process_->handle(), process_->dl_debug_addr(),
-                  thread_handle_->GetNativeHandle(), *regs, max_stack_depth, &record->frames);
+      UnwindStack(arch_provider_.get(), process_->process_handle(), process_->dl_debug_addr(),
+                  thread_handle(), *regs, max_stack_depth, &record.frames);
     }
   } else {
     // Didn't bother querying the stack.
-    record->stack_amount = debug_ipc::ThreadRecord::StackAmount::kNone;
+    record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kNone;
   }
+  return record;
 }
 
 std::vector<debug_ipc::Register> DebuggedThread::ReadRegisters(
@@ -514,7 +502,7 @@ std::vector<debug_ipc::Register> DebuggedThread::WriteRegisters(
 void DebuggedThread::SendThreadNotification() const {
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Sending starting notification.";
   debug_ipc::NotifyThread notify;
-  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr, &notify.record);
+  notify.record = GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal);
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notify, &writer);
@@ -527,11 +515,11 @@ void DebuggedThread::WillDeleteProcessBreakpoint(ProcessBreakpoint* bp) {
 }
 
 DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
-    zx_thread_state_general_regs* regs, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+    GeneralRegisters& regs, std::vector<debug_ipc::BreakpointStats>& hit_breakpoints) {
   // Get the correct address where the CPU is after hitting a breakpoint
   // (this is architecture specific).
   uint64_t breakpoint_address =
-      arch_provider_->BreakpointInstructionForSoftwareExceptionAddress(*arch::IPInRegs(regs));
+      arch_provider_->BreakpointInstructionForSoftwareExceptionAddress(regs.ip());
 
   SoftwareBreakpoint* found_bp = process_->FindSoftwareBreakpoint(breakpoint_address);
   if (found_bp) {
@@ -548,27 +536,19 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       return OnStop::kResume;
     }
 
-    UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kSoftware, found_bp, regs,
-                                  hit_breakpoints);
+    UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kSoftware, found_bp, hit_breakpoints);
 
     // The found_bp could have been deleted if it was a one-shot, so must
     // not be dereferenced below this.
     found_bp = nullptr;
   } else {
-    // Hit a software breakpoint that doesn't correspond to any current
-    // breakpoint.
+    // Hit a software breakpoint that doesn't correspond to any current breakpoint.
     if (arch_provider_->IsBreakpointInstruction(process_->handle(), breakpoint_address)) {
-      // The breakpoint is a hardcoded instruction in the program code. In
-      // this case we want to continue from the following instruction since
-      // the breakpoint instruction will never go away.
-      *arch::IPInRegs(regs) =
-          arch_provider_->NextInstructionForSoftwareExceptionAddress(*arch::IPInRegs(regs));
-      zx_status_t status =
-          arch_provider_->WriteGeneralState(thread_handle_->GetNativeHandle(), *regs);
-      if (status != ZX_OK) {
-        fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
-                static_cast<int>(status));
-      }
+      // The breakpoint is a hardcoded instruction in the program code. In this case we want to
+      // continue from the following instruction since the breakpoint instruction will never go
+      // away.
+      regs.set_ip(arch_provider_->NextInstructionForSoftwareExceptionAddress(regs.ip()));
+      thread_handle_->SetGeneralRegisters(regs);
 
       if (!process_->dl_debug_addr() && process_->RegisterDebugState()) {
         DEBUG_LOG(Thread) << ThreadPreamble(this) << "Found ld.so breakpoint. Sending modules.";
@@ -586,46 +566,41 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     } else {
       DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit non debugger SW breakpoint on 0x"
                         << std::hex << breakpoint_address;
-      // Not a breakpoint instruction. Probably the breakpoint instruction
-      // used to be ours but its removal raced with the exception handler.
-      // Resume from the instruction that used to be the breakpoint.
-      *arch::IPInRegs(regs) = breakpoint_address;
+      // Not a breakpoint instruction. Probably the breakpoint instruction used to be ours but its
+      // removal raced with the exception handler. Resume from the instruction that used to be the
+      // breakpoint.
+      regs.set_ip(breakpoint_address);
 
-      // Don't automatically continue execution here. A race for this should
-      // be unusual and maybe something weird happened that caused an
-      // exception we're not set up to handle. Err on the side of telling the
-      // user about the exception.
+      // Don't automatically continue execution here. A race for this should be unusual and maybe
+      // something weird happened that caused an exception we're not set up to handle. Err on the
+      // side of telling the user about the exception.
     }
   }
   return OnStop::kNotify;
 }
 
 void DebuggedThread::FixSoftwareBreakpointAddress(ProcessBreakpoint* process_breakpoint,
-                                                  zx_thread_state_general_regs* regs) {
+                                                  GeneralRegisters& regs) {
   // When the program hits one of our breakpoints, set the IP back to the exact address that
   // triggered the breakpoint. When the thread resumes, this is the address that it will resume
   // from (after putting back the original instruction), and will be what the client wants to
   // display to the user.
-  *arch::IPInRegs(regs) = process_breakpoint->address();
-  zx_status_t status = arch_provider_->WriteGeneralState(thread_handle_->GetNativeHandle(), *regs);
-  if (status != ZX_OK) {
-    fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
-            static_cast<int>(status));
-  }
+  regs.set_ip(process_breakpoint->address());
+  thread_handle_->SetGeneralRegisters(regs);
 }
 
 void DebuggedThread::UpdateForHitProcessBreakpoint(
     debug_ipc::BreakpointType exception_type, ProcessBreakpoint* process_breakpoint,
-    zx_thread_state_general_regs* regs, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+    std::vector<debug_ipc::BreakpointStats>& hit_breakpoints) {
   current_breakpoint_ = process_breakpoint;
 
-  process_breakpoint->OnHit(exception_type, hit_breakpoints);
+  process_breakpoint->OnHit(exception_type, &hit_breakpoints);
 
   // Delete any one-shot breakpoints. Since there can be multiple Breakpoints
   // (some one-shot, some not) referring to the current ProcessBreakpoint,
   // this operation could delete the ProcessBreakpoint or it could not. If it
   // does, our observer will be told and current_breakpoint_ will be cleared.
-  for (const auto& stats : *hit_breakpoints) {
+  for (const auto& stats : hit_breakpoints) {
     if (stats.should_delete)
       process_->debug_agent()->RemoveBreakpoint(stats.id);
   }

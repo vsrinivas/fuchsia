@@ -19,14 +19,18 @@ namespace arch {
 class ArchProvider;
 }
 
+class GeneralRegisters;
+class ProcessHandle;
+class ThreadHandle;
+
 // We're testing different unwinders, this specifies which one you want to use.
 // The unwinder type is a process-wide state.
 enum class UnwinderType { kNgUnwind, kAndroid };
 void SetUnwinderType(UnwinderType unwinder_type);
 
-zx_status_t UnwindStack(arch::ArchProvider* arch_provider, const zx::process& process,
-                        uint64_t dl_debug_addr, const zx::thread& thread,
-                        const zx_thread_state_general_regs& regs, size_t max_depth,
+zx_status_t UnwindStack(arch::ArchProvider* arch_provider, const ProcessHandle& process,
+                        uint64_t dl_debug_addr, const ThreadHandle& thread,
+                        const GeneralRegisters& regs, size_t max_depth,
                         std::vector<debug_ipc::StackFrame>* stack);
 
 }  // namespace debug_agent
