@@ -18,7 +18,7 @@
 #include <fbl/unique_fd.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define TOTAL_BLOCKS 244277248  // roughly 116GB
 #define BLOCK_SIZE 512
@@ -134,8 +134,7 @@ class TestState {
 
   uint64_t BlockSize() const { return block_info_.block_size; }
 
-  bool PrepareGpt() {
-    BEGIN_HELPER;
+  void PrepareGpt() {
     ASSERT_EQ(device_.get(), nullptr);
 
     zxio_storage_t* storage;
@@ -148,8 +147,6 @@ class TestState {
         GptDevice::Create(fd_.get(), static_cast<uint32_t>(BlockSize()), BlockCount(), &device_);
     ASSERT_GE(rc, 0, "Could not initialize gpt");
     ASSERT_EQ(device_->Finalize(), ZX_OK, "Could not finalize gpt");
-
-    END_HELPER;
   }
 
   GptDevice* Device() { return device_.get(); }
@@ -214,20 +211,17 @@ gpt_partition_t* find_by_type_and_name(const GptDevice* gpt, const uint8_t type_
   return NULL;
 }
 
-bool create_partition(GptDevice* d, const char* name, const uint8_t* type, partition_t* p) {
-  BEGIN_HELPER;
+void create_partition(GptDevice* d, const char* name, const uint8_t* type, partition_t* p) {
   uint8_t guid_buf[GPT_GUID_LEN];
   zx_cprng_draw(guid_buf, GPT_GUID_LEN);
 
   ASSERT_EQ(d->AddPartition(name, type, guid_buf, p->start, p->len, 0), 0,
             "Partition could not be added.");
   d->Sync();
-  END_HELPER;
 }
 
 // create the KERN-A, KERN-B, ROOT-A, ROOT-B and state partitions
-bool create_kern_roots_state(TestState* test) {
-  BEGIN_HELPER;
+void create_kern_roots_state(TestState* test) {
   partition_t part_defs[5];
 
   // this layout is patterned off observed layouts of ChromeOS devices
@@ -256,17 +250,14 @@ bool create_kern_roots_state(TestState* test) {
   ASSERT_EQ(device->Range(&disk_start, &disk_end), ZX_OK, "Retrieval of device range failed.");
   part_defs[0].len = disk_end - part_defs[0].start;
 
-  ASSERT_TRUE(create_partition(device, "STATE", kStateGUID, &part_defs[0]));
-  ASSERT_TRUE(create_partition(device, "KERN-A", kCrosKernGUID, &part_defs[1]));
-  ASSERT_TRUE(create_partition(device, "ROOT-A", kCrosRootGUID, &part_defs[2]));
-  ASSERT_TRUE(create_partition(device, "KERN-B", kCrosKernGUID, &part_defs[3]));
-  ASSERT_TRUE(create_partition(device, "ROOT-B", kCrosRootGUID, &part_defs[4]));
-  END_HELPER;
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "STATE", kStateGUID, &part_defs[0]));
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "KERN-A", kCrosKernGUID, &part_defs[1]));
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "ROOT-A", kCrosRootGUID, &part_defs[2]));
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "KERN-B", kCrosKernGUID, &part_defs[3]));
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "ROOT-B", kCrosRootGUID, &part_defs[4]));
 }
 
-bool create_default_c_parts(TestState* test) {
-  BEGIN_HELPER;
-
+void create_default_c_parts(TestState* test) {
   GptDevice* device = test->Device();
   uint64_t begin, end;
   ASSERT_EQ(device->Range(&begin, &end), ZX_OK, "Retrieval of device range failed.");
@@ -278,14 +269,11 @@ bool create_default_c_parts(TestState* test) {
   part_defs[1].start = part_defs[0].start + part_defs[0].len;
   part_defs[1].len = kCPartsInitSize;
 
-  ASSERT_TRUE(create_partition(device, "KERN-C", kCrosKernGUID, &part_defs[0]));
-  ASSERT_TRUE(create_partition(device, "ROOT-C", kCrosRootGUID, &part_defs[1]));
-
-  END_HELPER;
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "KERN-C", kCrosKernGUID, &part_defs[0]));
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "ROOT-C", kCrosRootGUID, &part_defs[1]));
 }
 
-bool create_misc_parts(TestState* test) {
-  BEGIN_HELPER;
+void create_misc_parts(TestState* test) {
   partition_t part_defs[5];
   // "OEM"
   part_defs[0].start = 86016;
@@ -308,33 +296,27 @@ bool create_misc_parts(TestState* test) {
   part_defs[4].len = test->EfiBlks();
 
   GptDevice* device = test->Device();
-  ASSERT_TRUE(create_partition(device, "OEM", kGenDataGUID, &part_defs[0]));
-  ASSERT_TRUE(create_partition(device, "reserved", kGenDataGUID, &part_defs[1]));
-  ASSERT_TRUE(create_partition(device, "reserved", kGenDataGUID, &part_defs[2]));
-  ASSERT_TRUE(create_partition(device, "RWFW", kFwGUID, &part_defs[3]));
-  ASSERT_TRUE(create_partition(device, "EFI-SYSTEM", kEfiGUID, &part_defs[4]));
-  END_HELPER;
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "OEM", kGenDataGUID, &part_defs[0]));
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "reserved", kGenDataGUID, &part_defs[1]));
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "reserved", kGenDataGUID, &part_defs[2]));
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "RWFW", kFwGUID, &part_defs[3]));
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "EFI-SYSTEM", kEfiGUID, &part_defs[4]));
 }
 
-bool create_test_layout(TestState* test) {
-  BEGIN_HELPER;
-  ASSERT_TRUE(create_kern_roots_state(test));
-  ASSERT_TRUE(create_default_c_parts(test));
-  ASSERT_TRUE(create_misc_parts(test));
-  END_HELPER;
+void create_test_layout(TestState* test) {
+  ASSERT_NO_FATAL_FAILURES(create_kern_roots_state(test));
+  ASSERT_NO_FATAL_FAILURES(create_default_c_parts(test));
+  ASSERT_NO_FATAL_FAILURES(create_misc_parts(test));
 }
 
-bool add_fvm_part(TestState* test, gpt_partition_t* state) {
-  BEGIN_HELPER;
+void add_fvm_part(TestState* test, gpt_partition_t* state) {
   partition_t fvm_part;
   fvm_part.start = state->first;
   fvm_part.len = test->FvmBlks();
   state->first += test->FvmBlks();
 
   GptDevice* device = test->Device();
-  ASSERT_TRUE(create_partition(device, "fvm", kFvmGUID, &fvm_part));
-
-  END_HELPER;
+  ASSERT_NO_FATAL_FAILURES(create_partition(device, "fvm", kFvmGUID, &fvm_part));
 }
 
 void resize_kernc_from_state(TestState* test, gpt_partition_t* kernc, gpt_partition_t* state) {
@@ -349,8 +331,7 @@ void resize_rootc_from_state(TestState* test, gpt_partition_t* rootc, gpt_partit
   state->first = rootc->last + 1;
 }
 
-bool assert_required_partitions(GptDevice* gpt) {
-  BEGIN_HELPER;
+void assert_required_partitions(GptDevice* gpt) {
   gpt_partition_t* part;
   part = find_by_type_and_name(gpt, kFvmGUID, "fvm");
   ASSERT_NOT_NULL(part);
@@ -371,16 +352,14 @@ bool assert_required_partitions(GptDevice* gpt) {
   part = find_by_type_and_name(gpt, kCrosKernGUID, "SYSCFG");
   ASSERT_NOT_NULL(part);
   ASSERT_TRUE(part_size_gte(part, SZ_SYSCFG_PART, BLOCK_SIZE), "SYSCFG size");
-  END_HELPER;
 }
 
-bool TestDefaultConfig(void) {
-  BEGIN_TEST;
+TEST(DiskWizardTests, TestDefaultConfig) {
   TestState test;
-  ASSERT_TRUE(test.PrepareGpt());
+  ASSERT_NO_FATAL_FAILURES(test.PrepareGpt());
   GptDevice* dev = test.Device();
 
-  ASSERT_TRUE(create_test_layout(&test), "Test layout creation failed.");
+  ASSERT_NO_FATAL_FAILURES(create_test_layout(&test), "Test layout creation failed.");
 
   ASSERT_FALSE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART),
                "Device SHOULD NOT be ready to pave.");
@@ -388,18 +367,16 @@ bool TestDefaultConfig(void) {
   ASSERT_TRUE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART), "Device SHOULD be ready to pave.");
 
   assert_required_partitions(dev);
-
-  END_TEST;
 }
 
-bool TestAlreadyConfigured(void) {
-  BEGIN_TEST;
+TEST(DiskWizardTests, TestAlreadyConfigured) {
   TestState test;
-  ASSERT_TRUE(test.PrepareGpt());
+  ASSERT_NO_FATAL_FAILURES(test.PrepareGpt());
   GptDevice* dev = test.Device();
 
-  ASSERT_TRUE(create_test_layout(&test), "Test layout creation failed.");
-  ASSERT_TRUE(add_fvm_part(&test, dev->GetPartition(0)), "Could not add FVM partition record");
+  ASSERT_NO_FATAL_FAILURES(create_test_layout(&test), "Test layout creation failed.");
+  ASSERT_NO_FATAL_FAILURES(add_fvm_part(&test, dev->GetPartition(0)),
+                           "Could not add FVM partition record");
   resize_kernc_from_state(&test, dev->GetPartition(5), dev->GetPartition(0));
   resize_rootc_from_state(&test, dev->GetPartition(6), dev->GetPartition(0));
 
@@ -412,19 +389,17 @@ bool TestAlreadyConfigured(void) {
   ASSERT_TRUE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART), "Device SHOULD be ready to pave.");
 
   assert_required_partitions(dev);
-
-  END_TEST;
 }
 
-bool TestNoCParts(void) {
-  BEGIN_TEST;
+TEST(DiskWizardTests, TestNoCParts) {
   TestState test;
-  ASSERT_TRUE(test.PrepareGpt());
+  ASSERT_NO_FATAL_FAILURES(test.PrepareGpt());
   GptDevice* dev = test.Device();
 
-  ASSERT_TRUE(create_kern_roots_state(&test), "Couldn't create A/B kern and root parts");
+  ASSERT_NO_FATAL_FAILURES(create_kern_roots_state(&test),
+                           "Couldn't create A/B kern and root parts");
 
-  ASSERT_TRUE(create_misc_parts(&test), "Couldn't create misc parts");
+  ASSERT_NO_FATAL_FAILURES(create_misc_parts(&test), "Couldn't create misc parts");
 
   ASSERT_FALSE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART),
                "Should not initially be ready to pave");
@@ -435,20 +410,18 @@ bool TestNoCParts(void) {
               "Device should now be ready to pave, but isn't");
 
   assert_required_partitions(dev);
-  END_TEST;
 }
 
-bool TestNoRootc(void) {
-  BEGIN_TEST;
+TEST(DiskWizardTests, TestNoRootc) {
   TestState test;
-  ASSERT_TRUE(test.PrepareGpt());
+  ASSERT_NO_FATAL_FAILURES(test.PrepareGpt());
   GptDevice* dev = test.Device();
 
-  ASSERT_TRUE(create_kern_roots_state(&test), "Couldn't make A&B kern/root parts");
+  ASSERT_NO_FATAL_FAILURES(create_kern_roots_state(&test), "Couldn't make A&B kern/root parts");
 
-  ASSERT_TRUE(create_misc_parts(&test), "Couldn't create misc parts");
+  ASSERT_NO_FATAL_FAILURES(create_misc_parts(&test), "Couldn't create misc parts");
 
-  ASSERT_TRUE(create_default_c_parts(&test), "Couldn't create c parts\n");
+  ASSERT_NO_FATAL_FAILURES(create_default_c_parts(&test), "Couldn't create c parts\n");
 
   ASSERT_EQ(dev->RemovePartition(dev->GetPartition(11)->guid), ZX_OK,
             "Failed to remove ROOT-C partition");
@@ -462,20 +435,18 @@ bool TestNoRootc(void) {
               "Device should now be ready to pave, but isn't");
 
   assert_required_partitions(dev);
-  END_TEST;
 }
 
-bool TestNoKernc(void) {
-  BEGIN_TEST;
+TEST(DiskWizardTests, TestNoKernc) {
   TestState test;
-  ASSERT_TRUE(test.PrepareGpt());
+  ASSERT_NO_FATAL_FAILURES(test.PrepareGpt());
   GptDevice* dev = test.Device();
 
-  ASSERT_TRUE(create_kern_roots_state(&test), "Couldn't make A&B kern/root parts");
+  ASSERT_NO_FATAL_FAILURES(create_kern_roots_state(&test), "Couldn't make A&B kern/root parts");
 
-  ASSERT_TRUE(create_misc_parts(&test), "Couldn't create misc parts");
+  ASSERT_NO_FATAL_FAILURES(create_misc_parts(&test), "Couldn't create misc parts");
 
-  ASSERT_TRUE(create_default_c_parts(&test), "Couldn't create c parts\n");
+  ASSERT_NO_FATAL_FAILURES(create_default_c_parts(&test), "Couldn't create c parts\n");
 
   ASSERT_EQ(dev->RemovePartition(dev->GetPartition(10)->guid), ZX_OK,
             "Failed to remove ROOT-C partition");
@@ -489,20 +460,16 @@ bool TestNoKernc(void) {
               "Device should now be ready to pave, but isn't");
 
   assert_required_partitions(dev);
-
-  END_TEST;
 }
 
-bool TestDiskTooSmall(void) {
-  BEGIN_TEST;
-
+TEST(DiskWizardTests, TestDiskTooSmall) {
   // first setup the device as though it is a normal test so we can compute
   // the blocks required
   TestState test;
-  ASSERT_TRUE(test.PrepareGpt());
+  ASSERT_NO_FATAL_FAILURES(test.PrepareGpt());
   GptDevice* dev = test.Device();
 
-  ASSERT_TRUE(create_test_layout(&test), "Failed creating initial test layout");
+  ASSERT_NO_FATAL_FAILURES(create_test_layout(&test), "Failed creating initial test layout");
 
   uint64_t reserved, unused;
   ASSERT_EQ(dev->Range(&reserved, &unused), ZX_OK, "Retrieval of device range failed.");
@@ -521,10 +488,10 @@ bool TestDiskTooSmall(void) {
   // smaller count
 
   test.Initialize(info);
-  ASSERT_TRUE(test.PrepareGpt());
+  ASSERT_NO_FATAL_FAILURES(test.PrepareGpt());
   dev = test.Device();
 
-  ASSERT_TRUE(create_test_layout(&test), "Failed creating real test layout");
+  ASSERT_NO_FATAL_FAILURES(create_test_layout(&test), "Failed creating real test layout");
 
   ASSERT_FALSE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART),
                "Should not initially be ready to pave");
@@ -533,32 +500,19 @@ bool TestDiskTooSmall(void) {
             "Configure reported success, but should have failed.");
   ASSERT_FALSE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART),
                "Device should still not be paveable");
-  END_TEST;
 }
 
-bool TestIsCrosDevice(void) {
-  BEGIN_TEST;
+TEST(DiskWizardTests, TestIsCrosDevice) {
   TestState test;
-  ASSERT_TRUE(test.PrepareGpt());
+  ASSERT_NO_FATAL_FAILURES(test.PrepareGpt());
   GptDevice* dev = test.Device();
 
-  ASSERT_TRUE(create_test_layout(&test), "Failed to create test layout");
+  ASSERT_NO_FATAL_FAILURES(create_test_layout(&test), "Failed to create test layout");
 
   ASSERT_TRUE(is_cros(dev), "This should be recognized as a chromeos layout");
   zx_cprng_draw(dev->GetPartition(1)->type, GPT_GUID_LEN);
   zx_cprng_draw(dev->GetPartition(4)->type, GPT_GUID_LEN);
   ASSERT_FALSE(is_cros(dev), "This should NOT be recognized as a chromos layout");
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(disk_wizard_tests)
-RUN_TEST(TestDefaultConfig)
-RUN_TEST(TestAlreadyConfigured)
-RUN_TEST(TestNoCParts)
-RUN_TEST(TestNoRootc)
-RUN_TEST(TestNoKernc)
-RUN_TEST(TestDiskTooSmall)
-RUN_TEST(TestIsCrosDevice)
-END_TEST_CASE(disk_wizard_tests)

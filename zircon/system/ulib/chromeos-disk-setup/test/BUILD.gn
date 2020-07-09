@@ -25,10 +25,10 @@ test("chromeos-disk-setup") {
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/chromeos-disk-setup",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/gpt",
-    "//zircon/system/ulib/unittest",
     "//zircon/system/ulib/zxio",
   ]
 
