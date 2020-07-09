@@ -11,6 +11,7 @@ test_package("tests") {
 
   deps = [
     "integration:lowpan_integration_tests",
+    "//src/connectivity/lowpan/drivers/lowpan-dummy-driver",
     "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:tests",
     "//src/connectivity/lowpan/drivers/lowpan-spinel-driver:tests",
     "//src/connectivity/lowpan/drivers/spinel_spi_driver:tests",

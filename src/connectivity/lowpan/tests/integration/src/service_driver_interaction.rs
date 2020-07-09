@@ -36,7 +36,7 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
         .watch_devices()
         .err_into::<Error>()
         .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
-            Err(format_err!("Timeout waiting for lookup.get_devices()"))
+            Err(format_err!("Timeout waiting for lookup.watch_devices()"))
         })
         .await
         .context("Initial call to lookup.watch_devices() failed")?;
@@ -56,7 +56,7 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
         .watch_devices()
         .err_into::<Error>()
         .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
-            Err(format_err!("Timeout waiting for lookup.get_devices()"))
+            Err(format_err!("Timeout waiting for lookup.watch_devices()"))
         })
         .await
         .context("Second call to lookup.watch_devices() failed")?;
@@ -76,6 +76,7 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
                 device: Some(server),
                 device_extra: Some(server_extra),
                 device_test: Some(server_test),
+                ..Protocols::empty()
             },
         )
         .err_into::<Error>()
