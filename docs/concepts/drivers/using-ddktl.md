@@ -22,6 +22,7 @@ The following mixins are provided:
 Mixin class            | Function             | Purpose
 -----------------------|----------------------|------------------------------
 `ddk::GetProtocolable`    | **DdkGetProtocol()** | fetches the protocol
+`ddk::Initializable`      | **DdkInit()**        | called after **DdkAdd()**, for completing initialization of a device safely
 `ddk::Openable`           | **DdkOpen()**        | client's **open()**
 `ddk::Closable`           | **DdkClose()**       | client's **close()**
 `ddk::UnbindableNew`      | **DdkUnbindNew()**   | called when this device is being removed
@@ -51,10 +52,11 @@ For example (line numbers added for documentation purposes only):
 
 ```c++
 [01] using DeviceType = ddk::Device<MyDevice,
-[02]                                ddk::Openable,        // we support open()
-[03]                                ddk::Closable,        // close()
-[04]                                ddk::Readable,        // read()
-[05]                                ddk::UnbindableNew>;  // and the device can be unbound
+[02]                                ddk::Initializable,   // safely initialize after **DdkAdd()**
+[03]                                ddk::Openable,        // we support open()
+[04]                                ddk::Closable,        // close()
+[05]                                ddk::Readable,        // read()
+[06]                                ddk::UnbindableNew>;  // and the device can be unbound
 ```
 
 This creates a shortcut to `DeviceType`.
@@ -79,27 +81,29 @@ from `DeviceType`:
 [16]     }
 [17]
 [18]     // Methods required by the ddk mixins
-[19]     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-[20]     zx_status_t DdkClose(uint32_t flags);
-[21]     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
-[22]     void DdkUnbindNew(ddk::UnbindTxn txn);
-[23]     void DdkRelease();
-[24] };
+[19]     void DdkInit(ddk::InitTxn txn);
+[20]     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
+[21]     zx_status_t DdkClose(uint32_t flags);
+[22]     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
+[23]     void DdkUnbindNew(ddk::UnbindTxn txn);
+[24]     void DdkRelease();
+[25] };
 ```
 
-Because the `DeviceType` class contains four mixins (lines `[02` .. `05]`: `Openable`,
-`Closable`, `Readable`, and `UnbindableNew`), we're required to provide
-the respective function implementations (lines `[18` .. `22]`)
+Because the `DeviceType` class contains five mixins (lines `[02` .. `06]`: `Initializable`,
+`Openable`, `Closable`, `Readable`, and `UnbindableNew`), we're required to provide
+the respective function implementations (lines `[18` .. `23]`)
 in our class.
 
-All DDKTL classes must provide a release function (here, line `[23]` provides
+All DDKTL classes must provide a release function (here, line `[24]` provides
 **DdkRelease()**), so that's why we didn't specify this in the mixin definition
 for `DeviceType`.
 
-> Keep in mind that once you call **DdkAdd()** you _cannot_ safely use the
-> device instance &mdash; other threads may call **DdkUnbindNew()**, which typically
-> calls **DdkRelease()**, and that frees the driver's device context.
-> This would constitute a "use-after-free" violation.
+> Keep in mind that once you reply to the `InitTxn` (provided in **DdkInit()**)
+> you _cannot_ safely use the device instance &mdash; other threads may call
+> **DdkUnbindNew()**, which typically calls **DdkRelease()**, and that frees the driver's
+> device context. This would constitute a "use-after-free" violation.
+> For devices that do not implement **DdkInit()**, this would apply after you call **DdkAdd()**.
 
 Recall from the preceding sections that your device must register with the device manager
 in order to be usable.
@@ -124,8 +128,13 @@ and then returns a status.
 **Bind()** (line `[12]` in the `class MyDevice` declaration above), performs whatever
 setup it needs to, and then calls **DdkAdd()** with the device name.
 
-After this point, your device is registered with the device manager, and
-any **open()**, **close()**, and **read()** client calls
+Since the device is `Initializable`, the device manager will then call your implementation
+of **DdkInit()** with an `InitTxn`. The device will be invisible and not able to be
+unbound until the device replies to the `InitTxn`. This reply can be done from any
+thread &mdash; it does not necessarily need to be before returning from **DdkInit()**.
+
+After replying to the `InitTxn`, your device will be visible in the Device filesystem,
+and any **open()**, **close()**, and **read()** client calls
 will now flow to your implementations of **DdkOpen()**, **DdkClose()**,
 and **DdkRead()**, respectively.
 
