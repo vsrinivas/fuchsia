@@ -24,7 +24,7 @@ static uint32_t GetVmarHandle(uint64_t size) {
                                              0,                                         // offset,
                                              size,                                      // size
                                              &test_vmar,                                // child
-                                             &child_addr                                // child_addr
+                                             &child_addr  // child_addr
                                              ));
   return test_vmar.release();
 }
@@ -525,6 +525,41 @@ class TestPlatformBuffer {
     EXPECT_TRUE(buffer->SetMappingAddressRange(magma::PlatformBuffer::MappingAddressRange::Create(
         magma::PlatformHandle::Create(GetVmarHandle(kVmarLength)))));
   }
+
+  static void Padding() {
+    std::unique_ptr<magma::PlatformBuffer> buffer =
+        magma::PlatformBuffer::Create(magma::page_size(), "test");
+    EXPECT_FALSE(buffer->SetPadding(1));
+    EXPECT_TRUE(buffer->SetPadding(magma::page_size()));
+
+    void* va;
+    EXPECT_TRUE(buffer->MapCpuConstrained(&va, buffer->size(), 1ul << 38));
+
+    std::unique_ptr<magma::PlatformBuffer> probe_buffer =
+        magma::PlatformBuffer::Create(magma::page_size(), "prove");
+    // Check that a buffer can't be mapped immediately after.
+    EXPECT_FALSE(probe_buffer->MapAtCpuAddr(reinterpret_cast<uint64_t>(va) + buffer->size(), 0,
+                                            probe_buffer->size()));
+
+    EXPECT_TRUE(buffer->UnmapCpu());
+
+    EXPECT_TRUE(buffer->MapCpu(&va));
+    EXPECT_FALSE(probe_buffer->MapAtCpuAddr(reinterpret_cast<uint64_t>(va) + buffer->size(), 0,
+                                            probe_buffer->size()));
+    EXPECT_TRUE(buffer->UnmapCpu());
+
+    // This is an address that probably won't be used by any other allocation, even with the ASAN
+    // shadow enabled.
+    constexpr uint64_t kMappedAddr = 1ul << 46;
+    if (buffer->MapAtCpuAddr(kMappedAddr, 0, buffer->size())) {
+      EXPECT_FALSE(
+          probe_buffer->MapAtCpuAddr(kMappedAddr + buffer->size(), 0, probe_buffer->size()));
+      EXPECT_TRUE(buffer->UnmapCpu());
+
+    } else {
+      printf("Warning: MapAtCpuAddr failed, skipping probe test.");
+    }
+  }
 #endif
 
   static void ReadWrite() {
@@ -623,4 +658,6 @@ TEST(PlatformBuffer, NotMappable) { TestPlatformBuffer::NotMappable(); }
 TEST(PlatformBuffer, AddressRegionSize) { TestPlatformBuffer::CheckAddressRegionSize(); }
 
 TEST(PlatformBuffer, MappingAddressRange) { TestPlatformBuffer::MappingAddressRange(); }
+
+TEST(PlatformBuffer, Padding) { TestPlatformBuffer::Padding(); }
 #endif

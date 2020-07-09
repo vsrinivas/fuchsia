@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 55,
+    "next-free-ordinal": 56,
     "exports": [
       {
         "ordinal": 4,
@@ -975,6 +975,29 @@
             "name": "addr_out",
             "type": "void**",
             "description": "The returned CPU virtual address for the start of the buffer."
+          }
+        ]
+      },
+      {
+        "ordinal": 55,
+        "name": "magma_buffer_set_padding",
+        "type": "magma_status_t",
+        "description": "Sets how much empty address space to leave after any CPU mappings of a buffer.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "padding",
+            "type": "uint64_t",
+            "description": "The number of bytes of padding to use."
           }
         ]
       }

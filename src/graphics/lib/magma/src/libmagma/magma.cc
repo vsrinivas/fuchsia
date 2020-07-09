@@ -262,6 +262,14 @@ magma_status_t magma_unmap(magma_connection_t connection, magma_buffer_t buffer)
   return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_buffer_set_padding(magma_connection_t connection, magma_buffer_t buffer,
+                                        uint64_t padding) {
+  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+  if (!platform_buffer->SetPadding(padding))
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  return MAGMA_STATUS_OK;
+}
+
 void magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer,
                           uint64_t page_offset, uint64_t page_count, uint64_t gpu_va,
                           uint64_t map_flags) {

@@ -50,6 +50,7 @@ class LinuxPlatformBuffer : public PlatformBuffer {
       std::unique_ptr<PlatformBuffer::MappingAddressRange> address_range) override;
   bool Read(void* buffer, uint64_t offset, uint64_t length) override;
   bool Write(const void* buffer, uint64_t offset, uint64_t length) override;
+  bool SetPadding(uint64_t padding_size) override { return false; }
 
  private:
   int memfd_;

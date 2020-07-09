@@ -84,6 +84,9 @@ class PlatformBuffer {
   virtual bool MapCpuWithFlags(uint64_t offset, uint64_t length, uint64_t flags,
                                std::unique_ptr<Mapping>* mapping_out) = 0;
 
+  // |padding| is the count of bytes after any CPU mapping that will be allocated and left empty.
+  virtual bool SetPadding(uint64_t padding) = 0;
+
   virtual bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) = 0;
 
   virtual bool SetCachePolicy(magma_cache_policy_t cache_policy) = 0;

@@ -525,6 +525,17 @@ magma_status_t magma_map_constrained(
     uint64_t alignment,
     void** addr_out);
 
+///
+/// \brief Sets how much empty address space to leave after any CPU mappings of a buffer.
+/// \param connection An open connection.
+/// \param buffer A valid buffer.
+/// \param padding The number of bytes of padding to use.
+///
+magma_status_t magma_buffer_set_padding(
+    magma_connection_t connection,
+    magma_buffer_t buffer,
+    uint64_t padding);
+
 #if defined(__cplusplus)
 }
 #endif

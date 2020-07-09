@@ -74,6 +74,7 @@ class ZirconPlatformBuffer : public PlatformBuffer {
   bool MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length) override;
   bool MapCpuWithFlags(uint64_t offset, uint64_t length, uint64_t flags,
                        std::unique_ptr<Mapping>* mapping_out) override;
+  bool SetPadding(uint64_t padding) override;
 
   bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) override;
   bool SetCachePolicy(magma_cache_policy_t cache_policy) override;
@@ -99,6 +100,7 @@ class ZirconPlatformBuffer : public PlatformBuffer {
   zx::vmo vmo_;
   zx::vmar vmar_;
   uint64_t size_;
+  uint64_t padding_size_ = 0;
   uint64_t koid_;
   void* virt_addr_{};
   uint32_t map_count_ = 0;

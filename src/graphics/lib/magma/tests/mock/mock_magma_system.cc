@@ -111,6 +111,11 @@ magma_status_t magma_map(magma_connection_t connection, magma_buffer_t buffer, v
   return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_buffer_set_padding(magma_connection_t connection, magma_buffer_t buffer,
+                                        uint64_t padding) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 magma_status_t magma_map_aligned(magma_connection_t connection, magma_buffer_t buffer,
                                  uint64_t alignment, void** addr_out) {
   if (!reinterpret_cast<magma::PlatformBuffer*>(buffer)->MapCpu(addr_out, alignment))
