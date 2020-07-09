@@ -574,7 +574,7 @@ zx_status_t SparseContainer::AddCorruptedPartition(const char* type, uint64_t ta
   info.format = nullptr;
   descriptor.magic = fvm::kPartitionDescriptorMagic;
   memcpy(descriptor.type, kDataType, sizeof(kDataType));
-  memcpy(descriptor.name, kDataTypeName, sizeof(kDataTypeName));
+  memcpy(descriptor.name, kMinfsName, sizeof(kMinfsName));
   // For the current use case we dont want to mark it as zxcrypt,
   // reformat path will update this to be encrypted.
   descriptor.flags = fvm::kSparseFlagCorrupted;
