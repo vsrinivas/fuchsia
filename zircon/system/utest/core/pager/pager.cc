@@ -1488,11 +1488,6 @@ TEST(Pager, InvalidPagerSupplyPages) {
             ZX_ERR_INVALID_ARGS);
 
   // Please do not use get_root_resource() in new code. See ZX-1467.
-  // The get_root_resource() function is a weak reference here.  In the
-  // standalone pager-test program, it's not defined because the root
-  // resource handle is not available to to the test.  In the unified
-  // Please do not use get_root_resource() in new code. See ZX-1467.
-  // standalone core-tests program, get_root_resource() is available.
   if (&get_root_resource) {
     // unsupported aux vmo type
     zx::vmo physical_vmo;
@@ -2139,6 +2134,54 @@ TEST(Pager, CleanThreadKill) {
   // Make sure the faulting thread does not take a fatal exception when killed.
   // The thread does fail since its page fault never completes, but it does not crash.
   ASSERT_TRUE(t.WaitForFailure());
+}
+
+// Test that if we resize a vmo while it is waiting on a page to fullfill the commit for a pin
+// request that neither the resize nor the pin cause a crash and fail gracefully.
+TEST(Pager, ResizeBlockedPin) {
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  if (!&get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 2;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  zx::iommu iommu;
+  zx::bti bti;
+  zx::pmt pmt;
+  zx::unowned_resource root_res(get_root_resource());
+  zx_iommu_desc_dummy_t desc;
+  ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                            iommu.reset_and_get_address()),
+            ZX_OK);
+  ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+  // Spin up a thread to do the pin, this will block as it has to wait for pages from the user pager
+  TestThread pin_thread([&bti, &pmt, &vmo]() -> bool {
+    zx_paddr_t addr;
+    // Pin the second page so we can resize such that there is absolutely no overlap in the ranges.
+    // The pin itself is expected to ultimately fail as the resize will complete first.
+    return bti.pin(ZX_BTI_PERM_READ, vmo->vmo(), ZX_PAGE_SIZE, ZX_PAGE_SIZE, &addr, 1, &pmt) ==
+           ZX_ERR_OUT_OF_RANGE;
+  });
+
+  // Wait till the userpager gets the request.
+  ASSERT_TRUE(pin_thread.Start());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
+
+  // Resize the VMO down such that the pin request is completely out of bounds. This should succeed
+  // as nothing has been pinned yet.
+  ASSERT_TRUE(vmo->Resize(0));
+
+  // The pin request should have been implicitly unblocked from the resize, and should have
+  // ultimately failed. pin_thread returns true if it got the correct failure result from pin.
+  ASSERT_TRUE(pin_thread.Wait());
 }
 
 }  // namespace pager_tests

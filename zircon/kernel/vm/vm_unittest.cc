@@ -1229,9 +1229,7 @@ static bool vmo_pin_test() {
   status = vmo->CommitRangePinned(PAGE_SIZE, alloc_size);
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status, "pinning out of range\n");
   status = vmo->CommitRangePinned(PAGE_SIZE, 0);
-  EXPECT_EQ(ZX_OK, status, "pinning range of len 0\n");
-  status = vmo->CommitRangePinned(alloc_size + PAGE_SIZE, 0);
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status, "pinning out-of-range of len 0\n");
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "pinning range of len 0\n");
 
   status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE);
   EXPECT_EQ(ZX_OK, status, "pinning committed range\n");

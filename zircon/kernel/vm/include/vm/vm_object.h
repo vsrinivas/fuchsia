@@ -106,6 +106,7 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
   virtual zx_status_t CommitRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
 
   // find physical pages to back the range of the object and pin them.
+  // |len| must be non-zero.
   virtual zx_status_t CommitRangePinned(uint64_t offset, uint64_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }

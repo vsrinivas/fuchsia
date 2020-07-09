@@ -1927,6 +1927,15 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
   // otherwise we can commit a partial range.
   uint64_t new_len = len;
   if (pin) {
+    // If pinning we explicitly forbid zero length pins as we cannot guarantee consistent semantics.
+    // For example pinning a zero length range outside the range of the VMO is an error, and so
+    // pinning a zero length range inside the vmo and then resizing the VMO smaller than the pin
+    // region should also be an error. To enforce this without having to have new metadata to track
+    // zero length pin regions is to just forbid them. Note that the user entry points for pinning
+    // already forbid zero length ranges.
+    if (len == 0) {
+      return ZX_ERR_INVALID_ARGS;
+    }
     // verify that the range is within the object
     if (unlikely(!InRange(offset, len, size_))) {
       return ZX_ERR_OUT_OF_RANGE;
@@ -1935,11 +1944,10 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     if (!TrimRange(offset, len, size_, &new_len)) {
       return ZX_ERR_OUT_OF_RANGE;
     }
-  }
-
-  // was in range, just zero length
-  if (new_len == 0) {
-    return ZX_OK;
+    // was in range, just zero length
+    if (new_len == 0) {
+      return ZX_OK;
+    }
   }
 
   // Child slices of VMOs are currently not resizable, nor can they be made
@@ -2008,7 +2016,12 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
 
   // Should any errors occur we need to unpin everything.
   auto pin_cleanup = fbl::MakeAutoCall([this, original_offset = offset, &offset, pin]() {
-    if (pin) {
+    // Regardless of any resizes or other things that may have happened any pinned pages *must*
+    // still be within a valid range, and so we know Unpin should succeed. The edge case is if we
+    // had failed to pin *any* pages and so our original offset may be outside the current range of
+    // the vmo. Additionally, as pinning a zero length range is invalid, so is unpinning, and so we
+    // must avoid.
+    if (pin && offset > original_offset) {
       AssertHeld(*lock());
       UnpinLocked(original_offset, offset - original_offset);
     }
@@ -2043,11 +2056,10 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
           pin_cleanup.cancel();
           return ZX_OK;
         }
-      }
-
-      if (new_len == 0) {
-        pin_cleanup.cancel();
-        return ZX_OK;
+        if (new_len == 0) {
+          pin_cleanup.cancel();
+          return ZX_OK;
+        }
       }
 
       end = ROUNDUP_PAGE_SIZE(offset + new_len);
@@ -2531,10 +2543,8 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
 
   // verify that the range is within the object
   ASSERT(InRange(offset, len, size_));
-
-  if (unlikely(len == 0)) {
-    return;
-  }
+  // forbid zero length unpins as zero length pins return errors.
+  ASSERT(len != 0);
 
   if (is_slice()) {
     uint64_t parent_offset;
