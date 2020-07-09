@@ -15,7 +15,7 @@
 
 #include <trace-test-utils/compare_records.h>
 #include <trace-test-utils/read_records.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "trace-vthread/event_vthread.h"
 
@@ -47,12 +47,10 @@ class TraceFixture : private trace::TraceHandler {
     return true;
   }
 
-  bool CompareBuffer(const char* expected) {
-    BEGIN_HELPER;
+  void CompareBuffer(const char* expected) {
     fbl::Vector<trace::Record> records;
     ASSERT_TRUE(trace_testing::ReadRecords(buffer_->data(), buffer_->size(), &records));
     ASSERT_TRUE(trace_testing::CompareBuffer(records, expected));
-    END_HELPER;
   }
 
  private:
@@ -61,10 +59,8 @@ class TraceFixture : private trace::TraceHandler {
   std::unique_ptr<std::array<uint8_t, kBufferSize>> buffer_;
 };
 
-bool TestVthreadDurationBegin() {
+TEST(EventThreadTests, TestVthreadDurationBegin) {
   TraceFixture fixture;
-
-  BEGIN_TEST;
 
   ASSERT_TRUE(fixture.StartTracing());
 
@@ -74,7 +70,7 @@ bool TestVthreadDurationBegin() {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_TRUE(
+  ASSERT_NO_FATAL_FAILURES(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -89,14 +85,10 @@ String(index: 6, \"k3\")\n\
 String(index: 7, \"k4\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1: string(\"v1\"), k2: string(\"v2\"), k3: string(\"v3\"), k4: string(\"v4\")})\n\
 "));
-
-  END_TEST;
 }
 
-bool TestVthreadDurationEnd() {
+TEST(EventThreadTests, TestVthreadDurationEnd) {
   TraceFixture fixture;
-
-  BEGIN_TEST;
 
   ASSERT_TRUE(fixture.StartTracing());
 
@@ -106,7 +98,7 @@ bool TestVthreadDurationEnd() {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_TRUE(
+  ASSERT_NO_FATAL_FAILURES(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -121,14 +113,10 @@ String(index: 6, \"k3\")\n\
 String(index: 7, \"k4\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationEnd, {k1: string(\"v1\"), k2: string(\"v2\"), k3: string(\"v3\"), k4: string(\"v4\")})\n\
 "));
-
-  END_TEST;
 }
 
-bool TestVthreadFlowBegin() {
+TEST(EventThreadTests, TestVthreadFlowBegin) {
   TraceFixture fixture;
-
-  BEGIN_TEST;
 
   ASSERT_TRUE(fixture.StartTracing());
 
@@ -138,7 +126,7 @@ bool TestVthreadFlowBegin() {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_TRUE(
+  ASSERT_NO_FATAL_FAILURES(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -153,14 +141,10 @@ String(index: 6, \"k3\")\n\
 String(index: 7, \"k4\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", FlowBegin(id: 2), {k1: string(\"v1\"), k2: string(\"v2\"), k3: string(\"v3\"), k4: string(\"v4\")})\n\
 "));
-
-  END_TEST;
 }
 
-bool TestVthreadFlowStep() {
+TEST(EventThreadTests, TestVthreadFlowStep) {
   TraceFixture fixture;
-
-  BEGIN_TEST;
 
   ASSERT_TRUE(fixture.StartTracing());
 
@@ -170,7 +154,7 @@ bool TestVthreadFlowStep() {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_TRUE(
+  ASSERT_NO_FATAL_FAILURES(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -185,14 +169,10 @@ String(index: 6, \"k3\")\n\
 String(index: 7, \"k4\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", FlowStep(id: 2), {k1: string(\"v1\"), k2: string(\"v2\"), k3: string(\"v3\"), k4: string(\"v4\")})\n\
 "));
-
-  END_TEST;
 }
 
-bool TestVthreadFlowEnd() {
+TEST(EventThreadTests, TestVthreadFlowEnd) {
   TraceFixture fixture;
-
-  BEGIN_TEST;
 
   ASSERT_TRUE(fixture.StartTracing());
 
@@ -202,7 +182,7 @@ bool TestVthreadFlowEnd() {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_TRUE(
+  ASSERT_NO_FATAL_FAILURES(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -217,14 +197,10 @@ String(index: 6, \"k3\")\n\
 String(index: 7, \"k4\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", FlowEnd(id: 2), {k1: string(\"v1\"), k2: string(\"v2\"), k3: string(\"v3\"), k4: string(\"v4\")})\n\
 "));
-
-  END_TEST;
 }
 
-bool TestVthreadCounter() {
+TEST(EventThreadTests, TestVthreadCounter) {
   TraceFixture fixture;
-
-  BEGIN_TEST;
 
   ASSERT_TRUE(fixture.StartTracing());
 
@@ -234,7 +210,7 @@ bool TestVthreadCounter() {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_TRUE(
+  ASSERT_NO_FATAL_FAILURES(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -249,15 +225,4 @@ String(index: 6, \"k3\")\n\
 String(index: 7, \"k4\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Counter(id: 2), {k1: int32(1), k2: int32(2), k3: int32(3), k4: int32(4)})\n\
 "));
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(event_thread_tests)
-RUN_TEST(TestVthreadDurationBegin)
-RUN_TEST(TestVthreadDurationEnd)
-RUN_TEST(TestVthreadFlowBegin)
-RUN_TEST(TestVthreadFlowStep)
-RUN_TEST(TestVthreadFlowEnd)
-RUN_TEST(TestVthreadCounter)
-END_TEST_CASE(event_thread_tests)
