@@ -16,11 +16,6 @@
 #include <kernel/thread_lock.h>
 #include <ktl/array.h>
 
-// TODO(edcoyne): delete this override and default these on.
-#ifndef DISABLE_PERIODIC_LOAD_BALANCER
-#define DISABLE_PERIODIC_LOAD_BALANCER 1
-#endif
-
 namespace load_balancer {
 
 constexpr zx_duration_t kAllowedRuntimeDeviation = Scheduler::kDefaultTargetLatency.raw_value() / 4;
