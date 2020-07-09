@@ -1783,6 +1783,121 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
   }
 }
 
+// ReadBeforeConnect tests the application behavior when we start to
+// read from a stream socket that is not yet connected.
+TEST(NetStreamTest, ReadBeforeConnect) {
+  fbl::unique_fd listener;
+  ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  ASSERT_EQ(bind(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
+
+  // Setup a test client connection over which we test socket reads
+  // when the connection is not yet established.
+
+  // Linux default behavior is to complete one more connection than what
+  // was passed as listen backlog (zero here).
+  // Hence we initiate 2 client connections in this order:
+  // (1) a precursor client for the sole purpose of filling up the server
+  //     accept queue after handshake completion.
+  // (2) a test client that keeps trying to establish connection with
+  //     server, but remains in SYN-SENT.
+#if defined(__linux__)
+  // TODO(gvisor.dev/issue/3153): Unlike Linux, gVisor does not complete
+  // handshake for a connection when listen backlog is zero. Hence, we
+  // do not maintain the precursor client connection on Fuchsia.
+  fbl::unique_fd precursor_client;
+  ASSERT_TRUE(precursor_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+  ASSERT_EQ(connect(precursor_client.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)),
+            0);
+#endif
+
+  // The test client connection would get established _only_ after both
+  // these conditions are met:
+  // (1) prior client connections are accepted by the server thus
+  //     making room for a new connection.
+  // (2) the server-side TCP stack completes handshake in response to
+  //     the retransmitted SYN for the test client connection.
+  //
+  // The test would likely perform socket reads before any connection
+  // timeout.
+  fbl::unique_fd test_client;
+  ASSERT_TRUE(test_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
+
+  char c;
+  // Test read before initiating connect.
+  EXPECT_EQ(read(test_client.get(), &c, sizeof(c)), -1);
+  EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
+
+  ASSERT_EQ(connect(test_client.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)),
+            -1);
+  ASSERT_EQ(EINPROGRESS, errno) << strerror(errno);
+
+  // Test socket read without waiting for connection to be established.
+  EXPECT_EQ(read(test_client.get(), &c, sizeof(c)), -1);
+  EXPECT_EQ(errno, EWOULDBLOCK) << strerror(errno);
+
+  std::latch fut_started(1);
+  // Asynchronously block on reading from the test client socket.
+  const auto fut = std::async(std::launch::async, [&]() {
+    // Make the socket blocking.
+    int status = fcntl(test_client.get(), F_GETFL, 0);
+    EXPECT_EQ(0, fcntl(test_client.get(), F_SETFL, status ^ O_NONBLOCK));
+
+    fut_started.count_down();
+
+    char c;
+    // Block on read before the connection is established.
+    EXPECT_EQ(read(test_client.get(), &c, sizeof(c)), static_cast<ssize_t>(sizeof(c)))
+        << strerror(errno);
+  });
+  fut_started.wait();
+  // Wait for the task to be blocked on read.
+  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
+
+#if defined(__linux__)
+  // Accept the precursor connection to make room for the test client
+  // connection to complete.
+  fbl::unique_fd precursor_accept;
+  ASSERT_TRUE(precursor_accept = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
+      << strerror(errno);
+  ASSERT_EQ(close(precursor_accept.release()), 0) << strerror(errno);
+  ASSERT_EQ(close(precursor_client.release()), 0) << strerror(errno);
+#endif
+
+  // TODO(gvisor.dev/issue/3153): Unlike Linux, gVisor does not accept a connection
+  // when listen backlog is zero.
+#if defined(__Fuchsia__)
+  ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+#endif
+
+  // Accept the test client connection.
+  fbl::unique_fd test_accept;
+  ASSERT_TRUE(test_accept = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
+      << strerror(errno);
+
+  // Write data to unblock the socket read on the test client connection.
+  ASSERT_EQ(write(test_accept.get(), &c, sizeof(c)), static_cast<ssize_t>(sizeof(c)))
+      << strerror(errno);
+
+  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
+
+  ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+  ASSERT_EQ(close(test_accept.release()), 0) << strerror(errno);
+  ASSERT_EQ(close(test_client.release()), 0) << strerror(errno);
+}
+
 TEST(NetStreamTest, NonBlockingConnectRefused) {
   int acptfd;
   ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);

@@ -245,7 +245,7 @@ zx_status_t zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
 
 static zx_status_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags,
                                         size_t* out_actual, int16_t* out_code) {
-  if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
+  if (!(*fdio_get_ioflag(io) & (IOFLAG_SOCKET_CONNECTING | IOFLAG_SOCKET_CONNECTED))) {
     return ZX_ERR_NOT_CONNECTED;
   }
   return fdio_zxio_recvmsg(io, msg, flags, out_actual, out_code);
@@ -291,7 +291,9 @@ static void fdio_wait_begin_socket(fdio_t* io, const zx::socket& socket, uint32_
     if (events & POLLOUT) {
       signals |= ZXIO_SIGNAL_WRITABLE;
     }
-    // This is just here for symmetry with POLLOUT above.
+  }
+
+  if (*ioflag & (IOFLAG_SOCKET_CONNECTING | IOFLAG_SOCKET_CONNECTED)) {
     if (events & POLLIN) {
       signals |= ZXIO_SIGNAL_READABLE;
     }
