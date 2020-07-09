@@ -354,13 +354,13 @@ impl Ip for Ipv6 {
         prefix: 8,
     };
     /// The subnet of link-local unicast addresses, defined in [RFC 4291 Section
-    /// 2.5.6].
+    /// 2.4].
     ///
     /// Note that multicast addresses can also be link-local. However, there is no
     /// single subnet of link-local multicast addresses. For more details on
     /// link-local multicast addresses, see [RFC 4291 Section 2.7].
     ///
-    /// [RFC 4291 Section 2.5.6]: https://tools.ietf.org/html/rfc4291#section-2.5.6
+    /// [RFC 4291 Section 2.4]: https://tools.ietf.org/html/rfc4291#section-2.4
     /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
     const LINK_LOCAL_UNICAST_SUBNET: Subnet<Ipv6Addr> = Subnet {
         network: Ipv6Addr::new([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
