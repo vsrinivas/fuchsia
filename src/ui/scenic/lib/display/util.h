@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_COMMON_DISPLAY_UTIL_H_
-#define SRC_UI_SCENIC_LIB_COMMON_DISPLAY_UTIL_H_
+#ifndef SRC_UI_SCENIC_LIB_DISPLAY_UTIL_H_
+#define SRC_UI_SCENIC_LIB_DISPLAY_UTIL_H_
 
 #include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -30,4 +30,4 @@ DisplayEventId ImportEvent(const fuchsia::hardware::display::ControllerSyncPtr& 
 
 }  // namespace scenic_impl
 
-#endif  // SRC_UI_SCENIC_LIB_COMMON_DISPLAY_UTIL_H_
+#endif  // SRC_UI_SCENIC_LIB_DISPLAY_UTIL_H_

@@ -11,7 +11,6 @@
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
-#include "src/ui/scenic/lib/common/display_util.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
 #include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
@@ -20,9 +19,10 @@
 #include <glm/gtc/constants.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
 
-namespace scenic_impl {
+#include "src/ui/scenic/lib/display/util.h"
 
-namespace display {
+using namespace scenic_impl;
+using namespace display;
 
 class DisplayTest : public gtest::RealLoopFixture {
  protected:
@@ -259,5 +259,3 @@ VK_TEST_F(DisplayTest, SetDisplayImageTest) {
       display_signal_fence.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::msec(3000)), nullptr);
   EXPECT_EQ(status, ZX_OK);
 }
-}  // namespace display
-}  // namespace scenic_impl

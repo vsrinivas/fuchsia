@@ -17,7 +17,7 @@
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
-#include "src/ui/scenic/lib/common/display_util.h"
+#include "src/ui/scenic/lib/display/util.h"
 
 #define VK_CHECK_RESULT(XXX) FX_CHECK(XXX.result == vk::Result::eSuccess)
 

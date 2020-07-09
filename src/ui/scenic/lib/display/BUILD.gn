@@ -16,6 +16,8 @@ source_set("display") {
     "display_manager.h",
     "display_manager2.cc",
     "display_manager2.h",
+    "util.cc",
+    "util.h",
   ]
 
   public_deps = [
