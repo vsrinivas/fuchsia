@@ -629,7 +629,7 @@ void Service::AddAddition(ServerInterpreterContext* context, uint64_t node_file_
 
 // - Server ----------------------------------------------------------------------------------------
 
-Server::Server() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
+Server::Server(async::Loop* loop) : loop_(loop) {}
 
 bool Server::Listen() {
   zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
@@ -639,7 +639,7 @@ bool Server::Listen() {
   }
 
   svc_dir_t* dir = nullptr;
-  zx_status_t status = svc_dir_create(loop_.dispatcher(), directory_request, &dir);
+  zx_status_t status = svc_dir_create(loop()->dispatcher(), directory_request, &dir);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "error: svc_dir_create failed: " << status << " ("
                    << zx_status_get_string(status) << ")";
@@ -656,7 +656,7 @@ bool Server::Listen() {
 }
 
 zx_status_t Server::IncomingConnection(zx_handle_t service_request) {
-  return fidl::Bind(loop_.dispatcher(), zx::channel(service_request),
+  return fidl::Bind(loop()->dispatcher(), zx::channel(service_request),
                     AddConnection(service_request));
 }
 

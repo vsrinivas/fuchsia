@@ -261,7 +261,9 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
 // object is created.
 class Server {
  public:
-  Server();
+  explicit Server(async::Loop* loop);
+
+  Server() = delete;
 
   // Erase a service previously created with AddConnection. This closes the connection.
   void EraseService(Service* service) {
@@ -287,12 +289,12 @@ class Server {
   // Returns whether we were able to bind to the given |channel|.  On error, |channel| is closed and
   // we do not bind.
   zx_status_t IncomingConnection(zx_handle_t service_request);
-  void Run() { loop_.Run(); }
+  void Run() { loop()->Run(); }
 
-  async::Loop* loop() { return &loop_; }
+  async::Loop* loop() { return loop_; }
 
  private:
-  async::Loop loop_;
+  async::Loop* loop_;
   std::vector<std::unique_ptr<Service>> services_;
 };
 
