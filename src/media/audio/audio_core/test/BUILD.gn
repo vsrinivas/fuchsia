@@ -8,7 +8,6 @@ group("test") {
     "api:audio-core-api-tests",
     "api:audio-core-api-pipeline-tests",
     "api:audio-core-with-inversion-filter",
-    "audio_admin:audio_admin_tests",
     "device:audio_device_tests",
     "hardware:audio_core_hardware_tests",
     "service:audio_device_service_tests",

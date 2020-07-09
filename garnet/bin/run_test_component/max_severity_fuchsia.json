@@ -33,10 +33,6 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/audio_admin_tests#meta/audio_admin_tests.cmx",
-         "max_severity": "ERROR"
-      },
-      {
          "url": "fuchsia-pkg://fuchsia.com/audio-core-api-tests#meta/audio-renderer-test.cmx",
          "max_severity": "ERROR"
       },

@@ -49,6 +49,13 @@ audio_core_api_test_component("audio-capturer-test") {
   ]
 }
 
+audio_core_api_test_component("audio-policy-pipeline-test") {
+  source = "audio_policy_pipeline_test.cc"
+  executable_deps = [
+    "//src/lib/fxl",
+  ]
+}
+
 audio_core_api_test_component("audio-renderer-test") {
   source = "audio_renderer_test.cc"
   executable_deps = [
@@ -120,6 +127,7 @@ fuchsia_test_package("audio-core-api-tests") {
 # These tests must run on real hardware because they depend on real time.
 fuchsia_test_package("audio-core-api-pipeline-tests") {
   test_components = [
+    ":audio-policy-pipeline-test",
     ":audio-renderer-pipeline-test",
   ]
   test_specs = {

@@ -3,18 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/virtualaudio/cpp/fidl.h>
-#include <lib/fzl/vmo-mapper.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/device/audio.h>
 
-#include <fbl/algorithm.h>
-
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 #include "src/media/audio/lib/test/renderer_shim.h"
-#include "zircon/system/ulib/pretty/include/pretty/hexdump.h"
 
 namespace media::audio::test {
 
