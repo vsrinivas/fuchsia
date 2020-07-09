@@ -24,6 +24,7 @@ async fn fails_on_image_write_error() {
             update: None,
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -75,6 +76,7 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
         update: None,
         reboot: None,
         skip_recovery: Some(true),
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -121,6 +123,7 @@ async fn writes_to_both_configs_if_abr_not_supported() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -184,6 +187,7 @@ async fn do_writes_to_inactive_config_if_abr_supported(
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -255,6 +259,7 @@ async fn writes_recovery_called_legacy_zedboot() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -306,6 +311,7 @@ async fn writes_recovery() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -357,6 +363,7 @@ async fn writes_recovery_vbmeta() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -412,6 +419,7 @@ async fn writes_fuchsia_vbmeta() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");

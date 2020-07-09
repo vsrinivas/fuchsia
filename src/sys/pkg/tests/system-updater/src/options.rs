@@ -22,6 +22,7 @@ async fn uses_custom_update_package() {
         update: Some("fuchsia-pkg://fuchsia.com/another-update/4"),
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("run system updater");
@@ -63,6 +64,7 @@ async fn rejects_invalid_update_package_url() {
             update: Some(bogus_url),
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -134,6 +136,7 @@ async fn does_not_reboot_if_requested_not_to_reboot() {
         update: None,
         reboot: Some(false),
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("run system updater");
@@ -171,4 +174,31 @@ async fn does_not_reboot_if_requested_not_to_reboot() {
             Paver(PaverEvent::BootManagerFlush),
         ]
     );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn oneshot_false_not_implemented() {
+    let env = TestEnv::new();
+
+    env.resolver
+        .register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi");
+
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: Some(false),
+            skip_recovery: None,
+            oneshot: None,
+        })
+        .await;
+    assert!(result.is_err(), "system updater succeeded when it should fail");
+
+    assert_eq!(env.take_interactions(), vec![]);
 }

@@ -70,7 +70,7 @@ impl Updater {
         drop(file);
 
         let update_package_ref = update_package.as_ref();
-        let mut args = vec!["--skip-recovery", "true", "--reboot", "false"];
+        let mut args = vec!["--skip-recovery", "true", "--reboot", "false", "--oneshot", "true"];
         if let Some(pkg) = update_package_ref {
             args.push("--update");
             args.push(pkg);

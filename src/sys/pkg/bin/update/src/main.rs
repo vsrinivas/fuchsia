@@ -106,6 +106,8 @@ async fn force_install(update_pkg_url: String, reboot: bool) -> Result<(), Error
         .arg("manual")
         .arg("--reboot")
         .arg(reboot.to_string())
+        .arg("--oneshot")
+        .arg("true")
         .spawn(&fuchsia_component::client::launcher()?)
         .context("spawning the system updater")?
         .wait()

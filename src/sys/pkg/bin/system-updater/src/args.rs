@@ -38,6 +38,10 @@ pub struct Args {
     /// start time of update attempt, as unix nanosecond timestamp
     #[argh(option, from_str_fn(parse_wall_time))]
     pub start: Option<SystemTime>,
+
+    /// if true, the system updater will install a single update and exit
+    #[argh(option, default = "false")]
+    pub oneshot: bool,
 }
 
 fn parse_wall_time(value: &str) -> Result<SystemTime, String> {

@@ -16,6 +16,13 @@ async fn main() {
     fx_log_info!("starting system updater");
 
     let args: crate::args::Args = argh::from_env();
+
+    if !args.oneshot {
+        // TODO(49804): implement the FIDL service path.
+        fx_log_err!("Error: use of channel other than oneshot not yet implemented.");
+        std::process::exit(1);
+    }
+
     let config = update::Config::from_args(args);
 
     let env = match update::Environment::connect_in_namespace() {

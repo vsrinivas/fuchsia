@@ -22,6 +22,7 @@ async fn updates_the_system() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("run system updater");
@@ -81,6 +82,7 @@ async fn requires_zbi() {
             update: None,
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");

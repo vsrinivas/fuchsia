@@ -60,6 +60,7 @@ mod tests {
             reboot: true,
             skip_recovery: false,
             start: Some(now),
+            oneshot: true,
         };
 
         let mut config = Config::from_args(args);

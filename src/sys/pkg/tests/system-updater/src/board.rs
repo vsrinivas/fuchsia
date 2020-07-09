@@ -26,6 +26,7 @@ async fn validates_board() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -59,6 +60,7 @@ async fn rejects_mismatched_board() {
             update: None,
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");

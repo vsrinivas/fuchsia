@@ -28,6 +28,7 @@ async fn rejects_invalid_package_name() {
             update: Some(not_update_package_url),
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -69,6 +70,7 @@ async fn fails_if_package_unavailable() {
             update: None,
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -106,6 +108,7 @@ async fn packages_json_takes_precedence() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("run system updater");

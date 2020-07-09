@@ -266,6 +266,9 @@ impl TestEnv {
         if let Some(skip_recovery) = args.skip_recovery {
             v.append(&mut vec!["--skip-recovery".to_string(), format!("{}", skip_recovery)]);
         }
+        if let Some(oneshot) = args.oneshot {
+            v.append(&mut vec!["--oneshot".to_string(), format!("{}", oneshot)]);
+        }
 
         self.run_system_updater_args(v).await
     }
@@ -318,6 +321,7 @@ struct SystemUpdaterArgs<'a> {
     update: Option<&'a str>,
     reboot: Option<bool>,
     skip_recovery: Option<bool>,
+    oneshot: Option<bool>,
 }
 
 struct MockCacheService {

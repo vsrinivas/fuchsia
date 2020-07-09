@@ -77,6 +77,8 @@ impl Installer for FuchsiaInstaller {
                 .arg(url)
                 .arg("--reboot")
                 .arg("false")
+                .arg("--oneshot")
+                .arg("true")
                 .status(&self.launcher)?
                 .await?
                 .ok()
@@ -168,10 +170,19 @@ mod tests {
                 assert_eq!(
                     arguments,
                     Some(
-                        vec!["--initiator", "manual", "--update", TEST_URL, "--reboot", "false",]
-                            .iter()
-                            .map(|s| s.to_string())
-                            .collect()
+                        vec![
+                            "--initiator",
+                            "manual",
+                            "--update",
+                            TEST_URL,
+                            "--reboot",
+                            "false",
+                            "--oneshot",
+                            "true"
+                        ]
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect()
                     )
                 );
                 let (_stream, handle) = controller.into_stream_and_control_handle().unwrap();

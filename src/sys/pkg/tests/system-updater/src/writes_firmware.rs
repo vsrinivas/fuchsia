@@ -23,6 +23,7 @@ async fn writes_bootloader() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -72,6 +73,7 @@ async fn writes_firmware() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -122,6 +124,7 @@ async fn writes_multiple_firmware_types() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -192,6 +195,7 @@ async fn skips_unsupported_firmware_type() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("success");
@@ -246,6 +250,7 @@ async fn fails_on_firmware_write_error() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect_err("update should fail");

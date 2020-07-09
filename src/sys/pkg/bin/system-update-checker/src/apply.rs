@@ -176,6 +176,8 @@ async fn apply_system_update_impl<'a>(
                 &format!("{}", current_system_image),
                 "--target",
                 &format!("{}", latest_system_image),
+                "--oneshot",
+                "true",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -380,6 +382,8 @@ mod test_apply_system_update_impl {
                         "0000000000000000000000000000000000000000000000000000000000000000",
                         "--target",
                         "0101010101010101010101010101010101010101010101010101010101010101",
+                        "--oneshot",
+                        "true",
                     ]
                     .iter()
                     .map(|s| s.to_string())
@@ -428,7 +432,9 @@ mod test_apply_system_update_impl {
                         "--source",
                         &source_merkle.to_lowercase(),
                         "--target",
-                        &target_merkle.to_lowercase()
+                        &target_merkle.to_lowercase(),
+                        "--oneshot",
+                        "true",
                     ]
                     .iter()
                     .map(|s| s.to_string())

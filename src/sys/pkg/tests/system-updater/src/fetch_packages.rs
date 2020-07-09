@@ -23,6 +23,7 @@ async fn fails_on_package_fetch_error() {
             update: None,
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -68,6 +69,7 @@ async fn fails_when_package_cache_sync_fails() {
             update: None,
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
 

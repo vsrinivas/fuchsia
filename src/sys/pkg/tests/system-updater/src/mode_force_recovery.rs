@@ -32,6 +32,7 @@ async fn writes_recovery_and_force_reboots_into_it() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("run system updater");
@@ -96,6 +97,7 @@ async fn reboots_regardless_of_reboot_arg() {
         update: None,
         reboot: Some(false),
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("run system updater");
@@ -142,6 +144,7 @@ async fn rejects_zbi() {
             update: None,
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -168,6 +171,7 @@ async fn rejects_skip_recovery_flag() {
             update: None,
             reboot: None,
             skip_recovery: Some(true),
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");

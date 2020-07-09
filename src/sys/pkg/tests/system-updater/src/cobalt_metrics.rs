@@ -36,6 +36,7 @@ async fn reports_untrusted_tuf_repo() {
             update: None,
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -76,6 +77,7 @@ async fn succeeds_even_if_metrics_fail_to_send() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .expect("run system updater");

@@ -24,6 +24,7 @@ async fn promotes_target_channel_as_current_channel() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .unwrap();
@@ -40,6 +41,7 @@ async fn promotes_target_channel_as_current_channel() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .unwrap();
@@ -65,6 +67,7 @@ async fn succeeds_even_if_target_channel_does_not_exist() {
         update: None,
         reboot: None,
         skip_recovery: None,
+        oneshot: Some(true),
     })
     .await
     .unwrap();
@@ -94,6 +97,7 @@ async fn does_not_promote_target_channel_on_failure() {
             update: None,
             reboot: None,
             skip_recovery: None,
+            oneshot: Some(true),
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
