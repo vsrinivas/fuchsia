@@ -1136,7 +1136,7 @@ filesystem_sizes_args += [
   max_data_image_size,
 ]
 
-# fvm.blob.sparse.blk creates a sprase FVM partition image containing the blob
+# fvm.blob.sparse.blk creates a sparse FVM partition image containing the blob
 # partition produced by blob.blk and an empty data partition that will be
 # formatted on first boot.
 fvm_blob_sparse_blk_path = "$target_out_dir/fvm.blob.sparse.blk"
