@@ -9,7 +9,7 @@ use {
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,
-    fidl_fuchsia_settings::{Error, PrivacyMarker, PrivacyProxy},
+    fidl_fuchsia_settings::{PrivacyMarker, PrivacyProxy},
     fuchsia_zircon::Status,
     futures::lock::Mutex,
     std::sync::Arc,
@@ -76,13 +76,6 @@ async fn test_privacy() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_channel_failure_watch() {
-    let privacy_service = create_privacy_test_env_with_failures().await;
-    let result = privacy_service.watch().await.ok();
-    assert_eq!(result, Some(Err(Error::Failed)));
-}
-
-#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch2() {
     let privacy_service = create_privacy_test_env_with_failures().await;
     let result = privacy_service.watch2().await;
@@ -91,15 +84,4 @@ async fn test_channel_failure_watch2() {
         ClientChannelClosed(Status::INTERNAL).to_string(),
         result.err().unwrap().to_string()
     );
-}
-
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_simultaneous_watch() {
-    let factory = InMemoryStorageFactory::create();
-    let (privacy_service, _) = create_test_privacy_env(factory).await;
-
-    let settings =
-        privacy_service.watch().await.expect("watch completed").expect("watch successful");
-    let settings2 = privacy_service.watch2().await.expect("watch completed");
-    assert_eq!(settings, settings2);
 }

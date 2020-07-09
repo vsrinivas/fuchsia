@@ -1,30 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::fidl_process;
+use crate::fidl_process_2;
 use fidl_fuchsia_settings::{
     Error, PrivacyMarker, PrivacyRequest, PrivacySettings, PrivacyWatch2Responder,
-    PrivacyWatchResponder,
 };
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
-use crate::fidl_hanging_get_result_responder;
 use crate::fidl_processor::RequestContext;
 use crate::request_respond;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(PrivacySettings, PrivacyWatch2Responder, PrivacyMarker::DEBUG_NAME);
-
-// TODO(fxb/52593): Remove when clients are ported to watch2.
-fidl_hanging_get_result_responder!(
-    PrivacySettings,
-    PrivacyWatchResponder,
-    PrivacyMarker::DEBUG_NAME
-);
 
 impl From<SettingResponse> for PrivacySettings {
     fn from(response: SettingResponse) -> Self {
@@ -42,32 +33,7 @@ impl From<PrivacySettings> for SettingRequest {
     }
 }
 
-fidl_process!(
-    Privacy,
-    SettingType::Privacy,
-    process_request,
-    PrivacyWatch2Responder,
-    process_request_2
-);
-
-// TODO(fxb/52593): Replace with logic from process_request_2
-// and remove process_request_2 when clients ported to Watch2 and back.
-async fn process_request(
-    context: RequestContext<PrivacySettings, PrivacyWatchResponder>,
-    req: PrivacyRequest,
-) -> Result<Option<PrivacyRequest>, anyhow::Error> {
-    #[allow(unreachable_patterns)]
-    match req {
-        PrivacyRequest::Watch { responder } => {
-            context.watch(responder, false).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-
-    return Ok(None);
-}
+fidl_process_2!(Privacy, SettingType::Privacy, process_request_2);
 
 async fn process_request_2(
     context: RequestContext<PrivacySettings, PrivacyWatch2Responder>,

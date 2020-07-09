@@ -4,9 +4,13 @@
 
 #[cfg(test)]
 use {
-    crate::config::default_settings::DefaultSetting, crate::registry::device_storage::testing::*,
-    crate::switchboard::base::SettingType, crate::EnvironmentBuilder, crate::ServiceConfiguration,
-    fidl_fuchsia_settings::*, std::collections::HashSet,
+    crate::config::default_settings::DefaultSetting,
+    crate::registry::device_storage::testing::*,
+    crate::switchboard::base::SettingType,
+    crate::EnvironmentBuilder,
+    crate::ServiceConfiguration,
+    fidl_fuchsia_settings::{AccessibilityMarker, PrivacyMarker},
+    std::collections::HashSet,
 };
 
 const ENV_NAME: &str = "settings_service_configuration_test_environment";
@@ -62,6 +66,5 @@ async fn test_default_configuration_provided() {
     let privacy_service = env.connect_to_service::<PrivacyMarker>().unwrap();
 
     // Any calls to the privacy service should fail since the service isn't included in the configuration.
-    privacy_service.watch().await.expect_err("watch completed");
     privacy_service.watch2().await.expect_err("watch completed");
 }
