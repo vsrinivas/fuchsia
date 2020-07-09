@@ -1168,10 +1168,10 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
   for (uint i = 0; i < depth; ++i) {
     printf("  ");
   }
-  printf("vmo %p/k%" PRIu64 " size %#" PRIx64 " offset %#" PRIx64 " limit %#" PRIx64
-         " pages %zu ref %d parent %p/k%" PRIu64 "\n",
-         this, user_id_, size_, parent_offset_, parent_limit_, count, ref_count_debug(),
-         parent_.get(), parent_id);
+  printf("vmo %p/k%" PRIu64 " size %#" PRIx64 " offset %#" PRIx64 " start limit %#" PRIx64
+         " limit %#" PRIx64 " pages %zu ref %d parent %p/k%" PRIu64 "\n",
+         this, user_id_, size_, parent_offset_, parent_start_limit_, parent_limit_, count,
+         ref_count_debug(), parent_.get(), parent_id);
 
   if (page_source_) {
     for (uint i = 0; i < depth + 1; ++i) {
@@ -1188,8 +1188,10 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
       if (p.IsMarker()) {
         printf("offset %#" PRIx64 " zero page marker\n", offset);
       } else {
-        printf("offset %#" PRIx64 " page %p paddr %#" PRIxPTR "\n", offset, p.Page(),
-               p.Page()->paddr());
+        vm_page_t* page = p.Page();
+        printf("offset %#" PRIx64 " page %p paddr %#" PRIxPTR "(%c%c)\n", offset, page,
+               page->paddr(), page->object.cow_left_split ? 'L' : '.',
+               page->object.cow_right_split ? 'R' : '.');
       }
       return ZX_ERR_NEXT;
     };
