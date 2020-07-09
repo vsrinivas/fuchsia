@@ -23,4 +23,16 @@ mod my_tests {
     fn sample_test_two() {
         println!("My only job is not to panic!()");
     }
+
+    #[ignore]
+    #[test]
+    fn ignored_passing_test() {
+        println!("Everybody ignores me");
+    }
+
+    #[ignore]
+    #[test]
+    fn ignored_failing_test() {
+        panic!("There's a REASON everyone ignores me.");
+    }
 }

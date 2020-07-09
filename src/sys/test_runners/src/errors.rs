@@ -9,148 +9,123 @@ use {
     fuchsia_zircon as zx,
     runner::component::ComponentNamespaceError,
     serde_json,
-    std::convert::From,
+    std::sync::Arc,
     thiserror::Error,
 };
 
 /// Error encountered while enumerating test.
-#[derive(Debug, Error)]
+///
+/// This must be `Clone`-able because enumeration futures are memoized.
+#[derive(Debug, Error, Clone)]
 pub enum EnumerationError {
     #[error("{:?}", _0)]
-    Namespace(NamespaceError),
+    Namespace(#[source] Arc<NamespaceError>),
 
     #[error("error launching test: {:?}", _0)]
-    LaunchTest(LaunchError),
+    LaunchTest(#[source] Arc<LaunchError>),
 
     #[error("{:?}", _0)]
-    Io(IoError),
+    Io(#[source] Arc<IoError>),
 
     #[error("can't get test list")]
     ListTest,
 
     #[error("can't get test list: {:?}", _0)]
-    JsonParse(serde_json::error::Error),
+    JsonParse(#[source] Arc<serde_json::error::Error>),
 
     #[error("can't convert to string, refer fxb/4610: {:?}", _0)]
-    Utf8ToString(std::str::Utf8Error),
+    Utf8ToString(#[from] std::str::Utf8Error),
 
     #[error("{:?}", _0)]
-    Log(LogError),
+    Log(#[from] Arc<LogError>),
+}
+
+impl From<NamespaceError> for EnumerationError {
+    fn from(e: NamespaceError) -> Self {
+        EnumerationError::Namespace(Arc::new(e))
+    }
+}
+
+impl From<LaunchError> for EnumerationError {
+    fn from(e: LaunchError) -> Self {
+        EnumerationError::LaunchTest(Arc::new(e))
+    }
+}
+
+impl From<IoError> for EnumerationError {
+    fn from(e: IoError) -> Self {
+        EnumerationError::Io(Arc::new(e))
+    }
+}
+
+impl From<serde_json::error::Error> for EnumerationError {
+    fn from(e: serde_json::error::Error) -> Self {
+        EnumerationError::JsonParse(Arc::new(e))
+    }
+}
+
+impl From<LogError> for EnumerationError {
+    fn from(e: LogError) -> Self {
+        EnumerationError::Log(Arc::new(e))
+    }
 }
 
 /// Error encountered while working with fuchsia::io
 #[derive(Debug, Error)]
 pub enum IoError {
     #[error("cannot clone proxy: {:?}", _0)]
-    CloneProxy(anyhow::Error),
+    CloneProxy(#[source] anyhow::Error),
 
     #[error("can't read file: {:?}", _0)]
-    File(anyhow::Error),
+    File(#[source] anyhow::Error),
 }
 
 /// Error encountered while working runner::component::ComponentNamespace.
 #[derive(Debug, Error)]
 pub enum NamespaceError {
     #[error("can't clone namespace: {:?}", _0)]
-    Clone(ComponentNamespaceError),
+    Clone(#[from] ComponentNamespaceError),
 }
 
 /// Error encountered while running test.
 #[derive(Debug, Error)]
 pub enum RunTestError {
     #[error("{:?}", _0)]
-    Namespace(NamespaceError),
+    Namespace(#[from] NamespaceError),
 
     #[error("error launching test: {:?}", _0)]
-    LaunchTest(LaunchError),
+    LaunchTest(#[from] LaunchError),
 
     #[error("{:?}", _0)]
-    Io(IoError),
+    Io(#[from] IoError),
 
     #[error("{:?}", _0)]
-    Log(LogError),
+    Log(#[from] LogError),
 
     #[error("can't convert to string, refer fxb/4610: {:?}", _0)]
-    Utf8ToString(std::str::Utf8Error),
+    Utf8ToString(#[from] std::str::Utf8Error),
 
     #[error("cannot send start event: {:?}", _0)]
-    SendStart(fidl::Error),
+    SendStart(#[source] fidl::Error),
 
     #[error("cannot send finish event: {:?}", _0)]
-    SendFinish(fidl::Error),
+    SendFinish(#[source] fidl::Error),
 
     #[error("cannot send on_finished event: {:?}", _0)]
-    SendFinishAllTests(fidl::Error),
+    SendFinishAllTests(#[source] fidl::Error),
 
     #[error("Received unexpected exit code {} from test process.", _0)]
     UnexpectedReturnCode(i64),
 
     #[error("can't get test result: {:?}", _0)]
-    JsonParse(serde_json::error::Error),
+    JsonParse(#[from] serde_json::error::Error),
 
     #[error("Cannot get test process info: {}", _0)]
-    ProcessInfo(zx::Status),
+    ProcessInfo(#[source] zx::Status),
 
     #[error("Name in invocation cannot be null")]
     TestCaseName,
-}
 
-impl From<IoError> for EnumerationError {
-    fn from(error: IoError) -> Self {
-        EnumerationError::Io(error)
-    }
-}
-
-impl From<LogError> for RunTestError {
-    fn from(error: LogError) -> Self {
-        RunTestError::Log(error)
-    }
-}
-
-impl From<LogError> for EnumerationError {
-    fn from(error: LogError) -> Self {
-        EnumerationError::Log(error)
-    }
-}
-
-impl From<NamespaceError> for EnumerationError {
-    fn from(error: NamespaceError) -> Self {
-        EnumerationError::Namespace(error)
-    }
-}
-
-impl From<LaunchError> for EnumerationError {
-    fn from(error: LaunchError) -> Self {
-        EnumerationError::LaunchTest(error)
-    }
-}
-
-impl From<std::str::Utf8Error> for EnumerationError {
-    fn from(error: std::str::Utf8Error) -> Self {
-        EnumerationError::Utf8ToString(error)
-    }
-}
-
-impl From<IoError> for RunTestError {
-    fn from(error: IoError) -> Self {
-        RunTestError::Io(error)
-    }
-}
-
-impl From<NamespaceError> for RunTestError {
-    fn from(error: NamespaceError) -> Self {
-        RunTestError::Namespace(error)
-    }
-}
-
-impl From<LaunchError> for RunTestError {
-    fn from(error: LaunchError) -> Self {
-        RunTestError::LaunchTest(error)
-    }
-}
-
-impl From<std::str::Utf8Error> for RunTestError {
-    fn from(error: std::str::Utf8Error) -> Self {
-        RunTestError::Utf8ToString(error)
-    }
+    #[error("error reloading list of tests: {:?}", _0)]
+    EnumerationError(#[from] EnumerationError),
 }

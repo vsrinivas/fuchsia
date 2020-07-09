@@ -14,7 +14,8 @@ use {
     },
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
-        future::{abortable, AbortHandle},
+        future::{abortable, AbortHandle, Future, FutureExt as _},
+        lock::Mutex,
         TryStreamExt,
     },
     log::{debug, error, info},
@@ -26,7 +27,10 @@ use {
     },
     test_runners_lib::{
         cases::TestCaseInfo,
-        elf::{Component, FidlError, KernelError, SuiteServer},
+        elf::{
+            Component, EnumeratedTestCases, FidlError, KernelError, MemoizedFutureContainer,
+            PinnedFuture, SuiteServer,
+        },
         errors::*,
         launch,
         logs::{LogError, LogStreamReader, LogWriter, LoggerStream},
@@ -93,15 +97,25 @@ struct Failure {
     pub failure: String,
 }
 
-/// Provides info about individual test cases.
+/// Provides info about individual test executions.
 /// Example: For test FOO.Bar, this contains info about Bar.
 /// Please refer to documentation of `TestOutput` for details.
 #[derive(Serialize, Deserialize, Debug)]
 struct IndividualTestOutput {
     pub name: String,
-    pub status: String,
+    pub status: IndividualTestOutputStatus,
     pub time: String,
     pub failures: Option<Vec<Failure>>,
+}
+
+/// Describes whether a test was run or skipped.
+///
+/// Refer to [`TestSuiteOutput`] documentation for schema details.
+#[serde(rename_all = "UPPERCASE")]
+#[derive(Serialize, Deserialize, Debug)]
+enum IndividualTestOutputStatus {
+    Run,
+    NotRun,
 }
 
 /// Provides info about individual test suites.
@@ -134,17 +148,20 @@ async fn read_file(dir: &DirectoryProxy, path: &Path) -> Result<String, anyhow::
 
 /// Implements `fuchsia.test.Suite` and runs provided test.
 pub struct TestServer {
-    /// Cache to store enumerated test names.
-    test_list: Option<Arc<Vec<TestCaseInfo>>>,
-
     /// Directory where test data(json) is written by gtest.
-    output_dir_proxy: fio::DirectoryProxy,
+    ///
+    /// Note: Although `DirectoryProxy` is `Clone`able, it is not `Sync + Send`, so it has to be
+    /// wrapped in an `Arc`.
+    output_dir_proxy: Arc<fio::DirectoryProxy>,
 
     /// Output directory name.
     output_dir_name: String,
 
     /// Output directory's parent path.
     output_dir_parent_path: String,
+
+    /// Cache to store enumerated tests.
+    tests_future_container: MemoizedFutureContainer<EnumeratedTestCases, EnumerationError>,
 }
 
 #[async_trait]
@@ -153,24 +170,11 @@ impl SuiteServer for TestServer {
     /// defined by gtests, i.e FOO.Bar.
     /// It only runs enumeration logic once, caches and returns the same result back on subsequent
     /// calls.
-
     async fn enumerate_tests(
-        &mut self,
+        &self,
         test_component: Arc<Component>,
-    ) -> Result<Arc<Vec<TestCaseInfo>>, EnumerationError> {
-        // Caching
-        if self.test_list.is_none() {
-            self.test_list = Some(Arc::new(
-                Self::enumerate_tests_internal(
-                    test_component,
-                    self.test_data_namespace()?,
-                    Clone::clone(&self.output_dir_proxy),
-                )
-                .await?,
-            ));
-        }
-
-        Ok(self.test_list.as_ref().expect("Unexpected caching error").clone())
+    ) -> Result<EnumeratedTestCases, EnumerationError> {
+        self.tests(test_component).await
     }
 
     // TODO(45852): Support disabled tests.
@@ -178,11 +182,12 @@ impl SuiteServer for TestServer {
     async fn run_tests(
         &self,
         invocations: Vec<Invocation>,
+        run_options: ftest::RunOptions,
         component: Arc<Component>,
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
         for invocation in invocations {
-            self.run_test(invocation, component.clone(), run_listener).await?;
+            self.run_test(invocation, &run_options, component.clone(), run_listener).await?;
         }
         Ok(())
     }
@@ -238,11 +243,63 @@ impl TestServer {
         output_dir_parent_path: String,
     ) -> Self {
         Self {
-            test_list: None,
-            output_dir_proxy: output_dir_proxy,
+            output_dir_proxy: Arc::new(output_dir_proxy),
             output_dir_name: output_dir_name,
             output_dir_parent_path: output_dir_parent_path,
+            tests_future_container: Arc::new(Mutex::new(None)),
         }
+    }
+
+    /// Retrieves and memoizes the full list of tests from the test binary.
+    ///
+    /// The entire `Future` is memoized, so repeated calls do not execute the test binary
+    /// repeatedly.
+    ///
+    /// This outer method is _not_ `async`, to avoid capturing a reference to `&self` and fighting
+    /// the borrow checker until the end of time.
+    fn tests(
+        &self,
+        test_component: Arc<Component>,
+    ) -> impl Future<Output = Result<EnumeratedTestCases, EnumerationError>> {
+        /// Fetches the full list of tests from the test binary.
+        async fn fetch(
+            test_component: Arc<Component>,
+            test_data_namespace: Result<fproc::NameInfo, IoError>,
+            output_dir_proxy: Arc<fio::DirectoryProxy>,
+        ) -> Result<EnumeratedTestCases, EnumerationError> {
+            Ok(Arc::new(get_tests(test_component, test_data_namespace?, output_dir_proxy).await?))
+        }
+
+        /// Populates the given `tests_future_container` with a future, or returns a copy of that
+        /// future if already present.
+        async fn get_or_insert_tests_future(
+            test_component: Arc<Component>,
+            tests_future_container: MemoizedFutureContainer<EnumeratedTestCases, EnumerationError>,
+            test_data_namespace: Result<fproc::NameInfo, IoError>,
+            output_dir_proxy: Arc<fio::DirectoryProxy>,
+        ) -> Result<EnumeratedTestCases, EnumerationError> {
+            tests_future_container
+                .lock()
+                .await
+                .get_or_insert_with(|| {
+                    let fetched: PinnedFuture<EnumeratedTestCases, EnumerationError> =
+                        Box::pin(fetch(test_component, test_data_namespace, output_dir_proxy));
+                    fetched.shared()
+                })
+                .clone()
+                .await
+        }
+
+        let tests_future_container = self.tests_future_container.clone();
+        let test_data_namespace = self.test_data_namespace();
+        let output_dir_proxy = self.output_dir_proxy.clone();
+
+        get_or_insert_tests_future(
+            test_component,
+            tests_future_container,
+            test_data_namespace,
+            output_dir_proxy,
+        )
     }
 
     fn test_data_namespace(&self) -> Result<fproc::NameInfo, IoError> {
@@ -257,9 +314,10 @@ impl TestServer {
         Ok(fproc::NameInfo { path: "/test_data".to_owned(), directory: client_channnel.into() })
     }
 
-    async fn run_test(
-        &self,
+    async fn run_test<'a>(
+        &'a self,
         invocation: Invocation,
+        run_options: &ftest::RunOptions,
         component: Arc<Component>,
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
@@ -276,6 +334,10 @@ impl TestServer {
             format!("--gtest_filter={}", test),
             format!("--gtest_output=json:{}", test_list_path.display()),
         ];
+
+        if run_options.include_disabled_tests.unwrap_or(false) {
+            args.push("--gtest_also_run_disabled_tests".to_owned());
+        }
 
         args.extend(component.args.clone());
 
@@ -300,9 +362,8 @@ impl TestServer {
             fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
         let mut test_logger = LogWriter::new(test_logger);
 
-        let newline = b'\n';
-
-        let prefixes_to_skip = [
+        const NEWLINE: u8 = b'\n';
+        const PREFIXES_TO_EXCLUDE: [&[u8]; 10] = [
             "Note: Google Test filter".as_bytes(),
             " 1 FAILED TEST".as_bytes(),
             "  YOU HAVE 1 DISABLED TEST".as_bytes(),
@@ -311,18 +372,20 @@ impl TestServer {
             "[ RUN      ]".as_bytes(),
             "[  PASSED  ]".as_bytes(),
             "[  FAILED  ]".as_bytes(),
+            "[  SKIPPED ]".as_bytes(),
             "[       OK ]".as_bytes(),
         ];
+
         while let Some(bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
             if bytes.is_empty() {
                 continue;
             }
 
-            let mut iter = bytes.split(|&x| x == newline);
+            let mut iter = bytes.split(|&x| x == NEWLINE);
 
             while let Some(buf) = iter.next() {
-                let skip = prefixes_to_skip.iter().any(|p| buf.starts_with(p));
-                if !skip {
+                let exclude = PREFIXES_TO_EXCLUDE.iter().any(|p| buf.starts_with(p));
+                if !exclude {
                     test_logger.write(&buf).await?;
                 }
             }
@@ -387,96 +450,103 @@ impl TestServer {
 
         // as we only run one test per iteration result would be always at 0 index in the arrays.
         let test_suite = &test_list.testsuites[0].testsuite[0];
-        match &test_suite.failures {
-            Some(_failures) => {
-                // TODO(53955): re-enable. currently we are getting these logs from test's
-                // stdout which we are printing above.
-                //for f in failures {
-                //   test_logger.write_str(format!("failure: {}\n", f.failure)).await?;
-                // }
+        let test_status = match &test_suite.status {
+            IndividualTestOutputStatus::NotRun => Status::Skipped,
+            IndividualTestOutputStatus::Run => {
+                match &test_suite.failures {
+                    Some(_failures) => {
+                        // TODO(53955): re-enable. currently we are getting these logs from test's
+                        // stdout which we are printing above.
+                        //for f in failures {
+                        //   test_logger.write_str(format!("failure: {}\n", f.failure)).await?;
+                        // }
 
-                case_listener_proxy
-                    .finished(TestResult { status: Some(Status::Failed) })
-                    .map_err(RunTestError::SendFinish)?;
+                        Status::Failed
+                    }
+                    None => Status::Passed,
+                }
             }
-            None => {
-                case_listener_proxy
-                    .finished(TestResult { status: Some(Status::Passed) })
-                    .map_err(RunTestError::SendFinish)?;
-            }
-        }
+        };
+        case_listener_proxy
+            .finished(TestResult { status: Some(test_status) })
+            .map_err(RunTestError::SendFinish)?;
         debug!("test finish {}", test);
         Ok(())
     }
+}
 
-    /// Internal, uncached implementation of `enumerate_tests`.
-    async fn enumerate_tests_internal(
-        component: Arc<Component>,
-        test_data_namespace: fproc::NameInfo,
-        output_dir_proxy: fio::DirectoryProxy,
-    ) -> Result<Vec<TestCaseInfo>, EnumerationError> {
-        let names = vec![test_data_namespace];
+/// Internal, uncached implementation of `enumerate_tests`.
+async fn get_tests(
+    component: Arc<Component>,
+    test_data_namespace: fproc::NameInfo,
+    output_dir_proxy: Arc<fio::DirectoryProxy>,
+) -> Result<Vec<TestCaseInfo>, EnumerationError> {
+    let names = vec![test_data_namespace];
 
-        let test_list_file = Path::new("test_list.json");
-        let test_list_path = Path::new("/test_data").join(test_list_file);
+    let test_list_file = Path::new("test_list.json");
+    let test_list_path = Path::new("/test_data").join(test_list_file);
 
-        let mut args = vec![
-            "--gtest_list_tests".to_owned(),
-            format!("--gtest_output=json:{}", test_list_path.display()),
-        ];
-        args.extend(component.args.clone());
+    let mut args = vec![
+        "--gtest_list_tests".to_owned(),
+        format!("--gtest_output=json:{}", test_list_path.display()),
+    ];
+    args.extend(component.args.clone());
 
-        // Load bearing to hold job guard.
-        let (process, _job, stdlogger) =
-            launch_component_process::<EnumerationError>(&component, names, args).await?;
+    // Load bearing to hold job guard.
+    let (process, _job, stdlogger) =
+        launch_component_process::<EnumerationError>(&component, names, args).await?;
 
-        // collect stdout in background before waiting for process termination.
-        let std_reader = LogStreamReader::new(stdlogger);
+    // collect stdout in background before waiting for process termination.
+    let std_reader = LogStreamReader::new(stdlogger);
 
-        fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
-            .await
-            .map_err(KernelError::ProcessExit)
-            .unwrap();
+    fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
+        .await
+        .map_err(KernelError::ProcessExit)
+        .unwrap();
 
-        let process_info = process.info().map_err(KernelError::ProcessInfo).unwrap();
-        if process_info.return_code != 0 {
+    let process_info = process.info().map_err(KernelError::ProcessInfo).unwrap();
+    if process_info.return_code != 0 {
+        let logs = std_reader.get_logs().await?;
+        // TODO(4610): logs might not be utf8, fix the code.
+        let output = from_utf8(&logs)?;
+        // TODO(45858): Add a error logger to API so that we can display test stdout logs.
+        error!("Failed getting list of tests:\n{}", output);
+        return Err(EnumerationError::ListTest);
+    }
+    let result_str = match read_file(&output_dir_proxy, &test_list_file).await {
+        Ok(b) => b,
+        Err(e) => {
             let logs = std_reader.get_logs().await?;
+
             // TODO(4610): logs might not be utf8, fix the code.
             let output = from_utf8(&logs)?;
-            // TODO(45858): Add a error logger to API so that we can display test stdout logs.
-            error!("Failed getting list of tests:\n{}", output);
-            return Err(EnumerationError::ListTest);
+            error!("Failed getting list of tests from {}:\n{}", test_list_file.display(), output);
+            return Err(IoError::File(e).into());
         }
-        let result_str = match read_file(&output_dir_proxy, &test_list_file).await {
-            Ok(b) => b,
-            Err(e) => {
-                let logs = std_reader.get_logs().await?;
+    };
 
-                // TODO(4610): logs might not be utf8, fix the code.
-                let output = from_utf8(&logs)?;
-                error!(
-                    "Failed getting list of tests from {}:\n{}",
-                    test_list_file.display(),
-                    output
-                );
-                return Err(IoError::File(e).into());
-            }
-        };
+    let test_list: ListTestResult =
+        serde_json::from_str(&result_str).map_err(EnumerationError::from)?;
 
-        let test_list: ListTestResult =
-            serde_json::from_str(&result_str).map_err(EnumerationError::JsonParse)?;
+    let mut tests = Vec::<TestCaseInfo>::with_capacity(test_list.tests);
 
-        let mut tests = Vec::<TestCaseInfo>::with_capacity(test_list.tests);
-
-        for suite in &test_list.testsuites {
-            for test in &suite.testsuite {
-                let name = format!("{}.{}", suite.name, test.name);
-                tests.push(TestCaseInfo { name })
-            }
+    for suite in &test_list.testsuites {
+        for test in &suite.testsuite {
+            let name = format!("{}.{}", suite.name, test.name);
+            let enabled = is_test_case_enabled(&name);
+            tests.push(TestCaseInfo { name, enabled })
         }
-
-        Ok(tests)
     }
+
+    Ok(tests)
+}
+
+/// Returns `true` if the test case is disabled, based on its name. (This is apparently the only
+/// way that gtest tests can be disabled.)
+/// See
+/// https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#temporarily-disabling-tests
+fn is_test_case_enabled(case_name: &str) -> bool {
+    !case_name.contains("DISABLED_")
 }
 
 /// Convenience wrapper around [`launch::launch_process`].
@@ -510,6 +580,7 @@ mod tests {
         fidl_fuchsia_test::{RunListenerMarker, RunOptions, SuiteMarker},
         fio::OPEN_RIGHT_WRITABLE,
         fuchsia_runtime::job_default,
+        pretty_assertions::assert_eq,
         runner::component::ComponentNamespace,
         runner::component::ComponentNamespaceError,
         std::convert::TryFrom,
@@ -589,24 +660,44 @@ mod tests {
 
         let component = sample_test_component()?;
 
-        let mut server =
+        let server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
 
         assert_eq!(
             *server.enumerate_tests(component.clone()).await?,
             vec![
-                TestCaseInfo { name: "SampleTest1.SimpleFail".to_owned() },
-                TestCaseInfo { name: "SampleTest1.Crashing".to_owned() },
-                TestCaseInfo { name: "SampleTest2.SimplePass".to_owned() },
-                TestCaseInfo { name: "SampleFixture.Test1".to_owned() },
-                TestCaseInfo { name: "SampleFixture.Test2".to_owned() },
-                TestCaseInfo { name: "SampleDisabled.DISABLED_Test1".to_owned() },
-                TestCaseInfo { name: "WriteToStdout.TestPass".to_owned() },
-                TestCaseInfo { name: "WriteToStdout.TestFail".to_owned() },
-                TestCaseInfo { name: "Tests/SampleParameterizedTestFixture.Test/0".to_owned() },
-                TestCaseInfo { name: "Tests/SampleParameterizedTestFixture.Test/1".to_owned() },
-                TestCaseInfo { name: "Tests/SampleParameterizedTestFixture.Test/2".to_owned() },
-                TestCaseInfo { name: "Tests/SampleParameterizedTestFixture.Test/3".to_owned() },
+                TestCaseInfo { name: "SampleTest1.SimpleFail".to_owned(), enabled: true },
+                TestCaseInfo { name: "SampleTest1.Crashing".to_owned(), enabled: true },
+                TestCaseInfo { name: "SampleTest2.SimplePass".to_owned(), enabled: true },
+                TestCaseInfo { name: "SampleFixture.Test1".to_owned(), enabled: true },
+                TestCaseInfo { name: "SampleFixture.Test2".to_owned(), enabled: true },
+                TestCaseInfo {
+                    name: "SampleDisabled.DISABLED_TestPass".to_owned(),
+                    enabled: false
+                },
+                TestCaseInfo {
+                    name: "SampleDisabled.DISABLED_TestFail".to_owned(),
+                    enabled: false
+                },
+                TestCaseInfo { name: "SampleDisabled.DynamicSkip".to_owned(), enabled: true },
+                TestCaseInfo { name: "WriteToStdout.TestPass".to_owned(), enabled: true },
+                TestCaseInfo { name: "WriteToStdout.TestFail".to_owned(), enabled: true },
+                TestCaseInfo {
+                    name: "Tests/SampleParameterizedTestFixture.Test/0".to_owned(),
+                    enabled: true,
+                },
+                TestCaseInfo {
+                    name: "Tests/SampleParameterizedTestFixture.Test/1".to_owned(),
+                    enabled: true,
+                },
+                TestCaseInfo {
+                    name: "Tests/SampleParameterizedTestFixture.Test/2".to_owned(),
+                    enabled: true,
+                },
+                TestCaseInfo {
+                    name: "Tests/SampleParameterizedTestFixture.Test/3".to_owned(),
+                    enabled: true,
+                },
             ]
         );
 
@@ -627,7 +718,7 @@ mod tests {
             ns: ns,
             job: current_job!(),
         });
-        let mut server =
+        let server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
 
         assert_eq!(*server.enumerate_tests(component.clone()).await?, Vec::<TestCaseInfo>::new());
@@ -649,20 +740,23 @@ mod tests {
             ns: ns,
             job: current_job!(),
         });
-        let mut server =
+        let server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
 
         let mut expected = vec![];
         for i in 0..1000 {
             let name = format!("HugeStress/HugeTest.Test/{}", i);
-            expected.push(TestCaseInfo { name });
+            expected.push(TestCaseInfo { name, enabled: true });
         }
         assert_eq!(*server.enumerate_tests(component.clone()).await?, expected);
 
         Ok(())
     }
 
-    async fn run_tests(invocations: Vec<Invocation>) -> Result<Vec<ListenerEvent>, anyhow::Error> {
+    async fn run_tests(
+        invocations: Vec<Invocation>,
+        run_options: RunOptions,
+    ) -> Result<Vec<ListenerEvent>, anyhow::Error> {
         let test_data = TestDataDir::new().context("Cannot create test data")?;
         let component = sample_test_component().context("Cannot create test component")?;
         let weak_component = Arc::downgrade(&component);
@@ -688,16 +782,8 @@ mod tests {
                 .expect("Failed to run test suite")
         });
 
-        fn make_run_options() -> RunOptions {
-            let run_options = RunOptions::empty();
-            run_options
-        }
         suite_proxy
-            .run(
-                &mut invocations.into_iter().map(|i| i.into()),
-                make_run_options(),
-                run_listener_client,
-            )
+            .run(&mut invocations.into_iter().map(|i| i.into()), run_options, run_listener_client)
             .context("cannot call run")?;
 
         collect_listener_event(run_listener).await.context("Failed to collect results")
@@ -706,12 +792,15 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_multiple_tests() -> Result<(), Error> {
         fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
-        let events = run_tests(names_to_invocation(vec![
-            "SampleTest1.SimpleFail",
-            "SampleTest1.Crashing",
-            "SampleTest2.SimplePass",
-            "Tests/SampleParameterizedTestFixture.Test/2",
-        ]))
+        let events = run_tests(
+            names_to_invocation(vec![
+                "SampleTest1.SimpleFail",
+                "SampleTest1.Crashing",
+                "SampleTest2.SimplePass",
+                "Tests/SampleParameterizedTestFixture.Test/2",
+            ]),
+            RunOptions { include_disabled_tests: Some(false) },
+        )
         .await
         .unwrap();
 
@@ -744,8 +833,40 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_disabled_tests_exclude() -> Result<(), Error> {
+        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
+        let events = run_tests(
+            names_to_invocation(vec![
+                "SampleDisabled.DISABLED_TestPass",
+                "SampleDisabled.DISABLED_TestFail",
+            ]),
+            RunOptions { include_disabled_tests: Some(false) },
+        )
+        .await
+        .unwrap();
+
+        let expected_events = vec![
+            ListenerEvent::start_test("SampleDisabled.DISABLED_TestPass"),
+            ListenerEvent::finish_test(
+                "SampleDisabled.DISABLED_TestPass",
+                TestResult { status: Some(Status::Skipped) },
+            ),
+            ListenerEvent::start_test("SampleDisabled.DISABLED_TestFail"),
+            ListenerEvent::finish_test(
+                "SampleDisabled.DISABLED_TestFail",
+                TestResult { status: Some(Status::Skipped) },
+            ),
+            ListenerEvent::finish_all_test(),
+        ];
+
+        assert_eq!(expected_events, events);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn run_no_test() -> Result<(), Error> {
-        let events = run_tests(vec![]).await.unwrap();
+        let events =
+            run_tests(vec![], RunOptions { include_disabled_tests: Some(false) }).await.unwrap();
 
         let expected_events = vec![ListenerEvent::finish_all_test()];
 
@@ -755,7 +876,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_one_test() -> Result<(), Error> {
-        let events = run_tests(names_to_invocation(vec!["SampleTest2.SimplePass"])).await.unwrap();
+        let events = run_tests(
+            names_to_invocation(vec!["SampleTest2.SimplePass"]),
+            RunOptions { include_disabled_tests: Some(false) },
+        )
+        .await
+        .unwrap();
 
         let expected_events = vec![
             ListenerEvent::start_test("SampleTest2.SimplePass"),

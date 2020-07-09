@@ -19,7 +19,7 @@ use {
 };
 
 /// Error encountered while calling fdio operations.
-#[derive(Debug, PartialEq, Eq, Error)]
+#[derive(Debug, PartialEq, Eq, Error, Clone)]
 pub enum FdioError {
     #[error("Cannot create file descriptor: {:?}", _0)]
     Create(zx::Status),
@@ -32,22 +32,16 @@ pub enum FdioError {
 }
 
 /// Error returned by this library.
-#[derive(Debug, PartialEq, Eq, Error)]
+#[derive(Debug, PartialEq, Eq, Error, Clone)]
 pub enum LoggerError {
     #[error("fdio error: {:?}", _0)]
-    Fdio(FdioError),
+    Fdio(#[from] FdioError),
 
     #[error("cannot create socket: {:?}", _0)]
     CreateSocket(zx::Status),
 
     #[error("invalid socket: {:?}", _0)]
     InvalidSocket(zx::Status),
-}
-
-impl From<FdioError> for LoggerError {
-    fn from(e: FdioError) -> Self {
-        LoggerError::Fdio(e)
-    }
 }
 
 /// Logger stream to read logs from a socket

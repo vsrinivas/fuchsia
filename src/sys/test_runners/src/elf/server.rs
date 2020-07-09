@@ -14,16 +14,33 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_test as ftest, fuchsia_async as fasync, fuchsia_zircon as zx,
     fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES,
-    futures::{future::AbortHandle, prelude::*},
+    futures::{
+        future::{AbortHandle, Shared},
+        lock::Mutex,
+        prelude::*,
+    },
     log::error,
     rust_measure_tape_for_case::measure,
-    std::sync::{Arc, Weak},
+    std::{
+        pin::Pin,
+        sync::{Arc, Weak},
+    },
     thiserror::Error,
 };
 
+/// A pinned, boxed future whose output is `Result<T, E>`.
+pub type PinnedFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
+/// `SharedFuture` wrapper around `PinnedFuture<T, E>`. Can be cloned.
+type SharedFuture<T, E> = Shared<PinnedFuture<T, E>>;
+/// A mutable container around `SharedFuture<T, E>` that can be filled in when the stored future is
+/// first created.
+pub type MemoizedFutureContainer<T, E> = Arc<Mutex<Option<SharedFuture<T, E>>>>;
+/// Ordered list of `TestCaseInfo`s.
+pub type EnumeratedTestCases = Arc<Vec<TestCaseInfo>>;
+
 /// Describes a test suite server for tests that are executed as ELF components.
 #[async_trait]
-pub trait SuiteServer: Sized + Sync {
+pub trait SuiteServer: Sized + Sync + Send {
     /// Run this server.
     ///
     /// * `component`: Test component instance.
@@ -40,18 +57,19 @@ pub trait SuiteServer: Sized + Sync {
 
     /// Retrieves test information from the test binary.
     ///
-    /// The `self` reference is `&mut` to allow the test information to be memoized. A cached list
-    /// of test cases should be returned by cloning an `Arc<Vec<TestCaseInfo>>` that is stored in
-    /// suite server struct.
+    /// A cached list of test cases should be returned by cloning a
+    /// `SharedFuture<EnumeratedTestCases, EnumerationError>` that is stored in the suite server
+    /// struct.
     async fn enumerate_tests(
-        &mut self,
+        &self,
         test_component: Arc<Component>,
-    ) -> Result<Arc<Vec<TestCaseInfo>>, EnumerationError>;
+    ) -> Result<EnumeratedTestCases, EnumerationError>;
 
     /// Runs requested tests and sends test events to the given listener.
     async fn run_tests(
         &self,
         invocations: Vec<ftest::Invocation>,
+        run_options: ftest::RunOptions,
         test_component: Arc<Component>,
         run_listener: &ftest::RunListenerProxy,
     ) -> Result<(), RunTestError>;
@@ -75,9 +93,8 @@ pub trait SuiteServer: Sized + Sync {
 
                     fasync::spawn(
                         async move {
-                            let mut iter = tests.iter().map(|TestCaseInfo { name }| {
-                                // TODO(fxb/45852): Support disabled tests.
-                                ftest::Case { name: Some(name.clone()), enabled: None }
+                            let mut iter = tests.iter().map(|TestCaseInfo { name, enabled }| {
+                                ftest::Case { name: Some(name.clone()), enabled: Some(*enabled) }
                             });
                             while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
                                 stream.try_next().await?
@@ -102,7 +119,7 @@ pub trait SuiteServer: Sized + Sync {
                         .unwrap_or_else(|e: anyhow::Error| error!("error serving tests: {:?}", e)),
                     );
                 }
-                ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
+                ftest::SuiteRequest::Run { tests, options, listener, .. } => {
                     let component = component.upgrade();
                     if component.is_none() {
                         // no component object, return, test has ended.
@@ -112,7 +129,7 @@ pub trait SuiteServer: Sized + Sync {
                     let listener =
                         listener.into_proxy().map_err(FidlError::ClientEndToProxy).unwrap();
 
-                    self.run_tests(tests, component.unwrap(), &listener).await?;
+                    self.run_tests(tests, options, component.unwrap(), &listener).await?;
                     listener.on_finished().map_err(RunTestError::SendFinishAllTests).unwrap();
                 }
             }

@@ -7,28 +7,38 @@ use {
     fidl_fuchsia_test as ftest,
     ftest::{Invocation, RunListenerProxy},
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::abortable,
-    futures::future::AbortHandle,
-    futures::prelude::*,
+    futures::{
+        future::{abortable, AbortHandle, FutureExt as _},
+        lock::Mutex,
+        prelude::*,
+    },
     log::{debug, error, info},
     regex::Regex,
     std::{
+        collections::HashSet,
         str::from_utf8,
         sync::{Arc, Weak},
     },
     test_runners_lib::{
         cases::TestCaseInfo,
-        elf::{Component, FidlError, KernelError, SuiteServer},
+        elf::{
+            Component, EnumeratedTestCases, FidlError, KernelError, MemoizedFutureContainer,
+            PinnedFuture, SuiteServer,
+        },
         errors::*,
         launch,
         logs::{LogError, LogStreamReader, LogWriter, LoggerStream},
     },
 };
 
+type EnumeratedTestNames = Arc<HashSet<String>>;
+
 /// Implements `fuchsia.test.Suite` and runs provided test.
 pub struct TestServer {
-    /// Cache to store enumerated test names.
-    test_list: Option<Arc<Vec<TestCaseInfo>>>,
+    /// Cache to store enumerated tests.
+    tests_future_container: MemoizedFutureContainer<EnumeratedTestCases, EnumerationError>,
+    /// Index of disabled tests for faster membership checking.
+    disabled_tests_future_container: MemoizedFutureContainer<EnumeratedTestNames, EnumerationError>,
 }
 
 #[async_trait]
@@ -48,20 +58,16 @@ impl SuiteServer for TestServer {
     ///
     /// The list of tests is cached.
     async fn enumerate_tests(
-        &mut self,
+        &self,
         test_component: Arc<Component>,
-    ) -> Result<Arc<Vec<TestCaseInfo>>, EnumerationError> {
-        // Caching
-        if self.test_list.is_none() {
-            self.test_list = Some(Arc::new(Self::enumerate_tests_internal(test_component).await?));
-        }
-        Ok(self.test_list.as_ref().expect("Unexpected caching error").clone())
+    ) -> Result<EnumeratedTestCases, EnumerationError> {
+        self.tests(test_component).await
     }
 
-    // TODO(45852): Support disabled tests.
     async fn run_tests(
         &self,
         invocations: Vec<Invocation>,
+        run_options: ftest::RunOptions,
         test_component: Arc<Component>,
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
@@ -86,7 +92,8 @@ impl SuiteServer for TestServer {
                 .unwrap();
             let mut test_logger = LogWriter::new(test_logger);
 
-            match self.run_test(&test, &test_component, &mut test_logger).await {
+            match self.run_test(&test, &run_options, test_component.clone(), &mut test_logger).await
+            {
                 Ok(result) => {
                     case_listener_proxy.finished(result).map_err(RunTestError::SendFinish)?;
                 }
@@ -131,7 +138,129 @@ impl TestServer {
     /// Creates new test server.
     /// Clients should call this function to create new object and then call `serve_test_suite`.
     pub fn new() -> Self {
-        Self { test_list: None }
+        Self {
+            tests_future_container: Arc::new(Mutex::new(None)),
+            disabled_tests_future_container: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    /// Retrieves and memoizes the full list of tests from the test binary.
+    ///
+    /// The entire `Future` is memoized, so repeated calls do not execute the test binary
+    /// repeatedly.
+    ///
+    /// This outer method is _not_ `async`, to avoid capturing a reference to `&self` and fighting
+    /// the borrow checker until the end of time.
+    fn tests(
+        &self,
+        test_component: Arc<Component>,
+    ) -> impl Future<Output = Result<EnumeratedTestCases, EnumerationError>> {
+        /// Fetches the full list of tests from the test binary.
+        ///
+        /// The `disabled_tests_future` is passed in to determine which tests should be marked
+        /// disabled.
+        async fn fetch(
+            test_component: Arc<Component>,
+            disabled_tests_future: impl Future<Output = Result<EnumeratedTestNames, EnumerationError>>
+                + Send
+                + 'static,
+        ) -> Result<EnumeratedTestCases, EnumerationError> {
+            let test_names = get_tests(test_component, TestFilter::AllTests).await?;
+            let disabled_tests = disabled_tests_future.await?;
+            let tests: Vec<TestCaseInfo> = test_names
+                .into_iter()
+                .map(|name| {
+                    let enabled = !disabled_tests.contains(&name);
+                    TestCaseInfo { name, enabled }
+                })
+                .collect();
+            Ok(Arc::new(tests))
+        }
+
+        /// Populates the given `tests_future_container` with a future, or returns a copy of that
+        /// future if already present.
+        async fn get_or_insert_tests_future(
+            test_component: Arc<Component>,
+            tests_future_container: MemoizedFutureContainer<EnumeratedTestCases, EnumerationError>,
+            disabled_tests_future: impl Future<Output = Result<EnumeratedTestNames, EnumerationError>>
+                + Send
+                + 'static,
+        ) -> Result<EnumeratedTestCases, EnumerationError> {
+            tests_future_container
+                .lock()
+                .await
+                .get_or_insert_with(|| {
+                    // The type must be specified in order to compile.
+                    let fetched: PinnedFuture<EnumeratedTestCases, EnumerationError> =
+                        Box::pin(fetch(test_component, disabled_tests_future));
+                    fetched.shared()
+                })
+                // This clones the `SharedFuture`.
+                .clone()
+                .await
+        }
+
+        let tests_future_container = self.tests_future_container.clone();
+        let disabled_tests_future = self.disabled_tests(test_component.clone());
+
+        get_or_insert_tests_future(test_component, tests_future_container, disabled_tests_future)
+    }
+
+    /// Retrieves and memoizes the list of just the disabled tests from the test binary.
+    ///
+    /// This outer method is _not_ `async`, to avoid capturing a reference to `&self` and fighting
+    /// the borrow checker until the end of time.
+    fn disabled_tests(
+        &self,
+        test_component: Arc<Component>,
+    ) -> impl Future<Output = Result<EnumeratedTestNames, EnumerationError>> {
+        type DisabledTestsFutureContainer =
+            MemoizedFutureContainer<EnumeratedTestNames, EnumerationError>;
+
+        /// Fetches the list of disabled tests from the test binary.
+        async fn fetch(
+            test_component: Arc<Component>,
+        ) -> Result<EnumeratedTestNames, EnumerationError> {
+            let disabled_tests = get_tests(test_component, TestFilter::DisabledTests)
+                .await?
+                .into_iter()
+                .collect::<HashSet<String>>();
+            Ok(Arc::new(disabled_tests))
+        }
+
+        /// Populates the given `disabled_tests_future_container` with a future, or returns a copy
+        /// of that future if already present.
+        async fn get_or_insert_disabled_tests_future(
+            test_component: Arc<Component>,
+            disabled_tests_future_container: DisabledTestsFutureContainer,
+        ) -> Result<EnumeratedTestNames, EnumerationError> {
+            disabled_tests_future_container
+                .lock()
+                .await
+                .get_or_insert_with(|| {
+                    // The type must be specified.
+                    let fetched: PinnedFuture<EnumeratedTestNames, EnumerationError> =
+                        Box::pin(fetch(test_component));
+                    fetched.shared()
+                })
+                .clone()
+                .await
+        }
+
+        let disabled_tests_future_container = self.disabled_tests_future_container.clone();
+        get_or_insert_disabled_tests_future(test_component, disabled_tests_future_container)
+    }
+
+    /// Returns `true` if the given test is disabled (marked `#[ignore]`) by the developer.
+    ///
+    /// If the set of disabled tests isn't yet cached, this will retrieve it -- hence `async`.
+    async fn is_test_disabled<'a>(
+        &'a self,
+        test_component: Arc<Component>,
+        test_name: &str,
+    ) -> Result<bool, EnumerationError> {
+        let disabled_tests = self.disabled_tests(test_component).await?;
+        Ok(disabled_tests.contains(test_name))
     }
 
     #[cfg(rust_panic = "unwind")]
@@ -146,27 +275,39 @@ impl TestServer {
         panic!("not supported");
     }
 
-    /// Launches a process that actually runs the test and parses the resulting json output.
+    /// Launches a process that actually runs the test and parses the resulting JSON output.
+    ///
+    /// The mechanism by which Rust tests are launched in individual processes ignores whether a
+    /// particular test was marked `#[ignore]`, so this method preemptively checks whether a
+    /// the given test is disabled and returns early if the test should be skipped.
     #[cfg(rust_panic = "abort")]
-    async fn run_test(
-        &self,
+    async fn run_test<'a>(
+        &'a self,
         test: &str,
-        test_component: &Component,
+        run_options: &ftest::RunOptions,
+        test_component: Arc<Component>,
         test_logger: &mut LogWriter,
     ) -> Result<ftest::Result_, RunTestError> {
         // Exit codes used by Rust's libtest runner.
         const TR_OK: i64 = 50;
         const TR_FAILED: i64 = 51;
 
-        let test_invoke = format!("__RUST_TEST_INVOKE={}", test);
+        // Rust test binaries launched with `__RUST_TEST_INVOKE` don't care if a test is disabled,
+        // so we must manually return early in order to skip a test.
+        let skip_disabled_tests = !run_options.include_disabled_tests.unwrap_or(false);
+        if skip_disabled_tests && self.is_test_disabled(test_component.clone(), test).await? {
+            return Ok(ftest::Result_ { status: Some(ftest::Status::Skipped) });
+        }
+
+        let test_invoke = Some(format!("__RUST_TEST_INVOKE={}", test));
+
         let mut args = vec!["--nocapture".to_owned()];
         args.extend(test_component.args.clone());
 
         // run test.
         // Load bearing to hold job guard.
         let (process, _job, mut stdlogger) =
-            launch_component_process::<RunTestError>(&test_component, args, Some(test_invoke))
-                .await?;
+            launch_component_process::<RunTestError>(&test_component, args, test_invoke).await?;
 
         let mut buf: Vec<u8> = vec![];
         let newline = b'\n';
@@ -210,49 +351,64 @@ impl TestServer {
             other => Err(RunTestError::UnexpectedReturnCode(other)),
         }
     }
+}
 
-    /// Internal, uncached implementation of `enumerate_tests`.
-    async fn enumerate_tests_internal(
-        test_component: Arc<Component>,
-    ) -> Result<Vec<TestCaseInfo>, EnumerationError> {
-        let mut args = vec!["-Z".to_owned(), "unstable-options".to_owned(), "--list".to_owned()];
-        args.extend(test_component.args.clone());
+/// Filter for use in `get_tests`.
+enum TestFilter {
+    /// List _all_ tests in the test binary.
+    AllTests,
+    /// List only the disabled tests in the test binary.
+    DisabledTests,
+}
 
-        // Load bearing to hold job guard.
-        let (process, _job, stdlogger) =
-            launch_component_process::<EnumerationError>(&test_component, args, None).await?;
+/// Launches the Rust test binary specified by the given `Component` to retrieve a list of test
+/// names.
+async fn get_tests(
+    test_component: Arc<Component>,
+    filter: TestFilter,
+) -> Result<Vec<String>, EnumerationError> {
+    let mut args = vec!["-Z".to_owned(), "unstable-options".to_owned(), "--list".to_owned()];
 
-        // collect stdout in background before waiting for process termination.
-        let std_reader = LogStreamReader::new(stdlogger);
+    if let TestFilter::DisabledTests = filter {
+        args.push("--ignored".to_owned());
+    }
 
-        fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
-            .await
-            .map_err(KernelError::ProcessExit)
-            .unwrap();
+    args.extend(test_component.args.clone());
 
-        let logs = std_reader.get_logs().await?;
-        // TODO(4610): logs might not be utf8, fix the code.
-        let output = from_utf8(&logs)?;
-        let process_info = process.info().map_err(KernelError::ProcessInfo).unwrap();
-        if process_info.return_code != 0 {
-            // TODO(45858): Add a error logger to API so that we can display test stdout logs.
-            error!("Failed getting list of tests:\n{}", output);
-            return Err(EnumerationError::ListTest);
-        }
+    // Load bearing to hold job guard.
+    let (process, _job, stdlogger) =
+        launch_component_process::<EnumerationError>(&test_component, args, None).await?;
 
-        let mut tests = vec![];
-        let regex = Regex::new(r"^(.*): test$").unwrap();
+    // collect stdout in background before waiting for process termination.
+    let std_reader = LogStreamReader::new(stdlogger);
 
-        for test in output.split("\n") {
-            if let Some(capture) = regex.captures(test) {
-                if let Some(name) = capture.get(1) {
-                    tests.push(TestCaseInfo { name: String::from(name.as_str()) });
-                }
+    fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
+        .await
+        .map_err(KernelError::ProcessExit)
+        .unwrap();
+
+    let logs = std_reader.get_logs().await?;
+    // TODO(4610): logs might not be utf8, fix the code.
+    let output = from_utf8(&logs)?;
+    let process_info = process.info().map_err(KernelError::ProcessInfo).unwrap();
+    if process_info.return_code != 0 {
+        // TODO(45858): Add a error logger to API so that we can display test stdout logs.
+        error!("Failed getting list of tests:\n{}", output);
+        return Err(EnumerationError::ListTest);
+    }
+
+    let mut tests = vec![];
+    let regex = Regex::new(r"^(.*): test$").unwrap();
+
+    for test in output.split("\n") {
+        if let Some(capture) = regex.captures(test) {
+            if let Some(name) = capture.get(1) {
+                tests.push(name.as_str().into());
             }
         }
-
-        return Ok(tests);
     }
+
+    Ok(tests)
 }
 
 /// Convenience wrapper around [`launch::launch_process`].
@@ -290,6 +446,8 @@ mod tests {
         },
         fuchsia_runtime::job_default,
         itertools::Itertools,
+        matches::assert_matches,
+        pretty_assertions::assert_eq,
         runner::component::ComponentNamespace,
         runner::component::ComponentNamespaceError,
         std::convert::TryFrom,
@@ -339,12 +497,14 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn enumerate_simple_test() -> Result<(), Error> {
         let component = sample_test_component().unwrap();
-        let mut server = TestServer::new();
+        let server = TestServer::new();
         let expected: Vec<TestCaseInfo> = vec![
-            TestCaseInfo { name: "my_tests::sample_test_one".to_string() },
-            TestCaseInfo { name: "my_tests::passing_test".to_string() },
-            TestCaseInfo { name: "my_tests::failing_test".to_string() },
-            TestCaseInfo { name: "my_tests::sample_test_two".to_string() },
+            TestCaseInfo { name: "my_tests::sample_test_one".to_string(), enabled: true },
+            TestCaseInfo { name: "my_tests::ignored_failing_test".to_string(), enabled: false },
+            TestCaseInfo { name: "my_tests::ignored_passing_test".to_string(), enabled: false },
+            TestCaseInfo { name: "my_tests::passing_test".to_string(), enabled: true },
+            TestCaseInfo { name: "my_tests::failing_test".to_string(), enabled: true },
+            TestCaseInfo { name: "my_tests::sample_test_two".to_string(), enabled: true },
         ]
         .into_iter()
         .sorted()
@@ -375,7 +535,7 @@ mod tests {
             ns: ns,
             job: current_job!(),
         });
-        let mut server = TestServer::new();
+        let server = TestServer::new();
 
         assert_eq!(*server.enumerate_tests(component.clone()).await?, Vec::<TestCaseInfo>::new());
 
@@ -394,7 +554,7 @@ mod tests {
             ns: ns,
             job: current_job!(),
         });
-        let mut server = TestServer::new();
+        let server = TestServer::new();
 
         let actual_tests: Vec<TestCaseInfo> = server
             .enumerate_tests(component.clone())
@@ -404,8 +564,10 @@ mod tests {
             .map(Clone::clone)
             .collect();
 
-        let expected: Vec<TestCaseInfo> =
-            (1..=1000).map(|i| TestCaseInfo { name: format!("test_{}", i) }).sorted().collect();
+        let expected: Vec<TestCaseInfo> = (1..=1000)
+            .map(|i| TestCaseInfo { name: format!("test_{}", i), enabled: true })
+            .sorted()
+            .collect();
 
         assert_eq!(&expected, &actual_tests);
 
@@ -424,24 +586,31 @@ mod tests {
             ns: ns,
             job: current_job!(),
         });
-        let mut server = TestServer::new();
+        let server = TestServer::new();
 
         let err = server
             .enumerate_tests(component.clone())
             .await
             .expect_err("this function have error-ed out due to non-existent file.");
 
-        match err {
-            EnumerationError::LaunchTest(launch::LaunchError::LoadInfo(
-                runner::component::LaunchError::LoadingExecutable(_),
-            )) => { /*this is the error we expect, do nothing*/ }
-            err => panic!("invalid error:{}", err),
+        assert_matches!(err, EnumerationError::LaunchTest(..));
+        let is_valid_error = match &err {
+            EnumerationError::LaunchTest(arc) => match **arc {
+                launch::LaunchError::LoadInfo(
+                    runner::component::LaunchError::LoadingExecutable(_),
+                ) => true,
+                _ => false,
+            },
+            _ => false,
         };
-
+        assert!(is_valid_error, "Invalid error: {:?}", err);
         Ok(())
     }
 
-    async fn run_tests(invocations: Vec<Invocation>) -> Result<Vec<ListenerEvent>, anyhow::Error> {
+    async fn run_tests(
+        invocations: Vec<Invocation>,
+        run_options: RunOptions,
+    ) -> Result<Vec<ListenerEvent>, anyhow::Error> {
         let component = sample_test_component().context("Cannot create test component")?;
         let weak_component = Arc::downgrade(&component);
         let server = TestServer::new();
@@ -462,13 +631,8 @@ mod tests {
                 .expect("Failed to run test suite")
         });
 
-        // TODO(fxb/45852): Support disabled tests.
         suite_proxy
-            .run(
-                &mut invocations.into_iter().map(|i| i.into()),
-                RunOptions::empty(),
-                run_listener_client,
-            )
+            .run(&mut invocations.into_iter().map(|i| i.into()), run_options, run_listener_client)
             .context("cannot call run")?;
 
         collect_listener_event(run_listener).await.context("Failed to collect results")
@@ -476,7 +640,10 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_one_test() -> Result<(), Error> {
-        let events = run_tests(names_to_invocation(vec!["my_tests::passing_test"])).await.unwrap();
+        let events =
+            run_tests(names_to_invocation(vec!["my_tests::passing_test"]), RunOptions::empty())
+                .await
+                .unwrap();
 
         let expected_events = vec![
             ListenerEvent::start_test("my_tests::passing_test"),
@@ -493,13 +660,18 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn run_multiple_tests() -> Result<(), Error> {
-        let events = run_tests(names_to_invocation(vec![
-            "my_tests::sample_test_one",
-            "my_tests::passing_test",
-            "my_tests::failing_test",
-            "my_tests::sample_test_two",
-        ]))
+    async fn run_multiple_tests_exclude_disabled_tests() -> Result<(), Error> {
+        let events = run_tests(
+            names_to_invocation(vec![
+                "my_tests::sample_test_one",
+                "my_tests::passing_test",
+                "my_tests::failing_test",
+                "my_tests::sample_test_two",
+                "my_tests::ignored_passing_test",
+                "my_tests::ignored_failing_test",
+            ]),
+            RunOptions { include_disabled_tests: Some(false) },
+        )
         .await
         .unwrap();
 
@@ -523,6 +695,52 @@ mod tests {
             ListenerEvent::finish_test(
                 "my_tests::sample_test_two",
                 TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::start_test("my_tests::ignored_passing_test"),
+            ListenerEvent::finish_test(
+                "my_tests::ignored_passing_test",
+                TestResult { status: Some(Status::Skipped) },
+            ),
+            ListenerEvent::start_test("my_tests::ignored_failing_test"),
+            ListenerEvent::finish_test(
+                "my_tests::ignored_failing_test",
+                TestResult { status: Some(Status::Skipped) },
+            ),
+            ListenerEvent::finish_all_test(),
+        ];
+
+        assert_eq!(expected_events, events);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_multiple_tests_include_disabled_tests() -> Result<(), Error> {
+        let events = run_tests(
+            names_to_invocation(vec![
+                "my_tests::sample_test_two",
+                "my_tests::ignored_passing_test",
+                "my_tests::ignored_failing_test",
+            ]),
+            RunOptions { include_disabled_tests: Some(true) },
+        )
+        .await
+        .unwrap();
+
+        let expected_events = vec![
+            ListenerEvent::start_test("my_tests::sample_test_two"),
+            ListenerEvent::finish_test(
+                "my_tests::sample_test_two",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::start_test("my_tests::ignored_passing_test"),
+            ListenerEvent::finish_test(
+                "my_tests::ignored_passing_test",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::start_test("my_tests::ignored_failing_test"),
+            ListenerEvent::finish_test(
+                "my_tests::ignored_failing_test",
+                TestResult { status: Some(Status::Failed) },
             ),
             ListenerEvent::finish_all_test(),
         ];

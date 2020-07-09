@@ -20,7 +20,7 @@ use {
 #[derive(Debug, Error)]
 pub enum LaunchError {
     #[error("{:?}", _0)]
-    Logger(LoggerError),
+    Logger(#[from] LoggerError),
 
     #[error("Error connecting to launcher: {:?}", _0)]
     Launcher(Error),

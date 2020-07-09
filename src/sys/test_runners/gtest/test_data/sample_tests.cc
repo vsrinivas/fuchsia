@@ -18,7 +18,11 @@ TEST_F(SampleFixture, Test1) {}
 
 TEST_F(SampleFixture, Test2) {}
 
-TEST(SampleDisabled, DISABLED_Test1) {}
+TEST(SampleDisabled, DISABLED_TestPass) {}
+
+TEST(SampleDisabled, DISABLED_TestFail) { EXPECT_FALSE(true); }
+
+TEST(SampleDisabled, DynamicSkip) { GTEST_SKIP(); }
 
 class SampleParameterizedTestFixture : public ::testing::TestWithParam<int> {};
 

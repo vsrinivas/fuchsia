@@ -313,7 +313,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            cases::TestCaseInfo,
+            elf::EnumeratedTestCases,
             errors::{EnumerationError, RunTestError},
         },
         anyhow::Error,
@@ -385,15 +385,16 @@ mod tests {
         }
 
         async fn enumerate_tests(
-            &mut self,
+            &self,
             _test_component: Arc<Component>,
-        ) -> Result<Arc<Vec<TestCaseInfo>>, EnumerationError> {
+        ) -> Result<EnumeratedTestCases, EnumerationError> {
             Ok(Arc::new(vec![]))
         }
 
         async fn run_tests(
             &self,
             _invocations: Vec<Invocation>,
+            _run_options: fidl_fuchsia_test::RunOptions,
             _component: Arc<Component>,
             _run_listener: &RunListenerProxy,
         ) -> Result<(), RunTestError> {

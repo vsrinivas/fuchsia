@@ -27,9 +27,9 @@ fx run-test gtest-runner-example-tests
 
 ## Limitations
 
-Currently gtest runner doesn't support:
-
--   Disabled tests.
+-   If a test calls `GTEST_SKIP()`, it will be recorded as `Passed` rather than
+    as `Skipped`.
+    This is due to a bug in gtest itself.
 
 Partial Support
 

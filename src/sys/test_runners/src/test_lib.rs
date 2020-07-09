@@ -63,7 +63,7 @@ pub async fn collect_listener_event(
     Ok(ret)
 }
 
-/// Helper methid to convert names to `Invocation`.
+/// Helper method to convert names to `Invocation`.
 pub fn names_to_invocation(names: Vec<&str>) -> Vec<Invocation> {
     names.iter().map(|s| Invocation { name: Some(s.to_string()), tag: None }).collect()
 }

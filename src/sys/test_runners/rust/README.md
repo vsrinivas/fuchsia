@@ -25,9 +25,7 @@ fx run-test rust-test-runner-example
 
 ## Limitations
 
-Currently rust test runner doesn't support:
-
-- Skipped tests(fxb/50793): Rust runner will always run all the tests weather skipped or not. The only way to skip a test is to comment it out.
+No known current limitations.
 
 ## Testing
 

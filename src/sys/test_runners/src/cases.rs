@@ -8,6 +8,8 @@
 /// test binary.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct TestCaseInfo {
+    /// Name of the test case.
     pub name: String,
-    // TODO(kpozin): Additional fields.
+    /// Whether the test is enabled or disabled by the developer.
+    pub enabled: bool,
 }

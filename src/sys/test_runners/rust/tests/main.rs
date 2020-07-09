@@ -12,7 +12,8 @@ use {
     fuchsia_component::client,
     fuchsia_component::client::connect_to_protocol_at_dir,
     futures::{channel::mpsc, prelude::*},
-    test_executor::{TestEvent, TestResult, TestRunOptions},
+    pretty_assertions::assert_eq,
+    test_executor::{DisabledTestHandling, TestEvent, TestResult},
 };
 
 async fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
@@ -47,13 +48,16 @@ async fn launch_test(
     Ok((suite_proxy, controller_proxy))
 }
 
-async fn run_test(test_url: &str) -> Result<Vec<TestEvent>, Error> {
+async fn run_test(
+    test_url: &str,
+    disabled_tests: DisabledTestHandling,
+) -> Result<Vec<TestEvent>, Error> {
     let (suite_proxy, _keep_alive) = launch_test(test_url).await?;
 
     let (sender, recv) = mpsc::channel(1);
 
-    // TODO(fxb/45852): Support disabled tests.
-    let run_options = TestRunOptions::default();
+    let run_options = test_executor::TestRunOptions { disabled_tests };
+
     let (events, ()) = futures::future::try_join(
         recv.collect::<Vec<_>>().map(Ok),
         test_executor::run_and_collect_results(suite_proxy, sender, None, run_options),
@@ -89,7 +93,7 @@ async fn run_test(test_url: &str) -> Result<Vec<TestEvent>, Error> {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/echo-test-realm.cm";
-    let events = run_test(test_url).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude).await.unwrap();
 
     let expected_events = vec![
         TestEvent::test_case_started("test_echo"),
@@ -102,7 +106,7 @@ async fn launch_and_test_echo_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_file_with_no_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/no_rust_tests.cm";
-    let events = run_test(test_url).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude).await.unwrap();
 
     let expected_events = vec![TestEvent::test_finished()];
     assert_eq!(expected_events, events);
@@ -110,10 +114,12 @@ async fn launch_and_test_file_with_no_test() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_sample_test() {
-    let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/sample_rust_tests.cm";
-    let events = run_test(test_url).await.unwrap();
+    use test_executor::GroupByTestCase as _;
 
-    let mut expected_events = vec![
+    let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/sample_rust_tests.cm";
+    let events = run_test(test_url, DisabledTestHandling::Exclude).await.unwrap();
+
+    let expected_events = vec![
         TestEvent::test_case_started("my_tests::failing_test"),
         TestEvent::test_case_finished("my_tests::failing_test", TestResult::Failed),
         TestEvent::test_case_started("my_tests::sample_test_one"),
@@ -125,26 +131,35 @@ async fn launch_and_run_sample_test() {
         TestEvent::test_case_started("my_tests::passing_test"),
         TestEvent::log_message("my_tests::passing_test", "My only job is not to panic!()"),
         TestEvent::test_case_finished("my_tests::passing_test", TestResult::Passed),
+        TestEvent::test_case_started("my_tests::ignored_failing_test"),
+        TestEvent::test_case_finished("my_tests::ignored_failing_test", TestResult::Skipped),
+        TestEvent::test_case_started("my_tests::ignored_passing_test"),
+        TestEvent::test_case_finished("my_tests::ignored_passing_test", TestResult::Skipped),
         TestEvent::test_finished(),
-    ];
+    ]
+    .into_iter()
+    .group_by_test_case_unordered();
 
-    let (mut events_without_failing_test_logs, failing_test_logs): (
-        Vec<TestEvent>,
-        Vec<TestEvent>,
-    ) = events.into_iter().partition(|x| match x {
-        TestEvent::LogMessage { test_case_name, msg: _ } => {
-            test_case_name != "my_tests::failing_test"
-        }
-        _ => true,
-    });
-    expected_events.sort();
-    events_without_failing_test_logs.sort();
+    assert_eq!(events.last().unwrap(), &TestEvent::test_finished());
+
+    let (failing_test_logs, events_without_failing_test_logs): (Vec<TestEvent>, Vec<TestEvent>) =
+        events.into_iter().partition(|x| match x {
+            TestEvent::LogMessage { test_case_name, msg: _ } => {
+                test_case_name == "my_tests::failing_test"
+            }
+            _ => false,
+        });
+
+    let events_without_failing_test_logs =
+        events_without_failing_test_logs.into_iter().group_by_test_case_unordered();
+
     assert_eq!(expected_events, events_without_failing_test_logs);
-    let panic_message = "thread \'main\' panicked at \'I\'m supposed panic!()\', ../../src/sys/test_runners/rust/test_data/sample-rust-tests/src/lib.rs:19:9";
+
+    let panic_message = r"thread 'main' panicked at 'I'm supposed panic!()', ../../src/sys/test_runners/rust/test_data/sample-rust-tests/src/lib.rs:19:9";
     assert!(failing_test_logs.len() > 3, "{:?}", failing_test_logs);
     assert_eq!(
-        failing_test_logs[0..3],
-        [
+        &failing_test_logs[0..3],
+        &[
             TestEvent::log_message("my_tests::failing_test", panic_message),
             TestEvent::log_message("my_tests::failing_test", "stack backtrace:"),
             TestEvent::log_message("my_tests::failing_test", "{{{reset}}}"),
@@ -153,6 +168,58 @@ async fn launch_and_run_sample_test() {
     assert_eq!(
         failing_test_logs.last().unwrap(),
         &TestEvent::log_message("my_tests::failing_test", "test failed.")
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_sample_test_include_disabled() {
+    use test_executor::GroupByTestCase as _;
+
+    let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/sample_rust_tests.cm";
+    let events = run_test(test_url, DisabledTestHandling::Include).await.unwrap();
+
+    let grouped_events = events.into_iter().group_by_test_case_ordered();
+
+    // Confirm that non-ignored tests are still included.
+    let events_failing_test =
+        grouped_events.get(&Some("my_tests::failing_test".to_string())).unwrap();
+    assert_eq!(&events_failing_test[0], &TestEvent::test_case_started("my_tests::failing_test"));
+    assert_eq!(
+        &events_failing_test[2],
+        &TestEvent::log_message("my_tests::failing_test", "stack backtrace:")
+    );
+
+    let events_ignored_failing_test =
+        grouped_events.get(&Some("my_tests::ignored_failing_test".to_string())).unwrap();
+    assert_eq!(
+        events_ignored_failing_test.first().unwrap(),
+        &TestEvent::test_case_started("my_tests::ignored_failing_test")
+    );
+    assert_eq!(
+        events_ignored_failing_test.last().unwrap(),
+        &TestEvent::test_case_finished("my_tests::ignored_failing_test", TestResult::Failed)
+    );
+    assert!(
+        events_ignored_failing_test
+            .iter()
+            .filter(|event| match event {
+                TestEvent::LogMessage { test_case_name: _, msg: _ } => true,
+                _ => false,
+            })
+            .count()
+            > 1,
+        "Expected > 1 log messages"
+    );
+
+    let events_ignored_passing_test =
+        grouped_events.get(&Some("my_tests::ignored_passing_test".to_string())).unwrap();
+    assert_eq!(
+        events_ignored_passing_test,
+        &vec![
+            TestEvent::test_case_started("my_tests::ignored_passing_test"),
+            TestEvent::log_message("my_tests::ignored_passing_test", "Everybody ignores me"),
+            TestEvent::test_case_finished("my_tests::ignored_passing_test", TestResult::Passed),
+        ]
     );
 }
 

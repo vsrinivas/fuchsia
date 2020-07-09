@@ -12,7 +12,13 @@ use {
     fuchsia_component::client,
     fuchsia_component::client::connect_to_protocol_at_dir,
     futures::{channel::mpsc, prelude::*},
-    test_executor::{TestEvent, TestResult, TestRunOptions},
+    maplit::{hashmap, hashset},
+    pretty_assertions::assert_eq,
+    std::{
+        collections::{HashMap, HashSet},
+        iter::FromIterator,
+    },
+    test_executor::{DisabledTestHandling, GroupByTestCase, TestEvent, TestResult, TestRunOptions},
 };
 
 async fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
@@ -47,13 +53,14 @@ async fn launch_test(
     Ok((suite_proxy, controller_proxy))
 }
 
-async fn run_test(test_url: &str) -> Result<Vec<TestEvent>, Error> {
+async fn run_test(
+    test_url: &str,
+    test_run_options: TestRunOptions,
+) -> Result<Vec<TestEvent>, Error> {
     let (suite_proxy, _keep_alive) = launch_test(test_url).await?;
 
     let (sender, recv) = mpsc::channel(1);
 
-    // TODO(fxb/45852): Support disabled tests.
-    let test_run_options = TestRunOptions::default();
     let (events, ()) = futures::future::try_join(
         recv.collect::<Vec<_>>().map(Ok),
         test_executor::run_and_collect_results(suite_proxy, sender, None, test_run_options),
@@ -86,78 +93,87 @@ async fn run_test(test_url: &str) -> Result<Vec<TestEvent>, Error> {
     Ok(test_events)
 }
 
+/// Helper for comparing grouped test events. Produces more readable diffs than diffing the entire
+/// two maps.
+#[allow(dead_code)]
+fn assert_events_eq(
+    a: &HashMap<Option<String>, Vec<TestEvent>>,
+    b: &HashMap<Option<String>, Vec<TestEvent>>,
+) {
+    let a_keys: HashSet<Option<String>> = b.keys().cloned().collect();
+    let b_keys: HashSet<Option<String>> = a.keys().cloned().collect();
+    assert_eq!(a_keys, b_keys);
+    for key in b.keys() {
+        assert_eq!(b.get(key).unwrap(), a.get(key).unwrap())
+    }
+}
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_sample_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
-    let mut events = run_test(test_url).await.unwrap();
 
-    let mut expected_events = vec![
-        TestEvent::test_case_started("SampleTest1.Crashing"),
-        TestEvent::test_case_started("SampleTest1.SimpleFail"),
-        TestEvent::log_message(
-            "SampleTest1.SimpleFail",
-            "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:9: Failure",
-        ),
-        TestEvent::log_message("SampleTest1.SimpleFail", "Value of: true"),
-        TestEvent::log_message("SampleTest1.SimpleFail", "  Actual: true"),
-        TestEvent::log_message("SampleTest1.SimpleFail", "Expected: false"),
-        TestEvent::test_case_started("SampleFixture.Test2"),
-        TestEvent::test_case_started("Tests/SampleParameterizedTestFixture.Test/0"),
-        TestEvent::test_case_finished(
-            "Tests/SampleParameterizedTestFixture.Test/0",
-            TestResult::Passed,
-        ),
-        TestEvent::test_case_started("Tests/SampleParameterizedTestFixture.Test/2"),
-        TestEvent::test_case_finished(
-            "Tests/SampleParameterizedTestFixture.Test/2",
-            TestResult::Passed,
-        ),
-        TestEvent::test_case_started("Tests/SampleParameterizedTestFixture.Test/3"),
-        TestEvent::test_case_finished(
-            "Tests/SampleParameterizedTestFixture.Test/3",
-            TestResult::Passed,
-        ),
-        TestEvent::test_case_started("WriteToStdout.TestPass"),
-        TestEvent::log_message("WriteToStdout.TestPass", "first msg"),
-        TestEvent::log_message("WriteToStdout.TestPass", "second msg"),
-        TestEvent::test_case_finished("WriteToStdout.TestPass", TestResult::Passed),
-        TestEvent::test_case_started("WriteToStdout.TestFail"),
-        TestEvent::log_message("WriteToStdout.TestFail", "first msg"),
-        TestEvent::log_message(
-            "WriteToStdout.TestFail",
-            "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:37: Failure",
-        ),
-        TestEvent::log_message("WriteToStdout.TestFail", "Value of: true"),
-        TestEvent::log_message("WriteToStdout.TestFail", "  Actual: true"),
-        TestEvent::log_message("WriteToStdout.TestFail", "Expected: false"),
-        TestEvent::log_message("WriteToStdout.TestFail", "second msg"),
-        TestEvent::test_case_finished("WriteToStdout.TestFail", TestResult::Failed),
-        TestEvent::test_case_started("SampleDisabled.DISABLED_Test1"),
-        TestEvent::test_case_finished("SampleTest1.SimpleFail", TestResult::Failed),
-        TestEvent::log_message("SampleTest1.Crashing", "Test exited abnormally"),
-        TestEvent::test_case_finished("SampleTest1.Crashing", TestResult::Failed),
-        TestEvent::test_case_started("SampleFixture.Test1"),
-        TestEvent::test_case_finished("SampleDisabled.DISABLED_Test1", TestResult::Passed),
-        TestEvent::test_case_started("Tests/SampleParameterizedTestFixture.Test/1"),
-        TestEvent::test_case_started("SampleTest2.SimplePass"),
-        TestEvent::test_case_finished("SampleTest2.SimplePass", TestResult::Passed),
-        TestEvent::test_case_finished("SampleFixture.Test1", TestResult::Passed),
-        TestEvent::test_case_finished("SampleFixture.Test2", TestResult::Passed),
-        TestEvent::test_case_finished(
-            "Tests/SampleParameterizedTestFixture.Test/1",
-            TestResult::Passed,
-        ),
-        TestEvent::test_finished(),
+    let events =
+        run_test(test_url, TestRunOptions { disabled_tests: DisabledTestHandling::Exclude })
+            .await
+            .unwrap()
+            .into_iter()
+            .group_by_test_case_unordered();
+
+    let expected_events = include!("../test_data/sample_tests_golden_events.rsf");
+
+    assert_events_eq(&events, &expected_events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_sample_test_include_disabled() {
+    const TEST_URL: &str =
+        "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
+    let events =
+        run_test(TEST_URL, TestRunOptions { disabled_tests: DisabledTestHandling::Include })
+            .await
+            .unwrap()
+            .into_iter()
+            .group_by_test_case_unordered();
+
+    let expected_pass_events = vec![
+        TestEvent::test_case_started("SampleDisabled.DISABLED_TestPass"),
+        TestEvent::test_case_finished("SampleDisabled.DISABLED_TestPass", TestResult::Passed),
     ];
-    expected_events.sort();
-    events.sort();
-    assert_eq!(expected_events, events);
+    let expected_fail_events = hashset![
+        TestEvent::test_case_started("SampleDisabled.DISABLED_TestFail"),
+        TestEvent::test_case_finished("SampleDisabled.DISABLED_TestFail", TestResult::Failed),
+    ];
+    let expected_skip_events = vec![
+        TestEvent::test_case_started("SampleDisabled.DynamicSkip"),
+        // gtest treats tests that call `GTEST_SKIP()` as `Passed`.
+        TestEvent::test_case_finished("SampleDisabled.DynamicSkip", TestResult::Passed),
+    ];
+
+    let actual_pass_events =
+        events.get(&Some("SampleDisabled.DISABLED_TestPass".to_string())).unwrap();
+    assert_eq!(actual_pass_events, &expected_pass_events);
+
+    // Not going to check all of the exact log events.
+    let actual_fail_events = HashSet::from_iter(
+        events.get(&Some("SampleDisabled.DISABLED_TestFail".to_string())).unwrap().clone(),
+    );
+    assert!(
+        actual_fail_events.is_superset(&expected_fail_events),
+        "actual_fail_events: {:?}",
+        &actual_fail_events
+    );
+
+    let actual_skip_events = events.get(&Some("SampleDisabled.DynamicSkip".to_string())).unwrap();
+    assert_eq!(actual_skip_events, &expected_skip_events)
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_empty_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/empty_test.cm";
-    let events = run_test(test_url).await.unwrap();
+    let events =
+        run_test(test_url, TestRunOptions { disabled_tests: DisabledTestHandling::Exclude })
+            .await
+            .unwrap();
 
     let expected_events = vec![TestEvent::test_finished()];
 
@@ -167,7 +183,10 @@ async fn launch_and_run_empty_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/echo_test_realm.cm";
-    let events = run_test(test_url).await.unwrap();
+    let events =
+        run_test(test_url, TestRunOptions { disabled_tests: DisabledTestHandling::Exclude })
+            .await
+            .unwrap();
 
     let expected_events = vec![
         TestEvent::test_case_started("EchoTest.TestEcho"),
