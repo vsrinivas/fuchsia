@@ -76,8 +76,14 @@ source_set("io-interfaces") {
 }
 
 source_set("fd-io") {
-  sources = [ "fd_reader.cc" ]
-  public = [ "fd_reader.h" ]
+  sources = [
+    "fd_reader.cc",
+    "fd_writer.cc",
+  ]
+  public = [
+    "fd_reader.h",
+    "fd_writer.h",
+  ]
   public_deps = [
     ":io-interfaces",
     "//zircon/public/lib/fbl",
@@ -85,11 +91,22 @@ source_set("fd-io") {
   ]
 }
 
+source_set("fd-test-helper") {
+  sources = [ "fd_test_helper.cc" ]
+  public = [ "fd_test_helper.h" ]
+  public_deps = [ "//zircon/public/lib/fit" ]
+  deps = [ "//zircon/public/lib/fbl" ]
+}
+
 source_set("fd-io-test") {
   testonly = true
-  sources = [ "fd_reader_test.cc" ]
+  sources = [
+    "fd_reader_test.cc",
+    "fd_writer_test.cc",
+  ]
   deps = [
     ":fd-io",
+    ":fd-test-helper",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",

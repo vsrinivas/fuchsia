@@ -18,6 +18,8 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/volume_image/utils/fd_test_helper.h"
+
 namespace storage::volume_image {
 namespace {
 
@@ -29,57 +31,8 @@ TEST(FdReaderTest, CreateFromPathToInexistentFileIsError) {
           .is_error());
 }
 
-class TempFile {
- public:
-  static fit::result<TempFile, std::string> Create(unsigned int seed) {
-    auto get_next_char = [&seed]() {
-      int val = rand_r(&seed) % (10 + 26);
-      if (val >= 10) {
-        return static_cast<char>(val - 10 + 'a');
-      }
-      return static_cast<char>(val + '0');
-    };
-
-    fbl::unique_fd created_file;
-    std::string base;
-    auto tmp_dir = std::filesystem::temp_directory_path().generic_string();
-
-    do {
-      base = tmp_dir;
-      base.append("/tmp_");
-      std::array<char, 15> random_suffix;
-      for (auto& random_char : random_suffix) {
-        random_char = get_next_char();
-      }
-      base.append(random_suffix.data(), random_suffix.size());
-      created_file.reset(open(base.c_str(), O_RDONLY));
-    } while (created_file.is_valid());
-
-    created_file.reset(open(base.c_str(), O_CREAT | O_RDWR, 0666));
-    if (!created_file.is_valid()) {
-      std::string error = "Failed to create temporal file at ";
-      error.append(base).append(". More specifically: ").append(strerror(errno));
-      return fit::error(error);
-    }
-    return fit::ok(TempFile(base));
-  }
-
-  TempFile() = default;
-  TempFile(const TempFile&) = delete;
-  TempFile(TempFile&&) = default;
-  TempFile& operator=(const TempFile&) = delete;
-  TempFile& operator=(TempFile&&) = default;
-  ~TempFile() { unlink(path_.c_str()); }
-
-  std::string_view path() const { return path_; }
-
- private:
-  explicit TempFile(std::string_view path) : path_(path) {}
-  std::string path_;
-};
-
 TEST(FdReaderTest, CreateFromExistingFileIsOk) {
-  auto temp_file_result = TempFile::Create(testing::UnitTest::GetInstance()->random_seed());
+  auto temp_file_result = TempFile::Create();
   ASSERT_TRUE(temp_file_result.is_ok()) << temp_file_result.error();
   TempFile file = temp_file_result.take_value();
 
@@ -104,7 +57,7 @@ void Write(int fd, fbl::Span<const char> buffer) {
 TEST(FdReaderTest, ReadReturnsCorrectContents) {
   constexpr std::string_view kFileContents = "12345678901234567890abcedf12345";
 
-  auto temp_file_result = TempFile::Create(testing::UnitTest::GetInstance()->random_seed());
+  auto temp_file_result = TempFile::Create();
   ASSERT_TRUE(temp_file_result.is_ok()) << temp_file_result.error();
   TempFile file = temp_file_result.take_value();
 
@@ -128,7 +81,7 @@ TEST(FdReaderTest, ReadReturnsCorrectContentsAtOffset) {
   constexpr std::string_view kFileContents = "12345678901234567890abcedf12345";
   constexpr uint64_t kOffset = 10;
   static_assert(kOffset < kFileContents.size());
-  auto temp_file_result = TempFile::Create(testing::UnitTest::GetInstance()->random_seed());
+  auto temp_file_result = TempFile::Create();
   ASSERT_TRUE(temp_file_result.is_ok()) << temp_file_result.error();
   TempFile file = temp_file_result.take_value();
 
@@ -149,10 +102,10 @@ TEST(FdReaderTest, ReadReturnsCorrectContentsAtOffset) {
       memcmp(kFileContents.data() + kOffset, buffer.data(), kFileContents.size() - kOffset) == 0);
 }
 
-TEST(FdReaderTest, ReadMultipleTimesReturnsCorrectContentsAtOffset) {
+TEST(FdReaderTest, ReadAreIdempotent) {
   constexpr std::string_view kFileContents = "12345678901234567890abcedf12345";
 
-  auto temp_file_result = TempFile::Create(testing::UnitTest::GetInstance()->random_seed());
+  auto temp_file_result = TempFile::Create();
   ASSERT_TRUE(temp_file_result.is_ok()) << temp_file_result.error();
   TempFile file = temp_file_result.take_value();
 
@@ -181,7 +134,7 @@ TEST(FdReaderTest, ReadMultipleTimesReturnsCorrectContentsAtOffset) {
 TEST(FdReaderTest, ReadOutOfBoundsIsError) {
   constexpr std::string_view kFileContents = "12345678901234567890abcedf12345";
 
-  auto temp_file_result = TempFile::Create(testing::UnitTest::GetInstance()->random_seed());
+  auto temp_file_result = TempFile::Create();
   ASSERT_TRUE(temp_file_result.is_ok()) << temp_file_result.error();
   TempFile file = temp_file_result.take_value();
 
