@@ -21,6 +21,8 @@ namespace {
 
 std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
   auto parser = std::make_unique<cmdline::ArgsParser<CommandLineArgs>>();
+  parser->AddSwitch("cleanup-test-partitions", 'c', "Cleanup all existing flash test partitions.",
+                    &CommandLineArgs::destroy_partitions);
   parser->AddSwitch("duration", 'd', "Test duration in seconds.",
                     &CommandLineArgs::test_duration_seconds);
   parser->AddSwitch("fvm-path", 'f', "Path to Fuchsia Volume Manager.", &CommandLineArgs::fvm_path);
@@ -70,7 +72,12 @@ CPU test options:
                          than 0, and no more than 100.
 
 Flash test options:
-  -f, --fvm-path=<path>  Path to Fuchsia Volume Manager
+  -c, --cleanup-test-partitions
+                         Cleanup all existing flash test partitions in the
+                         system, and then exit without testing. Can be used
+                         to clean up persistent test partitions left over from
+                         previous flash tests which did not exit cleanly.
+  -f, --fvm-path=<path>  Path to Fuchsia Volume Manager.
   -m, --memory=<size>    Amount of flash memory to test, in megabytes.
 
 Memory test options:
@@ -154,8 +161,12 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
   }
 
   // Ensure mandatory flash test argument is provided
-  if (result.subcommand == StressTest::kFlash && result.fvm_path.empty()) {
-    return fitx::error(fxl::StringPrintf("Path to Fuchsia Volume Manager must be specified"));
+  if (result.subcommand == StressTest::kFlash) {
+    if (result.destroy_partitions && !result.fvm_path.empty()) {
+      return fitx::error(fxl::StringPrintf("Path to Fuchsia Volume Manager invalid with cleanup"));
+    } else if (!result.destroy_partitions && result.fvm_path.empty()) {
+      return fitx::error(fxl::StringPrintf("Path to Fuchsia Volume Manager must be specified"));
+    }
   }
 
   // Ensure no more parameters were given.

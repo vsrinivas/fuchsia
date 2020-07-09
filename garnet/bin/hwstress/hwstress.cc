@@ -69,7 +69,12 @@ int Run(int argc, const char** argv) {
       success = StressCpu(&status, args, duration, sensor.get());
       break;
     case StressTest::kFlash:
-      success = StressFlash(&status, args.fvm_path, flash_to_test);
+      if (args.destroy_partitions) {
+        DestroyFlashTestPartitions(&status);
+        success = true;
+      } else {
+        success = StressFlash(&status, args.fvm_path, flash_to_test);
+      }
       break;
     case StressTest::kLight:
       success = StressLight(&status, args, duration);

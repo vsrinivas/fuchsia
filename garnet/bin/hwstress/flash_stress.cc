@@ -4,15 +4,12 @@
 
 #include "flash_stress.h"
 
-#include <fcntl.h>
 #include <fuchsia/hardware/block/cpp/fidl.h>
 #include <fuchsia/hardware/block/volume/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/fifo.h>
-#include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <threads.h>
 #include <zircon/status.h>
 
 #include <string>
@@ -32,9 +29,6 @@ constexpr uint32_t kSectorSize = 512;
 constexpr uint32_t kTransferSize = 512 * 1024;
 constexpr uint32_t kMinFvmFreeSpace = 16 * 1024 * 1024;
 constexpr uint32_t kMinPartitionFreeSpace = 2 * 1024 * 1024;
-
-constexpr uuid::Uuid kTestPartGUID = uuid::Uuid({0xC6, 0x24, 0xF5, 0xDD, 0x9D, 0x88, 0x4C, 0x81,
-                                                 0x99, 0x87, 0xCA, 0x92, 0xD1, 0x1B, 0x28, 0x89});
 
 struct BlockDevice {
   fuchsia::hardware::block::BlockSyncPtr device;  // Connection to the block device.
@@ -247,10 +241,9 @@ std::unique_ptr<TemporaryFvmPartition> TemporaryFvmPartition::Create(const std::
 
   uuid::Uuid unique_guid = uuid::Uuid::Generate();
 
-  alloc_req_t request{
-      .slice_count = num_slices,
-      .name = "flash-test-fs",
-  };
+  alloc_req_t request{.slice_count = num_slices,
+                      .name = "flash-test-fs",
+                      .flags = fuchsia::hardware::block::volume::ALLOCATE_PARTITION_FLAG_INACTIVE};
   memcpy(request.guid, unique_guid.bytes(), sizeof(request.guid));
   memcpy(request.type, kTestPartGUID.bytes(), sizeof(request.type));
 
@@ -339,6 +332,15 @@ bool StressFlash(StatusLine* status, const std::string& fvm_path, uint64_t bytes
   }
 
   return true;
+}
+
+void DestroyFlashTestPartitions(StatusLine* status) {
+  uint32_t count = 0;
+  // Remove any partitions from previous tests
+  while (destroy_partition(nullptr, kTestPartGUID.bytes()) == ZX_OK) {
+    count++;
+  }
+  status->Log("Deleted %u partitions", count);
 }
 
 }  // namespace hwstress

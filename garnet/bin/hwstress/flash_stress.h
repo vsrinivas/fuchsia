@@ -13,6 +13,10 @@
 
 namespace hwstress {
 
+// The GPT partition type used for partitions created by the flash test.
+constexpr uuid::Uuid kTestPartGUID = uuid::Uuid({0xC6, 0x24, 0xF5, 0xDD, 0x9D, 0x88, 0x4C, 0x81,
+                                                 0x99, 0x87, 0xCA, 0x92, 0xD1, 0x1B, 0x28, 0x89});
+
 // Creates and manages the lifetime of a new partition backed by a
 // Fuchsia Volume Manager instance.
 class TemporaryFvmPartition {
@@ -54,6 +58,9 @@ class TemporaryFvmPartition {
 
 // Start a stress test.
 bool StressFlash(StatusLine* status, const std::string& fvm_path, uint64_t bytes_to_test);
+
+// Delete any persistent flash test partitions
+void DestroyFlashTestPartitions(StatusLine* status);
 
 }  // namespace hwstress
 

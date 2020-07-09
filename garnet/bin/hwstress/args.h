@@ -67,6 +67,9 @@ struct CommandLineArgs {
   // Path to the Fuchsia Volume Manager
   std::string fvm_path;
 
+  // Destroy any existing flash test partitions.
+  bool destroy_partitions = false;
+
   //
   // Memory-specific arguments.
   //
