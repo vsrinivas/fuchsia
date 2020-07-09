@@ -16,19 +16,20 @@
 #include "src/media/audio/lib/test/comparators.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
+using ASF = fuchsia::media::AudioSampleFormat;
+
 namespace media::audio::test {
 
+namespace {
 constexpr size_t kNumPacketsInPayload = 50;
 constexpr size_t kFrameRate = 48000;
 constexpr size_t kPacketFrames = kFrameRate / 1000 * RendererShimImpl::kPacketMs;
 constexpr size_t kPayloadFrames = kPacketFrames * kNumPacketsInPayload;
+}  // namespace
 
-constexpr fuchsia::media::AudioSampleFormat kSampleFormat =
-    fuchsia::media::AudioSampleFormat::SIGNED_16;
-
-class AudioPipelineTest : public HermeticAudioTest {
+class AudioRendererPipelineTest : public HermeticAudioTest {
  protected:
-  AudioPipelineTest() : format_(Format::Create<kSampleFormat>(2, kFrameRate).value()) {}
+  AudioRendererPipelineTest() : format_(Format::Create<ASF::SIGNED_16>(2, kFrameRate).value()) {}
 
   void SetUp() {
     HermeticAudioTest::SetUp();
@@ -39,19 +40,19 @@ class AudioPipelineTest : public HermeticAudioTest {
     renderer_ = CreateAudioRenderer(format_, kPayloadFrames);
   }
 
-  const TypedFormat<kSampleFormat> format_;
-  VirtualOutput<kSampleFormat>* output_ = nullptr;
-  AudioRendererShim<kSampleFormat>* renderer_ = nullptr;
+  const TypedFormat<ASF::SIGNED_16> format_;
+  VirtualOutput<ASF::SIGNED_16>* output_ = nullptr;
+  AudioRendererShim<ASF::SIGNED_16>* renderer_ = nullptr;
 };
 
 // Validate that timestamped packets play through renderer to ring buffer as expected.
-TEST_F(AudioPipelineTest, RenderWithPts) {
+TEST_F(AudioRendererPipelineTest, RenderWithPts) {
   auto min_lead_time = renderer_->GetMinLeadTime();
   ASSERT_GT(min_lead_time, 0);
   auto num_packets = zx::duration(min_lead_time) / zx::msec(RendererShimImpl::kPacketMs);
   auto num_frames = num_packets * kPacketFrames;
 
-  auto input_buffer = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
+  auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto packets = renderer_->AppendPackets({&input_buffer});
   auto start_time = output_->NextSynchronizedTimestamp(this);
   renderer_->Play(this, start_time, 0);
@@ -69,11 +70,11 @@ TEST_F(AudioPipelineTest, RenderWithPts) {
                       AudioBufferSlice(&input_buffer, 0, num_frames), opts);
   opts.test_label = "check silence";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, num_frames, output_->frame_count()),
-                      AudioBufferSlice<kSampleFormat>(), opts);
+                      AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
 // If we issue DiscardAllPackets during Playback, PTS should not change.
-TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
+TEST_F(AudioRendererPipelineTest, DiscardDuringPlayback) {
   auto min_lead_time = renderer_->GetMinLeadTime();
   ASSERT_GT(min_lead_time, 0);
   // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See fxb/52410.
@@ -116,7 +117,7 @@ TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
   const size_t num_frames = num_packets * kPacketFrames;
 
   // Load the renderer with lots of packets, but interrupt after two of them.
-  auto first_input = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
+  auto first_input = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto first_packets = renderer_->AppendPackets({&first_input}, first_pts);
   auto first_time = output_->NextSynchronizedTimestamp(this);
   renderer_->Play(this, first_time, 0);
@@ -150,7 +151,7 @@ TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
   // when visually inspecting the buffer.
   const int16_t restart_data_value = 0x4000;
   auto second_input =
-      GenerateSequentialAudio<kSampleFormat>(format_, num_frames, restart_data_value);
+      GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames, restart_data_value);
   auto second_packets = renderer_->AppendPackets({&second_input}, restart_pts);
   auto second_time = first_time + ZX_MSEC(restart_packet * RendererShimImpl::kPacketMs);
   renderer_->WaitForPackets(this, second_time, second_packets);
@@ -177,27 +178,27 @@ TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
   opts.test_label = "silence after second_input";
   CompareAudioBuffers(
       AudioBufferSlice(&ring_buffer, restart_pts + num_frames, output_->frame_count()),
-      AudioBufferSlice<kSampleFormat>(), opts);
+      AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
-class AudioPipelineEffectsTest : public AudioPipelineTest {
+class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTest {
  protected:
   // Matches the value in audio_core_config_with_inversion_filter.json
   static constexpr const char* kInverterEffectName = "inverter";
 
   static void SetUpTestSuite() {
     HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
-        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-for-pipeline-tests",
-        .audio_core_config_data_path = "/pkg/data/audio_core_config_with_inversion_filter",
+        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-inversion-filter",
+        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-inversion-filter",
     });
   }
 
   void SetUp() override {
-    AudioPipelineTest::SetUp();
+    AudioRendererPipelineTest::SetUp();
     environment()->ConnectToService(effects_controller_.NewRequest());
   }
 
-  void RunInversionFilter(AudioBuffer<kSampleFormat>* audio_buffer_ptr) {
+  void RunInversionFilter(AudioBuffer<ASF::SIGNED_16>* audio_buffer_ptr) {
     auto& samples = audio_buffer_ptr->samples();
     for (size_t sample = 0; sample < samples.size(); sample++) {
       samples[sample] = -samples[sample];
@@ -208,13 +209,13 @@ class AudioPipelineEffectsTest : public AudioPipelineTest {
 };
 
 // Validate that the effects package is loaded and that it processes the input.
-TEST_F(AudioPipelineEffectsTest, RenderWithEffects) {
+TEST_F(AudioRendererPipelineEffectsTest, RenderWithEffects) {
   auto min_lead_time = renderer_->GetMinLeadTime();
   ASSERT_GT(min_lead_time, 0);
   auto num_packets = zx::duration(min_lead_time) / zx::msec(RendererShimImpl::kPacketMs);
   auto num_frames = num_packets * kPacketFrames;
 
-  auto input_buffer = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
+  auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto packets = renderer_->AppendPackets({&input_buffer});
   auto start_time = output_->NextSynchronizedTimestamp(this);
   renderer_->Play(this, start_time, 0);
@@ -235,10 +236,10 @@ TEST_F(AudioPipelineEffectsTest, RenderWithEffects) {
                       AudioBufferSlice(&input_buffer, 0, num_frames), opts);
   opts.test_label = "check silence";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, num_frames, output_->frame_count()),
-                      AudioBufferSlice<kSampleFormat>(), opts);
+                      AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
-TEST_F(AudioPipelineEffectsTest, EffectsControllerEffectDoesNotExist) {
+TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerEffectDoesNotExist) {
   fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
   zx_status_t status = effects_controller_->UpdateEffect("invalid_effect_name", "disable", &result);
   EXPECT_EQ(status, ZX_OK);
@@ -246,7 +247,7 @@ TEST_F(AudioPipelineEffectsTest, EffectsControllerEffectDoesNotExist) {
   EXPECT_EQ(result.err(), fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
 }
 
-TEST_F(AudioPipelineEffectsTest, EffectsControllerInvalidConfig) {
+TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerInvalidConfig) {
   fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
   zx_status_t status =
       effects_controller_->UpdateEffect(kInverterEffectName, "invalid config string", &result);
@@ -257,7 +258,7 @@ TEST_F(AudioPipelineEffectsTest, EffectsControllerInvalidConfig) {
 
 // Similar to RenderWithEffects, except we send a message to the effect to ask it to disable
 // processing.
-TEST_F(AudioPipelineEffectsTest, EffectsControllerUpdateEffect) {
+TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerUpdateEffect) {
   // Disable the inverter; frames should be unmodified.
   fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
   zx_status_t status = effects_controller_->UpdateEffect(kInverterEffectName, "disable", &result);
@@ -269,7 +270,7 @@ TEST_F(AudioPipelineEffectsTest, EffectsControllerUpdateEffect) {
   auto num_packets = zx::duration(min_lead_time) / zx::msec(RendererShimImpl::kPacketMs);
   auto num_frames = num_packets * kPacketFrames;
 
-  auto input_buffer = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
+  auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto packets = renderer_->AppendPackets({&input_buffer});
   auto start_time = output_->NextSynchronizedTimestamp(this);
   renderer_->Play(this, start_time, 0);
@@ -287,7 +288,7 @@ TEST_F(AudioPipelineEffectsTest, EffectsControllerUpdateEffect) {
                       AudioBufferSlice(&input_buffer, 0, num_frames), opts);
   opts.test_label = "check silence";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, num_frames, output_->frame_count()),
-                      AudioBufferSlice<kSampleFormat>(), opts);
+                      AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
 // /// Overall, need to add tests to validate various Renderer pipeline aspects

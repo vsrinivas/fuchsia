@@ -3,16 +3,46 @@
 # found in the LICENSE file.
 
 import("//build/testing/environments.gni")
+import("//src/media/audio/audio_core_package.gni")
 import("//src/media/audio/audio_core/test/api/api_test_component.gni")
+import("//src/media/audio/hardware.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 
+loadable_module("inversion_filter") {
+  sources = [ "inversion_filter.cc" ]
+
+  deps = [
+    "//sdk/lib/media/audio/effects",
+    "//sdk/lib/syslog/cpp",
+    "//third_party/rapidjson",
+    "//zircon/system/ulib/fzl",
+  ]
+}
+
+audio_core_test_package("audio-core-with-inversion-filter") {
+  effects = {
+    target = "//src/media/audio/audio_core/test/api:inversion_filter"
+    name = "inversion_filter.so"
+  }
+}
+
+resource("audio-core-config-with-inversion-filter") {
+  sources = [ "testdata/audio_core_config_with_inversion_filter.json" ]
+  outputs = [ "data/audio-core-config-with-inversion-filter/audio_core_config.json" ]
+}
+
+resource("audio-core-config-with-ultrasound") {
+  sources = [ "testdata/ultrasound_audio_core_config.json" ]
+  outputs = [ "data/ultrasound/audio_core_config.json" ]
+}
+
 audio_core_api_test_component("activity-reporter-test") {
-  sources = [ "activity_reporter_test.cc" ]
+  source = "activity_reporter_test.cc"
 }
 
 audio_core_api_test_component("audio-capturer-test") {
-  sources = [ "audio_capturer_test.cc" ]
-  deps = [
+  source = "audio_capturer_test.cc"
+  executable_deps = [
     "//sdk/lib/media/audio/cpp",
     "//src/media/audio/lib/clock:clone_mono",
     "//src/media/audio/lib/clock/testing",
@@ -20,34 +50,56 @@ audio_core_api_test_component("audio-capturer-test") {
 }
 
 audio_core_api_test_component("audio-renderer-test") {
-  sources = [ "audio_renderer_test.cc" ]
-  deps = [
+  source = "audio_renderer_test.cc"
+  executable_deps = [
     "//sdk/lib/media/audio/cpp",
     "//src/media/audio/lib/clock:clone_mono",
     "//src/media/audio/lib/clock/testing",
   ]
 }
 
+audio_core_api_test_component("audio-renderer-pipeline-test") {
+  source = "audio_renderer_pipeline_test.cc"
+  executable_deps = [
+    "//src/media/audio/lib/analysis",
+  ]
+  component_deps = [
+    ":audio-core-config-with-inversion-filter",
+    ":audio-core-with-inversion-filter",
+  ]
+}
+
 audio_core_api_test_component("audio-tuner-test") {
-  sources = [ "audio_tuner_test.cc" ]
-  deps = [ "//sdk/fidl/fuchsia.media.tuning" ]
+  source = "audio_tuner_test.cc"
+  executable_deps = [ "//sdk/fidl/fuchsia.media.tuning" ]
 }
 
 audio_core_api_test_component("gain-control-test") {
-  sources = [ "gain_control_test.cc" ]
+  source = "gain_control_test.cc"
+}
+
+audio_core_api_test_component("ultrasound-test") {
+  source = "ultrasound_test.cc"
+  executable_deps = [
+    "//src/media/audio/lib/clock",
+    "//src/media/audio/lib/clock/testing",
+  ]
+  component_deps = [
+    ":audio-core-config-with-ultrasound"
+  ]
 }
 
 audio_core_api_test_component("usage-gain-reporter-test") {
-  sources = [ "usage_gain_reporter_test.cc" ]
-  deps = [ "//sdk/fidl/fuchsia.media.audio" ]
+  source = "usage_gain_reporter_test.cc"
+  executable_deps = [ "//sdk/fidl/fuchsia.media.audio" ]
 }
 
 audio_core_api_test_component("usage-reporter-test") {
-  sources = [ "usage_reporter_test.cc" ]
+  source = "usage_reporter_test.cc"
 }
 
 audio_core_api_test_component("volume-control-test") {
-  sources = [ "volume_control_test.cc" ]
+  source = "volume_control_test.cc"
 }
 
 # These tests can run anywhere, including in emulators.
@@ -58,15 +110,19 @@ fuchsia_test_package("audio-core-api-tests") {
     ":audio-renderer-test",
     ":audio-tuner-test",
     ":gain-control-test",
+    ":ultrasound-test",
     ":usage-gain-reporter-test",
     ":usage-reporter-test",
     ":volume-control-test",
   ]
 }
-# TODO(50645): add after tests have been moved
+
 # These tests must run on real hardware because they depend on real time.
-#fuchsia_test_package("audio-core-api-tests-hw-only") {
-#  test_specs = [
-#    environments = hardware_envs
-#  ]
-#}
+fuchsia_test_package("audio-core-api-pipeline-tests") {
+  test_components = [
+    ":audio-renderer-pipeline-test",
+  ]
+  test_specs = {
+    environments = hardware_envs
+  }
+}

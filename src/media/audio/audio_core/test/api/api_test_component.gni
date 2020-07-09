@@ -7,31 +7,35 @@ import("//src/sys/build/fuchsia_component.gni")
 # Defines an API integration test.
 #
 # This template creates a fuchsia_component with the given name, where the
-# component contains a test executable built from sources and deps, along with
-# an auto-generated manifest for the test executable. By default, the deps
-# include libraries that will be needed by all tests in this directory.
+# component contains a test executable built from a source file, along with
+# an auto-generated manifest for the test executable.
 #
 # Example:
 # ```
 # audio_core_api_test_comonent(name) {
-#   sources = ["foo_test.cc"]
-#   deps = ["//lib"]
+#   source = "foo_test.cc"
+#   executable_deps = ["//lib"]
 # }
 # ```
 #
 # Parameters
 #
 #   sources (required)
-#     List of source files to include in this test component.
+#     List of source files to include in the test executable.
 #     Type: list(path)
 #
-#   deps (optional)
-#     List of dependencies files to include in this test component.
+#   executable_deps (optional)
+#     List of additional dependencies for the test executable. Libraries needed
+#     by all tests in this directory will be included by default.
+#     Type: list(target)
+#
+#   component_deps (optional)
+#     List of dependencies for the test component.
 #     Type: list(target)
 #
 template("audio_core_api_test_component") {
-  assert(defined(invoker.sources) && invoker.sources != [],
-         "sources must be non-empty")
+  assert(defined(invoker.source) && invoker.source != "",
+         "source must be specified")
 
   binary = "${target_name}-bin"
   cmx_target = "${target_name}_cmx"
@@ -53,19 +57,21 @@ template("audio_core_api_test_component") {
       ":${cmx_target}",
       ":${target_name}-bin",
     ]
+    if (defined(invoker.component_deps)) {
+      deps += invoker.component_deps
+    }
   }
 
   executable("${target_name}-bin") {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "sources",
-                           ])
-    if (!defined(deps)) {
+    sources = [ invoker.source ]
+    if (defined(invoker.executable_deps)) {
+      deps = invoker.executable_deps
+    } else {
       deps = []
     }
     deps += [
       "//sdk/fidl/fuchsia.media",
+      "//sdk/lib/syslog/cpp",
       "//src/lib/fxl/test:gtest_main",
       "//src/media/audio/lib/test:hermetic_audio_test",
       "//third_party/googletest:gmock",

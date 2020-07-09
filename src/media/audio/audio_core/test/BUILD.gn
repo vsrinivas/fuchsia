@@ -6,11 +6,11 @@ group("test") {
   testonly = true
   deps = [
     "api:audio-core-api-tests",
+    "api:audio-core-api-pipeline-tests",
+    "api:audio-core-with-inversion-filter",
     "audio_admin:audio_admin_tests",
     "device:audio_device_tests",
     "hardware:audio_core_hardware_tests",
-    "pipeline:audio-core-for-pipeline-tests",
-    "pipeline:audio_pipeline_tests",
     "service:audio_device_service_tests",
     "//src/media/audio/audio_core:audio-core-for-test",
     "//src/media/audio/virtual_audio_service:virtual-audio-service-for-test",
