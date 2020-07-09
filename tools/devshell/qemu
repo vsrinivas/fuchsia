@@ -30,7 +30,6 @@ args=(
   -a "${FUCHSIA_ARCH}"
   -q "${qemu_dir}"
   -t "${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}"
-  --gic=3
 )
 
 # Construction of a qcow image prevents qemu from writing back to the
