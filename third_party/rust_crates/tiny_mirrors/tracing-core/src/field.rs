@@ -42,6 +42,7 @@ use crate::stdlib::{
     borrow::Borrow,
     fmt,
     hash::{Hash, Hasher},
+    num,
     ops::Range,
 };
 
@@ -60,6 +61,15 @@ pub struct Field {
     i: usize,
     fields: FieldSet,
 }
+
+/// An empty field.
+///
+/// This can be used to indicate that the value of a field is not currently
+/// present but will be recorded later.
+///
+/// When a field's value is `Empty`. it will not be recorded.
+#[derive(Debug, Eq, PartialEq)]
+pub struct Empty;
 
 /// Describes the fields present on a span.
 pub struct FieldSet {
@@ -102,7 +112,6 @@ pub struct Iter {
 /// # extern crate tracing_core as tracing;
 /// use std::fmt::{self, Write};
 /// use tracing::field::{Value, Visit, Field};
-/// # fn main() {
 /// pub struct StringVisitor<'a> {
 ///     string: &'a mut String,
 /// }
@@ -112,7 +121,6 @@ pub struct Iter {
 ///         write!(self.string, "{} = {:?}; ", field.name(), value).unwrap();
 ///     }
 /// }
-/// # }
 /// ```
 /// This visitor will format each recorded value using `fmt::Debug`, and
 /// append the field name and formatted value to the provided string,
@@ -135,7 +143,6 @@ pub struct Iter {
 /// # extern crate tracing_core as tracing;
 /// # use std::fmt::{self, Write};
 /// # use tracing::field::{Value, Visit, Field};
-/// # fn main() {
 /// pub struct SumVisitor {
 ///     sum: i64,
 /// }
@@ -153,7 +160,6 @@ pub struct Iter {
 ///         // Do nothing
 ///     }
 /// }
-/// # }
 /// ```
 ///
 /// This visitor (which is probably not particularly useful) keeps a running
@@ -198,6 +204,7 @@ pub trait Visit {
     /// **Note**: this is only enabled when the Rust standard library is
     /// present.
     #[cfg(feature = "std")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     fn record_error(&mut self, field: &Field, value: &(dyn std::error::Error + 'static)) {
         self.record_debug(field, &format_args!("{}", value))
     }
@@ -279,33 +286,88 @@ macro_rules! impl_values {
         )+
     }
 }
-macro_rules! impl_value {
-    ( $record:ident( $( $value_ty:ty ),+ ) ) => {
-        $(
-            impl $crate::sealed::Sealed for $value_ty {}
-            impl $crate::field::Value for $value_ty {
-                fn record(
-                    &self,
-                    key: &$crate::field::Field,
-                    visitor: &mut dyn $crate::field::Visit,
-                ) {
-                    visitor.$record(key, *self)
-                }
+
+macro_rules! ty_to_nonzero {
+    (u8) => {
+        NonZeroU8
+    };
+    (u16) => {
+        NonZeroU16
+    };
+    (u32) => {
+        NonZeroU32
+    };
+    (u64) => {
+        NonZeroU64
+    };
+    (u128) => {
+        NonZeroU128
+    };
+    (usize) => {
+        NonZeroUsize
+    };
+    (i8) => {
+        NonZeroI8
+    };
+    (i16) => {
+        NonZeroI16
+    };
+    (i32) => {
+        NonZeroI32
+    };
+    (i64) => {
+        NonZeroI64
+    };
+    (i128) => {
+        NonZeroI128
+    };
+    (isize) => {
+        NonZeroIsize
+    };
+}
+
+macro_rules! impl_one_value {
+    (bool, $op:expr, $record:ident) => {
+        impl_one_value!(normal, bool, $op, $record);
+    };
+    ($value_ty:tt, $op:expr, $record:ident) => {
+        impl_one_value!(normal, $value_ty, $op, $record);
+        impl_one_value!(nonzero, $value_ty, $op, $record);
+    };
+    (normal, $value_ty:tt, $op:expr, $record:ident) => {
+        impl $crate::sealed::Sealed for $value_ty {}
+        impl $crate::field::Value for $value_ty {
+            fn record(&self, key: &$crate::field::Field, visitor: &mut dyn $crate::field::Visit) {
+                visitor.$record(key, $op(*self))
             }
+        }
+    };
+    (nonzero, $value_ty:tt, $op:expr, $record:ident) => {
+        // This `use num::*;` is reported as unused because it gets emitted
+        // for every single invocation of this macro, so there are multiple `use`s.
+        // All but the first are useless indeed.
+        // We need this import because we can't write a path where one part is
+        // the `ty_to_nonzero!($value_ty)` invocation.
+        #[allow(clippy::useless_attribute, unused)]
+        use num::*;
+        impl $crate::sealed::Sealed for ty_to_nonzero!($value_ty) {}
+        impl $crate::field::Value for ty_to_nonzero!($value_ty) {
+            fn record(&self, key: &$crate::field::Field, visitor: &mut dyn $crate::field::Visit) {
+                visitor.$record(key, $op(self.get()))
+            }
+        }
+    };
+}
+
+macro_rules! impl_value {
+    ( $record:ident( $( $value_ty:tt ),+ ) ) => {
+        $(
+            impl_one_value!($value_ty, |this: $value_ty| this, $record);
         )+
     };
-    ( $record:ident( $( $value_ty:ty ),+ as $as_ty:ty) ) => {
+    ( $record:ident( $( $value_ty:tt ),+ as $as_ty:ty) ) => {
         $(
-            impl $crate::sealed::Sealed for $value_ty {}
-            impl Value for $value_ty {
-                fn record(
-                    &self,
-                    key: &$crate::field::Field,
-                    visitor: &mut dyn $crate::field::Visit,
-                ) {
-                    visitor.$record(key, *self as $as_ty)
-                }
-            }
+            impl_one_value!($value_ty, |this: $value_ty| this as $as_ty, $record);
         )+
     };
 }
@@ -320,6 +382,13 @@ impl_values! {
     record_bool(bool)
 }
 
+impl<T: crate::sealed::Sealed> crate::sealed::Sealed for Wrapping<T> {}
+impl<T: crate::field::Value> crate::field::Value for Wrapping<T> {
+    fn record(&self, key: &crate::field::Field, visitor: &mut dyn crate::field::Visit) {
+        self.0.record(key, visitor)
+    }
+}
+
 impl crate::sealed::Sealed for str {}
 
 impl Value for str {
@@ -332,6 +401,7 @@ impl Value for str {
 impl crate::sealed::Sealed for dyn std::error::Error + 'static {}
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl Value for dyn std::error::Error + 'static {
     fn record(&self, key: &Field, visitor: &mut dyn Visit) {
         visitor.record_error(key, self)
@@ -393,6 +463,12 @@ impl<T: fmt::Debug> fmt::Debug for DebugValue<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.0)
     }
+}
+
+impl crate::sealed::Sealed for Empty {}
+impl Value for Empty {
+    #[inline]
+    fn record(&self, _: &Field, _: &mut dyn Visit) {}
 }
 
 // ===== impl Field =====
@@ -798,6 +874,25 @@ mod test {
         impl Visit for MyVisitor {
             fn record_debug(&mut self, field: &Field, _: &dyn (crate::stdlib::fmt::Debug)) {
                 assert_eq!(field.callsite(), TEST_META_1.callsite())
+            }
+        }
+        let valueset = fields.value_set(values);
+        valueset.record(&mut MyVisitor);
+    }
+
+    #[test]
+    fn empty_fields_are_skipped() {
+        let fields = TEST_META_1.fields();
+        let values = &[
+            (&fields.field("foo").unwrap(), Some(&Empty as &dyn Value)),
+            (&fields.field("bar").unwrap(), Some(&57 as &dyn Value)),
+            (&fields.field("baz").unwrap(), Some(&Empty as &dyn Value)),
+        ];
+
+        struct MyVisitor;
+        impl Visit for MyVisitor {
+            fn record_debug(&mut self, field: &Field, _: &dyn (crate::stdlib::fmt::Debug)) {
+                assert_eq!(field.name(), "bar")
             }
         }
         let valueset = fields.value_set(values);

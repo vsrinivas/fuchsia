@@ -1,7 +1,3 @@
-#![doc(html_root_url = "https://docs.rs/tracing/0.1.10")]
-#![deny(missing_debug_implementations, missing_docs, unreachable_pub)]
-#![cfg_attr(test, deny(warnings))]
-
 //! A scoped, structured logging and diagnostics system.
 //!
 //! # Overview
@@ -99,7 +95,7 @@
 //! or `Event`. If a call to `Subscriber::enabled` returns `false` for a given
 //! set of metadata, that `Subscriber` will *not* be notified about the
 //! corresponding `Span` or `Event`. For performance reasons, if no currently
-//! active subscribers express  interest in a given set of metadata by returning
+//! active subscribers express interest in a given set of metadata by returning
 //! `true`, then the corresponding `Span` or `Event` will never be constructed.
 //!
 //! # Usage
@@ -110,6 +106,8 @@
 //! [dependencies]
 //! tracing = "0.1"
 //! ```
+//!
+//! *Compiler support: requires rustc 1.39+*
 //!
 //! ## Recording Spans and Events
 //!
@@ -147,7 +145,9 @@
 //! fields using `fmt::Debug`.
 //!
 //! For example:
-//! ```
+//! ```ignore
+//! # // this doctest is ignored because we don't have a way to say
+//! # // that it should only be run with cfg(feature = "attributes")
 //! use tracing::{Level, event, instrument};
 //!
 //! #[instrument]
@@ -166,7 +166,7 @@
 //! You can find more examples showing how to use this crate [here][examples].
 //!
 //! [RAII]: https://github.com/rust-unofficial/patterns/blob/master/patterns/RAII.md
-//! [examples]: https://github.com/tokio-rs/tracing/tree/master/tracing/examples
+//! [examples]: https://github.com/tokio-rs/tracing/tree/master/examples
 //!
 //! ### Events
 //!
@@ -325,8 +325,25 @@
 //! #     field: "Hello world!"
 //! # };
 //! // `my_struct.field` will be recorded using its `fmt::Display` implementation.
-//! event!(Level::TRACE,  %my_struct.field);
+//! event!(Level::TRACE, %my_struct.field);
 //! # }
+//! ```
+//!
+//! Additionally, a span may declare fields with the special value [`Empty`],
+//! which indicates that that the value for that field does not currently exist
+//! but may be recorded later. For example:
+//!
+//! ```
+//! use tracing::{trace_span, field};
+//!
+//! // Create a span with two fields: `greeting`, with the value "hello world", and
+//! // `parting`, without a value.
+//! let span = trace_span!("my_span", greeting = "hello world", parting = field::Empty);
+//!
+//! // ...
+//!
+//! // Now, record a value for parting as well.
+//! span.record("parting", &"goodbye world!");
 //! ```
 //!
 //! Note that a span may have up to 32 fields. The following will not compile:
@@ -362,7 +379,7 @@
 //! // - `question.answer` with the value 42,
 //! // - `question.tricky` with the value `true`,
 //! // - "message", with the value "the answer to the ultimate question of life, the
-//! //    universe, and everthing is 42."
+//! //    universe, and everything is 42."
 //! event!(
 //!     Level::DEBUG,
 //!     question.answer = answer,
@@ -381,6 +398,7 @@
 //! [`fmt::Debug`]: https://doc.rust-lang.org/std/fmt/trait.Debug.html
 //! [`fmt::Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 //! [fmt]: https://doc.rust-lang.org/std/fmt/#usage
+//! [`Empty`]: field/struct.Empty.html
 //!
 //! ### Shorthand Macros
 //!
@@ -418,40 +436,63 @@
 //!
 //! Let's consider the `log` crate's yak-shaving example:
 //!
-//! ```rust
-//! use tracing::{info, span, warn, Level};
+//! ```rust,ignore
+//! use std::{error::Error, io};
+//! use tracing::{debug, error, info, span, warn, Level};
 //!
-//! # #[derive(Debug)] pub struct Yak(String);
-//! # impl Yak { fn shave(&mut self, _: u32) {} }
-//! # fn find_a_razor() -> Result<u32, u32> { Ok(1) }
-//! # fn main() {
-//! pub fn shave_the_yak(yak: &mut Yak) {
-//!     let span = span!(Level::TRACE, "shave_the_yak", ?yak);
+//! // the `#[tracing::instrument]` attribute creates and enters a span
+//! // every time the instrumented function is called. The span is named after the
+//! // the function or method. Parameters passed to the function are recorded as fields.
+//! #[tracing::instrument]
+//! pub fn shave(yak: usize) -> Result<(), Box<dyn Error + 'static>> {
+//!     // this creates an event at the DEBUG level with two fields:
+//!     // - `excitement`, with the key "excitement" and the value "yay!"
+//!     // - `message`, with the key "message" and the value "hello! I'm gonna shave a yak."
+//!     //
+//!     // unlike other fields, `message`'s shorthand initialization is just the string itself.
+//!     debug!(excitement = "yay!", "hello! I'm gonna shave a yak.");
+//!     if yak == 3 {
+//!         warn!("could not locate yak!");
+//!         // note that this is intended to demonstrate `tracing`'s features, not idiomatic
+//!         // error handling! in a library or application, you should consider returning
+//!         // a dedicated `YakError`. libraries like snafu or thiserror make this easy.
+//!         return Err(io::Error::new(io::ErrorKind::Other, "shaving yak failed!").into());
+//!     } else {
+//!         debug!("yak shaved successfully");
+//!     }
+//!     Ok(())
+//! }
+//!
+//! pub fn shave_all(yaks: usize) -> usize {
+//!     // Constructs a new span named "shaving_yaks" at the TRACE level,
+//!     // and a field whose key is "yaks". This is equivalent to writing:
+//!     //
+//!     // let span = span!(Level::TRACE, "shaving_yaks", yaks = yaks);
+//!     //
+//!     // local variables (`yaks`) can be used as field values
+//!     // without an assignment, similar to struct initializers.
+//!     let span = span!(Level::TRACE, "shaving_yaks", yaks);
 //!     let _enter = span.enter();
 //!
-//!     // Since the span is annotated with the yak, it is part of the context
-//!     // for everything happening inside the span. Therefore, we don't need
-//!     // to add it to the message for this event, as the `log` crate does.
-//!     info!(target: "yak_events", "Commencing yak shaving");
-//!     loop {
-//!         match find_a_razor() {
-//!             Ok(razor) => {
-//!                 // We can add the razor as a field rather than formatting it
-//!                 // as part of the message, allowing subscribers to consume it
-//!                 // in a more structured manner:
-//!                 info!(%razor, "Razor located");
-//!                 yak.shave(razor);
-//!                 break;
-//!             }
-//!             Err(err) => {
-//!                 // However, we can also create events with formatted messages,
-//!                 // just as we would for log records.
-//!                 warn!("Unable to locate a razor: {}, retrying", err);
-//!             }
+//!     info!("shaving yaks");
+//!
+//!     let mut yaks_shaved = 0;
+//!     for yak in 1..=yaks {
+//!         let res = shave(yak);
+//!         debug!(yak, shaved = res.is_ok());
+//!
+//!         if let Err(ref error) = res {
+//!             // Like spans, events can also use the field initialization shorthand.
+//!             // In this instance, `yak` is the field being initalized.
+//!             error!(yak, error = error.as_ref(), "failed to shave yak!");
+//!         } else {
+//!             yaks_shaved += 1;
 //!         }
+//!         debug!(yaks_shaved);
 //!     }
+//!
+//!     yaks_shaved
 //! }
-//! # }
 //! ```
 //!
 //! ## In libraries
@@ -543,6 +584,58 @@
 //! Once a subscriber has been set, instrumentation points may be added to the
 //! executable using the `tracing` crate's macros.
 //!
+//! ## `log` Compatibility
+//!
+//! The [`log`] crate provides a simple, lightweight logging facade for Rust.
+//! While `tracing` builds upon `log`'s foundation with richer structured
+//! diagnostic data, `log`'s simplicity and ubiquity make it the "lowest common
+//! denominator" for text-based logging in Rust — a vast majority of Rust
+//! libraries and applications either emit or consume `log` records. Therefore,
+//! `tracing` provides multiple forms of interoperability with `log`: `tracing`
+//! instrumentation can emit `log` records, and a compatibility layer enables
+//! `tracing` [`Subscriber`]s to consume `log` records as `tracing` [`Event`]s.
+//!
+//! ### Emitting `log` Records
+//!
+//! This crate provides two feature flags, "log" and "log-always", which will
+//! cause [spans] and [events] to emit `log` records. When the "log" feature is
+//! enabled, if no `tracing` `Subscriber` is active, invoking an event macro or
+//! creating a span with fields will emit a `log` record. This is intended
+//! primarily for use in libraries which wish to emit diagnostics that can be
+//! consumed by applications using `tracing` *or* `log`, without paying the
+//! additional overhead of emitting both forms of diagnostics when `tracing` is
+//! in use.
+//!
+//! Enabling the "log-always" feature will cause `log` records to be emitted
+//! even if a `tracing` `Subscriber` _is_ set. This is intended to be used in
+//! applications where a `log` `Logger` is being used to record a textual log,
+//! and `tracing` is used only to record other forms of diagnostics (such as
+//! metrics, profiling, or distributed tracing data). Unlike the "log" feature,
+//! libraries generally should **not** enable the "log-always" feature, as doing
+//! so will prevent applications from being able to opt out of the `log` records.
+//!
+//! See [here][flags] for more details on this crate's feature flags.
+//!
+//! The generated `log` records' messages will be a string representation of the
+//! span or event's fields, and all additional information recorded by `log`
+//! (target, verbosity level, module path, file, and line number) will also be
+//! populated. Additionally, `log` records are also generated when spans are
+//! entered, exited, and closed. Since these additional span lifecycle logs have
+//! the potential to be very verbose, and don't include additional fields, they
+//! are categorized under a separate `log` target, "tracing::span", which may be
+//! enabled or disabled separately from other `log` records emitted by `tracing`.
+//!
+//! ### Consuming `log` Records
+//!
+//! The [`tracing-log`] crate provides a compatibility layer which
+//! allows a `tracing` [`Subscriber`] to consume `log` records as though they
+//! were `tracing` [events]. This allows applications using `tracing` to record
+//! the logs emitted by dependencies using `log` as events within the context of
+//! the application's trace tree. See [that crate's documentation][log-tracer]
+//! for details.
+//!
+//! [log-tracer]: https://docs.rs/tracing-log/latest/tracing_log/#convert-log-records-to-tracing-events
+//!
 //! ## Related Crates
 //!
 //! In addition to `tracing` and `tracing-core`, the [`tokio-rs/tracing`] repository
@@ -562,16 +655,51 @@
 //!  - [`tracing-log`] provides a compatibility layer with the [`log`] crate,
 //!    allowing log messages to be recorded as `tracing` `Event`s within the
 //!    trace tree. This is useful when a project using `tracing` have
-//!    dependencies which use `log`.
+//!    dependencies which use `log`. Note that if you're using
+//!    `tracing-subscriber`'s `FmtSubscriber`, you don't need to depend on
+//!    `tracing-log` directly.
+//!  - [`tracing-appender`] provides utilities for outputting tracing data,
+//!     including a file appender and non blocking writer.
+//!
+//! Additionally, there are also several third-party crates which are not
+//! maintained by the `tokio` project. These include:
+//!
 //!  - [`tracing-timing`] implements inter-event timing metrics on top of `tracing`.
 //!    It provides a subscriber that records the time elapsed between pairs of
 //!    `tracing` events and generates histograms.
+//!  - [`tracing-opentelemetry`] provides a subscriber for emitting traces to
+//!    [OpenTelemetry]-compatible distributed tracing systems.
+//!  - [`tracing-honeycomb`] Provides a layer that reports traces spanning multiple machines to [honeycomb.io]. Backed by [`tracing-distributed`].
+//!  - [`tracing-distributed`] Provides a generic implementation of a layer that reports traces spanning multiple machines to some backend.
+//!  - [`tracing-actix`] provides `tracing` integration for the `actix` actor
+//!    framework.
+//!  - [`tracing-gelf`] implements a subscriber for exporting traces in Greylog
+//!    GELF format.
+//!  - [`tracing-coz`] provides integration with the [coz] causal profiler
+//!    (Linux-only).
+//!  - [`tracing-bunyan-formatter`] provides a layer implementation that reports events and spans
+//!    in [bunyan] format, enriched with timing information.
+//!
+//! If you're the maintainer of a `tracing` ecosystem crate not listed above,
+//! please let us know! We'd love to add your project to the list!
+//!
+//! [`tracing-opentelemetry`]: https://crates.io/crates/tracing-opentelemetry
+//! [OpenTelemetry]: https://opentelemetry.io/
+//! [`tracing-honeycomb`]: https://crates.io/crates/tracing-honeycomb
+//! [`tracing-distributed`]: https://crates.io/crates/tracing-distributed
+//! [honeycomb.io]: https://www.honeycomb.io/
+//! [`tracing-actix`]: https://crates.io/crates/tracing-actix
+//! [`tracing-gelf`]: https://crates.io/crates/tracing-gelf
+//! [`tracing-coz`]: https://crates.io/crates/tracing-coz
+//! [coz]: https://github.com/plasma-umass/coz
+//! [`tracing-bunyan-formatter`]: https://crates.io/crates/tracing-bunyan-formatter
+//! [bunyan]: https://github.com/trentm/node-bunyan
 //!
 //! **Note:** that some of the ecosystem crates are currently unreleased and
 //! undergoing active development. They may be less stable than `tracing` and
 //! `tracing-core`.
 //!
-//! ##  Crate Feature Flags
+//! ## Crate Feature Flags
 //!
 //! The following crate feature flags are available:
 //!
@@ -587,14 +715,20 @@
 //!   applications which intend to collect traces and logs separately; if an
 //!   adapter is used to convert `log` records into `tracing` events, this will
 //!   cause duplicate events to occur.
+//! * `attributes`: Includes support for the `#[instrument]` attribute.
+//!   This is on by default, but does bring in the `syn` crate as a dependency,
+//!   which may add to the compile time of crates that do not already use it.
 //! * `std`: Depend on the Rust standard library (enabled by default).
 //!
 //!   `no_std` users may disable this feature with `default-features = false`:
 //!
 //!   ```toml
 //!   [dependencies]
-//!   tracing = { version = "0.1.10", default-features = false }
+//!   tracing = { version = "0.1.15", default-features = false }
 //!   ```
+//!
+//!   *Compiler support: requires rustc 1.39+*
+//!
 //!   **Note**:`tracing`'s `no_std` support requires `liballoc`.
 //!
 //! [`log`]: https://docs.rs/log/0.4.6/log/
@@ -602,6 +736,7 @@
 //! [`Span`]: span/struct.Span.html
 //! [`in_scope`]: span/struct.Span.html#method.in_scope
 //! [`Event`]: struct.Event.html
+//! [event]: struct.Event.html
 //! [`Subscriber`]: subscriber/trait.Subscriber.html
 //! [Subscriber::event]: subscriber/trait.Subscriber.html#tymethod.event
 //! [`enter`]: subscriber/trait.Subscriber.html#tymethod.enter
@@ -617,22 +752,47 @@
 //! [`tracing-subscriber`]: https://crates.io/crates/tracing-subscriber
 //! [`tracing-log`]: https://crates.io/crates/tracing-log
 //! [`tracing-timing`]: https://crates.io/crates/tracing-timing
+//! [`tracing-appender`]: https://crates.io/crates/tracing-appender
 //! [`env_logger`]: https://crates.io/crates/env_logger
 //! [`FmtSubscriber`]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/struct.Subscriber.html
 //! [static verbosity level]: level_filters/index.html#compile-time-filters
 //! [instrument]: https://docs.rs/tracing-attributes/latest/tracing_attributes/attr.instrument.html
+//! [flags]: #crate-feature-flags
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![doc(html_root_url = "https://docs.rs/tracing/0.1.15")]
+#![warn(
+    missing_debug_implementations,
+    missing_docs,
+    rust_2018_idioms,
+    unreachable_pub,
+    bad_style,
+    const_err,
+    dead_code,
+    improper_ctypes,
+    non_shorthand_field_patterns,
+    no_mangle_generic_items,
+    overflowing_literals,
+    path_statements,
+    patterns_in_fns_without_body,
+    private_in_public,
+    unconditional_recursion,
+    unused,
+    unused_allocation,
+    unused_comparisons,
+    unused_parens,
+    while_true
+)]
 
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
 #[macro_use]
 extern crate cfg_if;
-use tracing_core;
 
 #[cfg(feature = "log")]
 #[doc(hidden)]
-pub extern crate log;
+pub use log;
 
 // Somehow this `use` statement is necessary for us to re-export the `core`
 // macros on Rust 1.26.0. I'm not sure how this makes it work, but it does.
@@ -640,31 +800,29 @@ pub extern crate log;
 #[doc(hidden)]
 use tracing_core::*;
 
-pub use self::{
-    dispatcher::Dispatch,
-    event::Event,
-    field::Value,
-    subscriber::Subscriber,
-    tracing_core::{dispatcher, event, Level, Metadata},
-};
+pub use self::{dispatcher::Dispatch, event::Event, field::Value, subscriber::Subscriber};
 
 #[doc(hidden)]
-pub use self::{
-    span::Id,
-    tracing_core::{
-        callsite::{self, Callsite},
-        metadata,
-    },
+pub use self::span::Id;
+
+#[doc(hidden)]
+pub use tracing_core::{
+    callsite::{self, Callsite},
+    metadata,
 };
+pub use tracing_core::{event, Level, Metadata};
 
 #[doc(inline)]
 pub use self::span::Span;
+#[cfg(feature = "attributes")]
+#[cfg_attr(docsrs, doc(cfg(feature = "attributes")))]
 #[doc(inline)]
 pub use tracing_attributes::instrument;
 
 #[macro_use]
 mod macros;
 
+pub mod dispatcher;
 pub mod field;
 pub mod level_filters;
 pub mod span;
@@ -679,7 +837,7 @@ pub mod __macro_support {
     pub use crate::stdlib::sync::Once;
 
     #[cfg(not(feature = "std"))]
-    pub type Once = spin::Once<()>;
+    pub type Once = tracing_core::Once<()>;
 }
 
 mod sealed {

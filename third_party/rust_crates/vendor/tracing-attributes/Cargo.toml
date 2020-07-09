@@ -13,11 +13,10 @@
 [package]
 edition = "2018"
 name = "tracing-attributes"
-version = "0.1.5"
+version = "0.1.9"
 authors = ["Tokio Contributors <team@tokio.rs>", "Eliza Weisman <eliza@buoyant.io>", "David Barsky <dbarsky@amazon.com>"]
 description = "Procedural macro attributes for automatically instrumenting functions.\n"
 homepage = "https://tokio.rs"
-documentation = "https://docs.rs/tracing-attributes/0.1.0/tracing_attributes"
 readme = "README.md"
 keywords = ["logging", "tracing", "macro", "instrument", "log"]
 categories = ["development-tools::debugging", "development-tools::profiling", "asynchronous"]
@@ -26,21 +25,31 @@ repository = "https://github.com/tokio-rs/tracing"
 
 [lib]
 proc-macro = true
+[dependencies.proc-macro2]
+version = "1"
+
 [dependencies.quote]
 version = "1"
 
 [dependencies.syn]
 version = "1"
 features = ["full", "extra-traits"]
+[dev-dependencies.async-trait]
+version = "0.1"
+
+[dev-dependencies.tokio-test]
+version = "0.2.0"
+
 [dev-dependencies.tracing]
 version = "0.1"
 
+[dev-dependencies.tracing-core]
+version = "0.1"
+
+[dev-dependencies.tracing-futures]
+version = "0.2"
+
 [features]
 async-await = []
-[badges.azure-devops]
-build = "1"
-pipeline = "tokio-rs.tracing"
-project = "tracing/tracing"
-
 [badges.maintenance]
 status = "experimental"

@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "tracing-subscriber"
-version = "0.2.5"
+version = "0.2.7"
 authors = ["Eliza Weisman <eliza@buoyant.io>", "David Barsky <me@davidbarsky.com>", "Tokio Contributors <team@tokio.rs>"]
 description = "Utilities for implementing and composing `tracing` subscribers.\n"
 homepage = "https://tokio.rs"
@@ -54,7 +54,7 @@ version = "0.0.1"
 optional = true
 
 [dependencies.parking_lot]
-version = ">= 0.7, < 0.10"
+version = ">= 0.7, <= 0.11"
 optional = true
 
 [dependencies.regex]
@@ -95,6 +95,9 @@ default_features = false
 
 [dev-dependencies.log]
 version = "0.4"
+
+[dev-dependencies.regex]
+version = "1"
 
 [dev-dependencies.tracing]
 version = "0.1"

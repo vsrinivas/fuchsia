@@ -105,8 +105,8 @@ test-case = "1.0.0"
 thiserror = "1.0.9"
 timebomb = "0.1.2"
 toml = "0.5"
-tracing = { version = "0.1.10", features = ["log"] }
-tracing-futures = "0.2.0"
+tracing = { version = "0.1.15", features = ["log"] }
+tracing-futures = "0.2.4"
 unicase = "2.2.0"
 url = "2.1"
 uuid = { version = "0.7.2", features = ["serde", "v4"] } # move ?
@@ -120,7 +120,7 @@ unic-char-range = "0.9"
 unic-ucd-block = "0.9"
 
 [dependencies.tracing-subscriber]
-version = "0.2.5"
+version = "0.2.7"
 default-features = false
 features = ["chrono", "registry", "tracing-log"]
 
@@ -215,6 +215,7 @@ pkg-config = { path = "tiny_mirrors/pkg-config" }
 regex-automata = { path = "tiny_mirrors/regex-automata" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
+tracing-core = { path = "tiny_mirrors/tracing-core" }
 wasm-bindgen-futures = { path = "tiny_mirrors/wasm-bindgen-futures" }
 web-sys = { path = "tiny_mirrors/web-sys" }
 wepoll-binding = { path = "tiny_mirrors/wepoll-binding" }

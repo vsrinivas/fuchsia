@@ -9,7 +9,7 @@
 //! - An [`Id`] assigned by the subscriber that uniquely identifies it in relation
 //!   to other spans.
 //! - The span's [parent] in the trace tree.
-//! - [Metadata] describing that describes static characteristics of all spans
+//! - [Metadata] that describes static characteristics of all spans
 //!   originating from that callsite, such as its name, source code location,
 //!   [verbosity level], and the names of its fields.
 //!
@@ -18,26 +18,21 @@
 //! Spans are created using the [`span!`] macro. This macro is invoked with the
 //! following arguments, in order:
 //!
-//! - The [`target`] and/or [`parent`](parent) attributes, if the user wishes to override
-//!   their default values.
+//! - The [`target`] and/or [`parent`][parent] attributes, if the user wishes to
+//!   override their default values.
 //! - The span's [verbosity level]
 //! - A string literal providing the span's name.
 //! - Finally, between zero and 32 arbitrary key/value fields.
 //!
-//! [parent]: #span-relationships
 //! [`target`]: ../struct.Metadata.html#method.target
 //!
 //! For example:
 //! ```rust
-//! #[macro_use]
-//! extern crate tracing;
-//! use tracing::Level;
+//! use tracing::{span, Level};
 //!
-//! # fn main() {
 //! /// Construct a new span at the `INFO` level named "my_span", with a single
 //! /// field named answer , with the value `42`.
 //! let my_span = span!(Level::INFO, "my_span", answer = 42);
-//! # }
 //! ```
 //!
 //! The documentation for the [`span!`] macro provides additional examples of
@@ -51,12 +46,10 @@
 //!
 //! The [`Attributes`] type contains data associated with a span, and is
 //! provided to the [`Subscriber`] when a new span is created. It contains
-//! the span's metadata, the ID of [the span's parent] if one was explicitly set,
-//! and any fields whose values were recorded when the span was constructed.
-//! The subscriber, which is responsible for recording `tracing` data, can then
-//! store or record these values.
-//!
-//! [the span's parent]: #span-relationships
+//! the span's metadata, the ID of [the span's parent][parent] if one was
+//! explicitly set, and any fields whose values were recorded when the span was
+//! constructed. The subscriber, which is responsible for recording `tracing`
+//! data, can then store or record these values.
 //!
 //! # The Span Lifecycle
 //!
@@ -71,7 +64,6 @@
 //! ```
 //! # #[macro_use] extern crate tracing;
 //! # use tracing::Level;
-//! # fn main() {
 //! let my_var: u64 = 5;
 //! let my_span = span!(Level::TRACE, "my_span", my_var);
 //!
@@ -82,7 +74,6 @@
 //!
 //! // Perform some work inside of the context of `my_span`...
 //! // Dropping the `_enter` guard will exit the span.
-//! # }
 //!```
 //!
 //! `in_scope` takes a closure or function pointer and executes it inside the
@@ -90,7 +81,6 @@
 //! ```
 //! # #[macro_use] extern crate tracing;
 //! # use tracing::Level;
-//! # fn main() {
 //! let my_var: u64 = 5;
 //! let my_span = span!(Level::TRACE, "my_span", my_var = &my_var);
 //!
@@ -103,7 +93,6 @@
 //! my_span.in_scope(|| {
 //!     // Perform some more work in the context of `my_span`.
 //! });
-//! # }
 //! ```
 //!
 //! **Note:** Since entering a span takes `&self`, and `Span`s are `Clone`,
@@ -122,7 +111,6 @@
 //! ```
 //! # #[macro_use] extern crate tracing;
 //! # use tracing::Level;
-//! # fn main() {
 //! // this span is considered the "root" of a new trace tree:
 //! span!(Level::INFO, "root").in_scope(|| {
 //!     // since we are now inside "root", this span is considered a child
@@ -136,7 +124,6 @@
 //!     });
 //!     // another span created here would also be a child of "root".
 //! });
-//! # }
 //!```
 //!
 //! In addition, the parent of a span may be explicitly specified in
@@ -145,7 +132,6 @@
 //! ```rust
 //! # #[macro_use] extern crate tracing;
 //! # use tracing::Level;
-//! # fn main() {
 //! // Create, but do not enter, a span called "foo".
 //! let foo = span!(Level::INFO, "foo");
 //!
@@ -156,7 +142,6 @@
 //! // Although we have currently entered "bar", "baz"'s parent span
 //! // will be "foo".
 //! let baz = span!(parent: &foo, Level::INFO, "baz");
-//! # }
 //! ```
 //!
 //! A child span should typically be considered _part_ of its parent. For
@@ -176,7 +161,7 @@
 //! might want to have a span representing the listener, and instrument each
 //! spawned handler task with its own span. We would want our instrumentation to
 //! record that the handler tasks were spawned as a result of the listener task.
-//! However, we might  not consider the handler tasks to be _part_ of the time
+//! However, we might not consider the handler tasks to be _part_ of the time
 //! spent in the listener task, so we would not consider those spans children of
 //! the listener span. Instead, we would record that the handler tasks follow
 //! from the listener, recording the causal relationship but treating the spans
@@ -231,7 +216,6 @@
 //! ```
 //! # #[macro_use] extern crate tracing;
 //! # use tracing::Level;
-//! # fn main() {
 //! {
 //!     span!(Level::TRACE, "my_span").in_scope(|| {
 //!         // perform some work in the context of `my_span`...
@@ -241,12 +225,11 @@
 //!     // dropped, the subscriber will be informed via `drop_span`.
 //!
 //! } // --> Subscriber::drop_span(my_span)
-//! # }
 //! ```
 //!
 //! However, if multiple handles exist, the span can still be re-entered even if
 //! one or more is dropped. For determining when _all_ handles to a span have
-//! been dropped, `Subscriber`s have a [`clone_span`]  method, which is called
+//! been dropped, `Subscriber`s have a [`clone_span`] method, which is called
 //! every time a span handle is cloned. Combined with `drop_span`, this may be
 //! used to track the number of handles to a given span — if `drop_span` has
 //! been called one more time than the number of calls to `clone_span` for a
@@ -267,7 +250,6 @@
 //! ```rust
 //! # #[macro_use] extern crate tracing;
 //! # use tracing::Level;
-//! # fn main() {
 //! # let n = 1;
 //! let span = span!(Level::TRACE, "my_loop");
 //! let _enter = span.enter();
@@ -275,20 +257,17 @@
 //!     # let _ = i;
 //!     // ...
 //! }
-//! # }
 //! ```
 //! Or, should we create a new span for each iteration of the loop, as in:
 //! ```rust
 //! # #[macro_use] extern crate tracing;
 //! # use tracing::Level;
-//! # fn main() {
 //! # let n = 1u64;
 //! for i in 0..n {
 //!     let span = span!(Level::TRACE, "my_loop", iteration = i);
 //!     let _enter = span.enter();
 //!     // ...
 //! }
-//! # }
 //! ```
 //!
 //! Depending on the circumstances, we might want to do either, or both. For
@@ -316,6 +295,7 @@
 //! [`in_scope`]: struct.Span.html#method.in_scope
 //! [`follows_from`]: struct.Span.html#method.follows_from
 //! [guard]: struct.Entered.html
+//! [parent]: #span-relationships
 pub use tracing_core::span::{Attributes, Id, Record};
 
 use crate::stdlib::{
@@ -383,6 +363,10 @@ pub(crate) struct Inner {
 pub struct Entered<'a> {
     span: &'a Span,
 }
+
+/// `log` target for span lifecycle (creation/enter/exit/close) records.
+#[cfg(feature = "log")]
+const LIFECYCLE_LOG_TARGET: &'static str = "tracing::span";
 
 // ===== impl Span =====
 
@@ -472,7 +456,7 @@ impl Span {
     }
 
     /// Returns a handle to the span [considered by the `Subscriber`] to be the
-    /// currrent span.
+    /// current span.
     ///
     /// If the subscriber indicates that it does not track the current span, or
     /// that the thread from which this function is called is not currently
@@ -506,7 +490,12 @@ impl Span {
         };
 
         if_log_enabled! {{
-            span.log(format_args!("++ {}; {}", meta.name(), FmtAttrs(attrs)));
+            let target = if attrs.is_empty() {
+                LIFECYCLE_LOG_TARGET
+            } else {
+                meta.target()
+            };
+            span.log(target, format_args!("++ {}{}", meta.name(), FmtAttrs(attrs)));
         }}
 
         span
@@ -523,7 +512,6 @@ impl Span {
     /// ```
     /// #[macro_use] extern crate tracing;
     /// # use tracing::Level;
-    /// # fn main() {
     /// let span = span!(Level::INFO, "my_span");
     /// let guard = span.enter();
     ///
@@ -533,14 +521,12 @@ impl Span {
     ///
     /// // code here is no longer within the span
     ///
-    /// # }
     /// ```
     ///
     /// Guards need not be explicitly dropped:
     ///
     /// ```
     /// #[macro_use] extern crate tracing;
-    /// # fn main() {
     /// fn my_function() -> String {
     ///     // enter a span for the duration of this function.
     ///     let span = trace_span!("my_function");
@@ -556,7 +542,6 @@ impl Span {
     /// fn my_other_function() {
     ///     // ...
     /// }
-    /// # }
     /// ```
     ///
     /// Sub-scopes may be created to limit the duration for which the span is
@@ -564,7 +549,6 @@ impl Span {
     ///
     /// ```
     /// #[macro_use] extern crate tracing;
-    /// # fn main() {
     /// let span = info_span!("my_great_span");
     ///
     /// {
@@ -578,20 +562,19 @@ impl Span {
     ///
     /// // this event is not inside the span.
     /// info!("i'm outside the span!")
-    /// # }
     /// ```
     ///
     /// [`Subscriber::enter`]: ../subscriber/trait.Subscriber.html#method.enter
     /// [`Subscriber::exit`]: ../subscriber/trait.Subscriber.html#method.exit
     /// [`Id`]: ../struct.Id.html
-    pub fn enter<'a>(&'a self) -> Entered<'a> {
+    pub fn enter(&self) -> Entered<'_> {
         if let Some(ref inner) = self.inner.as_ref() {
             inner.subscriber.enter(&inner.id);
         }
 
         if_log_enabled! {{
             if let Some(ref meta) = self.meta {
-                self.log(format_args!("-> {}", meta.name()));
+                self.log(LIFECYCLE_LOG_TARGET, format_args!("-> {}", meta.name()));
             }
         }}
 
@@ -612,7 +595,6 @@ impl Span {
     /// ```
     /// # #[macro_use] extern crate tracing;
     /// # use tracing::Level;
-    /// # fn main() {
     /// let my_span = span!(Level::TRACE, "my_span");
     ///
     /// my_span.in_scope(|| {
@@ -622,23 +604,19 @@ impl Span {
     ///
     /// // this event occurs outside the span.
     /// trace!("i'm not in the span!");
-    /// # }
     /// ```
     ///
     /// Calling a function and returning the result:
     /// ```
-    /// # #[macro_use] extern crate tracing;
-    /// # use tracing::Level;
+    /// # use tracing::{info_span, Level};
     /// fn hello_world() -> String {
     ///     "Hello world!".to_owned()
     /// }
     ///
-    /// # fn main() {
     /// let span = info_span!("hello_world");
     /// // the span will be entered for the duration of the call to
     /// // `hello_world`.
     /// let a_string = span.in_scope(hello_world);
-    /// # }
     ///
     pub fn in_scope<F: FnOnce() -> T, T>(&self, f: F) -> T {
         let _enter = self.enter();
@@ -664,7 +642,70 @@ impl Span {
         self.field(field).is_some()
     }
 
-    /// Visits that the field described by `field` has the value `value`.
+    /// Records that the field described by `field` has the value `value`.
+    ///
+    /// This may be used with [`field::Empty`] to declare fields whose values
+    /// are not known when the span is created, and record them later:
+    /// ```
+    /// use tracing::{trace_span, field};
+    ///
+    /// // Create a span with two fields: `greeting`, with the value "hello world", and
+    /// // `parting`, without a value.
+    /// let span = trace_span!("my_span", greeting = "hello world", parting = field::Empty);
+    ///
+    /// // ...
+    ///
+    /// // Now, record a value for parting as well.
+    /// // (note that the field name is passed as a string slice)
+    /// span.record("parting", &"goodbye world!");
+    /// ```
+    /// However, it may also be used to record a _new_ value for a field whose
+    /// value was already recorded:
+    /// ```
+    /// use tracing::info_span;
+    /// # fn do_something() -> Result<(), ()> { Err(()) }
+    ///
+    /// // Initially, let's assume that our attempt to do something is going okay...
+    /// let span = info_span!("doing_something", is_okay = true);
+    /// let _e = span.enter();
+    ///
+    /// match do_something() {
+    ///     Ok(something) => {
+    ///         // ...
+    ///     }
+    ///     Err(_) => {
+    ///         // Things are no longer okay!
+    ///         span.record("is_okay", &false);
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// **Note**: The fields associated with a span are part of its [`Metadata`].
+    /// The [`Metadata`] describing a particular span is constructed statically when the span is
+    /// created and cannot be extended later to add new fields.
+    /// Therefore, you cannot record a value for a field that was not specified when the span
+    /// was created:
+    /// ```
+    /// use tracing::{trace_span, field};
+    ///
+    /// // Create a span with two fields: `greeting`, with the value "hello world", and
+    /// // `parting`, without a value.
+    /// let span = trace_span!("my_span", greeting = "hello world", parting = field::Empty);
+    ///
+    /// // ...
+    ///
+    /// // Now, you try to record a value for a new field, `new_field`, which was not
+    /// // declared as `Empty` or populated when you created `span`.
+    /// // You won't get any error, but the assignment will have no effect!
+    /// span.record("new_field", &"interesting_value_you_really_need");
+    ///
+    /// // Instead, all fields that may be recorded after span creation should be declared up front,
+    /// // using field::Empty when a value is not known, as we did for `parting`.
+    /// // This `record` call will indeed replace field::Empty with "you will be remembered".
+    /// span.record("parting", &"you will be remembered");
+    /// ```
+    /// [`field::Empty`]: ../field/struct.Empty.html
+    /// [`Metadata`]: ../struct.Metadata.html
     pub fn record<Q: ?Sized, V>(&self, field: &Q, value: &V) -> &Self
     where
         Q: field::AsField,
@@ -683,7 +724,7 @@ impl Span {
         self
     }
 
-    /// Visit all the fields in the span
+    /// Records all the fields in the provided `ValueSet`.
     pub fn record_all(&self, values: &field::ValueSet<'_>) -> &Self {
         let record = Record::new(values);
         if let Some(ref inner) = self.inner {
@@ -692,7 +733,12 @@ impl Span {
 
         if_log_enabled! {{
             if let Some(ref meta) = self.meta {
-                self.log(format_args!("{}; {}", meta.name(), FmtValues(&record)));
+                let target = if record.is_empty() {
+                    LIFECYCLE_LOG_TARGET
+                } else {
+                    meta.target()
+                };
+                self.log(target, format_args!("{}{}", meta.name(), FmtValues(&record)));
             }
         }}
 
@@ -701,9 +747,28 @@ impl Span {
 
     /// Returns `true` if this span was disabled by the subscriber and does not
     /// exist.
+    ///
+    /// See also [`is_none`].
+    ///
+    /// [`is_none`]: #method.is_none
     #[inline]
     pub fn is_disabled(&self) -> bool {
         self.inner.is_none()
+    }
+
+    /// Returns `true` if this span was constructed by [`Span::none`] and is
+    /// empty.
+    ///
+    /// If `is_none` returns `true` for a given span, then [`is_disabled`] will
+    /// also return `true`. However, when a span is disabled by the subscriber
+    /// rather than constructed by `Span::none`, this method will return
+    /// `false`, while `is_disabled` will return `true`.
+    ///
+    /// [`Span::none`]: #method.none
+    /// [`is_disabled`]: #method.is_disabled
+    #[inline]
+    pub fn is_none(&self) -> bool {
+        self.is_disabled() && self.meta.is_none()
     }
 
     /// Indicates that the span with the given ID has an indirect causal
@@ -720,10 +785,43 @@ impl Span {
     ///
     /// If this span is disabled, or the resulting follows-from relationship
     /// would be invalid, this function will do nothing.
-    pub fn follows_from(&self, from: impl for<'a> Into<Option<&'a Id>>) -> &Self {
+    ///
+    /// # Examples
+    ///
+    /// Setting a `follows_from` relationship with a `Span`:
+    /// ```
+    /// # use tracing::{span, Id, Level, Span};
+    /// let span1 = span!(Level::INFO, "span_1");
+    /// let span2 = span!(Level::DEBUG, "span_2");
+    /// span2.follows_from(span1);
+    /// ```
+    ///
+    /// Setting a `follows_from` relationship with the current span:
+    /// ```
+    /// # use tracing::{span, Id, Level, Span};
+    /// let span = span!(Level::INFO, "hello!");
+    /// span.follows_from(Span::current());
+    /// ```
+    ///
+    /// Setting a `follows_from` relationship with a `Span` reference:
+    /// ```
+    /// # use tracing::{span, Id, Level, Span};
+    /// let span = span!(Level::INFO, "hello!");
+    /// let curr = Span::current();
+    /// span.follows_from(&curr);
+    /// ```
+    ///
+    /// Setting a `follows_from` relationship with an `Id`:
+    /// ```
+    /// # use tracing::{span, Id, Level, Span};
+    /// let span = span!(Level::INFO, "hello!");
+    /// let id = span.id();
+    /// span.follows_from(id);
+    /// ```
+    pub fn follows_from(&self, from: impl Into<Option<Id>>) -> &Self {
         if let Some(ref inner) = self.inner {
             if let Some(from) = from.into() {
-                inner.follows_from(from);
+                inner.follows_from(&from);
             }
         }
         self
@@ -736,30 +834,53 @@ impl Span {
 
     /// Returns this span's `Metadata`, if it is enabled.
     pub fn metadata(&self) -> Option<&'static Metadata<'static>> {
-        self.meta.clone()
+        self.meta
     }
 
     #[cfg(feature = "log")]
     #[inline]
-    fn log(&self, message: fmt::Arguments) {
+    fn log(&self, target: &str, message: fmt::Arguments<'_>) {
         if let Some(ref meta) = self.meta {
             let logger = log::logger();
             let log_meta = log::Metadata::builder()
                 .level(level_to_log!(meta.level()))
-                .target(meta.target())
+                .target(target)
                 .build();
             if logger.enabled(&log_meta) {
-                logger.log(
-                    &log::Record::builder()
-                        .metadata(log_meta)
-                        .module_path(meta.module_path())
-                        .file(meta.file())
-                        .line(meta.line())
-                        .args(message)
-                        .build(),
-                );
+                if let Some(ref inner) = self.inner {
+                    logger.log(
+                        &log::Record::builder()
+                            .metadata(log_meta)
+                            .module_path(meta.module_path())
+                            .file(meta.file())
+                            .line(meta.line())
+                            .args(format_args!("{}; span={}", message, inner.id.into_u64()))
+                            .build(),
+                    );
+                } else {
+                    logger.log(
+                        &log::Record::builder()
+                            .metadata(log_meta)
+                            .module_path(meta.module_path())
+                            .file(meta.file())
+                            .line(meta.line())
+                            .args(message)
+                            .build(),
+                    );
+                }
             }
         }
+    }
+
+    /// Invokes a function with a reference to this span's ID and subscriber.
+    ///
+    /// if this span is enabled, the provided function is called, and the result is returned.
+    /// If the span is disabled, the function is not called, and this method returns `None`
+    /// instead.
+    pub fn with_subscriber<T>(&self, f: impl FnOnce((&Id, &Dispatch)) -> T) -> Option<T> {
+        self.inner
+            .as_ref()
+            .map(|inner| f((&inner.id, &inner.subscriber)))
     }
 }
 
@@ -843,7 +964,7 @@ impl Drop for Span {
 
         if_log_enabled!({
             if let Some(ref meta) = self.meta {
-                self.log(format_args!("-- {}", meta.name()));
+                self.log(LIFECYCLE_LOG_TARGET, format_args!("-- {}", meta.name()));
             }
         })
     }
@@ -924,7 +1045,7 @@ impl<'a> Drop for Entered<'a> {
 
         if_log_enabled! {{
             if let Some(ref meta) = self.span.meta {
-                self.span.log(format_args!("<- {}", meta.name()));
+                self.span.log(LIFECYCLE_LOG_TARGET, format_args!("<- {}", meta.name()));
             }
         }}
     }
@@ -935,10 +1056,12 @@ struct FmtValues<'a>(&'a Record<'a>);
 
 #[cfg(feature = "log")]
 impl<'a> fmt::Display for FmtValues<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut res = Ok(());
+        let mut is_first = true;
         self.0.record(&mut |k: &field::Field, v: &dyn fmt::Debug| {
-            res = write!(f, "{}={:?} ", k, v);
+            res = write!(f, "{} {}={:?}", if is_first { ";" } else { "" }, k, v);
+            is_first = false;
         });
         res
     }
@@ -949,10 +1072,12 @@ struct FmtAttrs<'a>(&'a Attributes<'a>);
 
 #[cfg(feature = "log")]
 impl<'a> fmt::Display for FmtAttrs<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut res = Ok(());
+        let mut is_first = true;
         self.0.record(&mut |k: &field::Field, v: &dyn fmt::Debug| {
-            res = write!(f, "{}={:?} ", k, v);
+            res = write!(f, "{} {}={:?}", if is_first { ";" } else { "" }, k, v);
+            is_first = false;
         });
         res
     }

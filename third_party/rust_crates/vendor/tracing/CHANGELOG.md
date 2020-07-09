@@ -1,3 +1,95 @@
+# 0.1.15 (June 2, 2020)
+
+### Changed
+
+- **macros**: Replaced use of legacy `local_inner_macros` with `$crate::` (#740)
+
+### Added
+
+- Docs fixes and improvements (#742, #731, #730)
+
+Thanks to @bnjjj, @blaenk, and @LukeMathWalker for contributing to this release!
+
+# 0.1.14 (May 14, 2020)
+
+### Added
+
+- **log**: When using the [`log`] compatibility feature alongside a `tracing`
+  `Subscriber`, log records for spans now include span IDs (#613)
+- **attributes**: Support for using `#[instrument]` on methods that are part of
+  [`async-trait`] trait implementations (#711)
+- **attributes**: Optional `#[instrument(err)]` argument to automatically emit
+  an event if an instrumented function returns `Err` (#637) 
+- Added `#[must_use]` attribute to the guard returned by
+  `subscriber::set_default` (#685)
+  
+### Changed
+
+- **log**: Made [`log`] records emitted by spans much less noisy when span IDs are
+ not available (#613)
+ 
+### Fixed
+
+- Several typos in the documentation (#656, #710, #715)
+
+Thanks to @FintanH, @shepmaster, @inanna-malick, @zekisharif, @bkchr, @majecty,
+@ilana and @nightmared for contributing to this release! 
+
+[`async-trait`]: https://crates.io/crates/async-trait 
+[`log`]: https://crates.io/crates/log
+
+# 0.1.13 (February 26, 2019)
+
+### Added
+
+- **field**: `field::Empty` type for declaring empty fields whose values will be
+  recorded later (#548)
+- **field**: `field::Value` implementations for `Wrapping` and `NonZero*`
+  numbers (#538)
+- **attributes**: Support for adding arbitrary literal fields to spans generated
+  by `#[instrument]` (#569)
+- **attributes**: `#[instrument]` now emits a helpful compiler error when
+  attempting to skip a function parameter (#600)
+
+### Changed
+
+- **attributes**: The `#[instrument]` attribute was placed under an on-by-default
+  feature flag "attributes" (#603)
+
+### Fixed
+
+- Broken and unresolvable links in RustDoc (#595)
+
+Thanks to @oli-cosmian and @Kobzol for contributing to this release!
+
+# 0.1.12 (January 11, 2019)
+
+### Added
+
+- `Span::with_subscriber` method to access the subscriber that tracks a `Span`
+  (#503)
+- API documentation now shows which features are required by feature-flagged
+  items (#523)
+- Improved README examples (#496)
+- Documentation links to related crates (#507)
+
+# 0.1.11 (December 20, 2019)
+
+### Added
+
+- `Span::is_none` method (#475)
+- `LevelFilter::into_level` method (#470)
+- `LevelFilter::from_level` function and `From<Level>` impl (#471)
+- Documented minimum supported Rust version (#482)
+
+### Fixed
+
+- Incorrect parameter type to `Span::follows_from` that made it impossible to
+  call (#467)
+- Missing whitespace in `log` records generated when enabling the `log` feature
+  flag (#484)
+- Typos and missing links in documentation (#405, #423, #439)
+
 # 0.1.10 (October 23, 2019)
 
 ### Added

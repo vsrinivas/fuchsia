@@ -30,7 +30,7 @@ macro_rules! span {
     (target: $target:expr, parent: $parent:expr, $lvl:expr, $name:expr) => {
         $crate::span!(target: $target, parent: $parent, $lvl, $name,)
     };
-    (parent: $parent:expr, $lvl:expr,  $name:expr, $($fields:tt)*) => {
+    (parent: $parent:expr, $lvl:expr, $name:expr, $($fields:tt)*) => {
         $crate::span!(
             target: module_path!(),
             parent: $parent,
@@ -496,7 +496,7 @@ macro_rules! error_span {
 /// use tracing::{event, Level};
 ///
 /// # fn main() {
-/// let data = (42, "fourty-two");
+/// let data = (42, "forty-two");
 /// let private_data = "private";
 /// let error = "a bad error";
 ///
@@ -782,7 +782,7 @@ macro_rules! trace {
         $crate::event!(target: $target, parent: $parent, $crate::Level::TRACE, { $($field)* }, $($arg)*)
     );
     (target: $target:expr, parent: $parent:expr, $($k:ident).+ $($field:tt)+ ) => (
-        $crate::event!(target: $target, parent: $parent, $crate::Level::TRACE,  { $($k).+ $($field)+ })
+        $crate::event!(target: $target, parent: $parent, $crate::Level::TRACE, { $($k).+ $($field)+ })
     );
     (target: $target:expr, parent: $parent:expr, ?$($k:ident).+ $($field:tt)+ ) => (
         $crate::event!(target: $target, parent: $parent, $crate::Level::TRACE, { $($k).+ $($field)+ })
@@ -969,10 +969,10 @@ macro_rules! debug {
         $crate::event!(target: $target, parent: $parent, $crate::Level::DEBUG, { $($field)* }, $($arg)*)
     );
     (target: $target:expr, parent: $parent:expr, $($k:ident).+ $($field:tt)+ ) => (
-        $crate::event!(target: $target, parent: $parent, $crate::Level::DEBUG,  { $($k).+ $($field)+ })
+        $crate::event!(target: $target, parent: $parent, $crate::Level::DEBUG, { $($k).+ $($field)+ })
     );
     (target: $target:expr, parent: $parent:expr, ?$($k:ident).+ $($field:tt)+ ) => (
-        $crate::event!(target: $target,  parent: $parent, $crate::Level::DEBUG, { $($k).+ $($field)+ })
+        $crate::event!(target: $target, parent: $parent, $crate::Level::DEBUG, { $($k).+ $($field)+ })
     );
     (target: $target:expr, parent: $parent:expr, %$($k:ident).+ $($field:tt)+ ) => (
         $crate::event!(target: $target, parent: $parent, $crate::Level::DEBUG, { $($k).+ $($field)+ })
@@ -1160,7 +1160,7 @@ macro_rules! debug {
 /// # pub struct Ipv4Addr;
 /// # impl Ipv4Addr { fn new(o1: u8, o2: u8, o3: u8, o4: u8) -> Self { Self } }
 /// # fn main() {
-/// # struct Connection { port: u32,  speed: f32 }
+/// # struct Connection { port: u32, speed: f32 }
 /// use tracing::field;
 ///
 /// let addr = Ipv4Addr::new(127, 0, 0, 1);
@@ -1184,7 +1184,7 @@ macro_rules! info {
         $crate::event!(target: $target, parent: $parent, $crate::Level::INFO, { $($k).+ $($field)+ })
     );
     (target: $target:expr, parent: $parent:expr, ?$($k:ident).+ $($field:tt)+ ) => (
-        $crate::event!(target: $target,  parent: $parent, $crate::Level::INFO, { $($k).+ $($field)+ })
+        $crate::event!(target: $target, parent: $parent, $crate::Level::INFO, { $($k).+ $($field)+ })
     );
     (target: $target:expr, parent: $parent:expr, %$($k:ident).+ $($field:tt)+ ) => (
         $crate::event!(target: $target, parent: $parent, $crate::Level::INFO, { $($k).+ $($field)+ })
@@ -1389,7 +1389,7 @@ macro_rules! warn {
         $crate::event!(target: $target, parent: $parent, $crate::Level::WARN, { $($k).+ $($field)+ })
     );
     (target: $target:expr, parent: $parent:expr, ?$($k:ident).+ $($field:tt)+ ) => (
-        $crate::event!(target: $target,  parent: $parent, $crate::Level::WARN, { $($k).+ $($field)+ })
+        $crate::event!(target: $target, parent: $parent, $crate::Level::WARN, { $($k).+ $($field)+ })
     );
     (target: $target:expr, parent: $parent:expr, %$($k:ident).+ $($field:tt)+ ) => (
         $crate::event!(target: $target, parent: $parent, $crate::Level::WARN, { $($k).+ $($field)+ })
@@ -1590,7 +1590,7 @@ macro_rules! error {
         $crate::event!(target: $target, parent: $parent, $crate::Level::ERROR, { $($k).+ $($field)+ })
     );
     (target: $target:expr, parent: $parent:expr, ?$($k:ident).+ $($field:tt)+ ) => (
-        $crate::event!(target: $target,  parent: $parent, $crate::Level::ERROR, { $($k).+ $($field)+ })
+        $crate::event!(target: $target, parent: $parent, $crate::Level::ERROR, { $($k).+ $($field)+ })
     );
     (target: $target:expr, parent: $parent:expr, %$($k:ident).+ $($field:tt)+ ) => (
         $crate::event!(target: $target, parent: $parent, $crate::Level::ERROR, { $($k).+ $($field)+ })
@@ -2193,36 +2193,36 @@ macro_rules! __mk_format_string {
     // === recursive case (more tts), ===
     // ====== shorthand field syntax ===
     (@ { $(,)* $($out:expr),* }, ?$($k:ident).+, $($rest:tt)*) => {
-        tracing::__mk_format_string!(@ { $($out),*, tracing::__tracing_stringify!($($k).+), "={:?} " }, $($rest)*)
+        $crate::__mk_format_string!(@ { $($out),*, $crate::__tracing_stringify!($($k).+), "={:?} " }, $($rest)*)
     };
     (@ { $(,)* $($out:expr),* }, %$($k:ident).+, $($rest:tt)*) => {
-        tracing::__mk_format_string!(@ { $($out),*, tracing::__tracing_stringify!($($k).+), "={} " }, $($rest)*)
+        $crate::__mk_format_string!(@ { $($out),*, $crate::__tracing_stringify!($($k).+), "={} " }, $($rest)*)
     };
     (@ { $(,)* $($out:expr),* }, $($k:ident).+, $($rest:tt)*) => {
-        tracing::__mk_format_string!(@ { $($out),*, tracing::__tracing_stringify!($($k).+), "={:?} " }, $($rest)*)
+        $crate::__mk_format_string!(@ { $($out),*, $crate::__tracing_stringify!($($k).+), "={:?} " }, $($rest)*)
     };
     // ====== kv field syntax ===
     (@ { $(,)* $($out:expr),* }, message = $val:expr, $($rest:tt)*) => {
-        tracing::__mk_format_string!(@ { $($out),*, "{} " }, $($rest)*)
+        $crate::__mk_format_string!(@ { $($out),*, "{} " }, $($rest)*)
     };
     (@ { $(,)* $($out:expr),* }, $($k:ident).+ = ?$val:expr, $($rest:tt)*) => {
-        tracing::__mk_format_string!(@ { $($out),*, tracing::__tracing_stringify!($($k).+), "={:?} " }, $($rest)*)
+        $crate::__mk_format_string!(@ { $($out),*, $crate::__tracing_stringify!($($k).+), "={:?} " }, $($rest)*)
     };
     (@ { $(,)* $($out:expr),* }, $($k:ident).+ = %$val:expr, $($rest:tt)*) => {
-        tracing::__mk_format_string!(@ { $($out),*, tracing::__tracing_stringify!($($k).+), "={} " }, $($rest)*)
+        $crate::__mk_format_string!(@ { $($out),*, $crate::__tracing_stringify!($($k).+), "={} " }, $($rest)*)
     };
     (@ { $(,)* $($out:expr),* }, $($k:ident).+ = $val:expr, $($rest:tt)*) => {
-        tracing::__mk_format_string!(@ { $($out),*, tracing::__tracing_stringify!($($k).+), "={:?} " }, $($rest)*)
+        $crate::__mk_format_string!(@ { $($out),*, $crate::__tracing_stringify!($($k).+), "={:?} " }, $($rest)*)
     };
 
     // === rest is unparseable --- must be fmt args ===
     (@ { $(,)* $($out:expr),* }, $($rest:tt)+) => {
-        tracing::__mk_format_string!(@ { "{}", $($out),* }, )
+        $crate::__mk_format_string!(@ { "{} ", $($out),* }, )
     };
 
     // === entry ===
     ($($kvs:tt)+) => {
-        tracing::__mk_format_string!(@ { }, $($kvs)+,)
+        $crate::__mk_format_string!(@ { }, $($kvs)+,)
     };
     () => {
         ""
@@ -2289,7 +2289,7 @@ macro_rules! __mk_format_args {
     ($($kv:tt)*) => {
         {
             // use $crate::__mk_format_string;
-            $crate::__mk_format_args!(@ { }, tracing::__mk_format_string!($($kv)*), fields: $($kv)*)
+            $crate::__mk_format_args!(@ { }, $crate::__mk_format_string!($($kv)*), fields: $($kv)*)
         }
     };
 }

@@ -617,15 +617,15 @@ group("toml") {
 }
 
 group("tracing") {
-  deps = [ ":tracing-v0_1_10" ]
+  deps = [ ":tracing-v0_1_15" ]
 }
 
 group("tracing-futures") {
-  deps = [ ":tracing-futures-v0_2_0" ]
+  deps = [ ":tracing-futures-v0_2_4" ]
 }
 
 group("tracing-subscriber") {
-  deps = [ ":tracing-subscriber-v0_2_5" ]
+  deps = [ ":tracing-subscriber-v0_2_7" ]
 }
 
 if (is_fuchsia) {
@@ -3559,7 +3559,6 @@ rust_library("lazy_static-v1_4_0") {
   ]
 
   deps = []
-  deps += [ ":spin-v0_5_2" ]
 
   rustenv = []
 
@@ -3568,8 +3567,6 @@ rust_library("lazy_static-v1_4_0") {
     "--edition=2015",
     "-Cmetadata=cdf593bd3fb3d68f",
     "-Cextra-filename=-cdf593bd3fb3d68f",
-    "--cfg=feature=\"spin\"",
-    "--cfg=feature=\"spin_no_std\"",
   ]
 }
 
@@ -8177,10 +8174,10 @@ rust_library("tower-service-v0_3_0") {
   ]
 }
 
-rust_library("tracing-v0_1_10") {
+rust_library("tracing-v0_1_15") {
   crate_name = "tracing"
   crate_root = "//third_party/rust_crates/vendor/tracing/src/lib.rs"
-  output_name = "tracing-5ac624eb3041f417"
+  output_name = "tracing-7df98c48eff2097"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -8189,35 +8186,35 @@ rust_library("tracing-v0_1_10") {
   deps = []
   deps += [ ":cfg-if-v0_1_10" ]
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":tracing-attributes-v0_1_5($host_toolchain)" ]
-  deps += [ ":tracing-core-v0_1_7" ]
-  if (!true) {
-    deps += [ ":spin-v0_5_2" ]
-  }
+  deps += [ ":tracing-attributes-v0_1_9($host_toolchain)" ]
+  deps += [ ":tracing-core-v0_1_10" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=5ac624eb3041f417",
-    "-Cextra-filename=-5ac624eb3041f417",
+    "-Cmetadata=7df98c48eff2097",
+    "-Cextra-filename=-7df98c48eff2097",
+    "--cfg=feature=\"attributes\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"log\"",
     "--cfg=feature=\"std\"",
+    "--cfg=feature=\"tracing-attributes\"",
   ]
 }
 
-rust_proc_macro("tracing-attributes-v0_1_5") {
+rust_proc_macro("tracing-attributes-v0_1_9") {
   crate_name = "tracing_attributes"
   crate_root = "//third_party/rust_crates/vendor/tracing-attributes/src/lib.rs"
-  output_name = "tracing_attributes-66b36643411a013d"
+  output_name = "tracing_attributes-1e51075a344d1a76"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
+  deps += [ ":proc-macro2-v1_0_9" ]
   deps += [ ":quote-v1_0_2" ]
   deps += [ ":syn-v1_0_21" ]
 
@@ -8226,15 +8223,15 @@ rust_proc_macro("tracing-attributes-v0_1_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=66b36643411a013d",
-    "-Cextra-filename=-66b36643411a013d",
+    "-Cmetadata=1e51075a344d1a76",
+    "-Cextra-filename=-1e51075a344d1a76",
   ]
 }
 
-rust_library("tracing-core-v0_1_7") {
+rust_library("tracing-core-v0_1_10") {
   crate_name = "tracing_core"
-  crate_root = "//third_party/rust_crates/vendor/tracing-core/src/lib.rs"
-  output_name = "tracing_core-649338ac0e66f6cf"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/tracing-core/src/lib.rs"
+  output_name = "tracing_core-1a1da1948dcfba9e"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -8242,27 +8239,24 @@ rust_library("tracing-core-v0_1_7") {
 
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
-  if (!true) {
-    deps += [ ":lazy_static-v1_4_0" ]
-    deps += [ ":spin-v0_5_2" ]
-  }
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=649338ac0e66f6cf",
-    "-Cextra-filename=-649338ac0e66f6cf",
+    "-Cmetadata=1a1da1948dcfba9e",
+    "-Cextra-filename=-1a1da1948dcfba9e",
     "--cfg=feature=\"default\"",
+    "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
   ]
 }
 
-rust_library("tracing-futures-v0_2_0") {
+rust_library("tracing-futures-v0_2_4") {
   crate_name = "tracing_futures"
   crate_root = "//third_party/rust_crates/vendor/tracing-futures/src/lib.rs"
-  output_name = "tracing_futures-9d29aa06e5c66502"
+  output_name = "tracing_futures-5bf1848656e98263"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -8270,17 +8264,18 @@ rust_library("tracing-futures-v0_2_0") {
 
   deps = []
   deps += [ ":pin-project-v0_4_17" ]
-  deps += [ ":tracing-v0_1_10" ]
+  deps += [ ":tracing-v0_1_15" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=9d29aa06e5c66502",
-    "-Cextra-filename=-9d29aa06e5c66502",
+    "-Cmetadata=5bf1848656e98263",
+    "-Cextra-filename=-5bf1848656e98263",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"pin-project\"",
+    "--cfg=feature=\"std\"",
     "--cfg=feature=\"std-future\"",
   ]
 }
@@ -8297,7 +8292,7 @@ rust_library("tracing-log-v0_1_1") {
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":tracing-core-v0_1_7" ]
+  deps += [ ":tracing-core-v0_1_10" ]
 
   rustenv = []
 
@@ -8311,10 +8306,10 @@ rust_library("tracing-log-v0_1_1") {
   ]
 }
 
-rust_library("tracing-subscriber-v0_2_5") {
+rust_library("tracing-subscriber-v0_2_7") {
   crate_name = "tracing_subscriber"
   crate_root = "//third_party/rust_crates/vendor/tracing-subscriber/src/lib.rs"
-  output_name = "tracing_subscriber-bc593657f911aa68"
+  output_name = "tracing_subscriber-206edd79a73e7358"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -8323,7 +8318,7 @@ rust_library("tracing-subscriber-v0_2_5") {
   deps = []
   deps += [ ":chrono-v0_4_11" ]
   deps += [ ":sharded-slab-v0_0_9" ]
-  deps += [ ":tracing-core-v0_1_7" ]
+  deps += [ ":tracing-core-v0_1_10" ]
   deps += [ ":tracing-log-v0_1_1" ]
 
   rustenv = []
@@ -8331,8 +8326,8 @@ rust_library("tracing-subscriber-v0_2_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=bc593657f911aa68",
-    "-Cextra-filename=-bc593657f911aa68",
+    "-Cmetadata=206edd79a73e7358",
+    "-Cextra-filename=-206edd79a73e7358",
     "--cfg=feature=\"chrono\"",
     "--cfg=feature=\"registry\"",
     "--cfg=feature=\"sharded-slab\"",

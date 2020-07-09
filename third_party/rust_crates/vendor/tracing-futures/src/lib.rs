@@ -37,16 +37,24 @@
 //!   crate's `Spawn` and `LocalSpawn` traits.
 //! - `tokio-alpha`: Enables compatibility with `tokio` 0.2's alpha releases,
 //!   including the `tokio` 0.2 `Executor` and `TypedExecutor` traits.
+//! - `std`: Depend on the Rust standard library.
 //!
-//! The `tokio` and `std-future` features are enabled by default.
+//!   `no_std` users may disable this feature with `default-features = false`:
+//!
+//!   ```toml
+//!   [dependencies]
+//!   tracing-futures = { version = "0.2.3", default-features = false }
+//!   ```
+//!
+//! The `tokio`, `std-future` and `std` features are enabled by default.
 //!
 //! [`tracing`]: https://crates.io/crates/tracing
-//! [span]: https://docs.rs/tracing/0.1.9/tracing/span/index.html
-//! [`Subscriber`]: https://docs.rs/tracing/0.1.9/tracing/subscriber/index.html
+//! [span]: https://docs.rs/tracing/latest/tracing/span/index.html
+//! [`Subscriber`]: https://docs.rs/tracing/latest/tracing/subscriber/index.html
 //! [`Instrument`]: trait.Instrument.html
 //! [`WithSubscriber`]: trait.WithSubscriber.html
 //! [`futures`]: https://crates.io/crates/futures
-#![doc(html_root_url = "https://docs.rs/tracing-futures/0.2.0")]
+#![doc(html_root_url = "https://docs.rs/tracing-futures/0.2.3")]
 #![warn(
     missing_debug_implementations,
     missing_docs,
@@ -56,15 +64,12 @@
     const_err,
     dead_code,
     improper_ctypes,
-    legacy_directory_ownership,
     non_shorthand_field_patterns,
     no_mangle_generic_items,
     overflowing_literals,
     path_statements,
     patterns_in_fns_without_body,
-    plugin_as_library,
     private_in_public,
-    safe_extern_statics,
     unconditional_recursion,
     unused,
     unused_allocation,
@@ -72,13 +77,16 @@
     unused_parens,
     while_true
 )]
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #[cfg(feature = "std-future")]
 use pin_project::pin_project;
-#[cfg(feature = "std-future")]
-use std::{pin::Pin, task::Context};
 
-#[cfg(feature = "futures-01")]
-use futures_01::{Sink, StartSend, Stream};
+pub(crate) mod stdlib;
+
+#[cfg(feature = "std-future")]
+use crate::stdlib::{pin::Pin, task::Context};
+
 use tracing::dispatcher;
 use tracing::{Dispatch, Span};
 
@@ -88,7 +96,7 @@ pub mod executor;
 /// Extension trait allowing futures, streams, sinks, and executors to be
 /// instrumented with a `tracing` [span].
 ///
-/// [span]: https://docs.rs/tracing/0.1.9/tracing/span/index.html
+/// [span]: https://docs.rs/tracing/latest/tracing/span/index.html
 pub trait Instrument: Sized {
     /// Instruments this type with the provided `Span`, returning an
     /// `Instrumented` wrapper.
@@ -117,7 +125,7 @@ pub trait Instrument: Sized {
     /// # }
     /// ```
     ///
-    /// [entered]: https://docs.rs/tracing/0.1.9/tracing/span/struct.Span.html#method.enter
+    /// [entered]: https://docs.rs/tracing/latest/tracing/span/struct.Span.html#method.enter
     fn instrument(self, span: Span) -> Instrumented<Self> {
         Instrumented { inner: self, span }
     }
@@ -152,18 +160,20 @@ pub trait Instrument: Sized {
     /// # }
     /// ```
     ///
-    /// [current]: https://docs.rs/tracing/0.1.9/tracing/span/struct.Span.html#method.current
-    /// [entered]: https://docs.rs/tracing/0.1.9/tracing/span/struct.Span.html#method.enter
+    /// [current]: https://docs.rs/tracing/latest/tracing/span/struct.Span.html#method.current
+    /// [entered]: https://docs.rs/tracing/latest/tracing/span/struct.Span.html#method.enter
     #[inline]
     fn in_current_span(self) -> Instrumented<Self> {
         self.instrument(Span::current())
     }
 }
 
-/// Extension trait allowing futures, streams, and skins to be instrumented with
+/// Extension trait allowing futures, streams, and sinks to be instrumented with
 /// a `tracing` [`Subscriber`].
 ///
-/// [`Subscriber`]: https://docs.rs/tracing/0.1.9/tracing/subscriber/trait.Subscriber.html
+/// [`Subscriber`]: https://docs.rs/tracing/latest/tracing/subscriber/trait.Subscriber.html
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 pub trait WithSubscriber: Sized {
     /// Attaches the provided [`Subscriber`] to this type, returning a
     /// `WithDispatch` wrapper.
@@ -173,8 +183,8 @@ pub trait WithSubscriber: Sized {
     /// When the wrapped type is an executor, the subscriber will be set as the
     /// default for any futures spawned on that executor.
     ///
-    /// [`Subscriber`]: https://docs.rs/tracing/0.1.9/tracing/subscriber/trait.Subscriber.html
-    /// [default]: https://docs.rs/tracing/0.1.9/tracing/dispatcher/index.html#setting-the-default-subscriber
+    /// [`Subscriber`]: https://docs.rs/tracing/latest/tracing/subscriber/trait.Subscriber.html
+    /// [default]: https://docs.rs/tracing/latest/tracing/dispatcher/index.html#setting-the-default-subscriber
     fn with_subscriber<S>(self, subscriber: S) -> WithDispatch<Self>
     where
         S: Into<Dispatch>,
@@ -196,8 +206,8 @@ pub trait WithSubscriber: Sized {
     /// This can be used to propagate the current dispatcher context when
     /// spawning a new future.
     ///
-    /// [`Subscriber`]: https://docs.rs/tracing/0.1.9/tracing/subscriber/trait.Subscriber.html
-    /// [default]: https://docs.rs/tracing/0.1.9/tracing/dispatcher/index.html#setting-the-default-subscriber
+    /// [`Subscriber`]: https://docs.rs/tracing/latest/tracing/subscriber/trait.Subscriber.html
+    /// [default]: https://docs.rs/tracing/latest/tracing/dispatcher/index.html#setting-the-default-subscriber
     #[inline]
     fn with_current_subscriber(self) -> WithDispatch<Self> {
         WithDispatch {
@@ -221,6 +231,8 @@ pub struct Instrumented<T> {
 
 /// A future, stream, sink, or executor that has been instrumented with a
 /// `tracing` subscriber.
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 #[cfg_attr(feature = "std-future", pin_project)]
 #[derive(Clone, Debug)]
 pub struct WithDispatch<T> {
@@ -236,10 +248,11 @@ pub struct WithDispatch<T> {
 impl<T: Sized> Instrument for T {}
 
 #[cfg(feature = "std-future")]
-impl<T: std::future::Future> std::future::Future for Instrumented<T> {
+#[cfg_attr(docsrs, doc(cfg(feature = "std-future")))]
+impl<T: crate::stdlib::future::Future> crate::stdlib::future::Future for Instrumented<T> {
     type Output = T::Output;
 
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> std::task::Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> crate::stdlib::task::Poll<Self::Output> {
         let this = self.project();
         let _enter = this.span.enter();
         this.inner.poll(cx)
@@ -247,6 +260,7 @@ impl<T: std::future::Future> std::future::Future for Instrumented<T> {
 }
 
 #[cfg(feature = "futures-01")]
+#[cfg_attr(docsrs, doc(cfg(feature = "futures-01")))]
 impl<T: futures_01::Future> futures_01::Future for Instrumented<T> {
     type Item = T::Item;
     type Error = T::Error;
@@ -258,7 +272,8 @@ impl<T: futures_01::Future> futures_01::Future for Instrumented<T> {
 }
 
 #[cfg(feature = "futures-01")]
-impl<T: Stream> Stream for Instrumented<T> {
+#[cfg_attr(docsrs, doc(cfg(feature = "futures-01")))]
+impl<T: futures_01::Stream> futures_01::Stream for Instrumented<T> {
     type Item = T::Item;
     type Error = T::Error;
 
@@ -269,11 +284,15 @@ impl<T: Stream> Stream for Instrumented<T> {
 }
 
 #[cfg(feature = "futures-01")]
-impl<T: Sink> Sink for Instrumented<T> {
+#[cfg_attr(docsrs, doc(cfg(feature = "futures-01")))]
+impl<T: futures_01::Sink> futures_01::Sink for Instrumented<T> {
     type SinkItem = T::SinkItem;
     type SinkError = T::SinkError;
 
-    fn start_send(&mut self, item: Self::SinkItem) -> StartSend<Self::SinkItem, Self::SinkError> {
+    fn start_send(
+        &mut self,
+        item: Self::SinkItem,
+    ) -> futures_01::StartSend<Self::SinkItem, Self::SinkError> {
         let _enter = self.span.enter();
         self.inner.start_send(item)
     }
@@ -281,6 +300,63 @@ impl<T: Sink> Sink for Instrumented<T> {
     fn poll_complete(&mut self) -> futures_01::Poll<(), Self::SinkError> {
         let _enter = self.span.enter();
         self.inner.poll_complete()
+    }
+}
+
+#[cfg(all(feature = "futures-03", feature = "std-future"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "futures-03", feature = "std-future"))))]
+impl<T: futures::Stream> futures::Stream for Instrumented<T> {
+    type Item = T::Item;
+
+    fn poll_next(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> futures::task::Poll<Option<Self::Item>> {
+        let this = self.project();
+        let _enter = this.span.enter();
+        T::poll_next(this.inner, cx)
+    }
+}
+
+#[cfg(all(feature = "futures-03", feature = "std-future"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "futures-03", feature = "std-future"))))]
+impl<I, T: futures::Sink<I>> futures::Sink<I> for Instrumented<T>
+where
+    T: futures::Sink<I>,
+{
+    type Error = T::Error;
+
+    fn poll_ready(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> futures::task::Poll<Result<(), Self::Error>> {
+        let this = self.project();
+        let _enter = this.span.enter();
+        T::poll_ready(this.inner, cx)
+    }
+
+    fn start_send(self: Pin<&mut Self>, item: I) -> Result<(), Self::Error> {
+        let this = self.project();
+        let _enter = this.span.enter();
+        T::start_send(this.inner, item)
+    }
+
+    fn poll_flush(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> futures::task::Poll<Result<(), Self::Error>> {
+        let this = self.project();
+        let _enter = this.span.enter();
+        T::poll_flush(this.inner, cx)
+    }
+
+    fn poll_close(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> futures::task::Poll<Result<(), Self::Error>> {
+        let this = self.project();
+        let _enter = this.span.enter();
+        T::poll_close(this.inner, cx)
     }
 }
 
@@ -305,6 +381,20 @@ impl<T> Instrumented<T> {
         &mut self.inner
     }
 
+    /// Get a pinned reference to the wrapped type.
+    #[cfg(feature = "std-future")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std-future")))]
+    pub fn inner_pin_ref(self: Pin<&Self>) -> Pin<&T> {
+        self.project_ref().inner
+    }
+
+    /// Get a pinned mutable reference to the wrapped type.
+    #[cfg(feature = "std-future")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std-future")))]
+    pub fn inner_pin_mut(self: Pin<&mut Self>) -> Pin<&mut T> {
+        self.project().inner
+    }
+
     /// Consumes the `Instrumented`, returning the wrapped type.
     ///
     /// Note that this drops the span.
@@ -313,9 +403,11 @@ impl<T> Instrumented<T> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<T: Sized> WithSubscriber for T {}
 
-#[cfg(feature = "futures-01")]
+#[cfg(all(feature = "futures-01", feature = "std"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "futures-01", feature = "std"))))]
 impl<T: futures_01::Future> futures_01::Future for WithDispatch<T> {
     type Item = T::Item;
     type Error = T::Error;
@@ -326,11 +418,12 @@ impl<T: futures_01::Future> futures_01::Future for WithDispatch<T> {
     }
 }
 
-#[cfg(feature = "std-future")]
-impl<T: std::future::Future> std::future::Future for WithDispatch<T> {
+#[cfg(all(feature = "std-future", feature = "std"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "std-future", feature = "std"))))]
+impl<T: crate::stdlib::future::Future> crate::stdlib::future::Future for WithDispatch<T> {
     type Output = T::Output;
 
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> std::task::Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> crate::stdlib::task::Poll<Self::Output> {
         let this = self.project();
         let dispatch = this.dispatch;
         let future = this.inner;
@@ -338,9 +431,10 @@ impl<T: std::future::Future> std::future::Future for WithDispatch<T> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<T> WithDispatch<T> {
-    #[cfg(any(feature = "tokio", feature = "tokio-alpha", feature = "futures-03"))]
-    pub(crate) fn with_dispatch<U: Sized>(&self, inner: U) -> WithDispatch<U> {
+    /// Wrap a future, stream, sink or executor with the same subscriber as this WithDispatch.
+    pub fn with_dispatch<U>(&self, inner: U) -> WithDispatch<U> {
         WithDispatch {
             dispatch: self.dispatch.clone(),
             inner,
@@ -350,6 +444,30 @@ impl<T> WithDispatch<T> {
     /// Borrows the `Dispatch` that this type is instrumented by.
     pub fn dispatch(&self) -> &Dispatch {
         &self.dispatch
+    }
+
+    /// Get a pinned reference to the wrapped type.
+    #[cfg(feature = "std-future")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std-future")))]
+    pub fn inner_pin_ref(self: Pin<&Self>) -> Pin<&T> {
+        self.project_ref().inner
+    }
+
+    /// Get a pinned mutable reference to the wrapped type.
+    #[cfg(feature = "std-future")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std-future")))]
+    pub fn inner_pin_mut(self: Pin<&mut Self>) -> Pin<&mut T> {
+        self.project().inner
+    }
+
+    /// Borrows the wrapped type.
+    pub fn inner(&self) -> &T {
+        &self.inner
+    }
+
+    /// Mutably borrows the wrapped type.
+    pub fn inner_mut(&mut self) -> &mut T {
+        &mut self.inner
     }
 
     /// Consumes the `WithDispatch`, returning the wrapped type.
@@ -370,36 +488,36 @@ pub(crate) mod support;
 mod tests {
     use super::{test_support::*, *};
 
-    struct PollN<T, E> {
-        and_return: Option<Result<T, E>>,
-        finish_at: usize,
-        polls: usize,
-    }
-
-    impl PollN<(), ()> {
-        fn new_ok(finish_at: usize) -> Self {
-            Self {
-                and_return: Some(Ok(())),
-                finish_at,
-                polls: 0,
-            }
-        }
-
-        fn new_err(finish_at: usize) -> Self {
-            Self {
-                and_return: Some(Err(())),
-                finish_at,
-                polls: 0,
-            }
-        }
-    }
-
     #[cfg(feature = "futures-01")]
-    mod futures_tests {
-        use futures_01::{future, stream, task, Async, Future};
+    mod futures_01_tests {
+        use futures_01::{future, stream, task, Async, Future, Stream};
         use tracing::subscriber::with_default;
 
         use super::*;
+
+        struct PollN<T, E> {
+            and_return: Option<Result<T, E>>,
+            finish_at: usize,
+            polls: usize,
+        }
+
+        impl PollN<(), ()> {
+            fn new_ok(finish_at: usize) -> Self {
+                Self {
+                    and_return: Some(Ok(())),
+                    finish_at,
+                    polls: 0,
+                }
+            }
+
+            fn new_err(finish_at: usize) -> Self {
+                Self {
+                    and_return: Some(Err(())),
+                    finish_at,
+                    polls: 0,
+                }
+            }
+        }
 
         impl<T, E> futures_01::Future for PollN<T, E> {
             type Item = T;
@@ -437,7 +555,6 @@ mod tests {
             handle.assert_finished();
         }
 
-        #[cfg(feature = "futures-01")]
         #[test]
         fn future_error_ends_span() {
             let (subscriber, handle) = subscriber::mock()
@@ -507,6 +624,59 @@ mod tests {
                         });
                     runtime.block_on(Box::new(future)).unwrap();
                 })
+            });
+            handle.assert_finished();
+        }
+    }
+
+    #[cfg(all(feature = "futures-03", feature = "std-future"))]
+    mod futures_03_tests {
+        use futures::{future, sink, stream, FutureExt, SinkExt, StreamExt};
+        use tracing::subscriber::with_default;
+
+        use super::*;
+
+        #[test]
+        fn stream_enter_exit_is_reasonable() {
+            let (subscriber, handle) = subscriber::mock()
+                .enter(span::mock().named("foo"))
+                .exit(span::mock().named("foo"))
+                .enter(span::mock().named("foo"))
+                .exit(span::mock().named("foo"))
+                .enter(span::mock().named("foo"))
+                .exit(span::mock().named("foo"))
+                .enter(span::mock().named("foo"))
+                .exit(span::mock().named("foo"))
+                .drop_span(span::mock().named("foo"))
+                .run_with_handle();
+            with_default(subscriber, || {
+                stream::iter(&[1, 2, 3])
+                    .instrument(tracing::trace_span!("foo"))
+                    .for_each(|_| future::ready(()))
+                    .now_or_never()
+                    .unwrap();
+            });
+            handle.assert_finished();
+        }
+
+        #[test]
+        fn sink_enter_exit_is_reasonable() {
+            let (subscriber, handle) = subscriber::mock()
+                .enter(span::mock().named("foo"))
+                .exit(span::mock().named("foo"))
+                .enter(span::mock().named("foo"))
+                .exit(span::mock().named("foo"))
+                .enter(span::mock().named("foo"))
+                .exit(span::mock().named("foo"))
+                .drop_span(span::mock().named("foo"))
+                .run_with_handle();
+            with_default(subscriber, || {
+                sink::drain()
+                    .instrument(tracing::trace_span!("foo"))
+                    .send(1u8)
+                    .now_or_never()
+                    .unwrap()
+                    .unwrap()
             });
             handle.assert_finished();
         }

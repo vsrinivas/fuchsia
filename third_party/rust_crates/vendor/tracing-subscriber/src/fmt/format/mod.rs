@@ -7,10 +7,13 @@ use crate::{
     registry::LookupSpan,
 };
 
-use std::fmt::{self, Write};
+use std::{
+    fmt::{self, Write},
+    iter,
+};
 use tracing_core::{
     field::{self, Field, Visit},
-    Event, Level, Subscriber,
+    span, Event, Level, Subscriber,
 };
 
 #[cfg(feature = "tracing-log")]
@@ -22,6 +25,7 @@ use ansi_term::{Colour, Style};
 #[cfg(feature = "json")]
 mod json;
 
+use fmt::{Debug, Display};
 #[cfg(feature = "json")]
 #[cfg_attr(docsrs, doc(cfg(feature = "json")))]
 pub use json::*;
@@ -80,6 +84,18 @@ pub trait FormatFields<'writer> {
         writer: &'writer mut dyn fmt::Write,
         fields: R,
     ) -> fmt::Result;
+
+    /// Record additional field(s) on an existing span.
+    ///
+    /// By default, this appends a space to the current set of fields if it is
+    /// non-empty, and then calls `self.format_fields`. If different behavior is
+    /// required, the default implementation of this method can be overridden.
+    fn add_fields(&self, current: &'writer mut String, fields: &span::Record<'_>) -> fmt::Result {
+        if !current.is_empty() {
+            current.push(' ');
+        }
+        self.format_fields(current, fields)
+    }
 }
 
 /// Returns the default configuration for an [event formatter].
@@ -332,11 +348,11 @@ where
         let full_ctx = {
             #[cfg(feature = "ansi")]
             {
-                FullCtx::new(ctx, self.ansi)
+                FullCtx::new(ctx, event.parent(), self.ansi)
             }
             #[cfg(not(feature = "ansi"))]
             {
-                FullCtx::new(&ctx)
+                FullCtx::new(ctx, event.parent())
             }
         };
 
@@ -389,11 +405,11 @@ where
         let fmt_ctx = {
             #[cfg(feature = "ansi")]
             {
-                FmtCtx::new(&ctx, self.ansi)
+                FmtCtx::new(&ctx, event.parent(), self.ansi)
             }
             #[cfg(not(feature = "ansi"))]
             {
-                FmtCtx::new(&ctx)
+                FmtCtx::new(&ctx, event.parent())
             }
         };
         write!(writer, "{}", fmt_ctx)?;
@@ -563,6 +579,7 @@ impl<'a> fmt::Debug for DefaultVisitor<'a> {
 
 struct FmtCtx<'a, S, N> {
     ctx: &'a FmtContext<'a, S, N>,
+    span: Option<&'a span::Id>,
     #[cfg(feature = "ansi")]
     ansi: bool,
 }
@@ -573,13 +590,17 @@ where
     N: for<'writer> FormatFields<'writer> + 'static,
 {
     #[cfg(feature = "ansi")]
-    pub(crate) fn new(ctx: &'a FmtContext<'_, S, N>, ansi: bool) -> Self {
-        Self { ctx, ansi }
+    pub(crate) fn new(
+        ctx: &'a FmtContext<'_, S, N>,
+        span: Option<&'a span::Id>,
+        ansi: bool,
+    ) -> Self {
+        Self { ctx, ansi, span }
     }
 
     #[cfg(not(feature = "ansi"))]
-    pub(crate) fn new(ctx: &'a FmtContext<'_, S, N>) -> Self {
-        Self { ctx }
+    pub(crate) fn new(ctx: &'a FmtContext<'_, S, N>, span: Option<&'a span::Id>) -> Self {
+        Self { ctx, span }
     }
 
     fn bold(&self) -> Style {
@@ -603,10 +624,19 @@ where
         let bold = self.bold();
         let mut seen = false;
 
-        self.ctx.visit_spans(|span| {
+        let span = self
+            .span
+            .and_then(|id| self.ctx.ctx.span(&id))
+            .or_else(|| self.ctx.ctx.lookup_current());
+
+        let scope = span
+            .into_iter()
+            .flat_map(|span| span.from_root().chain(iter::once(span)));
+
+        for span in scope {
             seen = true;
-            write!(f, "{}:", bold.paint(span.metadata().name()))
-        })?;
+            write!(f, "{}:", bold.paint(span.metadata().name()))?;
+        }
 
         if seen {
             f.write_char(' ')?;
@@ -621,6 +651,7 @@ where
     N: for<'writer> FormatFields<'writer> + 'static,
 {
     ctx: &'a FmtContext<'a, S, N>,
+    span: Option<&'a span::Id>,
     #[cfg(feature = "ansi")]
     ansi: bool,
 }
@@ -631,13 +662,17 @@ where
     N: for<'writer> FormatFields<'writer> + 'static,
 {
     #[cfg(feature = "ansi")]
-    pub(crate) fn new(ctx: &'a FmtContext<'a, S, N>, ansi: bool) -> Self {
-        Self { ctx, ansi }
+    pub(crate) fn new(
+        ctx: &'a FmtContext<'a, S, N>,
+        span: Option<&'a span::Id>,
+        ansi: bool,
+    ) -> Self {
+        Self { ctx, span, ansi }
     }
 
     #[cfg(not(feature = "ansi"))]
-    pub(crate) fn new(ctx: &'a FmtContext<'a, S, N>) -> Self {
-        Self { ctx }
+    pub(crate) fn new(ctx: &'a FmtContext<'a, S, N>, span: Option<&'a span::Id>) -> Self {
+        Self { ctx, span }
     }
 
     fn bold(&self) -> Style {
@@ -661,7 +696,16 @@ where
         let bold = self.bold();
         let mut seen = false;
 
-        self.ctx.visit_spans(|span| {
+        let span = self
+            .span
+            .and_then(|id| self.ctx.ctx.span(&id))
+            .or_else(|| self.ctx.ctx.lookup_current());
+
+        let scope = span
+            .into_iter()
+            .flat_map(|span| span.from_root().chain(iter::once(span)));
+
+        for span in scope {
             write!(f, "{}", bold.paint(span.metadata().name()))?;
             seen = true;
 
@@ -672,8 +716,8 @@ where
             if !fields.is_empty() {
                 write!(f, "{}{}{}", bold.paint("{"), fields, bold.paint("}"))?;
             }
-            f.write_char(':')
-        })?;
+            f.write_char(':')?;
+        }
 
         if seen {
             f.write_char(' ')?;
@@ -811,16 +855,131 @@ impl<'a, F> fmt::Debug for FieldFnVisitor<'a, F> {
     }
 }
 
+// === printing synthetic Span events ===
+
+/// Configures what points in the span lifecycle are logged as events.
+///
+/// See also [`with_span_events`](../struct.SubscriberBuilder.html#method.with_span_events).
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct FmtSpan(FmtSpanInner);
+
+impl FmtSpan {
+    /// spans are ignored (this is the default)
+    pub const NONE: FmtSpan = FmtSpan(FmtSpanInner::None);
+    /// one event per enter/exit of a span
+    pub const ACTIVE: FmtSpan = FmtSpan(FmtSpanInner::Active);
+    /// one event when the span is dropped
+    pub const CLOSE: FmtSpan = FmtSpan(FmtSpanInner::Close);
+    /// events at all points (new, enter, exit, drop)
+    pub const FULL: FmtSpan = FmtSpan(FmtSpanInner::Full);
+}
+
+impl Debug for FmtSpan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0 {
+            FmtSpanInner::None => f.write_str("FmtSpan::NONE"),
+            FmtSpanInner::Active => f.write_str("FmtSpan::ACTIVE"),
+            FmtSpanInner::Close => f.write_str("FmtSpan::CLOSE"),
+            FmtSpanInner::Full => f.write_str("FmtSpan::FULL"),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+enum FmtSpanInner {
+    /// spans are ignored (this is the default)
+    None,
+    /// one event per enter/exit of a span
+    Active,
+    /// one event when the span is dropped
+    Close,
+    /// events at all points (new, enter, exit, drop)
+    Full,
+}
+
+pub(super) struct FmtSpanConfig {
+    pub(super) kind: FmtSpan,
+    pub(super) fmt_timing: bool,
+}
+
+impl FmtSpanConfig {
+    pub(super) fn without_time(self) -> Self {
+        Self {
+            kind: self.kind,
+            fmt_timing: false,
+        }
+    }
+    pub(super) fn with_kind(self, kind: FmtSpan) -> Self {
+        Self {
+            kind,
+            fmt_timing: self.fmt_timing,
+        }
+    }
+    pub(super) fn trace_new(&self) -> bool {
+        match self.kind {
+            FmtSpan::FULL => true,
+            _ => false,
+        }
+    }
+    pub(super) fn trace_active(&self) -> bool {
+        match self.kind {
+            FmtSpan::ACTIVE | FmtSpan::FULL => true,
+            _ => false,
+        }
+    }
+    pub(super) fn trace_close(&self) -> bool {
+        match self.kind {
+            FmtSpan::CLOSE | FmtSpan::FULL => true,
+            _ => false,
+        }
+    }
+}
+
+impl Debug for FmtSpanConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.kind.fmt(f)
+    }
+}
+
+impl Default for FmtSpanConfig {
+    fn default() -> Self {
+        Self {
+            kind: FmtSpan::NONE,
+            fmt_timing: true,
+        }
+    }
+}
+
+#[repr(transparent)]
+pub(super) struct TimingDisplay(pub(super) u64);
+impl Display for TimingDisplay {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut t = self.0 as f64;
+        for unit in ["ns", "µs", "ms", "s"].iter() {
+            if t < 10.0 {
+                return write!(f, "{:.2}{}", t, unit);
+            } else if t < 100.0 {
+                return write!(f, "{:.1}{}", t, unit);
+            } else if t < 1000.0 {
+                return write!(f, "{:.0}{}", t, unit);
+            }
+            t /= 1000.0;
+        }
+        write!(f, "{:.0}s", t * 1000.0)
+    }
+}
+
 #[cfg(test)]
-mod test {
+pub(super) mod test {
 
     use crate::fmt::{test::MockWriter, time::FormatTime};
     use lazy_static::lazy_static;
     use tracing::{self, subscriber::with_default};
 
+    use super::TimingDisplay;
     use std::{fmt, sync::Mutex};
 
-    struct MockTime;
+    pub(crate) struct MockTime;
     impl FormatTime for MockTime {
         fn format_time(&self, w: &mut dyn fmt::Write) -> fmt::Result {
             write!(w, "fake time")
@@ -915,5 +1074,93 @@ mod test {
             "fake time tracing_subscriber::fmt::format::test: hello\n",
             actual.as_str()
         );
+    }
+
+    #[test]
+    fn overridden_parents() {
+        lazy_static! {
+            static ref BUF: Mutex<Vec<u8>> = Mutex::new(vec![]);
+        }
+
+        let make_writer = || MockWriter::new(&BUF);
+        let subscriber = crate::fmt::Subscriber::builder()
+            .with_writer(make_writer)
+            .with_level(false)
+            .with_ansi(false)
+            .with_timer(MockTime)
+            .finish();
+
+        with_default(subscriber, || {
+            let span1 = tracing::info_span!("span1");
+            let span2 = tracing::info_span!(parent: &span1, "span2");
+            tracing::info!(parent: &span2, "hello");
+        });
+        let actual = String::from_utf8(BUF.try_lock().unwrap().to_vec()).unwrap();
+        assert_eq!(
+            "fake time span1:span2: tracing_subscriber::fmt::format::test: hello\n",
+            actual.as_str()
+        );
+    }
+
+    #[test]
+    fn overridden_parents_in_scope() {
+        lazy_static! {
+            static ref BUF: Mutex<Vec<u8>> = Mutex::new(vec![]);
+        }
+
+        let make_writer = || MockWriter::new(&BUF);
+        let subscriber = crate::fmt::Subscriber::builder()
+            .with_writer(make_writer)
+            .with_level(false)
+            .with_ansi(false)
+            .with_timer(MockTime)
+            .finish();
+
+        let actual = || {
+            let mut buf = BUF.try_lock().unwrap();
+            let val = String::from_utf8(buf.to_vec()).unwrap();
+            buf.clear();
+            val
+        };
+
+        with_default(subscriber, || {
+            let span1 = tracing::info_span!("span1");
+            let span2 = tracing::info_span!(parent: &span1, "span2");
+            let span3 = tracing::info_span!("span3");
+            let _e3 = span3.enter();
+
+            tracing::info!("hello");
+            assert_eq!(
+                "fake time span3: tracing_subscriber::fmt::format::test: hello\n",
+                actual().as_str()
+            );
+
+            tracing::info!(parent: &span2, "hello");
+            assert_eq!(
+                "fake time span1:span2: tracing_subscriber::fmt::format::test: hello\n",
+                actual().as_str()
+            );
+        });
+    }
+
+    #[test]
+    fn format_nanos() {
+        fn fmt(t: u64) -> String {
+            TimingDisplay(t).to_string()
+        }
+
+        assert_eq!(fmt(1), "1.00ns");
+        assert_eq!(fmt(12), "12.0ns");
+        assert_eq!(fmt(123), "123ns");
+        assert_eq!(fmt(1234), "1.23µs");
+        assert_eq!(fmt(12345), "12.3µs");
+        assert_eq!(fmt(123456), "123µs");
+        assert_eq!(fmt(1234567), "1.23ms");
+        assert_eq!(fmt(12345678), "12.3ms");
+        assert_eq!(fmt(123456789), "123ms");
+        assert_eq!(fmt(1234567890), "1.23s");
+        assert_eq!(fmt(12345678901), "12.3s");
+        assert_eq!(fmt(123456789012), "123s");
+        assert_eq!(fmt(1234567890123), "1235s");
     }
 }

@@ -13,28 +13,25 @@
 [package]
 edition = "2018"
 name = "tracing-core"
-version = "0.1.7"
+version = "0.1.10"
 authors = ["Tokio Contributors <team@tokio.rs>"]
 description = "Core primitives for application-level tracing.\n"
 homepage = "https://tokio.rs"
-documentation = "https://docs.rs/tracing-core/0.1.7/tracing_core"
 readme = "README.md"
 keywords = ["logging", "tracing", "profiling"]
 categories = ["development-tools::debugging", "development-tools::profiling", "asynchronous"]
 license = "MIT"
 repository = "https://github.com/tokio-rs/tracing"
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 [dependencies.lazy_static]
 version = "1"
+optional = true
 
 [features]
 default = ["std"]
-std = []
-[target."cfg(not(feature = \"std\"))".dependencies.lazy_static]
-version = "1"
-features = ["spin_no_std"]
-
-[target."cfg(not(feature = \"std\"))".dependencies.spin]
-version = "0.5"
+std = ["lazy_static"]
 [badges.azure-devops]
 build = "1"
 pipeline = "tokio-rs.tracing"

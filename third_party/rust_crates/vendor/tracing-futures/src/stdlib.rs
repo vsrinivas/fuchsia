@@ -26,53 +26,19 @@ mod no_std {
         time, u128, u16, u32, u8, usize,
     };
 
-    pub(crate) use alloc::{boxed, collections, rc, string, vec};
-
     pub(crate) mod borrow {
-        pub(crate) use alloc::borrow::*;
         pub(crate) use core::borrow::*;
     }
 
     pub(crate) mod fmt {
-        pub(crate) use alloc::fmt::*;
         pub(crate) use core::fmt::*;
     }
 
     pub(crate) mod slice {
-        pub(crate) use alloc::slice::*;
         pub(crate) use core::slice::*;
     }
 
     pub(crate) mod str {
-        pub(crate) use alloc::str::*;
         pub(crate) use core::str::*;
-    }
-
-    pub(crate) mod sync {
-        pub(crate) use alloc::sync::*;
-        pub(crate) use core::sync::*;
-        pub(crate) use spin::MutexGuard;
-
-        /// This wraps `spin::Mutex` to return a `Result`, so that it can be
-        /// used with code written against `std::sync::Mutex`.
-        ///
-        /// Since `spin::Mutex` doesn't support poisoning, the `Result` returned
-        /// by `lock` will always be `Ok`.
-        #[derive(Debug, Default)]
-        pub(crate) struct Mutex<T> {
-            inner: spin::Mutex<T>,
-        }
-
-        impl<T> Mutex<T> {
-            pub(crate) fn new(data: T) -> Self {
-                Self {
-                    inner: spin::Mutex::new(data),
-                }
-            }
-
-            pub(crate) fn lock(&self) -> Result<MutexGuard<T>, ()> {
-                Ok(self.inner.lock())
-            }
-        }
     }
 }
