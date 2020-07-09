@@ -45,7 +45,7 @@ pub struct DiagnosticsArtifactsContainer {
     /// If absent, this is interpereted as a component existing, but not
     /// hosting diagnostics data.
     pub inspect_artifacts_container: Option<InspectArtifactsContainer>,
-
+    /// Container holding the artifacts needed to serve lifecycle data.
     pub lifecycle_artifacts_container: Option<LifecycleArtifactsContainer>,
 }
 

@@ -18,6 +18,7 @@ test_package("archivist_integration_tests") {
   deps = [
     "archive_path:archive_path_test",
     "data_stats:data_stats_test",
+    "feedback_reader:feedback_reader_test",
     "logs:tests",
     "unified_reader:config",
     "unified_reader:unified_reader_test",
@@ -59,6 +60,11 @@ test_package("archivist_integration_tests") {
       dest = "unified_reader_test_archivist.cmx"
     },
     {
+      path =
+          rebase_path("feedback_reader/meta/feedback_reader_test_archivist.cmx")
+      dest = "feedback_reader_test_archivist.cmx"
+    },
+    {
       path = rebase_path("logs/rust/puppet/meta/stdio_puppet.cmx")
       dest = "stdio_puppet.cmx"
     },
@@ -78,10 +84,6 @@ test_package("archivist_integration_tests") {
       environments = basic_envs
     },
     {
-      name = "unified_reader_test"
-      environments = basic_envs
-    },
-    {
       name = "logs_integration_go_tests"
       environments = basic_envs
 
@@ -94,6 +96,14 @@ test_package("archivist_integration_tests") {
     },
     {
       name = "logs_integration_cpp_tests"
+      environments = basic_envs
+    },
+    {
+      name = "unified_reader_test"
+      environments = basic_envs
+    },
+    {
+      name = "feedback_reader_test"
       environments = basic_envs
     },
   ]

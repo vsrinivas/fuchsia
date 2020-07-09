@@ -20,3 +20,8 @@ pub static INSPECT_ASYNC_TIMEOUT_SECONDS: i64 = 5;
 // Number of seconds to wait for a single component to have its diagnostics data "pumped".
 // This involves diagnostics directory traversal, contents extraction, and snapshotting.
 pub static PER_COMPONENT_ASYNC_TIMEOUT_SECONDS: i64 = 10;
+
+/// Name used by clients to connect to the feedback diagnostics protocol.
+/// This protocol applies static selectors configured under config/data/feedback to
+/// inspect exfiltration.
+pub static FEEDBACK_ARCHIVE_ACCESSOR_NAME: &str = "fuchsia.diagnostics.FeedbackArchiveAccessor";

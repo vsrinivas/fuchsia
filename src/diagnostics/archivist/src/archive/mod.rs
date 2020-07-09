@@ -14,7 +14,9 @@ use {
     },
     anyhow::{format_err, Error},
     chrono::prelude::*,
+    fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS,
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
+    fuchsia_zircon as zx,
     futures::StreamExt,
     itertools::Itertools,
     lazy_static::lazy_static,
@@ -579,13 +581,13 @@ pub struct ArchivistState {
     writer: Option<ArchiveWriter>,
     log_node: BoundedListNode,
     configuration: configs::Config,
-    inspect_repository: Arc<RwLock<DiagnosticsDataRepository>>,
+    diagnostics_repositories: Vec<Arc<RwLock<DiagnosticsDataRepository>>>,
 }
 
 impl ArchivistState {
     pub fn new(
         configuration: configs::Config,
-        inspect_repository: Arc<RwLock<DiagnosticsDataRepository>>,
+        diagnostics_repositories: Vec<Arc<RwLock<DiagnosticsDataRepository>>>,
         writer: Option<ArchiveWriter>,
     ) -> Result<Self, Error> {
         let mut log_node = BoundedListNode::new(
@@ -595,31 +597,87 @@ impl ArchivistState {
 
         inspect_log!(log_node, event: "Archivist started");
 
-        Ok(ArchivistState { writer, log_node, configuration, inspect_repository })
+        Ok(ArchivistState { writer, log_node, configuration, diagnostics_repositories })
     }
 }
 
-fn populate_inspect_repo(
+async fn populate_inspect_repo(
     state: &Arc<Mutex<ArchivistState>>,
     diagnostics_ready_data: DiagnosticsReadyEvent,
-) -> Result<(), Error> {
+) {
     // The DiagnosticsReadyEvent should always contain a directory_proxy. Its existence
     // as an Option is only to support mock objects for equality in tests.
-    let diagnostics_directory_proxy = diagnostics_ready_data.directory.unwrap();
+    let diagnostics_proxy = diagnostics_ready_data.directory.unwrap();
 
-    state.lock().inspect_repository.write().add_inspect_artifacts(
-        diagnostics_ready_data.metadata.component_id,
-        diagnostics_ready_data.metadata.component_url,
-        diagnostics_directory_proxy,
-        diagnostics_ready_data.metadata.timestamp,
-    )
+    // TODO(55736): The pipeline specific updates should be happening asynchronously.
+    // Once there is a central repository for each pipeline, the updates will just be
+    // greedy selector evaluation.
+    for diagnostics_repo in &state.lock().diagnostics_repositories {
+        // DirectoryProxys aren't thread safe, so each repository must get
+        // a unique clone.
+        let identifier = diagnostics_ready_data.metadata.component_id.clone();
+        match io_util::clone_directory(&diagnostics_proxy, CLONE_FLAG_SAME_RIGHTS) {
+            Ok(cloned_directory) => {
+                // TODO(55736): There should be a central diagnostics repository that
+                // is shared across all pipelines.
+                diagnostics_repo
+                    .write()
+                    .add_inspect_artifacts(
+                        identifier.clone(),
+                        diagnostics_ready_data.metadata.component_url.clone(),
+                        cloned_directory,
+                        diagnostics_ready_data.metadata.timestamp.clone(),
+                    )
+                    .unwrap_or_else(|e| {
+                        error!(
+                            "Failed to add inspect artifacts for component: {:?} to repository: {:?}",
+                            identifier, e
+                        );
+                    });
+            }
+            Err(e) => {
+                error!(
+                    "Failed to clone diagnostics proxy of component {:?} for a repository: {:?}",
+                    identifier, e
+                );
+            }
+        }
+    }
+}
+
+fn add_new_component(
+    state: &Arc<Mutex<ArchivistState>>,
+    identifier: ComponentIdentifier,
+    component_url: String,
+    event_timestamp: zx::Time,
+    component_start_time: Option<zx::Time>,
+) {
+    for diagnostics_repo in &state.lock().diagnostics_repositories {
+        diagnostics_repo
+            .write()
+            .add_new_component(
+                identifier.clone(),
+                component_url.clone(),
+                event_timestamp,
+                component_start_time,
+            )
+            .unwrap_or_else(|e| {
+                error!(
+                    "Failed to add new component: {:?} to repository: {:?}",
+                    identifier.clone(),
+                    e
+                );
+            });
+    }
 }
 
 fn remove_from_inspect_repo(
     state: &Arc<Mutex<ArchivistState>>,
     component_id: &ComponentIdentifier,
 ) {
-    state.lock().inspect_repository.write().remove(&component_id);
+    for diagnostics_repo in &state.lock().diagnostics_repositories {
+        diagnostics_repo.write().remove(&component_id);
+    }
 }
 
 async fn process_event(
@@ -628,22 +686,26 @@ async fn process_event(
 ) -> Result<(), Error> {
     match event {
         ComponentEvent::Start(start) => {
-            archive_event(&state, "START", start.metadata.clone()).await?;
-            state.lock().inspect_repository.write().add_new_component(
+            let archived_metadata = start.metadata.clone();
+            add_new_component(
+                &state,
                 start.metadata.component_id,
                 start.metadata.component_url,
                 start.metadata.timestamp,
                 None,
-            )
+            );
+            archive_event(&state, "START", archived_metadata).await
         }
         ComponentEvent::Running(running) => {
-            archive_event(&state, "RUNNING", running.metadata.clone()).await?;
-            state.lock().inspect_repository.write().add_new_component(
+            let archived_metadata = running.metadata.clone();
+            add_new_component(
+                &state,
                 running.metadata.component_id,
                 running.metadata.component_url,
                 running.metadata.timestamp,
                 Some(running.component_start_time),
-            )
+            );
+            archive_event(&state, "RUNNING", archived_metadata.clone()).await
         }
         ComponentEvent::Stop(stop) => {
             // TODO(53939): Get inspect data from repository before removing
@@ -652,7 +714,8 @@ async fn process_event(
             archive_event(&state, "STOP", stop.metadata).await
         }
         ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
-            populate_inspect_repo(&state, diagnostics_ready)
+            populate_inspect_repo(&state, diagnostics_ready).await;
+            Ok(())
         }
     }
 }

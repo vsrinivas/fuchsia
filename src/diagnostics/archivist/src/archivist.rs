@@ -4,13 +4,14 @@
 
 use {
     crate::{
-        archive, archive_accessor, configs,
+        archive, archive_accessor, configs, constants,
         data_repository::DiagnosticsDataRepository,
         data_stats, diagnostics,
         events::{stream::EventStream, types::EventSource},
         logs,
     },
     anyhow::Error,
+    fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_async as fasync,
@@ -175,17 +176,12 @@ impl Archivist {
             None
         };
 
-        // The Inspect Repository offered to the ALL_ACCESS pipeline. This repository is unique
-        // in that it has no statically configured selectors, meaning all diagnostics data is visible.
-        // This should not be used for production services.
-        let all_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(None)));
-
         // TODO(4601): Refactor this code.
         // Set up loading feedback pipeline configs.
         let pipelines_node = diagnostics::root().create_child("pipelines");
         let feedback_pipeline = pipelines_node.create_child("feedback");
         let legacy_pipeline = pipelines_node.create_child("legacy_metrics");
-        let feedback_config = configs::PipelineConfig::from_directory("/config/data/feedback");
+        let mut feedback_config = configs::PipelineConfig::from_directory("/config/data/feedback");
         feedback_config.record_to_inspect(&feedback_pipeline);
         let legacy_config = configs::PipelineConfig::from_directory("/config/data/legacy_metrics");
         legacy_config.record_to_inspect(&legacy_pipeline);
@@ -197,25 +193,53 @@ impl Archivist {
             data_stats::add_stats_nodes(component::inspector().root(), to_summarize.clone())?;
         }
 
+        // The Inspect Repository offered to the ALL_ACCESS pipeline. This repository is unique
+        // in that it has no statically configured selectors, meaning all diagnostics data is
+        // visible.
+        // This should not be used for production services.
+        // TODO(55735): Lock down this protocol using allowlists.
+        let all_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(None)));
+
+        // The Inspect Repository offered to the Feedback pipeline. This repository applies
+        // static selectors configured under config/data/feedback to inspect exfiltration.
+        let feedback_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
+            feedback_config.take_inspect_selectors().map(|selectors| {
+                selectors
+                    .into_iter()
+                    .map(|selector| Arc::new(selector))
+                    .collect::<Vec<Arc<Selector>>>()
+            }),
+        )));
+
         let archivist_state = archive::ArchivistState::new(
             archivist_configuration,
-            all_inspect_repository.clone(),
+            vec![all_inspect_repository.clone(), feedback_inspect_repository.clone()],
             writer,
         )?;
 
-        let all_archive_accessor_node =
-            component::inspector().root().create_child("all_archive_accessor_node");
+        let all_accessor_stats = Arc::new(diagnostics::ArchiveAccessorStats::new(
+            component::inspector().root().create_child("all_archive_accessor"),
+        ));
 
-        let all_accessor_stats =
-            Arc::new(diagnostics::ArchiveAccessorStats::new(all_archive_accessor_node));
+        let feedback_accessor_stats = Arc::new(diagnostics::ArchiveAccessorStats::new(
+            component::inspector().root().create_child("feedback_archive_accessor"),
+        ));
 
-        fs.dir("svc").add_fidl_service(move |stream| {
-            let all_archive_accessor = archive_accessor::ArchiveAccessor::new(
-                all_inspect_repository.clone(),
-                all_accessor_stats.clone(),
-            );
-            all_archive_accessor.spawn_archive_accessor_server(stream)
-        });
+        fs.dir("svc")
+            .add_fidl_service(move |stream| {
+                let all_archive_accessor = archive_accessor::ArchiveAccessor::new(
+                    all_inspect_repository.clone(),
+                    all_accessor_stats.clone(),
+                );
+                all_archive_accessor.spawn_archive_accessor_server(stream)
+            })
+            .add_fidl_service_at(constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME, move |chan| {
+                let feedback_archive_accessor = archive_accessor::ArchiveAccessor::new(
+                    feedback_inspect_repository.clone(),
+                    feedback_accessor_stats.clone(),
+                );
+                feedback_archive_accessor.spawn_archive_accessor_server(chan)
+            });
 
         let events_node = diagnostics::root().create_child("event_stats");
         Ok(Self {

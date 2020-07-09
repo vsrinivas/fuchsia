@@ -114,7 +114,6 @@ impl PipelineConfig {
 
 pub fn parse_config(path: impl Into<PathBuf>) -> Result<Config, Error> {
     let path: PathBuf = path.into();
-
     let json_string: String = fs::read_to_string(path)?;
     let config: Config = json5::from_str(&json_string)?;
     if let Some(summarized_dirs) = &config.summarized_dirs {

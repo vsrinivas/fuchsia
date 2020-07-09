@@ -1,0 +1,50 @@
+[
+   {
+      "data_source":"Inspect",
+      "metadata":{
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/iquery_test_component.cmx",
+         "errors":null,
+         "filename":"fuchsia.inspect.Tree",
+         "timestamp":0
+      },
+      "moniker":"iquery_test_component.cmx",
+      "payload":{
+         "root":{
+
+         }
+      },
+     "version":1
+   },
+   {
+      "data_source":"Inspect",
+      "metadata":{
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/iquery_test_component.cmx",
+         "errors":null,
+         "filename":"fuchsia.inspect.deprecated.Inspect",
+         "timestamp":0
+      },
+      "moniker":"iquery_test_component.cmx",
+      "payload":{
+         "root":{
+
+         }
+      },
+     "version":1
+   },
+   {
+      "data_source":"Inspect",
+      "metadata":{
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/iquery_test_component.cmx",
+         "errors":null,
+         "filename":"root.inspect",
+         "timestamp":0
+      },
+      "moniker":"iquery_test_component.cmx",
+      "payload":{
+         "root":{
+
+         }
+      },
+     "version":1
+   }
+]

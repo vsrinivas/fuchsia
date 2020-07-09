@@ -430,6 +430,17 @@ impl App {
         Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
     }
 
+    /// Connect to a service provided by the `App`.
+    #[inline]
+    pub fn connect_to_named_service<S: DiscoverableService>(
+        &self,
+        service_name: &str,
+    ) -> Result<S::Proxy, Error> {
+        let (client_channel, server_channel) = zx::Channel::create()?;
+        self.pass_to_named_service(service_name, server_channel)?;
+        Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
+    }
+
     /// Connect to a FIDL Unified Service provided by the `App`.
     #[inline]
     pub fn connect_to_unified_service<US: UnifiedServiceMarker>(&self) -> Result<US::Proxy, Error> {

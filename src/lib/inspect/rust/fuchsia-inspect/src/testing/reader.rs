@@ -89,6 +89,7 @@ pub struct InspectDataFetcher {
     archive: Option<ArchiveAccessorProxy>,
     selectors: Vec<String>,
     should_retry: bool,
+    minimum_schema_count: usize,
     timeout: Option<Duration>,
 }
 
@@ -97,7 +98,13 @@ impl InspectDataFetcher {
     ///  - Maximum retries: 2^64-1
     ///  - Timeout: Never. Use with_timeout() to set a timeout.
     pub fn new() -> Self {
-        Self { timeout: None, selectors: vec![], should_retry: true, archive: None }
+        Self {
+            timeout: None,
+            selectors: vec![],
+            should_retry: true,
+            archive: None,
+            minimum_schema_count: 1,
+        }
     }
 
     pub fn with_archive(mut self, archive: ArchiveAccessorProxy) -> Self {
@@ -133,6 +140,13 @@ impl InspectDataFetcher {
     /// Do not use in tests unless timeout is the expected behavior.
     pub fn with_timeout(mut self, duration: Duration) -> Self {
         self.timeout = Some(duration);
+        self
+    }
+
+    /// Sets the minumum number of schemas expected in a result in order for the
+    /// result to be considered a success.
+    pub fn with_minimum_schema_count(mut self, minimum_schema_count: usize) -> Self {
+        self.minimum_schema_count = minimum_schema_count;
         self
     }
 
@@ -224,7 +238,7 @@ impl InspectDataFetcher {
                 }
             }
 
-            if result.is_empty() && self.should_retry {
+            if result.len() < self.minimum_schema_count && self.should_retry {
                 // Retry with delay to ensure data appears if the reader is called right after the
                 // component started, before the archivist knows about it.
                 fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
