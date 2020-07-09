@@ -156,7 +156,7 @@ class IntegralType : public Type {
 
 class Int8Type : public IntegralType<int8_t> {
  public:
-  enum class Kind { kDecimal };
+  enum class Kind { kChar, kDecimal };
 
   explicit Int8Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 

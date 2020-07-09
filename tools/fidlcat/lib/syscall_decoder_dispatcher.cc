@@ -21,6 +21,8 @@
 
 namespace fidlcat {
 
+std::unique_ptr<fidl_codec::Struct> uint128_struct_definition = nullptr;
+
 std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallType syscall_type) {
   switch (syscall_type) {
     case SyscallType::kBool:
@@ -29,6 +31,8 @@ std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallTyp
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kBtiPerm);
     case SyscallType::kCachePolicy:
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kCachePolicy);
+    case SyscallType::kChar:
+      return std::make_unique<fidl_codec::Int8Type>(fidl_codec::Int8Type::Kind::kChar);
     case SyscallType::kClock:
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kClock);
     case SyscallType::kDuration:
@@ -91,6 +95,15 @@ std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallTyp
       return std::make_unique<fidl_codec::Uint64Type>();
     case SyscallType::kUint64Hexa:
       return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kHexaDecimal);
+    case SyscallType::kUint128Hexa:
+      if (uint128_struct_definition == nullptr) {
+        uint128_struct_definition = std::make_unique<fidl_codec::Struct>("zx.uint128");
+        uint128_struct_definition->AddMember("low",
+                                             SyscallTypeToFidlCodecType(SyscallType::kUint64Hexa));
+        uint128_struct_definition->AddMember("high",
+                                             SyscallTypeToFidlCodecType(SyscallType::kUint64Hexa));
+      }
+      return std::make_unique<fidl_codec::StructType>(*uint128_struct_definition, false);
     case SyscallType::kUintptr:
       return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kUintptr);
     case SyscallType::kVaddr:

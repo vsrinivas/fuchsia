@@ -193,7 +193,14 @@ std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset
 
 void BoolType::Visit(TypeVisitor* visitor) const { visitor->VisitBoolType(this); };
 
-std::string Int8Type::Name() const { return "int8"; }
+std::string Int8Type::Name() const {
+  switch (kind_) {
+    case Kind::kDecimal:
+      return "int8";
+    case Kind::kChar:
+      return "char";
+  }
+}
 
 void Int8Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   uint64_t absolute;
@@ -202,6 +209,7 @@ void Int8Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
     printer << Red << "invalid" << ResetColor;
   } else {
     switch (kind_) {
+      case Kind::kChar:
       case Kind::kDecimal:
         printer << Blue;
         if (negative) {
