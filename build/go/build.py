@@ -211,6 +211,10 @@ def main():
         'CGO_LDFLAGS': ldflags_joined,
     }
 
+    # Infra sets $TMPDIR which is cleaned between builds.
+    if os.getenv('TMPDIR'):
+        env['TMPDIR'] = os.getenv('TMPDIR')
+
     if args.cgo:
         env['CGO_ENABLED'] = '1'
     if args.target:
