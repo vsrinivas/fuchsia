@@ -34,6 +34,11 @@ TEST(Identifier, GetName) {
   anon.AppendComponent(IdentifierComponent("SomeFunction"));
   EXPECT_EQ("::$anon::SomeFunction", anon.GetFullName());
 
+  // ELF function.
+  Identifier elf(IdentifierQualification::kRelative,
+                 IdentifierComponent(SpecialIdentifier::kElf, "pthread_key_create"));
+  EXPECT_EQ("$elf(pthread_key_create)", elf.GetFullName());
+
   // PLT function.
   Identifier plt(IdentifierQualification::kRelative,
                  IdentifierComponent(SpecialIdentifier::kPlt, "zx_foo_bar"));

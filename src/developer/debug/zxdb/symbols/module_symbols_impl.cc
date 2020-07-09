@@ -82,13 +82,13 @@ bool SameFileLine(const llvm::DWARFDebugLine::Row& reference,
   return reference.File == candidate.File && reference.Line == candidate.Line;
 }
 
-// Determines if the given input location references a PLT symbol. If it does, returns the name of
-// that symbol. If it does not, returns a null optional.
-std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
+// Determines if the given input location references a special identifier of the given type. If it
+// does, returns the name of that symbol. If it does not, returns a null optional.
+std::optional<std::string> GetSpecialInputLocation(const InputLocation& loc, SpecialIdentifier si) {
   if (loc.type != InputLocation::Type::kName || loc.name.components().size() != 1)
     return std::nullopt;
 
-  if (loc.name.components()[0].special() == SpecialIdentifier::kPlt)
+  if (loc.name.components()[0].special() == si)
     return loc.name.components()[0].name();
 
   return std::nullopt;
@@ -107,6 +107,7 @@ bool HasOnlySupportedSpecialIdentifierTypes(const Identifier& ident) {
   for (const auto& comp : ident.components()) {
     switch (comp.special()) {
       case SpecialIdentifier::kNone:
+      case SpecialIdentifier::kElf:
       case SpecialIdentifier::kPlt:
       case SpecialIdentifier::kAnon:
         break;  // Normal boring component.
@@ -326,9 +327,27 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
   if (!HasOnlySupportedSpecialIdentifierTypes(input_location.name))
     return {};  // Unsupported symbol type.
 
-  // Special-case for PLT functions.
-  if (auto plt_name = GetPLTInputLocation(input_location))
+  // Special-case for ELF/PLT functions.
+  //
+  // Note that this only checks the ELF index when explicitly requested. This is because for a given
+  // function, say "pthread_key_create", it will have a .so with the implementation, and each module
+  // that references it will have a PLT thunk (a type of ELF symbol). Matching all the ELF symbols
+  // is not what the user wants when they ask for information or a breakpoint on this function (the
+  // breakpoint will end up meaning 2 breaks per call).
+  //
+  // At the same time, it would be nice to use ELF symbols when debugging non-symbolized binaries.
+  // We can't just ask if the index is empty to detech this case since "unsymbolized" binaries can
+  // sometimes have a few trivial DWARF symbols.
+  //
+  // Just falling back to ELF symbols here when the main lookup matches nothing doesn't work because
+  // the calling modules in the pthread example above will have only the PLT match. To make it work,
+  // every caller of this function that combines results from more than one module (including
+  // FindName and ProcessSymbols) needs to have some filtering or prioritizing and how this should
+  // work is non-obvious.
+  if (auto plt_name = GetSpecialInputLocation(input_location, SpecialIdentifier::kPlt))
     return ResolvePltName(symbol_context, *plt_name);
+  if (auto elf_name = GetSpecialInputLocation(input_location, SpecialIdentifier::kElf))
+    return ResolveElfName(symbol_context, *elf_name);
 
   std::vector<Location> result;
 
@@ -368,18 +387,6 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
       // Unknown type of symbol.
       continue;
     }
-  }
-
-  // Fall back on ELF symbols if nothing was found. Many ELF symbols will duplicate the DWARF
-  // ones so we don't want to do this if there was a DWARF match.
-  if (result.empty()) {
-    // Currently we only support ELF lookup by mangled name. The reason is that the unmangled
-    // name for function names has a () and won't match our Identifier class. Currently ELF name
-    // lookup is not really used (the DWARF symbols should have normal things people need) so this
-    // is not a high priority.
-    //
-    // TODO(bug 41928) make Identifier support function parameters.
-    return ResolveElfName(symbol_context, symbol_to_find.GetFullNameNoQual());
   }
 
   return result;

@@ -28,7 +28,8 @@ enum class SpecialIdentifier {
 
   kAnon,  // Anonymous namespace.
   kMain,  // Main function (uses DWARF-indicated "entrypoint" regardless of name).
-  kPlt,   // PLT identifier.
+  kElf,   // Symbol defined in the ELF format (simpler than the full DWARF symbols).
+  kPlt,   // PLT identifier (a subset of ELF symbols).
   kRegister,
 
   kLast,  // Not a type, marker for array size.

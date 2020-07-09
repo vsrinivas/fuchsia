@@ -438,7 +438,8 @@ TEST(ModuleSymbols, ElfSymbols) {
   // properly, look one up.
   const char kVirtualDerivedVtableName[] = "_ZTT14VirtualDerived";
   const char kVirtualDerivedVtableUnmangledName[] = "VTT for VirtualDerived";
-  Identifier vtable_identifier((IdentifierComponent(kVirtualDerivedVtableName)));
+  Identifier vtable_identifier(
+      IdentifierComponent(SpecialIdentifier::kElf, kVirtualDerivedVtableName));
   std::vector<Location> result = setup.symbols()->ResolveInputLocation(
       symbol_context, InputLocation(vtable_identifier), ResolveOptions());
   ASSERT_EQ(1u, result.size());

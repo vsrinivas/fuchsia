@@ -22,8 +22,6 @@ enum class ElfSymbolType {
 // Represents a symbol read from the ELF file. This holds the mangled and unmangled names for
 // convenience for the index. Normal external users will use the ElfSymbol class which is
 // constructed from this structure.
-//
-// TODO(bug 42747): It would be nice to report the size of a symbol.
 struct ElfSymbolRecord {
   ElfSymbolRecord() = default;
 

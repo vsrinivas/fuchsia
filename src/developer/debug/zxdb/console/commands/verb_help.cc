@@ -94,6 +94,12 @@ Special names
       Maps to the entrypoint declared in the symbols, and falls back on the
       function named "main" if there is no entrypoint defined.
 
+  ELF symbols: "$elf(...)" "$plt(...)"
+
+      Maps to symbols from the ELF file. "$elf" matches all ELF symbols, "$plt"
+      matches only symbols in the Procedure Linkage Table (used for jumping to
+      dynamically linked functions in other shared libraries).
+
 CPU registers
 
   The expression evaluator will check for register names if there is no variable

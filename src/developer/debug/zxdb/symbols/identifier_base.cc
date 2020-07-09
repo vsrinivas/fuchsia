@@ -25,6 +25,7 @@ const SpecialIdentifierRecord kRecords[] = {
   { SpecialIdentifier::kEscaped,  "$",     true },
   { SpecialIdentifier::kAnon,     "$anon", false },
   { SpecialIdentifier::kMain,     "$main", false },
+  { SpecialIdentifier::kElf,      "$elf",  true },
   { SpecialIdentifier::kPlt,      "$plt",  true },
   { SpecialIdentifier::kRegister, "$reg",  true },
 };

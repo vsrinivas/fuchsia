@@ -110,12 +110,11 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   void AppendLocationForFunction(const SymbolContext& symbol_context, const ResolveOptions& options,
                                  const Function* func, std::vector<Location>* result) const;
 
-  // Looks up a PLT symbol. The symbol name only matches the mangled names and must not include
-  // the "$plt(...)" annotation. Returns a vector of one entry if found, an empty vector if not.
+  // Looks up an ELF or PLT symbol. The symbol name only matches the mangled names and must not
+  // include the "$elf(...)" or "$plt(...)" annotation. Returns a vector of one entry if found, an
+  // empty vector if not.
   std::vector<Location> ResolvePltName(const SymbolContext& symbol_context,
                                        const std::string& mangled_name) const;
-
-  // Does an ELF name lookup. There can be multiple matches.
   std::vector<Location> ResolveElfName(const SymbolContext& symbol_context,
                                        const std::string& mangled_name) const;
 

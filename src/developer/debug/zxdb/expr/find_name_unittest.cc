@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/index_test_support.h"
@@ -730,6 +731,37 @@ TEST(FindName, FindRecursiveNamespace) {
   ASSERT_EQ(2u, results.size());
   EXPECT_EQ(std_foo.get(), results[0].function().get());
   EXPECT_EQ(std_anon_foo.get(), results[1].function().get());
+}
+
+// Tests that $elf(...) symbols look up properly.
+TEST(FindName, ElfSymbol) {
+  ProcessSymbolsTestSetup setup;
+  MockModuleSymbols* module_symbols = setup.InjectMockModule();
+
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
+  FindNameContext context(&setup.process(), symbol_context);
+
+  const char kRawName[] = "pthread_key_create";
+  ParsedIdentifier elf_name(IdentifierQualification::kRelative,
+                            ParsedIdentifierComponent(SpecialIdentifier::kElf, kRawName));
+
+  auto elf_symbol = fxl::MakeRefCounted<ElfSymbol>(
+      module_symbols->GetWeakPtr(), ElfSymbolRecord(ElfSymbolType::kPlt, 0x1234, 4, kRawName));
+  Location elf_location(0x12345678, FileLine(), 0, symbol_context, elf_symbol);
+
+  // The current implementation does not add ELF symbols to the main index although this might be a
+  // nice thing to do in the future. So for now, we just need to test that manually injected ELF
+  // symbols come out the other end.
+  module_symbols->AddSymbolLocations(ToIdentifier(elf_name), {elf_location});
+
+  FindNameOptions opts(FindNameOptions::kAllKinds);
+  std::vector<FoundName> results;
+  FindName(context, opts, elf_name, &results);
+
+  ASSERT_EQ(1u, results.size());
+  ASSERT_TRUE(results[0].other_symbol());
+
+  EXPECT_EQ(results[0].other_symbol().get(), elf_symbol.get());
 }
 
 }  // namespace zxdb

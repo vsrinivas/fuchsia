@@ -52,6 +52,7 @@ FindNameSupported GetSupported(const ParsedIdentifier& identifier) {
         FX_NOTREACHED();  // These annotations shouldn't appear in identifiers.
         break;
       case SpecialIdentifier::kMain:
+      case SpecialIdentifier::kElf:
       case SpecialIdentifier::kPlt:
         // These symbols are queried directly from ModuleSymbols.
         return FindNameSupported::kModuleSymbolsOnly;

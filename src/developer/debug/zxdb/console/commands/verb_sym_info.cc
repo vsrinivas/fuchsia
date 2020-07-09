@@ -72,15 +72,8 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
   if (cmd.args().empty())
     return Err("sym-info expects the name of the symbol to look up.");
 
-  // Type names can have spaces in them, so concatenate all args.
-  std::string ident_string = cmd.args()[0];
-  for (size_t i = 1; i < cmd.args().size(); i++) {
-    ident_string += " ";
-    ident_string += cmd.args()[i];
-  }
-
   ParsedIdentifier identifier;
-  Err err = ExprParser::ParseIdentifier(ident_string, &identifier);
+  Err err = ExprParser::ParseIdentifier(cmd.args()[0], &identifier);
   if (err.has_error())
     return err;
 
@@ -176,8 +169,13 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 VerbRecord GetSymInfoVerbRecord() {
-  return VerbRecord(&RunVerbSymInfo, {"sym-info"}, kSymInfoShortHelp, kSymInfoHelp,
-                    CommandGroup::kSymbol);
+  VerbRecord sym_info(&RunVerbSymInfo, {"sym-info"}, kSymInfoShortHelp, kSymInfoHelp,
+                      CommandGroup::kSymbol);
+
+  // Accept just one arg and allow for spaces in it.
+  sym_info.param_type = VerbRecord::kOneParam;
+
+  return sym_info;
 }
 
 }  // namespace zxdb
