@@ -27,12 +27,10 @@ func TestConnectAndClose(t *testing.T) {
 	}
 	defer server.stop()
 
-	client, err := ConnectDeprecated(context.Background(), server.addr, server.clientConfig)
+	client, err := NewClient(context.Background(), server.addr, server.clientConfig, defaultConnectBackoff)
 	if err != nil {
 		t.Errorf("failed to connect: %v", err)
 	}
 
-	if err = client.Close(); err != nil {
-		t.Errorf("failed to close client: %v", err)
-	}
+	client.Close()
 }
