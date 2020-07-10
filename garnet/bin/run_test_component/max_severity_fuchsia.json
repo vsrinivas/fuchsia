@@ -390,6 +390,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/paver-test#meta/paver-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-integration-test.cmx",
          "max_severity": "ERROR"
       },

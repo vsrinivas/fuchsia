@@ -26,6 +26,7 @@ TEST(AstroAbrTests, CreateFails) {
   args.driver_search_paths.push_back("/boot/driver");
   args.disable_block_watcher = false;
   args.board_name = "sherlock";
+  args.path_prefix = "/pkg/";
   ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
@@ -41,6 +42,7 @@ TEST(SherlockAbrTests, CreateFails) {
   args.driver_search_paths.push_back("/boot/driver");
   args.disable_block_watcher = false;
   args.board_name = "astro";
+  args.path_prefix = "/pkg/";
   ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));

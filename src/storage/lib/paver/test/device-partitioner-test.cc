@@ -302,6 +302,7 @@ class GptDevicePartitionerTests : public zxtest::Test {
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
+    args.path_prefix = "/pkg/";
     args.board_name = board_name;
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
@@ -966,6 +967,7 @@ class FixedDevicePartitionerTests : public zxtest::Test {
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
+    args.path_prefix = "/pkg/";
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     fbl::unique_fd fd;
@@ -1263,7 +1265,7 @@ TEST(AstroPartitionerTests, IsFvmWithinFtl) {
 
 TEST(AstroPartitionerTests, ChooseAstroPartitioner) {
   std::unique_ptr<SkipBlockDevice> device;
-  SkipBlockDevice::Create(kNandInfo, &device);
+  ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
   auto devfs_root = device->devfs_root();
   std::unique_ptr<BlockDevice> zircon_a;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kZirconAType, &zircon_a));
@@ -1277,7 +1279,7 @@ TEST(AstroPartitionerTests, ChooseAstroPartitioner) {
 
 TEST(AstroPartitionerTests, AddPartitionTest) {
   std::unique_ptr<SkipBlockDevice> device;
-  SkipBlockDevice::Create(kNandInfo, &device);
+  ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
   zx::channel svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
@@ -1290,7 +1292,7 @@ TEST(AstroPartitionerTests, AddPartitionTest) {
 
 TEST(AstroPartitionerTests, WipeFvmTest) {
   std::unique_ptr<SkipBlockDevice> device;
-  SkipBlockDevice::Create(kNandInfo, &device);
+  ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
   zx::channel svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
@@ -1302,7 +1304,7 @@ TEST(AstroPartitionerTests, WipeFvmTest) {
 
 TEST(AstroPartitionerTests, FinalizePartitionTest) {
   std::unique_ptr<SkipBlockDevice> device;
-  SkipBlockDevice::Create(kNandInfo, &device);
+  ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
   zx::channel svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
@@ -1321,7 +1323,7 @@ TEST(AstroPartitionerTests, FinalizePartitionTest) {
 
 TEST(AstroPartitionerTests, FindPartitionTest) {
   std::unique_ptr<SkipBlockDevice> device;
-  SkipBlockDevice::Create(kNandInfo, &device);
+  ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
   auto devfs_root = device->devfs_root();
   std::unique_ptr<BlockDevice> fvm;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kFvmType, &fvm));
@@ -1345,7 +1347,7 @@ TEST(AstroPartitionerTests, FindPartitionTest) {
 
 TEST(AstroPartitionerTests, SupportsPartition) {
   std::unique_ptr<SkipBlockDevice> device;
-  SkipBlockDevice::Create(kNandInfo, &device);
+  ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
   zx::channel svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
@@ -1397,7 +1399,7 @@ void WritePartition(const paver::DevicePartitioner* partitioner, const Partition
 
 TEST(AstroPartitionerTests, BootloaderTplTest) {
   std::unique_ptr<SkipBlockDevice> device;
-  SkipBlockDevice::Create(kNandInfo, &device);
+  ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
   zx::channel svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
@@ -1415,7 +1417,7 @@ TEST(AstroPartitionerTests, BootloaderTplTest) {
 
 TEST(AstroPartitionerTests, BootloaderBl2Test) {
   std::unique_ptr<SkipBlockDevice> device;
-  SkipBlockDevice::Create(kNandInfo, &device);
+  ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
   zx::channel svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
@@ -1439,6 +1441,7 @@ class As370PartitionerTests : public zxtest::Test {
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
     args.board_name = "visalia";
+    args.path_prefix = "/pkg/";
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     fbl::unique_fd fd;

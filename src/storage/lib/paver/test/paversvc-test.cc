@@ -322,7 +322,7 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
  protected:
   void SpawnIsolatedDevmgr(const fuchsia_hardware_nand_RamNandInfo& nand_info) {
     ASSERT_EQ(device_.get(), nullptr);
-    SkipBlockDevice::Create(nand_info, &device_);
+    ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(nand_info, &device_));
     static_cast<paver::Paver*>(provider_ctx_)->set_dispatcher(loop_.dispatcher());
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
     static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
@@ -1383,6 +1383,7 @@ class PaverServiceBlockTest : public PaverServiceTest {
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
+    args.path_prefix = "/pkg/";
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 
     // Forward the block watcher FIDL interface from the devmgr.

@@ -4,8 +4,7 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("test") {
   if (is_fuchsia) {
@@ -67,22 +66,24 @@ test("test") {
   ]
 }
 
-devmgr_manifest("devmgr-manifest") {
-}
+isolated_devmgr_unittest_package("paver-test") {
+  executable_path = "test/paver-test"
 
-test_package("paver-test") {
   deps = [
-    ":devmgr-manifest",
     ":test",
-  ]
-
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  tests = [
-    {
-      name = "paver-test"
-      environments = basic_envs
-    },
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ftl",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/gpt",
+    "//src/devices/block/drivers/mbr",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/nand/drivers/nand",
+    "//src/devices/nand/drivers/nandpart",
+    "//src/devices/nand/drivers/ram-nand",
+    "//src/devices/nand/drivers/skip-block",
+    "//src/devices/tests/sysdev",
   ]
 }
 
