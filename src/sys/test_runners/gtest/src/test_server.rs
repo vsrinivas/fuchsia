@@ -225,8 +225,8 @@ impl SuiteServer for TestServer {
             .expect("Cannot open data directory");
             if let Err(e) = files_async::remove_dir_recursive(&test_data_dir, &test_data_name).await
             {
-                error!(
-                    "error deleting temp data dir '{}/{}': {:?}",
+                debug!(
+                    "cannot delete temp data dir '{}/{}': {:?}",
                     test_data_parent, test_data_name, e
                 );
             }
