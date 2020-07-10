@@ -41,6 +41,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/integration_tests/util/data_file_reader_writer_util.h"
 #include "src/sys/appmgr/realm.h"
@@ -392,6 +393,17 @@ class RealmIntrospectTest : public RealmTest {
   std::string current_realm_name_;
 };
 
+/// this will remove hash from the url and return un-hashed version.
+/// example:
+///  `url`:"fuchsia-pkg://fuchsia.com/my-pkg?hash=3204f2f24920e55bfbcb9c3a058ec2869f229b18d00ef1049ec3f47e5b7e4351#meta/my-component.cmx"
+///  returns "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx"
+std::string GetUnhashedUrl(const std::string& url) {
+  component::FuchsiaPkgUrl furl;
+  furl.Parse(url);
+  return fxl::Substitute("fuchsia-pkg://$0/$1#$2", furl.host_name(), furl.package_name(),
+                         furl.resource_path());
+}
+
 // This tests that the service is not available in environment which do not explicity include it
 // from parent environment.
 // This test's cmx file does that so we are able to indirectly test that inheriting this service
@@ -420,7 +432,7 @@ TEST_F(RealmIntrospectTest, ComponentUrlForCurrentProcess) {
   ASSERT_FALSE(result.is_err()) << zx_status_get_string(result.err());
   auto& response = result.response().component_info;
 
-  EXPECT_EQ(response.component_url(),
+  EXPECT_EQ(GetUnhashedUrl(response.component_url()),
             "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/"
             "appmgr_realm_integration_tests.cmx");
   std::vector<std::string> expected = {"app", "sys", current_realm_name()};
@@ -524,7 +536,7 @@ TEST_F(RealmIntrospectTest, ComponentUrlForNewProcess) {
   ASSERT_FALSE(result.is_err()) << zx_status_get_string(result.err());
   auto& response = result.response().component_info;
 
-  EXPECT_EQ(response.component_url(),
+  EXPECT_EQ(GetUnhashedUrl(response.component_url()),
             "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/"
             "appmgr_realm_integration_tests.cmx");
   std::vector<std::string> expected = {"app", "sys", current_realm_name()};
