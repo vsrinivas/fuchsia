@@ -110,6 +110,9 @@ func MultiplyShards(
 	targetTestCount int,
 ) ([]*Shard, error) {
 	for _, multiplier := range multipliers {
+		if multiplier.TotalRuns < 0 {
+			continue
+		}
 		type multiplierMatch struct {
 			shard *Shard
 			test  Test
@@ -181,6 +184,44 @@ func MultiplyShards(
 	}
 
 	return shards, nil
+}
+
+// ShardAffected separates the affected tests into separate shards.
+func ShardAffected(shards []*Shard, modTests []TestModifier) ([]*Shard, error) {
+	var newShards []*Shard
+	for _, shard := range shards {
+		var affected []Test
+		var unaffected []Test
+		for _, test := range shard.Tests {
+			isAffected := false
+			for _, modTest := range modTests {
+				if modTest.Name != test.Name {
+					continue
+				}
+
+				if modTest.Affected {
+					isAffected = true
+					affected = append(affected, test)
+					break
+				}
+			}
+			if !isAffected {
+				unaffected = append(unaffected, test)
+			}
+		}
+		if len(affected) > 0 {
+			newShards = append(newShards, &Shard{
+				Name:  fmt.Sprintf("affected:%s", shard.Name),
+				Tests: affected,
+				Env:   shard.Env,
+			})
+		}
+		if len(unaffected) > 0 {
+			shard.Tests = unaffected
+			newShards = append(newShards, shard)
+		}
+	}
+	return newShards, nil
 }
 
 func min(a, b int) int {

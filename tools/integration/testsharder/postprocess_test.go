@@ -19,6 +19,34 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
+func makeTest(id int, os string) Test {
+	test := Test{
+		Test: build.Test{
+			Name: fmt.Sprintf("test%d", id),
+			OS:   os,
+		},
+		Runs: 1,
+	}
+	if os == "fuchsia" {
+		test.Name = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
+	} else {
+		test.Name = fmt.Sprintf("/path/to/test%d", id)
+	}
+	return test
+}
+
+func shardWithOS(env build.Environment, os string, ids ...int) *Shard {
+	var tests []Test
+	for _, id := range ids {
+		tests = append(tests, makeTest(id, os))
+	}
+	return &Shard{
+		Name:  environmentName(env),
+		Tests: tests,
+		Env:   env,
+	}
+}
+
 func TestMultiplyShards(t *testing.T) {
 	env1 := build.Environment{
 		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
@@ -32,30 +60,8 @@ func TestMultiplyShards(t *testing.T) {
 		Dimensions: build.DimensionSet{OS: "linux"},
 		Tags:       []string{},
 	}
-	makeTest := func(id int, os string) Test {
-		test := Test{build.Test{
-			Name: fmt.Sprintf("test%d", id),
-			OS:   os,
-		}, 1}
-		if os == "fuchsia" {
-			test.Name = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
-		} else {
-			test.Name = fmt.Sprintf("/path/to/test%d", id)
-		}
-		return test
-	}
 
-	shard := func(env build.Environment, os string, ids ...int) *Shard {
-		var tests []Test
-		for _, id := range ids {
-			tests = append(tests, makeTest(id, os))
-		}
-		return &Shard{
-			Name:  environmentName(env),
-			Tests: tests,
-			Env:   env,
-		}
-	}
+	shard := shardWithOS
 
 	makeTestModifier := func(id int, os string, runs int) TestModifier {
 		return TestModifier{
@@ -242,6 +248,115 @@ func TestMultiplyShards(t *testing.T) {
 				return
 			}
 			assertEqual(t, expected, actual)
+		})
+	}
+}
+
+func TestShardAffected(t *testing.T) {
+	env1 := build.Environment{
+		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
+		Tags:       []string{},
+	}
+	env2 := build.Environment{
+		Dimensions: build.DimensionSet{DeviceType: "NUC"},
+		Tags:       []string{},
+	}
+	env3 := build.Environment{
+		Dimensions: build.DimensionSet{OS: "linux"},
+		Tags:       []string{},
+	}
+
+	shard := shardWithOS
+
+	makeTestModifier := func(id int, os string, affected bool) TestModifier {
+		var name string
+		if os == "fuchsia" {
+			name = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
+		} else {
+			name = fmt.Sprintf("/path/to/test%d", id)
+		}
+		return TestModifier{
+			Name:     name,
+			OS:       os,
+			Affected: affected,
+		}
+	}
+
+	affectedShard := func(env build.Environment, os string, ids ...int) *Shard {
+		var tests []Test
+		for _, id := range ids {
+			tests = append(tests, makeTest(id, os))
+		}
+		return &Shard{
+			Name:  "affected:" + environmentName(env),
+			Tests: tests,
+			Env:   env,
+		}
+	}
+
+	testCases := []struct {
+		name      string
+		shards    []*Shard
+		modifiers []TestModifier
+		expected  []*Shard
+		err       error
+	}{
+		{
+			name: "matches any os",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env3, "linux", 1, 2, 3),
+			},
+			modifiers: []TestModifier{
+				{Name: "fuchsia-pkg://fuchsia.com/test3", Affected: true},
+				{Name: "/path/to/test1", Affected: true},
+			},
+			expected: []*Shard{
+				affectedShard(env1, "fuchsia", 3),
+				shard(env1, "fuchsia", 1, 2),
+				affectedShard(env3, "linux", 1),
+				shard(env3, "linux", 2, 3),
+			},
+		},
+		{
+			name: "shards correctly",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+				shard(env1, "fuchsia", 2, 4),
+				shard(env2, "fuchsia", 1, 2, 4),
+				shard(env3, "linux", 3, 4),
+			},
+			modifiers: []TestModifier{
+				makeTestModifier(1, "fuchsia", false),
+				makeTestModifier(2, "fuchsia", false),
+				makeTestModifier(2, "fuchsia", true),
+				makeTestModifier(4, "fuchsia", true),
+				makeTestModifier(3, "linux", true),
+			},
+			expected: []*Shard{
+				shard(env1, "fuchsia", 1),
+				affectedShard(env1, "fuchsia", 2, 4),
+				affectedShard(env2, "fuchsia", 2, 4),
+				shard(env2, "fuchsia", 1),
+				affectedShard(env3, "linux", 3),
+				shard(env3, "linux", 4),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := ShardAffected(
+				tc.shards,
+				tc.modifiers,
+			)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("got unexpected error %v, expected: %v", err, tc.err)
+			}
+			if err != nil {
+				return
+			}
+			assertEqual(t, tc.expected, actual)
 		})
 	}
 }
@@ -461,11 +576,13 @@ func TestWithTargetDuration(t *testing.T) {
 		input := []*Shard{{
 			Name: "env1",
 			Env:  env1,
-			Tests: []Test{{build.Test{
-				Name:       "test1",
-				OS:         "fuchsia",
-				PackageURL: "test1",
-			}, 5,
+			Tests: []Test{{
+				Test: build.Test{
+					Name:       "test1",
+					OS:         "fuchsia",
+					PackageURL: "test1",
+				},
+				Runs: 5,
 			}},
 		}}
 		actual := WithTargetDuration(input, 2, 0, 0, defaultDurations)

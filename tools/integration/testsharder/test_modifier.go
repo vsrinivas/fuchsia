@@ -24,6 +24,10 @@ type TestModifier struct {
 	// testsharder will try to produce exactly one full shard for this test
 	// using historical test duration data.
 	TotalRuns int `json:"total_runs,omitempty"`
+
+	// Affected specifies whether the test is an affected test. If affected,
+	// it will be run in a separate shard than the unaffected tests.
+	Affected bool `json:"affected,omitempty"`
 }
 
 // LoadTestModifiers loads a set of test modifiers from a json manifest.
