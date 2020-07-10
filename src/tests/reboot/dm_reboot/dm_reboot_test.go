@@ -12,5 +12,5 @@ import (
 
 // Test that "dm reboot" will reboot the system.
 func TestDmReboot(t *testing.T) {
-	support.RebootWithCommand(t, "dm reboot")
+	support.RebootWithCommand(t, "dm reboot", support.CleanReboot)
 }

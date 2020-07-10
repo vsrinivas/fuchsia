@@ -8,6 +8,7 @@
 #include <lib/arch/intrin.h>
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
+#include <lib/zx/status.h>
 #include <reg.h>
 #include <stdio.h>
 #include <trace.h>
@@ -130,13 +131,13 @@ static void pl011_uart_init(const void* driver_data, uint32_t length) {
 }
 
 static int pl011_uart_getc(bool wait) {
-  char c;
-  if (uart_rx_buf.ReadChar(&c, wait) == 1) {
+  zx::status<char> result = uart_rx_buf.ReadChar(wait);
+  if (result.is_ok()) {
     UARTREG(uart_base, UART_IMSC) |= ((1 << 4) | (1 << 6));  // rxim
-    return c;
+    return result.value();
   }
 
-  return ZX_ERR_INTERNAL;
+  return result.error_value();
 }
 
 /* panic-time getc/putc */

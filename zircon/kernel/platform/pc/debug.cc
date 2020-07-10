@@ -690,10 +690,19 @@ static void debug_uart_putc_poll(char c) {
 }
 
 int platform_dgetc(char* c, bool wait) {
-  if (platform_serial_enabled()) {
-    return static_cast<int>(console_input_buf.ReadChar(c, wait));
+  if (!platform_serial_enabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
-  return ZX_ERR_NOT_SUPPORTED;
+
+  zx::status<char> result = console_input_buf.ReadChar(wait);
+  if (result.is_ok()) {
+    *c = result.value();
+    return 1;
+  }
+  if (result.error_value() == ZX_ERR_SHOULD_WAIT) {
+    return 0;
+  }
+  return result.error_value();
 }
 
 // panic time polling IO for the panic shell

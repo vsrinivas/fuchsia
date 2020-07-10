@@ -5,6 +5,7 @@
 
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
+#include <lib/zx/status.h>
 #include <reg.h>
 #include <stdio.h>
 #include <trace.h>
@@ -149,11 +150,11 @@ static int mt8167_uart_pgetc() {
 
 static int mt8167_uart_getc(bool wait) {
   if (initialized) {
-    char c;
-    if (uart_rx_buf.ReadChar(&c, wait) == 1) {
-      return c;
+    zx::status<char> result = uart_rx_buf.ReadChar(wait);
+    if (result.is_ok()) {
+      return result.value();
     }
-    return ZX_ERR_INTERNAL;
+    return result.error_value();
   } else {
     // Interrupts are not enabled yet. Use panic calls for now
     return mt8167_uart_pgetc();

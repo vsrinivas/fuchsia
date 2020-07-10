@@ -22,8 +22,15 @@ func zbiPath(t *testing.T) string {
 	return filepath.Join(exPath, "../fuchsia.zbi")
 }
 
+type ExpectedRebootType int
+
+const (
+	CleanReboot = iota
+	UncleanReboot
+)
+
 // RebootWithCommand is a test helper that boots a qemu instance then reboots it by issuing cmd.
-func RebootWithCommand(t *testing.T, cmd string) {
+func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType) {
 	distro, err := qemu.Unpack()
 	if err != nil {
 		t.Fatal(err)
@@ -54,8 +61,10 @@ func RebootWithCommand(t *testing.T, cmd string) {
 	// Trigger a reboot in one of the various ways.
 	i.RunCommand(cmd)
 
-	// Make sure the file system is notified and unmounts.
-	i.WaitForLogMessage("fshost: shutdown complete")
+	if kind == CleanReboot {
+		// Make sure the file system is notified and unmounts.
+		i.WaitForLogMessage("fshost: shutdown complete")
+	}
 
 	// Is the target rebooting?
 	i.WaitForLogMessage("Shutting down debuglog")

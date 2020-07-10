@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_LIB_CBUF_INCLUDE_LIB_CBUF_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/status.h>
 #include <pow2.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -43,8 +44,16 @@ class Cbuf {
    */
   bool Full() const;
 
-  /* Special cases for dealing with a single char of data. */
-  size_t ReadChar(char* c, bool block);
+  /**
+   * Read one character.
+   *
+   * If |wait| is true, block until a character is read or the thread is asked to suspend or
+   * terminate (ZX_ERR_INTERNAL_INTR_RETRY, ZX_ERR_INTERNAL_INTR_KILLED).
+   *
+   * If |wait| is false and no character is ready, ZX_ERR_SHOULD_WAIT is returned.
+   */
+  zx::status<char> ReadChar(bool block);
+
   size_t WriteChar(char c);
 
  private:

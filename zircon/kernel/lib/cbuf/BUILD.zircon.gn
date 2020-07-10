@@ -7,4 +7,15 @@
 zx_library("cbuf") {
   kernel = true
   sources = [ "cbuf.cc" ]
+  deps = [
+    ":tests",
+    "$zx/kernel/lib/zxc",
+  ]
+}
+
+source_set("tests") {
+  # TODO: testonly = true
+  sources = [ "cbuf_tests.cc" ]
+  include_dirs = [ "include" ]
+  deps = [ "$zx/kernel/lib/unittest" ]
 }

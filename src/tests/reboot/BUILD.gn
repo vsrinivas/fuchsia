@@ -16,6 +16,7 @@ group("tests") {
       ":dm_reboot_bootloader_test($host_toolchain)",
       ":dm_reboot_recovery_test($host_toolchain)",
       ":dm_reboot_test($host_toolchain)",
+      ":kill_critical_process_test($host_toolchain)",
     ]
   }
 }
@@ -59,5 +60,7 @@ if (is_linux) {
   split_go_test("dm_reboot_recovery") {
   }
   split_go_test("dm_reboot_bootloader") {
+  }
+  split_go_test("kill_critical_process") {
   }
 }

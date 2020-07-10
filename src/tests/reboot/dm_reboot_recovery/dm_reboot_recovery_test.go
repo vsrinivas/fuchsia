@@ -14,5 +14,5 @@ import (
 // reboot to the recovery partition.  However, in this test environment we have no recovery
 // partition so the system will end up back where it started.
 func TestDmRebootRecovery(t *testing.T) {
-	support.RebootWithCommand(t, "dm reboot-recovery")
+	support.RebootWithCommand(t, "dm reboot-recovery", support.CleanReboot)
 }

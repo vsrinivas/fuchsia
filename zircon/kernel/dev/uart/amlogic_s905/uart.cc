@@ -6,6 +6,7 @@
 
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
+#include <lib/zx/status.h>
 #include <reg.h>
 #include <stdio.h>
 #include <string.h>
@@ -206,11 +207,11 @@ static int s905_uart_pgetc() {
 static int s905_uart_getc(bool wait) {
   if (initialized) {
     // do cbuf stuff here
-    char c;
-    if (uart_rx_buf.ReadChar(&c, wait) == 1) {
-      return c;
+    zx::status<char> result = uart_rx_buf.ReadChar(wait);
+    if (result.is_ok()) {
+      return result.value();
     }
-    return ZX_ERR_INTERNAL;
+    return result.error_value();
 
   } else {
     // Interrupts not online yet, use the panic calls for now.

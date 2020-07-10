@@ -666,11 +666,6 @@ static interrupt_eoi i8042_interrupt(void* arg) {
   return IRQ_EOI_DEACTIVATE;
 }
 
-int platform_read_key(char* c) {
-  ssize_t len = key_buf->ReadChar(c, true);
-  return static_cast<int>(len);
-}
-
 void platform_init_keyboard(Cbuf* buffer) {
   uint8_t ctr;
 

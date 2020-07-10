@@ -14,5 +14,5 @@ import (
 // will reboot to the bootloader.  However, in this test environment it will simply reboot and the
 // system will end up back where it started.
 func TestDmRebootBootloader(t *testing.T) {
-	support.RebootWithCommand(t, "dm reboot-bootloader")
+	support.RebootWithCommand(t, "dm reboot-bootloader", support.CleanReboot)
 }

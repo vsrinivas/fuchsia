@@ -9,6 +9,7 @@
 
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
+#include <lib/zx/status.h>
 #include <reg.h>
 #include <stdio.h>
 #include <trace.h>
@@ -153,8 +154,9 @@ static int msm_pgetc(void) {
   char* bytes;
 
   // see if we have chars left from previous read
-  if (rxbuf->ReadChar(&c, false) == 1) {
-    return c;
+  zx::status<char> result = rxbuf->ReadChar(false);
+  if (result.is_ok()) {
+    return result.value();
   }
 
   if ((uart_read(UART_DM_SR) & UART_DM_SR_OVERRUN)) {
@@ -261,9 +263,12 @@ static void msm_uart_init(const void* driver_data, uint32_t length) {
 }
 
 static int msm_getc(bool wait) {
-  char ch;
-  size_t count = uart_rx_buf.ReadChar(&ch, wait);
-  return (count == 1 ? ch : -1);
+  zx::status<char> result = uart_rx_buf.ReadChar(wait);
+  if (result.is_ok()) {
+    return result.value();
+  } else {
+    return result.error_value();
+  }
 }
 
 static void msm_start_panic(void) { uart_tx_irq_enabled = false; }

@@ -59,35 +59,35 @@ size_t Cbuf::WriteChar(char c) {
   return ret;
 }
 
-size_t Cbuf::ReadChar(char* c, bool block) {
-  DEBUG_ASSERT(c);
+zx::status<char> Cbuf::ReadChar(bool block) {
+  while (true) {
+    if (block) {
+      zx_status_t status = event_.Wait(Deadline::infinite());
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+    }
 
-retry:
-  if (block) {
-    event_.Wait(Deadline::infinite());
-  }
+    {
+      AutoSpinLock guard(&lock_);
 
-  size_t ret = 0;
-  {
-    AutoSpinLock guard(&lock_);
+      // See if there's data available.
+      if (tail_ != head_) {
+        char c = buf_[tail_];
+        IncPointer(&tail_, 1);
 
-    // see if there's data available
-    if (tail_ != head_) {
-      *c = buf_[tail_];
-      IncPointer(&tail_, 1);
+        if (tail_ == head_) {
+          // We've emptied the buffer, so unsignal the event.
+          event_.Unsignal();
+        }
 
-      if (tail_ == head_) {
-        // We've emptied the buffer, so unsignal the event.
-        event_.Unsignal();
+        return zx::ok(c);
       }
 
-      ret = 1;
+      // No data available. Try again?
+      if (!block) {
+        return zx::error(ZX_ERR_SHOULD_WAIT);
+      }
     }
   }
-
-  if (block && ret == 0) {
-    goto retry;
-  }
-
-  return ret;
 }
