@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <threads.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -79,6 +80,7 @@ static_assert(sizeof(eth_buffer_t) == 32, "");
 
 static eth_buffer_t* eth_buffer_base;
 static size_t eth_buffer_count;
+static fuchsia_hardware_ethernet_DeviceStatus last_dev_status = 0;
 
 static int _check_ethbuf(eth_buffer_t* ethbuf, uint32_t state) {
   if (((uintptr_t)ethbuf) & 31) {
@@ -352,6 +354,17 @@ int netifc_poll(zx_time_t deadline) {
 
   if (netifc_send_pending()) {
     return 0;
+  }
+  fuchsia_hardware_ethernet_DeviceStatus dev_status = 0;
+  zx_status_t fidl_status = fuchsia_hardware_ethernet_DeviceGetStatus(g_netsvc, &dev_status);
+  if (dev_status != last_dev_status) {
+    if (!(dev_status & fuchsia_hardware_ethernet_DeviceStatus_ONLINE)) {
+      printf("netifc: Interface down. Operation code %i, FIDL code %s\n", dev_status,
+             zx_status_get_string(fidl_status));
+    } else {
+      printf("netifc: Interface up.\n");
+    }
+    last_dev_status = dev_status;
   }
 
   status = eth_wait_rx(g_eth, deadline);
