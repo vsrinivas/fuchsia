@@ -7,6 +7,8 @@ import 'dart:io';
 
 import 'package:logging/logging.dart';
 import 'package:ports/ports.dart';
+import 'package:pkg/pkg.dart';
+import 'package:quiver/core.dart' show Optional;
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
 
@@ -37,54 +39,6 @@ Future<ProcessResult> createArchive(
       workingDirectory: workingDirectory);
 }
 
-/// Make sure there's only one instance of the item in the input.
-///
-/// Example expected input:
-/// Rule {
-///     host_match: "fuchsia.com",
-///     host_replacement: "devhost",
-///     path_prefix_match: "/",
-///     path_prefix_replacement: "/",
-/// }
-///
-/// We want to make sure there is only one instance of a given key:value.
-bool hasExclusivelyOneItem(
-    String input, String expectedKey, String expectedValue) {
-  return 1 ==
-      RegExp('($expectedKey):\\s+\\"($expectedValue)\\"')
-          .allMatches(input)
-          .length;
-}
-
-/// Find the redirect rule for `fuchsia.com`, if there is one.
-///
-/// Example expected input:
-/// Rule {
-///     host_match: "fuchsia.com",
-///     host_replacement: "devhost",
-///     path_prefix_match: "/",
-///     path_prefix_replacement: "/",
-/// }
-///
-/// Returns `"devhost"` for the above example input.
-/// Returns `null` if there are no rules for `"fuchsia.com"`.
-String getCurrentRewriteRule(String ruleList) {
-  String fuchsiaRule = '';
-  var matches = RegExp('Rule (\{.+?\})', dotAll: true).allMatches(ruleList);
-  for (final match in matches) {
-    if (hasExclusivelyOneItem(match.group(0), 'host_match', 'fuchsia.com')) {
-      fuchsiaRule = match.group(0);
-      break;
-    }
-  }
-  matches = RegExp('host_replacement:\\s+\\"(.+)\\"').allMatches(fuchsiaRule);
-  for (final match in matches) {
-    // There should only be one match. If not, just take the first one.
-    return match.group(1);
-  }
-  return null;
-}
-
 void main() {
   final log = Logger('package_manager_test');
   final pmPath = Platform.script.resolve('runtime_deps/pm').toFilePath();
@@ -101,18 +55,30 @@ void main() {
   });
 
   tearDownAll(() async {
-    serveProcess.kill();
     await sl4fDriver.stopServer();
     sl4fDriver.close();
   });
   group('Package Manager', () {
     Directory tempDir;
+    Optional<String> originalRewriteRule;
+    Set<String> originalRepos;
     setUp(() async {
       tempDir = await Directory.systemTemp.createTemp('repo');
+
+      // Gather the original package management settings before test begins.
+      originalRepos = await getCurrentRepos(sl4fDriver);
+      var ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
+      expect(ruleListResponse.exitCode, 0);
+      originalRewriteRule =
+          getCurrentRewriteRule(ruleListResponse.stdout.toString());
     });
     tearDown(() async {
-      // TODO(vfcc): Write generic logic to observe the state of the repos and restore them to
-      // expected defaults.
+      if (!await resetPkgctl(sl4fDriver, originalRepos, originalRewriteRule)) {
+        log.severe('Failed to reset pkgctl to default state');
+      }
+      if (serveProcess != null) {
+        serveProcess.kill();
+      }
       tempDir.deleteSync(recursive: true);
     });
     test(
@@ -179,8 +145,6 @@ void main() {
       expect(ruleListResponse.exitCode, 0);
       final originalRuleList = ruleListResponse.stdout.toString();
 
-      var originalRewriteRule = getCurrentRewriteRule(originalRuleList);
-
       log.info(
           'Adding the new repository as an update source with http://$hostAddress:$port');
       final addRepoCfgResponse = await sl4fDriver.ssh.run(
@@ -219,10 +183,10 @@ void main() {
       listSrcsResponseOutput = listSrcsResponse.stdout.toString();
       expect(listSrcsResponseOutput.contains(repoUrl), isFalse);
 
-      if (originalRewriteRule != null) {
+      if (originalRewriteRule.isPresent) {
         log.info('Re-enabling original repo source');
         final enableSrcResponse = await sl4fDriver.ssh
-            .run('amberctl enable_src -n $originalRewriteRule');
+            .run('amberctl enable_src -n ${originalRewriteRule.value}');
         expect(enableSrcResponse.exitCode, 0);
       }
 
