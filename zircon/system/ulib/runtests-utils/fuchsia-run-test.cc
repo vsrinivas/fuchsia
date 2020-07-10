@@ -597,7 +597,8 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
   const zx::time end_time = zx::clock::get_monotonic();
   const int64_t duration_milliseconds = (end_time - start_time).to_msecs();
   if (status != ZX_OK) {
-    fprintf(stderr, "FAILURE: Failed to wait for process exiting %s: %d\n", test_name, status);
+    fprintf(stderr, "FAILURE: Failed to wait for process exiting %s: %d (%s)\n", test_name, status,
+            zx_status_get_string(status));
     if (status == ZX_ERR_TIMED_OUT) {
       return std::make_unique<Result>(test_name, TIMED_OUT, 0, duration_milliseconds);
     }
