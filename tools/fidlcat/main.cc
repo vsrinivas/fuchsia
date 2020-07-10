@@ -173,8 +173,8 @@ int ConsoleMain(int argc, const char* argv[]) {
     replay.dispatcher()->SessionEnded();
   } else {
     InterceptionWorkflow workflow;
-    workflow.Initialize(options.symbol_paths, options.symbol_repo_paths, options.symbol_cache_path,
-                        options.symbol_servers, std::move(decoder_dispatcher),
+    workflow.Initialize(options.symbol_paths, options.build_id_dirs, options.ids_txts,
+                        options.symbol_cache, options.symbol_servers, std::move(decoder_dispatcher),
                         options.quit_agent_on_exit);
 
     if (workflow.HasSymbolServers()) {

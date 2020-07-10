@@ -85,7 +85,7 @@ const char* const kFidlIrPathHelp = R"(  --fidl-ir-path=<path>|@argfile
       argfile.  This switch can be passed multiple times to add multiple
       locations.)";
 
-const char* const kSymbolPathHelp = R"(  --symbol-path=<path>
+const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
   -s <path>
       Adds the given directory or file to the symbol search path. Multiple
       -s switches can be passed to add multiple locations. When a directory
@@ -97,23 +97,32 @@ const char* const kSymbolPathHelp = R"(  --symbol-path=<path>
       will be loaded as an ELF file (if possible).)";
 
 const char kSymbolRepoPathHelp[] = R"(  --symbol-repo-path=<path>
+      Deprecated. Please use --build-id-dir instead.)";
+
+const char kBuildIdDirHelp[] = R"(  --build-id-dir=<path>
       Adds the given directory to the symbol search path. Multiple
-      --symbol-repo-path switches can be passed to add multiple locations. the
-      path is always assumed to be a directory, unlike with -s, and the
-      directory is assumed to contain an index of all ELF files in the same
-      style as the .build-id folder as used with the -s option. This is useful
-      if your build ID index is not named .build-id)";
+      --build-id-dir switches can be passed to add multiple directories.
+      The directory must have the same structure as a .build-id directory,
+      that is, each symbol file lives at xx/yyyyyyyy.debug where xx is
+      the first two characters of the build ID and yyyyyyyy is the rest.
+      However, the name of the directory doesn't need to be .build-id.)";
+
+const char kIdsTxtHelp[] = R"(  --ids-txt=<path>
+      Adds the given file to the symbol search path. Multiple --ids-txt
+      switches can be passed to add multiple files. The file, typically named
+      "ids.txt", serves as a mapping from build ID to symbol file path and
+      should contain multiple lines in the format of "<build ID> <file path>".)";
 
 const char kSymbolCacheHelp[] = R"(  --symbol-cache=<path>
-      Path where we can keep a symbol cache. A folder called <path>/.build-id
-      will be created if it does not exist, and symbols will be read from this
-      location as though you had specified "-s <path>". If a symbol server has
-      been specified, downloaded symbols will be stored in the .build-id
-      folder.)";
+      Directory where we can keep a symbol cache. If a symbol server has been
+      specified, downloaded symbols will be stored in this directory. The
+      directory structure will be the same as a .build-id directory, and
+      symbols will be read from this location as though you had specified
+      "--build-id-dir=<path>".)";
 
 const char kSymbolServerHelp[] = R"(  --symbol-server=<url>
-      When symbols are missing, attempt to download them from the given URL.
-      will be loaded as an ELF file (if possible).)";
+      Adds the given URL to symbol servers. Symbol servers host the debug
+      symbols for prebuilt binaries and dynamic libraries.)";
 
 const char* const kSyscallFilterHelp = R"(  --syscalls
       A regular expression which selects the syscalls to decode and display.
@@ -259,10 +268,11 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("replay", 0, kReplayHelp, &CommandLineOptions::replay);
   parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp, &CommandLineOptions::fidl_ir_paths);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
-  parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp,
-                   &CommandLineOptions::symbol_repo_paths);
-  parser.AddSwitch("symbol-cache", 's', kSymbolCacheHelp, &CommandLineOptions::symbol_cache_path);
-  parser.AddSwitch("symbol-server", 's', kSymbolServerHelp, &CommandLineOptions::symbol_servers);
+  parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp, &CommandLineOptions::build_id_dirs);
+  parser.AddSwitch("build-id-dir", 0, kBuildIdDirHelp, &CommandLineOptions::build_id_dirs);
+  parser.AddSwitch("ids-txt", 0, kIdsTxtHelp, &CommandLineOptions::ids_txts);
+  parser.AddSwitch("symbol-cache", 0, kSymbolCacheHelp, &CommandLineOptions::symbol_cache);
+  parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
   parser.AddSwitch("syscalls", 0, kSyscallFilterHelp, &CommandLineOptions::syscall_filters);
   parser.AddSwitch("exclude-syscalls", 0, kExcludeSyscallFilterHelp,
                    &CommandLineOptions::exclude_syscall_filters);

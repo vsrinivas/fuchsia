@@ -23,8 +23,9 @@ struct CommandLineOptions {
   std::string display_proto;
   std::string replay;
   std::vector<std::string> symbol_paths;
-  std::vector<std::string> symbol_repo_paths;
-  std::string symbol_cache_path;
+  std::vector<std::string> build_id_dirs;
+  std::vector<std::string> ids_txts;
+  std::optional<std::string> symbol_cache;
   std::vector<std::string> symbol_servers;
   std::vector<std::string> fidl_ir_paths;
   std::vector<std::string> syscall_filters;

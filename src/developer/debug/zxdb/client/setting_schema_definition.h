@@ -27,20 +27,23 @@ struct ClientSettings {
   struct System {
     static const char* kAutoCastToDerived;
     static const char* kDebugMode;
-    static const char* kSymbolPaths;
-    static const char* kSymbolRepoPaths;
     static const char* kPauseOnLaunch;
     static const char* kPauseOnAttach;
     static const char* kQuitAgentOnExit;
     static const char* kShowFilePaths;
     static const char* kShowStdout;
-    static const char* kSymbolServers;
-    static const char* kSymbolCache;
 
     static const char* kLanguage;
     static const char* kLanguage_Cpp;
     static const char* kLanguage_Rust;
     static const char* kLanguage_Auto;
+
+    // Symbol lookup.
+    static const char* kSymbolPaths;
+    static const char* kBuildIdDirs;
+    static const char* kIdsTxts;
+    static const char* kSymbolServers;
+    static const char* kSymbolCache;
   };
 
   struct Job {};

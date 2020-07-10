@@ -240,6 +240,7 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
 void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
   std::error_code ec;
   if (std::filesystem::is_directory(path, ec)) {
+    // TODO(dangyi): Drop support for .build-id subdirectory.
     auto build_id_path = std::filesystem::path(path) / ".build-id";
 
     if (std::filesystem::is_directory(build_id_path, ec)) {

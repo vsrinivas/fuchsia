@@ -21,9 +21,10 @@ struct CommandLineOptions {
   std::optional<std::string> run;
   std::vector<std::string> filter;
   std::optional<std::string> script_file;
-  std::optional<std::string> symbol_cache_path;
+  std::optional<std::string> symbol_cache;
   std::vector<std::string> symbol_paths;
-  std::vector<std::string> symbol_repo_paths;
+  std::vector<std::string> build_id_dirs;
+  std::vector<std::string> ids_txts;
   std::vector<std::string> symbol_servers;
   std::vector<std::string> build_dirs;
 };

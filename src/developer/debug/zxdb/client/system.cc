@@ -45,22 +45,6 @@ static const char* kDebugModeDescription =
     R"(  Output debug information about zxdb.
   In general should only be useful for people developing zxdb.)";
 
-const char* ClientSettings::System::kSymbolPaths = "symbol-paths";
-static const char* kSymbolPathsDescription =
-    R"(  List of mapping databases, ELF files or directories for symbol lookup.
-  When a directory path is passed, the directory will be enumerated
-  non-recursively to index all ELF files within, unless it contains a .build-id
-  subfolder, in which case that is presumed to contain an index of all ELF
-  files within. When a .txt file is passed, it will be treated as a mapping
-  database from build ID to file path. Otherwise, the path will be loaded as an
-  ELF file.)";
-
-const char* ClientSettings::System::kSymbolRepoPaths = "symbol-repo-paths";
-static const char* kSymbolRepoPathsDescription =
-    R"(  List of directories for symbol lookup. Each directory is assumed to
-  contain a ".build-id"-style index of symbol files, but does not need to be
-  named .build-id.)";
-
 const char* ClientSettings::System::kPauseOnLaunch = "pause-on-launch";
 static const char* kPauseOnLaunchDescription =
     R"(  Whether a process launched through zxdb should be stopped on startup.
@@ -87,15 +71,6 @@ const char* ClientSettings::System::kQuitAgentOnExit = "quit-agent-on-exit";
 static const char* kQuitAgentOnExitDescription =
     R"(  Whether the client will shutdown the connected agent upon exiting.")";
 
-const char* ClientSettings::System::kSymbolServers = "symbol-servers";
-static const char* kSymbolServersDescription = R"(  List of symbol server URLs.)";
-
-const char* ClientSettings::System::kSymbolCache = "symbol-cache";
-static const char* kSymbolCacheDescription =
-    R"(  Path to a writable directory for symbol data. A subdirectory named
-  .build-id will be created under the given path, and downloaded symbols will
-  be stored there.)";
-
 const char* ClientSettings::System::kLanguage = "language";
 static const char* kLanguageDescription =
     R"(  Programming language for expressions given to commands such as print.
@@ -105,6 +80,40 @@ const char* ClientSettings::System::kLanguage_Cpp = "c++";
 const char* ClientSettings::System::kLanguage_Rust = "rust";
 const char* ClientSettings::System::kLanguage_Auto = "auto";
 
+// Symbol lookup.
+const char* ClientSettings::System::kSymbolPaths = "symbol-paths";
+static const char* kSymbolPathsDescription =
+    R"(  List of mapping databases, ELF files or directories for symbol lookup.
+  When a directory path is passed, the directory will be enumerated
+  non-recursively to index all ELF files within, unless it contains a .build-id
+  subfolder, in which case that is presumed to contain an index of all ELF
+  files within. When a .txt file is passed, it will be treated as a mapping
+  database from build ID to file path. Otherwise, the path will be loaded as an
+  ELF file.)";
+
+const char* ClientSettings::System::kBuildIdDirs = "build-id-dirs";
+static const char* kBuildIdDirsDescription =
+    R"(  List of ".build-id" directories for symbol lookup. Each directory is assumed to
+  contain a ".build-id"-style index of symbol files, that is, each symbol file
+  lives at xx/yyyyyyyy.debug where xx is the first two characters of the build
+  ID and yyyyyyyy is the rest. However, the name of the directory doesn't need
+  to be .build-id.)";
+
+const char* ClientSettings::System::kIdsTxts = "ids-txts";
+static const char* kIdsTxtsDescription =
+    R"(  List of "ids.txt" files for symbol lookup. Each file, typically named
+  "ids.txt", serves as a mapping from build ID to symbol file path and should
+  contain multiple lines in the format of "<build ID> <file path>".)";
+
+const char* ClientSettings::System::kSymbolServers = "symbol-servers";
+static const char* kSymbolServersDescription = R"(  List of symbol server URLs.)";
+
+const char* ClientSettings::System::kSymbolCache = "symbol-cache";
+static const char* kSymbolCacheDescription =
+    R"(  Directory where we can keep a symbol cache. If a symbol server has been
+  specified, downloaded symbols will be stored in this directory. The directory
+  structure will be the same as a .build-id directory.)";
+
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
@@ -112,17 +121,20 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
   schema->AddBool(ClientSettings::System::kAutoCastToDerived, kAutoCastToDerivedDescription, true);
   schema->AddBool(ClientSettings::System::kDebugMode, kDebugModeDescription, false);
-  schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription, {});
-  schema->AddList(ClientSettings::System::kSymbolRepoPaths, kSymbolRepoPathsDescription, {});
   schema->AddBool(ClientSettings::System::kPauseOnLaunch, kPauseOnLaunchDescription, false);
   schema->AddBool(ClientSettings::System::kPauseOnAttach, kPauseOnAttachDescription, false);
   schema->AddBool(ClientSettings::System::kQuitAgentOnExit, kQuitAgentOnExitDescription, true);
   schema->AddBool(ClientSettings::System::kShowFilePaths, kShowFilePathsDescription, false);
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
-  schema->AddList(ClientSettings::System::kSymbolServers, kSymbolServersDescription, {});
-  schema->AddString(ClientSettings::System::kSymbolCache, kSymbolCacheDescription, "");
   schema->AddString(ClientSettings::System::kLanguage, kLanguageDescription, "auto",
                     {"rust", "c++", "auto"});
+
+  // Symbol lookup.
+  schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription, {});
+  schema->AddList(ClientSettings::System::kBuildIdDirs, kBuildIdDirsDescription, {});
+  schema->AddList(ClientSettings::System::kIdsTxts, kIdsTxtsDescription, {});
+  schema->AddList(ClientSettings::System::kSymbolServers, kSymbolServersDescription, {});
+  schema->AddString(ClientSettings::System::kSymbolCache, kSymbolCacheDescription, "");
 
   // Target ones.
   schema->AddList(ClientSettings::Target::kBuildDirs, ClientSettings::Target::kBuildDirsDescription,
@@ -289,7 +301,8 @@ System::System(Session* session)
   settings_.AddObserver(ClientSettings::System::kDebugMode, this);
   settings_.AddObserver(ClientSettings::System::kSymbolCache, this);
   settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
-  settings_.AddObserver(ClientSettings::System::kSymbolRepoPaths, this);
+  settings_.AddObserver(ClientSettings::System::kBuildIdDirs, this);
+  settings_.AddObserver(ClientSettings::System::kIdsTxts, this);
   settings_.AddObserver(ClientSettings::System::kSymbolServers, this);
 
   // Observe the session for filter matches and attach to any process koid that the system is not
@@ -754,35 +767,41 @@ void System::AddNewJob(std::unique_ptr<Job> job) {
 }
 
 void System::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {
-  if (setting_name == ClientSettings::System::kSymbolPaths) {
-    auto paths = store.GetList(ClientSettings::System::kSymbolPaths);
+  if (setting_name == ClientSettings::System::kSymbolPaths ||
+      setting_name == ClientSettings::System::kBuildIdDirs ||
+      setting_name == ClientSettings::System::kIdsTxts ||
+      setting_name == ClientSettings::System::kSymbolCache) {
+    // If any of them change, we have to reinitialize the build_id_index.
+    auto symbol_paths = store.GetList(ClientSettings::System::kSymbolPaths);
+    auto build_id_dirs = store.GetList(ClientSettings::System::kBuildIdDirs);
+    auto ids_txts = store.GetList(ClientSettings::System::kIdsTxts);
+    auto symbol_cache = store.GetString(ClientSettings::System::kSymbolCache);
 
     // Clear the symbol sources and add them back to sync the index with the setting.
     BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
     build_id_index.ClearSymbolSources();
 
-    for (const std::string& path : paths) {
+    for (const std::string& path : symbol_paths) {
+      // TODO(dangyi): Drop support for .txt file here.
       if (StringEndsWith(path, ".txt")) {
         build_id_index.AddBuildIDMappingFile(path);
       } else {
         build_id_index.AddSymbolSource(path);
       }
     }
-  } else if (setting_name == ClientSettings::System::kSymbolRepoPaths) {
-    auto paths = store.GetList(ClientSettings::System::kSymbolPaths);
-    BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
-    for (const std::string& path : paths) {
+    for (const std::string& path : build_id_dirs) {
       build_id_index.AddRepoSymbolSource(path);
     }
-  } else if (setting_name == ClientSettings::System::kSymbolCache) {
-    auto path = store.GetString(setting_name);
-
-    if (!path.empty()) {
+    for (const std::string& path : ids_txts) {
+      build_id_index.AddBuildIDMappingFile(path);
+    }
+    if (!symbol_cache.empty()) {
       std::error_code ec;
-      std::filesystem::create_directory(std::filesystem::path(path) / ".build-id", ec);
-      GetSymbols()->build_id_index().AddSymbolSource(path);
+      std::filesystem::create_directories(std::filesystem::path(symbol_cache), ec);
+      build_id_index.AddRepoSymbolSource(symbol_cache);
     }
   } else if (setting_name == ClientSettings::System::kSymbolServers) {
+    // TODO(dangyi): We don't support the removal of an existing symbol server yet.
     auto urls = store.GetList(setting_name);
     std::set<std::string> existing;
 

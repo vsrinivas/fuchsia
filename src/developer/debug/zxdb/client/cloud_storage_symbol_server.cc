@@ -42,43 +42,21 @@ std::string ToDebugFileName(const std::string& name, DebugSymbolFileType file_ty
   return name;
 }
 
-std::filesystem::path GetCachePath() {
-  static std::filesystem::path ret;
-
-  if (!ret.empty()) {
-    return ret;
-  }
-
-  auto home = std::getenv("HOME");
-
-#ifdef __APPLE__
-  if (home) {
-    ret = std::filesystem::path(home) / "Library" / "Caches" / "com.googlesource.fuchsia.zxdb";
-  }
-#else
-  auto xdg = getenv("XDG_CACHE_HOME");
-
-  if (xdg) {
-    ret = std::filesystem::path(xdg) / "zxdb";
-  } else if (home) {
-    ret = std::filesystem::path(home) / ".cache" / "zxdb";
-  }
-#endif
-
-  return ret;
-}
-
 FILE* GetGoogleApiAuthCache(const char* mode) {
-  auto path = GetCachePath();
+  static std::filesystem::path path;
 
-  std::error_code ec;
-  std::filesystem::create_directories(path, ec);
+  if (path.empty()) {
+    path = std::filesystem::path(std::getenv("HOME")) / ".fuchsia" / "debug";
+    std::error_code ec;
+    std::filesystem::create_directories(path, ec);
 
-  if (!std::filesystem::is_directory(path, ec)) {
-    return nullptr;
+    if (ec) {
+      path.clear();
+      return nullptr;
+    }
   }
 
-  return fopen(std::string(path / "googleapi_auth").c_str(), mode);
+  return fopen((path / "googleapi_auth").c_str(), mode);
 }
 
 class CloudStorageSymbolServerImpl : public CloudStorageSymbolServer {
@@ -367,7 +345,7 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
 
   if (!cache_path.empty()) {
     std::error_code ec;
-    auto path_obj = std::filesystem::path(cache_path) / ".build-id";
+    auto path_obj = std::filesystem::path(cache_path);
 
     if (std::filesystem::is_directory(path_obj, ec)) {
       // Download to a temporary file, so if we get cancelled (or we get sent a 404 page instead of
@@ -417,7 +395,7 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
       return path;
     }
 
-    auto target_path = std::filesystem::path(cache_path) / ".build-id" / build_id.substr(0, 2);
+    auto target_path = std::filesystem::path(cache_path) / build_id.substr(0, 2);
     auto target_name = ToDebugFileName(build_id.substr(2), file_type);
 
     std::filesystem::create_directory(target_path, ec);

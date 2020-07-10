@@ -296,11 +296,10 @@ if [[ ${launch_agent} -eq 1 ]]; then
   if launch_debug_agent "${port}" "" "${agent_out}"; then
     arguments+=("--connect" "$(get-device-addr-resource):${port}")
     arguments+=("--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt)
-    arguments+=("-s" "${FUCHSIA_BUILD_DIR}")
-    arguments+=("-s" "${ZIRCON_BUILDROOT}")
-    arguments+=("-s" "${FUCHSIA_DIR}/prebuilt")
-    arguments+=("-s" "${PREBUILT_CLANG_DIR}/lib/debug")
-    arguments+=("--symbol-cache" "~")
+    arguments+=("--build-id-dir" "${FUCHSIA_BUILD_DIR}/.build-id")
+    arguments+=("--build-id-dir" "${ZIRCON_BUILDROOT}/.build-id")
+    arguments+=("--build-id-dir" "${FUCHSIA_DIR}/prebuilt/.build-id")
+    arguments+=("--build-id-dir" "${PREBUILT_CLANG_DIR}/lib/debug/.build-id")
     arguments+=("--pretty-print")
     arguments+=("$@")
 
@@ -325,9 +324,9 @@ if [[ ${launch_agent} -eq 1 ]]; then
     exit 1
   fi
 else
-    arguments+=("--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt)
-    arguments+=("--pretty-print")
-    arguments+=("$@")
+  arguments+=("--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt)
+  arguments+=("--pretty-print")
+  arguments+=("$@")
 
   if [[ ${use_gdb} -eq 1 ]]; then
     # Starts gdb.

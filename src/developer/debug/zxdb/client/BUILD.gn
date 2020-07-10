@@ -202,13 +202,9 @@ if (is_host) {
   host_test_data("fake_home") {
     sources = [ "test_dummy_file" ]
 
-    if (is_mac) {
-      outputs = [ "$root_out_dir/test_data/zxdb/fake_home/Library/Caches/com.googlesource.fuchsia.zxdb/googleapi_auth" ]
-    } else {
-      outputs = [
-        "$root_out_dir/test_data/zxdb/fake_home/.cache/zxdb/googleapi_auth",
-      ]
-    }
+    outputs = [
+      "$root_out_dir/test_data/zxdb/fake_home/.fuchsia/debug/googleapi_auth",
+    ]
   }
 
   host_test_data("sample_core") {

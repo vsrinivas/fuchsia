@@ -118,7 +118,7 @@ TEST_F(CommandLineOptionsTest, BadOptionsTest) {
 TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   std::string fidl_ir_path = "blah.fidl.json";
   std::string symbol_path = "path/to/debug/symbols";
-  std::string symbol_repo_path = "path/to/debug/symbols/repo";
+  std::string build_id_dir = "path/to/build/id/dir";
   std::string symbol_cache = "~";
   std::string symbol_server = "gs://fuchsia-artifacts-release/debug";
   std::string remote_pid = "3141";
@@ -132,8 +132,8 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
                                    fidl_ir_path.c_str(),
                                    "-s",
                                    symbol_path.c_str(),
-                                   "--symbol-repo-path",
-                                   symbol_repo_path.c_str(),
+                                   "--build-id-dir",
+                                   build_id_dir.c_str(),
                                    "--symbol-cache",
                                    symbol_cache.c_str(),
                                    "--symbol-server",
@@ -174,8 +174,8 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   ASSERT_EQ(connect, *options.connect);
   ASSERT_EQ(remote_pid, options.remote_pid[0]);
   ASSERT_EQ(symbol_path, options.symbol_paths[0]);
-  ASSERT_EQ(symbol_repo_path, options.symbol_repo_paths[0]);
-  ASSERT_EQ(symbol_cache, options.symbol_cache_path);
+  ASSERT_EQ(build_id_dir, options.build_id_dirs[0]);
+  ASSERT_EQ(symbol_cache, options.symbol_cache);
   ASSERT_EQ(symbol_server, options.symbol_servers[0]);
   ASSERT_EQ(fidl_ir_path, options.fidl_ir_paths[0]);
   ASSERT_EQ(2, options.stack_level);

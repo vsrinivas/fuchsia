@@ -179,8 +179,9 @@ InterceptionWorkflow::~InterceptionWorkflow() {
 }
 
 void InterceptionWorkflow::Initialize(
-    const std::vector<std::string>& symbol_paths, const std::vector<std::string>& symbol_repo_paths,
-    const std::string& symbol_cache_path, const std::vector<std::string>& symbol_servers,
+    const std::vector<std::string>& symbol_paths, const std::vector<std::string>& build_id_dirs,
+    const std::vector<std::string>& ids_txts, const std::optional<std::string>& symbol_cache,
+    const std::vector<std::string>& symbol_servers,
     std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher, bool quit_agent_on_exit) {
   syscall_decoder_dispatcher_ = std::move(syscall_decoder_dispatcher);
 
@@ -190,35 +191,35 @@ void InterceptionWorkflow::Initialize(
 
   // 1) Set up symbol index.
 
-  // Stolen from console/console_main.cc
-  std::vector<std::string> paths;
+  // Stolen from zxdb/console/console_main.cc
+  auto& system_settings = session_->system().settings();
 
-  // At this moment, the build index has all the "default" paths.
-  zxdb::BuildIDIndex& build_id_index = session_->system().GetSymbols()->build_id_index();
-
-  for (const auto& build_id_file : build_id_index.build_id_files()) {
-    paths.push_back(build_id_file);
-  }
-  for (const auto& source : build_id_index.sources()) {
-    paths.push_back(source);
-  }
-
-  // We add the options paths given paths.
-  paths.insert(paths.end(), symbol_paths.begin(), symbol_paths.end());
-
-  if (!symbol_cache_path.empty()) {
-    session_->system().settings().SetString(zxdb::ClientSettings::System::kSymbolCache,
-                                            symbol_cache_path);
+  if (symbol_cache) {
+    // Legacy usage assumes a .build-id subdirectory will be created.
+    system_settings.SetString(zxdb::ClientSettings::System::kSymbolCache,
+                              *symbol_cache + "/.build-id");
+  } else {
+    // Default value for symbol_cache.
+    const char* home = std::getenv("HOME");
+    if (home)
+      system_settings.SetString(zxdb::ClientSettings::System::kSymbolCache,
+                                std::string(home) + "/.fuchsia/debug/symbol-cache");
   }
 
-  // Adding it to the settings will trigger the loading of the symbols.
-  // Redundant adds are ignored.
-  session_->system().settings().SetList(zxdb::ClientSettings::System::kSymbolPaths,
-                                        std::move(paths));
+  if (!symbol_servers.empty()) {
+    system_settings.SetList(zxdb::ClientSettings::System::kSymbolServers, symbol_servers);
+  }
 
-  if (!symbol_repo_paths.empty()) {
-    session_->system().settings().SetList(zxdb::ClientSettings::System::kSymbolRepoPaths,
-                                          symbol_repo_paths);
+  if (!symbol_paths.empty()) {
+    system_settings.SetList(zxdb::ClientSettings::System::kSymbolPaths, symbol_paths);
+  }
+
+  if (!build_id_dirs.empty()) {
+    system_settings.SetList(zxdb::ClientSettings::System::kBuildIdDirs, build_id_dirs);
+  }
+
+  if (!ids_txts.empty()) {
+    system_settings.SetList(zxdb::ClientSettings::System::kIdsTxts, ids_txts);
   }
 
   // 2) Ensure that the session correctly reads data off of the loop.

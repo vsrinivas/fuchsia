@@ -104,35 +104,39 @@ void ScheduleActions(zxdb::Session& session, zxdb::Console& console,
 }
 
 void SetupCommandLineOptions(const CommandLineOptions& options, Session* session) {
-  // Symbol paths
-  std::vector<std::string> paths;
-  // At this moment, the build index has all the "default" paths.
-  BuildIDIndex& build_id_index = session->system().GetSymbols()->build_id_index();
-  for (const auto& build_id_file : build_id_index.build_id_files())
-    paths.push_back(build_id_file);
-  for (const auto& source : build_id_index.sources())
-    paths.push_back(source);
+  auto& system_settings = session->system().settings();
 
-  // We add the options paths given paths.
-  paths.insert(paths.end(), options.symbol_paths.begin(), options.symbol_paths.end());
-
-  if (options.symbol_cache_path) {
-    session->system().settings().SetString(ClientSettings::System::kSymbolCache,
-                                           *options.symbol_cache_path);
+  if (options.symbol_cache) {
+    // Legacy usage assumes a .build-id subdirectory will be created.
+    system_settings.SetString(ClientSettings::System::kSymbolCache,
+                              *options.symbol_cache + "/.build-id");
+  } else {
+    // Default value for symbol_cache.
+    const char* home = std::getenv("HOME");
+    if (home)
+      system_settings.SetString(ClientSettings::System::kSymbolCache,
+                                std::string(home) + "/.fuchsia/debug/symbol-cache");
   }
 
   if (!options.symbol_servers.empty()) {
-    session->system().settings().SetList(ClientSettings::System::kSymbolServers,
-                                         options.symbol_servers);
+    system_settings.SetList(ClientSettings::System::kSymbolServers, options.symbol_servers);
   }
 
-  // Adding it to the settings will trigger the loading of the symbols. Redundant adds are ignored.
-  session->system().settings().SetList(ClientSettings::System::kSymbolPaths, std::move(paths));
+  if (!options.symbol_paths.empty()) {
+    system_settings.SetList(ClientSettings::System::kSymbolPaths, options.symbol_paths);
+  }
 
-  session->system().settings().SetList(ClientSettings::System::kSymbolRepoPaths,
-                                       options.symbol_repo_paths);
+  if (!options.build_id_dirs.empty()) {
+    system_settings.SetList(ClientSettings::System::kBuildIdDirs, options.build_id_dirs);
+  }
 
-  session->system().settings().SetList(ClientSettings::Target::kBuildDirs, options.build_dirs);
+  if (!options.ids_txts.empty()) {
+    system_settings.SetList(ClientSettings::System::kIdsTxts, options.ids_txts);
+  }
+
+  if (!options.build_dirs.empty()) {
+    system_settings.SetList(ClientSettings::Target::kBuildDirs, options.build_dirs);
+  }
 }
 
 }  // namespace

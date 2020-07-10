@@ -20,6 +20,9 @@ Options
 )";
 
 const char kBuildDirsHelp[] = R"(  --build-dirs=<path>
+      Deprecated. Please use --build-dir instead.)";
+
+const char kBuildDirHelp[] = R"(  --build-dir=<path>
   -b <path>
       Adds the given directory to the list of build directories. These
       directories are where source file names from the symbols are relative to.
@@ -64,13 +67,8 @@ const char kScriptFileHelp[] = R"(  --script-file=<file>
       commands as they would be input from the command line. They will be
       executed sequentially.)";
 
-const char kSymbolCachePathHelp[] = R"(  --symbol-cache=<path>
-      Path where we can keep a symbol cache. A folder called <path>/.build-id
-      will be created if it does not exist, and symbols will be read from this
-      location as though you had specified "-s <path>". If a symbol server has
-      been specified, downloaded symbols will be stored in the .build-id
-      folder.)";
-
+// TODO(dangyi): Remove the support for .txt file and .build-id directory when everyone is using
+// --build-id-dir and --ids-txt explicitly.
 const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
   -s <path>
       Adds the given directory or file to the symbol search path. Multiple
@@ -83,16 +81,32 @@ const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
       will be loaded as an ELF file (if possible).)";
 
 const char kSymbolRepoPathHelp[] = R"(  --symbol-repo-path=<path>
+      Deprecated. Please use --build-id-dir instead.)";
+
+const char kBuildIdDirHelp[] = R"(  --build-id-dir=<path>
       Adds the given directory to the symbol search path. Multiple
-      --symbol-repo-path switches can be passed to add multiple locations. the
-      path is always assumed to be a directory, unlike with -s, and the
-      directory is assumed to contain an index of all ELF files in the same
-      style as the .build-id folder as used with the -s option. This is useful
-      if your build ID index is not named .build-id)";
+      --build-id-dir switches can be passed to add multiple directories.
+      The directory must have the same structure as a .build-id directory,
+      that is, each symbol file lives at xx/yyyyyyyy.debug where xx is
+      the first two characters of the build ID and yyyyyyyy is the rest.
+      However, the name of the directory doesn't need to be .build-id.)";
+
+const char kIdsTxtHelp[] = R"(  --ids-txt=<path>
+      Adds the given file to the symbol search path. Multiple --ids-txt
+      switches can be passed to add multiple files. The file, typically named
+      "ids.txt", serves as a mapping from build ID to symbol file path and
+      should contain multiple lines in the format of "<build ID> <file path>".)";
+
+const char kSymbolCacheHelp[] = R"(  --symbol-cache=<path>
+      Directory where we can keep a symbol cache. If a symbol server has been
+      specified, downloaded symbols will be stored in this directory. The
+      directory structure will be the same as a .build-id directory, and
+      symbols will be read from this location as though you had specified
+      "--build-id-dir=<path>".)";
 
 const char kSymbolServerHelp[] = R"(  --symbol-server=<url>
-      When symbols are missing, attempt to download them from the given URL.
-      will be loaded as an ELF file (if possible).)";
+      Adds the given URL to symbol servers. Symbol servers host the debug
+      symbols for prebuilt binaries and dynamic libraries.)";
 
 }  // namespace
 
@@ -100,7 +114,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
                                  std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
 
-  parser.AddSwitch("build-dirs", 'b', kBuildDirsHelp, &CommandLineOptions::build_dirs);
+  parser.AddSwitch("build-dir", 'b', kBuildDirHelp, &CommandLineOptions::build_dirs);
+  parser.AddSwitch("build-dirs", 0, kBuildDirsHelp, &CommandLineOptions::build_dirs);
   parser.AddSwitch("connect", 'c', kConnectHelp, &CommandLineOptions::connect);
   parser.AddSwitch("core", 0, kCoreHelp, &CommandLineOptions::core);
   parser.AddSwitch("debug-mode", 'd', kDebugModeHelp, &CommandLineOptions::debug_mode);
@@ -109,10 +124,12 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("run", 'r', kRunHelp, &CommandLineOptions::run);
   parser.AddSwitch("filter", 'f', kFilterHelp, &CommandLineOptions::filter);
   parser.AddSwitch("script-file", 'S', kScriptFileHelp, &CommandLineOptions::script_file);
-  parser.AddSwitch("symbol-cache", 0, kSymbolCachePathHelp, &CommandLineOptions::symbol_cache_path);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
-  parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp,
-                   &CommandLineOptions::symbol_repo_paths);
+  // TODO(dangyi): Remove --symbol-repo-path after everyone has migrated to --build-id-dir.
+  parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp, &CommandLineOptions::build_id_dirs);
+  parser.AddSwitch("build-id-dir", 0, kBuildIdDirHelp, &CommandLineOptions::build_id_dirs);
+  parser.AddSwitch("ids-txt", 0, kIdsTxtHelp, &CommandLineOptions::ids_txts);
+  parser.AddSwitch("symbol-cache", 0, kSymbolCacheHelp, &CommandLineOptions::symbol_cache);
   parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
 
   // Special --help switch which doesn't exist in the options structure.
