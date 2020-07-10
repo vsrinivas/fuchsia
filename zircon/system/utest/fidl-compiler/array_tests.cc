@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-bool GoodNonzeroSizeArray() {
-  BEGIN_TEST;
-
+TEST(ArrayTests, GoodNonzeroSizeArray) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -20,13 +18,9 @@ struct S {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool BadZeroSizeArray() {
-  BEGIN_TEST;
-
+TEST(ArrayTests, BadZeroSizeArray) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -37,13 +31,9 @@ struct S {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_ERR(errors[0], fidl::ErrMustHaveNonZeroSize);
-
-  END_TEST;
 }
 
-bool BadNoSizeArray() {
-  BEGIN_TEST;
-
+TEST(ArrayTests, BadNoSizeArray) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -54,13 +44,9 @@ struct S {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_ERR(errors[0], fidl::ErrMustHaveSize);
-
-  END_TEST;
 }
 
-bool BadNonParameterizedArray() {
-  BEGIN_TEST;
-
+TEST(ArrayTests, BadNonParameterizedArray) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -71,15 +57,6 @@ struct S {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_ERR(errors[0], fidl::ErrMustBeParameterized);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(array_tests)
-RUN_TEST(GoodNonzeroSizeArray)
-RUN_TEST(BadZeroSizeArray)
-RUN_TEST(BadNoSizeArray)
-RUN_TEST(BadNonParameterizedArray)
-END_TEST_CASE(array_tests)

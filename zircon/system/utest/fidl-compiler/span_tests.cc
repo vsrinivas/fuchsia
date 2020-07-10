@@ -9,7 +9,7 @@
 #include <sstream>
 #include <stack>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "fidl/raw_ast.h"
 #include "fidl/tree_visitor.h"
@@ -508,8 +508,7 @@ constexpr std::string_view kPassedMsg = "\x1B[32mPassed\033[0m";
 constexpr std::string_view kFailedMsg = "\x1B[31mFailed\033[0m";
 constexpr std::string_view kErrorMsg = "\x1B[31mERROR:\033[0m";
 
-bool parse_test() {
-  BEGIN_TEST;
+TEST(SpanTests, parse_test) {
   std::cerr << '\n';
 
   bool all_passed = true;
@@ -581,14 +580,6 @@ bool parse_test() {
   // Assert after all tests are over so that we can get output for each test
   // case even if one of them fails.
   ASSERT_TRUE(all_passed, "At least one test case failed");
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(span_tests)
-
-RUN_TEST(parse_test)
-
-END_TEST_CASE(span_tests)

@@ -10,16 +10,14 @@
 #include <fidl/parser.h>
 #include <fidl/raw_ast.h>
 #include <fidl/source_file.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-bool handle_rights_test() {
-  BEGIN_TEST;
-
+TEST(HandleTests, handle_rights_test) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -41,13 +39,9 @@ struct MyStruct {
                 h_type_ctor->handle_rights->Value())
                 .value,
             1);
-
-  END_TEST;
 }
 
-bool no_handle_rights_test() {
-  BEGIN_TEST;
-
+TEST(HandleTests, no_handle_rights_test) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -66,13 +60,9 @@ struct MyStruct {
 
   ASSERT_EQ(h_type_ctor->handle_subtype.value(), fidl::types::HandleSubtype::kVmo);
   ASSERT_NULL(h_type_ctor->handle_rights);
-
-  END_TEST;
 }
 
-bool invalid_handle_rights_test() {
-  BEGIN_TEST;
-
+TEST(HandleTests, invalid_handle_rights_test) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -90,13 +80,9 @@ protocol P {
   ASSERT_EQ(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveHandleRights);
-
-  END_TEST;
 }
 
-bool plain_handle_test() {
-  BEGIN_TEST;
-
+TEST(HandleTests, plain_handle_test) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -115,13 +101,9 @@ struct MyStruct {
 
   EXPECT_FALSE(h_type_ctor->handle_subtype.has_value());
   ASSERT_NULL(h_type_ctor->handle_rights);
-
-  END_TEST;
 }
 
-bool handle_fidl_defined_test() {
-  BEGIN_TEST;
-
+TEST(HandleTests, handle_fidl_defined_test) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -171,13 +153,9 @@ struct MyStruct {
                 c->handle_rights->Value())
                 .value,
             45);
-
-  END_TEST;
 }
 
-bool invalid_fidl_defined_handle_subtype() {
-  BEGIN_TEST;
-
+TEST(HandleTests, invalid_fidl_defined_handle_subtype) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -205,13 +183,9 @@ struct MyStruct {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrCouldNotResolveHandleSubtype);
   EXPECT_TRUE(errors[0]->msg.find("ZIPPY") != std::string::npos);
-
-  END_TEST;
 }
 
-bool disallow_old_handles() {
-  BEGIN_TEST;
-
+TEST(HandleTests, disallow_old_handles) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kDisallowOldHandleSyntax);
 
@@ -228,18 +202,6 @@ struct MyStruct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrOldHandleSyntax);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(handle_tests)
-RUN_TEST(handle_rights_test)
-RUN_TEST(no_handle_rights_test)
-RUN_TEST(invalid_handle_rights_test)
-RUN_TEST(plain_handle_test)
-RUN_TEST(handle_fidl_defined_test)
-RUN_TEST(invalid_fidl_defined_handle_subtype)
-RUN_TEST(disallow_old_handles)
-END_TEST_CASE(handle_tests)

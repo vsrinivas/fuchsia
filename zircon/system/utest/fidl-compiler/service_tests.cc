@@ -7,16 +7,14 @@
 #include <fidl/names.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-bool valid_empty_service() {
-  BEGIN_TEST;
-
+TEST(ServiceTests, valid_empty_service) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -26,16 +24,12 @@ service SomeService {};
   ASSERT_TRUE(library.Compile());
 
   auto service = library.LookupService("SomeService");
-  ASSERT_NONNULL(service);
+  ASSERT_NOT_NULL(service);
 
   EXPECT_EQ(service->members.size(), 0);
-
-  END_TEST;
 }
 
-bool valid_service() {
-  BEGIN_TEST;
-
+TEST(ServiceTests, valid_service) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -52,7 +46,7 @@ service SomeService {
   ASSERT_TRUE(library.Compile());
 
   auto service = library.LookupService("SomeService");
-  ASSERT_NONNULL(service);
+  ASSERT_NOT_NULL(service);
 
   EXPECT_EQ(service->members.size(), 3);
   const auto& member0 = service->members[0];
@@ -64,13 +58,9 @@ service SomeService {
   const auto& member2 = service->members[2];
   EXPECT_STR_EQ(std::string(member2.name.data()).c_str(), "some_protocol_second");
   EXPECT_STR_EQ(fidl::NameFlatName(member2.type_ctor->name).c_str(), "example/SomeProtocol2");
-
-  END_TEST;
 }
 
-bool invalid_cannot_have_conflicting_members() {
-  BEGIN_TEST;
-
+TEST(ServiceTests, invalid_cannot_have_conflicting_members) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -87,13 +77,9 @@ service SomeService {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateServiceMemberName);
-
-  END_TEST;
 }
 
-bool invalid_no_nullable_protocol_members() {
-  BEGIN_TEST;
-
+TEST(ServiceTests, invalid_no_nullable_protocol_members) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -108,13 +94,9 @@ service SomeService {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrNullableServiceMember);
-
-  END_TEST;
 }
 
-bool invalid_only_protocol_members() {
-  BEGIN_TEST;
-
+TEST(ServiceTests, invalid_only_protocol_members) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -129,13 +111,9 @@ service SomeService {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrNonProtocolServiceMember);
-
-  END_TEST;
 }
 
-bool invalid_cannot_use_services_in_decls() {
-  BEGIN_TEST;
-
+TEST(ServiceTests, invalid_cannot_use_services_in_decls) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -150,17 +128,6 @@ struct CannotUseService {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrCannotUseServicesInOtherDeclarations);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(service_tests)
-RUN_TEST(valid_empty_service)
-RUN_TEST(valid_service)
-RUN_TEST(invalid_cannot_have_conflicting_members)
-RUN_TEST(invalid_no_nullable_protocol_members)
-RUN_TEST(invalid_only_protocol_members)
-RUN_TEST(invalid_cannot_use_services_in_decls)
-END_TEST_CASE(service_tests)

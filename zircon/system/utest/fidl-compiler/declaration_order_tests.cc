@@ -13,7 +13,7 @@
 #include <fidl/names.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "test_library.h"
 
@@ -78,9 +78,7 @@ class Namer {
 
 constexpr int kRepeatTestCount = 100;
 
-bool nonnullable_ref() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, nonnullable_ref) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -106,13 +104,9 @@ protocol #Protocol# {
     ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
     ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
   }
-
-  END_TEST;
 }
 
-bool nullable_ref_breaks_dependency() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, nullable_ref_breaks_dependency) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -157,13 +151,9 @@ protocol #Protocol# {
       ASSERT_DECL_NAME(decl_order[3], namer.of("Element"));
     }
   }
-
-  END_TEST;
 }
 
-bool request_type_breaks_dependency_graph() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, request_type_breaks_dependency_graph) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -186,13 +176,9 @@ protocol #Protocol# {
     ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix0");
     ASSERT_DECL_NAME(decl_order[2], namer.of("Protocol"));
   }
-
-  END_TEST;
 }
 
-bool nonnullable_union() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, nonnullable_union) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -221,13 +207,9 @@ struct #Payload# {
     ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
     ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
   }
-
-  END_TEST;
 }
 
-bool nullable_union() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, nullable_union) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -272,13 +254,9 @@ struct #Payload# {
       ASSERT_DECL_NAME(decl_order[3], namer.of("Xunion"));
     }
   }
-
-  END_TEST;
 }
 
-bool nonnullable_union_in_struct() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, nonnullable_union_in_struct) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -311,13 +289,9 @@ union #Xunion# {
     ASSERT_DECL_NAME(decl_order[3], "SomeLongAnonymousPrefix0");
     ASSERT_DECL_NAME(decl_order[4], namer.of("Protocol"));
   }
-
-  END_TEST;
 }
 
-bool nullable_union_in_struct() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, nullable_union_in_struct) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -367,13 +341,9 @@ union #Xunion# {
       ASSERT_DECL_NAME(decl_order[4], namer.of("Xunion"));
     }
   }
-
-  END_TEST;
 }
 
-bool decls_across_libraries() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, decls_across_libraries) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     SharedAmongstLibraries shared;
     TestLibrary dependency("dependency.fidl", R"FIDL(
@@ -410,12 +380,9 @@ protocol ExampleDecl1 {
     ASSERT_DECL_FQ_NAME(decl_order[3], "example/SomeLongAnonymousPrefix0");
     ASSERT_DECL_FQ_NAME(decl_order[4], "example/ExampleDecl1");
   }
-  END_TEST;
 }
 
-bool const_type_comes_first() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, const_type_comes_first) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -433,13 +400,9 @@ using #Alias# = uint32;
     ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
     ASSERT_DECL_NAME(decl_order[1], namer.of("Constant"));
   }
-
-  END_TEST;
 }
 
-bool enum_ordinal_type_comes_first() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, enum_ordinal_type_comes_first) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -457,13 +420,9 @@ using #Alias# = uint32;
     ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
     ASSERT_DECL_NAME(decl_order[1], namer.of("Enum"));
   }
-
-  END_TEST;
 }
 
-bool bits_ordinal_type_comes_first() {
-  BEGIN_TEST;
-
+TEST(DeclarationOrderTest, bits_ordinal_type_comes_first) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -481,22 +440,6 @@ using #Alias# = uint32;
     ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
     ASSERT_DECL_NAME(decl_order[1], namer.of("Bits"));
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(declaration_order_test)
-RUN_TEST(nonnullable_ref)
-RUN_TEST(nullable_ref_breaks_dependency)
-RUN_TEST(request_type_breaks_dependency_graph)
-RUN_TEST(nonnullable_union)
-RUN_TEST(nullable_union)
-RUN_TEST(nonnullable_union_in_struct)
-RUN_TEST(nullable_union_in_struct)
-RUN_TEST(decls_across_libraries);
-RUN_TEST(const_type_comes_first);
-RUN_TEST(enum_ordinal_type_comes_first);
-RUN_TEST(bits_ordinal_type_comes_first);
-END_TEST_CASE(declaration_order_test)

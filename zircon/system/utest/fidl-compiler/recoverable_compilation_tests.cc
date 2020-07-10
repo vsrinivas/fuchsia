@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "error_test.h"
 #include "fidl/diagnostics.h"
@@ -10,9 +10,7 @@
 
 namespace {
 
-bool recover_in_library_consume() {
-  BEGIN_TEST;
-
+TEST(RecoverableCompilationTests, recover_in_library_consume) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -33,13 +31,9 @@ union Union {
   ASSERT_ERR(errors[0], fidl::ErrNameCollision);
   ASSERT_ERR(errors[1], fidl::ErrNullableTableMember);
   ASSERT_ERR(errors[2], fidl::ErrNullableUnionMember);
-
-  END_TEST;
 }
 
-bool recover_in_library_compile() {
-  BEGIN_TEST;
-
+TEST(RecoverableCompilationTests, recover_in_library_compile) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -73,13 +67,9 @@ table NonDenseTable {
   ASSERT_ERR(errors[1], fidl::ErrDuplicateMemberName);
   ASSERT_ERR(errors[2], fidl::ErrNonDenseOrdinal);
   ASSERT_ERR(errors[3], fidl::ErrDuplicateMemberValue);
-
-  END_TEST;
 }
 
-bool recover_in_library_verify_attributes() {
-  BEGIN_TEST;
-
+TEST(RecoverableCompilationTests, recover_in_library_verify_attributes) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -106,14 +96,6 @@ struct Struct {
   ASSERT_ERR(errors[1], fidl::ErrInvalidAttributeValue);
   ASSERT_ERR(errors[2], fidl::ErrInvalidAttributePlacement);
   ASSERT_ERR(errors[3], fidl::ErrTooManyBytes);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(recoverable_compilation_tests)
-RUN_TEST(recover_in_library_consume)
-RUN_TEST(recover_in_library_compile)
-RUN_TEST(recover_in_library_verify_attributes)
-END_TEST_CASE(recoverable_compilation_tests)
