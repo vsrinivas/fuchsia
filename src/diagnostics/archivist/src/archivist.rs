@@ -440,7 +440,9 @@ mod tests {
         };
         let l = Listener { send_logs };
         fasync::spawn(async move {
-            run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false).await.unwrap();
+            run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false, None)
+                .await
+                .unwrap();
         });
 
         recv_logs

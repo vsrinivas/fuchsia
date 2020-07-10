@@ -13,7 +13,8 @@ use fuchsia_async as fasync;
 use fuchsia_syslog_listener as syslog_listener;
 use fuchsia_syslog_listener::LogProcessor;
 use fuchsia_zircon as zx;
-use regex::{Captures, Regex};
+use regex::{Captures, Regex, RegexSetBuilder};
+use selectors;
 use std::collections::hash_set::HashSet;
 use std::collections::HashMap;
 use std::env;
@@ -25,8 +26,10 @@ use std::thread;
 use std::time;
 
 // Include the generated FIDL bindings for the `Logger` service.
+use fidl_fuchsia_diagnostics::{Interest, Severity};
 use fidl_fuchsia_logger::{
-    LogFilterOptions, LogLevelFilter, LogMessage, MAX_TAGS, MAX_TAG_LEN_BYTES,
+    LogFilterOptions, LogInterestSelector, LogLevelFilter, LogMessage, MAX_LOG_SELECTORS, MAX_TAGS,
+    MAX_TAG_LEN_BYTES,
 };
 
 const DEFAULT_FILE_CAPACITY: u64 = 64000;
@@ -159,6 +162,7 @@ impl Decorator {
 struct LogListenerOptions {
     filter: LogFilterOptions,
     local: LocalOptions,
+    selectors: Vec<LogInterestSelector>,
 }
 
 impl Default for LogListenerOptions {
@@ -174,6 +178,7 @@ impl Default for LogListenerOptions {
                 tags: vec![],
             },
             local: LocalOptions::default(),
+            selectors: vec![],
         }
     }
 }
@@ -315,6 +320,23 @@ fn help(name: &str) -> String {
 
         --suppress <comma-separated-words>
             Filter-out lines containing any of the specified words
+
+        --select <comma-separated-component-interests>
+            Specify the runtime log level for components as 'component interest'
+            using the form <component>#<interest> where component is the component name and interest is the specified selection criteria,
+            e.g. 'log-level' as one of FATAL|ERROR|WARN|INFO|DEBUG|TRACE.
+            Multiple component interest selections are delimited by commas.
+            Example: --select audio_core.cmx#DEBUG,scenic.cmx#WARN
+            NOTE 1: This flag changes the settings with which logs are emitted
+            on the component/producer side. In order to view these logs, the
+            listener must be configured using --severity <= the lowest selector
+            value specified.
+            Examples:
+            --severity DEBUG --select foo.cmx#DEBUG,bar.cmx#TRACE (missing bar)
+            --severity TRACE --select foo.cmx#DEBUG,bar.cmx#TRACE (ok)
+            Note 2: In the event that multiple log listeners provide selector
+            arguments via --select, those provided by the last client will
+            override any previous selectors.
 
         --begin <comma-separated-words>
             Filter-in blocks starting with at least one of the specified words.
@@ -558,6 +580,60 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                     options.local.dump_logs = true;
                 }
             }
+            "--select" => {
+                // Starting out, we require that the 'component' be specified
+                // as full name using v1 or v2 specification.
+                let component_set = RegexSetBuilder::new(&[r#".*.cml"#, r#".*.cmx"#])
+                    .case_insensitive(true)
+                    .build()
+                    .unwrap();
+
+                for selector in args[i + 1].split(',') {
+                    let invalid_selector =
+                        format!("Invalid component interest selector: '{}'.", selector);
+                    // Parsed multiple comma delimited component#interest args.
+                    let mut parts = selector.split('#');
+                    // Split each arg into sub string vectors containing strings
+                    // for component [0] and interest [1] respectively.
+                    let component = parts.next().ok_or_else(|| invalid_selector.clone())?;
+                    let interest = parts.next().ok_or_else(|| invalid_selector.clone())?;
+                    if let Some(_extra) = parts.next() {
+                        return Err(invalid_selector.clone());
+                    }
+
+                    if !component_set.is_match(component) {
+                        return Err(invalid_selector.clone());
+                    }
+                    let selector = match selectors::parse_component_selector(&component.to_string())
+                    {
+                        Ok(s) => s,
+                        _ => return Err(invalid_selector.clone()),
+                    };
+
+                    let min_severity = match interest.to_uppercase().as_ref() {
+                        "TRACE" => Some(Severity::Trace),
+                        "DEBUG" => Some(Severity::Debug),
+                        "INFO" => Some(Severity::Info),
+                        "WARN" => Some(Severity::Warn),
+                        "ERROR" => Some(Severity::Error),
+                        "FATAL" => Some(Severity::Fatal),
+                        "" => None,
+                        _ => return Err(invalid_selector),
+                    };
+
+                    options.selectors.push(LogInterestSelector {
+                        selector,
+                        interest: Interest { min_severity },
+                    });
+                }
+
+                if options.selectors.len() > MAX_LOG_SELECTORS.into() {
+                    return Err(format!(
+                        "Exceeded maximum number of --select args: {}.",
+                        MAX_LOG_SELECTORS
+                    ));
+                }
+            }
             a => {
                 return Err(format!("Invalid option {}", a));
             }
@@ -764,13 +840,13 @@ fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + 
 
 fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let (filter_options, local_options) = options.map_or_else(
-        || (None, LocalOptions::default()),
-        |o| (Some(&mut o.filter), o.local.clone()),
+    let (filter_options, local_options, selectors) = options.map_or_else(
+        || (None, LocalOptions::default(), None),
+        |o| (Some(&mut o.filter), o.local.clone(), Some(&mut o.selectors)),
     );
     let dump_logs = local_options.dump_logs;
     let l = new_listener(local_options)?;
-    let listener_fut = syslog_listener::run_log_listener(l, filter_options, dump_logs);
+    let listener_fut = syslog_listener::run_log_listener(l, filter_options, dump_logs, selectors);
     executor.run_singlethreaded(listener_fut)?;
     Ok(())
 }
@@ -1500,6 +1576,74 @@ mod tests {
                 args.push("--tag".to_string());
                 args.push(format!("tag{}", i));
             }
+            parse_flag_test_helper(&args, None);
+        }
+
+        #[test]
+        fn select_single_loglevel() {
+            let mut args = vec!["--select".to_string()];
+            args.push("foo.cmx#DEBUG".to_string());
+
+            let mut expected = LogListenerOptions::default();
+            expected.selectors.push(LogInterestSelector {
+                selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
+                interest: Interest { min_severity: Some(Severity::Debug) },
+            });
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn select_multiple_loglevel() {
+            let mut args = vec!["--select".to_string()];
+            args.push("foo.cmx#DEBUG,bar.cml#WARN".to_string());
+
+            let mut expected = LogListenerOptions::default();
+            expected.selectors.push(LogInterestSelector {
+                selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
+                interest: Interest { min_severity: Some(Severity::Debug) },
+            });
+            expected.selectors.push(LogInterestSelector {
+                selector: selectors::parse_component_selector(&"bar.cml".to_string()).unwrap(),
+                interest: Interest { min_severity: Some(Severity::Warn) },
+            });
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn select_loglevel_noseverity() {
+            let mut args = vec!["--select".to_string()];
+            args.push("foo.cmx#".to_string());
+
+            let mut expected = LogListenerOptions::default();
+            expected.selectors.push(LogInterestSelector {
+                selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
+                interest: Interest { min_severity: None },
+            });
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn select_loglevel_format_error() {
+            let mut args = vec!["--select".to_string()];
+            args.push("foo.cmx##DEBUG".to_string());
+
+            parse_flag_test_helper(&args, None);
+        }
+
+        #[test]
+        fn select_loglevel_component_error() {
+            let mut args = vec!["--select".to_string()];
+            args.push("foo#DEBUG".to_string());
+            parse_flag_test_helper(&args, None);
+        }
+
+        #[test]
+        fn select_exceed_max_error() {
+            let mut args = vec!["--select".to_string()];
+            args.push(
+                "1.cmx#INFO,2.cmx#INFO,3.cmx#INFO,4.cmx#INFO,5.cmx#INFO,6.cmx#INFO".to_string(),
+            );
+
             parse_flag_test_helper(&args, None);
         }
     }

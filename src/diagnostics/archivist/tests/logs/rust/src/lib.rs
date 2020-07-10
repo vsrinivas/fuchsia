@@ -57,7 +57,7 @@ fn run_listener(tag: &str) -> impl Stream<Item = LogMessage> {
     let (send_logs, recv_logs) = mpsc::unbounded();
     let l = Listener { send_logs };
     fasync::spawn(async move {
-        let fut = syslog_listener::run_log_listener(l, Some(&mut options), false);
+        let fut = syslog_listener::run_log_listener(l, Some(&mut options), false, None);
         if let Err(e) = fut.await {
             panic!("test fail {:?}", e);
         }
@@ -173,7 +173,7 @@ async fn observer_stop_api() {
     let (send_logs, recv_logs) = mpsc::unbounded();
     let l = Listener { send_logs };
     fasync::spawn(async move {
-        run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false).await.unwrap();
+        run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false, None).await.unwrap();
     });
 
     // wait for logging_component to die
@@ -245,7 +245,9 @@ async fn same_log_sink_simultaneously() {
             min_severity: LogLevelFilter::None,
             tags: Vec::new(),
         };
-        run_log_listener_with_proxy(&log_proxy, listen, Some(&mut options), false).await.unwrap();
+        run_log_listener_with_proxy(&log_proxy, listen, Some(&mut options), false, None)
+            .await
+            .unwrap();
     });
 
     // connect to controller and call stop
@@ -344,7 +346,9 @@ async fn same_log_sink_simultaneously_via_connector() {
             min_severity: LogLevelFilter::None,
             tags: Vec::new(),
         };
-        run_log_listener_with_proxy(&log_proxy, listen, Some(&mut options), false).await.unwrap();
+        run_log_listener_with_proxy(&log_proxy, listen, Some(&mut options), false, None)
+            .await
+            .unwrap();
     });
 
     // connect to controller and call stop

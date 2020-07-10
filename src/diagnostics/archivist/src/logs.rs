@@ -6,8 +6,8 @@ use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{ClientEnd, ServerEnd, ServiceMarker};
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_logger::{
-    LogFilterOptions, LogListenerSafeMarker, LogRequest, LogRequestStream, LogSinkRequest,
-    LogSinkRequestStream,
+    LogFilterOptions, LogInterestSelector, LogListenerSafeMarker, LogRequest, LogRequestStream,
+    LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
 };
 use fidl_fuchsia_sys2 as fsys;
 use fidl_fuchsia_sys_internal::{
@@ -24,12 +24,14 @@ use std::sync::Arc;
 mod buffer;
 mod debuglog;
 mod error;
+mod interest;
 mod listener;
 pub mod message;
 mod socket;
 mod stats;
 
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
+use interest::InterestDispatcher;
 use listener::{pool::Pool, pretend_scary_listener_is_safe, Listener};
 use message::Message;
 use socket::{Encoding, LogMessageSocket};
@@ -49,6 +51,8 @@ pub struct LogManager {
 struct ManagerInner {
     #[inspect(skip)]
     listeners: Pool,
+    #[inspect(skip)]
+    interest_dispatcher: InterestDispatcher,
     #[inspect(rename = "buffer_stats")]
     log_msg_buffer: buffer::MemoryBoundedBuffer<Message>,
     stats: stats::LogManagerStats,
@@ -60,6 +64,7 @@ impl LogManager {
         Self {
             inner: Arc::new(Mutex::new(ManagerInner {
                 listeners: Pool::default(),
+                interest_dispatcher: InterestDispatcher::default(),
                 log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
                 stats: stats::LogManagerStats::new_detached(),
                 inspect_node: inspect::Node::default(),
@@ -167,6 +172,7 @@ impl LogManager {
         if source.component_name.is_none() {
             self.inner.lock().await.stats.record_unattributed();
         }
+
         while let Some(next) = stream.next().await {
             match next {
                 Ok(LogSinkRequest::Connect { socket, control_handle }) => {
@@ -174,6 +180,7 @@ impl LogManager {
                         .context("creating log stream from socket")
                     {
                         Ok(log_stream) => {
+                            self.add_interest_listener(&source, control_handle).await;
                             let fut =
                                 FutureObj::new(Box::new(self.clone().drain_messages(log_stream)));
                             let res = sender.unbounded_send(fut);
@@ -192,6 +199,7 @@ impl LogManager {
                         .context("creating log stream from socket")
                     {
                         Ok(log_stream) => {
+                            self.add_interest_listener(&source, control_handle).await;
                             let fut =
                                 FutureObj::new(Box::new(self.clone().drain_messages(log_stream)));
                             let res = sender.unbounded_send(fut);
@@ -233,6 +241,21 @@ impl LogManager {
                 }
             }
         }
+    }
+
+    /// Add 'Interest' listener to connect the interest dispatcher to the
+    /// LogSinkControlHandle (weak reference) associated with the given source.
+    async fn add_interest_listener(
+        &self,
+        source: &Arc<SourceIdentity>,
+        control_handle: LogSinkControlHandle,
+    ) {
+        let event_listener = Arc::new(control_handle);
+        self.inner
+            .lock()
+            .await
+            .interest_dispatcher
+            .add_interest_listener(source, Arc::downgrade(&event_listener));
     }
 
     /// Spawn a task to handle requests from components reading the shared log.
@@ -326,28 +349,32 @@ impl LogManager {
     /// whole backlog from memory, `DumpLogs(Safe)` stops listening after that.
     async fn handle_log_requests(self, mut stream: LogRequestStream) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
-            let (listener, options, dump_logs) = match request {
+            let (listener, options, dump_logs, selectors) = match request {
                 LogRequest::ListenSafe { log_listener, options, .. } => {
-                    (log_listener, options, false)
+                    (log_listener, options, false, None)
                 }
                 LogRequest::DumpLogsSafe { log_listener, options, .. } => {
-                    (log_listener, options, true)
+                    (log_listener, options, true, None)
                 }
+
+                LogRequest::ListenSafeWithSelectors {
+                    log_listener, options, selectors, ..
+                } => (log_listener, options, false, Some(selectors)),
 
                 // TODO(fxb/48758) delete these methods!
                 LogRequest::Listen { log_listener, options, .. } => {
                     warn!("Use of fuchsia.logger.Log.Listen. Use ListenSafe.");
                     let listener = pretend_scary_listener_is_safe(log_listener)?;
-                    (listener, options, false)
+                    (listener, options, false, None)
                 }
                 LogRequest::DumpLogs { log_listener, options, .. } => {
                     warn!("Use of fuchsia.logger.Log.DumpLogs. Use DumpLogsSafe.");
                     let listener = pretend_scary_listener_is_safe(log_listener)?;
-                    (listener, options, true)
+                    (listener, options, true, None)
                 }
             };
 
-            self.handle_log_listener(listener, options, dump_logs).await?;
+            self.handle_log_listener(listener, options, dump_logs, selectors).await?;
         }
         Ok(())
     }
@@ -360,10 +387,12 @@ impl LogManager {
         log_listener: ClientEnd<LogListenerSafeMarker>,
         options: Option<Box<LogFilterOptions>>,
         dump_logs: bool,
+        selectors: Option<Vec<LogInterestSelector>>,
     ) -> Result<(), Error> {
         let mut listener = Listener::new(log_listener, options)?;
 
         let mut inner = self.inner.lock().await;
+
         listener.backfill(inner.log_msg_buffer.iter()).await;
 
         if !listener.is_healthy() {
@@ -374,6 +403,9 @@ impl LogManager {
         if dump_logs {
             listener.done();
         } else {
+            if let Some(s) = selectors {
+                inner.interest_dispatcher.update_selectors(s).await;
+            }
             inner.listeners.add(listener);
         }
         Ok(())
@@ -1154,6 +1186,7 @@ mod tests {
         fn new() -> Self {
             let inner = Arc::new(Mutex::new(ManagerInner {
                 listeners: Pool::default(),
+                interest_dispatcher: InterestDispatcher::default(),
                 log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
                 stats: stats::LogManagerStats::new_detached(),
                 inspect_node: inspect::Node::default(),
@@ -1400,6 +1433,7 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let inner = Arc::new(Mutex::new(ManagerInner {
             listeners: Pool::default(),
+            interest_dispatcher: InterestDispatcher::default(),
             log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
             stats: stats::LogManagerStats::new_detached(),
             inspect_node: inspect::Node::default(),
