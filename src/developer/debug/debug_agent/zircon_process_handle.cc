@@ -5,14 +5,26 @@
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 
 #include "src/developer/debug/debug_agent/elf_utils.h"
+#include "src/developer/debug/debug_agent/zircon_thread_handle.h"
+#include "src/developer/debug/debug_agent/zircon_utils.h"
 #include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
 
-namespace {}  // namespace
+ZirconProcessHandle::ZirconProcessHandle(zx::process p)
+    : process_koid_(zircon::KoidForObject(p)), process_(std::move(p)) {}
 
-ZirconProcessHandle::ZirconProcessHandle(zx_koid_t process_koid, zx::process p)
-    : process_koid_(process_koid), process_(std::move(p)) {}
+std::string ZirconProcessHandle::GetName() const { return zircon::NameForObject(process_); }
+
+std::vector<std::unique_ptr<ThreadHandle>> ZirconProcessHandle::GetChildThreads() const {
+  std::vector<std::unique_ptr<ThreadHandle>> result;
+  for (auto& child : zircon::GetChildThreads(process_)) {
+    zx_koid_t thread_koid = zircon::KoidForObject(child);
+    result.push_back(std::make_unique<ZirconThreadHandle>(
+        std::make_shared<arch::ArchProvider>(), process_koid_, thread_koid, std::move(child)));
+  }
+  return result;
+}
 
 int64_t ZirconProcessHandle::GetReturnCode() const {
   zx_info_process info = {};

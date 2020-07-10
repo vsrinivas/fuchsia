@@ -38,6 +38,7 @@ static_library("lib") {
     "general_registers.h",
     "hardware_breakpoint.cc",
     "hardware_breakpoint.h",
+    "job_handle.h",
     "limbo_provider.cc",
     "limbo_provider.h",
     "object_provider.cc",
@@ -60,12 +61,16 @@ static_library("lib") {
     "unwind.h",
     "watchpoint.cc",
     "watchpoint.h",
+    "zircon_job_handle.cc",
+    "zircon_job_handle.h",
     "zircon_process_handle.cc",
     "zircon_process_handle.h",
     "zircon_thread_exception.cc",
     "zircon_thread_exception.h",
     "zircon_thread_handle.cc",
     "zircon_thread_handle.h",
+    "zircon_utils.cc",
+    "zircon_utils.h",
   ]
 
   if (current_cpu == "x64") {
@@ -152,6 +157,8 @@ source_set("test_lib") {
   sources = [
     "local_stream_backend.cc",
     "local_stream_backend.h",
+    "mock_job_handle.cc",
+    "mock_job_handle.h",
     "mock_object_provider.cc",
     "mock_object_provider.h",
     "mock_process.cc",

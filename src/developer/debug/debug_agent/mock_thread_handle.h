@@ -20,8 +20,7 @@ class MockThreadHandle final : public ThreadHandle {
     debug_ipc::AddressRange address_range;
   };
 
-  MockThreadHandle(zx_koid_t process_koid, zx_koid_t thread_koid)
-      : process_koid_(process_koid), thread_koid_(thread_koid) {}
+  MockThreadHandle(zx_koid_t process_koid, zx_koid_t thread_koid, std::string name = std::string());
 
   void set_state(State s) { state_ = s; }
 
@@ -56,6 +55,7 @@ class MockThreadHandle final : public ThreadHandle {
   const zx::thread& GetNativeHandle() const override { return null_handle_; }
   zx::thread& GetNativeHandle() override { return null_handle_; }
   zx_koid_t GetKoid() const override { return thread_koid_; }
+  std::string GetName() const override { return name_; }
   State GetState() const override { return state_; }
   debug_ipc::ThreadRecord GetThreadRecord() const override;
   debug_ipc::ExceptionRecord GetExceptionRecord() const override;
@@ -78,10 +78,11 @@ class MockThreadHandle final : public ThreadHandle {
  private:
   // Always null, for returning only from the getters above.
   // TODO(brettw) Remove this when the ThreadHandle no longer exposes a zx::thread getter.
-  zx::thread null_handle_;
+  static zx::thread null_handle_;
 
   zx_koid_t process_koid_;
   zx_koid_t thread_koid_;
+  std::string name_;
 
   std::vector<debug_ipc::Register>
       registers_[static_cast<size_t>(debug_ipc::RegisterCategory::kLast)];

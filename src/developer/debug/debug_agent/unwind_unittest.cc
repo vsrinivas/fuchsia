@@ -86,8 +86,7 @@ void DoUnwindTest() {
 
   zx::process handle;
   zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
-  // This uses a fake KOID since we don't need it for this test.
-  ZirconProcessHandle process(1, std::move(handle));
+  ZirconProcessHandle process(std::move(handle));
 
   ThreadData data;
   std::thread background(ThreadFunc1, &data);

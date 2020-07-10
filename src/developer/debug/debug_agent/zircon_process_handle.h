@@ -11,12 +11,14 @@ namespace debug_agent {
 
 class ZirconProcessHandle final : public ProcessHandle {
  public:
-  ZirconProcessHandle(zx_koid_t process_koid, zx::process p);
+  explicit ZirconProcessHandle(zx::process p);
 
   // ProcessHandle implementation.
   const zx::process& GetNativeHandle() const override { return process_; }
   zx::process& GetNativeHandle() override { return process_; }
   zx_koid_t GetKoid() const override { return process_koid_; }
+  std::string GetName() const override;
+  std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const override;
   int64_t GetReturnCode() const override;
   std::vector<debug_ipc::AddressRegion> GetAddressSpace(uint64_t address) const override;
   std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const override;

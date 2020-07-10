@@ -8,6 +8,7 @@
 #include <lib/zx/process.h>
 #include <zircon/status.h>
 
+#include <memory>
 #include <vector>
 
 namespace debug_ipc {
@@ -17,6 +18,8 @@ struct Module;
 }  // namespace debug_ipc
 
 namespace debug_agent {
+
+class ThreadHandle;
 
 class ProcessHandle {
  public:
@@ -30,6 +33,9 @@ class ProcessHandle {
   virtual zx::process& GetNativeHandle() = 0;
 
   virtual zx_koid_t GetKoid() const = 0;
+  virtual std::string GetName() const = 0;
+
+  virtual std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const = 0;
 
   // Retrieves the return code for an exited process. Returns some default value if the process is
   // still running (as defined by the kernel).

@@ -10,7 +10,22 @@
 
 namespace debug_agent {
 
-MockProcessHandle::MockProcessHandle(zx_koid_t process_koid) : process_koid_(process_koid) {}
+zx::process MockProcessHandle::null_handle_;
+
+MockProcessHandle::MockProcessHandle(zx_koid_t process_koid, std::string name)
+    : process_koid_(process_koid), name_(std::move(name)) {
+  // Tests could accidentally write to this handle since it's returned as a mutable value in some
+  // cases. Catch accidents like that.
+  FX_DCHECK(!null_handle_);
+}
+
+std::vector<std::unique_ptr<ThreadHandle>> MockProcessHandle::GetChildThreads() const {
+  // Need to return a unique set of objects every time so make copies.
+  std::vector<std::unique_ptr<ThreadHandle>> result;
+  for (auto& thread : threads_)
+    result.push_back(std::make_unique<MockThreadHandle>(thread));
+  return result;
+}
 
 int64_t MockProcessHandle::GetReturnCode() const { return 0; }
 

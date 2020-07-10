@@ -8,6 +8,15 @@
 
 namespace debug_agent {
 
+zx::thread MockThreadHandle::null_handle_;
+
+MockThreadHandle::MockThreadHandle(zx_koid_t process_koid, zx_koid_t thread_koid, std::string name)
+    : process_koid_(process_koid), thread_koid_(thread_koid), name_(std::move(name)) {
+  // Tests could accidentally write to this handle since it's returned as a mutable value in some
+  // cases. Catch accidents like that.
+  FX_DCHECK(!null_handle_);
+}
+
 void MockThreadHandle::SetRegisterCategory(debug_ipc::RegisterCategory cat,
                                            std::vector<debug_ipc::Register> values) {
   FX_CHECK(static_cast<size_t>(cat) < std::size(registers_));

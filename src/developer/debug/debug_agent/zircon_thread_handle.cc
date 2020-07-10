@@ -6,6 +6,7 @@
 
 #include <map>
 
+#include "src/developer/debug/debug_agent/zircon_utils.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
 
@@ -79,6 +80,8 @@ ZirconThreadHandle::ZirconThreadHandle(std::shared_ptr<arch::ArchProvider> arch_
       process_koid_(process_koid),
       thread_koid_(thread_koid),
       thread_(std::move(t)) {}
+
+std::string ZirconThreadHandle::GetName() const { return zircon::NameForObject(thread_); }
 
 ThreadHandle::State ZirconThreadHandle::GetState() const {
   zx_info_thread info;

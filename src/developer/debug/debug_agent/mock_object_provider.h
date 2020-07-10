@@ -6,6 +6,7 @@
 
 #include <map>
 
+#include "src/developer/debug/debug_agent/mock_job_handle.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 
 namespace debug_agent {
@@ -153,6 +154,13 @@ class MockObjectProvider : public ObjectProvider {
 //            t: 22 second-thread
 //            t: 23 third-thread
 void FillInMockObjectProvider(MockObjectProvider*);
+
+// New version of FillInMockObjectProvider that returns a MockJobHandle representing the root of the
+// hierarchy. New code should use this, and the ObjectProvider should be eventually deleted.
+//
+// This is currently here to keep it next to FillInMockObjectProvider(), but it should be moved
+// to a more appropriate place when the ObjectProvider is deleted.
+std::unique_ptr<MockJobHandle> GetMockJobTree();
 
 // Creates a new MockObjectProvider and calls |FillInMockObjectProvider|.
 std::unique_ptr<MockObjectProvider> CreateDefaultMockObjectProvider();

@@ -69,7 +69,7 @@ class DebugAgent : public RemoteAPI,
 
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
-  void OnProcessStart(const std::string& filter, zx::process) override;
+  void OnProcessStart(const std::string& filter, std::unique_ptr<ProcessHandle> process) override;
 
   void InjectProcessForTest(std::unique_ptr<DebuggedProcess> process);
 
@@ -139,7 +139,7 @@ class DebugAgent : public RemoteAPI,
 
   // Job/Process/Thread Management -----------------------------------------------------------------
 
-  zx_status_t AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
+  zx_status_t AddDebuggedJob(std::unique_ptr<JobHandle> job);
   zx_status_t AddDebuggedProcess(DebuggedProcessCreateInfo&&, DebuggedProcess** added);
 
   // Attempts to attach to the given process and sends a AttachReply message

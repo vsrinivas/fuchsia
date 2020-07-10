@@ -5,6 +5,9 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/debug/debug_agent/mock_job_handle.h"
+#include "src/developer/debug/debug_agent/mock_process_handle.h"
+#include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
@@ -155,6 +158,62 @@ void FillInMockObjectProvider(MockObjectProvider* provider) {
   process = provider->AppendProcess(job121, "job121-p2");
   provider->AppendThread(process, "second-thread");
   provider->AppendThread(process, "third-thread");
+}
+
+std::unique_ptr<MockJobHandle> GetMockJobTree() {
+  // This hierarchy is built in reverse.
+  zx_koid_t next_mock_koid = 1000;
+
+  // Job 121.
+  MockProcessHandle job121_p1(next_mock_koid++, "job121-p1");
+  job121_p1.set_threads({MockThreadHandle(job121_p1.GetKoid(), next_mock_koid++)});
+
+  MockProcessHandle job121_p2(next_mock_koid++, "job121-p2");
+  job121_p2.set_threads({MockThreadHandle(job121_p2.GetKoid(), next_mock_koid++, "initial-thread"),
+                         MockThreadHandle(job121_p2.GetKoid(), next_mock_koid++, "second-thread"),
+                         MockThreadHandle(job121_p2.GetKoid(), next_mock_koid++, "third-thread")});
+
+  MockJobHandle job121(next_mock_koid++, "job121");
+  job121.set_child_processes({job121_p1, job121_p2});
+
+  // Job 12.
+  MockJobHandle job12(next_mock_koid++, "job12");
+  job12.set_child_jobs({job121});
+
+  // Job 11.
+  MockProcessHandle job11_p1(next_mock_koid++, "job11-p1");
+  job11_p1.set_threads({MockThreadHandle(job11_p1.GetKoid(), next_mock_koid++, "initial-thread"),
+                        MockThreadHandle(job11_p1.GetKoid(), next_mock_koid++, "second-thread")});
+
+  MockJobHandle job11(next_mock_koid++, "job11");
+  job11.set_child_processes({job11_p1});
+
+  // Job 1
+  MockProcessHandle job1_p1(next_mock_koid++, "job1-p1");
+  job1_p1.set_threads({MockThreadHandle(job1_p1.GetKoid(), next_mock_koid++, "initial-thread")});
+
+  MockProcessHandle job1_p2(next_mock_koid++, "job1-p2");
+  job1_p2.set_threads({MockThreadHandle(job1_p2.GetKoid(), next_mock_koid++, "initial-thread")});
+
+  MockJobHandle job1(next_mock_koid++, "job1");
+  job1.set_child_processes({job1_p1, job1_p2});
+  job1.set_child_jobs({job11, job12});
+
+  // Root.
+  MockProcessHandle root_p1(next_mock_koid++, "root-p1");
+  root_p1.set_threads({MockThreadHandle(root_p1.GetKoid(), next_mock_koid++, "initial-thread")});
+
+  MockProcessHandle root_p2(next_mock_koid++, "root-p2");
+  root_p2.set_threads({MockThreadHandle(root_p2.GetKoid(), next_mock_koid++, "initial-thread")});
+
+  MockProcessHandle root_p3(next_mock_koid++, "root-p3");
+  root_p3.set_threads({MockThreadHandle(root_p3.GetKoid(), next_mock_koid++, "initial-thread")});
+
+  auto root = std::make_unique<MockJobHandle>(next_mock_koid++, "root");
+  root->set_child_processes({root_p1, root_p2, root_p3});
+  root->set_child_jobs({job1});
+
+  return root;
 }
 
 std::unique_ptr<MockObjectProvider> CreateDefaultMockObjectProvider() {

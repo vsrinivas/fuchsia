@@ -23,6 +23,7 @@
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/debug_agent/thread_exception.h"
+#include "src/developer/debug/debug_agent/zircon_job_handle.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
@@ -257,7 +258,7 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
   switch (request.type) {
     case debug_ipc::TaskType::kJob: {
       auto debug_job = GetDebuggedJob(request.koid);
-      if (debug_job && debug_job->job().is_valid()) {
+      if (debug_job && debug_job->job_handle().GetNativeHandle().is_valid()) {
         RemoveDebuggedJob(request.koid);
         reply->status = ZX_OK;
       } else {
@@ -511,11 +512,8 @@ void DebugAgent::OnJobFilter(const debug_ipc::JobFilterRequest& request,
     return;
   }
 
-  auto matches = job->SetFilters(std::move(request.filters));
-  for (zx_koid_t process_koid : matches) {
-    reply->matched_processes.push_back(process_koid);
-  }
-
+  for (const auto& match : job->SetFilters(std::move(request.filters)))
+    reply->matched_processes.push_back(match->GetKoid());
   reply->status = ZX_OK;
 }
 
@@ -558,13 +556,13 @@ DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid, zx_koid_t 
   return process->GetThread(thread_koid);
 }
 
-zx_status_t DebugAgent::AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job) {
-  auto job = std::make_unique<DebuggedJob>(object_provider_, this, job_koid, std::move(zx_job));
-  zx_status_t status = job->Init();
-  if (status != ZX_OK)
+zx_status_t DebugAgent::AddDebuggedJob(std::unique_ptr<JobHandle> job_handle) {
+  zx_koid_t koid = job_handle->GetKoid();
+  auto job = std::make_unique<DebuggedJob>(this, std::move(job_handle));
+  if (zx_status_t status = job->Init(); status != ZX_OK)
     return status;
 
-  jobs_[job_koid] = std::move(job);
+  jobs_[koid] = std::move(job);
   return ZX_OK;
 }
 
@@ -642,7 +640,7 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
   if (job.is_valid()) {
     reply.name = object_provider_->NameForObject(job);
     reply.koid = job_koid;
-    reply.status = AddDebuggedJob(job_koid, std::move(job));
+    reply.status = AddDebuggedJob(std::make_unique<ZirconJobHandle>(std::move(job)));
   }
 
   DEBUG_LOG(Agent) << "Attaching to job " << job_koid << ": " << zx_status_get_string(reply.status);
@@ -718,7 +716,7 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
   create_info.object_provider = object_provider_;
   create_info.from_limbo = true;
   create_info.name = object_provider_->NameForObject(process.get());
-  create_info.handle = std::make_unique<ZirconProcessHandle>(process_koid, std::move(process));
+  create_info.handle = std::make_unique<ZirconProcessHandle>(std::move(process));
 
   DebuggedProcess* debugged_process = nullptr;
   zx_status_t status = AddDebuggedProcess(std::move(create_info), &debugged_process);
@@ -760,8 +758,7 @@ zx_status_t DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t
   DebuggedProcessCreateInfo create_info = {};
   create_info.koid = process_koid;
   create_info.name = object_provider_->NameForObject(process_handle);
-  create_info.handle =
-      std::make_unique<ZirconProcessHandle>(process_koid, std::move(process_handle));
+  create_info.handle = std::make_unique<ZirconProcessHandle>(std::move(process_handle));
   create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
 
@@ -791,12 +788,14 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   if (reply->status != ZX_OK)
     return;
 
+  // TODO(brettw) replace this with when the launcher uses ProcessHandles.
+  //   auto process_handle = std::make_unique<ZirconProcessHandle>(std::move(process));
   zx::process process = launcher.GetProcess();
   zx_koid_t process_koid = object_provider_->KoidForObject(process);
 
   DebuggedProcessCreateInfo create_info;
   create_info.koid = process_koid;
-  create_info.handle = std::make_unique<ZirconProcessHandle>(process_koid, std::move(process));
+  create_info.handle = std::make_unique<ZirconProcessHandle>(std::move(process));
   create_info.out = launcher.ReleaseStdout();
   create_info.err = launcher.ReleaseStderr();
   create_info.arch_provider = arch_provider_;
@@ -902,7 +901,8 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   reply->status = ZX_OK;
 }
 
-void DebugAgent::OnProcessStart(const std::string& filter, zx::process process_handle) {
+void DebugAgent::OnProcessStart(const std::string& filter,
+                                std::unique_ptr<ProcessHandle> process_handle) {
   ComponentDescription description;
   ComponentHandles handles;
   auto it = expected_components_.find(filter);
@@ -914,10 +914,10 @@ void DebugAgent::OnProcessStart(const std::string& filter, zx::process process_h
     running_components_[description.component_id] = std::move(it->second.controller);
     expected_components_.erase(it);
   } else {
-    description.process_name = object_provider_->NameForObject(process_handle);
+    description.process_name = process_handle->GetName();
   }
 
-  auto process_koid = object_provider_->KoidForObject(process_handle);
+  auto process_koid = process_handle->GetKoid();
 
   DEBUG_LOG(Process) << "Process starting. Name: " << description.process_name
                      << ", koid: " << process_koid << ", filter: " << filter
@@ -934,8 +934,7 @@ void DebugAgent::OnProcessStart(const std::string& filter, zx::process process_h
 
   DebuggedProcessCreateInfo create_info;
   create_info.koid = process_koid;
-  create_info.handle =
-      std::make_unique<ZirconProcessHandle>(process_koid, std::move(process_handle));
+  create_info.handle = std::move(process_handle);
   create_info.name = description.process_name;
   create_info.out = std::move(handles.out);
   create_info.err = std::move(handles.err);

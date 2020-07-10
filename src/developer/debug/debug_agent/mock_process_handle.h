@@ -5,6 +5,9 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_PROCESS_HANDLE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_PROCESS_HANDLE_H_
 
+#include <string>
+
+#include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/process_handle.h"
 #include "src/developer/debug/shared/mock_memory.h"
 
@@ -19,7 +22,13 @@ class MockProcessHandle final : public ProcessHandle {
     std::vector<uint8_t> data;
   };
 
-  explicit MockProcessHandle(zx_koid_t process_koid);
+  explicit MockProcessHandle(zx_koid_t process_koid, std::string name = std::string());
+
+  void set_name(std::string n) { name_ = std::move(n); }
+
+  // Sets the threads. These will be copied since we need to return a new unique_ptr for each call
+  // to GetChildThreads().
+  void set_threads(std::vector<MockThreadHandle> threads) { threads_ = std::move(threads); }
 
   // Use to set mcoked memory values to read. The MockMemory is only used for ReadMemory calls.
   // WriteMemory calls come out in memory_writes().
@@ -30,6 +39,8 @@ class MockProcessHandle final : public ProcessHandle {
   const zx::process& GetNativeHandle() const override { return null_handle_; }
   zx::process& GetNativeHandle() override { return null_handle_; }
   zx_koid_t GetKoid() const override { return process_koid_; }
+  std::string GetName() const override { return name_; }
+  std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const override;
   int64_t GetReturnCode() const override;
   std::vector<debug_ipc::AddressRegion> GetAddressSpace(uint64_t address) const override;
   std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const override;
@@ -43,9 +54,12 @@ class MockProcessHandle final : public ProcessHandle {
  private:
   // Always null, for returning only from the getters above.
   // TODO(brettw) Remove this when the ThreadHandle no longer exposes a zx::thread getter.
-  zx::process null_handle_;
+  static zx::process null_handle_;
 
   zx_koid_t process_koid_;
+  std::string name_;
+
+  std::vector<MockThreadHandle> threads_;
 
   debug_ipc::MockMemory mock_memory_;
   std::vector<MemoryWrite> memory_writes_;

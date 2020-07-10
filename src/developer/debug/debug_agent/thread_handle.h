@@ -49,6 +49,7 @@ class ThreadHandle {
   virtual zx::thread& GetNativeHandle() = 0;
 
   virtual zx_koid_t GetKoid() const = 0;
+  virtual std::string GetName() const = 0;
 
   virtual State GetState() const = 0;
 

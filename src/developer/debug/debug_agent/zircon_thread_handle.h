@@ -25,6 +25,7 @@ class ZirconThreadHandle final : public ThreadHandle {
   const zx::thread& GetNativeHandle() const override { return thread_; }
   zx::thread& GetNativeHandle() override { return thread_; }
   zx_koid_t GetKoid() const override { return thread_koid_; }
+  std::string GetName() const override;
   State GetState() const override;
   debug_ipc::ThreadRecord GetThreadRecord() const override;
   debug_ipc::ExceptionRecord GetExceptionRecord() const override;
