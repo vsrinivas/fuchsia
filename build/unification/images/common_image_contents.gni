@@ -325,7 +325,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/devices/tests/devhost-test:devhost-test-manual",
     "//src/devices/tests/fidl-async-llcpp-driver",
     "//src/devices/tests/fidl-llcpp-driver",
-    "//src/devices/tests/isolateddevmgr:isolateddevmgr-test",
     "//src/devices/tests/mock-device",
     "//src/devices/tests/sysdev",
     "//src/devices/tests/unit-test-test:unit-test-fail",

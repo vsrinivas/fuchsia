@@ -4,9 +4,9 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-driver_module("isolateddevmgr-test") {
+driver_module("isolateddevmgr-test-driver") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -39,13 +39,19 @@ test("isolateddevmgr") {
   ]
 }
 
-unittest_package("isolateddevmgr-package") {
+isolated_devmgr_unittest_package("isolateddevmgr-test") {
   package_name = "isolateddevmgr"
-  deps = [ ":isolateddevmgr" ]
+  executable_path = "test/isolateddevmgr-test"
 
-  tests = [
-    {
-      name = "isolateddevmgr-test"
-    },
+  deps = [
+    ":isolateddevmgr",
+    ":isolateddevmgr-test-driver",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":isolateddevmgr-test" ]
 }

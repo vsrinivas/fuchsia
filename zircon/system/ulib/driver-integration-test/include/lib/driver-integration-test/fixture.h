@@ -44,6 +44,8 @@ class IsolatedDevmgr {
     bool disable_block_watcher = true;
     // If set to true, the netsvc will be disabled.
     bool disable_netsvc = true;
+    // Where to look for driver_manager, fshost, driver_host, and drivers.
+    std::string path_prefix = "/boot/";
   };
 
   // Notifies if driver manager job has an exception.

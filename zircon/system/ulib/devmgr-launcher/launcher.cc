@@ -24,8 +24,8 @@
 
 namespace {
 
-constexpr const char* kDevmgrPath = "/boot/bin/driver_manager";
-constexpr const char* kFshostPath = "/boot/bin/fshost";
+constexpr const char* kDevmgrPath = "bin/driver_manager";
+constexpr const char* kFshostPath = "bin/fshost";
 
 }  // namespace
 
@@ -43,8 +43,10 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
 
   const bool clone_stdio = !args.stdio.is_valid();
 
+  std::string fshost_path = args.path_prefix + kFshostPath;
+
   fbl::Vector<const char*> argv;
-  argv.push_back(kFshostPath);
+  argv.push_back(fshost_path.c_str());
   if (args.disable_block_watcher) {
     argv.push_back("--disable-block-watcher");
   }
@@ -69,10 +71,28 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
       .ns = {.prefix = "/dev", .handle = devfs_client.release()},
   });
 
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_CLONE_DIR,
-      .dir = {.prefix = "/boot"},
-  });
+  auto prefix_slice = args.path_prefix.substr(0, args.path_prefix.size() - 1);
+  if (prefix_slice == "/boot") {
+    actions.push_back(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_CLONE_DIR,
+        .ns = {.prefix = "/boot"},
+    });
+  } else {
+    zx::channel local, remote;
+    status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = fdio_open(prefix_slice.c_str(), ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY,
+                       remote.release());
+    if (status != ZX_OK) {
+      return status;
+    }
+    actions.push_back(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+        .ns = {.prefix = "/boot", .handle = local.release()},
+    });
+  }
 
   actions.push_back(fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
@@ -92,9 +112,9 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
   }
 
   zx::process new_process;
-  status = fdio_spawn_etc(devmgr_job.get(), flags, kFshostPath, argv.data(), nullptr /* environ */,
-                          actions.size(), actions.data(), new_process.reset_and_get_address(),
-                          nullptr /* err_msg */);
+  status = fdio_spawn_etc(devmgr_job.get(), flags, fshost_path.c_str(), argv.data(),
+                          nullptr /* environ */, actions.size(), actions.data(),
+                          new_process.reset_and_get_address(), nullptr /* err_msg */);
   if (status != ZX_OK) {
     return status;
   }
@@ -140,10 +160,12 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
     return status;
   }
 
+  std::string devmgr_path = args.path_prefix + kDevmgrPath;
+
   const bool clone_stdio = !args.stdio.is_valid();
 
   fbl::Vector<const char*> argv;
-  argv.push_back(kDevmgrPath);
+  argv.push_back(devmgr_path.c_str());
   argv.push_back("--no-start-svchost");
   for (const char* path : args.driver_search_paths) {
     argv.push_back("--driver-search-path");
@@ -196,10 +218,32 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
     });
   }
 
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_CLONE_DIR,
-      .dir = {.prefix = "/boot"},
-  });
+  auto prefix_slice = args.path_prefix.substr(0, args.path_prefix.size() - 1);
+  if (prefix_slice == "/boot") {
+    actions.push_back(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_CLONE_DIR,
+        .ns = {.prefix = "/boot"},
+    });
+  } else {
+    zx::channel local, remote;
+    status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = fdio_open(prefix_slice.c_str(), ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY,
+                       remote.release());
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    actions.push_back(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+        .ns = {.prefix = "/boot", .handle = local.release()},
+    });
+  }
 
   actions.push_back(fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
@@ -251,7 +295,7 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
   }
 
   zx::process new_process;
-  status = fdio_spawn_etc(job.get(), flags, kDevmgrPath, argv.data(), nullptr /* environ */,
+  status = fdio_spawn_etc(job.get(), flags, devmgr_path.c_str(), argv.data(), nullptr /* environ */,
                           actions.size(), actions.data(), new_process.reset_and_get_address(),
                           nullptr /* err_msg */);
   if (status != ZX_OK) {

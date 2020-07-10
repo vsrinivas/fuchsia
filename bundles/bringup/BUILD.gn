@@ -24,7 +24,6 @@ group("tests") {
     "//src/devices/rtc/lib/rtc/test:rtc-lib-package",
     "//src/devices/serial/drivers/ftdi/test:ftdi-i2c-test-package",
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
-    "//src/devices/tests/isolateddevmgr:isolateddevmgr-package",
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-test-package",
     "//src/devices/usb/tests/usb:usb-package",
     "//src/graphics/drivers/virtio:virtio-gpu-test-package",
