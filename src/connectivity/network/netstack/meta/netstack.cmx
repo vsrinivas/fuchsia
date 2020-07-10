@@ -1,6 +1,9 @@
 {
     "program": {
-        "binary": "bin/netstack"
+        "args": [
+            "netstack"
+        ],
+        "binary": "bin/grand_unified_binary"
     },
     "sandbox": {
         "features": [

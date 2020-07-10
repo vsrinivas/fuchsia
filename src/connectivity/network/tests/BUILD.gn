@@ -160,6 +160,9 @@ fuchsia_test_package("netstack-integration-tests-inner") {
     # netstack3 is under test.
     "//src/connectivity/network/netstack3:component",
 
+    # netstack is under test.
+    "//src/connectivity/network/netstack:component-debug",
+
     # network_manager integration with netstack is tested.
     "//src/connectivity/management/network-manager:component-netemul",
   ]
@@ -185,9 +188,11 @@ config_data("netcfg-netemul-config") {
 }
 
 # This target contains the test package netstack_integration_tests and the
-# dependencies needed in the image/universe to run the tests within it.
-# There's currently no way to express a dependency between packages in the build
-# system, so we aggregate all the dependencies in this group target.
+# package dependencies needed in the image/universe to run the tests within it.
+# We can remove this once all the dependencies move to the new build templates
+# so we can include dependent components in the test package. Note, there's
+# currently no way to express a dependency between packages in the build
+# system, so we aggregate all the package dependencies in this group target.
 # See bug 36293 for more details.
 group("netstack-integration-tests") {
   testonly = true
@@ -197,9 +202,6 @@ group("netstack-integration-tests") {
 
     # device_name_provider provides fuchsia.device.NameProvider.
     ":device_name_provider",
-
-    # netstack is under test.
-    "//src/connectivity/network/netstack:debug",
 
     # mock_cobalt provides fuchsia.cobalt.LoggerFactory and fuchsia.cobalt.test.LoggerQuerier.
     "//src/cobalt/bin/testing/mock_cobalt",
@@ -285,9 +287,11 @@ test("name_provider_service_not_present_test") {
 }
 
 # This target contains the test package netstack_c_api_tests and the
-# dependencies needed in the image/universe to run the tests within it.
-# There's currently no way to express a dependency between packages in the build
-# system, so we aggregate all the dependencies in this group target.
+# package dependencies needed in the image/universe to run the tests within it.
+# We can remove this once all the dependencies move to the new build templates
+# so we can include dependent components in the test package. Note, there's
+# currently no way to express a dependency between packages in the build
+# system, so we aggregate all the package dependencies in this group target.
 # See bug 36293 for more details.
 group("netstack_c_api_tests") {
   testonly = true
@@ -296,9 +300,6 @@ group("netstack_c_api_tests") {
 
     # device_name_provider provides fuchsia.device.NameProvider.
     ":device_name_provider",
-
-    # netstack is under test.
-    "//src/connectivity/network/netstack",
 
     # netemul is used to create hermetic environments.
     "//src/connectivity/network/testing/netemul",
@@ -380,6 +381,11 @@ fuchsia_test_package("netstack_c_api_tests_inner") {
     ":netstack-fuchsia-c-api-test",
     ":netstack-if-nameindex-test",
     ":netstack-no-network-test",
+  ]
+
+  deps = [
+    # netstack is under test.
+    "//src/connectivity/network/netstack:component-debug",
   ]
 
   test_specs = {

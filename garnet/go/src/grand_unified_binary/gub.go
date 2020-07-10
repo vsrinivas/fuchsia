@@ -21,6 +21,16 @@ import (
 )
 
 func main() {
+	// The new fuchsia build templates do not support renaming a binary and properly
+	// including its dependent libraries in a package. As a workaround, we leave the
+	// binary name untouched and check the second argument if the first argument is
+	// the default binary name.
+	// TODO(55842): Remove this workaround.
+	if len(os.Args) != 0 && filepath.Base(os.Args[0]) == "grand_unified_binary" {
+		os.Args[0] = ""
+		os.Args = os.Args[1:]
+	}
+
 	if len(os.Args) < 1 {
 		log.Println("software delivery grand unified binary: cannot determine binary, no argv 0")
 		os.Exit(1)

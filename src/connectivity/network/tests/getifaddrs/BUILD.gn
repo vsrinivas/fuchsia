@@ -21,16 +21,12 @@ fuchsia_component("getifaddrs-test-component") {
 fuchsia_component("getifaddrs-netemul-test") {
   testonly = true
   manifest = "meta/getifaddrs-netemul-test.cmx"
-  deps = [
-    ":getifaddrs-test-component",
-
-    # netstack is under test.
-    "//src/connectivity/network/netstack:debug",
-  ]
+  deps = [ ":getifaddrs-test-component" ]
 }
 
 fuchsia_test_package("getifaddrs-tests") {
   test_components = [ ":getifaddrs-netemul-test" ]
+  deps = [ "//src/connectivity/network/netstack:component-debug" ]
 }
 
 group("tests") {

@@ -57,7 +57,7 @@ fuchsia_unittest_package("dhcpv6-client-test") {
 
     # The DHCPv6 client creates sockets so it depends on an implementation of
     # `fuchsia.posix.socket.Provider`.
-    "//src/connectivity/network/netstack:debug",
+    "//src/connectivity/network/netstack:component-debug",
   ]
 }
 

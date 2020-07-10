@@ -52,15 +52,16 @@ fuchsia_component("dhcp-validity-test") {
     ":dhcp6_setup",
     ":dhcp_setup",
     ":dhcpd_config",
-
-    # DHCP is implemented in-stack in netstack2. This will change when DHCP is
-    # implemented out-of-stack.
-    "//src/connectivity/network/netstack:debug",
   ]
 }
 
 fuchsia_test_package("netemul-dhcp-tests") {
   test_components = [ ":dhcp-validity-test" ]
+  deps = [
+    # DHCP is implemented in-stack in netstack2. This will change when DHCP is
+    # implemented out-of-stack.
+    "//src/connectivity/network/netstack:component-debug",
+  ]
 
   # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
   test_specs = {

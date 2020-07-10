@@ -36,7 +36,7 @@ impl NetstackVersion {
     pub fn get_url(&self) -> &'static str {
         match self {
             NetstackVersion::Netstack2 => {
-                "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx"
+                "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack-debug.cmx"
             }
             NetstackVersion::Netstack3 => {
                 "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack3.cmx"

@@ -522,7 +522,7 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/weavestack_unittests#meta/weavestack_unittests.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/weavestack-unittests#meta/weavestack-unittests.cmx",
          "max_severity": "ERROR"
       },
       {

@@ -2,9 +2,9 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx",
+                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/weavestack-unittests#meta/netstack-debug.cmx",
                 "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cmx",
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx"
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/weavestack-unittests#meta/netstack-debug.cmx"
             },
             "system-services": [
                 "fuchsia.boot.FactoryItems"
@@ -12,7 +12,7 @@
         }
     },
     "program": {
-        "binary": "test/weavestack_unittests"
+        "binary": "bin/weavestack_unittests"
     },
     "sandbox": {
         "features": [

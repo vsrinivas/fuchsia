@@ -3,36 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":weavestack_unittests",
-    "//src/connectivity/network/netstack:debug",
-  ]
-}
-
-test_package("weavestack_unittests") {
-  deps = [
-    ":config",
-    ":unittests",
-  ]
-
-  tests = [
-    {
-      name = "weavestack_unittests"
-      environments = basic_envs
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("../data/default_environment_schema.json")
-      dest = "default_environment_schema.json"
-    },
-  ]
+  public_deps = [ ":package-test" ]
 }
 
 executable("unittests") {
@@ -60,9 +35,33 @@ executable("unittests") {
 }
 
 config_data("config") {
-  for_pkg = "weavestack_unittests"
+  for_pkg = "weavestack-unittests"
   sources = [
     "testdata/default_environment.json",
     "testdata/device_info.json",
   ]
+}
+
+resource("data") {
+  testonly = true
+  sources = [
+    "//src/connectivity/weave/weavestack/data/default_environment_schema.json",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_component("weavestack-unittests") {
+  testonly = true
+  manifest = "meta/weavestack_unittests.cmx"
+  deps = [
+    ":config",
+    ":data",
+    ":unittests",
+  ]
+}
+
+fuchsia_test_package("package-test") {
+  package_name = "weavestack-unittests"
+  test_components = [ ":weavestack-unittests" ]
+  deps = [ "//src/connectivity/network/netstack:component-debug" ]
 }

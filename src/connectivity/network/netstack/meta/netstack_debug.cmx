@@ -1,11 +1,12 @@
 {
     "program": {
         "args": [
+            "netstack",
             "--log-packets",
             "--syslog",
             "--verbosity=debug"
         ],
-        "binary": "bin/netstack"
+        "binary": "bin/grand_unified_binary"
     },
     "sandbox": {
         "features": [

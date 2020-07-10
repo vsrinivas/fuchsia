@@ -249,7 +249,6 @@ group("deprecated_package_underscore") {
     "//src/connectivity/telephony/lib/tel-devmgr:tel_devmgr_qmi_component_test",
     "//src/connectivity/telephony/telephony:telephony_tests",
     "//src/connectivity/weave/adaptation/tests:adaptation_tests",
-    "//src/connectivity/weave/weavestack/tests:weavestack_unittests",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device/test:sim_device_test",
     "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_test",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test:iwlwifi_test",
