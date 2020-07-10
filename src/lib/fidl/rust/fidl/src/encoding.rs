@@ -1952,9 +1952,13 @@ macro_rules! fidl_struct {
 
         impl $crate::encoding::Encodable for $name {
             unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+                // Ensure padding is zero by writing zero to the padded region which will be partially overwritten
+                // when the field is written.
                 $(
-                    *std::mem::transmute::<*mut u8, *mut $padding_ty>(encoder.mut_buffer().as_mut_ptr().offset(offset as isize).offset($padding_offset)) = 0;
+                    let ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize).offset($padding_offset);
+                    *std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr) = 0;
                 )*
+                // Write the fields.
                 $(
                     $crate::fidl_unsafe_encode!(&mut self.$member_name, encoder, offset + $member_offset_v1, recursion_depth)?;
                 )*
@@ -1972,14 +1976,22 @@ macro_rules! fidl_struct {
             }
 
             unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
-                // TODO(bprosnitz) Use generated padding mask here.
-                let mut padding_start = 0;
+                // Apply masks to check if padded regions are zero.
                 $(
-                    decoder.check_padding(offset + padding_start, $member_offset_v1 - padding_start)?;
-                    $crate::fidl_unsafe_decode!(&mut self.$member_name, decoder, offset + $member_offset_v1)?;
-                    padding_start = $member_offset_v1 + decoder.inline_size_of::<$member_ty>();
+                    let ptr = decoder.buffer().as_ptr().offset(offset as isize).offset($padding_offset);
+                    let padval = *std::mem::transmute::<*const u8, *const $padding_ty>(ptr);
+                    let maskedval = padval & $padding_mask;
+                    if (maskedval != 0) {
+                        return Err($crate::Error::NonZeroPadding {
+                            padding_start: offset + $padding_offset + (($padding_mask as u64).trailing_zeros() / 8) as usize,
+                            non_zero_pos: offset + $padding_offset + (maskedval.trailing_zeros() / 8) as usize
+                        });
+                    }
                 )*
-                decoder.check_padding(offset + padding_start, decoder.inline_size_of::<Self>() - padding_start)?;
+                // Read the fields.
+                $(
+                    $crate::fidl_unsafe_decode!(&mut self.$member_name, decoder, offset + $member_offset_v1)?;
+                )*
                 Ok(())
             }
         }
