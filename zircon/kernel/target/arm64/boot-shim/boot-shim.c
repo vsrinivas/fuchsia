@@ -57,8 +57,6 @@ static void set_cpu_count(uint32_t cpu_count);
 #define REMOVE_KERNEL_FROM_ZBI 1
 #endif
 
-#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
-
 #if HAS_DEVICE_TREE
 typedef enum {
   NODE_NONE,
