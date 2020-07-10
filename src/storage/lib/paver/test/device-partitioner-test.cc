@@ -545,6 +545,37 @@ TEST_F(EfiDevicePartitionerTests, AddedPartitionRemovedAfterWipePartitions) {
   ASSERT_NOT_OK(status->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
 }
 
+TEST_F(EfiDevicePartitionerTests, FindOldBootloaderPartitionName) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(32 * kGibibyte, &gpt_dev));
+
+  {
+    // Pause the block watcher while we write partitions to the disk.
+    // This is to avoid the block watcher seeing an intermediate state of the partition table
+    // and incorrectly treating it as an MBR.
+    // The watcher is automatically resumed when this goes out of scope.
+    auto pauser = BlockWatcherPauser::Create(GetSvcRoot());
+    ASSERT_OK(pauser);
+
+    std::unique_ptr<gpt::GptDevice> gpt;
+    ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
+
+    ASSERT_OK(gpt->AddPartition("efi-system", kEfiType, GetRandomGuid(), 0x22, 0x8000, 0));
+    ASSERT_OK(gpt->Sync());
+  }
+
+  fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
+  auto result = ::llcpp::fuchsia::device::Controller::Call::Rebind(
+      caller.channel(), fidl::StringView("/boot/driver/gpt.so"));
+  ASSERT_TRUE(result.ok());
+  ASSERT_FALSE(result->result.is_err());
+
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  auto partitioner = CreatePartitioner(std::move(gpt_fd));
+  ASSERT_OK(partitioner);
+  ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader)));
+}
+
 TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(CreateDisk(32 * kGibibyte, &gpt_dev));
@@ -561,17 +592,18 @@ TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
     ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
 
     // Write initial partitions to disk.
-    const std::array<PartitionDescription, 10> partitions_at_start{
+    const std::array<PartitionDescription, 11> partitions_at_start{
         PartitionDescription{"efi", kEfiType, 0x22, 0x1},
-        PartitionDescription{GUID_EFI_NAME, kEfiType, 0x23, 0x8000},
-        PartitionDescription{"ZIRCON-A", kZirconAType, 0x8023, 0x1},
-        PartitionDescription{"zircon_b", kZirconBType, 0x8024, 0x1},
-        PartitionDescription{"zircon r", kZirconRType, 0x8025, 0x1},
-        PartitionDescription{"vbmeta-a", kVbMetaAType, 0x8026, 0x1},
-        PartitionDescription{"VBMETA_B", kVbMetaBType, 0x8027, 0x1},
-        PartitionDescription{"VBMETA R", kVbMetaRType, 0x8028, 0x1},
-        PartitionDescription{"abrmeta", kAbrMetaType, 0x8029, 0x1},
-        PartitionDescription{"FVM", kFvmType, 0x8030, 0x1},
+        PartitionDescription{"efi-system", kEfiType, 0x23, 0x8000},
+        PartitionDescription{GUID_EFI_NAME, kEfiType, 0x8023, 0x8000},
+        PartitionDescription{"ZIRCON-A", kZirconAType, 0x10023, 0x1},
+        PartitionDescription{"zircon_b", kZirconBType, 0x10024, 0x1},
+        PartitionDescription{"zircon r", kZirconRType, 0x10025, 0x1},
+        PartitionDescription{"vbmeta-a", kVbMetaAType, 0x10026, 0x1},
+        PartitionDescription{"VBMETA_B", kVbMetaBType, 0x10027, 0x1},
+        PartitionDescription{"VBMETA R", kVbMetaRType, 0x10028, 0x1},
+        PartitionDescription{"abrmeta", kAbrMetaType, 0x10029, 0x1},
+        PartitionDescription{"FVM", kFvmType, 0x10030, 0x1},
     };
     for (auto& part : partitions_at_start) {
       ASSERT_OK(

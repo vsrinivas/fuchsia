@@ -19,6 +19,9 @@ constexpr size_t kKibibyte = 1024;
 constexpr size_t kMebibyte = kKibibyte * 1024;
 constexpr size_t kGibibyte = kMebibyte * 1024;
 
+// TODO: Remove support after July 9th 2021.
+constexpr char kOldEfiName[] = "efi-system";
+
 }  // namespace
 
 zx::status<std::unique_ptr<DevicePartitioner>> EfiDevicePartitioner::Initialize(
@@ -125,7 +128,9 @@ zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::FindPartition
   switch (spec.partition) {
     case Partition::kBootloader: {
       const auto filter = [](const gpt_partition_t& part) {
-        return FilterByTypeAndName(part, GUID_EFI_VALUE, GUID_EFI_NAME);
+        return FilterByTypeAndName(part, GUID_EFI_VALUE, GUID_EFI_NAME) ||
+               // TODO: Remove support after July 9th 2021.
+               FilterByTypeAndName(part, GUID_EFI_VALUE, kOldEfiName);
       };
       auto status = gpt_->FindPartition(filter);
       if (status.is_error()) {
@@ -199,6 +204,11 @@ zx::status<> EfiDevicePartitioner::InitPartitionTables() const {
       char cstring_name[GPT_NAME_LEN] = {};
       utf16_to_cstring(cstring_name, part.name, GPT_NAME_LEN);
       if (strncasecmp(cstring_name, GUID_EFI_NAME, GPT_NAME_LEN) == 0) {
+        return true;
+      }
+      // Support the old name.
+      // TODO: Remove support after July 9th 2021.
+      if (strncasecmp(cstring_name, kOldEfiName, GPT_NAME_LEN) == 0) {
         return true;
       }
     }

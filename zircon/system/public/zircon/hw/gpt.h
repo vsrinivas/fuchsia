@@ -65,7 +65,7 @@ static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
     0xd2, 0x11,                                    \
     0xba, 0x4b, 0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b \
 }
-#define GUID_EFI_NAME "efi-system"
+#define GUID_EFI_NAME "fuchsia-esp"
 
 // GUID for a system partition
 #define GUID_SYSTEM_STRING "606B000B-B7C7-4653-A7D5-B737332C899D"
