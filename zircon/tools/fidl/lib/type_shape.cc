@@ -147,13 +147,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kStruct:
             return DataSize(8);
           case flat::Decl::Kind::kUnion:
-            switch (wire_format()) {
-              case WireFormat::kOld:
-                return DataSize(8);
-              case WireFormat::kV1NoEe:
-              case WireFormat::kV1Header:
-                return DataSize(24);
-            }
+            return DataSize(24);
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
@@ -219,38 +213,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
     return UnalignedSize(object.type_ctor->type);
   }
 
-  std::any Visit(const flat::Union& object) override {
-    switch (wire_format()) {
-      case WireFormat::kOld: {
-        DataSize max_member_size = 0;
-
-        for (const auto& member : object.members) {
-          max_member_size = std::max(max_member_size, UnalignedSize(member));
-        }
-
-        // * The size of the union's tag is always 4 bytes.
-        // * However, the _aligned_ size of the union's tag (which is the unaligned size + padding)
-        // will
-        //   be:
-        //   * 4 iff all union members have alignment <= 4, or
-        //   * 8 iff any of the union members have alignment 8.
-        // * In other words, the size of the union's tag is the same as the alignment for the union.
-        // * It would be more readable to call object.DataOffset() here, but we cannot do that,
-        // since
-        //   object.Offset() calls this code--Alignment()--internally.
-        const DataSize tag_size = Alignment(object, wire_format());
-
-        // TODO(fxb/38129): The code in the line below returns the _aligned_ size of the union, not
-        // the _unaligned_ size. To fix this, we need to remove the call to AlignTo(), so this
-        // should just be "return tag_size + max_member_size". The current code is like this to
-        // preserve backward-compatibility with the previous typeshape implementation.
-        return tag_size + AlignTo(max_member_size, tag_size);
-      }
-      case WireFormat::kV1NoEe:
-      case WireFormat::kV1Header:
-        return DataSize(24);
-    }
-  }
+  std::any Visit(const flat::Union& object) override { return DataSize(24); }
 
   std::any Visit(const flat::Union::Member& object) override {
     return object.maybe_used ? UnalignedSize(*object.maybe_used) : DataSize(0);
@@ -360,25 +323,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
     return Alignment(object.type_ctor->type);
   }
 
-  std::any Visit(const flat::Union& object) override {
-    switch (wire_format()) {
-      case WireFormat::kOld: {
-        // Union member alignment is either 4 or 8, depending on whether any union members have
-        // alignment 8.
-
-        for (const auto& member : object.members) {
-          if (Alignment(member) == 8) {
-            return DataSize(8);
-          }
-        }
-
-        return DataSize(4);
-      }
-      case WireFormat::kV1NoEe:
-      case WireFormat::kV1Header:
-        return DataSize(8);
-    }
-  }
+  std::any Visit(const flat::Union& object) override { return DataSize(8); }
 
   std::any Visit(const flat::Union::Member& object) override {
     return object.maybe_used ? Alignment(*object.maybe_used) : DataSize(0);
@@ -396,7 +341,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
   DataSize Alignment(const flat::Object* object) { return Alignment(*object); }
 };
 
-class DepthVisitor final : public TypeShapeVisitor<DataSize> {
+class DepthVisitor : public TypeShapeVisitor<DataSize> {
  public:
   using TypeShapeVisitor<DataSize>::TypeShapeVisitor;
 
@@ -429,13 +374,7 @@ class DepthVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kStruct:
             return DataSize(1) + Depth(object.type_decl);
           case flat::Decl::Kind::kUnion:
-            switch (wire_format()) {
-              case WireFormat::kOld:
-                return DataSize(1) + Depth(object.type_decl);
-              case WireFormat::kV1NoEe:
-              case WireFormat::kV1Header:
-                return Depth(object.type_decl);
-            }
+            return Depth(object.type_decl);
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
@@ -514,13 +453,7 @@ class DepthVisitor final : public TypeShapeVisitor<DataSize> {
       max_depth = std::max(max_depth, Depth(member));
     }
 
-    switch (wire_format()) {
-      case WireFormat::kOld:
-        return max_depth;
-      case WireFormat::kV1NoEe:
-      case WireFormat::kV1Header:
-        return DataSize(1) + max_depth;
-    }
+    return DataSize(1) + max_depth;
   }
 
   std::any Visit(const flat::Union::Member& object) override {
@@ -533,10 +466,45 @@ class DepthVisitor final : public TypeShapeVisitor<DataSize> {
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(0); }
 
- private:
+ protected:
   DataSize Depth(const flat::Object& object) { return object.Accept(this); }
 
   DataSize Depth(const flat::Object* object) { return Depth(*object); }
+};
+
+// This visitor calculates depth according to the "old" wire format (i.e. with
+// static unions). It leverages |DepthVisitor| for any cases that are wire format
+// dependent, and overrides cases that are different in the old wire format (i.e.
+// unions).
+class OldWireFormatDepthVisitor final : public DepthVisitor {
+ public:
+  // A wire format is provided here because the default constructor is disabled. In actuality,
+  // the wire format does not matter as this class is hardcoded to return depth under the
+  // "old" wire format.
+  explicit OldWireFormatDepthVisitor(const WireFormat wire_format) : DepthVisitor(wire_format) {}
+
+  // A nullable static union introduces an extra level of depth, since it gets replaced with
+  // a presence pointer.
+  std::any Visit(const flat::IdentifierType& object) override {
+    if (object.nullability == types::Nullability::kNullable &&
+        object.type_decl->kind == flat::Decl::Kind::kUnion) {
+      return DataSize(1) + Depth(object.type_decl);
+    }
+
+    return DepthVisitor::Visit(object);
+  }
+
+  // Static unions do not introduce an extra level of depth because they hold data inline,
+  // without the use of an envelope
+  std::any Visit(const flat::Union& object) override {
+    DataSize max_depth;
+
+    for (const auto& member : object.members) {
+      max_depth = std::max(max_depth, Depth(member));
+    }
+
+    return max_depth;
+  }
 };
 
 class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
@@ -693,14 +661,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
             return ObjectAlign(UnalignedSize(object.type_decl, wire_format())) +
                    MaxOutOfLine(object.type_decl);
           case flat::Decl::Kind::kUnion:
-            switch (wire_format()) {
-              case WireFormat::kOld:
-                return ObjectAlign(UnalignedSize(object.type_decl, wire_format())) +
-                       MaxOutOfLine(object.type_decl);
-              case WireFormat::kV1NoEe:
-              case WireFormat::kV1Header:
-                return MaxOutOfLine(object.type_decl);
-            }
+            return MaxOutOfLine(object.type_decl);
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
@@ -781,15 +742,9 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
     DataSize max_out_of_line;
 
     for (const auto& member : object.members) {
-      max_out_of_line = std::max(max_out_of_line, [&] {
-        switch (wire_format()) {
-          case WireFormat::kOld:
-            return MaxOutOfLine(member);
-          case WireFormat::kV1NoEe:
-          case WireFormat::kV1Header:
-            return ObjectAlign(UnalignedSize(member, wire_format())) + MaxOutOfLine(member);
-        }
-      }());
+      max_out_of_line =
+          std::max(max_out_of_line,
+                   ObjectAlign(UnalignedSize(member, wire_format())) + MaxOutOfLine(member));
     }
 
     return max_out_of_line;
@@ -917,28 +872,9 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Union& object) override {
-    switch (wire_format()) {
-      case WireFormat::kOld: {
-        if (Alignment(object, wire_format()) == 8) {
-          // Unions have a 32-bit tag, so if a union's alignment is 8, it is necessarily padded.
-          return true;
-        }
-
-        for (const auto& member : object.members) {
-          if (HasPadding(member)) {
-            return true;
-          }
-        }
-
-        return false;
-      }
-      case WireFormat::kV1Header:
-      case WireFormat::kV1NoEe: {
-        // TODO(fxb/36332): Unions currently return true for has_padding in all cases, which should
-        // be fixed.
-        return true;
-      }
-    }
+    // TODO(fxb/36332): Unions currently return true for has_padding in all cases, which should
+    // be fixed.
+    return true;
   }
 
   std::any Visit(const flat::Union::Member& object) override {
@@ -1038,16 +974,7 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
 
   std::any Visit(const flat::Union& object) override {
     if (object.strictness == types::Strictness::kFlexible) {
-      switch (wire_format()) {
-        // In the old wire format, this union would be a "static union" on the
-        // wire which does not contain an envelope. Even if the union is declared
-        // as flexible, that's irrelevant since there's no envelope at all.
-        case WireFormat::kOld:
-          break;
-        case WireFormat::kV1NoEe:
-        case WireFormat::kV1Header:
-          return true;
-      }
+      return true;
     }
 
     for (const auto& member : object.members) {
@@ -1237,6 +1164,13 @@ bool IsResource(const flat::Object* object, const WireFormat wire_format) {
 
 namespace fidl {
 
+uint32_t OldWireFormatDepth(const flat::Object& object) {
+  OldWireFormatDepthVisitor v(WireFormat::kV1NoEe);
+  return object.Accept(&v);
+}
+
+uint32_t OldWireFormatDepth(const flat::Object* object) { return OldWireFormatDepth(*object); }
+
 TypeShape::TypeShape(const flat::Object& object, WireFormat wire_format)
     : inline_size(::AlignedSize(object, wire_format)),
       alignment(::Alignment(object, wire_format)),
@@ -1289,25 +1223,8 @@ FieldShape::FieldShape(const flat::TableMemberUsed& member, const WireFormat wir
     : padding(::Padding(UnalignedSize(member, wire_format), 8)) {}
 
 FieldShape::FieldShape(const flat::UnionMemberUsed& member, const WireFormat wire_format)
-    : offset([&] {
-        switch (wire_format) {
-          case WireFormat::kOld:
-            return Alignment(member.parent, wire_format).RawValue();
-          case WireFormat::kV1NoEe:
-          case WireFormat::kV1Header:
-            return 0u;
-        }
-      }()),
-      padding([&] {
-        switch (wire_format) {
-          case WireFormat::kOld:
-            return AlignedSize(member.parent, wire_format) - offset -
-                   UnalignedSize(member, wire_format).RawValue();
-          case WireFormat::kV1NoEe:
-          case WireFormat::kV1Header:
-            return ::Padding(UnalignedSize(member, wire_format),
-                             Alignment(member.parent, wire_format));
-        }
-      }()) {}
+    : offset(0u),
+      padding(
+          ::Padding(UnalignedSize(member, wire_format), Alignment(member.parent, wire_format))) {}
 
 }  // namespace fidl

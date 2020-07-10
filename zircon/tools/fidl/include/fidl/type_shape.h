@@ -20,7 +20,6 @@ struct UnionMemberUsed;
 }  // namespace flat
 
 enum class WireFormat {
-  kOld,       // The v0 wire format, where "union" is a static union on-the-wire.
   kV1NoEe,    // The v1-no-ee wire format, where "union" is an extensible union on-the-wire,
               // but without efficient envelope support.
   kV1Header,  // The v1 wire format, except where request and response structs do not receive
@@ -107,6 +106,11 @@ struct FieldShape {
 };
 
 constexpr uint32_t kMessageAlign = 8u;
+
+// Returns depth according to the "old" wire format (with static unions). This is currently only
+// supported to calculate the Layout=Simple/ForDeprecatedCBindings attribute constraint.
+uint32_t OldWireFormatDepth(const flat::Object& object);
+uint32_t OldWireFormatDepth(const flat::Object* object);
 
 }  // namespace fidl
 

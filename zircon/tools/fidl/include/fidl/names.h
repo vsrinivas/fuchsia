@@ -39,33 +39,27 @@ std::string NameFlatBinaryOperator(flat::BinaryOperatorConstant::Operator op);
 std::string NameFlatConstant(const flat::Constant* constant);
 std::string NameFlatTypeConstructor(const flat::TypeConstructor* type_ctor);
 std::string NameFlatType(const flat::Type* type);
-std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind,
-                          const WireFormat wire_format);
+std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind);
 std::string NameDiscoverable(const flat::Protocol& protocol);
 std::string NameMethod(std::string_view protocol_name, const flat::Protocol::Method& method);
 std::string NameOrdinal(std::string_view method_name);
 std::string NameMessage(std::string_view method_name, types::MessageKind kind);
 
 std::string NameTable(std::string_view table_name);
-std::string NamePointer(std::string_view name, const WireFormat wire_format);
+std::string NamePointer(std::string_view name);
 std::string NameMembers(std::string_view name);
 std::string NameFields(std::string_view name);
 std::string NameFieldsAltField(std::string_view name, uint32_t field_num);
 
-std::string NameCodedName(const flat::Name& name, const WireFormat wire_format);
-std::string NameCodedNullableName(const flat::Name& name, const WireFormat wire_format);
-std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability,
-                            const WireFormat wire_format);
-std::string NameCodedProtocolHandle(std::string_view protocol_name, types::Nullability nullability,
-                                    const WireFormat wire_format);
-std::string NameCodedRequestHandle(std::string_view protocol_name, types::Nullability nullability,
-                                   const WireFormat wire_format);
-std::string NameCodedArray(std::string_view element_name, uint64_t size,
-                           const WireFormat wire_format);
+std::string NameCodedName(const flat::Name& name);
+std::string NameCodedNullableName(const flat::Name& name);
+std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability);
+std::string NameCodedProtocolHandle(std::string_view protocol_name, types::Nullability nullability);
+std::string NameCodedRequestHandle(std::string_view protocol_name, types::Nullability nullability);
+std::string NameCodedArray(std::string_view element_name, uint64_t size);
 std::string NameCodedVector(std::string_view element_name, uint64_t max_size,
-                            types::Nullability nullability, const WireFormat wire_format);
-std::string NameCodedString(uint64_t max_size, types::Nullability nullability,
-                            const WireFormat wire_format);
+                            types::Nullability nullability);
+std::string NameCodedString(uint64_t max_size, types::Nullability nullability);
 
 }  // namespace fidl
 

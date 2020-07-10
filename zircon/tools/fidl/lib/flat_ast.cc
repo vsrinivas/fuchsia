@@ -197,7 +197,8 @@ const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
     {"fuchsia.io", "NodeInfo"},
 }};
 
-bool IsSimple(const Type* type, const TypeShape& typeshape, Reporter* reporter) {
+bool IsSimple(const Type* type, Reporter* reporter) {
+  auto depth = fidl::OldWireFormatDepth(type);
   switch (type->kind) {
     case Type::Kind::kVector: {
       auto vector_type = static_cast<const VectorType*>(type);
@@ -223,7 +224,7 @@ bool IsSimple(const Type* type, const TypeShape& typeshape, Reporter* reporter) 
     case Type::Kind::kHandle:
     case Type::Kind::kRequestHandle:
     case Type::Kind::kPrimitive:
-      return typeshape.Depth() == 0u;
+      return depth == 0u;
     case Type::Kind::kIdentifier: {
       auto identifier_type = static_cast<const IdentifierType*>(type);
       if (identifier_type->type_decl->kind == Decl::Kind::kUnion) {
@@ -240,9 +241,9 @@ bool IsSimple(const Type* type, const TypeShape& typeshape, Reporter* reporter) 
         case types::Nullability::kNullable:
           // If the identifier is nullable, then we can handle a depth of 1
           // because the secondary object is directly accessible.
-          return typeshape.Depth() <= 1u;
+          return depth <= 1u;
         case types::Nullability::kNonnullable:
-          return typeshape.Depth() == 0u;
+          return depth == 0u;
       }
     }
   }
@@ -746,7 +747,7 @@ bool SimpleLayoutConstraint(Reporter* reporter, const raw::Attribute& attribute,
   auto struct_decl = static_cast<const Struct*>(decl);
   bool ok = true;
   for (const auto& member : struct_decl->members) {
-    if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld), reporter)) {
+    if (!IsSimple(member.type_ctor.get()->type, reporter)) {
       reporter->ReportError(ErrMemberMustBeSimple, member.name, member.name.data());
       ok = false;
     }

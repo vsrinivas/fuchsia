@@ -39,9 +39,6 @@ bool CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
 
 bool CheckTypeShape(const fidl::flat::Object* actual, Expected expected_old,
                     Expected expected_v1_no_ee, Expected expected_v1_header) {
-  if (!CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kOld), expected_old)) {
-    return false;
-  }
   if (!CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe), expected_v1_no_ee)) {
     return false;
   }
@@ -53,9 +50,6 @@ bool CheckTypeShape(const fidl::flat::Object* actual, Expected expected_old,
 
 bool CheckTypeShape(const fidl::flat::Object* actual, Expected expected_old,
                     Expected expected_v1_no_ee) {
-  if (!CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kOld), expected_old)) {
-    return false;
-  }
   if (!CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe), expected_v1_no_ee)) {
     return false;
   }
@@ -78,10 +72,8 @@ template <typename T>
 bool CheckFieldShape(const T& field, ExpectedField expected_old, ExpectedField expected_v1) {
   BEGIN_HELPER;
 
-  const fidl::FieldShape& actual_old = fidl::FieldShape(field, fidl::WireFormat::kOld);
-  EXPECT_EQ(actual_old.offset, expected_old.offset);
-  EXPECT_EQ(actual_old.padding, expected_old.padding);
-
+  // There is no difference between kV1NoEe and kV1Header when it comes to FieldShapes, so
+  // only test one of them.
   const fidl::FieldShape& actual_v1 = fidl::FieldShape(field, fidl::WireFormat::kV1NoEe);
   EXPECT_EQ(actual_v1.offset, expected_v1.offset);
   EXPECT_EQ(actual_v1.padding, expected_v1.padding);

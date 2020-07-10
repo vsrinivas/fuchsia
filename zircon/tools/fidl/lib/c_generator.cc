@@ -587,7 +587,7 @@ void ArrayCountsAndElementTypeName(const flat::Library* library, const flat::Typ
   for (;;) {
     switch (type->kind) {
       default: {
-        *out_element_type_name = NameFlatCType(type, GetDeclKind(library, type), WireFormat::kOld);
+        *out_element_type_name = NameFlatCType(type, GetDeclKind(library, type));
         *out_array_counts = array_counts;
         return;
       }
@@ -606,7 +606,7 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
   std::string name = NameIdentifier(decl.name);
   const flat::Type* type = decl.type_ctor->type;
   auto decl_kind = GetDeclKind(library, type);
-  auto type_name = NameFlatCType(type, decl_kind, WireFormat::kOld);
+  auto type_name = NameFlatCType(type, decl_kind);
   std::string element_type_name;
   std::vector<uint32_t> array_counts;
   types::Nullability nullability = types::Nullability::kNonnullable;
@@ -619,8 +619,7 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     case flat::Type::Kind::kVector: {
       auto vector_type = static_cast<const flat::VectorType*>(type);
       const auto element_type = vector_type->element_type;
-      element_type_name =
-          NameFlatCType(element_type, GetDeclKind(library, element_type), WireFormat::kOld);
+      element_type_name = NameFlatCType(element_type, GetDeclKind(library, element_type));
       max_num_elements = vector_type->element_count->value;
       break;
     }
@@ -827,7 +826,7 @@ std::map<const flat::Decl*, CGenerator::NamedBits> CGenerator::NameBits(
     const std::vector<std::unique_ptr<flat::Bits>>& bits_infos) {
   std::map<const flat::Decl*, NamedBits> named_bits;
   for (const auto& bits_info : bits_infos) {
-    std::string bits_name = NameCodedName(bits_info->name, WireFormat::kOld);
+    std::string bits_name = NameCodedName(bits_info->name);
     named_bits.emplace(bits_info.get(), NamedBits{std::move(bits_name), *bits_info});
   }
   return named_bits;
@@ -839,9 +838,8 @@ std::map<const flat::Decl*, CGenerator::NamedConst> CGenerator::NameConsts(
     const std::vector<std::unique_ptr<flat::Const>>& const_infos) {
   std::map<const flat::Decl*, NamedConst> named_consts;
   for (const auto& const_info : const_infos) {
-    named_consts.emplace(
-        const_info.get(),
-        NamedConst{NameCodedName(const_info->name, WireFormat::kOld), *const_info});
+    named_consts.emplace(const_info.get(),
+                         NamedConst{NameCodedName(const_info->name), *const_info});
   }
   return named_consts;
 }
@@ -850,7 +848,7 @@ std::map<const flat::Decl*, CGenerator::NamedEnum> CGenerator::NameEnums(
     const std::vector<std::unique_ptr<flat::Enum>>& enum_infos) {
   std::map<const flat::Decl*, NamedEnum> named_enums;
   for (const auto& enum_info : enum_infos) {
-    std::string enum_name = NameCodedName(enum_info->name, WireFormat::kOld);
+    std::string enum_name = NameCodedName(enum_info->name);
     named_enums.emplace(enum_info.get(), NamedEnum{std::move(enum_name), *enum_info});
   }
   return named_enums;
@@ -861,7 +859,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
   std::map<const flat::Decl*, NamedProtocol> named_protocols;
   for (const auto& protocol_info : protocol_infos) {
     NamedProtocol named_protocol;
-    named_protocol.c_name = NameCodedName(protocol_info->name, WireFormat::kOld);
+    named_protocol.c_name = NameCodedName(protocol_info->name);
     if (protocol_info->HasAttribute("Discoverable")) {
       named_protocol.discoverable_name = NameDiscoverable(*protocol_info);
     }
@@ -904,7 +902,7 @@ std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(
   for (const auto& struct_info : struct_infos) {
     if (struct_info->is_request_or_response)
       continue;
-    std::string c_name = NameCodedName(struct_info->name, WireFormat::kOld);
+    std::string c_name = NameCodedName(struct_info->name);
     std::string coded_name = c_name + "Coded";
     named_structs.emplace(struct_info.get(),
                           NamedStruct{std::move(c_name), std::move(coded_name), *struct_info});
@@ -916,7 +914,7 @@ std::map<const flat::Decl*, CGenerator::NamedTable> CGenerator::NameTables(
     const std::vector<std::unique_ptr<flat::Table>>& table_infos) {
   std::map<const flat::Decl*, NamedTable> named_tables;
   for (const auto& table_info : table_infos) {
-    std::string c_name = NameCodedName(table_info->name, WireFormat::kOld);
+    std::string c_name = NameCodedName(table_info->name);
     std::string coded_name = c_name + "Coded";
     named_tables.emplace(table_info.get(),
                          NamedTable{std::move(c_name), std::move(coded_name), *table_info});
@@ -928,7 +926,7 @@ std::map<const flat::Decl*, CGenerator::NamedUnion> CGenerator::NameUnions(
     const std::vector<std::unique_ptr<flat::Union>>& union_infos) {
   std::map<const flat::Decl*, NamedUnion> named_unions;
   for (const auto& union_info : union_infos) {
-    std::string union_name = NameCodedName(union_info->name, WireFormat::kOld);
+    std::string union_name = NameCodedName(union_info->name);
     if (!CUnionAllowed(union_name)) {
       continue;
     }

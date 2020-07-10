@@ -92,7 +92,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
 
       uint32_t array_size = array_type->typeshape(wire_format).InlineSize();
       uint32_t element_size = array_type->element_type->typeshape(wire_format).InlineSize();
-      auto name = NameCodedArray(coded_element_type->coded_name, array_size, WireFormat::kOld);
+      auto name = NameCodedArray(coded_element_type->coded_name, array_size);
       auto coded_array_type = std::make_unique<coded::ArrayType>(
           std::move(name), coded_element_type, array_size, element_size, context);
       array_type_map_[array_type] = coded_array_type.get();
@@ -109,8 +109,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       uint32_t max_count = vector_type->element_count->value;
       uint32_t element_size = coded_element_type->size;
       std::string_view element_name = coded_element_type->coded_name;
-      auto name =
-          NameCodedVector(element_name, max_count, vector_type->nullability, WireFormat::kOld);
+      auto name = NameCodedVector(element_name, max_count, vector_type->nullability);
       auto coded_vector_type = std::make_unique<coded::VectorType>(
           std::move(name), coded_element_type, max_count, element_size, vector_type->nullability);
       vector_type_map_[vector_type] = coded_vector_type.get();
@@ -123,7 +122,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       if (iter != string_type_map_.end())
         return iter->second;
       uint32_t max_size = string_type->max_size->value;
-      auto name = NameCodedString(max_size, string_type->nullability, WireFormat::kOld);
+      auto name = NameCodedString(max_size, string_type->nullability);
       auto coded_string_type =
           std::make_unique<coded::StringType>(std::move(name), max_size, string_type->nullability);
       string_type_map_[string_type] = coded_string_type.get();
@@ -135,7 +134,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto iter = handle_type_map_.find(handle_type);
       if (iter != handle_type_map_.end())
         return iter->second;
-      auto name = NameCodedHandle(handle_type->subtype, handle_type->nullability, WireFormat::kOld);
+      auto name = NameCodedHandle(handle_type->subtype, handle_type->nullability);
       zx_rights_t rights =
           static_cast<const flat::NumericConstantValue<zx_rights_t>&>(handle_type->rights->Value());
       auto coded_handle_type = std::make_unique<coded::HandleType>(
@@ -149,9 +148,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto iter = request_type_map_.find(request_type);
       if (iter != request_type_map_.end())
         return iter->second;
-      auto name =
-          NameCodedRequestHandle(NameCodedName(request_type->protocol_type->name, WireFormat::kOld),
-                                 request_type->nullability, WireFormat::kOld);
+      auto name = NameCodedRequestHandle(NameCodedName(request_type->protocol_type->name),
+                                         request_type->nullability);
       auto coded_request_type =
           std::make_unique<coded::RequestHandleType>(std::move(name), request_type->nullability);
       request_type_map_[request_type] = coded_request_type.get();
@@ -191,7 +189,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
           }
           auto coded_struct_type = static_cast<coded::StructType*>(coded_type);
           auto struct_pointer_type = std::make_unique<coded::StructPointerType>(
-              NamePointer(coded_struct_type->coded_name, wire_format), coded_struct_type,
+              NamePointer(coded_struct_type->coded_name), coded_struct_type,
               identifier_type->typeshape(wire_format).inline_size);
           coded_struct_type->maybe_reference_type = struct_pointer_type.get();
           struct_type_map_[identifier_type] = struct_pointer_type.get();
@@ -204,8 +202,6 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
           return coded_type;
         }
         case coded::Type::Kind::kXUnion: {
-          assert(wire_format != WireFormat::kOld);
-
           if (identifier_type->nullability != types::Nullability::kNullable) {
             return coded_type;
           }
@@ -216,9 +212,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
           auto iter = protocol_type_map_.find(identifier_type);
           if (iter != protocol_type_map_.end())
             return iter->second;
-          auto name =
-              NameCodedProtocolHandle(NameCodedName(identifier_type->name, WireFormat::kOld),
-                                      identifier_type->nullability, WireFormat::kOld);
+          auto name = NameCodedProtocolHandle(NameCodedName(identifier_type->name),
+                                              identifier_type->nullability);
           auto coded_protocol_type = std::make_unique<coded::ProtocolHandleType>(
               std::move(name), identifier_type->nullability);
           protocol_type_map_[identifier_type] = coded_protocol_type.get();
@@ -324,10 +319,6 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
       auto union_decl = static_cast<const flat::Union*>(decl);
       auto type = named_coded_types_[decl->name].get();
       switch (wire_format) {
-        case WireFormat::kOld: {
-          assert(false && "coding tables are not generated for the old wire format");
-          break;
-        }
         case WireFormat::kV1Header:
           __FALLTHROUGH;
         case WireFormat::kV1NoEe: {
@@ -393,7 +384,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
   switch (decl->kind) {
     case flat::Decl::Kind::kBits: {
       auto bits_decl = static_cast<const flat::Bits*>(decl);
-      std::string bits_name = NameCodedName(bits_decl->name, WireFormat::kOld);
+      std::string bits_name = NameCodedName(bits_decl->name);
       auto primitive_type = static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type);
       named_coded_types_.emplace(
           bits_decl->name,
@@ -404,7 +395,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
     }
     case flat::Decl::Kind::kEnum: {
       auto enum_decl = static_cast<const flat::Enum*>(decl);
-      std::string enum_name = NameCodedName(enum_decl->name, WireFormat::kOld);
+      std::string enum_name = NameCodedName(enum_decl->name);
       std::vector<uint64_t> members;
       for (const auto& member : enum_decl->members) {
         std::unique_ptr<flat::ConstantValue> value;
@@ -433,7 +424,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
     }
     case flat::Decl::Kind::kProtocol: {
       auto protocol_decl = static_cast<const flat::Protocol*>(decl);
-      std::string protocol_name = NameCodedName(protocol_decl->name, WireFormat::kOld);
+      std::string protocol_name = NameCodedName(protocol_decl->name);
       std::string protocol_qname = NameFlatName(protocol_decl->name);
       std::vector<std::unique_ptr<coded::MessageType>> protocol_messages;
       for (const auto& method_with_info : protocol_decl->all_methods) {
@@ -463,7 +454,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
     }
     case flat::Decl::Kind::kTable: {
       auto table_decl = static_cast<const flat::Table*>(decl);
-      std::string table_name = NameCodedName(table_decl->name, WireFormat::kOld);
+      std::string table_name = NameCodedName(table_decl->name);
       named_coded_types_.emplace(
           decl->name,
           std::make_unique<coded::TableType>(
@@ -475,7 +466,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
       auto struct_decl = static_cast<const flat::Struct*>(decl);
       if (struct_decl->is_request_or_response)
         break;
-      std::string struct_name = NameCodedName(struct_decl->name, WireFormat::kOld);
+      std::string struct_name = NameCodedName(struct_decl->name);
       named_coded_types_.emplace(
           decl->name,
           std::make_unique<coded::StructType>(
@@ -485,18 +476,13 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
     }
     case flat::Decl::Kind::kUnion: {
       auto union_decl = static_cast<const flat::Union*>(decl);
-      std::string union_name = NameCodedName(union_decl->name, WireFormat::kOld);
+      std::string union_name = NameCodedName(union_decl->name);
 
       switch (wire_format) {
-        case WireFormat::kOld: {
-          assert(false && "coding tables are not generated for the old wire format");
-          break;
-        }
         case WireFormat::kV1Header:
           __FALLTHROUGH;
         case WireFormat::kV1NoEe: {
-          std::string nullable_xunion_name =
-              NameCodedNullableName(union_decl->name, WireFormat::kOld);
+          std::string nullable_xunion_name = NameCodedNullableName(union_decl->name);
 
           // Always create the reference type
           auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
@@ -527,8 +513,6 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
 }
 
 void CodedTypesGenerator::CompileCodedTypes(const WireFormat wire_format) {
-  assert(wire_format != WireFormat::kOld &&
-         "coding tables are not generated for the old wire format");
   for (const auto& decl : library_->declaration_order_) {
     CompileDecl(decl, wire_format);
   }
