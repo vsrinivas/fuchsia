@@ -153,6 +153,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/driver-host-tests#meta/driver-host-tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/e2e_input_tests#meta/mediabuttons_listener_test.cmx",
          "max_severity": "ERROR"
       },
