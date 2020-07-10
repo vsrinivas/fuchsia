@@ -171,6 +171,7 @@ async fn connect_after_timeout(
     peers: Arc<Mutex<ConnectedPeers>>,
     controller_pool: Arc<Mutex<AvdtpControllerPool>>,
     profile_svc: ProfileProxy,
+    channel_mode: ChannelMode,
 ) {
     fx_vlog!(
         1,
@@ -185,7 +186,14 @@ async fn connect_after_timeout(
 
     fx_vlog!(1, "Peer has not established connection. A2DP sink assuming the INT role.");
     let channel = match profile_svc
-        .connect(&mut peer_id.into(), PSM_AVDTP, ChannelParameters::new_empty())
+        .connect(
+            &mut peer_id.into(),
+            PSM_AVDTP,
+            ChannelParameters {
+                channel_mode: Some(channel_mode),
+                ..ChannelParameters::new_empty()
+            },
+        )
         .await
     {
         Err(e) => {
@@ -226,6 +234,7 @@ fn handle_services_found(
     peers: Arc<Mutex<ConnectedPeers>>,
     controller_pool: Arc<Mutex<AvdtpControllerPool>>,
     profile_svc: ProfileProxy,
+    channel_mode: ChannelMode,
 ) {
     fx_log_info!("Audio Source found on {}, attributes: {:?}", peer_id, attributes);
 
@@ -248,7 +257,20 @@ fn handle_services_found(
         peers.clone(),
         controller_pool.clone(),
         profile_svc,
+        channel_mode,
     ));
+}
+
+/// Parses the ChannelMode from the String argument.
+///
+/// Returns an Error if the provided argument is an invalid string.
+fn channel_mode_from_arg(channel_mode: Option<String>) -> Result<ChannelMode, Error> {
+    match channel_mode {
+        None => Ok(ChannelMode::Basic),
+        Some(s) if s == "basic" => Ok(ChannelMode::Basic),
+        Some(s) if s == "ertm" => Ok(ChannelMode::EnhancedRetransmission),
+        Some(s) => return Err(format_err!("invalid channel mode: {}", s)),
+    }
 }
 
 /// Options available from the command line
@@ -259,6 +281,10 @@ struct Opt {
     /// published Media Session Domain (optional, defaults to a native Fuchsia session)
     // TODO - Point to any media documentation about domains
     domain: Option<String>,
+
+    #[argh(option, short = 'c', long = "channelmode")]
+    /// channel mode preferred for the AVDTP signaling channel (optional, defaults to "basic", values: "basic", "ertm").
+    channel_mode: Option<String>,
 }
 
 #[fasync::run_singlethreaded]
@@ -268,6 +294,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["a2dp-sink"]).expect("Can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
+    let signaling_channel_mode = channel_mode_from_arg(opts.channel_mode)?;
     let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
     let inspect = inspect::Inspector::new();
@@ -322,7 +349,10 @@ async fn main() -> Result<(), Error> {
     profile_svc.advertise(
         &mut service_defs.into_iter(),
         SecurityRequirements::new_empty(),
-        ChannelParameters::new_empty(),
+        ChannelParameters {
+            channel_mode: Some(signaling_channel_mode),
+            ..ChannelParameters::new_empty()
+        },
         connect_client,
     )?;
 
@@ -340,14 +370,22 @@ async fn main() -> Result<(), Error> {
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
-    handle_profile_events(peers, controller_pool, profile_svc, connect_requests, results_requests)
-        .await
+    handle_profile_events(
+        peers,
+        controller_pool,
+        profile_svc,
+        signaling_channel_mode,
+        connect_requests,
+        results_requests,
+    )
+    .await
 }
 
 async fn handle_profile_events(
     peers: Arc<Mutex<ConnectedPeers>>,
     controller_pool: Arc<Mutex<AvdtpControllerPool>>,
     profile_svc: ProfileProxy,
+    channel_mode: ChannelMode,
     mut connect_requests: ConnectionReceiverRequestStream,
     mut results_requests: SearchResultsRequestStream,
 ) -> Result<(), Error> {
@@ -368,7 +406,7 @@ async fn handle_profile_events(
                 };
                 let SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
 
-                handle_services_found(&peer_id.into(), &attributes, peers.clone(), controller_pool.clone(), profile_svc.clone());
+                handle_services_found(&peer_id.into(), &attributes, peers.clone(), controller_pool.clone(), profile_svc.clone(), channel_mode.clone());
                 responder.send()?;
             }
             complete => break,
@@ -387,6 +425,7 @@ mod tests {
     use fuchsia_bluetooth::types::PeerId;
     use futures::channel::mpsc;
     use futures::{pin_mut, task::Poll, StreamExt};
+    use matches::assert_matches;
 
     pub(crate) fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
         const BUFFER_SIZE: usize = 100;
@@ -437,6 +476,7 @@ mod tests {
             peers,
             controller_pool,
             profile_proxy,
+            ChannelMode::Basic,
             connect_stream,
             results_stream,
         );
@@ -497,6 +537,7 @@ mod tests {
             peers.clone(),
             controller_pool.clone(),
             proxy.clone(),
+            ChannelMode::Basic,
         );
 
         run_to_stalled(&mut exec);
@@ -556,6 +597,7 @@ mod tests {
             peers.clone(),
             controller_pool.clone(),
             proxy.clone(),
+            ChannelMode::Basic,
         );
 
         // At this point, a remote peer was found, but hasn't connected yet. There
@@ -591,5 +633,23 @@ mod tests {
             Poll::Pending => {}
         };
         run_to_stalled(&mut exec);
+    }
+
+    #[test]
+    fn test_channel_mode_from_arg() {
+        let channel_string = None;
+        assert_matches!(channel_mode_from_arg(channel_string), Ok(ChannelMode::Basic));
+
+        let channel_string = Some("basic".to_string());
+        assert_matches!(channel_mode_from_arg(channel_string), Ok(ChannelMode::Basic));
+
+        let channel_string = Some("ertm".to_string());
+        assert_matches!(
+            channel_mode_from_arg(channel_string),
+            Ok(ChannelMode::EnhancedRetransmission)
+        );
+
+        let channel_string = Some("foobar123".to_string());
+        assert!(channel_mode_from_arg(channel_string).is_err());
     }
 }

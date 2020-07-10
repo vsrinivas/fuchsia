@@ -167,13 +167,15 @@ struct Peers {
     peers: DetachableMap<PeerId, Peer>,
     streams: stream::Streams,
     profile: ProfileProxy,
+    // The L2CAP channel mode preference for the AVDTP signaling channel.
+    channel_mode: ChannelMode,
 }
 
 const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(2);
 
 impl Peers {
-    fn new(streams: stream::Streams, profile: ProfileProxy) -> Self {
-        Peers { peers: DetachableMap::new(), profile, streams }
+    fn new(streams: stream::Streams, profile: ProfileProxy, channel_mode: ChannelMode) -> Self {
+        Peers { peers: DetachableMap::new(), profile, streams, channel_mode }
     }
 
     pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<Peer>> {
@@ -228,11 +230,12 @@ impl Peers {
         let entry = self.peers.lazy_entry(&id);
         let profile = self.profile.clone();
         let streams = self.streams.as_new();
+        let channel_mode = self.channel_mode.clone();
         fasync::spawn_local(async move {
             fx_log_info!("Waiting {:?} to connect to discovered peer {}", INITIATOR_DELAY, id);
             fasync::Timer::new(INITIATOR_DELAY.after_now()).await;
             if let Some(peer) = entry.get() {
-                fx_log_info!("After initiatiator delay, {} was connected, not connecting..", id);
+                fx_log_info!("After initiator delay, {} was connected, not connecting..", id);
                 if let Some(peer) = peer.upgrade() {
                     if peer.set_descriptor(desc.clone()).is_none() {
                         // TODO(50465): maybe check to see if we should start streaming.
@@ -242,7 +245,14 @@ impl Peers {
                 return;
             }
             let channel = match profile
-                .connect(&mut id.into(), PSM_AVDTP, ChannelParameters::new_empty())
+                .connect(
+                    &mut id.into(),
+                    PSM_AVDTP,
+                    ChannelParameters {
+                        channel_mode: Some(channel_mode),
+                        ..ChannelParameters::new_empty()
+                    },
+                )
                 .await
             {
                 Err(e) => {
@@ -427,6 +437,18 @@ async fn start_streaming(peer: &DetachableWeak<PeerId, Peer>) -> Result<(), anyh
         .map_err(Into::into)
 }
 
+/// Parses the ChannelMode from the String argument.
+///
+/// Returns an Error if the provided argument is an invalid string.
+fn channel_mode_from_arg(channel_mode: Option<String>) -> Result<ChannelMode, Error> {
+    match channel_mode {
+        None => Ok(ChannelMode::Basic),
+        Some(s) if s == "basic" => Ok(ChannelMode::Basic),
+        Some(s) if s == "ertm" => Ok(ChannelMode::EnhancedRetransmission),
+        Some(s) => return Err(format_err!("invalid channel mode: {}", s)),
+    }
+}
+
 /// Defines the options available from the command line
 #[derive(FromArgs)]
 #[argh(description = "Bluetooth Advanced Audio Distribution Profile: Source")]
@@ -434,6 +456,10 @@ struct Opt {
     #[argh(option, default = "AudioSourceType::AudioOut")]
     /// audio source. options: [audio_out, big_ben]. Defaults to 'audio_out'
     source: AudioSourceType,
+
+    #[argh(option, short = 'c', long = "channelmode")]
+    /// channel mode preferred for the AVDTP signaling channel (optional, defaults to "basic", values: "basic", "ertm").
+    channel_mode: Option<String>,
 }
 
 #[fasync::run_singlethreaded]
@@ -444,6 +470,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["a2dp-source"]).expect("Can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
+    let signaling_channel_mode = channel_mode_from_arg(opts.channel_mode)?;
     // Check to see that we can encode SBC audio.
     // This is a requireement of A2DP 1.3: Section 4.2
     if let Err(e) = test_encode_sbc().await {
@@ -477,7 +504,10 @@ async fn main() -> Result<(), Error> {
         .advertise(
             &mut service_defs.into_iter(),
             SecurityRequirements::new_empty(),
-            ChannelParameters::new_empty(),
+            ChannelParameters {
+                channel_mode: Some(signaling_channel_mode),
+                ..ChannelParameters::new_empty()
+            },
             connect_client,
         )
         .context("advertising A2DP service")?;
@@ -495,7 +525,7 @@ async fn main() -> Result<(), Error> {
     profile_svc.search(ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
 
     let streams = build_local_streams(opts.source)?;
-    let peers = Peers::new(streams, profile_svc);
+    let peers = Peers::new(streams, profile_svc, signaling_channel_mode);
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
@@ -573,7 +603,7 @@ mod tests {
             create_proxy_and_stream::<ConnectionReceiverMarker>()
                 .expect("ConnectionReceiver proxy should be created");
 
-        let peers = Peers::new(stream::Streams::new(), profile_proxy);
+        let peers = Peers::new(stream::Streams::new(), profile_proxy, ChannelMode::Basic);
         let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
         let handler_fut =
@@ -611,7 +641,7 @@ mod tests {
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
         let id = PeerId(1);
 
-        let peers = Peers::new(stream::Streams::new(), proxy);
+        let peers = Peers::new(stream::Streams::new(), proxy, ChannelMode::Basic);
 
         (exec, id, peers, stream)
     }
@@ -754,5 +784,23 @@ mod tests {
             }
             x => panic!("Expected Ok Selected SBC stream, got {:?}", x),
         };
+    }
+
+    #[test]
+    fn test_channel_mode_from_arg() {
+        let channel_string = None;
+        assert_matches!(channel_mode_from_arg(channel_string), Ok(ChannelMode::Basic));
+
+        let channel_string = Some("basic".to_string());
+        assert_matches!(channel_mode_from_arg(channel_string), Ok(ChannelMode::Basic));
+
+        let channel_string = Some("ertm".to_string());
+        assert_matches!(
+            channel_mode_from_arg(channel_string),
+            Ok(ChannelMode::EnhancedRetransmission)
+        );
+
+        let channel_string = Some("foobar123".to_string());
+        assert!(channel_mode_from_arg(channel_string).is_err());
     }
 }
