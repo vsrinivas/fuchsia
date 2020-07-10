@@ -345,24 +345,17 @@ async fn test_omaha_client_update() {
 
     env.proxies
         .resolver
-        .url("fuchsia-pkg://integration.test.fuchsia.com/update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
-        .resolve(
-        &env.proxies
-            .resolver
-            .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
-            .add_file(
-                "packages",
-                "system_image/0=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead\n",
-            )
-            .add_file("zbi", "fake zbi"),
-    );
-    env.proxies
-        .resolver.url("fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")
-        .resolve(
-        &env.proxies
-            .resolver
-            .package("system_image", "beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeada")
-    );
+        .register_custom_package(
+            "update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            "update",
+            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            "integration.test.fuchsia.com",
+        )
+        .add_file(
+            "packages",
+            "system_image/0=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead\n",
+        )
+        .add_file("zbi", "fake zbi");
 
     let mut stream = env.check_now().await;
     expect_states(

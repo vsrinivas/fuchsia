@@ -79,28 +79,20 @@ async fn fails_if_package_unavailable() {
 async fn packages_json_takes_precedence() {
     let env = TestEnv::new();
 
-    let pkg1_url = "fuchsia-pkg://fuchsia.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";
-    let pkg2_url = "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff";
     env.resolver
         .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
         )
-        .add_file("packages.json", make_packages_json([pkg1_url, pkg2_url]))
+        .add_file(
+            "packages.json",
+            make_packages_json([
+                "fuchsia-pkg://fuchsia.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
+                "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff",
+            ]),
+        )
         .add_file("zbi", "fake zbi");
-
-    env.resolver
-        .url(SYSTEM_IMAGE_URL)
-        .resolve(&env.resolver.package("system_image/0", SYSTEM_IMAGE_HASH));
-    env.resolver.url(pkg1_url).resolve(
-        &env.resolver
-            .package("amber/0", "00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100"),
-    );
-    env.resolver.url(pkg2_url).resolve(
-        &env.resolver
-            .package("pkgfs/0", "ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff"),
-    );
 
     env.run_system_updater(SystemUpdaterArgs {
         oneshot: Some(true),
@@ -113,6 +105,10 @@ async fn packages_json_takes_precedence() {
 
     assert_eq!(
         resolved_urls(Arc::clone(&env.interactions)),
-        vec![UPDATE_PKG_URL, pkg1_url, pkg2_url]
+        vec![
+            UPDATE_PKG_URL,
+            "fuchsia-pkg://fuchsia.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
+            "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff"
+        ]
     );
 }

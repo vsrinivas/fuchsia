@@ -10,7 +10,10 @@ async fn writes_bootloader() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([]))
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
         .add_file("zbi", "fake zbi")
         .add_file("bootloader", "new bootloader");
 
@@ -29,6 +32,7 @@ async fn writes_bootloader() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
@@ -54,7 +58,10 @@ async fn writes_firmware() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([]))
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
         .add_file("zbi", "fake zbi")
         .add_file("firmware", "fake firmware");
 
@@ -73,6 +80,7 @@ async fn writes_firmware() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
@@ -98,7 +106,10 @@ async fn writes_multiple_firmware_types() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([]))
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
         .add_file("zbi", "fake zbi")
         .add_file("firmware_a", "fake firmware A")
         .add_file("firmware_b", "fake firmware B");
@@ -116,7 +127,7 @@ async fn writes_multiple_firmware_types() {
     // The order of files listed from a directory isn't guaranteed so the
     // firmware could be written in either order. Sort by type string so
     // we can easily validate contents.
-    interactions[5..7].sort_by_key(|event| {
+    interactions[6..8].sort_by_key(|event| {
         if let Paver(PaverEvent::WriteFirmware { firmware_type, payload: _ }) = event {
             return firmware_type.clone();
         } else {
@@ -130,6 +141,7 @@ async fn writes_multiple_firmware_types() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
@@ -163,7 +175,10 @@ async fn skips_unsupported_firmware_type() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([]))
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
         .add_file("zbi", "fake zbi")
         .add_file("firmware", "fake firmware");
 
@@ -183,6 +198,7 @@ async fn skips_unsupported_firmware_type() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
@@ -213,7 +229,10 @@ async fn fails_on_firmware_write_error() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([]))
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
         .add_file("zbi", "fake zbi")
         .add_file("firmware", "fake firmware");
 

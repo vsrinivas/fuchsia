@@ -10,7 +10,10 @@ async fn uses_custom_update_package() {
 
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
-        .add_file("packages.json", make_packages_json([]))
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
         .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
@@ -29,6 +32,7 @@ async fn uses_custom_update_package() {
             Gc,
             PackageResolve("fuchsia-pkg://fuchsia.com/another-update/4".to_string()),
             Gc,
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
@@ -117,7 +121,10 @@ async fn does_not_reboot_if_requested_not_to_reboot() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([]))
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
         .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
@@ -150,6 +157,7 @@ async fn does_not_reboot_if_requested_not_to_reboot() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {

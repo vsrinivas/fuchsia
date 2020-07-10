@@ -12,7 +12,10 @@ async fn validates_board() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([]))
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
         .add_file("board", "x64")
         .add_file("zbi", "fake zbi")
         .add_file("bootloader", "new bootloader");
@@ -26,7 +29,10 @@ async fn validates_board() {
     .await
     .expect("success");
 
-    assert_eq!(resolved_urls(Arc::clone(&env.interactions)), vec![UPDATE_PKG_URL]);
+    assert_eq!(
+        resolved_urls(Arc::clone(&env.interactions)),
+        vec![UPDATE_PKG_URL, SYSTEM_IMAGE_URL,]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]

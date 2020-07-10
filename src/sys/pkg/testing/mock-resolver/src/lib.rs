@@ -270,14 +270,18 @@ impl MockResolverService {
 
         (*self.resolve_hook)(&package_url);
 
-        match self
-            .expectations
-            .lock()
-            .get_mut(&package_url)
-            .unwrap_or(&mut Expectation::Immediate(Err(Status::NOT_FOUND)))
-        {
+        // Successfully resolve unexpected packages without serving a package dir. Log the
+        // transaction through the above resolve_hook so tests can decide if it was expected.
+        // TODO(fxb/53187): change this to NOT_FOUND and fix the tests.
+        let mut fallback = Expectation::Immediate(Err(Status::OK));
+
+        match self.expectations.lock().get_mut(&package_url).unwrap_or(&mut fallback) {
             Expectation::Immediate(Ok(package)) => {
                 package.serve_on(dir);
+                responder.send(&mut Ok(()))?;
+            }
+            // TODO(fxb/53187): remove this line and fix affected tests.
+            Expectation::Immediate(Err(Status::OK)) => {
                 responder.send(&mut Ok(()))?;
             }
             Expectation::Immediate(Err(status)) => {
