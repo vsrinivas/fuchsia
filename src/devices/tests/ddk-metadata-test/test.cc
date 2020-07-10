@@ -14,15 +14,10 @@ namespace {
 using devmgr_integration_test::IsolatedDevmgr;
 
 TEST(MetadataTest, RunTests) {
-  const char kDriver[] = "/drivers/ddk-metadata-test.so";
+  const char kDriver[] = "/boot/driver/ddk-metadata-test.so";
   auto args = IsolatedDevmgr::DefaultArgs();
-
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_OK(
-      fdio_open("/pkg/data", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, remote.release()));
-  args.flat_namespace.push_back({"/drivers", std::move(local)});
-  args.load_drivers.push_back(kDriver);
+  args.path_prefix = "/pkg/";
+  args.driver_search_paths.push_back("/boot/driver");
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));

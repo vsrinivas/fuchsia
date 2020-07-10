@@ -4,8 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
@@ -46,29 +45,13 @@ test("tests") {
   visibility = [ ":*" ]
 }
 
-devmgr_manifest("devmgr-manifest") {
-}
+isolated_devmgr_unittest_package("ddk-metadata-test") {
+  executable_path = "test/ddk-metadata-test"
 
-test_package("ddk-metadata-test") {
   deps = [
-    ":devmgr-manifest",
     ":driver",
     ":tests",
-  ]
-
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  tests = [
-    {
-      name = "ddk-metadata-test"
-      environments = basic_envs
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("${root_build_dir}/ddk-metadata-test.so")
-      dest = "ddk-metadata-test.so"
-    },
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
   ]
 }

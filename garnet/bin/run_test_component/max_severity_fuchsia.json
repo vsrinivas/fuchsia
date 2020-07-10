@@ -141,6 +141,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/ddk-metadata-test#meta/ddk-metadata-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/decryptor_adapter_tests#meta/decryptor_adapter_tests.cmx",
          "max_severity": "ERROR"
       },
