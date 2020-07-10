@@ -335,7 +335,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   std::unique_ptr<WritebackInfo> write_info_ = {};
 
   // Reads in the blob's pages on demand.
-  std::unique_ptr<PageWatcher> page_watcher_ = nullptr;
+  std::unique_ptr<pager::PageWatcher> page_watcher_ = nullptr;
 };
 
 }  // namespace blobfs

@@ -16,41 +16,12 @@
 
 #include <memory>
 
-#include "../blob-verifier.h"
-#include "../compression/seekable-decompressor.h"
-#include "../compression/zstd-seekable-blob-collection.h"
+#include "../transaction-manager.h"
+#include "transfer-buffer.h"
+#include "user-pager-info.h"
 
 namespace blobfs {
-
-// Info required by the user pager to read in and verify pages.
-// Initialized by the PageWatcher and passed on to the UserPager.
-struct UserPagerInfo {
-  // Unique identifier used by UserPager to identify the data source on the underlying block
-  // device.
-  uint32_t identifier = 0;
-  // Block offset (in bytes) the data starts at. Used to inform the UserPager of the offset it
-  // should start issuing reads from.
-  uint64_t data_start_bytes = 0;
-  // Total length of the data. The |verifier| must be set up to verify this length.
-  uint64_t data_length_bytes = 0;
-  // Used to verify the pages as they are read in.
-  // TODO(44742): Make BlobVerifier movable, unwrap from unique_ptr.
-  std::unique_ptr<BlobVerifier> verifier;
-  // An optional decompressor used by the chunked compression strategy. The decompressor is invoked
-  // on the raw bytes received from the disk. If unset, blob data is assumed to be managed via some
-  // other compression strategy (including the "uncompressed" strategy).
-  std::unique_ptr<SeekableDecompressor> decompressor;
-  // An optional blobs management object used by the ZSTD Seekable compression strategy. If unset,
-  // blob data is assumed to be managed via some other compression strategy (including the
-  // "uncompressed" strategy). Note that this object is global to the |Blobfs| instance, and is
-  // copied here to maintain short-term consistency between |UserPager| strategy implementations.
-  //
-  // TODO(51072): Decompression strategies should have common abstractions to, among other things,
-  // avoid the need for both |decompressor| and |zstd_seekable_blob_collection|. This change is
-  // somewhat complicated by the fact that ZSTD Seekable decompression manages its own
-  // compressed-space buffer rather than reusing |transfer_buffer_| as chunked decompression does.
-  ZSTDSeekableBlobCollection* zstd_seekable_blob_collection = nullptr;
-};
+namespace pager {
 
 // The size of a transfer buffer for reading from storage.
 //
@@ -71,6 +42,11 @@ constexpr uint64_t kTransferBufferSize = 256 * (1 << 20);
 // 256 MB; but the size is arbitrary, since pages will become decommitted as they are moved to
 // destination VMOS.
 constexpr uint64_t kDecompressionBufferSize = 256 * (1 << 20);
+
+// Make sure blocks are page-aligned.
+static_assert(kBlobfsBlockSize % PAGE_SIZE == 0);
+// Make sure the pager transfer buffer is block-aligned.
+static_assert(kTransferBufferSize % kBlobfsBlockSize == 0);
 
 // Wrapper enum for error codes supported by the zx_pager_op_range(ZX_PAGER_OP_FAIL) syscall, used
 // to communicate userpager errors to the kernel, so that the error can be propagated to the
@@ -108,13 +84,16 @@ constexpr PagerErrorStatus ToPagerErrorStatus(zx_status_t status) {
   }
 }
 
-// Abstract class that encapsulates a user pager, its associated thread and transfer buffer. The
-// child class will need to define the interface required to populate the transfer buffer with
-// blocks read from storage.
+// Encapsulates a user pager, its associated thread and transfer buffer.
 class UserPager {
  public:
-  UserPager() = default;
-  virtual ~UserPager() = default;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(UserPager);
+
+  // Creates an instance of UserPager.
+  // A new thread is created and started to process page fault requests.
+  // |buffer| is used to retrieve and buffer data from the underlying storage.
+  [[nodiscard]] static zx::status<std::unique_ptr<UserPager>> Create(
+      std::unique_ptr<TransferBuffer> buffer);
 
   // Returns the pager handle.
   const zx::pager& Pager() const { return pager_; }
@@ -139,13 +118,11 @@ class UserPager {
                                                     const zx::vmo& vmo, const UserPagerInfo& info);
 
  protected:
-  // Sets up the transfer buffer, creates the pager and starts the pager thread.
-  [[nodiscard]] zx_status_t InitPager();
-
   // Protected for unit test access.
   zx::pager pager_;
 
  private:
+  UserPager() = default;
   struct ReadRange {
     uint64_t offset;
     uint64_t length;
@@ -180,30 +157,12 @@ class UserPager {
                                                   const zx::vmo& vmo, const UserPagerInfo& info);
   PagerErrorStatus TransferUncompressedPagesToVmo(uint64_t offset, uint64_t length,
                                                   const zx::vmo& vmo, const UserPagerInfo& info);
-  // Attaches the transfer buffer to the underlying block device, so that blocks can be read into it
-  // from storage.
-  [[nodiscard]] virtual zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) = 0;
-
-  // Reads data for the inode corresponding to |info.identifier| into the transfer buffer for the
-  // byte range specified by [|offset|, |offset| + |length|).
-  [[nodiscard]] virtual zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
-                                                        const UserPagerInfo& info) = 0;
-
-  // Verifies the data read in to |transfer_vmo| (i.e. the transfer buffer) via
-  // |PopulateTransferVmo|. Data in the range [|offset|, |offset| + |length|) is verified using the
-  // |info| provided. |buffer_length| might be larger than |length| e.g. for the tail where
-  // |length| might not be aligned, in which case the range between |length| and |buffer_length|
-  // should be verified to be zero.
-  [[nodiscard]] virtual zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
-                                                      uint64_t buffer_length,
-                                                      const zx::vmo& transfer_vmo,
-                                                      const UserPagerInfo& info) = 0;
 
   // Scratch buffer for pager transfers.
-  // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
-  // calling |zx_pager_supply_pages|. Map this only when an explicit address is required, e.g. for
-  // verification, and unmap it immediately after.
-  zx::vmo transfer_buffer_;
+  // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, the VMO owned by this buffer
+  // needs to be unmapped before calling |zx_pager_supply_pages|. Map |transfer_buffer_.vmo()| only
+  // when an explicit address is required, e.g. for verification, and unmap it immediately after.
+  std::unique_ptr<TransferBuffer> transfer_buffer_;
 
   // Scratch buffer for decompression.
   // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
@@ -214,6 +173,7 @@ class UserPager {
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };
 
+}  // namespace pager
 }  // namespace blobfs
 
 #endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_PAGER_USER_PAGER_H_

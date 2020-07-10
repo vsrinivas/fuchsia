@@ -40,7 +40,7 @@ class BlobLoader {
   // Creates a BlobLoader.
   static zx::status<BlobLoader> Create(TransactionManager* txn_manager,
                                        BlockIteratorProvider* block_iter_provider,
-                                       NodeFinder* node_finder, UserPager* pager,
+                                       NodeFinder* node_finder, pager::UserPager* pager,
                                        BlobfsMetrics* metrics,
                                        ZSTDSeekableBlobCollection* zstd_seekable_blob_collection);
 
@@ -76,12 +76,12 @@ class BlobLoader {
   // This method does *NOT* immediately verify the integrity of the blob's data, this will be
   // lazily verified by the pager as chunks of the blob are loaded.
   zx_status_t LoadBlobPaged(uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier,
-                            std::unique_ptr<PageWatcher>* page_watcher_out,
+                            std::unique_ptr<pager::PageWatcher>* page_watcher_out,
                             fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out);
 
  private:
   BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
-             NodeFinder* node_finder, UserPager* pager, BlobfsMetrics* metrics,
+             NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
              ZSTDSeekableBlobCollection* zstd_seekable_blob_collection,
              fzl::OwnedVmoMapper scratch_vmo, storage::OwnedVmoid scratch_vmoid);
 
@@ -115,7 +115,7 @@ class BlobLoader {
   TransactionManager* txn_manager_ = nullptr;
   BlockIteratorProvider* block_iter_provider_ = nullptr;
   NodeFinder* node_finder_ = nullptr;
-  UserPager* pager_ = nullptr;
+  pager::UserPager* pager_ = nullptr;
   BlobfsMetrics* metrics_ = nullptr;
   ZSTDSeekableBlobCollection* zstd_seekable_blob_collection_ = nullptr;
   fzl::OwnedVmoMapper scratch_vmo_;

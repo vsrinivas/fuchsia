@@ -66,7 +66,7 @@ using storage::UnbufferedOperationsBuilder;
 
 constexpr char kOutgoingDataRoot[] = "root";
 
-class Blobfs : public TransactionManager, public UserPager, public BlockIteratorProvider {
+class Blobfs : public TransactionManager, public BlockIteratorProvider {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
@@ -186,7 +186,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
   void PersistBlocks(const ReservedExtent& extent, storage::UnbufferedOperationsBuilder* ops);
 
-  bool PagingEnabled() const { return paging_enabled_; }
+  bool PagingEnabled() const { return pager_ != nullptr; }
 
   bool ShouldCompress() const {
     return write_compression_settings_.compression_algorithm != CompressionAlgorithm::UNCOMPRESSED;
@@ -214,18 +214,6 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
  private:
   friend class BlobfsChecker;
   std::unique_ptr<BlobCorruptionNotifier> blob_corruption_notifier_;
-
-  ////////////////
-  // UserPager interface.
-  //
-  // Allows populating (and verifying) the pager transfer buffer with a blob's blocks
-  // from the block device.
-  [[nodiscard]] zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) final;
-  [[nodiscard]] zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
-                                                const UserPagerInfo& info) final;
-  [[nodiscard]] zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
-                                              uint64_t buffer_length, const zx::vmo& transfer_vmo,
-                                              const UserPagerInfo& info) final;
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable,
@@ -315,8 +303,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   BlobfsMetrics metrics_ = {};
 
-  storage::Vmoid transfer_vmoid_;
-  bool paging_enabled_ = false;
+  std::unique_ptr<pager::UserPager> pager_ = nullptr;
 
   BlobLoader loader_;
   std::shared_mutex fsck_at_end_of_transaction_mutex_;

@@ -31,6 +31,7 @@
 #include "pager/user-pager.h"
 
 namespace blobfs {
+namespace pager {
 namespace {
 
 // Relatively large blobs are used to exercise paging multi-frame compressed blobs.
@@ -92,7 +93,7 @@ class MockBlob {
 
 class MockBlobFactory {
  public:
-  explicit MockBlobFactory(UserPager* pager) : pager_(pager) {}
+  MockBlobFactory(UserPager* pager, BlobfsMetrics* metrics) : pager_(pager), metrics_(metrics) {}
 
   std::unique_ptr<MockBlob> CreateBlob(char identifier, CompressionAlgorithm algorithm, size_t sz) {
     fbl::Array<uint8_t> data(new uint8_t[sz], sz);
@@ -113,7 +114,7 @@ class MockBlobFactory {
     }
 
     std::unique_ptr<BlobVerifier> verifier;
-    EXPECT_OK(BlobVerifier::Create(std::move(root), &metrics_, merkle_tree.get(), tree_len, sz,
+    EXPECT_OK(BlobVerifier::Create(std::move(root), metrics_, merkle_tree.get(), tree_len, sz,
                                    nullptr, &verifier));
 
     // Generate the contents as they would be stored on disk. (This includes compression if
@@ -183,58 +184,47 @@ class MockBlobFactory {
     return decompressor;
   }
 
-  BlobfsMetrics metrics_;
-  UserPager* pager_;
+  UserPager* pager_ = nullptr;
+  BlobfsMetrics* metrics_ = nullptr;
   bool data_corruption_ = false;
 };
 
-// Mock user pager. Defines the UserPager interface such that the result of reads on distinct
-// mock blobs can be verified.
-class MockPager : public UserPager {
+// Mock transfer buffer. Defines the |TransferBuffer| interface such that the result of reads on
+// distinct mock blobs can be verified.
+class MockTransferBuffer : public TransferBuffer {
  public:
-  MockPager() : factory_(this) { ASSERT_OK(InitPager()); }
+  static std::unique_ptr<MockTransferBuffer> Create(size_t sz) {
+    EXPECT_EQ(sz % ZX_PAGE_SIZE, 0);
+    zx::vmo vmo;
+    EXPECT_OK(zx::vmo::create(sz, 0, &vmo));
+    return std::unique_ptr<MockTransferBuffer>(new MockTransferBuffer(std::move(vmo)));
+  }
 
   void SetFailureMode(PagerErrorStatus mode) {
-    switch (mode) {
-      case PagerErrorStatus::kOK:
-        // Clear possible side effects from a previous failure mode.
-        mapping_.Unmap();
-        factory_.SetDataCorruption(false);
-        break;
-      case PagerErrorStatus::kErrDataIntegrity:
-        factory_.SetDataCorruption(true);
-        mapping_.Unmap();
-        break;
-      case PagerErrorStatus::kErrBadState:
-        mapping_.Map(*vmo_, 0, ZX_PAGE_SIZE, ZX_VM_PERM_READ);
-        factory_.SetDataCorruption(false);
-        break;
-      default:
-        break;
+    // Clear possible side effects from a previous failure mode.
+    mapping_.Unmap();
+    if (mode == PagerErrorStatus::kErrBadState) {
+      // A mapped VMO cannot be used for supplying pages, so this will result in failed calls to
+      // zx_pager_supply_pages.
+      mapping_.Map(vmo_, 0, ZX_PAGE_SIZE, ZX_VM_PERM_READ);
     }
     failure_mode_ = mode;
   }
 
-  MockBlob* CreateBlob(char identifier, CompressionAlgorithm algorithm, size_t sz) {
+  MockBlob* RegisterBlob(char identifier, std::unique_ptr<MockBlob> blob) {
     EXPECT_EQ(blob_registry_.find(identifier), blob_registry_.end());
-    blob_registry_[identifier] = factory_.CreateBlob(identifier, algorithm, sz);
-    return blob_registry_[identifier].get();
+    auto blob_ptr = blob.get();
+    blob_registry_[identifier] = std::move(blob);
+    return blob_ptr;
   }
 
   void SetDoPartialTransfer(bool do_partial_transfer = true) {
     do_partial_transfer_ = do_partial_transfer;
   }
 
- private:
-  zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) override {
-    vmo_ = zx::unowned_vmo(transfer_vmo);
-    return ZX_OK;
-  }
-
-  zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
-                                  const UserPagerInfo& info) override {
+  zx::status<> Populate(uint64_t offset, uint64_t length, const UserPagerInfo& info) final {
     if (failure_mode_ == PagerErrorStatus::kErrIO) {
-      return ZX_ERR_IO_REFUSED;
+      return zx::error(ZX_ERR_IO_REFUSED);
     }
     char identifier = static_cast<char>(info.identifier);
     EXPECT_NE(blob_registry_.find(identifier), blob_registry_.end());
@@ -244,55 +234,65 @@ class MockPager : public UserPager {
     // Fill the transfer buffer with the blob's data, to service page requests.
     if (do_partial_transfer_) {
       // Zero the entire range, and then explicitly fill the first half.
-      EXPECT_OK(vmo_->op_range(ZX_VMO_OP_ZERO, offset, length, nullptr, 0));
-      EXPECT_OK(vmo_->write(blob.raw_data() + offset, 0, length / 2));
+      EXPECT_OK(vmo_.op_range(ZX_VMO_OP_ZERO, offset, length, nullptr, 0));
+      EXPECT_OK(vmo_.write(blob.raw_data() + offset, 0, length / 2));
     } else {
-      EXPECT_OK(vmo_->write(blob.raw_data() + offset, 0, length));
+      EXPECT_OK(vmo_.write(blob.raw_data() + offset, 0, length));
     }
-    return ZX_OK;
+    return zx::ok();
   }
 
-  zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, size_t buffer_size,
-                                const zx::vmo& transfer_vmo, const UserPagerInfo& info) override {
-    // buffer_size should always be rounded up to a page.
-    EXPECT_EQ(fbl::round_up(length, unsigned{PAGE_SIZE}), buffer_size);
-    fzl::VmoMapper mapping;
-    auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
+  const zx::vmo& vmo() const final { return vmo_; }
 
-    // Map the transfer VMO in order to pass the verifier a pointer to the data.
-    zx_status_t status = mapping.Map(transfer_vmo, 0, buffer_size, ZX_VM_PERM_READ);
-    if (status != ZX_OK) {
-      return status;
-    }
-    return info.verifier->VerifyPartial(mapping.start(), length, offset, buffer_size);
-  }
+ private:
+  explicit MockTransferBuffer(zx::vmo vmo) : vmo_(std::move(vmo)) {}
 
-  std::map<char, std::unique_ptr<MockBlob>> blob_registry_;
-  MockBlobFactory factory_;
-  zx::unowned_vmo vmo_;
-  bool do_partial_transfer_ = false;
+  zx::vmo vmo_;
+  // Used to induce failures (zx_pager_supply_pages will return ZX_ERR_BAD_STATE if the supply
+  // VMO is mapped. See |failure_mode_|.
   fzl::VmoMapper mapping_;
+  std::map<char, std::unique_ptr<MockBlob>> blob_registry_ = {};
+  bool do_partial_transfer_ = false;
   PagerErrorStatus failure_mode_ = PagerErrorStatus::kOK;
 };
 
 class BlobfsPagerTest : public zxtest::Test {
  public:
-  void SetUp() override { pager_ = std::make_unique<MockPager>(); }
+  void SetUp() override {
+    auto buffer = MockTransferBuffer::Create(kTransferBufferSize);
+    buffer_ = buffer.get();
+    auto status_or_pager = UserPager::Create(std::move(buffer));
+    ASSERT_TRUE(status_or_pager.is_ok());
+    pager_ = std::move(status_or_pager).value();
+    factory_ = std::make_unique<MockBlobFactory>(pager_.get(), &metrics_);
+  }
 
   MockBlob* CreateBlob(char identifier = 'z',
                        CompressionAlgorithm algorithm = CompressionAlgorithm::UNCOMPRESSED,
                        size_t sz = kDefaultBlobSize) {
-    return pager_->CreateBlob(identifier, algorithm, sz);
+    std::unique_ptr<MockBlob> blob = factory_->CreateBlob(identifier, algorithm, sz);
+    return buffer_->RegisterBlob(identifier, std::move(blob));
   }
 
   void ResetPager() { pager_.reset(); }
 
-  MockPager& pager() { return *pager_; }
+  MockTransferBuffer& transfer_buffer() { return *buffer_; }
 
-  void SetFailureMode(PagerErrorStatus mode) { pager_->SetFailureMode(mode); }
+  void SetFailureMode(PagerErrorStatus mode) {
+    buffer_->SetFailureMode(mode);
+    if (mode == PagerErrorStatus::kErrDataIntegrity) {
+      factory_->SetDataCorruption(true);
+    } else {
+      factory_->SetDataCorruption(false);
+    }
+  }
 
  private:
-  std::unique_ptr<MockPager> pager_;
+  BlobfsMetrics metrics_ = {};
+  std::unique_ptr<UserPager> pager_;
+  // Owned by |pager_|.
+  MockTransferBuffer* buffer_ = nullptr;
+  std::unique_ptr<MockBlobFactory> factory_;
 };
 
 class RandomBlobReader {
@@ -517,7 +517,7 @@ TEST_F(BlobfsPagerTest, PartiallyCommittedBuffer) {
   // The blob contents must be zero, since we want verification to pass but we also want the
   // data to only be half filled (the other half defaults to zero because it is decommitted.)
   MockBlob* blob = CreateBlob('\0', CompressionAlgorithm::UNCOMPRESSED);
-  pager().SetDoPartialTransfer();
+  transfer_buffer().SetDoPartialTransfer();
   blob->CommitRange(0, kDefaultPagedVmoSize);
 }
 
@@ -621,4 +621,5 @@ TEST_F(BlobfsPagerTest, FailAfterPagerError_ZstdChunked) {
 }
 
 }  // namespace
+}  // namespace pager
 }  // namespace blobfs

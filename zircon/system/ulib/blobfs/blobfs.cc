@@ -48,6 +48,8 @@
 #include "blobfs-checker.h"
 #include "compression/compressor.h"
 #include "iterator/block-iterator.h"
+#include "pager/transfer-buffer.h"
+#include "pager/user-pager-info.h"
 
 namespace blobfs {
 namespace {
@@ -158,12 +160,19 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   fs->block_info_ = std::move(block_info);
 
   if (options->pager) {
-    status = fs->InitPager();
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Could not initialize user pager\n");
-      return status;
+    auto fs_ptr = fs.get();
+    auto status_or_buffer =
+        pager::StorageBackedTransferBuffer::Create(pager::kTransferBufferSize, fs_ptr, fs_ptr);
+    if (!status_or_buffer.is_ok()) {
+      FS_TRACE_ERROR("blobfs: Could not initialize pager transfer buffer\n");
+      return status_or_buffer.status_value();
     }
-    fs->paging_enabled_ = true;
+    auto status_or_pager = pager::UserPager::Create(std::move(status_or_buffer).value());
+    if (!status_or_pager.is_ok()) {
+      FS_TRACE_ERROR("blobfs: Could not initialize user pager\n");
+      return status_or_pager.status_value();
+    }
+    fs->pager_ = std::move(status_or_pager).value();
     FS_TRACE_INFO("blobfs: Initialized user pager\n");
   }
 
@@ -310,7 +319,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
 
   auto* fs_ptr = fs.get();
   zx::status<BlobLoader> loader =
-      BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs_ptr, fs->Metrics(),
+      BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->pager_.get(), fs->Metrics(),
                          fs->zstd_seekable_blob_collection());
   if (!loader.is_ok()) {
     FS_TRACE_ERROR("blobfs: Failed to initialize loader: %s\n", loader.status_string());
@@ -734,6 +743,9 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   // the end of |Blobfs::Reset()|.
   zstd_seekable_blob_collection_ = nullptr;
 
+  // Reset |pager_| which owns a VMO that is attached to the block FIFO.
+  pager_ = nullptr;
+
   // Write the clean bit.
   if (writability_ == Writability::Writable) {
     // TODO(fxb/42174): If blobfs initialization failed, it is possible that the
@@ -758,7 +770,6 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   sync_txn.Transact();
 
   BlockDetachVmo(std::move(info_vmoid_));
-  BlockDetachVmo(std::move(transfer_vmoid_));
 
   return std::move(block_device_);
 }
@@ -847,74 +858,6 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
 }
 
 Journal* Blobfs::journal() { return journal_.get(); }
-
-zx_status_t Blobfs::AttachTransferVmo(const zx::vmo& transfer_vmo) {
-  return BlockAttachVmo(transfer_vmo, &transfer_vmoid_);
-}
-
-zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length,
-                                        const UserPagerInfo& info) {
-  fs::Ticker ticker(metrics_.Collecting());
-  fs::ReadTxn txn(this);
-  BlockIterator block_iter = BlockIteratorByNodeIndex(info.identifier);
-
-  auto start_block = static_cast<uint32_t>((offset + info.data_start_bytes) / kBlobfsBlockSize);
-  auto block_count =
-      static_cast<uint32_t>(fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize);
-
-  // Navigate to the start block.
-  zx_status_t status = IterateToBlock(&block_iter, start_block);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to navigate to start block %u: %s\n", start_block,
-                   zx_status_get_string(status));
-    return status;
-  }
-
-  // Enqueue operations to read in the required blocks to the transfer buffer.
-  const uint64_t data_start = DataStartBlock(Info());
-  status = StreamBlocks(&block_iter, block_count,
-                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(transfer_vmoid_.get(), vmo_offset - start_block,
-                                      dev_offset + data_start, length);
-                          return ZX_OK;
-                        });
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to enqueue read operations: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  // Issue the read.
-  status = txn.Transact();
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to transact read operations: %s\n",
-                   zx_status_get_string(status));
-    return status;
-  }
-  metrics_.read_metrics().IncrementDiskRead(block_count * kBlobfsBlockSize, ticker.End());
-  return ZX_OK;
-}
-
-zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, uint64_t buffer_size,
-                                      const zx::vmo& transfer_vmo, const UserPagerInfo& info) {
-  fzl::VmoMapper mapping;
-  // We need to unmap the transfer VMO before its pages can be transferred to the destination VMO,
-  // via |zx_pager_supply_pages|.
-  auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
-
-  // Map the transfer VMO in order to pass the verifier a pointer to the data.
-  zx_status_t status = mapping.Map(transfer_vmo, 0, buffer_size, ZX_VM_PERM_READ);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to map transfer buffer: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  status = info.verifier->VerifyPartial(mapping.start(), length, offset, buffer_size);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Verification failure: %s\n", zx_status_get_string(status));
-  }
-
-  return status;
-}
 
 void Blobfs::FsckAtEndOfTransaction(zx_status_t status) {
   if (status == ZX_OK) {

@@ -20,6 +20,7 @@
 #include "user-pager.h"
 
 namespace blobfs {
+namespace pager {
 
 // Responsible for attaching a paged VMO to a user pager, populating pages of the VMO on demand, and
 // detaching the VMO from the pager when done.
@@ -104,6 +105,7 @@ class PageWatcher {
   bool is_corrupt_ = false;
 };
 
+}  // namespace pager
 }  // namespace blobfs
 
 #endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_PAGER_PAGE_WATCHER_H_

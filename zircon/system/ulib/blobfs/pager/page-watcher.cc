@@ -11,6 +11,7 @@
 #include <fs/trace.h>
 
 namespace blobfs {
+namespace pager {
 
 // Called from the blobfs main thread.
 zx_status_t PageWatcher::CreatePagedVmo(size_t vmo_size, zx::vmo* vmo_out) {
@@ -149,4 +150,5 @@ void PageWatcher::SignalPagerDetach() {
   vmo_attached_condvar_.Signal();
 }
 
+}  // namespace pager
 }  // namespace blobfs

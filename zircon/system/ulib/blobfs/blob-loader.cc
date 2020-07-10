@@ -37,7 +37,7 @@ constexpr size_t kScratchBufferSize = 4 * kBlobfsBlockSize;
 }  // namespace
 
 BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
-                       NodeFinder* node_finder, UserPager* pager, BlobfsMetrics* metrics,
+                       NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
                        ZSTDSeekableBlobCollection* zstd_seekable_blob_collection,
                        fzl::OwnedVmoMapper scratch_vmo, storage::OwnedVmoid scratch_vmoid)
     : txn_manager_(txn_manager),
@@ -51,7 +51,7 @@ BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* b
 
 zx::status<BlobLoader> BlobLoader::Create(
     TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
-    NodeFinder* node_finder, UserPager* pager, BlobfsMetrics* metrics,
+    NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
     ZSTDSeekableBlobCollection* zstd_seekable_blob_collection) {
   fzl::OwnedVmoMapper scratch_vmo;
   storage::OwnedVmoid scratch_vmoid(txn_manager);
@@ -139,7 +139,7 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
 
 zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
                                       const BlobCorruptionNotifier* corruption_notifier,
-                                      std::unique_ptr<PageWatcher>* page_watcher_out,
+                                      std::unique_ptr<pager::PageWatcher>* page_watcher_out,
                                       fzl::OwnedVmoMapper* data_out,
                                       fzl::OwnedVmoMapper* merkle_out) {
   ZX_DEBUG_ASSERT(scratch_vmo_.vmo().is_valid());
@@ -176,14 +176,14 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
     return status;
   }
 
-  UserPagerInfo userpager_info;
+  pager::UserPagerInfo userpager_info;
   userpager_info.identifier = node_index;
   userpager_info.data_start_bytes = ComputeNumMerkleTreeBlocks(*inode) * kBlobfsBlockSize;
   userpager_info.data_length_bytes = inode->blob_size;
   userpager_info.verifier = std::move(verifier);
   userpager_info.decompressor = std::move(decompressor);
   userpager_info.zstd_seekable_blob_collection = zstd_seekable_blob_collection;
-  auto page_watcher = std::make_unique<PageWatcher>(pager_, std::move(userpager_info));
+  auto page_watcher = std::make_unique<pager::PageWatcher>(pager_, std::move(userpager_info));
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
   FormatBlobDataVmoName(node_index, &data_vmo_name);

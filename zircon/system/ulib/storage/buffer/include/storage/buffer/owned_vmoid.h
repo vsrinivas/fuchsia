@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_STORAGE_BUFFER_OWNED_VMOID_H_
-#define ZIRCON_SYSTEM_ULIB_STORAGE_BUFFER_OWNED_VMOID_H_
+#ifndef STORAGE_BUFFER_OWNED_VMOID_H_
+#define STORAGE_BUFFER_OWNED_VMOID_H_
 
-#include <storage/buffer/vmoid_registry.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
+
+#include <storage/buffer/vmoid_registry.h>
 
 namespace storage {
 
@@ -21,6 +22,8 @@ class OwnedVmoid {
       : vmoid_(std::move(vmoid)), vmoid_registry_(registry) {}
   OwnedVmoid(OwnedVmoid&& other);
   OwnedVmoid& operator=(OwnedVmoid&& other);
+  OwnedVmoid(const OwnedVmoid& other) = delete;
+  OwnedVmoid& operator=(const OwnedVmoid& other) = delete;
   ~OwnedVmoid();
 
   zx_status_t AttachVmo(const zx::vmo& vmo);
@@ -48,4 +51,4 @@ class OwnedVmoid {
 
 }  // namespace storage
 
-#endif  // ZIRCON_SYSTEM_ULIB_STORAGE_BUFFER_OWNED_VMOID_H_
+#endif  // STORAGE_BUFFER_OWNED_VMOID_H_

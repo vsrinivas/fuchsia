@@ -4,6 +4,7 @@
 
 #include "blob-loader.h"
 
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
@@ -39,90 +40,48 @@ std::set<uint64_t> AddressRange(uint64_t start, uint64_t len) {
   return addresses;
 }
 
-// FakeUserPager is an implementation of UserPager that uses a static backing buffer as its
-// data source (rather than a block device).
-class FakeUserPager : public UserPager {
+// FakeTransferBuffer is an implementation of TransferBuffer that uses a static backing buffer as
+// its data source (rather than a block device).
+class FakeTransferBuffer : public pager::TransferBuffer {
  public:
-  FakeUserPager() { ASSERT_OK(InitPager()); }
-  FakeUserPager(const char* data, size_t len) : data_(new uint8_t[len], len) {
+  FakeTransferBuffer(const char* data, size_t len) : data_(new uint8_t[len], len) {
+    ASSERT_OK(zx::vmo::create(len, 0, &vmo_));
     memcpy(data_.get(), data, len);
-    ASSERT_OK(InitPager());
   }
-
-  // HACK: We don't have a good interface for propagating failure to satisfy a page request back
-  // to the requesting process. This means the test will hang if the pager thread fails.
-  // To avoid this, we will close this VMO (which should be the pager-backed VMO) on failure,
-  // which will bubble back down to the main test thread and cause it to fail too.
-  void SetVmoToDetachOnFailure(const zx::vmo& vmo) { handle_to_close_on_failure_ = vmo.get(); }
 
   void AssertHasNoAddressesMapped() { ASSERT_EQ(mapped_addresses_.size(), 0); }
 
-  void AssertHasAddressesMappedAndVerified(std::set<uint64_t> addresses) {
+  void AssertHasAddressesMapped(std::set<uint64_t> addresses) {
     for (const auto& address : addresses) {
       if (mapped_addresses_.find(address) == mapped_addresses_.end()) {
         ADD_FAILURE("Address 0x%lx not mapped", address);
-      } else if (verified_addresses_.find(address) == verified_addresses_.end()) {
-        ADD_FAILURE("Address 0x%lx mapped but not verified", address);
       }
     }
   }
 
- private:
-  void AbortMainThread() { zx_pager_detach_vmo(pager_.get(), handle_to_close_on_failure_); }
-
-  zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) override {
-    vmo_ = zx::unowned_vmo(transfer_vmo);
-    return ZX_OK;
-  }
-
-  zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
-                                  const UserPagerInfo& info) override {
+  zx::status<> Populate(uint64_t offset, uint64_t length, const pager::UserPagerInfo& info) final {
+    if (offset % kBlobfsBlockSize != 0) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
     if (offset + length > data_.size()) {
-      AbortMainThread();
-      return ZX_ERR_OUT_OF_RANGE;
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
     zx_status_t status;
-    if ((status = vmo_->write(data_.get() + offset, 0, length)) != ZX_OK) {
-      AbortMainThread();
-      return status;
+    if ((status = vmo_.write(data_.get() + offset, 0, length)) != ZX_OK) {
+      return zx::error(status);
     }
     for (const auto& address : AddressRange(offset, length)) {
       mapped_addresses_.insert(address);
     }
-    return ZX_OK;
+    return zx::ok();
   }
 
-  zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, uint64_t buffer_size,
-                                const zx::vmo& transfer_vmo, const UserPagerInfo& info) override {
-    if (offset + length > data_.size()) {
-      AbortMainThread();
-      return ZX_ERR_OUT_OF_RANGE;
-    }
+  const zx::vmo& vmo() const final { return vmo_; }
 
-    // Map the transfer VMO in order to pass the verifier a pointer to the data.
-    fzl::VmoMapper mapping;
-    auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
-    zx_status_t status = mapping.Map(transfer_vmo, 0, buffer_size, ZX_VM_PERM_READ);
-    if (status != ZX_OK) {
-      AbortMainThread();
-      return status;
-    }
-    if ((status = info.verifier->VerifyPartial(mapping.start(), length, offset, buffer_size)) !=
-        ZX_OK) {
-      AbortMainThread();
-      return status;
-    }
-    for (const auto& address : AddressRange(offset, length)) {
-      verified_addresses_.insert(address);
-    }
-    return status;
-  }
-
+ private:
+  zx::vmo vmo_;
   fbl::Array<uint8_t> data_;
   std::set<uint64_t> mapped_addresses_;
-  std::set<uint64_t> verified_addresses_;
-  zx::unowned_vmo vmo_;
-  zx_handle_t handle_to_close_on_failure_;
 };
 
 class BlobLoaderTest : public zxtest::Test {
@@ -148,10 +107,19 @@ class BlobLoaderTest : public zxtest::Test {
     ASSERT_OK(Sync());
   }
 
-  BlobLoader CreateLoader(UserPager* pager) const {
+  FakeTransferBuffer& InitPager(std::unique_ptr<FakeTransferBuffer> buffer) {
+    FakeTransferBuffer& buffer_ref = *buffer;
+    auto status_or_pager = pager::UserPager::Create(std::move(buffer));
+    EXPECT_TRUE(status_or_pager.is_ok());
+    pager_ = std::move(status_or_pager).value();
+    return buffer_ref;
+  }
+
+  BlobLoader CreateLoader() const {
     auto* fs_ptr = fs_.get();
+
     zx::status<BlobLoader> loader =
-        BlobLoader::Create(fs_ptr, fs_ptr, fs_->GetNodeFinder(), pager, fs_->Metrics(),
+        BlobLoader::Create(fs_ptr, fs_ptr, fs_->GetNodeFinder(), pager_.get(), fs_->Metrics(),
                            fs_->zstd_seekable_blob_collection());
     EXPECT_EQ(loader.status_value(), ZX_OK);
     // TODO(jfsulliv): Pessimizing move seems to be necessary, since otherwise fitx::result::value
@@ -205,6 +173,8 @@ class BlobLoaderTest : public zxtest::Test {
 
  protected:
   std::unique_ptr<Blobfs> fs_;
+  std::unique_ptr<FakeTransferBuffer> buffer_;
+  std::unique_ptr<pager::UserPager> pager_;
   BlobLoader loader_;
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
@@ -229,7 +199,7 @@ void DoTest_NullBlob(BlobLoaderTest* test) {
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
-  BlobLoader loader = test->CreateLoader(nullptr);
+  BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
   ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
@@ -252,7 +222,7 @@ void DoTest_SmallBlob(BlobLoaderTest* test) {
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
-  BlobLoader loader = test->CreateLoader(nullptr);
+  BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
   ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
@@ -276,22 +246,22 @@ void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
-  FakeUserPager pager(info->data.get(), info->size_data);
-  BlobLoader loader = test->CreateLoader(&pager);
+  auto buffer_ptr = std::make_unique<FakeTransferBuffer>(info->data.get(), info->size_data);
+  FakeTransferBuffer& buffer = test->InitPager(std::move(buffer_ptr));
+  BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  std::unique_ptr<PageWatcher> page_watcher;
+  std::unique_ptr<pager::PageWatcher> page_watcher;
   ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle));
-  pager.SetVmoToDetachOnFailure(data.vmo());
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
-  pager.AssertHasNoAddressesMapped();
+  buffer.AssertHasNoAddressesMapped();
   // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
   fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
   ASSERT_OK(data.vmo().read(buf.get(), 0, blob_len));
   EXPECT_BYTES_EQ(buf.get(), info->data.get(), info->size_data);
-  pager.AssertHasAddressesMappedAndVerified({0ul});
+  buffer.AssertHasAddressesMapped({0ul});
 
   EXPECT_FALSE(merkle.vmo().is_valid());
   EXPECT_EQ(info->size_merkle, 0);
@@ -307,7 +277,7 @@ void DoTest_LargeBlob(BlobLoaderTest* test) {
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
-  BlobLoader loader = test->CreateLoader(nullptr);
+  BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
   ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
@@ -332,7 +302,7 @@ void DoTest_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
-  BlobLoader loader = test->CreateLoader(nullptr);
+  BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
   ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
@@ -365,22 +335,22 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
-  FakeUserPager pager(info->data.get(), info->size_data);
-  BlobLoader loader = test->CreateLoader(&pager);
+  auto buffer_ptr = std::make_unique<FakeTransferBuffer>(info->data.get(), info->size_data);
+  FakeTransferBuffer& buffer = test->InitPager(std::move(buffer_ptr));
+  BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  std::unique_ptr<PageWatcher> page_watcher;
+  std::unique_ptr<pager::PageWatcher> page_watcher;
   ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle));
-  pager.SetVmoToDetachOnFailure(data.vmo());
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
-  pager.AssertHasNoAddressesMapped();
+  buffer.AssertHasNoAddressesMapped();
   // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
   fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
   ASSERT_OK(data.vmo().read(buf.get(), 0, blob_len));
   EXPECT_BYTES_EQ(buf.get(), info->data.get(), info->size_data);
-  pager.AssertHasAddressesMappedAndVerified(AddressRange(0, 1 << 18));
+  buffer.AssertHasAddressesMapped(AddressRange(0, 1 << 18));
 
   ASSERT_TRUE(merkle.vmo().is_valid());
   ASSERT_GE(merkle.size(), info->size_merkle);
@@ -397,22 +367,22 @@ void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
-  FakeUserPager pager(info->data.get(), info->size_data);
-  BlobLoader loader = test->CreateLoader(&pager);
+  auto buffer_ptr = std::make_unique<FakeTransferBuffer>(info->data.get(), info->size_data);
+  FakeTransferBuffer& buffer = test->InitPager(std::move(buffer_ptr));
+  BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  std::unique_ptr<PageWatcher> page_watcher;
+  std::unique_ptr<pager::PageWatcher> page_watcher;
   ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle));
-  pager.SetVmoToDetachOnFailure(data.vmo());
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
-  pager.AssertHasNoAddressesMapped();
+  buffer.AssertHasNoAddressesMapped();
   // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
   fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
   ASSERT_OK(data.vmo().read(buf.get(), 0, blob_len));
   EXPECT_BYTES_EQ(buf.get(), info->data.get(), info->size_data);
-  pager.AssertHasAddressesMappedAndVerified(AddressRange(0, blob_len));
+  buffer.AssertHasAddressesMapped(AddressRange(0, blob_len));
 
   ASSERT_TRUE(merkle.vmo().is_valid());
   ASSERT_GE(merkle.size(), info->size_merkle);
