@@ -28,7 +28,6 @@ mod bindings {
     pub type Handle = shim::Handle;
 
     /// Type of target content.
-    /// Should map to Source defined in triage library.
     #[wasm_bindgen]
     #[derive(Debug)]
     pub enum Source {
