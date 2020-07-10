@@ -6,6 +6,6 @@ pub mod access;
 pub mod bootstrap;
 mod control;
 pub mod host_watcher;
-mod pairing_delegate;
+pub mod pairing;
 
-pub use self::{control::start_control_service, pairing_delegate::start_pairing_delegate};
+pub use self::control::start_control_service;

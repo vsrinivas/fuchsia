@@ -34,13 +34,19 @@ pub struct Tagged<K, St> {
 
 impl<K, St: Unpin> Unpin for Tagged<K, St> {}
 
-impl<K, St: Stream> Tagged<K, St> {
+impl<K, St> Tagged<K, St> {
     // It is safe to take a pinned projection to `stream` as:
     // * Tagged does not implement `Drop`
     // * Tagged only implements Unpin if `stream` is Unpin.
     // * Tagged is not #[repr(packed)].
     // see: pin_utils::unsafe_pinned docs for details
     unsafe_pinned!(stream: St);
+}
+
+impl<K: Clone, St> Tagged<K, St> {
+    pub fn tag(&self) -> K {
+        self.tag.clone()
+    }
 }
 
 /// Extension trait to allow for easy creation of a `Tagged` stream from a `Stream`.
@@ -52,6 +58,18 @@ pub trait WithTag: Sized {
 impl<St: Sized> WithTag for St {
     fn tagged<T>(self, tag: T) -> Tagged<T, Self> {
         Tagged { tag, stream: self }
+    }
+}
+
+impl<K: Clone, Fut: Future> Future for Tagged<K, Fut> {
+    type Output = (K, Fut::Output);
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let k = self.tag.clone();
+        match self.stream().poll(cx) {
+            Poll::Ready(out) => Poll::Ready((k, out)),
+            Poll::Pending => Poll::Pending,
+        }
     }
 }
 
@@ -104,6 +122,13 @@ impl<K: Eq + Hash + Unpin, St: Stream> StreamMap<K, St> {
     /// Remove the stream identified by `key`, returning it if it exists.
     pub fn remove(&mut self, key: &K) -> Option<Pin<Box<St>>> {
         self.inner.remove(key)
+    }
+
+    /// Provide mutable access to the inner hashmap.
+    /// This is safe as if the stream were being polled, we would not be able to access a mutable
+    /// reference to self to pass to this method.
+    pub fn inner(&mut self) -> &mut HashMap<K, Pin<Box<St>>> {
+        &mut self.inner
     }
 }
 

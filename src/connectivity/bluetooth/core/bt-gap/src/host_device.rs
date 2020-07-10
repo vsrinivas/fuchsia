@@ -4,11 +4,9 @@
 
 use {
     anyhow::format_err,
-    fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth::{self as fbt, DeviceClass},
     fidl_fuchsia_bluetooth_control::{self as control, PairingOptions},
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
-    fidl_fuchsia_bluetooth_sys::{InputCapability, OutputCapability, PairingDelegateMarker},
     fidl_fuchsia_mem::Buffer,
     fuchsia_bluetooth::{
         inspect::Inspectable,
@@ -41,15 +39,6 @@ impl HostDevice {
 
     pub fn get_host(&self) -> &HostProxy {
         &self.host
-    }
-
-    pub fn set_host_pairing_delegate(
-        &self,
-        input: InputCapability,
-        output: OutputCapability,
-        delegate: ClientEnd<PairingDelegateMarker>,
-    ) {
-        let _ = self.host.set_pairing_delegate(input, output, delegate);
     }
 
     pub fn get_info(&self) -> &HostInfo {

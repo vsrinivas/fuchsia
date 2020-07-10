@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     async_helpers::hanging_get::asynchronous as hanging_get,
-    fidl::endpoints::{self, ServerEnd},
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{self as control, ControlControlHandle},
@@ -25,7 +25,7 @@ use {
     fuchsia_inspect::{self as inspect, unique_name, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
-    futures::{channel::mpsc, future::BoxFuture, FutureExt, TryFutureExt},
+    futures::{channel::mpsc, future::BoxFuture, FutureExt},
     parking_lot::RwLock,
     slab::Slab,
     std::{
@@ -43,7 +43,10 @@ use {
 use crate::{
     generic_access_service,
     host_device::{self, HostDevice, HostListener},
-    services,
+    services::pairing::{
+        pairing_dispatcher::{PairingDispatcher, PairingDispatcherHandle},
+        PairingDelegate,
+    },
     store::stash::Stash,
     types::{self, HostInspectVmo},
     watch_peers::PeerWatcher,
@@ -136,24 +139,6 @@ impl HostDispatcherInspect {
     }
 }
 
-/// Abstraction over the fuchsia.bluetooth.control and fuchsia.bluetooth.system interfaces, which
-/// each have their own pairing delegate definition. Once control is fully deprecated and removed,
-/// we can remove this.
-#[derive(Clone)]
-pub enum PairingDelegate {
-    Control(control::PairingDelegateProxy),
-    Sys(sys::PairingDelegateProxy),
-}
-
-impl PairingDelegate {
-    fn is_closed(&self) -> bool {
-        match self {
-            PairingDelegate::Control(delegate) => delegate.is_closed(),
-            PairingDelegate::Sys(delegate) => delegate.is_closed(),
-        }
-    }
-}
-
 /// The HostDispatcher acts as a proxy aggregating multiple HostAdapters
 /// It appears as a Host to higher level systems, and is responsible for
 /// routing commands to the appropriate HostAdapter
@@ -179,7 +164,8 @@ struct HostDispatcherState {
     // them along a clone of this channel to GAS
     gas_channel_sender: mpsc::Sender<LocalServiceDelegateRequest>,
 
-    pub pairing_delegate: Option<PairingDelegate>,
+    pairing_delegate: Option<PairingDelegate>,
+    pairing_dispatcher: Option<PairingDispatcherHandle>,
 
     // Sender end of a futures::mpsc channel to send host Inspect VMOs to the main loop.
     // When a new host adapter is recognized, we request its Inspect VMO and send it on this channel.
@@ -229,7 +215,11 @@ impl HostDispatcherState {
             Some(delegate) => delegate.is_closed(),
         };
         if assign {
-            self.pairing_delegate = Some(PairingDelegate::Sys(delegate));
+            self.set_pairing_delegate_internal(
+                Some(PairingDelegate::Sys(delegate)),
+                self.input,
+                self.output,
+            );
         } else {
             fx_log_info!("Failed to set PairingDelegate; another Delegate is active");
         }
@@ -250,27 +240,48 @@ impl HostDispatcherState {
                     Some(delegate) => delegate.is_closed(),
                 };
                 if assign {
-                    self.pairing_delegate = Some(PairingDelegate::Control(delegate));
+                    self.set_pairing_delegate_internal(
+                        Some(PairingDelegate::Control(delegate)),
+                        self.input,
+                        self.output,
+                    );
                 }
                 assign
             }
             None => {
                 self.pairing_delegate = None;
+                self.set_pairing_delegate_internal(None, self.input, self.output);
                 false
             }
         }
     }
 
-    /// Returns the current pairing delegate proxy if it exists and has not been closed. Clears the
-    /// if the handle is closed.
-    pub fn pairing_delegate(&mut self) -> Option<PairingDelegate> {
-        if let Some(delegate) = &self.pairing_delegate {
-            if delegate.is_closed() {
-                self.inspect.has_pairing_delegate.set(false.to_property());
-                self.pairing_delegate = None;
+    fn set_pairing_delegate_internal(
+        &mut self,
+        delegate: Option<PairingDelegate>,
+        input: InputCapability,
+        output: OutputCapability,
+    ) {
+        match delegate {
+            Some(delegate) => {
+                let (dispatcher, handle) = PairingDispatcher::new(delegate, input, output);
+                for host in self.host_devices.values() {
+                    let (id, proxy) = {
+                        let host = host.read();
+                        let proxy = host.get_host().clone();
+                        let info = host.get_info();
+                        (HostId::from(info.id), proxy)
+                    };
+                    handle.add_host(id, proxy.clone());
+                }
+                // Old pairing dispatcher dropped; this drops all host pairings
+                self.pairing_dispatcher = Some(handle);
+                // Spawn handling of the new pairing requests
+                fasync::spawn(dispatcher.run());
             }
+            // Old pairing dispatcher dropped; this drops all host pairings
+            None => self.pairing_dispatcher = None,
         }
-        self.pairing_delegate.clone()
     }
 
     /// Set the IO capabilities of the system
@@ -279,6 +290,8 @@ impl HostDispatcherState {
         self.output = output;
         self.inspect.input_capability.set(&input.debug());
         self.inspect.output_capability.set(&output.debug());
+
+        self.set_pairing_delegate_internal(self.pairing_delegate.clone(), self.input, self.output);
     }
 
     /// Return the active id. If the ID is currently not set,
@@ -394,6 +407,7 @@ impl HostDispatcher {
             discovery: None,
             discoverable: None,
             pairing_delegate: None,
+            pairing_dispatcher: None,
             event_listeners: vec![],
             watch_peers_publisher,
             watch_peers_registrar,
@@ -638,12 +652,6 @@ impl HostDispatcher {
         self.state.write().notify_event_listeners(f);
     }
 
-    /// Returns the current pairing delegate proxy if it exists and has not been closed. Clears the
-    /// if the handle is closed.
-    pub fn pairing_delegate(&self) -> Option<PairingDelegate> {
-        self.state.write().pairing_delegate()
-    }
-
     // This is not an async method as we do not want to borrow `self` for the duration of the async
     // call, and we also want to trigger the send immediately even if the future is not yet awaited
     pub fn store_bond(&self, bond_data: BondingData) -> impl Future<Output = Result<(), Error>> {
@@ -793,7 +801,6 @@ impl HostDispatcher {
         // Enable privacy by default.
         host_device.read().enable_privacy(true).map_err(|e| e.as_failure())?;
 
-        // TODO(845): Only the active host should be made connectable and scanning in the background.
         let fut = host_device.read().set_connectable(true);
         fut.await.map_err(|_| format_err!("failed to set connectable"))?;
         host_device
@@ -801,8 +808,8 @@ impl HostDispatcher {
             .enable_background_scan(true)
             .map_err(|_| format_err!("failed to enable background scan"))?;
 
-        // Initialize bt-gap as this host's pairing delegate.
-        start_pairing_delegate(self.clone(), host_device.clone())?;
+        // Ensure the current active pairing delegate (if it exists) handles this host
+        self.handle_pairing_requests(host_device.clone());
 
         let id: HostId = host_device.read().get_info().id.into();
         self.state.write().add_host(id.clone(), host_device.clone());
@@ -892,6 +899,21 @@ impl HostDispatcher {
             }
         } // Now the lock is dropped, we can run the async notify
         self.notify_host_watchers().await;
+    }
+
+    /// Route pairing requests from this host through our pairing dispatcher, if it exists
+    fn handle_pairing_requests(&self, host: Arc<RwLock<HostDevice>>) {
+        let mut dispatcher = self.state.write();
+
+        if let Some(handle) = &mut dispatcher.pairing_dispatcher {
+            let (id, proxy) = {
+                let host = host.read();
+                let proxy = host.get_host().clone();
+                let info = host.get_info();
+                (HostId::from(info.id), proxy)
+            };
+            handle.add_host(id, proxy);
+        }
     }
 
     #[cfg(test)]
@@ -1046,26 +1068,6 @@ async fn assign_host_data(
     };
     let host = host_device.read();
     host.set_local_data(data).map_err(|e| e.into())
-}
-
-fn start_pairing_delegate(
-    hd: HostDispatcher,
-    host_device: Arc<RwLock<HostDevice>>,
-) -> Result<(), Error> {
-    // Initialize bt-gap as this host's pairing delegate.
-    // TODO(845): Do this only for the active host. This will make sure that non-active hosts
-    // always reject pairing.
-    let (delegate_client_end, delegate_stream) = endpoints::create_request_stream()?;
-    host_device.read().set_host_pairing_delegate(
-        hd.state.read().input,
-        hd.state.read().output,
-        delegate_client_end,
-    );
-    fasync::spawn(
-        services::start_pairing_delegate(hd.clone(), delegate_stream)
-            .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
-    );
-    Ok(())
 }
 
 #[cfg(test)]
