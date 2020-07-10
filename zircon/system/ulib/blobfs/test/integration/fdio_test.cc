@@ -31,8 +31,8 @@ void FdioTest::SetUp() {
   blobfs::MountOptions options;
   std::unique_ptr<blobfs::Runner> runner;
   ASSERT_OK(blobfs::Runner::Create(loop_.get(), std::move(device), &options,
-                                   std::move(vmex_resource_), &runner,
-                                   std::move(diagnostics_dir_server)));
+                                   std::move(vmex_resource_), std::move(diagnostics_dir_server),
+                                   &runner));
   ASSERT_OK(runner->ServeRoot(std::move(root_server), layout_));
   ASSERT_OK(loop_->StartThread("blobfs test dispatcher"));
 

@@ -22,7 +22,7 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx
 
   std::unique_ptr<Runner> runner;
   zx_status_t status = Runner::Create(&loop, std::move(device), options, std::move(vmex_resource),
-                                      &runner, std::move(diagnostics_dir));
+                                      std::move(diagnostics_dir), &runner);
   if (status != ZX_OK) {
     return status;
   }

@@ -16,7 +16,7 @@ namespace blobfs {
 // static.
 zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> device,
                            MountOptions* options, zx::resource vmex_resource,
-                           std::unique_ptr<Runner>* out, zx::channel diagnostics_dir_server) {
+                           zx::channel diagnostics_dir_server, std::unique_ptr<Runner>* out) {
   std::unique_ptr<Blobfs> fs;
   zx_status_t status =
       Blobfs::Create(loop->dispatcher(), std::move(device), options, std::move(vmex_resource), &fs);
