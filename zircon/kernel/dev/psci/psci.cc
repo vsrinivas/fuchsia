@@ -122,18 +122,43 @@ LK_PDEV_INIT(arm_psci_init, KDRV_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM
 
 static int cmd_psci(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
+notenoughargs:
     printf("not enough arguments\n");
-    printf("%s function [arg0] [arg1] [arg2]\n", argv[0].str);
+    printf("%s system_reset\n", argv[0].str);
+    printf("%s system_off\n", argv[0].str);
+    printf("%s cpu_on <mpidr>\n", argv[0].str);
+    printf("%s affinity_info <cluster> <cpu>\n", argv[0].str);
+    printf("%s <function_id> [arg0] [arg1] [arg2]\n", argv[0].str);
     return -1;
   }
 
-  uint32_t function = static_cast<uint32_t>(argv[1].u);
-  uint64_t arg0 = (argc >= 3) ? argv[2].u : 0;
-  uint64_t arg1 = (argc >= 4) ? argv[3].u : 0;
-  uint64_t arg2 = (argc >= 5) ? argv[4].u : 0;
+  if (!strcmp(argv[1].str, "system_reset")) {
+    psci_system_reset(REBOOT_NORMAL);
+  } else if (!strcmp(argv[1].str, "system_off")) {
+    psci_system_off();
+  } else if (!strcmp(argv[1].str, "cpu_on")) {
+    // Defined in start.S.
+    extern paddr_t kernel_entry_paddr;
+    if (argc < 3) {
+      goto notenoughargs;
+    }
+    uint32_t ret = psci_cpu_on(argv[2].u, kernel_entry_paddr);
+    printf("psci_cpu_on returns %u\n", ret);
+  } else if (!strcmp(argv[1].str, "affinity_info")) {
+    if (argc < 4) {
+      goto notenoughargs;
+    }
+    uint32_t ret = psci_get_affinity_info(argv[2].u, argv[3].u);
+    printf("affinity info returns %u\n", ret);
+  } else {
+    uint32_t function = static_cast<uint32_t>(argv[1].u);
+    uint64_t arg0 = (argc >= 3) ? argv[2].u : 0;
+    uint64_t arg1 = (argc >= 4) ? argv[3].u : 0;
+    uint64_t arg2 = (argc >= 5) ? argv[4].u : 0;
 
-  uint64_t ret = do_psci_call(function, arg0, arg1, arg2);
-  printf("do_psci_call returned %" PRIu64 "\n", ret);
+    uint64_t ret = do_psci_call(function, arg0, arg1, arg2);
+    printf("do_psci_call returned %" PRIu64 "\n", ret);
+  }
   return 0;
 }
 
