@@ -105,6 +105,93 @@ executable("fidl_compatibility_test_executable") {
   ]
 }
 
+## Tests
+
+fidl_compatibility_tests = [
+  {
+    name = "struct"
+    filter = "Struct.*"
+  },
+  {
+    name = "array"
+    filter = "Array.*"
+  },
+  {
+    name = "vector"
+    filter = "Vector.*"
+  },
+  {
+    name = "table"
+    filter = "Table.*"
+  },
+  {
+    name = "union"
+    filter = "Xunion.*"
+  },
+]
+
+fidl_compatibilty_test_servers = [
+  "hlcpp",
+  "go",
+  "llcpp",
+  "rust",
+  "fuchsia-pkg://fuchsia.com/fidl_dart_compatibility_test_server#meta/fidl_dart_compatibility_test_server.cmx",
+]
+
+test_component_labels = []
+test_labels = []
+foreach(test, fidl_compatibility_tests) {
+  component_name = "fidl_compatibility_test_${test.name}"
+  component_label = "${component_name}_component"
+  test_label = component_name
+  generate_label = "generate_${test.name}"
+  generate_output = "${target_gen_dir}/${component_name}.cmx"
+
+  test_component_labels += [ ":${component_label}" ]
+  test_labels += [ ":${test_label}" ]
+
+  ## Generate a CMX
+  generated_file(generate_label) {
+    visibility = [ ":*" ]
+    testonly = true
+
+    outputs = [ generate_output ]
+    output_conversion = "json"
+    contents = {
+      program = {
+        binary = "bin/fidl_compatibility_test"
+        args =
+            [ "--gtest_filter=${test.filter}" ] + fidl_compatibilty_test_servers
+      }
+      sandbox = {
+        services = [ "fuchsia.sys.Launcher" ]
+      }
+    }
+  }
+
+  ## The test component
+  fuchsia_component(component_label) {
+    visibility = [ ":*" ]
+    testonly = true
+
+    component_name = component_name
+    manifest = rebase_path(generate_output)
+    deps = [
+      ":${generate_label}",
+      ":fidl_compatibility_test_executable",
+    ]
+  }
+
+  ## The test declaration
+  fuchsia_test(test_label) {
+    package = ":fidl_compatibility_test_package"
+    package_name = "fidl-compatibility-test"
+    component = ":${component_label}"
+
+    environments = basic_envs
+  }
+}
+
 fuchsia_component("fidl_compatibility_test_component") {
   testonly = true
 
@@ -118,18 +205,14 @@ fuchsia_package("fidl_compatibility_test_package") {
 
   package_name = "fidl-compatibility-test"
   deps = [
-    ":fidl_compatibility_test_component",
-    ":hlcpp-server",
-    ":llcpp-server",
-    ":rust-server",
-    "golang:go-server",
-  ]
+           ":hlcpp-server",
+           ":llcpp-server",
+           ":rust-server",
+           "golang:go-server",
+         ] + test_component_labels
 }
 
-fuchsia_test("fidl_compatibility_test") {
-  package = ":fidl_compatibility_test_package"
-  package_name = "fidl-compatibility-test"
-  component = ":fidl_compatibility_test_component"
-
-  environments = basic_envs
+group("fidl_compatibility_test") {
+  testonly = true
+  deps = test_labels + [ "//topaz/bin/fidl_compatibility_test/dart:fidl_dart_compatibility_test_server" ]
 }

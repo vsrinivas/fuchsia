@@ -85,22 +85,39 @@ The code for the compatibility tests are located at:
   the test messages and protocol. The server implementations in garnet and topaz
   depend on this FIDL file.
 
-To run the garnet test runner, which tests HLCPP, LLCPP, Rust, and Go.
+The test runner and all of the test server components except for Dart are in a single package, `fuchsia-pkg://fuchsia.com/fidl-compatibility-test`.
+
+## Running
+
+Beacuse individual tests have timeouts the test is split across 5 different 
+components in the same package:
+
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_struct.cmx`
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_array.cmx`
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_vector.cmx`
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_table.cmx`
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_union.cmx`
+
+They all invoke the same test runner but use a `--gtest_filter` argument to filter which
+tests are run.
+
+To run all of the tests:
 
 ```sh
-fx run-test fidl_compatibility_test
+fx test fidl_compatibility_test
 ```
 
-To run the topaz test runner, which tests Dart.
+Or to run a specific test:
 
 ```sh
-fx run-test fidl_compatibility_test_topaz
+fx test "fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_struct.cmx"
 ```
 
-The test is written using `gtest`, so you can filter a specific test case:
+And if you want to run a specific test case:
 
 ```sh
-fx run-test fidl_compatibility_test -- --gtest_filter=Compatibility.EchoArrays
+fx test "fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_struct.cmx" \
+  -- --gtest_filter=Struct.EchoStructNoRetval
 ```
 
 ## Debugging
@@ -119,4 +136,4 @@ fx fidlcat --remote-name=fidl
 ```
 
 Then, run `compatibility_test`. Note: `fidlcat` will block until
-`compatibility_test is launched/
+`compatibility_test` is launched.

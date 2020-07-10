@@ -1310,7 +1310,7 @@ void ForAllServers(TestBody body) {
   };
 }
 
-TEST(Compatibility, EchoStruct) {
+TEST(Struct, EchoStruct) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (struct)"] =
@@ -1336,7 +1336,7 @@ TEST(Compatibility, EchoStruct) {
   });
 }
 
-TEST(Compatibility, EchoStructWithErrorSuccessCase) {
+TEST(Struct, EchoStructWithErrorSuccessCase) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
@@ -1367,7 +1367,7 @@ TEST(Compatibility, EchoStructWithErrorSuccessCase) {
   });
 }
 
-TEST(Compatibility, EchoStructWithErrorErrorCase) {
+TEST(Struct, EchoStructWithErrorErrorCase) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
@@ -1392,7 +1392,7 @@ TEST(Compatibility, EchoStructWithErrorErrorCase) {
   });
 }
 
-TEST(Compatibility, EchoStructNoRetval) {
+TEST(Struct, EchoStructNoRetval) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
@@ -1418,7 +1418,7 @@ TEST(Compatibility, EchoStructNoRetval) {
   });
 }
 
-TEST(Compatibility, EchoArrays) {
+TEST(Array, EchoArrays) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (array)"] =
@@ -1450,7 +1450,7 @@ TEST(Compatibility, EchoArrays) {
   });
 }
 
-TEST(Compatibility, EchoArraysWithErrorSuccessCase) {
+TEST(Array, EchoArraysWithErrorSuccessCase) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
@@ -1485,7 +1485,7 @@ TEST(Compatibility, EchoArraysWithErrorSuccessCase) {
   });
 }
 
-TEST(Compatibility, EchoArraysWithErrorErrorCase) {
+TEST(Array, EchoArraysWithErrorErrorCase) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
@@ -1515,7 +1515,7 @@ TEST(Compatibility, EchoArraysWithErrorErrorCase) {
   });
 }
 
-TEST(Compatibility, EchoVectors) {
+TEST(Vector, EchoVectors) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (vector)"] =
@@ -1547,7 +1547,7 @@ TEST(Compatibility, EchoVectors) {
   });
 }
 
-TEST(Compatibility, EchoVectorsWithErrorSuccessCase) {
+TEST(Vector, EchoVectorsWithErrorSuccessCase) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
@@ -1582,7 +1582,7 @@ TEST(Compatibility, EchoVectorsWithErrorSuccessCase) {
   });
 }
 
-TEST(Compatibility, EchoVectorsWithErrorErrorCase) {
+TEST(Vector, EchoVectorsWithErrorErrorCase) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
@@ -1612,7 +1612,7 @@ TEST(Compatibility, EchoVectorsWithErrorErrorCase) {
   });
 }
 
-TEST(Compatibility, EchoTable) {
+TEST(Table, EchoTable) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
@@ -1644,7 +1644,7 @@ TEST(Compatibility, EchoTable) {
   });
 }
 
-TEST(Compatibility, EchoTableWithErrorSuccessCase) {
+TEST(Table, EchoTableWithErrorSuccessCase) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
@@ -1679,7 +1679,7 @@ TEST(Compatibility, EchoTableWithErrorSuccessCase) {
   });
 }
 
-TEST(Compatibility, EchoTableWithErrorErrorCase) {
+TEST(Table, EchoTableWithErrorErrorCase) {
   ForAllServers(
       // See: FIDL-644
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -1711,7 +1711,7 @@ TEST(Compatibility, EchoTableWithErrorErrorCase) {
       });
 }
 
-TEST(Compatibility, EchoXunions) {
+TEST(Union, EchoUnions) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (xunion)"] =
@@ -1743,7 +1743,7 @@ TEST(Compatibility, EchoXunions) {
   });
 }
 
-TEST(Compatibility, EchoXunionsWithErrorSuccessCase) {
+TEST(Union, EchoUnionsWithErrorSuccessCase) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
@@ -1778,7 +1778,7 @@ TEST(Compatibility, EchoXunionsWithErrorSuccessCase) {
   });
 }
 
-TEST(Compatibility, EchoXunionsWithErrorErrorCase) {
+TEST(Union, EchoUnionsWithErrorErrorCase) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +

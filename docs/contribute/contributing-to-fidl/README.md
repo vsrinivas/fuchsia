@@ -328,7 +328,7 @@ commands.
 ### Compatibility Test
 
 Details about how the compatibility tests work and where the code is located can be
-found in the README at [//garnet/bin/fidl_compatibility_test][compat_readme].
+found in the README at [//garnet/public/lib/fidl/compatibility_test][compat_readme].
 
 To run the compatibility tests, you first need to have Fuchsia running in an
 emulator:
@@ -340,18 +340,11 @@ Tab 2> fx qemu -kN
 
 ```
 
-To run the compatibility tests with HLCPP, LLCPP, Rust, and Go:
+To run the compatibility tests:
 
 ```sh
 Tab 3> fx set core.x64 --with-base //garnet/packages/tests:zircon --with //garnet/packages/tests:all
-Tab 3> fx test fidl_compatibility_test
-```
-
-To run the compatibility tests with Dart:
-
-```sh
-Tab 3> fx set core.x64 --with //topaz/packages/tests:all
-Tab 3> fx test fidl_compatibility_test_topaz
+Tab 3> fx test fidl-compatibility-test
 ```
 
 ### GIDL
