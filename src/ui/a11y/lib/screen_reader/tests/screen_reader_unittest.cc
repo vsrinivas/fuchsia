@@ -217,14 +217,13 @@ TEST_F(ScreenReaderTest, NextAction) {
   factory_ptr_->semantic_tree()->SetNextNode(&next_node);
 
   // Create Next Action.
-  glm::vec2 first_update_ndc_position = {0, .7f};
+  glm::vec2 first_update_ndc_position = {0, -.7f};
 
-  // Perform Down Swipe which translates to Next action.
+  // Perform Up Swipe which translates to Next action.
   SendPointerEvents(DownEvents(kPointerId, {}) + MoveEvents(1, {}, first_update_ndc_position));
   SendPointerEvents(
       MoveEvents(kPointerId, first_update_ndc_position, first_update_ndc_position, 1) +
       UpEvents(kPointerId, first_update_ndc_position));
-
   RunLoopUntilIdle();
 
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
@@ -245,9 +244,9 @@ TEST_F(ScreenReaderTest, PreviousAction) {
   factory_ptr_->semantic_tree()->SetPreviousNode(&previous_node);
 
   // Create Previous Action.
-  glm::vec2 first_update_ndc_position = {0, -.7f};
+  glm::vec2 first_update_ndc_position = {0, .7f};
 
-  // Perform Up Swipe which translates to Previous action.
+  // Perform Down Swipe which translates to Previous action.
   SendPointerEvents(DownEvents(kPointerId, {}) + MoveEvents(1, {}, first_update_ndc_position));
   SendPointerEvents(
       MoveEvents(kPointerId, first_update_ndc_position, first_update_ndc_position, 1) +

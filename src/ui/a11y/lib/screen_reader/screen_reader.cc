@@ -38,7 +38,8 @@ ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
 
 void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add gestures with higher priority earlier than gestures with lower priority.
-  // Add a three finger Up swipe gesture. This corresponds to a physical three finger Right swipe.
+  // Add a three finger Up swipe recognizer. This corresponds to a physical three finger Right
+  // swipe.
   bool gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
@@ -49,7 +50,8 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       GestureHandler::kThreeFingerUpSwipe);
   FX_DCHECK(gesture_bind_status);
 
-  // Add a three finger Down swipe gesture. This corresponds to a physical three finger Left swipe.
+  // Add a three finger Down swipe recognizer. This corresponds to a physical three finger Left
+  // swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
@@ -60,7 +62,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       GestureHandler::kThreeFingerDownSwipe);
   FX_DCHECK(gesture_bind_status);
 
-  // Add a three finger Left swipe gesture. This corresponds to a physical three finger Up swipe.
+  // Add a three finger Left swipe recognizer. This corresponds to a physical three finger Up swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
@@ -71,7 +73,8 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       GestureHandler::kThreeFingerLeftSwipe);
   FX_DCHECK(gesture_bind_status);
 
-  // Add a three finger Right swipe gesture. This corresponds to a physical three finger Down swipe.
+  // Add a three finger Right swipe recognizer. This corresponds to a physical three finger Down
+  // swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
@@ -82,18 +85,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       GestureHandler::kThreeFingerRightSwipe);
   FX_DCHECK(gesture_bind_status);
 
-  // Add one finger Down swipe gesture. This corresponds to a physical 1 finger Left swipe.
-  gesture_bind_status = gesture_handler->BindSwipeAction(
-      [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = viewref_koid;
-        action_data.local_point = point;
-        ExecuteAction(kNextActionLabel, action_data);
-      },
-      GestureHandler::kOneFingerDownSwipe);
-  FX_DCHECK(gesture_bind_status);
-
-  // Add one finger Up swipe Gesture. This corresponds to a physical one finger Right swipe.
+  // Add one finger Down swipe recognizer. This corresponds to a physical one finger Left swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
@@ -101,10 +93,21 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
         action_data.local_point = point;
         ExecuteAction(kPreviousActionLabel, action_data);
       },
+      GestureHandler::kOneFingerDownSwipe);
+  FX_DCHECK(gesture_bind_status);
+
+  // Add one finger Up swipe recognizer. This corresponds to a physical one finger Right swipe.
+  gesture_bind_status = gesture_handler->BindSwipeAction(
+      [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+        ScreenReaderAction::ActionData action_data;
+        action_data.current_view_koid = viewref_koid;
+        action_data.local_point = point;
+        ExecuteAction(kNextActionLabel, action_data);
+      },
       GestureHandler::kOneFingerUpSwipe);
   FX_DCHECK(gesture_bind_status);
 
-  // Add OneFingerDoubleTap gesture.
+  // Add OneFingerDoubleTap recognizer.
   gesture_bind_status = gesture_handler->BindOneFingerDoubleTapAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
@@ -114,7 +117,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       });
   FX_DCHECK(gesture_bind_status);
 
-  // Add OneFingerSingleTap gesture.
+  // Add OneFingerSingleTap recognizer.
   gesture_bind_status = gesture_handler->BindOneFingerSingleTapAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
@@ -124,7 +127,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       });
   FX_DCHECK(gesture_bind_status);
 
-  // Add OneFingerDrag gesture.
+  // Add OneFingerDrag recognizer.
   gesture_bind_status = gesture_handler->BindOneFingerDragAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         context_->set_mode(ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
