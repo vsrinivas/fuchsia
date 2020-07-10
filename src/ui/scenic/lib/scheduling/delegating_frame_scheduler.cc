@@ -53,14 +53,6 @@ PresentId DelegatingFrameScheduler::RegisterPresent(
   return present_id;
 }
 
-void DelegatingFrameScheduler::SetOnUpdateFailedCallbackForSession(
-    SessionId session_id, FrameScheduler::OnSessionUpdateFailedCallback update_failed_callback) {
-  CallWhenFrameSchedulerAvailable([session_id, callback = std::move(update_failed_callback)](
-                                      FrameScheduler* frame_scheduler) mutable {
-    frame_scheduler->SetOnUpdateFailedCallbackForSession(session_id, std::move(callback));
-  });
-}
-
 void DelegatingFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
                                                         SchedulingIdPair id_pair) {
   CallWhenFrameSchedulerAvailable([presentation_time, id_pair](FrameScheduler* frame_scheduler) {

@@ -35,7 +35,7 @@ class Session final : public fuchsia::ui::scenic::Session {
   ~Session() override;
 
   void SetCommandDispatchers(
-      std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers);
+      std::unordered_map<System::TypeId, CommandDispatcherUniquePtr> dispatchers);
 
   // |fuchsia::ui::scenic::Session|
   void Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) override;
@@ -177,7 +177,7 @@ class Session final : public fuchsia::ui::scenic::Session {
   const SessionId id_;
   fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
 
-  std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers_;
+  std::unordered_map<System::TypeId, CommandDispatcherUniquePtr> dispatchers_;
 
   std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
 

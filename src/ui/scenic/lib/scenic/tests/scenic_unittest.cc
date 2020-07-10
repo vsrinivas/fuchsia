@@ -7,7 +7,6 @@
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
 #include "src/ui/scenic/lib/scenic/tests/dummy_system.h"
-#include "src/ui/scenic/lib/scenic/tests/scenic_gfx_test.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
 
 namespace {
@@ -99,9 +98,8 @@ TEST_F(ScenicTest, SessionCreatedAfterInitialization) {
   EXPECT_EQ(scenic()->num_sessions(), 1U);
 }
 
-// TODO(SCN-421)): This test requires a GfxSystem because GfxSystem is currently the source of
-// TempSessionDelegates. Once this bug has been fixed, this test should revert back to a ScenicTest.
-TEST_F(ScenicGfxTest, InvalidPresentCall_ShouldDestroySession) {
+TEST_F(ScenicTest, InvalidPresentCall_ShouldDestroySession) {
+  scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
   auto session = CreateSession();
   EXPECT_EQ(scenic()->num_sessions(), 1U);
@@ -119,9 +117,8 @@ TEST_F(ScenicGfxTest, InvalidPresentCall_ShouldDestroySession) {
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 }
 
-// TODO(SCN-421)): This test requires a GfxSystem because GfxSystem is currently the source of
-// TempSessionDelegates. Once this bug has been fixed, this test should revert back to a ScenicTest.
-TEST_F(ScenicGfxTest, InvalidPresent2Call_ShouldDestroySession) {
+TEST_F(ScenicTest, InvalidPresent2Call_ShouldDestroySession) {
+  scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
   auto session = CreateSession();
   EXPECT_EQ(scenic()->num_sessions(), 1U);
@@ -137,6 +134,29 @@ TEST_F(ScenicGfxTest, InvalidPresent2Call_ShouldDestroySession) {
   RunLoopUntilIdle();
 
   EXPECT_EQ(scenic()->num_sessions(), 0U);
+}
+
+TEST_F(ScenicTest, FailedUpdate_ShouldDestroySession) {
+  auto mock_system = scenic()->RegisterSystem<DummySystem>();
+  scenic()->SetInitialized();
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+  auto session = CreateSession();
+  EXPECT_EQ(scenic()->num_sessions(), 1U);
+
+  // Mark the session as having failed an update next time DummySystem runs UpdateSessions().
+  auto id = mock_system->GetLastSessionId();
+  ASSERT_GE(id, 0);
+  scheduling::SessionId session_id = static_cast<scheduling::SessionId>(id);
+  mock_system->SetUpdateSessionsReturnValue({.sessions_with_failed_updates = {session_id}});
+
+  // Check that the next update causes Session destruction.
+  EXPECT_EQ(scenic()->num_sessions(), 1U);
+  auto update_result = scenic()->UpdateSessions(/*sessions_to_update*/ {}, /*frame_trace_id*/ 23);
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+
+  // Returned |update_result| should contain the same sessions returned from the system.
+  ASSERT_EQ(update_result.sessions_with_failed_updates.size(), 1u);
+  EXPECT_EQ(*update_result.sessions_with_failed_updates.begin(), session_id);
 }
 
 TEST_F(ScenicTest, ScenicApiRaceBeforeSystemRegistration) {

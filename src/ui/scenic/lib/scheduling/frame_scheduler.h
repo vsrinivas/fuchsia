@@ -89,13 +89,6 @@ class FrameScheduler {
   // regardless of whether they're explicitly requested using RequestFrame().
   virtual void SetRenderContinuously(bool render_continuously) = 0;
 
-  // Sets a callback to handle a failed session update. This should only be
-  // called once per session. When triggered, all references to the Session are also removed from
-  // FrameScheduler.
-  using OnSessionUpdateFailedCallback = std::function<void()>;
-  virtual void SetOnUpdateFailedCallbackForSession(
-      SessionId session, OnSessionUpdateFailedCallback update_failed_callback) = 0;
-
   // Registers per-present information with the frame scheduler and returns an incrementing
   // PresentId unique to that session. The |present_id| argument should only be set when
   // transferring sessions between frame schedulers.

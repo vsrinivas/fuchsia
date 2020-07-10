@@ -37,20 +37,6 @@ static const std::string kDependencyDir = "/dev/class/display-controller";
 static const std::string kDependencyDir = "/dev/class/gpu";
 #endif
 
-// A limited System used only to limit Scenic from fully initializing, without introducing a new
-// command dispatcher.
-//
-// TODO(SCN-1506): Find a better way to represent this other than creating an entire dummy system.
-class Dependency : public scenic_impl::System {
- public:
-  using System::System;
-  scenic_impl::CommandDispatcherUniquePtr CreateCommandDispatcher(
-      scheduling::SessionId session_id, std::shared_ptr<scenic_impl::EventReporter> event_reporter,
-      std::shared_ptr<scenic_impl::ErrorReporter> error_reporter) override {
-    return nullptr;
-  };
-};
-
 zx::duration GetMinimumPredictedFrameDuration() {
   std::string frame_scheduler_min_predicted_frame_duration;
   int frame_scheduler_min_predicted_frame_duration_in_us = 0;

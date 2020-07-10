@@ -23,13 +23,25 @@ class DummySystem : public System {
       scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
       std::shared_ptr<ErrorReporter> error_reporter) override;
 
+  scheduling::SessionUpdater::UpdateResults UpdateSessions(
+      const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
+      uint64_t frame_trace_id) override {
+    return update_sessions_return_value_;
+  }
+
   uint32_t GetNumDispatchers() { return num_dispatchers_; }
 
   int64_t GetLastSessionId() { return last_session_; }
 
+  void SetUpdateSessionsReturnValue(scheduling::SessionUpdater::UpdateResults results) {
+    update_sessions_return_value_ = results;
+  }
+
  private:
   uint32_t num_dispatchers_ = 0;
   int64_t last_session_ = -1;
+
+  scheduling::SessionUpdater::UpdateResults update_sessions_return_value_;
 };
 
 class DummyCommandDispatcher : public CommandDispatcher {

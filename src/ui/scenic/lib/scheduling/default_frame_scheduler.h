@@ -47,10 +47,6 @@ class DefaultFrameScheduler : public FrameScheduler {
   void SetRenderContinuously(bool render_continuously) override;
 
   // |FrameScheduler|
-  void SetOnUpdateFailedCallbackForSession(
-      SessionId session, OnSessionUpdateFailedCallback update_failed_callback) override;
-
-  // |FrameScheduler|
   PresentId RegisterPresent(SessionId session_id,
                             std::variant<OnPresentedCallback, Present2Info> present_information,
                             std::vector<zx::event> release_fences,
@@ -151,8 +147,7 @@ class DefaultFrameScheduler : public FrameScheduler {
   SessionUpdater::UpdateResults ApplyUpdatesToEachUpdater(
       const std::unordered_map<SessionId, PresentId>& sessions_to_update, uint64_t frame_number);
 
-  // Removes all references to each session passed in and calls their
-  // OnSessionUpdateFailedCallbacks.
+  // Removes all references to each session passed in.
   void RemoveFailedSessions(const std::unordered_set<SessionId>& sessions_with_failed_updates);
 
   // Map of all pending Present calls ordered by SessionId and then PresentId. Maps to requested
@@ -178,9 +173,6 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   // Map of registered callbacks for Present2 sessions.
   std::unordered_map<SessionId, OnFramePresentedCallback> present2_callback_map_;
-  // Map of callbacks to fire when a Session update fails.
-  std::unordered_map<SessionId, FrameScheduler::OnSessionUpdateFailedCallback>
-      update_failed_callback_map_;
 
   utils::SequentialFenceSignaller release_fence_signaller_;
 

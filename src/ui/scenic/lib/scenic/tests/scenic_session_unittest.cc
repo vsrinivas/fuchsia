@@ -55,11 +55,6 @@ class MockFrameScheduler : public scheduling::FrameScheduler {
   }
 
   // |FrameScheduler|
-  void SetOnUpdateFailedCallbackForSession(
-      scheduling::SessionId session,
-      OnSessionUpdateFailedCallback update_failed_callback) override {}
-
-  // |FrameScheduler|
   void ScheduleUpdateForSession(zx::time requested_presentation_time,
                                 scheduling::SchedulingIdPair id_pair) override {
     ++schedule_called_count_;
@@ -93,7 +88,7 @@ class ScenicSessionTest : public ::gtest::TestLoopFixture {
   ~ScenicSessionTest() override = default;
 
   void InitializeSession(Session& session) {
-    std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers;
+    std::unordered_map<System::TypeId, CommandDispatcherUniquePtr> dispatchers;
     dispatchers[System::TypeId::kGfx] = CommandDispatcherUniquePtr(dispatcher_.get(), [](auto) {});
     session.SetCommandDispatchers(std::move(dispatchers));
     session.SetFrameScheduler(scheduler_);

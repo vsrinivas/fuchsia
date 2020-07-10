@@ -32,10 +32,6 @@ class MockFrameScheduler : public FrameScheduler {
                             std::vector<zx::event> release_fences, PresentId present_id) override;
 
   // |FrameScheduler|
-  void SetOnUpdateFailedCallbackForSession(
-      SessionId session, OnSessionUpdateFailedCallback update_failed_callback) override {}
-
-  // |FrameScheduler|
   void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair) override;
 
   // |FrameScheduler|

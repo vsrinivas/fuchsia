@@ -77,20 +77,10 @@ static void SchedulePresent2Update(const std::unique_ptr<DefaultFrameScheduler>&
                                       {.session_id = session_id, .present_id = present_id});
 }
 
-static void SetSessionUpdateFailedNotExpected(FrameScheduler* scheduler,
-                                              const SessionId session_id) {
-  scheduler->SetOnUpdateFailedCallbackForSession(session_id, []() {
-    // Tests using this helper do not expect their session
-    // update to fail. Fail the test case.
-    EXPECT_FALSE(true);
-  });
-}
-
 TEST_F(FrameSchedulerTest, PresentTimeZero_ShouldBeScheduledBeforeNextVsync) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -111,7 +101,6 @@ TEST_F(FrameSchedulerTest, PresentTimeZero_ShouldBeScheduledBeforeNextVsync) {
 TEST_F(FrameSchedulerTest, Present2WithTimeZero_ShouldBeScheduledBeforeNextVsync) {
   auto scheduler = CreateDefaultFrameScheduler();
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
   scheduler->SetOnFramePresentedCallbackForSession(kSessionId, [](auto) {});
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -132,7 +121,6 @@ TEST_F(FrameSchedulerTest, Present2WithTimeZero_ShouldBeScheduledBeforeNextVsync
 TEST_F(FrameSchedulerTest, PresentBiggerThanNextVsync_ShouldBeScheduledAfterNextVsync) {
   auto scheduler = CreateDefaultFrameScheduler();
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   EXPECT_EQ(Now(), vsync_timing_->last_vsync_time());
 
@@ -168,7 +156,6 @@ TEST_F(FrameSchedulerTest, Present2BiggerThanNextVsync_ShouldBeScheduledAfterNex
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
   scheduler->SetOnFramePresentedCallbackForSession(kSessionId, [](auto) {});
 
   EXPECT_EQ(Now(), vsync_timing_->last_vsync_time());
@@ -205,7 +192,6 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -239,7 +225,6 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCall) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   uint64_t present_count = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
@@ -284,7 +269,6 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   // Set the LastVsyncTime arbitrarily in the future.
   //
@@ -331,7 +315,6 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCallExactlyOnTime
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
   uint64_t present_count = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
       kSessionId, [&present_count](fuchsia::scenic::scheduling::FramePresentedInfo info) {
@@ -387,7 +370,6 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetPresentCallbackWhenNoContentT
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
   uint64_t present_count = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
       kSessionId, [&present_count](fuchsia::scenic::scheduling::FramePresentedInfo info) {
@@ -434,8 +416,6 @@ TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
 
   constexpr SessionId kSessionId1 = 1;
   constexpr SessionId kSessionId2 = 2;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId1);
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId2);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -473,8 +453,6 @@ TEST_F(FrameSchedulerTest, Present2sForTheSameFrame_ShouldGetSingleRenderCall) {
 
   constexpr SessionId kSessionId1 = 1;
   constexpr SessionId kSessionId2 = 2;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId1);
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId2);
   scheduler->SetOnFramePresentedCallbackForSession(kSessionId1, [](auto) {});
   scheduler->SetOnFramePresentedCallbackForSession(kSessionId2, [](auto) {});
 
@@ -513,7 +491,6 @@ TEST_F(FrameSchedulerTest, PresentsForDifferentFrames_ShouldGetSeparateRenderCal
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   EXPECT_EQ(Now(), vsync_timing_->last_vsync_time());
 
@@ -555,7 +532,6 @@ TEST_F(FrameSchedulerTest, Present2sForDifferentFrames_ShouldGetSeparateRenderCa
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
   scheduler->SetOnFramePresentedCallbackForSession(kSessionId, [](auto) {});
 
   EXPECT_EQ(Now(), vsync_timing_->last_vsync_time());
@@ -597,7 +573,6 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -636,7 +611,6 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
   uint64_t present_count = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
       kSessionId, [&present_count](fuchsia::scenic::scheduling::FramePresentedInfo info) {
@@ -685,7 +659,6 @@ TEST_F(FrameSchedulerTest, RenderCalls_ShouldNotExceed_MaxOutstandingFrames) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   auto maximum_allowed_render_calls = scheduler->kMaxOutstandingFrames;
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -715,7 +688,6 @@ TEST_F(FrameSchedulerTest, Present2RenderCalls_ShouldNotExceed_MaxOutstandingFra
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   auto maximum_allowed_render_calls = scheduler->kMaxOutstandingFrames;
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -745,7 +717,6 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -791,7 +762,6 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresent2CallbackOnlyWhenFramePresente
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
   uint64_t present_count = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
       kSessionId, [&present_count](fuchsia::scenic::scheduling::FramePresentedInfo info) {
@@ -846,19 +816,9 @@ TEST_F(FrameSchedulerTest, FailedUpdateWithRender_ShouldNotCrash) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId1 = 1;
-  bool update_failed1 = false;
-  scheduler->SetOnUpdateFailedCallbackForSession(
-      kSessionId1, [&update_failed1, id = kSessionId1, frame_scheduler = scheduler.get()]() {
-        update_failed1 = true;
-        // Remove session from FrameScheduler when the update fails.
-        frame_scheduler->RemoveSession(id);
-      });
   mock_updater_->SetUpdateSessionsReturnValue({.sessions_with_failed_updates = {kSessionId1}});
 
   constexpr SessionId kSessionId2 = 2;
-  bool update_failed2 = false;
-  scheduler->SetOnUpdateFailedCallbackForSession(kSessionId2,
-                                                 [&update_failed2]() { update_failed2 = true; });
 
   ScheduleUpdateAndCallback(scheduler, kSessionId1, Now());
   ScheduleUpdateAndCallback(scheduler, kSessionId2, Now());
@@ -868,48 +828,31 @@ TEST_F(FrameSchedulerTest, FailedUpdateWithRender_ShouldNotCrash) {
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
-  EXPECT_TRUE(update_failed1);
-  EXPECT_FALSE(update_failed2);
 }
 
 TEST_F(FrameSchedulerTest, FailedPresent2UpdateWithRender_ShouldNotCrash) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId1 = 1;
-  bool update_failed1 = false;
-  scheduler->SetOnUpdateFailedCallbackForSession(
-      kSessionId1, [&update_failed1, id = kSessionId1, frame_scheduler = scheduler.get()]() {
-        update_failed1 = true;
-        // Remove session from FrameScheduler when the update fails.
-        frame_scheduler->RemoveSession(id);
-      });
   mock_updater_->SetUpdateSessionsReturnValue({.sessions_with_failed_updates = {kSessionId1}});
 
   constexpr SessionId kSessionId2 = 2;
-  bool update_failed2 = false;
-  scheduler->SetOnUpdateFailedCallbackForSession(kSessionId2,
-                                                 [&update_failed2]() { update_failed2 = true; });
   scheduler->SetOnFramePresentedCallbackForSession(kSessionId2, [](auto...) {});
 
   SchedulePresent2Update(scheduler, kSessionId1, Now());
   SchedulePresent2Update(scheduler, kSessionId2, Now());
 
   EXPECT_NO_FATAL_FAILURE(RunLoopFor(zx::duration(vsync_timing_->vsync_interval())));
-  EXPECT_TRUE(update_failed1);
-  EXPECT_FALSE(update_failed2);
   EXPECT_NO_FATAL_FAILURE(mock_renderer_->EndFrame(/* frame number */ 0, Now()));
   EXPECT_NO_FATAL_FAILURE(RunLoopFor(zx::duration(vsync_timing_->vsync_interval())));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
-  EXPECT_TRUE(update_failed1);
-  EXPECT_FALSE(update_failed2);
 }
 
 TEST_F(FrameSchedulerTest, NoOpUpdateWithSecondPendingUpdate_ShouldBeRescheduled) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -929,7 +872,6 @@ TEST_F(FrameSchedulerTest, NoOpPresent2UpdateWithSecondPendingUpdate_ShouldBeRes
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
   scheduler->SetOnFramePresentedCallbackForSession(kSessionId, [](auto) {});
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -950,7 +892,6 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   // Guarantee the vsync interval here is what we expect.
   zx::duration interval = zx::msec(100);
@@ -1017,7 +958,6 @@ TEST_F(FrameSchedulerTest, LowPresent2GpuRenderTime_ShouldNotMatter) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
   uint64_t present_count = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
       kSessionId, [&present_count](fuchsia::scenic::scheduling::FramePresentedInfo info) {
@@ -1093,11 +1033,9 @@ TEST_F(FrameSchedulerTest, PresentAndPresent2Clients_CanCoexist) {
 
   // Present client.
   constexpr SessionId kSessionId1 = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId1);
 
   // Present2 client.
   constexpr SessionId kSessionId2 = 2;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId2);
   uint64_t present_count = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
       kSessionId2, [&present_count](fuchsia::scenic::scheduling::FramePresentedInfo info) {
@@ -1129,7 +1067,6 @@ TEST_F(FrameSchedulerTest, MultiplePresent2Clients) {
   constexpr uint64_t kNumClients = 3;
 
   constexpr SessionId kSessionId1 = 0;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId1);
   uint64_t present_count1 = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
       kSessionId1,
@@ -1143,7 +1080,6 @@ TEST_F(FrameSchedulerTest, MultiplePresent2Clients) {
       });
 
   constexpr SessionId kSessionId2 = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId2);
   uint64_t present_count2 = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
       kSessionId2,
@@ -1157,7 +1093,6 @@ TEST_F(FrameSchedulerTest, MultiplePresent2Clients) {
       });
 
   constexpr SessionId kSessionId3 = 2;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId3);
   uint64_t present_count3 = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
       kSessionId3,
@@ -1201,8 +1136,6 @@ TEST_F(FrameSchedulerTest, CoalescedPresent2s_CauseASingleOnFramePresentedEvent)
   uint64_t present_count = 0;
   constexpr uint64_t kNumPresents = 4;
 
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId2);
-
   scheduler->SetOnFramePresentedCallbackForSession(
       kSessionId2,
       [&present_count, kNumPresents](fuchsia::scenic::scheduling::FramePresentedInfo info) {
@@ -1233,8 +1166,6 @@ TEST_F(FrameSchedulerTest, OnFramePresentedEvent_HasPresent2sInOrder) {
   constexpr SessionId kSessionId2 = 1;
   uint64_t present_count = 0;
   constexpr uint64_t kNumPresents = 4;
-
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId2);
 
   // Present in reverse order. This is to ensure that the Presents are ordered by submission, not
   // necessarily latch point or present received values.
@@ -1404,11 +1335,6 @@ TEST_F(FrameSchedulerTest, MultiUpdaterMultiSession) {
   auto updater2 = std::make_shared<MockSessionUpdater>();
   scheduler->AddSessionUpdater(updater1);
   scheduler->AddSessionUpdater(updater2);
-  // Update is not expected to fail.
-  scheduler->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
-  scheduler->SetOnUpdateFailedCallbackForSession(kSession2, [] { EXPECT_FALSE(true); });
-  scheduler->SetOnUpdateFailedCallbackForSession(kSession3, [] { EXPECT_FALSE(true); });
-  scheduler->SetOnUpdateFailedCallbackForSession(kSession4, [] { EXPECT_FALSE(true); });
 
   ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(2));
   ScheduleUpdateAndCallback(scheduler, kSession2, zx::time(3));
@@ -1445,7 +1371,6 @@ TEST_F(FrameSchedulerTest, AddSessionUpdatersInSessionUpdater) {
   // Pre-declare the Session IDs used in this test.
   constexpr SessionId kSession1 = 1;
   // Updates are not expected to fail.
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSession1);
 
   // Creates a mock SessionUpdater that creates 10 SessionUpdaters on every
   // UpdateSessions call.
@@ -1512,7 +1437,6 @@ TEST_F(FrameSchedulerTest, KillingFollowingSessionUpdaterInPreviousSessionUpdate
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSession1 = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSession1);
 
   auto updater1 = std::make_shared<MockSessionUpdaterWithFunctionOnUpdate>(
       []() { EXPECT_FALSE(true) << "Should never be called."; });
@@ -1542,7 +1466,6 @@ TEST_F(FrameSchedulerTest, SquashedPresents_ShouldSignalAllCallbacksInOrder) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   std::vector<int64_t> callback_order;
   // Schedule three callbacks, which should be squashed.
@@ -1567,7 +1490,6 @@ TEST_F(FrameSchedulerTest, SquashedPresent2s_ShouldHaveCorrectNumberOfHandledPre
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   uint64_t present_count = 0;
   uint64_t num_callbacks = 0;
@@ -1597,7 +1519,6 @@ TEST_F(FrameSchedulerTest, SkippedPresent_ShouldSignalAllCallbacksInOrder) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   std::vector<int64_t> callback_order;
   // These will never get scheduled.
@@ -1628,7 +1549,6 @@ TEST_F(FrameSchedulerTest, CanRemoveUpdaterWithQueuedUpdates) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSession1 = 1;
-  scheduler->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
 
   auto updater = std::make_shared<MockSessionUpdater>();
   scheduler->AddSessionUpdater(updater);
@@ -1644,7 +1564,6 @@ TEST_F(FrameSchedulerTest, CanAddUpdaterWithQueuedUpdates) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSession1 = 1;
-  scheduler->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
   ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(0));
 
   auto updater = std::make_shared<MockSessionUpdater>();
@@ -1742,7 +1661,6 @@ TEST_F(FrameSchedulerTest, SquashedPresents_ShouldHaveAllPreviousFencesSignaled)
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   // Create release fences
   std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(1);
@@ -1781,7 +1699,6 @@ TEST_F(FrameSchedulerTest, SkippedPresents_ShouldHaveAllPreviousFencesSignaled) 
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   // Create release fences
   std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(1);
@@ -1823,7 +1740,6 @@ TEST_F(FrameSchedulerTest, ReleaseFences_ShouldFireInOrder) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   constexpr SessionId kSessionId = 1;
-  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   std::vector<int> fence_order;
 

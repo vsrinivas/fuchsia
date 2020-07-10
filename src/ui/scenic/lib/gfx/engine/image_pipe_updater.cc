@@ -15,10 +15,6 @@ ImagePipeUpdater::ImagePipeUpdater(
     const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler)
     : scheduling_id_(scheduling::GetNextSessionId()), frame_scheduler_(frame_scheduler) {
   FX_DCHECK(frame_scheduler);
-  frame_scheduler->SetOnUpdateFailedCallbackForSession(scheduling_id_, [] {
-    // ImagePipe updates currently can not fail.
-    FX_CHECK(false);
-  });
 }
 
 ImagePipeUpdater::ImagePipeUpdater() : scheduling_id_(scheduling::GetNextSessionId()) {}

@@ -42,13 +42,6 @@ class DelegatingFrameScheduler : public FrameScheduler {
   void SetRenderContinuously(bool render_continuously) override;
 
   // |FrameScheduler|
-  // Calls SetOnUpdateFailedCallbackForSession() immediately if a FrameScheduler has been set;
-  // otherwise defers the call until one has been set.
-  void SetOnUpdateFailedCallbackForSession(
-      SessionId session,
-      FrameScheduler::OnSessionUpdateFailedCallback update_failed_callback) override;
-
-  // |FrameScheduler|
   // Calls RegisterPresent() immediately if a FrameScheduler has been set, otherwise defers the call
   // until one has been set. Returns a PresentId unique to the session. |present_id| should only be
   // set when transferring sessions between frame schedulers.

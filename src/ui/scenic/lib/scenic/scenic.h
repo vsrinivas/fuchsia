@@ -115,9 +115,8 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
   fit::closure quit_callback_;
   inspect::Node inspect_node_;
 
-  // Registered systems, indexed by their TypeId. These slots could be null,
-  // indicating the System is not available or supported.
-  std::array<std::shared_ptr<System>, System::TypeId::kMaxSystems> systems_;
+  // Registered systems, mapped to their TypeId.
+  std::unordered_map<System::TypeId, std::shared_ptr<System>> systems_;
 
   bool initialized_ = false;
   // Closures that will be run when all systems are initialized.
@@ -143,7 +142,7 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
 
 template <typename SystemT, typename... Args>
 std::shared_ptr<SystemT> Scenic::RegisterSystem(Args&&... args) {
-  FX_DCHECK(systems_[SystemT::kTypeId] == nullptr)
+  FX_DCHECK(systems_.find(SystemT::kTypeId) == systems_.end())
       << "System of type: " << SystemT::kTypeId << "was already registered.";
 
   SystemT* system =

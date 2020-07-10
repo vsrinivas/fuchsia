@@ -65,12 +65,13 @@ scheduling::SessionUpdater::UpdateResults Scenic::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t trace_id) {
   scheduling::SessionUpdater::UpdateResults results;
-  for (auto& system : systems_) {
-    if (system) {
-      auto temp_result = system->UpdateSessions(sessions_to_update, trace_id);
-      results.sessions_with_failed_updates.insert(temp_result.sessions_with_failed_updates.begin(),
-                                                  temp_result.sessions_with_failed_updates.end());
+  for (auto& [type_id, system] : systems_) {
+    auto temp_result = system->UpdateSessions(sessions_to_update, trace_id);
+    for (auto session_id : temp_result.sessions_with_failed_updates) {
+      CloseSession(session_id);
     }
+    results.sessions_with_failed_updates.insert(temp_result.sessions_with_failed_updates.begin(),
+                                                temp_result.sessions_with_failed_updates.end());
   }
   return results;
 }
@@ -112,12 +113,10 @@ void Scenic::CreateSessionImmediately(
 
   // Give each installed System an opportunity to install a CommandDispatcher in
   // the newly-created Session.
-  std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers;
-  for (size_t i = 0; i < System::TypeId::kMaxSystems; ++i) {
-    if (auto& system = systems_[i]) {
-      dispatchers[i] = system->CreateCommandDispatcher(session_id, session->event_reporter(),
-                                                       session->error_reporter());
-    }
+  std::unordered_map<System::TypeId, CommandDispatcherUniquePtr> dispatchers;
+  for (auto& [type_id, system] : systems_) {
+    dispatchers[type_id] = system->CreateCommandDispatcher(session_id, session->event_reporter(),
+                                                           session->error_reporter());
   }
   session->SetCommandDispatchers(std::move(dispatchers));
 

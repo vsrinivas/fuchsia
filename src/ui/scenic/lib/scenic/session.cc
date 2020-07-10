@@ -37,18 +37,6 @@ void Session::SetFrameScheduler(
   // Initialize FrameScheduler callbacks.
   // Check validity because frame_scheduler is not always set in tests.
   if (frame_scheduler) {
-    frame_scheduler->SetOnUpdateFailedCallbackForSession(id_,
-                                                         [weak = weak_factory_.GetWeakPtr()]() {
-                                                           if (weak) {
-                                                             // Called to initiate a session close
-                                                             // when an update fails. Requests the
-                                                             // destruction of client fidl session
-                                                             // from scenic, which then triggers the
-                                                             // actual destruction of this object.
-                                                             weak->destroy_session_func_();
-                                                           }
-                                                         });
-
     frame_scheduler->SetOnFramePresentedCallbackForSession(
         id_,
         [weak = weak_factory_.GetWeakPtr()](fuchsia::scenic::scheduling::FramePresentedInfo info) {
@@ -71,13 +59,13 @@ void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
   for (auto& cmd : cmds) {
     // TODO(SCN-710): This dispatch is far from optimal in terms of performance.
     // We need to benchmark it to figure out whether it matters.
-    System::TypeId type_id = SystemTypeForCmd(cmd);
-    auto dispatcher = type_id != System::TypeId::kInvalid ? dispatchers_[type_id].get() : nullptr;
-    if (!dispatcher) {
+    const System::TypeId type_id = SystemTypeForCmd(cmd);
+    const auto dispatcher_it = dispatchers_.find(type_id);
+    if (dispatcher_it == dispatchers_.end()) {
       reporter_->EnqueueEvent(std::move(cmd));
     } else if (type_id == System::TypeId::kInput) {
       // Input handles commands immediately and doesn't care about present calls.
-      dispatcher->DispatchCommand(std::move(cmd), /*present_id=*/0);
+      dispatcher_it->second->DispatchCommand(std::move(cmd), /*present_id=*/0);
     } else {
       commands_pending_present_.emplace_back(std::move(cmd));
     }
@@ -246,10 +234,8 @@ void Session::ScheduleNextPresent() {
   TRACE_FLOW_END("gfx", "wait_for_fences", SESSION_TRACE_ID(id_, present_request.present_id));
 
   for (auto& cmd : present_request.commands) {
-    System::TypeId type_id = SystemTypeForCmd(cmd);
-    auto dispatcher = type_id != System::TypeId::kInvalid ? dispatchers_[type_id].get() : nullptr;
-    FX_DCHECK(dispatcher);
-    dispatcher->DispatchCommand(std::move(cmd), present_request.present_id);
+    dispatchers_.at(SystemTypeForCmd(cmd))
+        ->DispatchCommand(std::move(cmd), present_request.present_id);
   }
 
   if (auto scheduler = frame_scheduler_.lock()) {
@@ -282,17 +268,15 @@ void Session::InvokeFuturePresentationTimesCallback(zx_duration_t requested_pred
 }
 
 void Session::SetCommandDispatchers(
-    std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers) {
-  for (size_t i = 0; i < System::TypeId::kMaxSystems; ++i) {
-    dispatchers_[i] = std::move(dispatchers[i]);
-  }
+    std::unordered_map<System::TypeId, CommandDispatcherUniquePtr> dispatchers) {
+  FX_DCHECK(dispatchers_.empty()) << "dispatchers should only be set once.";
+  dispatchers_ = std::move(dispatchers);
 }
 
 void Session::SetDebugName(std::string debug_name) {
   TRACE_DURATION("gfx", "scenic_impl::Session::SetDebugName", "debug name", debug_name);
-  for (auto& dispatcher : dispatchers_) {
-    if (dispatcher)
-      dispatcher->SetDebugName(debug_name);
+  for (auto& [type_id, dispatcher] : dispatchers_) {
+    dispatcher->SetDebugName(debug_name);
   }
 }
 

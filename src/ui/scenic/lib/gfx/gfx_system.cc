@@ -240,7 +240,7 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
   engine_->annotation_manager()->FulfillCreateRequests();
 
   // Session owned by AnnotationManager can also have ViewTree updates when
-  // AnnotaionViewHolders are created or deleted. We should stage these updates
+  // AnnotationViewHolders are created or deleted. We should stage these updates
   // into SceneGraph manually.
   engine_->annotation_manager()->StageViewTreeUpdates();
 

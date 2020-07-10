@@ -445,7 +445,6 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 }
 
 void DefaultFrameScheduler::RemoveSession(SessionId session_id) {
-  update_failed_callback_map_.erase(session_id);
   present2_callback_map_.erase(session_id);
   RemoveSessionIdFromMap(session_id, &pending_present_requests_);
   RemoveSessionIdFromMap(session_id, &present1_callbacks_);
@@ -590,21 +589,8 @@ bool DefaultFrameScheduler::ApplyUpdates(zx::time target_presentation_time, zx::
 
 void DefaultFrameScheduler::RemoveFailedSessions(
     const std::unordered_set<SessionId>& sessions_with_failed_updates) {
-  // Aggregate all failed session callbacks, and remove failed sessions from all present callback
-  // maps.
-  std::vector<OnSessionUpdateFailedCallback> failure_callbacks;
   for (auto failed_session_id : sessions_with_failed_updates) {
-    auto it = update_failed_callback_map_.find(failed_session_id);
-    FX_DCHECK(it != update_failed_callback_map_.end());
-    failure_callbacks.emplace_back(std::move(it->second));
-    // Remove the callback from the global map so they are not called after this failure callback is
-    // triggered.
     RemoveSession(failed_session_id);
-  }
-
-  // Process all update failed callbacks.
-  for (auto& callback : failure_callbacks) {
-    callback();
   }
 }
 
@@ -668,12 +654,6 @@ void DefaultFrameScheduler::SignalPresentCallbacksUpTo(
     SignalPresent2CallbackForInfosUpTo({session_id, present_id},
                                        zx::time(presentation_info.presentation_time));
   }
-}
-
-void DefaultFrameScheduler::SetOnUpdateFailedCallbackForSession(
-    SessionId session_id, FrameScheduler::OnSessionUpdateFailedCallback update_failed_callback) {
-  FX_DCHECK(update_failed_callback_map_.find(session_id) == update_failed_callback_map_.end());
-  update_failed_callback_map_[session_id] = std::move(update_failed_callback);
 }
 
 void DefaultFrameScheduler::SetOnFramePresentedCallbackForSession(
