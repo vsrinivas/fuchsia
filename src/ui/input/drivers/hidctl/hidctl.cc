@@ -105,8 +105,8 @@ void HidDevice::DdkInit(ddk::InitTxn txn) {
 
 void HidDevice::DdkRelease() {
   zxlogf(DEBUG, "hidctl: DdkRelease");
-  // This function will only be called after the unbind txn is replied to,
-  // and the thread will already be detached at that point, so no need to join.
+  int ret = thrd_join(thread_, nullptr);
+  ZX_DEBUG_ASSERT(ret == thrd_success);
   delete this;
 }
 
@@ -257,7 +257,6 @@ int HidDevice::Thread() {
   {
     fbl::AutoLock lock(&lock_);
     data_.reset();
-    thrd_detach(thread_);
     // Check if the device has a pending unbind txn to reply to.
     if (unbind_txn_) {
       unbind_txn_->Reply();
