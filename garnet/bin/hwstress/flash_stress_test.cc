@@ -35,7 +35,8 @@ TEST(Flash, FlashStress) {
   ASSERT_TRUE(fvm_path.is_ok());
 
   StatusLine status;
-  ASSERT_TRUE(StressFlash(&status, fvm_path.value(), /*bytes_to_test=*/16 * 1024 * 1024));
+  ASSERT_TRUE(
+      StressFlash(&status, fvm_path.value(), /*bytes_to_test=*/16 * 1024 * 1024, zx::msec(1)));
 }
 
 TEST(Flash, DeletePartition) {

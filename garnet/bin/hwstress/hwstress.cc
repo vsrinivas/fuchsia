@@ -73,7 +73,7 @@ int Run(int argc, const char** argv) {
         DestroyFlashTestPartitions(&status);
         success = true;
       } else {
-        success = StressFlash(&status, args.fvm_path, flash_to_test);
+        success = StressFlash(&status, args.fvm_path, flash_to_test, duration);
       }
       break;
     case StressTest::kLight:

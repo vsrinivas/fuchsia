@@ -7,7 +7,9 @@
 #include <fuchsia/hardware/block/cpp/fidl.h>
 #include <fuchsia/hardware/block/volume/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/fifo.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
@@ -284,7 +286,8 @@ uint64_t TemporaryFvmPartition::GetPartitionSize() { return partition_size_; }
 uint64_t TemporaryFvmPartition::GetSliceSize() { return slice_size_; }
 
 // Start a stress test.
-bool StressFlash(StatusLine* status, const std::string& fvm_path, uint64_t bytes_to_test) {
+bool StressFlash(StatusLine* status, const std::string& fvm_path, uint64_t bytes_to_test,
+                 zx::duration duration) {
   std::unique_ptr<TemporaryFvmPartition> fvm_partition =
       TemporaryFvmPartition::Create(fvm_path, bytes_to_test);
 
@@ -315,21 +318,24 @@ bool StressFlash(StatusLine* status, const std::string& fvm_path, uint64_t bytes
     return false;
   }
 
+  zx::time end_time = zx::deadline_after(duration);
   uint64_t errors_detected;
 
-  if (FlashIo(device, bytes_to_test, /*is_write_test=*/true, &errors_detected) != ZX_OK) {
-    status->Log("Error writing to vmo.");
-    return false;
-  }
+  do {
+    if (FlashIo(device, bytes_to_test, /*is_write_test=*/true, &errors_detected) != ZX_OK) {
+      status->Log("Error writing to vmo.");
+      return false;
+    }
 
-  if (FlashIo(device, bytes_to_test, /*is_write_test=*/false, &errors_detected) != ZX_OK) {
-    status->Log("Error reading from vmo.");
-    return false;
-  }
-  if (errors_detected > 0) {
-    status->Log("Found %lu errors.", errors_detected);
-    return false;
-  }
+    if (FlashIo(device, bytes_to_test, /*is_write_test=*/false, &errors_detected) != ZX_OK) {
+      status->Log("Error reading from vmo.");
+      return false;
+    }
+    if (errors_detected > 0) {
+      status->Log("Found %lu errors.", errors_detected);
+      return false;
+    }
+  } while (zx::clock::get_monotonic() < end_time);
 
   return true;
 }

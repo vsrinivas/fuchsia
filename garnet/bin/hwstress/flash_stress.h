@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_HWSTRESS_FLASH_STRESS_H_
 #define GARNET_BIN_HWSTRESS_FLASH_STRESS_H_
 
+#include <lib/zx/time.h>
+
 #include <string>
 
 #include <src/lib/uuid/uuid.h>
@@ -57,7 +59,8 @@ class TemporaryFvmPartition {
 };
 
 // Start a stress test.
-bool StressFlash(StatusLine* status, const std::string& fvm_path, uint64_t bytes_to_test);
+bool StressFlash(StatusLine* status, const std::string& fvm_path, uint64_t bytes_to_test,
+                 zx::duration duration);
 
 // Delete any persistent flash test partitions
 void DestroyFlashTestPartitions(StatusLine* status);
