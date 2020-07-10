@@ -12,13 +12,13 @@ namespace test {
 void ScenicTest::SetUp() {
   sys::testing::ComponentContextProvider provider;
   context_ = provider.TakeContext();
-  scenic_ = std::make_unique<Scenic>(context_.get(), inspect::Node(), [this] { QuitLoop(); });
-  InitializeScenic(scenic_.get());
+  scenic_ = std::make_shared<Scenic>(context_.get(), inspect::Node(), [this] { QuitLoop(); });
+  InitializeScenic(scenic_);
 }
 
 void ScenicTest::TearDown() { scenic_.reset(); }
 
-void ScenicTest::InitializeScenic(Scenic* scenic) {}
+void ScenicTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {}
 
 std::unique_ptr<::scenic::Session> ScenicTest::CreateSession() {
   fuchsia::ui::scenic::SessionPtr session_ptr;

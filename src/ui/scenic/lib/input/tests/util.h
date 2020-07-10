@@ -138,7 +138,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
  private:
   // |scenic_impl::test::ScenicTest|
   // Create a dummy GFX system, as well as a live input system to test.
-  void InitializeScenic(scenic_impl::Scenic* scenic) override;
+  void InitializeScenic(std::shared_ptr<scenic_impl::Scenic> scenic) override;
 
   sys::testing::ComponentContextProvider context_provider_;
   std::shared_ptr<scenic_impl::gfx::Engine> engine_;

@@ -21,6 +21,7 @@
 #include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
@@ -28,7 +29,7 @@ namespace scenic_impl {
 // A Scenic instance has two main areas of responsibility:
 //   - manage Session lifecycles
 //   - provide a host environment for Services
-class Scenic : public fuchsia::ui::scenic::Scenic {
+class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::SessionUpdater {
  public:
   // TODO(fxb/23686): Remove when we get rid of Scenic.GetDisplayInfo().
   class GetDisplayInfoDelegateDeprecated {
@@ -43,13 +44,18 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
                   fit::closure quit_callback);
   ~Scenic();
 
-  // [fuchsia::ui::scenic::Scenic]
+  // |fuchsia::ui::scenic::Scenic|
   void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
-  // [fuchsia::ui::scenic::Scenic]
+  // |fuchsia::ui::scenic::Scenic|
   void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
-  // [fuchsia::ui::scenic::Scenic]
+  // |fuchsia::ui::scenic::Scenic|
   void GetDisplayOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
+
+  // |scheduling::SessionUpdater|
+  UpdateResults UpdateSessions(
+      const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
+      uint64_t trace_id) override;
 
   // Register a delegate class for implementing top-level Scenic operations (e.g., GetDisplayInfo).
   // This delegate must outlive the Scenic instance.

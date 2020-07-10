@@ -61,6 +61,20 @@ void Scenic::RunAfterInitialized(fit::closure closure) {
   }
 }
 
+scheduling::SessionUpdater::UpdateResults Scenic::UpdateSessions(
+    const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
+    uint64_t trace_id) {
+  scheduling::SessionUpdater::UpdateResults results;
+  for (auto& system : systems_) {
+    if (system) {
+      auto temp_result = system->UpdateSessions(sessions_to_update, trace_id);
+      results.sessions_with_failed_updates.insert(temp_result.sessions_with_failed_updates.begin(),
+                                                  temp_result.sessions_with_failed_updates.end());
+    }
+  }
+  return results;
+}
+
 void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
                            fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   RunAfterInitialized([this, session_request = std::move(session_request),

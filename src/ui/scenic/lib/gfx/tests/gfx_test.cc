@@ -18,7 +18,7 @@ void GfxSystemTest::TearDown() {
   FX_DCHECK(gfx_system_.expired());
 }
 
-void GfxSystemTest::InitializeScenic(Scenic* scenic) {
+void GfxSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
   auto signaller = std::make_unique<ReleaseFenceSignallerForTest>();
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       std::make_shared<scheduling::VsyncTiming>(),
@@ -32,9 +32,9 @@ void GfxSystemTest::InitializeScenic(Scenic* scenic) {
   gfx_system_ = scenic->RegisterSystem<GfxSystem>(engine_.get(),
                                                   /* sysmem */ nullptr,
                                                   /* display_manager */ nullptr);
-  frame_scheduler_->AddSessionUpdater(gfx_system_);
-  scenic_->SetInitialized(engine_->scene_graph());
-  scenic_->SetFrameScheduler(frame_scheduler_);
+  frame_scheduler_->AddSessionUpdater(scenic);
+  scenic->SetInitialized(engine_->scene_graph());
+  scenic->SetFrameScheduler(frame_scheduler_);
 }
 
 }  // namespace test

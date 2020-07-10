@@ -31,7 +31,7 @@ class GfxSystemTest : public scenic_impl::test::ScenicTest {
   sys::testing::ComponentContextProvider& context_provider() { return context_provider_; }
 
  private:
-  void InitializeScenic(Scenic* scenic) override;
+  void InitializeScenic(std::shared_ptr<Scenic> scenic) override;
 
   sys::testing::ComponentContextProvider context_provider_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;

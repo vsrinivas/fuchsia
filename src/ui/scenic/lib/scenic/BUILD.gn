@@ -78,6 +78,7 @@ source_set("system") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/scenic/util:util",
+    "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling:id",
   ]
 }

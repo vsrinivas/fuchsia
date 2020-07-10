@@ -36,10 +36,10 @@ class ScenicTest : public ::gtest::TestLoopFixture {
 
   // Subclasses may override this to install any systems required by the test;
   // none are installed by default.
-  virtual void InitializeScenic(Scenic* scenic);
+  virtual void InitializeScenic(std::shared_ptr<Scenic> scenic);
 
   std::unique_ptr<sys::ComponentContext> context_;
-  std::unique_ptr<Scenic> scenic_;
+  std::shared_ptr<Scenic> scenic_;
 };
 
 }  // namespace test

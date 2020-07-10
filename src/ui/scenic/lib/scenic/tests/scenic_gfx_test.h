@@ -18,7 +18,7 @@ namespace test {
 class ScenicGfxTest : public ScenicTest {
  protected:
   void TearDown() override;
-  void InitializeScenic(Scenic* scenic) override;
+  void InitializeScenic(std::shared_ptr<Scenic> scenic) override;
 
  private:
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;

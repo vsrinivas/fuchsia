@@ -154,7 +154,7 @@ SessionWrapper InputSystemTest::CreateClient(const std::string& name,
   return session_wrapper;
 }
 
-void InputSystemTest::InitializeScenic(Scenic* scenic) {
+void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
   auto signaller = std::make_unique<ReleaseFenceSignallerForTest>();
   display_ = std::make_unique<Display>(
       /*id*/ 0, test_display_width_px(), test_display_height_px());
@@ -168,8 +168,8 @@ void InputSystemTest::InitializeScenic(Scenic* scenic) {
   auto gfx = scenic->RegisterSystem<GfxSystem>(engine_.get(),
                                                /* sysmem */ nullptr,
                                                /* display_manager */ nullptr);
-  frame_scheduler->AddSessionUpdater(gfx);
-  scenic_->SetFrameScheduler(frame_scheduler);
+  frame_scheduler->AddSessionUpdater(scenic);
+  scenic->SetFrameScheduler(frame_scheduler);
 
   input_system_ = scenic->RegisterSystem<InputSystem>(engine_->scene_graph()).get();
   scenic->SetInitialized();

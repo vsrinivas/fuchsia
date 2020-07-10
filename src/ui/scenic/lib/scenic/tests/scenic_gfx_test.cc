@@ -14,7 +14,7 @@
 namespace scenic_impl {
 namespace test {
 
-void ScenicGfxTest::InitializeScenic(Scenic* scenic) {
+void ScenicGfxTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
   auto signaller = std::make_unique<gfx::test::ReleaseFenceSignallerForTest>();
 
   // TODO(SCN-421)): This frame scheduler is only needed for a single test in scenic_unittests.cc.

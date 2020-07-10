@@ -9,12 +9,15 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
 
+#include <unordered_map>
+
 #include "lib/inspect/cpp/inspect.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/scenic/lib/scenic/command_dispatcher.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace sys {
@@ -72,6 +75,14 @@ class System {
   virtual CommandDispatcherUniquePtr CreateCommandDispatcher(
       scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
       std::shared_ptr<ErrorReporter> error_reporter) = 0;
+
+  // Performs updates up to the corresponding PresentId for Sessions managed by this System.
+  // Mirrors the functionality of scheduling::SessionUpdater::UpdateSessions.
+  virtual scheduling::SessionUpdater::UpdateResults UpdateSessions(
+      const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
+      uint64_t frame_trace_id) {
+    return {};
+  };
 
   SystemContext* context() { return &context_; }
 

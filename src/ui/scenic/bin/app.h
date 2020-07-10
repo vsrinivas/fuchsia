@@ -58,7 +58,7 @@ class App {
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
   std::shared_ptr<gfx::Engine> engine_;
-  Scenic scenic_;
+  std::shared_ptr<Scenic> scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
   std::unique_ptr<Watchdog> watchdog_;
 

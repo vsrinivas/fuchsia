@@ -18,9 +18,7 @@
 namespace scenic_impl {
 namespace gfx {
 
-class GfxSystem : public System,
-                  public scenic_impl::TakeScreenshotDelegateDeprecated,
-                  public scheduling::SessionUpdater {
+class GfxSystem final : public System, public scenic_impl::TakeScreenshotDelegateDeprecated {
  public:
   static constexpr TypeId kTypeId = kGfx;
   static const char* kName;
@@ -28,6 +26,7 @@ class GfxSystem : public System,
   GfxSystem(SystemContext context, Engine* engine, Sysmem* sysmem,
             display::DisplayManager* display_manager);
 
+  // |scenic_impl::System|
   CommandDispatcherUniquePtr CreateCommandDispatcher(
       scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
       std::shared_ptr<ErrorReporter> error_reporter) override;
@@ -36,8 +35,8 @@ class GfxSystem : public System,
   // |scenic_impl::TakeScreenshotDelegateDeprecated|
   void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
 
-  // |scheduling::SessionUpdater|
-  virtual UpdateResults UpdateSessions(
+  // |scenic_impl::System|
+  scheduling::SessionUpdater::UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
       uint64_t trace_id) override;
 

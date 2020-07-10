@@ -109,12 +109,13 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       // It is preferable to cleanly shutdown using destructors only, if possible.
       shutdown_manager_(
           ShutdownManager::New(async_get_default_dispatcher(), std::move(quit_callback))),
-      scenic_(app_context_.get(), std::move(inspect_node),
-              [weak = std::weak_ptr<ShutdownManager>(shutdown_manager_)] {
-                if (auto strong = weak.lock()) {
-                  strong->Shutdown(LifecycleControllerImpl::kShutdownTimeout);
-                }
-              }),
+      scenic_(std::make_shared<Scenic>(app_context_.get(), std::move(inspect_node),
+                                       [weak = std::weak_ptr<ShutdownManager>(shutdown_manager_)] {
+                                         if (auto strong = weak.lock()) {
+                                           strong->Shutdown(
+                                               LifecycleControllerImpl::kShutdownTimeout);
+                                         }
+                                       })),
       annotation_registry_(app_context_.get()),
       lifecycle_controller_impl_(app_context_.get(),
                                  std::weak_ptr<ShutdownManager>(shutdown_manager_)) {
@@ -220,40 +221,40 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
             GetMinimumPredictedFrameDuration(),
             scheduling::DefaultFrameScheduler::kInitialRenderDuration,
             scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
-        scenic_.inspect_node()->CreateChild("FrameScheduler"), cobalt_logger);
+        scenic_->inspect_node()->CreateChild("FrameScheduler"), cobalt_logger);
   }
 
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
     engine_ =
         std::make_shared<gfx::Engine>(app_context_.get(), frame_scheduler_, escher_->GetWeakPtr(),
-                                      scenic_.inspect_node()->CreateChild("Engine"));
+                                      scenic_->inspect_node()->CreateChild("Engine"));
   }
   frame_scheduler_->SetFrameRenderer(engine_);
-  scenic_.SetFrameScheduler(frame_scheduler_);
+  scenic_->SetFrameScheduler(frame_scheduler_);
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(engine_.get(), &sysmem_, &display_manager_);
+  auto gfx = scenic_->RegisterSystem<gfx::GfxSystem>(engine_.get(), &sysmem_, &display_manager_);
   FX_DCHECK(gfx);
 
-  frame_scheduler_->AddSessionUpdater(gfx);
-  scenic_.SetScreenshotDelegate(gfx.get());
+  frame_scheduler_->AddSessionUpdater(scenic_);
+  scenic_->SetScreenshotDelegate(gfx.get());
   display_info_delegate_ = std::make_unique<DisplayInfoDelegate>(display);
-  scenic_.SetDisplayInfoDelegate(display_info_delegate_.get());
+  scenic_->SetDisplayInfoDelegate(display_info_delegate_.get());
 #endif
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
-  auto input = scenic_.RegisterSystem<input::InputSystem>(engine_->scene_graph());
+  auto input = scenic_->RegisterSystem<input::InputSystem>(engine_->scene_graph());
   FX_DCHECK(input);
 #endif
 
   // Create the snapshotter and pass it to scenic.
   auto snapshotter =
       std::make_unique<gfx::InternalSnapshotImpl>(engine_->scene_graph(), escher_->GetWeakPtr());
-  scenic_.InitializeSnapshotService(std::move(snapshotter));
+  scenic_->InitializeSnapshotService(std::move(snapshotter));
 
-  scenic_.SetInitialized(engine_->scene_graph());
+  scenic_->SetInitialized(engine_->scene_graph());
 }
 
 }  // namespace scenic_impl
