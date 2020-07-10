@@ -12,7 +12,7 @@ etc.
 ```
 fx set bringup.x64 --with-base //garnet/packages/tests:zircon  # or bringup.arm64
 fx build
-fx qemu -z out/default.zircon/user-x64-clang/obj/system/utest/core/core-tests.zbi
+fx qemu -k -z out/default/obj/zircon/system/utest/core/core-tests.zbi
 ```
 
 ## Notes
