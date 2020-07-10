@@ -60,9 +60,9 @@ type cmdRunner interface {
 }
 
 // For testability
-type sshRunner interface {
-	Close() error
-	ReconnectIfNecessary(ctx context.Context) (*ssh.Client, error)
+type sshClient interface {
+	Close()
+	Reconnect(ctx context.Context) error
 	Run(ctx context.Context, command []string, stdout, stderr io.Writer) error
 }
 
@@ -70,6 +70,7 @@ type sshRunner interface {
 type dataSinkCopier interface {
 	GetReference() (runtests.DataSinkReference, error)
 	Copy(sinks []runtests.DataSinkReference, localDir string) (runtests.DataSinkMap, error)
+	Reconnect() error
 	Close() error
 }
 
@@ -125,8 +126,7 @@ func (t *subprocessTester) Close() error {
 
 // fuchsiaSSHTester executes fuchsia tests over an SSH connection.
 type fuchsiaSSHTester struct {
-	r                           sshRunner
-	client                      *ssh.Client
+	client                      sshClient
 	copier                      dataSinkCopier
 	useRuntests                 bool
 	localOutputDir              string
@@ -146,17 +146,15 @@ func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputD
 	if err != nil {
 		return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
 	}
-	client, err := sshutil.ConnectToNodeDeprecated(ctx, nodename, config)
+	client, err := sshutil.ConnectToNode(ctx, nodename, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish an SSH connection: %v", err)
 	}
-	r := runner.NewSSHRunner(client, config)
 	copier, err := runtests.NewDataSinkCopier(client, dataOutputDir)
 	if err != nil {
 		return nil, err
 	}
 	return &fuchsiaSSHTester{
-		r:                           r,
 		client:                      client,
 		copier:                      copier,
 		useRuntests:                 useRuntests,
@@ -166,19 +164,12 @@ func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputD
 	}, nil
 }
 
-func (t *fuchsiaSSHTester) reconnectIfNecessary(ctx context.Context) error {
-	if client, err := t.r.ReconnectIfNecessary(ctx); err != nil {
-		return fmt.Errorf("failed to restablish SSH connection: %w", err)
-	} else if client != t.client {
-		// Create new DataSinkCopier with new client.
-		t.client = client
-		if err := t.copier.Close(); err != nil {
-			logger.Errorf(ctx, "failed to close data sink copier: %v", err)
-		}
-		t.copier, err = runtests.NewDataSinkCopier(t.client, dataOutputDir)
-		if err != nil {
-			return fmt.Errorf("failed to create new data sink copier: %w", err)
-		}
+func (t *fuchsiaSSHTester) reconnect(ctx context.Context) error {
+	if err := t.client.Reconnect(ctx); err != nil {
+		return fmt.Errorf("failed to reestablish SSH connection: %w", err)
+	}
+	if err := t.copier.Reconnect(); err != nil {
+		return fmt.Errorf("failed to reconnect data sink copier: %w", err)
 	}
 	return nil
 }
@@ -201,10 +192,10 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	var testErr error
 	const maxReconnectAttempts = 3
 	retry.Retry(ctx, retry.WithMaxAttempts(t.connectionErrorRetryBackoff, maxReconnectAttempts), func() error {
-		testErr = t.r.Run(ctx, test.Command, stdout, stderr)
+		testErr = t.client.Run(ctx, test.Command, stdout, stderr)
 		if sshutil.IsConnectionError(testErr) {
 			logger.Errorf(ctx, "attempting to reconnect over SSH after error: %v", testErr)
-			if err := t.reconnectIfNecessary(ctx); err != nil {
+			if err := t.reconnect(ctx); err != nil {
 				logger.Errorf(ctx, "%s: %v", constants.FailedToReconnectMsg, err)
 				// If we fail to reconnect, continuing is likely hopeless.
 				return nil
@@ -271,7 +262,7 @@ func (t *fuchsiaSSHTester) RunBugreport(ctx context.Context, bugreportFile strin
 	}
 	defer bugreportOutFile.Close()
 	startTime := time.Now()
-	err = t.r.Run(ctx, []string{"/bin/bugreport"}, bugreportOutFile, os.Stderr)
+	err = t.client.Run(ctx, []string{"/bin/bugreport"}, bugreportOutFile, os.Stderr)
 	logger.Debugf(ctx, "ran bugreport in %v", time.Now().Sub(startTime))
 	return err
 }
@@ -279,11 +270,8 @@ func (t *fuchsiaSSHTester) RunBugreport(ctx context.Context, bugreportFile strin
 // Close terminates the underlying SSH connection. The object is no longer
 // usable after calling this method.
 func (t *fuchsiaSSHTester) Close() error {
-	if err := t.copier.Close(); err != nil {
-		t.r.Close()
-		return err
-	}
-	return t.r.Close()
+	defer t.client.Close()
+	return t.copier.Close()
 }
 
 // FuchsiaSerialTester executes fuchsia tests over serial.

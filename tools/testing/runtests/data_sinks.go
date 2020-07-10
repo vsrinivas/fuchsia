@@ -12,24 +12,31 @@ import (
 	"path"
 	"path/filepath"
 
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
+
 	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
 )
 
 // DataSinkCopier copies data sinks from a remote host after a runtests invocation.
 type DataSinkCopier struct {
 	viewer    remoteViewer
+	sshClient *sshutil.Client
 	remoteDir string
 }
 
 // NewDataSinkCopier constructs a copier using the specified ssh client.
-func NewDataSinkCopier(client *ssh.Client, remoteDir string) (*DataSinkCopier, error) {
-	sftpClient, err := sftp.NewClient(client)
+func NewDataSinkCopier(client *sshutil.Client, remoteDir string) (*DataSinkCopier, error) {
+	sftpClient, err := client.NewSFTPClient()
 	if err != nil {
 		return nil, err
 	}
 	viewer := &sftpViewer{sftpClient}
-	return &DataSinkCopier{viewer: viewer, remoteDir: remoteDir}, nil
+	copier := &DataSinkCopier{
+		viewer:    viewer,
+		sshClient: client,
+		remoteDir: remoteDir,
+	}
+	return copier, nil
 }
 
 // Copy copies data sinks using the copier's remote viewer.
@@ -40,6 +47,23 @@ func (c DataSinkCopier) Copy(references []DataSinkReference, localDir string) (D
 // GetReference returns a reference to the remote data sinks.
 func (c DataSinkCopier) GetReference() (DataSinkReference, error) {
 	return getDataSinkReference(c.viewer, c.remoteDir)
+}
+
+// Reconnect should be called after the sshClient has been disconnected and
+// reconnected. It closes the old viewer and creates a new viewer using the
+// refreshed sshClient.
+func (c *DataSinkCopier) Reconnect() error {
+	// This may fail because the underlying ssh session has already been
+	// closed, which is fine and expected, so no need to check the
+	// returned error.
+	c.viewer.close()
+
+	sftpClient, err := c.sshClient.NewSFTPClient()
+	if err != nil {
+		return fmt.Errorf("failed to create new SFTP client: %w", err)
+	}
+	c.viewer = &sftpViewer{sftpClient}
+	return nil
 }
 
 func (c DataSinkCopier) Close() error {

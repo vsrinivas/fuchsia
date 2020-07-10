@@ -20,18 +20,46 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 
 	"github.com/google/go-cmp/cmp"
-	"golang.org/x/crypto/ssh"
 )
 
-type fakeRunner struct {
-	reconnectIfNecessaryErrs  []error
-	reconnectIfNecessaryCalls int
-	runErrs                   []error
-	runCalls                  int
-	lastCmd                   []string
+type fakeSSHClient struct {
+	reconnectErrs  []error
+	reconnectCalls int
+	runErrs        []error
+	runCalls       int
+	lastCmd        []string
 }
 
-func (r *fakeRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
+func (c *fakeSSHClient) Run(_ context.Context, command []string, _, _ io.Writer) error {
+	c.runCalls++
+	c.lastCmd = command
+	if c.runErrs == nil {
+		return nil
+	}
+	err, remainingErrs := c.runErrs[0], c.runErrs[1:]
+	c.runErrs = remainingErrs
+	return err
+}
+
+func (c *fakeSSHClient) Close() {}
+
+func (c *fakeSSHClient) Reconnect(_ context.Context) error {
+	c.reconnectCalls++
+	if c.reconnectErrs == nil {
+		return nil
+	}
+	err, remainingErrs := c.reconnectErrs[0], c.reconnectErrs[1:]
+	c.reconnectErrs = remainingErrs
+	return err
+}
+
+type fakeCmdRunner struct {
+	runErrs  []error
+	runCalls int
+	lastCmd  []string
+}
+
+func (r *fakeCmdRunner) Run(_ context.Context, command []string, _, _ io.Writer) error {
 	r.runCalls++
 	r.lastCmd = command
 	if r.runErrs == nil {
@@ -40,20 +68,6 @@ func (r *fakeRunner) Run(ctx context.Context, command []string, stdout, stderr i
 	err, remainingErrs := r.runErrs[0], r.runErrs[1:]
 	r.runErrs = remainingErrs
 	return err
-}
-
-func (r *fakeRunner) Close() error {
-	return nil
-}
-
-func (r *fakeRunner) ReconnectIfNecessary(ctx context.Context) (*ssh.Client, error) {
-	r.reconnectIfNecessaryCalls++
-	if r.reconnectIfNecessaryErrs == nil {
-		return nil, nil
-	}
-	err, remainingErrs := r.reconnectIfNecessaryErrs[0], r.reconnectIfNecessaryErrs[1:]
-	r.reconnectIfNecessaryErrs = remainingErrs
-	return nil, err
 }
 
 func TestSubprocessTester(t *testing.T) {
@@ -97,7 +111,7 @@ func TestSubprocessTester(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			runner := &fakeRunner{
+			runner := &fakeCmdRunner{
 				runErrs: c.runErrs,
 			}
 			tester := subprocessTester{
@@ -119,14 +133,21 @@ func TestSubprocessTester(t *testing.T) {
 	}
 }
 
-type fakeDataSinkCopier struct{}
+type fakeDataSinkCopier struct {
+	reconnectCalls int
+}
 
 func (*fakeDataSinkCopier) GetReference() (runtests.DataSinkReference, error) {
 	return runtests.DataSinkReference{}, nil
 }
 
-func (*fakeDataSinkCopier) Copy(sinks []runtests.DataSinkReference, localDir string) (runtests.DataSinkMap, error) {
+func (*fakeDataSinkCopier) Copy(_ []runtests.DataSinkReference, _ string) (runtests.DataSinkMap, error) {
 	return runtests.DataSinkMap{}, nil
+}
+
+func (c *fakeDataSinkCopier) Reconnect() error {
+	c.reconnectCalls++
+	return nil
 }
 
 func (*fakeDataSinkCopier) Close() error {
@@ -135,14 +156,15 @@ func (*fakeDataSinkCopier) Close() error {
 
 func TestSSHTester(t *testing.T) {
 	cases := []struct {
-		name        string
-		runErrs     []error
-		reconErrs   []error
-		wantErr     bool
-		wantConnErr bool
+		name            string
+		runErrs         []error
+		reconErrs       []error
+		copierReconErrs []error
+		wantErr         bool
+		wantConnErr     bool
 	}{
 		{
-			name:    "sucess",
+			name:    "success",
 			runErrs: []error{nil},
 			wantErr: false,
 		},
@@ -178,13 +200,14 @@ func TestSSHTester(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			runner := &fakeRunner{
-				reconnectIfNecessaryErrs: c.reconErrs,
-				runErrs:                  c.runErrs,
+			client := &fakeSSHClient{
+				reconnectErrs: c.reconErrs,
+				runErrs:       c.runErrs,
 			}
+			copier := &fakeDataSinkCopier{}
 			tester := fuchsiaSSHTester{
-				r:                           runner,
-				copier:                      &fakeDataSinkCopier{},
+				client:                      client,
+				copier:                      copier,
 				connectionErrorRetryBackoff: &retry.ZeroBackoff{},
 			}
 			defer func() {
@@ -207,11 +230,26 @@ func TestSSHTester(t *testing.T) {
 					t.Errorf("got isConnErr: %t, want: %t", isConnErr, c.wantConnErr)
 				}
 			}
-			if wantReconnCalls != runner.reconnectIfNecessaryCalls {
-				t.Errorf("ReconnectIfNecesssary() called wrong number of times. Got: %d, Want: %d", runner.reconnectIfNecessaryCalls, wantReconnCalls)
+
+			if wantReconnCalls != client.reconnectCalls {
+				t.Errorf("Reconnect() called wrong number of times. Got: %d, Want: %d", client.reconnectCalls, wantReconnCalls)
 			}
-			if wantRunCalls != runner.runCalls {
-				t.Errorf("Run() called wrong number of times. Got: %d, Want: %d", runner.runCalls, wantRunCalls)
+
+			reconnFailures := 0
+			for _, err := range c.reconErrs {
+				if err != nil {
+					reconnFailures++
+				}
+			}
+			// The copier shouldn't be reconnected if reconnecting the ssh
+			// client fails.
+			wantCopierReconnCalls := wantReconnCalls - reconnFailures
+			if wantCopierReconnCalls != copier.reconnectCalls {
+				t.Errorf("Reconnect() called wrong number of times. Got: %d, Want: %d", copier.reconnectCalls, wantReconnCalls)
+			}
+
+			if wantRunCalls != client.runCalls {
+				t.Errorf("Run() called wrong number of times. Got: %d, Want: %d", client.runCalls, wantRunCalls)
 			}
 		})
 	}
