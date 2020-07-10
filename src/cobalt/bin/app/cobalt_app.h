@@ -16,6 +16,7 @@
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/sys/cpp/component_context.h"
+#include "src/cobalt/bin/app/activity_listener_impl.h"
 #include "src/cobalt/bin/app/cobalt_controller_impl.h"
 #include "src/cobalt/bin/app/configuration_data.h"
 #include "src/cobalt/bin/app/logger_factory_impl.h"
@@ -100,7 +101,8 @@ class CobaltApp {
       std::chrono::seconds target_interval, std::chrono::seconds min_interval,
       std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
       bool use_memory_observation_store, size_t max_bytes_per_observation_store,
-      const std::string& product_name, const std::string& board_name, const std::string& version);
+      const std::string& product_name, const std::string& board_name, const std::string& version,
+      std::unique_ptr<ActivityListenerImpl> listener);
 
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
             std::unique_ptr<CobaltServiceInterface> cobalt_service,

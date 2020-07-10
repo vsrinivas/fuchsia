@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "lib/sys/cpp/component_context.h"
+#include "src/cobalt/bin/app/activity_listener_impl.h"
 #include "src/cobalt/bin/app/metric_event_logger_factory_impl.h"
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
@@ -59,7 +60,8 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
     std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
     size_t event_aggregator_backfill_days, bool use_memory_observation_store,
     size_t max_bytes_per_observation_store, const std::string& product_name,
-    const std::string& board_name, const std::string& version) {
+    const std::string& board_name, const std::string& version,
+    std::unique_ptr<ActivityListenerImpl> listener) {
   // |target_pipeline| is the pipeline used for sending data to cobalt. In particular, it is the
   // source of the encryption keys, as well as determining the destination for generated
   // observations (either clearcut, or the local filesystem).
@@ -106,6 +108,8 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
       .local_aggregation_backfill_days = event_aggregator_backfill_days,
 
       .validated_clock = system_clock,
+
+      .activity_listener = std::move(listener),
   };
   return cfg;
 }
@@ -133,7 +137,7 @@ CobaltApp CobaltApp::CreateCobaltApp(
       },
       target_interval, min_interval, initial_interval, event_aggregator_backfill_days,
       use_memory_observation_store, max_bytes_per_observation_store, product_name, board_name,
-      version));
+      version, std::make_unique<ActivityListenerImpl>(dispatcher, context->svc())));
 
   cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());
 

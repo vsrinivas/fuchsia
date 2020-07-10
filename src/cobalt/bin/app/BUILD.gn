@@ -30,6 +30,8 @@ config_data("cobalt_registry") {
 
 source_set("lib") {
   sources = [
+    "activity_listener_impl.cc",
+    "activity_listener_impl.h",
     "cobalt_app.cc",
     "cobalt_app.h",
     "cobalt_controller_impl.cc",
@@ -57,7 +59,9 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.ui.activity",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/cobalt/bin/utils:clock",
     "//src/cobalt/bin/utils:fuchsia_http_client",
@@ -70,6 +74,7 @@ source_set("lib") {
     "//third_party/cobalt/src/lib/util:pem_util",
     "//third_party/cobalt/src/lib/util:posix_file_system",
     "//third_party/cobalt/src/logger",
+    "//third_party/cobalt/src/public:activity_listener_interface",
     "//third_party/cobalt/src/public:cobalt_config",
     "//third_party/cobalt/src/public:cobalt_service",
     "//third_party/cobalt/src/public:cobalt_service_interface",
@@ -185,8 +190,8 @@ metrics_registry("testapp_metrics_registry") {
 
 executable("cobalt_app_unittests") {
   testonly = true
-
   sources = [
+    "activity_listener_impl_test.cc",
     "cobalt_app_test.cc",
     "cobalt_controller_impl_test.cc",
     "configuration_data_test.cc",
@@ -196,12 +201,12 @@ executable("cobalt_app_unittests") {
     "timer_manager_test.cc",
     "user_consent_watcher_test.cc",
   ]
-
   deps = [
     ":lib",
     ":testapp_metrics_registry_cc",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/cobalt/bin/testapp:fake_timekeeper_lib",
     "//src/cobalt/bin/testing:fake_http_loader",

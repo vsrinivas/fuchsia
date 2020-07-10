@@ -10,6 +10,7 @@
 #include <gmock/gmock.h>
 
 #include "sdk/lib/sys/cpp/testing/service_directory_provider.h"
+#include "src/cobalt/bin/app/activity_listener_impl.h"
 #include "src/cobalt/bin/app/testapp_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/fake_timekeeper.h"
 #include "src/cobalt/bin/testing/fake_http_loader.h"
@@ -60,7 +61,8 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
         },
         target_interval, min_interval, initial_interval, event_aggregator_backfill_days,
         use_memory_observation_store, max_bytes_per_observation_store, product_name, board_name,
-        version);
+        version,
+        std::make_unique<ActivityListenerImpl>(dispatcher(), context_provider_.context()->svc()));
   }
 
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
