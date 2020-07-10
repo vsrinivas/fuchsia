@@ -14,7 +14,7 @@ async fn succeeds_without_writable_data() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
     env.run_system_updater_args(
@@ -51,7 +51,6 @@ async fn succeeds_without_writable_data() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
@@ -78,7 +77,7 @@ async fn writes_history() {
 
     env.resolver
         .register_package("update", UPDATE_HASH)
-        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
@@ -113,7 +112,7 @@ async fn replaces_bogus_history() {
 
     env.resolver
         .register_package("update", UPDATE_HASH)
-        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
@@ -145,7 +144,7 @@ async fn increments_attempts_counter_on_retry() {
     env.resolver.url("fuchsia-pkg://fuchsia.com/not-found").fail(Status::NOT_FOUND);
     env.resolver
         .register_package("update", UPDATE_HASH)
-        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
     let _ = env

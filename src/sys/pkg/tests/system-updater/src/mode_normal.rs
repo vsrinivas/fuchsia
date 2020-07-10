@@ -10,11 +10,11 @@ async fn updates_the_system() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
         .add_file("zbi", "fake zbi");
+    env.resolver
+        .url(SYSTEM_IMAGE_URL)
+        .resolve(&env.resolver.package("system_image/0", SYSTEM_IMAGE_HASH));
 
     env.run_system_updater(SystemUpdaterArgs {
         oneshot: Some(true),
@@ -67,11 +67,11 @@ async fn requires_zbi() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
         .add_file("bootloader", "new bootloader");
+    env.resolver
+        .url(SYSTEM_IMAGE_URL)
+        .resolve(&env.resolver.package("system_image/0", SYSTEM_IMAGE_HASH));
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
