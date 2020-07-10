@@ -290,8 +290,8 @@ async fn try_compare<ActionType: std::fmt::Debug>(
                 );
             }
 
-            if let Err(e) = data.compare_to_json(&archive_data[0].clone().into(), results.diff_type)
-            {
+            let hierarchy = archive_data[0].payload.as_ref().unwrap();
+            if let Err(e) = data.compare_to_json(&hierarchy.clone().into(), results.diff_type) {
                 bail!(
                     "Archive compare error in trial {}, step {}, action {}:\n{:?}:\n{} ",
                     trial_name,

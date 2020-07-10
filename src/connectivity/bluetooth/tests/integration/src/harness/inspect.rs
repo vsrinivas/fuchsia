@@ -51,7 +51,8 @@ pub async fn handle_inspect_updates(harness: InspectHarness) -> Result<(), Error
     loop {
         let fetcher = inspect::testing::InspectDataFetcher::new()
             .add_selector(inspect::testing::ComponentSelector::new(vec!["bt-gap.cmx".to_string()]));
-        harness.write_state().hierarchies = fetcher.get().await?;
+        harness.write_state().hierarchies =
+            fetcher.get().await?.into_iter().flat_map(|result| result.payload).collect();
         harness.notify_state_changed();
         fuchsia_async::Timer::new(RETRY_TIMEOUT_SECONDS.seconds().after_now()).await;
     }

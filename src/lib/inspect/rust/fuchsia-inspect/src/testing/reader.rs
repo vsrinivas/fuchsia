@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Error},
+    diagnostics_schema::InspectSchema,
     fidl_fuchsia_diagnostics::{
         ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker,
         ClientSelectorConfiguration, DataType, Format, FormattedContent, SelectorArgument,
@@ -149,25 +150,16 @@ impl InspectDataFetcher {
 
     // TODO: remove, just for soft-migration.
     pub async fn get_hierarchy(self) -> Result<Vec<NodeHierarchy>, Error> {
-        self.get().await
+        let results = self.get().await?;
+        Ok(results.into_iter().filter_map(|result| result.payload).collect())
     }
 
     /// Connects to the archivist observer.cmx and returns inspect data associated with the given
     /// component under the relative realm path given.
-    pub async fn get(self) -> Result<Vec<NodeHierarchy>, Error> {
+    pub async fn get(self) -> Result<Vec<InspectSchema>, Error> {
         let raw_json = self.get_raw_json().await?;
-        match raw_json {
-            serde_json::Value::Array(values) => values
-                .into_iter()
-                .map(|mut value| {
-                    let tree_json =
-                        value.get_mut(*PAYLOAD_KEY).context("contents are there")?.take();
-                    serde_json::from_value(tree_json)
-                        .map_err(|e| format_err!("Failed to deserialize: {:?}", e))
-                })
-                .collect::<Result<Vec<_>, _>>(),
-            _ => unreachable!("No other json value type is expected here"),
-        }
+        let result: Vec<InspectSchema> = serde_json::from_value(raw_json)?;
+        Ok(result)
     }
 
     /// Connects to the archivist observer.cmx and returns inspect data associated with the given
@@ -259,12 +251,14 @@ mod tests {
     use {
         super::*,
         anyhow::format_err,
+        diagnostics_schema::Schema,
         fidl_fuchsia_diagnostics as fdiagnostics,
         fidl_fuchsia_sys::ComponentControllerEvent,
         fuchsia_component::{
             client::App,
             server::{NestedEnvironment, ServiceFs},
         },
+        fuchsia_inspect_node_hierarchy::Property,
         fuchsia_zircon as zx,
         futures::StreamExt,
         futures::TryStreamExt,
@@ -300,13 +294,13 @@ mod tests {
     async fn inspect_data_for_component() -> Result<(), Error> {
         let (_env, _app) = start_component("test-ok").await?;
 
-        let hierarchies = InspectDataFetcher::new()
+        let results = InspectDataFetcher::new()
             .add_selector("test-ok/inspect_test_component.cmx:root".to_string())
             .get()
             .await?;
 
-        assert_eq!(hierarchies.len(), 1);
-        assert_inspect_tree!(hierarchies[0], root: {
+        assert_eq!(results.len(), 1);
+        assert_inspect_tree!(results[0].payload.as_ref().unwrap(), root: {
             int: 3u64,
             "lazy-node": {
                 a: "test",
@@ -316,7 +310,7 @@ mod tests {
             }
         });
 
-        let mut response = InspectDataFetcher::new()
+        let response = InspectDataFetcher::new()
             .add_selector(
                 ComponentSelector::new(vec![
                     "test-ok".to_string(),
@@ -325,15 +319,12 @@ mod tests {
                 .with_tree_selector("root:int")
                 .with_tree_selector("root/lazy-node:a"),
             )
-            .get_raw_json()
+            .get()
             .await?;
 
-        let hierarchies = response.as_array_mut().expect("as array ok");
-        assert_eq!(hierarchies.len(), 1);
-        let hierarchy: NodeHierarchy =
-            serde_json::from_value(hierarchies[0][*PAYLOAD_KEY].take()).expect("deserialized");
+        assert_eq!(response.len(), 1);
 
-        assert_inspect_tree!(hierarchy, root: {
+        assert_inspect_tree!(response[0].payload.as_ref().unwrap(), root: {
             int: 3u64,
             "lazy-node": {
                 a: "test"
@@ -380,7 +371,7 @@ mod tests {
         let proxy = spawn_fake_archive();
         let result = InspectDataFetcher::new().with_archive(proxy).get().await.expect("got result");
         assert_eq!(result.len(), 1);
-        assert_inspect_tree!(result[0], root: { x: 1u64 });
+        assert_inspect_tree!(result[0].payload.as_ref().unwrap(), root: { x: 1u64 });
     }
 
     fn spawn_fake_archive() -> fdiagnostics::ArchiveAccessorProxy {
@@ -407,15 +398,19 @@ mod tests {
                                             continue;
                                         }
                                         called = true;
-                                        let content =
-                                            serde_json::to_string_pretty(&serde_json::json!({
-                                                "moniker": "a",
-                                                "payload": {
-                                                    "root": {
-                                                        "x": 1,
-                                                    }
-                                                }
-                                            }))
+                                        let result = Schema::for_inspect(
+                                            "moniker",
+                                            Some(NodeHierarchy::new(
+                                                "root",
+                                                vec![Property::Uint("x".to_string(), 1)],
+                                                vec![],
+                                            )),
+                                            zx::Time::get(zx::ClockId::UTC),
+                                            "component-url",
+                                            "filename",
+                                            vec![],
+                                        );
+                                        let content = serde_json::to_string_pretty(&result)
                                             .expect("json pretty");
                                         let vmo_size = content.len() as u64;
                                         let vmo =

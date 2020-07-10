@@ -64,7 +64,7 @@ async fn check_nested(
     let results = fetcher.get().await?.into_iter().collect::<Vec<_>>();
     assert_eq!(results.len(), expected_results);
     for result in results {
-        assert_inspect_tree!(result, root: contains {
+        assert_inspect_tree!(result.payload.as_ref().unwrap(), root: contains {
             "fuchsia.inspect.Health": contains {
                 status: "OK",
             }

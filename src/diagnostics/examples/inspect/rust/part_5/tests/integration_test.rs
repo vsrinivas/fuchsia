@@ -77,6 +77,7 @@ impl IntegrationTest {
             .await?
             .into_iter()
             .next()
+            .and_then(|result| result.payload)
             .ok_or(format_err!("expected one inspect hierarchy"))
     }
     // [END get_inspect]

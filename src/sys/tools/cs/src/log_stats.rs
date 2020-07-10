@@ -127,7 +127,7 @@ impl LogStats {
             return Err(format_err!("Expected one inspect tree, received {}", response.len()));
         }
 
-        let inspect_root = response.pop().unwrap();
+        let inspect_root = response.pop().and_then(|r| r.payload).unwrap();
 
         Self::new_with_root(min_severity, &inspect_root).await
     }

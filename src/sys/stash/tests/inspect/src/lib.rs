@@ -22,7 +22,7 @@ async fn stash_inspect() -> Result<(), Error> {
 
     assert_eq!(1, data.len());
 
-    assert_inspect_tree!(data[0],
+    assert_inspect_tree!(data[0].payload.as_ref().unwrap(),
         root: contains {
             secure_mode: false,
             "fuchsia.inspect.Health": contains {
@@ -42,7 +42,7 @@ async fn stash_secure_inspect() -> Result<(), Error> {
 
     assert_eq!(1, data.len());
 
-    assert_inspect_tree!(data[0],
+    assert_inspect_tree!(data[0].payload.as_ref().unwrap(),
         root: contains {
             secure_mode: true,
             "fuchsia.inspect.Health": contains {

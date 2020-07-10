@@ -25,7 +25,7 @@ async fn verify_component_attributed(url: &str, expected_info_count: u64) {
         .get()
         .await
         .unwrap();
-    let hierarchy = response.pop().unwrap();
+    let hierarchy = response.pop().and_then(|r| r.payload).unwrap();
     let log_stats = LogStats::new_with_root(LogSeverity::INFO, &hierarchy).await.unwrap();
     let component_log_stats = log_stats.get_by_url(url).unwrap();
     let info_log_count = component_log_stats.get_count(LogSeverity::INFO);
@@ -45,7 +45,7 @@ async fn read_v2_components_inspect() {
         .await
         .expect("got inspect data");
 
-    assert_inspect_tree!(data[0], root: {
+    assert_inspect_tree!(data[0].payload.as_ref().unwrap(), root: {
         "fuchsia.inspect.Health": {
             status: "OK",
             start_timestamp_nanos: AnyProperty,
