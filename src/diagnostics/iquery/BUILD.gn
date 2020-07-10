@@ -20,6 +20,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/diagnostics/lib/diagnostics-schema",
     "//src/diagnostics/lib/inspect-fidl-load",
     "//src/diagnostics/lib/selectors",
     "//src/lib/fdio/rust:fdio",

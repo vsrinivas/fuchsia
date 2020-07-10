@@ -11,10 +11,7 @@ use {
     },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client,
-    fuchsia_inspect_node_hierarchy::{
-        serialization::{HierarchyDeserializer, RawJsonNodeHierarchySerializer},
-        NodeHierarchy,
-    },
+    fuchsia_inspect_node_hierarchy::NodeHierarchy,
     fuchsia_zircon::{Duration, DurationNum},
     lazy_static::lazy_static,
     serde_json,
@@ -165,7 +162,8 @@ impl InspectDataFetcher {
                 .map(|mut value| {
                     let tree_json =
                         value.get_mut(*PAYLOAD_KEY).context("contents are there")?.take();
-                    RawJsonNodeHierarchySerializer::deserialize(tree_json)
+                    serde_json::from_value(tree_json)
+                        .map_err(|e| format_err!("Failed to deserialize: {:?}", e))
                 })
                 .collect::<Result<Vec<_>, _>>(),
             _ => unreachable!("No other json value type is expected here"),
@@ -309,7 +307,7 @@ mod tests {
 
         assert_eq!(hierarchies.len(), 1);
         assert_inspect_tree!(hierarchies[0], root: {
-            int: 3i64,
+            int: 3u64,
             "lazy-node": {
                 a: "test",
                 child: {
@@ -332,12 +330,11 @@ mod tests {
 
         let hierarchies = response.as_array_mut().expect("as array ok");
         assert_eq!(hierarchies.len(), 1);
-        let hierarchy =
-            RawJsonNodeHierarchySerializer::deserialize(hierarchies[0][*PAYLOAD_KEY].take())
-                .expect("deserialize ok");
+        let hierarchy: NodeHierarchy =
+            serde_json::from_value(hierarchies[0][*PAYLOAD_KEY].take()).expect("deserialized");
 
         assert_inspect_tree!(hierarchy, root: {
-            int: 3i64,
+            int: 3u64,
             "lazy-node": {
                 a: "test"
             }
@@ -383,7 +380,7 @@ mod tests {
         let proxy = spawn_fake_archive();
         let result = InspectDataFetcher::new().with_archive(proxy).get().await.expect("got result");
         assert_eq!(result.len(), 1);
-        assert_inspect_tree!(result[0], root: { x: 1i64 });
+        assert_inspect_tree!(result[0], root: { x: 1u64 });
     }
 
     fn spawn_fake_archive() -> fdiagnostics::ArchiveAccessorProxy {

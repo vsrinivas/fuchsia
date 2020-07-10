@@ -1,4 +1,4 @@
-// Copyright 2020impl  The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -120,3 +120,120 @@ impl<'a> Serialize for Bucket<f64> {
 
 impl_serialize_for_array_value![i64, u64, f64,];
 impl_serialize_for_array_bucket![i64, u64,];
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::ArrayFormat};
+
+    #[test]
+    fn serialize_json() {
+        let mut hierarchy = test_hierarchy();
+        hierarchy.sort();
+        let expected = expected_json();
+        let result = serde_json::to_string_pretty(&hierarchy).expect("failed to serialize");
+        assert_eq!(result, expected);
+    }
+
+    fn test_hierarchy() -> NodeHierarchy {
+        NodeHierarchy::new(
+            "root",
+            vec![
+                Property::UintArray("array".to_string(), ArrayContent::Values(vec![0, 2, 4])),
+                Property::Bool("bool_true".to_string(), true),
+                Property::Bool("bool_false".to_string(), false),
+            ],
+            vec![
+                NodeHierarchy::new(
+                    "a",
+                    vec![
+                        Property::Double("double".to_string(), 2.5),
+                        Property::DoubleArray(
+                            "histogram".to_string(),
+                            ArrayContent::new(
+                                vec![0.0, 2.0, 4.0, 1.0, 3.0, 4.0],
+                                ArrayFormat::ExponentialHistogram,
+                            )
+                            .unwrap(),
+                        ),
+                        Property::Bytes("bytes".to_string(), vec![5u8, 0xf1, 0xab]),
+                    ],
+                    vec![],
+                ),
+                NodeHierarchy::new(
+                    "b",
+                    vec![
+                        Property::Int("int".to_string(), -2),
+                        Property::String("string".to_string(), "some value".to_string()),
+                        Property::IntArray(
+                            "histogram".to_string(),
+                            ArrayContent::new(vec![0, 2, 4, 1, 3], ArrayFormat::LinearHistogram)
+                                .unwrap(),
+                        ),
+                    ],
+                    vec![],
+                ),
+            ],
+        )
+    }
+
+    fn expected_json() -> String {
+        r#"{
+  "root": {
+    "array": [
+      0,
+      2,
+      4
+    ],
+    "bool_false": false,
+    "bool_true": true,
+    "a": {
+      "bytes": "b64:BfGr",
+      "double": 2.5,
+      "histogram": {
+        "buckets": [
+          {
+            "count": 1.0,
+            "floor": "-Infinity",
+            "upper_bound": 0.0
+          },
+          {
+            "count": 3.0,
+            "floor": 0.0,
+            "upper_bound": 2.0
+          },
+          {
+            "count": 4.0,
+            "floor": 2.0,
+            "upper_bound": "Infinity"
+          }
+        ]
+      }
+    },
+    "b": {
+      "histogram": {
+        "buckets": [
+          {
+            "count": 4,
+            "floor": -9223372036854775808,
+            "upper_bound": 0
+          },
+          {
+            "count": 1,
+            "floor": 0,
+            "upper_bound": 2
+          },
+          {
+            "count": 3,
+            "floor": 2,
+            "upper_bound": 9223372036854775807
+          }
+        ]
+      },
+      "int": -2,
+      "string": "some value"
+    }
+  }
+}"#
+        .to_string()
+    }
+}

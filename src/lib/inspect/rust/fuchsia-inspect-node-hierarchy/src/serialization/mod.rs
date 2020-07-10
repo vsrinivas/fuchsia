@@ -13,34 +13,14 @@
 //!
 //! ```
 //! let hierarchy = NodeHierarchy::new(...);
-//! let json_string = JsonNodeHierarchySerializer::serialize(hierarchy)
-//! ```
-//!
-//! If you'd like to control more of your formatting than the inspect tree, you can do the
-//! following:
-//!
-//! ```
-//! let hierarchy = NodeHierarchy::new(...);
-//! let json_value = RawJsonNodeHierarchySerializer::serialize(hierarchy)
-//! // json!(json_value) or compose this value into your own JSON.
+//! let json_string = serde_json::to_string(&hierarchy)?;
 //! ```
 //!
 //! If you'd like to deserialize some json string, you can do the following:
 //! ```
 //! let string = "{ ... }".to_string();
-//! let hierarchy = JsonNodeHierarchySerializer::deserialize(string)?;
+//! let hierarchy : NodeHierarchy = serde_json::from_str(&string);
 //! ```
 
-use {crate::NodeHierarchy, anyhow::Error};
-
-pub use crate::serialization::json::*;
-
-pub mod json;
+mod deserialize;
 mod serialize;
-
-/// Implementers of this trait will be able to convert an `Object` type data format that
-/// is encoding a diagnostics data hierarchy into a NodeHierarchy.
-pub trait HierarchyDeserializer<Key = String> {
-    type Object;
-    fn deserialize(data_format: Self::Object) -> Result<NodeHierarchy<Key>, Error>;
-}

@@ -15,11 +15,8 @@ pub enum Error {
     #[error("Invalid arguments: {}", _0)]
     InvalidArguments(String),
 
-    #[error("The archivist returned invalid JSON")]
-    ArchiveInvalidJson,
-
-    #[error("The archivist didn't return expected property: {}", _0)]
-    ArchiveMissingProperty(String),
+    #[error("The archivist returned invalid JSON: {}", _0)]
+    ArchiveInvalidJson(serde_json::Error),
 
     #[error("Failed formatting the command response: {}", _0)]
     InvalidCommandResponse(serde_json::Error),
@@ -32,6 +29,9 @@ pub enum Error {
 
     #[error("Failed to find inspect data in location {}: {}", _0, _1)]
     ReadLocation(String, anyhow::Error),
+
+    #[error("The archivist returned an invalid reponse: {}", _0)]
+    InvalidArchiveResponse(String),
 }
 
 impl Error {
@@ -43,8 +43,8 @@ impl Error {
         Error::InvalidArguments(msg.into())
     }
 
-    pub fn archive_missing_property(name: impl Into<String>) -> Error {
-        Error::ArchiveMissingProperty(name.into())
+    pub fn invalid_archive_response(msg: impl Into<String>) -> Error {
+        Error::InvalidArchiveResponse(msg.into())
     }
 }
 

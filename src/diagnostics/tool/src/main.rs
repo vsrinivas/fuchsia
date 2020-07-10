@@ -8,14 +8,7 @@ use {
         Difference::{Add, Rem, Same},
     },
     fidl_fuchsia_diagnostics::Selector,
-    fuchsia_inspect_node_hierarchy::{
-        self,
-        serialization::{
-            json::{JsonNodeHierarchySerializer, RawJsonNodeHierarchySerializer},
-            HierarchyDeserializer,
-        },
-        InspectHierarchyMatcher, NodeHierarchy,
-    },
+    fuchsia_inspect_node_hierarchy::{self, InspectHierarchyMatcher, NodeHierarchy},
     selectors,
     std::cmp::{max, min},
     std::collections::HashSet,
@@ -198,7 +191,7 @@ fn filter_json_schema_by_selectors(
     let (moniker_key, payload_key) = get_keys_from_schema(&value);
     let moniker_string_opt = value[moniker_key].as_str();
     let deserialized_hierarchy: Result<NodeHierarchy, _> =
-        RawJsonNodeHierarchySerializer::deserialize(value[payload_key].clone());
+        serde_json::from_value(value[payload_key].clone());
 
     match (moniker_string_opt, deserialized_hierarchy) {
         (Some(moniker_path), Ok(hierarchy)) => {
@@ -402,9 +395,8 @@ fn generate_selectors<'a>(
                         .expect("Monikers in provided data dumps are required to be non-empty.");
 
             if component_name_matches {
-                let hierarchy =
-                    JsonNodeHierarchySerializer::deserialize(value[payload_key].to_string())
-                        .unwrap();
+                let hierarchy: NodeHierarchy = serde_json::from_value(value[payload_key].clone())
+                    .expect("Couldn't deserialize node hierarchy");
                 Some(MatchedHierarchy { moniker, hierarchy: hierarchy })
             } else {
                 None

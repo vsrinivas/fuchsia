@@ -4,27 +4,33 @@
 
 use {
     fuchsia_inspect_node_hierarchy::NodeHierarchy,
+    fuchsia_zircon as zx,
     fuchsia_zircon::Time,
     lazy_static::lazy_static,
-    serde::{self, ser::SerializeSeq, Serialize, Serializer},
+    serde::{self, de::Deserializer, Deserialize, Serialize, Serializer},
+    std::{
+        hash::Hash,
+        ops::{Deref, DerefMut},
+        str::FromStr,
+    },
 };
 
 lazy_static! {
     static ref SCHEMA_VERSION: u64 = 1;
 }
 
-#[derive(Serialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum DataSource {
     Inspect,
     LifecycleEvent,
 }
 
-#[derive(Serialize, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Error {
     pub message: String,
 }
 
-#[derive(Serialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum LifecycleType {
     Started,
     Stopped,
@@ -32,17 +38,46 @@ pub enum LifecycleType {
     DiagnosticsReady,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(untagged)]
 pub enum Metadata {
     Inspect(InspectMetadata),
     LifecycleEvent(LifecycleEventMetadata),
 }
 
-#[derive(Serialize, Debug)]
+/// Wraps a time for serialization and deserialization purposes.
+#[derive(Debug)]
+pub struct Timestamp(zx::Time);
+
+impl From<zx::Time> for Timestamp {
+    fn from(time: zx::Time) -> Self {
+        Timestamp(time)
+    }
+}
+
+impl Into<zx::Time> for Timestamp {
+    fn into(self) -> zx::Time {
+        self.0
+    }
+}
+
+impl Deref for Timestamp {
+    type Target = zx::Time;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Timestamp {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct LifecycleEventMetadata {
     /// Optional vector of errors encountered by platform.
-    #[serde(serialize_with = "serialize_errors")]
     pub errors: Option<Vec<Error>>,
 
     /// Type of lifecycle event being encoded in the schema.
@@ -52,26 +87,23 @@ pub struct LifecycleEventMetadata {
     pub component_url: String,
 
     /// Monotonic time in nanos.
-    #[serde(serialize_with = "serialize_time")]
-    pub timestamp: Time,
+    pub timestamp: Timestamp,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct InspectMetadata {
     /// Optional vector of errors encountered by platform.
-    #[serde(serialize_with = "serialize_errors")]
     pub errors: Option<Vec<Error>>,
     /// Name of diagnostics file producing data.
     pub filename: String,
     /// The url with which the component was launched.
     pub component_url: String,
     /// Monotonic time in nanos.
-    #[serde(serialize_with = "serialize_time")]
-    pub timestamp: Time,
+    pub timestamp: Timestamp,
 }
 
-#[derive(Serialize, Debug)]
-pub struct Schema<Key: AsRef<str>> {
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Schema<Key: AsRef<str> + Hash + Eq + FromStr + Clone> {
     /// Enum specifying that this schema is encoding data.
     pub data_source: DataSource,
 
@@ -86,29 +118,6 @@ pub struct Schema<Key: AsRef<str>> {
 
     /// Schema version.
     pub version: u64,
-}
-
-fn serialize_time<S>(time: &Time, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.serialize_i64(time.into_nanos())
-}
-
-fn serialize_errors<S>(errors: &Option<Vec<Error>>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    match errors {
-        Some(errors) => {
-            let mut seq = serializer.serialize_seq(Some(errors.len()))?;
-            for element in errors {
-                seq.serialize_element(&element.message)?;
-            }
-            seq.end()
-        }
-        None => serializer.serialize_none(),
-    }
 }
 
 pub type InspectSchema = Schema<String>;
@@ -126,7 +135,7 @@ impl Schema<String> {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
         let lifecycle_event_metadata = LifecycleEventMetadata {
-            timestamp,
+            timestamp: timestamp.into(),
             component_url: component_url.into(),
             lifecycle_event_type,
             errors: errors_opt,
@@ -153,7 +162,7 @@ impl Schema<String> {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
         let inspect_metadata = InspectMetadata {
-            timestamp,
+            timestamp: timestamp.into(),
             component_url: component_url.into(),
             filename: filename.into(),
             errors: errors_opt,
@@ -165,6 +174,54 @@ impl Schema<String> {
             data_source: DataSource::Inspect,
             payload: inspect_hierarchy,
             metadata: Metadata::Inspect(inspect_metadata),
+        }
+    }
+}
+
+impl Serialize for Error {
+    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        self.message.serialize(ser)
+    }
+}
+
+impl<'de> Deserialize<'de> for Error {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let message = String::deserialize(de)?;
+        Ok(Error { message })
+    }
+}
+
+impl Serialize for Timestamp {
+    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        ser.serialize_i64(self.into_nanos())
+    }
+}
+
+impl<'de> Deserialize<'de> for Timestamp {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let nanos = i64::deserialize(de)?;
+        Ok(Timestamp(zx::Time::from_nanos(nanos)))
+    }
+}
+
+impl Metadata {
+    pub fn inspect(&self) -> Option<&InspectMetadata> {
+        match self {
+            Metadata::Inspect(m) => Some(m),
+            _ => None,
+        }
+    }
+
+    pub fn lifecycle_event(&self) -> Option<&LifecycleEventMetadata> {
+        match self {
+            Metadata::LifecycleEvent(m) => Some(m),
+            _ => None,
         }
     }
 }

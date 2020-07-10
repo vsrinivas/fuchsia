@@ -5,10 +5,7 @@
 use {
     super::MetricValue,
     anyhow::{anyhow, bail, Context, Error, Result},
-    fuchsia_inspect_node_hierarchy::{
-        serialization::{json::RawJsonNodeHierarchySerializer, HierarchyDeserializer},
-        NodeHierarchy,
-    },
+    fuchsia_inspect_node_hierarchy::NodeHierarchy,
     selectors,
     serde_derive::Deserialize,
     serde_json::Value as JsonValue,
@@ -124,25 +121,25 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
                 .context("Path string needs to be a moniker")
         }
 
-        let components: Vec<_> =
-            component_vec
-                .iter()
-                .map(|raw_component| {
-                    let path = path_from(raw_component)?;
-                    let moniker = moniker_from(&path)?;
-                    let raw_contents = match extract_json_value(raw_component, "payload") {
-                        Err(_) => extract_json_value(raw_component, "contents"),
-                        v => v,
-                    }?;
-                    let processed_data =
-                        RawJsonNodeHierarchySerializer::deserialize(raw_contents.clone())
-                            .with_context(|| {
-                                format!(
-                    "Unable to deserialize Inspect contents for {} to node hierarchy", path)
-                            })?;
-                    Ok(ComponentInspectInfo { moniker, processed_data })
-                })
-                .collect::<Result<Vec<_>, Error>>()?;
+        let components: Vec<_> = component_vec
+            .iter()
+            .map(|raw_component| {
+                let path = path_from(raw_component)?;
+                let moniker = moniker_from(&path)?;
+                let raw_contents = match extract_json_value(raw_component, "payload") {
+                    Err(_) => extract_json_value(raw_component, "contents"),
+                    v => v,
+                }?;
+                let processed_data: NodeHierarchy = serde_json::from_value(raw_contents.clone())
+                    .with_context(|| {
+                        format!(
+                            "Unable to deserialize Inspect contents for {} to node hierarchy",
+                            path
+                        )
+                    })?;
+                Ok(ComponentInspectInfo { moniker, processed_data })
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
         Ok(Self { components })
     }
 }

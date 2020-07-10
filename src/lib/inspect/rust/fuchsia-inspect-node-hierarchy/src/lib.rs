@@ -11,6 +11,7 @@ use {
     num_traits::bounds::Bounded,
     regex::RegexSet,
     selectors,
+    serde::Deserialize,
     std::{
         cmp::Ordering,
         collections::HashMap,
@@ -418,9 +419,11 @@ pub enum Property<Key = String> {
 }
 
 #[allow(missing_docs)]
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Clone)]
 pub struct Bucket<T> {
     pub floor: T,
+    // TODO(fxbug.dev/55833): rename to upper in serialization.
+    #[serde(rename = "upper_bound")]
     pub upper: T,
     pub count: T,
 }

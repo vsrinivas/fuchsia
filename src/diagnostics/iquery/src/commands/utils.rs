@@ -7,25 +7,12 @@ use {
         commands::{Command, ListCommand},
         types::Error,
     },
+    diagnostics_schema::InspectSchema,
     fuchsia_inspect::testing::InspectDataFetcher,
-    fuchsia_inspect_node_hierarchy::{
-        serialization::{HierarchyDeserializer, RawJsonNodeHierarchySerializer},
-        NodeHierarchy,
-    },
+    fuchsia_inspect_node_hierarchy::NodeHierarchy,
     serde_json,
 };
 
-/// Returns the moniker in a json response or an error if one is not found
-pub fn get_moniker_from_result(result: &serde_json::Value) -> Result<String, Error> {
-    Ok(result
-        .get("moniker")
-        .ok_or(Error::archive_missing_property("moniker"))?
-        .as_str()
-        .ok_or(Error::ArchiveInvalidJson)?
-        .to_string())
-}
-
-/// Returns the moniker in a json response or an error if one is not found
 /// Returns the selectors for a component whose url contains the `manifest` string.
 pub async fn get_selectors_for_manifest(
     manifest: &Option<String>,
@@ -63,19 +50,15 @@ pub async fn fetch_data(selectors: &[String]) -> Result<Vec<(String, NodeHierarc
             fetcher = fetcher.add_selector(format!("{}:*", selector));
         }
     }
-    let mut results = fetcher.get_raw_json().await.map_err(|e| Error::Fetch(e))?;
+    let result_value = fetcher.get_raw_json().await.map_err(|e| Error::Fetch(e))?;
+    let results: Vec<InspectSchema> =
+        serde_json::from_value(result_value).map_err(|e| Error::ArchiveInvalidJson(e))?;
 
     let mut data = vec![];
-    for result in results.as_array_mut().ok_or(Error::ArchiveInvalidJson)? {
-        let moniker = get_moniker_from_result(&result)?;
-        if let Some(payload) = result.get_mut("payload") {
-            if payload.is_object() {
-                let mut hierarchy: NodeHierarchy<String> =
-                    RawJsonNodeHierarchySerializer::deserialize(payload.take())
-                        .map_err(|_| Error::ArchiveInvalidJson)?;
-                hierarchy.sort();
-                data.push((moniker, hierarchy))
-            }
+    for result in results {
+        if let Some(mut hierarchy) = result.payload {
+            hierarchy.sort();
+            data.push((result.moniker, hierarchy))
         }
     }
     Ok(data)

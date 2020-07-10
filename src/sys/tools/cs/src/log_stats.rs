@@ -66,6 +66,7 @@ impl ComponentLogStats {
             .iter()
             .map(|x| match x {
                 Property::Int(name, value) => (name.as_str(), *value as u64),
+                Property::Uint(name, value) => (name.as_str(), *value),
                 _ => ("", 0),
             })
             .collect::<HashMap<_, _>>();
