@@ -10,6 +10,8 @@ use {
     validating_log_listener,
 };
 
+// TODO(55914): re-enable when not flaking on fuchsia-arm64-asan
+#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn listen_for_syslog() {
     let log_proxy =
