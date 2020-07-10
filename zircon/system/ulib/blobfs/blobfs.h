@@ -14,6 +14,7 @@
 
 #include <fuchsia/blobfs/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/trace/event.h>
 #include <lib/zx/resource.h>
@@ -61,6 +62,7 @@ namespace blobfs {
 
 using block_client::BlockDevice;
 using digest::Digest;
+using llcpp::fuchsia::io::FilesystemInfo;
 using storage::OperationType;
 using storage::UnbufferedOperationsBuilder;
 
@@ -111,6 +113,9 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
   zx_status_t AddInodes(Allocator* allocator) final;
   zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
+
+  // Returns filesystem specific information.
+  void GetFilesystemInfo(FilesystemInfo* info) const;
 
   ////////////////
   // TransactionManager interface.

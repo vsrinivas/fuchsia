@@ -5,7 +5,6 @@
 #include "directory.h"
 
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
 #include <stdlib.h>
@@ -121,23 +120,8 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 
 #ifdef __Fuchsia__
 
-constexpr const char kFsName[] = "blobfs";
-
 zx_status_t Directory::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
-                "Blobfs name too long");
-
-  *info = {};
-  info->block_size = kBlobfsBlockSize;
-  info->max_filename_size = digest::kSha256HexLength;
-  info->fs_type = VFS_TYPE_BLOBFS;
-  info->fs_id = blobfs_->GetFsIdLegacy();
-  info->total_bytes = blobfs_->Info().data_block_count * blobfs_->Info().block_size;
-  info->used_bytes = blobfs_->Info().alloc_block_count * blobfs_->Info().block_size;
-  info->total_nodes = blobfs_->Info().inode_count;
-  info->used_nodes = blobfs_->Info().alloc_inode_count;
-  strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
-          ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER);
+  blobfs_->GetFilesystemInfo(info);
   return ZX_OK;
 }
 

@@ -686,6 +686,24 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   return ZX_OK;
 }
 
+constexpr const char kFsName[] = "blobfs";
+void Blobfs::GetFilesystemInfo(FilesystemInfo* info) const {
+  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
+                "Blobfs name too long");
+
+  *info = {};
+  info->block_size = kBlobfsBlockSize;
+  info->max_filename_size = digest::kSha256HexLength;
+  info->fs_type = VFS_TYPE_BLOBFS;
+  info->fs_id = GetFsIdLegacy();
+  info->total_bytes = Info().data_block_count * Info().block_size;
+  info->used_bytes = Info().alloc_block_count * Info().block_size;
+  info->total_nodes = Info().inode_count;
+  info->used_nodes = Info().alloc_inode_count;
+  strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
+          ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER);
+}
+
 BlockIterator Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {
   return BlockIterator(std::make_unique<AllocatedExtentIterator>(GetAllocator(), node_index));
 }
