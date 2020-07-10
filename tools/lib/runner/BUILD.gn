@@ -7,11 +7,7 @@ import("//build/go/go_test.gni")
 
 go_library("runner") {
   name = "go.fuchsia.dev/fuchsia/tools/lib/runner"
-  deps = [
-    "//third_party/golibs:golang.org/x/crypto",
-    "//tools/lib/logger",
-    "//tools/net/sshutil",
-  ]
+  deps = [ "//tools/lib/logger" ]
 }
 
 go_test("runner_tests") {
