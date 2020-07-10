@@ -327,7 +327,7 @@ class BlobStats {
         var fuchsiaPackages = dartPackage.blobs[blob];
 
         var result = await Process.run(Platform.executable, [
-          '../../third_party/dart/pkg/vm/bin/list_libraries.dart',
+          '../../prebuilt/third_party/flutter/x64/debug/jit/dart_binaries/list_libraries.snapshot',
           blob.buildPath
         ]);
         if (result.exitCode != 0) {
