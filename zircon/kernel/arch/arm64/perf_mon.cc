@@ -159,10 +159,13 @@ static void arm64_perfmon_init_once(uint level) {
   }
 
   perfmon_imp = (pmcr & ARM64_PMCR_EL0_IMP_MASK) >> ARM64_PMCR_EL0_IMP_SHIFT;
-  uint32_t idcode = (pmcr & ARM64_PMCR_EL0_IDCODE_MASK) >> ARM64_PMCR_EL0_IDCODE_SHIFT;
-  if (idcode != 3) {
+
+  uint64_t dfr0 = __arm_rsr64("id_dfr0_el1");
+  uint32_t pmuver = (dfr0 & ID_DFR0_EL1_PMU_VER) >> ID_DFR0_EL1_PMU_VER_SHIFT;
+
+  if (pmuver != 3) {
     // For now only support version 3.
-    TRACEF("Unexpected/unsupported PMU idcode: 0x%x\n", idcode);
+    TRACEF("Unexpected/unsupported PMU version: 0x%x\n", pmuver);
     return;
   }
   perfmon_version = 3;

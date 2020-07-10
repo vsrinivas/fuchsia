@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 // Uncomment to enable debug UART.
-// #define DEBUG_UART 1
+#define DEBUG_UART 1
 
 // Board specific.
 void uart_pputc(char c);

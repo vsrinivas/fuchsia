@@ -134,6 +134,7 @@ shims = [
   "as370",
   "motmot",
   "visalia",
+  "rpi4",
 ]
 
 foreach(shim, shims) {

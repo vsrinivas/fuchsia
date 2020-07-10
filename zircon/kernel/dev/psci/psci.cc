@@ -12,7 +12,7 @@
 #include <arch/arm64/smccc.h>
 #include <dev/psci.h>
 
-#define LOCAL_TRACE 0
+#define LOCAL_TRACE 1
 
 // Defined in start.S.
 extern paddr_t kernel_entry_paddr;
