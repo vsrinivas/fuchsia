@@ -85,6 +85,10 @@ test_package("cobalt_tests") {
               "/testapp_metrics_registry.pb")
       dest = "testapp_metrics_registry.pb"
     },
+    {
+      path = rebase_path("system-metrics/log_stats_component_allowlist.txt")
+      dest = "log_stats_component_allowlist.txt"
+    },
   ]
 }
 

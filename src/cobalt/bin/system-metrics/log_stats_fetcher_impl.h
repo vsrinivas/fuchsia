@@ -19,6 +19,9 @@ namespace cobalt {
 
 class LogStatsFetcherImpl : public LogStatsFetcher {
  public:
+  static void LoadAllowlist(const std::string& allowlist_path,
+                            std::unordered_map<std::string, ComponentEventCode>* map);
+
   LogStatsFetcherImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context);
 
   // Overridden from LogStatsFetcher:
@@ -32,6 +35,9 @@ class LogStatsFetcherImpl : public LogStatsFetcher {
   MetricsCallback metrics_callback_;
   async::Executor executor_;
   inspect::contrib::ArchiveReader archive_reader_;
+
+  // A map from component urls to cobalt event codes for all components in the allowlist.
+  std::unordered_map<std::string, ComponentEventCode> component_code_map_;
 
   // Map from component event codes (as defined in metrics.yaml) to the last known error count
   std::unordered_map<ComponentEventCode, uint64_t> per_component_error_count_;

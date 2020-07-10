@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 import("//third_party/protobuf/proto_library.gni")
@@ -77,6 +78,13 @@ executable("system-metrics") {
     ":system_metrics_daemon_lib",
     "//sdk/lib/sys/cpp",
   ]
+}
+
+config_data("config") {
+  for_pkg = "cobalt_system_metrics"
+
+  # This is the default allowlist included in core. Other products can define their own allowlist.
+  sources = [ "log_stats_component_allowlist.txt" ]
 }
 
 package("cobalt_system_metrics") {

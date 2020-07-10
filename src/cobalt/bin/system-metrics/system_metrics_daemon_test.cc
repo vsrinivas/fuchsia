@@ -19,6 +19,7 @@
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/cobalt/bin/system-metrics/diagnostics_metrics_registry.cb.h"
+#include "src/cobalt/bin/system-metrics/log_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_archivist_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_cpu_stats_fetcher.h"
@@ -248,6 +249,16 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   std::unique_ptr<SystemMetricsDaemon> daemon_;
   const size_t kLastItemInTemperatureBuffer = SystemMetricsDaemon::kTempArraySize - 1;
 };
+
+// Verifies that loading the component allow list for error log metrics works properly.
+TEST_F(SystemMetricsDaemonTest, LoadLogMetricAllowList) {
+  std::unordered_map<std::string, cobalt::ComponentEventCode> map;
+  cobalt::LogStatsFetcherImpl::LoadAllowlist("/pkg/data/log_stats_component_allowlist.txt", &map);
+  EXPECT_EQ(cobalt::ComponentEventCode::Appmgr,
+            map["fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm"]);
+  EXPECT_EQ(cobalt::ComponentEventCode::Sysmgr,
+            map["fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx"]);
+}
 
 // Tests the method LogTemperature(). Uses a local FakeTemperatureFetcher and
 // then read from inspect

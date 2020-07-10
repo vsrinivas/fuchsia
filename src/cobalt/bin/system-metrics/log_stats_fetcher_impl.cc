@@ -6,42 +6,27 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <fstream>
+
 namespace cobalt {
 
 namespace {
 
-// A map from components urls in the approve-list to the corresponding Cobalt event
-// codes (as defined in metrics.yaml).
-const std::unordered_map<std::string, ComponentEventCode> kComponentCodeMap{
-    {"fuchsia-boot:///#meta/driver_manager.cm", ComponentEventCode::DriverManager},
-    {"fuchsia-pkg://fuchsia.com/a11y_manager#meta/a11y_manager.cmx",
-     ComponentEventCode::A11yManager},
-    {"fuchsia-pkg://fuchsia.com/audio_core_google#meta/audio_core.cmx",
-     ComponentEventCode::AudioCore},
-    {"fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm", ComponentEventCode::Appmgr},
-    {"fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cmx",
-     ComponentEventCode::BrightnessManager},
-    {"fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx", ComponentEventCode::CastAgent},
-    {"fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx", ComponentEventCode::CastRunner},
-    {"fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx", ComponentEventCode::Cobalt},
-    {"fuchsia-pkg://fuchsia.com/dhcpd#meta/dhcpd.cmx", ComponentEventCode::Dhcpd},
-    {"fuchsia-pkg://fuchsia.com/hwinfo#meta/hwinfo.cmx", ComponentEventCode::Hwinfo},
-    {"fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx", ComponentEventCode::Mdns},
-    {"fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx", ComponentEventCode::Netcfg},
-    {"fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx",
-     ComponentEventCode::PkgResolver},
-    {"fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
-     ComponentEventCode::RootPresenter},
-    {"fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx", ComponentEventCode::Scenic},
-    {"fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx", ComponentEventCode::SessionMgr},
-    {"fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx", ComponentEventCode::Sysmgr},
-    {"fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx",
-     ComponentEventCode::SystemUpdateChecker},
-    {"fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx",
-     ComponentEventCode::ContextProvider},
-};
+static constexpr char kAllowlistFilePath[] = "/config/data/log_stats_component_allowlist.txt";
 
 }  // namespace
+
+// static
+void LogStatsFetcherImpl::LoadAllowlist(const std::string& allowlist_path,
+                                        std::unordered_map<std::string, ComponentEventCode>* map) {
+  std::ifstream allowlist_file_stream(allowlist_path);
+  uint32_t component_code;
+  while (allowlist_file_stream >> component_code) {
+    std::string component_url;
+    allowlist_file_stream >> component_url;
+    (*map)[component_url] = static_cast<ComponentEventCode>(component_code);
+  }
+}
 
 LogStatsFetcherImpl::LogStatsFetcherImpl(async_dispatcher_t* dispatcher,
                                          sys::ComponentContext* context)
@@ -49,6 +34,7 @@ LogStatsFetcherImpl::LogStatsFetcherImpl(async_dispatcher_t* dispatcher,
       archive_reader_(context->svc()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
                       {"archivist.cmx:root/log_stats:*",
                        "archivist.cmx:root/log_stats/by_component/*:error_logs"}) {
+  LoadAllowlist(kAllowlistFilePath, &component_code_map_);
   // This establishes a baseline for error counts so that the next call to FetchMetrics() only
   // includes logs since the daemon started as opposed to since the  boot time. This is especially
   // important if the daemon had previously crashed and has been relaunched.
@@ -88,9 +74,9 @@ void LogStatsFetcherImpl::OnInspectSnapshotReady(
   for (auto& component_member : component_list.GetObject()) {
     std::string component_url = component_member.name.GetString();
 
-    auto code_it = kComponentCodeMap.find(component_url);
+    auto code_it = component_code_map_.find(component_url);
     // Ignore components not in the whitelist.
-    if (code_it == kComponentCodeMap.end())
+    if (code_it == component_code_map_.end())
       continue;
 
     ComponentEventCode component_code = code_it->second;
