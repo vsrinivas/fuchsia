@@ -5,6 +5,31 @@
 use {super::*, pretty_assertions::assert_eq};
 
 #[fasync::run_singlethreaded(test)]
+async fn fails_on_paver_connect_error() {
+    let env = TestEnv::builder().unregister_protocol(Protocol::Paver).build();
+
+    env.resolver
+        .register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake_zbi");
+
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            oneshot: Some(true),
+            initiator: Some(Initiator::User),
+            target: Some("m3rk13"),
+            ..Default::default()
+        })
+        .await;
+    assert!(result.is_err(), "system updater succeeded when it should fail");
+
+    assert_eq!(env.take_interactions(), vec![]);
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn fails_on_image_write_error() {
     let env =
         TestEnv::builder().paver_service(|builder| builder.call_hook(|_| Status::INTERNAL)).build();
@@ -19,12 +44,10 @@ async fn fails_on_image_write_error() {
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
-            initiator: "manual",
-            target: "m3rk13",
-            update: None,
-            reboot: None,
-            skip_recovery: None,
             oneshot: Some(true),
+            initiator: Some(Initiator::User),
+            target: Some("m3rk13"),
+            ..Default::default()
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -71,12 +94,11 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
         .add_file("recovery.vbmeta", "new recovery vbmeta");
 
     env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
-        reboot: None,
+        initiator: Some(Initiator::User),
+        target: Some("m3rk13"),
         skip_recovery: Some(true),
         oneshot: Some(true),
+        ..Default::default()
     })
     .await
     .expect("success");
@@ -118,12 +140,10 @@ async fn writes_to_both_configs_if_abr_not_supported() {
         .add_file("zbi", "fake_zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
-        reboot: None,
-        skip_recovery: None,
         oneshot: Some(true),
+        initiator: Some(Initiator::User),
+        target: Some("m3rk13"),
+        ..Default::default()
     })
     .await
     .expect("success");
@@ -182,12 +202,10 @@ async fn do_writes_to_inactive_config_if_abr_supported(
         .add_file("zbi", "fake_zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
-        reboot: None,
-        skip_recovery: None,
         oneshot: Some(true),
+        initiator: Some(Initiator::User),
+        target: Some("m3rk13"),
+        ..Default::default()
     })
     .await
     .expect("success");
@@ -254,12 +272,10 @@ async fn writes_recovery_called_legacy_zedboot() {
         .add_file("zedboot", "new recovery");
 
     env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
-        reboot: None,
-        skip_recovery: None,
         oneshot: Some(true),
+        initiator: Some(Initiator::User),
+        target: Some("m3rk13"),
+        ..Default::default()
     })
     .await
     .expect("success");
@@ -306,12 +322,10 @@ async fn writes_recovery() {
         .add_file("recovery", "new recovery");
 
     env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
-        reboot: None,
-        skip_recovery: None,
         oneshot: Some(true),
+        initiator: Some(Initiator::User),
+        target: Some("m3rk13"),
+        ..Default::default()
     })
     .await
     .expect("success");
@@ -358,12 +372,10 @@ async fn writes_recovery_vbmeta() {
         .add_file("recovery.vbmeta", "new recovery vbmeta");
 
     env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
-        reboot: None,
-        skip_recovery: None,
         oneshot: Some(true),
+        initiator: Some(Initiator::User),
+        target: Some("m3rk13"),
+        ..Default::default()
     })
     .await
     .expect("success");
@@ -414,12 +426,10 @@ async fn writes_fuchsia_vbmeta() {
         .add_file("fuchsia.vbmeta", "fake zbi vbmeta");
 
     env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
-        reboot: None,
-        skip_recovery: None,
         oneshot: Some(true),
+        initiator: Some(Initiator::User),
+        target: Some("m3rk13"),
+        ..Default::default()
     })
     .await
     .expect("success");

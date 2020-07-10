@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequest, DirectoryRequestStream},
-    fidl_fuchsia_pkg::{PackageResolverRequestStream, PackageResolverResolveResponder},
+    fidl_fuchsia_pkg::{
+        PackageResolverMarker, PackageResolverProxy, PackageResolverRequestStream,
+        PackageResolverResolveResponder,
+    },
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
-    futures::prelude::*,
+    futures::{channel::oneshot, prelude::*},
     parking_lot::Mutex,
     std::{
         collections::HashMap,
@@ -29,7 +32,7 @@ pub struct TestPackage {
 }
 
 impl TestPackage {
-    pub fn new(root: PathBuf) -> Self {
+    fn new(root: PathBuf) -> Self {
         TestPackage { root }
     }
 
@@ -37,6 +40,21 @@ impl TestPackage {
         fs::write(self.root.join(PACKAGE_CONTENTS_PATH).join(path), contents)
             .expect("create fake package file");
         self
+    }
+
+    fn serve_on(&self, dir_request: ServerEnd<DirectoryMarker>) {
+        // Connect to the backing directory which we'll proxy _most_ requests to.
+        let (backing_dir_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        fdio::service_connect(self.root.to_str().unwrap(), server_end.into_channel()).unwrap();
+
+        // Open the package directory using the directory request given by the client
+        // asking to resolve the package, but proxy it through our handler so that we can
+        // intercept requests for /meta.
+        fasync::spawn(handle_package_directory_stream(
+            dir_request.into_stream().unwrap(),
+            backing_dir_proxy,
+        ));
     }
 }
 
@@ -121,11 +139,17 @@ pub fn handle_package_directory_stream(
     }
 }
 
+#[derive(Debug)]
+enum Expectation {
+    Immediate(Result<TestPackage, Status>),
+    BlockOnce(Option<oneshot::Sender<PendingResolve>>),
+}
+
 /// Mock package resolver which returns package directories that behave
 /// roughly as if they're being served from pkgfs: /meta can be
 /// opened as both a directory and a file.
 pub struct MockResolverService {
-    expectations: Mutex<HashMap<String, Result<PathBuf, Status>>>,
+    expectations: Mutex<HashMap<String, Expectation>>,
     resolve_hook: Box<dyn Fn(&str) + Send + Sync>,
     packages_dir: tempfile::TempDir,
 }
@@ -140,6 +164,7 @@ impl MockResolverService {
         }
     }
 
+    /// Consider using Self::package/Self::url instead to clarify the usage of these 4 str params.
     pub fn register_custom_package(
         &self,
         name_for_url: impl AsRef<str>,
@@ -147,9 +172,32 @@ impl MockResolverService {
         merkle: impl AsRef<str>,
         domain: &str,
     ) -> TestPackage {
-        let name = name_for_url.as_ref();
+        let name_for_url = name_for_url.as_ref();
         let merkle = merkle.as_ref();
         let meta_far_name = meta_far_name.as_ref();
+
+        let url = format!("fuchsia-pkg://{}/{}", domain, name_for_url);
+        let pkg = self.package(meta_far_name, merkle);
+        self.url(url).resolve(&pkg);
+        pkg
+    }
+
+    pub fn register_package(&self, name: impl AsRef<str>, merkle: impl AsRef<str>) -> TestPackage {
+        self.register_custom_package(&name, &name, merkle, "fuchsia.com")
+    }
+
+    pub fn mock_resolve_failure(&self, url: impl Into<String>, response_status: Status) {
+        self.url(url).fail(response_status);
+    }
+
+    /// Registers a package with the given name and merkle root, returning a handle to add files to
+    /// the package.
+    ///
+    /// This method does not register the package to be served by any fuchsia-pkg URLs. See
+    /// [`MockResolverService::url`]
+    pub fn package(&self, name: impl AsRef<str>, merkle: impl AsRef<str>) -> TestPackage {
+        let name = name.as_ref();
+        let merkle = merkle.as_ref();
 
         let root = self.packages_dir.path().join(merkle);
 
@@ -160,24 +208,36 @@ impl MockResolverService {
         create_dir(&root.join(PACKAGE_CONTENTS_PATH).join("meta"))
             .expect("meta dir to not yet exist");
 
-        let url = format!("fuchsia-pkg://{}/{}", domain, name);
-        self.expectations.lock().insert(url.into(), Ok(root.clone()));
-
         // Create the file which holds the merkle root of the package, to redirect requests for 'meta' to.
         std::fs::write(root.join(META_FAR_MERKLE_ROOT_PATH), merkle)
             .expect("create fake package file");
 
-        TestPackage::new(root).add_file(
-            "meta/package",
-            format!("{{\"name\": \"{}\", \"version\": \"0\"}}", meta_far_name),
-        )
+        TestPackage::new(root)
+            .add_file("meta/package", format!("{{\"name\": \"{}\", \"version\": \"0\"}}", name))
     }
 
-    pub fn register_package(&self, name: impl AsRef<str>, merkle: impl AsRef<str>) -> TestPackage {
-        // The update package must always be internally named update/0, to support space-savings gained with fxbug.dev/52767
-        self.register_custom_package(name, "update", merkle, "fuchsia.com")
+    /// Equivalent to `self.url(format!("fuchsia-pkg://fuchsia.com/{}", path))`
+    pub fn path(&self, path: impl AsRef<str>) -> ForUrl<'_> {
+        self.url(format!("fuchsia-pkg://fuchsia.com/{}", path.as_ref()))
     }
 
+    /// Returns an object to configure the handler for the given URL.
+    pub fn url(&self, url: impl Into<String>) -> ForUrl<'_> {
+        ForUrl { svc: self, url: url.into() }
+    }
+
+    pub fn spawn_resolver_service(self: Arc<Self>) -> PackageResolverProxy {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
+
+        fasync::spawn(self.run_resolver_service(stream).unwrap_or_else(|e| {
+            panic!("error running package resolver service: {:#}", anyhow!(e))
+        }));
+
+        proxy
+    }
+
+    /// Serves the fuchsia.pkg.PackageResolver protocol on the given request stream.
     pub async fn run_resolver_service(
         self: Arc<Self>,
         mut stream: PackageResolverRequestStream,
@@ -208,52 +268,112 @@ impl MockResolverService {
     ) -> Result<(), Error> {
         eprintln!("TEST: Got resolve request for {:?}", package_url);
 
-        let response = self
-            .expectations
-            .lock()
-            .get(&package_url)
-            .map(|entry| entry.clone())
-            // Successfully resolve unexpected packages without serving a package dir. Log the
-            // transaction so tests can decide if it was expected.
-            // TODO(fxb/53187): change this to NOT_FOUND and fix the tests.
-            .unwrap_or(Err(Status::OK));
-
         (*self.resolve_hook)(&package_url);
 
-        let mut response = match response {
-            Ok(package_dir) => {
-                // Open the package directory using the directory request given by the client
-                // asking to resolve the package, but proxy it through our handler so that we can
-                // intercept requests for /meta.
-                // Connect to the backing directory which we'll proxy _most_ requests to.
-                let (backing_dir_proxy, server_end) =
-                    fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-                fdio::service_connect(package_dir.to_str().unwrap(), server_end.into_channel())
-                    .unwrap();
+        // Successfully resolve unexpected packages without serving a package dir. Log the
+        // transaction through the above resolve_hook so tests can decide if it was expected.
+        // TODO(fxb/53187): change this to NOT_FOUND and fix the tests.
+        let mut fallback = Expectation::Immediate(Err(Status::OK));
 
-                fasync::spawn(handle_package_directory_stream(
-                    dir.into_stream().unwrap(),
-                    backing_dir_proxy,
-                ));
-
-                Ok(())
+        match self.expectations.lock().get_mut(&package_url).unwrap_or(&mut fallback) {
+            Expectation::Immediate(Ok(package)) => {
+                package.serve_on(dir);
+                responder.send(&mut Ok(()))?;
             }
             // TODO(fxb/53187): remove this line and fix affected tests.
-            Err(Status::OK) => Ok(()),
-            Err(status) => Err(status.into_raw()),
-        };
-        responder.send(&mut response)?;
+            Expectation::Immediate(Err(Status::OK)) => {
+                responder.send(&mut Ok(()))?;
+            }
+            Expectation::Immediate(Err(status)) => {
+                responder.send(&mut Err(status.into_raw()))?;
+            }
+            Expectation::BlockOnce(handler) => {
+                let handler = handler.take().unwrap();
+                handler.send(PendingResolve { responder, dir_request: dir }).unwrap();
+            }
+        }
         Ok(())
     }
+}
 
-    pub fn mock_resolve_failure(&self, url: impl Into<String>, response_status: Status) {
-        self.expectations.lock().insert(url.into(), Err(response_status));
+#[must_use]
+pub struct ForUrl<'a> {
+    svc: &'a MockResolverService,
+    url: String,
+}
+
+impl<'a> ForUrl<'a> {
+    /// Fail resolve requests for the given URL with the given error status.
+    pub fn fail(self, status: Status) {
+        self.svc.expectations.lock().insert(self.url, Expectation::Immediate(Err(status)));
+    }
+
+    /// Succeed resolve requests for the given URL by serving the given package.
+    pub fn resolve(self, pkg: &TestPackage) {
+        // Manually construct a new TestPackage referring to the same root dir. Note that it would
+        // be invalid for TestPackage to impl Clone, as add_file would affect all Clones of a
+        // package.
+        let pkg = TestPackage::new(pkg.root.clone());
+        self.svc.expectations.lock().insert(self.url, Expectation::Immediate(Ok(pkg)));
+    }
+
+    /// Blocks requests for the given URL once, allowing the returned handler control the response.
+    /// Panics on further requests for that URL.
+    pub fn block_once(self) -> ResolveHandler {
+        let (send, recv) = oneshot::channel();
+
+        self.svc.expectations.lock().insert(self.url, Expectation::BlockOnce(Some(send)));
+        ResolveHandler::Waiting(recv)
+    }
+}
+
+#[derive(Debug)]
+pub struct PendingResolve {
+    responder: PackageResolverResolveResponder,
+    dir_request: ServerEnd<DirectoryMarker>,
+}
+
+#[derive(Debug)]
+pub enum ResolveHandler {
+    Waiting(oneshot::Receiver<PendingResolve>),
+    Blocked(PendingResolve),
+}
+
+impl ResolveHandler {
+    /// Waits for the mock package resolver to receive a resolve request for this handler.
+    pub async fn wait(&mut self) {
+        match self {
+            ResolveHandler::Waiting(receiver) => {
+                *self = ResolveHandler::Blocked(receiver.await.unwrap());
+            }
+            ResolveHandler::Blocked(_) => {}
+        }
+    }
+
+    async fn into_pending(self) -> PendingResolve {
+        match self {
+            ResolveHandler::Waiting(receiver) => receiver.await.unwrap(),
+            ResolveHandler::Blocked(pending) => pending,
+        }
+    }
+
+    /// Wait for the request and fail the resolve with the given status.
+    pub async fn fail(self, status: Status) {
+        self.into_pending().await.responder.send(&mut Err(status.into_raw())).unwrap();
+    }
+
+    /// Wait for the request and succeed the resolve by serving the given package.
+    pub async fn resolve(self, pkg: &TestPackage) {
+        let PendingResolve { responder, dir_request } = self.into_pending().await;
+
+        pkg.serve_on(dir_request);
+        responder.send(&mut Ok(())).unwrap();
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl_fuchsia_pkg::UpdatePolicy};
+    use {super::*, fidl_fuchsia_pkg::UpdatePolicy, matches::assert_matches};
 
     async fn read_file(dir_proxy: &DirectoryProxy, path: &str) -> String {
         let file_proxy =
@@ -262,6 +382,24 @@ mod tests {
                 .unwrap();
 
         io_util::file::read_to_string(&file_proxy).await.unwrap()
+    }
+
+    fn do_resolve(
+        proxy: &PackageResolverProxy,
+        url: &str,
+    ) -> impl Future<Output = Result<DirectoryProxy, Status>> {
+        let (package_dir, package_dir_server_end) = fidl::endpoints::create_proxy().unwrap();
+        let fut = proxy.resolve(
+            url,
+            &mut std::iter::empty(),
+            &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
+            package_dir_server_end,
+        );
+
+        async move {
+            let () = fut.await.unwrap().map_err(Status::from_raw)?;
+            Ok(package_dir)
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -273,14 +411,7 @@ mod tests {
                 resolved_urls_clone.lock().push(resolved_url.to_owned())
             }))));
 
-        let (resolver_proxy, resolver_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
-                .expect("Creating resolver endpoints");
-        fasync::spawn(
-            Arc::clone(&resolver)
-                .run_resolver_service(resolver_stream)
-                .unwrap_or_else(|e| panic!("error running resolver service: {:?}", e)),
-        );
+        let resolver_proxy = Arc::clone(&resolver).spawn_resolver_service();
 
         resolver
             .register_package("update", "upd4t3")
@@ -293,18 +424,8 @@ mod tests {
         // We should have no URLs resolved yet.
         assert_eq!(*resolved_urls.lock(), Vec::<String>::new());
 
-        let (package_dir, package_dir_server_end) = fidl::endpoints::create_proxy().unwrap();
-        let selectors: Vec<String> = vec![];
-        resolver_proxy
-            .resolve(
-                "fuchsia-pkg://fuchsia.com/update",
-                &mut selectors.iter().map(|s| s.as_str()),
-                &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
-                package_dir_server_end,
-            )
-            .await
-            .unwrap()
-            .unwrap();
+        let package_dir =
+            do_resolve(&resolver_proxy, "fuchsia-pkg://fuchsia.com/update").await.unwrap();
 
         // Check that we can read from /meta (meta-as-file mode)
         let meta_contents = read_file(&package_dir, "meta").await;
@@ -320,5 +441,28 @@ mod tests {
 
         // Make sure that our resolve hook was called properly
         assert_eq!(*resolved_urls.lock(), vec!["fuchsia-pkg://fuchsia.com/update"]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn block_once_blocks() {
+        let resolver = Arc::new(MockResolverService::new(None));
+        let mut handle_first = resolver.url("fuchsia-pkg://fuchsia.com/first").block_once();
+        let handle_second = resolver.path("second").block_once();
+
+        let proxy = Arc::clone(&resolver).spawn_resolver_service();
+
+        let first_fut = do_resolve(&proxy, "fuchsia-pkg://fuchsia.com/first");
+        let second_fut = do_resolve(&proxy, "fuchsia-pkg://fuchsia.com/second");
+
+        handle_first.wait().await;
+
+        handle_second.fail(Status::NOT_FOUND).await;
+        assert_matches!(second_fut.await, Err(Status::NOT_FOUND));
+
+        let pkg = resolver.package("second", "fake merkle");
+        handle_first.resolve(&pkg).await;
+
+        let first_pkg = first_fut.await.unwrap();
+        assert_eq!(read_file(&first_pkg, "meta").await, "fake merkle");
     }
 }

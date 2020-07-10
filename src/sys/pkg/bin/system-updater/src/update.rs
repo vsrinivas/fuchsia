@@ -79,12 +79,6 @@ pub async fn update(config: Config, env: Environment) -> Result<(), ()> {
                 status_code,
                 config.start_time_mono.elapsed(),
             );
-            cobalt.log_ota_result_free_space_delta(
-                &config.target_version,
-                config.initiator,
-                phase,
-                status_code,
-            );
             drop(cobalt);
 
             if res.is_ok() {
@@ -158,11 +152,7 @@ async fn update_attempt(
             let () = sync_package_cache(&env.pkg_cache).await?;
             packages
         }
-        UpdateMode::ForceRecovery => {
-            // FIXME(53133): this sync isn't necessary.
-            let () = sync_package_cache(&env.pkg_cache).await?;
-            vec![]
-        }
+        UpdateMode::ForceRecovery => vec![],
     };
 
     // Write images
