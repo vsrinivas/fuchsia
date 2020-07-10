@@ -21,7 +21,7 @@ namespace testing {
 
 class DevmgrTest : public ::gtest::RealLoopFixture {
  protected:
-  static constexpr const char* kSysdevDriver = "/boot/driver/test/sysdev.so";
+  static constexpr const char* kSysdevDriver = "/boot/driver/sysdev.so";
   static constexpr const char* kPlatformDriver = "/boot/driver/platform-bus.so";
   const board_test::DeviceEntry kRtcDeviceEntry = []() {
     board_test::DeviceEntry entry = {};
@@ -45,6 +45,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     devmgr_launcher::Args args;
     IsolatedDevmgr::ExtraArgs extra_args;
     args.sys_device_driver = kSysdevDriver;
+    args.path_prefix = "/pkg/";
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
     args.load_drivers.push_back("/boot/driver/ethernet.so");
     args.load_drivers.push_back("/boot/driver/ethertap.so");
@@ -58,6 +59,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     auto device_list_ptr = std::unique_ptr<fbl::Vector<board_test::DeviceEntry>>(
         new fbl::Vector<board_test::DeviceEntry>());
     args.sys_device_driver = kPlatformDriver;
+    args.path_prefix = "/pkg/";
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
     args.driver_search_paths.push_back("/boot/driver");
     args.driver_search_paths.push_back("/boot/driver/test");
@@ -81,10 +83,11 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     memcpy(config.mac.octets.data(), mac, sizeof(mac));
 
     fidl::InterfaceHandle<fuchsia::hardware::ethertap::TapDevice> device;
-    zx_status_t o_status;
-    if (tapctl->OpenDevice("tap_device", std::move(config), device.NewRequest(), &o_status) !=
-            ZX_OK ||
+    zx_status_t status, o_status;
+    if ((status = tapctl->OpenDevice("tap_device", std::move(config), device.NewRequest(),
+                                     &o_status)) != ZX_OK ||
         o_status != ZX_OK) {
+      fprintf(stderr, "status: %d, o_status: %d\n", status, o_status);
       // discard channel
       device = nullptr;
     }
@@ -164,8 +167,8 @@ TEST_F(DevmgrTest, ExposedThroughComponent) {
   fuchsia::sys::LaunchInfo info;
   info.directory_request = std::move(req);
   info.url =
-      "fuchsia-pkg://fuchsia.com/isolated_devmgr_tests#meta/"
-      "isolated_devmgr.cmx";
+      "fuchsia-pkg://fuchsia.com/isolated-devmgr-tests-package#meta/"
+      "ethertap-devmgr.cmx";
   fidl::InterfacePtr<fuchsia::sys::ComponentController> ctlr;
 
   launcher->CreateComponent(std::move(info), ctlr.NewRequest());
@@ -190,8 +193,8 @@ TEST_F(DevmgrTest, ExposeDriverFromComponentNamespace) {
   fuchsia::sys::LaunchInfo info;
   info.directory_request = std::move(req);
   info.url =
-      "fuchsia-pkg://fuchsia.com/isolated_devmgr_tests#meta/"
-      "isolated_devmgr_virtual_audio.cmx";
+      "fuchsia-pkg://fuchsia.com/isolated-devmgr-tests-package#meta/"
+      "virtual-audio-devmgr.cmx";
   fidl::InterfacePtr<fuchsia::sys::ComponentController> ctlr;
 
   launcher->CreateComponent(std::move(info), ctlr.NewRequest());

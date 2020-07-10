@@ -1,15 +1,11 @@
 {
     "program": {
-        "binary": "test/isolated_devmgr_tests"
+        "binary": "bin/isolated_devmgr_tests"
     },
     "sandbox": {
-        "boot": [
-            "bin",
-            "driver",
-            "lib"
-        ],
         "services": [
             "fuchsia.exception.Handler",
+            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher"
         ]

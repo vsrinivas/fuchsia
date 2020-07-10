@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/testing/environments.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
+import("//src/sys/build/components.gni")
 
 source_set("src") {
   sources = [
@@ -111,57 +110,56 @@ executable("test_bin") {
   ]
 }
 
-devmgr_manifest("devmgr-manifest") {
+isolated_devmgr_component("ethertap-devmgr") {
+  args = [
+    "--svc_name=fuchsia.example.IsolatedDevmgr",
+    "--load_driver=/boot/driver/ethertap.so",
+    "--load_driver=/boot/driver/ethernet.so",
+    "--wait_for=test/tapctl",
+  ]
+
+  deps = [
+    "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/ethernet/drivers/ethertap",
+    "//src/devices/tests/sysdev",
+  ]
 }
 
-package("isolated_devmgr_tests") {
-  testonly = true
+isolated_devmgr_component("virtual-audio-devmgr") {
+  args = [
+    "--svc_name=fuchsia.example.IsolatedDevmgr",
+    "--load_driver=/boot/driver/virtual_audio_driver.so",
+    "--wait_for=test/virtual_audio",
+  ]
+
   deps = [
-    ":devmgr-manifest",
-    ":isolated_devmgr",
-    ":test_bin",
+    "//src/devices/tests/sysdev",
     "//src/media/audio/drivers/virtual_audio:virtual_audio_driver",
   ]
+}
 
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  binaries = [
-    {
-      name = "isolated_devmgr"
-    },
+fuchsia_component("isolated-devmgr-tests") {
+  testonly = true
+  manifest = "isolated-devmgr-tests.cmx"
+  deps = [
+    ":ethertap-devmgr",
+    ":test_bin",
+    ":virtual-audio-devmgr",
+    "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/ethernet/drivers/ethertap",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/rtc/drivers/fallback",
+    "//src/devices/tests/crash-device",
+    "//src/devices/tests/sysdev",
   ]
+}
 
-  meta = [
-    {
-      dest = "isolated_devmgr_tests.cmx"
-      path = dest
-    },
-    {
-      dest = "isolated_devmgr.cmx"
-      path = dest
-    },
-    {
-      dest = "isolated_devmgr_virtual_audio.cmx"
-      path = dest
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("${root_build_dir}/virtual_audio_driver.so")
-      dest = "virtual_audio_driver.so"
-    },
-  ]
-
-  tests = [
-    {
-      name = "isolated_devmgr_tests"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("isolated-devmgr-tests-package") {
+  test_components = [ ":isolated-devmgr-tests" ]
 }
 
 group("tests") {
   testonly = true
-  data_deps = [ ":isolated_devmgr_tests" ]
+  data_deps = [ ":isolated-devmgr-tests-package" ]
 }
