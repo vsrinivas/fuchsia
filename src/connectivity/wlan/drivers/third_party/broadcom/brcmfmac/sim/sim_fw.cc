@@ -258,6 +258,26 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       }
       break;
     }
+    case BRCMF_C_SCB_DEAUTHENTICATE_FOR_REASON: {
+      if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(brcmf_scb_val_le))) == ZX_OK) {
+        status = ZX_ERR_IO;
+        if (softap_ifidx_ != std::nullopt && softap_ifidx_ == ifidx) {
+          auto scb_val = reinterpret_cast<brcmf_scb_val_le*>(data);
+          auto req_mac = reinterpret_cast<common::MacAddr*>(scb_val->ea);
+          auto client = FindClient(*req_mac);
+          if (client) {
+            // Deauthenticate also disassocs the client
+            SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH, BRCMF_E_STATUS_SUCCESS,
+                              softap_ifidx_.value(), nullptr, 0, 0, *req_mac);
+            SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS,
+                              softap_ifidx_.value(), nullptr, 0, 0, *req_mac);
+            iface_tbl_[softap_ifidx_.value()].ap_config.clients.remove(client);
+            status = ZX_OK;
+          }
+        }
+      }
+      break;
+    }
     case BRCMF_C_SET_ROAM_TRIGGER:
     case BRCMF_C_SET_ROAM_DELTA:
       break;

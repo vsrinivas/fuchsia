@@ -32,6 +32,7 @@ class CreateSoftAPTest : public SimTest {
   void TxAssocReq(common::MacAddr client_mac);
   void TxDisassocReq(common::MacAddr client_mac);
   void TxDeauthReq(common::MacAddr client_mac);
+  void DeauthClient(common::MacAddr client_mac);
   void VerifyAuth();
   void VerifyAssoc();
   void VerifyNotAssoc();
@@ -291,6 +292,15 @@ void CreateSoftAPTest::TxDeauthReq(common::MacAddr client_mac) {
   env_->Tx(deauth_frame, tx_info_, this);
 }
 
+void CreateSoftAPTest::DeauthClient(common::MacAddr client_mac) {
+  wlanif_deauth_req_t req;
+
+  memcpy(req.peer_sta_address, client_mac.byte, ETH_ALEN);
+  req.reason_code = 0;
+
+  softap_ifc_.if_impl_ops_->deauth_req(softap_ifc_.if_impl_ctx_, &req);
+}
+
 void CreateSoftAPTest::VerifyAuth() {
   ASSERT_EQ(auth_ind_recv_, true);
   // When auth is done, the client is already added into client list.
@@ -432,6 +442,25 @@ TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
   env_->Run();
   // Only disassoc ind should be seen.
   EXPECT_EQ(deauth_ind_recv_, false);
+  EXPECT_EQ(disassoc_ind_recv_, true);
+  VerifyNumOfClient(0);
+}
+
+// After a client associates, deauth it from the SoftAP itself.
+TEST_F(CreateSoftAPTest, DisassociateClientFromSoftAP) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  StartSoftAP();
+  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
+                kFakeMac);
+  SCHEDULE_CALL(zx::msec(8), &CreateSoftAPTest::VerifyAuth, this);
+  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
+  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
+  SCHEDULE_CALL(zx::msec(60), &CreateSoftAPTest::DeauthClient, this, kFakeMac);
+  env_->Run();
+  // Should have received deauth and disassoc indications.
+  EXPECT_EQ(deauth_ind_recv_, true);
   EXPECT_EQ(disassoc_ind_recv_, true);
   VerifyNumOfClient(0);
 }

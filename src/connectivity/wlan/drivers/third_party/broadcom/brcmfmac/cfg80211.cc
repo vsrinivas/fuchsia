@@ -3073,7 +3073,26 @@ void brcmf_if_auth_resp(net_device* ndev, const wlanif_auth_resp_t* ind) {
 // MLME-DEAUTHENTICATE.confirm on completion (or failure), even though there is no status
 // reported.
 void brcmf_if_deauth_req(net_device* ndev, const wlanif_deauth_req_t* req) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
   BRCMF_DBG(WLANIF, "Deauth request from SME. reason: %" PRIu16 "", req->reason_code);
+
+  if (brcmf_is_apmode(ifp->vif)) {
+    struct brcmf_scb_val_le scbval;
+    int32_t fw_err = 0;
+
+    memcpy(&scbval.ea, req->peer_sta_address, ETH_ALEN);
+    scbval.val = req->reason_code;
+    zx_status_t status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCB_DEAUTHENTICATE_FOR_REASON, &scbval,
+                                                sizeof(scbval), &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_ERR("Failed to disassociate: %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
+    }
+    // Deauth confirm will get sent when the driver receives the DEAUTH_EVENT
+    return;
+  }
+
+  // Client IF processing
   if (brcmf_cfg80211_disconnect(ndev, req->peer_sta_address, req->reason_code, true) != ZX_OK) {
     // Request to disconnect failed, so respond immediately
     brcmf_notify_deauth(ndev, req->peer_sta_address);
