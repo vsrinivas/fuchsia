@@ -20,8 +20,8 @@
 namespace block_verity {
 
 zx_status_t extra_op_t::Init(block_op_t* block, block_impl_queue_callback cb, void* _cookie,
-                             size_t reserved_blocks) {
-  LOG_ENTRY_ARGS("block=%p, reserved_blocks=%zu", block, reserved_blocks);
+                             uint64_t data_start_offset_blocks) {
+  LOG_ENTRY_ARGS("block=%p, data_start_offset_blocks=%zu", block, data_start_offset_blocks);
 
   list_initialize(&node);
   data = nullptr;
@@ -31,7 +31,7 @@ zx_status_t extra_op_t::Init(block_op_t* block, block_impl_queue_callback cb, vo
   switch (block->command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
     case BLOCK_OP_WRITE:
-      if (add_overflow(block->rw.offset_dev, reserved_blocks, &block->rw.offset_dev)) {
+      if (add_overflow(block->rw.offset_dev, data_start_offset_blocks, &block->rw.offset_dev)) {
         zxlogf(ERROR, "adjusted offset overflow: block->rw.offset_dev=%" PRIu64 "",
                block->rw.offset_dev);
         return ZX_ERR_OUT_OF_RANGE;

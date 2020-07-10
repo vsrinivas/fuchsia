@@ -16,6 +16,9 @@ DeviceInfo::DeviceInfo(zx_device_t* device)
   block_size = blk.block_size;
   op_size += sizeof(extra_op_t);
   block_allocation = BestSplitFor(blk.block_size, 32, blk.block_count);
+  integrity_start_offset = block_allocation.superblock_count;
+  data_start_offset =
+      block_allocation.superblock_count + block_allocation.padded_integrity_block_count;
 }
 
 DeviceInfo::DeviceInfo(DeviceInfo&& other)
@@ -24,12 +27,16 @@ DeviceInfo::DeviceInfo(DeviceInfo&& other)
       block_size(other.block_size),
       block_count(other.block_count),
       op_size(other.op_size),
-      block_allocation(other.block_allocation) {
+      block_allocation(other.block_allocation),
+      integrity_start_offset(other.integrity_start_offset),
+      data_start_offset(other.data_start_offset) {
   other.block_protocol.clear();
   other.block_device = nullptr;
   other.block_size = 0;
   other.block_count = 0;
   other.op_size = 0;
+  other.integrity_start_offset = 0;
+  other.data_start_offset = 0;
 }
 
 bool DeviceInfo::IsValid() const { return block_protocol.is_valid(); }

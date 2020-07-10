@@ -41,10 +41,14 @@ struct DeviceInfo {
   uint64_t block_count;
 
   // This device's required block_op_t size.
-  size_t op_size;
+  uint64_t op_size;
 
   // The way that this device will use blocks from the parent device's size.
   BlockAllocation block_allocation;
+
+  // Some precomputed offsets to make fast add/subtraction
+  uint64_t integrity_start_offset;
+  uint64_t data_start_offset;
 
   // Returns true if the block device can be used by block_verity.  This may fail, for example, if
   // the constructor was unable to get a valid block protocol.

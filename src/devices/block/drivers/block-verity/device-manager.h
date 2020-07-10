@@ -45,7 +45,6 @@ class DeviceManager final
 
   ~DeviceManager() = default;
 
-
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Adds the device

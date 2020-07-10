@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/block/verified/llcpp/fidl.h>
 #include <threads.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -97,6 +98,8 @@ void DeviceManager::DdkChildPreRelease(void* child_ctx) {
       state_ = kError;
       break;
     case kClosing:
+      ZX_ASSERT(child_ctx == *child_);
+      ZX_ASSERT(close_completer_.has_value());
       child_ = std::nullopt;
       close_completer_->ReplySuccess();
       close_completer_ = std::nullopt;

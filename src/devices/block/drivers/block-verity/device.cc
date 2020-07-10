@@ -4,10 +4,13 @@
 
 #include "device.h"
 
+#include <zircon/status.h>
+
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
 #include "device-info.h"
+#include "extra.h"
 
 namespace block_verity {
 
@@ -35,7 +38,6 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
 }
 
 zx_off_t Device::DdkGetSize() {
-  zxlogf(INFO, "mutable DdkGetSize\n");
   zx_off_t data_size;
   if (mul_overflow(info_.block_size, info_.block_allocation.data_block_count, &data_size)) {
     zxlogf(ERROR, "overflowed when computing device size\n");
@@ -61,18 +63,70 @@ void Device::BlockImplQuery(block_info_t* out_info, size_t* out_op_size) {
   info_.block_protocol.Query(out_info, out_op_size);
   // Overwrite block_count with just the number of blocks we're exposing as data
   // blocks.  We keep the superblock & integrity blocks to ourselves.
+  // Besides block count and the op size, we're happy to pass through all values
+  // from the underlying block device here.
   out_info->block_count = info_.block_allocation.data_block_count;
-
-  // TODO: figure out reasonable max_transfer_size
-  // TODO: fix up op size to accommodate larger buffer
-  // *out_op_size = info_.op_size;
+  *out_op_size = info_.op_size;
 }
 
 void Device::BlockImplQueue(block_op_t* block_op, block_impl_queue_callback completion_cb,
                             void* cookie) {
   fbl::AutoLock lock(&mtx_);
-  zxlogf(INFO, "mutable BlockImplQueue\n");
-  // TODO: implement
+  extra_op_t* extra = BlockToExtra(block_op, info_.op_size);
+  // Save original values in extra, and adjust block_op's block offset.
+  zx_status_t rc = extra->Init(block_op, completion_cb, cookie, info_.data_start_offset);
+  if (rc != ZX_OK) {
+    zxlogf(ERROR, "failed to initialize extra info: %s", zx_status_get_string(rc));
+    BlockComplete(block_op, rc);
+    return;
+  }
+
+  switch (block_op->command & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+    case BLOCK_OP_WRITE:
+    case BLOCK_OP_FLUSH:
+    case BLOCK_OP_TRIM:
+      // Queue to backing block device.
+      info_.block_protocol.Queue(block_op, BlockCallback, this);
+      break;
+    default:
+      // Unknown block command, not sure if this is safe to pass through
+      BlockComplete(block_op, ZX_ERR_NOT_SUPPORTED);
+  }
+}
+
+void Device::BlockCallback(void* cookie, zx_status_t status, block_op_t* block) {
+  // Restore data that may have changed
+  Device* device = static_cast<Device*>(cookie);
+  extra_op_t* extra = BlockToExtra(block, device->op_size());
+  block->rw.vmo = extra->vmo;
+  block->rw.length = extra->length;
+  block->rw.offset_dev = extra->offset_dev;
+  block->rw.offset_vmo = extra->offset_vmo;
+
+  if (status != ZX_OK) {
+    zxlogf(DEBUG, "parent device returned %s", zx_status_get_string(status));
+    device->BlockComplete(block, status);
+    return;
+  }
+
+  switch (block->command & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+    case BLOCK_OP_WRITE:
+    case BLOCK_OP_FLUSH:
+    case BLOCK_OP_TRIM:
+      device->BlockComplete(block, ZX_OK);
+      break;
+    default:
+      // This should be unreachable -- we should have rejected/completed this in BlockImplQueue.
+      device->BlockComplete(block, ZX_ERR_NOT_SUPPORTED);
+  }
+}
+
+void Device::BlockComplete(block_op_t* block, zx_status_t status) {
+  extra_op_t* extra = BlockToExtra(block, info_.op_size);
+  // Complete the request.
+  extra->completion_cb(extra->cookie, status, block);
 }
 
 }  // namespace block_verity

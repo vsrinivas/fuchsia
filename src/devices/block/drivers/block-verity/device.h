@@ -32,6 +32,8 @@ class Device : public DeviceType, public ddk::BlockImplProtocol<Device, ddk::bas
 
   ~Device() = default;
 
+  uint64_t op_size() { return info_.op_size; }
+
   // ddk::Device methods; see ddktl/device.h
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_off_t DdkGetSize();
@@ -42,6 +44,15 @@ class Device : public DeviceType, public ddk::BlockImplProtocol<Device, ddk::bas
   void BlockImplQuery(block_info_t* out_info, size_t* out_op_size);
   void BlockImplQueue(block_op_t* block_op, block_impl_queue_callback completion_cb, void* cookie)
       __TA_EXCLUDES(mtx_);
+
+  // The callback that we give to the underlying block device when we queue
+  // operations against it.  It simply translates block offsets back and completes the
+  // matched block requests.
+  static void BlockCallback(void* cookie, zx_status_t status, block_op_t* block);
+
+  // Completes the block operation by calling the appropriate callback with the
+  // appropriate status.
+  void BlockComplete(block_op_t* block, zx_status_t status);
 
  private:
   fbl::Mutex mtx_;
