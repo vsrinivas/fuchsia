@@ -7,6 +7,7 @@
 
 #include <inttypes.h>
 
+#include <cstdint>
 #include <memory>
 #include <utility>
 
@@ -65,7 +66,7 @@ class VnodeMinfs : public fs::Vnode,
                    public fbl::Recyclable<VnodeMinfs> {
 #endif
  public:
-  virtual ~VnodeMinfs();
+  ~VnodeMinfs() override;
 
   // Allocates a new Vnode and initializes the in-memory inode structure given the type, where
   // type is one of:
@@ -181,7 +182,7 @@ class VnodeMinfs : public fs::Vnode,
   zx_status_t ReadInternal(PendingWork* transaction, void* data, size_t len, size_t off,
                            size_t* actual);
   zx_status_t ReadExactInternal(PendingWork* transaction, void* data, size_t len, size_t off);
-  zx_status_t WriteInternal(Transaction* transaction, const void* data, size_t len, size_t off,
+  zx_status_t WriteInternal(Transaction* transaction, const uint8_t* data, size_t len, size_t off,
                             size_t* actual);
   zx_status_t WriteExactInternal(Transaction* transaction, const void* data, size_t len,
                                  size_t off);
@@ -214,7 +215,7 @@ class VnodeMinfs : public fs::Vnode,
   // of "File + Directory + Vnode" being a single class. They should be transitioned to
   // private.
  protected:
-  VnodeMinfs(Minfs* fs);
+  explicit VnodeMinfs(Minfs* fs);
 
   // fs::Vnode interface.
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;

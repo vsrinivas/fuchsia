@@ -36,7 +36,7 @@ struct DirArgs {
 // A specialization of the Minfs Vnode which implements a directory interface.
 class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
  public:
-  Directory(Minfs* fs);
+  explicit Directory(Minfs* fs);
   ~Directory() final;
 
   // fbl::Recyclable interface.
@@ -87,7 +87,7 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
   using DirentCallback = zx_status_t (*)(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
 
   // Enumerates directories.
-  zx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
+  zx_status_t ForEachDirent(DirArgs* args, DirentCallback func);
 
   // Directory callback functions.
   //

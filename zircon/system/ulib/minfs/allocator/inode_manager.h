@@ -25,7 +25,7 @@ namespace minfs {
 
 class InspectableInodeManager {
  public:
-  virtual ~InspectableInodeManager() {}
+  virtual ~InspectableInodeManager() = default;
 
   // Gets immutable reference to the inode allocator.
   virtual const Allocator* GetInodeAllocator() const = 0;
@@ -45,7 +45,7 @@ class InodeManager : public InspectableInodeManager {
  public:
   InodeManager() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(InodeManager);
-  ~InodeManager() {}
+  ~InodeManager() override = default;
 
 #ifdef __Fuchsia__
   static zx_status_t Create(block_client::BlockDevice* device, SuperblockManager* sb,
@@ -58,7 +58,8 @@ class InodeManager : public InspectableInodeManager {
 #endif
 
   // Reserve |inodes| inodes in the allocator.
-  zx_status_t Reserve(PendingWork* transaction, size_t inodes, AllocatorReservation* reservation) {
+  static zx_status_t Reserve(PendingWork* transaction, size_t inodes,
+                             AllocatorReservation* reservation) {
     return reservation->Reserve(transaction, inodes);
   }
 
@@ -89,7 +90,7 @@ class InodeManager : public InspectableInodeManager {
 
  private:
 #ifdef __Fuchsia__
-  InodeManager(blk_t start_block);
+  explicit InodeManager(blk_t start_block);
 #else
   InodeManager(Bcache* bc, blk_t start_block);
 #endif

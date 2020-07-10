@@ -28,8 +28,8 @@ namespace minfs {
 // A specialization of the Minfs Vnode which implements a regular file interface.
 class File final : public VnodeMinfs, public fbl::Recyclable<File> {
  public:
-  File(Minfs* fs);
-  ~File();
+  explicit File(Minfs* fs);
+  ~File() override;
 
   // fbl::Recyclable interface.
   void fbl_recycle() final { VnodeMinfs::fbl_recycle(); }

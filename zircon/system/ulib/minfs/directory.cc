@@ -15,6 +15,7 @@
 #include <zircon/time.h>
 
 #include <memory>
+#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -53,10 +54,12 @@ zx_status_t ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
   if ((bytes_read < kMinfsDirentSize) || (reclen < kMinfsDirentSize)) {
     FS_TRACE_ERROR("vn_dir: Could not read dirent at offset: %zd\n", off);
     return ZX_ERR_IO;
-  } else if ((off + reclen > kMinfsMaxDirectorySize) || (reclen & 3)) {
+  }
+  if ((off + reclen > kMinfsMaxDirectorySize) || (reclen & 3)) {
     FS_TRACE_ERROR("vn_dir: bad reclen %u > %u\n", reclen, kMinfsMaxDirectorySize);
     return ZX_ERR_IO;
-  } else if (de->ino != 0) {
+  }
+  if (de->ino != 0) {
     if ((de->namelen == 0) || (de->namelen > (reclen - kMinfsDirentSize))) {
       FS_TRACE_ERROR("vn_dir: bad namelen %u / %u\n", de->namelen, reclen);
       return ZX_ERR_IO;
@@ -126,9 +129,8 @@ zx_status_t Directory::DirentCallbackFind(fbl::RefPtr<Directory> vndir, Dirent* 
     args->ino = de->ino;
     args->type = de->type;
     return kDirIteratorDone;
-  } else {
-    return NextDirent(de, &args->offs);
   }
+  return NextDirent(de, &args->offs);
 }
 
 zx_status_t Directory::CanUnlink() const {
@@ -165,7 +167,8 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
     if ((status = ReadExactInternal(transaction, &de_next, len, off_next)) != ZX_OK) {
       FS_TRACE_ERROR("unlink: Failed to read next dirent\n");
       return status;
-    } else if ((status = ValidateDirent(&de_next, len, off_next)) != ZX_OK) {
+    }
+    if ((status = ValidateDirent(&de_next, len, off_next)) != ZX_OK) {
       FS_TRACE_ERROR("unlink: Read invalid dirent\n");
       return status;
     }
@@ -181,7 +184,8 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
     if ((status = ReadExactInternal(transaction, &de_prev, len, off_prev)) != ZX_OK) {
       FS_TRACE_ERROR("unlink: Failed to read previous dirent\n");
       return status;
-    } else if ((status = ValidateDirent(&de_prev, len, off_prev)) != ZX_OK) {
+    }
+    if ((status = ValidateDirent(&de_prev, len, off_prev)) != ZX_OK) {
       FS_TRACE_ERROR("unlink: Read invalid dirent\n");
       return status;
     }
@@ -283,13 +287,16 @@ zx_status_t Directory::DirentCallbackAttemptRename(fbl::RefPtr<Directory> vndir,
   zx_status_t status;
   if ((status = vndir->fs_->VnodeGet(&vn, de->ino)) < 0) {
     return status;
-  } else if (args->ino == vn->GetIno()) {
+  }
+  if (args->ino == vn->GetIno()) {
     // cannot rename node to itself
     return ZX_ERR_BAD_STATE;
-  } else if (args->type != de->type) {
+  }
+  if (args->type != de->type) {
     // cannot rename directory to file (or vice versa)
     return ZX_ERR_BAD_STATE;
-  } else if ((status = vn->CanUnlink()) != ZX_OK) {
+  }
+  if ((status = vn->CanUnlink()) != ZX_OK) {
     // if we cannot unlink the target, we cannot rename the target
     return status;
   }
@@ -342,19 +349,19 @@ zx_status_t Directory::DirentCallbackFindSpace(fbl::RefPtr<Directory> vndir, Dir
       return NextDirent(de, &args->offs);
     }
     return kDirIteratorDone;
-  } else {
-    // filled entry, can we sub-divide?
-    uint32_t size = static_cast<uint32_t>(DirentSize(de->namelen));
-    if (size > reclen) {
-      FS_TRACE_ERROR("bad reclen (smaller than dirent) %u < %u\n", reclen, size);
-      return ZX_ERR_IO;
-    }
-    uint32_t extra = reclen - size;
-    if (extra < args->reclen) {
-      return NextDirent(de, &args->offs);
-    }
-    return kDirIteratorDone;
   }
+
+  // filled entry, can we sub-divide?
+  uint32_t size = static_cast<uint32_t>(DirentSize(de->namelen));
+  if (size > reclen) {
+    FS_TRACE_ERROR("bad reclen (smaller than dirent) %u < %u\n", reclen, size);
+    return ZX_ERR_IO;
+  }
+  uint32_t extra = reclen - size;
+  if (extra < args->reclen) {
+    return NextDirent(de, &args->offs);
+  }
+  return kDirIteratorDone;
 }
 
 zx_status_t Directory::AppendDirent(DirArgs* args) {
@@ -362,11 +369,13 @@ zx_status_t Directory::AppendDirent(DirArgs* args) {
   Dirent* de = &dirent_buffer.dirent;
 
   size_t r;
-  zx_status_t status =
-      ReadInternal(args->transaction, de, kMinfsMaxDirentSize, args->offs.off, &r);
+  zx_status_t status = ReadInternal(args->transaction, de, kMinfsMaxDirentSize, args->offs.off, &r);
   if (status != ZX_OK) {
     return status;
-  } else if ((status = ValidateDirent(de, r, args->offs.off)) != ZX_OK) {
+  }
+
+  status = ValidateDirent(de, r, args->offs.off);
+  if (status != ZX_OK) {
     return status;
   }
 
@@ -446,7 +455,9 @@ zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
         ReadInternal(args->transaction, de, kMinfsMaxDirentSize, args->offs.off, &r);
     if (status != ZX_OK) {
       return status;
-    } else if ((status = ValidateDirent(de, r, args->offs.off)) != ZX_OK) {
+    }
+    status = ValidateDirent(de, r, args->offs.off);
+    if (status != ZX_OK) {
       return status;
     }
 
@@ -631,7 +642,8 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
   status = ForEachDirent(&args, DirentCallbackFindSpace);
   if (status == ZX_ERR_NOT_FOUND) {
     return ZX_ERR_NO_SPACE;
-  } else if (status != ZX_OK) {
+  }
+  if (status != ZX_OK) {
     return status;
   }
 
@@ -722,7 +734,7 @@ zx_status_t Directory::Truncate(size_t len) { return ZX_ERR_NOT_FILE; }
 
 // Verify that the 'newdir' inode is not a subdirectory of the source.
 zx_status_t Directory::CheckNotSubdirectory(fbl::RefPtr<Directory> newdir) {
-  fbl::RefPtr<Directory> vn = newdir;
+  fbl::RefPtr<Directory> vn = std::move(newdir);
   zx_status_t status = ZX_OK;
   while (vn->GetIno() != kMinfsRootIno) {
     if (vn->GetIno() == GetIno()) {
@@ -895,7 +907,8 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
   status = ForEachDirent(&args, DirentCallbackFindSpace);
   if (status == ZX_ERR_NOT_FOUND) {
     return ZX_ERR_NO_SPACE;
-  } else if (status != ZX_OK) {
+  }
+  if (status != ZX_OK) {
     return status;
   }
 

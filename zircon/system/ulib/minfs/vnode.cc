@@ -11,6 +11,7 @@
 #include <zircon/device/vfs.h>
 #include <zircon/time.h>
 
+#include <cstdint>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -226,7 +227,8 @@ zx_status_t VnodeMinfs::ReadExactInternal(PendingWork* transaction, void* data, 
   zx_status_t status = ReadInternal(transaction, data, len, off, &actual);
   if (status != ZX_OK) {
     return status;
-  } else if (actual != len) {
+  }
+  if (actual != len) {
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -235,10 +237,12 @@ zx_status_t VnodeMinfs::ReadExactInternal(PendingWork* transaction, void* data, 
 zx_status_t VnodeMinfs::WriteExactInternal(Transaction* transaction, const void* data, size_t len,
                                            size_t off) {
   size_t actual;
-  zx_status_t status = WriteInternal(transaction, data, len, off, &actual);
+  zx_status_t status =
+      WriteInternal(transaction, static_cast<const uint8_t*>(data), len, off, &actual);
   if (status != ZX_OK) {
     return status;
-  } else if (actual != len) {
+  }
+  if (actual != len) {
     return ZX_ERR_IO;
   }
   InodeSync(transaction, kMxFsSyncMtime);
@@ -365,7 +369,7 @@ zx_status_t VnodeMinfs::Close() {
 }
 
 // Internal read. Usable on directories.
-zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* data, size_t len, size_t off,
+zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size_t len, size_t off,
                                      size_t* actual) {
   // clip to EOF
   if (off >= GetSize()) {
@@ -380,13 +384,14 @@ zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* data, size_
 #ifdef __Fuchsia__
   if ((status = InitVmo(transaction)) != ZX_OK) {
     return status;
-  } else if ((status = vmo_.read(data, off, len)) != ZX_OK) {
+  } else if ((status = vmo_.read(vdata, off, len)) != ZX_OK) {
     return status;
   } else {
     *actual = len;
   }
 #else
-  void* start = data;
+  uint8_t* data = static_cast<uint8_t*>(vdata);
+  uint8_t* start = data;
   uint32_t n = static_cast<uint32_t>(off / kMinfsBlockSize);
   size_t adjust = off % kMinfsBlockSize;
 
@@ -416,16 +421,16 @@ zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* data, size_
 
     adjust = 0;
     len -= xfer;
-    data = (void*)((uintptr_t)data + xfer);
+    data = data + xfer;
     n++;
   }
-  *actual = (uintptr_t)data - (uintptr_t)start;
+  *actual = data - start;
 #endif
   return ZX_OK;
 }
 
 // Internal write. Usable on directories.
-zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data, size_t len,
+zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* data, size_t len,
                                       size_t off, size_t* actual) {
   if (len == 0) {
     *actual = 0;
@@ -443,7 +448,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
   size_t max_size = off + len;
 #endif
 
-  const void* const start = data;
+  const uint8_t* const start = data;
   uint32_t n = static_cast<uint32_t>(off / kMinfsBlockSize);
   size_t adjust = off % kMinfsBlockSize;
 
@@ -478,7 +483,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
     }
 
     IssueWriteback(transaction, n, bno + fs_->Info().dat_block, 1);
-#else   // __Fuchsia__
+#else  // __Fuchsia__
     blk_t bno;
     if ((status = BlockGetWritable(transaction, n, &bno))) {
       break;
@@ -499,11 +504,11 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
 
     adjust = 0;
     len -= xfer;
-    data = (void*)((uintptr_t)(data) + xfer);
+    data = data + xfer;
     n++;
   }
 
-  len = (uintptr_t)data - (uintptr_t)start;
+  len = data - start;
   if (len == 0) {
     // If more than zero bytes were requested, but zero bytes were written,
     // return an error explicitly (rather than zero).
@@ -766,7 +771,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
         }
         IssueWriteback(transaction, rel_bno, bno + fs_->Info().dat_block, 1);
       }
-#else   // __Fuchsia__
+#else  // __Fuchsia__
       if (bno != 0) {
         if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, bdata)) {
           return ZX_ERR_IO;

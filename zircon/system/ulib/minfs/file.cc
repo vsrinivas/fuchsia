@@ -281,7 +281,8 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
     return status;
   }
 
-  status = WriteInternal(transaction.get(), data, len, offset, out_actual);
+  status =
+      WriteInternal(transaction.get(), static_cast<const uint8_t*>(data), len, offset, out_actual);
   if (status != ZX_OK) {
     return status;
   }

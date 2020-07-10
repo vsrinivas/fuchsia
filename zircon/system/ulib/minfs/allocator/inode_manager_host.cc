@@ -54,7 +54,8 @@ void InodeManager::Load(ino_t ino, Inode* out) const {
   uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
   uint8_t inodata[kMinfsBlockSize];
   bc_->Readblk(start_block_ + (ino / kMinfsInodesPerBlock), inodata);
-  const Inode* inode = reinterpret_cast<const Inode*>((uintptr_t)inodata + off_of_ino);
+  const Inode* inode =
+      reinterpret_cast<const Inode*>(reinterpret_cast<uintptr_t>(inodata) + off_of_ino);
   memcpy(out, inode, kMinfsInodeSize);
 }
 
