@@ -37,7 +37,7 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
 
   void TearDown() override {
     if (controller_device_) {
-      ASSERT_EQ(controller_device_->DdkRemoveDeprecated(), ZX_OK);
+      controller_device_->DdkAsyncRemove();
     }
     ASSERT_EQ(ddk_->WaitUntilRemove(), ZX_OK);
     ASSERT_TRUE(ddk_->Ok());
