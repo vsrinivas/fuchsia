@@ -1152,6 +1152,8 @@ void SimFirmware::SetStateToDisassociated() {
   DisableBeaconWatchdog();
 
   // Proprogate disassociation to driver code
+  SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
+                    0, assoc_state_.opts->bssid, kDisassocEventDelay);
   SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0, 0,
                     assoc_state_.opts->bssid, kLinkEventDelay);
 }

@@ -52,6 +52,8 @@ constexpr zx::duration kStartAPConfDelay = zx::msec(10);
 constexpr zx::duration kSsidEventDelay = zx::msec(100);
 // Delay in sending E_LINK event during disassoc.
 constexpr zx::duration kLinkEventDelay = zx::msec(1);
+// Delay in sending E_DISASSOC event during disassoc.
+constexpr zx::duration kDisassocEventDelay = zx::msec(1);
 
 // Size allocated to hold association frame IEs in SIM FW
 #define ASSOC_IES_MAX_LEN 1000

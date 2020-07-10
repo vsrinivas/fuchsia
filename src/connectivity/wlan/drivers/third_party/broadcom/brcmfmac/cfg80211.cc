@@ -974,6 +974,7 @@ static uint16_t brcmf_map_fw_linkdown_reason(const struct brcmf_event_msg* e) {
       reason = WLAN_DEAUTH_REASON_LEAVING_NETWORK_DEAUTH;
       break;
     case BRCMF_E_DISASSOC_IND:
+    case BRCMF_E_DISASSOC:
       reason = WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC;
       break;
     case BRCMF_E_LINK:
@@ -4426,6 +4427,29 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
     return brcmf_indicate_client_disconnect(ifp, e, data);
 }
 
+static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
+                                                    const struct brcmf_event_msg* e, void* data) {
+  BRCMF_ERR("Disassoc event: %d flags: %d reason:%d status: %d", e->event_code, e->flags, e->reason,
+            e->status);
+  brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
+  if (brcmf_is_apmode(ifp->vif)) {
+    struct net_device* ndev = ifp->ndev;
+    wlanif_disassoc_indication_t disassoc_ind_params;
+
+    memset(&disassoc_ind_params, 0, sizeof(disassoc_ind_params));
+    memcpy(disassoc_ind_params.peer_sta_address, e->addr, ETH_ALEN);
+    disassoc_ind_params.reason_code = e->reason;
+
+    BRCMF_DBG(WLANIF,
+              "Sending disassoc indication to SME. address: " MAC_FMT_STR ", reason: %" PRIu16 "\n",
+              MAC_FMT_ARGS(disassoc_ind_params.peer_sta_address), disassoc_ind_params.reason_code);
+
+    wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &disassoc_ind_params);
+    return ZX_OK;
+  } else
+    return brcmf_indicate_client_disconnect(ifp, e, data);
+}
+
 static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
                                                const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
@@ -4566,7 +4590,8 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_AUTH_IND, brcmf_process_auth_ind_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH_IND, brcmf_process_deauth_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH, brcmf_process_deauth_event);
-  brcmf_fweh_register(cfg->pub, BRCMF_E_DISASSOC_IND, brcmf_notify_connect_status);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_DISASSOC_IND, brcmf_process_disassoc_ind_event);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_DISASSOC, brcmf_process_disassoc_ind_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_ASSOC_IND, brcmf_handle_assoc_ind);
   brcmf_fweh_register(cfg->pub, BRCMF_E_REASSOC_IND, brcmf_handle_assoc_ind);
   brcmf_fweh_register(cfg->pub, BRCMF_E_ROAM, brcmf_notify_roaming_status);
