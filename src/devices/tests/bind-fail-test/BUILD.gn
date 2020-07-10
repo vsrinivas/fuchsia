@@ -4,13 +4,11 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 driver_module("driver") {
   output_name = "bind-fail-test"
 
-  test = true
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -40,29 +38,13 @@ test("tests") {
   visibility = [ ":*" ]
 }
 
-devmgr_manifest("devmgr-manifest") {
-}
+isolated_devmgr_unittest_package("bind-fail-test") {
+  executable_path = "test/bind-fail-test"
 
-test_package("bind-fail-test") {
   deps = [
-    ":devmgr-manifest",
     ":driver",
     ":tests",
-  ]
-
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  tests = [
-    {
-      name = "bind-fail-test"
-      environments = basic_envs
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("${root_build_dir}/bind-fail-test.so")
-      dest = "bind-fail-test.so"
-    },
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
   ]
 }
