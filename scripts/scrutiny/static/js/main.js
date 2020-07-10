@@ -3,13 +3,40 @@
  * drawing it to the UI.
  */
 
+ function defaultColorFill(e) {
+  if (e.source == "bootfs") {
+    return "#FFA726";
+  }
+  if (e.source == "unknown") {
+    return "#9C27B0";
+  }
+  if (e.routes.offers.length > 0) {
+    return "#FF0266";
+  }
+  if (e.routes.uses.length > 0) {
+    return "#1DE9B6";
+  }
+  return "#09A4AE";
+}
+
+function searchColorFill(e) {
+  if (e == "node") {
+    return "#FF0266";
+  } else if (e == "uses") {
+    return "#1DE9B6";
+  } else if (e == "used_by") {
+    return "#9C27B0";
+  } else {
+    return "#09A4AE";
+  }
+}
+
 /**
  * Simple wrapper around the component mapper json API.
  */
 class ComponentMapperApi {
   constructor(baseUrl) {
     this.baseUrl = baseUrl;
-    this.graphUrl = baseUrl + "api/component/graph";
 
     this.routesUrl = baseUrl + "api/routes";
     this.componentsUrl = baseUrl + "api/components";
@@ -27,7 +54,8 @@ class ComponentMapperApi {
     let componentName = metaInd == -1 ? component.url : component.url.slice(metaInd + 6);
     let node = {
       consumers: 0,
-      id: component.url,
+      id: component.id,
+      url: component.url,
       manifest: mani,
       name: componentName,
       routes: {
@@ -166,7 +194,9 @@ class ComponentMapperView {
     this.api = api;
     this.graphData = null;
     this.search = document.getElementById("cm-search");
-    this.search.addEventListener("input", this.autocompleteSearch);
+    this.search.addEventListener("keyup", this.searchComponents);
+    this.searchButton = document.getElementById("cm-search-button");
+    this.searchButton.addEventListener("click", this.searchComponents);
     this.sidebar = document.getElementById("cm-component-list");
     this.map = document.getElementById("cm-map");
     this.logo = document.getElementById("cm-logo");
@@ -176,6 +206,7 @@ class ComponentMapperView {
         this.resetGraphVisible();
       }
     }
+    document.addEventListener('click', this.globalClickListener);
   }
 
   /**
@@ -201,7 +232,7 @@ class ComponentMapperView {
   /**
    * Draws the main graph.
    */
-  drawGraph(componentList) {
+  drawGraph() {
     console.log("[ComponentView] - Drawing Graph");
     const map = document.getElementById("cm-map");
     const boundingRect = map.getBoundingClientRect();
@@ -250,21 +281,7 @@ class ComponentMapperView {
             e.radius = calculatedRadius;
             return calculatedRadius;
           })
-          .style("fill", function(e) {
-            if (e.source == "bootfs") {
-              return "#FFA726";
-            }
-            if (e.source == "unknown") {
-              return "#9C27B0";
-            }
-            if (e.routes.offers.length > 0) {
-              return "#FF0266";
-            }
-            if (e.routes.uses.length > 0) {
-              return "#1DE9B6";
-            }
-            return "#09A4AE";
-          })
+          .style("fill", defaultColorFill)
           .on("click", (e, i) => {
             const query = "^" + e.name + "$";
             view.search.value = query;
@@ -324,6 +341,16 @@ class ComponentMapperView {
     }
   }
 
+  openRawManifest(component_id) {
+    window.open(this.api.manifestUrl + "?component_id=" + component_id, "_blank");
+  }
+
+  globalClickListener = ele => {
+    if (ele.target.className == "manifest-button" && ele.target.getAttribute("data-component-id") != null) {
+      this.openRawManifest(ele.target.getAttribute("data-component-id"));
+    }
+  }
+
   /**
    * Draws the component sidebar with the listed items.
    */
@@ -333,6 +360,13 @@ class ComponentMapperView {
     for (const graphNode of graphNodes) {
       const listNode = document.createElement("li");
       listNode.appendChild(document.createTextNode(graphNode["name"]));
+
+      listNode.appendChild(document.createElement("br"));
+      let hrefEle = document.createElement("button");
+      hrefEle.className = "manifest-button";
+      hrefEle.setAttribute("data-component-id", graphNode.id);
+      hrefEle.appendChild(document.createTextNode("Manifest"));
+      listNode.appendChild(hrefEle);
       if (graphNode["routes"]["uses"].length) {
         listNode.appendChild(document.createElement("br"));
         listNode.appendChild(document.createElement("br"));
@@ -375,75 +409,108 @@ class ComponentMapperView {
   }
 
   /**
-   * Hide components not related to the node.
+   * Show a node and all nodes used by or using that node.
    */
-  hideGraphComponents(node, showUsingComponents) {
-    this.resetGraphVisible();
+  selectSingleNode(node, show_uses, show_used_by) {
     const componentName = node.name;
     const servicesOffered = node.routes.offers;
+    const servicesUsed = node.routes.uses;
     d3.select('g').selectAll('circle').each(function(node) {
       if (node.name == componentName) {
-        d3.select(this).style("stroke", "#ffaf49").style("stroke-width", "12");
+        d3.select(this).attr("visibility", "visible").style("fill", searchColorFill("node"));
         return;
       }
-      if (showUsingComponents) {
+
+      // Since we are iterating through the nodes to see if the node we have selected is used by 
+      // the current loop node, the naming of the variables is a little confusing.
+      // Essentially, show_used_by says that we only show the current loop node if it uses
+      // a service provided by the selected node.
+      if (show_used_by) {
         const uses = servicesOffered.some(e => node.routes.uses.indexOf(e) >= 0);
-        if (!uses) {
-          d3.select(this).attr("visibility", "hidden");
+        if (uses) {
+          d3.select(this).attr("visibility", "visible").style("fill", searchColorFill("uses"));
+          return;
         }
       }
+
+      if (show_uses) {
+        const used_by = servicesUsed.some(e => node.routes.offers.indexOf(e) >= 0);
+        if (used_by) {
+          d3.select(this).attr("visibility", "visible").style("fill", searchColorFill("used_by"));
+          return;
+        }
+      }
+
     });
     d3.select('g').selectAll('line').each(function(link) {
-      if (link.source.name != componentName && link.target.name != componentName) {
-        d3.select(this).attr("visibility", "hidden");
+      if (link.source.name == componentName || link.target.name == componentName) {
+        d3.select(this).attr("visibility", "visible");
       }
     });
   }
 
   /**
-   * Resets the graph back to the default state.
+   * Resets the graph back to the state where all links and nodes are invisible.
+   */
+  resetGraphInvisible() {
+    d3.select('g').selectAll('circle').each(function(node) {
+      d3.select(this).attr("visibility", "hidden");
+      d3.select(this).style("stroke", "").style("stroke-width", "").style("fill", defaultColorFill);
+    });
+    d3.select('g').selectAll('line').each(function(link) {
+      d3.select(this).attr("visibility", "hidden");
+    });
+  }
+
+  /**
+   * Resets the graph back to the default state where all links and nodes are visible.
    */
   resetGraphVisible() {
     d3.select('g').selectAll('circle').each(function(node) {
       d3.select(this).attr("visibility", "visible");
-        d3.select(this).style("stroke", "").style("stroke-width", "");
+      d3.select(this).style("stroke", "").style("stroke-width", "").style("fill", defaultColorFill);
     });
     d3.select('g').selectAll('line').each(function(link) {
       d3.select(this).attr("visibility", "visible");
     });
   }
 
-  /**
-   * Completes the search to make the API usable.
-   */
-  autocompleteSearch = e => {
-    this.updateSidebarWithSearchResults(e.target.value);
+  searchComponents = event => {
+      // 13 is the enter key, only search whenever we either click on the search button or release the enter key.
+      if (event.type == "click" || (event.type == "keyup" && event.keyCode == 13)) {
+        this.updateSidebarWithSearchResults(this.search.value);
+      }
   }
 
   updateSidebarWithSearchResults(query) {
     if (this.graphData == null) {
       return;
     }
-    const options = [];
+
+    if (query == "") {
+      this.resetGraphVisible();
+      this.drawSidebar([]);
+      return;
+    }
+
+    const matchingNodes = [];
     // Handle commands
     if (query.startsWith("uses: ")) {
       const subquery = query.split(" ")[1];
-      console.log("uses subquery", subquery);
       for (const node of this.graphData["nodes"]) {
         for (const uses of node["routes"]["uses"]) {
           if (uses.match(subquery)) {
-            options.push(node);
+            matchingNodes.push(node);
             break;
           }
         }
       }
     } else if (query.startsWith("offers: ")) {
       const subquery = query.split(" ")[1];
-      console.log("offers subquery", subquery);
       for (const node of this.graphData["nodes"]) {
         for (const offers of node["routes"]["offers"]) {
           if (offers.match(subquery)) {
-            options.push(node);
+            matchingNodes.push(node);
             break;
           }
         }
@@ -451,26 +518,31 @@ class ComponentMapperView {
     } else {
       for (const node of this.graphData["nodes"]) {
         if (node["name"].match(query)) {
-          options.push(node);
+          matchingNodes.push(node);
         }
       }
     }
-    console.log(options);
 
-    if (query == "") {
-      this.resetGraphVisible();
-    } else if (options.length >= 1) {
-      this.resetGraphVisible();
+    this.resetGraphInvisible();
+    if (matchingNodes.length == 1) {
       d3.select('g').selectAll('circle').each(node => {
-        if (node.name == options[0].name) {
-          this.hideGraphComponents(node, true);
+        if (node.name == matchingNodes[0].name) {
+          this.selectSingleNode(node, true, true);
+          return;
+        }
+      });
+    } else if (matchingNodes.length > 1) {
+      d3.select('g').selectAll('circle').each(node => {
+        if (matchingNodes.some(e => e.name == node.name)) {
+          this.selectSingleNode(node, false, false);
           return;
         }
       });
     } else {
       this.resetGraphVisible();
     }
-    this.drawSidebar(options);
+
+    this.drawSidebar(matchingNodes);
   }
 }
 

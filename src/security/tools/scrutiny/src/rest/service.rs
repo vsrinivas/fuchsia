@@ -46,7 +46,7 @@ fn parse_get_params(query_str: &str) -> HashMap<String, String> {
                     // If the = is at the end of the split, ignore.
                     None
                 } else {
-                    // This only works for string-string kv pairs.
+                    // TODO(arkay) Make this work for non string-string kv pairs.
                     let (key, value) = kv.split_at(ind);
                     Some((key.to_string(), value[1..].to_string()))
                 }

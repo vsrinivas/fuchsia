@@ -52,6 +52,20 @@ pub struct PackageDataCollector {
 }
 
 impl PackageDataCollector {
+    fn new() -> Result<Self> {
+        let fuchsia_dir = env::var("FUCHSIA_DIR")?;
+        if fuchsia_dir.len() == 0 {
+            return Err(anyhow!("Unable to retrieve $FUCHSIA_DIR, has it been set?"));
+        }
+
+        Ok(Self {
+            package_reader: Box::new(PackageServerReader::new(
+                fuchsia_dir,
+                Box::new(HttpGetter::new(String::from("127.0.0.1:8083"))),
+            )),
+        })
+    }
+
     fn get_packages(&self) -> Result<Vec<PackageDefinition>> {
         // Retrieve the json packages definition from the package server.
         let targets = self.package_reader.read_targets()?;
@@ -84,20 +98,6 @@ impl PackageDataCollector {
         }
 
         Ok((packages, builtins.services))
-    }
-
-    fn new() -> Result<Self> {
-        let fuchsia_dir = env::var("FUCHSIA_DIR")?;
-        if fuchsia_dir.len() == 0 {
-            return Err(anyhow!("Unable to retrieve $FUCHSIA_DIR, has it been set?"));
-        }
-
-        Ok(Self {
-            package_reader: Box::new(PackageServerReader::new(
-                fuchsia_dir,
-                Box::new(HttpGetter::new(String::from("127.0.0.1:8083"))),
-            )),
-        })
     }
 
     // Combine service name->url mappings from builtins and those defined in config-data.
@@ -293,7 +293,6 @@ impl DataCollector for PackageDataCollector {
             builtin_packages.len()
         );
 
-        // TODO: Push to data model
         let (components, mut manifests, mut routes) =
             PackageDataCollector::build_model(served_packages, builtin_packages, services)?;
         let mut model_comps = model.components().write().unwrap();

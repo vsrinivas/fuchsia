@@ -83,15 +83,35 @@ pub struct RawManifestGraphController {}
 
 #[derive(Deserialize, Serialize)]
 struct RawManifestRequest {
-    component_id: i32,
+    component_id: Value,
 }
 
 impl DataController for RawManifestGraphController {
     fn query(&self, model: Arc<DataModel>, value: Value) -> Result<Value> {
         let req: RawManifestRequest = serde_json::from_value(value)?;
+
+        let component_id = if req.component_id.is_i64() {
+            req.component_id.as_i64().unwrap()
+        } else if req.component_id.is_string() {
+            match req.component_id.as_str().unwrap().parse::<i64>() {
+                Ok(val) => val,
+                _ => {
+                    return Err(Error::new(io::Error::new(
+                        ErrorKind::Other,
+                        format!("Unable to parse component id {}.", req.component_id),
+                    )));
+                }
+            }
+        } else {
+            return Err(Error::new(io::Error::new(
+                ErrorKind::Other,
+                format!("Invalid component_id format received {}.", req.component_id),
+            )));
+        };
+
         let manifests = model.manifests().read().unwrap();
         for manifest in manifests.iter() {
-            if manifest.component_id == req.component_id {
+            if manifest.component_id as i64 == component_id {
                 return Ok(serde_json::to_value(manifest.manifest.clone())?);
             }
         }
@@ -252,6 +272,34 @@ mod tests {
             "component_id": 3
         });
         assert!(controller.query(model, json_body).is_err());
+    }
+
+    #[test]
+    fn component_raw_manifest_controller_string_id_returns_manifest() {
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        let model = Arc::new(DataModel::connect(uri).unwrap());
+
+        let comp1 = make_component(1, "fake_url", 0, false);
+        let comp2 = make_component(2, "fake_url_2", 0, true);
+        {
+            let mut components = model.components().write().unwrap();
+            components.push(comp1.clone());
+            components.push(comp2.clone());
+        }
+
+        let manifest1 = make_manifest(1, "fake_manifest");
+        {
+            let mut manifests = model.manifests().write().unwrap();
+            manifests.push(manifest1.clone());
+        }
+
+        let controller = RawManifestGraphController::default();
+        let json_body = json!({
+            "component_id": "1"
+        });
+        let val = controller.query(model, json_body).unwrap();
+        assert_eq!("fake_manifest", serde_json::from_value::<String>(val).unwrap());
     }
 
     #[ignore]
