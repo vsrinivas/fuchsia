@@ -126,6 +126,7 @@ zx_status_t SparseReader::ReadMetadata() {
     return ZX_ERR_BAD_STATE;
   }
 
+  ZX_ASSERT(image.header_length > sizeof(image));
   metadata_.reset(new uint8_t[image.header_length]);
   memcpy(metadata_.get(), &image, sizeof(image));
 
