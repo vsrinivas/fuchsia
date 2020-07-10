@@ -20,8 +20,6 @@
 
 namespace usb_xhci {
 
-#define TRANSFER_RING_SIZE ((PAGE_SIZE * 16) / sizeof(xhci_trb_t))
-
 // The type and length fields for a string descriptor are one byte each.
 #define STR_DESC_METADATA_LEN 2
 #define MAX_STR_LEN 64
