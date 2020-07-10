@@ -21,7 +21,19 @@ protocol Accessibility {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
+    [Transitional = "Deprecated in favor of Watch"]
     Watch2() -> (AccessibilitySettings settings);
+
+    /// Gets the current value of all accessibility settings. Returns
+    /// immediately on first call; subsequent calls return when any of the
+    /// values change.
+    ///
+    /// - `settings` all current values of the accessibility settings.
+    /// * see [`AccessibilitySettings`] for their meaning.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
+    Watch() -> (AccessibilitySettings settings);
 
     /// Sets [AccessibilitySettings] settings. Any field not explicitly set in the table performs a
     /// no-op, and will not make any changes.

@@ -35,6 +35,18 @@ class FakePrivacy : public fuchsia::settings::Privacy {
     };
   }
 
+  void Watch(WatchCallback callback) override {
+    if (!first_call_) {
+      watchers_.push_back(std::move(callback));
+      return;
+    }
+
+    fuchsia::settings::PrivacySettings settings;
+    settings_.Clone(&settings);
+    callback(std::move(settings));
+    first_call_ = false;
+  }
+
   void Watch2(Watch2Callback callback) override {
     if (!first_call_) {
       watchers2_.push_back(std::move(callback));
@@ -51,6 +63,8 @@ class FakePrivacy : public fuchsia::settings::Privacy {
     settings_ = std::move(settings);
     callback(fit::ok());
 
+    NotifyWatchers();
+    // TODO(fxb/55685): Remove when clients are migrated to watch.
     NotifyWatchers2();
   }
 
@@ -62,6 +76,15 @@ class FakePrivacy : public fuchsia::settings::Privacy {
   }
 
  private:
+  void NotifyWatchers() {
+    for (const auto& watcher : watchers_) {
+      fuchsia::settings::PrivacySettings settings;
+      settings_.Clone(&settings);
+      watcher(std::move(settings));
+    }
+    watchers_.clear();
+  }
+  // TODO(fxb/55685): Remove when clients are migrated to watch.
   void NotifyWatchers2() {
     for (const auto& watcher : watchers2_) {
       fuchsia::settings::PrivacySettings settings;
@@ -74,16 +97,30 @@ class FakePrivacy : public fuchsia::settings::Privacy {
   std::unique_ptr<fidl::Binding<fuchsia::settings::Privacy>> binding_;
   fuchsia::settings::PrivacySettings settings_;
   bool first_call_ = true;
+  std::vector<WatchCallback> watchers_;
+  // TODO(fxb/55685): Remove when clients are migrated to watch.
   std::vector<Watch2Callback> watchers2_;
 };
 
 class FakePrivacyClosesConnection : public FakePrivacy {
  public:
+  void Watch(WatchCallback callback) { CloseConnection(); }
+  // TODO(fxb/55685): Remove when clients are migrated to watch.
   void Watch2(Watch2Callback callback) { CloseConnection(); }
 };
 
 class FakePrivacyClosesConnectionOnce : public FakePrivacy {
  public:
+  void Watch(WatchCallback callback) {
+    if (!has_closed_once_) {
+      has_closed_once_ = true;
+      CloseConnection();
+      return;
+    }
+
+    FakePrivacy::Watch(std::move(callback));
+  }
+  // TODO(fxb/55685): Remove when clients are migrated to watch.
   void Watch2(Watch2Callback callback) {
     if (!has_closed_once_) {
       has_closed_once_ = true;

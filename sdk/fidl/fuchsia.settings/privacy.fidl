@@ -17,7 +17,17 @@ protocol Privacy {
     /// wait on a value change before returning the new value. This follows the hanging get pattern.
     ///
     /// If this call fails, it is considered a fatal error and the channel will be closed.
+    [Transitional = "Deprecated in favor of Watch"]
     Watch2() -> (PrivacySettings settings);
+
+    /// Notifies of a change in privacy settings.
+    ///
+    /// On a given connection, the server will return immediately if this is the first call made,
+    /// or if the `settings` value has changed since a previous call. Otherwise, the server will
+    /// wait on a value change before returning the new value. This follows the hanging get pattern.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel will be closed.
+    Watch() -> (PrivacySettings settings);
 
     /// Sets the privacy settings.
     ///
