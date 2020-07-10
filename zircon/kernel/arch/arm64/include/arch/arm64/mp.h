@@ -112,6 +112,9 @@ static inline uint arch_cpu_num_to_cpu_id(uint cpu) {
   return arm64_cpu_cpu_ids[cpu];
 }
 
+// translate mpidr to cpu number
+uint arm64_mpidr_to_cpu_num(uint64_t mpidr);
+
 #define READ_PERCPU_FIELD32(field) arm64_read_percpu_u32(offsetof(struct arm64_percpu, field))
 
 #define WRITE_PERCPU_FIELD32(field, value) \

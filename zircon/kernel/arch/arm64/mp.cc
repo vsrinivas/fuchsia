@@ -51,23 +51,27 @@ void arch_register_mpid(uint cpu_id, uint64_t mpid) {
   arm64_cpu_list[arm64_cpu_list_count++] = {.mpid = mpid, .cpu_id = cpu_id};
 }
 
-// do the 'slow' lookup by mpidr to cpu number
-static uint arch_curr_cpu_num_slow() {
-  uint64_t mpidr = __arm_rsr64("mpidr_el1");
+uint arm64_mpidr_to_cpu_num(uint64_t mpidr) {
   mpidr &= kMpidAffMask;
-
   for (size_t i = 0; i < arm64_cpu_list_count; ++i) {
     if (arm64_cpu_list[i].mpid == mpidr) {
       return arm64_cpu_list[i].cpu_id;
     }
   }
 
-  // The only time we shouldn't find a cpu is when the list isn't
-  // defined yet during early boot, in this case the only processor up is 0
-  // so returning 0 is correct.
-  DEBUG_ASSERT(arm64_cpu_list_count == 0);
+  if (arm64_cpu_list_count == 0) {
+    // The only time we shouldn't find a cpu is when the list isn't
+    // defined yet during early boot, in this case the only processor up is 0
+    // so returning 0 is correct.
+    return 0;
+  }
+  return INVALID_CPU;
+}
 
-  return 0;
+// do the 'slow' lookup by mpidr to cpu number
+static uint arch_curr_cpu_num_slow() {
+  uint64_t mpidr = __arm_rsr64("mpidr_el1");
+  return arm64_mpidr_to_cpu_num(mpidr);
 }
 
 void arch_prepare_current_cpu_idle_state(bool idle) {
