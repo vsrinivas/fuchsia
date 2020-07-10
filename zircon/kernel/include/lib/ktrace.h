@@ -263,7 +263,7 @@ inline void ktrace_counter(TraceEnabled<enabled>, uint32_t group, StringRef* str
   }
   const uint32_t tag = KTRACE_TAG_FLAGS(TAG_COUNTER(string_ref->GetId(), group), KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(tag))) {
-    ktrace_write_record(tag, kRecordCurrentTimestamp, counter_id, value);
+    ktrace_write_record(tag, kRecordCurrentTimestamp, counter_id, static_cast<uint64_t>(value));
   }
 }
 
