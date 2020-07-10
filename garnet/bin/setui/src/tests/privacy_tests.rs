@@ -57,7 +57,7 @@ async fn test_privacy() {
     let (privacy_service, store) = create_test_privacy_env(factory).await;
 
     // Ensure retrieved value matches set value
-    let settings = privacy_service.watch2().await.expect("watch completed");
+    let settings = privacy_service.watch().await.expect("watch completed");
     assert_eq!(settings.user_data_sharing_consent, initial_value.user_data_sharing_consent);
 
     // Ensure setting interface propagates correctly
@@ -71,14 +71,14 @@ async fn test_privacy() {
     assert_eq!(changed_value, retrieved_struct);
 
     // Ensure retrieved value matches set value
-    let settings = privacy_service.watch2().await.expect("watch completed");
+    let settings = privacy_service.watch().await.expect("watch completed");
     assert_eq!(settings.user_data_sharing_consent, changed_value.user_data_sharing_consent);
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_channel_failure_watch2() {
+async fn test_channel_failure_watch() {
     let privacy_service = create_privacy_test_env_with_failures().await;
-    let result = privacy_service.watch2().await;
+    let result = privacy_service.watch().await;
     assert!(result.is_err());
     assert_eq!(
         ClientChannelClosed(Status::INTERNAL).to_string(),

@@ -1,21 +1,31 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::fidl_process_2;
+
+use crate::fidl_process;
 use fidl_fuchsia_settings::{
     Error, PrivacyMarker, PrivacyRequest, PrivacySettings, PrivacyWatch2Responder,
+    PrivacyWatchResponder,
 };
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
+use crate::fidl_hanging_get_responder_no_imports;
 use crate::fidl_processor::RequestContext;
 use crate::request_respond;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
-fidl_hanging_get_responder!(PrivacySettings, PrivacyWatch2Responder, PrivacyMarker::DEBUG_NAME);
+fidl_hanging_get_responder!(PrivacySettings, PrivacyWatchResponder, PrivacyMarker::DEBUG_NAME);
+
+// TODO(fxb/55692): Remove when clients are ported to watch.
+fidl_hanging_get_responder_no_imports!(
+    PrivacySettings,
+    PrivacyWatch2Responder,
+    PrivacyMarker::DEBUG_NAME
+);
 
 impl From<SettingResponse> for PrivacySettings {
     fn from(response: SettingResponse) -> Self {
@@ -33,10 +43,18 @@ impl From<PrivacySettings> for SettingRequest {
     }
 }
 
-fidl_process_2!(Privacy, SettingType::Privacy, process_request_2);
+fidl_process!(
+    Privacy,
+    SettingType::Privacy,
+    process_request,
+    SettingType::Privacy,
+    PrivacySettings,
+    PrivacyWatch2Responder,
+    process_request_2,
+);
 
-async fn process_request_2(
-    context: RequestContext<PrivacySettings, PrivacyWatch2Responder>,
+async fn process_request(
+    context: RequestContext<PrivacySettings, PrivacyWatchResponder>,
     req: PrivacyRequest,
 ) -> Result<Option<PrivacyRequest>, anyhow::Error> {
     #[allow(unreachable_patterns)]
@@ -54,6 +72,24 @@ async fn process_request_2(
                 );
             });
         }
+        PrivacyRequest::Watch { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
+}
+
+// TODO(fxb/55692): Remove when clients are ported to watch.
+async fn process_request_2(
+    context: RequestContext<PrivacySettings, PrivacyWatch2Responder>,
+    req: PrivacyRequest,
+) -> Result<Option<PrivacyRequest>, anyhow::Error> {
+    #[allow(unreachable_patterns)]
+    match req {
         PrivacyRequest::Watch2 { responder } => {
             context.watch(responder, true).await;
         }

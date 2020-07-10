@@ -6,11 +6,13 @@ use futures::FutureExt;
 
 use fidl_fuchsia_settings::{
     AccessibilityMarker, AccessibilityRequest, AccessibilitySettings, AccessibilityWatch2Responder,
+    AccessibilityWatchResponder,
 };
 use fuchsia_async as fasync;
 
 use crate::fidl_hanging_get_responder;
-use crate::fidl_process_2;
+use crate::fidl_hanging_get_responder_no_imports;
+use crate::fidl_process;
 use crate::fidl_processor::RequestContext;
 use crate::request_respond;
 use crate::switchboard::accessibility_types::{
@@ -20,6 +22,13 @@ use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(
+    AccessibilitySettings,
+    AccessibilityWatchResponder,
+    AccessibilityMarker::DEBUG_NAME
+);
+
+// TODO(fxb/55692): Remove when clients are ported to watch.
+fidl_hanging_get_responder_no_imports!(
     AccessibilitySettings,
     AccessibilityWatch2Responder,
     AccessibilityMarker::DEBUG_NAME
@@ -63,10 +72,18 @@ impl From<AccessibilitySettings> for SettingRequest {
     }
 }
 
-fidl_process_2!(Accessibility, SettingType::Accessibility, process_request_2,);
+fidl_process!(
+    Accessibility,
+    SettingType::Accessibility,
+    process_request,
+    SettingType::Accessibility,
+    AccessibilitySettings,
+    AccessibilityWatch2Responder,
+    process_request_2,
+);
 
-async fn process_request_2(
-    context: RequestContext<AccessibilitySettings, AccessibilityWatch2Responder>,
+async fn process_request(
+    context: RequestContext<AccessibilitySettings, AccessibilityWatchResponder>,
     req: AccessibilityRequest,
 ) -> Result<Option<AccessibilityRequest>, anyhow::Error> {
     // Support future expansion of FIDL.
@@ -85,6 +102,25 @@ async fn process_request_2(
                 );
             });
         }
+        AccessibilityRequest::Watch { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
+}
+
+// TODO(fxb/55692): Remove when clients are ported to watch.
+async fn process_request_2(
+    context: RequestContext<AccessibilitySettings, AccessibilityWatch2Responder>,
+    req: AccessibilityRequest,
+) -> Result<Option<AccessibilityRequest>, anyhow::Error> {
+    // Support future expansion of FIDL.
+    #[allow(unreachable_patterns)]
+    match req {
         AccessibilityRequest::Watch2 { responder } => {
             context.watch(responder, true).await;
         }

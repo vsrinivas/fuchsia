@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 use {
     crate::fidl_hanging_get_responder,
-    crate::fidl_process_2,
+    crate::fidl_hanging_get_responder_no_imports,
+    crate::fidl_process,
     crate::fidl_processor::RequestContext,
     crate::request_respond,
     crate::switchboard::base::{
@@ -14,14 +15,21 @@ use {
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{
         AudioInput, AudioMarker, AudioRequest, AudioSettings, AudioStreamSettingSource,
-        AudioStreamSettings, AudioWatch2Responder, Error, Volume,
+        AudioStreamSettings, AudioWatch2Responder, AudioWatchResponder, Error, Volume,
     },
     fuchsia_async as fasync,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
 };
 
-fidl_hanging_get_responder!(AudioSettings, AudioWatch2Responder, AudioMarker::DEBUG_NAME);
+fidl_hanging_get_responder!(AudioSettings, AudioWatchResponder, AudioMarker::DEBUG_NAME);
+
+// TODO(fxb/55692): Remove when clients are ported to watch.
+fidl_hanging_get_responder_no_imports!(
+    AudioSettings,
+    AudioWatch2Responder,
+    AudioMarker::DEBUG_NAME
+);
 
 impl From<SettingResponse> for AudioSettings {
     fn from(response: SettingResponse) -> Self {
@@ -120,10 +128,18 @@ fn to_request(settings: AudioSettings) -> Option<SettingRequest> {
     request
 }
 
-fidl_process_2!(Audio, SettingType::Audio, process_request_2);
+fidl_process!(
+    Audio,
+    SettingType::Audio,
+    process_request,
+    SettingType::Audio,
+    AudioSettings,
+    AudioWatch2Responder,
+    process_request_2,
+);
 
-async fn process_request_2(
-    context: RequestContext<AudioSettings, AudioWatch2Responder>,
+async fn process_request(
+    context: RequestContext<AudioSettings, AudioWatchResponder>,
     req: AudioRequest,
 ) -> Result<Option<AudioRequest>, anyhow::Error> {
     // Support future expansion of FIDL.
@@ -148,6 +164,24 @@ async fn process_request_2(
                     .log_fidl_response_error(AudioMarker::DEBUG_NAME);
             }
         }
+        AudioRequest::Watch { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+    return Ok(None);
+}
+
+// TODO(fxb/55692): Remove when clients are ported to watch.
+async fn process_request_2(
+    context: RequestContext<AudioSettings, AudioWatch2Responder>,
+    req: AudioRequest,
+) -> Result<Option<AudioRequest>, anyhow::Error> {
+    // Support future expansion of FIDL.
+    #[allow(unreachable_patterns)]
+    match req {
         AudioRequest::Watch2 { responder } => {
             context.watch(responder, true).await;
         }

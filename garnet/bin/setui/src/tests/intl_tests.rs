@@ -97,7 +97,7 @@ async fn test_intl_e2e() {
     let intl_service = create_test_intl_env(factory).await;
 
     // Check if the initial value is correct.
-    let settings = intl_service.watch2().await.expect("watch completed");
+    let settings = intl_service.watch().await.expect("watch completed");
     assert_eq!(
         settings.time_zone_id,
         Some(fidl_fuchsia_intl::TimeZoneId { id: "UTC".to_string() })
@@ -119,7 +119,7 @@ async fn test_intl_e2e() {
     intl_service.set(intl_settings.clone()).await.expect("set completed").expect("set successful");
 
     // Verify the values we set are returned when watching.
-    let settings = intl_service.watch2().await.expect("watch completed");
+    let settings = intl_service.watch().await.expect("watch completed");
     assert_eq!(settings, intl_settings.clone());
 
     // Verify the value we set is persisted in DeviceStorage.
@@ -137,7 +137,7 @@ async fn test_intl_e2e_set_twice() {
     let intl_service = create_test_intl_env(factory).await;
 
     // Initial value is not None.
-    let settings = intl_service.watch2().await.expect("watch completed");
+    let settings = intl_service.watch().await.expect("watch completed");
     assert_eq!(
         settings.time_zone_id,
         Some(fidl_fuchsia_intl::TimeZoneId { id: "UTC".to_string() })
@@ -179,7 +179,7 @@ async fn test_intl_e2e_idempotent_set() {
     let intl_service = create_test_intl_env(factory).await;
 
     // Check if the initial value is correct.
-    let settings = intl_service.watch2().await.expect("watch completed");
+    let settings = intl_service.watch().await.expect("watch completed");
     assert_eq!(
         settings.time_zone_id,
         Some(fidl_fuchsia_intl::TimeZoneId { id: "UTC".to_string() })
@@ -231,7 +231,7 @@ async fn test_intl_invalid_timezone() {
     intl_service.set(intl_settings).await.expect("set completed").expect_err("invalid");
 
     // Verify the returned when watching hasn't changed.
-    let settings = intl_service.watch2().await.expect("watch completed");
+    let settings = intl_service.watch().await.expect("watch completed");
     assert_eq!(
         settings.time_zone_id,
         Some(fidl_fuchsia_intl::TimeZoneId { id: INITIAL_TIME_ZONE.to_string() })
@@ -239,9 +239,9 @@ async fn test_intl_invalid_timezone() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_channel_failure_watch2() {
+async fn test_channel_failure_watch() {
     let intl_service = create_intl_test_env_with_failures(InMemoryStorageFactory::create()).await;
-    let result = intl_service.watch2().await;
+    let result = intl_service.watch().await;
     assert!(result.is_err());
     assert_eq!(
         ClientChannelClosed(Status::INTERNAL).to_string(),

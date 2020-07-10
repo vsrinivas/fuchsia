@@ -158,14 +158,14 @@ async fn test_audio() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let settings = audio_proxy.watch2().await.expect("watch completed");
+    let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
         settings.clone(),
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
-    let settings = audio_proxy.watch2().await.expect("watch completed");
+    let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
 
     assert_eq!(
@@ -189,14 +189,14 @@ async fn test_volume_overwritten() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let settings = audio_proxy.watch2().await.expect("watch completed");
+    let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
         settings.clone(),
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
-    let settings = audio_proxy.watch2().await.expect("watch completed");
+    let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
 
     assert_eq!(
@@ -219,7 +219,7 @@ async fn test_volume_overwritten() {
     };
 
     set_volume(&audio_proxy, vec![CHANGED_BACKGROUND_STREAM_SETTINGS]).await;
-    let settings = audio_proxy.watch2().await.expect("watch completed");
+    let settings = audio_proxy.watch().await.expect("watch completed");
 
     // Changing the background volume should not affect media volume.
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
@@ -235,7 +235,7 @@ async fn test_volume_rounding() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let settings = audio_proxy.watch2().await.expect("watch completed");
+    let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
         settings.clone(),
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
@@ -251,7 +251,7 @@ async fn test_volume_rounding() {
     )
     .await;
 
-    let settings = audio_proxy.watch2().await.expect("watch completed");
+    let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
 
     assert_eq!(
@@ -281,7 +281,7 @@ async fn test_audio_input() {
         MediaButtonsEvent { volume: Some(1), mic_mute: Some(true), pause: Some(false) };
     fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
 
-    let updated_settings = audio_proxy.watch2().await.expect("watch completed");
+    let updated_settings = audio_proxy.watch().await.expect("watch completed");
 
     let input = updated_settings.input.expect("Should have input settings");
     let mic_mute = input.muted.expect("Should have mic mute value");
@@ -348,7 +348,7 @@ async fn test_bringup_without_audio_core() {
     // At this point we should not crash.
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let settings = audio_proxy.watch2().await.expect("watch completed");
+    let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
         settings.clone(),
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
@@ -421,9 +421,9 @@ async fn test_persisted_values_applied_at_start() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let settings = audio_proxy.watch2().await.expect("watch completed");
+    let settings = audio_proxy.watch().await.expect("watch completed");
 
-    // Check that the stored values were returned from watch2() and applied to the audio core
+    // Check that the stored values were returned from watch() and applied to the audio core
     // service.
     for stream in test_audio_info.streams.iter() {
         verify_audio_stream(settings.clone(), AudioStreamSettings::from(*stream));
@@ -440,9 +440,9 @@ async fn test_persisted_values_applied_at_start() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_channel_failure_watch2() {
+async fn test_channel_failure_watch() {
     let audio_proxy = create_audio_test_env_with_failures(InMemoryStorageFactory::create()).await;
-    let result = audio_proxy.watch2().await;
+    let result = audio_proxy.watch().await;
     assert!(result.is_err());
     assert_eq!(
         ClientChannelClosed(Status::INTERNAL).to_string(),

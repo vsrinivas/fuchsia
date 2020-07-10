@@ -1,19 +1,25 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use fidl_fuchsia_settings::{IntlMarker, IntlRequest, IntlSettings, IntlWatch2Responder};
+use fidl_fuchsia_settings::{
+    IntlMarker, IntlRequest, IntlSettings, IntlWatch2Responder, IntlWatchResponder,
+};
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
-use crate::fidl_process_2;
+use crate::fidl_hanging_get_responder_no_imports;
+use crate::fidl_process;
 use crate::fidl_processor::RequestContext;
 use crate::request_respond;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
-fidl_hanging_get_responder!(IntlSettings, IntlWatch2Responder, IntlMarker::DEBUG_NAME);
+fidl_hanging_get_responder!(IntlSettings, IntlWatchResponder, IntlMarker::DEBUG_NAME);
+
+// TODO(fxb/55692): Remove when clients are ported to watch.
+fidl_hanging_get_responder_no_imports!(IntlSettings, IntlWatch2Responder, IntlMarker::DEBUG_NAME);
 
 impl From<SettingResponse> for IntlSettings {
     fn from(response: SettingResponse) -> Self {
@@ -31,10 +37,18 @@ impl From<IntlSettings> for SettingRequest {
     }
 }
 
-fidl_process_2!(Intl, SettingType::Intl, process_request_2);
+fidl_process!(
+    Intl,
+    SettingType::Intl,
+    process_request,
+    SettingType::Intl,
+    IntlSettings,
+    IntlWatch2Responder,
+    process_request_2,
+);
 
-async fn process_request_2(
-    context: RequestContext<IntlSettings, IntlWatch2Responder>,
+async fn process_request(
+    context: RequestContext<IntlSettings, IntlWatchResponder>,
     req: IntlRequest,
 ) -> Result<Option<IntlRequest>, anyhow::Error> {
     // Support future expansion of FIDL
@@ -53,6 +67,23 @@ async fn process_request_2(
                 );
             });
         }
+        IntlRequest::Watch { responder } => context.watch(responder, true).await,
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
+}
+
+// TODO(fxb/55692): Remove when clients are ported to watch.
+async fn process_request_2(
+    context: RequestContext<IntlSettings, IntlWatch2Responder>,
+    req: IntlRequest,
+) -> Result<Option<IntlRequest>, anyhow::Error> {
+    // Support future expansion of FIDL
+    #[allow(unreachable_patterns)]
+    match req {
         IntlRequest::Watch2 { responder } => context.watch(responder, true).await,
         _ => {
             return Ok(Some(req));

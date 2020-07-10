@@ -39,7 +39,7 @@ async fn test_no_configuration_provided() {
     // No ServiceConfiguration provided, we should be able to connect to the service and make a watch call without issue.
     let service = env.connect_to_service::<AccessibilityMarker>().expect("Connected to service");
 
-    service.watch2().await.expect("watch completed");
+    service.watch().await.expect("watch completed");
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -66,5 +66,5 @@ async fn test_default_configuration_provided() {
     let privacy_service = env.connect_to_service::<PrivacyMarker>().unwrap();
 
     // Any calls to the privacy service should fail since the service isn't included in the configuration.
-    privacy_service.watch2().await.expect_err("watch completed");
+    privacy_service.watch().await.expect_err("watch completed");
 }

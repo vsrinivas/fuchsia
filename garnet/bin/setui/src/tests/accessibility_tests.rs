@@ -89,7 +89,7 @@ async fn test_accessibility_set_all() {
     let accessibility_proxy = create_test_accessibility_env(factory).await;
 
     // Fetch the initial value.
-    let settings = accessibility_proxy.watch2().await.expect("watch completed");
+    let settings = accessibility_proxy.watch().await.expect("watch completed");
     assert_eq!(settings, initial_settings);
 
     // Set the various settings values.
@@ -105,7 +105,7 @@ async fn test_accessibility_set_all() {
     assert_eq!(expected_info, retrieved_struct);
 
     // Verify the value we set is returned when watching.
-    let settings = accessibility_proxy.watch2().await.expect("watch completed");
+    let settings = accessibility_proxy.watch().await.expect("watch completed");
     assert_eq!(settings, expected_settings);
 }
 
@@ -181,15 +181,15 @@ async fn test_accessibility_set_captions() {
     assert_eq!(expected_info, retrieved_struct);
 
     // Verify the value we set is returned when watching.
-    let settings = accessibility_proxy.watch2().await.expect("watch completed");
+    let settings = accessibility_proxy.watch().await.expect("watch completed");
     assert_eq!(settings, expected_settings);
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_channel_failure_watch2() {
+async fn test_channel_failure_watch() {
     let accessibility_proxy =
         create_a11y_test_env_with_failures(InMemoryStorageFactory::create()).await;
-    let result = accessibility_proxy.watch2().await;
+    let result = accessibility_proxy.watch().await;
     assert!(result.is_err());
     assert_eq!(
         ClientChannelClosed(Status::INTERNAL).to_string(),
