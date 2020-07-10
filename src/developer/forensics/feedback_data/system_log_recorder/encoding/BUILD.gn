@@ -55,7 +55,7 @@ source_set("lz4_encoder") {
     ":encoder",
     ":lz4_utils",
     ":ring_buffer",
-    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
   ]
 }
 
