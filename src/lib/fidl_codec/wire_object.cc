@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <vector>
 
 #include <rapidjson/stringbuffer.h>
@@ -81,8 +82,10 @@ uint8_t IntegerValue::GetUint8Value() const {
 }
 
 int IntegerValue::DisplaySize(const Type* for_type, int /*remaining_size*/) const {
-  bool sign_size = negative_ ? 1 : 0;
-  return std::to_string(absolute_value_).size() + sign_size;
+  std::stringstream dummyStream;
+  auto dummyPrinter = PrettyPrinter(dummyStream, WithoutColors, true, "", INT_MAX, false);
+  for_type->PrettyPrint(this, dummyPrinter);
+  return dummyStream.str().length();
 }
 
 void IntegerValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
