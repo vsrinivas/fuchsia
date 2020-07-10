@@ -19,5 +19,5 @@ struct FailedOutcome {
 
 [Discoverable]
 protocol TestOutcomeReport {
-    Report(TestOutcome outcome);
+    Report(TestOutcome outcome) -> ();
 };

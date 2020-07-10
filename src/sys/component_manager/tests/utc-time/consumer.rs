@@ -41,6 +41,7 @@ async fn main() -> Result<(), Error> {
         Ok(backstop_nanos) => {
             test_proxy
                 .report(&mut ftest::TestOutcome::Success(ftest::SuccessOutcome { backstop_nanos }))
+                .await
                 .expect("failed to report success");
             Ok(())
         }
@@ -49,6 +50,7 @@ async fn main() -> Result<(), Error> {
                 .report(&mut ftest::TestOutcome::Failed(ftest::FailedOutcome {
                     message: e.to_string(),
                 }))
+                .await
                 .expect("failed to report failure");
             Err(e)
         }

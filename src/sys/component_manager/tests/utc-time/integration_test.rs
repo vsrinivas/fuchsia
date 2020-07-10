@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
 use fidl::endpoints::ServerEnd;
 use fidl_componentmanager_test as ftest;
@@ -112,7 +112,8 @@ impl Injector for TestOutcomeCapability {
         sender
             .send(match request_stream.next().await {
                 Some(outcome) => outcome.map_err(|e| e.into()).and_then(
-                    |ftest::TestOutcomeReportRequest::Report { outcome, control_handle: _ }| {
+                    |ftest::TestOutcomeReportRequest::Report { outcome, responder }| {
+                        responder.send().context("failed to send response to client")?;
                         match outcome {
                             ftest::TestOutcome::Success(ftest::SuccessOutcome {
                                 backstop_nanos,
