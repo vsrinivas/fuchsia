@@ -23,8 +23,8 @@
 namespace nand {
 
 class NandPartDevice;
-using DeviceType =
-    ddk::Device<NandPartDevice, ddk::GetSizable, ddk::GetProtocolable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<NandPartDevice, ddk::GetSizable, ddk::GetProtocolable,
+                               ddk::UnbindableNew, ddk::Initializable>;
 
 class NandPartDevice : public DeviceType,
                        public ddk::NandProtocol<NandPartDevice, ddk::base_protocol>,
@@ -42,6 +42,7 @@ class NandPartDevice : public DeviceType,
     return device_get_size(parent());
   }
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* protocol);
+  void DdkInit(ddk::InitTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
@@ -84,6 +85,7 @@ class NandPartDevice : public DeviceType,
   fbl::RefPtr<BadBlock> bad_block_;
   // Cached list of bad blocks for this partition. Lazily instantiated.
   fbl::Array<uint32_t> bad_block_list_;
+  uint32_t extra_partition_copy_count_;
 };
 
 }  // namespace nand
