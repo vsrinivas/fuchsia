@@ -10,6 +10,7 @@ import 'package:sl4f/trace_processing.dart' as trace_processing;
 final _log = Logger('encode-camera');
 const _timeout = Duration(seconds: 60);
 const List<String> _defaultCategories = [
+  'camera',
   'memory_monitor',
   'media',
 ];
@@ -74,6 +75,7 @@ void main() {
 void _processEncodeTrace(trace_processing.Model traceModel, int duration) {
   const String category = 'media';
   const String packetSentEventName = 'Media:PacketSent';
+  const String packetRecvEventName = 'Media:PacketReceived';
   // verify an appropriate number of frames were encoded
   // encode_camera selects a camera configuration that produces 30 fps
   // TODO(55279) Re-enable more exact frame count checking when it's determined
@@ -81,6 +83,7 @@ void _processEncodeTrace(trace_processing.Model traceModel, int duration) {
   //const int frameRate = 30;
 
   int packetSentCount = 0;
+  int packetRecvCount = 0;
 
   for (final p in traceModel.processes) {
     for (final t in p.threads) {
@@ -88,10 +91,13 @@ void _processEncodeTrace(trace_processing.Model traceModel, int duration) {
         if (e.category == category && e.name == packetSentEventName) {
           packetSentCount++;
         }
+        if (e.category == category && e.name == packetRecvEventName) {
+          packetRecvCount++;
+        }
       }
     }
   }
-  _log.info('encoder packets sent $packetSentCount');
+  _log.info('encoder packets sent $packetSentCount recv $packetRecvCount');
 
   expect(packetSentCount, greaterThan(0));
 }
