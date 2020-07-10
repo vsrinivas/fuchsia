@@ -444,13 +444,21 @@ impl InspectData {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::shutdown_request::RebootReason;
     use crate::test::mock_node::{create_dummy_node, create_mock_node, MessageMatcher};
     use crate::{msg_eq, msg_ok_return};
     use inspect::assert_inspect_tree;
     use matches::assert_matches;
+
+    pub fn setup_test_node(shutdown_function: impl Fn() + 'static) -> Rc<SystemShutdownHandler> {
+        SystemShutdownHandlerBuilder::new(create_dummy_node())
+            .with_force_shutdown_function(Box::new(shutdown_function))
+            .with_component_mgr_proxy(setup_fake_component_mgr_service(|| {}))
+            .build()
+            .unwrap()
+    }
 
     /// Create a fake SystemController service proxy that responds to Shutdown requests by calling
     /// the provided closure.

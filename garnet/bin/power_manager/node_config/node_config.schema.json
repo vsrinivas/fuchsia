@@ -156,21 +156,6 @@
       {
         "properties": {
           "type": {
-            "pattern": "SystemPowerHandler"
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "name"
-        ]
-      },
-      {
-        "properties": {
-          "type": {
             "pattern": "SystemShutdownHandler"
           },
           "name": {

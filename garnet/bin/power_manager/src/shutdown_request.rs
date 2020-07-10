@@ -21,23 +21,6 @@ pub enum ShutdownRequest {
     Mexec,
 }
 
-impl ShutdownRequest {
-    /// Gets the fuchsia.hardware.power.statecontrol flag constant that this ShutdownRequest maps
-    /// to.
-    // TODO(pshickel): We only need this to support the deprecated shutdown path that is being used
-    // by the SystemPowerManager node. We can safely remove this after we're using the new shutdown
-    // path.
-    pub fn to_driver_manager_flag(&self) -> u32 {
-        match *self {
-            ShutdownRequest::PowerOff => fdevicemgr::SUSPEND_FLAG_POWEROFF,
-            ShutdownRequest::Reboot(_) => fdevicemgr::SUSPEND_FLAG_REBOOT,
-            ShutdownRequest::RebootBootloader => fdevicemgr::SUSPEND_FLAG_REBOOT_BOOTLOADER,
-            ShutdownRequest::RebootRecovery => fdevicemgr::SUSPEND_FLAG_REBOOT_RECOVERY,
-            ShutdownRequest::Mexec => fdevicemgr::SUSPEND_FLAG_MEXEC,
-        }
-    }
-}
-
 // TODO(fxbug.dev/53962): This function only exists to help convert incoming old-style Suspend
 // requests (which are deprecated) into the new style shutdown-type specific APIs. We can remove
 // this after all clients are using the new APIs and the old-style Suspend API has been removed.
