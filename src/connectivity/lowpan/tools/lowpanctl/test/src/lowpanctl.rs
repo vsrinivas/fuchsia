@@ -30,6 +30,14 @@ pub async fn test_lowpanctl_status() {
     test_lowpanctl_command(vec!["status".to_string()])
         .await
         .expect("Call to `lowpanctl status` failed.");
+
+    test_lowpanctl_command(vec!["status".to_string(), "--format".to_string(), "csv".to_string()])
+        .await
+        .expect("Call to `lowpanctl status --format csv` failed.");
+
+    test_lowpanctl_command(vec!["status".to_string(), "--format".to_string(), "std".to_string()])
+        .await
+        .expect("Call to `lowpanctl status --format std` failed.");
 }
 
 pub async fn test_lowpanctl_leave() {
