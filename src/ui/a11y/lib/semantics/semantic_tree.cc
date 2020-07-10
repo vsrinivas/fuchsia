@@ -8,7 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <cstdint>
-#include <queue>
+#include <stack>
 #include <string>
 #include <unordered_set>
 
@@ -171,7 +171,7 @@ const Node* SemanticTree::GetNextNode(const uint32_t node_id) const {
     return nullptr;
   }
 
-  std::queue<uint32_t> nodes_to_visit;
+  std::stack<uint32_t> nodes_to_visit;
 
   bool found_node = false;
 
@@ -179,7 +179,7 @@ const Node* SemanticTree::GetNextNode(const uint32_t node_id) const {
   nodes_to_visit.push(kRootNodeId);
 
   while (!nodes_to_visit.empty()) {
-    auto current_node_id = nodes_to_visit.front();
+    auto current_node_id = nodes_to_visit.top();
     nodes_to_visit.pop();
 
     FX_DCHECK(nodes_.find(current_node_id) != nodes_.end())
@@ -195,11 +195,14 @@ const Node* SemanticTree::GetNextNode(const uint32_t node_id) const {
       found_node = true;
     }
 
-    if (!current_node->has_child_ids()) {
+    if (!current_node->has_child_ids() || current_node->child_ids().empty()) {
       continue;
     }
 
-    for (const auto child_id : current_node->child_ids()) {
+    // Add child_ids in reverse so that we visit left nodes first.
+    for (auto reverse_iterator = current_node->child_ids().rbegin();
+         reverse_iterator != current_node->child_ids().rend(); ++reverse_iterator) {
+      const auto child_id = *reverse_iterator;
       nodes_to_visit.push(child_id);
     }
   }
@@ -212,7 +215,7 @@ const Node* SemanticTree::GetPreviousNode(const uint32_t node_id) const {
     return nullptr;
   }
 
-  std::queue<uint32_t> nodes_to_visit;
+  std::stack<uint32_t> nodes_to_visit;
 
   // Start traversal from the root node.
   nodes_to_visit.push(kRootNodeId);
@@ -220,7 +223,7 @@ const Node* SemanticTree::GetPreviousNode(const uint32_t node_id) const {
   const Node* previous_describable_node = nullptr;
 
   while (!nodes_to_visit.empty()) {
-    auto current_node_id = nodes_to_visit.front();
+    auto current_node_id = nodes_to_visit.top();
     nodes_to_visit.pop();
 
     if (current_node_id == node_id) {
@@ -236,11 +239,14 @@ const Node* SemanticTree::GetPreviousNode(const uint32_t node_id) const {
       previous_describable_node = current_node;
     }
 
-    if (!current_node->has_child_ids()) {
+    if (!current_node->has_child_ids() || current_node->child_ids().empty()) {
       continue;
     }
 
-    for (const auto child_id : current_node->child_ids()) {
+    // Add child_ids in reverse so that we visit left nodes first.
+    for (auto reverse_iterator = current_node->child_ids().rbegin();
+         reverse_iterator != current_node->child_ids().rend(); ++reverse_iterator) {
+      const auto child_id = *reverse_iterator;
       nodes_to_visit.push(child_id);
     }
   }

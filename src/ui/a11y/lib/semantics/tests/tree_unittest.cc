@@ -34,6 +34,7 @@ using fuchsia::accessibility::semantics::Role;
 // Valid tree paths.
 const std::string kSemanticTreeSingleNodePath = "/pkg/data/semantic_tree_single_node.json";
 const std::string kSemanticTreeOddNodesPath = "/pkg/data/semantic_tree_odd_nodes.json";
+const std::string kSemanticTreeEvenNodesPath = "/pkg/data/semantic_tree_even_nodes.json";
 // Invalid tree paths.
 const std::string kSemanticTreeWithCyclePath = "/pkg/data/cyclic_semantic_tree.json";
 const std::string kSemanticTreeWithMissingChildrenPath =
@@ -333,37 +334,42 @@ TEST_F(SemanticTreeTest, PerformHitTestingRequested) {
 }
 
 TEST_F(SemanticTreeTest, NextNodeExists) {
-  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  // Tests the case where semantic tree is not balanced, and GetNextNode is called on a node which
+  // is the leaf node, without any sibling. This will fail in case of a level order traversal.
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeEvenNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
-  auto next_node = tree_.GetNextNode(3u);
-  EXPECT_NE(next_node, nullptr);
+  auto next_node = tree_.GetNextNode(7u);
+  ASSERT_NE(next_node, nullptr);
   EXPECT_EQ(next_node->node_id(), 4u);
 }
 
 TEST_F(SemanticTreeTest, GetNextNodeSkipUndescribableNodes) {
+  // Test case where intermediate nodes which are not describable are skipped. This will fail in
+  // case of level order traversal.
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
   updates.clear();
   fuchsia::accessibility::semantics::Node undescribable_node;
-  undescribable_node.set_node_id(4u);
+  undescribable_node.set_node_id(5u);
   undescribable_node.set_child_ids({});
   undescribable_node.set_attributes(fuchsia::accessibility::semantics::Attributes());
   updates.emplace_back(std::move(undescribable_node));  // Removed label.
   fuchsia::accessibility::semantics::Node describable_node;
-  describable_node.set_node_id(5u);
+  describable_node.set_node_id(6u);
   describable_node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
   describable_node.set_child_ids({});
   updates.emplace_back(std::move(describable_node));
   EXPECT_TRUE(tree_.Update(std::move(updates)));
-  auto next_node = tree_.GetNextNode(3u);
-  EXPECT_NE(next_node, nullptr);
-  EXPECT_EQ(next_node->node_id(), 5u);
+  auto next_node = tree_.GetNextNode(2u);
+  ASSERT_NE(next_node, nullptr);
+  EXPECT_EQ(next_node->node_id(), 6u);
 }
 
 TEST_F(SemanticTreeTest, NoNextNode) {
-  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  // Tests case where next node doesn't exist.This will fail in case of level order traversal.
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeEvenNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
   auto next_node = tree_.GetNextNode(6u);
@@ -371,6 +377,7 @@ TEST_F(SemanticTreeTest, NoNextNode) {
 }
 
 TEST_F(SemanticTreeTest, GetNextNodeForNonexistentId) {
+  // Tests case where input node doesn't exist.
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
@@ -379,15 +386,18 @@ TEST_F(SemanticTreeTest, GetNextNodeForNonexistentId) {
 }
 
 TEST_F(SemanticTreeTest, PreviousNodeExists) {
-  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  // Tests the case where semantic tree is not balanced, and GetPreviousNode is called on a non leaf
+  // which should return a leaf node. This will fail in case of a level order traversal.
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeEvenNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
-  auto next_node = tree_.GetPreviousNode(6u);
-  EXPECT_NE(next_node, nullptr);
-  EXPECT_EQ(next_node->node_id(), 5u);
+  auto next_node = tree_.GetPreviousNode(4u);
+  ASSERT_NE(next_node, nullptr);
+  EXPECT_EQ(next_node->node_id(), 7u);
 }
 
 TEST_F(SemanticTreeTest, GetPreviousNodeSkipUndescribableNodes) {
+  // Test case where intermediate nodes which are not describable are skipped.
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
@@ -395,15 +405,15 @@ TEST_F(SemanticTreeTest, GetPreviousNodeSkipUndescribableNodes) {
 
   // Create node with no label.
   fuchsia::accessibility::semantics::Node node_no_label;
-  node_no_label.set_node_id(4u);
+  node_no_label.set_node_id(5u);
   node_no_label.set_child_ids({});
   node_no_label.set_attributes(fuchsia::accessibility::semantics::Attributes());
   updates.emplace_back(std::move(node_no_label));
 
   // Create node with empty label.
   fuchsia::accessibility::semantics::Node node_empty_label;
-  node_empty_label.set_node_id(5u);
-  node_empty_label.set_child_ids({});
+  node_empty_label.set_node_id(2u);
+  node_empty_label.set_child_ids({5, 6});
   fuchsia::accessibility::semantics::Attributes attributes_empty_label;
   attributes_empty_label.set_label("");
   node_empty_label.set_attributes(std::move(attributes_empty_label));
@@ -415,12 +425,14 @@ TEST_F(SemanticTreeTest, GetPreviousNodeSkipUndescribableNodes) {
   describable_node.set_child_ids({});
   updates.emplace_back(std::move(describable_node));
   EXPECT_TRUE(tree_.Update(std::move(updates)));
+
   auto previous_node = tree_.GetPreviousNode(6u);
-  EXPECT_NE(previous_node, nullptr);
-  EXPECT_EQ(previous_node->node_id(), 3u);
+  ASSERT_NE(previous_node, nullptr);
+  EXPECT_EQ(previous_node->node_id(), 4u);
 }
 
 TEST_F(SemanticTreeTest, NoPreviousNode) {
+  // Tests case where previous node doesn't exist.
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
@@ -429,6 +441,7 @@ TEST_F(SemanticTreeTest, NoPreviousNode) {
 }
 
 TEST_F(SemanticTreeTest, GetPreviousNodeForNonexistentId) {
+  // Tests case where input node doesn't exist.
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
