@@ -182,7 +182,7 @@ fi
 
 declare FIDL_LINT_CMD=( "${FIDL_LINT}" )
 # TODO(fxb/TC-559): add command and args for Dart linter
-declare DART_LINT_CMD=() # "${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_PLATFORM}/bin/dart<cmd?> <options?>"
+declare DART_LINT_CMD=() # "${FUCHSIA_DIR}/prebuilt/third_party/dart/${HOST_PLATFORM}/bin/dart<cmd?> <options?>"
 # TODO(fxb/TC-542): add command and args for Go linter
 declare GO_LINT_CMD=() # "${PREBUILT_GO_DIR}/bin/go<cmd?> <options?>"
 # TODO(fxb/TC-543): add command and args for JSON linter
