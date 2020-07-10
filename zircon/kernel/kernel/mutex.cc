@@ -119,18 +119,14 @@ Mutex::~Mutex() {
   val_.store(STATE_FREE, ktl::memory_order_relaxed);
 }
 
-/**
- * @brief  Acquire the mutex
- */
 void Mutex::Acquire(zx_duration_t spin_max_duration) {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
-  Thread* const ct = Thread::Current::Get();
-  const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(ct);
+  Thread* const current_thread = Thread::Current::Get();
+  const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(current_thread);
 
-  // Fastest path: The mutex is unlocked and uncontested. Try to acquire it
-  // immediately.
+  // Fast path: The mutex is unlocked and uncontested. Try to acquire it immediately.
   uintptr_t old_mutex_state = STATE_FREE;
   if (likely(val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
                                           ktl::memory_order_seq_cst, ktl::memory_order_seq_cst))) {
@@ -142,14 +138,22 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
     return;
   }
 
-  // Faster path: Spin on the mutex until it is either released, contested, or
+  AcquireContendedMutex(spin_max_duration, current_thread);
+}
+
+__NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
+                                              Thread* current_thread) {
+  const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(current_thread);
+
+  // Spin on the mutex until it is either released, contested, or
   // the max spin time is reached.
+  //
   // TODO(ZX-4873): Optimize cache pressure of spinners and default spin max.
   const affine::Ratio time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
   const zx_ticks_t spin_until_ticks =
       affine::utils::ClampAdd(current_ticks(), time_to_ticks.Scale(spin_max_duration));
   do {
-    old_mutex_state = STATE_FREE;
+    uintptr_t old_mutex_state = STATE_FREE;
     if (likely(val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
                                             ktl::memory_order_seq_cst,
                                             ktl::memory_order_seq_cst))) {
@@ -170,8 +174,8 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
   } while (current_ticks() < spin_until_ticks);
 
   if ((LK_DEBUGLEVEL > 0) && unlikely(this->IsHeld())) {
-    panic("Mutex::Acquire: thread %p (%s) tried to acquire mutex %p it already owns.\n", ct,
-          ct->name(), this);
+    panic("Mutex::Acquire: thread %p (%s) tried to acquire mutex %p it already owns.\n",
+          current_thread, current_thread->name(), this);
   }
 
   {
@@ -181,7 +185,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
     // Check if the queued flag is currently set. The contested flag can only be changed
     // whilst the thread lock is held so we know we aren't racing with anyone here. This
     // is just an optimization and allows us to avoid redundantly doing the atomic OR.
-    old_mutex_state = val();
+    uintptr_t old_mutex_state = val();
 
     if (unlikely(!(old_mutex_state & STATE_FLAG_CONTESTED))) {
       // Set the queued flag to indicate that we're blocking.
@@ -211,17 +215,17 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
       // mutexes are not interruptible and cannot time out, so it
       // is illegal to return with any error state.
       panic("Mutex::Acquire: wait queue block returns with error %d m %p, thr %p, sp %p\n", ret,
-            this, ct, __GET_FRAME());
+            this, current_thread, __GET_FRAME());
     }
 
     // someone must have woken us up, we should own the mutex now
-    DEBUG_ASSERT(ct == holder());
+    DEBUG_ASSERT(current_thread == holder());
   }
 }
 
 // Shared implementation of release
 template <Mutex::ThreadLockState TLS>
-void Mutex::ReleaseInternal(const bool allow_reschedule) {
+inline void Mutex::ReleaseInternal(const bool allow_reschedule) {
   Thread* ct = Thread::Current::Get();
 
   // Try the fast path.  Assume that we are locked, but uncontested.
@@ -234,6 +238,15 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
     KTracer{}.KernelMutexUncontestedRelease(this);
     return;
   }
+
+  // Otherwise, the mutex is contended. Drop into the slow path.
+  ReleaseContendedMutex<TLS>(allow_reschedule, old_mutex_state);
+}
+
+template <Mutex::ThreadLockState TLS>
+__NO_INLINE void Mutex::ReleaseContendedMutex(const bool allow_reschedule,
+                                              uintptr_t old_mutex_state) {
+  Thread* ct = Thread::Current::Get();
 
   // Sanity checks.  The mutex should have been either locked by us and
   // uncontested, or locked by us and contested.  Anything else is an internal

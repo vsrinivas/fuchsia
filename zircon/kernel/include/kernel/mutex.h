@@ -38,11 +38,14 @@ class TA_CAP("mutex") Mutex {
   // and describe how to optimize this value.
   static constexpr zx_duration_t SPIN_MAX_DURATION = ZX_USEC(150);
 
+  // Acquire the mutex.
   void Acquire(zx_duration_t spin_max_duration = SPIN_MAX_DURATION) TA_ACQ() TA_EXCL(thread_lock);
+
+  // Release the mutex. Must be held by the current thread.
   void Release() TA_REL() TA_EXCL(thread_lock);
 
   // Special version of Release which operates with the thread lock held
-  void ReleaseThreadLocked(const bool allow_reschedule) TA_REL() TA_REQ(thread_lock);
+  void ReleaseThreadLocked(bool allow_reschedule) TA_REL() TA_REQ(thread_lock);
 
   // does the current thread hold the mutex?
   bool IsHeld() const { return (holder() == Thread::Current::Get()); }
@@ -56,12 +59,34 @@ class TA_CAP("mutex") Mutex {
  private:
   enum class ThreadLockState : bool { NotHeld = false, Held = true };
 
+  // Templated implementation for |Release| and |ReleaseThreadLocked|.
+  template <ThreadLockState TLS>
+  void ReleaseInternal(bool allow_reschedule) TA_REL() __TA_NO_THREAD_SAFETY_ANALYSIS;
+
+  // Acquire a lock held by another thread.
+  //
+  // This is a slowpath taken by |Acquire| if the mutex is found to already be held
+  // by another thread.
+  //
+  // This function is deliberately moved out of line from |Acquire| to keep the stack
+  // set up, tear down in the |Acquire| fastpath small.
+  void AcquireContendedMutex(zx_duration_t spin_max_duration, Thread* current_thread) TA_ACQ()
+      TA_EXCL(thread_lock);
+
+  // Release a lock contended by another thread.
+  //
+  // This is a slowpath taken by |Release| (via |ReleaseInternal|) when releasing a
+  // lock that is being waited for by another thread.
+  //
+  // This function is deliberately moved out of line from |Release| to keep the stack
+  // set up, tear down in the |Release| fastpath small.
+  template <Mutex::ThreadLockState TLS>
+  void ReleaseContendedMutex(bool allow_rescheduled,
+                             uintptr_t old_mutex_state) __TA_NO_THREAD_SAFETY_ANALYSIS;
+
   static constexpr uint32_t MAGIC = 0x6D757478;  // 'mutx'
   static constexpr uintptr_t STATE_FREE = 0u;
   static constexpr uintptr_t STATE_FLAG_CONTESTED = 1u;
-
-  template <ThreadLockState TLS>
-  void ReleaseInternal(const bool allow_reschedule) TA_REL() __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   // Accessors to extract the holder pointer from the val member
   uintptr_t val() const { return val_.load(ktl::memory_order_relaxed); }
