@@ -47,10 +47,6 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
-	if err := r.GenKeys(); err != nil {
-		return err
-	}
-
 	if err := r.Repo.AddTargets([]string{}, json.RawMessage{}); err != nil {
 		return err
 	}

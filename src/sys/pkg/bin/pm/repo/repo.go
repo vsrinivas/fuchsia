@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/merkle"
@@ -69,8 +70,17 @@ func passphrase(role string, confirm bool) ([]byte, error) { return []byte{}, ni
 // New initializes a new Repo structure that may read/write repository data at
 // the given path.
 func New(path string) (*Repo, error) {
-	if info, e := os.Stat(path); e != nil || !info.IsDir() {
-		return nil, os.ErrInvalid
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(path, 0755)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("repository directory %q: %w", path, err)
+		}
+	}
+	if info != nil && !info.IsDir() {
+		return nil, fmt.Errorf("repository path %q: %w", path, syscall.ENOTDIR)
 	}
 
 	repo, err := tuf.NewRepo(tuf.FileSystemStore(path, passphrase), "sha512")
@@ -128,7 +138,12 @@ func (r *Repo) OptionallyInitAtLocation(createIfNotExists bool) error {
 		return err
 	}
 
-	return nil
+	rk, err := r.Repo.RootKeys()
+	if err != nil || len(rk) == 0 {
+		err = r.GenKeys()
+	}
+
+	return err
 }
 
 // GenKeys will generate a full suite of the necessary keys for signing a

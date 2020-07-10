@@ -127,11 +127,6 @@ func Run(cfg *build.Config, args []string) error {
 			return err
 		}
 	} else {
-		// If the repository was just initialized then we have more init to do
-		if err := repo.GenKeys(); err != nil {
-			return err
-		}
-
 		if err := repo.AddTargets([]string{}, json.RawMessage{}); err != nil {
 			return err
 		}

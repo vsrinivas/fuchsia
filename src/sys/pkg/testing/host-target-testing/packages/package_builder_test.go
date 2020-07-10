@@ -30,9 +30,6 @@ func createTestPackage(dir string) (*Repository, string, error) {
 	if err = pmRepo.Init(); err != nil {
 		return nil, "", fmt.Errorf("failed to init repo. %w", err)
 	}
-	if err = pmRepo.GenKeys(); err != nil {
-		return nil, "", fmt.Errorf("failed to generate keys for repo. %w", err)
-	}
 
 	// Create a config.
 	config := build.TestConfig()

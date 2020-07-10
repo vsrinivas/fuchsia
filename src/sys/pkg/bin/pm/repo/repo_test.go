@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,6 +17,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -43,11 +45,14 @@ type targetsFile struct {
 var roleJsons = []string{"root.json", "timestamp.json", "targets.json", "snapshot.json"}
 var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
-func TestInitRepoWithCreate(t *testing.T) {
+func TestInitRepoWithCreate_no_directory(t *testing.T) {
 	repoDir, err := ioutil.TempDir("", "publish-test-repo")
 	if err != nil {
 		t.Fatalf("Couldn't create test repo directory.")
 	}
+	// remove the repository directory that tempdir just created, as we want to
+	// check that a new one is created.
+	os.RemoveAll(repoDir)
 	defer os.RemoveAll(repoDir)
 
 	r, err := New(repoDir)
@@ -57,7 +62,28 @@ func TestInitRepoWithCreate(t *testing.T) {
 	if err := r.OptionallyInitAtLocation(true); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.GenKeys(); err != nil {
+
+	for _, rolejson := range roleJsons {
+		path := filepath.Join(repoDir, "keys", rolejson)
+		if _, err := os.Stat(path); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+func TestInitRepoWithCreate_existing_directory(t *testing.T) {
+	repoDir, err := ioutil.TempDir("", "publish-test-repo")
+	if err != nil {
+		t.Fatalf("Couldn't create test repo directory.")
+	}
+	// The tempdir is not removed, so the repo directory already exists but is
+	// empty.
+	defer os.RemoveAll(repoDir)
+
+	r, err := New(repoDir)
+	if err != nil {
+		t.Fatalf("Repo new returned error %v", err)
+	}
+	if err := r.OptionallyInitAtLocation(true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -66,6 +92,21 @@ func TestInitRepoWithCreate(t *testing.T) {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+func TestInitRepoWithCreate_file_at_target_path(t *testing.T) {
+	repoPath, err := ioutil.TempFile("", "publish-test-repo")
+	if err != nil {
+		t.Fatalf("Couldn't create test repo file.")
+	}
+	defer os.RemoveAll(repoPath.Name())
+
+	_, err = New(repoPath.Name())
+	if err == nil {
+		t.Fatal("expected error, did not get one")
+	}
+	if !errors.Is(err, syscall.ENOTDIR) {
+		t.Fatalf("unexpected error: %#v", err)
 	}
 }
 
@@ -107,9 +148,6 @@ func TestAddPackage(t *testing.T) {
 		t.Fatalf("Repo init returned error %v", err)
 	}
 	if err := r.Init(); err != nil {
-		t.Fatal(err)
-	}
-	if err := r.GenKeys(); err != nil {
 		t.Fatal(err)
 	}
 	for _, rolejson := range roleJsons {
@@ -356,9 +394,6 @@ func TestLoadExistingRepo(t *testing.T) {
 	}
 	if err := r.Init(); err != nil {
 		t.Fatalf("Init: failed to init repo: %v", err)
-	}
-	if err := r.GenKeys(); err != nil {
-		t.Fatalf("GenKeys: failed to generate role keys: %v", err)
 	}
 
 	if err := r.AddTargets([]string{}, json.RawMessage{}); err != nil {

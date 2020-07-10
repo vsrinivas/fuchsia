@@ -97,10 +97,6 @@ func TestServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := repo.GenKeys(); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := repo.AddTargets([]string{}, json.RawMessage{}); err != nil {
 		t.Fatal(err)
 	}
@@ -310,10 +306,6 @@ func TestServeAuto(t *testing.T) {
 	}
 
 	if err := repo.Init(); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := repo.GenKeys(); err != nil {
 		t.Fatal(err)
 	}
 
