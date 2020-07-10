@@ -21,6 +21,7 @@ if (host_toolchain == current_toolchain) {
     ]
 
     test_deps = [
+      "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:matches",
       "//third_party/rust_crates:tempfile",
     ]

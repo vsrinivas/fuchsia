@@ -38,18 +38,23 @@ pub fn filename_to_string(filename: impl AsRef<OsStr>) -> io::Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_util::lock_test_environment;
     use std::env;
     use std::os::unix;
-    use tempfile::tempdir;
 
     #[test]
     fn get_fuchsia_root_resolves_symlinks() {
-        let temp_dir = tempdir().expect("internal error: failed to create temp dir");
-        let subdir_path = temp_dir.path().join("subdir");
-        let link_path = temp_dir.path().join("symlink");
+        // Create a test environment and lock it to prevent races between tests
+        // that modify the environment.
+        let test_env = lock_test_environment();
+
+        let subdir_path = test_env.path().join("subdir");
+        let link_path = test_env.path().join("symlink");
         let _subdir =
             std::fs::File::create(&subdir_path).expect("internal error: failed to create sub dir");
         let _link = unix::fs::symlink(&subdir_path, &link_path);
+
+        // Set FUCHSIA_DIR to a symlink.
         env::set_var("FUCHSIA_DIR", link_path);
 
         let fuchsia_root = get_fuchsia_root();

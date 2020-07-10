@@ -5,6 +5,9 @@
 mod template_helpers;
 mod util;
 
+#[cfg(test)]
+mod test_util;
+
 use anyhow::{anyhow, bail, Context};
 use chrono::{Datelike, Utc};
 use handlebars::Handlebars;
@@ -539,18 +542,19 @@ impl FileReader for StdFs {
 mod tests {
     use super::*;
     use matches::assert_matches;
-    use std::env;
-    use tempfile::tempdir;
+    use test_util::lock_test_environment;
 
     #[test]
     fn project_path_parsed() {
+        // Create a test environment and lock it to prevent races between tests
+        // that modify the environment.
+        let test_env = lock_test_environment();
+
         // Create a dir structure like //foo, where FUCHSIA_DIR points to //.
-        let temp_dir = tempdir().expect("failed to create temp dir");
-        let foo_path = temp_dir.path().join("foo");
+        let foo_path = test_env.path().join("foo");
         std::fs::File::create(&foo_path).expect("failed to create foo dir");
 
-        // Test GN absolute labels (need to point to actual file, so set FUCHSIA_DIR to temp dir).
-        env::set_var("FUCHSIA_DIR", temp_dir.path());
+        // Test GN absolute labels.
         assert_eq!(
             "//foo/bar".parse::<ProjectPath>().unwrap(),
             ProjectPath { project_parent: foo_path.clone(), project_name: "bar".to_string() }
@@ -558,61 +562,43 @@ mod tests {
         assert_eq!(
             "//bar".parse::<ProjectPath>().unwrap(),
             ProjectPath {
-                project_parent: temp_dir.path().to_path_buf(),
+                project_parent: test_env.path().to_path_buf(),
                 project_name: "bar".to_string()
             }
         );
 
-        // Test absolute paths (need to point to actual files, so use the temp dir).
+        // Test absolute paths.
         assert_eq!(
             foo_path.join("bar").display().to_string().parse::<ProjectPath>().unwrap(),
             ProjectPath { project_parent: foo_path.clone(), project_name: "bar".to_string() }
         );
         assert_eq!(
-            temp_dir.path().join("bar").display().to_string().parse::<ProjectPath>().unwrap(),
+            test_env.path().join("bar").display().to_string().parse::<ProjectPath>().unwrap(),
             ProjectPath {
-                project_parent: temp_dir.path().to_path_buf(),
+                project_parent: test_env.path().to_path_buf(),
                 project_name: "bar".to_string()
             }
         );
 
-        // Test relative paths (need to point to actual files, so change current dir to temp dir).
-        with_current_dir(temp_dir.path(), || {
-            assert_eq!(
-                "foo/bar".parse::<ProjectPath>().unwrap(),
-                ProjectPath { project_parent: foo_path.clone(), project_name: "bar".to_string() }
-            );
-            assert_eq!(
-                "bar".parse::<ProjectPath>().unwrap(),
-                ProjectPath {
-                    project_parent: temp_dir.path().to_path_buf(),
-                    project_name: "bar".to_string()
-                }
-            );
-        });
-    }
-
-    /// Runs a closure with the current working directory set to `path`. When the closure finishes
-    /// executing, the previous working directory is reinstated.
-    fn with_current_dir<P, F, R>(path: P, f: F) -> R
-    where
-        P: AsRef<Path>,
-        F: FnOnce() -> R + std::panic::UnwindSafe,
-    {
-        let prev_dir = env::current_dir().expect("failed to get current dir");
-        env::set_current_dir(path).expect("failed to set current dir");
-        let result = std::panic::catch_unwind(f);
-        env::set_current_dir(prev_dir).expect("failed to restore previous current dir");
-        match result {
-            Ok(r) => r,
-            Err(err) => std::panic::resume_unwind(err),
-        }
+        // Test relative paths.
+        assert_eq!(
+            "foo/bar".parse::<ProjectPath>().unwrap(),
+            ProjectPath { project_parent: foo_path.clone(), project_name: "bar".to_string() }
+        );
+        assert_eq!(
+            "bar".parse::<ProjectPath>().unwrap(),
+            ProjectPath {
+                project_parent: test_env.path().to_path_buf(),
+                project_name: "bar".to_string()
+            }
+        );
     }
 
     #[test]
     fn project_name_is_valid() {
-        // Set FUCHSIA_DIR to something valid.
-        env::set_var("FUCHSIA_DIR", env::current_dir().expect("failed to get current dir"));
+        // Create a test environment and lock it to prevent races between tests
+        // that modify the environment.
+        let _test_env = lock_test_environment();
 
         assert_matches!("foo_bar".parse::<ProjectPath>(), Err(_));
         assert_matches!("foo.bar".parse::<ProjectPath>(), Err(_));
