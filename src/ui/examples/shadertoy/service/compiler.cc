@@ -57,30 +57,30 @@ layout(push_constant) uniform ShadertoyRendererParams {
   uniform float     iMouse[4];
   uniform float     iDate[4];
   uniform float     iSampleRate;
-} __pushed;
+} pushed;
 
 // Copy uniforms into the variables expected by Shadertoy programs.
-vec3 iResolution = vec3(__pushed.iResolution[0],
-                        __pushed.iResolution[1],
-                        __pushed.iResolution[2]);
-float iTime =      __pushed.iTime;
-float iTimeDelta = __pushed.iTimeDelta;
-int iFrame =       __pushed.iFrame;
-float iChannelTime[4] = __pushed.iChannelTime;
+vec3 iResolution = vec3(pushed.iResolution[0],
+                        pushed.iResolution[1],
+                        pushed.iResolution[2]);
+float iTime =      pushed.iTime;
+float iTimeDelta = pushed.iTimeDelta;
+int iFrame =       pushed.iFrame;
+float iChannelTime[4] = pushed.iChannelTime;
 vec3 iChannelResolution[4] =
-         vec3[](vec3(__pushed.iCR[0], __pushed.iCR[1], __pushed.iCR[2]),
-         vec3(__pushed.iCR[3], __pushed.iCR[4], __pushed.iCR[5]),
-         vec3(__pushed.iCR[6], __pushed.iCR[7], __pushed.iCR[8]),
-         vec3(__pushed.iCR[9], __pushed.iCR[10], __pushed.iCR[11]));
-vec4 iMouse = vec4(__pushed.iMouse[0],
-                   __pushed.iMouse[1],
-                   __pushed.iMouse[2],
-                   __pushed.iMouse[3]);
-vec4 iDate = vec4(__pushed.iDate[0],
-                  __pushed.iDate[1],
-                  __pushed.iDate[2],
-                  __pushed.iDate[3]);
-float iSampleRate = __pushed.iSampleRate;
+         vec3[](vec3(pushed.iCR[0], pushed.iCR[1], pushed.iCR[2]),
+         vec3(pushed.iCR[3], pushed.iCR[4], pushed.iCR[5]),
+         vec3(pushed.iCR[6], pushed.iCR[7], pushed.iCR[8]),
+         vec3(pushed.iCR[9], pushed.iCR[10], pushed.iCR[11]));
+vec4 iMouse = vec4(pushed.iMouse[0],
+                   pushed.iMouse[1],
+                   pushed.iMouse[2],
+                   pushed.iMouse[3]);
+vec4 iDate = vec4(pushed.iDate[0],
+                  pushed.iDate[1],
+                  pushed.iDate[2],
+                  pushed.iDate[3]);
+float iSampleRate = pushed.iSampleRate;
 
 // Backward compatibility?  Some Shadertoy programs use this value, but it is
 // not currently listed amongst those provided by the website.
