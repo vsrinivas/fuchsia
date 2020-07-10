@@ -503,9 +503,10 @@ pub trait IpAddress:
         Self::Version::LOOPBACK_SUBNET.contains(self)
     }
 
-    /// Is this a unicast address in the context of the given subnet?
+    /// Is this a unicast address contained in the given subnet?
     ///
-    /// `is_unicast_in_subnet` returns `true` if this address is none of:
+    /// `is_unicast_in_subnet` returns `true` if a given subnet contains this
+    /// address and the address is none of:
     /// - a multicast address
     /// - the IPv4 global broadcast address
     /// - the IPv4 subnet-specific broadcast address for the given `subnet`
@@ -1075,6 +1076,7 @@ impl IpAddress for Ipv4Addr {
                 || (*self != subnet.broadcast() && *self != subnet.network()))
             && self.is_specified()
             && !self.is_class_e()
+            && subnet.contains(self)
     }
 
     #[inline]
@@ -1182,6 +1184,14 @@ impl Ipv6Addr {
     pub fn is_site_local(&self) -> bool {
         Ipv6::SITE_LOCAL_UNICAST_SUBNET.contains(self)
     }
+
+    /// Is this address a unicast link-local address?
+    ///
+    /// Shorthand for `self.is_unicast_in_subnet(Ipv6::LINK_LOCAL_UNICAST_SUBNET)`.
+    #[inline]
+    pub fn is_unicast_linklocal(&self) -> bool {
+        self.is_unicast_in_subnet(&Ipv6::LINK_LOCAL_UNICAST_SUBNET)
+    }
 }
 
 impl sealed::Sealed for Ipv6Addr {}
@@ -1214,8 +1224,8 @@ impl IpAddress for Ipv6Addr {
     }
 
     #[inline]
-    fn is_unicast_in_subnet(&self, _subnet: &Subnet<Self>) -> bool {
-        !self.is_multicast() && self.is_specified()
+    fn is_unicast_in_subnet(&self, subnet: &Subnet<Self>) -> bool {
+        !self.is_multicast() && self.is_specified() && subnet.contains(self)
     }
 
     #[inline]
@@ -1713,6 +1723,7 @@ mod tests {
 
         // IPv6
         assert!(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network.is_linklocal());
+        assert!(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network.is_unicast_linklocal());
         let mut addr = Ipv6::MULTICAST_SUBNET.network;
         for flags in 0..=0x0F {
             // Set the scope to link-local and the flags to `flags`.
@@ -1720,6 +1731,7 @@ mod tests {
             // Test that a link-local multicast address is always considered
             // link-local regardless of which flags are set.
             assert!(addr.is_linklocal());
+            assert!(!addr.is_unicast_linklocal());
         }
 
         // Test that a non-multicast address (outside of the link-local subnet)
@@ -1799,13 +1811,18 @@ mod tests {
     #[test]
     fn test_is_unicast_in_subnet() {
         // Valid unicast in subnet
-        assert!(Ipv4Addr::new([1, 2, 3, 4])
-            .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 0, 0]), 16).unwrap()));
+        let subnet =
+            Subnet::new(Ipv4Addr::new([1, 2, 0, 0]), 16).expect("1.2.0.0/16 is a valid subnet");
+        assert!(Ipv4Addr::new([1, 2, 3, 4]).is_unicast_in_subnet(&subnet));
+        assert!(!Ipv4Addr::new([2, 2, 3, 4]).is_unicast_in_subnet(&subnet));
+
+        let subnet =
+            Subnet::new(Ipv6Addr::new([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
+                .expect("1::/64 is a valid subnet");
         assert!(Ipv6Addr::new([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
-            .is_unicast_in_subnet(
-                &Subnet::new(Ipv6Addr::new([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
-                    .unwrap()
-            ));
+            .is_unicast_in_subnet(&subnet));
+        assert!(!Ipv6Addr::new([2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+            .is_unicast_in_subnet(&subnet));
 
         // Unspecified address
         assert!(!Ipv4::UNSPECIFIED_ADDRESS
