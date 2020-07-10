@@ -216,10 +216,13 @@ void main(List<String> args) {
     final diagnostics = await inspect.snapshotAll();
     for (final inspectResult in diagnostics) {
       final label = inspectResult['moniker'];
-      final rootNode = inspectResult['payload']['root'];
-      if (rootNode == null) {
+      final payload = inspectResult['payload'];
+      if (payload == null || payload['root'] == null) {
+        log.warning(
+            'Null payload/root for $label. Metadata: ${inspectResult['metadata']}');
         continue;
       }
+      final rootNode = payload['root'];
 
       // For all nodes that have it, add health node information.
       rebootResults.addAll(record(
