@@ -72,26 +72,31 @@ test_platforms = [
     testbed = "bt_rf_chamber_nuc_phone"
     cpu = "x64"
     pool = "fuchsia.tests.connectivity"
+    device_type = "Intel NUC Kit NUC7i5DNHE"
   },
   {
     testbed = "bt_rf_chamber_nuc_nuc"
     cpu = "x64"
     pool = "fuchsia.tests.connectivity"
+    device_type = "Intel NUC Kit NUC7i5DNHE"
   },
   {
     testbed = "wifi_rf_chamber_astro"
     cpu = "arm64"
     pool = "fuchsia.tests.connectivity"
+    device_type = "Astro"
   },
   {
     testbed = "wifi_rf_chamber_fiber_astro"
     cpu = "arm64"
     pool = "fuchsia.tests.connectivity"
+    device_type = "Astro"
   },
   {
     testbed = "wifi_rf_chamber_nuc"
     cpu = "x64"
     pool = "fuchsia.tests.connectivity"
+    device_type = "Intel NUC Kit NUC7i5DNHE"
   },
 
   # Experimental/FYI. fxb/43946

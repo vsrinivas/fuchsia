@@ -20,6 +20,7 @@ specs = [
     testbed = "bt_rf_chamber_nuc_phone"
     tests = "BleFuchsiaAndroidTest GattServerSetupTest NetstackFuchsiaTest"
     timeout_minutes = 15
+    device_type = "Intel NUC Kit NUC7i5DNHE"
   },
   {
     name = "acts_bt2_test"
@@ -27,6 +28,7 @@ specs = [
     testbed = "bt_rf_chamber_nuc_nuc"
     tests = "BleFuchsiaTest FuchsiaBtMacAddressTest FuchsiaBtScanTest GattConnectionStressTest Sl4fSanityTest"
     timeout_minutes = 15
+    device_type = "Intel NUC Kit NUC7i5DNHE"
   },
   {
     name = "acts_wifi_test"
@@ -35,6 +37,7 @@ specs = [
     tests = "WlanScanTest WlanPhyComplianceABGTest WlanSecurityComplianceABGTest WlanPhyCompliance11NTest VapeInteropTest BeaconLossTest"
     timeout_minutes =
         1430  # 24 hours less 10 minutes for output processing in Dart script
+    device_type = "Intel NUC Kit NUC7i5DNHE"
   },
   {
     name = "acts_astro_wifi_test"
@@ -43,6 +46,7 @@ specs = [
     tests = "WlanScanTest WlanPhyComplianceABGTest WlanSecurityComplianceABGTest WlanPhyCompliance11NTest VapeInteropTest BeaconLossTest"
     timeout_minutes =
         1430  # 24 hours less 10 minutes for output processing in Dart script
+    device_type = "Astro"
   },
   {
     name = "acts_astro_wifi_fiber_test"
@@ -50,6 +54,7 @@ specs = [
     testbed = "wifi_rf_chamber_fiber_astro"
     tests = "Sl4fSanityTest WlanScanTest"
     timeout_minutes = 15
+    device_type = "Astro"
   },
 ]
 
@@ -71,6 +76,7 @@ foreach(spec, specs) {
         dimensions = {
           testbed = spec.testbed
           pool = "fuchsia.tests.connectivity"
+          device_type = spec.device_type
         }
 
         tags = spec.tags
