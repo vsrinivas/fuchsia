@@ -35,6 +35,10 @@ void *vkreallocate(void *user_data, void *original_ptr, size_t size, size_t alig
   const size_t aligned_size = (size + alignment - 1) / alignment * alignment;
   void *ptr = realloc(original_ptr, aligned_size);
   EXPECT_NE(ptr, nullptr);
+  if (!original_ptr) {
+    auto *allocations = static_cast<int *>(user_data);
+    (*allocations)++;
+  }
   return ptr;
 }
 
