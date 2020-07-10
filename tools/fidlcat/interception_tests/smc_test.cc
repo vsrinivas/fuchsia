@@ -56,12 +56,12 @@ SMC_CALL_DISPLAY_TEST(ZxSmcCall, ZX_OK,
                       "    secure_os_id: \x1B[32muint16\x1B[0m = \x1B[34m9\x1B[0m\n"
                       "  }\n"
                       "  -> \x1B[32mZX_OK\x1B[0m\n"
-                      "    out_smc_result: \x1B[32mzx_smc_result_t\x1B[0m = {\n"
-                      "      arg0: \x1B[32muint64\x1B[0m = \x1B[34m1\x1B[0m\n"
-                      "      arg1: \x1B[32muint64\x1B[0m = \x1B[34m2\x1B[0m\n"
-                      "      arg2: \x1B[32muint64\x1B[0m = \x1B[34m3\x1B[0m\n"
-                      "      arg3: \x1B[32muint64\x1B[0m = \x1B[34m3\x1B[0m\n"
-                      "      arg6: \x1B[32muint64\x1B[0m = \x1B[34m4\x1B[0m\n"
-                      "    }\n");
+                      "    out_smc_result: \x1B[32mzx_smc_result_t\x1B[0m = { "
+                      "arg0: \x1B[32muint64\x1B[0m = \x1B[34m1\x1B[0m, "
+                      "arg1: \x1B[32muint64\x1B[0m = \x1B[34m2\x1B[0m, "
+                      "arg2: \x1B[32muint64\x1B[0m = \x1B[34m3\x1B[0m, "
+                      "arg3: \x1B[32muint64\x1B[0m = \x1B[34m3\x1B[0m, "
+                      "arg6: \x1B[32muint64\x1B[0m = \x1B[34m4\x1B[0m "
+                      "}\n");
 
 }  // namespace fidlcat

@@ -151,6 +151,15 @@ class ClassFieldBase {
   virtual void Display(const ClassType* object, debug_ipc::Arch arch,
                        fidl_codec::PrettyPrinter& printer) const = 0;
 
+  virtual std::unique_ptr<fidl_codec::Type> ComputeType() const {
+    return std::make_unique<fidl_codec::InvalidType>();
+  }
+
+  virtual std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
+                                                           debug_ipc::Arch arch) const {
+    return std::make_unique<fidl_codec::InvalidValue>();
+  }
+
   uint8_t id() const { return id_; }
 
   ClassFieldBase<ClassType>* SetId(uint8_t id) {
@@ -177,6 +186,11 @@ class ClassField : public ClassFieldBase<ClassType> {
   void Display(const ClassType* object, debug_ipc::Arch arch,
                fidl_codec::PrettyPrinter& printer) const override;
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override;
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
+                                                   debug_ipc::Arch arch) const override;
+
  private:
   // Function which can extract the value of the field for a given object.
   Type (*get_)(const ClassType* from);
@@ -190,8 +204,19 @@ class ArrayField : public ClassFieldBase<ClassType> {
              std::pair<const Type*, int> (*get)(const ClassType* from))
       : ClassFieldBase<ClassType>(name, syscall_type), get_(get) {}
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    auto type = SyscallTypeToFidlCodecType(this->syscall_type());
+    ClassType dummy;
+    std::pair<const Type*, int> result = (*get_)(&dummy);
+    int fixed_size = result.second;
+    return std::make_unique<fidl_codec::ArrayType>(std::move(type), fixed_size);
+  }
+
   void Display(const ClassType* object, debug_ipc::Arch arch,
-               fidl_codec::PrettyPrinter& printer) const;
+               fidl_codec::PrettyPrinter& printer) const override;
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
+                                                   debug_ipc::Arch arch) const override;
 
  private:
   // Function which can extract the address of the field for a given object.
@@ -206,8 +231,16 @@ class DynamicArrayField : public ClassFieldBase<ClassType> {
                     std::pair<const Type*, SizeType> (*get)(const ClassType* from))
       : ClassFieldBase<ClassType>(name, syscall_type), get_(get) {}
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    auto type = SyscallTypeToFidlCodecType(this->syscall_type());
+    return std::make_unique<fidl_codec::VectorType>(std::move(type));
+  }
+
   void Display(const ClassType* object, debug_ipc::Arch arch,
                fidl_codec::PrettyPrinter& printer) const override;
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
+                                                   debug_ipc::Arch arch) const override;
 
  private:
   // Function which can extract the address of the field for a given object.
@@ -226,6 +259,15 @@ class ClassClassField : public ClassFieldBase<ClassType> {
 
   void Display(const ClassType* object, debug_ipc::Arch arch,
                fidl_codec::PrettyPrinter& printer) const override;
+
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    return field_class_->ComputeType();
+  }
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
+                                                   debug_ipc::Arch arch) const override {
+    return field_class_->GenerateValue(get_(object), arch);
+  }
 
  private:
   // Function which can extract the address of the field for a given object.
@@ -263,8 +305,16 @@ class DynamicArrayClassField : public ClassFieldBase<ClassType> {
         get_size_(get_size),
         sub_class_(sub_class) {}
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    auto type = sub_class_->ComputeType();
+    return std::make_unique<fidl_codec::VectorType>(std::move(type));
+  }
+
   void Display(const ClassType* object, debug_ipc::Arch arch,
                fidl_codec::PrettyPrinter& printer) const override;
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
+                                                   debug_ipc::Arch arch) const override;
 
  private:
   // Function which can extract the address of the field for a given object.
@@ -281,6 +331,8 @@ class Class {
  public:
   const std::string& name() const { return name_; }
 
+  const std::vector<std::unique_ptr<ClassFieldBase<ClassType>>>& fields() const { return fields_; }
+
   void DisplayObject(const ClassType* object, debug_ipc::Arch arch,
                      fidl_codec::PrettyPrinter& printer) const {
     printer << "{\n";
@@ -295,11 +347,32 @@ class Class {
     printer << '}';
   }
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const {
+    return std::make_unique<fidl_codec::StructType>(struct_definition_, true);
+  }
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
+                                                   debug_ipc::Arch arch) const {
+    if (object == nullptr) {
+      return std::make_unique<fidl_codec::NullValue>();
+    }
+
+    auto struct_value = std::make_unique<fidl_codec::StructValue>(struct_definition_);
+    for (const auto& field : fields()) {
+      if (field->ConditionsAreTrue(object, arch)) {
+        std::unique_ptr<fidl_codec::Value> val = field->GenerateValue(object, arch);
+        struct_value->AddField(field->name(), field->id(), std::move(val));
+      }
+    }
+    return std::move(struct_value);
+  }
+
   template <typename Type>
   ClassField<ClassType, Type>* AddField(std::unique_ptr<ClassField<ClassType, Type>> field,
                                         uint8_t id = 0) {
     auto result = field.get();
     result->SetId(id);
+    AddFieldToStructDefinition(*field, id);
     fields_.push_back(std::move(field));
     return result;
   }
@@ -309,6 +382,7 @@ class Class {
                                         uint8_t id = 0) {
     auto result = field.get();
     result->SetId(id);
+    AddFieldToStructDefinition(*field, id);
     fields_.push_back(std::move(field));
     return result;
   }
@@ -318,6 +392,7 @@ class Class {
       std::unique_ptr<DynamicArrayField<ClassType, Type, SizeType>> field, uint8_t id = 0) {
     auto result = field.get();
     result->SetId(id);
+    AddFieldToStructDefinition(*field, id);
     fields_.push_back(std::move(field));
     return result;
   }
@@ -327,6 +402,7 @@ class Class {
       std::unique_ptr<ClassClassField<ClassType, Type>> field, uint8_t id = 0) {
     auto result = field.get();
     result->SetId(id);
+    AddFieldToStructDefinition(*field, id);
     fields_.push_back(std::move(field));
     return result;
   }
@@ -336,6 +412,7 @@ class Class {
       std::unique_ptr<ArrayClassField<ClassType, Type>> field, uint8_t id = 0) {
     auto result = field.get();
     result->SetId(id);
+    AddFieldToStructDefinition(*field, id);
     fields_.push_back(std::move(field));
     return result;
   }
@@ -345,21 +422,28 @@ class Class {
       std::unique_ptr<DynamicArrayClassField<ClassType, Type>> field, uint8_t id = 0) {
     auto result = field.get();
     result->SetId(id);
+    AddFieldToStructDefinition(*field, id);
     fields_.push_back(std::move(field));
     return result;
   }
 
  protected:
-  explicit Class(std::string_view name) : name_(name) {}
+  explicit Class(std::string_view name) : name_(name), struct_definition_(name) {}
   Class(const Class&) = delete;
   Class& operator=(const Class&) = delete;
 
  private:
+  void AddFieldToStructDefinition(ClassFieldBase<ClassType>& field, uint8_t id) {
+    auto type = field.ComputeType();
+    struct_definition_.AddMember(field.name(), std::move(type), id);
+  }
   // Name of the class.
   std::string name_;
   // List of all fields in the class. Some fields can be specified several times
   // with different conditions.
   std::vector<std::unique_ptr<ClassFieldBase<ClassType>>> fields_;
+  // Struct definition for the generated value.
+  fidl_codec::Struct struct_definition_;
 };
 
 // Base class (not templated) for system call arguments.
@@ -1091,6 +1175,16 @@ class SyscallInputOutputObject : public SyscallInputOutputBase {
         buffer_(std::move(buffer)),
         buffer_size_(std::move(buffer_size)),
         class_definition_(class_definition) {}
+
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    return class_definition_->ComputeType();
+  }
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+                                                   Stage stage) const override {
+    const auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
+    return class_definition_->GenerateValue(object, decoder->arch());
+  }
 
   bool InlineValue() const override { return false; }
 
@@ -2024,6 +2118,20 @@ inline std::unique_ptr<fidl_codec::Value> GenerateValue(uintptr_t value) {
 }
 #endif
 
+template <typename Type>
+inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(Type handle) {
+  return std::make_unique<fidl_codec::InvalidValue>();
+}
+
+template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(zx_handle_t handle) {
+  zx_handle_info_t info;
+  info.handle = handle;
+  info.type = ZX_OBJ_TYPE_NONE;
+  info.rights = 0;
+  return std::make_unique<fidl_codec::HandleValue>(info);
+}
+
 // Display a value on a stream.
 template <typename ValueType>
 void DisplayValue(SyscallType type, ValueType /*value*/, fidl_codec::PrettyPrinter& printer) {
@@ -2430,6 +2538,25 @@ void ClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Ar
 }
 
 template <typename ClassType, typename Type>
+std::unique_ptr<fidl_codec::Value> ClassField<ClassType, Type>::GenerateValue(
+    const ClassType* object, debug_ipc::Arch arch) const {
+  if (ClassFieldBase<ClassType>::syscall_type() == SyscallType::kHandle) {
+    return fidlcat::GenerateHandleValue<Type>(get_(object));
+  } else {
+    return fidlcat::GenerateValue<Type>(get_(object));
+  }
+}
+
+template <typename ClassType, typename Type>
+std::unique_ptr<fidl_codec::Type> ClassField<ClassType, Type>::ComputeType() const {
+  auto type = SyscallTypeToFidlCodecType(this->syscall_type());
+  if (type == nullptr) {
+    type = std::make_unique<fidl_codec::InvalidType>();
+  }
+  return type;
+}
+
+template <typename ClassType, typename Type>
 void ArrayField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch /*arch*/,
                                           fidl_codec::PrettyPrinter& printer) const {
   printer << ClassFieldBase<ClassType>::name() << ": array<" << fidl_codec::Green
@@ -2481,6 +2608,42 @@ void DynamicArrayField<ClassType, Type, SizeType>::Display(
 }
 
 template <typename ClassType, typename Type>
+std::unique_ptr<fidl_codec::Value> ArrayField<ClassType, Type>::GenerateValue(
+    const ClassType* object, debug_ipc::Arch arch) const {
+  auto vector_value = std::make_unique<fidl_codec::VectorValue>();
+  std::pair<const Type*, int> array = get_(object);
+  auto syscall_type_ = this->syscall_type();
+
+  for (int i = 0; i < array.second; ++i) {
+    if (syscall_type_ == SyscallType::kHandle) {
+      vector_value->AddValue(fidlcat::GenerateHandleValue<Type>(array.first[i]));
+    } else {
+      vector_value->AddValue(fidlcat::GenerateValue<Type>(array.first[i]));
+    }
+  }
+
+  return vector_value;
+}
+
+template <typename ClassType, typename Type, typename SizeType>
+std::unique_ptr<fidl_codec::Value> DynamicArrayField<ClassType, Type, SizeType>::GenerateValue(
+    const ClassType* object, debug_ipc::Arch arch) const {
+  auto vector_value = std::make_unique<fidl_codec::VectorValue>();
+  std::pair<const Type*, SizeType> vector = get_(object);
+  auto syscall_type_ = this->syscall_type();
+
+  for (SizeType i = 0; i < vector.second; ++i) {
+    if (syscall_type_ == SyscallType::kHandle) {
+      vector_value->AddValue(fidlcat::GenerateHandleValue<Type>(vector.first[i]));
+    } else {
+      vector_value->AddValue(fidlcat::GenerateValue<Type>(vector.first[i]));
+    }
+  }
+
+  return vector_value;
+}
+
+template <typename ClassType, typename Type>
 void ClassClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
                                                fidl_codec::PrettyPrinter& printer) const {
   printer << ClassFieldBase<ClassType>::name() << ": " << fidl_codec::Green << field_class_->name()
@@ -2523,18 +2686,18 @@ void DynamicArrayClassField<ClassType, Type>::Display(const ClassType* object, d
   printer << "]\n";
 }
 
-template <typename Type>
-inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(Type handle) {
-  return std::make_unique<fidl_codec::InvalidValue>();
-}
+template <typename ClassType, typename Type>
+std::unique_ptr<fidl_codec::Value> DynamicArrayClassField<ClassType, Type>::GenerateValue(
+    const ClassType* object, debug_ipc::Arch arch) const {
+  auto vector_value = std::make_unique<fidl_codec::VectorValue>();
+  const Type* array = get_(object);
+  uint32_t size = get_size_(object);
 
-template <>
-inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(zx_handle_t handle) {
-  zx_handle_info_t info;
-  info.handle = handle;
-  info.type = ZX_OBJ_TYPE_NONE;
-  info.rights = 0;
-  return std::make_unique<fidl_codec::HandleValue>(info);
+  for (uint32_t i = 0; i < size; ++i) {
+    vector_value->AddValue(sub_class_->GenerateValue(array + i, arch));
+  }
+
+  return vector_value;
 }
 
 template <typename Type>

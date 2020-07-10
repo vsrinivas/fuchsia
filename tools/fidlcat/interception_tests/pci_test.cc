@@ -291,10 +291,10 @@ PCI_GET_BAR_UNUSED_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "bar_num: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
-    "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = {\n"
-    "      id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m\n"
-    "      type: \x1B[32mzx_pci_bar_type_t\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_UNUSED\x1B[0m\n"
-    "    }\n");
+    "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = { "
+    "id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m, "
+    "type: \x1B[32mzx.pci_bar_type\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_UNUSED\x1B[0m"
+    " }\n");
 
 #define PCI_GET_BAR_MMIO_DISPLAY_TEST_CONTENT(result, expected)                          \
   zx_pci_bar_t out_bar = {.id = 1000, .type = ZX_PCI_BAR_TYPE_MMIO, .handle = kHandle2}; \
@@ -318,11 +318,11 @@ PCI_GET_BAR_MMIO_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "bar_num: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
-    "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = {\n"
-    "      id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m\n"
-    "      type: \x1B[32mzx_pci_bar_type_t\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_MMIO\x1B[0m\n"
-    "      handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m\n"
-    "    }\n");
+    "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = { "
+    "id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m, "
+    "type: \x1B[32mzx.pci_bar_type\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_MMIO\x1B[0m, "
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m"
+    " }\n");
 
 #define PCI_GET_BAR_PIO_DISPLAY_TEST_CONTENT(result, expected)                                     \
   zx_pci_bar_t out_bar = {.id = 1000, .type = ZX_PCI_BAR_TYPE_PIO, .size = 1024, .addr = 0x45678}; \
@@ -348,9 +348,9 @@ PCI_GET_BAR_PIO_DISPLAY_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
     "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = {\n"
     "      id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m\n"
-    "      type: \x1B[32mzx_pci_bar_type_t\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_PIO\x1B[0m\n"
-    "      size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m\n"
-    "      addr: \x1B[32muintptr_t\x1B[0m = \x1B[34m0000000000045678\x1B[0m\n"
+    "      type: \x1B[32mzx.pci_bar_type\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_PIO\x1B[0m\n"
+    "      size: \x1B[32msize\x1B[0m = \x1B[34m1024\x1B[0m\n"
+    "      addr: \x1B[32muintptr\x1B[0m = \x1B[34m0000000000045678\x1B[0m\n"
     "    }\n");
 
 // zx_pci_map_interrupt tests.
@@ -512,15 +512,23 @@ std::string FillPins(std::string_view header, std::string_view footer) {
   stream << header;
   std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
   const char* separator = "";
+  int printed_elems = 0;
   for (unsigned device = 0; device < ZX_PCI_MAX_DEVICES_PER_BUS; ++device) {
     for (unsigned function = 0; function < ZX_PCI_MAX_FUNCTIONS_PER_DEVICE; ++function) {
       for (unsigned pin = 0; pin < ZX_PCI_MAX_LEGACY_IRQ_PINS; ++pin) {
+        ++printed_elems;
         snprintf(buffer.data(), buffer.size(), "%08x", pin + function * 16 + device * 256);
         stream << separator << "\x1B[34m" << buffer.data() << "\x1B[0m";
-        separator = ", ";
+        if (printed_elems == 12) {
+          printed_elems = 0;
+          separator = "\n      ";
+        } else {
+          separator = ", ";
+        }
       }
     }
   }
+  stream << "\n";
   stream << footer;
   return stream.str();
 }
@@ -532,26 +540,26 @@ PCI_INIT_DISPLAY_TEST(
              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
              "len: \x1B[32muint32\x1B[0m = \x1B[34m5968\x1B[0m)\n"
              "  init_buf: \x1B[32mzx_pci_init_arg_t\x1B[0m = {\n"
-             "    dev_pin_to_global_irq: array<\x1B[32muint32\x1B[0m> = [ ",
-             " ]\n"
+             "    dev_pin_to_global_irq: array<\x1B[32muint32\x1B[0m> = [\n      ",
+             "    ]\n"
              "    num_irqs: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m\n"
              "    irqs: vector<\x1B[32mzx_pci_init_arg_irq_t\x1B[0m> = [\n"
-             "      {\n"
-             "        global_irq: \x1B[32muint32\x1B[0m = \x1B[34m10\x1B[0m\n"
-             "        level_triggered: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
-             "        active_high: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"
-             "      }\n"
-             "      {\n"
-             "        global_irq: \x1B[32muint32\x1B[0m = \x1B[34m20\x1B[0m\n"
-             "        level_triggered: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"
-             "        active_high: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
-             "      }\n"
+             "      { "
+             "global_irq: \x1B[32muint32\x1B[0m = \x1B[34m10\x1B[0m, "
+             "level_triggered: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m, "
+             "active_high: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m"
+             " }\n"
+             "      { "
+             "global_irq: \x1B[32muint32\x1B[0m = \x1B[34m20\x1B[0m, "
+             "level_triggered: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m, "
+             "active_high: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m"
+             " }\n"
              "    ]\n"
              "    addr_window_count: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m\n"
              "    addr_windows: vector<\x1B[32mzx_pci_init_arg_addr_window_t\x1B[0m> = [\n"
              "      {\n"
              "        base: \x1B[32muint64\x1B[0m = \x1B[34m1000\x1B[0m\n"
-             "        size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m\n"
+             "        size: \x1B[32msize\x1B[0m = \x1B[34m1024\x1B[0m\n"
              "        bus_start: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m\n"
              "        bus_end: \x1B[32muint8\x1B[0m = \x1B[34m2\x1B[0m\n"
              "        cfg_space_type: \x1B[32muint8\x1B[0m = \x1B[34m3\x1B[0m\n"
@@ -559,7 +567,7 @@ PCI_INIT_DISPLAY_TEST(
              "      }\n"
              "      {\n"
              "        base: \x1B[32muint64\x1B[0m = \x1B[34m2000\x1B[0m\n"
-             "        size: \x1B[32msize_t\x1B[0m = \x1B[34m2024\x1B[0m\n"
+             "        size: \x1B[32msize\x1B[0m = \x1B[34m2024\x1B[0m\n"
              "        bus_start: \x1B[32muint8\x1B[0m = \x1B[34m21\x1B[0m\n"
              "        bus_end: \x1B[32muint8\x1B[0m = \x1B[34m22\x1B[0m\n"
              "        cfg_space_type: \x1B[32muint8\x1B[0m = \x1B[34m23\x1B[0m\n"
@@ -567,7 +575,7 @@ PCI_INIT_DISPLAY_TEST(
              "      }\n"
              "      {\n"
              "        base: \x1B[32muint64\x1B[0m = \x1B[34m3000\x1B[0m\n"
-             "        size: \x1B[32msize_t\x1B[0m = \x1B[34m3024\x1B[0m\n"
+             "        size: \x1B[32msize\x1B[0m = \x1B[34m3024\x1B[0m\n"
              "        bus_start: \x1B[32muint8\x1B[0m = \x1B[34m31\x1B[0m\n"
              "        bus_end: \x1B[32muint8\x1B[0m = \x1B[34m32\x1B[0m\n"
              "        cfg_space_type: \x1B[32muint8\x1B[0m = \x1B[34m33\x1B[0m\n"
