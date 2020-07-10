@@ -876,7 +876,7 @@ void InitializeStruct(Struct* s) {
 
   uintptr_t vmar_addr;
   ASSERT_EQ(ZX_OK, zx::vmar::root_self()->allocate2(ZX_VM_CAN_MAP_READ, 0u, getpagesize(),
-                                                   &s->handles.vmar_handle, &vmar_addr));
+                                                    &s->handles.vmar_handle, &vmar_addr));
 
   zx::fifo fifo1;
   ASSERT_EQ(ZX_OK, zx::fifo::create(1u, 1u, 0u, &s->handles.fifo_handle, &fifo1));
@@ -1823,9 +1823,8 @@ int main(int argc, char** argv) {
     if (server.rfind("fuchsia-pkg://", 0) == 0) {
       package_url = server;
     } else {
-      package_url = "fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_" +
-                    std::string(argv[i]) + "#meta/fidl_compatibility_test_server_" +
-                    std::string(argv[i]) + ".cmx";
+      package_url = "fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/" +
+                    std::string(argv[i]) + "-server.cmx";
     }
     servers.push_back(package_url);
   }

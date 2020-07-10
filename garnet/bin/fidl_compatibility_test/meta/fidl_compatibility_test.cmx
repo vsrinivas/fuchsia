@@ -1,12 +1,12 @@
 {
     "program": {
         "args": [
-            "cpp",
+            "hlcpp",
             "go",
             "llcpp",
             "rust"
         ],
-        "binary": "test/fidl_compatibility_test"
+        "binary": "bin/fidl_compatibility_test"
     },
     "sandbox": {
         "services": [

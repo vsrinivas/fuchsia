@@ -8,13 +8,9 @@ group("tests") {
     ":tools",
     "//build/fidl:tests",
     "//examples/fidl:tests",
-
-    # TODO(49942): temporarily disable while flake is investigated.
-    # "//garnet/bin/fidl_compatibility_test",
-    # "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_cpp",
-    # "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_llcpp",
-    # "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_rust",
-    # "//garnet/bin/fidl_compatibility_test/golang:fidl_compatibility_test_server_go",
+    "//garnet/bin/fidl_compatibility_test",
+    "//garnet/examples/fidl/echo_server_cpp",
+    "//garnet/examples/fidl/echo_server_cpp:echo_server_cpp_tests",
     "//garnet/go/src/fidl:fidlgen_common_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_types_test($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl_cpp_host_conformance_test($host_toolchain)",

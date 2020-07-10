@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/compatibility_test_server_rust"
+        "binary": "bin/rust_server"
     },
     "sandbox": {
         "services": [

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/compatibility_test_server_cpp"
+        "binary": "bin/go-server"
     },
     "sandbox": {
         "services": [

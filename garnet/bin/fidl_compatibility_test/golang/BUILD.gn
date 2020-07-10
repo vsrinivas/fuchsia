@@ -5,16 +5,7 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
-import("//build/package.gni")
-
-group("golang") {
-  testonly = true
-  deps = [
-    ":compatibility_test_server_go_bin",
-    ":fidl_compatibility_test_server_go",
-    ":lib",
-  ]
-}
+import("//src/sys/build/components.gni")
 
 # The go_binary GN rule requires us to declare a go_library that creates the
 # gopackage, even if the library doesn't have any sources.
@@ -26,43 +17,15 @@ go_library("lib") {
     "//src/lib/component",
   ]
 }
+go_binary("go_server") {
+  gopackage = "compatibility_test"
+  output_name = "go-server"
+  output_dir = target_out_dir
 
-template("go_fidl_compatibility_test") {
-  not_needed(invoker, "*")
-
-  binary_target = "compatibility_test_server_${target_name}_bin"
-  binary_output = "compatibility_test_server_${target_name}"
-  package_target = "fidl_compatibility_test_server_${target_name}"
-  cmx_path = "meta/fidl_compatibility_test_server_${target_name}.cmx"
-
-  go_binary(binary_target) {
-    gopackage = "compatibility_test"
-
-    output_name = binary_output
-
-    if (defined(invoker.build_tag)) {
-      tags = [ invoker.build_tag ]
-    }
-
-    deps = [ ":lib" ]
-  }
-
-  package(package_target) {
-    testonly = true
-    deps = [ ":$binary_target" ]
-    meta = [
-      {
-        path = cmx_path
-        dest = "${target_name}.cmx"
-      },
-    ]
-    binaries = [
-      {
-        name = binary_output
-      },
-    ]
-  }
+  deps = [ ":lib" ]
 }
 
-go_fidl_compatibility_test("go") {
+fuchsia_component("go-server") {
+  manifest = "meta/go-server.cmx"
+  deps = [ ":go_server" ]
 }
