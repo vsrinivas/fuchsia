@@ -46,6 +46,11 @@ declare_args() {
   # include those labels in this variable.
   universe_package_labels = []
 
+  # If you add labels to this variable, these will be included in the 'host'
+  # artifact set, which represents an additional set of host-only software that
+  # is produced by the build.
+  host_labels = []
+
   # [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
   # This is included in the default value of [`zircon_args`](#zircon_args) so
   # you can set this to add things there without wiping out the defaults.
@@ -674,6 +679,7 @@ build_api_module("zircon") {
 group("default") {
   testonly = true
   deps = [
+    "//:host",
     "//build:tests",
     "//build/images:packages",
     "//build/unification",
@@ -710,6 +716,14 @@ group("additional_universe_packages") {
   testonly = true
   visibility = [ "//build/images:universe_packages" ]
   public_deps = universe_package_labels
+}
+
+group("host") {
+  testonly = true
+  public_deps = []
+  foreach(label, host_labels) {
+    public_deps += [ "$label($host_toolchain)" ]
+  }
 }
 
 group("recovery_image") {

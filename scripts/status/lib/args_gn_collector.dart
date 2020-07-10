@@ -27,6 +27,7 @@ class GNStatusParser {
       'Base packages',
       '--with-base argument of `fx set`'
     ],
+    'host_labels': ['Host labels', '--with-host argument of `fx set`'],
   };
 
   List<Item> parseGn({ProcessResult processResult}) {

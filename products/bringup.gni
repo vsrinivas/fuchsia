@@ -33,3 +33,5 @@ universe_package_labels = [
   "//tools/vboot_reference:cgpt_host",
   "//tools/vboot_reference:futility_host",
 ]
+
+host_labels = []

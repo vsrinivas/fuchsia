@@ -99,6 +99,10 @@
 ##                         Multiple labels can be provided delimited by commas
 ##                         or the --with-base argument can be provided multiple
 ##                         times.
+##   --with-host GNLABEL   Labels of additional host-only targets to be
+##                         produced by the build. Multiple labels can be
+##                         provided delimited by commas or the --with-host
+##                         argument can be provided multiple times.
 ##   --cargo-toml-gen      Enable generation of Cargo.toml files
 ##
 ## Example:
@@ -181,8 +185,9 @@ function main {
   local gn_cmd='gen'
   local -a gn_switches=(--check=system --export-rust-project --export-compile-commands=default)
   local gn_after_args=""
-  local base=()
-  local universe=()
+  local base_packages=()
+  local universe_packages=()
+  local host_labels=()
   local auto_dir_variants=
   local auto_dir=false
   local is_release=false
@@ -207,7 +212,7 @@ function main {
           fx-command-help
           return 1
         fi
-        IFS=, base+=("$2")
+        IFS=, base_packages+=("$2")
         shift
         ;;
       --with)
@@ -224,7 +229,15 @@ function main {
           return 1;;
         esac
 
-        IFS=, universe+=("$2")
+        IFS=, universe_packages+=("$2")
+        shift
+        ;;
+      --with-host)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        IFS=, host_labels+=("$2")
         shift
         ;;
       --cargo-toml-gen)
@@ -407,7 +420,7 @@ function main {
 # See: fx args --list=base_package_labels
 base_package_labels+=["
 
-  for package in ${base[@]}; do
+  for package in ${base_packages[@]}; do
     gn_args+="\"${package}\","
   done
   gn_args+="]
@@ -418,8 +431,16 @@ cache_package_labels+=[]
 # See: fx args --list=universe_package_labels
 universe_package_labels+=["
 
-  for package in ${universe[@]}; do
+  for package in ${universe_packages[@]}; do
     gn_args+="\"${package}\","
+  done
+  gn_args+="]
+
+# See: fx args --list=host_labels
+host_labels+=["
+
+  for label in ${host_labels[@]}; do
+    gn_args+="\"${label}\","
   done
   gn_args+="]"
 
