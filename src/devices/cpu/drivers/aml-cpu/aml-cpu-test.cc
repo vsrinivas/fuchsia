@@ -2,6 +2,7 @@
 
 #include <fuchsia/hardware/thermal/llcpp/fidl.h>
 #include <lib/fake_ddk/fidl-helper.h>
+#include <lib/inspect/cpp/reader.h>
 
 #include <memory>
 
@@ -193,6 +194,8 @@ class AmlCpuTest : public AmlCpu {
   static zx_status_t MessageOp(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
   zx::channel& GetMessengerChannel() { return messenger_.local(); }
 
+  zx::vmo inspect_vmo() { return inspector_.DuplicateVmo(); }
+
  private:
   fake_ddk::FidlMessenger messenger_;
 };
@@ -203,7 +206,29 @@ zx_status_t AmlCpuTest::MessageOp(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
 
 zx_status_t AmlCpuTest::Init() { return messenger_.SetMessageOp(this, AmlCpuTest::MessageOp); }
 
-class AmlCpuTestFixture : public zxtest::Test {
+class InspectTestHelper {
+ public:
+  InspectTestHelper() {}
+
+  void ReadInspect(const zx::vmo& vmo) {
+    hierarchy_ = inspect::ReadFromVmo(vmo);
+    ASSERT_TRUE(hierarchy_.is_ok());
+  }
+
+  inspect::Hierarchy& hierarchy() { return hierarchy_.value(); }
+
+  template <typename T>
+  void CheckProperty(const inspect::NodeValue& node, std::string property, T expected_value) {
+    const T* actual_value = node.get_property<T>(property);
+    ASSERT_TRUE(actual_value);
+    EXPECT_EQ(expected_value.value(), actual_value->value());
+  }
+
+ private:
+  fit::result<inspect::Hierarchy> hierarchy_;
+};
+
+class AmlCpuTestFixture : public InspectTestHelper, public zxtest::Test {
  public:
   void SetUp() override;
 
@@ -293,6 +318,24 @@ TEST_F(AmlCpuTestFixture, TestSetPerformanceState) {
     // operating point.
     EXPECT_EQ(kInitialOperatingPoint, thermal_.ActiveOperatingPoint());
   }
+}
+
+TEST_F(AmlCpuTestFixture, TestSetCpuInfo) {
+  uint32_t test_cpu_version = 0x28200b02;
+  dut_->SetCpuInfo(test_cpu_version);
+  ASSERT_NO_FATAL_FAILURES(ReadInspect(dut_->inspect_vmo()));
+  auto* cpu_info = hierarchy().GetByPath({"cpu_info_service"});
+  ASSERT_TRUE(cpu_info);
+
+  // cpu_major_revision : 40
+  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
+      cpu_info->node(), "cpu_major_revision", inspect::UintPropertyValue(40)));
+  // cpu_minor_revision : 11
+  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
+      cpu_info->node(), "cpu_minor_revision", inspect::UintPropertyValue(11)));
+  // cpu_package_id : 2
+  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
+      cpu_info->node(), "cpu_package_id", inspect::UintPropertyValue(2)));
 }
 
 }  // namespace amlogic_cpu

@@ -33,6 +33,7 @@ driver_module("aml-cpu") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/inspect",
   ]
 }
 
@@ -77,5 +78,6 @@ test("aml-cpu-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/inspect",
   ]
 }

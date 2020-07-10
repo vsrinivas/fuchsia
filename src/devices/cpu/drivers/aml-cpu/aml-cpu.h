@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
 #include <fuchsia/hardware/thermal/llcpp/fidl.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
@@ -48,10 +49,16 @@ class AmlCpu : public DeviceType,
   void GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync completer);
   void GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync completer);
 
+  // Set CpuInfo in inspect.
+  void SetCpuInfo(uint32_t cpu_version_packed);
+
  private:
   zx_status_t GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* out);
-
   fuchsia_thermal::Device::SyncClient thermal_client_;
+
+ protected:
+  inspect::Inspector inspector_;
+  inspect::Node cpu_info_ = inspector_.GetRoot().CreateChild("cpu_info_service");
 };
 
 }  // namespace amlogic_cpu

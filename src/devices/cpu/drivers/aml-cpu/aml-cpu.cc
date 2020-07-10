@@ -5,6 +5,7 @@
 #include "aml-cpu.h"
 
 #include <lib/device-protocol/pdev.h>
+#include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
 
 #include <memory>
@@ -55,25 +56,6 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
            actual);
     return ZX_ERR_INTERNAL;
   }
-
-  zx_device_t* platform_device = devices[kFragmentPdev];
-  ddk::PDev pdev_client(platform_device);
-
-  // Map AOBUS registers
-  std::optional<ddk::MmioBuffer> mmio_buffer;
-
-  if ((status = pdev_client.MapMmio(0, &mmio_buffer)) != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", status);
-    return status;
-  }
-
-  const uint32_t cpu_version_packed = mmio_buffer->Read32(kCpuVersionOffset);
-  const uint8_t major_revision = (cpu_version_packed >> 24) & 0xff;
-  const uint8_t minor_revision = (cpu_version_packed >> 8) & 0xff;
-  const uint8_t cpu_package_id = (cpu_version_packed >> 20) & 0x0f;
-  zxlogf(INFO, "major revision number: 0x%x", major_revision);
-  zxlogf(INFO, "minor revision number: 0x%x", minor_revision);
-  zxlogf(INFO, "cpu package id number: 0x%x", cpu_package_id);
 
   // Initialize an array with the maximum possible number of PStates since we
   // determine the actual number of PStates at runtime by querying the thermal
@@ -142,12 +124,26 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   const uint8_t perf_state_count = static_cast<uint8_t>(opps.count);
   zxlogf(INFO, "aml-cpu: Creating CPU Device with %u operating points", opps.count);
 
+  zx_device_t* platform_device = devices[kFragmentPdev];
+  ddk::PDev pdev_client(platform_device);
+
+  // Map AOBUS registers
+  std::optional<ddk::MmioBuffer> mmio_buffer;
+
+  if ((status = pdev_client.MapMmio(0, &mmio_buffer)) != ZX_OK) {
+    zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", status);
+    return status;
+  }
+
   auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(thermal_fidl_client));
+  uint32_t cpu_version_packed = mmio_buffer->Read32(kCpuVersionOffset);
+  cpu_device->SetCpuInfo(cpu_version_packed);
 
   status = cpu_device->DdkAdd(ddk::DeviceAddArgs("cpu")
                                   .set_flags(DEVICE_ADD_NON_BINDABLE)
                                   .set_proto_id(ZX_PROTOCOL_CPU_CTRL)
-                                  .set_performance_states({perf_states, perf_state_count}));
+                                  .set_performance_states({perf_states, perf_state_count})
+                                  .set_inspect_vmo(cpu_device->inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: Failed to add cpu device, st = %d", status);
     return status;
@@ -255,6 +251,19 @@ void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync completer) {
 void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync completer) {
   // Placeholder.
   completer.Reply(0);
+}
+
+void AmlCpu::SetCpuInfo(uint32_t cpu_version_packed) {
+  const uint8_t major_revision = (cpu_version_packed >> 24) & 0xff;
+  const uint8_t minor_revision = (cpu_version_packed >> 8) & 0xff;
+  const uint8_t cpu_package_id = (cpu_version_packed >> 20) & 0x0f;
+  zxlogf(INFO, "major revision number: 0x%x", major_revision);
+  zxlogf(INFO, "minor revision number: 0x%x", minor_revision);
+  zxlogf(INFO, "cpu package id number: 0x%x", cpu_package_id);
+
+  cpu_info_.CreateUint("cpu_major_revision", major_revision, &inspector_);
+  cpu_info_.CreateUint("cpu_minor_revision", minor_revision, &inspector_);
+  cpu_info_.CreateUint("cpu_package_id", cpu_package_id, &inspector_);
 }
 
 }  // namespace amlogic_cpu
