@@ -228,7 +228,6 @@ common_image_contents = [
   "//src/zircon/testing/mutex_pi_exerciser",
   "//src/zircon/bin/kstress",
   "//src/storage/bin/dd",
-  "//zircon/system/uapp/trace-example",
   "//src/bringup/bin/waitfor",
   "//src/bringup/bin/watch",
   "//zircon/system/ulib/driver-info/app:driverinfo",
