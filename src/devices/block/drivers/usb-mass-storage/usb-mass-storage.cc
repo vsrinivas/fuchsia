@@ -69,7 +69,7 @@ void UsbMassStorageDevice::DdkRelease() {
   delete this;
 }
 
-void UsbMassStorageDevice::DdkUnbindDeprecated() {
+void UsbMassStorageDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   // terminate our worker thread
   {
     fbl::AutoLock l(&txn_lock_);
@@ -81,18 +81,11 @@ void UsbMassStorageDevice::DdkUnbindDeprecated() {
   if (worker_thread_.has_value() && worker_thread_->joinable()) {
     worker_thread_->join();
   }
-  for (uint8_t lun = 0; lun <= max_lun_; lun++) {
-    auto dev = block_devs_[lun];
-    const auto& params = dev->GetBlockDeviceParameters();
-    if (params.device_added) {
-      dev->DdkRemoveDeprecated();
-    }
-  }
   // Wait for remaining requests to complete
   while (pending_requests_.load()) {
     waiter_->Wait(&txn_completion_, ZX_SEC(1));
   }
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void UsbMassStorageDevice::RequestQueue(usb_request_t* request,
@@ -130,7 +123,6 @@ zx_status_t UsbMassStorageDevice::Init(bool is_test_mode) {
   return status;
 }
 void UsbMassStorageDevice::DdkInit(ddk::InitTxn txn) {
-  auto call = fbl::MakeAutoCall([&]() { DdkRemoveDeprecated(); });
   usb::UsbDevice usb(parent());
   if (!usb.is_valid()) {
     txn.Reply(ZX_ERR_PROTOCOL_NOT_SUPPORTED);
@@ -267,7 +259,6 @@ void UsbMassStorageDevice::DdkInit(ddk::InitTxn txn) {
     txn.Reply(status);
     return;
   }
-  call.cancel();
   worker_thread_.emplace(
       [this, init_txn = std::move(txn)]() mutable { WorkerThread(std::move(init_txn)); });
 }
@@ -805,7 +796,7 @@ zx_status_t UsbMassStorageDevice::CheckLunsReady() {
         zxlogf(ERROR, "UMS: device_add for block device failed %d", status);
       }
     } else if (!ready && params.device_added) {
-      dev->DdkRemoveDeprecated();
+      dev->DdkAsyncRemove();
       params = dev->GetBlockDeviceParameters();
       params.device_added = false;
     }
@@ -822,7 +813,6 @@ int UsbMassStorageDevice::WorkerThread(ddk::InitTxn&& init_txn) {
     status = Inquiry(lun, inquiry_data);
     if (status < 0) {
       zxlogf(ERROR, "Inquiry failed for lun %d status: %d", lun, status);
-      DdkRemoveDeprecated();
       init_txn.Reply(status);
       return 0;
     }

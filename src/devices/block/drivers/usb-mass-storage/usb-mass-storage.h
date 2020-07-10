@@ -73,7 +73,7 @@ struct UsbRequestContext {
 };
 
 using MassStorageDeviceType =
-    ddk::Device<UsbMassStorageDevice, ddk::UnbindableDeprecated, ddk::Initializable>;
+    ddk::Device<UsbMassStorageDevice, ddk::UnbindableNew, ddk::Initializable>;
 class UsbMassStorageDevice : public MassStorageDeviceType {
  public:
   explicit UsbMassStorageDevice(fbl::RefPtr<WaiterInterface> waiter, zx_device_t* parent = nullptr)
@@ -86,7 +86,7 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
   void DdkRelease();
   void DdkInit(ddk::InitTxn txn);
 
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   // Performs the object initialization.
   zx_status_t Init(bool is_test_mode);

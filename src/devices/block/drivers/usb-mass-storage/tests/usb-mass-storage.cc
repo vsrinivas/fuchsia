@@ -77,6 +77,7 @@ struct Context {
   size_t desc_length;
   size_t block_devs;
   ums::UmsBlockDevice* devices[4];
+  std::unique_ptr<Context> block_ctxs[4];
   sync_completion_t completion;
   zx_status_t status;
   block_op_t* op;
@@ -114,17 +115,28 @@ class Binder : public fake_ddk::Bind {
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) {
     Context* context = reinterpret_cast<Context*>(parent);
+
+    std::unique_ptr<Context> outctx = std::make_unique<Context>();
+    outctx->parent = context;
+    outctx->block_device = reinterpret_cast<ums::UmsBlockDevice*>(args->ctx);
+    *out = reinterpret_cast<zx_device_t*>(outctx.get());
+
+    // If |parent| has a parent, we are currently adding a UmsBlockDevice.
     if (context->parent) {
       Context* parent = context->parent;
       parent->devices[parent->block_devs] = reinterpret_cast<ums::UmsBlockDevice*>(args->ctx);
+      // Save the context so it will be automatically freed when the test completes.
+      // Usually the real DDK would handle scheduling the unbind / remove tasks for the block
+      // device after the parent's (UsbMassStorageDevice) unbind reply.
+      parent->block_ctxs[parent->block_devs] = std::move(outctx);
       if ((++parent->block_devs) == 3) {
         sync_completion_signal(&parent->completion);
       }
+    } else {
+      // We expect to get a |DeviceRemove| call (from replying to unbind) for the
+      // UsbMassStorageDevice.
+      __UNUSED auto ptr = outctx.release();
     }
-    Context* outctx = new Context();
-    outctx->parent = context;
-    outctx->block_device = reinterpret_cast<ums::UmsBlockDevice*>(args->ctx);
-    *out = reinterpret_cast<zx_device_t*>(outctx);
     // This needs to come after setting |out|, as this sets the device's internal |zxdev_|,
     // which needs to be present for the InitTxn.
     if (args->ops->init) {
@@ -547,7 +559,7 @@ TEST(Ums, TestRead) {
                         parent_dev.last_transfer->data.size()));
   }
   // Unbind
-  dev.DdkUnbindDeprecated();
+  dev.DdkUnbindNew(ddk::UnbindTxn(dev.zxdev()));
   EXPECT_EQ(4, parent_dev.block_devs);
   ASSERT_FALSE(has_zero_duration);
 }
@@ -608,7 +620,7 @@ TEST(Ums, TestWrite) {
                         transaction.op.rw.length * kBlockSize));
   }
   // Unbind
-  dev.DdkUnbindDeprecated();
+  dev.DdkUnbindNew(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
 }
@@ -651,7 +663,7 @@ TEST(Ums, TestFlush) {
     EXPECT_EQ(xfer_type, parent_dev.transfer_type);
   }
   // Unbind
-  dev.DdkUnbindDeprecated();
+  dev.DdkUnbindNew(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
 }
@@ -677,7 +689,7 @@ TEST(Ums, CbwStallDoesNotFreezeDriver) {
   usb_protocol_ops_t ops;
   Setup(&parent_dev, &dev, &ops, RejectCacheCbw);
   // Unbind
-  dev.DdkUnbindDeprecated();
+  dev.DdkUnbindNew(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
 }
@@ -703,7 +715,7 @@ TEST(Ums, DataStageStallDoesNotFreezeDriver) {
   usb_protocol_ops_t ops;
   Setup(&parent_dev, &dev, &ops, RejectCacheDataStage);
   // Unbind
-  dev.DdkUnbindDeprecated();
+  dev.DdkUnbindNew(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
 }
