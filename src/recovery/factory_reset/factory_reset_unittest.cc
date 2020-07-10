@@ -68,6 +68,7 @@ class FactoryResetTest : public Test {
     devmgr_.reset(new IsolatedDevmgr());
     auto args = IsolatedDevmgr::DefaultArgs();
     args.disable_block_watcher = true;
+    args.path_prefix = "/pkg/";
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
@@ -77,9 +78,7 @@ class FactoryResetTest : public Test {
     CreateFvmPartition();
   }
 
-  void TearDown() override {
-    ASSERT_EQ(ramdisk_destroy(ramdisk_client_), ZX_OK);
-  }
+  void TearDown() override { ASSERT_EQ(ramdisk_destroy(ramdisk_client_), ZX_OK); }
 
   bool PartitionHasFormat(disk_format_t format) {
     fbl::unique_fd fd(openat(devmgr_->devfs_root().get(), fvm_block_path_, O_RDONLY));
@@ -165,8 +164,9 @@ class FactoryResetTest : public Test {
     fdio_cpp::UnownedFdioCaller caller(fd.get());
     ASSERT_TRUE(caller);
     fuchsia_hardware_block_BlockInfo block_info;
-    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &call_status,
-                                                  &block_info), ZX_OK);
+    ASSERT_EQ(
+        fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &call_status, &block_info),
+        ZX_OK);
     ASSERT_EQ(call_status, ZX_OK);
     *out_size = block_info.block_size;
   }
