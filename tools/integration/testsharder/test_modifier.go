@@ -28,6 +28,10 @@ type TestModifier struct {
 	// Affected specifies whether the test is an affected test. If affected,
 	// it will be run in a separate shard than the unaffected tests.
 	Affected bool `json:"affected,omitempty"`
+
+	// MaxAttempts is the max number of times to run this test if it fails.
+	// This is the max attempts per run as specified by the `TotalRuns` field.
+	MaxAttempts int `json:"max_attempts,omitempty"`
 }
 
 // LoadTestModifiers loads a set of test modifiers from a json manifest.

@@ -13,4 +13,14 @@ type Test struct {
 
 	// Runs is the number of times this test should be run.
 	Runs int `json:"runs,omitempty"`
+
+	// MaxAttempts is the max number of times to run this test if it fails.
+	// This is the max attempts per run as specified by the `Runs` field.
+	MaxAttempts int `json:"max_attempts,omitempty"`
+}
+
+func (t *Test) applyModifier(m TestModifier) {
+	if m.MaxAttempts > 0 {
+		t.MaxAttempts = m.MaxAttempts
+	}
 }

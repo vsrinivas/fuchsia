@@ -24,6 +24,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	tap "go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
@@ -145,6 +146,9 @@ func validateTest(test testsharder.Test) error {
 	}
 	if test.Runs <= 0 {
 		return fmt.Errorf("one or more tests with invalid `runs` field")
+	}
+	if test.MaxAttempts <= 0 {
+		return fmt.Errorf("one or more tests with invalid `max_attempts` field")
 	}
 	if test.OS == "fuchsia" && test.PackageURL == "" && test.Path == "" {
 		return fmt.Errorf("one or more fuchsia tests missing the `path` and `package_url` fields")
@@ -298,7 +302,12 @@ func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester)
 
 	result := runtests.TestSuccess
 	startTime := time.Now()
-	dataSinks, err := t.Test(ctx, test, multistdout, multistderr)
+	var dataSinks runtests.DataSinkReference
+	var err error
+	retry.Retry(ctx, retry.WithMaxAttempts(&retry.ZeroBackoff{}, uint64(test.MaxAttempts)), func() error {
+		dataSinks, err = t.Test(ctx, test, multistdout, multistderr)
+		return err
+	}, nil)
 	if err != nil {
 		result = runtests.TestFailure
 		logger.Errorf(ctx, err.Error())

@@ -73,7 +73,8 @@ func TestValidateTest(t *testing.T) {
 					OS:   "linux",
 					Path: "/foo/bar",
 				},
-				Runs: 1,
+				Runs:        1,
+				MaxAttempts: 1,
 			},
 			expectErr: true,
 		}, {
@@ -83,7 +84,8 @@ func TestValidateTest(t *testing.T) {
 					Name: "test1",
 					Path: "/foo/bar",
 				},
-				Runs: 1,
+				Runs:        1,
+				MaxAttempts: 1,
 			},
 			expectErr: true,
 		}, {
@@ -94,7 +96,8 @@ func TestValidateTest(t *testing.T) {
 					OS:         "linux",
 					PackageURL: "fuchsia-pkg://test1",
 				},
-				Runs: 1,
+				Runs:        1,
+				MaxAttempts: 1,
 			},
 			expectErr: true,
 		},
@@ -105,7 +108,8 @@ func TestValidateTest(t *testing.T) {
 					Name: "test1",
 					OS:   "linux",
 				},
-				Runs: 1,
+				Runs:        1,
+				MaxAttempts: 1,
 			},
 			expectErr: true,
 		},
@@ -116,7 +120,8 @@ func TestValidateTest(t *testing.T) {
 					Name: "test1",
 					OS:   "fuchsia",
 				},
-				Runs: 1,
+				Runs:        1,
+				MaxAttempts: 1,
 			},
 			expectErr: true,
 		}, {
@@ -127,6 +132,18 @@ func TestValidateTest(t *testing.T) {
 					OS:   "linux",
 					Path: "/foo/bar",
 				},
+				MaxAttempts: 1,
+			},
+			expectErr: true,
+		}, {
+			name: "missing max attempts",
+			test: testsharder.Test{
+				Test: build.Test{
+					Name: "test1",
+					OS:   "linux",
+					Path: "/foo/bar",
+				},
+				Runs: 1,
 			},
 			expectErr: true,
 		}, {
@@ -137,7 +154,8 @@ func TestValidateTest(t *testing.T) {
 					OS:   "linux",
 					Path: "/foo/bar",
 				},
-				Runs: 1,
+				Runs:        1,
+				MaxAttempts: 1,
 			},
 			expectErr: false,
 		}, {
@@ -148,7 +166,8 @@ func TestValidateTest(t *testing.T) {
 					OS:         "fuchsia",
 					PackageURL: "fuchsia-pkg://test1",
 				},
-				Runs: 5,
+				Runs:        5,
+				MaxAttempts: 1,
 			},
 			expectErr: false,
 		},
@@ -168,6 +187,7 @@ func TestRunTest(t *testing.T) {
 		name           string
 		test           build.Test
 		runs           int
+		maxAttempts    int
 		testErr        error
 		runTestFunc    func(testsharder.Test, io.Writer, io.Writer)
 		expectedErr    error
@@ -261,6 +281,32 @@ func TestRunTest(t *testing.T) {
 				stderr.Write([]byte("stderr "))
 				stdout.Write([]byte("stdout"))
 			},
+		}, {
+			name: "retries test",
+			test: build.Test{
+				Name:       "fuchsia-pkg://foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			},
+			maxAttempts: 3,
+			testErr:     fmt.Errorf("test failed"),
+			expectedResult: []*testrunner.TestResult{{
+				Name:   "fuchsia-pkg://foo/bar",
+				Result: runtests.TestFailure,
+			}},
+		},
+		{
+			name: "returns on first success even if max attempts > 1",
+			test: build.Test{
+				Name:       "fuchsia-pkg://foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			},
+			maxAttempts: 5,
+			expectedResult: []*testrunner.TestResult{{
+				Name:   "fuchsia-pkg://foo/bar",
+				Result: runtests.TestSuccess,
+			}},
 		},
 	}
 	for _, c := range cases {
@@ -272,8 +318,11 @@ func TestRunTest(t *testing.T) {
 			if c.runs == 0 {
 				c.runs = 1
 			}
+			if c.maxAttempts == 0 {
+				c.maxAttempts = 1
+			}
 			for i := 0; i < c.runs; i++ {
-				result, err := runTest(context.Background(), testsharder.Test{c.test, c.runs}, i, tester)
+				result, err := runTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, MaxAttempts: c.maxAttempts}, i, tester)
 
 				if err != c.expectedErr {
 					t.Errorf("got error: %v, expected: %v", err, c.expectedErr)
@@ -281,6 +330,17 @@ func TestRunTest(t *testing.T) {
 				if err == nil {
 					if !assertEqual(result, c.expectedResult[i]) {
 						t.Errorf("got result: %v, expected: %v", result, c.expectedResult[i])
+					}
+				}
+				if c.maxAttempts > 1 {
+					funcCalls := strings.Join(tester.funcCalls, ",")
+					testCount := strings.Count(funcCalls, testFunc)
+					expectedTries := 1
+					if c.testErr != nil {
+						expectedTries = c.maxAttempts
+					}
+					if testCount != expectedTries {
+						t.Errorf("ran test %d times, expected: %d", testCount, expectedTries)
 					}
 				}
 			}
@@ -291,18 +351,22 @@ func TestRunTest(t *testing.T) {
 func TestRunTests(t *testing.T) {
 	tests := []testsharder.Test{
 		{
-			build.Test{
+			Test: build.Test{
 				Name:       "bar",
 				OS:         "fuchsia",
 				PackageURL: "fuchsia-pkg://foo/bar",
-			}, 2,
+			},
+			Runs:        2,
+			MaxAttempts: 1,
 		}, {
-			build.Test{
+			Test: build.Test{
 				Name:       "baz",
 				Path:       "/foo/baz",
 				OS:         "fuchsia",
 				PackageURL: "fuchsia-pkg://foo/baz",
-			}, 1,
+			},
+			Runs:        1,
+			MaxAttempts: 1,
 		},
 	}
 	tester := &fakeTester{}

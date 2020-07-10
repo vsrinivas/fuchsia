@@ -47,7 +47,7 @@ func shard(env build.Environment, ids ...int) *Shard {
 func namedShard(env build.Environment, name string, ids ...int) *Shard {
 	var tests []Test
 	for _, id := range ids {
-		tests = append(tests, Test{Test: spec(id, env).Test, Runs: 1})
+		tests = append(tests, Test{Test: spec(id, env).Test, Runs: 1, MaxAttempts: 1})
 	}
 	return &Shard{
 		Name:  name,

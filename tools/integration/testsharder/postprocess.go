@@ -189,21 +189,34 @@ func MultiplyShards(
 // ShardAffected separates the affected tests into separate shards.
 func ShardAffected(shards []*Shard, modTests []TestModifier) ([]*Shard, error) {
 	var newShards []*Shard
+	defaultModTest := TestModifier{}
+	foundDefault := false
+	for _, modTest := range modTests {
+		if modTest.Name == "*" {
+			if foundDefault {
+				return nil, fmt.Errorf("too many default modifiers, only one is allowed")
+			}
+			defaultModTest = modTest
+			foundDefault = true
+		}
+	}
 	for _, shard := range shards {
 		var affected []Test
 		var unaffected []Test
 		for _, test := range shard.Tests {
 			isAffected := false
+			test.applyModifier(defaultModTest)
 			for _, modTest := range modTests {
 				if modTest.Name != test.Name {
 					continue
 				}
+				test.applyModifier(modTest)
 
 				if modTest.Affected {
 					isAffected = true
 					affected = append(affected, test)
-					break
 				}
+				break
 			}
 			if !isAffected {
 				unaffected = append(unaffected, test)

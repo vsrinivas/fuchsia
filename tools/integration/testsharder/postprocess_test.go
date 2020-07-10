@@ -25,7 +25,8 @@ func makeTest(id int, os string) Test {
 			Name: fmt.Sprintf("test%d", id),
 			OS:   os,
 		},
-		Runs: 1,
+		Runs:        1,
+		MaxAttempts: 1,
 	}
 	if os == "fuchsia" {
 		test.Name = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
@@ -266,7 +267,20 @@ func TestShardAffected(t *testing.T) {
 		Tags:       []string{},
 	}
 
+	type modifyDetails struct {
+		index       int
+		maxAttempts int
+	}
+
 	shard := shardWithOS
+
+	shardWithModify := func(s *Shard, md []modifyDetails) *Shard {
+		for _, m := range md {
+			i := m.index
+			s.Tests[i].MaxAttempts = m.maxAttempts
+		}
+		return s
+	}
 
 	makeTestModifier := func(id int, os string, affected bool) TestModifier {
 		var name string
@@ -276,9 +290,10 @@ func TestShardAffected(t *testing.T) {
 			name = fmt.Sprintf("/path/to/test%d", id)
 		}
 		return TestModifier{
-			Name:     name,
-			OS:       os,
-			Affected: affected,
+			Name:        name,
+			OS:          os,
+			Affected:    affected,
+			MaxAttempts: 1,
 		}
 	}
 
@@ -328,7 +343,6 @@ func TestShardAffected(t *testing.T) {
 			},
 			modifiers: []TestModifier{
 				makeTestModifier(1, "fuchsia", false),
-				makeTestModifier(2, "fuchsia", false),
 				makeTestModifier(2, "fuchsia", true),
 				makeTestModifier(4, "fuchsia", true),
 				makeTestModifier(3, "linux", true),
@@ -340,6 +354,28 @@ func TestShardAffected(t *testing.T) {
 				shard(env2, "fuchsia", 1),
 				affectedShard(env3, "linux", 3),
 				shard(env3, "linux", 4),
+			},
+		},
+		{
+			name: "copies other fields correctly",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 4, 5),
+				shard(env2, "fuchsia", 1, 2, 4),
+				shard(env3, "linux", 3, 4),
+			},
+			modifiers: []TestModifier{
+				{Name: "*", MaxAttempts: 5},
+				makeTestModifier(4, "fuchsia", true),
+				makeTestModifier(5, "fuchsia", true),
+				makeTestModifier(3, "linux", true),
+			},
+			expected: []*Shard{
+				affectedShard(env1, "fuchsia", 4, 5),
+				shardWithModify(shard(env1, "fuchsia", 1), []modifyDetails{{0, 5}}),
+				affectedShard(env2, "fuchsia", 4),
+				shardWithModify(shard(env2, "fuchsia", 1, 2), []modifyDetails{{0, 5}, {1, 5}}),
+				affectedShard(env3, "linux", 3),
+				shardWithModify(shard(env3, "linux", 4), []modifyDetails{{0, 5}}),
 			},
 		},
 	}
