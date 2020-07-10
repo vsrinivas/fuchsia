@@ -35,6 +35,7 @@ template("sherlock_driver") {
       "sherlock-display.cc",
       "sherlock-emmc.cc",
       "sherlock-gpio.cc",
+      "sherlock-hevc-enc.cc",
       "sherlock-i2c.cc",
       "sherlock-light.cc",
       "sherlock-mali.cc",

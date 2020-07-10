@@ -39,6 +39,7 @@ enum {
   BTI_NNA,
   BTI_AML_SECURE_MEM,
   BTI_VIDEO_ENC,
+  BTI_HEVC_ENC,
 };
 
 // MAC address metadata indices
@@ -99,6 +100,7 @@ class Sherlock : public SherlockType {
   zx_status_t TeeInit();
   zx_status_t VideoInit();
   zx_status_t VideoEncInit();
+  zx_status_t HevcEncInit();
   zx_status_t ButtonsInit();
   zx_status_t DisplayInit();
   zx_status_t AudioInit();

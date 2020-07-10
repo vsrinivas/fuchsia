@@ -442,6 +442,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "camera-controller",
       "aml-video",
       "aml-video-enc",
+      "aml-hevc-enc",
       "sys/platform/05:04:17/aml-gpu",
       "sys/platform/05:04:16/sherlock-audio-in",
       "SherlockAudio",

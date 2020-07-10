@@ -144,6 +144,10 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "VideoEncInit() failed");
   }
 
+  if (HevcEncInit() != ZX_OK) {
+    zxlogf(ERROR, "HevcEncInit() failed");
+  }
+
   if (MaliInit() != ZX_OK) {
     zxlogf(ERROR, "MaliInit() failed");
   }
