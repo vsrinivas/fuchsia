@@ -82,24 +82,28 @@ pub struct StreamMap<K, St> {
 impl<K: Unpin, St> Unpin for StreamMap<K, St> {}
 
 impl<K: Eq + Hash + Unpin, St: Stream> StreamMap<K, St> {
+    /// Returns an empty `StreamMap`.
     pub fn empty() -> StreamMap<K, St> {
         StreamMap { inner: HashMap::new() }
     }
 
-    /// Will not wake the StreamMap nor cause stream to be polled, you should ensure that poll_next
-    /// is called on the StreamMap after inserting in order to process items.
+    /// Insert a stream identified by `key` to the map.
+    ///
+    /// This method will not call `poll` on the submitted stream. The caller must ensure
+    /// that `poll_next` is called in order to receive wake-up notifications for the given
+    /// stream.
     pub fn insert(&mut self, key: K, stream: St) -> Option<Pin<Box<St>>> {
         self.inner.insert(key, Box::new(stream).into())
     }
 
-    /// Remove the stream identified by 'K' from the StreamMap, returning it if it exists
-    pub fn remove(&mut self, key: &K) -> Option<Pin<Box<St>>> {
-        self.inner.remove(key)
+    /// Returns `true` if the `StreamMap` contains `key`.
+    pub fn contains_key(&self, key: &K) -> bool {
+        self.inner.contains_key(key)
     }
 
-    #[cfg(test)]
-    fn inner(&mut self) -> &mut HashMap<K, Pin<Box<St>>> {
-        &mut self.inner
+    /// Remove the stream identified by `key`, returning it if it exists.
+    pub fn remove(&mut self, key: &K) -> Option<Pin<Box<St>>> {
+        self.inner.remove(key)
     }
 }
 
@@ -292,7 +296,7 @@ mod test {
                                 // Ensure that we wake up next time;
                                 next_wake = count.get();
                                 // Invariant: stream(k) must be in the map
-                                prop_assert!(streams.inner().contains_key(&k))
+                                prop_assert!(streams.contains_key(&k))
                             }
                             Poll::Ready(Some(StreamItem::Epitaph(k))) => {
                                 events.push(StreamItem::Epitaph(k));
@@ -329,7 +333,7 @@ mod test {
                 };
             let all_keys = 0..expected_count;
             for k in all_keys {
-                prop_assert!(!streams.inner().contains_key(&k), "All streams should now have been removed");
+                prop_assert!(!streams.contains_key(&k), "All streams should now have been removed");
                 prop_assert!(!events.iter().skip_while(|e| not_terminated(k, e)).any(|e| event_of(k, e)), "No events should have been yielded from a stream after it terminated");
             }
         }
