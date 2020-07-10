@@ -49,10 +49,6 @@
     }
   },
   {
-    "type": "SystemPowerHandler",
-    "name": "sys_power"
-  },
-  {
     "type": "TemperatureHandler",
     "name": "temperature",
     "config": {
@@ -72,7 +68,7 @@
       "cpu_control_nodes": [
         "cpu_control"
       ],
-      "system_power_handler_node": "sys_power",
+      "system_power_handler_node": "sys_shutdown",
       "thermal_limiter_node": "thermal_limiter"
     },
     "config": {
