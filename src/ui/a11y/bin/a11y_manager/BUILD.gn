@@ -34,6 +34,96 @@ package("a11y_manager") {
               "$target_gen_dir/../../lib/screen_reader/i18n/en/l10n.json")
       dest = "assets/locales/en/l10n.json"
     },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/ar-XB/l10n.json")
+      dest = "assets/locales/ar-XB/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/da/l10n.json")
+      dest = "assets/locales/da/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/de/l10n.json")
+      dest = "assets/locales/de/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/de-CH/l10n.json")
+      dest = "assets/locales/de-CH/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/en-GB/l10n.json")
+      dest = "assets/locales/en-GB/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/en-XA/l10n.json")
+      dest = "assets/locales/en-XA/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/en-XC/l10n.json")
+      dest = "assets/locales/en-XC/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/es/l10n.json")
+      dest = "assets/locales/es/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/es-419/l10n.json")
+      dest = "assets/locales/es-419/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/fr/l10n.json")
+      dest = "assets/locales/fr/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/fr-CA/l10n.json")
+      dest = "assets/locales/fr-CA/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/it/l10n.json")
+      dest = "assets/locales/it/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/ja/l10n.json")
+      dest = "assets/locales/ja/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/ko/l10n.json")
+      dest = "assets/locales/ko/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/nb/l10n.json")
+      dest = "assets/locales/nb/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/nl/l10n.json")
+      dest = "assets/locales/nl/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/no/l10n.json")
+      dest = "assets/locales/no/l10n.json"
+    },
+    {
+      path = rebase_path(
+              "$target_gen_dir/../../lib/screen_reader/i18n/sv/l10n.json")
+      dest = "assets/locales/sv/l10n.json"
+    },
 
     # [START icudata_resource]
     {

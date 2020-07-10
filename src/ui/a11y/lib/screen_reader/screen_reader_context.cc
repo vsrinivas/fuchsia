@@ -21,9 +21,7 @@ ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_
                               FX_LOGS(ERROR) << "Unable to connect to TTS service";
                             }
                           });
-  // TODO(FXB/55181): Use Fuchsia provided locale to load the translated strings instead of
-  // hard-coded English.
-  auto result = intl::Lookup::New({"en"});
+  auto result = intl::Lookup::New({locale_id_});
   FX_DCHECK(result.is_ok()) << "Load of l10n resources failed.";
   auto message_formatter =
       std::make_unique<i18n::MessageFormatter>(icu::Locale("en-US"), result.take_value());
