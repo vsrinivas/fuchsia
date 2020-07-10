@@ -14,6 +14,8 @@
 
 #include <string>
 
+#include <fbl/unique_fd.h>
+
 namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -60,10 +62,10 @@ void NamespaceTest::ExpectDoesNotExist(const char* path) {
 void NamespaceTest::ExpectPathSupportsRights(const char* path, uint32_t rights) {
   ASSERT_FALSE(rights & ~kKnownFsRights) << "Unsupported rights in ExpectPathSupportsRights call";
 
-  int fd = -1;
-  EXPECT_EQ(ZX_OK, fdio_open_fd(path, rights, &fd))
+  fbl::unique_fd fd;
+  EXPECT_EQ(ZX_OK, fdio_open_fd(path, rights, fd.reset_and_get_address()))
       << "Failed to open " << path << " with rights: " << rights_str(rights);
-  EXPECT_GE(fd, 0);
+  EXPECT_GE(fd.get(), 0);
 }
 
 // TODO(fxb/37419): Once fuchsia.io/Node supports GetFlags, we should update this test utility to
@@ -79,8 +81,8 @@ void NamespaceTest::ExpectPathSupportsStrictRights(const char* path, uint32_t ri
       continue;
     }
 
-    int fd;
-    zx_status_t status = fdio_open_fd(path, rights_bit, &fd);
+    fbl::unique_fd fd;
+    zx_status_t status = fdio_open_fd(path, rights_bit, fd.reset_and_get_address());
     EXPECT_NE(ZX_OK, status) << "Opening " << path << " with '" << rights_str(rights_bit)
                              << "' right unexpectedly succeeded";
     if (status != ZX_OK && require_access_denied) {

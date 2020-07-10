@@ -64,10 +64,7 @@
             directory: "/fs/data",
             from: "self",
             as: "/minfs",
-            rights: [
-                "admin",
-                "rw*",
-            ],
+            rights: [ "rw*" ],
         },
         {
             directory: "/fs/install",
