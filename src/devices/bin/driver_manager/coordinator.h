@@ -38,7 +38,6 @@
 #include "init_task.h"
 #include "inspect.h"
 #include "metadata.h"
-#include "reboot_watcher_manager.h"
 #include "resume_task.h"
 #include "suspend_task.h"
 #include "system_state_manager.h"
@@ -212,8 +211,7 @@ struct SuspendCallbackInfo : public fbl::RefCounted<SuspendCallbackInfo> {
   SuspendCallback callback;
 };
 
-class Coordinator : public power_fidl::statecontrol::Admin::Interface,
-                    public device_manager_fidl::BindDebugger::Interface {
+class Coordinator : public device_manager_fidl::BindDebugger::Interface {
  public:
   Coordinator(const Coordinator&) = delete;
   Coordinator& operator=(const Coordinator&) = delete;
@@ -370,30 +368,11 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   const Driver* fragment_driver() const { return fragment_driver_; }
 
   InspectManager& inspect_manager() { return inspect_manager_; }
-  RebootWatcherManager& reboot_watcher_manager() { return reboot_watcher_manager_; }
 
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
 
-  // Power state control interface
-  void Suspend(
-      power_fidl::statecontrol::SystemPowerState state,
-      power_fidl::statecontrol::Admin::Interface::SuspendCompleter::Sync completer) override;
   uint32_t GetSuspendFlagsFromSystemPowerState(power_fidl::statecontrol::SystemPowerState state);
-  void PowerFullyOn(
-      power_fidl::statecontrol::Admin::Interface::PowerFullyOnCompleter::Sync completer) override;
-  void Reboot(power_fidl::statecontrol::RebootReason reason,
-              power_fidl::statecontrol::Admin::Interface::RebootCompleter::Sync completer) override;
-  void RebootToBootloader(
-      power_fidl::statecontrol::Admin::Interface::RebootToBootloaderCompleter::Sync completer)
-      override;
-  void RebootToRecovery(power_fidl::statecontrol::Admin::Interface::RebootToRecoveryCompleter::Sync
-                            completer) override;
-  void Poweroff(
-      power_fidl::statecontrol::Admin::Interface::PoweroffCompleter::Sync completer) override;
-  void Mexec(power_fidl::statecontrol::Admin::Interface::MexecCompleter::Sync completer) override;
-  void SuspendToRam(
-      power_fidl::statecontrol::Admin::Interface::SuspendToRamCompleter::Sync completer) override;
 
   // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
   void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
@@ -445,7 +424,6 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   ResumeContext resume_context_;
 
   InspectManager inspect_manager_;
-  RebootWatcherManager reboot_watcher_manager_;
   std::unique_ptr<SystemStateManager> system_state_manager_;
   power_fidl::statecontrol::SystemPowerState shutdown_system_state_;
 

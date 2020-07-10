@@ -106,6 +106,7 @@
                 "/svc/fuchsia.fshost.Filesystems",
                 "/svc/fuchsia.fshost.Loader",
                 "/svc/fuchsia.fshost.Registry",
+                "/svc/fuchsia.hardware.power.statecontrol.Admin",
                 "/svc/fuchsia.hardware.pty.Device",
                 "/svc/fuchsia.kernel.Stats",
                 "/svc/fuchsia.logger.Log",
@@ -121,7 +122,6 @@
 
                 // Service from power_manager
                 "/svc/fuchsia.power.manager.DriverManagerRegistration",
-                "/svc/fuchsia.hardware.power.statecontrol.Admin",
 
                 // Builtin service
                 "/svc/fuchsia.process.Launcher",
@@ -166,7 +166,6 @@
                 "/svc/fuchsia.device.manager.DebugDumper",
                 "/svc/fuchsia.device.manager.SystemStateTransition",
                 "/svc/fuchsia.device.NameProvider",
-                "/svc/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "/svc/fuchsia.kernel.Counter",
                 "/svc/fuchsia.kernel.DebugBroker",
                 "/svc/fuchsia.paver.Paver",
