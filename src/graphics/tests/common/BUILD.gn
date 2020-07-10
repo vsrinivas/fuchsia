@@ -18,16 +18,6 @@ source_set("common") {
   ]
 }
 
-test_package("vulkan-test-common") {
-  deps = [ ":vkcontext" ]
-
-  tests = [
-    {
-      name = "vkcontext"
-    },
-  ]
-}
-
 executable("vkcontext") {
   testonly = true
 

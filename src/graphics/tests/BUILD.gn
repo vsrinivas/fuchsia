@@ -37,6 +37,7 @@ foreach(env, magma_libvulkan_hardware_envs) {
 
 test_package("vulkan-tests") {
   deps = [
+    "common:vkcontext",
     "icd_load",
     "vk_timer_query",
     "vkext",
@@ -83,6 +84,10 @@ test_package("vulkan-tests") {
     {
       name = "vk_timer_query_tests"
       environments = magma_libvulkan_arm_hardware_envs
+    },
+    {
+      name = "vkcontext"
+      environments = [ aemu_env ] + magma_libvulkan_hardware_envs
     },
   ]
 
