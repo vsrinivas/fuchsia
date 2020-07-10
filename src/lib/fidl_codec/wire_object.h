@@ -294,7 +294,11 @@ class StructValue : public Value {
     fields_.emplace(std::make_pair(member, std::move(value)));
   }
 
-  void AddField(std::string_view name, std::unique_ptr<Value> value);
+  void inline AddField(std::string_view name, std::unique_ptr<Value> value) {
+    AddField(name, 0, std::move(value));
+  }
+
+  void AddField(std::string_view name, uint32_t id, std::unique_ptr<Value> value);
 
   StructValue* AsStructValue() override { return this; }
   const StructValue* AsStructValue() const override { return this; }

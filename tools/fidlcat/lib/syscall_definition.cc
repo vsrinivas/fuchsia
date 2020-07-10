@@ -1700,6 +1700,10 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
 
  private:
   ZxPortPacket() : Class("zx_port_packet_t") {
+    // Conditional field Ids
+    const uint8_t kZxPortPacket_ZX_PKT_TYPE_GUEST_MEM_Arm64 = 1;
+    const uint8_t kZxPortPacket_ZX_PKT_TYPE_GUEST_MEM_X64 = 2;
+    // Fields
     AddField(
         std::make_unique<ClassField<zx_port_packet_t, uint64_t>>("key", SyscallType::kUint64, key));
     auto type_field = AddField(std::make_unique<ClassField<zx_port_packet_t, uint32_t>>(
@@ -1716,11 +1720,13 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
                  "guest_bell", guest_bell, ZxPacketGuestBell::GetClass()))
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_BELL));
     AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_mem_aarch64_t>>(
-                 "guest_mem", guest_mem_aarch64, ZxPacketGuestMemAArch64::GetClass()))
+                 "guest_mem", guest_mem_aarch64, ZxPacketGuestMemAArch64::GetClass()),
+             kZxPortPacket_ZX_PKT_TYPE_GUEST_MEM_Arm64)
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_MEM))
         ->DisplayIfArch(debug_ipc::Arch::kArm64);
     AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_mem_x86_t>>(
-                 "guest_mem", guest_mem_x86, ZxPacketGuestMemX86::GetClass()))
+                 "guest_mem", guest_mem_x86, ZxPacketGuestMemX86::GetClass()),
+             kZxPortPacket_ZX_PKT_TYPE_GUEST_MEM_X64)
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_MEM))
         ->DisplayIfArch(debug_ipc::Arch::kX64);
     AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_io_t>>(

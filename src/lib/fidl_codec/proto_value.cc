@@ -14,10 +14,13 @@ namespace fidl_codec {
 
 void ProtoEncodeStruct(proto::Struct* dst, const fidl_codec::StructValue* node) {
   for (const auto& field : node->fields()) {
-    proto::Value value;
-    ProtoVisitor visitor(&value);
+    auto proto_field = dst->add_fields();
+    proto_field->set_name(field.first->name());
+    proto_field->set_id(field.first->id());
+
+    auto value = proto_field->mutable_value();
+    ProtoVisitor visitor(value);
     field.second->Visit(&visitor, nullptr);
-    dst->mutable_fields()->insert(google::protobuf::MapPair(field.first->name(), value));
   }
 }
 
@@ -132,14 +135,15 @@ std::unique_ptr<StructValue> DecodeStruct(LibraryLoader* loader, const proto::St
   bool ok = true;
   auto struct_value = std::make_unique<fidl_codec::StructValue>(struct_definition);
   for (const auto& proto_field : proto_struct.fields()) {
-    const fidl_codec::StructMember* member = struct_definition.SearchMember(proto_field.first);
+    const fidl_codec::StructMember* member =
+        struct_definition.SearchMember(proto_field.name(), proto_field.id());
     if (member == nullptr) {
-      FX_LOGS_OR_CAPTURE(ERROR) << "Member " << proto_field.first << " not found in "
-                                << struct_definition.name() << '.';
+      FX_LOGS_OR_CAPTURE(ERROR) << "Member " << proto_field.name() << ":" << proto_field.id()
+                                << " not found in " << struct_definition.name() << '.';
       ok = false;
     } else {
       std::unique_ptr<fidl_codec::Value> value =
-          DecodeValue(loader, proto_field.second, member->type());
+          DecodeValue(loader, proto_field.value(), member->type());
       if (value == nullptr) {
         ok = false;
       } else {

@@ -187,8 +187,8 @@ const Value* StructValue::GetFieldValue(std::string_view field_name) const {
   return nullptr;
 }
 
-void StructValue::AddField(std::string_view name, std::unique_ptr<Value> value) {
-  StructMember* member = struct_definition_.SearchMember(name);
+void StructValue::AddField(std::string_view name, uint32_t id, std::unique_ptr<Value> value) {
+  StructMember* member = struct_definition_.SearchMember(name, id);
   if (member != nullptr) {
     AddField(member, std::move(value));
   }

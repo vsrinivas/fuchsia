@@ -43,9 +43,17 @@ message Union {
   Value value = 2;
 }
 
+// Defines a struct field with id
+
+message StructField {
+  uint32 id = 1;
+  string name = 2;
+  Value value = 3;
+}
+
 // Defines a struct value.
 message Struct {
-  map<string, Value> fields = 1;
+  repeated StructField fields = 1;
 }
 
 // Defines a vector value.

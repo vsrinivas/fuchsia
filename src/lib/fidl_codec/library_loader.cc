@@ -166,8 +166,8 @@ StructMember::~StructMember() = default;
 Struct::Struct(Library* enclosing_library, const rapidjson::Value* json_definition)
     : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
 
-void Struct::AddMember(std::string_view name, std::unique_ptr<Type> type) {
-  members_.emplace_back(std::make_unique<StructMember>(name, std::move(type)));
+void Struct::AddMember(std::string_view name, std::unique_ptr<Type> type, uint32_t id) {
+  members_.emplace_back(std::make_unique<StructMember>(name, std::move(type), id));
 }
 
 void Struct::DecodeStructTypes() {

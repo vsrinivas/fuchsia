@@ -151,10 +151,18 @@ class ClassFieldBase {
   virtual void Display(const ClassType* object, debug_ipc::Arch arch,
                        fidl_codec::PrettyPrinter& printer) const = 0;
 
+  uint8_t id() const { return id_; }
+
+  ClassFieldBase<ClassType>* SetId(uint8_t id) {
+    id_ = id;
+    return this;
+  }
+
  private:
   std::string name_;
   const SyscallType syscall_type_;
   std::vector<std::unique_ptr<ClassFieldConditionBase<ClassType>>> conditions_;
+  uint8_t id_ = 0;
 };
 
 // Define a class field for basic types.
@@ -288,47 +296,55 @@ class Class {
   }
 
   template <typename Type>
-  ClassField<ClassType, Type>* AddField(std::unique_ptr<ClassField<ClassType, Type>> field) {
+  ClassField<ClassType, Type>* AddField(std::unique_ptr<ClassField<ClassType, Type>> field,
+                                        uint8_t id = 0) {
     auto result = field.get();
+    result->SetId(id);
     fields_.push_back(std::move(field));
     return result;
   }
 
   template <typename Type>
-  ArrayField<ClassType, Type>* AddField(std::unique_ptr<ArrayField<ClassType, Type>> field) {
+  ArrayField<ClassType, Type>* AddField(std::unique_ptr<ArrayField<ClassType, Type>> field,
+                                        uint8_t id = 0) {
     auto result = field.get();
+    result->SetId(id);
     fields_.push_back(std::move(field));
     return result;
   }
 
   template <typename Type, typename SizeType>
   DynamicArrayField<ClassType, Type, SizeType>* AddField(
-      std::unique_ptr<DynamicArrayField<ClassType, Type, SizeType>> field) {
+      std::unique_ptr<DynamicArrayField<ClassType, Type, SizeType>> field, uint8_t id = 0) {
     auto result = field.get();
+    result->SetId(id);
     fields_.push_back(std::move(field));
     return result;
   }
 
   template <typename Type>
   ClassClassField<ClassType, Type>* AddField(
-      std::unique_ptr<ClassClassField<ClassType, Type>> field) {
+      std::unique_ptr<ClassClassField<ClassType, Type>> field, uint8_t id = 0) {
     auto result = field.get();
+    result->SetId(id);
     fields_.push_back(std::move(field));
     return result;
   }
 
   template <typename Type>
   ArrayClassField<ClassType, Type>* AddField(
-      std::unique_ptr<ArrayClassField<ClassType, Type>> field) {
+      std::unique_ptr<ArrayClassField<ClassType, Type>> field, uint8_t id = 0) {
     auto result = field.get();
+    result->SetId(id);
     fields_.push_back(std::move(field));
     return result;
   }
 
   template <typename Type>
   DynamicArrayClassField<ClassType, Type>* AddField(
-      std::unique_ptr<DynamicArrayClassField<ClassType, Type>> field) {
+      std::unique_ptr<DynamicArrayClassField<ClassType, Type>> field, uint8_t id = 0) {
     auto result = field.get();
+    result->SetId(id);
     fields_.push_back(std::move(field));
     return result;
   }

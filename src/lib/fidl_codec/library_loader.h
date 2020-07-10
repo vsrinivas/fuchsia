@@ -234,11 +234,11 @@ class Struct {
   uint32_t size() const { return size_; }
   const std::vector<std::unique_ptr<StructMember>>& members() const { return members_; }
 
-  void AddMember(std::string_view name, std::unique_ptr<Type> type);
+  void AddMember(std::string_view name, std::unique_ptr<Type> type, uint32_t id = 0);
 
-  StructMember* SearchMember(std::string_view name) const {
+  StructMember* SearchMember(std::string_view name, uint32_t id = 0) const {
     for (const auto& member : members_) {
-      if (member->name() == name) {
+      if (member->name() == name && member->id() == id) {
         return member.get();
       }
     }
