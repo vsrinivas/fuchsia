@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/rust_logs_example"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
