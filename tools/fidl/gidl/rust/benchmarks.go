@@ -24,6 +24,8 @@ use {
 	},
 	fidl_benchmarkfidl as benchmarkfidl,
 	fuchsia_criterion::criterion::{BatchSize, Bencher},
+	fuchsia_async::futures::{future, stream::StreamExt},
+	fuchsia_zircon as zx,
 };
 
 // ALL_BENCHMARKS is used by src/tests/benchmarks/fidl/rust/src/main.rs.
@@ -31,6 +33,9 @@ pub const ALL_BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }
 {{- range .Benchmarks }}
 	("Encode/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_encode),
 	("Decode/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_decode),
+	{{ if .EnableEchoCallBenchmark }}
+	("EchoCall/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_echo_call),
+	{{- end -}}
 {{- end }}
 ];
 
@@ -69,6 +74,43 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 		BatchSize::SmallInput,
 	);
 }
+{{ if .EnableEchoCallBenchmark }}
+async fn {{ .Name }}_echo_call_server_thread(server_end: zx::Channel) {
+	let async_server_end = fuchsia_async::Channel::from_channel(server_end).unwrap();
+	let stream = <{{ .ValueType }}EchoCallRequestStream as fidl::endpoints::RequestStream>::from_channel(async_server_end);
+
+    const MAX_CONCURRENT: usize = 10;
+    stream.for_each_concurrent(MAX_CONCURRENT, |request| {
+		match request {
+			Ok({{ .ValueType }}EchoCallRequest::Echo { mut val, responder }) => {
+				responder.send(&mut val).unwrap();
+			},
+			Err(_) => {
+				panic!("unexpected err request")
+			},
+		}
+		future::ready(())
+	}).await;
+}
+fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
+	let (client_end, server_end) = zx::Channel::create().unwrap();
+	std::thread::spawn(|| {
+		fuchsia_async::Executor::new()
+			.unwrap()
+			.run_singlethreaded(async move {
+			{{ .Name }}_echo_call_server_thread(server_end).await;
+		});
+	});
+	let mut proxy = {{ .ValueType }}EchoCallSynchronousProxy::new(client_end);
+	b.iter_batched_ref(|| {
+		{{ .Value }}
+	},
+	|value| {
+		proxy.echo(value, zx::Time::after(zx::Duration::from_seconds(1))).unwrap();
+	},
+	BatchSize::SmallInput);
+}
+{{- end -}}
 {{ end }}
 `))
 
@@ -79,12 +121,14 @@ type benchmarkTmplInput struct {
 
 type benchmark struct {
 	Name, ChromeperfPath, Value, ValueType string
+	EnableEchoCallBenchmark                bool
 }
 
 // GenerateBenchmarks generates Rust benchmarks.
 func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	var benchmarks []benchmark
+	nBenchmarks := 0
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
@@ -92,14 +136,19 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, e
 		}
 		value := visit(gidlBenchmark.Value, decl)
 		benchmarks = append(benchmarks, benchmark{
-			Name:           benchmarkName(gidlBenchmark.Name),
-			ChromeperfPath: gidlBenchmark.Name,
-			Value:          value,
-			ValueType:      declName(decl),
+			Name:                    benchmarkName(gidlBenchmark.Name),
+			ChromeperfPath:          gidlBenchmark.Name,
+			Value:                   value,
+			ValueType:               declName(decl),
+			EnableEchoCallBenchmark: gidlBenchmark.EnableEchoCallBenchmark,
 		})
+		nBenchmarks += 2
+		if gidlBenchmark.EnableEchoCallBenchmark {
+			nBenchmarks++
+		}
 	}
 	input := benchmarkTmplInput{
-		NumBenchmarks: len(benchmarks) * 2,
+		NumBenchmarks: nBenchmarks,
 		Benchmarks:    benchmarks,
 	}
 	var buf bytes.Buffer

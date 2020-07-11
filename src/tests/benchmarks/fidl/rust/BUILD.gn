@@ -29,6 +29,7 @@ rustc_library("benchmark_suite_rust_lib") {
     "//src/developer/fuchsia-criterion",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl-rustc",
   ]
   non_rust_deps = [ ":benchmark_suite_rust" ]
