@@ -123,7 +123,6 @@ source_set("data_provider") {
     "//src/developer/forensics/feedback_data/annotations:utils",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
-    "//src/developer/forensics/feedback_data/attachments:utils",
     "//src/developer/forensics/utils:archive",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fsl",

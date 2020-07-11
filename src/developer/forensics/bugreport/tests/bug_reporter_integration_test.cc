@@ -39,7 +39,7 @@ TEST_F(BugReporterIntegrationTest, SmokeTest) {
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromFilename(bugreport_path_, &vmo));
   fuchsia::mem::Buffer buffer = std::move(vmo).ToTransport();
-  std::vector<::fuchsia::feedback::Attachment> unpacked_attachments;
+  std::map<std::string, std::string> unpacked_attachments;
   ASSERT_TRUE(Unpack(buffer, &unpacked_attachments));
 }
 

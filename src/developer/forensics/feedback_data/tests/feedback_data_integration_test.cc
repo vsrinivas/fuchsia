@@ -30,7 +30,6 @@
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/cobalt/metrics_registry.cb.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
@@ -55,6 +54,7 @@ using fuchsia::hwinfo::BoardInfo;
 using fuchsia::hwinfo::BoardPtr;
 using fuchsia::hwinfo::ProductInfo;
 using fuchsia::hwinfo::ProductPtr;
+using testing::Key;
 using testing::UnorderedElementsAreArray;
 
 class LogListener : public fuchsia::logger::LogListenerSafe {
@@ -307,24 +307,19 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckKeys) {
 
   ASSERT_TRUE(bugreport.has_bugreport());
   EXPECT_STREQ(bugreport.bugreport().key.c_str(), kBugreportFilename);
-  std::vector<Attachment> unpacked_attachments;
+  std::map<std::string, std::string> unpacked_attachments;
   ASSERT_TRUE(Unpack(bugreport.bugreport().value, &unpacked_attachments));
   ASSERT_THAT(unpacked_attachments, testing::UnorderedElementsAreArray({
-                                        MatchesKey(kAttachmentAnnotations),
-                                        MatchesKey(kAttachmentBuildSnapshot),
-                                        MatchesKey(kAttachmentInspect),
-                                        MatchesKey(kAttachmentLogKernel),
-                                        MatchesKey(kAttachmentLogSystem),
-                                        MatchesKey(kAttachmentManifest),
+                                        Key(kAttachmentAnnotations),
+                                        Key(kAttachmentBuildSnapshot),
+                                        Key(kAttachmentInspect),
+                                        Key(kAttachmentLogKernel),
+                                        Key(kAttachmentLogSystem),
+                                        Key(kAttachmentManifest),
                                     }));
 
-  std::string inspect_json;
-  for (const auto& attachment : unpacked_attachments) {
-    if (attachment.key != kAttachmentInspect) {
-      continue;
-    }
-    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_json));
-  }
+  ASSERT_NE(unpacked_attachments.find(kAttachmentInspect), unpacked_attachments.end());
+  const std::string inspect_json = unpacked_attachments[kAttachmentInspect];
   ASSERT_FALSE(inspect_json.empty());
 
   // JSON verification.

@@ -35,7 +35,6 @@
 #include "src/developer/forensics/utils/archive.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/timekeeper/test_clock.h"
@@ -46,7 +45,6 @@ namespace forensics {
 namespace feedback_data {
 namespace {
 
-using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
@@ -197,10 +195,10 @@ class DataProviderTest : public UnitTestFixture {
     return bugreport;
   }
 
-  std::vector<Attachment> UnpackBugreport(const Bugreport& bugreport) {
+  std::map<std::string, std::string> UnpackBugreport(const Bugreport& bugreport) {
     FX_CHECK(bugreport.has_bugreport());
     FX_CHECK(bugreport.bugreport().key == kBugreportFilename);
-    std::vector<Attachment> unpacked_attachments;
+    std::map<std::string, std::string> unpacked_attachments;
     FX_CHECK(Unpack(bugreport.bugreport().value, &unpacked_attachments));
     return unpacked_attachments;
   }
@@ -351,29 +349,22 @@ TEST_F(DataProviderTest, GetBugreport_AnnotationsAsAttachment) {
   SetUpDataProvider();
 
   Bugreport bugreport = GetBugreport();
-  std::vector<Attachment> unpacked_attachments = UnpackBugreport(bugreport);
+  auto unpacked_attachments = UnpackBugreport(bugreport);
 
   // There should be an "annotations.json" attachment present in the bugreport.
-  bool found_annotations_attachment = false;
-  std::string annotations_json;
-  for (const auto& attachment : unpacked_attachments) {
-    if (attachment.key != kAttachmentAnnotations) {
-      continue;
-    }
-    found_annotations_attachment = true;
+  ASSERT_NE(unpacked_attachments.find(kAttachmentAnnotations), unpacked_attachments.end());
+  const std::string annotations_json = unpacked_attachments[kAttachmentAnnotations];
+  ASSERT_FALSE(annotations_json.empty());
 
-    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &annotations_json));
-    ASSERT_FALSE(annotations_json.empty());
-
-    // JSON verification.
-    // We check that the output is a valid JSON and that it matches the schema.
-    rapidjson::Document json;
-    ASSERT_FALSE(json.Parse(annotations_json.c_str()).HasParseError());
-    rapidjson::Document schema_json;
-    ASSERT_FALSE(
-        schema_json
-            .Parse(fxl::StringPrintf(
-                R"({
+  // JSON verification.
+  // We check that the output is a valid JSON and that it matches the schema.
+  rapidjson::Document json;
+  ASSERT_FALSE(json.Parse(annotations_json.c_str()).HasParseError());
+  rapidjson::Document schema_json;
+  ASSERT_FALSE(
+      schema_json
+          .Parse(fxl::StringPrintf(
+              R"({
   "type": "object",
  "properties": {
     "%s": {
@@ -403,41 +394,31 @@ TEST_F(DataProviderTest, GetBugreport_AnnotationsAsAttachment) {
   },
   "additionalProperties": false
 })",
-                kAnnotationBuildBoard, kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
-                kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationDeviceBoardName,
-                kAnnotationDeviceUptime, kAnnotationDeviceUTCTime))
-            .HasParseError());
-    rapidjson::SchemaDocument schema(schema_json);
-    rapidjson::SchemaValidator validator(schema);
-    EXPECT_TRUE(json.Accept(validator));
-  }
-  EXPECT_TRUE(found_annotations_attachment);
+              kAnnotationBuildBoard, kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
+              kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationDeviceBoardName,
+              kAnnotationDeviceUptime, kAnnotationDeviceUTCTime))
+          .HasParseError());
+  rapidjson::SchemaDocument schema(schema_json);
+  rapidjson::SchemaValidator validator(schema);
+  EXPECT_TRUE(json.Accept(validator));
 }
 
 TEST_F(DataProviderTest, GetBugreport_ManifestAsAttachment) {
   SetUpDataProvider();
 
   Bugreport bugreport = GetBugreport();
-  std::vector<Attachment> unpacked_attachments = UnpackBugreport(bugreport);
+  auto unpacked_attachments = UnpackBugreport(bugreport);
 
   // There should be a "manifest.json" attachment present in the bugreport.
-  bool found_manifest_attachment = false;
-  std::string manifest_json;
-  for (const auto& attachment : unpacked_attachments) {
-    if (attachment.key != kAttachmentManifest) {
-      continue;
-    }
-    found_manifest_attachment = true;
-  }
-  EXPECT_TRUE(found_manifest_attachment);
+  ASSERT_NE(unpacked_attachments.find(kAttachmentManifest), unpacked_attachments.end());
 }
 
 TEST_F(DataProviderTest, GetBugreport_SingleAttachmentOnEmptyAttachmentAllowlist) {
   SetUpDataProvider(kDefaultAnnotations, /*attachment_allowlist=*/{});
 
   Bugreport bugreport = GetBugreport();
-  std::vector<Attachment> unpacked_attachments = UnpackBugreport(bugreport);
-  EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
+  auto unpacked_attachments = UnpackBugreport(bugreport);
+  ASSERT_NE(unpacked_attachments.find(kAttachmentAnnotations), unpacked_attachments.end());
 }
 
 TEST_F(DataProviderTest, GetBugreport_NoDataOnEmptyAllowlists) {

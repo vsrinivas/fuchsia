@@ -14,7 +14,6 @@
 #include "src/developer/forensics/utils/archive.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
@@ -42,22 +41,10 @@ std::vector<Annotation> CreateAnnotations() {
 }
 
 Attachment CreateBugreport() {
-  std::vector<Attachment> attachments;
+  std::map<std::string, std::string> attachments;
 
-  fsl::SizedVmo vmo;
-
-  FX_CHECK(fsl::VmoFromString("attachment_value_1", &vmo)) << "Failed to create attachment vmo";
-  attachments.emplace_back(Attachment{
-      .key = "attachment_key_1",
-      .value = std::move(vmo).ToTransport(),
-  });
-
-  FX_CHECK(fsl::VmoFromString(AnnotationsToJSON(CreateAnnotations()), &vmo))
-      << "Failed to create attachment vmo";
-  attachments.emplace_back(Attachment{
-      .key = "annotations.json",
-      .value = std::move(vmo).ToTransport(),
-  });
+  attachments["annotations.json"] = AnnotationsToJSON(CreateAnnotations());
+  attachments["attachment_key"] = "attachment_value";
 
   Attachment bugreport;
   bugreport.key = "bugreport.zip";

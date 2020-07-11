@@ -198,7 +198,6 @@ executable("feedback_data_integration_test_exe") {
     "//src/developer/forensics/testing/fakes:cobalt",
     "//src/developer/forensics/utils:archive",
     "//src/developer/forensics/utils/cobalt",
-    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/uuid:uuid",
     "//src/ui/lib/escher/test/common:gtest_vulkan",

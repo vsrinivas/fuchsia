@@ -71,23 +71,3 @@ source_set("types") {
     "//src/developer/forensics/utils:errors",
   ]
 }
-
-source_set("utils") {
-  sources = [
-    "utils.cc",
-    "utils.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/forensics/feedback_data/attachments:types",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/utils:archive",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-  ]
-}

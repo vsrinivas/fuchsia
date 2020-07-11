@@ -18,35 +18,28 @@
 namespace forensics {
 namespace {
 
-using fuchsia::feedback::Attachment;
 using fuchsia::mem::Buffer;
 
-bool Archive(const std::vector<Attachment>& attachments, Buffer* archive, zipFile* zf) {
-  for (const auto& attachment : attachments) {
-    const std::string& filename = attachment.key;
-
+bool Archive(const std::map<std::string, std::string>& files, Buffer* archive, zipFile* zf) {
+  for (const auto& [filename, content] : files) {
     zip_fileinfo zf_info = {};
-    if (int status = zipOpenNewFileInZip64(*zf, filename.c_str(), &zf_info, nullptr, 0, nullptr, 0,
-                                           nullptr, Z_DEFLATED, Z_DEFAULT_COMPRESSION, /*zip64=*/1);
+    if (const int status =
+            zipOpenNewFileInZip64(*zf, filename.c_str(), &zf_info, nullptr, 0, nullptr, 0, nullptr,
+                                  Z_DEFLATED, Z_DEFAULT_COMPRESSION, /*zip64=*/1);
         status != ZIP_OK) {
       FX_LOGS(ERROR) << fxl::Substitute("cannot create $0 in output zip archive: ", filename)
                      << status;
       return false;
     }
 
-    std::vector<uint8_t> content;
-    if (!fsl::VectorFromVmo(attachment.value, &content)) {
-      FX_LOGS(ERROR) << "failed to read VMO for " << filename;
-      return false;
-    }
-
-    if (int status = zipWriteInFileInZip(*zf, content.data(), content.size()); status != ZIP_OK) {
+    if (const int status = zipWriteInFileInZip(*zf, content.data(), content.size());
+        status != ZIP_OK) {
       FX_LOGS(ERROR) << fxl::Substitute("cannot write $0 in output zip archive: ", filename)
                      << status;
       return false;
     }
 
-    if (int status = zipCloseFileInZip(*zf); status != ZIP_OK) {
+    if (const int status = zipCloseFileInZip(*zf); status != ZIP_OK) {
       FX_LOGS(WARNING) << fxl::Substitute("cannot close $0 in output zip archive: ", filename)
                        << status;
     }
@@ -57,7 +50,7 @@ bool Archive(const std::vector<Attachment>& attachments, Buffer* archive, zipFil
 
 }  // namespace
 
-bool Archive(const std::vector<Attachment>& attachments, Buffer* archive) {
+bool Archive(const std::map<std::string, std::string>& files, Buffer* archive) {
   // We write the archive to a temporary file because in-memory archiving in minizip is complicated.
   files::ScopedTempDir tmp_dir;
   std::string archive_filename;
@@ -69,10 +62,10 @@ bool Archive(const std::vector<Attachment>& attachments, Buffer* archive) {
     return false;
   }
 
-  bool success = Archive(attachments, archive, &zf);
+  const bool success = Archive(files, archive, &zf);
 
   // We always close the archive regardless of the success status.
-  if (int status = zipClose(zf, nullptr); status != ZIP_OK) {
+  if (const int status = zipClose(zf, nullptr); status != ZIP_OK) {
     FX_LOGS(WARNING) << "cannot close output zip archive: " << status;
   }
 
@@ -92,9 +85,9 @@ bool Archive(const std::vector<Attachment>& attachments, Buffer* archive) {
 
 namespace {
 
-bool Unpack(const Buffer& archive, std::vector<Attachment>* attachments, unzFile* uf) {
+bool Unpack(unzFile* uf, std::map<std::string, std::string>* files) {
   unz_global_info archive_info;
-  if (int status = unzGetGlobalInfo(*uf, &archive_info); status != UNZ_OK) {
+  if (const int status = unzGetGlobalInfo(*uf, &archive_info); status != UNZ_OK) {
     FX_LOGS(ERROR) << "cannot read input zip archive info: " << status;
     return false;
   }
@@ -108,8 +101,8 @@ bool Unpack(const Buffer& archive, std::vector<Attachment>* attachments, unzFile
   for (uint64_t current_file_index = 1; current_file_index <= num_files; ++current_file_index) {
     unz_file_info64 file_info;
     char filename[256];
-    if (int status = unzGetCurrentFileInfo64(*uf, &file_info, filename, sizeof(filename), nullptr,
-                                             0, nullptr, 0);
+    if (const int status = unzGetCurrentFileInfo64(*uf, &file_info, filename, sizeof(filename),
+                                                   nullptr, 0, nullptr, 0);
         status != UNZ_OK) {
       FX_LOGS(ERROR) << "cannot read current file info in input zip archive: " << status;
       return false;
@@ -139,26 +132,18 @@ bool Unpack(const Buffer& archive, std::vector<Attachment>* attachments, unzFile
       }  // num_bytes_or_status == 0 means EOF
     } while (num_bytes_or_status > 0);
 
-    if (int status = unzCloseCurrentFile(*uf); status != UNZ_OK) {
+    if (const int status = unzCloseCurrentFile(*uf); status != UNZ_OK) {
       FX_LOGS(WARNING) << fxl::Substitute("cannot close $0 in input zip archive: ", filename_str)
                        << status;
     }
 
-    fsl::SizedVmo sized_vmo;
-    if (!fsl::VmoFromVector(data, &sized_vmo)) {
-      FX_LOGS(ERROR) << "cannot write output VMO for " << filename_str;
-      return false;
-    }
-    Attachment attachment;
-    attachment.key = std::move(filename_str);
-    attachment.value = std::move(sized_vmo).ToTransport();
-    attachments->push_back(std::move(attachment));
+    files->insert({std::string(filename_str), std::string(data.begin(), data.end())});
 
     if (current_file_index == num_files) {  // last file, bail out.
       break;
     }
 
-    if (int status = unzGoToNextFile(*uf); status != UNZ_OK) {
+    if (const int status = unzGoToNextFile(*uf); status != UNZ_OK) {
       FX_LOGS(ERROR) << "cannot read next file in input zip archive: " << status;
       return false;
     }
@@ -169,7 +154,7 @@ bool Unpack(const Buffer& archive, std::vector<Attachment>* attachments, unzFile
 
 }  // namespace
 
-bool Unpack(const Buffer& archive, std::vector<Attachment>* attachments) {
+bool Unpack(const Buffer& archive, std::map<std::string, std::string>* files) {
   // We write the archive to a temporary file because minizip doesn't support unpacking an in-memory
   // archive.
   files::ScopedTempDir tmp_dir;
@@ -177,7 +162,7 @@ bool Unpack(const Buffer& archive, std::vector<Attachment>* attachments) {
   tmp_dir.NewTempFile(&archive_filename);
 
   auto data = std::make_unique<uint8_t[]>(archive.size);
-  if (zx_status_t status = archive.vmo.read(data.get(), 0u, archive.size); status != ZX_OK) {
+  if (const zx_status_t status = archive.vmo.read(data.get(), 0u, archive.size); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "failed to read input zip archive VMO";
     return false;
   }
@@ -194,10 +179,10 @@ bool Unpack(const Buffer& archive, std::vector<Attachment>* attachments) {
     return false;
   }
 
-  bool success = Unpack(archive, attachments, &uf);
+  const bool success = Unpack(&uf, files);
 
   // We always close the archive regardless of the success status.
-  if (int status = unzClose(uf); status != ZIP_OK) {
+  if (const int status = unzClose(uf); status != ZIP_OK) {
     FX_LOGS(WARNING) << "cannot close input zip archive: " << status;
   }
 

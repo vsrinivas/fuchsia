@@ -14,15 +14,16 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <map>
 #include <memory>
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/annotations/utils.h"
 #include "src/developer/forensics/feedback_data/attachments/screenshot_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
-#include "src/developer/forensics/feedback_data/attachments/utils.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/image_conversion.h"
+#include "src/developer/forensics/utils/archive.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
@@ -66,7 +67,7 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
           .and_then([this](std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
                                annotations_and_attachments) {
             Bugreport bugreport;
-            std::vector<fuchsia::feedback::Attachment> attachments;
+            std::map<std::string, std::string> attachments;
 
             const auto& annotations_result = std::get<0>(annotations_and_attachments);
             if (annotations_result.is_ok()) {
@@ -77,18 +78,23 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
 
             const auto& attachments_result = std::get<1>(annotations_and_attachments);
             if (attachments_result.is_ok()) {
-              attachments = ToFeedbackAttachmentVector(attachments_result.value());
+              for (const auto& [key, value] : attachments_result.value()) {
+                if (value.HasValue() && !value.Value().empty()) {
+                  attachments[key] = value.Value();
+                }
+              }
+
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any attachments";
             }
 
             // We also add the annotations as a single extra attachment.
-            // This is useful for clients that surface the annotations differentily in the UI
+            // This is useful for clients that surface the annotations differently in the UI
             // but still want all the annotations to be easily downloadable in one file.
             if (bugreport.has_annotations()) {
               const auto annotations_json = ToJsonString(bugreport.annotations());
               if (annotations_json.has_value()) {
-                AddToAttachments(kAttachmentAnnotations, annotations_json.value(), &attachments);
+                attachments[kAttachmentAnnotations] = annotations_json.value();
               }
             }
 
@@ -96,14 +102,14 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
                     annotations_result, attachments_result,
                     datastore_->IsMissingNonPlatformAnnotations());
                 integrity_report.has_value()) {
-              AddToAttachments(kAttachmentManifest, integrity_report.value(), &attachments);
+              attachments[kAttachmentManifest] = integrity_report.value();
             }
 
             // We bundle the attachments into a single attachment.
-            // This is useful for most clients that want to pass around a single bundle.
             if (!attachments.empty()) {
               fuchsia::feedback::Attachment bundle;
-              if (BundleAttachments(attachments, &bundle)) {
+              bundle.key = kBugreportFilename;
+              if (Archive(attachments, &(bundle.value))) {
                 bugreport.set_bugreport(std::move(bundle));
               }
             }

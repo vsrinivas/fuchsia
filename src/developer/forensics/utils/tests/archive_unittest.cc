@@ -19,7 +19,6 @@
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/vector.h"
 
 namespace forensics {
@@ -27,6 +26,8 @@ namespace {
 
 using fuchsia::feedback::Attachment;
 using fuchsia::mem::Buffer;
+using testing::Pair;
+using testing::UnorderedElementsAreArray;
 
 constexpr char kPlainTextFilename[] = "filename.txt";
 constexpr char kJsonFilename[] = "filename.json";
@@ -44,25 +45,9 @@ const std::map<std::string, std::string> kAttachments = {
     {kXmlFilename, kXmlFileContent},
 };
 
-Attachment BuildAttachment(const std::string& key, const std::string& value) {
-  Attachment attachment;
-  attachment.key = key;
-  FX_CHECK(fsl::VmoFromString(value, &attachment.value));
-  return attachment;
-}
-
-std::vector<Attachment> BuildAttachments(
-    const std::map<std::string, std::string>& str_attachments) {
-  std::vector<Attachment> attachments;
-  for (const auto& [key, value] : str_attachments) {
-    attachments.push_back(BuildAttachment(key, value));
-  }
-  return attachments;
-}
-
 TEST(ArchiveTest, Archive) {
   Buffer archive;
-  ASSERT_TRUE(Archive(BuildAttachments(kAttachments), &archive));
+  ASSERT_TRUE(Archive(kAttachments, &archive));
   ASSERT_TRUE(archive.vmo.is_valid());
   ASSERT_GT(archive.size, 0u);
 
@@ -80,29 +65,22 @@ TEST(ArchiveTest, Unpack) {
   ASSERT_TRUE(fsl::VmoFromFilename("/pkg/data/test_data.zip", &vmo));
   Buffer archive = std::move(vmo).ToTransport();
 
-  std::vector<Attachment> unpacked_attachments;
+  std::map<std::string, std::string> unpacked_attachments;
   ASSERT_TRUE(Unpack(archive, &unpacked_attachments));
-  EXPECT_THAT(unpacked_attachments,
-              testing::UnorderedElementsAreArray({
-                  MatchesAttachment(kPlainTextFilename, kPlainTextFileContent),
-                  MatchesAttachment(kJsonFilename, kJsonFileContent),
-                  MatchesAttachment(kXmlFilename, kXmlFileContent),
-              }));
+  EXPECT_THAT(unpacked_attachments, UnorderedElementsAreArray({
+                                        Pair(kPlainTextFilename, kPlainTextFileContent),
+                                        Pair(kJsonFilename, kJsonFileContent),
+                                        Pair(kXmlFilename, kXmlFileContent),
+                                    }));
 }
 
 TEST(ArchiveTest, UnpackArchive) {
-  const std::vector<Attachment> original_attachments = BuildAttachments(kAttachments);
   Buffer archive;
-  ASSERT_TRUE(Archive(original_attachments, &archive));
+  ASSERT_TRUE(Archive(kAttachments, &archive));
 
-  std::vector<Attachment> unpacked_attachments;
+  std::map<std::string, std::string> unpacked_attachments;
   ASSERT_TRUE(Unpack(archive, &unpacked_attachments));
-  EXPECT_THAT(unpacked_attachments,
-              testing::UnorderedElementsAreArray({
-                  MatchesAttachment(kPlainTextFilename, kPlainTextFileContent),
-                  MatchesAttachment(kJsonFilename, kJsonFileContent),
-                  MatchesAttachment(kXmlFilename, kXmlFileContent),
-              }));
+  EXPECT_EQ(unpacked_attachments, kAttachments);
 }
 
 }  // namespace
