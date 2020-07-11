@@ -4,6 +4,8 @@
 
 # Note: this file is heavily based on //zircon/third_party/ulib/zstd/BUILD.gn.
 
+import("//build/config/compiler.gni")
+
 config("zstd_config") {
   visibility = [ ":*" ]
 
@@ -77,6 +79,13 @@ static_library("zstd") {
   public_configs = [ ":zstd_include" ]
 
   configs += [ ":zstd_config" ]
+
+  # host tools (specifically blobfs) used during build use zstd to compress blobs. zstd is
+  # slow when compiled with optimize=none or optimize=debug (-O0 currently); enable default
+  # optimizations for just this library to speed up builds.
+  # See fxbug.dev/55297
+  configs -= [ "//build/config:default_optimize" ]
+  configs += [ "//build/config:optimize_speed" ]
 }
 
 config("zstd_seekable_config") {
