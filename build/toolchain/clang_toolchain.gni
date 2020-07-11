@@ -232,7 +232,7 @@ template("clang_toolchain") {
       #}
       if (output_breakpad_syms && invoker.toolchain_os == "fuchsia" &&
           host_os != "mac") {
-        command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+        command += " && $dump_syms -r -n \"$breakpad_name\" -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
       }
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
