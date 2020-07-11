@@ -26,13 +26,7 @@ class InstanceLifecycleTest : public zxtest::Test {
   ~InstanceLifecycleTest() override = default;
   void SetUp() override {
     IsolatedDevmgr::Args args;
-
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
-    ASSERT_OK(
-        fdio_open("/pkg/driver", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, remote.release()));
-    args.flat_namespace.push_back({"/drivers", std::move(local)});
-    args.load_drivers.push_back("/drivers/ddk-instance-lifecycle-test.so");
+    args.path_prefix = "/pkg/";
 
     board_test::DeviceEntry dev = {};
     dev.vid = PDEV_VID_TEST;

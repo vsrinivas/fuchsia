@@ -5,8 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 fidl("fuchsia.device.instancelifecycle.test") {
   testonly = true
@@ -55,28 +54,15 @@ test("tests") {
   visibility = [ ":*" ]
 }
 
-devmgr_manifest("devmgr-manifest") {
-}
+isolated_devmgr_unittest_package("ddk-instance-lifecycle-test") {
+  executable_path = "test/ddk-instance-lifecycle-test"
 
-test_package("ddk-instance-lifecycle-test") {
   deps = [
-    ":devmgr-manifest",
     ":driver",
     ":tests",
-  ]
-
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  tests = [
-    {
-      name = "ddk-instance-lifecycle-test"
-      environments = basic_envs
-    },
-  ]
-
-  drivers = [
-    {
-      name = "ddk-instance-lifecycle-test.so"
-    },
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
   ]
 }
