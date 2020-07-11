@@ -3,32 +3,20 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.openthread.devmgr.IsolatedDevmgr": [
-                    "fuchsia-pkg://fuchsia.com/ot_devmgr_component_integration#meta/ot_devmgr_component_integration.cmx"
+                    "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-devmgr-component-integration.cmx"
                 ]
             }
         }
     },
     "program": {
-        "binary": "test/ot_radio_ncp_ver_query_mock"
+        "binary": "bin/ot_radio_ncp_ver_query_mock"
     },
     "sandbox": {
-        "boot": [
-            "bin",
-            "driver",
-            "lib"
-        ],
-        "dev": [
-            "class/ot-radio",
-            "test/test"
-        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.lowpan.spinel.Device",
             "fuchsia.openthread.devmgr.IsolatedDevmgr",
             "fuchsia.sys.Launcher"
-        ],
-        "system": [
-            "driver/fake-ot-radio.so"
         ]
     }
 }

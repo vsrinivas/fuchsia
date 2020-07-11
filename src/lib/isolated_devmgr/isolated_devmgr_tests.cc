@@ -21,7 +21,7 @@ namespace testing {
 
 class DevmgrTest : public ::gtest::RealLoopFixture {
  protected:
-  static constexpr const char* kSysdevDriver = "/boot/driver/sysdev.so";
+  static constexpr const char* kSysdevDriver = "/boot/driver/test/sysdev.so";
   static constexpr const char* kPlatformDriver = "/boot/driver/platform-bus.so";
   const board_test::DeviceEntry kRtcDeviceEntry = []() {
     board_test::DeviceEntry entry = {};

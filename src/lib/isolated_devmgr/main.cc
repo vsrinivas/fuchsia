@@ -40,7 +40,7 @@ Options:
    --search_driver=[search_path]: loads all drivers in provided search path. May be informed
                                   multiple times.
    --sys_device=[sys_device_driver]: path to sys device driver, defaults to
-                                     /boot/driver/sysdev.so
+                                     /boot/driver/test/sysdev.so
    --wait_for=[device]: wait for isolated manager to have |device| exposed before serving any
                         requests. May be informed multiple times.
    --add_namespace=[ns]: make the namespace 'ns' from this component available to the devmgr
@@ -99,8 +99,8 @@ int main(int argc, const char** argv) {
       new fbl::Vector<board_test::DeviceEntry>());
 
   // fill up defaults:
-  args.sys_device_driver = "/boot/driver/sysdev.so";
-  args.load_drivers.push_back("/boot/driver/sysdev.so");
+  args.sys_device_driver = "/boot/driver/test/sysdev.so";
+  args.load_drivers.push_back("/boot/driver/test/sysdev.so");
   args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
   args.disable_block_watcher = true;
   args.disable_netsvc = true;

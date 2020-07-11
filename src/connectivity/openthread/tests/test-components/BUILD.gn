@@ -5,10 +5,8 @@
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
-
-devmgr_manifest("devmgr-manifest") {
-}
+import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
+import("//src/sys/build/components.gni")
 
 test_package("ot-radio-tests") {
   package_name = "ot-radio-tests"
@@ -73,32 +71,6 @@ rustc_test("ot-stack-soft-reset") {
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }
 
-test_package("ot-radio-component-tests") {
-  package_name = "ot-radio-component-tests"
-
-  deps = [
-    ":devmgr-manifest",
-    ":ot-radio-ncp-ver-query-mock",
-    ":ot-stack-ncp-ver-query-mock",
-    ":ot-stack-soft-reset-mock",
-  ]
-
-  tests = [
-    {
-      name = "ot_stack_ncp_ver_query_mock"
-      environments = basic_envs
-    },
-    {
-      name = "ot_stack_soft_reset_mock"
-      environments = basic_envs
-    },
-    {
-      name = "ot_radio_ncp_ver_query_mock"
-      environments = basic_envs
-    },
-  ]
-}
-
 rustc_test("ot-stack-ncp-ver-query-mock") {
   name = "ot_stack_ncp_ver_query_mock"
   source_root = "mock-device/ot_stack_ncp_ver_query_mock.rs"
@@ -139,4 +111,43 @@ rustc_test("ot-radio-ncp-ver-query-mock") {
     "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+}
+
+fuchsia_component("ot-radio-ncp-ver-query-mock-component") {
+  testonly = true
+  manifest = "meta/ot_radio_ncp_ver_query_mock.cmx"
+  deps = [
+    ":ot-radio-ncp-ver-query-mock",
+    "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration",
+  ]
+}
+
+fuchsia_component("ot-stack-ncp-ver-query-mock-component") {
+  testonly = true
+  manifest = "meta/ot_stack_ncp_ver_query_mock.cmx"
+  deps = [
+    ":ot-stack-ncp-ver-query-mock",
+    "//src/connectivity/openthread/ot-stack:component",
+    "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration",
+  ]
+}
+
+fuchsia_component("ot-stack-soft-reset-mock-component") {
+  testonly = true
+  manifest = "meta/ot_radio_ncp_ver_query_mock.cmx"
+  deps = [
+    ":ot-stack-soft-reset-mock",
+    "//src/connectivity/openthread/ot-stack:component",
+    "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration",
+  ]
+}
+
+fuchsia_test_package("ot-radio-component-tests") {
+  package_name = "ot-radio-component-tests"
+
+  test_components = [
+    ":ot-radio-ncp-ver-query-mock-component",
+    ":ot-stack-ncp-ver-query-mock-component",
+    ":ot-stack-soft-reset-mock-component",
+  ]
 }

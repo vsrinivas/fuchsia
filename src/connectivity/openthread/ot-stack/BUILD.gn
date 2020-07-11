@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("app") {
   sources = [
@@ -41,20 +40,13 @@ group("ot-stack") {
   public_deps = [ ":pkg" ]
 }
 
-package("pkg") {
-  package_name = "ot-stack"
+fuchsia_component("component") {
+  component_name = "ot-stack"
+  manifest = "meta/ot-stack.cmx"
   deps = [ ":bin" ]
+}
 
-  binaries = [
-    {
-      name = "ot-stack"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/ot-stack.cmx"
-      dest = "ot-stack.cmx"
-    },
-  ]
+fuchsia_package("pkg") {
+  package_name = "ot-stack"
+  deps = [ ":component" ]
 }

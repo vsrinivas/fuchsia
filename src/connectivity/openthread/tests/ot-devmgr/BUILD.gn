@@ -3,36 +3,23 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 
-devmgr_manifest("devmgr_manifest") {
-}
-
-group("ot-devmgr") {
-  testonly = true
-  deps = [ ":ot_devmgr_component_integration" ]
-}
-
-package("ot_devmgr_component_integration") {
-  testonly = true
+isolated_devmgr_component("ot-devmgr-component-integration") {
+  args = [
+    "--svc_name=fuchsia.openthread.devmgr.IsolatedDevmgr",
+    "--sys_device=/boot/driver/platform-bus.so",
+    "--search_driver=/boot/driver",
+    "--load_driver=/boot/driver/fake-ot-radio.so",
+    "--device_vid_pid_did=11:11:18",
+    "--wait_for=class/ot-radio/000",
+  ]
 
   deps = [
-    ":devmgr_manifest",
-    "//src/lib/isolated_devmgr",
-  ]
-
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  binaries = [
-    {
-      name = "isolated_devmgr"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/ot_devmgr_component_integration.cmx")
-      dest = "ot_devmgr_component_integration.cmx"
-    },
+    "//src/connectivity/openthread/drivers/ot-radio",
+    "//src/connectivity/openthread/tests/fake-drivers/fake-ot-radio:fake-ot-radio-driver",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/tests/sysdev",
   ]
 }

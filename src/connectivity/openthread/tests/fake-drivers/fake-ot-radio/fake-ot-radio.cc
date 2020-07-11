@@ -282,7 +282,7 @@ zx_status_t FakeOtRadioDevice::TrySendInboundFrame() {
 
 zx_status_t FakeOtRadioDevice::RadioThread() {
   zx_status_t status = ZX_OK;
-  zxlogf(ERROR, "fake-ot-radio: entered thread");
+  zxlogf(INFO, "fake-ot-radio: entered thread");
 
   while (true) {
     zx_port_packet_t packet = {};
