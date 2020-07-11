@@ -18,10 +18,12 @@ async fn writes_bootloader() {
         .add_file("bootloader", "new bootloader");
 
     env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
         oneshot: Some(true),
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
     })
     .await
     .expect("success");
@@ -66,10 +68,12 @@ async fn writes_firmware() {
         .add_file("firmware", "fake firmware");
 
     env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
         oneshot: Some(true),
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
     })
     .await
     .expect("success");
@@ -115,10 +119,12 @@ async fn writes_multiple_firmware_types() {
         .add_file("firmware_b", "fake firmware B");
 
     env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
         oneshot: Some(true),
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
     })
     .await
     .expect("success");
@@ -184,10 +190,12 @@ async fn skips_unsupported_firmware_type() {
 
     // Update should still succeed, we want to skip unsupported firmware types.
     env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
         oneshot: Some(true),
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
     })
     .await
     .expect("success");
@@ -237,10 +245,12 @@ async fn fails_on_firmware_write_error() {
         .add_file("firmware", "fake firmware");
 
     env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
         oneshot: Some(true),
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
     })
     .await
     .expect_err("update should fail");

@@ -12,7 +12,10 @@ use {
     update_package::UpdatePackage,
 };
 
-const CONCURRENT_PACKAGE_RESOLVES: usize = 5;
+// FIXME(52596) Bump up concurrency once systems low on storage can handle it.
+// FIXME(53133) Also blocked on the go system updater no longer existing.
+const CONCURRENT_PACKAGE_RESOLVES: usize = 1;
+//const CONCURRENT_PACKAGE_RESOLVES: usize = 5;
 
 /// Error encountered while resolving a package.
 #[derive(Debug, Error)]

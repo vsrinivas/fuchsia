@@ -12,6 +12,8 @@ rustc_library("mock-resolver") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/lib/fdio/rust:fdio",
@@ -22,11 +24,6 @@ rustc_library("mock-resolver") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:tempfile",
-  ]
-
-  test_deps = [
-    "//garnet/lib/rust/io_util",
-    "//third_party/rust_crates:matches",
   ]
 }
 

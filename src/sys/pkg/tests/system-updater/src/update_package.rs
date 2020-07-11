@@ -23,11 +23,12 @@ async fn rejects_invalid_package_name() {
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
+            initiator: "manual",
+            target: "m3rk13",
             update: Some(not_update_package_url),
+            reboot: None,
+            skip_recovery: None,
             oneshot: Some(true),
-            ..Default::default()
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -64,10 +65,12 @@ async fn fails_if_package_unavailable() {
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+            skip_recovery: None,
             oneshot: Some(true),
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -87,18 +90,25 @@ async fn packages_json_takes_precedence() {
         )
         .add_file(
             "packages.json",
-            make_packages_json([
+            &json!({
+              // TODO: Change to "1" once we remove support for versions as ints.
+              "version": 1,
+              "content": [
                 "fuchsia-pkg://fuchsia.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
                 "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff",
-            ]),
+              ]
+            })
+            .to_string(),
         )
         .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
         oneshot: Some(true),
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
     })
     .await
     .expect("run system updater");

@@ -17,10 +17,12 @@ async fn updates_the_system() {
         .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
         oneshot: Some(true),
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
     })
     .await
     .expect("run system updater");
@@ -75,10 +77,12 @@ async fn requires_zbi() {
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+            skip_recovery: None,
             oneshot: Some(true),
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");

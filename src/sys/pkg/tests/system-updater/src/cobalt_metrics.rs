@@ -4,27 +4,39 @@
 
 use {super::*, pretty_assertions::assert_eq};
 
-async fn test_resolve_error_maps_to_cobalt_status_code(
-    status: Status,
-    expected_status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode,
-) {
+#[fasync::run_singlethreaded(test)]
+async fn reports_untrusted_tuf_repo() {
     let env = TestEnv::new();
-
-    let pkg_url = "fuchsia-pkg://fuchsia.com/failure/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([pkg_url]))
+        .add_file(
+            "packages.json",
+            &json!({
+              // TODO: Change to "1" once we remove support for versions as ints.
+              "version": 1,
+              "content": [
+                "fuchsia-pkg://non-existent-repo.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
+                "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff",
+              ]
+            })
+            .to_string(),
+        )
         .add_file("zbi", "fake zbi");
 
-    env.resolver.url(pkg_url).fail(status);
+    env.resolver.mock_resolve_failure(
+        "fuchsia-pkg://non-existent-repo.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
+        Status::ADDRESS_UNREACHABLE,
+    );
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+            skip_recovery: None,
             oneshot: Some(true),
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -38,51 +50,16 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
-            status_code: expected_status_code as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorUntrustedTufRepo
+                as u32,
             target: "m3rk13".into(),
         }
     );
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn reports_untrusted_tuf_repo() {
-    test_resolve_error_maps_to_cobalt_status_code(
-        Status::ADDRESS_UNREACHABLE,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorUntrustedTufRepo,
-    )
-    .await;
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn reports_out_of_space() {
-    test_resolve_error_maps_to_cobalt_status_code(
-        Status::NO_SPACE,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorStorageOutOfSpace,
-    )
-    .await;
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn reports_misc_storage() {
-    test_resolve_error_maps_to_cobalt_status_code(
-        Status::IO,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorStorage,
-    )
-    .await;
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn reports_network() {
-    test_resolve_error_maps_to_cobalt_status_code(
-        Status::UNAVAILABLE,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorNetworking,
-    )
-    .await;
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn succeeds_even_if_metrics_fail_to_send() {
-    let env = TestEnvBuilder::new().unregister_protocol(Protocol::Cobalt).build();
+    let env = TestEnv::new();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -92,11 +69,15 @@ async fn succeeds_even_if_metrics_fail_to_send() {
         )
         .add_file("zbi", "fake zbi");
 
+    *env.logger_factory.broken.lock() = true;
+
     env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
         oneshot: Some(true),
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
     })
     .await
     .expect("run system updater");

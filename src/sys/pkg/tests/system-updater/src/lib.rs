@@ -22,7 +22,6 @@ use {
     pretty_assertions::assert_eq,
     serde_json::json,
     std::{
-        collections::HashSet,
         fs::{self, create_dir, File},
         io::Write,
         path::PathBuf,
@@ -35,7 +34,6 @@ mod board;
 mod channel;
 mod cobalt_metrics;
 mod fetch_packages;
-mod history;
 mod mode_force_recovery;
 mod mode_normal;
 mod options;
@@ -55,29 +53,15 @@ enum SystemUpdaterInteraction {
     Reboot,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-enum Protocol {
-    PackageResolver,
-    PackageCache,
-    SpaceManager,
-    Paver,
-    Reboot,
-    Cobalt,
-}
-
 type SystemUpdaterInteractions = Arc<Mutex<Vec<SystemUpdaterInteraction>>>;
 
 struct TestEnvBuilder {
     paver_service_builder: MockPaverServiceBuilder,
-    blocked_protocols: HashSet<Protocol>,
 }
 
 impl TestEnvBuilder {
     fn new() -> Self {
-        TestEnvBuilder {
-            paver_service_builder: MockPaverServiceBuilder::new(),
-            blocked_protocols: HashSet::new(),
-        }
+        TestEnvBuilder { paver_service_builder: MockPaverServiceBuilder::new() }
     }
 
     fn paver_service<F>(mut self, f: F) -> Self
@@ -88,21 +72,17 @@ impl TestEnvBuilder {
         self
     }
 
-    fn unregister_protocol(mut self, protocol: Protocol) -> Self {
-        self.blocked_protocols.insert(protocol);
-        self
-    }
-
     fn build(self) -> TestEnv {
-        let Self { paver_service_builder, blocked_protocols } = self;
-
         // A buffer to store all the interactions the system-updater has with external services.
         let interactions = Arc::new(Mutex::new(vec![]));
 
         let test_dir = TempDir::new().expect("create test tempdir");
 
-        let data_path = test_dir.path().join("data");
-        create_dir(&data_path).expect("create data dir");
+        let blobfs_path = test_dir.path().join("blob");
+        create_dir(&blobfs_path).expect("create blob dir");
+
+        let fake_path = test_dir.path().join("fake");
+        create_dir(&fake_path).expect("create fake stimulus dir");
 
         let build_info_path = test_dir.path().join("build-info");
         create_dir(&build_info_path).expect("create build-info dir");
@@ -114,7 +94,7 @@ impl TestEnvBuilder {
         // call_hook and firmware_hook.
         let interactions_paver_clone = Arc::clone(&interactions);
         let paver_service = Arc::new(
-            paver_service_builder
+            self.paver_service_builder
                 .event_hook(move |event| {
                     interactions_paver_clone.lock().push(Paver(event.clone()));
                 })
@@ -144,62 +124,48 @@ impl TestEnvBuilder {
             let logger_factory = Arc::clone(&logger_factory);
             let space_service = Arc::clone(&space_service);
 
-            let should_register = |protocol: Protocol| !blocked_protocols.contains(&protocol);
-
-            if should_register(Protocol::PackageResolver) {
-                fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
-                    fasync::spawn(
-                        Arc::clone(&resolver)
-                            .run_resolver_service(stream)
-                            .unwrap_or_else(|e| panic!("error running resolver service: {:?}", e)),
-                    )
-                });
-            }
-            if should_register(Protocol::Paver) {
-                fs.add_fidl_service(move |stream| {
-                    fasync::spawn(
-                        Arc::clone(&paver_service)
-                            .run_paver_service(stream)
-                            .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
-                    )
-                });
-            }
-            if should_register(Protocol::Reboot) {
-                fs.add_fidl_service(move |stream| {
-                    fasync::spawn(
-                        Arc::clone(&reboot_service)
-                            .run_reboot_service(stream)
-                            .unwrap_or_else(|e| panic!("error running reboot service: {:?}", e)),
-                    )
-                });
-            }
-            if should_register(Protocol::PackageCache) {
-                fs.add_fidl_service(move |stream| {
-                    fasync::spawn(
-                        Arc::clone(&cache_service)
-                            .run_cache_service(stream)
-                            .unwrap_or_else(|e| panic!("error running cache service: {:?}", e)),
-                    )
-                });
-            }
-            if should_register(Protocol::Cobalt) {
-                fs.add_fidl_service(move |stream| {
-                    fasync::spawn(
-                        Arc::clone(&logger_factory)
-                            .run_logger_factory(stream)
-                            .unwrap_or_else(|e| panic!("error running logger factory: {:?}", e)),
-                    )
-                });
-            }
-            if should_register(Protocol::SpaceManager) {
-                fs.add_fidl_service(move |stream| {
-                    fasync::spawn(
-                        Arc::clone(&space_service)
-                            .run_space_service(stream)
-                            .unwrap_or_else(|e| panic!("error running space service: {:?}", e)),
-                    )
-                });
-            }
+            fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
+                fasync::spawn(
+                    Arc::clone(&resolver)
+                        .run_resolver_service(stream)
+                        .unwrap_or_else(|e| panic!("error running resolver service: {:?}", e)),
+                )
+            })
+            .add_fidl_service(move |stream| {
+                fasync::spawn(
+                    Arc::clone(&paver_service)
+                        .run_paver_service(stream)
+                        .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
+                )
+            })
+            .add_fidl_service(move |stream| {
+                fasync::spawn(
+                    Arc::clone(&reboot_service)
+                        .run_reboot_service(stream)
+                        .unwrap_or_else(|e| panic!("error running reboot service: {:?}", e)),
+                )
+            })
+            .add_fidl_service(move |stream| {
+                fasync::spawn(
+                    Arc::clone(&cache_service)
+                        .run_cache_service(stream)
+                        .unwrap_or_else(|e| panic!("error running cache service: {:?}", e)),
+                )
+            })
+            .add_fidl_service(move |stream| {
+                fasync::spawn(
+                    Arc::clone(&logger_factory)
+                        .run_logger_factory(stream)
+                        .unwrap_or_else(|e| panic!("error running logger factory: {:?}", e)),
+                )
+            })
+            .add_fidl_service(move |stream| {
+                fasync::spawn(
+                    Arc::clone(&space_service)
+                        .run_space_service(stream)
+                        .unwrap_or_else(|e| panic!("error running space service: {:?}", e)),
+                )
+            });
         }
 
         let env = fs
@@ -216,7 +182,8 @@ impl TestEnvBuilder {
             logger_factory,
             _space_service: space_service,
             _test_dir: test_dir,
-            data_path,
+            blobfs_path,
+            fake_path,
             build_info_path,
             misc_path,
             interactions,
@@ -233,7 +200,8 @@ struct TestEnv {
     logger_factory: Arc<MockLoggerFactory>,
     _space_service: Arc<MockSpaceService>,
     _test_dir: TempDir,
-    data_path: PathBuf,
+    blobfs_path: PathBuf,
+    fake_path: PathBuf,
     build_info_path: PathBuf,
     misc_path: PathBuf,
     interactions: SystemUpdaterInteractions,
@@ -278,54 +246,55 @@ impl TestEnv {
         }
     }
 
-    fn read_history(&self) -> Option<serde_json::Value> {
-        match File::open(self.data_path.join("update_history.json")) {
-            Ok(f) => Some(serde_json::from_reader(f).unwrap()),
-            Err(e) => {
-                assert_eq!(e.kind(), std::io::ErrorKind::NotFound, "io error: {:?}", e);
-                None
-            }
-        }
-    }
-
-    fn write_history(&self, history: serde_json::Value) {
-        serde_json::to_writer(
-            File::create(self.data_path.join("update_history.json")).unwrap(),
-            &history,
-        )
-        .unwrap()
-    }
-
     async fn run_system_updater<'a>(
-        &self,
+        &'a self,
         args: SystemUpdaterArgs<'a>,
     ) -> Result<(), fuchsia_component::client::OutputError> {
-        self.run_system_updater_args(args, Default::default()).await
+        let mut v = vec![
+            "--initiator".to_string(),
+            format!("{}", args.initiator),
+            "--target".to_string(),
+            format!("{}", args.target),
+        ];
+
+        if let Some(update) = args.update {
+            v.append(&mut vec!["--update".to_string(), format!("{}", update)]);
+        }
+        if let Some(reboot) = args.reboot {
+            v.append(&mut vec!["--reboot".to_string(), format!("{}", reboot)]);
+        }
+        if let Some(skip_recovery) = args.skip_recovery {
+            v.append(&mut vec!["--skip-recovery".to_string(), format!("{}", skip_recovery)]);
+        }
+        if let Some(oneshot) = args.oneshot {
+            v.append(&mut vec!["--oneshot".to_string(), format!("{}", oneshot)]);
+        }
+
+        self.run_system_updater_args(v).await
     }
 
     async fn run_system_updater_args<'a>(
         &'a self,
-        args: impl ToSystemUpdaterCliArgs,
-        env: SystemUpdaterEnv,
+        args: impl IntoIterator<Item = impl Into<String>>,
     ) -> Result<(), fuchsia_component::client::OutputError> {
         let launcher = self.launcher();
-        let data_dir = File::open(&self.data_path).expect("open data dir");
+        let blobfs_dir = File::open(&self.blobfs_path).expect("open blob dir");
+        let fake_dir = File::open(&self.fake_path).expect("open fake stimulus dir");
         let build_info_dir = File::open(&self.build_info_path).expect("open config dir");
         let misc_dir = File::open(&self.misc_path).expect("open misc dir");
 
-        let mut system_updater = AppBuilder::new(
+        let system_updater = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater.cmx",
         )
+        .add_dir_to_namespace("/blob".to_string(), blobfs_dir)
+        .expect("/blob to mount")
+        .add_dir_to_namespace("/fake".to_string(), fake_dir)
+        .expect("/fake to mount")
         .add_dir_to_namespace("/config/build-info".to_string(), build_info_dir)
         .expect("/config/build-info to mount")
         .add_dir_to_namespace("/misc".to_string(), misc_dir)
         .expect("/misc to mount")
-        .args(args.to_args());
-        if env.mount_data {
-            system_updater = system_updater
-                .add_dir_to_namespace("/data".to_string(), data_dir)
-                .expect("/data to mount");
-        }
+        .args(args);
 
         let output = system_updater
             .output(launcher)
@@ -346,100 +315,13 @@ impl TestEnv {
     }
 }
 
-trait ToSystemUpdaterCliArgs {
-    fn to_args(self) -> Vec<String>;
-}
-
-impl ToSystemUpdaterCliArgs for SystemUpdaterArgs<'_> {
-    fn to_args(self) -> Vec<String> {
-        self.build()
-    }
-}
-
-impl ToSystemUpdaterCliArgs for RawSystemUpdaterArgs {
-    fn to_args(self) -> Vec<String> {
-        self.0.into_iter().map(|s| (*s).to_owned()).collect()
-    }
-}
-
-#[derive(Debug)]
-struct SystemUpdaterEnv {
-    mount_data: bool,
-}
-
-impl Default for SystemUpdaterEnv {
-    fn default() -> Self {
-        Self { mount_data: true }
-    }
-}
-
-#[derive(Debug)]
-struct RawSystemUpdaterArgs(&'static [&'static str]);
-
-#[derive(Debug, Default)]
 struct SystemUpdaterArgs<'a> {
-    initiator: Option<Initiator>,
-    source: Option<&'a str>,
-    target: Option<&'a str>,
-    start: Option<i64>,
+    initiator: &'a str,
+    target: &'a str,
     update: Option<&'a str>,
     reboot: Option<bool>,
     skip_recovery: Option<bool>,
     oneshot: Option<bool>,
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Initiator {
-    User,
-    Service,
-}
-
-impl Default for Initiator {
-    fn default() -> Self {
-        Initiator::Service
-    }
-}
-
-impl Initiator {
-    fn to_cli_arg(self) -> String {
-        match self {
-            Initiator::User => "manual".to_string(),
-            Initiator::Service => "automatic".to_string(),
-        }
-    }
-}
-
-impl SystemUpdaterArgs<'_> {
-    fn build(&self) -> Vec<String> {
-        let mut args = vec![];
-
-        if let Some(initiator) = self.initiator {
-            args.extend(vec!["--initiator".to_owned(), initiator.to_cli_arg()]);
-        }
-        if let Some(source) = self.source {
-            args.extend(vec!["--source".to_owned(), source.to_owned()]);
-        }
-        if let Some(target) = self.target {
-            args.extend(vec!["--target".to_owned(), target.to_owned()]);
-        }
-        if let Some(start) = self.start {
-            args.extend(vec!["--start".to_owned(), start.to_string()]);
-        }
-        if let Some(update) = self.update {
-            args.extend(vec!["--update".to_owned(), update.to_owned()]);
-        }
-        if let Some(reboot) = self.reboot {
-            args.extend(vec!["--reboot".to_owned(), reboot.to_string()]);
-        }
-        if let Some(skip_recovery) = self.skip_recovery {
-            args.extend(vec!["--skip-recovery".to_owned(), skip_recovery.to_string()]);
-        }
-        if let Some(oneshot) = self.oneshot {
-            args.extend(vec!["--oneshot".to_owned(), oneshot.to_string()]);
-        }
-
-        args
-    }
 }
 
 struct MockCacheService {
@@ -569,17 +451,23 @@ impl MockLogger {
 
 struct MockLoggerFactory {
     loggers: Mutex<Vec<Arc<MockLogger>>>,
+    broken: Mutex<bool>,
 }
 
 impl MockLoggerFactory {
     fn new() -> Self {
-        Self { loggers: Mutex::new(vec![]) }
+        Self { loggers: Mutex::new(vec![]), broken: Mutex::new(false) }
     }
 
     async fn run_logger_factory(
         self: Arc<Self>,
         mut stream: fidl_fuchsia_cobalt::LoggerFactoryRequestStream,
     ) -> Result<(), Error> {
+        if *self.broken.lock() {
+            eprintln!("TEST: This LoggerFactory is broken by order of the test.");
+            // Drop the stream, closing the channel.
+            return Ok(());
+        }
         while let Some(event) = stream.try_next().await? {
             match event {
                 fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLoggerFromProjectId {
@@ -613,6 +501,7 @@ struct OtaMetrics {
     phase: u32,
     status_code: u32,
     target: String,
+    // TODO: support free_space_delta assertions
 }
 
 impl OtaMetrics {
@@ -626,6 +515,7 @@ impl OtaMetrics {
                 metrics::OTA_START_METRIC_ID,
                 metrics::OTA_RESULT_ATTEMPTS_METRIC_ID,
                 metrics::OTA_RESULT_DURATION_METRIC_ID,
+                metrics::OTA_RESULT_FREE_SPACE_DELTA_METRIC_ID
             ]
         );
 
@@ -634,6 +524,7 @@ impl OtaMetrics {
         let start = iter.next().unwrap();
         let attempt = iter.next().unwrap();
         let duration = iter.next().unwrap();
+        let free_space_delta = iter.next().unwrap();
 
         // Some basic sanity checks follow
         assert_eq!(
@@ -649,6 +540,8 @@ impl OtaMetrics {
         // metric event_codes and component should line up across all 3 result metrics
         assert_eq!(&duration.event_codes, &event_codes);
         assert_eq!(&duration.component, &component);
+        assert_eq!(&free_space_delta.event_codes, &event_codes);
+        assert_eq!(&free_space_delta.component, &component);
 
         // OtaStart only has initiator and hour_of_day, so just check initiator.
         assert_eq!(start.event_codes[0], event_codes[0]);
@@ -670,47 +563,22 @@ impl OtaMetrics {
             }
         }
 
+        // Ignore this for now, since it's using a shared tempdir, the values
+        // are not deterministic.
+        let _free_space_delta = match free_space_delta.payload {
+            fidl_fuchsia_cobalt::EventPayload::EventCount(fidl_fuchsia_cobalt::CountEvent {
+                period_duration_micros: 0,
+                count,
+            }) => count,
+            other => {
+                panic!("unexpected free space delta payload {:?}", other);
+            }
+        };
+
         Self { initiator, phase, status_code, target }
     }
 }
 
-#[macro_export]
-macro_rules! merkle_str {
-    ($seed:literal) => {{
-        $crate::merkle_str!(@check $seed);
-        $crate::merkle_str!(@unchecked $seed)
-    }};
-    (@check $seed:literal) => {
-        assert_eq!($seed.len(), 2)
-    };
-    (@unchecked $seed:literal) => {
-        concat!(
-            $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed,
-            $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed,
-            $seed, $seed, $seed, $seed, $seed, $seed, $seed, $seed,
-        )
-    };
-}
-
-#[macro_export]
-macro_rules! pinned_pkg_url {
-    ($path:literal, $merkle_seed:literal) => {{
-        $crate::merkle_str!(@check $merkle_seed);
-        concat!("fuchsia-pkg://fuchsia.com/", $path, "?hash=", $crate::merkle_str!(@unchecked $merkle_seed))
-    }};
-}
-
-fn make_packages_json<'a>(urls: impl AsRef<[&'a str]>) -> String {
-    json!({
-      // TODO(50754): Change to "1" once we remove support for versions as ints.
-      "version": 1,
-      "content": urls.as_ref(),
-    })
-    .to_string()
-}
-
-const UPDATE_HASH: &str = "00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";
-const SYSTEM_IMAGE_HASH: &str = "42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296";
 const SYSTEM_IMAGE_URL: &str = "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296";
 const UPDATE_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 

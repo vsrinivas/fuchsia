@@ -27,10 +27,12 @@ async fn writes_recovery_and_force_reboots_into_it() {
         .add_file("recovery.vbmeta", "the recovery vbmeta");
 
     env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
         oneshot: Some(true),
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
     })
     .await
     .expect("run system updater");
@@ -55,6 +57,7 @@ async fn writes_recovery_and_force_reboots_into_it() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
+            BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::Recovery,
@@ -89,11 +92,12 @@ async fn reboots_regardless_of_reboot_arg() {
         .add_file("update-mode", &force_recovery_json());
 
     env.run_system_updater(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
         reboot: Some(false),
+        skip_recovery: None,
         oneshot: Some(true),
-        ..Default::default()
     })
     .await
     .expect("run system updater");
@@ -104,6 +108,7 @@ async fn reboots_regardless_of_reboot_arg() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
+            BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::SetConfigurationUnbootable {
                 configuration: paver::Configuration::A
@@ -134,15 +139,20 @@ async fn rejects_zbi() {
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+            skip_recovery: None,
             oneshot: Some(true),
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
-    assert_eq!(env.take_interactions(), vec![Gc, PackageResolve(UPDATE_PKG_URL.to_string()), Gc]);
+    assert_eq!(
+        env.take_interactions(),
+        vec![Gc, PackageResolve(UPDATE_PKG_URL.to_string()), Gc, BlobfsSync,]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -156,11 +166,12 @@ async fn rejects_skip_recovery_flag() {
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
             skip_recovery: Some(true),
             oneshot: Some(true),
-            ..Default::default()
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");

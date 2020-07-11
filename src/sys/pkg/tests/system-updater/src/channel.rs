@@ -18,9 +18,16 @@ async fn promotes_target_channel_as_current_channel() {
         )
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater(SystemUpdaterArgs { oneshot: Some(true), ..Default::default() })
-        .await
-        .unwrap();
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
+        oneshot: Some(true),
+    })
+    .await
+    .unwrap();
 
     env.verify_current_channel(Some(b"target-channel"));
 
@@ -28,9 +35,16 @@ async fn promotes_target_channel_as_current_channel() {
 
     env.set_target_channel("target-channel-2");
 
-    env.run_system_updater(SystemUpdaterArgs { oneshot: Some(true), ..Default::default() })
-        .await
-        .unwrap();
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
+        oneshot: Some(true),
+    })
+    .await
+    .unwrap();
 
     env.verify_current_channel(Some(b"target-channel-2"));
 }
@@ -47,9 +61,16 @@ async fn succeeds_even_if_target_channel_does_not_exist() {
         )
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater(SystemUpdaterArgs { oneshot: Some(true), ..Default::default() })
-        .await
-        .unwrap();
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
+        oneshot: Some(true),
+    })
+    .await
+    .unwrap();
 
     env.verify_current_channel(None);
 }
@@ -70,7 +91,14 @@ async fn does_not_promote_target_channel_on_failure() {
         .add_file("zbi", "fake zbi");
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs { oneshot: Some(true), ..Default::default() })
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+            skip_recovery: None,
+            oneshot: Some(true),
+        })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
