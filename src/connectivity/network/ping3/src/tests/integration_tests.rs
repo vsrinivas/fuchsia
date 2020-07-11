@@ -29,8 +29,6 @@ impl TestAddr for TestIpv4Addr {
     const SUBNET_PREFIX: u8 = 24;
 }
 
-// TODO(http://fxbug.dev/53896): remove allow(dead_code) when IPv6 ping3 test is re-enabled.
-#[allow(dead_code)]
 struct TestIpv6Addr;
 impl TestAddr for TestIpv6Addr {
     const ALICE_IP: fnet_ext::IpAddress =
@@ -89,8 +87,7 @@ async fn alice_to_bob(
         alice_to_bob_over_proto::<TestIpv4Addr>(format!("{}_v4", name), args, expected_return_code)
             .await
             .context("ipv4")?;
-    // TODO(http://fxbug.dev/53896): fix and reneable IPv6 ping3 test.
-    #[cfg(issue_53896)]
+
     let () =
         alice_to_bob_over_proto::<TestIpv6Addr>(format!("{}_v6", name), args, expected_return_code)
             .await
