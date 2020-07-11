@@ -56,13 +56,14 @@ void TestSetBitsAtAndAboveIndex() {
   const T kOnes = ~kZeros;
 
   for (size_t i = 0; i < kNumBits; ++i) {
-    const T kAtAndAboveBits = kOnes << i;
-    const T kBelowBits = ~kAtAndAboveBits;
+    using UT = std::make_unsigned_t<T>;
+    const UT kAtAndAboveBits = static_cast<UT>(kOnes) << i;
+    const UT kBelowBits = ~kAtAndAboveBits;
 
     T bits = kZeros;
     SetBitsAtAndAboveIndex(&bits, i);
-    EXPECT_EQ(bits & kAtAndAboveBits, kAtAndAboveBits);
-    EXPECT_EQ(bits & kBelowBits, kZeros);
+    EXPECT_EQ(static_cast<UT>(bits) & kAtAndAboveBits, kAtAndAboveBits);
+    EXPECT_EQ(static_cast<UT>(bits) & kBelowBits, static_cast<UT>(kZeros));
 
     bits = kOnes;
     SetBitsAtAndAboveIndex(&bits, i);
@@ -81,6 +82,7 @@ TEST(BitOps, SetBitsAtAndAboveIndex) {
 
 template <typename T>
 void TestRotateLeft() {
+  using UT = std::make_unsigned_t<T>;
   EXPECT_EQ(2U, RotateLeft(1U, 1));
   EXPECT_EQ(4U, RotateLeft(1U, 2));
   EXPECT_EQ(6U, RotateLeft(3U, 1));
@@ -93,7 +95,7 @@ void TestRotateLeft() {
     EXPECT_EQ(max, RotateLeft(max, i));
   }
 
-  const T high_order_bit = T(1) << digits - 1;
+  const T high_order_bit = static_cast<T>(UT(1) << digits - 1U);
   EXPECT_EQ(1U, RotateLeft(high_order_bit, 1));
 }
 

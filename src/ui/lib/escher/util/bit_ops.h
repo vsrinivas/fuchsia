@@ -95,7 +95,8 @@ inline void ForEachBitRange(uint32_t value, const T& func) {
 // Set to 1 all bits in |input| at and above |index|.
 template <typename T>
 inline void SetBitsAtAndAboveIndex(T* input, uint32_t index) {
-  *input |= ~((T{1} << index) - 1);
+  using UT = std::make_unsigned_t<T>;
+  *input |= ~(static_cast<T>((UT{1} << index) - 1U));
 }
 
 }  // namespace escher
