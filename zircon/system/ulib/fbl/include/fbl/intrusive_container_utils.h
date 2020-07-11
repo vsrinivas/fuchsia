@@ -127,7 +127,8 @@ enum class NodeOptions : uint64_t {
   // Because of this, the ContainableBaseClasses helper (see below) will, by
   // default, complain and refuse to build if someone attempts to use it in
   // conjunction with a Containable mix-in which tracks objects using
-  // unique_ptr-style pointers.
+  // unique_ptr-style pointers if there are any other containers in the
+  // Containable list.
   //
   // There are special cases, however, where a user might want this behavior to
   // be permitted.  Consider an object whose lifecycle is managed by a central
@@ -257,6 +258,8 @@ template <>
 struct ContainableBaseClassEnumerator<> {
   using ContainableTypes = std::tuple<>;
   using TagTypes = std::tuple<>;
+  static constexpr size_t BaseClassCount = 0;
+  static constexpr size_t UniquePtrCount = 0;
 };
 
 template <template <typename, NodeOptions, typename> class Containable, typename PtrType,
@@ -264,13 +267,9 @@ template <template <typename, NodeOptions, typename> class Containable, typename
 struct ContainableBaseClassEnumerator<Containable<PtrType, Options, TagType>, Rest...>
     : public Containable<PtrType, Options, TagType>,
       public ContainableBaseClassEnumerator<Rest...> {
-  static_assert(internal::ContainerPtrTraits<PtrType>::CanCopy ||
-                    (Options & NodeOptions::AllowMultiContainerUptr),
-                "You can't have a unique_ptr in multiple containers at once without specifying the "
-                "AllowMultiContainerUptr flag in your node options.");
   static_assert(!std::is_same_v<TagType, DefaultObjectTag>,
                 "Do not use fbl::DefaultObjectTag when inheriting from "
-                "fbl::ContainableBaseClasses; define your own instead.");
+                "fbl::ContainableBaseClasses. Define your own instead.");
   static_assert((!std::is_same_v<TagType, typename Rest::TagType> && ...),
                 "All tag types used with fbl::ContainableBaseClassEnumerator must be unique.");
 
@@ -280,6 +279,16 @@ struct ContainableBaseClassEnumerator<Containable<PtrType, Options, TagType>, Re
   using TagTypes = decltype(
       std::tuple_cat(std::declval<std::tuple<TagType>>(),
                      std::declval<typename ContainableBaseClassEnumerator<Rest...>::TagTypes>()));
+
+  static constexpr size_t BaseClassCount =
+      1 + ContainableBaseClassEnumerator<Rest...>::BaseClassCount;
+  static constexpr size_t UniquePtrCount = !internal::ContainerPtrTraits<PtrType>::CanCopy +
+                                           ContainableBaseClassEnumerator<Rest...>::UniquePtrCount;
+  static_assert((UniquePtrCount == 0) || ((UniquePtrCount == 1) && (BaseClassCount == 1)) ||
+                    (Options & NodeOptions::AllowMultiContainerUptr),
+                "Containers of pointers with unique pointer semantics cannot be combined with any "
+                "other containers when using ContainableBaseClasses unless you specify the "
+                "AllowMultiContainerUptr flag in your node options.");
 };
 
 }  // namespace internal

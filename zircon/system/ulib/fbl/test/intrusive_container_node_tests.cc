@@ -9,6 +9,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/intrusive_wavl_tree.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -1021,25 +1023,8 @@ TEST(IntrusiveContainerNodeTest, AllowMultiContainerUptrTest) {
     [[maybe_unused]] fbl::TaggedWAVLTree<uint32_t, std::unique_ptr<DisjointObj>, TagType2> tree;
   }
 
-  // Not passing the option, however, is not legal and should fail to compile.
-#if TEST_WILL_NOT_COMPILE || 0
-  struct IllegalTwoListObj
-      : public fbl::ContainableBaseClasses<
-            fbl::TaggedDoublyLinkedListable<std::unique_ptr<IllegalTwoListObj>, TagType1>,
-            fbl::TaggedDoublyLinkedListable<std::unique_ptr<IllegalTwoListObj>, TagType2>> {
-    uint32_t a, b, c;
-  };
-
-  {
-    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalTwoListObj>, TagType1> dll1;
-    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalTwoListObj>, TagType2> dll2;
-  }
-#endif
-
-  // Even attempting to use ContainableBaseClasses with only one base class will
-  // fail if the option is not passed.  Users must actively opt-in to this
-  // behavior.
-#if TEST_WILL_NOT_COMPILE || 0
+  // A list of containers which contains exactly one container whose pointer
+  // type is unique_ptr is OK as well.
   struct IllegalOneListObj
       : public fbl::ContainableBaseClasses<
             fbl::TaggedDoublyLinkedListable<std::unique_ptr<IllegalOneListObj>, TagType1>> {
@@ -1048,6 +1033,56 @@ TEST(IntrusiveContainerNodeTest, AllowMultiContainerUptrTest) {
 
   {
     [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalOneListObj>, TagType1> dll;
+  }
+
+  // If we add _any_ other containers (regardless of pointer type), this should
+  // fail.
+#if TEST_WILL_NOT_COMPILE || 0
+  struct IllegalTwoListObjRawPtr
+      : public fbl::ContainableBaseClasses<
+            fbl::TaggedDoublyLinkedListable<std::unique_ptr<IllegalTwoListObjRawPtr>, TagType1>,
+            fbl::TaggedDoublyLinkedListable<IllegalTwoListObjRawPtr*, TagType2>> {
+    uint32_t a, b, c;
+  };
+
+  {
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalTwoListObjRawPtr>, TagType1>
+        dll1;
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalTwoListObjRawPtr>, TagType2>
+        dll2;
+  }
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+  struct IllegalTwoListObjUPtr
+      : public fbl::ContainableBaseClasses<
+            fbl::TaggedDoublyLinkedListable<std::unique_ptr<IllegalTwoListObjUPtr>, TagType1>,
+            fbl::TaggedDoublyLinkedListable<std::unique_ptr<IllegalTwoListObjUPtr>, TagType2>> {
+    uint32_t a, b, c;
+  };
+
+  {
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalTwoListObjUPtr>, TagType1>
+        dll1;
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalTwoListObjUPtr>, TagType2>
+        dll2;
+  }
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+  struct IllegalTwoListObjRefPtr
+      : public fbl::RefCounted<IllegalTwoListObjRefPtr>,
+        public fbl::ContainableBaseClasses<
+            fbl::TaggedDoublyLinkedListable<std::unique_ptr<IllegalTwoListObjRefPtr>, TagType1>,
+            fbl::TaggedDoublyLinkedListable<fbl::RefPtr<IllegalTwoListObjRefPtr>, TagType2>> {
+    uint32_t a, b, c;
+  };
+
+  {
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalTwoListObjRefPtr>, TagType1>
+        dll1;
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalTwoListObjRefPtr>, TagType2>
+        dll2;
   }
 #endif
 }
