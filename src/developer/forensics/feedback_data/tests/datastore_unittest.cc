@@ -23,8 +23,10 @@
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/device_id_provider.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/forensics/testing/gmatchers.h"
+#include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/board_info_provider.h"
 #include "src/developer/forensics/testing/stubs/channel_provider.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -451,9 +453,10 @@ TEST_F(DatastoreTest, GetAttachments_Inspect) {
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
   std::string previous_log_contents = "";
   for (const auto& filepath : kCurrentLogsFilePaths) {
+    auto encoder = system_log_recorder::ProductionEncoder();
     const std::string str = Format(BuildLogMessage(FX_LOG_INFO, "Log for file: " + filepath));
     previous_log_contents = str + previous_log_contents;
-    WriteFile(filepath, str);
+    WriteFile(filepath, encoder.Encode(str));
   }
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
 

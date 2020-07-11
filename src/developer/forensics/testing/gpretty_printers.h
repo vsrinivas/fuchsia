@@ -47,6 +47,34 @@ void PrintTo(const Error error, std::ostream* os) { *os << ToString(error); }
 
 namespace feedback_data {
 
+namespace pretty {
+
+// Display ASCII character as is or non-ascii characters by their {hex value}.
+inline void Format(const char ch, std::stringstream* output) {
+  if (ch == '\n' || ch == '\t') {
+    *output << ch;
+  } else if (ch >= ' ' && ch <= '~') {
+    *output << ch;
+  } else {
+    *output << "{0x" << ((int) ch & 0xFF) << "}";
+  }
+}
+
+// Removes exception "FormatException: Unexpected extension byte" when calling PrintTo() with
+// ostream = std::cout by converting all non-ascii character to "{hex_value}".
+inline std::string Format(const std::string& input) {
+  return input;
+  std::stringstream output;
+  // Display HEX code for integer-cast non-ascii characters.
+  output << std::hex;
+  for (char ch : input) {
+    Format(ch, &output);
+  }
+  return output.str();
+}
+
+} // pretty
+
 void PrintTo(const AnnotationOr& value, std::ostream* os) {
   *os << fostr::Indent;
   *os << "{ ";
@@ -64,10 +92,10 @@ void PrintTo(const AttachmentValue& value, std::ostream* os) {
   *os << "{ ";
   switch (value.State()) {
     case AttachmentValue::State::kComplete:
-      *os << "VALUE : " << value.Value();
+      *os << "VALUE : " << pretty::Format(value.Value());
       break;
     case AttachmentValue::State::kPartial:
-      *os << "VALUE : " << value.Value();
+      *os << "VALUE : " << pretty::Format(value.Value());
       *os << ", ERROR : " << ToString(value.Error());
       break;
     case AttachmentValue::State::kMissing:

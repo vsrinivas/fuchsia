@@ -466,6 +466,37 @@ TEST(WriterTest, WritesMessages) {
 )");
 }
 
+TEST(WriterTest, VerifyProductionEcoding) {
+  files::ScopedTempDir temp_dir;
+  const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/2);
+
+  // Set up the writer such that one file contains 5 log messages.
+  auto encoder = std::unique_ptr<Encoder>(new ProductionEncoder());
+  LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, std::move(encoder));
+  SystemLogWriter writer(file_paths, &store);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 4")));
+  writer.Write();
+
+  const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
+  ProductionDecoder decoder;
+
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+
+  std::string contents;
+  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
+  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
+[15604.000][07559][07687][] INFO: line 1
+[15604.000][07559][07687][] INFO: line 2
+[15604.000][07559][07687][] INFO: line 3
+[15604.000][07559][07687][] INFO: line 4
+)");
+}
+
 TEST(ReaderTest, SortsMessages) {
   files::ScopedTempDir temp_dir;
   const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/1);
@@ -563,6 +594,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   //    4.50: line12 -> write 5 -> file 3
   //    5.25: line13 -> write 6 -> file 3
   //
+  // Note: we use the IdentityEncoder to easily control which messages are dropped.
   const zx::duration kListenerPeriod = zx::msec(750);
   const zx::duration kWriterPeriod = zx::sec(1);
 
@@ -607,7 +639,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
                                  .log_file_paths = file_paths,
                                  .total_log_size_bytes = file_paths.size() * kWriteSize,
                              },
-                             std::unique_ptr<Encoder>(new ProductionEncoder()));
+                             std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
 
   std::string contents;
@@ -616,7 +648,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
 
-  ProductionDecoder decoder;
+  IdentityDecoder decoder;
 
   ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
