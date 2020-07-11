@@ -23,6 +23,7 @@ source_set("fake-lib") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.display.capture",
+    "//sdk/banjo/ddk.protocol.display.clamprgb",
     "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",

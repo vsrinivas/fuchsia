@@ -4,6 +4,8 @@
 
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_VPP_REGS_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_VPP_REGS_H_
+#include <cstdint>
+
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
 
@@ -120,6 +122,9 @@
 #define VPP_GAMMA_DATA_PORT (0x1401 << 2)
 #define VPP_GAMMA_ADDR_PORT (0x1402 << 2)
 
+// RGB Clamp Register
+#define VPP_CLIP_MISC1 (0x1dda << 2)
+
 namespace amlogic_display {
 
 class VppGammaCntlPortReg : public hwreg::RegisterBase<VppGammaCntlPortReg, uint32_t> {
@@ -148,6 +153,12 @@ class VppGammaAddrPortReg : public hwreg::RegisterBase<VppGammaAddrPortReg, uint
   DEF_BIT(8, sel_b);
   DEF_FIELD(7, 0, adr);
   static auto Get() { return hwreg::RegisterAddr<VppGammaAddrPortReg>(VPP_GAMMA_ADDR_PORT); }
+};
+
+class VppClipMisc1Reg : public hwreg::RegisterBase<VppClipMisc1Reg, uint32_t> {
+ public:
+  DEF_FIELD(31, 0, val);
+  static auto Get() { return hwreg::RegisterAddr<VppClipMisc1Reg>(VPP_CLIP_MISC1); }
 };
 
 }  // namespace amlogic_display

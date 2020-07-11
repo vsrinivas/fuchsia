@@ -378,6 +378,22 @@ struct UsbModeSwitchProxyRequest {
   usb_mode_t mode;
 };
 
+// ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL proxy support.
+enum class ClampRgbOp {
+  SET,
+};
+
+struct ClampRgbProxyRequest {
+  ProxyRequest header;
+  ClampRgbOp op;
+  size_t offset;
+  uint8_t minimum_rgb;
+};
+
+struct ClampRgbProxyResponse {
+  ProxyResponse header;
+};
+
 }  // namespace fragment
 
 #endif  // SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_PROXY_PROTOCOL_H_

@@ -672,4 +672,9 @@ TEST_F(IntegrationTest, ImportImage_InvalidCollection) {
   ASSERT_NE(ii_reply->res, ZX_OK);
 }
 
+TEST_F(IntegrationTest, ClampRgbValue) {
+  clamprgb()->DisplayClampRgbImplSetMinimumRgb(32);
+  EXPECT_EQ(32, clamprgb()->GetClampRgbValue());
+}
+
 }  // namespace display

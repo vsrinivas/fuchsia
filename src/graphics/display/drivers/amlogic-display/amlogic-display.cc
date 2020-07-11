@@ -25,6 +25,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/composite.h>
+#include <ddk/protocol/display/clamprgb.h>
 #include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/dsiimpl.h>
 #include <ddk/protocol/platform/device.h>
@@ -35,6 +36,7 @@
 #include <fbl/vector.h>
 
 #include "common.h"
+#include "vpp-regs.h"
 
 namespace sysmem = llcpp::fuchsia::sysmem;
 
@@ -59,6 +61,35 @@ constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
 constexpr uint32_t kCanvasLittleEndian64Bit = 7;
 constexpr uint32_t kBufferAlignment = 64;
 }  // namespace
+
+void ClampRgb::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+
+void ClampRgb::DdkRelease() { delete this; }
+
+zx_status_t ClampRgb::DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb) {
+  VppClipMisc1Reg::Get().FromValue(0).set_val(minimum_rgb).WriteTo(&(*vpu_mmio_));
+  return ZX_OK;
+}
+
+zx_status_t ClampRgb::Bind() {
+  // Map vpu mmio
+  mmio_buffer_t mmio;
+  auto status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  if (status != ZX_OK) {
+    DISP_ERROR("osd: Could not map VPU mmio\n");
+    return status;
+  }
+
+  vpu_mmio_ = ddk::MmioBuffer(mmio);
+  auto cleanup = fbl::MakeAutoCall([&]() { DdkRelease(); });
+  status = DdkAdd("display-clamp-rgb");
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not add device (%d)\n", status);
+    return status;
+  }
+  cleanup.cancel();
+  return ZX_OK;
+}
 
 // This function copies the display settings into our internal structure
 void AmlogicDisplay::CopyDisplaySettings() {
@@ -864,6 +895,20 @@ zx_status_t AmlogicDisplay::Bind() {
   }
 
   cleanup.cancel();
+
+  // Create ClampRgb device and add it to Ddk as a child. Pass pdev so that
+  // ClampRgb can map vpu registers in order to set the minimum RGB value
+  fbl::AllocChecker ac;
+  auto clamp_rgb = fbl::make_unique_checked<ClampRgb>(&ac, zxdev(), pdev_);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  status = clamp_rgb->Bind();
+  if (status == ZX_OK) {
+    // devmgr is now in charge of the memory for clamp_rgb
+    __UNUSED auto ptr = clamp_rgb.release();
+  }
+
   return ZX_OK;
 }
 

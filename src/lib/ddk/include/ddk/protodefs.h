@@ -164,6 +164,7 @@ DDK_PROTOCOL_DEF(AUDIO_INPUT_2,           140, "audio-input-2", 0)
 DDK_PROTOCOL_DEF(AUDIO_OUTPUT_2,          141, "audio-output-2", 0)
 DDK_PROTOCOL_DEF(AMLOGIC_RAM,             142, "aml-ram", 0)
 DDK_PROTOCOL_DEF(GPU_PERFORMANCE_COUNTERS, 143, "gpu-performance-counters", 0)
+DDK_PROTOCOL_DEF(DISPLAY_CLAMP_RGB_IMPL,    144, "display-clamprgb-impl", PF_NOPUB)
 
 #undef DDK_PROTOCOL_DEF
 #endif

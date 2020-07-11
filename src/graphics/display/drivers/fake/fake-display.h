@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 
 #include <ddk/debug.h>
@@ -22,6 +23,7 @@
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/capture.h>
+#include <ddktl/protocol/display/clamprgb.h>
 #include <ddktl/protocol/display/controller.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
@@ -34,8 +36,29 @@ struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> 
 };
 
 class FakeDisplay;
+class ClampRgb;
 
 using DeviceType = ddk::Device<FakeDisplay, ddk::GetProtocolable, ddk::UnbindableNew>;
+using DeviceType2 = ddk::Device<ClampRgb, ddk::UnbindableNew>;
+
+class ClampRgb : public DeviceType2,
+                 public ddk::DisplayClampRgbImplProtocol<ClampRgb, ddk::base_protocol> {
+ public:
+  ClampRgb(zx_device_t* parent) : DeviceType2(parent) {}
+
+  zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
+  zx_status_t Bind();
+
+  // Required functions for DeviceType
+  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkRelease();
+
+  uint8_t GetClampRgbValue() const { return clamp_rgb_value_; }
+
+ private:
+  // Value that hold the clamped RGB value
+  uint8_t clamp_rgb_value_ = 0;
+};
 
 class FakeDisplay : public DeviceType,
                     public ddk::DisplayControllerImplProtocol<FakeDisplay, ddk::base_protocol>,

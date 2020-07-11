@@ -12,7 +12,9 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>
+#include <zircon/types.h>
 
+#include <cstdint>
 #include <memory>
 
 #include <ddk/debug.h>
@@ -24,6 +26,7 @@
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/capture.h>
+#include <ddktl/protocol/display/clamprgb.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/dsiimpl.h>
 #include <fbl/auto_lock.h>
@@ -53,9 +56,29 @@ struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> 
 };
 
 class AmlogicDisplay;
+class ClampRgb;
 
 // AmlogicDisplay will implement only a few subset of Device.
 using DeviceType = ddk::Device<AmlogicDisplay, ddk::GetProtocolable, ddk::UnbindableNew>;
+using DeviceType2 = ddk::Device<ClampRgb, ddk::UnbindableNew>;
+
+class ClampRgb : public DeviceType2,
+                 public ddk::DisplayClampRgbImplProtocol<ClampRgb, ddk::base_protocol> {
+ public:
+  ClampRgb(zx_device_t* parent, pdev_protocol_t pdev) : DeviceType2(parent), pdev_(pdev) {}
+
+  zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
+  zx_status_t Bind();
+
+  // Required functions for DeviceType
+  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkRelease();
+
+ private:
+  pdev_protocol_t pdev_ = {nullptr, nullptr};
+  // Display Clamp RGB interface protocol
+  std::optional<ddk::MmioBuffer> vpu_mmio_;
+};
 
 class AmlogicDisplay
     : public DeviceType,

@@ -7,6 +7,7 @@
 
 #include "../../fake/fake-display.h"
 #include "../controller.h"
+#include "lib/fake_ddk/fake_ddk.h"
 
 namespace display {
 
@@ -47,6 +48,8 @@ void TestBase::SetUp() {
   display_ = new fake_display::FakeDisplay(fake_ddk::kFakeParent);
   ASSERT_OK(display_->Bind(/*start_vsync=*/false));
   ddk_.SetDisplay(display_);
+
+  clamp_rgb_ = new fake_display::ClampRgb(fake_ddk::kFakeParent);
 
   std::unique_ptr<display::Controller> c(new Controller(display_->zxdev()));
   // Save a copy for test cases.

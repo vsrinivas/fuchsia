@@ -870,6 +870,30 @@ zx_status_t Fragment::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_
   }
 }
 
+zx_status_t Fragment::RpcClampRgb(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                                  uint32_t* out_resp_size, zx::handle* req_handles,
+                                  uint32_t req_handle_count, zx::handle* resp_handles,
+                                  uint32_t* resp_handle_count) {
+  if (!clamp_rgb_client_.proto_client().is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  auto* req = reinterpret_cast<const ClampRgbProxyRequest*>(req_buf);
+  if (req_size < sizeof(*req)) {
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
+    return ZX_ERR_INTERNAL;
+  }
+
+  auto* resp = reinterpret_cast<ProxyResponse*>(resp_buf);
+  *out_resp_size = sizeof(*resp);
+  switch (req->op) {
+    case ClampRgbOp::SET:
+      return clamp_rgb_client_.proto_client().SetMinimumRgb(req->minimum_rgb);
+    default:
+      zxlogf(ERROR, "%s: unknown clk op %u", __func__, static_cast<uint32_t>(req->op));
+      return ZX_ERR_INTERNAL;
+  }
+}
+
 zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
   zx::unowned_channel channel(raw_channel);
   if (!channel->is_valid()) {
@@ -966,6 +990,10 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_CODEC:
       status = RpcCodec(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                         resp_handles, &resp_handle_count);
+      break;
+    case ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL:
+      status = RpcClampRgb(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                           resp_handles, &resp_handle_count);
       break;
     default:
       zxlogf(ERROR, "%s: unknown protocol %u", __func__, req_header->proto_id);
@@ -1175,6 +1203,15 @@ zx_status_t Fragment::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
         return ZX_ERR_NOT_SUPPORTED;
       }
       ge2d_client_.proto_client().GetProto(static_cast<ge2d_protocol_t*>(out_protocol));
+      return ZX_OK;
+    }
+
+    case ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL: {
+      if (!clamp_rgb_client_.proto_client().is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      clamp_rgb_client_.proto_client().GetProto(
+          static_cast<display_clamp_rgb_impl_protocol_t*>(out_protocol));
       return ZX_OK;
     }
 

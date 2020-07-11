@@ -17,6 +17,7 @@
 #include <ddktl/protocol/camerasensor.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/codec.h>
+#include <ddktl/protocol/display/clamprgb.h>
 #include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/gdc.h>
@@ -91,7 +92,8 @@ class Fragment : public FragmentBase {
         mipi_csi_client_(parent, ZX_PROTOCOL_MIPI_CSI),
         camera_sensor_client_(parent, ZX_PROTOCOL_CAMERA_SENSOR),
         gdc_client_(parent, ZX_PROTOCOL_GDC),
-        ge2d_client_(parent, ZX_PROTOCOL_GE2D) {}
+        ge2d_client_(parent, ZX_PROTOCOL_GE2D),
+        clamp_rgb_client_(parent, ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL) {}
 
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
@@ -157,6 +159,10 @@ class Fragment : public FragmentBase {
   zx_status_t RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                        uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                        zx::handle* resp_handles, uint32_t* resp_handle_count);
+  zx_status_t RpcClampRgb(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                          uint32_t* out_resp_size, zx::handle* req_handles,
+                          uint32_t req_handle_count, zx::handle* resp_handles,
+                          uint32_t* resp_handle_count);
 
   static void I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
                                   size_t op_count);
@@ -189,6 +195,8 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::CameraSensorProtocolClient, camera_sensor_protocol_t> camera_sensor_client_;
   ProtocolClient<ddk::GdcProtocolClient, gdc_protocol_t> gdc_client_;
   ProtocolClient<ddk::Ge2dProtocolClient, ge2d_protocol_t> ge2d_client_;
+  ProtocolClient<ddk::DisplayClampRgbImplProtocolClient, display_clamp_rgb_impl_protocol_t>
+      clamp_rgb_client_;
 };
 
 }  // namespace fragment
