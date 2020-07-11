@@ -22,7 +22,11 @@ namespace ti {
 enum {
   FRAGMENT_PDEV,
   FRAGMENT_I2C,
-  FRAGMENT_COUNT,
+  // add new fragments here
+
+  // Since FRAGMENT_CLAMP_RGB is optional, it should always be the last item.
+  FRAGMENT_CLAMP_RGB,
+  MAX_FRAGMENTS,
 };
 
 void Lp8556Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
@@ -267,6 +271,12 @@ zx_status_t Lp8556Device::Init() {
   return ZX_OK;
 }
 
+void Lp8556Device::SetMinimumRgb(uint8_t minimum_rgb) {
+  if (clamp_rgb_.ctx) {
+    display_clamp_rgb_impl_set_minimum_rgb(&clamp_rgb_, minimum_rgb);
+  }
+}
+
 zx_status_t Lp8556Device::SetCurrentScale(uint16_t scale) {
   scale &= kBrightnessRegMask;
 
@@ -305,13 +315,16 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
-  if (actual != FRAGMENT_COUNT) {
-    LOG_ERROR("Could not get fragments\n");
+  zx_device_t* fragments[MAX_FRAGMENTS];
+  size_t fragment_count;
+  composite_get_fragments(&composite, fragments, countof(fragments), &fragment_count);
+  if (fragment_count > MAX_FRAGMENTS || fragment_count < MAX_FRAGMENTS - 1) {
+    LOG_ERROR("Unexpected number of fragments\n");
     return ZX_ERR_INTERNAL;
   }
+
+  // fragment may include an optional clamp rgb protocol.
+  auto has_clamp_rgb = (fragment_count == MAX_FRAGMENTS);
 
   // Get platform device protocol
   ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
@@ -337,9 +350,19 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
   }
   ddk::I2cChannel i2c_channel(&i2c);
 
+  display_clamp_rgb_impl_protocol_t clamp_rgb = {};
+  if (has_clamp_rgb) {
+    status = device_get_protocol(fragments[FRAGMENT_CLAMP_RGB], ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL,
+                                 &clamp_rgb);
+    if (status != ZX_OK) {
+      LOG_ERROR("CLAMP RGB protocol not available\n");
+      return status;
+    }
+  }
+
   fbl::AllocChecker ac;
   auto dev = fbl::make_unique_checked<ti::Lp8556Device>(&ac, parent, std::move(i2c_channel),
-                                                        *std::move(mmio));
+                                                        *std::move(mmio), clamp_rgb);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

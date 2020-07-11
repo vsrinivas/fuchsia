@@ -11,6 +11,7 @@
 
 #include <optional>
 
+#include <ddk/protocol/display/clamprgb.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <hw/reg.h>
@@ -64,8 +65,9 @@ class Lp8556Device : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
                      public FidlBacklight::Device::Interface {
  public:
-  Lp8556Device(zx_device_t* parent, ddk::I2cChannel i2c, ddk::MmioBuffer mmio)
-      : DeviceType(parent), i2c_(std::move(i2c)), mmio_(std::move(mmio)) {}
+  Lp8556Device(zx_device_t* parent, ddk::I2cChannel i2c, ddk::MmioBuffer mmio,
+               display_clamp_rgb_impl_protocol_t clamp_rgb)
+      : DeviceType(parent), i2c_(std::move(i2c)), mmio_(std::move(mmio)), clamp_rgb_(clamp_rgb) {}
 
   zx_status_t Init();
 
@@ -106,10 +108,16 @@ class Lp8556Device : public DeviceType,
  private:
   zx_status_t SetCurrentScale(uint16_t scale);
 
+  void SetMinimumRgb(uint8_t minimum_rgb);
+
   // TODO(rashaeqbal): Switch from I2C to PWM in order to support a larger brightness range.
   // Needs a PWM driver.
   ddk::I2cChannel i2c_;
   ddk::MmioBuffer mmio_;
+
+  // Optional protocol used by backlight to clamp the minimum allowed value of RGB
+  // in order to reduce backlight bleeding
+  display_clamp_rgb_impl_protocol_t clamp_rgb_ = {};
 
   // brightness is set to maximum from bootloader if the persistent brightness sticky register is
   // not set.

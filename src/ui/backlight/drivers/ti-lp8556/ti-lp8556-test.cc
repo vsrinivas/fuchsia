@@ -58,10 +58,12 @@ class Lp8556DeviceTest : public zxtest::Test {
 
   void SetUp() {
     ddk::MmioBuffer mmio(mock_regs_.GetMmioBuffer());
+    display_clamp_rgb_impl_protocol_t clamp_rgb = {};
 
     fbl::AllocChecker ac;
-    dev_ = fbl::make_unique_checked<Lp8556Device>(
-        &ac, fake_ddk::kFakeParent, ddk::I2cChannel(mock_i2c_.GetProto()), std::move(mmio));
+    dev_ = fbl::make_unique_checked<Lp8556Device>(&ac, fake_ddk::kFakeParent,
+                                                  ddk::I2cChannel(mock_i2c_.GetProto()),
+                                                  std::move(mmio), clamp_rgb);
     ASSERT_TRUE(ac.check());
 
     const auto message_op = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
