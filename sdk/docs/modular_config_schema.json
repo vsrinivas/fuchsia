@@ -10,7 +10,7 @@
           "type": "boolean",
           "default": false
         },
-        "base_shell": { "$ref": "#definitions/base_shell" },
+        "base_shell": { "$ref": "#/definitions/base_shell" },
         "session_shells": {
           "type": "array",
           "items": { "$ref": "#/definitions/session_shell" },
@@ -81,10 +81,7 @@
         },
         "component_args": {
           "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/component_args"
-          }
+          "items": { "$ref": "#/definitions/component_args" }
         },
         "agent_service_index": {
           "type": "array",
@@ -114,9 +111,9 @@
           "items": {
             "type": "string"
           }
-        },
-        "required": ["uri", "args"]
-      }
+        }
+      },
+      "required": ["uri", "args"]
     },
     "agent_service_index_entry": {
       "type": "object",
