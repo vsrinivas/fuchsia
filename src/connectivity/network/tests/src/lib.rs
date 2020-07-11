@@ -17,7 +17,6 @@ mod socket;
 use std::convert::TryFrom;
 
 use fidl_fuchsia_hardware_ethertap as ethertap;
-use fuchsia_async::{DurationExt, TimeoutExt};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;

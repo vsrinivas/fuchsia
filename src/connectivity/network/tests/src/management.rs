@@ -9,23 +9,27 @@ use fidl_fuchsia_net_ext::IntoExt as _;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netstack as netstack;
+use fuchsia_async::{DurationExt as _, TimeoutExt as _};
+use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use futures::future::{self, FutureExt as _};
-use futures::stream::{self, StreamExt as _};
+use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
 use netstack_testing_macros::variants_test;
 
-use crate::environments::*;
-use crate::*;
+use crate::environments::{KnownServices, Manager as _, NetCfg, Netstack2, TestSandboxExt as _};
+use crate::{
+    try_all, try_any, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, DHCP_SERVER_DEFAULT_CONFIG_PATH,
+};
 
 /// Test that NetCfg discovers a newly added device and it adds the device
 /// to the Netstack.
 // TODO(54025): Enable this test for NetworkManager.
 #[variants_test]
-async fn test_oir<E: Endpoint>(name: &str) -> Result {
-    let sandbox = TestSandbox::new().context("create sandbox")?;
+async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
+    let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
     // Create an environment with the LookupAdmin service as NetCfg tries to configure
     // it. NetCfg will fail if it can't send the LookupAdmin a request.
     let environment = sandbox
@@ -97,7 +101,7 @@ async fn test_oir<E: Endpoint>(name: &str) -> Result {
 /// Also make sure that a new WLAN AP interface may be added after a previous interface has been
 /// removed from the netstack.
 #[variants_test]
-async fn test_wlan_ap_dhcp_server<E: Endpoint>(name: &str) -> Result {
+async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
     // Use a large timeout to check for resolution.
     //
     // These values effectively result in a large timeout of 60s which should avoid
@@ -125,9 +129,9 @@ async fn test_wlan_ap_dhcp_server<E: Endpoint>(name: &str) -> Result {
     ///
     /// When `wlan_ap_dhcp_server_inner` returns successfully, the interface that it creates will
     /// have been removed.
-    async fn wlan_ap_dhcp_server_inner<'a, E: Endpoint>(
-        sandbox: &'a TestSandbox,
-        environment: &TestEnvironment<'a>,
+    async fn wlan_ap_dhcp_server_inner<'a, E: netemul::Endpoint>(
+        sandbox: &'a netemul::TestSandbox,
+        environment: &netemul::TestEnvironment<'a>,
         offset: u8,
     ) -> Result {
         // These constants are all hard coded in NetCfg for the WLAN AP interface and
@@ -324,7 +328,7 @@ async fn test_wlan_ap_dhcp_server<E: Endpoint>(name: &str) -> Result {
         Ok(())
     }
 
-    let sandbox = TestSandbox::new().context("create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
     let environment = sandbox
         .create_netstack_environment_with::<Netstack2, _, _>(
             name,

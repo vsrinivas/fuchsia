@@ -5,10 +5,10 @@
 use anyhow::Context as _;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use net_declare::fidl_ip;
-
-use crate::environments::*;
-use crate::Result;
 use netstack_testing_macros::variants_test;
+
+use crate::environments::{KnownServices, Netstack2, TestSandboxExt as _};
+use crate::Result;
 
 /// Endpoints in DHCP tests are either
 /// 1. attached to the server stack, which will have DHCP servers serving on them.
@@ -39,7 +39,7 @@ struct DhcpTestNetwork<'a> {
 
 // TODO(tamird): could this be done with a single stack and bridged interfaces?
 #[variants_test]
-async fn acquire_dhcp<E: Endpoint>(name: &str) -> Result {
+async fn acquire_dhcp<E: netemul::Endpoint>(name: &str) -> Result {
     test_dhcp::<E>(
         name,
         &mut [DhcpTestNetwork {
@@ -69,7 +69,7 @@ async fn acquire_dhcp<E: Endpoint>(name: &str) -> Result {
 }
 
 #[variants_test]
-async fn acquire_dhcp_with_dhcpd_bound_device<E: Endpoint>(name: &str) -> Result {
+async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) -> Result {
     test_dhcp::<E>(
         name,
         &mut [DhcpTestNetwork {
@@ -99,7 +99,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: Endpoint>(name: &str) -> Result
 }
 
 #[variants_test]
-async fn acquire_dhcp_with_multiple_network<E: Endpoint>(name: &str) -> Result {
+async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) -> Result {
     test_dhcp::<E>(
         name,
         &mut [
@@ -163,13 +163,13 @@ async fn acquire_dhcp_with_multiple_network<E: Endpoint>(name: &str) -> Result {
 ///
 /// DHCP clients are started on each client endpoint, attempt to acquire
 /// addresses through DHCP and compare them to expected address.
-async fn test_dhcp<E: Endpoint>(
+async fn test_dhcp<E: netemul::Endpoint>(
     name: &str,
     network_configs: &mut [DhcpTestNetwork<'_>],
     dhcpd_config_paths: &[&str],
     cycles: u32,
 ) -> Result {
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
 
     let server_environment = sandbox
         .create_netstack_environment_with::<Netstack2, _, _>(
@@ -205,12 +205,12 @@ async fn test_dhcp<E: Endpoint>(
                             // NOTE: InterfaceAddress does not currently
                             // implement Clone, it probably will at some point
                             // as FIDL bindings evolve.
-                            InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
+                            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
                                 addr: addr.addr,
                                 prefix_len: addr.prefix_len,
                             })
                         }
-                        None => InterfaceConfig::None,
+                        None => netemul::InterfaceConfig::None,
                     };
 
                     let interface = test_environment

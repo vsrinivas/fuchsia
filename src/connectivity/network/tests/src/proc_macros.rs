@@ -10,25 +10,36 @@ use quote::quote;
 
 /// A specific implementation of a test variant.
 struct Implementation {
-    type_name: &'static str,
+    type_name: syn::Path,
     suffix: &'static str,
 }
 
 /// A variant tests will be generated for.
-struct Variant {
-    trait_bound: &'static str,
-    implementations: &'static [Implementation],
+struct Variant<'a> {
+    trait_bound: syn::Path,
+    implementations: &'a [Implementation],
 }
 
 /// A specific variation of a test.
 #[derive(Default)]
 struct TestVariation {
     // Holds tuples of (trait name, implementation type name).
-    trait_replacements: Vec<(String, String)>,
+    trait_replacements: Vec<(syn::Path, syn::Path)>,
     suffix: String,
 }
 
-fn variants_test_inner(input: TokenStream, variants: &[Variant]) -> TokenStream {
+fn str_to_syn_path(path: &str) -> syn::Path {
+    let mut segments = syn::punctuated::Punctuated::<_, syn::token::Colon2>::new();
+    for seg in path.split("::") {
+        segments.push(syn::PathSegment {
+            ident: syn::Ident::new(seg, Span::call_site()),
+            arguments: syn::PathArguments::None,
+        });
+    }
+    syn::Path { leading_colon: None, segments }
+}
+
+fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStream {
     let item = input.clone();
     let item = syn::parse_macro_input!(item as syn::ItemFn);
     let syn::Signature { ident: name, generics, output, inputs, .. } = &item.sig;
@@ -141,7 +152,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant]) -> TokenStream 
     // The intial variation has no replacements or suffix.
     let test_variations = variants.into_iter().fold(vec![TestVariation::default()], |acc, v| {
         // If the test is not generic over `v`, then skip `v`.
-        if !trait_bounds.iter().any(|trait_bound| trait_bound.is_ident(v.trait_bound)) {
+        if !trait_bounds.iter().any(|trait_bound| *trait_bound == &v.trait_bound) {
             return acc;
         }
 
@@ -149,7 +160,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant]) -> TokenStream 
             .flat_map(|c| {
                 v.implementations.iter().map(move |i| {
                     let mut tbs = c.trait_replacements.clone();
-                    tbs.push((v.trait_bound.to_string(), i.type_name.to_string()));
+                    tbs.push((v.trait_bound.clone(), i.type_name.clone()));
                     TestVariation {
                         trait_replacements: tbs,
                         suffix: format!("{}_{}", c.suffix, i.suffix),
@@ -169,10 +180,8 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant]) -> TokenStream 
         // Replace all the generics with concrete types.
         let mut params = Vec::with_capacity(trait_bounds.len());
         for trait_bound in trait_bounds.iter() {
-            if let Some((_, tn)) =
-                v.trait_replacements.iter().find(|(tb, _)| trait_bound.is_ident(tb))
-            {
-                params.push(syn::Ident::new(tn, Span::call_site()));
+            if let Some((_, tn)) = v.trait_replacements.iter().find(|(tb, _)| trait_bound == &tb) {
+                params.push(tn);
             } else {
                 return syn::Error::new_spanned(
                     proc_macro2::TokenStream::from(input),
@@ -223,15 +232,15 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant]) -> TokenStream 
 /// ```
 /// async fn test_foo<N: Nestack>(name: &str){/*...*/}
 /// #[fuchsia_async::run_singlethreaded(test)]
-/// async fn test_foo_ns2() { test_foo::<Netstack2>("test_foo_ns2").await }
+/// async fn test_foo_ns2() { test_foo::<crate::environments::Netstack2>("test_foo_ns2").await }
 /// #[fuchsia_async::run_singlethreaded(test)]
-/// async fn test_foo_ns3() { test_foo::<Netstack3>("test_foo_ns3").await }
+/// async fn test_foo_ns3() { test_foo::<crate::environments::Netstack3>("test_foo_ns3").await }
 /// ```
 ///
 /// Similarily,
 /// ```
 /// #[variants_test]
-/// async fn test_foo<E: Endpoint>(name: &str) {/*...*/}
+/// async fn test_foo<E: netemul::Endpoint>(name: &str) {/*...*/}
 /// ```
 ///
 /// and
@@ -249,27 +258,33 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant]) -> TokenStream 
 ///
 /// ```
 /// #[variants_test]
-/// async fn test_foo<N: Netstack, E: Endpoint>(name: &str) {/*...*/}
+/// async fn test_foo<N: Netstack, E: netemul::Endpoint>(name: &str) {/*...*/}
 /// ```
 ///
 /// Expands to:
 /// ```
-/// async fn test_foo<N: Nestack, E: Endpoint>(name: &str){/*...*/}
+/// async fn test_foo<N: Nestack, E: netemul::Endpoint>(name: &str){/*...*/}
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo_ns2_eth() {
-///     test_foo::<Netstack2, Ethernet>("test_foo_ns2_eth").await
+///     test_foo::<crate::environments::Netstack2, netemul::Ethernet>("test_foo_ns2_eth").await
 /// }
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo_ns3_eth() {
-///     test_foo::<Netstack3, Ethernet>("test_foo_ns3_eth").await
+///     test_foo::<crate::environments::Netstack3, netemul::Ethernet>("test_foo_ns3_eth").await
 /// }
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo_ns2_netdev() {
-///     test_foo::<Netstack2, NetworkDevice>("test_foo_ns2_netdev").await
+///     test_foo::<
+///         crate::environments::Netstack2,
+///         netemul::NetworkDevice,
+///     >("test_foo_ns2_netdev").await
 /// }
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo_ns3_netdev() {
-///     test_foo::<Netstack3, NetworkDevice>("test_foo_ns3_netdev").await
+///     test_foo::<
+///         crate::environments::Netstack3,
+///         netemul::NetworkDevice,
+///     >("test_foo_ns3_netdev").await
 /// }
 /// ```
 #[proc_macro_attribute]
@@ -287,24 +302,42 @@ pub fn variants_test(attrs: TokenStream, input: TokenStream) -> TokenStream {
         input,
         &[
             Variant {
-                trait_bound: "Netstack",
+                trait_bound: str_to_syn_path("Netstack"),
                 implementations: &[
-                    Implementation { type_name: "Netstack2", suffix: "ns2" },
-                    Implementation { type_name: "Netstack3", suffix: "ns3" },
+                    Implementation {
+                        type_name: str_to_syn_path("crate::environments::Netstack2"),
+                        suffix: "ns2",
+                    },
+                    Implementation {
+                        type_name: str_to_syn_path("crate::environments::Netstack3"),
+                        suffix: "ns3",
+                    },
                 ],
             },
             Variant {
-                trait_bound: "Endpoint",
+                trait_bound: str_to_syn_path("netemul::Endpoint"),
                 implementations: &[
-                    Implementation { type_name: "Ethernet", suffix: "eth" },
-                    Implementation { type_name: "NetworkDevice", suffix: "netdevice" },
+                    Implementation {
+                        type_name: str_to_syn_path("netemul::Ethernet"),
+                        suffix: "eth",
+                    },
+                    Implementation {
+                        type_name: str_to_syn_path("netemul::NetworkDevice"),
+                        suffix: "netdevice",
+                    },
                 ],
             },
             Variant {
-                trait_bound: "Manager",
+                trait_bound: str_to_syn_path("Manager"),
                 implementations: &[
-                    Implementation { type_name: "NetCfg", suffix: "netcfg" },
-                    Implementation { type_name: "NetworkManager", suffix: "netmgr" },
+                    Implementation {
+                        type_name: str_to_syn_path("crate::environments::NetCfg"),
+                        suffix: "netcfg",
+                    },
+                    Implementation {
+                        type_name: str_to_syn_path("crate::environments::NetworkManager"),
+                        suffix: "netmgr",
+                    },
                 ],
             },
         ],

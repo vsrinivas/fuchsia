@@ -33,8 +33,10 @@ use packet_formats::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame;
 use zerocopy::ByteSlice;
 
 use crate::constants::{eth as eth_consts, ipv6 as ipv6_consts};
-use crate::environments::*;
-use crate::*;
+use crate::environments::{KnownServices, Netstack, Netstack2, TestSandboxExt as _};
+use crate::{
+    EthertapName, Result, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+};
 
 /// As per [RFC 4861] sections 4.1-4.5, NDP packets MUST have a hop limit of 255.
 ///
@@ -64,17 +66,17 @@ const EXPECTED_DAD_RETRANSMIT_TIMER: zx::Duration = zx::Duration::from_seconds(1
 /// netstack) and a fake endpoint used to read and write raw ethernet packets.
 /// The interface will be up when `setup_network` returns successfully.
 async fn setup_network<E, S>(
-    sandbox: &TestSandbox,
+    sandbox: &netemul::TestSandbox,
     name: S,
 ) -> Result<(
-    TestNetwork<'_>,
-    TestEnvironment<'_>,
+    netemul::TestNetwork<'_>,
+    netemul::TestEnvironment<'_>,
     netstack::NetstackProxy,
-    TestInterface<'_>,
-    TestFakeEndpoint<'_>,
+    netemul::TestInterface<'_>,
+    netemul::TestFakeEndpoint<'_>,
 )>
 where
-    E: Endpoint,
+    E: netemul::Endpoint,
     S: Copy + Into<String> + EthertapName,
 {
     let network = sandbox.create_network(name).await.context("failed to create network")?;
@@ -86,7 +88,11 @@ where
     let fake_ep = network.create_fake_endpoint()?;
 
     let iface = environment
-        .join_network::<E, _>(&network, name.ethertap_compatible_name(), InterfaceConfig::None)
+        .join_network::<E, _>(
+            &network,
+            name.ethertap_compatible_name(),
+            netemul::InterfaceConfig::None,
+        )
         .await
         .context("failed to configure networking")?;
 
@@ -112,7 +118,7 @@ pub(super) async fn write_ndp_message<
     dst_ip: net_types_ip::Ipv6Addr,
     message: M,
     options: &[NdpOption<'_>],
-    ep: &TestFakeEndpoint<'_>,
+    ep: &netemul::TestFakeEndpoint<'_>,
 ) -> Result {
     let ser = ndp::OptionsSerializer::<_>::new(options.iter())
         .into_serializer()
@@ -135,7 +141,7 @@ pub(super) async fn write_ndp_message<
 /// the launched netstack will still be terminated, but no guarantees are made
 /// about when that will happen.
 async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
-    endpoint: &TestEndpoint<'_>,
+    endpoint: &netemul::TestEndpoint<'_>,
     launcher: &sys::LauncherProxy,
     name: String,
 ) -> Result<Vec<net::Subnet>> {
@@ -189,14 +195,14 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
 /// Test that across netstack runs, a device will initially be assigned the same
 /// IPv6 addresses.
 #[variants_test]
-async fn consistent_initial_ipv6_addrs<E: Endpoint>(name: &str) -> Result {
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+async fn consistent_initial_ipv6_addrs<E: netemul::Endpoint>(name: &str) -> Result {
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let env = sandbox
         .create_environment(name, &[KnownServices::SecureStash])
         .context("failed to create environment")?;
     let launcher = env.get_launcher().context("failed to get launcher")?;
     let endpoint = sandbox
-        .create_endpoint::<Ethernet, _>(name.ethertap_compatible_name())
+        .create_endpoint::<netemul::Ethernet, _>(name.ethertap_compatible_name())
         .await
         .context("failed to create endpoint")?;
 
@@ -221,8 +227,8 @@ async fn consistent_initial_ipv6_addrs<E: Endpoint>(name: &str) -> Result {
 /// Tests that `EXPECTED_ROUTER_SOLICIATIONS` Router Solicitation messages are transmitted
 /// when the interface is brought up.
 #[variants_test]
-async fn sends_router_solicitations<E: Endpoint>(name: &str) -> Result {
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+async fn sends_router_solicitations<E: netemul::Endpoint>(name: &str) -> Result {
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let (_network, _environment, _netstack, _iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await?;
 
@@ -328,8 +334,8 @@ async fn sends_router_solicitations<E: Endpoint>(name: &str) -> Result {
 
 /// Tests that both stable and temporary SLAAC addresses are generated for a SLAAC prefix.
 #[variants_test]
-async fn slaac_with_privacy_extensions<E: Endpoint>(name: &str) -> Result {
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(name: &str) -> Result {
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let (_network, _environment, netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await?;
 
@@ -437,10 +443,10 @@ async fn add_address_for_dad<
     'a,
     'b: 'a,
     R: 'b + Future<Output = Result>,
-    FN: FnOnce(&'b TestInterface<'a>, &'b TestFakeEndpoint<'a>) -> R,
+    FN: FnOnce(&'b netemul::TestInterface<'a>, &'b netemul::TestFakeEndpoint<'a>) -> R,
 >(
-    iface: &'b TestInterface<'a>,
-    fake_ep: &'b TestFakeEndpoint<'a>,
+    iface: &'b netemul::TestInterface<'a>,
+    fake_ep: &'b netemul::TestFakeEndpoint<'a>,
     fail_dad_fn: FN,
 ) -> Result {
     let () = iface
@@ -507,10 +513,10 @@ async fn add_address_for_dad<
 // TODO(53644): Reenable when we figure out how to handle timing issues in CQ when the address
 // may resolve before the netstack processes the NA/NS messagee.
 #[allow(unused)]
-async fn duplicate_address_detection<E: Endpoint>(name: &str) -> Result {
+async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result {
     /// Makes sure that `ipv6_consts::LINK_LOCAL_ADDR` is not assigned to the interface after the
     /// DAD resolution time.
-    async fn check_address_failed_dad(iface: &TestInterface<'_>) -> Result {
+    async fn check_address_failed_dad(iface: &netemul::TestInterface<'_>) -> Result {
         let () = fasync::Timer::new(fasync::Time::after(
             EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
                 + ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
@@ -531,7 +537,10 @@ async fn duplicate_address_detection<E: Endpoint>(name: &str) -> Result {
 
     /// Transmits a Neighbor Solicitation message and expects `ipv6_consts::LINK_LOCAL_ADDR`
     /// to not be assigned to the interface after the normal resolution time for DAD.
-    async fn fail_dad_with_ns(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<'_>) -> Result {
+    async fn fail_dad_with_ns(
+        iface: &netemul::TestInterface<'_>,
+        fake_ep: &netemul::TestFakeEndpoint<'_>,
+    ) -> Result {
         let snmc = ipv6_consts::LINK_LOCAL_ADDR.to_solicited_node_address();
         let () = write_ndp_message::<&[u8], _>(
             eth_consts::MAC_ADDR,
@@ -550,7 +559,10 @@ async fn duplicate_address_detection<E: Endpoint>(name: &str) -> Result {
 
     /// Transmits a Neighbor Advertisement message and expects `ipv6_consts::LINK_LOCAL_ADDR`
     /// to not be assigned to the interface after the normal resolution time for DAD.
-    async fn fail_dad_with_na(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<'_>) -> Result {
+    async fn fail_dad_with_na(
+        iface: &netemul::TestInterface<'_>,
+        fake_ep: &netemul::TestFakeEndpoint<'_>,
+    ) -> Result {
         let () = write_ndp_message::<&[u8], _>(
             eth_consts::MAC_ADDR,
             Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
@@ -571,7 +583,7 @@ async fn duplicate_address_detection<E: Endpoint>(name: &str) -> Result {
         check_address_failed_dad(iface).await
     }
 
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let (_network, _environment, netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await?;
 

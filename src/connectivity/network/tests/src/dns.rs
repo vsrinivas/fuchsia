@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_async::DurationExt as _;
+
 use anyhow::Context as _;
-use futures;
 use futures::future::FutureExt;
 use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6};
 use net_types::ethernet::Mac;
@@ -16,9 +17,9 @@ use packet_formats::icmp::ndp::{
 };
 
 use crate::constants::{eth as eth_consts, ipv6 as ipv6_consts};
-use crate::environments::*;
+use crate::environments::{KnownServices, Manager, Netstack2, TestSandboxExt as _};
 use crate::ipv6::write_ndp_message;
-use crate::*;
+use crate::Result;
 
 /// Tests that dns-resolver does not support `fuchsia.net.name/LookupAdmin.SetDefaultDnsServers`.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -27,7 +28,7 @@ async fn test_set_default_dns_servers() -> Result {
     const STATIC_DNS_SERVER: fidl_fuchsia_net::IpAddress = fidl_ip!(123.12.34.99);
 
     let name = "test_set_default_dns_servers";
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
 
     let client_environment = sandbox
         .create_environment(name, &[KnownServices::LookupAdmin])
@@ -59,7 +60,7 @@ async fn test_set_default_dns_servers() -> Result {
 /// Tests that Netstack exposes DNS servers discovered dynamically and NetworkManager
 /// configures the Lookup service.
 #[variants_test]
-async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
+async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
     const SERVER_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
     /// DNS server served by DHCP.
     const DHCP_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(123.12.34.56);
@@ -74,7 +75,7 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
 
     const DEFAULT_DNS_PORT: u16 = 53;
 
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
 
     let network = sandbox.create_network("net").await.context("failed to create network")?;
     let server_environment = sandbox
@@ -105,7 +106,10 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
         .join_network::<E, _>(
             &network,
             "server-ep",
-            InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet { addr: SERVER_IP, prefix_len: 24 }),
+            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
+                addr: SERVER_IP,
+                prefix_len: 24,
+            }),
         )
         .await
         .context("failed to configure server networking")?;
@@ -123,7 +127,7 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
 
     // Start networking on client environment.
     let _client_iface = client_environment
-        .join_network::<E, _>(&network, "client-ep", InterfaceConfig::Dhcp)
+        .join_network::<E, _>(&network, "client-ep", netemul::InterfaceConfig::Dhcp)
         .await
         .context("failed to configure client networking")?;
 

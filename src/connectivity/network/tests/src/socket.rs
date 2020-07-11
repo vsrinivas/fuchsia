@@ -2,23 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Context as _;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
+
+use anyhow::Context as _;
 use futures::{FutureExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6};
+use netemul::EnvironmentUdpSocket as _;
 use netstack_testing_macros::variants_test;
 use packet::Serializer;
 use packet_formats;
 use packet_formats::ipv4::Ipv4Header;
 
-use crate::environments::*;
+use crate::environments::{Netstack2, TestSandboxExt as _};
 use crate::Result;
 
 async fn run_udp_socket_test(
-    server: &TestEnvironment<'_>,
+    server: &netemul::TestEnvironment<'_>,
     server_addr: fidl_fuchsia_net::IpAddress,
-    client: &TestEnvironment<'_>,
+    client: &netemul::TestEnvironment<'_>,
     client_addr: fidl_fuchsia_net::IpAddress,
 ) -> Result {
     let fidl_fuchsia_net_ext::IpAddress(client_addr) =
@@ -59,8 +61,8 @@ async fn run_udp_socket_test(
 }
 
 #[variants_test]
-async fn test_udp_socket<E: Endpoint>(name: &str) -> Result {
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+async fn test_udp_socket<E: netemul::Endpoint>(name: &str) -> Result {
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let net = sandbox.create_network("net").await.context("failed to create network")?;
 
     let client = sandbox
@@ -73,7 +75,10 @@ async fn test_udp_socket<E: Endpoint>(name: &str) -> Result {
         .join_network::<E, _>(
             &net,
             "client",
-            InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet { addr: CLIENT_IP, prefix_len: 24 }),
+            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
+                addr: CLIENT_IP,
+                prefix_len: 24,
+            }),
         )
         .await
         .context("client failed to join network")?;
@@ -84,7 +89,10 @@ async fn test_udp_socket<E: Endpoint>(name: &str) -> Result {
         .join_network::<E, _>(
             &net,
             "server",
-            InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet { addr: SERVER_IP, prefix_len: 24 }),
+            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
+                addr: SERVER_IP,
+                prefix_len: 24,
+            }),
         )
         .await
         .context("server failed to join network")?;
@@ -94,7 +102,7 @@ async fn test_udp_socket<E: Endpoint>(name: &str) -> Result {
 
 // Helper function to add ip device to stack.
 async fn install_ip_device(
-    env: &TestEnvironment<'_>,
+    env: &netemul::TestEnvironment<'_>,
     device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::DeviceMarker>,
     addrs: &mut [fidl_fuchsia_net::Subnet],
 ) -> Result<u64> {
@@ -175,7 +183,7 @@ fn base_ip_device_config() -> fidl_fuchsia_net_tun::BaseConfig {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_ip_endpoints_socket() -> Result {
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let client = sandbox
         .create_netstack_environment::<Netstack2, _>("test_ip_endpoints_client")
         .context("failed to create client environment")?;
@@ -257,7 +265,7 @@ async fn test_ip_endpoints_socket() -> Result {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_ip_endpoint_packets() -> Result {
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let env = sandbox
         .create_netstack_environment::<Netstack2, _>("test_ip_endpoint_packets")
         .context("failed to create client environment")?;
