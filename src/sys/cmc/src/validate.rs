@@ -1296,7 +1296,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\""
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `runner`, `from`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`"
         ),
 
         test_cml_use_disallows_nested_dirs(
@@ -2538,7 +2538,7 @@ mod tests {
         // runner
         test_cml_runner(
             json!({
-                "runner": [
+                "runners": [
                     {
                         "name": "a",
                         "from": "#minfs",
@@ -2572,7 +2572,7 @@ mod tests {
                         "url": "https://www.google.com/gmail"
                     },
                 ],
-                "runner": [
+                "runners": [
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-runner",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
@@ -3423,6 +3423,18 @@ mod tests {
                 ]
             }),
             Err(Error::Parse { err, .. }) if &err == "missing field `path`"
+        ),
+
+        // deny unknown fields
+        test_deny_unknown_fields(
+            json!(
+                {
+                    "program": { "binary": "bin/app" },
+                    "use": [ { "runner": "elf" } ],
+                    "unknown_field": {},
+                }
+            ),
+            Err(Error::Parse { err }) if err.starts_with("unknown field `unknown_field`, expected one of ")
         ),
     }
 

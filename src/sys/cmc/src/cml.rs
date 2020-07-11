@@ -456,6 +456,7 @@ pub fn parse_rights(right_tokens: &Rights) -> Result<cm::Rights, cm::RightsValid
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Document {
     pub program: Option<Map<String, Value>>,
     pub r#use: Option<Vec<Use>>,
@@ -558,6 +559,7 @@ pub enum EnvironmentExtends {
 /// An Environment defines properties which affect the behavior of components within a realm, such
 /// as its resolver.
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Environment {
     /// This name is used to reference the environment assigned to the component's children
     pub name: Name,
@@ -571,6 +573,7 @@ pub struct Environment {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct RunnerRegistration {
     pub runner: Name,
     pub from: RegistrationRef,
@@ -578,6 +581,7 @@ pub struct RunnerRegistration {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct ResolverRegistration {
     pub resolver: Name,
     pub from: RegistrationRef,
@@ -585,6 +589,7 @@ pub struct ResolverRegistration {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Use {
     pub service: Option<Path>,
     pub protocol: Option<OneOrMany<Path>>,
@@ -601,6 +606,7 @@ pub struct Use {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Expose {
     pub service: Option<Path>,
     pub protocol: Option<OneOrMany<Path>>,
@@ -615,6 +621,7 @@ pub struct Expose {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Offer {
     pub service: Option<Path>,
     pub protocol: Option<OneOrMany<Path>>,
@@ -633,6 +640,7 @@ pub struct Offer {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Child {
     pub name: Name,
     pub url: Url,
@@ -642,6 +650,7 @@ pub struct Child {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Collection {
     pub name: Name,
     pub durability: Durability,
@@ -649,6 +658,7 @@ pub struct Collection {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Storage {
     pub name: Name,
     pub from: StorageFromRef,
@@ -656,6 +666,7 @@ pub struct Storage {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Runner {
     pub name: Name,
     pub from: RunnerFromRef,
@@ -663,6 +674,7 @@ pub struct Runner {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Resolver {
     pub name: Name,
     pub path: Path,
@@ -954,6 +966,7 @@ pub(super) fn alias_or_path<'a>(
 mod tests {
     use super::*;
     use cm_json::{self, Error};
+    use json5;
     use matches::assert_matches;
     use serde_json;
 
@@ -1106,5 +1119,21 @@ mod tests {
             cm::Right::GetAttributes,
             cm::Right::Execute,
         ]),
+    }
+
+    #[test]
+    fn test_deny_unknown_fields() {
+        assert_matches!(json5::from_str::<Document>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<Environment>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<RunnerRegistration>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<ResolverRegistration>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<Use>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<Expose>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<Offer>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<Child>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<Collection>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<Storage>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<Runner>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<Resolver>("{ unknown: \"\" }"), Err(_));
     }
 }

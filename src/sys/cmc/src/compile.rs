@@ -2039,7 +2039,7 @@ mod tests {
                         "protocol": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": [ "#netstack", "#modular" ],
-                        "dependency_type": "strong"
+                        "dependency": "weak_for_migration"
                     },
                 ],
                 "children": [
@@ -2195,7 +2195,7 @@ mod tests {
                     }
                 },
                 "target_path": "/svc/fuchsia.logger.LegacyLog",
-                "dependency_type": "strong"
+                "dependency_type": "weak_for_migration"
             }
         },
         {
@@ -2212,7 +2212,7 @@ mod tests {
                     }
                 },
                 "target_path": "/svc/fuchsia.logger.LegacyLog",
-                "dependency_type": "strong"
+                "dependency_type": "weak_for_migration"
             }
         }
     ],
