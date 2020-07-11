@@ -18,7 +18,7 @@ group("tests") {
   ]
 }
 
-rustc_library("lib") {
+rustc_library("streams") {
   name = "diagnostic_streams"
   with_unit_tests = true
   edition = "2018"
@@ -35,7 +35,7 @@ rustc_library("lib") {
 }
 
 unittest_package("diagnostic_streams_tests") {
-  deps = [ ":lib_test" ]
+  deps = [ ":streams_test" ]
 
   tests = [
     {
@@ -46,7 +46,7 @@ unittest_package("diagnostic_streams_tests") {
 
 rustc_fuzzer("parse_record_fuzzer") {
   deps = [
-    ":lib",
+    ":streams",
     "//src/lib/fuzzing/rust:fuzz",
   ]
   source_root = "src/fuzzer.rs"
