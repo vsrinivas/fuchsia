@@ -181,12 +181,10 @@ mod tests {
             exposes: None,
             offers: None,
             facets: None,
+            capabilities: None,
             children: None,
             collections: None,
-            storage: None,
-            runners: None,
             environments: None,
-            resolvers: None,
         };
         assert_eq!(decl.unwrap(), expected_decl);
 

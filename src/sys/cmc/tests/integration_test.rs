@@ -6,13 +6,7 @@ use anyhow::Error;
 use cm_fidl_translator;
 use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_io2 as fio2;
-use fidl_fuchsia_sys2::{
-    ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType, Durability,
-    Entry, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
-    ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef, Object, OfferDecl, OfferEventDecl,
-    OfferProtocolDecl, OfferServiceDecl, ParentRef, Ref, RunnerDecl, SelfRef, StartupMode, UseDecl,
-    UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl, Value,
-};
+use fidl_fuchsia_sys2::*;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -88,11 +82,6 @@ fn main() {
                 ]),
             }),
         ];
-        let runners = vec![RunnerDecl {
-            name: Some("dart_runner".to_string()),
-            source: Some(Ref::Self_(SelfRef {})),
-            source_path: Some("/svc/fuchsia.sys2.Runner".to_string()),
-        }];
         let exposes = vec![
             ExposeDecl::Service(ExposeServiceDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
@@ -146,6 +135,22 @@ fn main() {
                 filter: None,
             }),
         ];
+        let capabilities = vec![
+            CapabilityDecl::Storage(StorageDecl {
+                name: Some("minfs".to_string()),
+                source: Some(Ref::Parent(ParentRef {})),
+                source_path: Some("/data".to_string()),
+            }),
+            CapabilityDecl::Runner(RunnerDecl {
+                name: Some("dart_runner".to_string()),
+                source: Some(Ref::Self_(SelfRef {})),
+                source_path: Some("/svc/fuchsia.sys2.Runner".to_string()),
+            }),
+            CapabilityDecl::Resolver(ResolverDecl {
+                name: Some("pkg_resolver".to_string()),
+                source_path: Some("/svc/fuchsia.pkg.Resolver".to_string()),
+            }),
+        ];
         let children = vec![ChildDecl {
             name: Some("logger".to_string()),
             url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
@@ -187,14 +192,11 @@ fn main() {
             uses: Some(uses),
             exposes: Some(exposes),
             offers: Some(offers),
+            capabilities: Some(capabilities),
             children: Some(children),
             collections: Some(collections),
             facets: Some(facets),
-            runners: Some(runners),
-            // TODO: test storage
-            storage: None,
             environments: Some(envs),
-            resolvers: None,
         }
     };
     assert_eq!(cm_decl, expected_decl);

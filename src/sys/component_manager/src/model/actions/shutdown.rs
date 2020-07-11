@@ -10,9 +10,9 @@ use {
         realm::{Realm, RealmState},
     },
     cm_rust::{
-        ComponentDecl, DependencyType, OfferDecl, OfferDirectorySource, OfferResolverSource,
-        OfferRunnerSource, OfferServiceSource, OfferStorageSource, OfferTarget, RegistrationSource,
-        StorageDecl, StorageDirectorySource,
+        CapabilityDecl, ComponentDecl, DependencyType, OfferDecl, OfferDirectorySource,
+        OfferResolverSource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
+        OfferTarget, RegistrationSource, StorageDirectorySource,
     },
     futures::future::select_all,
     maplit::hashset,
@@ -33,17 +33,18 @@ pub enum DependencyNode {
 /// String passed in and whose source is a child. `None` is returned if either
 /// no declaration has the specified name or the declaration represents an
 /// offer from Self or Parent.
-fn find_storage_provider(storage_decls: &Vec<StorageDecl>, name: &str) -> Option<String> {
-    for decl in storage_decls {
-        if decl.name == name {
-            match &decl.source {
+fn find_storage_provider(capabilities: &Vec<CapabilityDecl>, name: &str) -> Option<String> {
+    for decl in capabilities {
+        match decl {
+            CapabilityDecl::Storage(decl) if decl.name == name => match &decl.source {
                 StorageDirectorySource::Child(child) => {
                     return Some(child.to_string());
                 }
                 StorageDirectorySource::Self_ | StorageDirectorySource::Parent => {
                     return None;
                 }
-            }
+            },
+            _ => {}
         }
     }
     None
@@ -409,7 +410,7 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
             OfferDecl::Storage(s) => {
                 match s.source() {
                     OfferStorageSource::Storage(source_name) => {
-                        match find_storage_provider(&decl.storage, &source_name) {
+                        match find_storage_provider(&decl.capabilities, &source_name) {
                             Some(storage_source) => match s.target() {
                                 OfferTarget::Child(target) => vec![(
                                     DependencyNode::Child(storage_source.clone()),

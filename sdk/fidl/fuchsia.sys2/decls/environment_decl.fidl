@@ -47,7 +47,7 @@ table RunnerRegistration {
     1: fuchsia.component.runner_name source_name;
 
     /// The provider of the capability relative to the component itself. Must be
-    /// `realm`, `self`, or `child`.
+    /// `parent`, `self`, or `child`.
     2: Ref source;
 
     /// The name by which the runner is made available in this environment.
@@ -60,7 +60,7 @@ table ResolverRegistration {
     1: fuchsia.component.resolver_name resolver;
 
     /// The provider of the capability relative to the component itself. Must be
-    /// `realm`, `self`, or `child`.
+    /// `parent`, `self`, or `child`.
     2: Ref source;
 
     /// The URL scheme the resolver is registered to handle.

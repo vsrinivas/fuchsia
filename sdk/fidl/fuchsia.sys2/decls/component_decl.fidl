@@ -54,8 +54,8 @@ table ComponentDecl {
     /// The offered capabilities must be unique and non-overlapping.
     4: vector<OfferDecl> offers;
 
-    /// Additional metadata about the component.
-    5: Object facets;
+    /// List of capabilities defined by the component.
+    5: vector<CapabilityDecl> capabilities;
 
     /// The component's statically instantiated children. The children must have
     /// unique names.
@@ -64,29 +64,11 @@ table ComponentDecl {
     /// The component's collections. The collections must have unique names.
     7: vector<CollectionDecl> collections;
 
-    /// List of storage capabilities created by this component.
-    /// Storage capabilities can be offered to children.
-    8: vector<StorageDecl> storage;
-
-    /// List of runner capabilities created by this component.
-    /// Runner capabilities can be exposed to the parent's realm or offered to children.
-    9: vector<RunnerDecl> runners;
-
     /// List of environments created by this component.
     /// Environments are assigned to children and control aspects of a child component's
     /// runtime.
-    10: vector<EnvironmentDecl> environments;
+    8: vector<EnvironmentDecl> environments;
 
-    /// List of resolver capabilities created by this component.
-    ///
-    /// A component can:
-    ///
-    /// - "expose" a resolver capability to its realm,
-    /// - "offer" a resolver capability to its children,
-    /// - register a resolver in an environment.
-    ///
-    /// A component cannot "use" a resolver capability directly. Component manager uses
-    /// a resolver capability on behalf of a component when that component's environment
-    /// contains the resolver capability.
-    11: vector<ResolverDecl> resolvers;
+    /// Additional metadata about the component.
+    9: Object facets;
 };

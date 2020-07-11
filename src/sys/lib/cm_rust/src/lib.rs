@@ -172,13 +172,11 @@ pub struct ComponentDecl {
     pub uses: Vec<UseDecl>,
     pub exposes: Vec<ExposeDecl>,
     pub offers: Vec<OfferDecl>,
+    pub capabilities: Vec<CapabilityDecl>,
     pub children: Vec<ChildDecl>,
     pub collections: Vec<CollectionDecl>,
-    pub storage: Vec<StorageDecl>,
     pub facets: Option<fsys::Object>,
-    pub runners: Vec<RunnerDecl>,
     pub environments: Vec<EnvironmentDecl>,
-    pub resolvers: Vec<ResolverDecl>,
 }
 
 impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
@@ -262,13 +260,11 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
             uses: self.uses.fidl_into_native(),
             exposes,
             offers,
+            capabilities: self.capabilities.fidl_into_native(),
             children: self.children.fidl_into_native(),
             collections: self.collections.fidl_into_native(),
-            storage: self.storage.fidl_into_native(),
             facets: self.facets.fidl_into_native(),
-            runners: self.runners.fidl_into_native(),
             environments: self.environments.fidl_into_native(),
-            resolvers: self.resolvers.fidl_into_native(),
         }
     }
 }
@@ -338,13 +334,11 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             uses: self.uses.native_into_fidl(),
             exposes: if exposes.is_empty() { None } else { Some(exposes) },
             offers: if offers.is_empty() { None } else { Some(offers) },
+            capabilities: self.capabilities.native_into_fidl(),
             children: self.children.native_into_fidl(),
             collections: self.collections.native_into_fidl(),
-            storage: self.storage.native_into_fidl(),
             facets: self.facets.native_into_fidl(),
-            runners: self.runners.native_into_fidl(),
             environments: self.environments.native_into_fidl(),
-            resolvers: self.resolvers.native_into_fidl(),
         }
     }
 }
@@ -356,13 +350,11 @@ impl Clone for ComponentDecl {
             uses: self.uses.clone(),
             exposes: self.exposes.clone(),
             offers: self.offers.clone(),
+            capabilities: self.capabilities.clone(),
             children: self.children.clone(),
             collections: self.collections.clone(),
-            storage: self.storage.clone(),
             facets: data::clone_option_object(&self.facets),
-            runners: self.runners.clone(),
             environments: self.environments.clone(),
-            resolvers: self.resolvers.clone(),
         }
     }
 }
@@ -379,12 +371,15 @@ impl ComponentDecl {
 
     /// Returns the `StorageDecl` corresponding to `storage_name`.
     pub fn find_storage_source<'a>(&'a self, storage_name: &str) -> Option<&'a StorageDecl> {
-        self.storage.iter().find(|s| &s.name == storage_name)
-    }
-
-    /// Returns the `CollectionDecl` corresponding to `collection_name`.
-    pub fn find_collection<'a>(&'a self, collection_name: &str) -> Option<&'a CollectionDecl> {
-        self.collections.iter().find(|c| c.name == collection_name)
+        self.capabilities.iter().find_map(|c| {
+            match c {
+                CapabilityDecl::Storage(s) if &s.name == storage_name => {
+                    return Some(s);
+                }
+                _ => {}
+            }
+            None
+        })
     }
 
     /// Returns the `RunnerDecl` corresponding to `runner_name`.
@@ -392,7 +387,22 @@ impl ComponentDecl {
         &'a self,
         runner_name: &CapabilityName,
     ) -> Option<&'a RunnerDecl> {
-        self.runners.iter().find(|s| &s.name == runner_name)
+        self.capabilities.iter().find_map(|c| {
+            match c {
+                CapabilityDecl::Runner(r) => {
+                    if &r.name == runner_name {
+                        return Some(r);
+                    }
+                }
+                _ => {}
+            }
+            None
+        })
+    }
+
+    /// Returns the `CollectionDecl` corresponding to `collection_name`.
+    pub fn find_collection<'a>(&'a self, collection_name: &str) -> Option<&'a CollectionDecl> {
+        self.collections.iter().find(|c| c.name == collection_name)
     }
 
     /// Indicates whether the capability specified by `target_path` is exposed to the framework.
@@ -551,13 +561,6 @@ fsys::ExposeRunnerDecl,
     target: ExposeTarget,
     target_name: CapabilityName,
 });
-fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
-fsys::StorageDecl,
-{
-    name: String,
-    source: StorageDirectorySource,
-    source_path: CapabilityPath,
-});
 fidl_into_struct!(OfferProtocolDecl, OfferProtocolDecl, fsys::OfferProtocolDecl,
 fsys::OfferProtocolDecl,
 {
@@ -603,6 +606,30 @@ fsys::OfferEventDecl,
     target_name: CapabilityName,
     filter: Option<HashMap<String, DictionaryValue>>,
 });
+fidl_into_enum!(CapabilityDecl, CapabilityDecl, fsys::CapabilityDecl, fsys::CapabilityDecl,
+{
+    Storage(StorageDecl),
+    Runner(RunnerDecl),
+    Resolver(ResolverDecl),
+});
+fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
+fsys::StorageDecl,
+{
+    name: String,
+    source: StorageDirectorySource,
+    source_path: CapabilityPath,
+});
+fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
+{
+    name: CapabilityName,
+    source: RunnerSource,
+    source_path: CapabilityPath,
+});
+fidl_into_struct!(ResolverDecl, ResolverDecl, fsys::ResolverDecl, fsys::ResolverDecl,
+{
+    name: CapabilityName,
+    source_path: CapabilityPath,
+});
 fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
 {
     name: String,
@@ -616,17 +643,6 @@ fidl_into_struct!(CollectionDecl, CollectionDecl, fsys::CollectionDecl, fsys::Co
     name: String,
     durability: fsys::Durability,
     environment: Option<String>,
-});
-fidl_into_struct!(ResolverDecl, ResolverDecl, fsys::ResolverDecl, fsys::ResolverDecl,
-{
-    name: CapabilityName,
-    source_path: CapabilityPath,
-});
-fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
-{
-    name: CapabilityName,
-    source: RunnerSource,
-    source_path: CapabilityPath,
 });
 fidl_into_struct!(EnvironmentDecl, EnvironmentDecl, fsys::EnvironmentDecl, fsys::EnvironmentDecl,
 {
@@ -654,9 +670,7 @@ fsys::ResolverRegistration,
 fidl_into_vec!(UseDecl, fsys::UseDecl);
 fidl_into_vec!(ChildDecl, fsys::ChildDecl);
 fidl_into_vec!(CollectionDecl, fsys::CollectionDecl);
-fidl_into_vec!(StorageDecl, fsys::StorageDecl);
-fidl_into_vec!(ResolverDecl, fsys::ResolverDecl);
-fidl_into_vec!(RunnerDecl, fsys::RunnerDecl);
+fidl_into_vec!(CapabilityDecl, fsys::CapabilityDecl);
 fidl_into_vec!(EnvironmentDecl, fsys::EnvironmentDecl);
 fidl_into_vec!(RunnerRegistration, fsys::RunnerRegistration);
 fidl_into_vec!(ResolverRegistration, fsys::ResolverRegistration);
@@ -1719,26 +1733,22 @@ mod tests {
                 uses: None,
                 exposes: None,
                 offers: None,
+                capabilities: None,
                 children: None,
                 collections: None,
                 facets: None,
-                storage: None,
-                runners: None,
                 environments: None,
-                resolvers: None,
             },
             result = ComponentDecl {
                 program: None,
                 uses: vec![],
                 exposes: vec![],
                 offers: vec![],
+                capabilities: vec![],
                 children: vec![],
                 collections: vec![],
-                storage: vec![],
                 facets: None,
-                runners: vec![],
                 environments: vec![],
-                resolvers: vec![],
             },
         },
         try_from_all => {
@@ -1951,6 +1961,22 @@ mod tests {
                        target_path: Some("/svc/mynetstack".to_string()),
                    }),
                ]),
+               capabilities: Some(vec![
+                   fsys::CapabilityDecl::Storage(fsys::StorageDecl {
+                       name: Some("memfs".to_string()),
+                       source_path: Some("/memfs".to_string()),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                   }),
+                   fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
+                       name: Some("elf".to_string()),
+                       source_path: Some("/elf".to_string()),
+                       source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                   }),
+                   fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
+                       name: Some("pkg".to_string()),
+                       source_path: Some("/pkg_resolver".to_string()),
+                   }),
+               ]),
                children: Some(vec![
                     fsys::ChildDecl {
                         name: Some("netstack".to_string()),
@@ -1991,26 +2017,6 @@ mod tests {
                        value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
                    },
                ]}),
-               storage: Some(vec![
-                   fsys::StorageDecl {
-                       name: Some("memfs".to_string()),
-                       source_path: Some("/memfs".to_string()),
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                   }
-               ]),
-               runners: Some(vec![
-                   fsys::RunnerDecl {
-                       name: Some("elf".to_string()),
-                       source_path: Some("/elf".to_string()),
-                       source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                   }
-               ]),
-               resolvers: Some(vec![
-                   fsys::ResolverDecl {
-                       name: Some("pkg".to_string()),
-                       source_path: Some("/pkg_resolver".to_string()),
-                   }
-               ]),
                environments: Some(vec![
                    fsys::EnvironmentDecl {
                        name: Some("test_env".to_string()),
@@ -2177,6 +2183,22 @@ mod tests {
                             target_path: "/svc/mynetstack".try_into().unwrap(),
                         }),
                     ],
+                    capabilities: vec![
+                        CapabilityDecl::Storage(StorageDecl {
+                            name: "memfs".to_string(),
+                            source_path: "/memfs".try_into().unwrap(),
+                            source: StorageDirectorySource::Parent,
+                        }),
+                        CapabilityDecl::Runner(RunnerDecl {
+                            name: "elf".into(),
+                            source: RunnerSource::Self_,
+                            source_path: "/elf".try_into().unwrap(),
+                        }),
+                        CapabilityDecl::Resolver(ResolverDecl {
+                            name: "pkg".into(),
+                            source_path: "/pkg_resolver".try_into().unwrap(),
+                        }),
+                    ],
                     children: vec![
                         ChildDecl {
                             name: "netstack".to_string(),
@@ -2215,26 +2237,6 @@ mod tests {
                            value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
                        },
                     ]}),
-                    storage: vec![
-                        StorageDecl {
-                            name: "memfs".to_string(),
-                            source_path: "/memfs".try_into().unwrap(),
-                            source: StorageDirectorySource::Parent,
-                        },
-                    ],
-                    runners: vec![
-                        RunnerDecl {
-                            name: "elf".into(),
-                            source: RunnerSource::Self_,
-                            source_path: "/elf".try_into().unwrap(),
-                        }
-                    ],
-                    resolvers: vec![
-                        ResolverDecl {
-                            name: "pkg".into(),
-                            source_path: "/pkg_resolver".try_into().unwrap(),
-                        }
-                    ],
                     environments: vec![
                         EnvironmentDecl {
                             name: "test_env".into(),

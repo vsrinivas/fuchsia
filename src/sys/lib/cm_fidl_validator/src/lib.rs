@@ -348,24 +348,19 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Validate "storage" and build the set of all storage sections.
-        if let Some(storage) = self.decl.storage.as_ref() {
-            for storage in storage {
-                self.validate_storage_decl(&storage);
-            }
-        }
-
-        // Validate "runners" and build the set of all runners.
-        if let Some(runners) = self.decl.runners.as_ref() {
-            for runner in runners {
-                self.validate_runner_decl(&runner);
-            }
-        }
-
-        // Validate "resolvers" and build the set of all resolvers.
-        if let Some(resolvers) = self.decl.resolvers.as_ref() {
-            for resolver in resolvers {
-                self.validate_resolver_decl(&resolver);
+        // Validate "capabilities" and build the set of all runners, resolvers, and storage.
+        if let Some(capabilities) = self.decl.capabilities.as_ref() {
+            for capability in capabilities {
+                match capability {
+                    fsys::CapabilityDecl::Storage(storage) => self.validate_storage_decl(&storage),
+                    fsys::CapabilityDecl::Runner(runner) => self.validate_runner_decl(&runner),
+                    fsys::CapabilityDecl::Resolver(resolver) => {
+                        self.validate_resolver_decl(&resolver)
+                    }
+                    fsys::CapabilityDecl::__UnknownVariant { .. } => {
+                        self.errors.push(Error::invalid_field("ComponentDecl", "capability"));
+                    }
+                }
             }
         }
 
@@ -867,7 +862,6 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_storage_decl(&mut self, storage: &'a fsys::StorageDecl) {
-        check_path(storage.source_path.as_ref(), "StorageDecl", "source_path", &mut self.errors);
         let source_child_name = match storage.source.as_ref() {
             Some(fsys::Ref::Parent(_)) => None,
             Some(fsys::Ref::Self_(_)) => None,
@@ -890,6 +884,7 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::duplicate_field("StorageDecl", "name", name.as_str()));
             }
         }
+        check_path(storage.source_path.as_ref(), "StorageDecl", "source_path", &mut self.errors);
     }
 
     fn validate_runner_decl(&mut self, runner: &'a fsys::RunnerDecl) {
@@ -1834,22 +1829,8 @@ fn check_offer_target_is_not_source(
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
-        fidl_fuchsia_sys2::{
-            ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType,
-            Durability, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
-            ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl,
-            FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl,
-            OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, ParentRef, Ref,
-            ResolverDecl, ResolverRegistration, RunnerDecl, RunnerRegistration, SelfRef,
-            StartupMode, StorageDecl, StorageRef, StorageType, UseDecl, UseDirectoryDecl,
-            UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl,
-            UseStorageDecl,
-        },
-        lazy_static::lazy_static,
-        proptest::prelude::*,
-        regex::Regex,
+        super::*, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2::*,
+        lazy_static::lazy_static, proptest::prelude::*, regex::Regex,
     };
 
     const PATH_REGEX_STR: &str = r"(/[^/]+)+";
@@ -1955,11 +1936,9 @@ mod tests {
             exposes: None,
             offers: None,
             facets: None,
-            storage: None,
+            capabilities: None,
             children: None,
             collections: None,
-            runners: None,
-            resolvers: None,
             environments: None,
         }
     }
@@ -3029,15 +3008,6 @@ mod tests {
         test_validate_exposes_duplicate_target => {
             input = {
                 let mut decl = new_component_decl();
-                decl.runners = Some(vec![RunnerDecl{
-                    name: Some("source_elf".to_string()),
-                    source: Some(Ref::Self_(SelfRef{})),
-                    source_path: Some("/path".to_string()),
-                }]);
-                decl.resolvers = Some(vec![ResolverDecl {
-                    name: Some("source_pkg".to_string()),
-                    source_path: Some("/path".to_string()),
-                }]);
                 decl.exposes = Some(vec![
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -3096,6 +3066,17 @@ mod tests {
                         source_name: Some("source_pkg".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg".to_string()),
+                    }),
+                ]);
+                decl.capabilities = Some(vec![
+                    CapabilityDecl::Runner(RunnerDecl {
+                        name: Some("source_elf".to_string()),
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/path".to_string()),
+                    }),
+                    CapabilityDecl::Resolver(ResolverDecl {
+                        name: Some("source_pkg".to_string()),
+                        source_path: Some("/path".to_string()),
                     }),
                 ]);
                 decl
@@ -3747,6 +3728,16 @@ mod tests {
                         )),
                     })
                 ]),
+                capabilities: Some(vec![
+                    CapabilityDecl::Storage(StorageDecl {
+                        name: Some("minfs".to_string()),
+                        source_path: Some("/minfs".to_string()),
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                    }),
+                ]),
                 children: Some(vec![
                     ChildDecl {
                         name: Some("logger".to_string()),
@@ -3754,16 +3745,6 @@ mod tests {
                         startup: Some(StartupMode::Lazy),
                         environment: None,
                     },
-                ]),
-                storage: Some(vec![
-                    StorageDecl {
-                        name: Some("minfs".to_string()),
-                        source_path: Some("/minfs".to_string()),
-                        source: Some(Ref::Child(ChildRef {
-                            name: "logger".to_string(),
-                            collection: None,
-                        })),
-                    }
                 ]),
                 ..new_component_decl()
             },
@@ -3819,15 +3800,15 @@ mod tests {
                         dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                 ]);
-                decl.storage = Some(vec![
-                    StorageDecl {
+                decl.capabilities = Some(vec![
+                    CapabilityDecl::Storage(StorageDecl {
                         name: Some("memfs".to_string()),
                         source_path: Some("/memfs".to_string()),
                         source: Some(Ref::Child(ChildRef {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                    },
+                    }),
                 ]);
                 decl.children = Some(vec![
                     ChildDecl {
@@ -4729,177 +4710,181 @@ mod tests {
             ])),
         },
 
-        // storage
-        test_validate_storage_long_identifiers => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.storage = Some(vec![StorageDecl{
-                    name: Some("a".repeat(101)),
-                    source_path: Some(format!("/{}", "a".repeat(1024))),
-                    source: Some(Ref::Self_(SelfRef{})),
-                }]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::field_too_long("StorageDecl", "source_path"),
-                Error::field_too_long("StorageDecl", "name"),
-            ])),
-        },
-
         // runners
-        test_validate_runners_empty => {
+        test_validate_capabilities_empty => {
             input = {
                 let mut decl = new_component_decl();
-                decl.runners = Some(vec![RunnerDecl{
-                    name: None,
-                    source: None,
-                    source_path: None,
-                }]);
+                decl.capabilities = Some(vec![
+                    CapabilityDecl::Storage(StorageDecl {
+                        name: None,
+                        source: None,
+                        source_path: None,
+                    }),
+                    CapabilityDecl::Runner(RunnerDecl {
+                        name: None,
+                        source: None,
+                        source_path: None,
+                    }),
+                    CapabilityDecl::Resolver(ResolverDecl {
+                        name: None,
+                        source_path: None,
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::missing_field("StorageDecl", "source"),
+                Error::missing_field("StorageDecl", "name"),
+                Error::missing_field("StorageDecl", "source_path"),
                 Error::missing_field("RunnerDecl", "source"),
                 Error::missing_field("RunnerDecl", "name"),
                 Error::missing_field("RunnerDecl", "source_path"),
+                Error::missing_field("ResolverDecl", "name"),
+                Error::missing_field("ResolverDecl", "source_path"),
             ])),
         },
-        test_validate_runners_invalid_identifiers => {
+        test_validate_capabilities_invalid_identifiers => {
             input = {
                 let mut decl = new_component_decl();
-                decl.runners = Some(vec![RunnerDecl{
-                    name: Some("^bad".to_string()),
-                    source: Some(Ref::Collection(CollectionRef {
-                        name: "/bad".to_string()
-                    })),
-                    source_path: Some("&bad".to_string()),
-                }]);
+                decl.capabilities = Some(vec![
+                    CapabilityDecl::Storage(StorageDecl {
+                        name: Some("^bad".to_string()),
+                        source: Some(Ref::Collection(CollectionRef {
+                            name: "/bad".to_string()
+                        })),
+                        source_path: Some("&bad".to_string()),
+                    }),
+                    CapabilityDecl::Runner(RunnerDecl {
+                        name: Some("^bad".to_string()),
+                        source: Some(Ref::Collection(CollectionRef {
+                            name: "/bad".to_string()
+                        })),
+                        source_path: Some("&bad".to_string()),
+                    }),
+                    CapabilityDecl::Resolver(ResolverDecl {
+                        name: Some("^bad".to_string()),
+                        source_path: Some("&bad".to_string()),
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::invalid_field("StorageDecl", "source"),
+                Error::invalid_field("StorageDecl", "name"),
+                Error::invalid_field("StorageDecl", "source_path"),
                 Error::invalid_field("RunnerDecl", "source"),
                 Error::invalid_field("RunnerDecl", "name"),
                 Error::invalid_field("RunnerDecl", "source_path"),
+                Error::invalid_field("ResolverDecl", "name"),
+                Error::invalid_field("ResolverDecl", "source_path"),
             ])),
         },
-        test_validate_runners_invalid_child => {
+        test_validate_capabilities_invalid_child => {
             input = {
                 let mut decl = new_component_decl();
-                decl.runners = Some(vec![RunnerDecl{
-                    name: Some("elf".to_string()),
-                    source: Some(Ref::Collection(CollectionRef {
-                        name: "invalid".to_string(),
-                    })),
-                    source_path: Some("/elf".to_string()),
-                }]);
+                decl.capabilities = Some(vec![
+                    CapabilityDecl::Storage(StorageDecl {
+                        name: Some("foo".to_string()),
+                        source: Some(Ref::Collection(CollectionRef {
+                            name: "invalid".to_string(),
+                        })),
+                        source_path: Some("/foo".to_string()),
+                    }),
+                    CapabilityDecl::Runner(RunnerDecl {
+                        name: Some("foo".to_string()),
+                        source: Some(Ref::Collection(CollectionRef {
+                            name: "invalid".to_string(),
+                        })),
+                        source_path: Some("/foo".to_string()),
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::invalid_field("StorageDecl", "source"),
                 Error::invalid_field("RunnerDecl", "source"),
             ])),
         },
-        test_validate_runners_long_identifiers => {
+        test_validate_capabilities_long_identifiers => {
             input = {
                 let mut decl = new_component_decl();
-                decl.runners = Some(vec![
-                    RunnerDecl{
+                decl.capabilities = Some(vec![
+                    CapabilityDecl::Storage(StorageDecl {
                         name: Some("a".repeat(101)),
                         source: Some(Ref::Child(ChildRef {
                             name: "b".repeat(101),
                             collection: None,
                         })),
                         source_path: Some(format!("/{}", "c".repeat(1024))),
-                    },
+                    }),
+                    CapabilityDecl::Runner(RunnerDecl {
+                        name: Some("a".repeat(101)),
+                        source: Some(Ref::Child(ChildRef {
+                            name: "b".repeat(101),
+                            collection: None,
+                        })),
+                        source_path: Some(format!("/{}", "c".repeat(1024))),
+                    }),
+                    CapabilityDecl::Resolver(ResolverDecl {
+                        name: Some("a".repeat(101)),
+                        source_path: Some(format!("/{}", "b".repeat(1024))),
+                    }),
                 ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::field_too_long("StorageDecl", "source.child.name"),
+                Error::field_too_long("StorageDecl", "name"),
+                Error::field_too_long("StorageDecl", "source_path"),
                 Error::field_too_long("RunnerDecl", "source.child.name"),
                 Error::field_too_long("RunnerDecl", "name"),
                 Error::field_too_long("RunnerDecl", "source_path"),
+                Error::field_too_long("ResolverDecl", "name"),
+                Error::field_too_long("ResolverDecl", "source_path"),
             ])),
         },
-        test_validate_runners_duplicate_name => {
+        test_validate_capabilities_duplicate_name => {
             input = {
                 let mut decl = new_component_decl();
-                decl.runners = Some(vec![
-                    RunnerDecl {
-                        name: Some("elf".to_string()),
+                decl.capabilities = Some(vec![
+                    CapabilityDecl::Storage(StorageDecl {
+                        name: Some("foo".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/elf".to_string()),
-                    },
-                    RunnerDecl {
-                        name: Some("elf".to_string()),
+                        source_path: Some("/foo".to_string()),
+                    }),
+                    CapabilityDecl::Storage(StorageDecl {
+                        name: Some("foo".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/elf2".to_string()),
-                    },
+                        source_path: Some("/foo2".to_string()),
+                    }),
+                    CapabilityDecl::Runner(RunnerDecl {
+                        name: Some("bar".to_string()),
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/bar".to_string()),
+                    }),
+                    CapabilityDecl::Runner(RunnerDecl {
+                        name: Some("bar".to_string()),
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/bar2".to_string()),
+                    }),
+                    CapabilityDecl::Resolver(ResolverDecl {
+                        name: Some("baz".to_string()),
+                        source_path: Some("/baz".to_string()),
+                    }),
+                    CapabilityDecl::Resolver(ResolverDecl {
+                        name: Some("baz".to_string()),
+                        source_path: Some("/baz2".to_string()),
+                    }),
                 ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::duplicate_field("RunnerDecl", "name", "elf"),
+                Error::duplicate_field("StorageDecl", "name", "foo"),
+                Error::duplicate_field("RunnerDecl", "name", "bar"),
+                Error::duplicate_field("ResolverDecl", "name", "baz"),
             ])),
         },
 
-        // Resolvers
-        test_validate_resolvers_empty => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.resolvers = Some(vec![ResolverDecl{
-                    name: None,
-                    source_path: None,
-                }]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::missing_field("ResolverDecl", "name"),
-                Error::missing_field("ResolverDecl", "source_path")
-            ])),
-        },
-        test_validate_resolvers_invalid_identifiers => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.resolvers = Some(vec![ResolverDecl{
-                    name: Some("^bad".to_string()),
-                    source_path: Some("&bad".to_string()),
-                }]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::invalid_field("ResolverDecl", "name"),
-                Error::invalid_field("ResolverDecl", "source_path")
-            ])),
-        },
-        test_validate_resolvers_long_identifiers => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.resolvers = Some(vec![ResolverDecl{
-                    name: Some("a".repeat(101)),
-                    source_path: Some(format!("/{}", "f".repeat(1024))),
-                }]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::field_too_long("ResolverDecl", "name"),
-                Error::field_too_long("ResolverDecl", "source_path")
-            ])),
-        },
-        test_validate_resolvers_duplicate_name => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.resolvers = Some(vec![ResolverDecl{
-                    name: Some("a".to_string()),
-                    source_path: Some("/foo".to_string()),
-                },
-                ResolverDecl {
-                    name: Some("a".to_string()),
-                    source_path: Some("/bar".to_string()),
-                }]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::duplicate_field("ResolverDecl", "name", "a"),
-            ])),
-        },
         test_validate_resolvers_missing_from_offer => {
             input = {
                 let mut decl = new_component_decl();

@@ -75,6 +75,15 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     out.children = document.children.as_ref().map(translate_children).transpose()?;
     out.uses = document.r#use.as_ref().map(translate_use).transpose()?;
     out.exposes = document.expose.as_ref().map(translate_expose).transpose()?;
+    if let Some(storage) = document.storage.as_ref() {
+        out.capabilities.get_or_insert(vec![]).append(&mut translate_storage(storage)?);
+    }
+    if let Some(runners) = document.runners.as_ref() {
+        out.capabilities.get_or_insert(vec![]).append(&mut translate_runners(runners)?);
+    }
+    if let Some(resolvers) = document.resolvers.as_ref() {
+        out.capabilities.get_or_insert(vec![]).append(&mut translate_resolvers(resolvers)?);
+    }
     if let Some(offer) = document.offer.as_ref() {
         let all_children = document.all_children_names().into_iter().collect();
         let all_collections = document.all_collection_names().into_iter().collect();
@@ -82,10 +91,7 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     }
     out.environments = document.environments.as_ref().map(translate_environments).transpose()?;
     out.collections = document.collections.as_ref().map(translate_collections).transpose()?;
-    out.storage = document.storage.as_ref().map(translate_storage).transpose()?;
     out.facets = document.facets.as_ref().cloned();
-    out.runners = document.runners.as_ref().map(translate_runners).transpose()?;
-    out.resolvers = document.resolvers.as_ref().map(translate_resolvers).transpose()?;
     Ok(out)
 }
 
@@ -434,37 +440,40 @@ fn translate_collections(
     Ok(out_collections)
 }
 
-fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Storage>, Error> {
+fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Capability>, Error> {
     storage_in
         .iter()
         .map(|storage| {
-            Ok(cm::Storage {
+            Ok(cm::Capability::Storage(cm::Storage {
                 name: storage.name.clone(),
                 source_path: storage.path.clone(),
                 source: extract_single_offer_source(storage)?,
-            })
+            }))
         })
         .collect()
 }
 
-fn translate_runners(runners_in: &Vec<cml::Runner>) -> Result<Vec<cm::Runner>, Error> {
+fn translate_runners(runners_in: &Vec<cml::Runner>) -> Result<Vec<cm::Capability>, Error> {
     runners_in
         .iter()
         .map(|runner| {
-            Ok(cm::Runner {
+            Ok(cm::Capability::Runner(cm::Runner {
                 name: runner.name.clone(),
                 source_path: runner.path.clone(),
                 source: extract_single_offer_source(runner)?,
-            })
+            }))
         })
         .collect()
 }
 
-fn translate_resolvers(resolvers_in: &Vec<cml::Resolver>) -> Result<Vec<cm::Resolver>, Error> {
+fn translate_resolvers(resolvers_in: &Vec<cml::Resolver>) -> Result<Vec<cm::Capability>, Error> {
     resolvers_in
         .iter()
         .map(|resolver| {
-            Ok(cm::Resolver { name: resolver.name.clone(), source_path: resolver.path.clone() })
+            Ok(cm::Capability::Resolver(cm::Resolver {
+                name: resolver.name.clone(),
+                source_path: resolver.path.clone(),
+            }))
         })
         .collect()
 }
@@ -1669,6 +1678,19 @@ mod tests {
             }
         }
     ],
+    "capabilities": [
+        {
+            "storage": {
+                "name": "logger-storage",
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/minfs"
+            }
+        }
+    ],
     "children": [
         {
             "name": "logger",
@@ -1685,17 +1707,6 @@ mod tests {
         {
             "name": "modular",
             "durability": "persistent"
-        }
-    ],
-    "storage": [
-        {
-            "name": "logger-storage",
-            "source_path": "/minfs",
-            "source": {
-                "child": {
-                    "name": "logger"
-                }
-            }
         }
     ]
 }"#,
@@ -1796,13 +1807,26 @@ mod tests {
 }"#,
         },
 
-        test_compile_storage => {
+        test_compile_capabilities => {
             input = json!({
                 "storage": [
                     {
                         "name": "mystorage",
                         "path": "/storage",
                         "from": "#minfs",
+                    }
+                ],
+                "runners": [
+                    {
+                        "name": "myrunner",
+                        "path": "/runner",
+                        "from": "self"
+                    }
+                ],
+                "resolvers": [
+                    {
+                        "name": "myresolver",
+                        "path": "/resolver"
                     }
                 ],
                 "children": [
@@ -1813,22 +1837,39 @@ mod tests {
                 ]
             }),
             output = r#"{
+    "capabilities": [
+        {
+            "storage": {
+                "name": "mystorage",
+                "source": {
+                    "child": {
+                        "name": "minfs"
+                    }
+                },
+                "source_path": "/storage"
+            }
+        },
+        {
+            "runner": {
+                "name": "myrunner",
+                "source": {
+                    "self": {}
+                },
+                "source_path": "/runner"
+            }
+        },
+        {
+            "resolver": {
+                "name": "myresolver",
+                "source_path": "/resolver"
+            }
+        }
+    ],
     "children": [
         {
             "name": "minfs",
             "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm",
             "startup": "lazy"
-        }
-    ],
-    "storage": [
-        {
-            "name": "mystorage",
-            "source_path": "/storage",
-            "source": {
-                "child": {
-                    "name": "minfs"
-                }
-            }
         }
     ]
 }"#,
@@ -1855,28 +1896,6 @@ mod tests {
             "year": 2018
         }
     }
-}"#,
-        },
-        test_compile_runner => {
-            input = json!({
-                "runners": [
-                    {
-                        "name": "myrunner",
-                        "path": "/runner",
-                        "from": "self",
-                    }
-                ],
-            }),
-            output = r#"{
-    "runners": [
-        {
-            "name": "myrunner",
-            "source": {
-                "self": {}
-            },
-            "source_path": "/runner"
-        }
-    ]
 }"#,
         },
         test_compile_environment => {
@@ -2197,6 +2216,23 @@ mod tests {
             }
         }
     ],
+    "capabilities": [
+        {
+            "runner": {
+                "name": "myrunner",
+                "source": {
+                    "self": {}
+                },
+                "source_path": "/runner"
+            }
+        },
+        {
+            "resolver": {
+                "name": "myresolver",
+                "source_path": "/myresolver"
+            }
+        }
+    ],
     "children": [
         {
             "name": "logger",
@@ -2219,21 +2255,6 @@ mod tests {
         "author": "Fuchsia",
         "year": 2018
     },
-    "runners": [
-        {
-            "name": "myrunner",
-            "source": {
-                "self": {}
-            },
-            "source_path": "/runner"
-        }
-    ],
-    "resolvers": [
-        {
-            "name": "myresolver",
-            "source_path": "/myresolver"
-        }
-    ],
     "environments": [
         {
             "name": "myenv",

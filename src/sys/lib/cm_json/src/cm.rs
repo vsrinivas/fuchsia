@@ -32,24 +32,18 @@ pub struct Document {
     /// Offered capabilities.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub offers: Option<Vec<Offer>>,
+    /// Capability declarations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capabilities: Option<Vec<Capability>>,
     /// Child components.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub children: Option<Vec<Child>>,
     /// Collection declarations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collections: Option<Vec<Collection>>,
-    /// Storage capability declarations.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub storage: Option<Vec<Storage>>,
     /// Freeform object containing third-party metadata.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub facets: Option<Map<String, Value>>,
-    /// Runner capability declarations.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub runners: Option<Vec<Runner>>,
-    /// Resolver capability declarations.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub resolvers: Option<Vec<Resolver>>,
     // Environment declarations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub environments: Option<Vec<Environment>>,
@@ -73,6 +67,17 @@ pub enum Right {
 /// Rights define what permissions are available to exposed, offered or used routes.
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct Rights(pub Vec<Right>);
+
+/// A capability declaration. See [`CapabilityDecl`].
+///
+/// [`CapabilityDecl`]: ../../fidl_fuchsia_sys2/struct.CapabilityDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum Capability {
+    Storage(Storage),
+    Runner(Runner),
+    Resolver(Resolver),
+}
 
 /// A child component. See [`ChildDecl`].
 ///
@@ -103,8 +108,8 @@ pub struct Collection {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Storage {
     pub name: Name,
-    pub source_path: Path,
     pub source: Ref,
+    pub source_path: Path,
 }
 
 /// A runner capability. See [`RunnerDecl`].

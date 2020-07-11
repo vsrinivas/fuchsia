@@ -25,6 +25,7 @@ fidl("fuchsia.sys2") {
   ]
 
   sources = [
+    "decls/capability_decl.fidl",
     "decls/child_decl.fidl",
     "decls/collection_decl.fidl",
     "decls/component_decl.fidl",
@@ -33,9 +34,6 @@ fidl("fuchsia.sys2") {
     "decls/object.fidl",
     "decls/offer_decl.fidl",
     "decls/relative_refs.fidl",
-    "decls/resolver_decl.fidl",
-    "decls/runner_decl.fidl",
-    "decls/storage_decl.fidl",
     "decls/use_decl.fidl",
     "events.fidl",
     "realm.fidl",

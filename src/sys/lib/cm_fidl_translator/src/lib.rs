@@ -50,13 +50,11 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
             uses: self.uses.cm_into()?,
             exposes: self.exposes.cm_into()?,
             offers: self.offers.cm_into()?,
+            capabilities: self.capabilities.cm_into()?,
             children: self.children.cm_into()?,
             collections: self.collections.cm_into()?,
             facets: self.facets.cm_into()?,
-            storage: self.storage.cm_into()?,
-            runners: self.runners.cm_into()?,
             environments: self.environments.cm_into()?,
-            resolvers: self.resolvers.cm_into()?,
         })
     }
 }
@@ -360,6 +358,18 @@ impl CmInto<fsys::CollectionDecl> for cm::Collection {
     }
 }
 
+impl CmInto<fsys::CapabilityDecl> for cm::Capability {
+    fn cm_into(self) -> Result<fsys::CapabilityDecl, Error> {
+        Ok(match self {
+            cm::Capability::Storage(storage) => fsys::CapabilityDecl::Storage(storage.cm_into()?),
+            cm::Capability::Runner(runner) => fsys::CapabilityDecl::Runner(runner.cm_into()?),
+            cm::Capability::Resolver(resolver) => {
+                fsys::CapabilityDecl::Resolver(resolver.cm_into()?)
+            }
+        })
+    }
+}
+
 impl CmInto<fsys::StorageDecl> for cm::Storage {
     fn cm_into(self) -> Result<fsys::StorageDecl, Error> {
         Ok(fsys::StorageDecl {
@@ -601,12 +611,10 @@ mod tests {
             exposes: None,
             offers: None,
             facets: None,
+            capabilities: None,
             children: None,
             collections: None,
-            storage: None,
-            runners: None,
             environments: None,
-            resolvers: None,
         }
     }
 
@@ -1300,6 +1308,17 @@ mod tests {
                         }
                     }
                 ],
+                "capabilities": [
+                    {
+                        "storage": {
+                            "name": "memfs",
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/memfs"
+                        }
+                    }
+                ],
                 "children": [
                     {
                         "name": "logger",
@@ -1317,16 +1336,7 @@ mod tests {
                         "name": "modular",
                         "durability": "persistent"
                     }
-                ],
-                "storage": [
-                    {
-                        "name": "memfs",
-                        "source_path": "/memfs",
-                        "source": {
-                            "self": {}
-                        }
-                    }
-                ],
+                ]
             }),
             output = {
                 let offers = vec![
@@ -1489,6 +1499,13 @@ mod tests {
                         target_name: Some("capability_ready_diagnostics".to_string()),
                     }),
                 ];
+                let capabilities = vec![
+                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
+                        name: Some("memfs".to_string()),
+                        source_path: Some("/memfs".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
+                    }),
+                ];
                 let children = vec![
                     fsys::ChildDecl{
                         name: Some("logger".to_string()),
@@ -1510,18 +1527,11 @@ mod tests {
                         environment: None,
                     },
                 ];
-                let storages = vec![
-                    fsys::StorageDecl {
-                        name: Some("memfs".to_string()),
-                        source_path: Some("/memfs".to_string()),
-                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
-                    },
-                ];
                 let mut decl = new_component_decl();
                 decl.offers = Some(offers);
+                decl.capabilities = Some(capabilities);
                 decl.children = Some(children);
                 decl.collections = Some(collections);
-                decl.storage = Some(storages);
                 decl
             },
         },
@@ -1740,76 +1750,56 @@ mod tests {
                 decl
             },
         },
-        test_translate_storage => {
+        test_translate_capabilities => {
             input = json!({
-                "storage": [
+                "capabilities": [
                     {
-                        "name": "memfs",
-                        "source": {
-                            "self": {}
-                        },
-                        "source_path": "/memfs"
+                        "storage": {
+                            "name": "memfs",
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/memfs"
+                        }
+                    },
+                    {
+                        "runner": {
+                            "name": "elf",
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/elf"
+                        }
+                    },
+                    {
+                        "resolver": {
+                            "name": "pkg_resolver",
+                            "source_path": "/resolver",
+                        }
                     }
                 ]
             }),
             output = {
-                let storages = vec![
-                    fsys::StorageDecl {
+                let capabilities = vec![
+                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                         name: Some("memfs".to_string()),
                         source_path: Some("/memfs".to_string()),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
-                    },
-                ];
-                let mut decl = new_component_decl();
-                decl.storage = Some(storages);
-                decl
-
-            },
-        },
-        test_translate_runners => {
-            input = json!({
-                "runners": [
-                    {
-                        "name": "elf",
-                        "source": {
-                            "self": {}
-                        },
-                        "source_path": "/elf"
-                    }
-                ]
-            }),
-            output = {
-                let runners = vec![
-                    fsys::RunnerDecl {
+                    }),
+                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
                         name: Some("elf".to_string()),
                         source_path: Some("/elf".to_string()),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
-                    },
-                ];
-                let mut decl = new_component_decl();
-                decl.runners = Some(runners);
-                decl
-            },
-        },
-        test_translate_resolvers => {
-            input = json!({
-                "resolvers": [
-                    {
-                        "name": "pkg_resolver",
-                        "source_path": "/resolver",
-                    },
-                ]
-            }),
-            output = {
-                let resolvers = vec![
-                    fsys::ResolverDecl {
+                    }),
+                    fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
                         name: Some("pkg_resolver".to_string()),
                         source_path: Some("/resolver".to_string()),
-                    },
+                    }),
                 ];
                 let mut decl = new_component_decl();
-                decl.resolvers = Some(resolvers);
+                decl.capabilities = Some(capabilities);
                 decl
+
             },
         },
         test_translate_all_sections => {
@@ -1859,6 +1849,32 @@ mod tests {
                         }
                     }
                 ],
+                "capabilities": [
+                    {
+                        "storage": {
+                            "name": "memfs",
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/memfs"
+                        }
+                    },
+                    {
+                        "runner": {
+                            "name": "elf",
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/elf"
+                        }
+                    },
+                    {
+                        "resolver": {
+                            "name": "pkg_resolver",
+                            "source_path": "/resolver"
+                        }
+                    }
+                ],
                 "children": [
                     {
                         "name": "logger",
@@ -1881,24 +1897,6 @@ mod tests {
                     "author": "Fuchsia",
                     "year": 2018
                 },
-                "storage": [
-                    {
-                        "name": "memfs",
-                        "source_path": "/memfs",
-                        "source": {
-                            "self": {}
-                        }
-                    }
-                ],
-                "runners": [
-                    {
-                        "name": "elf",
-                        "source": {
-                            "self": {}
-                        },
-                        "source_path": "/elf"
-                    }
-                ],
                 "environments": [
                     {
                         "name": "test_env",
@@ -1913,13 +1911,7 @@ mod tests {
                             }
                         ]
                     }
-                ],
-                "resolvers": [
-                    {
-                        "name": "pkg_resolver",
-                        "source_path": "/resolver",
-                    }
-                ],
+                ]
             }),
             output = {
                 let program = fdata::Dictionary {entries: Some(vec![
@@ -1992,19 +1984,21 @@ mod tests {
                         value: Some(Box::new(fsys::Value::Inum(2018))),
                     },
                 ]};
-                let storages = vec![
-                    fsys::StorageDecl {
+                let capabilities = vec![
+                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                         name: Some("memfs".to_string()),
                         source_path: Some("/memfs".to_string()),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
-                    },
-                ];
-                let runners = vec![
-                    fsys::RunnerDecl {
+                    }),
+                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
                         name: Some("elf".to_string()),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                         source_path: Some("/elf".to_string()),
-                    },
+                    }),
+                    fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
+                        name: Some("pkg_resolver".to_string()),
+                        source_path: Some("/resolver".to_string()),
+                    })
                 ];
                 let environments = vec![
                     fsys::EnvironmentDecl {
@@ -2021,24 +2015,16 @@ mod tests {
                         stop_timeout_ms: None,
                     }
                 ];
-                let resolvers = vec![
-                    fsys::ResolverDecl {
-                        name: Some("pkg_resolver".to_string()),
-                        source_path: Some("/resolver".to_string()),
-                    }
-                ];
                 fsys::ComponentDecl {
                     program: Some(program),
                     uses: Some(uses),
                     exposes: Some(exposes),
                     offers: Some(offers),
+                    capabilities: Some(capabilities),
                     children: Some(children),
                     collections: Some(collections),
                     facets: Some(facets),
-                    storage: Some(storages),
-                    runners: Some(runners),
                     environments: Some(environments),
-                    resolvers: Some(resolvers),
                 }
             },
         },

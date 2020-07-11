@@ -137,12 +137,10 @@ mod tests {
                     exposes: None,
                     offers: None,
                     facets: None,
+                    capabilities: None,
                     children: None,
                     collections: None,
-                    storage: None,
-                    runners: None,
                     environments: None,
-                    resolvers: None,
                 }),
                 package: None,
             }))

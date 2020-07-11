@@ -39,7 +39,7 @@ enum DependencyType {
 /// https://fuchsia.dev/fuchsia-src/glossary#service
 table OfferServiceDecl {
     /// The provider of the capability relative to the component itself. Must be
-    /// `realm`, `self`, or `child`.
+    /// `parent`, `self`, or `child`.
     1: Ref source;
 
     /// Path identifying the service being offered.
@@ -64,7 +64,7 @@ table OfferServiceDecl {
 /// FIDL protocol.
 table OfferProtocolDecl {
     /// The provider of the capability relative to the component itself. Must be
-    /// `realm`, `self`, or `child`.
+    /// `parent`, `self`, or `child`.
     1: Ref source;
 
     /// Path identifying the legacy service being offered.
@@ -89,7 +89,7 @@ table OfferProtocolDecl {
 /// itself, or one of its other children.
 table OfferDirectoryDecl {
     /// The provider of the capability relative to the component itself. Must be
-    /// `realm`, `self`, or `child`.
+    /// `parent`, `self`, or `child`.
     1: Ref source;
 
     /// Path identifying the directory being offered.
@@ -123,7 +123,7 @@ table OfferStorageDecl {
     /// The type of storage being offered.
     1: StorageType type;
 
-    /// The source of the storage capability. Must be `realm` or `storage`.
+    /// The source of the storage capability. Must be `parent` or `storage`.
     2: Ref source;
 
     /// Reference to the target of the capability. Must be `child` or
@@ -136,7 +136,7 @@ table OfferStorageDecl {
 /// or one of its other children.
 table OfferRunnerDecl {
     /// The provider of the capability relative to the component itself. Must be
-    /// `realm`, `self`, or `child`.
+    /// `parent`, `self`, or `child`.
     1: Ref source;
 
     /// Name of the runner being offered.
@@ -155,7 +155,7 @@ table OfferRunnerDecl {
 /// or one of its other children.
 table OfferResolverDecl {
     /// The provider of the capability relative to the component itself. Must be
-    /// `realm`, `self`, or `child`.
+    /// `parent`, `self`, or `child`.
     1: Ref source;
 
     /// Name of the resolver being offered.
@@ -171,7 +171,7 @@ table OfferResolverDecl {
 
 /// Declares an event offered by a component.
 table OfferEventDecl {
-    /// The provider of the event. Must be `realm`.
+    /// The provider of the event. Must be `parent`.
     1: Ref source;
 
     /// Name of the event being offered.

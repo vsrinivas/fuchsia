@@ -177,6 +177,32 @@
             }
         }
     ],
+    "capabilities": [
+        {
+            "storage": {
+                "name": "minfs",
+                "source": {
+                    "parent": {}
+                },
+                "source_path": "/data"
+            }
+        },
+        {
+            "runner": {
+                "name": "dart_runner",
+                "source": {
+                    "self": {}
+                },
+                "source_path": "/svc/fuchsia.sys2.Runner"
+            }
+        },
+        {
+            "resolver": {
+                "name": "pkg_resolver",
+                "source_path": "/svc/fuchsia.pkg.Resolver"
+            }
+        }
+    ],
     "children": [
         {
             "name": "logger",
@@ -195,15 +221,6 @@
         "author": "Fuchsia",
         "year": 2018
     },
-    "runners": [
-        {
-            "name": "dart_runner",
-            "source": {
-                "self": {}
-            },
-            "source_path": "/svc/fuchsia.sys2.Runner"
-        }
-    ],
     "environments": [
         {
             "name": "env_one",

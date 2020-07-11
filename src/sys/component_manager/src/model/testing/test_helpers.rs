@@ -252,13 +252,13 @@ impl ComponentDeclBuilder {
 
     /// Add a custom storage declaration.
     pub fn storage(mut self, storage: cm_rust::StorageDecl) -> Self {
-        self.result.storage.push(storage);
+        self.result.capabilities.push(cm_rust::CapabilityDecl::Storage(storage));
         self
     }
 
     /// Add a custom runner declaration.
     pub fn runner(mut self, runner: cm_rust::RunnerDecl) -> Self {
-        self.result.runners.push(runner);
+        self.result.capabilities.push(cm_rust::CapabilityDecl::Runner(runner));
         self
     }
 

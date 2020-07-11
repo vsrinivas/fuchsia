@@ -575,13 +575,15 @@ impl RoutingTest {
                 _ => (),
             }
         }
-        for storage in decl.storage.iter() {
-            // Storage capabilities can have a source of "self", so there are situations we want to
-            // test where a storage capability is offered and used and there's no directory
-            // capability in the manifest, so we must host the directory structure for this case in
-            // addition to directory offers.
-            if storage.source == StorageDirectorySource::Self_ {
-                out_dir.add_directory_proxy(test_dir_proxy)
+        for capability in decl.capabilities.iter() {
+            if let CapabilityDecl::Storage(storage) = capability {
+                // Storage capabilities can have a source of "self", so there are situations we
+                // want to test where a storage capability is offered and used and there's no
+                // directory capability in the manifest, so we must host the directory structure
+                // for this case in addition to directory offers.
+                if storage.source == StorageDirectorySource::Self_ {
+                    out_dir.add_directory_proxy(test_dir_proxy)
+                }
             }
         }
         // Add any user-specific DirectoryEntry objects into the outgoing namespace.

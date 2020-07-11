@@ -92,11 +92,24 @@
             subdir: "blob",
         },
     ],
+    resolvers: [
+        {
+            name: "pkg_resolver",
+            path: "/svc/fuchsia.pkg.Resolver",
+        },
+    ],
     runners: [
         {
             name: "dart_runner",
             from: "self",
             path: "/svc/fuchsia.sys2.Runner",
+        },
+    ],
+    storage: [
+        {
+            name: "minfs",
+            from: "parent",
+            path: "/data",
         },
     ],
     environments: [
