@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
-import 'package:internationalization/strings.dart';
 
 import '../../utils/styles.dart';
 
@@ -51,19 +50,32 @@ class TileChrome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget chrome = GestureDetector(
+    return GestureDetector(
       behavior: HitTestBehavior.translucent,
       // Disable listview scrolling on top of story.
       onHorizontalDragStart: (_) {},
       onTap: onTap,
       child: Stack(
         children: [
+          // Title.
+          Positioned(
+            left: 0,
+            top: 0,
+            right: 0,
+            height: ErmineStyle.kStoryTitleHeight,
+            child: showTitle ? _buildTitlebar(context) : Offstage(),
+          ),
+
           // Border.
-          Positioned.fill(
+          Positioned(
+            left: 0,
+            top: fullscreen ? 0 : ErmineStyle.kStoryTitleHeight,
+            right: 0,
+            bottom: 0,
             child: Container(
               padding: showTitle
                   ? EdgeInsets.only(
-                      top: ErmineStyle.kStoryTitleHeight,
+                      top: fullscreen ? ErmineStyle.kStoryTitleHeight : 0,
                       left: ErmineStyle.kBorderWidth,
                       right: ErmineStyle.kBorderWidth,
                       bottom: ErmineStyle.kBorderWidth,
@@ -75,87 +87,27 @@ class TileChrome extends StatelessWidget {
               ),
             ),
           ),
-
-          // Title.
-          Positioned(
-            left: 0,
-            top: 0,
-            right: 0,
-            height: ErmineStyle.kStoryTitleHeight,
-            child: showTitle ? _buildTitlebar(context) : Offstage(),
-          )
         ],
       ),
     );
-    return draggable
-        ? Draggable(
-            child: chrome,
-            feedback: SizedBox(
-              width: width,
-              height: height,
-              child: chrome,
-            ),
-            childWhenDragging: Container(),
-            onDragCompleted: () => print('onDragCompleted'),
-            onDraggableCanceled: (velocity, offset) =>
-                onDragComplete?.call(offset),
-          )
-        : chrome;
   }
 
   Widget _buildTitlebar(BuildContext context) => Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          if (editing)
-            Padding(
-              padding: EdgeInsets.only(left: 8),
-            ),
-
           // Minimize button.
-          if (!editing && focused)
-            _buildIconButton(maximize: false, onTap: onDelete),
-
-          // Cancel edit button.
-          if (editing)
-            _buildTitleBarTextButton(context, Strings.cancel, onTapCancel),
+          if (focused) _buildIconButton(maximize: false, onTap: onDelete),
 
           // Story name.
           Expanded(
-            child: editing
-                ? TextField(
-                    controller: titleFieldController,
-                    autofocus: true,
-                    onSubmitted: (_) => onTapDone(),
-                    cursorWidth: 8,
-                    cursorRadius: Radius.zero,
-                    cursorColor: Colors.white,
-                    textAlign: TextAlign.center,
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.zero,
-                      // TODO(fmil): I18N There should be no hard-coded paddings in the text.
-                      hintText:
-                          '              ${Strings.nameThisStory.toUpperCase()}',
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                  )
-                : _buildTitleBarTextButton(context, name ?? '<>', onEdit),
+            child: _buildTitleBarTextButton(context, name ?? '<>', onEdit),
           ),
 
           // Maximize button.
-          if (!editing && focused)
+          if (focused)
             _buildIconButton(
               maximize: true,
               onTap: fullscreen ? onMinimize : onFullscreen,
-            ),
-
-          // Done edit button.
-          if (editing)
-            _buildTitleBarTextButton(context, Strings.done, onTapDone),
-
-          if (editing)
-            Padding(
-              padding: EdgeInsets.only(left: 8),
             ),
         ],
       );
