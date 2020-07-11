@@ -3,11 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//build/images/manifest.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("tests") {
   testonly = true
@@ -46,22 +43,16 @@ test("tests") {
   ]
 }
 
-devmgr_manifest("devmgr-manifest") {
-}
+isolated_devmgr_unittest_package("libdriver-integration-test") {
+  executable_path = "test/libdriver-integration-test"
 
-test_package("libdriver-integration-test") {
   deps = [
-    ":devmgr-manifest",
     ":tests",
-  ]
-
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  tests = [
-    {
-      name = "libdriver-integration-test"
-      environments = basic_envs
-    },
+    "//src/devices/internal/drivers/fragment",
+    "//src/devices/internal/drivers/fragment:fragment.proxy",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/mock-device",
+    "//src/devices/tests/sysdev",
   ]
 }
 

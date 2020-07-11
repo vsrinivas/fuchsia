@@ -30,6 +30,8 @@ void IntegrationTest::DoSetup(bool should_create_composite) {
   args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
   args.load_drivers.push_back("/boot/driver/fragment.so");
   args.load_drivers.push_back("/boot/driver/fragment.proxy.so");
+  args.driver_search_paths.push_back("/boot/driver");
+  args.path_prefix = "/pkg/";
 
   // Rig up a get_boot_item that will send configuration information over to
   // the sysdev driver.
@@ -62,9 +64,7 @@ void IntegrationTest::DoSetup(bool should_create_composite) {
   IntegrationTest::devmgr_.SetExceptionCallback(DevmgrException);
 }
 
-void IntegrationTest::TearDownTestCase() {
-  IntegrationTest::devmgr_.reset();
-}
+void IntegrationTest::TearDownTestCase() { IntegrationTest::devmgr_.reset(); }
 
 IntegrationTest::IntegrationTest() {}
 

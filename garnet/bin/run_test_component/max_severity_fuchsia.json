@@ -302,6 +302,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/libdriver-integration-test#meta/libdriver-integration-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/magma-abi-conformance-tests#meta/magma_abi_conformance_tests.cmx",
          "max_severity": "ERROR"
       },
