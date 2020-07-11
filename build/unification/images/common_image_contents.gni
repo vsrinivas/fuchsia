@@ -310,7 +310,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/devices/serial/drivers/virtio-console:virtio_console",
     "//src/devices/spi/drivers/dw-spi",
     "//src/devices/spi/drivers/mtk-spi",
-    "//src/devices/tests/bind-debugger-test:bind-debugger-test-driver",
     "//src/devices/tests/crash-device",
     "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-test",
     "//src/devices/tests/ddk-power:ddk-power-test-child",

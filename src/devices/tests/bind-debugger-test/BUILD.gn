@@ -4,13 +4,10 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//build/test.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-executable("tests") {
-  testonly = true
-
+test("test") {
   output_name = "bind-debugger-test"
 
   sources = [ "bind-debugger-test.cc" ]
@@ -28,22 +25,14 @@ executable("tests") {
   ]
 }
 
-devmgr_manifest("devmgr-manifest") {
-}
+isolated_devmgr_unittest_package("bind-debugger-test") {
+  executable_path = "test/bind-debugger-test"
 
-test_package("bind-debugger-test") {
   deps = [
-    ":devmgr-manifest",
-    ":tests",
-  ]
-
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  tests = [
-    {
-      name = "bind-debugger-test"
-      environments = basic_envs
-    },
+    ":bind-debugger-test-driver",
+    ":test",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
   ]
 }
 
@@ -54,7 +43,6 @@ bind_rules("bind") {
   deps = [ "//src/devices/bind/deprecated.test" ]
 }
 
-# TODO: Move this out of bootfs and into test package.
 driver_module("bind-debugger-test-driver") {
   output_name = "bind-debugger-test"
   test = true
