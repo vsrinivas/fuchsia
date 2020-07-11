@@ -17,8 +17,7 @@
           "maxItems": 1
         },
         "story_shell_url": {
-          "type": "string",
-          "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$",
+          "$ref": "#/definitions/fuchsia_pkg_url",
           "default": "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"
         }
       },
@@ -29,16 +28,13 @@
       "type": "object",
       "properties": {
         "url": {
-          "type": "string",
-          "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$",
+          "$ref": "#/definitions/fuchsia_pkg_url",
           "default": "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx"
         },
         "keep_alive_after_login": { "type": "boolean", "default": false },
         "args": {
           "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "items": { "type": "string" }
         }
       },
       "additionalProperties": false,
@@ -48,8 +44,7 @@
       "type": "object",
       "properties": {
         "url": {
-          "type": "string",
-          "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$",
+          "$ref": "#/definitions/fuchsia_pkg_url",
           "default": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx"
         },
         "display_usage": { "type": "string" },
@@ -65,18 +60,12 @@
         "enable_cobalt": { "type": "boolean", "default": true },
         "startup_agents": {
           "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
-          },
+          "items": { "$ref": "#/definitions/fuchsia_pkg_url" },
           "uniqueItems": true
         },
         "session_agents": {
           "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
-          },
+          "items": { "$ref": "#/definitions/fuchsia_pkg_url" },
           "uniqueItems": true
         },
         "component_args": {
@@ -90,10 +79,7 @@
         },
         "restart_session_on_agent_crash": {
           "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
-          },
+          "items": { "$ref": "#/definitions/fuchsia_pkg_url" },
           "uniqueItems": true
         }
       },
@@ -108,9 +94,7 @@
         },
         "args": {
           "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "items": { "type": "string" }
         }
       },
       "required": ["uri", "args"]
@@ -122,13 +106,14 @@
           "type": "string",
           "pattern": "^[^.]+[.][^.]+([.][^.]+)*$"
         },
-        "agent_url": {
-          "type": "string",
-          "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
-        }
+        "agent_url": { "$ref": "#/definitions/fuchsia_pkg_url" }
       },
       "additionalProperties": false,
       "required": ["service_name", "agent_url"]
+    },
+    "fuchsia_pkg_url": {
+      "type": "string",
+      "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
     }
   },
   "type": "object",
