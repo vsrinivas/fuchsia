@@ -11,7 +11,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -37,11 +36,9 @@ struct TestParam {
 };
 
 class ImminentGracefulRebootWatcherTest : public UnitTestFixture,
-                                          public CobaltTestFixture,
                                           public testing::WithParamInterface<TestParam> {
  public:
-  ImminentGracefulRebootWatcherTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this), cobalt_(dispatcher(), services()) {}
+  ImminentGracefulRebootWatcherTest() : cobalt_(dispatcher(), services()) {}
 
  protected:
   std::string Path() { return files::JoinPath(tmp_dir_.path(), kFilename); }

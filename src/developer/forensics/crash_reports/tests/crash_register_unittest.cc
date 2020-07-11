@@ -7,8 +7,6 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/promise.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -19,7 +17,6 @@
 
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/product.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/stubs/channel_provider.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -45,15 +42,12 @@ constexpr char kComponentUrl[] = "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-compo
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class CrashRegisterTest : public UnitTestFixture, public CobaltTestFixture {
+class CrashRegisterTest : public UnitTestFixture {
  public:
-  CrashRegisterTest()
-      : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+  CrashRegisterTest() : executor_(dispatcher()) {}
 
   void SetUp() override {
-    inspector_ = std::make_unique<inspect::Inspector>();
-    info_context_ =
-        std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
+    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
     crash_register_ = std::make_unique<CrashRegister>(dispatcher(), services(), info_context_,
                                                       ErrorOr<std::string>(kBuildVersion));
 
@@ -90,16 +84,9 @@ class CrashRegisterTest : public UnitTestFixture, public CobaltTestFixture {
     return product.take_value();
   }
 
-  inspect::Hierarchy InspectTree() {
-    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FX_CHECK(result.is_ok());
-    return result.take_value();
-  }
-
  private:
   async::Executor executor_;
   timekeeper::TestClock clock_;
-  std::unique_ptr<inspect::Inspector> inspector_;
   std::shared_ptr<InfoContext> info_context_;
   std::unique_ptr<CrashRegister> crash_register_;
   std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;

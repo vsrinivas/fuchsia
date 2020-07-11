@@ -17,7 +17,6 @@ executable("board_info_provider_unittest_exe") {
   deps = [
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/annotations:board_info_provider",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:board_info_provider",
@@ -40,7 +39,6 @@ executable("channel_provider_unittest_exe") {
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/annotations:channel_provider",
     "//src/developer/forensics/feedback_data/annotations:types",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:channel_provider",
@@ -88,7 +86,6 @@ executable("data_provider_unittest_exe") {
     "//src/developer/forensics/feedback_data:integrity_reporter",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -135,7 +132,6 @@ executable("datastore_unittest_exe") {
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/feedback_data/system_log_recorder:reader",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -221,10 +217,8 @@ executable("main_service_unittest_exe") {
   sources = [ "main_service_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:main_service",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:cobalt",
@@ -317,7 +311,6 @@ executable("last_reboot_info_provider_unittest_exe") {
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/annotations:last_reboot_info_provider",
     "//src/developer/forensics/feedback_data/annotations:types",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:cobalt",
@@ -362,7 +355,6 @@ executable("product_info_provider_unittest_exe") {
   deps = [
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/annotations:product_info_provider",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:cobalt",

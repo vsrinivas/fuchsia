@@ -20,7 +20,6 @@
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/product_info_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -45,11 +44,9 @@ using testing::Pair;
 
 class ProductInfoProviderTest
     : public UnitTestFixture,
-      public CobaltTestFixture,
       public testing::WithParamInterface<std::map<AnnotationKey, std::string>> {
  public:
-  ProductInfoProviderTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+  ProductInfoProviderTest() : executor_(dispatcher()) {}
 
  protected:
   void SetUpProductProviderServer(std::unique_ptr<stubs::ProductInfoProviderBase> server) {

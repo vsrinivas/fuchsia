@@ -4,18 +4,13 @@
 
 #include "src/developer/forensics/utils/inspect_node_manager.h"
 
-#include <lib/inspect/cpp/hierarchy.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/cpp/reader.h>
-#include <lib/syslog/cpp/macros.h>
-
 #include <string>
 #include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "sdk/lib/inspect/testing/cpp/inspect.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 
 namespace forensics {
 namespace {
@@ -33,24 +28,14 @@ using testing::HasSubstr;
 using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
 
-class InspectNodeManagerTest : public testing::Test {
+class InspectNodeManagerTest : public UnitTestFixture {
  public:
   void SetUp() override {
-    inspector_ = std::make_unique<inspect::Inspector>();
-    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&inspector_->GetRoot());
+    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
   }
 
  protected:
-  inspect::Hierarchy InspectTree() {
-    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FX_CHECK(result.is_ok());
-    return result.take_value();
-  }
-
   std::unique_ptr<InspectNodeManager> inspect_node_manager_;
-
- private:
-  std::unique_ptr<inspect::Inspector> inspector_;
 };
 
 TEST_F(InspectNodeManagerTest, Check_Get_RootNode) {

@@ -12,7 +12,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -37,11 +36,10 @@ using fuchsia::cobalt::Status;
 using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
 
-class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
+class CobaltTest : public UnitTestFixture {
  public:
   CobaltTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this),
-        clock_(new timekeeper::TestClock()),
+      : clock_(new timekeeper::TestClock()),
         cobalt_(std::make_unique<Logger>(dispatcher(), services(),
                                          std::unique_ptr<timekeeper::TestClock>(clock_))) {}
 

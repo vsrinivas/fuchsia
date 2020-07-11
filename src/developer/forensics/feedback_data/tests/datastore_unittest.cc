@@ -24,7 +24,6 @@
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/stubs/board_info_provider.h"
 #include "src/developer/forensics/testing/stubs/channel_provider.h"
@@ -68,12 +67,9 @@ const AttachmentKeys kDefaultAttachmentsToAvoidSpuriousLogs = {
     kAttachmentBuildSnapshot,
 };
 
-class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
+class DatastoreTest : public UnitTestFixture {
  public:
-  DatastoreTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this),
-        executor_(dispatcher()),
-        device_id_provider_(kDeviceIdPath) {}
+  DatastoreTest() : executor_(dispatcher()), device_id_provider_(kDeviceIdPath) {}
 
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());

@@ -6,9 +6,6 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fit/result.h>
-#include <lib/inspect/cpp/hierarchy.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -19,7 +16,6 @@
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/main_service.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/device_id_provider.h"
 #include "src/developer/forensics/testing/stubs/network_reachability_provider.h"
@@ -44,19 +40,15 @@ using testing::UnorderedElementsAreArray;
 
 constexpr char kCrashServerUrl[] = "localhost:1234";
 
-class MainServiceTest : public UnitTestFixture, public CobaltTestFixture {
+class MainServiceTest : public UnitTestFixture {
  public:
-  MainServiceTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture=*/this) {}
-
   void SetUp() override {
     Config config = {/*crash_server=*/
                      {
                          /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                          /*url=*/std::make_unique<std::string>(kCrashServerUrl),
                      }};
-    inspector_ = std::make_unique<inspect::Inspector>();
-    info_context_ =
-        std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
+    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpDeviceIdProviderServer();
@@ -67,13 +59,6 @@ class MainServiceTest : public UnitTestFixture, public CobaltTestFixture {
         MainService::TryCreate(dispatcher(), services(), clock_, info_context_, std::move(config));
     FX_CHECK(main_service_);
     RunLoopUntilIdle();
-  }
-
- protected:
-  inspect::Hierarchy InspectTree() {
-    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FX_CHECK(result.is_ok());
-    return result.take_value();
   }
 
  private:
@@ -95,7 +80,6 @@ class MainServiceTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
  protected:
-  std::unique_ptr<inspect::Inspector> inspector_;
   timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
 

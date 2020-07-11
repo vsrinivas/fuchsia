@@ -4,11 +4,11 @@
 
 #include "src/developer/forensics/utils/inspect_protocol_stats.h"
 
-#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>
 
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/inspect_node_manager.h"
 
 namespace forensics {
@@ -22,26 +22,16 @@ using inspect::testing::UintIs;
 using testing::AllOf;
 using testing::UnorderedElementsAreArray;
 
-class InspectProtocolStatsTest : public testing::Test {
+class InspectProtocolStatsTest : public UnitTestFixture {
  public:
   void SetUpProtocolStats(const std::string &path) {
-    inspector_ = std::make_unique<inspect::Inspector>();
-    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&inspector_->GetRoot());
+    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
     protocol_stats_ = std::make_unique<InspectProtocolStats>(inspect_node_manager_.get(), path);
   }
 
  protected:
-  inspect::Hierarchy InspectTree() {
-    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FX_CHECK(result.is_ok());
-    return result.take_value();
-  }
-
   std::unique_ptr<InspectNodeManager> inspect_node_manager_;
   std::unique_ptr<InspectProtocolStats> protocol_stats_;
-
- private:
-  std::unique_ptr<inspect::Inspector> inspector_;
 };
 
 TEST_F(InspectProtocolStatsTest, Check_MakingAndClosingConnections) {

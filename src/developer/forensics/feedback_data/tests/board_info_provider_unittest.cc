@@ -19,7 +19,6 @@
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/stubs/board_info_provider.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -40,10 +39,9 @@ using testing::ElementsAreArray;
 using testing::IsEmpty;
 using testing::Pair;
 
-class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
+class BoardInfoProviderTest : public UnitTestFixture {
  public:
-  BoardInfoProviderTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+  BoardInfoProviderTest() : executor_(dispatcher()) {}
 
  protected:
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {

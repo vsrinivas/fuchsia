@@ -84,7 +84,6 @@ executable("cobalt_unittest_exe") {
   sources = [ "cobalt_unittest.cc" ]
 
   deps = [
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -137,9 +136,9 @@ executable("inspect_node_manager_unittest_exe") {
   sources = [ "inspect_node_manager_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils:inspect_node_manager",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -152,8 +151,8 @@ executable("inspect_protocol_stats_unittest_exe") {
   sources = [ "inspect_protocol_stats_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/inspect/testing/cpp",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils:inspect_node_manager",
     "//src/developer/forensics/utils:inspect_protocol_stats",
   ]

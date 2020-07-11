@@ -4,10 +4,6 @@
 
 #include "src/developer/forensics/crash_reports/info/inspect_manager.h"
 
-#include <lib/inspect/cpp/hierarchy.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/cpp/reader.h>
-#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -22,6 +18,7 @@
 #include "src/developer/forensics/crash_reports/errors.h"
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/settings.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/timekeeper/test_clock.h"
@@ -63,25 +60,15 @@ constexpr Settings::UploadPolicy kSettingsDisabled = Settings::UploadPolicy::DIS
 constexpr Settings::UploadPolicy kSettingsEnabled = Settings::UploadPolicy::ENABLED;
 constexpr Settings::UploadPolicy kSettingsLimbo = Settings::UploadPolicy::LIMBO;
 
-class InspectManagerTest : public testing::Test {
+class InspectManagerTest : public UnitTestFixture {
  public:
   void SetUp() override {
-    inspector_ = std::make_unique<inspect::Inspector>();
-    inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_);
+    inspect_manager_ = std::make_unique<InspectManager>(&InspectRoot(), clock_);
   }
 
  protected:
-  inspect::Hierarchy InspectTree() {
-    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FX_CHECK(result.is_ok());
-    return result.take_value();
-  }
-
   timekeeper::TestClock clock_;
   std::unique_ptr<InspectManager> inspect_manager_;
-
- private:
-  std::unique_ptr<inspect::Inspector> inspector_;
 };
 
 TEST_F(InspectManagerTest, InitialInspectTree) {

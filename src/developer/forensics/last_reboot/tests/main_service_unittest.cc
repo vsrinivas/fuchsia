@@ -4,11 +4,6 @@
 
 #include "src/developer/forensics/last_reboot/main_service.h"
 
-#include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/inspect/cpp/hierarchy.h>
-#include <lib/inspect/cpp/inspector.h>
-#include <lib/inspect/cpp/reader.h>
-#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -16,7 +11,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/reboot_methods_watcher_register.h"
@@ -39,15 +33,13 @@ using inspect::testing::UintIs;
 using testing::Contains;
 using testing::UnorderedElementsAreArray;
 
-class MainServiceTest : public UnitTestFixture, public CobaltTestFixture {
+class MainServiceTest : public UnitTestFixture {
  public:
   MainServiceTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this),
-        inspector_(std::make_unique<inspect::Inspector>()),
-        main_service_(MainService::Config{
+      : main_service_(MainService::Config{
             .dispatcher = dispatcher(),
             .services = services(),
-            .root_node = &inspector_->GetRoot(),
+            .root_node = &InspectRoot(),
             .reboot_log = RebootLog(RebootReason::kNotParseable, std::nullopt, std::nullopt),
             .graceful_reboot_reason_write_path = Path(),
         }) {}
@@ -61,18 +53,11 @@ class MainServiceTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
-  inspect::Hierarchy InspectTree() {
-    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FX_CHECK(result.is_ok());
-    return result.take_value();
-  }
-
   std::string Path() { return files::JoinPath(tmp_dir_.path(), "graceful_reboot_reason.txt"); }
 
  private:
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<stubs::RebootMethodsWatcherRegisterBase> reboot_watcher_register_server_;
-  std::unique_ptr<inspect::Inspector> inspector_;
 
  protected:
   MainService main_service_;

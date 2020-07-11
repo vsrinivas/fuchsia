@@ -15,7 +15,6 @@
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/last_reboot_info_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -36,10 +35,9 @@ using testing::Pair;
 constexpr RebootReason kRebootReason = RebootReason::KERNEL_PANIC;
 constexpr zx::duration kUptime = zx::msec(100);
 
-class LastRebootInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
+class LastRebootInfoProviderTest : public UnitTestFixture {
  public:
-  LastRebootInfoProviderTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+  LastRebootInfoProviderTest() : executor_(dispatcher()) {}
 
  protected:
   void SetUpLastRebootInfoProviderServer(

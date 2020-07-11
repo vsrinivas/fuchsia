@@ -31,10 +31,8 @@ executable("crash_register_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/inspect/testing/cpp",
     "//src/developer/forensics/crash_reports:crash_register",
     "//src/developer/forensics/crash_reports/info",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:channel_provider",
@@ -63,12 +61,10 @@ executable("crash_reporter_unittest_exe") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.time",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:crash_reporter",
     "//src/developer/forensics/crash_reports/info:info",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/fakes:privacy_settings",
@@ -118,12 +114,10 @@ executable("main_service_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:main_service",
     "//src/developer/forensics/crash_reports/info",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:cobalt",
@@ -151,11 +145,9 @@ executable("database_unittest_exe") {
   ]
 
   deps = [
-    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:database",
     "//src/developer/forensics/crash_reports/info:info",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:cobalt",
@@ -178,12 +170,12 @@ executable("inspect_manager_unittest_exe") {
   sources = [ "inspect_manager_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:errors",
     "//src/developer/forensics/crash_reports/info:inspect_manager",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
     "//src/lib/fxl",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
@@ -221,11 +213,9 @@ executable("queue_unittest_exe") {
   ]
 
   deps = [
-    "//sdk/lib/inspect/testing/cpp",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:queue",
     "//src/developer/forensics/crash_reports/info",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:cobalt",

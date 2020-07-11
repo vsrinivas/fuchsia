@@ -17,7 +17,6 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/last_reboot/reboot_log.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -55,12 +54,9 @@ struct GracefulRebootTestParam {
 };
 
 template <typename TestParam>
-class ReporterTest : public UnitTestFixture,
-                     public CobaltTestFixture,
-                     public testing::WithParamInterface<TestParam> {
+class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<TestParam> {
  public:
-  ReporterTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this), cobalt_(dispatcher(), services()) {}
+  ReporterTest() : cobalt_(dispatcher(), services()) {}
 
   void TearDown() override { files::DeletePath(kHasReportedOnPath, /*recursive=*/false); }
 

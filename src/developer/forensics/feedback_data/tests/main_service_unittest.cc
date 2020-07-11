@@ -5,10 +5,6 @@
 #include "src/developer/forensics/feedback_data/main_service.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/inspect/cpp/hierarchy.h>
-#include <lib/inspect/cpp/inspector.h>
-#include <lib/inspect/cpp/reader.h>
-#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -16,7 +12,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 
@@ -36,26 +31,13 @@ using inspect::testing::UintIs;
 using testing::Contains;
 using testing::UnorderedElementsAreArray;
 
-class MainServiceTest : public UnitTestFixture, public CobaltTestFixture {
+class MainServiceTest : public UnitTestFixture {
  public:
-  MainServiceTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture=*/this) {}
-
   void SetUp() {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
-    inspector_ = std::make_unique<inspect::Inspector>();
-    main_service_ = MainService::TryCreate(dispatcher(), services(), &inspector_->GetRoot());
+    main_service_ = MainService::TryCreate(dispatcher(), services(), &InspectRoot());
   }
-
- protected:
-  inspect::Hierarchy InspectTree() {
-    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FX_CHECK(result.is_ok());
-    return result.take_value();
-  }
-
- private:
-  std::unique_ptr<inspect::Inspector> inspector_;
 
  protected:
   std::unique_ptr<MainService> main_service_;

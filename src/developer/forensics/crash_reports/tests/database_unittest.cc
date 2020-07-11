@@ -5,10 +5,6 @@
 #include "src/developer/forensics/crash_reports/database.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/inspect/cpp/hierarchy.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/cpp/reader.h>
-#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -19,7 +15,6 @@
 
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/tests/crashpad_database_gremlin.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
@@ -92,14 +87,10 @@ std::string GenerateString(const StorageSize string_size) {
   return str;
 }
 
-class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
+class DatabaseTest : public UnitTestFixture {
  public:
-  DatabaseTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture*/ this) {}
-
   void SetUp() override {
-    inspector_ = std::make_unique<inspect::Inspector>();
-    info_context_ =
-        std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
+    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
 
     ASSERT_TRUE(SetUpDatabase(/*max_size=*/kMaxTotalReportsSize));
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
@@ -169,12 +160,6 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
                                          }));
   }
 
-  inspect::Hierarchy InspectTree() {
-    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FX_CHECK(result.is_ok());
-    return result.take_value();
-  }
-
  private:
   std::vector<std::string> GetDirectoryContents(const std::string& path) {
     std::vector<std::string> contents;
@@ -197,7 +182,6 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
   std::string attachments_dir_;
 
  private:
-  std::unique_ptr<inspect::Inspector> inspector_;
   std::string completed_dir_;
   std::string pending_dir_;
 

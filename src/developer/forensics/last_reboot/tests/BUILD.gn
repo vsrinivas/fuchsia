@@ -36,10 +36,8 @@ executable("main_service_unittest_exe") {
   sources = [ "main_service_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/last_reboot:main_service",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:cobalt",
@@ -94,7 +92,6 @@ executable("reboot_watcher_unittest_exe") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//src/developer/forensics/last_reboot:reboot_watcher",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:cobalt",
@@ -113,7 +110,6 @@ executable("reporter_unittest_exe") {
 
   deps = [
     "//src/developer/forensics/last_reboot:reporter",
-    "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",

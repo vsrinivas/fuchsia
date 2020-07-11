@@ -4,8 +4,6 @@
 
 #include "src/developer/forensics/crash_reports/queue.h"
 
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -17,7 +15,6 @@
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/settings.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/network_reachability_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -80,15 +77,11 @@ std::map<std::string, std::string> MakeAnnotations() {
   return {{kAnnotationKey, kAnnotationValue}};
 }
 
-class QueueTest : public UnitTestFixture, public CobaltTestFixture {
+class QueueTest : public UnitTestFixture {
  public:
-  QueueTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
-
   void SetUp() override {
     settings_.set_upload_policy(UploadPolicy::LIMBO);
-    inspector_ = std::make_unique<inspect::Inspector>();
-    info_context_ =
-        std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
+    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpNetworkReachabilityProvider();
@@ -195,12 +188,6 @@ class QueueTest : public UnitTestFixture, public CobaltTestFixture {
                 UnorderedElementsAre(kAttachmentKey, kMinidumpKey));
   }
 
-  inspect::Hierarchy InspectTree() {
-    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FX_CHECK(result.is_ok());
-    return result.take_value();
-  }
-
   std::unique_ptr<Queue> queue_;
   std::vector<UUID> expected_queue_contents_;
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
@@ -245,7 +232,6 @@ class QueueTest : public UnitTestFixture, public CobaltTestFixture {
   Settings settings_;
   timekeeper::TestClock clock_;
   std::unique_ptr<StubCrashServer> crash_server_;
-  std::unique_ptr<inspect::Inspector> inspector_;
   std::shared_ptr<InfoContext> info_context_;
   std::shared_ptr<cobalt::Logger> cobalt_;
 };

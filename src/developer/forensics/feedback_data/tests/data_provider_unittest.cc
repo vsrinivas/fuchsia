@@ -27,7 +27,6 @@
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/integrity_reporter.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -137,10 +136,9 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
+class DataProviderTest : public UnitTestFixture {
  public:
-  DataProviderTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this), device_id_provider_(kDeviceIdPath) {}
+  DataProviderTest() : device_id_provider_(kDeviceIdPath) {}
 
   void SetUp() override {
     // |cobalt_| owns the test clock through a unique_ptr so we need to allocate |clock_| on the

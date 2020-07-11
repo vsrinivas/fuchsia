@@ -8,10 +8,6 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <fuchsia/settings/cpp/fidl.h>
 #include <lib/fit/result.h>
-#include <lib/inspect/cpp/hierarchy.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/cpp/reader.h>
-#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -33,7 +29,6 @@
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/settings.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
-#include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/fakes/privacy_settings.h"
 #include "src/developer/forensics/testing/stubs/channel_provider.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -130,14 +125,10 @@ PrivacySettings MakePrivacySettings(const std::optional<bool> user_data_sharing_
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
+class CrashReporterTest : public UnitTestFixture {
  public:
-  CrashReporterTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture=*/this) {}
-
   void SetUp() override {
-    inspector_ = std::make_unique<inspect::Inspector>();
-    info_context_ =
-        std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
+    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
     crash_register_ = std::make_unique<CrashRegister>(dispatcher(), services(), info_context_,
                                                       std::string(kBuildVersion));
 
@@ -419,12 +410,6 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
     EXPECT_TRUE(set_result.is_ok());
   }
 
-  inspect::Hierarchy InspectTree() {
-    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FX_CHECK(result.is_ok());
-    return result.take_value();
-  }
-
  private:
   // Returns all the attachment subdirectories under the over-arching attachment directory in the
   // database.
@@ -455,7 +440,6 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
 
  private:
   std::string attachments_dir_;
-  std::unique_ptr<inspect::Inspector> inspector_;
   timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
   Config config_;
