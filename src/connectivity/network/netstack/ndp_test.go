@@ -527,7 +527,7 @@ func TestLinkDown(t *testing.T) {
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1NIC1.Addr, addr2NIC1.Addr}, defaultLifetime)
 	ndpDisp.OnRecursiveDNSServerOption(ifs2.nicid, []tcpip.Address{addr1NIC2.Addr, addr3NIC2.Addr}, defaultLifetime)
 	waitForEmptyQueue(ndpDisp)
-	servers := ns.dnsClient.GetServersCache()
+	servers := ns.dnsConfig.GetServersCache()
 	if !containsFullAddress(servers, addr1NIC1) {
 		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr1NIC1, servers)
 	}
@@ -555,7 +555,7 @@ func TestLinkDown(t *testing.T) {
 		t.Fatalf("ifs2.controller.Down(): %s", err)
 	}
 	waitForEmptyQueue(ndpDisp)
-	servers = ns.dnsClient.GetServersCache()
+	servers = ns.dnsConfig.GetServersCache()
 	if !containsFullAddress(servers, addr1NIC1) {
 		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr1NIC1, servers)
 	}
@@ -577,7 +577,7 @@ func TestLinkDown(t *testing.T) {
 		t.Fatalf("ifs2.controller.Up(): %s", err)
 	}
 	waitForEmptyQueue(ndpDisp)
-	servers = ns.dnsClient.GetServersCache()
+	servers = ns.dnsConfig.GetServersCache()
 	if !containsFullAddress(servers, addr1NIC1) {
 		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr1NIC1, servers)
 	}
@@ -650,14 +650,14 @@ func TestRecursiveDNSServers(t *testing.T) {
 
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1NIC1.Addr, addr2NIC1.Addr}, 0)
 	waitForEmptyQueue(ndpDisp)
-	servers := ns.dnsClient.GetServersCache()
+	servers := ns.dnsConfig.GetServersCache()
 	if l := len(servers); l != 0 {
 		t.Errorf("got len(servers) = %d, want = 0; servers = %+v", l, servers)
 	}
 
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1NIC1.Addr, addr2NIC1.Addr}, defaultLifetime)
 	waitForEmptyQueue(ndpDisp)
-	servers = ns.dnsClient.GetServersCache()
+	servers = ns.dnsConfig.GetServersCache()
 	if !containsFullAddress(servers, addr1NIC1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1NIC1, servers)
 	}
@@ -670,7 +670,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 
 	ndpDisp.OnRecursiveDNSServerOption(ifs2.nicid, []tcpip.Address{addr1NIC2.Addr, addr3NIC2.Addr}, defaultLifetime)
 	waitForEmptyQueue(ndpDisp)
-	servers = ns.dnsClient.GetServersCache()
+	servers = ns.dnsConfig.GetServersCache()
 	if !containsFullAddress(servers, addr1NIC1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1NIC1, servers)
 	}
@@ -689,7 +689,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 
 	ndpDisp.OnRecursiveDNSServerOption(ifs2.nicid, []tcpip.Address{addr1NIC2.Addr, addr3NIC2.Addr}, 0)
 	waitForEmptyQueue(ndpDisp)
-	servers = ns.dnsClient.GetServersCache()
+	servers = ns.dnsConfig.GetServersCache()
 	if !containsFullAddress(servers, addr1NIC1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1NIC1, servers)
 	}
@@ -704,7 +704,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 	waitForEmptyQueue(ndpDisp)
 	for elapsedTime := time.Duration(0); elapsedTime <= shortLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
-		servers = ns.dnsClient.GetServersCache()
+		servers = ns.dnsConfig.GetServersCache()
 		if l := len(servers); l != 0 {
 			if elapsedTime < shortLifetimeTimeout {
 				continue
@@ -757,7 +757,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	}
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1.Addr, addr2.Addr, addr3.Addr}, newInfiniteLifetime)
 	waitForEmptyQueue(ndpDisp)
-	servers := ns.dnsClient.GetServersCache()
+	servers := ns.dnsConfig.GetServersCache()
 	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
 	}
@@ -783,7 +783,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	waitForEmptyQueue(ndpDisp)
 	for elapsedTime := time.Duration(0); elapsedTime <= middleLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
-		servers = ns.dnsClient.GetServersCache()
+		servers = ns.dnsConfig.GetServersCache()
 		if !containsFullAddress(servers, addr2) {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
@@ -818,7 +818,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	// represents infinity).
 	for elapsedTime := time.Duration(0); elapsedTime <= newInfiniteLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
-		servers = ns.dnsClient.GetServersCache()
+		servers = ns.dnsConfig.GetServersCache()
 		if !containsFullAddress(servers, addr2) {
 			t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
 		}

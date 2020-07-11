@@ -33,8 +33,6 @@ import (
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
-	"fidl/fuchsia/net"
-	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/posix/socket"
@@ -288,7 +286,7 @@ func Main() {
 	appCtx.ConnectToEnvService(req)
 
 	ns := &Netstack{
-		dnsClient:    dns.NewClient(stk),
+		dnsConfig:    dns.MakeServersConfig(),
 		nameProvider: np,
 		stack:        stk,
 	}
@@ -306,8 +304,8 @@ func Main() {
 		syslog.Fatalf("loopback: %s", err)
 	}
 
-	dnsWatchers := newDnsServerWatcherCollection(ns.dnsClient.GetServersCache)
-	ns.dnsClient.SetOnServersChanged(dnsWatchers.NotifyServersChanged)
+	dnsWatchers := newDnsServerWatcherCollection(ns.dnsConfig.GetServersCache)
+	ns.dnsConfig.SetOnServersChanged(dnsWatchers.NotifyServersChanged)
 
 	socketProviderImpl := providerImpl{ns: ns}
 	ns.stats = stats{
@@ -421,19 +419,6 @@ func Main() {
 	}
 
 	{
-		stub := name.LookupAdminWithCtxStub{Impl: &nameLookupAdminImpl{ns: ns}}
-		appCtx.OutgoingService.AddService(
-			name.LookupAdminName,
-			func(ctx fidl.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(name.LookupAdminName, "%s", err)
-				})
-				return nil
-			},
-		)
-	}
-
-	{
 		stub := stack.StackWithCtxStub{Impl: &stackImpl{
 			ns:          ns,
 			dnsWatchers: dnsWatchers,
@@ -459,19 +444,6 @@ func Main() {
 				})
 				return nil
 			})
-	}
-
-	{
-		stub := net.NameLookupWithCtxStub{Impl: &nameLookupImpl{dnsClient: ns.dnsClient}}
-		appCtx.OutgoingService.AddService(
-			net.NameLookupName,
-			func(ctx fidl.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(net.NameLookupName, "%s", err)
-				})
-				return nil
-			},
-		)
 	}
 
 	{

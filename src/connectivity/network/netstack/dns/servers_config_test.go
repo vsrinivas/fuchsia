@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package dns
+package dns_test
 
 import (
-	"fidl/fuchsia/net/name"
 	"testing"
 	"time"
+
+	"fidl/fuchsia/net/name"
+
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -26,16 +29,16 @@ const (
 var (
 	addr1 = tcpip.FullAddress{
 		Addr: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
-		Port: DefaultDNSPort,
+		Port: dns.DefaultDNSPort,
 	}
 	// Address is the same as addr1, but differnt port.
 	addr2 = tcpip.FullAddress{
 		Addr: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
-		Port: DefaultDNSPort + 1,
+		Port: dns.DefaultDNSPort + 1,
 	}
 	addr3 = tcpip.FullAddress{
 		Addr: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02",
-		Port: DefaultDNSPort + 2,
+		Port: dns.DefaultDNSPort + 2,
 	}
 	// Should assume default port of 53.
 	addr4 = tcpip.FullAddress{
@@ -44,72 +47,72 @@ var (
 	}
 	addr5 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x05",
-		Port: DefaultDNSPort,
+		Port: dns.DefaultDNSPort,
 	}
 	addr6 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06",
-		Port: DefaultDNSPort,
+		Port: dns.DefaultDNSPort,
 	}
 	addr7 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07",
-		Port: DefaultDNSPort,
+		Port: dns.DefaultDNSPort,
 	}
 	addr8 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08",
-		Port: DefaultDNSPort,
+		Port: dns.DefaultDNSPort,
 	}
 	addr9 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x09",
-		Port: DefaultDNSPort,
+		Port: dns.DefaultDNSPort,
 	}
 	addr10 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0a",
-		Port: DefaultDNSPort,
+		Port: dns.DefaultDNSPort,
 	}
 )
 
-func toNDPConfiguredServer(addr tcpip.FullAddress) Server {
-	return Server{
+func toNDPConfiguredServer(addr tcpip.FullAddress) dns.Server {
+	var ndpSource name.NdpDnsServerSource
+	if addr.NIC != 0 {
+		ndpSource.SetSourceInterface(uint64(addr.NIC))
+	}
+	var source name.DnsServerSource
+	source.SetNdp(ndpSource)
+	return dns.Server{
 		Address: addr,
-		Source: name.DnsServerSource{
-			I_dnsServerSourceTag: name.DnsServerSourceNdp,
-			Ndp: name.NdpDnsServerSource{
-				SourceInterface:        uint64(addr.NIC),
-				SourceInterfacePresent: addr.NIC != 0,
-			},
-		},
+		Source:  source,
 	}
 }
 
-func toDHCPConfiguredServer(addr tcpip.Address, sourceNIC tcpip.NICID) Server {
-	return Server{
+func toDHCPConfiguredServer(addr tcpip.Address, sourceNIC tcpip.NICID) dns.Server {
+	var dhcpSource name.DhcpDnsServerSource
+	if sourceNIC != 0 {
+		dhcpSource.SetSourceInterface(uint64(sourceNIC))
+	}
+	var source name.DnsServerSource
+	source.SetDhcp(dhcpSource)
+	return dns.Server{
 		Address: tcpip.FullAddress{
 			Addr: addr,
-			Port: DefaultDNSPort,
+			Port: dns.DefaultDNSPort,
 		},
-		Source: name.DnsServerSource{
-			I_dnsServerSourceTag: name.DnsServerSourceDhcp,
-			Dhcp: name.DhcpDnsServerSource{
-				SourceInterface:        uint64(sourceNIC),
-				SourceInterfacePresent: sourceNIC != 0,
-			},
-		},
+		Source: source,
 	}
 }
 
-func toStaticConfiguredServer(addr tcpip.Address) Server {
-	return Server{
+func toStaticConfiguredServer(addr tcpip.Address) dns.Server {
+	var source name.DnsServerSource
+	source.SetStaticSource(name.StaticDnsServerSource{})
+	return dns.Server{
 		Address: tcpip.FullAddress{
 			Addr: addr,
-			Port: DefaultDNSPort,
+			Port: dns.DefaultDNSPort,
 		},
-		Source: name.DnsServerSource{
-			I_dnsServerSourceTag: name.DnsServerSourceStaticSource,
-		},
+		Source: source,
 	}
 }
 
-func containsConfiguredServer(list []Server, item Server) bool {
+func containsConfiguredServer(list []dns.Server, item dns.Server) bool {
 	for _, i := range list {
 		if i == item {
 			return true
@@ -119,7 +122,7 @@ func containsConfiguredServer(list []Server, item Server) bool {
 	return false
 }
 
-func containsFullAddress(list []Server, item tcpip.FullAddress) bool {
+func containsFullAddress(list []dns.Server, item tcpip.FullAddress) bool {
 	for _, i := range list {
 		if i.Address == item {
 			return true
@@ -141,11 +144,11 @@ func containsAddress(list []tcpip.Address, item tcpip.Address) bool {
 
 func TestGetServersCacheNoDuplicates(t *testing.T) {
 	addr3 := addr3
-	addr3.Port = DefaultDNSPort
+	addr3.Port = dns.DefaultDNSPort
 	addr4WithPort := addr4
-	addr4WithPort.Port = DefaultDNSPort
+	addr4WithPort.Port = dns.DefaultDNSPort
 
-	d := makeServersConfig()
+	d := dns.MakeServersConfig()
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2, addr2, addr3, addr4, addr8}, longLifetime)
 	dhcpServers1 := []tcpip.Address{addr5.Addr, addr5.Addr, addr6.Addr, addr7.Addr}
@@ -192,9 +195,9 @@ func TestGetServersCacheNoDuplicates(t *testing.T) {
 
 func TestGetServersCacheOrdering(t *testing.T) {
 	addr4WithPort := addr4
-	addr4WithPort.Port = DefaultDNSPort
+	addr4WithPort.Port = dns.DefaultDNSPort
 
-	d := makeServersConfig()
+	d := dns.MakeServersConfig()
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
 	dhcpServers1 := []tcpip.Address{addr5.Addr, addr6.Addr}
@@ -247,9 +250,9 @@ func TestRemoveAllServersWithNIC(t *testing.T) {
 	addr3 := addr3
 	addr3.NIC = addr4.NIC
 	addr4WithPort := addr4
-	addr4WithPort.Port = DefaultDNSPort
+	addr4WithPort.Port = dns.DefaultDNSPort
 
-	d := makeServersConfig()
+	d := dns.MakeServersConfig()
 
 	expectAllAddresses := func() {
 		t.Helper()
@@ -345,12 +348,12 @@ func TestRemoveAllServersWithNIC(t *testing.T) {
 }
 
 func TestGetServersCache(t *testing.T) {
-	d := makeServersConfig()
+	d := dns.MakeServersConfig()
 
 	addr3 := addr3
 	addr3.NIC = addr4.NIC
 	addr4WithPort := addr4
-	addr4WithPort.Port = DefaultDNSPort
+	addr4WithPort.Port = dns.DefaultDNSPort
 
 	d.SetDefaultServers([]tcpip.Address{addr5.Addr, addr6.Addr})
 	servers := d.GetServersCache()
@@ -522,10 +525,10 @@ func TestGetServersCache(t *testing.T) {
 }
 
 func TestNDPServersDefaultDNSPort(t *testing.T) {
-	d := makeServersConfig()
+	d := dns.MakeServersConfig()
 
 	addr4WithPort := addr4
-	addr4WithPort.Port = DefaultDNSPort
+	addr4WithPort.Port = dns.DefaultDNSPort
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr4}, longLifetime)
 	servers := d.GetServersCache()
@@ -538,7 +541,7 @@ func TestNDPServersDefaultDNSPort(t *testing.T) {
 }
 
 func TestNDPServersUpdateWithDuplicates(t *testing.T) {
-	d := makeServersConfig()
+	d := dns.MakeServersConfig()
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr1, addr1}, longLifetime)
 	servers := d.GetServersCache()
@@ -551,7 +554,7 @@ func TestNDPServersUpdateWithDuplicates(t *testing.T) {
 }
 
 func TestNDPServersAddAndUpdate(t *testing.T) {
-	d := makeServersConfig()
+	d := dns.MakeServersConfig()
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, longLifetime)
 	servers := d.GetServersCache()
@@ -612,7 +615,7 @@ func TestNDPServersAddAndUpdate(t *testing.T) {
 func TestNDPServersExpireImmediatelyTimer(t *testing.T) {
 	t.Parallel()
 
-	d := makeServersConfig()
+	d := dns.MakeServersConfig()
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, shortLifetime)
 	for elapsedTime := time.Duration(0); elapsedTime <= shortLifetimeTimeout; elapsedTime += incrementalTimeout {
@@ -633,7 +636,7 @@ func TestNDPServersExpireImmediatelyTimer(t *testing.T) {
 func TestNDPServersExpireAfterUpdate(t *testing.T) {
 	t.Parallel()
 
-	d := makeServersConfig()
+	d := dns.MakeServersConfig()
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, longLifetime)
 	servers := d.GetServersCache()
@@ -682,7 +685,7 @@ func TestNDPServersExpireAfterUpdate(t *testing.T) {
 func TestNDPServersInfiniteLifetime(t *testing.T) {
 	t.Parallel()
 
-	d := makeServersConfig()
+	d := dns.MakeServersConfig()
 
 	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, middleLifetime)
 	servers := d.GetServersCache()

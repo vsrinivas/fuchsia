@@ -13,6 +13,9 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
+// DefaultDNSPort is the default port used by DNS servers.
+const DefaultDNSPort = 53
+
 // expiringDNSServerState is the state for an expiring DNS server.
 type expiringDNSServerState struct {
 	// Timer to invalidate a DNS server.
@@ -29,8 +32,8 @@ type Server struct {
 
 type OnServersConfigChangedCallback func()
 
-// serversConfig holds DNS resolvers' DNS servers configuration.
-type serversConfig struct {
+// ServersConfig holds DNS resolvers' DNS servers configuration.
+type ServersConfig struct {
 	mu struct {
 		sync.RWMutex
 
@@ -63,8 +66,8 @@ type serversConfig struct {
 	}
 }
 
-func makeServersConfig() serversConfig {
-	var d serversConfig
+func MakeServersConfig() ServersConfig {
+	var d ServersConfig
 	d.mu.ndpServers = make(map[tcpip.FullAddress]expiringDNSServerState)
 	d.mu.dhcpServers = make(map[tcpip.NICID]*[]tcpip.Address)
 	return d
@@ -74,7 +77,7 @@ func makeServersConfig() serversConfig {
 //
 // The expiring servers will be at the front of the list, followed by
 // the runtime and default servers. The list will be deduplicated.
-func (d *serversConfig) GetServersCache() []Server {
+func (d *ServersConfig) GetServersCache() []Server {
 	// If we already have a populated cache, return it.
 	d.mu.RLock()
 	cache := d.mu.serversCache
@@ -117,15 +120,15 @@ func (d *serversConfig) GetServersCache() []Server {
 		// We don't check if s is already in have since d.mu.ndpServers
 		// is a map - we will not see the same key twice.
 		have[s] = struct{}{}
+		var ndpSource name.NdpDnsServerSource
+		if s.NIC != 0 {
+			ndpSource.SetSourceInterface(uint64(s.NIC))
+		}
+		var source name.DnsServerSource
+		source.SetNdp(ndpSource)
 		cache = append(cache, Server{
 			Address: s,
-			Source: name.DnsServerSource{
-				I_dnsServerSourceTag: name.DnsServerSourceNdp,
-				Ndp: name.NdpDnsServerSource{
-					SourceInterface:        uint64(s.NIC),
-					SourceInterfacePresent: s.NIC != 0,
-				},
-			},
+			Source:  source,
 		})
 	}
 
@@ -138,15 +141,15 @@ func (d *serversConfig) GetServersCache() []Server {
 				continue
 			}
 			have[s] = struct{}{}
+			var dhcpSource name.DhcpDnsServerSource
+			if nic != 0 {
+				dhcpSource.SetSourceInterface(uint64(nic))
+			}
+			var source name.DnsServerSource
+			source.SetDhcp(dhcpSource)
 			cache = append(cache, Server{
 				Address: s,
-				Source: name.DnsServerSource{
-					I_dnsServerSourceTag: name.DnsServerSourceDhcp,
-					Dhcp: name.DhcpDnsServerSource{
-						SourceInterface:        uint64(nic),
-						SourceInterfacePresent: nic != 0,
-					},
-				},
+				Source:  source,
 			})
 		}
 	}
@@ -159,11 +162,11 @@ func (d *serversConfig) GetServersCache() []Server {
 			continue
 		}
 		have[s] = struct{}{}
+		var source name.DnsServerSource
+		source.SetStaticSource(name.StaticDnsServerSource{})
 		cache = append(cache, Server{
 			Address: s,
-			Source: name.DnsServerSource{
-				I_dnsServerSourceTag: name.DnsServerSourceStaticSource,
-			},
+			Source:  source,
 		})
 	}
 
@@ -172,7 +175,7 @@ func (d *serversConfig) GetServersCache() []Server {
 	return cache
 }
 
-func (d *serversConfig) SetOnServersChanged(callback OnServersConfigChangedCallback) {
+func (d *ServersConfig) SetOnServersChanged(callback OnServersConfigChangedCallback) {
 	d.mu.Lock()
 	d.mu.onServersChanged = callback
 	d.mu.Unlock()
@@ -182,7 +185,7 @@ func (d *serversConfig) SetOnServersChanged(callback OnServersConfigChangedCallb
 // This usually comes from a system-wide configuration file.
 // Servers are checked sequentially, in order.
 // Takes ownership of the passed-in slice of addrs.
-func (d *serversConfig) SetDefaultServers(servers []tcpip.Address) {
+func (d *ServersConfig) SetDefaultServers(servers []tcpip.Address) {
 	d.mu.Lock()
 	d.mu.defaultServers = servers
 
@@ -207,7 +210,7 @@ func (d *serversConfig) SetDefaultServers(servers []tcpip.Address) {
 // E.g., if one of the network interface structs containing a slice pointer is
 // deleted, UpdateDhcpServers should be called again with an updated list of
 // runtime server refs.
-func (d *serversConfig) UpdateDhcpServers(nicid tcpip.NICID, serverRefs *[]tcpip.Address) {
+func (d *ServersConfig) UpdateDhcpServers(nicid tcpip.NICID, serverRefs *[]tcpip.Address) {
 	d.mu.Lock()
 	if serverRefs != nil {
 		d.mu.dhcpServers[nicid] = serverRefs
@@ -231,7 +234,7 @@ func (d *serversConfig) UpdateDhcpServers(nicid tcpip.NICID, serverRefs *[]tcpip
 //
 // A lifetime value of less than 0 indicates that servers are not to expire
 // (they will become valid forever until another update refreshes the lifetime).
-func (d *serversConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime time.Duration) {
+func (d *ServersConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime time.Duration) {
 	d.mu.Lock()
 
 	changed := false
@@ -291,7 +294,7 @@ func (d *serversConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime t
 //
 // If a NIC is not specified (nicID == 0), then RemoveAllServersWithNIC does
 // nothing.
-func (d *serversConfig) RemoveAllServersWithNIC(nicID tcpip.NICID) {
+func (d *ServersConfig) RemoveAllServersWithNIC(nicID tcpip.NICID) {
 	if nicID == 0 {
 		return
 	}

@@ -8,10 +8,6 @@ declare_args() {
   # When set as a GN argument, requires that sysmgr_config_warn_override be set
   # to true to avoid build failures. See that flag's documentation for details.
   use_netstack3 = false
-
-  # Transitional flag to enable dns-resolver as the provider for
-  # fuchsia.net.name.LookupAdmin and fuchsia.net.NameLookup instead of netstack.
-  use_dns_resolver = true
 }
 
 group("config") {
@@ -27,14 +23,10 @@ group("config") {
     ]
   }
 
-  if (use_dns_resolver) {
-    deps += [
-      "dns:dns-resolver",
-      "dns/sysmgr:config",
-    ]
-  } else if (!use_netstack3) {
-    deps += [ "netstack/sysmgr:config-dns" ]
-  }
+  deps += [
+    "dns:dns-resolver",
+    "dns/sysmgr:config",
+  ]
 }
 
 group("tests") {

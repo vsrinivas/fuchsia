@@ -849,10 +849,9 @@ func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispa
 	})
 	ns := &Netstack{
 		stack: stk,
-		// We need to initialize the DNS client, since adding/removing interfaces
-		// sets the DNS servers on that interface, which requires that dnsClient
-		// exist.
-		dnsClient: dns.NewClient(stk),
+		// Required initialization because adding/removing interfaces interacts with
+		// DNS configuration.
+		dnsConfig: dns.MakeServersConfig(),
 	}
 	t.Cleanup(func() {
 		nicInfos := ns.stack.NICInfo()

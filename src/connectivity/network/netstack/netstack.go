@@ -311,7 +311,7 @@ func (m *endpointsMap) Range(f func(key zx.Handle, value tcpip.Endpoint) bool) {
 
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
-	dnsClient    *dns.Client
+	dnsConfig    dns.ServersConfig
 	nameProvider *device.NameProviderWithCtxInterface
 
 	netstackService struct {
@@ -645,7 +645,7 @@ func (ifs *ifState) setDNSServers(servers []tcpip.Address) bool {
 	}
 	if !sameDNS {
 		ifs.dns.mu.servers = servers
-		ifs.ns.dnsClient.UpdateDhcpServers(ifs.nicid, &ifs.dns.mu.servers)
+		ifs.ns.dnsConfig.UpdateDhcpServers(ifs.nicid, &ifs.dns.mu.servers)
 	}
 	ifs.dns.mu.Unlock()
 	return !sameDNS
@@ -717,9 +717,7 @@ func (ifs *ifState) stateChange(s link.State) {
 			ifs.mu.dhcp.cancel()
 
 			// Remove DNS servers through ifs.
-			if ifs.ns.dnsClient != nil {
-				ifs.ns.dnsClient.RemoveAllServersWithNIC(ifs.nicid)
-			}
+			ifs.ns.dnsConfig.RemoveAllServersWithNIC(ifs.nicid)
 			ifs.setDNSServers(nil)
 
 			// TODO(crawshaw): more cleanup to be done here:

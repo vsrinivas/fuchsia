@@ -261,7 +261,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 
 func TestDnsServerWatcher(t *testing.T) {
 	ns := newNetstack(t)
-	watcherCollection := newDnsServerWatcherCollection(ns.dnsClient.GetServersCache)
+	watcherCollection := newDnsServerWatcherCollection(ns.dnsConfig.GetServersCache)
 	ni := stackImpl{ns: ns, dnsWatchers: watcherCollection}
 	request, watcher, err := name.NewDnsServerWatcherWithCtxInterfaceRequest()
 	if err != nil {

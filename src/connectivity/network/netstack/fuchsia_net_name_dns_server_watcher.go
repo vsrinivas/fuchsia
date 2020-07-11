@@ -11,6 +11,7 @@ import (
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -65,6 +66,13 @@ func serverListEquals(a []dns.Server, b []dns.Server) bool {
 		}
 	}
 	return true
+}
+
+func dnsServerToFidl(s dns.Server) name.DnsServer {
+	var n name.DnsServer
+	n.SetAddress(fidlconv.ToNetSocketAddress(s.Address))
+	n.SetSource(s.Source)
+	return n
 }
 
 func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, error) {
