@@ -8,6 +8,7 @@ use {
     anyhow::Result,
     log::{error, info},
     std::collections::HashMap,
+    std::fmt,
     std::sync::{mpsc, Arc, Mutex},
     std::thread,
     uuid::Uuid,
@@ -20,6 +21,16 @@ pub enum CollectorState {
     Terminated,
 }
 
+impl fmt::Display for CollectorState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CollectorState::Running => write!(f, "Running"),
+            CollectorState::Idle => write!(f, "Idle"),
+            CollectorState::Terminated => write!(f, "Terminated"),
+        }
+    }
+}
+
 enum CollectorMessage {
     Collect(Arc<DataModel>),
     Terminate,
@@ -30,13 +41,14 @@ enum CollectorMessage {
 /// includes non-preemptive thread termination when the instance is dropped.
 struct CollectorInstance {
     pub instance_id: Uuid,
+    pub name: String,
     pub state: Arc<Mutex<CollectorState>>,
     sender: mpsc::Sender<CollectorMessage>,
     worker: Option<thread::JoinHandle<()>>,
 }
 
 impl CollectorInstance {
-    pub fn new(instance_id: Uuid, collector: Arc<dyn DataCollector>) -> Self {
+    pub fn new(instance_id: Uuid, name: String, collector: Arc<dyn DataCollector>) -> Self {
         let (sender, recv) = mpsc::channel();
         let state = Arc::new(Mutex::new(CollectorState::Idle));
         // Clone these so that we can pass references to the worker thread.
@@ -67,7 +79,7 @@ impl CollectorInstance {
                 }
             }
         });
-        Self { instance_id, state, sender, worker: Some(worker) }
+        Self { instance_id, name, state, sender, worker: Some(worker) }
     }
 
     /// Sends a message to the collector instance worker to run this collector.
@@ -104,11 +116,38 @@ impl CollectorScheduler {
     /// Adds a collector associated with a particular `instance_id` to the collector
     /// scheduler. An internal handle is returned that can be used to reference
     /// the specific Collector instance in the future.
-    pub fn add(&mut self, instance_id: Uuid, collector: Arc<dyn DataCollector>) -> CollectorHandle {
+    pub fn add(
+        &mut self,
+        instance_id: Uuid,
+        name: impl Into<String>,
+        collector: Arc<dyn DataCollector>,
+    ) -> CollectorHandle {
         let handle = self.next_handle;
         self.next_handle += 1;
-        self.collectors.insert(handle, CollectorInstance::new(instance_id, collector));
+        self.collectors.insert(handle, CollectorInstance::new(instance_id, name.into(), collector));
         handle
+    }
+
+    /// Returns a list of all the scheduled collectors.
+    pub fn collectors_all(&self) -> Vec<(CollectorHandle, String)> {
+        let mut collectors = Vec::new();
+        for (handle, instance) in self.collectors.iter() {
+            collectors.push((handle.clone(), instance.name.clone()))
+        }
+        collectors
+    }
+
+    /// Returns a list of all associated collector handles and names for each
+    /// collector. Collector names should be unique per instance_id but not
+    /// globally.
+    pub fn collectors(&self, instance_id: Uuid) -> Vec<(CollectorHandle, String)> {
+        let mut collectors = Vec::new();
+        for (handle, instance) in self.collectors.iter() {
+            if instance.instance_id == instance_id {
+                collectors.push((handle.clone(), instance.name.clone()))
+            }
+        }
+        collectors
     }
 
     /// Removes all `CollectorInstance` objects with a matching instance-id.
@@ -183,7 +222,7 @@ mod tests {
         let mut scheduler = create_scheduler();
         let collector = Arc::new(MockCollector::default());
         let instance_id = Uuid::new_v4();
-        let handle = scheduler.add(instance_id.clone(), collector.clone());
+        let handle = scheduler.add(instance_id.clone(), "foo", collector.clone());
         let state = scheduler.state(&handle).unwrap();
         assert_eq!(state, CollectorState::Idle);
     }
@@ -195,7 +234,7 @@ mod tests {
         let post = Arc::new(Barrier::new(2));
         let collector = Arc::new(MockCollector::new(pre.clone(), post.clone()));
         let instance_id = Uuid::new_v4();
-        let handle = scheduler.add(instance_id.clone(), collector.clone());
+        let handle = scheduler.add(instance_id.clone(), "foo", collector.clone());
         let state = scheduler.state(&handle).unwrap();
         assert_eq!(state, CollectorState::Idle);
         scheduler.schedule().unwrap();
@@ -210,7 +249,7 @@ mod tests {
         let mut scheduler = create_scheduler();
         let collector = Arc::new(MockCollector::default());
         let instance_id = Uuid::new_v4();
-        let handle = scheduler.add(instance_id.clone(), collector.clone());
+        let handle = scheduler.add(instance_id.clone(), "foo", collector.clone());
         scheduler.remove(&handle);
         assert_eq!(scheduler.state(&handle).is_none(), true);
     }
@@ -220,7 +259,7 @@ mod tests {
         let mut scheduler = create_scheduler();
         let collector = Arc::new(MockCollector::default());
         let instance_id = Uuid::new_v4();
-        let handle = scheduler.add(instance_id.clone(), collector.clone());
+        let handle = scheduler.add(instance_id.clone(), "foo", collector.clone());
         scheduler.remove_all(instance_id);
         assert_eq!(scheduler.state(&handle).is_none(), true);
     }

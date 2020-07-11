@@ -3,4 +3,6 @@
 // found in the LICENSE file.
 
 pub mod app;
+pub mod builtin;
 pub mod logo;
+pub mod shell;

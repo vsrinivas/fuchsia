@@ -28,8 +28,8 @@ impl DataController for HealthController {
 plugin!(
     HealthPlugin,
     PluginHooks::new(
-        vec![],
-        controller_hooks! {
+        collectors! {},
+        controllers! {
             "/health/status" => HealthController::default(),
         }
     ),

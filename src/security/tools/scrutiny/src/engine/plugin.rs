@@ -100,8 +100,10 @@ mod tests {
     plugin!(
         TestPlugin,
         PluginHooks::new(
-            vec![Arc::new(TestCollector::default())],
-            controller_hooks! {
+            collectors! {
+                "TestCollector" => TestCollector::default(),
+            },
+            controllers! {
                 "/foo/bar" => TestController::default(),
             }
         ),

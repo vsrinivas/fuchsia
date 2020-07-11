@@ -10,6 +10,7 @@ use {
     },
     anyhow::Result,
     log::{error, info},
+    std::fmt,
     std::{
         boxed::Box,
         collections::{HashMap, HashSet},
@@ -51,6 +52,15 @@ fn log_error(error: PluginError) -> Result<()> {
 pub enum PluginState {
     Loaded,
     Unloaded,
+}
+
+impl fmt::Display for PluginState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PluginState::Loaded => write!(f, "Loaded"),
+            PluginState::Unloaded => write!(f, "Unloaded"),
+        }
+    }
 }
 
 /// `PluginInstance` holds all the information the `PluginManager` needs to
@@ -161,8 +171,8 @@ impl PluginManager {
         let hooks = plugin_instance.plugin.hooks();
         // Hook all the collectors into the worker scheduler.
         let mut scheduler = self.scheduler.lock().unwrap();
-        for collector in hooks.collectors.iter() {
-            scheduler.add(plugin_instance.instance_id, Arc::clone(&collector));
+        for (name, collector) in hooks.collectors.iter() {
+            scheduler.add(plugin_instance.instance_id, name, Arc::clone(&collector));
         }
         // Hook all the controllers into the dispatcher.
         let mut dispatcher = self.dispatcher.write().unwrap();
@@ -225,6 +235,15 @@ impl PluginManager {
             Err(PluginError::NotFound(desc.clone()).into())
         }
     }
+
+    /// Returns the unique instance identifier for a particular descriptor.
+    pub fn instance_id(&self, desc: &PluginDescriptor) -> Result<Uuid> {
+        if let Some(plugin_instance) = self.plugins.get(desc) {
+            Ok(plugin_instance.instance_id.clone())
+        } else {
+            Err(PluginError::NotFound(desc.clone()).into())
+        }
+    }
 }
 
 #[cfg(test)]
@@ -258,8 +277,10 @@ mod tests {
     plugin!(
         TestPluginOne,
         PluginHooks::new(
-            vec![Arc::new(TestCollector::default())],
-            controller_hooks! {
+            collectors! {
+                "TestCollector" => TestCollector::default(),
+            },
+            controllers! {
                 "/foo/bar" => TestController::default(),
             }
         ),
@@ -269,8 +290,10 @@ mod tests {
     plugin!(
         TestPluginTwo,
         PluginHooks::new(
-            vec![Arc::new(TestCollector::default())],
-            controller_hooks! {
+            collectors! {
+                "TestCollector" => TestCollector::default(),
+            },
+            controllers! {
                 "/foo/baz" => TestController::default(),
             }
         ),
@@ -279,13 +302,13 @@ mod tests {
 
     plugin!(
         TestCycleOne,
-        PluginHooks::new(vec![], controller_hooks! {}),
+        PluginHooks::new(collectors! {}, controllers! {}),
         vec![PluginDescriptor::new("TestCycleTwo".to_string()),]
     );
 
     plugin!(
         TestCycleTwo,
-        PluginHooks::new(vec![], controller_hooks! {}),
+        PluginHooks::new(collectors![], controllers! {}),
         vec![PluginDescriptor::new("TestCycleOne".to_string()),]
     );
 

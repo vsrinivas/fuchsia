@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::logo,
+    super::{logo, shell::Shell},
     anyhow::{Error, Result},
     clap::{App, Arg, ArgMatches},
     log::error,
@@ -13,11 +13,12 @@ use {
             scheduler::CollectorScheduler,
         },
         model::model::DataModel,
-        rest::service,
+        rest::service::RestService,
         rest::visualizer::Visualizer,
     },
-    simplelog::{Config, LevelFilter, TermLogger, TerminalMode},
+    simplelog::{Config, LevelFilter, WriteLogger},
     std::env,
+    std::fs::File,
     std::io::{self, ErrorKind},
     std::sync::{Arc, Mutex, RwLock},
 };
@@ -26,10 +27,11 @@ const FUCHSIA_DIR: &str = "FUCHSIA_DIR";
 
 /// Holds a reference to core objects required by the application to run.
 pub struct ScrutinyApp {
-    manager: PluginManager,
+    manager: Arc<Mutex<PluginManager>>,
     dispatcher: Arc<RwLock<ControllerDispatcher>>,
-    collector: Arc<Mutex<CollectorScheduler>>,
+    scheduler: Arc<Mutex<CollectorScheduler>>,
     visualizer: Arc<RwLock<Visualizer>>,
+    shell: Shell,
     args: ArgMatches<'static>,
 }
 
@@ -41,22 +43,33 @@ impl ScrutinyApp {
             "error" => LevelFilter::Error,
             "warn" => LevelFilter::Warn,
             "info" => LevelFilter::Info,
+            "debug" => LevelFilter::Debug,
             "trace" => LevelFilter::Trace,
             _ => LevelFilter::Off,
         };
-        if log_level != LevelFilter::Off {
+        if log_level != LevelFilter::Off && args.value_of("command").is_none() {
             logo::print_logo();
         }
-        TermLogger::init(log_level, Config::default(), TerminalMode::Mixed).unwrap();
+        WriteLogger::init(
+            log_level,
+            Config::default(),
+            File::create(args.value_of("log").unwrap()).unwrap(),
+        )
+        .unwrap();
         let model = Arc::new(DataModel::connect(args.value_of("model").unwrap().to_string())?);
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
-        let collector = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
-        let manager = PluginManager::new(Arc::clone(&collector), Arc::clone(&dispatcher));
         let visualizer = Arc::new(RwLock::new(Visualizer::new(
             env::var(FUCHSIA_DIR).expect("Unable to retrieve $FUCHSIA_DIR, has it been set?"),
             args.value_of("visualizer").unwrap().to_string(),
         )));
-        Ok(Self { manager, dispatcher, collector, visualizer, args })
+        let scheduler = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
+        let manager = Arc::new(Mutex::new(PluginManager::new(
+            Arc::clone(&scheduler),
+            Arc::clone(&dispatcher),
+        )));
+        let shell =
+            Shell::new(Arc::clone(&manager), Arc::clone(&scheduler), Arc::clone(&dispatcher));
+        Ok(Self { manager, dispatcher, scheduler, visualizer, shell, args })
     }
 
     /// Parses all the commond line arguments passed in and returns.
@@ -66,10 +79,23 @@ impl ScrutinyApp {
             .author("Fuchsia Authors")
             .about("An extendable security auditing framework")
             .arg(
+                Arg::with_name("command")
+                    .short("c")
+                    .help("Run a single command")
+                    .value_name("command")
+                    .takes_value(true),
+            )
+            .arg(
                 Arg::with_name("model")
                     .short("m")
                     .help("The uri of the data model.")
                     .default_value("/tmp/scrutiny/"),
+            )
+            .arg(
+                Arg::with_name("log")
+                    .short("l")
+                    .help("Path to output scrutiny.log")
+                    .default_value("/tmp/scrutiny.log"),
             )
             .arg(
                 Arg::with_name("port")
@@ -99,19 +125,27 @@ impl ScrutinyApp {
 
     /// Utility function to register a plugin.
     pub fn plugin(&mut self, plugin: impl Plugin + 'static) -> Result<()> {
-        self.manager.register_and_load(Box::new(plugin))
+        self.manager.lock().unwrap().register_and_load(Box::new(plugin))
     }
 
     /// Schedules the DataCollectors to run and starts the REST service.
     pub fn run(&mut self) -> Result<()> {
-        self.collector.lock().unwrap().schedule()?;
+        self.scheduler.lock().unwrap().schedule()?;
 
-        if let Ok(port) = self.args.value_of("port").unwrap().parse::<u16>() {
-            service::run(self.dispatcher.clone(), self.visualizer.clone(), port);
-            Ok(())
+        if let Some(command) = self.args.value_of("command") {
+            self.shell.execute(command.to_string());
         } else {
-            error!("Port provided was not a valid port number.");
-            Err(Error::new(io::Error::new(ErrorKind::InvalidInput, "Invaild argument.")))
+            if let Ok(port) = self.args.value_of("port").unwrap().parse::<u16>() {
+                RestService::spawn(self.dispatcher.clone(), self.visualizer.clone(), port);
+            } else {
+                error!("Port provided was not a valid port number.");
+                return Err(Error::new(io::Error::new(
+                    ErrorKind::InvalidInput,
+                    "Invaild argument.",
+                )));
+            }
+            self.shell.run();
         }
+        Ok(())
     }
 }

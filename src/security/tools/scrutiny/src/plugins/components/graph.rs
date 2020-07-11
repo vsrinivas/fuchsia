@@ -15,7 +15,7 @@ use {
     },
     anyhow::{anyhow, Result},
     lazy_static::lazy_static,
-    log::{info, warn},
+    log::{debug, info},
     regex::Regex,
     std::collections::HashMap,
     std::env,
@@ -32,8 +32,10 @@ pub const CONFIG_DATA_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/config-data";
 plugin!(
     ComponentGraphPlugin,
     PluginHooks::new(
-        vec![Arc::new(PackageDataCollector::new().unwrap())],
-        controller_hooks! {
+        collectors! {
+            "PackageDataCollector" => PackageDataCollector::new().unwrap(),
+        },
+        controllers! {
             "/components" => ComponentsGraphController::default(),
             "/component/id" => ComponentIdGraphController::default(),
             "/component/from_uri" => ComponentFromUriGraphController::default(),
@@ -120,7 +122,7 @@ impl PackageDataCollector {
                         if let Some(services) = service_pkg.services {
                             for (service_name, service_url) in services {
                                 if combined.contains_key(&service_name) {
-                                    warn!(
+                                    debug!(
                                         "Service mapping collision on {} between {} and {}",
                                         service_name, combined[&service_name], service_url
                                     );
@@ -129,7 +131,7 @@ impl PackageDataCollector {
                                 combined.insert(service_name, service_url);
                             }
                         } else {
-                            warn!("Expected service with merkle {} to exist. Optimistically continuing.", merkle);
+                            debug!("Expected service with merkle {} to exist. Optimistically continuing.", merkle);
                         }
                     }
                 }
@@ -138,7 +140,7 @@ impl PackageDataCollector {
         // Add all builtin services
         for (service_name, service_url) in builtins {
             if combined.contains_key(&service_name) {
-                warn!(
+                debug!(
                     "Service mapping collision on {} between {} and {}",
                     service_name, combined[&service_name], service_url
                 );
@@ -209,7 +211,7 @@ impl PackageDataCollector {
             if !components.contains_key(pkg_url) {
                 // We don't already know about the component that *should* provide this service.
                 // Create an inferred node.
-                warn!("Expected component {} exist to provide service {} but it does not exist. Creating inferred node.", pkg_url, service_name);
+                debug!("Expected component {} exist to provide service {} but it does not exist. Creating inferred node.", pkg_url, service_name);
                 idx += 1;
                 components.insert(
                     pkg_url.clone(),
@@ -237,7 +239,7 @@ impl PackageDataCollector {
                     } else {
                         // Even the service map didn't know about this service. We should create an inferred component
                         // that provides this service.
-                        warn!("Expected a service provider for service {} but it does not exist. Creating inferred node.", service_name);
+                        debug!("Expected a service provider for service {} but it does not exist. Creating inferred node.", service_name);
                         idx += 1;
                         let url = format!("fuchsia-pkg://inferred#meta/{}.cmx", service_name);
                         components.insert(

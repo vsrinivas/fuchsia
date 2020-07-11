@@ -42,6 +42,8 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:clap",
       "//third_party/rust_crates:log",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:termion",
     ]
@@ -61,5 +63,8 @@ group("scrutiny") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":lib_test($host_toolchain)" ]
+  public_deps = [
+    ":bin_test($host_toolchain)",
+    ":lib_test($host_toolchain)",
+  ]
 }

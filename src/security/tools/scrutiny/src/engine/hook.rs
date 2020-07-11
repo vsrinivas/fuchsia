@@ -13,25 +13,41 @@ use {
 /// called.
 #[derive(Clone)]
 pub struct PluginHooks {
-    pub collectors: Vec<Arc<dyn DataCollector>>,
+    pub collectors: HashMap<String, Arc<dyn DataCollector>>,
     pub controllers: HashMap<String, Arc<dyn DataController>>,
 }
 
 impl PluginHooks {
     pub fn new(
-        collectors: Vec<Arc<dyn DataCollector>>,
+        collectors: HashMap<String, Arc<dyn DataCollector>>,
         controllers: HashMap<String, Arc<dyn DataController>>,
     ) -> Self {
         Self { collectors: collectors, controllers: controllers }
     }
 }
 
+// Utility macro to give unique names to each collector for a given plugin.
+// This additional naming information is used to make individual controllers
+// human readable.
+#[macro_use]
+macro_rules! collectors {
+    ($($ns:expr => $ctrl:expr,)+) => {collectors!($($ns => $ctrl),+)};
+    ($($ns:expr => $ctrl:expr),*) => {{
+            let mut _collectors: ::std::collections::HashMap<String,
+            std::sync::Arc<dyn crate::model::collector::DataCollector>> = ::std::collections::HashMap::new();
+            $(
+                _collectors.insert(String::from($ns), Arc::new($ctrl));
+            )*
+            _collectors
+        }}
+}
+
 // Utility macro to generate controller hook mappings from a namespace => constructor
 // mapping. It automatically fixes the string type and sets the correct arc, rwlock
 // on the controllers provided.
 #[macro_use]
-macro_rules! controller_hooks {
-    ($($ns:expr => $ctrl:expr,)+) => {controller_hooks!($($ns => $ctrl),+)};
+macro_rules! controllers {
+    ($($ns:expr => $ctrl:expr,)+) => {controllers!($($ns => $ctrl),+)};
     ($($ns:expr => $ctrl:expr),*) => {{
             let mut _hooks: ::std::collections::HashMap<String,
             std::sync::Arc<dyn crate::model::controller::DataController>> = ::std::collections::HashMap::new();
@@ -67,7 +83,7 @@ mod tests {
 
     #[test]
     fn test_controller_hooks() {
-        let hooks = controller_hooks! {
+        let hooks = controllers! {
             "/foo/bar" => FakeController::default(),
             "foo/baz" => FakeController::default(),
         };

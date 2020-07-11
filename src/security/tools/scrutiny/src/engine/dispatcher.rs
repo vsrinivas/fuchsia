@@ -72,6 +72,18 @@ impl ControllerDispatcher {
             Err(Error::new(DispatcherError::NamespaceDoesNotExist(namespace)))
         }
     }
+
+    /// Returns a list of all controllers associated with a given instance_id.
+    pub fn controllers(&self, instance_id: Uuid) -> Vec<String> {
+        let controllers = self.controllers.read().unwrap();
+        let mut hooks = Vec::new();
+        for (hook, controller) in controllers.iter() {
+            if controller.instance_id == instance_id {
+                hooks.push(hook.clone());
+            }
+        }
+        hooks
+    }
 }
 
 #[cfg(test)]
