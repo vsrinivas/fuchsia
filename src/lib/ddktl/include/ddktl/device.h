@@ -495,28 +495,8 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 
   zx_status_t DdkAdd(DeviceAddArgs args) { return DdkAdd(args.get().name, args.get()); }
 
-  zx_status_t DdkAdd(const char* name, uint32_t flags = 0, zx_device_prop_t* props = nullptr,
-                     uint32_t prop_count = 0, uint32_t proto_id = 0,
-                     const char* proxy_args = nullptr,
-                     zx_handle_t client_remote = ZX_HANDLE_INVALID,
-                     const device_power_state_info_t* power_states = nullptr,
-                     const uint8_t power_state_count = 0,
-                     const device_performance_state_info_t* perf_power_states = nullptr,
-                     const uint8_t perf_power_state_count = 0, zx::vmo inspect_vmo = zx::vmo()) {
-    device_add_args_t args{
-        .props = props,
-        .prop_count = prop_count,
-        .power_states = power_states,
-        .power_state_count = power_state_count,
-        .performance_states = perf_power_states,
-        .performance_state_count = perf_power_state_count,
-        .proto_id = proto_id,
-        .proxy_args = proxy_args,
-        .flags = flags,
-        .client_remote = client_remote,
-        .inspect_vmo = inspect_vmo.release(),
-    };
-    return DdkAdd(name, args);
+  zx_status_t DdkAdd(const char* name, uint32_t flags = 0) {
+    return DdkAdd(ddk::DeviceAddArgs(name).set_flags(flags));
   }
 
   zx_status_t DdkAddComposite(const char* name, const composite_device_desc_t* comp_desc) {

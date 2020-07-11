@@ -52,13 +52,7 @@ void TestInspectDriver::ModifyInspect(ModifyInspectCompleter::Sync completer) {
 
 zx_status_t TestInspectDriver::Bind() {
   inspect_.GetRoot().CreateString("testBeforeDdkAdd", "OK", &inspect_);
-  return DdkAdd(
-      /* name */ "inspect-test", /* flags */ 0, /* props */ nullptr,
-      /* prop_count */ 0, /* proto_id */ 0, /* proxy_args */ nullptr,
-      /* client_remote */ ZX_HANDLE_INVALID,
-      /* power_states */ nullptr, /* power_state_count */ 0,
-      /* perf_power_states */ nullptr,
-      /* perf_power_state_count */ 0, /* inspect_vmo */ inspect_vmo());
+  return DdkAdd(ddk::DeviceAddArgs("inspect-test").set_inspect_vmo(inspect_vmo()));
 }
 
 zx_status_t test_inspect_bind(void* ctx, zx_device_t* device) {
