@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:ui';
+
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
@@ -32,6 +34,8 @@ void main() {
     suggestionService = MockSuggestionService();
     statusModel = MockStatusModel();
     clustersModel = MockClustersModel();
+
+    when(localeSource.stream()).thenAnswer((_) => Stream<Locale>.empty());
 
     appModel = _TestAppModel(
       keyboardShortcuts: keyboardShortcuts,
