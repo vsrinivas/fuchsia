@@ -39,14 +39,15 @@ func TestAdvertFrequency(t *testing.T) {
 		IP:   net.IPv6linklocalallnodes,
 		Port: 33331,
 	})
-	defer conn.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer conn.Close()
 	ip := net.ParseIP(string(match[1]))
 	if ip == nil {
 		t.Fatalf("can't parse %s as IP", match[1])
 	}
+
 	for i := 0; i < 50; i++ {
 		if _, err := conn.WriteToUDP(nil, &net.UDPAddr{
 			IP:   ip,
@@ -56,26 +57,20 @@ func TestAdvertFrequency(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+
+	var dst [1]byte
+
+	// The system may be slow to start; do the first read without deadlines.
+	if _, _, err := conn.ReadFromUDP(dst[:]); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := conn.SetDeadline(time.Now().Add(800 * time.Millisecond)); err != nil {
 		t.Fatal(err)
 	}
-	var dst [100]byte
-	for i := 0; i < 10; i++ {
-		n, addr, err := conn.ReadFromUDP(dst[:])
-		if i == 0 {
-			if err != nil {
-				t.Fatal(err)
-			}
-			continue
-		}
-		if err == nil {
-			t.Errorf("expected one advertisement packet, got %d bytes from %s on iteration %d", n, addr, i)
-			continue
-		}
-		if tErr, ok := err.(net.Error); !ok || !tErr.Timeout() {
-			t.Errorf("expected timeout error on iteration %d, got %s", i, err)
-			continue
-		}
-		break
+	if n, addr, err := conn.ReadFromUDP(dst[:]); err == nil {
+		t.Errorf("expected one advertisement packet, got %d bytes from %s", n, addr)
+	} else if tErr, ok := err.(net.Error); !ok || !tErr.Timeout() {
+		t.Errorf("expected timeout error, got %s", err)
 	}
 }
