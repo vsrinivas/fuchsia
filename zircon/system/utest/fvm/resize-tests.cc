@@ -7,8 +7,8 @@
 
 #include <vector>
 
-#include <fvm/test/device-ref.h>
 #include <fvm/format.h>
+#include <fvm/test/device-ref.h>
 #include <zxtest/zxtest.h>
 
 namespace fvm {
@@ -94,6 +94,7 @@ class FvmResizeTest : public zxtest::Test {
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
+    args.path_prefix = "/pkg/";
     ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_));
   }
 

@@ -14,7 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("fvm") {
   output_name = "fvm-test"
@@ -86,23 +86,36 @@ test("fvm-integration") {
   ]
 }
 
-devmgr_manifest("devmgr-manifest") {
+isolated_devmgr_unittest_package("fvm-integration-test") {
+  executable_path = "test/fvm-integration-test"
+
+  deps = [
+    ":fvm-integration",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+  ]
 }
 
-test_package("fvm-tests") {
-  deps = [
-    ":devmgr-manifest",
-    ":fvm",
-    ":fvm-integration",
-  ]
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
+isolated_devmgr_unittest_package("fvm-test") {
+  executable_path = "test/fvm-test"
 
-  tests = [
-    {
-      name = "fvm-test"
-    },
-    {
-      name = "fvm-integration-test"
-    },
+  deps = [
+    ":fvm",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+  ]
+}
+
+group("fvm-tests") {
+  testonly = true
+  deps = [
+    ":fvm-integration-test",
+    ":fvm-test",
   ]
 }
