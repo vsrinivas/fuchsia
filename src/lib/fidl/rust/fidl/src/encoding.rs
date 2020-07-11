@@ -11,7 +11,7 @@ use {
     bitflags::bitflags,
     fuchsia_zircon_status as zx_status,
     static_assertions::{assert_not_impl_any, assert_obj_safe},
-    std::{cell::RefCell, cmp, convert::TryFrom, mem, ptr, str, u32, u64},
+    std::{cell::RefCell, cmp, mem, ptr, str, u32, u64},
 };
 
 thread_local!(static CODING_BUF: RefCell<MessageBuf> = RefCell::new(MessageBuf::new()));
@@ -1711,16 +1711,13 @@ impl Layout for zx_status::Status {
 }
 
 impl Encodable for zx_status::Status {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
-        _recursion_depth: usize,
+        recursion_depth: usize,
     ) -> Result<()> {
-        type Raw = zx_status::zx_status_t;
-        encoder.buf[offset..offset + mem::size_of::<Raw>()]
-            .copy_from_slice(&self.into_raw().to_le_bytes());
-        Ok(())
+        self.into_raw().unsafe_encode(encoder, offset, recursion_depth)
     }
 }
 
@@ -1728,16 +1725,11 @@ impl Decodable for zx_status::Status {
     fn new_empty() -> Self {
         Self::from_raw(0)
     }
-    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-        type Raw = zx_status::zx_status_t;
-        const SIZE: usize = mem::size_of::<Raw>();
-        match <[u8; SIZE]>::try_from(&decoder.buf[offset..offset + SIZE]) {
-            Ok(array) => {
-                *self = Self::from_raw(Raw::from_le_bytes(array));
-                Ok(())
-            }
-            Err(_) => Err(Error::OutOfRange),
-        }
+    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        let mut val: i32 = 0;
+        val.unsafe_decode(decoder, offset)?;
+        *self = Self::from_raw(val);
+        Ok(())
     }
 }
 
@@ -1758,13 +1750,13 @@ impl Layout for EpitaphBody {
 }
 
 impl Encodable for EpitaphBody {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        self.error.encode(encoder, offset, recursion_depth)
+        self.error.unsafe_encode(encoder, offset, recursion_depth)
     }
 }
 
@@ -1772,8 +1764,8 @@ impl Decodable for EpitaphBody {
     fn new_empty() -> Self {
         Self { error: zx_status::Status::new_empty() }
     }
-    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-        self.error.decode(decoder, offset)
+    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        self.error.unsafe_decode(decoder, offset)
     }
 }
 
@@ -4415,10 +4407,19 @@ mod zx_test {
     #[test]
     fn encode_epitaph() {
         for ctx in CONTEXTS {
-            assert_eq!(
-                EpitaphBody { error: zx::Status::UNAVAILABLE },
-                encode_decode(ctx, &mut EpitaphBody { error: zx::Status::UNAVAILABLE })
-            );
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(
+                ctx,
+                buf,
+                handle_buf,
+                &mut EpitaphBody { error: zx::Status::UNAVAILABLE },
+            )
+            .expect("encoding failed");
+            assert_eq!(&**buf, &[0xe4, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00]);
+            let mut out: EpitaphBody = EpitaphBody { error: zx::Status::OK };
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            assert_eq!(EpitaphBody { error: zx::Status::UNAVAILABLE }, out);
         }
     }
 }
