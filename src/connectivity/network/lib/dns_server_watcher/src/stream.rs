@@ -18,10 +18,11 @@ pub struct DnsServerWatcherEvent {
 }
 
 /// The possible sources of DNS server updates.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum DnsServersUpdateSource {
     Default,
     Netstack,
+    Dhcpv6 { interface_id: u64 },
 }
 
 /// Returns a `Stream` of [`DnsServerWatcherEvent`]s from watching the server configuration
@@ -118,7 +119,7 @@ mod tests {
             assert!(stream.next().now_or_never().is_none());
             {
                 let mut w = watcher.lock().await;
-                w.push_config(vec![DHCPV6_SERVER]);
+                w.push_config(vec![NDP_SERVER]);
                 w.push_config(vec![STATIC_SERVER]);
             }
             let nxt = stream
@@ -130,7 +131,7 @@ mod tests {
                 nxt,
                 DnsServerWatcherEvent {
                     source: DnsServersUpdateSource::Netstack,
-                    servers: vec![DHCPV6_SERVER]
+                    servers: vec![NDP_SERVER]
                 }
             );
             let nxt = stream

@@ -124,7 +124,7 @@ impl Device for EthernetDevice {
             })?
             .into_zx_channel();
 
-        let nic_id = netcfg
+        let interface_id = netcfg
             .netstack
             .add_ethernet_device(
                 &topological_path,
@@ -134,7 +134,7 @@ impl Device for EthernetDevice {
             .await
             .context("adding ethdev interface")?;
 
-        Ok(nic_id.into())
+        Ok(interface_id.into())
     }
 }
 
@@ -187,7 +187,7 @@ impl Device for NetworkDevice {
             fidl::endpoints::create_proxy().context("create mac addressing proxy")?;
         let () = device_instance.get_mac_addressing(req).context("get mac address")?;
 
-        let nic_id = netcfg
+        let interface_id = netcfg
             .stack
             .add_interface(
                 fnet_stack::InterfaceConfig {
@@ -220,6 +220,6 @@ impl Device for NetworkDevice {
                 anyhow::anyhow!("error adding netdev interface: {:?}", e,)
             })?;
 
-        Ok(nic_id)
+        Ok(interface_id)
     }
 }

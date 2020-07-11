@@ -11,6 +11,7 @@ rustc_library("fidl_fuchsia_net_ext") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/connectivity/lib/net-types",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",

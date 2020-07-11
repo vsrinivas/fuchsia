@@ -56,29 +56,54 @@ pub(crate) mod constants {
             zone_index: 0,
         });
 
+    pub(crate) const NDP_SERVER_INTERFACE_ID: u64 = 2;
+
     pub(crate) const NDP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
         address: Some(NDP_SOURCE_SOCKADDR),
         source: Some(fname::DnsServerSource::Ndp(fname::NdpDnsServerSource {
-            source_interface: Some(2),
+            source_interface: Some(NDP_SERVER_INTERFACE_ID),
         })),
     };
 
-    pub(crate) const DHCPV6_SOURCE_SOCKADDR: fnet::SocketAddress =
+    pub(crate) const DHCPV6_SOURCE_SOCKADDR1: fnet::SocketAddress =
         fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
             address: fnet::Ipv6Address {
                 addr: [
                     0x20, 0x02, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                    0x00, 0x44, 0x44,
+                    0x00, 0x44, 0x40,
                 ],
             },
             port: DEFAULT_DNS_PORT,
             zone_index: 0,
         });
 
-    pub(crate) const DHCPV6_SERVER: fname::DnsServer_ = fname::DnsServer_ {
-        address: Some(DHCPV6_SOURCE_SOCKADDR),
+    pub(crate) const DHCPV6_SERVER1_INTERFACE_ID: u64 = 3;
+
+    pub(crate) const DHCPV6_SERVER1: fname::DnsServer_ = fname::DnsServer_ {
+        address: Some(DHCPV6_SOURCE_SOCKADDR1),
         source: Some(fname::DnsServerSource::Dhcpv6(fname::Dhcpv6DnsServerSource {
-            source_interface: Some(3),
+            source_interface: Some(DHCPV6_SERVER1_INTERFACE_ID),
+        })),
+    };
+
+    pub(crate) const DHCPV6_SOURCE_SOCKADDR2: fnet::SocketAddress =
+        fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+            address: fnet::Ipv6Address {
+                addr: [
+                    0x20, 0x02, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x44, 0x41,
+                ],
+            },
+            port: DEFAULT_DNS_PORT,
+            zone_index: 0,
+        });
+
+    pub(crate) const DHCPV6_SERVER2_INTERFACE_ID: u64 = 4;
+
+    pub(crate) const DHCPV6_SERVER2: fname::DnsServer_ = fname::DnsServer_ {
+        address: Some(DHCPV6_SOURCE_SOCKADDR2),
+        source: Some(fname::DnsServerSource::Dhcpv6(fname::Dhcpv6DnsServerSource {
+            source_interface: Some(DHCPV6_SERVER2_INTERFACE_ID),
         })),
     };
 }
