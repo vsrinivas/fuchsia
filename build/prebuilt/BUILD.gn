@@ -7,7 +7,21 @@ import("//build/prebuilt_binaries.gni")
 # The //prebuilt directory contains only the binary artifacts managed by
 # jiri.  So this directory represents it in the build.
 
-prebuilt_binaries("prebuilt") {
-  testonly = true
-  build_id_dir = "//prebuilt/.build-id"
+attributes = read_file("//.jiri_root/attributes.json", "json")
+debug_symbols = false
+foreach(attribute, attributes) {
+  if (string_replace(attribute, "debug-symbols", "bogus") != attribute) {
+    debug_symbols = true
+  }
+}
+
+if (debug_symbols) {
+  prebuilt_binaries("prebuilt") {
+    testonly = true
+    build_id_dir = "//prebuilt/.build-id"
+  }
+} else {
+  group("prebuilt") {
+    testonly = true
+  }
 }
