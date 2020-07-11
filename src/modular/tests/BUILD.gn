@@ -38,6 +38,7 @@ executable("agent_services_test") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//src/modular/lib/pseudo_dir:pseudo_dir_server",
     "//third_party/googletest:gmock",
   ]
 }

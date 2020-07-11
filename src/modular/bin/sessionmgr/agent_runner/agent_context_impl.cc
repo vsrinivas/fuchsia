@@ -263,7 +263,28 @@ void AgentContextImpl::ConnectToService(
        service_name, channel = std::move(channel)]() mutable {
         FX_CHECK(state_ == State::RUNNING);
 
-        if (agent_outgoing_services_.count(service_name) > 0) {
+        // Connect to this service either via opening the service path in the agent's
+        // outgoing directory, or by asking its fuchsia.modular.Agent service.
+        //
+        // a) Outgoing directory:
+        //    If the agent does not publish fuchsia.modular.Agent, this is the only
+        //    path available. If the agent _does_ publish fuchsia.modular.Agent, but
+        //    the service was listed in the outgoing directory at the time of agent
+        //    initialization, prefer using that path.
+        // b) fuchsia.modular.Agent/Connect()
+        //    Use as a fallback to (a) for legacy reasons (see fxbug.dev/43008)
+        //
+        // NOTE:
+        //  * Some implementations of fuchsia.io2.Directory do not correctly implement
+        //    ReadDirents() (example: fxbug.dev/55769). The resulting behavior is that
+        //    |agent_outgoing_services_| is incomplete.
+        //  * Relying on |agent_.is_bound()| to decide to connect to the agent's outgoing
+        //    dir anyway (in case the service is published and can be opened, but is not
+        //    listed in the dir) is racy: there is a time between asking the agent to
+        //    connect to its implementation of fuchsia.modular.Agent and the agent
+        //    subsequently closing the channel. During this time, the fallback logic here
+        //    will fail.
+        if (!agent_.is_bound() || agent_outgoing_services_.count(service_name) > 0) {
           app_client_->services().ConnectToService(std::move(channel), service_name);
         } else if (agent_.is_bound()) {
           fuchsia::sys::ServiceProviderPtr agent_services;

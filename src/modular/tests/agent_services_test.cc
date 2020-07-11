@@ -5,6 +5,8 @@
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <fuchsia/testing/modular/cpp/fidl.h>
+#include <lib/vfs/cpp/composed_service_dir.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
 
 #include <gmock/gmock.h>
 #include <sdk/lib/modular/testing/cpp/fake_agent.h>
@@ -13,6 +15,7 @@
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_story_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
+#include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
 
 namespace {
 
@@ -726,6 +729,130 @@ TEST_F(AgentServicesSFWCompatTest, PublishToOutgoingDirectoryStillWorksWithoutAg
       agent->component_context()->svc()->Connect<fuchsia::testing::modular::TestProtocol>();
 
   RunLoopUntil([&] { return saw_outgoing_connection; });
+}
+
+class BuggyOutgoingDirAgent {
+ public:
+  BuggyOutgoingDirAgent(modular_testing::FakeComponent::Args args)
+      : args_(std::move(args)), hidden_service_dir_(new vfs::PseudoDir()) {}
+
+  static std::unique_ptr<BuggyOutgoingDirAgent> CreateWithDefaultOptions() {
+    return std::make_unique<BuggyOutgoingDirAgent>(modular_testing::FakeComponent::Args{
+        .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
+  }
+
+  modular_testing::TestHarnessBuilder::InterceptOptions BuildInterceptOptions(
+      async_dispatcher_t* dispatcher = nullptr) {
+    modular_testing::TestHarnessBuilder::InterceptOptions options;
+    options.url = args_.url;
+    options.sandbox_services = args_.sandbox_services;
+    options.launch_handler =
+        [this, dispatcher](fuchsia::sys::StartupInfo startup_info,
+                           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
+                               intercepted_component) {
+          intercepted_component_ptr_.Bind(std::move(intercepted_component), dispatcher);
+          intercepted_component_ptr_.events().OnKill = [this] { OnDestroy(); };
+
+          OnCreate(std::move(startup_info));
+        };
+    return options;
+  }
+
+  template <typename Interface>
+  void AddPublicService(fidl::InterfaceRequestHandler<Interface> handler) {
+    hidden_service_dir_->AddEntry(Interface::Name_,
+                                  std::make_unique<vfs::Service>(std::move(handler)));
+  }
+
+  bool is_running() { return is_running_; }
+  const std::string& url() { return args_.url; }
+
+ protected:
+  void OnCreate(fuchsia::sys::StartupInfo startup_info) {
+    // Configure a ComposedServiceDir which exhibits fxbug.dev/55769.
+    //
+    // outgoing_dir (type: PseudoDir, serves: LaunchInfo.directory_request)
+    //   svc/ -> composed_service_dir (type: ComposedServiceDir)
+    //           with fallback: hidden_service_dir_ (type: PseudoDir)
+    fuchsia::io::DirectoryPtr hidden_service_dir_ptr;
+    hidden_service_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
+                                   fuchsia::io::OPEN_FLAG_DIRECTORY,
+                               hidden_service_dir_ptr.NewRequest().TakeChannel());
+
+    auto composed_service_dir = std::make_unique<vfs::ComposedServiceDir>();
+    composed_service_dir->set_fallback(std::move(hidden_service_dir_ptr));
+
+    auto outgoing_dir = std::make_unique<vfs::PseudoDir>();
+    outgoing_dir->AddEntry("svc", std::move(composed_service_dir));
+    outgoing_dir_server_ = std::make_unique<modular::PseudoDirServer>(std::move(outgoing_dir));
+    outgoing_dir_server_->Serve(std::move(startup_info.launch_info.directory_request));
+
+    is_running_ = true;
+  }
+
+  void OnDestroy() { is_running_ = false; }
+
+  modular_testing::FakeComponent::Args args_;
+  std::unique_ptr<modular::PseudoDirServer> outgoing_dir_server_;
+  std::unique_ptr<vfs::PseudoDir> hidden_service_dir_;
+  fuchsia::modular::testing::InterceptedComponentPtr intercepted_component_ptr_;
+
+  bool is_running_ = false;
+};
+
+// Test that an agent that:
+//  * Does NOT publish fuchsia.modular.Agent
+//  * Serves an outgoing directory implementation with a bug (fxbug.dev/55769)
+//    resulting in it not returning directory entries from ReadDirents()
+//  * But still serves a service in that directory
+//
+// will result in successful connections to the service.
+//
+// TODO(fxbug.dev/55769): Once fixed, remove this test and the class BuggyOutgoingDirAgent.
+TEST_F(AgentServicesSFWCompatTest, PublishToBuggyOutgoingDirectoryStillWorksWithoutAgentProtocol) {
+  auto serving_agent = BuggyOutgoingDirAgent::CreateWithDefaultOptions();
+
+  // Intercept this agent and use it as a client to connect to `serving_agent`.
+  auto agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
+
+  // Set up the test environment with TestProtocol being served by `serving_agent`.
+  auto spec = CreateSpecWithAgentServiceIndex(
+      {{fuchsia::testing::modular::TestProtocol::Name_, serving_agent->url()}});
+  spec.mutable_sessionmgr_config()->mutable_session_agents()->push_back(agent->url());
+  spec.mutable_sessionmgr_config()->mutable_session_agents()->push_back(serving_agent->url());
+
+  modular_testing::TestHarnessBuilder builder(std::move(spec));
+  builder.InterceptComponent(serving_agent->BuildInterceptOptions());
+  builder.InterceptComponent(AddSandboxServices({fuchsia::testing::modular::TestProtocol::Name_},
+                                                agent->BuildInterceptOptions()));
+
+  // Publish fuchsia.modular.Agent so that the test can wait until after sessionmgr has
+  // observed its request for fuchsia.modular.Agent close. The workaround relies on
+  // the the Agent channel being closed.
+  bool saw_agent_service_request = false;
+  serving_agent->AddPublicService(
+      fit::function<void(fidl::InterfaceRequest<fuchsia::modular::Agent>)>(
+          [&](fidl::InterfaceRequest<fuchsia::modular::Agent> request) {
+            saw_agent_service_request = true;
+            request.Close(ZX_ERR_NOT_FOUND);
+          }));
+
+  // Publish the service as an outgoing/public service.
+  bool saw_test_protocol_request = false;
+  serving_agent->AddPublicService(
+      fit::function<void(fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol>)>(
+          [&](fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
+            saw_test_protocol_request = true;
+          }));
+  builder.BuildAndRun(test_harness());
+
+  RunLoopUntil([&] { return agent->is_running() && serving_agent->is_running(); });
+  RunLoopUntil([&] { return saw_agent_service_request; });
+
+  auto protocol_ptr =
+      agent->component_context()->svc()->Connect<fuchsia::testing::modular::TestProtocol>();
+
+  RunLoopUntil([&] { return saw_test_protocol_request; });
 }
 
 }  // namespace
