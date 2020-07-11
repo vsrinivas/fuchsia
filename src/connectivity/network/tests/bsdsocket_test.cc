@@ -1817,9 +1817,10 @@ TEST(NetStreamTest, ReadBeforeConnect) {
   // handshake for a connection when listen backlog is zero. Hence, we
   // do not maintain the precursor client connection on Fuchsia.
   fbl::unique_fd precursor_client;
-  ASSERT_TRUE(precursor_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
-  ASSERT_EQ(connect(precursor_client.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)),
-            0);
+  ASSERT_TRUE(precursor_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0)))
+      << strerror(errno);
+  ASSERT_EQ(
+      connect(precursor_client.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), 0);
 #endif
 
   // The test client connection would get established _only_ after both
