@@ -2102,27 +2102,59 @@ TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
   ASSERT_TRUE(test_sock = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 }
 
-// ShutdownReset tests for the application to be notifed of a RST, when
-// it sends data after the remote has initiated SHUT_RDWR.
+// Tests that a socket which has completed SHUT_RDWR responds to incoming data with RST.
 TEST_F(NetStreamSocketsTest, ShutdownReset) {
-  // Shutdown RDWR on the server. SHUT_WR would initiate an active
-  // TCP close causing server to get into FIN_WAIT2 and client into
-  // CLOSE_WAIT. SHUT_RD would close the server's receive.
-  EXPECT_EQ(shutdown(server.get(), SHUT_RDWR), 0) << strerror(errno);
+  // This test is tricky. In Linux we could shutdown(SHUT_RDWR) the server socket, write() some data
+  // on the client socket, and observe the server reply with RST. The SHUT_WR would move the server
+  // socket state out of ESTABLISHED (to FIN-WAIT2 after sending FIN and receiving an ACK) and
+  // SHUT_RD would close the receiver. Only when the server socket has transitioned out of
+  // ESTABLISHED state. At this point, the server socket would respond to incoming data with RST.
+  //
+  // In Fuchsia this is more complicated because each socket is a distributed system (consisting of
+  // netstack and fdio) wherein the socket state is eventually consistent. We must take care to
+  // synchronize our actions with netstack's state as we're testing that netstack correctly sends a
+  // RST in response to data received after shutdown(SHUT_RDWR).
+  //
+  // We can manipulate and inspect state using only shutdown() and poll(), both of which operate on
+  // fdio state rather than netstack state. Combined with the fact that SHUT_RD is not observable by
+  // the peer (i.e. doesn't cause any network traffic), means we are in a pickle.
+  //
+  // On the other hand, SHUT_WR does cause a FIN to be sent, which can be observed by the peer using
+  // poll(POLLRDHUP). Note also that netstack observes SHUT_RD and SHUT_WR on different threads,
+  // meaning that a race condition still exists. At the time of writing, this is the best we can do.
 
-  // Send data to the now shutdown server, SHUT_RD should trigger a RST
-  // from the server causing the client TCP state to transition from
-  // CLOSE_WAIT to CLOSE.
+  // Change internal state to disallow further reads and writes. The state change propagates to
+  // netstack at some future time. We have no way to observe that SHUT_RD has propagated (because it
+  // propagates independently from SHUT_WR).
+  ASSERT_EQ(shutdown(server.get(), SHUT_RDWR), 0) << strerror(errno);
+
+  // Wait for the FIN to arrive at the client and for the state to propagate to the client's fdio.
+  {
+    struct pollfd pfd = {
+        .fd = client.get(),
+        .events = POLLRDHUP,
+    };
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+    EXPECT_EQ(pfd.revents, POLLRDHUP);
+  }
+
+  // Send data from the client. The server should now very likely be in SHUT_RD and respond with
+  // RST.
   char c;
-  EXPECT_EQ(write(client.get(), &c, sizeof(c)), static_cast<ssize_t>(sizeof(c))) << strerror(errno);
+  ASSERT_EQ(write(client.get(), &c, sizeof(c)), static_cast<ssize_t>(sizeof(c))) << strerror(errno);
 
-  // Expect the client application socket to be notified of the RST.
-  struct pollfd pfd = {};
+  // Wait for the client to receive the RST and for the state to propagate through its fdio.
+  struct pollfd pfd = {
+      .fd = client.get(),
+      .events = POLLHUP,
+  };
   pfd.fd = client.get();
   pfd.events = POLLHUP;
   int n = poll(&pfd, 1, kTimeout);
-  EXPECT_GE(n, 0) << strerror(errno);
-  EXPECT_EQ(n, 1);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
   EXPECT_EQ(pfd.revents, POLLHUP | POLLERR);
 }
 
