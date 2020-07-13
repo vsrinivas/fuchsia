@@ -5,6 +5,7 @@ use {
     crate::ok_or_return,
     crate::target,
     anyhow::{anyhow, Context, Error},
+    async_std::future::timeout,
     async_trait::async_trait,
     fuchsia_async::Task,
     futures::channel::mpsc,
@@ -15,6 +16,7 @@ use {
     std::hash::Hash,
     std::net::SocketAddr,
     std::sync::{Arc, Weak},
+    std::time::Duration,
 };
 
 pub trait EventTrait: Debug + Sized + Hash + Clone + Eq + Send + Sync {}
@@ -237,20 +239,42 @@ impl<T: 'static + EventTrait> Queue<T> {
         handlers.push(dispatcher);
     }
 
-    pub async fn wait_for(&self, predicate: impl Fn(T) -> bool + Send + Sync + 'static) {
-        self.wait_for_async(move |e| future::ready(predicate(e))).await
+    /// Waits for an event to occur. An event has occured when the closure
+    /// passed to this function evaluates to `true`.
+    ///
+    /// If timeout is `None`, this will run forever, else this will return an
+    /// `Error` if the timeout is reached (`Error` will only ever be returned
+    /// for a timeout).
+    pub async fn wait_for(
+        &self,
+        timeout: Option<Duration>,
+        predicate: impl Fn(T) -> bool + Send + Sync + 'static,
+    ) -> Result<(), Error> {
+        self.wait_for_async(timeout, move |e| future::ready(predicate(e))).await
     }
 
-    pub async fn wait_for_async<F>(&self, predicate: impl Fn(T) -> F + Send + Sync + 'static)
+    /// The async version of `wait_for` (See: `wait_for`).
+    pub async fn wait_for_async<F>(
+        &self,
+        timeout_opt: Option<Duration>,
+        predicate: impl Fn(T) -> F + Send + Sync + 'static,
+    ) -> Result<(), Error>
     where
         F: Future<Output = bool> + Send + Sync + 'static,
     {
         let (handler, mut handler_done) = PredicateHandler::new(move |t| predicate(t));
         self.add_handler(handler).await;
-        handler_done
-            .next()
-            .await
-            .unwrap_or_else(|| log::warn!("unable to get 'done' signal from handler."));
+        let fut = async move {
+            handler_done
+                .next()
+                .await
+                .unwrap_or_else(|| log::warn!("unable to get 'done' signal from handler."))
+        };
+
+        match timeout_opt {
+            None => Ok(fut.await),
+            Some(t) => timeout(t, fut).await.map_err(|e| anyhow!("waiting for event: {:#}", e)),
+        }
     }
 
     pub async fn push(&self, event: T) -> Result<(), Error> {
@@ -340,22 +364,24 @@ mod test {
     async fn test_wait_for_event_once_async() {
         let fake_events = Arc::new(FakeEventStruct {});
         let queue = Queue::new(&fake_events);
-        let ((), result) = futures::join!(
-            queue.wait_for_async(|e| async move {
+        let (res1, res2) = futures::join!(
+            queue.wait_for_async(None, |e| async move {
                 assert_eq!(e, 5);
                 true
             }),
             queue.push(5)
         );
-        result.unwrap();
+        res1.unwrap();
+        res2.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_wait_for_event_once() {
         let fake_events = Arc::new(FakeEventStruct {});
         let queue = Queue::new(&fake_events);
-        let ((), result) = futures::join!(queue.wait_for(|e| e == 5), queue.push(5),);
-        result.unwrap();
+        let (res1, res2) = futures::join!(queue.wait_for(None, |e| e == 5), queue.push(5),);
+        res1.unwrap();
+        res2.unwrap();
     }
 
     struct FakeEventSynthesizer {}
@@ -371,12 +397,16 @@ mod test {
     async fn test_wait_for_event_synthetic() {
         let fake_events = Arc::new(FakeEventSynthesizer {});
         let queue = Queue::new(&fake_events);
-        let ((), (), (), ()) = futures::join!(
-            queue.wait_for(|e| e == 7),
-            queue.wait_for(|e| e == 6),
-            queue.wait_for(|e| e == 2),
-            queue.wait_for(|e| e == 3)
+        let (one, two, three, four) = futures::join!(
+            queue.wait_for(None, |e| e == 7),
+            queue.wait_for(None, |e| e == 6),
+            queue.wait_for(None, |e| e == 2),
+            queue.wait_for(None, |e| e == 3)
         );
+        one.unwrap();
+        two.unwrap();
+        three.unwrap();
+        four.unwrap();
     }
 
     // This is mostly here to fool the compiler, as for whatever reason invoking
@@ -467,5 +497,12 @@ mod test {
         queue.push(EventFailerInput::Complete).await.unwrap();
         assert!(handler_dropped_rx.next().await.unwrap());
         assert!(handler_dropped_rx2.next().await.unwrap());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn event_wait_for_timeout() {
+        let fake_events = Arc::new(FakeEventStruct {});
+        let queue = Queue::<i32>::new(&fake_events);
+        assert!(queue.wait_for(Some(Duration::from_millis(1)), |_| true).await.is_err());
     }
 }

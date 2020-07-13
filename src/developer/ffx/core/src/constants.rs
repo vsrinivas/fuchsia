@@ -31,5 +31,10 @@ pub const AUTOSTART_MIN_RETRY_COUNT: u32 = 15;
 // Delay between retry attempts to find the RCS.
 pub const RETRY_DELAY: Duration = Duration::from_millis(200);
 
+// The amount of time when awaiting an event (target up, RCS connect, etc)
+// before giving up. This may need to be split up into specific timeouts for
+// specific events.
+pub const EVENT_TIMEOUT: Duration = Duration::from_secs(10);
+
 // Timeout for the config cache.
 pub const CONFIG_CACHE_TIMEOUT: Duration = Duration::from_secs(3);

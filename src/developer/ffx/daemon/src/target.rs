@@ -1065,7 +1065,7 @@ mod test {
             Err(_) => unimplemented!("this branch should never happen"),
         };
         // This will hang forever if no synthesis happens.
-        t.events.wait_for(|e| e == TargetEvent::RcsActivated).await;
+        t.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1076,12 +1076,13 @@ mod test {
             &NodeId { id: 1234 },
         );
 
-        let fut = t.events.wait_for(|e| e == TargetEvent::RcsActivated);
+        let fut = t.events.wait_for(None, |e| e == TargetEvent::RcsActivated);
         let mut new_state = TargetState::new();
         new_state.rcs = Some(conn);
         // This is a bit of a race, so it's possible that state will be
         // updated before the wait_for invocation is registered with the
         // event queue, but either way this should succeed.
-        let ((), ()) = futures::join!(fut, t.update_state(new_state));
+        let (res, ()) = futures::join!(fut, t.update_state(new_state));
+        res.unwrap();
     }
 }

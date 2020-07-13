@@ -10,7 +10,7 @@ use {
     anyhow::{anyhow, Context, Error},
     async_std::task,
     async_trait::async_trait,
-    ffx_core::constants::SOCKET,
+    ffx_core::constants::{EVENT_TIMEOUT, SOCKET},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
@@ -257,8 +257,21 @@ impl Daemon {
                         return Ok(());
                     }
                 };
-                // TODO(awdavies): Add a timeout here.
-                target.events.wait_for(|e| e == TargetEvent::RcsActivated).await;
+                match target
+                    .events
+                    .wait_for(Some(EVENT_TIMEOUT), |e| e == TargetEvent::RcsActivated)
+                    .await
+                {
+                    Ok(()) => (),
+                    Err(e) => {
+                        log::warn!("{}", e);
+                        // TODO(awdavies): More specific error here like timeout?
+                        responder
+                            .send(&mut Err(DaemonError::RcsConnectionError))
+                            .context("sending error response")?;
+                        return Ok(());
+                    }
+                }
                 let mut rcs = match target.rcs().await {
                     Some(r) => r,
                     None => {
@@ -333,14 +346,18 @@ mod test {
                 .unwrap();
 
             let nodename = t.nodename();
-            self.event_queue.wait_for(move |e| e == DaemonEvent::NewTarget(nodename.clone())).await;
+            self.event_queue
+                .wait_for(None, move |e| e == DaemonEvent::NewTarget(nodename.clone()))
+                .await
+                .unwrap();
             self.tc
                 .get(t.nodename().into())
                 .await
                 .unwrap()
                 .events
-                .wait_for(|e| e == TargetEvent::RcsActivated)
-                .await;
+                .wait_for(None, |e| e == TargetEvent::RcsActivated)
+                .await
+                .unwrap();
         }
     }
 
