@@ -72,8 +72,8 @@ source_set("production") {
   sources = [ "production_encoding.h" ]
 
   public_deps = [
-    ":identity_decoder",
-    ":identity_encoder",
+    ":lz4_decoder",
+    ":lz4_encoder",
   ]
 }
 
