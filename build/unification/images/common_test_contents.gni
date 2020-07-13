@@ -28,7 +28,6 @@ common_test_contents = [
   "//src/devices/pci/lib/device-protocol-pci/test:device-protocol-pci",
   "//src/devices/power/drivers/as370-power:as370-power-test",
   "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test",
-  "//src/devices/rtc/drivers/fallback:fallback-rtc",
   "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test",
   "//src/devices/serial/drivers/uart16550:uart16550-test",
   "//src/devices/spi/drivers/mtk-spi:mtk-spi-test",
