@@ -21,12 +21,17 @@ namespace zircon {
 // These should only be used by _zircon implementation files that aren't mocked. Normal callers
 // (e.g. debugged_thread.cc) should go through the wrappers like ThreadHandle which allow mocking.
 // These helpers are very low-level functions for use by the non-mocked implementations.
+//
+// These functions should work in terms of zx::* primitives and nto ProcessHandle, etc.
 
 // Returns ZX_KOID_INVALID on failure.
 zx_koid_t KoidForObject(const zx::object_base& object);
 
 // Returns empty string on failure.
 std::string NameForObject(const zx::object_base& object);
+
+// Returns an !is_valid() job object on failure.
+zx::job GetRootJob();
 
 // Returns the given type of child koids.
 std::vector<zx_koid_t> GetChildKoids(const zx::object_base& parent, uint32_t child_kind);

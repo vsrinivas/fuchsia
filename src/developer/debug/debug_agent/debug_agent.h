@@ -26,6 +26,8 @@
 
 namespace debug_agent {
 
+class SystemInterface;
+
 // Set of dependencies the debug agent needs.
 struct SystemProviders {
   // Creates the set of providers that represent the actual system. This is what you want to use for
@@ -50,7 +52,8 @@ class DebugAgent : public RemoteAPI,
   //
   // |object_provider| provides a view into the Zircon process tree.
   // Can be overriden for test purposes.
-  explicit DebugAgent(std::shared_ptr<sys::ServiceDirectory> services, SystemProviders providers);
+  explicit DebugAgent(std::unique_ptr<SystemInterface> system_interface,
+                      std::shared_ptr<sys::ServiceDirectory> services, SystemProviders providers);
   ~DebugAgent();
 
   fxl::WeakPtr<DebugAgent> GetWeakPtr();
@@ -156,9 +159,11 @@ class DebugAgent : public RemoteAPI,
 
   // Process Limbo ---------------------------------------------------------------------------------
 
-  void OnProcessesEnteredLimbo(std::vector<fuchsia::exception::ProcessExceptionMetadata>);
+  void OnProcessEnteredLimbo(const LimboProvider::Record& record);
 
   // Members ---------------------------------------------------------------------------------------
+
+  std::unique_ptr<SystemInterface> system_interface_;
 
   debug_ipc::StreamBuffer* stream_ = nullptr;
 

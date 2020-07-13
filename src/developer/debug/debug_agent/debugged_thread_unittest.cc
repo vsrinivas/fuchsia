@@ -77,7 +77,6 @@ std::pair<std::unique_ptr<DebuggedThread>, MockThreadHandle*> CreateThread(zx_ko
   create_info.handle = std::move(owning_handle);
   create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
   create_info.arch_provider = std::make_shared<arch::ArchProvider>();
-  create_info.object_provider = std::make_unique<ObjectProvider>();
   return {std::make_unique<DebuggedThread>(nullptr, std::move(create_info)), handle};
 }
 
@@ -154,7 +153,6 @@ TEST(DebuggedThread, NormalSuspension) {
     create_info.handle = std::make_unique<ZirconThreadHandle>(
         arch_provider, kProcessKoid, current_thread_koid, std::move(current_thread));
     create_info.arch_provider = arch_provider;
-    create_info.object_provider = object_provider;
     debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
 
     // Let the test know it can continue.
@@ -225,7 +223,6 @@ TEST(DebuggedThread, RefCountedSuspension) {
     create_info.handle = std::make_unique<ZirconThreadHandle>(
         arch_provider, kProcessKoid, current_thread_koid, std::move(current_thread));
     create_info.arch_provider = arch_provider;
-    create_info.object_provider = object_provider;
     debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
 
     // Let the test know it can continue.

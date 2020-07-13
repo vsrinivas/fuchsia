@@ -7,6 +7,7 @@
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
+#include "src/developer/debug/debug_agent/zircon_system_interface.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
 
@@ -107,7 +108,8 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
     WatchpointStreamBackend backend(loop);
 
     auto services = sys::ServiceDirectory::CreateFromNamespace();
-    DebugAgent agent(services, SystemProviders::CreateDefaults(services));
+    DebugAgent agent(std::make_unique<ZirconSystemInterface>(), services,
+                     SystemProviders::CreateDefaults(services));
     RemoteAPI* remote_api = &agent;
 
     agent.Connect(&backend.stream());

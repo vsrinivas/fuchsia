@@ -34,8 +34,6 @@ class ThreadException {
 
   // Given a ZX_EXCEPTION_STRAGEY_* constant, sets the handling strategy.
   virtual zx_status_t SetStrategy(uint32_t strategy) = 0;
-
-  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ThreadException);
 };
 
 }  // namespace debug_agent

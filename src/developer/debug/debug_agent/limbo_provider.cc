@@ -5,21 +5,38 @@
 
 #include <zircon/status.h>
 
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
+#include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/debug_agent/zircon_thread_exception.h"
+#include "src/developer/debug/debug_agent/zircon_thread_handle.h"
+#include "src/developer/debug/debug_agent/zircon_utils.h"
 
 using namespace fuchsia::exception;
 
 namespace debug_agent {
 
-// LimboProvider -----------------------------------------------------------------------------------
+namespace {
+
+LimboProvider::Record MetadataToRecord(ProcessExceptionMetadata metadata) {
+  LimboProvider::Record record;
+
+  record.process = std::make_unique<ZirconProcessHandle>(std::move(*metadata.mutable_process()));
+  record.thread = std::make_unique<ZirconThreadHandle>(
+      std::make_shared<arch::ArchProvider>(), metadata.info().process_koid,
+      metadata.info().thread_koid, std::move(*metadata.mutable_thread()));
+
+  return record;
+}
+
+}  // namespace
 
 LimboProvider::LimboProvider(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(std::move(services)) {}
 LimboProvider::~LimboProvider() = default;
 
 zx_status_t LimboProvider::Init() {
-  // We get the initial state of the hanging gets.
+  // Get the initial state of the hanging gets.
   ProcessLimboSyncPtr process_limbo;
   zx_status_t status = services_->Connect(process_limbo.NewRequest());
   if (status != ZX_OK)
@@ -42,11 +59,9 @@ zx_status_t LimboProvider::Init() {
     if (result.is_err())
       return result.err();
 
-    // Add to the exceptions.
-    for (auto& exception : result.response().exception_list) {
-      zx_koid_t process_koid = exception.info().process_koid;
-      limbo_[process_koid] = std::move(exception);
-    }
+    // Add all the current exceptions.
+    for (auto& exception : result.response().exception_list)
+      limbo_[exception.info().process_koid] = MetadataToRecord(std::move(exception));
   }
 
   // Now that we were able to get the current state of the limbo, we move to an async binding.
@@ -86,36 +101,6 @@ void LimboProvider::WatchActive() {
 
 bool LimboProvider::Valid() const { return valid_; }
 
-const std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata>& LimboProvider::Limbo()
-    const {
-  return limbo_;
-}
-
-// WatchLimbo --------------------------------------------------------------------------------------
-
-namespace {
-
-ProcessExceptionMetadata DuplicateException(const ProcessExceptionMetadata& exception) {
-  ProcessExceptionMetadata result = {};
-  result.set_info(exception.info());
-
-  if (exception.has_process()) {
-    zx::process process;
-    exception.process().duplicate(ZX_RIGHT_SAME_RIGHTS, &process);
-    result.set_process(std::move(process));
-  }
-
-  if (exception.has_thread()) {
-    zx::thread thread;
-    exception.thread().duplicate(ZX_RIGHT_SAME_RIGHTS, &thread);
-    result.set_thread(std::move(thread));
-  }
-
-  return result;
-}
-
-}  // namespace
-
 void LimboProvider::WatchLimbo() {
   connection_->WatchProcessesWaitingOnException(
       // |this| owns the connection, so it's guaranteed to outlive it.
@@ -123,27 +108,39 @@ void LimboProvider::WatchLimbo() {
         if (result.is_err()) {
           FX_LOGS(ERROR) << "Got error waiting on limbo: " << zx_status_get_string(result.err());
         } else {
-          // We need to figure out which exceptions remain.
-
-          // Add the exceptions to the limbo.
-          std::vector<fuchsia::exception::ProcessExceptionMetadata> new_exceptions;
-          std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata> new_limbo;
-          for (auto& exception : result.response().exception_list) {
-            // We check to see if it's currently on the limbo. If it wasn't, it is a new exception.
+          // The callback provides the full current list every time.
+          RecordMap new_limbo;
+          std::vector<zx_koid_t> new_exceptions;
+          for (ProcessExceptionMetadata& exception : result.response().exception_list) {
             zx_koid_t process_koid = exception.info().process_koid;
+            // Record if this is a new one we don't have yet.
             if (auto it = limbo_.find(process_koid); it == limbo_.end())
-              new_exceptions.push_back(DuplicateException(exception));
-            new_limbo.insert({process_koid, std::move(exception)});
+              new_exceptions.push_back(process_koid);
+
+            new_limbo.insert({process_koid, MetadataToRecord(std::move(exception))});
           }
 
           limbo_ = std::move(new_limbo);
-          if (!new_exceptions.empty() && on_enter_limbo_)
-            on_enter_limbo_(std::move(new_exceptions));
+
+          if (on_enter_limbo_) {
+            // Notify for the new exceptions.
+            for (zx_koid_t process_koid : new_exceptions) {
+              // Even though we added the exception above and expect it to be in limbo_, re-check
+              // that we found it in case the callee consumed the exception out from under us.
+              if (auto found = limbo_.find(process_koid); found != limbo_.end())
+                on_enter_limbo_(found->second);
+            }
+          }
         }
 
         // Re-issue the hanging get.
         WatchLimbo();
       });
+}
+
+bool LimboProvider::IsProcessInLimbo(zx_koid_t process_koid) const {
+  const auto& records = GetLimboRecords();
+  return records.find(process_koid) != records.end();
 }
 
 fitx::result<zx_status_t, LimboProvider::RetrievedException> LimboProvider::RetrieveException(
@@ -161,11 +158,18 @@ fitx::result<zx_status_t, LimboProvider::RetrievedException> LimboProvider::Retr
   if (result.is_err())
     return fitx::error(result.err());
 
-  fuchsia::exception::ProcessException process_exception = result.response().ResultValue_();
-  return fitx::ok(RetrievedException{
-      std::make_unique<ZirconThreadException>(std::move(*process_exception.mutable_exception())),
-      std::move(*process_exception.mutable_process()),
-  });
+  fuchsia::exception::ProcessException exception = result.response().ResultValue_();
+  zx_koid_t thread_koid = zircon::KoidForObject(exception.thread());
+  RetrievedException retrieved;
+  retrieved.process =
+      std::make_unique<ZirconProcessHandle>(std::move(*exception.mutable_process()));
+  retrieved.thread =
+      std::make_unique<ZirconThreadHandle>(std::make_shared<arch::ArchProvider>(), process_koid,
+                                           thread_koid, std::move(*exception.mutable_thread()));
+  retrieved.exception =
+      std::make_unique<ZirconThreadException>(std::move(*exception.mutable_exception()));
+
+  return fitx::ok(std::move(retrieved));
 }
 
 zx_status_t LimboProvider::ReleaseProcess(zx_koid_t process_koid) {

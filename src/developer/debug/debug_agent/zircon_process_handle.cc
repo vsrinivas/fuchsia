@@ -26,6 +26,8 @@ std::vector<std::unique_ptr<ThreadHandle>> ZirconProcessHandle::GetChildThreads(
   return result;
 }
 
+zx_status_t ZirconProcessHandle::Kill() { return process_.kill(); }
+
 int64_t ZirconProcessHandle::GetReturnCode() const {
   zx_info_process info = {};
   if (process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr) == ZX_OK)

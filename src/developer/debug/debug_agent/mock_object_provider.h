@@ -151,8 +151,8 @@ class MockObjectProvider : public ObjectProvider {
 //            t: 20 initial-thread
 //          p: 21 job121-p2
 //            t: 22 initial-thread
-//            t: 22 second-thread
-//            t: 23 third-thread
+//            t: 23 second-thread
+//            t: 24 third-thread
 void FillInMockObjectProvider(MockObjectProvider*);
 
 // New version of FillInMockObjectProvider that returns a MockJobHandle representing the root of the

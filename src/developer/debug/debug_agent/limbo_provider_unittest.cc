@@ -16,16 +16,12 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/debug_agent/mock_object_provider.h"
-#include "src/developer/debug/debug_agent/mock_thread_exception.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 
 using namespace ::fuchsia::exception;
 
 namespace debug_agent {
 namespace {
-
-// Stubs -------------------------------------------------------------------------------------------
 
 class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
  public:
@@ -81,11 +77,11 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
     }
   }
 
-  void AppendException(const MockProcessObject& process, const MockThreadObject& thread,
+  void AppendException(zx_koid_t process_koid, zx_koid_t thread_koid,
                        ExceptionType exception_type) {
     ExceptionInfo info = {};
-    info.process_koid = process.koid;
-    info.thread_koid = thread.koid;
+    info.process_koid = process_koid;
+    info.thread_koid = thread_koid;
     info.type = exception_type;
 
     // Track the metadata in the limbo.
@@ -94,8 +90,8 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
 
     // Sadly we cannot send bad handles over a channel, so we cannot actually send the "invented"
     // handles for this test. Setting the info is enough though.
-    // metadata.set_process(process.GetHandle());
-    // metadata.set_thread(thread.GetHandle());
+    // metadata.set_process(...);
+    // metadata.set_thread(...);
     processes_[info.process_koid] = std::move(metadata);
 
     // If there is a callback, only send the new exceptions over.
@@ -151,17 +147,6 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
   std::atomic<int> watch_count_ = 0;
 };
 
-std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
-    const MockObjectProvider& object_provider, const std::string& process_name,
-    const std::string& thread_name) {
-  const MockProcessObject* process = object_provider.ProcessByName(process_name);
-  FX_DCHECK(process);
-  const MockThreadObject* thread = process->GetThread(thread_name);
-  FX_DCHECK(thread);
-
-  return {process, thread};
-}
-
 void RunUntil(async::Loop* loop, fit::function<bool()> condition,
               zx::duration step = zx::msec(10)) {
   while (!condition()) {
@@ -169,20 +154,20 @@ void RunUntil(async::Loop* loop, fit::function<bool()> condition,
   }
 }
 
+}  // namespace
+
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(LimboProvider, WatchProcessesOnException) {
-  // Set the process limbo.
-  auto object_provider = CreateDefaultMockObjectProvider();
-  auto [process1, thread1] = GetProcessThread(*object_provider, "root-p2", "initial-thread");
-
-  constexpr ExceptionType exception1 = ExceptionType::FATAL_PAGE_FAULT;
-  auto [process2, thread2] = GetProcessThread(*object_provider, "job121-p2", "third-thread");
-  constexpr ExceptionType exception2 = ExceptionType::UNALIGNED_ACCESS;
-
   StubProcessLimbo process_limbo;
-  process_limbo.AppendException(*process1, *thread1, exception1);
-  process_limbo.AppendException(*process2, *thread2, exception2);
+
+  constexpr zx_koid_t kProc1Koid = 100;
+  constexpr zx_koid_t kThread1Koid = 101;
+  process_limbo.AppendException(kProc1Koid, kThread1Koid, ExceptionType::FATAL_PAGE_FAULT);
+
+  constexpr zx_koid_t kProc2Koid = 102;
+  constexpr zx_koid_t kThread2Koid = 103;
+  process_limbo.AppendException(kProc2Koid, kThread2Koid, ExceptionType::UNALIGNED_ACCESS);
 
   // Setup the async loop to respond to the async call.
   async::Loop remote_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -199,102 +184,25 @@ TEST(LimboProvider, WatchProcessesOnException) {
 
   local_loop.RunUntilIdle();
 
-  /* std::vector<ProcessExceptionMetadata> processes; */
-  auto& processes = limbo_provider.Limbo();
+  // Validate that both exceptions came through. The handles aren't real so the values will not
+  // be useful, but we can verify that two come out the other end.
+  const auto& processes = limbo_provider.GetLimboRecords();
   ASSERT_EQ(processes.size(), 2u);
-
-  auto it = processes.begin();
-  ASSERT_TRUE(it->second.has_info());
-  EXPECT_EQ(it->second.info().process_koid, process1->koid);
-  EXPECT_EQ(it->second.info().thread_koid, thread1->koid);
-  EXPECT_EQ(it->second.info().type, exception1);
-
-  it++;
-  ASSERT_TRUE(it->second.has_info());
-  EXPECT_EQ(it->second.info().process_koid, process2->koid);
-  EXPECT_EQ(it->second.info().thread_koid, thread2->koid);
-  EXPECT_EQ(it->second.info().type, exception2);
-}
-
-TEST(LimboProvider, RetriveException) {
-  // Set the process limbo.
-  auto object_provider = CreateDefaultMockObjectProvider();
-  auto [process1, thread1] = GetProcessThread(*object_provider, "root-p2", "initial-thread");
-  constexpr ExceptionType exception1 = ExceptionType::FATAL_PAGE_FAULT;
-  auto [process2, thread2] = GetProcessThread(*object_provider, "job121-p2", "third-thread");
-  constexpr ExceptionType exception2 = ExceptionType::UNALIGNED_ACCESS;
-
-  StubProcessLimbo process_limbo;
-  process_limbo.AppendException(*process1, *thread1, exception1);
-  process_limbo.AppendException(*process2, *thread2, exception2);
-
-  // Setup the async loop to respond to the async call.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  sys::testing::ServiceDirectoryProvider services(loop.dispatcher());
-  services.AddService(process_limbo.GetHandler());
-  ASSERT_ZX_EQ(loop.StartThread("process-limbo-thread"), ZX_OK);
-
-  LimboProvider limbo_provider(services.service_directory());
-
-  // Some random koid should fail.
-  {
-    auto result = limbo_provider.RetrieveException(-1);
-    ASSERT_TRUE(result.is_error());
-    ASSERT_ZX_EQ(result.error_value(), ZX_ERR_NOT_FOUND);
-  }
-
-  // Getting a valid one should work.
-  {
-    auto result = limbo_provider.RetrieveException(process1->koid);
-    ASSERT_TRUE(result.is_ok());
-  }
-}
-
-TEST(LimboProvider, ReleaseProcess) {
-  // Set the process limbo.
-  auto object_provider = CreateDefaultMockObjectProvider();
-  auto [process1, thread1] = GetProcessThread(*object_provider, "root-p2", "initial-thread");
-  constexpr ExceptionType exception1 = ExceptionType::FATAL_PAGE_FAULT;
-  auto [process2, thread2] = GetProcessThread(*object_provider, "job121-p2", "third-thread");
-  constexpr ExceptionType exception2 = ExceptionType::UNALIGNED_ACCESS;
-
-  StubProcessLimbo process_limbo;
-  process_limbo.AppendException(*process1, *thread1, exception1);
-  process_limbo.AppendException(*process2, *thread2, exception2);
-
-  // Setup the async loop to respond to the async call.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  sys::testing::ServiceDirectoryProvider services(loop.dispatcher());
-  services.AddService(process_limbo.GetHandler());
-  ASSERT_ZX_EQ(loop.StartThread("process-limbo-thread"), ZX_OK);
-
-  LimboProvider limbo_provider(services.service_directory());
-
-  // Some random koid should fail.
-  fuchsia::exception::ProcessException exception;
-  ASSERT_ZX_EQ(limbo_provider.ReleaseProcess(-1), ZX_ERR_NOT_FOUND);
-
-  // Getting a valid one should work.
-  ASSERT_ZX_EQ(limbo_provider.ReleaseProcess(process1->koid), ZX_OK);
-
-  // There should only be one process left on limbo.
-  ASSERT_EQ(process_limbo.processes().size(), 1u);
-  auto it = process_limbo.processes().begin();
-  EXPECT_EQ(it++->first, process2->koid);
+  EXPECT_NE(processes.find(kProc1Koid), processes.end());
+  EXPECT_NE(processes.find(kProc2Koid), processes.end());
 }
 
 TEST(LimboProvider, WatchProcessesCallback) {
-  // Set the process limbo.
-  auto object_provider = CreateDefaultMockObjectProvider();
-
-  auto [process1, thread1] = GetProcessThread(*object_provider, "root-p2", "initial-thread");
-  constexpr ExceptionType exception1 = ExceptionType::FATAL_PAGE_FAULT;
-
-  auto [process2, thread2] = GetProcessThread(*object_provider, "job121-p2", "third-thread");
-  constexpr ExceptionType exception2 = ExceptionType::UNALIGNED_ACCESS;
-
+  constexpr zx_koid_t kProc1Koid = 100;
+  constexpr zx_koid_t kThread1Koid = 101;
+  constexpr auto kException1Type = ExceptionType::FATAL_PAGE_FAULT;
   StubProcessLimbo process_limbo;
-  process_limbo.AppendException(*process1, *thread1, exception1);
+  process_limbo.AppendException(kProc1Koid, kThread1Koid, kException1Type);
+
+  // These will be appended later.
+  constexpr zx_koid_t kProc2Koid = 102;
+  constexpr zx_koid_t kThread2Koid = 103;
+  constexpr auto kException2Type = ExceptionType::UNALIGNED_ACCESS;
 
   // Setup the async loop to respond to the async call.
   async::Loop remote_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -313,113 +221,75 @@ TEST(LimboProvider, WatchProcessesCallback) {
            [&process_limbo]() { return process_limbo.has_watch_processes_callback(); });
 
   {
-    // There should be one exception on limbo.
-    auto& limbo = limbo_provider.Limbo();
+    // There should be one exception in limbo.
+    const auto& limbo = limbo_provider.GetLimboRecords();
     ASSERT_EQ(limbo.size(), 1u);
-    auto it = limbo.find(process1->koid);
-    ASSERT_NE(it, limbo.end());
-    EXPECT_EQ(it->second.info().process_koid, process1->koid);
-    EXPECT_EQ(it->second.info().thread_koid, thread1->koid);
-    EXPECT_EQ(it->second.info().type, exception1);
+    EXPECT_NE(limbo.find(kProc1Koid), limbo.end());
   }
 
   // Set the callback.
-
-  bool called = false;
-  std::vector<ProcessExceptionMetadata> exceptions;
+  int called_count = 0;
   limbo_provider.set_on_enter_limbo(
-      [&called, &exceptions](std::vector<ProcessExceptionMetadata> new_exceptions) {
-        called = true;
-        exceptions = std::move(new_exceptions);
-      });
+      [&called_count](const LimboProvider::Record& record) { called_count++; });
 
   // The event should've not been signaled.
-  /* ASSERT_ZX_EQ(called.wait_one(ZX_USER_SIGNAL_0, zx::time(0), nullptr), ZX_ERR_TIMED_OUT); */
-  ASSERT_FALSE(called);
+  ASSERT_EQ(called_count, 0);
 
   // We post an exception on the limbo's loop.
   {
     zx::event exception_posted;
     ASSERT_ZX_EQ(zx::event::create(0, &exception_posted), ZX_OK);
-    async::PostTask(remote_loop.dispatcher(),
-                    [p = process2, t = thread2, &process_limbo, &exception_posted]() {
-                      // Add the new exception.
-                      process_limbo.AppendException(*p, *t, exception2);
-                      exception_posted.signal(0, ZX_USER_SIGNAL_0);
-                    });
+    async::PostTask(remote_loop.dispatcher(), [&process_limbo, &exception_posted]() {
+      // Add the new exception.
+      process_limbo.AppendException(kProc2Koid, kThread2Koid, kException2Type);
+      exception_posted.signal(0, ZX_USER_SIGNAL_0);
+    });
 
     // Wait until it was posted.
     ASSERT_ZX_EQ(exception_posted.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr), ZX_OK);
   }
 
   // Process the callback.
-  RunUntil(&local_loop, [&called]() { return called; });
+  RunUntil(&local_loop, [&called_count]() { return called_count > 0; });
 
   // Should've called the callback.
   {
-    ASSERT_TRUE(called);
-    ASSERT_EQ(exceptions.size(), 1u);
-    EXPECT_EQ(exceptions[0].info().process_koid, process2->koid);
-    EXPECT_EQ(exceptions[0].info().thread_koid, thread2->koid);
-    EXPECT_EQ(exceptions[0].info().type, exception2);
-
-    // The limbo should be updated.
-    auto& limbo = limbo_provider.Limbo();
-
-    ASSERT_EQ(limbo.size(), 2u);
-
-    auto it = limbo.find(process1->koid);
-    ASSERT_NE(it, limbo.end());
-    EXPECT_EQ(it->second.info().process_koid, process1->koid);
-    EXPECT_EQ(it->second.info().thread_koid, thread1->koid);
-    EXPECT_EQ(it->second.info().type, exception1);
-
-    it = limbo.find(process2->koid);
-    ASSERT_NE(it, limbo.end());
-    EXPECT_EQ(it->second.info().process_koid, process2->koid);
-    EXPECT_EQ(it->second.info().thread_koid, thread2->koid);
-    EXPECT_EQ(it->second.info().type, exception2);
+    ASSERT_EQ(called_count, 1);
+    const auto& records = limbo_provider.GetLimboRecords();
+    ASSERT_EQ(records.size(), 2u);
+    EXPECT_NE(records.find(kProc1Koid), records.end());
+    EXPECT_NE(records.find(kProc2Koid), records.end());
   }
 
   // Releasing an exception should also call the enter limbo callback.
-  called = false;
-  exceptions.clear();
+  called_count = 0;
 
   {
     zx::event release_event;
     ASSERT_ZX_EQ(zx::event::create(0, &release_event), ZX_OK);
-    async::PostTask(remote_loop.dispatcher(),
-                    [process_koid = process2->koid, &process_limbo, &release_event]() {
-                      // Add the new exception.
-                      process_limbo.ReleaseProcess(process_koid, [](auto a) {});
-                      release_event.signal(0, ZX_USER_SIGNAL_0);
-                    });
+    async::PostTask(remote_loop.dispatcher(), [&process_limbo, &release_event]() {
+      // Add the new exception.
+      process_limbo.ReleaseProcess(kProc2Koid, [](auto a) {});
+      release_event.signal(0, ZX_USER_SIGNAL_0);
+    });
 
     // Wait until it was posted.
     ASSERT_ZX_EQ(release_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr), ZX_OK);
   }
 
   // The enter limbo callback should not have been called.
-  ASSERT_FALSE(called);
+  ASSERT_EQ(called_count, 0);
 
   // We wait until the limbo have had a time to issue the other watch, thus having processes the
   // release callback.
   RunUntil(&local_loop, [&process_limbo]() { return process_limbo.watch_count() == 4; });
 
-  // We should've received the call.
-  // Should've called the callback.
+  // The limbo should be updated.
   {
-    // The limbo should be updated.
-    auto& limbo = limbo_provider.Limbo();
-    ASSERT_EQ(limbo.size(), 1u);
-
-    auto it = limbo.find(process1->koid);
-    ASSERT_NE(it, limbo.end());
-    EXPECT_EQ(it->second.info().process_koid, process1->koid);
-    EXPECT_EQ(it->second.info().thread_koid, thread1->koid);
-    EXPECT_EQ(it->second.info().type, exception1);
+    const auto& records = limbo_provider.GetLimboRecords();
+    ASSERT_EQ(records.size(), 1u);
+    EXPECT_NE(records.find(kProc1Koid), records.end());
   }
 }
 
-}  // namespace
 }  // namespace debug_agent

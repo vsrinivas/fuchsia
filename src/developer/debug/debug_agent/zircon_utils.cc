@@ -4,6 +4,11 @@
 
 #include "src/developer/debug/debug_agent/zircon_utils.h"
 
+#include <fuchsia/boot/cpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
+
 namespace debug_agent {
 namespace zircon {
 
@@ -38,6 +43,28 @@ std::string NameForObject(const zx::object_base& object) {
   if (object.get_property(ZX_PROP_NAME, name, sizeof(name)) == ZX_OK)
     return std::string(name);
   return std::string();
+}
+
+zx::job GetRootJob() {
+  zx::job root_job;
+  fuchsia::boot::RootJobSyncPtr root_job_ptr;
+
+  std::string root_job_path("/svc/");
+  root_job_path.append(fuchsia::boot::RootJob::Name_);
+
+  zx_status_t status = fdio_service_connect(root_job_path.c_str(),
+                                            root_job_ptr.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    FX_NOTREACHED();
+    return zx::job();
+  }
+
+  status = root_job_ptr->Get(&root_job);
+  if (status != ZX_OK) {
+    FX_NOTREACHED();
+    return zx::job();
+  }
+  return root_job;
 }
 
 std::vector<zx_koid_t> GetChildKoids(const zx::object_base& parent, uint32_t child_kind) {

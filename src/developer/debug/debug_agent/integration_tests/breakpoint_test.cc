@@ -10,6 +10,7 @@
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
+#include "src/developer/debug/debug_agent/zircon_system_interface.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
@@ -153,7 +154,8 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     BreakpointStreamBackend mock_stream_backend(loop);
 
     auto services = sys::ServiceDirectory::CreateFromNamespace();
-    DebugAgent agent(services, SystemProviders::CreateDefaults(services));
+    DebugAgent agent(std::make_unique<ZirconSystemInterface>(), services,
+                     SystemProviders::CreateDefaults(services));
     RemoteAPI* remote_api = &agent;
 
     agent.Connect(&mock_stream_backend.stream());
@@ -284,7 +286,8 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     BreakpointStreamBackend mock_stream_backend(loop);
 
     auto services = sys::ServiceDirectory::CreateFromNamespace();
-    DebugAgent agent(std::move(services), SystemProviders::CreateDefaults(services));
+    DebugAgent agent(std::make_unique<ZirconSystemInterface>(), std::move(services),
+                     SystemProviders::CreateDefaults(services));
     RemoteAPI* remote_api = &agent;
 
     agent.Connect(&mock_stream_backend.stream());

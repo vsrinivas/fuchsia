@@ -11,7 +11,6 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/general_registers.h"
-#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/developer/debug/debug_agent/thread_handle.h"
 #include "src/developer/debug/ipc/protocol.h"
@@ -23,7 +22,6 @@ namespace debug_agent {
 
 class DebugAgent;
 class DebuggedProcess;
-class ObjectProvider;
 class ProcessBreakpoint;
 class Watchpoint;
 
@@ -73,7 +71,6 @@ class DebuggedThread {
     std::unique_ptr<ThreadException> exception;  // Optional.
 
     std::shared_ptr<arch::ArchProvider> arch_provider;
-    std::shared_ptr<ObjectProvider> object_provider;
   };
   DebuggedThread(DebugAgent*, CreateInfo&&);
   virtual ~DebuggedThread();
@@ -258,7 +255,6 @@ class DebuggedThread {
   ProcessBreakpoint* current_breakpoint_ = nullptr;
 
   std::shared_ptr<arch::ArchProvider> arch_provider_ = nullptr;
-  std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
 
   fxl::WeakPtrFactory<DebuggedThread> weak_factory_;
 

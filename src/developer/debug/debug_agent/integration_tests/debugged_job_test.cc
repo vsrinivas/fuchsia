@@ -13,6 +13,7 @@
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/system_info.h"
+#include "src/developer/debug/debug_agent/zircon_system_interface.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_writer.h"
@@ -216,7 +217,8 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   JobStreamBackend backend(message_loop);
 
   auto services = sys::ServiceDirectory::CreateFromNamespace();
-  DebugAgent agent(services, SystemProviders::CreateDefaults(services));
+  DebugAgent agent(std::make_unique<ZirconSystemInterface>(), services,
+                   SystemProviders::CreateDefaults(services));
   RemoteAPI* remote_api = &agent;
 
   agent.Connect(&backend.stream());
@@ -413,7 +415,7 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
 
   auto services = sys::ServiceDirectory::CreateFromNamespace();
   SystemProviders providers = SystemProviders::CreateDefaults(services);
-  DebugAgent agent(std::move(services), providers);
+  DebugAgent agent(std::make_unique<ZirconSystemInterface>(), std::move(services), providers);
   RemoteAPI* remote_api = &agent;
 
   agent.Connect(&backend.stream());

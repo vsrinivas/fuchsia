@@ -9,6 +9,7 @@
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
+#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 
 namespace debug_agent {

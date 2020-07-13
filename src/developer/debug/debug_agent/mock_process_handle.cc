@@ -27,6 +27,8 @@ std::vector<std::unique_ptr<ThreadHandle>> MockProcessHandle::GetChildThreads() 
   return result;
 }
 
+zx_status_t MockProcessHandle::Kill() { return kill_status_; }
+
 int64_t MockProcessHandle::GetReturnCode() const { return 0; }
 
 std::vector<debug_ipc::AddressRegion> MockProcessHandle::GetAddressSpace(uint64_t address) const {

@@ -19,6 +19,7 @@ class ZirconProcessHandle final : public ProcessHandle {
   zx_koid_t GetKoid() const override { return process_koid_; }
   std::string GetName() const override;
   std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const override;
+  zx_status_t Kill() override;
   int64_t GetReturnCode() const override;
   std::vector<debug_ipc::AddressRegion> GetAddressSpace(uint64_t address) const override;
   std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const override;

@@ -22,6 +22,7 @@
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/system_info.h"
+#include "src/developer/debug/debug_agent/system_interface.h"
 #include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
@@ -82,8 +83,10 @@ std::string LogResumeRequest(const debug_ipc::ResumeRequest& request) {
 
 }  // namespace
 
-DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services, SystemProviders providers)
-    : services_(services),
+DebugAgent::DebugAgent(std::unique_ptr<SystemInterface> system_interface,
+                       std::shared_ptr<sys::ServiceDirectory> services, SystemProviders providers)
+    : system_interface_(std::move(system_interface)),
+      services_(services),
       arch_provider_(std::move(providers.arch_provider)),
       limbo_provider_(std::move(providers.limbo_provider)),
       object_provider_(std::move(providers.object_provider)),
@@ -111,12 +114,11 @@ DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services, SystemPr
   }
 
   // Set a callback to the limbo_provider to let us know when new processes enter the limbo.
-  limbo_provider_->set_on_enter_limbo(
-      [agent = GetWeakPtr()](std::vector<fuchsia::exception::ProcessExceptionMetadata> processes) {
-        if (!agent)
-          return;
-        agent->OnProcessesEnteredLimbo(std::move(processes));
-      });
+  limbo_provider_->set_on_enter_limbo([agent = GetWeakPtr()](const LimboProvider::Record& record) {
+    if (!agent)
+      return;
+    agent->OnProcessEnteredLimbo(record);
+  });
 }
 
 DebugAgent::~DebugAgent() = default;
@@ -176,7 +178,7 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
   for (auto& [process_koid, proc] : procs_) {
     debug_ipc::ProcessRecord process_record = {};
     process_record.process_koid = process_koid;
-    process_record.process_name = proc->name();
+    process_record.process_name = proc->process_handle().GetName();
 
     auto threads = proc->GetThreads();
     process_record.threads.reserve(threads.size());
@@ -191,20 +193,13 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
   // Get the limbo processes.
   if (limbo_provider_->Valid()) {
     std::vector<fuchsia::exception::ProcessExceptionMetadata> limbo_processes;
-    for (auto& [process_koid, process_metadata] : limbo_provider_->Limbo()) {
+    for (const auto& [process_koid, record] : limbo_provider_->GetLimboRecords()) {
       debug_ipc::ProcessRecord process_record = {};
-      process_record.process_koid = process_metadata.info().process_koid;
-      process_record.process_name = object_provider_->NameForObject(process_metadata.process());
+      process_record.process_koid = process_koid;
+      process_record.process_name = record.process->GetName();
 
-      // For now, only fill the thread on exception.
-      debug_ipc::ThreadRecord thread_record = {};
-      thread_record.process_koid = process_record.process_koid;
-      thread_record.thread_koid = process_metadata.info().thread_koid;
-      thread_record.name = object_provider_->NameForObject(process_metadata.thread());
-      thread_record.state = debug_ipc::ThreadRecord::State::kBlocked;
-      thread_record.blocked_reason = debug_ipc::ThreadRecord::BlockedReason::kException;
-
-      process_record.threads.push_back(std::move(thread_record));
+      // For now, only fill the thread blocked on exception.
+      process_record.threads.push_back(record.thread->GetThreadRecord());
 
       reply->limbo.push_back(std::move(process_record));
     }
@@ -228,24 +223,23 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::La
 
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
   // See first if the process is on limbo.
-  auto limbo_it = limbo_provider_->Limbo().find(request.process_koid);
-  if (limbo_it != limbo_provider_->Limbo().end()) {
+  if (limbo_provider_->IsProcessInLimbo(request.process_koid)) {
     // Release if from limbo, which will effectivelly kill it.
     reply->status = limbo_provider_->ReleaseProcess(request.process_koid);
     return;
   }
 
-  // Otherwise we search locally.
+  // Otherwise search locally.
   auto debug_process = GetDebuggedProcess(request.process_koid);
-  if (!debug_process || !debug_process->handle().is_valid()) {
+  if (!debug_process) {
     reply->status = ZX_ERR_NOT_FOUND;
     return;
   }
 
   debug_process->OnKill(request, reply);
 
-  // We check if this was a limbo "kill". If so, we mark this process to be removed from limbo when
-  // it re-enters it and tell the client that we successfully killed it.
+  // Check if this was a limbo "kill". If so, mark this process to be removed from limbo when it
+  // re-enters it and tell the client that we successfully killed it.
   if (reply->status == ZX_ERR_ACCESS_DENIED && debug_process->from_limbo()) {
     killed_limbo_procs_.insert(debug_process->koid());
     reply->status = ZX_OK;
@@ -267,9 +261,8 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
       break;
     }
     case debug_ipc::TaskType::kProcess: {
-      // First check if the process is waiting in limbo. If so, we release it.
-      auto limbo_it = limbo_provider_->Limbo().find(request.koid);
-      if (limbo_it != limbo_provider_->Limbo().end()) {
+      // First check if the process is waiting in limbo. If so, release it.
+      if (limbo_provider_->IsProcessInLimbo(request.koid)) {
         reply->status = limbo_provider_->ReleaseProcess(request.koid);
         return;
       }
@@ -418,7 +411,7 @@ void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [this, process]() mutable {
     debug_ipc::NotifyProcessStarting notify = {};
     notify.koid = process->koid();
-    notify.name = process->name();
+    notify.name = process->process_handle().GetName();
 
     debug_ipc::MessageWriter writer;
     debug_ipc::WriteNotifyProcessStarting(notify, &writer);
@@ -653,10 +646,12 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
 
 void DebugAgent::AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id) {
   DEBUG_LOG(Agent) << "Attemping to attach to process " << process_koid;
-  // We see if we're already attached to this process.
+
+  // See if we're already attached to this process.
   for (auto& [koid, proc] : procs_) {
     if (koid == process_koid) {
-      DEBUG_LOG(Agent) << "Already attached to " << proc->name() << "(" << proc->koid() << ").";
+      DEBUG_LOG(Agent) << "Already attached to " << proc->process_handle().GetName() << "("
+                       << proc->koid() << ").";
       SendAttachReply(this, transaction_id, ZX_ERR_ALREADY_BOUND);
       return;
     }
@@ -685,22 +680,7 @@ void DebugAgent::AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id
 zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id) {
   FX_DCHECK(limbo_provider_->Valid());
 
-  // Go over processes.
-  const fuchsia::exception::ProcessExceptionMetadata* process_metadata = nullptr;
-  for (const auto& [process_koid, exception] : limbo_provider_->Limbo()) {
-    FX_DCHECK(exception.has_info());
-    DEBUG_LOG(Agent) << "Found process in limbo: " << exception.info().process_koid;
-    if (exception.info().process_koid == process_koid) {
-      process_metadata = &exception;
-      break;
-    }
-  }
-
-  if (!process_metadata)
-    return ZX_ERR_NOT_FOUND;
-
   // Obtain the process and exception from limbo.
-
   auto retrieved = limbo_provider_->RetrieveException(process_koid);
   if (retrieved.is_error()) {
     zx_status_t status = retrieved.error_value();
@@ -708,15 +688,14 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
     return status;
   }
 
-  auto [exception, process] = std::move(retrieved.value());
+  LimboProvider::RetrievedException& exception = retrieved.value();
 
   DebuggedProcessCreateInfo create_info;
   create_info.koid = process_koid;
   create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
   create_info.from_limbo = true;
-  create_info.name = object_provider_->NameForObject(process.get());
-  create_info.handle = std::make_unique<ZirconProcessHandle>(std::move(process));
+  create_info.handle = std::move(exception.process);
 
   DebuggedProcess* debugged_process = nullptr;
   zx_status_t status = AddDebuggedProcess(std::move(create_info), &debugged_process);
@@ -724,41 +703,41 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
     return status;
 
   // Send the response, then the notifications about the process and threads.
-  SendAttachReply(this, transaction_id, ZX_OK, process_koid, debugged_process->name());
+  //
+  // DO NOT RETURN FAILURE AFTER THIS POINT or the attach reply will be duplicated (the caller will
+  // fall back on non-limbo processes if this function fails and will send another reply).
+  SendAttachReply(this, transaction_id, ZX_OK, process_koid,
+                  debugged_process->process_handle().GetName());
 
   debugged_process->PopulateCurrentThreads();
   debugged_process->SuspendAndSendModulesIfKnown();
 
+  zx_koid_t thread_koid = exception.thread->GetKoid();
+
   // Pass in the exception handle to the corresponding thread.
   DebuggedThread* exception_thread = nullptr;
   for (DebuggedThread* thread : debugged_process->GetThreads()) {
-    auto koid = exception->GetThreadKoid();
-    if (koid.is_error()) {
-      DEBUG_LOG(Agent) << "failed to get koid of exception's thread";
-      return koid.error_value();
-    }
-    if (thread->koid() == koid.value()) {
+    if (thread->koid() == thread_koid) {
       exception_thread = thread;
       break;
     }
   }
 
-  FX_DCHECK(exception_thread);
-  exception_thread->set_exception_handle(std::move(exception));
+  if (exception_thread)
+    exception_thread->set_exception_handle(std::move(exception.exception));
 
   return ZX_OK;
 }
 
 zx_status_t DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id) {
-  zx::process process_handle = object_provider_->GetProcessFromKoid(process_koid);
-  if (!process_handle.is_valid())
+  std::unique_ptr<ProcessHandle> process_handle = system_interface_->GetProcess(process_koid);
+  if (!process_handle)
     return ZX_ERR_NOT_FOUND;
 
   // We attach to the process.
   DebuggedProcessCreateInfo create_info = {};
   create_info.koid = process_koid;
-  create_info.name = object_provider_->NameForObject(process_handle);
-  create_info.handle = std::make_unique<ZirconProcessHandle>(std::move(process_handle));
+  create_info.handle = std::move(process_handle);
   create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
 
@@ -768,7 +747,7 @@ zx_status_t DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t
     return status;
 
   // Send the response, then the notifications about the process and threads.
-  SendAttachReply(this, transaction_id, ZX_OK, process_koid, process->name());
+  SendAttachReply(this, transaction_id, ZX_OK, process_koid, process->process_handle().GetName());
 
   process->PopulateCurrentThreads();
   process->SuspendAndSendModulesIfKnown();
@@ -935,7 +914,6 @@ void DebugAgent::OnProcessStart(const std::string& filter,
   DebuggedProcessCreateInfo create_info;
   create_info.koid = process_koid;
   create_info.handle = std::move(process_handle);
-  create_info.name = description.process_name;
   create_info.out = std::move(handles.out);
   create_info.err = std::move(handles.err);
   create_info.arch_provider = arch_provider_;
@@ -980,30 +958,27 @@ void DebugAgent::OnComponentTerminated(int64_t return_code, const ComponentDescr
   }
 }
 
-void DebugAgent::OnProcessesEnteredLimbo(
-    std::vector<fuchsia::exception::ProcessExceptionMetadata> processes) {
-  for (auto& process : processes) {
-    // We first check if we were to "kill" this process.
-    auto it = killed_limbo_procs_.find(process.info().process_koid);
-    if (it != killed_limbo_procs_.end()) {
-      limbo_provider_->ReleaseProcess(process.info().process_koid);
-      killed_limbo_procs_.erase(it);
-      continue;
-    }
+void DebugAgent::OnProcessEnteredLimbo(const LimboProvider::Record& record) {
+  zx_koid_t process_koid = record.process->GetKoid();
 
-    std::string process_name = object_provider_->NameForObject(process.process());
-    DEBUG_LOG(Agent) << "Process " << process_name << " (" << process.info().process_koid
-                     << ") entered limbo.";
-
-    debug_ipc::NotifyProcessStarting process_starting = {};
-    process_starting.type = debug_ipc::NotifyProcessStarting::Type::kLimbo;
-    process_starting.koid = process.info().process_koid;
-    process_starting.name = std::move(process_name);
-
-    debug_ipc::MessageWriter writer;
-    debug_ipc::WriteNotifyProcessStarting(std::move(process_starting), &writer);
-    stream()->Write(writer.MessageComplete());
+  // First check if we were to "kill" this process.
+  if (auto it = killed_limbo_procs_.find(process_koid); it != killed_limbo_procs_.end()) {
+    limbo_provider_->ReleaseProcess(process_koid);
+    killed_limbo_procs_.erase(it);
+    return;
   }
+
+  std::string process_name = record.process->GetName();
+  DEBUG_LOG(Agent) << "Process " << process_name << " (" << process_koid << ") entered limbo.";
+
+  debug_ipc::NotifyProcessStarting process_starting = {};
+  process_starting.type = debug_ipc::NotifyProcessStarting::Type::kLimbo;
+  process_starting.koid = process_koid;
+  process_starting.name = std::move(process_name);
+
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyProcessStarting(std::move(process_starting), &writer);
+  stream()->Write(writer.MessageComplete());
 }
 
 }  // namespace debug_agent

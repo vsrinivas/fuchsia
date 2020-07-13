@@ -10,6 +10,7 @@
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_breakpoint.h"
+#include "src/developer/debug/debug_agent/mock_system_interface.h"
 #include "src/developer/debug/debug_agent/mock_thread_exception.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
@@ -165,7 +166,8 @@ TestContext CreateTestContext() {
   providers.arch_provider = context.arch_provider;
   providers.limbo_provider = context.limbo_provider;
   providers.object_provider = context.object_provider;
-  context.debug_agent = std::make_unique<DebugAgent>(nullptr, std::move(providers));
+  context.debug_agent = std::make_unique<DebugAgent>(
+      std::make_unique<MockSystemInterface>(MockJobHandle(1)), nullptr, std::move(providers));
 
   // Create the connection to the debug agent.
   context.backend = std::make_unique<TestStreamBackend>();
@@ -228,7 +230,6 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   create_info.koid = thread_object->koid;
   create_info.handle = std::move(owning_thread_handle);
   create_info.arch_provider = context.arch_provider;
-  create_info.object_provider = context.object_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Set the exception information the arch provider is going to return.
@@ -284,7 +285,6 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   create_info.koid = thread_object->koid;
   create_info.handle = std::move(owning_thread_handle);
   create_info.arch_provider = context.arch_provider;
-  create_info.object_provider = context.object_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Set the exception information the arch provider is going to return.
@@ -378,7 +378,6 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   create_info.koid = thread_object->koid;
   create_info.handle = std::move(owning_thread_handle);
   create_info.arch_provider = context.arch_provider;
-  create_info.object_provider = context.object_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Set the exception information the arch provider is going to return.
@@ -451,7 +450,6 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   create_info.koid = thread_object->koid;
   create_info.handle = std::move(owning_thread_handle);
   create_info.arch_provider = context.arch_provider;
-  create_info.object_provider = context.object_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Add a watchpoint.

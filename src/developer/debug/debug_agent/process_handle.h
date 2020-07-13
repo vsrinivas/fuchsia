@@ -37,6 +37,9 @@ class ProcessHandle {
 
   virtual std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const = 0;
 
+  // Terminates the process. The actually termination will normally happen asynchronously.
+  virtual zx_status_t Kill() = 0;
+
   // Retrieves the return code for an exited process. Returns some default value if the process is
   // still running (as defined by the kernel).
   virtual int64_t GetReturnCode() const = 0;

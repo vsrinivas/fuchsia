@@ -10,9 +10,9 @@
 #include <memory>
 #include <vector>
 
-namespace debug_agent {
+#include "src/developer/debug/debug_agent/process_handle.h"
 
-class ProcessHandle;
+namespace debug_agent {
 
 class JobHandle {
  public:
@@ -31,6 +31,13 @@ class JobHandle {
   // Returns the set of child objects for this job.
   virtual std::vector<std::unique_ptr<JobHandle>> GetChildJobs() const = 0;
   virtual std::vector<std::unique_ptr<ProcessHandle>> GetChildProcesses() const = 0;
+
+  // Recursively searches the job tree from this job and returns a handle to the process with the
+  // given koid. Returns an empty pointer if the process was not found. This can also happen if the
+  // debug_agent doesn't have permission to see it.
+  //
+  // This is not virtual because it can be implemented entirely in terms of the virtual interface.
+  std::unique_ptr<ProcessHandle> FindProcess(zx_koid_t process_koid) const;
 };
 
 }  // namespace debug_agent

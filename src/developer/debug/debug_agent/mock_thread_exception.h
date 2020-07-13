@@ -20,7 +20,7 @@ namespace debug_agent {
 class MockThreadException : public ThreadException {
  public:
   MockThreadException() = default;
-  MockThreadException(uint64_t thread_koid) : thread_koid_(thread_koid) {}
+  explicit MockThreadException(uint64_t thread_koid) : thread_koid_(thread_koid) {}
   ~MockThreadException() = default;
 
   fitx::result<zx_status_t, zx_koid_t> GetThreadKoid() const override {

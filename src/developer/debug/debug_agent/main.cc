@@ -16,6 +16,7 @@
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/socket_connection.h"
 #include "src/developer/debug/debug_agent/unwind.h"
+#include "src/developer/debug/debug_agent/zircon_system_interface.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
@@ -173,7 +174,8 @@ int main(int argc, const char* argv[]) {
       // The debug agent is independent of whether it's connected or not.
       // DebugAgent::Disconnect is called by ~SocketConnection is called by ~SocketServer, so the
       // debug agent must be destructed after the SocketServer.
-      debug_agent::DebugAgent debug_agent(services,
+      debug_agent::DebugAgent debug_agent(std::make_unique<debug_agent::ZirconSystemInterface>(),
+                                          services,
                                           debug_agent::SystemProviders::CreateDefaults(services));
 
       debug_agent::SocketServer server;

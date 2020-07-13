@@ -13,6 +13,7 @@
 #include <optional>
 #include <vector>
 
+#include "src/developer/debug/debug_agent/process_handle.h"
 #include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -25,13 +26,21 @@ namespace debug_agent {
 // exception occurred. We call this process Just In Time Debugging (JITD).
 class LimboProvider {
  public:
-  using OnEnterLimboCallback =
-      fit::function<void(std::vector<fuchsia::exception::ProcessExceptionMetadata>)>;
-
-  struct RetrievedException {
-    std::unique_ptr<ThreadException> exception;
-    zx::process process;
+  struct Record {
+    std::unique_ptr<ProcessHandle> process;
+    std::unique_ptr<ThreadHandle> thread;
   };
+
+  // Used when taking over an exception from limbo. This adds on the exception to the normal process
+  // and thread handles.
+  struct RetrievedException : public Record {
+    std::unique_ptr<ThreadException> exception;
+  };
+
+  // Maps process koids to the corresponding records.
+  using RecordMap = std::map<zx_koid_t, Record>;
+
+  using OnEnterLimboCallback = fit::function<void(const Record&)>;
 
   explicit LimboProvider(std::shared_ptr<sys::ServiceDirectory> services);
   virtual ~LimboProvider();
@@ -56,8 +65,13 @@ class LimboProvider {
   //       empty (not have any processes waiting on an exception).
   virtual bool Valid() const;
 
-  virtual const std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata>& Limbo() const;
+  // Returns true if the process with the given koid is in limbo.
+  bool IsProcessInLimbo(zx_koid_t process_koid) const;
 
+  // Read-only access to the processes currently waiting in limbo.
+  virtual const RecordMap& GetLimboRecords() const { return limbo_; }
+
+  // Consumes the process in limbo.
   virtual fitx::result<zx_status_t, RetrievedException> RetrieveException(zx_koid_t process_koid);
 
   virtual zx_status_t ReleaseProcess(zx_koid_t process_koid);
@@ -79,7 +93,7 @@ class LimboProvider {
   // Because the Process Limbo uses hanging gets (async callbacks) and this class exposes a
   // synchronous inteface, we need to keep track of the current state in order to be able to
   // return it immediatelly.
-  std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata> limbo_;
+  RecordMap limbo_;
 
   bool is_limbo_active_ = false;
 

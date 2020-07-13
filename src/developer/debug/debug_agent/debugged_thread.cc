@@ -17,7 +17,6 @@
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
-#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/unwind.h"
@@ -38,7 +37,7 @@ namespace {
 // Used to have better context upon reading the debug logs.
 std::string ThreadPreamble(const DebuggedThread* thread) {
   return fxl::StringPrintf("[Pr: %lu (%s), T: %lu] ", thread->process()->koid(),
-                           thread->process()->name().c_str(), thread->koid());
+                           thread->process()->process_handle().GetName().c_str(), thread->koid());
 }
 
 // TODO(donosoc): Move this to a more generic place (probably shared) where it
@@ -123,9 +122,7 @@ DebuggedThread::DebuggedThread(DebugAgent* debug_agent, CreateInfo&& create_info
       process_(create_info.process),
       exception_handle_(std::move(create_info.exception)),
       arch_provider_(std::move(create_info.arch_provider)),
-      object_provider_(std::move(create_info.object_provider)),
       weak_factory_(this) {
-  FX_DCHECK(object_provider_);
   FX_DCHECK(arch_provider_);
 
   switch (create_info.creation_option) {

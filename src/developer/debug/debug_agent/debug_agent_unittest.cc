@@ -12,11 +12,15 @@
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
+#include "src/developer/debug/debug_agent/mock_process_handle.h"
+#include "src/developer/debug/debug_agent/mock_system_interface.h"
 #include "src/developer/debug/debug_agent/mock_thread_exception.h"
+#include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -103,77 +107,88 @@ class DebugAgentMockProcess : public MockProcess {
 
 class MockLimboProvider : public LimboProvider {
  public:
+  struct MockRecord {
+    MockRecord(MockProcessHandle p, MockThreadHandle t, MockThreadException e)
+        : process(std::move(p)), thread(std::move(t)), exception(std::move(e)) {}
+
+    MockProcessHandle process;
+    MockThreadHandle thread;
+    MockThreadException exception;
+  };
+
   MockLimboProvider() : LimboProvider(nullptr) {}
 
-  const std::map<zx_koid_t, ProcessExceptionMetadata>& Limbo() const override { return limbo_; }
   const std::vector<zx_koid_t> release_calls() const { return release_calls_; }
+
+  const RecordMap& GetLimboRecords() const override {
+    // Recreate limbo_ contents from the current mock records.
+    limbo_.clear();
+    for (const auto& [process_koid, mock_record] : mock_records_)
+      limbo_[mock_record.process.GetKoid()] = FromMockRecord(mock_record);
+    return limbo_;
+  }
 
   bool Valid() const override { return true; }
 
   fitx::result<zx_status_t, RetrievedException> RetrieveException(zx_koid_t process_koid) override {
-    auto it = limbo_.find(process_koid);
-    if (it == limbo_.end())
+    auto it = mock_records_.find(process_koid);
+    if (it == mock_records_.end())
       return fitx::error(ZX_ERR_NOT_FOUND);
 
-    zx_koid_t thread_koid = it->second.info().thread_koid;
-    // zx_koid_t process_koid = it->second.info().process_koid;
-    limbo_.erase(it);
-    return fitx::ok(RetrievedException{
-        std::make_unique<MockThreadException>(thread_koid),
-        zx::process(process_koid),
-    });
+    RetrievedException result;
+    result.process = std::make_unique<MockProcessHandle>(it->second.process);
+    result.thread = std::make_unique<MockThreadHandle>(it->second.thread);
+    result.exception = std::make_unique<MockThreadException>(it->second.exception);
+
+    mock_records_.erase(it);
+    limbo_.erase(process_koid);
+
+    return fitx::ok(std::move(result));
   }
 
-  void AppendException(const MockProcessObject* process, const MockThreadObject* thread,
-                       ExceptionType exception_type) {
-    ExceptionInfo info = {};
-    info.process_koid = process->koid;
-    info.thread_koid = thread->koid;
-    info.type = exception_type;
-
-    ProcessExceptionMetadata metadata = {};
-    metadata.set_info(std::move(info));
-    metadata.set_process(process->GetHandle());
-    metadata.set_thread(thread->GetHandle());
-
-    limbo_[process->koid] = std::move(metadata);
+  void AppendException(MockProcessHandle process, MockThreadHandle thread,
+                       MockThreadException exception) {
+    zx_koid_t process_koid = process.GetKoid();
+    mock_records_.insert(
+        {process_koid, MockRecord(std::move(process), std::move(thread), std::move(exception))});
   }
 
   void CallOnEnterLimbo() {
     FX_DCHECK(on_enter_limbo_);
 
-    std::vector<ProcessExceptionMetadata> processes;
-    processes.reserve(limbo_.size());
-    for (const auto& [process_koid, metadata] : limbo_) {
-      processes.push_back(CopyMetadata(metadata));
-    }
-
-    on_enter_limbo_(std::move(processes));
+    // The callback may mutate the list from under us, so make a copy of what to call.
+    auto record_copy = mock_records_;
+    for (const auto& [process_koid, mock_record] : record_copy)
+      on_enter_limbo_(FromMockRecord(mock_record));
   }
 
   zx_status_t ReleaseProcess(zx_koid_t process_koid) override {
     release_calls_.push_back(process_koid);
 
-    auto it = limbo_.find(process_koid);
-    if (it == limbo_.end())
+    auto it = mock_records_.find(process_koid);
+    if (it == mock_records_.end())
       return ZX_ERR_NOT_FOUND;
 
-    limbo_.erase(it);
+    mock_records_.erase(it);
+    limbo_.erase(process_koid);
     return ZX_OK;
   }
 
  private:
-  ProcessExceptionMetadata CopyMetadata(const ProcessExceptionMetadata& metadata) {
-    ProcessExceptionMetadata exception = {};
-
-    exception.set_info(metadata.info());
-    exception.set_process(zx::process(metadata.info().process_koid));
-    exception.set_thread(zx::thread(metadata.info().thread_koid));
-
-    return exception;
+  static Record FromMockRecord(const MockRecord& mock) {
+    Record record;
+    record.process = std::make_unique<MockProcessHandle>(mock.process);
+    record.thread = std::make_unique<MockThreadHandle>(mock.thread);
+    return record;
   }
 
-  std::map<zx_koid_t, ProcessExceptionMetadata> limbo_;
+  // Current contents of limbo.
+  std::map<zx_koid_t, MockRecord> mock_records_;
+
+  // Recomputed from mock_records_ for every call to GetLimboRecords() because it must return a
+  // reference.
+  mutable RecordMap limbo_;
+
   std::vector<zx_koid_t> release_calls_;
 };
 
@@ -234,7 +249,8 @@ class DebugAgentTests : public ::testing::Test {};
 TEST_F(DebugAgentTests, OnGlobalStatus) {
   auto test_context = CreateTestContext();
 
-  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()), nullptr,
+                         ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -296,22 +312,18 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
   EXPECT_EQ(reply.processes[1].threads[1].thread_koid, kProcess2ThreadKoid2);
 
   // Set a limbo provider.
-  const MockObjectProvider& object_provider = *test_context->object_provider;
 
-  const std::string kLimboProcess1 = "job1-p1";
-  const std::string kLimboProcess1Thread = "initial-thread";
-  constexpr ExceptionType kLimboException1 = ExceptionType::FATAL_PAGE_FAULT;
-  auto [limbo_proc1, limbo_thread1] =
-      GetProcessThread(object_provider, kLimboProcess1, kLimboProcess1Thread);
+  constexpr zx_koid_t kProcKoid1 = 100;
+  constexpr zx_koid_t kThreadKoid1 = 101;
+  test_context->limbo_provider->AppendException(
+      MockProcessHandle(kProcKoid1, "proc1"), MockThreadHandle(kProcKoid1, kThreadKoid1, "thread1"),
+      MockThreadException(kThreadKoid1));
 
-  const std::string kLimboProcess2 = "job121-p2";
-  const std::string kLimboProcess2Thread = "second-thread";
-  constexpr ExceptionType kLimboException2 = ExceptionType::UNALIGNED_ACCESS;
-  auto [limbo_proc2, limbo_thread2] =
-      GetProcessThread(object_provider, kLimboProcess2, kLimboProcess2Thread);
-
-  test_context->limbo_provider->AppendException(limbo_proc1, limbo_thread1, kLimboException1);
-  test_context->limbo_provider->AppendException(limbo_proc2, limbo_thread2, kLimboException2);
+  constexpr zx_koid_t kProcKoid2 = 102;
+  constexpr zx_koid_t kThreadKoid2 = 103;
+  test_context->limbo_provider->AppendException(
+      MockProcessHandle(kProcKoid2, "proc2"), MockThreadHandle(kProcKoid2, kThreadKoid1, "thread2"),
+      MockThreadException(kThreadKoid2));
 
   reply = {};
   remote_api->OnStatus(request, &reply);
@@ -321,22 +333,17 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
 
   // The limbo processes should be there.
   ASSERT_EQ(reply.limbo.size(), 2u);
-  EXPECT_EQ(reply.limbo[0].process_koid, limbo_proc1->koid);
-  EXPECT_EQ(reply.limbo[0].process_name, limbo_proc1->name);
+  EXPECT_EQ(reply.limbo[0].process_koid, kProcKoid1);
+  EXPECT_EQ(reply.limbo[0].process_name, "proc1");
   ASSERT_EQ(reply.limbo[0].threads.size(), 1u);
-  EXPECT_EQ(reply.limbo[0].threads[0].process_koid, limbo_proc1->koid);
-  EXPECT_EQ(reply.limbo[0].threads[0].thread_koid, limbo_thread1->koid);
-  EXPECT_EQ(reply.limbo[0].threads[0].name, limbo_thread1->name);
-  EXPECT_EQ(reply.limbo[0].threads[0].state, debug_ipc::ThreadRecord::State::kBlocked);
-  EXPECT_EQ(reply.limbo[0].threads[0].blocked_reason,
-            debug_ipc::ThreadRecord::BlockedReason::kException);
 
   // TODO(donosoc): Add exception type.
 }
 
 TEST_F(DebugAgentTests, OnProcessStatus) {
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()), nullptr,
+                         ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -400,7 +407,8 @@ TEST_F(DebugAgentTests, OnAttachNotFound) {
   uint32_t transaction_id = 1u;
 
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()), nullptr,
+                         ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -421,10 +429,11 @@ TEST_F(DebugAgentTests, OnAttachNotFound) {
     ASSERT_EQ(watches.size(), 0u);
   }
 
-  auto [proc_object, thread_object] =
-      GetProcessThread(*test_context->object_provider, "job11-p1", "second-thread");
-  test_context->limbo_provider->AppendException(proc_object, thread_object,
-                                                ExceptionType::FATAL_PAGE_FAULT);
+  constexpr zx_koid_t kProcKoid1 = 100;
+  constexpr zx_koid_t kThreadKoid1 = 101;
+  test_context->limbo_provider->AppendException(
+      MockProcessHandle(kProcKoid1, "proc1"), MockThreadHandle(kProcKoid1, kThreadKoid1, "thread1"),
+      MockThreadException(kThreadKoid1));
 
   // Even with limbo it should fail.
   remote_api->OnAttach(transaction_id++, attach_request);
@@ -445,13 +454,14 @@ TEST_F(DebugAgentTests, OnAttach) {
   uint32_t transaction_id = 1u;
 
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()), nullptr,
+                         ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
   debug_ipc::AttachRequest attach_request;
   attach_request.type = debug_ipc::TaskType::kProcess;
-  attach_request.koid = 11;
+  attach_request.koid = 11;  // Koid for job1-p2 from the GetMockJobTree() hierarchy.
 
   remote_api->OnAttach(transaction_id++, attach_request);
 
@@ -459,7 +469,6 @@ TEST_F(DebugAgentTests, OnAttach) {
   auto& watches = test_context->loop.watches();
   ASSERT_EQ(watches.size(), 1u);
   EXPECT_EQ(watches[0].process_name, "job1-p2");
-  EXPECT_EQ(watches[0].process_handle, 11u);
   EXPECT_EQ(watches[0].process_koid, 11u);
 
   // We should've gotten an attach reply.
@@ -498,48 +507,54 @@ TEST_F(DebugAgentTests, OnAttach) {
 }
 
 TEST_F(DebugAgentTests, AttachToLimbo) {
+  // debug_ipc::SetDebugMode(true);
+  // debug_ipc::SetLogCategories({debug_ipc::LogCategory::kAll});
   uint32_t transaction_id = 1u;
 
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()), nullptr,
+                         ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
-  auto [proc_object, thread_object] =
-      GetProcessThread(*test_context->object_provider, "job11-p1", "second-thread");
-  test_context->limbo_provider->AppendException(proc_object, thread_object,
-                                                ExceptionType::FATAL_PAGE_FAULT);
+  constexpr zx_koid_t kProcKoid = 100;
+  constexpr zx_koid_t kThreadKoid = 101;
+  MockProcessHandle mock_process(kProcKoid, "proc");
+  MockThreadHandle mock_thread(kProcKoid, kThreadKoid, "thread");
+  mock_process.set_threads({mock_thread});
+
+  test_context->limbo_provider->AppendException(mock_process, mock_thread,
+                                                MockThreadException(kThreadKoid));
 
   debug_ipc::AttachRequest attach_request = {};
   attach_request.type = debug_ipc::TaskType::kProcess;
-  attach_request.koid = proc_object->koid;
+  attach_request.koid = kProcKoid;
   remote_api->OnAttach(transaction_id++, attach_request);
 
   // We should've received a watch command (which does the low level exception watching).
   auto& watches = test_context->loop.watches();
   ASSERT_EQ(watches.size(), 1u);
-  EXPECT_EQ(watches[0].process_name, proc_object->name);
-  EXPECT_EQ(watches[0].process_handle, proc_object->koid);
-  EXPECT_EQ(watches[0].process_koid, proc_object->koid);
+  EXPECT_EQ(watches[0].process_name, "proc");
+  EXPECT_EQ(watches[0].process_koid, kProcKoid);
 
   // We should've gotten an attach reply.
   auto& attach_replies = test_context->stream_backend.attach_replies();
-  auto reply = attach_replies.back();
   ASSERT_EQ(attach_replies.size(), 1u);
+  auto reply = attach_replies.back();
   EXPECT_ZX_EQ(reply.status, ZX_OK);
-  EXPECT_EQ(reply.koid, proc_object->koid);
-  EXPECT_EQ(reply.name, proc_object->name);
+  EXPECT_EQ(reply.koid, kProcKoid);
+  EXPECT_EQ(reply.name, "proc");
 
   {
-    DebuggedProcess* process = debug_agent.GetDebuggedProcess(proc_object->koid);
+    DebuggedProcess* process = debug_agent.GetDebuggedProcess(kProcKoid);
     ASSERT_TRUE(process);
     auto threads = process->GetThreads();
-    ASSERT_EQ(threads.size(), 2u);
+    ASSERT_EQ(threads.size(), 1u);
 
     // Search for the exception thread.
     DebuggedThread* exception_thread = nullptr;
     for (DebuggedThread* thread : threads) {
-      if (thread->koid() == thread_object->koid) {
+      if (thread->koid() == kThreadKoid) {
         exception_thread = thread;
         break;
       }
@@ -550,19 +565,21 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
     auto koid = exception_thread->exception_handle()->GetThreadKoid();
     ASSERT_TRUE(koid.is_ok()) << "failed to get exception's thread koid: "
                               << zx_status_get_string(koid.error_value());
-    EXPECT_EQ(koid.value(), thread_object->koid);
+    EXPECT_EQ(koid.value(), kThreadKoid);
   }
 }
 
 TEST_F(DebugAgentTests, OnEnterLimbo) {
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()), nullptr,
+                         ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
 
-  auto [proc_object, thread_object] =
-      GetProcessThread(*test_context->object_provider, "job11-p1", "second-thread");
-  test_context->limbo_provider->AppendException(proc_object, thread_object,
-                                                ExceptionType::FATAL_PAGE_FAULT);
+  constexpr zx_koid_t kProcKoid1 = 100;
+  constexpr zx_koid_t kThreadKoid1 = 101;
+  test_context->limbo_provider->AppendException(
+      MockProcessHandle(kProcKoid1, "proc1"), MockThreadHandle(kProcKoid1, kThreadKoid1, "thread1"),
+      MockThreadException(kThreadKoid1));
 
   // Call the limbo.
   test_context->limbo_provider->CallOnEnterLimbo();
@@ -573,15 +590,16 @@ TEST_F(DebugAgentTests, OnEnterLimbo) {
 
     auto& process_start = test_context->stream_backend.process_starts()[0];
     EXPECT_EQ(process_start.type, debug_ipc::NotifyProcessStarting::Type::kLimbo);
-    EXPECT_EQ(process_start.koid, proc_object->koid);
+    EXPECT_EQ(process_start.koid, kProcKoid1);
     EXPECT_EQ(process_start.component_id, 0u);
-    EXPECT_EQ(process_start.name, proc_object->name);
+    EXPECT_EQ(process_start.name, "proc1");
   }
 }
 
 TEST_F(DebugAgentTests, DetachFromLimbo) {
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()), nullptr,
+                         ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -602,33 +620,36 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
   }
 
   // Adding it should now find it and remove it.
-  test_context->limbo_provider->AppendException(proc_object, thread_object,
-                                                ExceptionType::FATAL_PAGE_FAULT);
+  constexpr zx_koid_t kProcKoid1 = 100;
+  constexpr zx_koid_t kThreadKoid1 = 101;
+  test_context->limbo_provider->AppendException(
+      MockProcessHandle(kProcKoid1, "proc1"), MockThreadHandle(kProcKoid1, kThreadKoid1, "thread1"),
+      MockThreadException(kThreadKoid1));
   {
     debug_ipc::DetachRequest request = {};
     request.type = debug_ipc::TaskType::kProcess;
-    request.koid = proc_object->koid;
+    request.koid = kProcKoid1;
 
     debug_ipc::DetachReply reply = {};
     remote_api->OnDetach(request, &reply);
 
     ASSERT_ZX_EQ(reply.status, ZX_OK);
     ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 1u);
-    EXPECT_EQ(test_context->limbo_provider->release_calls()[0], proc_object->koid);
+    EXPECT_EQ(test_context->limbo_provider->release_calls()[0], kProcKoid1);
   }
 
   // This should've remove it from limbo, trying it again should fail.
   {
     debug_ipc::DetachRequest request = {};
     request.type = debug_ipc::TaskType::kProcess;
-    request.koid = proc_object->koid;
+    request.koid = kProcKoid1;
 
     debug_ipc::DetachReply reply = {};
     remote_api->OnDetach(request, &reply);
 
     ASSERT_ZX_EQ(reply.status, ZX_ERR_NOT_FOUND);
     ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 1u);
-    EXPECT_EQ(test_context->limbo_provider->release_calls()[0], proc_object->koid);
+    EXPECT_EQ(test_context->limbo_provider->release_calls()[0], kProcKoid1);
   }
 }
 
@@ -636,7 +657,8 @@ TEST_F(DebugAgentTests, Kill) {
   uint32_t transaction_id = 1u;
 
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()), nullptr,
+                         ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -682,9 +704,16 @@ TEST_F(DebugAgentTests, Kill) {
     ASSERT_ZX_EQ(kill_reply.status, ZX_ERR_NOT_FOUND);
   }
 
-  // We now add the process to the limbo.
-  test_context->limbo_provider->AppendException(proc_object, thread_object,
-                                                ExceptionType::FATAL_PAGE_FAULT);
+  // Add the process to the limbo.
+  constexpr zx_koid_t kProcKoid = 100;
+  constexpr zx_koid_t kThreadKoid = 101;
+  MockProcessHandle mock_process(kProcKoid, "proc");
+  // This is a limbo process so we can not kill it.
+  mock_process.set_kill_status(ZX_ERR_ACCESS_DENIED);
+  MockThreadHandle mock_thread(kProcKoid, kThreadKoid, "thread");
+  MockThreadException mock_exception(kThreadKoid);
+  mock_process.set_threads({mock_thread});
+  test_context->limbo_provider->AppendException(mock_process, mock_thread, mock_exception);
 
   // There should be no more processes.
   ASSERT_EQ(debug_agent.procs_.size(), 0u);
@@ -692,42 +721,38 @@ TEST_F(DebugAgentTests, Kill) {
   // Killing now should release it.
   {
     debug_ipc::KillRequest kill_request = {};
-    kill_request.process_koid = proc_object->koid;
+    kill_request.process_koid = kProcKoid;
 
     debug_ipc::KillReply kill_reply = {};
     remote_api->OnKill(kill_request, &kill_reply);
     ASSERT_ZX_EQ(kill_reply.status, ZX_OK);
 
     ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 1u);
-    EXPECT_EQ(test_context->limbo_provider->release_calls()[0], proc_object->koid);
+    EXPECT_EQ(test_context->limbo_provider->release_calls()[0], kProcKoid);
 
     // Killing again should not find it.
     remote_api->OnKill(kill_request, &kill_reply);
     ASSERT_ZX_EQ(kill_reply.status, ZX_ERR_NOT_FOUND);
   }
 
-  test_context->limbo_provider->AppendException(proc_object, thread_object,
-                                                ExceptionType::FATAL_PAGE_FAULT);
-
-  // This is a limbo process, so we cannot kill it.
-  test_context->object_provider->set_next_kill_status(ZX_ERR_ACCESS_DENIED);
+  test_context->limbo_provider->AppendException(mock_process, mock_thread, mock_exception);
 
   debug_ipc::AttachRequest attach_request = {};
   attach_request.type = debug_ipc::TaskType::kProcess;
-  attach_request.koid = proc_object->koid;
+  attach_request.koid = kProcKoid;
   remote_api->OnAttach(transaction_id++, attach_request);
 
   // There should be a process.
   ASSERT_EQ(debug_agent.procs_.size(), 1u);
 
   {
-    auto it = debug_agent.procs_.find(proc_object->koid);
+    auto it = debug_agent.procs_.find(kProcKoid);
     ASSERT_NE(it, debug_agent.procs_.end());
     EXPECT_TRUE(debug_agent.procs_.begin()->second->from_limbo());
 
     // Killing it should free the process.
     debug_ipc::KillRequest kill_request = {};
-    kill_request.process_koid = proc_object->koid;
+    kill_request.process_koid = kProcKoid;
 
     debug_ipc::KillReply kill_reply = {};
     remote_api->OnKill(kill_request, &kill_reply);
@@ -737,14 +762,13 @@ TEST_F(DebugAgentTests, Kill) {
 
     // There should be a limbo process to be killed.
     ASSERT_EQ(debug_agent.killed_limbo_procs_.size(), 1u);
-    EXPECT_EQ(debug_agent.killed_limbo_procs_.count(proc_object->koid), 1u);
+    EXPECT_EQ(debug_agent.killed_limbo_procs_.count(kProcKoid), 1u);
 
     // There should've have been more release calls (yet).
     ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 1u);
 
     // When the process "re-enters" the limbo, it should be removed.
-    test_context->limbo_provider->AppendException(proc_object, thread_object,
-                                                  ExceptionType::FATAL_PAGE_FAULT);
+    test_context->limbo_provider->AppendException(mock_process, mock_thread, mock_exception);
     test_context->limbo_provider->CallOnEnterLimbo();
 
     // There should not be an additional proc in the agent.
@@ -752,7 +776,7 @@ TEST_F(DebugAgentTests, Kill) {
 
     // There should've been a release call.
     ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 2u);
-    EXPECT_EQ(test_context->limbo_provider->release_calls()[1], proc_object->koid);
+    EXPECT_EQ(test_context->limbo_provider->release_calls()[1], kProcKoid);
   }
 }
 

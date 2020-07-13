@@ -37,9 +37,8 @@ struct DebuggedProcessCreateInfo {
   DebuggedProcessCreateInfo();
 
   // Constructor with only the required fields.
-  DebuggedProcessCreateInfo(zx_koid_t koid, std::string name,
-                            std::unique_ptr<ProcessHandle> handle);
-  DebuggedProcessCreateInfo(zx_koid_t koid, std::string name, std::unique_ptr<ProcessHandle> handle,
+  DebuggedProcessCreateInfo(zx_koid_t koid, std::unique_ptr<ProcessHandle> handle);
+  DebuggedProcessCreateInfo(zx_koid_t koid, std::unique_ptr<ProcessHandle> handle,
                             std::shared_ptr<arch::ArchProvider>, std::shared_ptr<ObjectProvider>);
 
   // Required.
@@ -51,7 +50,6 @@ struct DebuggedProcessCreateInfo {
   std::shared_ptr<ObjectProvider> object_provider;
 
   // Optional.
-  std::string name;
   zx::socket out;  // stdout.
   zx::socket err;  // stderr.
 
@@ -85,8 +83,6 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   const zx::process& handle() const { return process_handle_->GetNativeHandle(); }
 
   uint64_t dl_debug_addr() const { return dl_debug_addr_; }
-
-  const std::string& name() const { return name_; }
 
   // Returns true on success. On failure, the object may not be used further.
   // |object_provider| gives a view of the Zircon process tree. Can be overriden for test purposes.
@@ -234,8 +230,6 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
 
   zx_koid_t koid_;
   std::unique_ptr<ProcessHandle> process_handle_;
-
-  std::string name_;
 
   // Address in the debugged program of the dl_debug_state in ld.so.
   uint64_t dl_debug_addr_ = 0;

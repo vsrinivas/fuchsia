@@ -53,7 +53,8 @@ std::vector<char> ReadSocketInput(debug_ipc::BufferedZxSocket* socket) {
 
 // Meant to be used in debug logging.
 std::string LogPreamble(const DebuggedProcess* process) {
-  return fxl::StringPrintf("[P: %lu (%s)] ", process->koid(), process->name().c_str());
+  return fxl::StringPrintf("[P: %lu (%s)] ", process->koid(),
+                           process->process_handle().GetName().c_str());
 }
 
 void LogRegisterBreakpoint(debug_ipc::FileLineFunction location, DebuggedProcess* process,
@@ -77,19 +78,17 @@ void LogRegisterBreakpoint(debug_ipc::FileLineFunction location, DebuggedProcess
 
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo() = default;
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid,
-                                                     std::string process_name,
                                                      std::unique_ptr<ProcessHandle> handle)
-    : koid(process_koid), handle(std::move(handle)), name(std::move(process_name)) {}
+    : koid(process_koid), handle(std::move(handle)) {}
 
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(
-    zx_koid_t process_koid, std::string process_name, std::unique_ptr<ProcessHandle> handle,
+    zx_koid_t process_koid, std::unique_ptr<ProcessHandle> handle,
     std::shared_ptr<arch::ArchProvider> arch_provider,
     std::shared_ptr<ObjectProvider> object_provider)
     : koid(process_koid),
       handle(std::move(handle)),
       arch_provider(std::move(arch_provider)),
-      object_provider(std::move(object_provider)),
-      name(std::move(process_name)) {}
+      object_provider(std::move(object_provider)) {}
 
 // DebuggedProcess ---------------------------------------------------------------------------------
 
@@ -99,7 +98,6 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateI
       debug_agent_(debug_agent),
       koid_(create_info.koid),
       process_handle_(std::move(create_info.handle)),
-      name_(std::move(create_info.name)),
       from_limbo_(create_info.from_limbo) {
   RegisterDebugState();
 
@@ -143,7 +141,7 @@ zx_status_t DebuggedProcess::Init() {
 
   // Register for debug exceptions.
   debug_ipc::MessageLoopTarget::WatchProcessConfig config;
-  config.process_name = object_provider_->NameForObject(handle());
+  config.process_name = process_handle_->GetName();
   config.process_handle = handle().get();
   config.process_koid = koid_;
   config.watcher = this;
@@ -160,8 +158,8 @@ zx_status_t DebuggedProcess::Init() {
     stdout_.set_error_callback([this]() { OnStdout(true); });
     status = stdout_.Start();
     if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "Could not listen on stdout for process " << name_ << ": "
-                       << debug_ipc::ZxStatusToString(status);
+      FX_LOGS(WARNING) << "Could not listen on stdout for process " << process_handle_->GetName()
+                       << ": " << debug_ipc::ZxStatusToString(status);
       stdout_.Reset();
     }
   }
@@ -171,8 +169,8 @@ zx_status_t DebuggedProcess::Init() {
     stderr_.set_error_callback([this]() { OnStderr(true); });
     status = stderr_.Start();
     if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "Could not listen on stderr for process " << name_ << ": "
-                       << debug_ipc::ZxStatusToString(status);
+      FX_LOGS(WARNING) << "Could not listen on stderr for process " << process_handle_->GetName()
+                       << ": " << debug_ipc::ZxStatusToString(status);
       stderr_.Reset();
     }
   }
@@ -261,7 +259,7 @@ void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request, debug_ipc::K
   // threads. This makes cleanup code more straightforward, as there are no
   // threads to resume/handle.
   threads_.clear();
-  reply->status = object_provider_->Kill(handle());
+  reply->status = process_handle_->Kill();
 }
 
 DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) const {
@@ -280,27 +278,21 @@ std::vector<DebuggedThread*> DebuggedProcess::GetThreads() const {
 }
 
 void DebuggedProcess::PopulateCurrentThreads() {
-  for (zx_koid_t thread_koid :
-       object_provider_->GetChildKoids(handle().get(), ZX_INFO_PROCESS_THREADS)) {
+  for (auto& thread : process_handle_->GetChildThreads()) {
     // We should never populate the same thread twice.
+    zx_koid_t thread_koid = thread->GetKoid();
     if (threads_.find(thread_koid) != threads_.end())
       continue;
 
-    zx_handle_t handle;
-    if (object_provider_->GetChild(this->handle().get(), thread_koid, ZX_RIGHT_SAME_RIGHTS,
-                                   &handle) == ZX_OK) {
-      DebuggedThread::CreateInfo create_info = {};
-      create_info.process = this;
-      create_info.koid = thread_koid;
-      create_info.handle = std::make_unique<ZirconThreadHandle>(arch_provider_, koid_, thread_koid,
-                                                                zx::thread(handle));
-      create_info.creation_option = ThreadCreationOption::kRunningKeepRunning;
-      create_info.arch_provider = arch_provider_;
-      create_info.object_provider = object_provider_;
+    DebuggedThread::CreateInfo create_info = {};
+    create_info.process = this;
+    create_info.koid = thread_koid;
+    create_info.handle = std::move(thread);
+    create_info.creation_option = ThreadCreationOption::kRunningKeepRunning;
+    create_info.arch_provider = arch_provider_;
 
-      auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, std::move(create_info));
-      threads_.emplace(thread_koid, std::move(new_thread));
-    }
+    auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, std::move(create_info));
+    threads_.emplace(thread_koid, std::move(new_thread));
   }
 }
 
@@ -577,7 +569,6 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
   create_info.exception = std::make_unique<ZirconThreadException>(std::move(exception));
   create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
   create_info.arch_provider = arch_provider_;
-  create_info.object_provider = object_provider_;
 
   auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, std::move(create_info));
   auto added = threads_.emplace(exception_info.tid, std::move(new_thread));

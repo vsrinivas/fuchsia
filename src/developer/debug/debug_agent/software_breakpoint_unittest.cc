@@ -13,6 +13,7 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
+#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/shared/logging/debug.h"
 
 namespace debug_agent {
