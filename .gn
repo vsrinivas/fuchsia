@@ -17,8 +17,8 @@ secondary_source = "//build/secondary/"
 # The executable used to execute scripts in action and exec_script.
 script_executable = "/usr/bin/env"
 
-# Require Ninja 1.9.0 to enable support for depfiles with multiple outputs.
-ninja_required_version = "1.9.0"
+# Require Ninja 1.10.0 to support multiple outputs from a rule with a depfile.
+ninja_required_version = "1.10.0"
 
 # These arguments override the default values for items in a declare_args
 # block. "gn args" in turn can override these.
