@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::create_proxy,
+    anyhow::Error,
     fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client::{launcher, AppBuilder, Stdio},
+    fuchsia_inspect::testing::{assert_inspect_tree, InspectDataFetcher},
     fuchsia_zircon::DurationNum,
-    serde_json::json,
     std::{
         fs::{create_dir, create_dir_all, write, File},
         path::Path,
@@ -46,33 +45,6 @@ async fn data_stats() -> Result<(), Error> {
         std::fs::write(full_path, filename.as_bytes())?;
     }
 
-    let expected = json!({
-        "test_data": {
-            "stats": {
-                // NOTE(adamperry): this is due to a lack of ADMIN rights on the test_data dir
-                "error": "Query failed"
-            },
-            "test_data": {
-                "size": 34,
-                "first": {
-                    "size": 5
-                },
-                "second": {
-                    "size": 6
-                },
-                "third": {
-                    "size": 23,
-                    "fifth": {
-                        "size": 11
-                    },
-                    "fourth": {
-                        "size": 12
-                    }
-                }
-            }
-        }
-    });
-
     let launcher = launcher()?;
     let mut archivist = AppBuilder::new(ARCHIVIST_URL)
         .add_dir_to_namespace("/config/data".into(), File::open(config_path)?)?
@@ -83,79 +55,43 @@ async fn data_stats() -> Result<(), Error> {
         .spawn(&launcher)?;
     let archive_accessor = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
 
-    let retrieve_first_real_result = || {
-        async move {
-            loop {
-                let (batch_consumer, batch_server) = create_proxy().unwrap();
-
-                let mut stream_parameters = fidl_fuchsia_diagnostics::StreamParameters::empty();
-                stream_parameters.stream_mode =
-                    Some(fidl_fuchsia_diagnostics::StreamMode::Snapshot);
-                stream_parameters.data_type = Some(fidl_fuchsia_diagnostics::DataType::Inspect);
-                stream_parameters.format = Some(fidl_fuchsia_diagnostics::Format::Json);
-                stream_parameters.client_selector_configuration =
-                    Some(fidl_fuchsia_diagnostics::ClientSelectorConfiguration::SelectAll(true));
-
-                archive_accessor
-                    .stream_diagnostics(stream_parameters, batch_server)
-                    .context("get BatchIterator")
-                    .unwrap();
-
-                let first_result = batch_consumer
-                    .get_next()
-                    .await
-                    .context("retrieving first batch of hierarchy data")
-                    .expect("fidl should be fine")
-                    .expect("expect batches to be retrieved without error");
-
-                if first_result.len() < 1 {
-                    continue;
-                }
-
-                assert_eq!(first_result.len(), 1);
-
-                let entry = &first_result[0];
-                let mem_buf = match entry {
-                    fidl_fuchsia_diagnostics::FormattedContent::Json(buffer) => buffer,
-                    _ => panic!("should be json formatted text"),
-                };
-
-                let mut byte_buf = vec![0u8; mem_buf.size as usize];
-
-                let first_batch_result = mem_buf
-                    .vmo
-                    .read(&mut byte_buf, 0)
-                    .map_err(|_| format_err!("Reading from vmo failed."))
-                    .and_then(|_| {
-                        std::str::from_utf8(&byte_buf).map_err(|_| {
-                            format_err!("Parsing byte vector to utf8 string failed...")
-                        })
-                    })
-                    .map(|s| s.to_string())
-                    .unwrap_or(r#"{}"#.to_string());
-
-                let output: serde_json::Value = serde_json::from_str(&first_batch_result)
-                    .expect("should have valid json from the first payload.");
-
-                // TODO(fxb/43112): when the archivist outputs the new JSON format for which we
-                // have a deserializer, perform an `assert_inspect_tree` that checks the other
-                // values in the response as well, not only data stats.
-                if let Some(data_stats) = output
-                    .get("payload")
-                    .and_then(|contents| contents.get("root"))
-                    .and_then(|root| root.get("data_stats"))
-                {
-                    assert_eq!(*data_stats, expected);
-                    return;
+    let results = InspectDataFetcher::new()
+        .with_archive(archive_accessor)
+        .add_selector("observer_with_data_stats.cmx:root/data_stats")
+        .get()
+        .await
+        .expect("got results");
+    assert_eq!(results.len(), 1);
+    let hierarchy = results.into_iter().next().unwrap().payload.unwrap();
+    assert_inspect_tree!(hierarchy, root: {
+        data_stats: {
+            test_data: {
+                stats: {
+                    // NOTE(adamperry): this is due to a lack of ADMIN rights on the test_data dir
+                    error: "Query failed"
+                },
+                test_data: {
+                    size: 34u64,
+                    first: {
+                        size: 5u64
+                    },
+                    second: {
+                        size: 6u64
+                    },
+                    third: {
+                        size: 23u64,
+                        fifth: {
+                            size: 11u64
+                        },
+                        fourth: {
+                            size: 12u64
+                        }
+                    }
                 }
             }
         }
-    };
-    retrieve_first_real_result()
-        .on_timeout(READ_TIMEOUT_SECONDS.seconds().after_now(), || {
-            panic!("failed to get meaningful results from reader service.")
-        })
-        .await;
+    });
+
     archivist.kill().unwrap();
     let output = archivist
         .wait_with_output()
