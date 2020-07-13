@@ -100,7 +100,7 @@ impl VolumeRelay {
 
         let audio_proxy_clone = audio.clone();
         let mut audio_watch_stream =
-            HangingGetStream::new(Box::new(move || Some(audio_proxy_clone.watch2())));
+            HangingGetStream::new(Box::new(move || Some(audio_proxy_clone.watch())));
 
         // Wait for the first update from the settings app.
         let mut current_volume = match audio_watch_stream.next().await {
@@ -290,17 +290,17 @@ mod tests {
     fn expect_audio_watch(
         exec: &mut fasync::Executor,
         audio_request_stream: &mut settings::AudioRequestStream,
-    ) -> settings::AudioWatch2Responder {
+    ) -> settings::AudioWatchResponder {
         let watch_request_fut = audio_request_stream.select_next_some();
         pin_mut!(watch_request_fut);
 
         match exec.run_until_stalled(&mut watch_request_fut) {
-            Poll::Ready(Ok(settings::AudioRequest::Watch2 { responder })) => responder,
-            x => panic!("Expected an Audio Watch Reqeust, got {:?}", x),
+            Poll::Ready(Ok(settings::AudioRequest::Watch { responder })) => responder,
+            x => panic!("Expected an Audio Watch Request, got {:?}", x),
         }
     }
 
-    fn respond_to_audio_watch(responder: settings::AudioWatch2Responder, level: f32) {
+    fn respond_to_audio_watch(responder: settings::AudioWatchResponder, level: f32) {
         responder
             .send(settings::AudioSettings {
                 streams: Some(vec![settings::AudioStreamSettings {
@@ -324,7 +324,7 @@ mod tests {
         mut exec: &mut fasync::Executor,
         mut avrcp_request_stream: avrcp::PeerManagerRequestStream,
         audio_request_stream: &mut settings::AudioRequestStream,
-    ) -> (avrcp::AbsoluteVolumeHandlerProxy, settings::AudioWatch2Responder)
+    ) -> (avrcp::AbsoluteVolumeHandlerProxy, settings::AudioWatchResponder)
     where
         <T as Future>::Output: Debug,
     {
