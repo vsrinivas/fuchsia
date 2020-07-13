@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-bool GoodError() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, GoodError) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -53,13 +52,9 @@ protocol Example {
   auto primitive_type =
       static_cast<const fidl::flat::PrimitiveType*>(error.maybe_used->type_ctor->type);
   ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt32);
-
-  END_TEST;
 }
 
-bool GoodErrorUnsigned() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, GoodErrorUnsigned) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -70,12 +65,9 @@ protocol Example {
 )FIDL");
 
   ASSERT_TRUE(library.Compile());
-  END_TEST;
 }
 
-bool GoodErrorEnum() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, GoodErrorEnum) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -92,12 +84,9 @@ protocol Example {
 )FIDL");
 
   ASSERT_TRUE(library.Compile());
-  END_TEST;
 }
 
-bool GoodErrorEnumAfter() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, GoodErrorEnumAfter) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -114,12 +103,9 @@ enum ErrorType : int32 {
 )FIDL");
 
   ASSERT_TRUE(library.Compile());
-  END_TEST;
 }
 
-bool BadErrorUnknownIdentifier() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, BadErrorUnknownIdentifier) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -133,12 +119,9 @@ protocol Example {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnknownType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "ErrorType");
-  END_TEST;
 }
 
-bool BadErrorWrongPrimitive() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, BadErrorWrongPrimitive) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -151,12 +134,9 @@ protocol Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidErrorType);
-  END_TEST;
 }
 
-bool BadErrorMissingType() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, BadErrorMissingType) {
   TestLibrary library(R"FIDL(
 library example;
 protocol Example {
@@ -167,12 +147,9 @@ protocol Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  END_TEST;
 }
 
-bool BadErrorNotAType() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, BadErrorNotAType) {
   TestLibrary library(R"FIDL(
 library example;
 protocol Example {
@@ -183,12 +160,9 @@ protocol Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  END_TEST;
 }
 
-bool BadErrorNoResponse() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, BadErrorNoResponse) {
   TestLibrary library(R"FIDL(
 library example;
 protocol Example {
@@ -199,12 +173,9 @@ protocol Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  END_TEST;
 }
 
-bool BadErrorUnexpectedEndOfFile() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, BadErrorUnexpectedEndOfFile) {
   TestLibrary library(R"FIDL(
 library example;
 table ForgotTheSemicolon {}
@@ -214,34 +185,14 @@ table ForgotTheSemicolon {}
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  END_TEST;
 }
 
-bool BadErrorEmptyFile() {
-  BEGIN_TEST;
-
+TEST(ErrorsTests, BadErrorEmptyFile) {
   TestLibrary library("");
 
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedIdentifier);
-  END_TEST;
 }
 }  // namespace
-
-BEGIN_TEST_CASE(errors_tests)
-
-RUN_TEST(GoodError)
-RUN_TEST(GoodErrorUnsigned)
-RUN_TEST(GoodErrorEnum)
-RUN_TEST(GoodErrorEnumAfter)
-RUN_TEST(BadErrorUnknownIdentifier)
-RUN_TEST(BadErrorWrongPrimitive)
-RUN_TEST(BadErrorMissingType)
-RUN_TEST(BadErrorNotAType)
-RUN_TEST(BadErrorNoResponse)
-RUN_TEST(BadErrorUnexpectedEndOfFile)
-RUN_TEST(BadErrorEmptyFile)
-
-END_TEST_CASE(errors_tests)

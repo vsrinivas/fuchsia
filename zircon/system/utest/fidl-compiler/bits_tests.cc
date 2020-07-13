@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-bool GoodBitsTestSimple() {
-  BEGIN_TEST;
-
+TEST(BitsTests, GoodBitsTestSimple) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -22,13 +21,9 @@ bits Fruit : uint64 {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool BadBitsTestSigned() {
-  BEGIN_TEST;
-
+TEST(BitsTests, BadBitsTestSigned) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -41,13 +36,9 @@ bits Fruit : int64 {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_ERR(errors[0], fidl::ErrBitsTypeMustBeUnsignedIntegralPrimitive);
-
-  END_TEST;
 }
 
-bool BadBitsTestWithNonUniqueValues() {
-  BEGIN_TEST;
-
+TEST(BitsTests, BadBitsTestWithNonUniqueValues) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -62,13 +53,9 @@ bits Fruit : uint64 {
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "APPLE");
   ASSERT_STR_STR(errors[0]->msg.c_str(), "ORANGE");
-
-  END_TEST;
 }
 
-bool BadBitsTestWithNonUniqueValuesOutOfLine() {
-  BEGIN_TEST;
-
+TEST(BitsTests, BadBitsTestWithNonUniqueValuesOutOfLine) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -86,13 +73,9 @@ const uint32 TWO_SQUARED = 4;
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "APPLE");
   ASSERT_STR_STR(errors[0]->msg.c_str(), "ORANGE");
-
-  END_TEST;
 }
 
-bool BadBitsTestUnsignedWithNegativeMember() {
-  BEGIN_TEST;
-
+TEST(BitsTests, BadBitsTestUnsignedWithNegativeMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -107,13 +90,9 @@ bits Fruit : uint64 {
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "-2");
   ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
-
-  END_TEST;
 }
 
-bool BadBitsTestMemberOverflow() {
-  BEGIN_TEST;
-
+TEST(BitsTests, BadBitsTestMemberOverflow) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -128,13 +107,9 @@ bits Fruit : uint8 {
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "256");
   ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
-
-  END_TEST;
 }
 
-bool BadBitsTestDuplicateMember() {
-  BEGIN_TEST;
-
+TEST(BitsTests, BadBitsTestDuplicateMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -149,13 +124,9 @@ bits Fruit : uint64 {
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberName);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "ORANGE");
-
-  END_TEST;
 }
 
-bool BadBitsTestNoMembers() {
-  BEGIN_TEST;
-
+TEST(BitsTests, BadBitsTestNoMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -165,13 +136,9 @@ bits B {};
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrMustHaveOneMember);
-
-  END_TEST;
 }
 
-bool GoodBitsTestKeywordNames() {
-  BEGIN_TEST;
-
+TEST(BitsTests, GoodBitsTestKeywordNames) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -182,13 +149,9 @@ bits Fruit : uint64 {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool BadBitsTestNonPowerOfTwo() {
-  BEGIN_TEST;
-
+TEST(BitsTests, BadBitsTestNonPowerOfTwo) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -200,13 +163,9 @@ bits non_power_of_two : uint64 {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrBitsMemberMustBePowerOfTwo);
-
-  END_TEST;
 }
 
-bool GoodBitsTestMask() {
-  BEGIN_TEST;
-
+TEST(BitsTests, GoodBitsTestMask) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -219,26 +178,8 @@ bits Life {
   ASSERT_TRUE(library.Compile());
 
   auto bits = library.LookupBits("Life");
-  ASSERT_NONNULL(bits);
+  ASSERT_NOT_NULL(bits);
   EXPECT_EQ(bits->mask, 42);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(bits_tests)
-
-RUN_TEST(GoodBitsTestSimple)
-RUN_TEST(BadBitsTestSigned)
-RUN_TEST(BadBitsTestWithNonUniqueValues)
-RUN_TEST(BadBitsTestWithNonUniqueValuesOutOfLine)
-RUN_TEST(BadBitsTestUnsignedWithNegativeMember)
-RUN_TEST(BadBitsTestMemberOverflow)
-RUN_TEST(BadBitsTestDuplicateMember)
-RUN_TEST(BadBitsTestNoMembers)
-RUN_TEST(GoodBitsTestKeywordNames)
-RUN_TEST(BadBitsTestNonPowerOfTwo)
-RUN_TEST(GoodBitsTestMask)
-
-END_TEST_CASE(bits_tests)

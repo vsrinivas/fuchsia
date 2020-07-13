@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+#include "assert_strstr.h"
 #include "fidl/diagnostics.h"
 #include "fidl/reporter.h"
 #include "test_library.h"
@@ -17,8 +18,7 @@ using fidl::Reporter;
 constexpr ErrorDef<std::string, std::string> ErrTest(
     "This test error has one string param '{}' and another '{}'.");
 
-bool ReportErrorFormatParams() {
-  BEGIN_TEST;
+TEST(ReporterTests, ReportErrorFormatParams) {
   Reporter reporter;
   std::string param1("param1");
   std::string param2("param2");
@@ -28,11 +28,9 @@ bool ReportErrorFormatParams() {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_STR_STR(errors[0]->msg.c_str(),
                  "This test error has one string param 'param1' and another 'param2'.");
-  END_TEST;
 }
 
-bool MakeErrorThenReportIt() {
-  BEGIN_TEST;
+TEST(ReporterTests, MakeErrorThenReportIt) {
   std::string param1("param1");
   std::string param2("param2");
   std::unique_ptr<Diagnostic> reported_err = Reporter::MakeError(ErrTest, param1, param2);
@@ -43,12 +41,6 @@ bool MakeErrorThenReportIt() {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_STR_STR(errors[0]->msg.c_str(),
                  "This test error has one string param 'param1' and another 'param2'.");
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(reporter_tests)
-RUN_TEST(ReportErrorFormatParams)
-RUN_TEST(MakeErrorThenReportIt)
-END_TEST_CASE(reporter_tests)

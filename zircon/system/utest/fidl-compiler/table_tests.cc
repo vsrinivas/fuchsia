@@ -6,8 +6,9 @@
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -18,9 +19,7 @@ static bool Compiles(const std::string& source_code) {
   return library.Compile();
 }
 
-static bool compiling(void) {
-  BEGIN_TEST;
-
+TEST(TableTests, compiling) {
   // Populated fields.
   EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
@@ -278,13 +277,9 @@ table Foo {
     EXPECT_EQ(library.errors().size(), 1u);
     ASSERT_ERR(library.errors().at(0), fidl::ErrNullableTableMember);
   }
-
-  END_TEST;
 }
 
-bool default_not_allowed() {
-  BEGIN_TEST;
-
+TEST(TableTests, default_not_allowed) {
   auto library = TestLibrary(R"FIDL(
 library fidl.test.tables;
 
@@ -296,13 +291,9 @@ table Foo {
   EXPECT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrDefaultsOnTablesNotSupported);
-
-  END_TEST;
 }
 
-bool must_be_dense() {
-  BEGIN_TEST;
-
+TEST(TableTests, must_be_dense) {
   auto library = TestLibrary(R"FIDL(
 library example;
 
@@ -316,14 +307,6 @@ table Example {
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrNonDenseOrdinal);
   ASSERT_STR_STR(library.errors().at(0)->msg.c_str(), "2");
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(table_tests)
-RUN_TEST(compiling)
-RUN_TEST(default_not_allowed)
-RUN_TEST(must_be_dense)
-END_TEST_CASE(table_tests)

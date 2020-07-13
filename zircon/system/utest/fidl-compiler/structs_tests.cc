@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-bool GoodPrimitiveDefaultValueLiteral() {
-  BEGIN_TEST;
-
+TEST(StructsTests, GoodPrimitiveDefaultValueLiteral) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -20,13 +19,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodPrimitiveDefaultValueConstReference() {
-  BEGIN_TEST;
-
+TEST(StructsTests, GoodPrimitiveDefaultValueConstReference) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -37,13 +32,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool BadMissingDefaultValueReferenceTarget() {
-  BEGIN_TEST;
-
+TEST(StructsTests, BadMissingDefaultValueReferenceTarget) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -52,13 +43,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodEnumDefaultValueEnumMemberReference() {
-  BEGIN_TEST;
-
+TEST(StructsTests, GoodEnumDefaultValueEnumMemberReference) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -69,13 +56,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodPrimitiveDefaultValueEnumMemberReference() {
-  BEGIN_TEST;
-
+TEST(StructsTests, GoodPrimitiveDefaultValueEnumMemberReference) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -86,13 +69,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool BadDefaultValueEnumType() {
-  BEGIN_TEST;
-
+TEST(StructsTests, BadDefaultValueEnumType) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -107,13 +86,9 @@ struct MyStruct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrMismatchedNameTypeAssignment);
-
-  END_TEST;
 }
 
-bool BadDefaultValuePrimitiveInEnum() {
-  BEGIN_TEST;
-
+TEST(StructsTests, BadDefaultValuePrimitiveInEnum) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -128,13 +103,9 @@ struct MyStruct {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "MyEnum");
-
-  END_TEST;
 }
 
-bool GoodEnumDefaultValueBitsMemberReference() {
-  BEGIN_TEST;
-
+TEST(StructsTests, GoodEnumDefaultValueBitsMemberReference) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -145,13 +116,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodPrimitiveDefaultValueBitsMemberReference() {
-  BEGIN_TEST;
-
+TEST(StructsTests, GoodPrimitiveDefaultValueBitsMemberReference) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -162,13 +129,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool BadDefaultValueBitsType() {
-  BEGIN_TEST;
-
+TEST(StructsTests, BadDefaultValueBitsType) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -183,13 +146,9 @@ struct MyStruct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrMismatchedNameTypeAssignment);
-
-  END_TEST;
 }
 
-bool BadDefaultValuePrimitiveInBits() {
-  BEGIN_TEST;
-
+TEST(StructsTests, BadDefaultValuePrimitiveInBits) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -204,14 +163,10 @@ struct MyStruct {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "MyBits");
-
-  END_TEST;
 }
 
 // The old-style of enum-referencing should no longer work.
-bool BadLegacyEnumMemberReference() {
-  BEGIN_TEST;
-
+TEST(StructsTests, BadLegacyEnumMemberReference) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -222,13 +177,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-
-  END_TEST;
 }
 
-bool BadDefaultValueNullableString() {
-  BEGIN_TEST;
-
+TEST(StructsTests, BadDefaultValueNullableString) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -240,13 +191,9 @@ struct MyStruct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidStructMemberType);
-
-  END_TEST;
 }
 
-bool BadDuplicateMemberName() {
-  BEGIN_TEST;
-
+TEST(StructsTests, BadDuplicateMemberName) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -259,29 +206,6 @@ struct Duplicates {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateStructMemberName);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(structs_tests)
-
-RUN_TEST(GoodPrimitiveDefaultValueLiteral)
-RUN_TEST(GoodPrimitiveDefaultValueConstReference)
-RUN_TEST(BadMissingDefaultValueReferenceTarget)
-
-RUN_TEST(GoodEnumDefaultValueEnumMemberReference)
-RUN_TEST(GoodPrimitiveDefaultValueEnumMemberReference)
-RUN_TEST(BadDefaultValueEnumType)
-RUN_TEST(BadDefaultValuePrimitiveInEnum)
-
-RUN_TEST(GoodEnumDefaultValueBitsMemberReference)
-RUN_TEST(GoodPrimitiveDefaultValueBitsMemberReference)
-RUN_TEST(BadDefaultValueBitsType)
-RUN_TEST(BadDefaultValuePrimitiveInBits)
-RUN_TEST(BadLegacyEnumMemberReference)
-RUN_TEST(BadDefaultValueNullableString)
-RUN_TEST(BadDuplicateMemberName)
-
-END_TEST_CASE(structs_tests)

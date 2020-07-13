@@ -10,8 +10,9 @@
 #include <fidl/parser.h>
 #include <fidl/raw_ast.h>
 #include <fidl/source_file.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -19,9 +20,7 @@ namespace {
 
 // Test that an invalid compound identifier fails parsing. Regression
 // test for FIDL-263.
-bool bad_compound_identifier_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, bad_compound_identifier_test) {
   // The leading 0 in the library name causes parsing an Identifier
   // to fail, and then parsing a CompoundIdentifier to fail.
   TestLibrary library(R"FIDL(
@@ -31,14 +30,10 @@ library 0fidl.test.badcompoundidentifier;
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-
-  END_TEST;
 }
 
 // Test that library name formatting checks are done in the parser
-bool bad_library_name_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, bad_library_name_test) {
   TestLibrary library(R"FIDL(
 library a_b;
 )FIDL");
@@ -49,15 +44,11 @@ library a_b;
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidLibraryNameComponent);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "a_b");
-
-  END_TEST;
 }
 
 // Test that otherwise reserved words can be appropriarely parsed when context
 // is clear.
-bool parsing_reserved_words_in_struct_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, parsing_reserved_words_in_struct_test) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -97,13 +88,9 @@ struct InStruct {
 };
 )FIDL");
   EXPECT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool parsing_handles_in_struct_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, parsing_handles_in_struct_test) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -140,13 +127,9 @@ struct Handles {
 )FIDL");
 
   EXPECT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool parsing_handle_constraint_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, parsing_handle_constraint_test) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
@@ -162,15 +145,11 @@ struct Handles {
                       std::move(experimental_flags));
 
   EXPECT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
 // Test that otherwise reserved words can be appropriarely parsed when context
 // is clear.
-bool parsing_reserved_words_in_union_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, parsing_reserved_words_in_union_test) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -210,15 +189,11 @@ union InUnion {
 };
 )FIDL");
   EXPECT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
 // Test that otherwise reserved words can be appropriarely parsed when context
 // is clear.
-bool parsing_reserved_words_in_protocol_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, parsing_reserved_words_in_protocol_test) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -258,13 +233,9 @@ protocol InProtocol {
 };
 )FIDL");
   EXPECT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool bad_char_at_sign_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, bad_char_at_sign_test) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -277,13 +248,9 @@ struct Test {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "@");
-
-  END_TEST;
 }
 
-bool bad_char_slash_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, bad_char_slash_test) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -296,13 +263,9 @@ struct Test / {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "/");
-
-  END_TEST;
 }
 
-bool bad_identifier_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, bad_identifier_test) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -315,8 +278,6 @@ struct test_ {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidIdentifier);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "test_");
-
-  END_TEST;
 }
 
 class LocaleSwapper {
@@ -328,9 +289,7 @@ class LocaleSwapper {
   const char* old_locale_;
 };
 
-static bool invalid_character_test(void) {
-  BEGIN_TEST;
-
+TEST(ParsingTests, invalid_character_test) {
   LocaleSwapper swapper("de_DE.iso88591");
   TestLibrary test_library("invalid.character.fidl", R"FIDL(
 library fidl.test.maxbytes;
@@ -347,13 +306,9 @@ struct ß {
   const auto& errors = test_library.errors();
   EXPECT_NE(errors.size(), 0);
   ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
-
-  END_TEST;
 }
 
-bool empty_struct_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, empty_struct_test) {
   TestLibrary library("empty_struct.fidl", R"FIDL(
 library fidl.test.emptystruct;
 
@@ -362,13 +317,9 @@ struct Empty {
 
 )FIDL");
   EXPECT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool error_on_type_alias_before_imports() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, error_on_type_alias_before_imports) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
@@ -395,13 +346,9 @@ struct UseDependent {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
-
-  END_TEST;
 }
 
-bool multiline_comment_has_correct_source_span() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, multiline_comment_has_correct_source_span) {
   TestLibrary library("example.fidl", R"FIDL(
   library example;
 
@@ -421,13 +368,9 @@ bool multiline_comment_has_correct_source_span() {
                 R"EXPECTED(/// A
   /// multiline
   /// comment!)EXPECTED");
-
-  END_TEST;
 }
 
-bool doc_comment_blank_line_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, doc_comment_blank_line_test) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -443,13 +386,9 @@ struct Empty{};
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::WarnBlankLinesWithinDocCommentBlock);
-
-  END_TEST;
 }
 
-bool comment_inside_doc_comment_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, comment_inside_doc_comment_test) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -464,13 +403,9 @@ struct Empty{};
   const auto& warnings = library.warnings();
   ASSERT_GE(warnings.size(), 1);
   ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
-
-  END_TEST;
 }
 
-bool doc_comment_with_comment_blank_line_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, doc_comment_with_comment_blank_line_test) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -487,13 +422,9 @@ struct Empty{};
   ASSERT_EQ(warnings.size(), 2);
   ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
   ASSERT_ERR(warnings[1], fidl::WarnBlankLinesWithinDocCommentBlock);
-
-  END_TEST;
 }
 
-bool doc_comment_not_allowed_on_params() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, doc_comment_not_allowed_on_params) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -508,13 +439,9 @@ protocol Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDocCommentOnParameters);
-
-  END_TEST;
 }
 
-bool comments_surrounding_doc_comment_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, comments_surrounding_doc_comment_test) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -530,13 +457,9 @@ struct Empty{};
   std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Parse(&ast));
-
-  END_TEST;
 }
 
-bool blank_lines_after_doc_comment_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, blank_lines_after_doc_comment_test) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -550,13 +473,9 @@ struct Empty{};
   std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Parse(&ast));
-
-  END_TEST;
 }
 
-bool blank_lines_after_doc_comment_with_comment_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, blank_lines_after_doc_comment_with_comment_test) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -571,13 +490,9 @@ struct Empty{};
   std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Parse(&ast));
-
-  END_TEST;
 }
 
-bool trailing_doc_comment_test() {
-  BEGIN_TEST;
-
+TEST(ParsingTests, trailing_doc_comment_test) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -590,33 +505,6 @@ struct Empty{};
   const auto& warnings = library.warnings();
   ASSERT_EQ(warnings.size(), 1);
   ASSERT_ERR(warnings[0], fidl::WarnDocCommentMustBeFollowedByDeclaration);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(parsing_tests)
-RUN_TEST(bad_compound_identifier_test)
-RUN_TEST(bad_library_name_test)
-RUN_TEST(parsing_reserved_words_in_struct_test)
-RUN_TEST(parsing_handles_in_struct_test)
-RUN_TEST(parsing_handle_constraint_test)
-RUN_TEST(parsing_reserved_words_in_union_test)
-RUN_TEST(parsing_reserved_words_in_protocol_test)
-RUN_TEST(bad_char_at_sign_test)
-RUN_TEST(bad_char_slash_test)
-RUN_TEST(bad_identifier_test)
-RUN_TEST(invalid_character_test)
-RUN_TEST(empty_struct_test)
-RUN_TEST(error_on_type_alias_before_imports)
-RUN_TEST(multiline_comment_has_correct_source_span)
-RUN_TEST(doc_comment_blank_line_test)
-RUN_TEST(doc_comment_with_comment_blank_line_test)
-RUN_TEST(doc_comment_not_allowed_on_params)
-RUN_TEST(comment_inside_doc_comment_test)
-RUN_TEST(comments_surrounding_doc_comment_test)
-RUN_TEST(blank_lines_after_doc_comment_test)
-RUN_TEST(blank_lines_after_doc_comment_with_comment_test)
-RUN_TEST(trailing_doc_comment_test)
-END_TEST_CASE(parsing_tests)

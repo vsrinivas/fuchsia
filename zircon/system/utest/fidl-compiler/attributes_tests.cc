@@ -8,16 +8,15 @@
 #include <fidl/parser.h>
 #include <fidl/reporter.h>
 #include <fidl/source_file.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-bool placement_of_attributes() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, placement_of_attributes) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("exampleusing.fidl", R"FIDL(
 library exampleusing;
@@ -90,58 +89,54 @@ union ExampleUnion {
   EXPECT_TRUE(library.library()->HasAttribute("OnLibrary"));
 
   auto example_bits = library.LookupBits("ExampleBits");
-  ASSERT_NONNULL(example_bits);
+  ASSERT_NOT_NULL(example_bits);
   EXPECT_TRUE(example_bits->attributes->HasAttribute("OnBits"));
   EXPECT_TRUE(example_bits->members.front().attributes->HasAttribute("OnBitsMember"));
 
   auto example_const = library.LookupConstant("EXAMPLE_CONST");
-  ASSERT_NONNULL(example_const);
+  ASSERT_NOT_NULL(example_const);
   EXPECT_TRUE(example_const->attributes->HasAttribute("OnConst"));
 
   auto example_enum = library.LookupEnum("ExampleEnum");
-  ASSERT_NONNULL(example_enum);
+  ASSERT_NOT_NULL(example_enum);
   EXPECT_TRUE(example_enum->attributes->HasAttribute("OnEnum"));
   EXPECT_TRUE(example_enum->members.front().attributes->HasAttribute("OnEnumMember"));
 
   auto example_protocol = library.LookupProtocol("ExampleProtocol");
-  ASSERT_NONNULL(example_protocol);
+  ASSERT_NOT_NULL(example_protocol);
   EXPECT_TRUE(example_protocol->attributes->HasAttribute("OnProtocol"));
   EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("OnMethod"));
-  ASSERT_NONNULL(example_protocol->methods.front().maybe_request);
+  ASSERT_NOT_NULL(example_protocol->methods.front().maybe_request);
   EXPECT_TRUE(
       example_protocol->methods.front().maybe_request->members.front().attributes->HasAttribute(
           "OnParameter"));
 
   auto example_service = library.LookupService("ExampleService");
-  ASSERT_NONNULL(example_service);
+  ASSERT_NOT_NULL(example_service);
   EXPECT_TRUE(example_service->attributes->HasAttribute("OnService"));
   EXPECT_TRUE(example_service->members.front().attributes->HasAttribute("OnServiceMember"));
 
   auto example_struct = library.LookupStruct("ExampleStruct");
-  ASSERT_NONNULL(example_struct);
+  ASSERT_NOT_NULL(example_struct);
   EXPECT_TRUE(example_struct->attributes->HasAttribute("OnStruct"));
   EXPECT_TRUE(example_struct->members.front().attributes->HasAttribute("OnStructMember"));
 
   auto example_table = library.LookupTable("ExampleTable");
-  ASSERT_NONNULL(example_table);
+  ASSERT_NOT_NULL(example_table);
   EXPECT_TRUE(example_table->attributes->HasAttribute("OnTable"));
   EXPECT_TRUE(example_table->members.front().maybe_used->attributes->HasAttribute("OnTableMember"));
 
   auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
-  ASSERT_NONNULL(example_type_alias);
+  ASSERT_NOT_NULL(example_type_alias);
   EXPECT_TRUE(example_type_alias->attributes->HasAttribute("OnTypeAlias"));
 
   auto example_union = library.LookupUnion("ExampleUnion");
-  ASSERT_NONNULL(example_union);
+  ASSERT_NOT_NULL(example_union);
   EXPECT_TRUE(example_union->attributes->HasAttribute("OnUnion"));
   EXPECT_TRUE(example_union->members.front().maybe_used->attributes->HasAttribute("OnUnionMember"));
-
-  END_TEST;
 }
 
-bool no_attribute_on_using_not_event_doc() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, no_attribute_on_using_not_event_doc) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -157,14 +152,10 @@ using we.should.not.care;
   ASSERT_STR_STR(errors[0]->msg.c_str(), "Doc");
   ASSERT_STR_STR(errors[0]->msg.c_str(), "NoAttributeOnUsing");
   ASSERT_STR_STR(errors[0]->msg.c_str(), "EvenDoc");
-
-  END_TEST;
 }
 
 // Test that a duplicate attribute is caught, and nicely reported.
-bool no_two_same_attribute_test() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, no_two_same_attribute_test) {
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
@@ -179,14 +170,10 @@ protocol A {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateAttribute);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "dup");
-
-  END_TEST;
 }
 
 // Test that doc comments and doc attributes clash are properly checked.
-bool no_two_same_doc_attribute_test() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, no_two_same_doc_attribute_test) {
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
@@ -202,14 +189,10 @@ protocol A {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateAttribute);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "Doc");
-
-  END_TEST;
 }
 
 // Test that TODO
-bool no_two_same_attribute_on_library_test() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, no_two_same_attribute_on_library_test) {
   TestLibrary library;
   library.AddSource("dup_attributes.fidl", R"FIDL(
 [dup = "first"]
@@ -226,14 +209,10 @@ library fidl.test.dupattributes;
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateAttribute);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "dup");
-
-  END_TEST;
 }
 
 // Test that a close attribute is caught.
-bool warn_on_close_attribute_test() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, warn_on_close_attribute_test) {
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
@@ -249,15 +228,11 @@ protocol A {
   ASSERT_ERR(warnings[0], fidl::WarnAttributeTypo);
   ASSERT_STR_STR(warnings[0]->msg.c_str(), "Duc");
   ASSERT_STR_STR(warnings[0]->msg.c_str(), "Doc");
-
-  END_TEST;
 }
 
 // This tests our ability to treat warnings as errors.  It is here because this
 // is the most convenient warning.
-bool warnings_as_errors_test() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, warnings_as_errors_test) {
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
@@ -276,13 +251,9 @@ protocol A {
   ASSERT_ERR(errors[0], fidl::WarnAttributeTypo);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "Duc");
   ASSERT_STR_STR(errors[0]->msg.c_str(), "Doc");
-
-  END_TEST;
 }
 
-bool empty_transport() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, empty_transport) {
   TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
@@ -296,13 +267,9 @@ protocol A {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidTransportType);
-
-  END_TEST;
 }
 
-bool bogus_transport() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, bogus_transport) {
   TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
@@ -316,13 +283,9 @@ protocol A {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidTransportType);
-
-  END_TEST;
 }
 
-bool channel_transport() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, channel_transport) {
   TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
@@ -335,13 +298,9 @@ protocol A {
   EXPECT_TRUE(library.Compile());
   ASSERT_EQ(library.errors().size(), 0);
   ASSERT_EQ(library.warnings().size(), 0);
-
-  END_TEST;
 }
 
-bool syscall_transport() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, syscall_transport) {
   TestLibrary library("transport_attributes.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
@@ -354,13 +313,9 @@ protocol A {
   EXPECT_TRUE(library.Compile());
   ASSERT_EQ(library.errors().size(), 0);
   ASSERT_EQ(library.warnings().size(), 0);
-
-  END_TEST;
 }
 
-bool multiple_transports() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, multiple_transports) {
   TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
@@ -373,13 +328,9 @@ protocol A {
   EXPECT_TRUE(library.Compile());
   ASSERT_EQ(library.errors().size(), 0);
   ASSERT_EQ(library.warnings().size(), 0);
-
-  END_TEST;
 }
 
-bool multiple_transports_with_bogus() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, multiple_transports_with_bogus) {
   TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
@@ -393,13 +344,9 @@ protocol A {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidTransportType);
-
-  END_TEST;
 }
 
-bool transitional_invalid_placement() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, transitional_invalid_placement) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -414,13 +361,9 @@ protocol MyProtocol {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "Transitional");
-
-  END_TEST;
 }
 
-bool unknown_invalid_placement_on_union() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, unknown_invalid_placement_on_union) {
   TestLibrary library("library fidl.test; [Unknown] flexible union U { 1: int32 a; };");
 
   ASSERT_FALSE(library.Compile());
@@ -428,13 +371,9 @@ bool unknown_invalid_placement_on_union() {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "Unknown");
-
-  END_TEST;
 }
 
-bool unknown_invalid_placement_on_bits_member() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, unknown_invalid_placement_on_bits_member) {
   TestLibrary library(
       "library fidl.test; flexible bits B : uint32 { [Unknown] A = 0x1; };",
       fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
@@ -444,13 +383,9 @@ bool unknown_invalid_placement_on_bits_member() {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "Unknown");
-
-  END_TEST;
 }
 
-bool unknown_invalid_on_strict_unions_enums() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, unknown_invalid_on_strict_unions_enums) {
   {
     TestLibrary library("library fidl.test; strict union U { [Unknown] 1: int32 a; };");
     EXPECT_FALSE(library.Compile());
@@ -468,13 +403,9 @@ bool unknown_invalid_on_strict_unions_enums() {
     ASSERT_ERR(errors[0], fidl::ErrUnknownAttributeOnInvalidType);
     ASSERT_STR_STR(errors[0]->msg.c_str(), "Unknown");
   }
-
-  END_TEST;
 }
 
-bool unknown_ok_on_flexible_or_transitional_enums_union_members() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, unknown_ok_on_flexible_or_transitional_enums_union_members) {
   {
     TestLibrary library("library fidl.test; flexible union U { [Unknown] 1: int32 a; };");
     EXPECT_TRUE(library.Compile());
@@ -498,13 +429,9 @@ bool unknown_ok_on_flexible_or_transitional_enums_union_members() {
         "library fidl.test; [Transitional] strict enum E : uint32 { [Unknown] A = 1; };");
     EXPECT_TRUE(library.Compile());
   }
-
-  END_TEST;
 }
 
-bool incorrect_placement_layout() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, incorrect_placement_layout) {
   TestLibrary library(R"FIDL(
 [ForDeprecatedCBindings]
 library fidl.test;
@@ -548,13 +475,9 @@ protocol MyProtocol {
   ASSERT_EQ(errors.size(), 11);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "ForDeprecatedCBindings");
-
-  END_TEST;
 }
 
-bool deprecated_attributes() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, deprecated_attributes) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -577,13 +500,9 @@ protocol MyProtocol {
   for (size_t i = 0; i < errors.size(); i++) {
     ASSERT_ERR(errors[i], fidl::ErrDeprecatedAttribute);
   }
-
-  END_TEST;
 }
 
-bool invalid_simple_union() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, invalid_simple_union) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -601,8 +520,6 @@ protocol P {
   ASSERT_EQ(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrUnionCannotBeSimple);
   ASSERT_ERR(errors[1], fidl::ErrMemberMustBeSimple);
-
-  END_TEST;
 }
 
 bool MustHaveThreeMembers(fidl::Reporter* reporter, const fidl::raw::Attribute& attribute,
@@ -617,9 +534,7 @@ bool MustHaveThreeMembers(fidl::Reporter* reporter, const fidl::raw::Attribute& 
   }
 }
 
-bool constraint_only_three_members_on_struct() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, constraint_only_three_members_on_struct) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -646,13 +561,9 @@ struct MyStruct {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrAttributeConstraintNotSatisfied);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "MustHaveThreeMembers");
-
-  END_TEST;
 }
 
-bool constraint_only_three_members_on_method() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, constraint_only_three_members_on_method) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -675,13 +586,9 @@ protocol MyProtocol {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrAttributeConstraintNotSatisfied);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "MustHaveThreeMembers");
-
-  END_TEST;
 }
 
-bool constraint_only_three_members_on_protocol() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, constraint_only_three_members_on_protocol) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -706,13 +613,9 @@ protocol MyProtocol {
   ASSERT_EQ(errors.size(), 2);  // 2 because there are two methods
   ASSERT_ERR(errors[0], fidl::ErrAttributeConstraintNotSatisfied);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "MustHaveThreeMembers");
-
-  END_TEST;
 }
 
-bool max_bytes() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, max_bytes) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -728,13 +631,9 @@ table MyTable {
   ASSERT_ERR(errors[0], fidl::ErrTooManyBytes);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "27");  // 27 allowed
   ASSERT_STR_STR(errors[0]->msg.c_str(), "40");  // 40 found
-
-  END_TEST;
 }
 
-bool max_bytes_bound_too_big() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, max_bytes_bound_too_big) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -747,13 +646,9 @@ table MyTable {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrBoundIsTooBig);
-
-  END_TEST;
 }
 
-bool max_bytes_unable_to_parse_bound() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, max_bytes_unable_to_parse_bound) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -766,13 +661,9 @@ table MyTable {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnableToParseBound);
-
-  END_TEST;
 }
 
-bool max_handles() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, max_handles) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -790,13 +681,9 @@ union MyUnion {
   ASSERT_ERR(errors[0], fidl::ErrTooManyHandles);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "2");  // 2 allowed
   ASSERT_STR_STR(errors[0]->msg.c_str(), "6");  // 6 found
-
-  END_TEST;
 }
 
-bool invalid_attribute_value() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, invalid_attribute_value) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -809,13 +696,9 @@ protocol P {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributeValue);
-
-  END_TEST;
 }
 
-bool selector_incorrect_placement() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, selector_incorrect_placement) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -829,13 +712,9 @@ union MyUnion {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-
-  END_TEST;
 }
 
-bool no_attributes_on_reserved() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, no_attributes_on_reserved) {
   TestLibrary on_union(R"FIDL(
 library fidl.test;
 
@@ -859,13 +738,9 @@ table Foo {
   ASSERT_FALSE(on_table.Compile());
   ASSERT_EQ(on_table.errors().size(), 1);
   ASSERT_ERR(on_table.errors()[0], fidl::ErrCannotAttachAttributesToReservedOrdinals);
-
-  END_TEST;
 }
 
-bool parameter_attribute_incorrect_placement() {
-  BEGIN_TEST;
-
+TEST(AttributesTests, parameter_attribute_incorrect_placement) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -878,42 +753,5 @@ protocol ExampleProtocol {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-
-  END_TEST;
 }
 }  // namespace
-
-BEGIN_TEST_CASE(attributes_tests)
-RUN_TEST(placement_of_attributes)
-RUN_TEST(no_attribute_on_using_not_event_doc)
-RUN_TEST(no_two_same_attribute_test)
-RUN_TEST(no_two_same_doc_attribute_test)
-RUN_TEST(no_two_same_attribute_on_library_test)
-RUN_TEST(warn_on_close_attribute_test)
-RUN_TEST(warnings_as_errors_test)
-RUN_TEST(empty_transport)
-RUN_TEST(bogus_transport)
-RUN_TEST(channel_transport)
-RUN_TEST(syscall_transport)
-RUN_TEST(multiple_transports)
-RUN_TEST(multiple_transports_with_bogus)
-RUN_TEST(incorrect_placement_layout)
-RUN_TEST(deprecated_attributes)
-RUN_TEST(invalid_simple_union)
-RUN_TEST(constraint_only_three_members_on_struct)
-RUN_TEST(constraint_only_three_members_on_method)
-RUN_TEST(constraint_only_three_members_on_protocol)
-RUN_TEST(max_bytes)
-RUN_TEST(max_bytes_bound_too_big)
-RUN_TEST(max_bytes_unable_to_parse_bound)
-RUN_TEST(max_handles)
-RUN_TEST(invalid_attribute_value)
-RUN_TEST(selector_incorrect_placement)
-RUN_TEST(no_attributes_on_reserved)
-RUN_TEST(parameter_attribute_incorrect_placement)
-RUN_TEST(transitional_invalid_placement)
-RUN_TEST(unknown_invalid_placement_on_union)
-RUN_TEST(unknown_invalid_placement_on_bits_member)
-RUN_TEST(unknown_invalid_on_strict_unions_enums)
-RUN_TEST(unknown_ok_on_flexible_or_transitional_enums_union_members)
-END_TEST_CASE(attributes_tests)

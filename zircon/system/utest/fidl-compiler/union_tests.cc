@@ -7,8 +7,9 @@
 #include <fidl/names.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -20,9 +21,7 @@ static bool Compiles(const std::string& source_code,
   return library.Compile();
 }
 
-bool compiling() {
-  BEGIN_TEST;
-
+TEST(UnionTests, compiling) {
   // Keywords as field names.
   EXPECT_TRUE(Compiles(R"FIDL(
 library test;
@@ -79,13 +78,9 @@ strict union Foo {
   1: string bar;
 };
 )FIDL"));
-
-  END_TEST;
 }
 
-bool must_have_explicit_ordinals() {
-  BEGIN_TEST;
-
+TEST(UnionTests, must_have_explicit_ordinals) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -99,13 +94,9 @@ union Foo {
   ASSERT_EQ(library.errors().size(), 2u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrMissingOrdinalBeforeType);
   ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
-
-  END_TEST;
 }
 
-bool explicit_ordinals() {
-  BEGIN_TEST;
-
+TEST(UnionTests, explicit_ordinals) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -117,22 +108,18 @@ union Foo {
   ASSERT_TRUE(library.Compile());
 
   auto fidl_union = library.LookupUnion("Foo");
-  ASSERT_NONNULL(fidl_union);
+  ASSERT_NOT_NULL(fidl_union);
 
   ASSERT_EQ(fidl_union->members.size(), 2);
   auto& member0 = fidl_union->members[0];
-  EXPECT_NONNULL(member0.maybe_used);
+  EXPECT_NOT_NULL(member0.maybe_used);
   EXPECT_EQ(member0.ordinal->value, 1);
   auto& member1 = fidl_union->members[1];
-  EXPECT_NONNULL(member1.maybe_used);
+  EXPECT_NOT_NULL(member1.maybe_used);
   EXPECT_EQ(member1.ordinal->value, 2);
-
-  END_TEST;
 }
 
-bool explicit_ordinals_with_reserved() {
-  BEGIN_TEST;
-
+TEST(UnionTests, explicit_ordinals_with_reserved) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -147,31 +134,27 @@ union Foo {
   ASSERT_TRUE(library.Compile());
 
   auto fidl_union = library.LookupUnion("Foo");
-  ASSERT_NONNULL(fidl_union);
+  ASSERT_NOT_NULL(fidl_union);
 
   ASSERT_EQ(fidl_union->members.size(), 5);
   auto& member0 = fidl_union->members[0];
   EXPECT_NULL(member0.maybe_used);
   EXPECT_EQ(member0.ordinal->value, 1);
   auto& member1 = fidl_union->members[1];
-  EXPECT_NONNULL(member1.maybe_used);
+  EXPECT_NOT_NULL(member1.maybe_used);
   EXPECT_EQ(member1.ordinal->value, 2);
   auto& member2 = fidl_union->members[2];
   EXPECT_NULL(member2.maybe_used);
   EXPECT_EQ(member2.ordinal->value, 3);
   auto& member3 = fidl_union->members[3];
-  EXPECT_NONNULL(member3.maybe_used);
+  EXPECT_NOT_NULL(member3.maybe_used);
   EXPECT_EQ(member3.ordinal->value, 4);
   auto& member4 = fidl_union->members[4];
   EXPECT_NULL(member4.maybe_used);
   EXPECT_EQ(member4.ordinal->value, 5);
-
-  END_TEST;
 }
 
-bool explicit_ordinals_out_of_order() {
-  BEGIN_TEST;
-
+TEST(UnionTests, explicit_ordinals_out_of_order) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -186,14 +169,14 @@ union Foo {
   ASSERT_TRUE(library.Compile());
 
   auto fidl_union = library.LookupUnion("Foo");
-  ASSERT_NONNULL(fidl_union);
+  ASSERT_NOT_NULL(fidl_union);
 
   ASSERT_EQ(fidl_union->members.size(), 5);
   auto& member0 = fidl_union->members[0];
-  EXPECT_NONNULL(member0.maybe_used);
+  EXPECT_NOT_NULL(member0.maybe_used);
   EXPECT_EQ(member0.ordinal->value, 5);
   auto& member1 = fidl_union->members[1];
-  EXPECT_NONNULL(member1.maybe_used);
+  EXPECT_NOT_NULL(member1.maybe_used);
   EXPECT_EQ(member1.ordinal->value, 2);
   auto& member2 = fidl_union->members[2];
   EXPECT_NULL(member2.maybe_used);
@@ -202,14 +185,11 @@ union Foo {
   EXPECT_NULL(member3.maybe_used);
   EXPECT_EQ(member3.ordinal->value, 1);
   auto& member4 = fidl_union->members[4];
-  EXPECT_NONNULL(member4.maybe_used);
+  EXPECT_NOT_NULL(member4.maybe_used);
   EXPECT_EQ(member4.ordinal->value, 4);
-  END_TEST;
 }
 
-bool ordinal_out_of_bounds() {
-  BEGIN_TEST;
-
+TEST(UnionTests, ordinal_out_of_bounds) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -220,13 +200,9 @@ union Foo {
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrOrdinalOutOfBound);
-
-  END_TEST;
 }
 
-bool ordinals_must_be_unique() {
-  BEGIN_TEST;
-
+TEST(UnionTests, ordinals_must_be_unique) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -238,13 +214,9 @@ union Foo {
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateUnionMemberOrdinal);
-
-  END_TEST;
 }
 
-bool member_names_must_be_unique() {
-  BEGIN_TEST;
-
+TEST(UnionTests, member_names_must_be_unique) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -256,13 +228,9 @@ union Duplicates {
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateUnionMemberName);
-
-  END_TEST;
 }
 
-bool cannot_mix_explicit_and_hashed_ordinals() {
-  BEGIN_TEST;
-
+TEST(UnionTests, cannot_mix_explicit_and_hashed_ordinals) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -275,13 +243,9 @@ union Foo {
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrMissingOrdinalBeforeType);
-
-  END_TEST;
 }
 
-bool cannot_start_at_zero() {
-  BEGIN_TEST;
-
+TEST(UnionTests, cannot_start_at_zero) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -293,13 +257,9 @@ union Foo {
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrOrdinalsMustStartAtOne);
-
-  END_TEST;
 }
 
-bool default_not_allowed() {
-  BEGIN_TEST;
-
+TEST(UnionTests, default_not_allowed) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -311,13 +271,9 @@ union Foo {
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrDefaultsOnUnionsNotSupported);
-
-  END_TEST;
 }
 
-bool must_be_dense() {
-  BEGIN_TEST;
-
+TEST(UnionTests, must_be_dense) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -331,13 +287,9 @@ union Example {
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrNonDenseOrdinal);
   ASSERT_STR_STR(library.errors().at(0)->msg.c_str(), "2");
-
-  END_TEST;
 }
 
-bool must_have_at_least_one_non_reserved() {
-  BEGIN_TEST;
-
+TEST(UnionTests, must_have_at_least_one_non_reserved) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -350,13 +302,9 @@ union Foo {
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrMustHaveNonReservedMember);
-
-  END_TEST;
 }
 
-bool no_nullable_members_in_unions() {
-  BEGIN_TEST;
-
+TEST(UnionTests, no_nullable_members_in_unions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -369,13 +317,9 @@ union Foo {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrNullableUnionMember);
-
-  END_TEST;
 }
 
-bool no_directly_recursive_unions() {
-  BEGIN_TEST;
-
+TEST(UnionTests, no_directly_recursive_unions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -388,13 +332,9 @@ union Value {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
-
-  END_TEST;
 }
 
-bool invalid_empty_unions() {
-  BEGIN_TEST;
-
+TEST(UnionTests, invalid_empty_unions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -405,12 +345,9 @@ union Foo {};
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrMustHaveNonReservedMember);
-
-  END_TEST;
 }
 
-bool error_syntax_explicit_ordinals() {
-  BEGIN_TEST;
+TEST(UnionTests, error_syntax_explicit_ordinals) {
   TestLibrary error_library(R"FIDL(
 library example;
 protocol Example {
@@ -422,12 +359,9 @@ protocol Example {
   ASSERT_NOT_NULL(error_union);
   ASSERT_EQ(error_union->members.front().ordinal->value, 1);
   ASSERT_EQ(error_union->members.back().ordinal->value, 2);
-  END_TEST;
 }
 
-bool no_selector() {
-  BEGIN_TEST;
-
+TEST(UnionTests, no_selector) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -441,13 +375,9 @@ union Foo {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "Selector");
-
-  END_TEST;
 }
 
-bool deprecated_xunion_error() {
-  BEGIN_TEST;
-
+TEST(UnionTests, deprecated_xunion_error) {
   {
     TestLibrary xunion_library(R"FIDL(
   library test;
@@ -492,30 +422,6 @@ bool deprecated_xunion_error() {
     ASSERT_EQ(errors.size(), 1);
     ASSERT_ERR(errors[0], fidl::ErrStrictXunionDeprecated);
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(union_tests)
-RUN_TEST(compiling)
-RUN_TEST(must_have_explicit_ordinals)
-RUN_TEST(explicit_ordinals)
-RUN_TEST(explicit_ordinals_with_reserved)
-RUN_TEST(explicit_ordinals_out_of_order)
-RUN_TEST(ordinal_out_of_bounds)
-RUN_TEST(ordinals_must_be_unique)
-RUN_TEST(member_names_must_be_unique)
-RUN_TEST(cannot_mix_explicit_and_hashed_ordinals)
-RUN_TEST(cannot_start_at_zero)
-RUN_TEST(default_not_allowed)
-RUN_TEST(must_be_dense)
-RUN_TEST(must_have_at_least_one_non_reserved)
-RUN_TEST(no_nullable_members_in_unions)
-RUN_TEST(no_directly_recursive_unions)
-RUN_TEST(invalid_empty_unions)
-RUN_TEST(error_syntax_explicit_ordinals)
-RUN_TEST(no_selector)
-RUN_TEST(deprecated_xunion_error)
-END_TEST_CASE(union_tests)

@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-bool GoodEnumTestSimple() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, GoodEnumTestSimple) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -22,13 +21,9 @@ enum Fruit : uint64 {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool BadEnumTestWithNonUniqueValues() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, BadEnumTestWithNonUniqueValues) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -43,13 +38,9 @@ enum Fruit : uint64 {
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "APPLE");
   ASSERT_STR_STR(errors[0]->msg.c_str(), "ORANGE");
-
-  END_TEST;
 }
 
-bool BadEnumTestWithNonUniqueValuesOutOfLine() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, BadEnumTestWithNonUniqueValuesOutOfLine) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -67,13 +58,9 @@ const uint32 TWO_SQUARED = 4;
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "APPLE");
   ASSERT_STR_STR(errors[0]->msg.c_str(), "ORANGE");
-
-  END_TEST;
 }
 
-bool BadEnumTestUnsignedWithNegativeMember() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, BadEnumTestUnsignedWithNegativeMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -88,13 +75,9 @@ enum Fruit : uint64 {
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "-2");
   ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
-
-  END_TEST;
 }
 
-bool BadEnumTestInferredUnsignedWithNegativeMember() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, BadEnumTestInferredUnsignedWithNegativeMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -109,13 +92,9 @@ enum Fruit {
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "-2");
   ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
-
-  END_TEST;
 }
 
-bool BadEnumTestMemberOverflow() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, BadEnumTestMemberOverflow) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -130,13 +109,9 @@ enum Fruit : uint8 {
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "256");
   ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
-
-  END_TEST;
 }
 
-bool BadEnumTestFloatType() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, BadEnumTestFloatType) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -148,13 +123,9 @@ enum Error: float64 {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrEnumTypeMustBeIntegralPrimitive);
-
-  END_TEST;
 }
 
-bool BadEnumTestDuplicateMember() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, BadEnumTestDuplicateMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -169,13 +140,9 @@ enum Fruit : uint64 {
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberName);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "ORANGE");
-
-  END_TEST;
 }
 
-bool BadEnumTestNoMembers() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, BadEnumTestNoMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -185,13 +152,9 @@ enum E {};
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrMustHaveOneMember);
-
-  END_TEST;
 }
 
-bool GoodEnumTestKeywordNames() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, GoodEnumTestKeywordNames) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -202,13 +165,9 @@ enum Fruit : uint64 {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool BadEnumShantBeNullable() {
-  BEGIN_TEST;
-
+TEST(EnumsTests, BadEnumShantBeNullable) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -225,24 +184,6 @@ struct Struct {
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "NotNullable");
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(enums_tests)
-
-RUN_TEST(GoodEnumTestSimple)
-RUN_TEST(BadEnumTestWithNonUniqueValues)
-RUN_TEST(BadEnumTestWithNonUniqueValuesOutOfLine)
-RUN_TEST(BadEnumTestUnsignedWithNegativeMember)
-RUN_TEST(BadEnumTestInferredUnsignedWithNegativeMember)
-RUN_TEST(BadEnumTestMemberOverflow)
-RUN_TEST(BadEnumTestFloatType)
-RUN_TEST(BadEnumTestDuplicateMember)
-RUN_TEST(BadEnumTestNoMembers)
-RUN_TEST(GoodEnumTestKeywordNames)
-RUN_TEST(BadEnumShantBeNullable)
-
-END_TEST_CASE(enums_tests)
