@@ -58,16 +58,49 @@ class MixStage : public ReadableStream {
   };
 
   // TODO(13415): Integrate it into the Mixer class itself.
-  void UpdateSourceTrans(const ReadableStream& stream, Mixer::Bookkeeping* bk);
+  // TODO(55851): Don't require |stream_lock_|.
+  void UpdateSourceTrans(const ReadableStream& stream, Mixer::Bookkeeping* bk)
+    FXL_EXCLUSIVE_LOCKS_REQUIRED(stream_lock_);
   void UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk);
 
   enum class TaskType { Mix, Trim };
 
   void ForEachSource(TaskType task_type, zx::time dest_ref_time);
 
+  class MixerInput {
+   public:
+    MixerInput(std::shared_ptr<ReadableStream> stream, std::shared_ptr<Mixer> mixer,
+               zx::time ref_time)
+        : stream_(std::move(stream)), mixer_(std::move(mixer)), ref_time_(ref_time) {}
+
+    const zx::time ref_time() const { return ref_time_; }
+    Mixer* mixer() const { return mixer_.get(); }
+
+    // TODO(55851): Don't expose the streams reference_clock directly here.
+    std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+                                                   uint32_t frame_count) const {
+      return stream_->ReadLock(ref_time, frame, frame_count);
+    }
+    void Trim() const { stream_->Trim(ref_time_); }
+    void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
+                         FractionalFrames<int64_t> frac_source_mix_point,
+                         zx::duration underflow_duration) const {
+      stream_->ReportUnderflow(frac_source_start, frac_source_mix_point, underflow_duration);
+    }
+    void ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_offset,
+                                int64_t dest_mix_offset) const {
+      stream_->ReportPartialUnderflow(frac_source_offset, dest_mix_offset);
+    }
+
+   private:
+    std::shared_ptr<ReadableStream> stream_;
+    std::shared_ptr<Mixer> mixer_;
+    zx::time ref_time_;
+  };
+
   void SetupMix(Mixer* mixer);
-  bool ProcessMix(ReadableStream* stream, Mixer* mixer, const ReadableStream::Buffer& buffer);
-  void MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref_time);
+  bool ProcessMix(const MixerInput& input, const ReadableStream::Buffer& buffer);
+  void MixStream(const MixerInput& input);
 
   struct StreamHolder {
     std::shared_ptr<ReadableStream> stream;

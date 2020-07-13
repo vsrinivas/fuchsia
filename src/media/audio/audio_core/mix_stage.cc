@@ -151,34 +151,44 @@ void MixStage::Trim(zx::time dest_ref_time) {
 void MixStage::ForEachSource(TaskType task_type, zx::time dest_ref_time) {
   TRACE_DURATION("audio", "MixStage::ForEachSource");
 
-  std::vector<std::pair<std::shared_ptr<ReadableStream>, std::shared_ptr<Mixer>>> streams;
+  std::vector<MixerInput> streams;
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     for (const auto& holder : streams_) {
       if (holder.stream && holder.mixer) {
-        streams.emplace_back(std::make_pair(holder.stream, holder.mixer));
+        auto source_ref_time =
+            audio::clock::ReferenceTimeFromReferenceTime(reference_clock().get(), dest_ref_time,
+                                                         holder.stream->reference_clock().get())
+                .take_value();
+        streams.emplace_back(MixerInput(holder.stream, holder.mixer, source_ref_time));
+
+        // Ensure the mappings from source-frame to source-ref-time and monotonic-time are
+        // up-to-date.
+        //
+        // TODO(55851) We need to do this here because when source is a renderers PacketQueue, the
+        // clock in the AudioRenderer can be free'd while we're in the process of mixing, so it's
+        // not safe to reference source->reference_clock outside of this lock (which
+        // UpdateSourdTrans does).
+        if (task_type == TaskType::Mix) {
+          UpdateSourceTrans(*holder.stream, &holder.mixer->bookkeeping());
+        }
       }
     }
   }
 
-  for (const auto& [stream, mixer] : streams) {
+  for (const auto& input : streams) {
     if (task_type == TaskType::Mix) {
-      MixStream(stream.get(), mixer.get(), dest_ref_time);
+      MixStream(input);
     } else {
-      // To pass a Trim upstream to a source, we must translate dest_ref_time to their ref clock.
-      auto source_ref_time =
-          audio::clock::ReferenceTimeFromReferenceTime(reference_clock().get(), dest_ref_time,
-                                                       stream->reference_clock().get())
-              .take_value();
-      stream->Trim(source_ref_time);
+      input.Trim();
     }
   }
 }
 
-void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref_time) {
+void MixStage::MixStream(const MixStage::MixerInput& input) {
   TRACE_DURATION("audio", "MixStage::MixStream");
-  // Ensure the mappings from source-frame to source-ref-time and monotonic-time are up-to-date.
-  UpdateSourceTrans(*stream, &mixer->bookkeeping());
+  Mixer* mixer = input.mixer();
+  zx::time source_ref_time = input.ref_time();
   SetupMix(mixer);
 
   // If the renderer is currently paused, subject_delta (not just step_size) is zero. This packet
@@ -186,11 +196,6 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref
   if (!mixer->bookkeeping().dest_frames_to_frac_source_frames.subject_delta()) {
     return;
   }
-
-  auto source_ref_time =
-      audio::clock::ReferenceTimeFromReferenceTime(reference_clock().get(), dest_ref_time,
-                                                   stream->reference_clock().get())
-          .take_value();
 
   // Calculate the first sampling point for the initial job, in source sub-frames. Use timestamps
   // for the first and last dest frames we need, translated into the source (frac_frame) timeline.
@@ -214,7 +219,7 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref
         mixer->pos_filter_width();
 
     // Try to grab the front of the packet queue (or ring buffer, if capturing).
-    auto stream_buffer = stream->ReadLock(
+    auto stream_buffer = input.ReadLock(
         source_ref_time, frac_source_for_first_mix_job_frame.Floor(), source_frames.Ceiling());
 
     // If the queue is empty, then we are done.
@@ -229,7 +234,7 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref
 
     // Now process the packet at the front of the renderer's queue. If the packet has been
     // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
-    auto fully_consumed = ProcessMix(stream, mixer, *stream_buffer);
+    auto fully_consumed = ProcessMix(input, *stream_buffer);
     stream_buffer->set_is_fully_consumed(fully_consumed);
 
     // If we have mixed enough destination frames, we are done with this mix, regardless of what
@@ -262,9 +267,10 @@ void MixStage::SetupMix(Mixer* mixer) {
   cur_mix_job_.frames_produced = 0;
 }
 
-bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
+bool MixStage::ProcessMix(const MixStage::MixerInput& input,
                           const ReadableStream::Buffer& source_buffer) {
   TRACE_DURATION("audio", "MixStage::ProcessMix");
+  Mixer* mixer = input.mixer();
   // Bookkeeping should contain: the rechannel matrix (eventually).
 
   // Sanity check our parameters.
@@ -331,8 +337,8 @@ bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
     auto clock_mono_late = zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
         source_frac_frames_late.raw_value()));
 
-    stream->ReportUnderflow(frac_source_for_first_packet_frame, frac_source_for_first_mix_job_frame,
-                            clock_mono_late);
+    input.ReportUnderflow(frac_source_for_first_packet_frame, frac_source_for_first_mix_job_frame,
+                          clock_mono_late);
 
     return true;
   }
@@ -375,7 +381,7 @@ bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
 
     frac_source_offset_64 += FractionalFrames<int64_t>::FromRaw(dest_to_src.Scale(dest_offset_64));
 
-    stream->ReportPartialUnderflow(frac_source_offset_64, dest_offset_64);
+    input.ReportPartialUnderflow(frac_source_offset_64, dest_offset_64);
   }
 
   FX_DCHECK(dest_offset_64 >= 0);
