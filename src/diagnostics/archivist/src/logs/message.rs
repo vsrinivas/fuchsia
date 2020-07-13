@@ -9,7 +9,7 @@ use fidl_fuchsia_logger::{LogLevelFilter, LogMessage};
 use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
 use fuchsia_zircon as zx;
 use libc::{c_char, c_int};
-use std::{convert::TryFrom, iter::FromIterator, mem, str};
+use std::{convert::TryFrom, fmt::Write, iter::FromIterator, mem, str};
 
 pub const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
 pub const MIN_PACKET_SIZE: usize = METADATA_SIZE + 1;
@@ -39,6 +39,15 @@ pub enum Field {
     Tag,
     Msg,
     Other(String),
+}
+
+impl Field {
+    fn is_legacy(&self) -> bool {
+        matches!(
+            self,
+            Field::ProcessId | Field::ThreadId | Field::Dropped | Field::Tag | Field::Msg
+        )
+    }
 }
 
 impl AsRef<str> for Field {
@@ -245,8 +254,18 @@ impl Message {
         })
     }
 
+    fn non_legacy_contents(&self) -> impl Iterator<Item = &LogProperty> {
+        self.contents.properties.iter().filter(|prop| !prop.key().is_legacy())
+    }
+
     /// Convert this `Message` to a FIDL representation suitable for sending to `LogListenerSafe`.
     pub fn for_listener(&self) -> LogMessage {
+        let mut msg = self.msg().unwrap_or("").to_string();
+
+        for property in self.non_legacy_contents() {
+            write!(&mut msg, " {}", property).expect("allocations have to fail for this to fail");
+        }
+
         LogMessage {
             pid: self.pid().unwrap_or(zx::sys::ZX_KOID_INVALID),
             tid: self.tid().unwrap_or(zx::sys::ZX_KOID_INVALID),
@@ -254,7 +273,7 @@ impl Message {
             severity: self.severity.for_listener(),
             dropped_logs: self.dropped_logs().unwrap_or(0) as _,
             tags: self.tags().map(String::from).collect(),
-            msg: self.msg().unwrap_or("").to_string(),
+            msg,
         }
     }
 }
@@ -907,6 +926,18 @@ mod tests {
                     ],
                     vec![],
                 )
+            }
+        );
+        assert_eq!(
+            parsed.for_listener(),
+            LogMessage {
+                severity: Severity::Error.for_listener(),
+                time: 72,
+                dropped_logs: 2,
+                pid: 43,
+                tid: 912,
+                msg: "msg arg1=-23".into(),
+                tags: vec!["tag".into()]
             }
         );
 
