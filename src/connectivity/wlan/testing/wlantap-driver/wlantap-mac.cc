@@ -33,7 +33,7 @@ struct WlantapMacImpl : WlantapMac {
 
   static void DdkUnbind(void* ctx) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    self.RemoveDevice();
+    self.Unbind();
   }
 
   static void DdkRelease(void* ctx) { delete static_cast<WlantapMacImpl*>(ctx); }
@@ -196,12 +196,16 @@ struct WlantapMacImpl : WlantapMac {
     }
   }
 
-  virtual void RemoveDevice() override {
+  void Unbind() {
     {
       std::lock_guard<std::mutex> guard(lock_);
       ifc_.clear();
     }
-    device_remove_deprecated(device_);
+    device_unbind_reply(device_);
+  }
+
+  virtual void RemoveDevice() override {
+    device_async_remove(device_);
   }
 
   zx_device_t* device_ = nullptr;
