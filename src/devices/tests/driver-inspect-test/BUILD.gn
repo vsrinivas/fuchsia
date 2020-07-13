@@ -5,8 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 fidl("fuchsia.device.inspect.test") {
   testonly = true
@@ -55,29 +54,13 @@ test("tests") {
   visibility = [ ":*" ]
 }
 
-devmgr_manifest("devmgr-manifest") {
-}
+isolated_devmgr_unittest_package("driver-inspect-test") {
+  executable_path = "test/driver-inspect-test"
 
-test_package("driver-inspect-test") {
   deps = [
-    ":devmgr-manifest",
     ":driver",
     ":tests",
-  ]
-
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  tests = [
-    {
-      name = "driver-inspect-test"
-      environments = basic_envs
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("${root_build_dir}/inspect-test.so")
-      dest = "inspect-test.so"
-    },
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
   ]
 }
