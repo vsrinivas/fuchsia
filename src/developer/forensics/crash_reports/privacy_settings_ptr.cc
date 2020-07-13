@@ -46,7 +46,7 @@ void PrivacySettingsWatcher::Connect() {
 }
 
 void PrivacySettingsWatcher::Watch() {
-  privacy_settings_ptr_->Watch2([this](fuchsia::settings::PrivacySettings settings) {
+  privacy_settings_ptr_->Watch([this](fuchsia::settings::PrivacySettings settings) {
     retry_backoff_.Reset();
     privacy_settings_ = std::move(settings);
     Update();

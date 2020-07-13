@@ -18,9 +18,9 @@ void PrivacySettings::CloseConnection() {
   }
 }
 
-void PrivacySettings::Watch2(Watch2Callback callback) {
+void PrivacySettings::Watch(WatchCallback callback) {
   FX_CHECK(!watcher_);
-  watcher_ = std::make_unique<Watch2Callback>(std::move(callback));
+  watcher_ = std::make_unique<WatchCallback>(std::move(callback));
   if (dirty_bit_) {
     NotifyWatcher();
   }
@@ -44,7 +44,7 @@ void PrivacySettings::NotifyWatcher() {
   dirty_bit_ = false;
 }
 
-void PrivacySettingsClosesConnectionOnFirstWatch::Watch2(Watch2Callback callback) {
+void PrivacySettingsClosesConnectionOnFirstWatch::Watch(WatchCallback callback) {
   if (first_watch_) {
     CloseConnection();
     first_watch_ = false;
@@ -52,7 +52,7 @@ void PrivacySettingsClosesConnectionOnFirstWatch::Watch2(Watch2Callback callback
   }
 
   FX_CHECK(!watcher_);
-  watcher_ = std::make_unique<Watch2Callback>(std::move(callback));
+  watcher_ = std::make_unique<WatchCallback>(std::move(callback));
   if (dirty_bit_) {
     NotifyWatcher();
   }
