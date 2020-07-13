@@ -13,7 +13,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("lib") {
-  name = "amber"
+  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/amber"
   deps = [
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg.rewrite($go_toolchain)",
@@ -70,38 +70,25 @@ package("amberctl") {
   ]
 }
 
-test_targets = [
-  {
-    name = "amber_urlscope_test"
-    gopkg = "amber/urlscope"
-  },
-]
-foreach(test, test_targets) {
-  go_test(test.name) {
-    gopackages = [ test.gopkg ]
+go_test("amber_urlscope_test") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/amber/urlscope" ]
 
-    deps = [
-      ":lib",
-      "//src/sys/pkg/bin/pkgfs:pmd",
-      "//src/sys/pkg/bin/pm:pm_lib",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
-  }
+  deps = [
+    ":lib",
+    "//src/sys/pkg/bin/pkgfs:pmd",
+    "//src/sys/pkg/bin/pm:pm_lib",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
 }
 
 test_package("amber_tests") {
-  deps = []
-  tests = []
-
-  foreach(test, test_targets) {
-    deps += [ ":${test.name}" ]
-    tests += [
-      {
-        name = test.name
-        environments = basic_envs
-      },
-    ]
-  }
+  deps = [ ":amber_urlscope_test" ]
+  tests = [
+    {
+      name = "amber_urlscope_test"
+      environments = basic_envs
+    },
+  ]
 }
 
 # Retained for //garnet/packages/config:amber

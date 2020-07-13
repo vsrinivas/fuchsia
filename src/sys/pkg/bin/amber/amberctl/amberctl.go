@@ -31,9 +31,8 @@ import (
 	"fidl/fuchsia/space"
 	"fidl/fuchsia/update"
 
-	"amber/urlscope"
-
 	"go.fuchsia.dev/fuchsia/src/lib/component"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/amber/urlscope"
 )
 
 const usage = `usage: %s <command> [opts]

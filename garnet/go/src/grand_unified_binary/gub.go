@@ -14,9 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"amber/amberctl"
-
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/amber/amberctl"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/pkgsvr"
 )
 
