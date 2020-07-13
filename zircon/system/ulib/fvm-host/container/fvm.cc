@@ -316,6 +316,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
   uint64_t pslice_count = info_.SuperBlock()->pslice_count;
   fvm::FormatInfo source_format_info = fvm::FormatInfo::FromDiskSize(disk_size_, slice_size_);
   fvm::FormatInfo target_format_info = fvm::FormatInfo::FromDiskSize(disk_size, slice_size_);
+  std::vector<uint8_t> data(slice_size_);
   for (uint32_t index = 1; index <= pslice_count; index++) {
     zx_status_t status;
     fvm::slice_entry_t* slice = nullptr;
@@ -328,25 +329,13 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
       continue;
     }
 
-    fbl::Array<uint8_t> data(new uint8_t[slice_size_], slice_size_);
-
-    if (lseek(fd_.get(), source_format_info.GetSliceStart(index), SEEK_SET) < 0) {
-      fprintf(stderr, "Cannot seek to slice %u in current FVM\n", index);
-      return ZX_ERR_BAD_STATE;
-    }
-
-    ssize_t r = read(fd_.get(), data.data(), slice_size_);
+    ssize_t r = pread(fd_.get(), data.data(), slice_size_, source_format_info.GetSliceStart(index));
     if (r < 0 || static_cast<size_t>(r) != slice_size_) {
       fprintf(stderr, "Failed to read data from FVM: %ld\n", r);
       return ZX_ERR_BAD_STATE;
     }
 
-    if (lseek(fd.get(), target_format_info.GetSliceStart(index), SEEK_SET) < 0) {
-      fprintf(stderr, "Cannot seek to slice %u in new FVM\n", index);
-      return ZX_ERR_BAD_STATE;
-    }
-
-    r = write(fd.get(), data.data(), slice_size_);
+    r = pwrite(fd.get(), data.data(), slice_size_, target_format_info.GetSliceStart(index));
     if (r < 0 || static_cast<size_t>(r) != slice_size_) {
       fprintf(stderr, "Failed to write data to FVM: %ld\n", r);
       return ZX_ERR_BAD_STATE;
