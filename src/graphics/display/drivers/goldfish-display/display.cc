@@ -32,12 +32,15 @@ constexpr uint32_t kClientFlags = 0;
 constexpr zx_pixel_format_t kPixelFormats[] = {
     ZX_PIXEL_FORMAT_RGB_x888,
     ZX_PIXEL_FORMAT_ARGB_8888,
+    ZX_PIXEL_FORMAT_BGR_888x,
+    ZX_PIXEL_FORMAT_ABGR_8888,
 };
 
 constexpr uint32_t FB_WIDTH = 1;
 constexpr uint32_t FB_HEIGHT = 2;
 constexpr uint32_t FB_FPS = 5;
 
+constexpr uint32_t GL_RGBA = 0x1908;
 constexpr uint32_t GL_BGRA_EXT = 0x80E1;
 constexpr uint32_t GL_UNSIGNED_BYTE = 0x1401;
 
@@ -388,13 +391,19 @@ zx_status_t Display::ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset) 
     return status;
   }
 
+  uint32_t format = (image->pixel_format == ZX_PIXEL_FORMAT_RGB_x888 ||
+                     image->pixel_format == ZX_PIXEL_FORMAT_ARGB_8888)
+                        ? GL_BGRA_EXT
+                        : GL_RGBA;
+
   color_buffer->vmo = std::move(vmo);
   color_buffer->width = image->width;
   color_buffer->height = image->height;
+  color_buffer->format = format;
 
   {
     fbl::AutoLock lock(&lock_);
-    status = CreateColorBufferLocked(image->width, image->height, &color_buffer->id);
+    status = CreateColorBufferLocked(image->width, image->height, format, &color_buffer->id);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: failed to create color buffer", kTag);
       return status;
@@ -619,26 +628,29 @@ zx_status_t Display::DisplayControllerImplSetBufferCollectionConstraints(const i
   buffer_constraints.heap_permitted_count = 2;
   buffer_constraints.heap_permitted[0] = fuchsia_sysmem_HeapType_SYSTEM_RAM;
   buffer_constraints.heap_permitted[1] = fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL;
-  constraints.image_format_constraints_count = 1;
-  fuchsia_sysmem_ImageFormatConstraints& image_constraints =
-      constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
-  image_constraints.min_coded_width = 0;
-  image_constraints.max_coded_width = 0xffffffff;
-  image_constraints.min_coded_height = 0;
-  image_constraints.max_coded_height = 0xffffffff;
-  image_constraints.min_bytes_per_row = 0;
-  image_constraints.max_bytes_per_row = 0xffffffff;
-  image_constraints.max_coded_width_times_coded_height = 0xffffffff;
-  image_constraints.layers = 1;
-  image_constraints.coded_width_divisor = 1;
-  image_constraints.coded_height_divisor = 1;
-  image_constraints.bytes_per_row_divisor = 1;
-  image_constraints.start_offset_divisor = 1;
-  image_constraints.display_width_divisor = 1;
-  image_constraints.display_height_divisor = 1;
+  constraints.image_format_constraints_count = 2;
+  for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
+    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[i];
+    image_constraints.pixel_format.type =
+        i == 1 ? fuchsia_sysmem_PixelFormatType_R8G8B8A8 : fuchsia_sysmem_PixelFormatType_BGRA32;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
+    image_constraints.min_coded_width = 0;
+    image_constraints.max_coded_width = 0xffffffff;
+    image_constraints.min_coded_height = 0;
+    image_constraints.max_coded_height = 0xffffffff;
+    image_constraints.min_bytes_per_row = 0;
+    image_constraints.max_bytes_per_row = 0xffffffff;
+    image_constraints.max_coded_width_times_coded_height = 0xffffffff;
+    image_constraints.layers = 1;
+    image_constraints.coded_width_divisor = 1;
+    image_constraints.coded_height_divisor = 1;
+    image_constraints.bytes_per_row_divisor = 1;
+    image_constraints.start_offset_divisor = 1;
+    image_constraints.display_width_divisor = 1;
+    image_constraints.display_height_divisor = 1;
+  }
 
   zx_status_t status =
       fuchsia_sysmem_BufferCollectionSetConstraints(collection, true, &constraints);
@@ -776,15 +788,17 @@ int32_t Display::GetFbParamLocked(uint32_t param, int32_t default_value) {
   return status == ZX_OK ? result : default_value;
 }
 
-zx_status_t Display::CreateColorBufferLocked(uint32_t width, uint32_t height, uint32_t* id) {
-  TRACE_DURATION("gfx", "Display::CreateColorBuffer", "width", width, "height", height);
+zx_status_t Display::CreateColorBufferLocked(uint32_t width, uint32_t height, uint32_t format,
+                                             uint32_t* id) {
+  TRACE_DURATION("gfx", "Display::CreateColorBuffer", "width", width, "height", height, "format",
+                 format);
 
   auto cmd = static_cast<CreateColorBufferCmd*>(io_buffer_.virt());
   cmd->op = kOP_rcCreateColorBuffer;
   cmd->size = kSize_rcCreateColorBuffer;
   cmd->width = width;
   cmd->height = height;
-  cmd->internalformat = GL_BGRA_EXT;
+  cmd->internalformat = format;
 
   return ExecuteCommandLocked(kSize_rcCreateColorBuffer, id);
 }
@@ -824,7 +838,8 @@ zx_status_t Display::SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode, 
 }
 
 zx_status_t Display::UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr, uint32_t width,
-                                             uint32_t height, size_t size, uint32_t* result) {
+                                             uint32_t height, uint32_t format, size_t size,
+                                             uint32_t* result) {
   TRACE_DURATION("gfx", "Display::UpdateColorBuffer", "size", size);
 
   auto cmd = static_cast<UpdateColorBufferCmd*>(io_buffer_.virt());
@@ -835,7 +850,7 @@ zx_status_t Display::UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr, uint
   cmd->y = 0;
   cmd->width = width;
   cmd->height = height;
-  cmd->format = GL_BGRA_EXT;
+  cmd->format = format;
   cmd->type = GL_UNSIGNED_BYTE;
   cmd->size_pixels = static_cast<uint32_t>(size);
 
@@ -972,9 +987,9 @@ int Display::FlushHandler(uint64_t display_id) {
 
       if (displayed_cb->paddr) {
         uint32_t result;
-        zx_status_t status =
-            UpdateColorBufferLocked(displayed_cb->id, displayed_cb->paddr, displayed_cb->width,
-                                    displayed_cb->height, displayed_cb->size, &result);
+        zx_status_t status = UpdateColorBufferLocked(
+            displayed_cb->id, displayed_cb->paddr, displayed_cb->width, displayed_cb->height,
+            displayed_cb->format, displayed_cb->size, &result);
         if (status != ZX_OK || result) {
           zxlogf(ERROR, "%s: color buffer update failed", kTag);
           continue;

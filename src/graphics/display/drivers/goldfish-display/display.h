@@ -89,6 +89,7 @@ class Display : public DisplayType,
     size_t size = 0;
     uint32_t width = 0;
     uint32_t height = 0;
+    uint32_t format = 0;
     zx::vmo vmo;
     zx::pmt pmt;
   };
@@ -109,13 +110,15 @@ class Display : public DisplayType,
   zx_status_t ReadResultLocked(uint32_t* result, uint32_t count) TA_REQ(lock_);
   zx_status_t ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) TA_REQ(lock_);
   int32_t GetFbParamLocked(uint32_t param, int32_t default_value) TA_REQ(lock_);
-  zx_status_t CreateColorBufferLocked(uint32_t width, uint32_t height, uint32_t* id) TA_REQ(lock_);
+  zx_status_t CreateColorBufferLocked(uint32_t width, uint32_t height, uint32_t format,
+                                      uint32_t* id) TA_REQ(lock_);
   zx_status_t OpenColorBufferLocked(uint32_t id) TA_REQ(lock_);
   zx_status_t CloseColorBufferLocked(uint32_t id) TA_REQ(lock_);
   zx_status_t SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode, uint32_t* result)
       TA_REQ(lock_);
   zx_status_t UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr, uint32_t width,
-                                      uint32_t height, size_t size, uint32_t* result) TA_REQ(lock_);
+                                      uint32_t height, uint32_t format, size_t size,
+                                      uint32_t* result) TA_REQ(lock_);
   zx_status_t FbPostLocked(uint32_t id) TA_REQ(lock_);
   zx_status_t CreateDisplayLocked(uint32_t* result) TA_REQ(lock_);
   zx_status_t DestroyDisplayLocked(uint32_t display_id, uint32_t* result) TA_REQ(lock_);
