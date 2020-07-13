@@ -62,7 +62,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
     // App is created, but is not fully-initialized.  Make sure the fetch of settings only happens
     // after it has been initialized.
-    EXPECT_EQ(0, mock_setui_.num_watch2_called());
+    EXPECT_EQ(0, mock_setui_.num_watch_called());
     // Right now, obtaining the locale causes the app to be fully-initialized.
     ASSERT_EQ(1, mock_property_provider_.get_profile_count());
     mock_property_provider_.SetLocale("en");
@@ -70,8 +70,8 @@ class AppUnitTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
     ASSERT_EQ(1,
               mock_property_provider_.get_profile_count());  // Stil 1, no changes in profile yet.
-    // Note: 2 here because as soon as we get a settings, we call Watch2() again.
-    ASSERT_EQ(2, mock_setui_.num_watch2_called());
+    // Note: 2 here because as soon as we get a settings, we call Watch() again.
+    ASSERT_EQ(2, mock_setui_.num_watch_called());
 
     zx::eventpair::create(0u, &eventpair_, &eventpair_peer_);
     view_ref_ = fuchsia::ui::views::ViewRef({

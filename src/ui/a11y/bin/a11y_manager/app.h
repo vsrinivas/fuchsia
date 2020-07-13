@@ -114,10 +114,10 @@ class App {
   // to handle the settings logic without |profile_| would result in an error.
   void FinishSetUp();
 
-  // Callback for Setui's Watch2() method.
-  void SetuiWatch2Callback(fuchsia::settings::AccessibilitySettings settings);
+  // Callback for Setui's Watch() method.
+  void SetuiWatchCallback(fuchsia::settings::AccessibilitySettings settings);
 
-  // Set up continuous watch of setui's accessibility settings. The Watch2(...) method returns on
+  // Set up continuous watch of setui's accessibility settings. The Watch(...) method returns on
   // the initial call, and afterwards uses a hanging get to return only when settings change.
   void WatchSetui();
 

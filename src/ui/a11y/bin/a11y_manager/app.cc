@@ -172,14 +172,12 @@ bool App::GestureState::operator==(GestureState o) const {
          magnifier_gestures == o.magnifier_gestures;
 }
 
-void App::SetuiWatch2Callback(fuchsia::settings::AccessibilitySettings settings) {
+void App::SetuiWatchCallback(fuchsia::settings::AccessibilitySettings settings) {
   SetState(state_.withSettings(settings));
   WatchSetui();
 }
 
-void App::WatchSetui() {
-  setui_settings_->Watch2(fit::bind_member(this, &App::SetuiWatch2Callback));
-}
+void App::WatchSetui() { setui_settings_->Watch(fit::bind_member(this, &App::SetuiWatchCallback)); }
 
 // Converts setui color blindess type to the relevant accessibility color correction mode.
 fuchsia::accessibility::ColorCorrectionMode ConvertColorCorrection(
