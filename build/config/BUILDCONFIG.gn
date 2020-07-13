@@ -233,6 +233,17 @@ default_shared_library_configs = default_common_binary_configs + [
                                  ]
 default_shared_library_configs -= toolchain_variant.remove_shared_configs
 
+# Rust proc macros don't support (Thin)LTO, so always remove it.
+default_rust_proc_macro_configs = default_shared_library_configs + [
+                                    "//build/config/lto",
+                                    "//build/config/lto:thinlto",
+                                  ] -
+                                  [
+                                    "//build/config/lto",
+                                    "//build/config/lto:thinlto",
+                                    "//build/config/lto:default",
+                                  ]
+
 default_executable_configs = default_common_binary_configs + [
                                "//build/config:executable_config",
                                "//build/config:default_libs",
@@ -268,7 +279,7 @@ set_defaults("rust_library") {
 }
 
 set_defaults("rust_proc_macro") {
-  configs = default_shared_library_configs
+  configs = default_rust_proc_macro_configs
 }
 
 set_defaults("loadable_module") {
