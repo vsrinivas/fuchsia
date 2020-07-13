@@ -8,75 +8,67 @@
 #include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
-#include <memory>
-#include <new>
+#include <iostream>
+#include <vector>
 
-#include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 #include <fvm/format.h>
 #include <minfs/format.h>
-#include <unittest/unittest.h>
 
-#include "filesystems.h"
-#include "misc.h"
+#include "src/storage/fs_test/fs_test_fixture.h"
+#include "src/storage/fs_test/misc.h"
 
+namespace fs_test {
 namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-bool QueryInfo(uint64_t* out_free_pool_size) {
-  BEGIN_HELPER;
-  fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
-  ASSERT_TRUE(fd);
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  auto query_result = fio::DirectoryAdmin::Call::QueryFilesystem(caller.channel());
-  ASSERT_EQ(query_result.status(), ZX_OK);
-  ASSERT_NOT_NULL(query_result.Unwrap()->info);
-  fio::FilesystemInfo* info = query_result.Unwrap()->info.get();
-  // This should always be true, for all filesystems.
-  ASSERT_GT(info->total_bytes, info->used_bytes);
-  *out_free_pool_size = info->free_shared_pool_bytes;
-  END_HELPER;
-}
+using ParamType = std::tuple<TestFilesystemOptions, /*remount=*/bool>;
 
-bool EnsureCanGrow() {
-  BEGIN_HELPER;
-  uint64_t free_pool_size;
-  ASSERT_TRUE(QueryInfo(&free_pool_size));
-  // This tests expects to run with free FVM space.
-  ASSERT_GT(free_pool_size, 0);
-  END_HELPER;
-}
+class ResizeTest : public BaseFilesystemTest, public testing::WithParamInterface<ParamType> {
+ public:
+  ResizeTest() : BaseFilesystemTest(std::get<0>(GetParam())) {}
 
-bool EnsureCannotGrow() {
-  BEGIN_HELPER;
-  uint64_t free_pool_size;
-  ASSERT_TRUE(QueryInfo(&free_pool_size));
-  ASSERT_EQ(free_pool_size, 0);
-  END_HELPER;
-}
+  bool ShouldRemount() const { return std::get<1>(GetParam()); }
 
-const test_disk_t max_inode_disk = {
-    .block_count = 1LLU << 15,
-    .block_size = 1LLU << 9,
-    .slice_size = 1LLU << 20,
+ protected:
+  void QueryInfo(uint64_t* out_free_pool_size) {
+    fbl::unique_fd fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(fd);
+    fdio_cpp::FdioCaller caller(std::move(fd));
+    auto query_result = fio::DirectoryAdmin::Call::QueryFilesystem(caller.channel());
+    ASSERT_EQ(query_result.status(), ZX_OK);
+    ASSERT_NE(query_result.Unwrap()->info, nullptr);
+    fio::FilesystemInfo* info = query_result.Unwrap()->info.get();
+    // This should always be true, for all filesystems.
+    ASSERT_GT(info->total_bytes, info->used_bytes);
+    *out_free_pool_size = info->free_shared_pool_bytes;
+  }
+
+  void EnsureCanGrow() {
+    uint64_t free_pool_size;
+    ASSERT_NO_FATAL_FAILURE(QueryInfo(&free_pool_size));
+    // This tests expects to run with free FVM space.
+    ASSERT_GT(free_pool_size, 0ul);
+  }
+
+  void EnsureCannotGrow() {
+    uint64_t free_pool_size;
+    ASSERT_NO_FATAL_FAILURE(QueryInfo(&free_pool_size));
+    ASSERT_EQ(free_pool_size, 0ul);
+  }
 };
 
-template <bool Remount>
-bool TestUseAllInodes() {
-  BEGIN_TEST;
-  if (use_real_disk) {
-    fprintf(stderr, "Ramdisk required; skipping test\n");
-    return true;
-  }
-  ASSERT_TRUE(test_info->supports_resize);
-  ASSERT_TRUE(EnsureCanGrow());
+using MaxInodeTest = ResizeTest;
+
+TEST_P(MaxInodeTest, UseAllInodes) {
+  ASSERT_NO_FATAL_FAILURE(EnsureCanGrow());
 
   // Create 100,000 inodes.
   // We expect that this will force enough inodes to cause the
@@ -85,19 +77,17 @@ bool TestUseAllInodes() {
   size_t d = 0;
   while (true) {
     if (d % 100 == 0) {
-      printf("Creating directory (containing 100 files): %lu\n", d);
+      std::cerr << "Creating directory (containing 100 files): " << d << std::endl;
     }
-    char dname[128];
-    snprintf(dname, sizeof(dname), "::%lu", d);
-    if (mkdir(dname, 0666) < 0) {
+    const std::string dname = GetPath(std::to_string(d));
+    if (mkdir(dname.c_str(), 0666) < 0) {
       ASSERT_EQ(errno, ENOSPC);
       break;
     }
     bool stop = false;
     for (size_t f = 0; f < kFilesPerDirectory; f++) {
-      char fname[128];
-      snprintf(fname, sizeof(fname), "::%lu/%lu", d, f);
-      fbl::unique_fd fd(open(fname, O_CREAT | O_RDWR | O_EXCL));
+      const std::string fname = dname + "/" + std::to_string(f);
+      fbl::unique_fd fd(open(fname.c_str(), O_CREAT | O_RDWR | O_EXCL));
       if (!fd) {
         ASSERT_EQ(errno, ENOSPC);
         stop = true;
@@ -110,67 +100,52 @@ bool TestUseAllInodes() {
     d++;
   }
 
-  ASSERT_TRUE(EnsureCannotGrow());
+  ASSERT_NO_FATAL_FAILURE(EnsureCannotGrow());
 
-  if (Remount) {
-    printf("Unmounting, Re-mounting, verifying...\n");
-    ASSERT_TRUE(check_remount(), "Could not remount filesystem");
+  if (ShouldRemount()) {
+    std::cerr << "Unmounting, Verifying, Re-mounting..." << std::endl;
+    EXPECT_EQ(fs().Unmount().status_value(), 0);
+    EXPECT_EQ(fs().Fsck().status_value(), 0);
+    EXPECT_EQ(fs().Mount().status_value(), 0);
   }
 
   size_t directory_count = d;
   for (size_t d = 0; d < directory_count; d++) {
     if (d % 100 == 0) {
-      printf("Deleting directory (containing 100 files): %lu\n", d);
+      std::cerr << "Deleting directory (containing 100 files): " << d << std::endl;
     }
+    const std::string dname = GetPath(std::to_string(d));
     for (size_t f = 0; f < kFilesPerDirectory; f++) {
-      char fname[128];
-      snprintf(fname, sizeof(fname), "::%lu/%lu", d, f);
-      ASSERT_EQ(unlink(fname), 0);
+      const std::string fname = dname + "/" + std::to_string(f);
+      ASSERT_EQ(unlink(fname.c_str()), 0);
     }
-    char dname[128];
-    snprintf(dname, sizeof(dname), "::%lu", d);
-    ASSERT_EQ(rmdir(dname), 0);
+    ASSERT_EQ(rmdir(dname.c_str()), 0);
   }
-
-  END_TEST;
 }
 
-const test_disk_t max_data_disk = {
-    .block_count = 1LLU << 17,
-    .block_size = 1LLU << 9,
-    .slice_size = 1LLU << 20,
-};
+using MaxDataTest = ResizeTest;
 
-template <bool Remount>
-bool TestUseAllData() {
-  BEGIN_TEST;
-  if (use_real_disk) {
-    fprintf(stderr, "Ramdisk required; skipping test\n");
-    return true;
-  }
-  constexpr size_t kBufSize = (1 << 20);
+TEST_P(MaxDataTest, UseAllData) {
+  constexpr size_t kBufSize = 1 << 20;
   constexpr size_t kFileBufCount = 20;
-  ASSERT_TRUE(test_info->supports_resize);
-  ASSERT_TRUE(EnsureCanGrow());
+  ASSERT_NO_FATAL_FAILURE(EnsureCanGrow());
 
-  uint64_t disk_size = test_disk_info.block_count * test_disk_info.block_size;
-  size_t metadata_size = fvm::MetadataSize(disk_size, max_data_disk.slice_size);
+  uint64_t disk_size = fs().options().device_block_count * fs().options().device_block_size;
+  size_t metadata_size = fvm::MetadataSize(disk_size, fs().options().fvm_slice_size);
 
   ASSERT_GT(disk_size, metadata_size * 2);
   disk_size -= 2 * metadata_size;
 
-  ASSERT_GT(disk_size, minfs::kMinfsMinimumSlices * max_data_disk.slice_size);
-  disk_size -= minfs::kMinfsMinimumSlices * max_data_disk.slice_size;
+  ASSERT_GT(disk_size, minfs::kMinfsMinimumSlices * fs().options().fvm_slice_size);
+  disk_size -= minfs::kMinfsMinimumSlices * fs().options().fvm_slice_size;
 
-  std::unique_ptr<uint8_t[]> buf(new uint8_t[kBufSize]);
-  memset(buf.get(), 0, kBufSize);
+  std::vector<uint8_t> buf(kBufSize);
 
   size_t f = 0;
   while (true) {
-    printf("Creating 20 MB file #%lu\n", f);
-    char fname[128];
-    snprintf(fname, sizeof(fname), "::%lu", f);
-    fbl::unique_fd fd(open(fname, O_CREAT | O_RDWR | O_EXCL));
+    std::cerr << "Creating 20 MB file " << f << std::endl;
+    const std::string fname = GetPath(std::to_string(f));
+    fbl::unique_fd fd(open(fname.c_str(), O_CREAT | O_RDWR | O_EXCL));
     if (!fd) {
       ASSERT_EQ(errno, ENOSPC);
       break;
@@ -179,7 +154,7 @@ bool TestUseAllData() {
     bool stop = false;
     for (size_t i = 0; i < kFileBufCount; i++) {
       ASSERT_EQ(ftruncate(fd.get(), kBufSize * kFileBufCount), 0);
-      ssize_t r = write(fd.get(), buf.get(), kBufSize);
+      ssize_t r = write(fd.get(), buf.data(), kBufSize);
       if (r != kBufSize) {
         ASSERT_EQ(errno, ENOSPC);
         stop = true;
@@ -191,34 +166,67 @@ bool TestUseAllData() {
     }
   }
 
-  ASSERT_TRUE(EnsureCannotGrow());
+  ASSERT_NO_FATAL_FAILURE(EnsureCannotGrow());
 
-  if (Remount) {
-    printf("Unmounting, Re-mounting, verifying...\n");
-    ASSERT_TRUE(check_remount(), "Could not remount filesystem");
+  if (ShouldRemount()) {
+    std::cerr << "Unmounting, Verifying, Re-mounting..." << std::endl;
+    EXPECT_EQ(fs().Unmount().status_value(), 0);
+    EXPECT_EQ(fs().Fsck().status_value(), 0);
+    EXPECT_EQ(fs().Mount().status_value(), 0);
   }
 
   size_t file_count = f;
   for (size_t f = 0; f < file_count; f++) {
-    char fname[128];
-    snprintf(fname, sizeof(fname), "::%lu", f);
-    ASSERT_EQ(unlink(fname), 0);
+    const std::string fname = GetPath(std::to_string(f));
+    ASSERT_EQ(unlink(fname.c_str()), 0);
   }
-
-  END_TEST;
 }
 
+std::string GetParamDescription(const testing::TestParamInfo<ParamType>& param) {
+  std::stringstream s;
+  s << std::get<0>(param.param) << (std::get<1>(param.param) ? "WithRemount" : "WithoutRemount");
+  return s.str();
+}
+
+std::vector<ParamType> GetTestCombinationsForMaxInodeTest() {
+  std::vector<ParamType> test_combinations;
+  for (TestFilesystemOptions options : AllTestFilesystems()) {
+    if (options.use_fvm && options.filesystem->GetTraits().supports_resize) {
+      options.device_block_count = 1LLU << 15;
+      options.device_block_size = 1LLU << 9;
+      options.fvm_slice_size = 1LLU << 20;
+      test_combinations.push_back(ParamType{options, false});
+      if (options.filesystem->GetTraits().can_unmount) {
+        test_combinations.push_back(ParamType{options, true});
+      }
+    }
+  }
+  return test_combinations;
+}
+
+std::vector<ParamType> GetTestCombinationsForMaxDataTest() {
+  std::vector<ParamType> test_combinations;
+  for (TestFilesystemOptions options : AllTestFilesystems()) {
+    if (options.use_fvm && options.filesystem->GetTraits().supports_resize) {
+      options.device_block_count = 1LLU << 17;
+      options.device_block_size = 1LLU << 9;
+      options.fvm_slice_size = 1LLU << 20;
+      test_combinations.push_back(ParamType{options, false});
+      if (options.filesystem->GetTraits().can_unmount) {
+        test_combinations.push_back(ParamType{options, true});
+      }
+    }
+  }
+  return test_combinations;
+}
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MaxInodeTest,
+                         testing::ValuesIn(GetTestCombinationsForMaxInodeTest()),
+                         GetParamDescription);
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MaxDataTest,
+                         testing::ValuesIn(GetTestCombinationsForMaxDataTest()),
+                         GetParamDescription);
+
 }  // namespace
-
-// Reformat the disk between tests to restore original size.
-RUN_FOR_ALL_FILESYSTEMS_TYPE(fs_resize_tests_inodes_remount, max_inode_disk, FS_TEST_FVM,
-                             RUN_TEST_LARGE((TestUseAllInodes<true>)))
-
-RUN_FOR_ALL_FILESYSTEMS_TYPE(fs_resize_tests_inodes, max_inode_disk, FS_TEST_FVM,
-                             RUN_TEST_LARGE((TestUseAllInodes<false>)))
-
-RUN_FOR_ALL_FILESYSTEMS_TYPE(fs_resize_tests_data_remount, max_data_disk, FS_TEST_FVM,
-                             RUN_TEST_LARGE((TestUseAllData<true>)))
-
-RUN_FOR_ALL_FILESYSTEMS_TYPE(fs_resize_tests_data, max_data_disk, FS_TEST_FVM,
-                             RUN_TEST_LARGE((TestUseAllData<false>)))
+}  // namespace fs_test

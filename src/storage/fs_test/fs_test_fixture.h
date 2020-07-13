@@ -46,7 +46,7 @@ class __EXPORT BaseFilesystemTest : public testing::Test {
 
 class FilesystemTest : public BaseFilesystemTest,
                        public testing::WithParamInterface<TestFilesystemOptions> {
- public:
+ protected:
   FilesystemTest() : BaseFilesystemTest(GetParam()) {}
 };
 

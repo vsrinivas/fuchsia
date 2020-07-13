@@ -60,6 +60,7 @@ class Filesystem {
     zx::duration timestamp_granularity = zx::nsec(1);
     bool supports_hard_links = true;
     bool supports_mmap = false;
+    bool supports_resize = false;
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
@@ -92,6 +93,7 @@ class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
         .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = true,
         .supports_mmap = false,
+        .supports_resize = true,
     };
     return traits;
   }
@@ -108,6 +110,7 @@ class MemfsFilesystem : public FilesystemImpl<MemfsFilesystem> {
         .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = true,
         .supports_mmap = true,
+        .supports_resize = false,
     };
     return traits;
   }
