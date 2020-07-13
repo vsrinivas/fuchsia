@@ -321,6 +321,8 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     {{- range .Members }}
     case Tag::{{ .TagName }}:
       {{- if .Type.NeedsDtor }}
@@ -329,6 +331,10 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
       return ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
     {{- end }}
     default:
+    {{- if .IsFlexible }}
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
+    {{ end -}}
       return ZX_OK;
   }
 }

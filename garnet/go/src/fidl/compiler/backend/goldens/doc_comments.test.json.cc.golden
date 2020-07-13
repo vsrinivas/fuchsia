@@ -97,6 +97,8 @@ zx_status_t Union::Clone(Union* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kField:
       return ::fidl::Clone(Field_, &result->Field_);
     default:

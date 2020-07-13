@@ -512,6 +512,8 @@ zx_status_t SimpleUnion::Clone(SimpleUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kA:
       return ::fidl::Clone(a_, &result->a_);
     case Tag::kB:

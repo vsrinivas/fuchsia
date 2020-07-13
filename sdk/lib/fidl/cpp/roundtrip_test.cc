@@ -137,6 +137,12 @@ TEST(XUnion, Empty) {
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
 
+TEST(XUnion, EmptyInStruct) {
+  SampleXUnionInStruct input;
+  ASSERT_TRUE(input.xu.has_invalid_tag());
+  util::CheckEncodeFailure(input, ZX_ERR_INVALID_ARGS);
+}
+
 TEST(XUnion, Int32) {
   SampleXUnion input;
   input.set_i(0xdeadbeef);

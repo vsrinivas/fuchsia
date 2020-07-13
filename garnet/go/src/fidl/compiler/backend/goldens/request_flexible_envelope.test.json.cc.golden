@@ -122,6 +122,8 @@ zx_status_t StrictFoo::Clone(StrictFoo* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kS:
       new (&result->s_)::std::string();
       return ::fidl::Clone(s_, &result->s_);
@@ -305,12 +307,16 @@ zx_status_t FlexibleFoo::Clone(FlexibleFoo* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kS:
       new (&result->s_)::std::string();
       return ::fidl::Clone(s_, &result->s_);
     case Tag::kI:
       return ::fidl::Clone(i_, &result->i_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }

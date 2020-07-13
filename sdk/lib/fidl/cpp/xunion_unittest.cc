@@ -52,6 +52,22 @@ TEST(XUnion, FlexibleXUnionWithUnknownData) {
                                                         sizeof(fidl_xunion_t),
                                                     input.cend()));
 
+  // TODO(fxb/7847): Decide how unions with unknown data should be re-encoded
+  // The union itself is re-encoded as an empty union
+  std::vector<uint8_t> empty_union = {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes, num handles
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // data is not present
+  };
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(xu, empty_union));
+
+  // Encoding the union in a non-nullable context fails.
+  auto xu_in_struct = ::fidl::test::util::DecodedBytes<SampleXUnionInStruct>(input);
+
+  // This code is just util::CheckEncodeFailure, but without the call to
+  // fidl::Clone beceause this hangs for unions with unknown data
+  ::fidl::test::util::CheckEncodeFailure(xu_in_struct, ZX_ERR_INVALID_ARGS);
+
   // Reset the xunion to a known field, and ensure it behaves correctly.
   xu.set_i(5);
   EXPECT_EQ(xu.i(), 5);

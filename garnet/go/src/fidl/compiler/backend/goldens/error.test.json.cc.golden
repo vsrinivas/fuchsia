@@ -155,6 +155,8 @@ zx_status_t Example_foo_Result::Clone(Example_foo_Result* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kResponse:
       new (&result->response_) class Example_foo_Response();
       return ::fidl::Clone(response_, &result->response_);

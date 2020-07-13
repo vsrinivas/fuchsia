@@ -115,10 +115,14 @@ zx_status_t UnionWithHandle::Clone(UnionWithHandle* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kH:
       new (&result->h_)::zx::vmo();
       return ::fidl::Clone(h_, &result->h_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }

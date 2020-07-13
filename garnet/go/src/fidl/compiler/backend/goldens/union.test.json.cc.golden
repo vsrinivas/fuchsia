@@ -151,6 +151,8 @@ zx_status_t Union::Clone(Union* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kPrimitive:
       return ::fidl::Clone(Primitive_, &result->Primitive_);
     case Tag::kStringNeedsConstructor:
@@ -401,6 +403,8 @@ zx_status_t StrictUnion::Clone(StrictUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kPrimitive:
       return ::fidl::Clone(Primitive_, &result->Primitive_);
     case Tag::kStringNeedsConstructor:
@@ -612,6 +616,8 @@ zx_status_t StrictSimpleXUnion::Clone(StrictSimpleXUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kI:
       return ::fidl::Clone(i_, &result->i_);
     case Tag::kF:
@@ -794,6 +800,8 @@ zx_status_t StrictFoo::Clone(StrictFoo* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kS:
       new (&result->s_)::std::string();
       return ::fidl::Clone(s_, &result->s_);
@@ -947,6 +955,8 @@ zx_status_t StrictBoundedXUnion::Clone(StrictBoundedXUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kV:
       new (&result->v_)::std::vector<uint8_t>();
       return ::fidl::Clone(v_, &result->v_);
@@ -1103,6 +1113,8 @@ zx_status_t ReverseOrdinalUnion::Clone(ReverseOrdinalUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kSecond:
       return ::fidl::Clone(second_, &result->second_);
     case Tag::kFirst:
@@ -1323,6 +1335,8 @@ zx_status_t StrictPizzaOrPasta::Clone(StrictPizzaOrPasta* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kPizza:
       new (&result->pizza_) class Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
@@ -1497,6 +1511,8 @@ zx_status_t PizzaOrPasta::Clone(PizzaOrPasta* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kPizza:
       new (&result->pizza_) class Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
@@ -1688,6 +1704,8 @@ zx_status_t FlexiblePizzaOrPasta::Clone(FlexiblePizzaOrPasta* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kPizza:
       new (&result->pizza_) class Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
@@ -1695,6 +1713,8 @@ zx_status_t FlexiblePizzaOrPasta::Clone(FlexiblePizzaOrPasta* result) const {
       new (&result->pasta_) class Pasta();
       return ::fidl::Clone(pasta_, &result->pasta_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }
@@ -1869,6 +1889,8 @@ zx_status_t ExplicitPizzaOrPasta::Clone(ExplicitPizzaOrPasta* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kPizza:
       new (&result->pizza_) class Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
@@ -2053,11 +2075,15 @@ zx_status_t OlderSimpleUnion::Clone(OlderSimpleUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kI:
       return ::fidl::Clone(i_, &result->i_);
     case Tag::kF:
       return ::fidl::Clone(f_, &result->f_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }
@@ -2598,6 +2624,8 @@ zx_status_t NewerSimpleUnion::Clone(NewerSimpleUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kI:
       return ::fidl::Clone(i_, &result->i_);
     case Tag::kS:
@@ -2607,6 +2635,8 @@ zx_status_t NewerSimpleUnion::Clone(NewerSimpleUnion* result) const {
       new (&result->v_)::std::vector<::std::string>();
       return ::fidl::Clone(v_, &result->v_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }
@@ -2830,6 +2860,8 @@ zx_status_t FlexibleUnion::Clone(FlexibleUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kPrimitive:
       return ::fidl::Clone(Primitive_, &result->Primitive_);
     case Tag::kStringNeedsConstructor:
@@ -2842,6 +2874,8 @@ zx_status_t FlexibleUnion::Clone(FlexibleUnion* result) const {
       return ::fidl::Clone(VectorStringAlsoNeedsConstructor_,
                            &result->VectorStringAlsoNeedsConstructor_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }
@@ -3037,12 +3071,16 @@ zx_status_t FlexibleFoo::Clone(FlexibleFoo* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kS:
       new (&result->s_)::std::string();
       return ::fidl::Clone(s_, &result->s_);
     case Tag::kI:
       return ::fidl::Clone(i_, &result->i_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }
@@ -3188,6 +3226,8 @@ zx_status_t FieldCollision::Clone(FieldCollision* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kFieldCollisionTag:
       return ::fidl::Clone(field_collision_tag_, &result->field_collision_tag_);
     default:
@@ -3354,11 +3394,15 @@ zx_status_t ExplicitXUnion::Clone(ExplicitXUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kI:
       return ::fidl::Clone(i_, &result->i_);
     case Tag::kF:
       return ::fidl::Clone(f_, &result->f_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }
@@ -3525,6 +3569,8 @@ zx_status_t ExplicitUnion::Clone(ExplicitUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kPrimitive:
       return ::fidl::Clone(Primitive_, &result->Primitive_);
     case Tag::kStringNeedsConstructor:
@@ -3697,6 +3743,8 @@ zx_status_t ExplicitStrictFoo::Clone(ExplicitStrictFoo* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kS:
       new (&result->s_)::std::string();
       return ::fidl::Clone(s_, &result->s_);
@@ -3880,12 +3928,16 @@ zx_status_t ExplicitFoo::Clone(ExplicitFoo* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kS:
       new (&result->s_)::std::string();
       return ::fidl::Clone(s_, &result->s_);
     case Tag::kI:
       return ::fidl::Clone(i_, &result->i_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }
@@ -4079,10 +4131,14 @@ zx_status_t XUnionContainingEmptyStruct::Clone(
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kEmpty:
       new (&result->empty_) class Empty();
       return ::fidl::Clone(empty_, &result->empty_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }

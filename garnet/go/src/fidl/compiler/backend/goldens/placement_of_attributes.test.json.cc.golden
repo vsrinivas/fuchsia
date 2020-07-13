@@ -230,9 +230,13 @@ zx_status_t ExampleXUnion::Clone(ExampleXUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kVariant:
       return ::fidl::Clone(variant_, &result->variant_);
     default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      result->unknown_data_ = unknown_data_;
       return ZX_OK;
   }
 }
@@ -365,6 +369,8 @@ zx_status_t ExampleUnion::Clone(ExampleUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kVariant:
       return ::fidl::Clone(variant_, &result->variant_);
     default:

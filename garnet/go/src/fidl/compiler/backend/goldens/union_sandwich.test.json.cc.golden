@@ -102,6 +102,8 @@ zx_status_t UnionSize8Alignment4::Clone(UnionSize8Alignment4* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kVariant:
       return ::fidl::Clone(variant_, &result->variant_);
     default:
@@ -283,6 +285,8 @@ zx_status_t UnionSize36Alignment4::Clone(UnionSize36Alignment4* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kVariant:
       new (&result->variant_)::std::array<uint8_t, 32>();
       return ::fidl::Clone(variant_, &result->variant_);
@@ -467,6 +471,8 @@ zx_status_t UnionSize12Alignment4::Clone(UnionSize12Alignment4* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kVariant:
       new (&result->variant_)::std::array<uint8_t, 6>();
       return ::fidl::Clone(variant_, &result->variant_);
@@ -686,6 +692,8 @@ zx_status_t UnionSize24Alignment8::Clone(UnionSize24Alignment8* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
     case Tag::kVariant:
       new (&result->variant_) class StructSize16Alignment8();
       return ::fidl::Clone(variant_, &result->variant_);
