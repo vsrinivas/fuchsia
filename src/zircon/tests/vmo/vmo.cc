@@ -10,13 +10,11 @@
 #include <zircon/syscalls.h>
 
 #include <fbl/function.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "bench.h"
 
-bool vmo_cache_map_test() {
-  BEGIN_TEST;
-
+TEST(VmoTests, vmo_cache_map_test) {
   auto maptest = [](uint32_t policy, const char *type) {
     zx_handle_t vmo;
     const size_t size = 256 * 1024;  // 256K
@@ -65,13 +63,10 @@ bool vmo_cache_map_test() {
   maptest(ZX_CACHE_POLICY_UNCACHED, "uncached");
   maptest(ZX_CACHE_POLICY_UNCACHED_DEVICE, "uncached device");
   maptest(ZX_CACHE_POLICY_WRITE_COMBINING, "write combining");
-
-  END_TEST;
 }
 
-bool vmo_unmap_coherency() {
-  BEGIN_TEST;
-
+// This is disabled because it is slow (30 seconds).
+TEST(VmoTests, DISABLED_vmo_unmap_coherency) {
   // This is an expensive test to try to detect a multi-cpu coherency
   // problem with TLB flushing of unmap operations
   //
@@ -110,7 +105,7 @@ bool vmo_unmap_coherency() {
   auto worker = [](void *_args) -> int {
     worker_args *a = (worker_args *)_args;
 
-    unittest_printf("ptr %#" PRIxPTR " len %zu\n", a->ptr, a->len);
+    printf("ptr %#" PRIxPTR " len %zu\n", a->ptr, a->len);
 
     while (!a->exit.load()) {
       // walk through the mapping, writing to every page
@@ -121,7 +116,7 @@ bool vmo_unmap_coherency() {
       a->count.fetch_add(1);
     }
 
-    unittest_printf("exiting worker\n");
+    printf("exiting worker\n");
 
     a->exited.store(true);
 
@@ -140,7 +135,7 @@ bool vmo_unmap_coherency() {
     size_t last_count = args.count.load();
     while (args.count.load() <= last_count) {
       if (zx_clock_get_monotonic() - t > max_wait) {
-        UNITTEST_FAIL_TRACEF("looper appears stuck!\n");
+        printf("looper appears stuck!\n");
         break;
       }
     }
@@ -157,14 +152,7 @@ bool vmo_unmap_coherency() {
   args.exit.store(true);
   while (args.exited.load() == false)
     ;
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(vmo_tests)
-RUN_TEST_PERFORMANCE(vmo_cache_map_test);
-RUN_TEST_LARGE(vmo_unmap_coherency);
-END_TEST_CASE(vmo_tests)
 
 int main(int argc, char **argv) {
   bool run_bench = false;
@@ -175,8 +163,7 @@ int main(int argc, char **argv) {
   }
 
   if (!run_bench) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
+    return zxtest::RunAllTests(argc, argv);
   } else {
     return vmo_run_benchmark();
   }
