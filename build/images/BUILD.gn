@@ -1433,6 +1433,16 @@ action("flash_script") {
     "--product=${fastboot_product}",
     "--pre-erase-flash=${pre_erase_flash}",
   ]
+  metadata = {
+    images = [
+      {
+        name = "flash-script"
+        path = "flash.sh"
+        type = "script"
+      },
+    ]
+    image_paths = [ "IMAGE_FLASH_SH=netboot.sh" ]
+  }
 }
 
 if (override_recovery_label != "") {
@@ -1456,6 +1466,16 @@ paver_targets = [
     } else {
       deps += [ ":netboot" ]
     }
+    metadata = {
+      images = [
+        {
+          name = name
+          path = "netboot.sh"
+          type = "script"
+        },
+      ]
+      image_paths = [ "IMAGE_NETBOOT_SH=netboot.sh" ]
+    }
   },
   {
     name = "zedboot-script"
@@ -1469,6 +1489,16 @@ paver_targets = [
       switch = "--pave_zedboot="
     }
     extra_bootserver_arguments = "--allow-zedboot-version-mismatch"
+    metadata = {
+      images = [
+        {
+          name = name
+          path = "pave-zedboot.sh"
+          type = "script"
+        },
+      ]
+      image_paths = [ "IMAGE_PAVE_ZEDBOOT_SH=pave-zedboot.sh" ]
+    }
   },
   {
     name = "paver-script"
@@ -1482,8 +1512,21 @@ paver_targets = [
       switch = "--pave="
     }
     extra_bootserver_arguments = ""
+    metadata = {
+      images = [
+        {
+          name = name
+          path = "pave.sh"
+          type = "script"
+        },
+      ]
+      image_paths = [ "IMAGE_PAVE_SH=pave.sh" ]
+    }
   },
 ]
+
+# Name the entrypoint scripts in images.json as well, as that they are
+# presently the stable API to perform a pave/netboot/etc. without botanist.
 
 archive_formats = [
   "tar",
