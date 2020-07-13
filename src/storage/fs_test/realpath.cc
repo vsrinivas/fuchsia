@@ -9,21 +9,25 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/unique_fd.h>
-#include <zircon/syscalls.h>
-#include <unittest/unittest.h>
 
-#include "filesystems.h"
+#include "src/storage/fs_test/fs_test_fixture.h"
 
-constexpr char kName[] = "::my_file";
-constexpr char kTestNameDotDot[] = "::foo/../bar/../my_file";
-constexpr char kTestNameDot[] = "::././././my_file";
-constexpr char kTestNameBothDots[] = "::foo//.././/./././my_file";
+namespace fs_test {
+namespace {
 
-static bool terminator(char c) { return c == 0 || c == '/'; }
+using RealpathTest = FilesystemTest;
 
-static bool is_resolved(const char* path) {
+constexpr char kName[] = "my_file";
+constexpr char kTestNameDotDot[] = "foo/../bar/../my_file";
+constexpr char kTestNameDot[] = "././././my_file";
+constexpr char kTestNameBothDots[] = "foo//.././/./././my_file";
+
+bool terminator(char c) { return c == 0 || c == '/'; }
+
+bool is_resolved(const char* path) {
   // Check that there are no ".", "//", or ".." components.
   // We assume there are no symlinks, since symlinks are not
   // yet supported on Fuchsia.
@@ -44,78 +48,71 @@ static bool is_resolved(const char* path) {
   }
 }
 
-bool TestRealpathAbsolute(void) {
-  BEGIN_TEST;
-
-  fbl::unique_fd fd(open(kName, O_RDWR | O_CREAT, 0644));
+TEST_P(RealpathTest, Absolute) {
+  fbl::unique_fd fd(open(GetPath(kName).c_str(), O_RDWR | O_CREAT, 0644));
   ASSERT_TRUE(fd);
 
   struct stat sb;
-  ASSERT_EQ(stat(kName, &sb), 0);
+  ASSERT_EQ(stat(GetPath(kName).c_str(), &sb), 0);
 
-  // Find the real path of the file (since, due to linker magic, we
-  // actually don't know it).
+  // Find the real path of the file.
   char buf[PATH_MAX];
-  ASSERT_EQ(realpath(kName, buf), buf);
+  ASSERT_EQ(realpath(GetPath(kName).c_str(), buf), buf);
 
   // Confirm that for (resolvable) cases of realpath, the name
   // can be cleaned.
   char buf2[PATH_MAX];
-  ASSERT_EQ(realpath(kTestNameDotDot, buf2), buf2);
-  ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with ..) did not resolve");
+  ASSERT_EQ(realpath(GetPath(kTestNameDotDot).c_str(), buf2), buf2);
+  ASSERT_EQ(std::string(buf), std::string(buf2));
   ASSERT_TRUE(is_resolved(buf2));
 
-  ASSERT_EQ(realpath(kTestNameDot, buf2), buf2);
-  ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with .) did not resolve");
+  ASSERT_EQ(realpath(GetPath(kTestNameDot).c_str(), buf2), buf2);
+  ASSERT_EQ(std::string(buf), std::string(buf2));
   ASSERT_TRUE(is_resolved(buf2));
 
-  ASSERT_EQ(realpath(kTestNameBothDots, buf2), buf2);
-  ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with . and ..) did not resolve");
+  ASSERT_EQ(realpath(GetPath(kTestNameBothDots).c_str(), buf2), buf2);
+  ASSERT_EQ(std::string(buf), std::string(buf2));
   ASSERT_TRUE(is_resolved(buf2));
 
   // Clean up
   ASSERT_EQ(close(fd.release()), 0);
-  ASSERT_EQ(unlink(kName), 0);
-  END_TEST;
+  ASSERT_EQ(unlink(GetPath(kName).c_str()), 0);
 }
 
-constexpr char kNameDir[] = "::my_dir";
-constexpr char kNameFile[] = "::my_dir/my_file";
+constexpr char kNameDir[] = "my_dir";
+constexpr char kNameFile[] = "my_dir/my_file";
 constexpr char kTestRelativeDotDot[] = "../my_dir/../my_dir/my_file";
 constexpr char kTestRelativeDot[] = "./././my_file";
 constexpr char kTestRelativeBothDots[] = "./..//my_dir/.././///././my_dir/./my_file";
 
-bool TestRealpathRelative(void) {
-  BEGIN_TEST;
-
-  ASSERT_EQ(mkdir(kNameDir, 0666), 0);
-  fbl::unique_fd fd(open(kNameFile, O_RDWR | O_CREAT, 0644));
+TEST_P(RealpathTest, Relative) {
+  ASSERT_EQ(mkdir(GetPath(kNameDir).c_str(), 0666), 0);
+  fbl::unique_fd fd(open(GetPath(kNameFile).c_str(), O_RDWR | O_CREAT, 0644));
   ASSERT_TRUE(fd);
   close(fd.release());
 
   struct stat sb;
-  ASSERT_EQ(stat(kNameFile, &sb), 0);
+  ASSERT_EQ(stat(GetPath(kNameFile).c_str(), &sb), 0);
 
-  // Find the real path of the file (since, due to linker magic, we
-  // actually don't know it).
+  // Find the real path of the file.
   char buf[PATH_MAX];
-  ASSERT_EQ(realpath(kNameFile, buf), buf);
+  ASSERT_EQ(realpath(GetPath(kNameFile).c_str(), buf), buf);
 
   char cwd[PATH_MAX];
-  ASSERT_NONNULL(getcwd(cwd, sizeof(cwd)));
-  ASSERT_EQ(chdir(kNameDir), 0);
+  ASSERT_NE(getcwd(cwd, sizeof(cwd)), nullptr);
+  ASSERT_EQ(chdir(GetPath(kNameDir).c_str()), 0);
 
   char buf2[PATH_MAX];
   ASSERT_EQ(realpath(kTestRelativeDotDot, buf2), buf2);
-  ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with ..) did not resolve");
+  ASSERT_EQ(std::string(buf), std::string(buf2));
   ASSERT_TRUE(is_resolved(buf2));
 
   ASSERT_EQ(realpath(kTestRelativeDot, buf2), buf2);
-  ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with .) did not resolve");
+  ASSERT_EQ(std::string(buf), std::string(buf2));
   ASSERT_TRUE(is_resolved(buf2));
 
   ASSERT_EQ(realpath(kTestRelativeBothDots, buf2), buf2);
-  ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with . and ..) did not resolve");
+  ASSERT_EQ(std::string(buf), std::string(buf2));
   ASSERT_TRUE(is_resolved(buf2));
 
   // Test the longest possible path name
@@ -133,25 +130,26 @@ bool TestRealpathRelative(void) {
   while (len != PATH_MAX - cwd_len - strlen("my_file") - 1) {
     bufmax[len++] = '/';
   }
-  memcpy(bufmax + len, "my_file", strlen("my_file"));
-  bufmax[len + strlen("my_file")] = 0;
+  strcpy(bufmax + len, "my_file");
   ASSERT_EQ(strlen(bufmax), PATH_MAX - cwd_len - 1);
 
   ASSERT_EQ(realpath(bufmax, buf2), buf2);
-  ASSERT_EQ(strcmp(buf, buf2), 0, "Name (longest path) did not resolve");
+  ASSERT_EQ(std::string(buf), std::string(buf2));
   ASSERT_TRUE(is_resolved(buf2));
 
   // Try a name that is too long (same as the last one, but just
   // add a single additional "/").
   bufmax[len++] = '/';
   strcpy(bufmax + len, "my_file");
-  ASSERT_NULL(realpath(bufmax, buf2));
+  ASSERT_EQ(realpath(bufmax, buf2), nullptr);
 
   // Clean up
-  ASSERT_EQ(chdir(cwd), 0, "Could not return to original cwd");
-  ASSERT_EQ(unlink(kNameFile), 0);
-  END_TEST;
+  ASSERT_EQ(chdir(cwd), 0) << "Could not return to original cwd";
+  ASSERT_EQ(unlink(GetPath(kNameFile).c_str()), 0);
 }
 
-RUN_FOR_ALL_FILESYSTEMS(realpath_tests,
-                        RUN_TEST_MEDIUM(TestRealpathAbsolute) RUN_TEST_MEDIUM(TestRealpathRelative))
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, RealpathTest, testing::ValuesIn(AllTestFilesystems()),
+                         testing::PrintToStringParamName());
+
+}  // namespace
+}  // namespace fs_test

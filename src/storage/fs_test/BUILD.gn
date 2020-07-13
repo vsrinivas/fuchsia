@@ -314,8 +314,8 @@ fuchsia_component("random-op-tests") {
   ]
 }
 
-test("read_write_tests") {
-  sources = [ "read_write.cc" ]
+test("realpath_tests") {
+  sources = [ "realpath.cc" ]
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
@@ -323,12 +323,12 @@ test("read_write_tests") {
   ]
 }
 
-fuchsia_component("read-write-tests") {
+fuchsia_component("realpath-tests") {
   testonly = true
-  manifest = "$target_gen_dir/read-write-tests.cml"
+  manifest = "$target_gen_dir/realpath-tests.cml"
   deps = [
     ":manifests",
-    ":read_write_tests",
+    ":realpath_tests",
   ]
 }
 
@@ -348,7 +348,7 @@ fuchsia_test_package("fs-tests") {
     ":overflow-tests",
     ":persist-tests",
     ":random-op-tests",
-    ":read-write-tests",
+    ":realpath-tests",
   ]
 }
 
@@ -394,7 +394,7 @@ action("manifests") {
     "$target_gen_dir/overflow-tests.cml",
     "$target_gen_dir/persist-tests.cml",
     "$target_gen_dir/random-op-tests.cml",
-    "$target_gen_dir/read-write-tests.cml",
+    "$target_gen_dir/realpath-tests.cml",
   ]
   args = rebase_path(sources, root_build_dir) +
          rebase_path(outputs, root_build_dir)
