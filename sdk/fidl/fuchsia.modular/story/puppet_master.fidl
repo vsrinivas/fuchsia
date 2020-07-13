@@ -36,8 +36,8 @@ enum ConfigureStoryError : int32 {
 
 struct ExecuteResult {
     ExecuteStatus status;
-    string? story_id;
-    string? error_message;
+    string:MAX? story_id;
+    string:MAX? error_message;
 };
 
 // Enables control of a session. A session, conceptually, is a single
@@ -62,14 +62,14 @@ protocol PuppetMaster {
     // `request` is closed if control cannot be granted.
     //
     // TODO(thatguy): We want story names to be scoped to the client's namespace.
-    ControlStory(string story_name, request<StoryPuppetMaster> request);
+    ControlStory(string:MAX story_name, request<StoryPuppetMaster> request);
 
     // Deletes a story associated to `story_name`.
     // Any active StoryPuppetMaster connections to the Story will be closed.
-    DeleteStory(string story_name) -> ();
+    DeleteStory(string:MAX story_name) -> ();
 
     // Returns a list of all the names of stories in the session.
-    GetStories() -> (vector<string> story_names);
+    GetStories() -> (vector<string:MAX>:MAX story_names);
 };
 
 protocol StoryPuppetMaster {
@@ -78,7 +78,7 @@ protocol StoryPuppetMaster {
     // set of changes to the story.
     //
     // To execute all enqueued commands, call Execute().
-    Enqueue(vector<StoryCommand> commands);
+    Enqueue(vector<StoryCommand>:MAX commands);
 
     // Executes the commands enqueued so far by Enqueue() in order and as
     // a batch: no other commands from other clients will be interleaved.
@@ -95,7 +95,7 @@ protocol StoryPuppetMaster {
     //
     // DEPRECATED. This method is a no-op and will never return an error.
     [Transitional = "Deprecated, no-op"]
-    SetStoryInfoExtra(vector<StoryInfoExtraEntry> story_info_extra)
+    SetStoryInfoExtra(vector<StoryInfoExtraEntry>:MAX story_info_extra)
         -> () error ConfigureStoryError;
 
     /// Attach the `annotations` to the story. If the story does not yet exist,

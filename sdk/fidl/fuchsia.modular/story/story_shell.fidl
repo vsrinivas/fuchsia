@@ -37,22 +37,22 @@ protocol StoryShell {
     AddSurface3(ViewConnection view_connection, SurfaceInfo2 surface_info);
 
     /// Focuses the surface with surface_id, bringing it to the foreground.
-    FocusSurface(string surface_id);
+    FocusSurface(string:MAX surface_id);
 
     /// Defocuses the surface with surface_id, dismissing it to the background.
-    DefocusSurface(string surface_id) -> ();
+    DefocusSurface(string:MAX surface_id) -> ();
 
     /// Notify when a Surface is focused in the story. The focus could be from
     /// a user interaction or requested by the framework through
     /// StoryController#FocusModule.
     /// EXPERIMENTAL
-    -> OnSurfaceFocused(string surface_id);
+    -> OnSurfaceFocused(string:MAX surface_id);
 
     /// Remove the Surface with surface_id from the StoryShell entirely. This is
     /// final. The Surface is removed from the graph. If necessary, the
     /// associated Surface is defocused. There is no expectation that
     /// DefocusSurface is called before this.
-    RemoveSurface(string surface_id);
+    RemoveSurface(string:MAX surface_id);
 
     /// Update the surface
     /// This is called when the intent is to update the surface metadata in the
@@ -75,7 +75,7 @@ protocol StoryShell {
 /// A pair mapping a surface ID to a view (via `view_holder_token`).
 struct ViewConnection {
     /// The ID for the surface
-    string surface_id;
+    string:MAX surface_id;
 
     /// Token for embedding the new view corresponding to the surface.
     fuchsia.ui.views.ViewHolderToken view_holder_token;
@@ -84,7 +84,7 @@ struct ViewConnection {
 /// DEPRECATED, for transition purposes only.
 struct ViewConnection2 {
     /// The ID for the surface
-    string surface_id;
+    string:MAX surface_id;
 
     /// Token for embedding the new view corresponding to the surface.
     fuchsia.ui.views.ViewHolderToken view_holder_token;
@@ -93,7 +93,7 @@ struct ViewConnection2 {
 /// Contains metadata for a Surface.
 struct SurfaceInfo {
     /// ID of the view that is parent of this Surface.
-    string parent_id;
+    string:MAX parent_id;
 
     /// The relationship between the parent Surface and this new Surface. Used
     /// for layout optimization.
@@ -110,7 +110,7 @@ struct SurfaceInfo {
 /// Contains metadata for a Surface.
 table SurfaceInfo2 {
     /// ID of the view that is parent of this Surface.
-    1: string parent_id;
+    1: string:MAX parent_id;
 
     /// The relationship between the parent Surface and this new Surface. Used
     /// for layout optimization.
@@ -146,7 +146,7 @@ protocol StoryShellContext {
     /// Requests a view for a Surface.
     /// Requests that a view for `surface_id` is provided through
     /// StoryShell.ReconnectView().
-    RequestView(string surface_id);
+    RequestView(string:MAX surface_id);
 };
 
 /// Implemented by StoryShell to get notified about visual state changes.

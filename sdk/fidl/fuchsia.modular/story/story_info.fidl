@@ -9,10 +9,10 @@ struct StoryInfo {
     /// URL of the first module run in this story. This module is free to
     /// run more modules in the story. Used for display purposes only.
     // TODO(thatguy): Remove this. It is not being set any more.
-    string? url;
+    string:MAX? url;
 
     /// The ID of the Story, used to reference it in method arguments.
-    string id;
+    string:MAX id;
 
     /// Wallclock time when the story was last focused. From
     /// `ZX_CLOCK_UTC`, thus nanoseconds since UNIX epoch (1970-01-01 00:00 UTC).
@@ -22,14 +22,14 @@ struct StoryInfo {
 
     /// Data the SessionShell wants to keep associated with this Story, like
     /// title, a color, or a display rank.
-    vector<StoryInfoExtraEntry>? extra;
+    vector<StoryInfoExtraEntry>:MAX? extra;
 };
 
 /// Information about a story as provided to the SessionShell.
 /// For transition purposes only.
 table StoryInfo2 {
     /// The ID of the Story, used to reference it in method arguments.
-    1: string id;
+    1: string:MAX id;
 
     /// Wallclock time when the story was last focused. From
     /// ZX_CLOCK_UTC, thus nanoseconds since UNIX epoch (1970-01-01 00:00 UTC).
@@ -45,6 +45,6 @@ table StoryInfo2 {
 };
 
 struct StoryInfoExtraEntry {
-    string key;
-    string value;
+    string:MAX key;
+    string:MAX value;
 };

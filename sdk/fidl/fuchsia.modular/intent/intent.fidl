@@ -13,14 +13,14 @@ struct Intent {
     ///
     /// This is nullable for backwards compatibility.
     // TODO(MI4-1100): Make action non-nullable.
-    string? action;
+    string:MAX? action;
 
     /// An explicit handler for the Intent. Specified as the component URL of the
     /// module.
-    string? handler;
+    string:MAX? handler;
 
     /// NON-FUNCTIONAL: `parameters` is no longer supported but must remain for ABI compatibility.
-    vector<IntentParameter>? parameters;
+    vector<IntentParameter>:MAX? parameters;
 };
 
 /// NON-FUNCTIONAL: `IntentParameter` is no longer supported but must remain for ABI compatibility.
@@ -29,7 +29,7 @@ struct Intent {
 struct IntentParameter {
     /// The name of the parameter. The handler (i.e. selected mod) will be provided
     /// with the data for this parameter under a link called `name`.
-    string? name;
+    string:MAX? name;
 
     /// The data that will be passed to the intent handler.
     IntentParameterData data;
@@ -41,7 +41,7 @@ union IntentParameterData {
     /// Set this if you already have an Entity reference at runtime.
     /// Entity.getTypes() will be used to set the constraints for this noun during
     /// resolution.
-    1: string entity_reference;
+    1: string:MAX entity_reference;
 
     /// Set this if you have structured JSON data. Values typically are a JSON
     /// object with a "@type" attribute and other associated data.  TODO(thatguy):
@@ -59,5 +59,5 @@ union IntentParameterData {
     ///
     /// Only one entry in `entity_type` must match the constraint specified by
     /// the Module for the constraint to be considered satisfied.
-    3: vector<string> entity_type;
+    3: vector<string:MAX>:MAX entity_type;
 };

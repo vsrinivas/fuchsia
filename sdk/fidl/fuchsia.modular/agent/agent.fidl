@@ -57,5 +57,5 @@ protocol Agent {
     /// StoryCommand.AddMod/surface_relation_parent.
     ///
     /// The full path is encoded into `requestor_url` as escape_colons(module_path).join(':').
-    Connect(string requestor_url, request<fuchsia.sys.ServiceProvider> services);
+    Connect(string:MAX requestor_url, request<fuchsia.sys.ServiceProvider> services);
 };

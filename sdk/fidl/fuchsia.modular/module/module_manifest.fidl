@@ -10,44 +10,44 @@ struct ModuleManifest {
     /// file can be found.
     /// TODO(MF-94): Extract a module's URL from its cmx manifest instead of
     /// here.
-    string binary;
+    string:MAX binary;
 
-    /// A human-readable string that can be used when suggesting this Module.
+    /// A human-readable string:MAX that can be used when suggesting this Module.
     /// DEPRECATED.
-    string? suggestion_headline;
+    string:MAX? suggestion_headline;
 
     /// A list of intents that this module is able to handle.
-    vector<IntentFilter>? intent_filters;
+    vector<IntentFilter>:MAX? intent_filters;
 
     /// Identifies the pattern with which to compose this module with others.
-    string? composition_pattern;
+    string:MAX? composition_pattern;
 
     /// Defines the color of the placeholder widget used while the module loads.
-    string? placeholder_color;
+    string:MAX? placeholder_color;
 };
 
 /// This struct is used to describe an intent that a module is able to handle.
 struct IntentFilter {
     /// The action this module is able to handle.
-    string action;
+    string:MAX action;
 
     /// Includes the name and types of entities for the parameters required to
     /// execute specified [action].
-    vector<ParameterConstraint> parameter_constraints;
+    vector<ParameterConstraint>:MAX parameter_constraints;
 
     /// Defines presentation properties for suggestions of this action.
     ActionDisplay action_display;
 };
 
 struct ParameterConstraint {
-    string name;
+    string:MAX name;
     /// The entity type that is valid for this parameter.
-    string type;
+    string:MAX type;
 };
 
 /// Defines how a suggestion of an action will be presented.
 table ActionDisplay {
-    /// Defines presentation fields for a suggestion. The string fields might be
+    /// Defines presentation fields for a suggestion. The string:MAX fields might be
     /// templated and will be filled from data in `parameter_mapping`.
     /// For example: "Listen to $artistName"
     1: DisplayInfo display_info;
@@ -56,29 +56,29 @@ table ActionDisplay {
     /// In the example above, we would map name=artistName to the intent field
     /// artist.name where artist is the intent parameter name and name a field
     /// of it.
-    2: vector<ParameterMapping> parameter_mapping;
+    2: vector<ParameterMapping>:MAX parameter_mapping;
 };
 
 /// Presentation information about the suggestion.
 table DisplayInfo {
     /// The title of the suggestion.
-    1: string title;
+    1: string:MAX title;
 
     /// A subtitle for the suggestion.
-    2: string subtitle;
+    2: string:MAX subtitle;
 
     /// A url from which to fetch the icon of the suggestion.
-    3: string icon;
+    3: string:MAX icon;
 };
 
 /// Defines pairs that will be replaced in the DisplayInfo.
 table ParameterMapping {
     /// The name of the variable to be replaced in the template.
-    1: string name;
+    1: string:MAX name;
 
     /// The path in the intent parameter to get that name.
-    /// `PARAMETER_PROPERTY` = string | string . `PARAMETER_PROPERTY`
-    /// The first string in the dot-separated string is the name of the intent
+    /// `PARAMETER_PROPERTY` = string:MAX | string:MAX . `PARAMETER_PROPERTY`
+    /// The first string:MAX in the dot-separated string:MAX is the name of the intent
     /// parameter and the following are nested subfields.
-    2: string parameter_property;
+    2: string:MAX parameter_property;
 };

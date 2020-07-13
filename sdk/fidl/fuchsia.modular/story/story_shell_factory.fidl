@@ -10,9 +10,9 @@ library fuchsia.modular;
 [Discoverable]
 protocol StoryShellFactory {
     /// Requests a StoryShell for the story with the given `story_id`.
-    AttachStory(string story_id, request<StoryShell> story_shell);
+    AttachStory(string:MAX story_id, request<StoryShell> story_shell);
 
     /// Instructs the session shell to teardown the story shell with the given `story_id`.
     /// This will be called before the story is stopped.
-    DetachStory(string story_id) -> ();
+    DetachStory(string:MAX story_id) -> ();
 };

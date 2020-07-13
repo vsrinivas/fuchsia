@@ -19,7 +19,7 @@ protocol ComponentContext {
     /// Used to start an agent in the user scope if it isn't already running, and
     /// connect to it.
     [Transitional]
-    DeprecatedConnectToAgent(string url,
+    DeprecatedConnectToAgent(string:MAX url,
                              request<fuchsia.sys.ServiceProvider> incoming_services,
                              request<AgentController> controller);
 
@@ -43,7 +43,7 @@ protocol ComponentContext {
 /// Used by ComponentContext.ConnectToAgentService
 table AgentServiceRequest {
     /// The name of the requested service.
-    1: string service_name;
+    1: string:MAX service_name;
 
     /// The channel that will be used to communicate with the requested service.
     2: zx.handle:CHANNEL channel;

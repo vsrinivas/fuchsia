@@ -41,8 +41,8 @@ struct SetFocusState {
 struct AddMod {
     /// The name of the mod within the story. The mod's name acts as the unique
     /// ID of the mod, scoped to the story in which it is contained. Since
-    /// AddMod is reused for observation and mod names are vector<string>
-    /// inside the framework, they are vector<string> here as well.
+    /// AddMod is reused for observation and mod names are vector<string:MAX>
+    /// inside the framework, they are vector<string:MAX>:MAX here as well.
     ///
     /// Clients should treat the full vector as a single opaque value.
     ///
@@ -50,21 +50,21 @@ struct AddMod {
     /// If both are provided, `mod_name` is ignored.
     ///
     // TODO(MF-148): Convert to string
-    vector<string> mod_name;
+    vector<string:MAX>:MAX mod_name;
 
     /// The name of the mod within the story. This should be used instead of
     /// `mod_name`. If provided, it is equivalent to passing `mod_name` with
     /// a single item. If both are provided, `mod_name` is ignored.
     ///
     // TODO(MF-148): Remove
-    string? mod_name_transitional;
+    string:MAX? mod_name_transitional;
 
     Intent intent;
 
     /// `surface_relation` defines the visual relationship between this mod and the
     /// mod at `surface_parent_mod_name`.
     SurfaceRelation surface_relation;
-    vector<string>? surface_parent_mod_name;
+    vector<string:MAX>:MAX? surface_parent_mod_name;
 };
 
 /// Removes the mod under `mod_name` from the story.
@@ -75,14 +75,14 @@ struct RemoveMod {
     /// If both are provided, `mod_name` is ignored.
     ///
     // TODO(MF-148): Convert to string
-    vector<string> mod_name;
+    vector<string:MAX>:MAX mod_name;
 
     /// The name of the mod within the story. This should be used instead of
     /// `mod_name`. If provided, it is equivalent to passing `mod_name` with
     /// a single item. If both are provided, `mod_name` is ignored.
     ///
     // TODO(MF-148): Remove
-    string? mod_name_transitional;
+    string:MAX? mod_name_transitional;
 };
 
 /// Instructs the session shell to focus the mod under `mod_name`.
@@ -93,12 +93,12 @@ struct FocusMod {
     /// If both are provided, `mod_name` is ignored.
     ///
     // TODO(MF-148): Convert to string
-    vector<string> mod_name;
+    vector<string:MAX>:MAX mod_name;
 
     /// The name of the mod within the story. This should be used instead of
     /// `mod_name`. If provided, it is equivalent to passing `mod_name` with
     /// a single item. If both are provided, `mod_name` is ignored.
     ///
     // TODO(MF-148): Remove
-    string? mod_name_transitional;
+    string:MAX? mod_name_transitional;
 };

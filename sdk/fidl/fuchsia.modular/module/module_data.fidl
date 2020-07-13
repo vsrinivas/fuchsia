@@ -7,12 +7,12 @@ library fuchsia.modular;
 /// Information about a Module instance in a story.
 table ModuleData {
     /// The URL of the Module binary.
-    1: string module_url;
+    1: string:MAX module_url;
 
     /// The named path leading up to this Module instance. The last name in this
     /// array is the name by which the Module was started by the parent Module
     /// instance calling StartModule().
-    2: vector<string> module_path;
+    2: vector<string:MAX>:MAX module_path;
 
     3: reserved;
 

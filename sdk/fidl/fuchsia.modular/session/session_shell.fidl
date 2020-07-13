@@ -43,10 +43,10 @@ protocol SessionShell {
 /// field match those used in the `StoryProvider` interface, allowing
 /// identification of the same story across interfaces.
 ///
-/// This is a struct rather than a naked string to allow for future evolution of
+/// This is a struct rather than a naked string:MAX to allow for future evolution of
 /// the identifier without changing the `SessionShell` API itself.
 struct ViewIdentifier {
-    string story_id;
+    string:MAX story_id;
 };
 
 /// This interface allows a `SessionShell` to request capabilities from its
@@ -79,9 +79,9 @@ protocol SessionShellContext {
 protocol SessionShellPresentationProvider {
     /// When a StoryShell calls StoryShellContext.GetPresentation(), this request
     /// arrives here.
-    GetPresentation(string story_id, request<fuchsia.ui.policy.Presentation> request);
+    GetPresentation(string:MAX story_id, request<fuchsia.ui.policy.Presentation> request);
 
     /// When a StoryShell calls StoryShellContext.WatchVisualState(), this request
     /// arrives here.
-    WatchVisualState(string story_id, StoryVisualStateWatcher watcher);
+    WatchVisualState(string:MAX story_id, StoryVisualStateWatcher watcher);
 };

@@ -15,23 +15,23 @@ protocol StoryProvider {
     /// be notified of story changes (new stories, deleted stories, runtime
     /// state changes).
     [Transitional = "Use GetStories2 instead"]
-    GetStories(StoryProviderWatcher? watcher) -> (vector<StoryInfo> story_infos);
+    GetStories(StoryProviderWatcher? watcher) -> (vector<StoryInfo>:MAX story_infos);
     /// For transition purposes only.
     [Transitional = "Only use while GetStories is transitional"]
-    GetStories2(StoryProviderWatcher? watcher) -> (vector<StoryInfo2> story_infos);
+    GetStories2(StoryProviderWatcher? watcher) -> (vector<StoryInfo2>:MAX story_infos);
 
     /// Requests detailed information about the given story. If the story doesn't
     /// exist, returns null.
     [Transitional = "Use GetStoryInfo2 instead"]
-    GetStoryInfo(string story_id) -> (StoryInfo? story_info);
+    GetStoryInfo(string:MAX story_id) -> (StoryInfo? story_info);
     /// For transition purposes only.
     [Transitional = "Use only while GetStoryInfo is transitional"]
-    GetStoryInfo2(string story_id) -> (StoryInfo2 story_info);
+    GetStoryInfo2(string:MAX story_id) -> (StoryInfo2 story_info);
 
     /// Obtains a controller for a previously created story identified by its story
     /// ID. Obtaining the controller doesn't run it yet. If the story doesn't
     /// exist, the interface request is closed.
-    GetController(string story_id, request<StoryController> request);
+    GetController(string:MAX story_id, request<StoryController> request);
 
     /// Registers a watcher for changes in the story collection.
     /// DEPRECATED: In favor of GetStories().
@@ -82,5 +82,5 @@ protocol StoryProviderWatcher {
     ///
     /// If the story is running on this device at the time it is deleted,
     /// OnChange() will not be called first.
-    OnDelete(string story_id);
+    OnDelete(string:MAX story_id);
 };

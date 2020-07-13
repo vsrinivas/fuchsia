@@ -20,7 +20,7 @@ library fuchsia.modular;
 // user.
 protocol FocusController {
     // Sets the focus on this device.
-    Set(string? focused_story_id);
+    Set(string:MAX? focused_story_id);
     WatchRequest(FocusRequestWatcher watcher);
 };
 
@@ -28,7 +28,7 @@ protocol FocusController {
 /// is a new request to change focus on this device. Requests can be
 /// made via FocusProvider.Request().
 protocol FocusRequestWatcher {
-    OnFocusRequest(string story_id);
+    OnFocusRequest(string:MAX story_id);
 };
 
 /// Implemented by sessionmgr. Given to session shell and session agents through
@@ -36,7 +36,7 @@ protocol FocusRequestWatcher {
 [Discoverable]
 protocol FocusProvider {
     /// Returns the stories that are focused across all devices.
-    Query() -> (vector<FocusInfo> focused_stories);
+    Query() -> (vector<FocusInfo>:MAX focused_stories);
 
     /// Watches for change in focus on any of the user's devices.
     Watch(FocusWatcher watcher);
@@ -49,7 +49,7 @@ protocol FocusProvider {
     ///
     // TODO(alhaad): Consider making this available for remote devices as
     // well.
-    Request(string? story_id);
+    Request(string:MAX? story_id);
 };
 
 /// Implemented by anyone who is interested in getting updates when focus
@@ -61,7 +61,7 @@ protocol FocusWatcher {
 /// Specifies the focused story of a device.
 struct FocusInfo {
     /// The id of the focused story.  If null, no stories are focused.
-    string? focused_story_id;
+    string:MAX? focused_story_id;
 
     /// The time the focused story on the device `device_id` was last
     /// changed. 0 if no focus has ever been set for device `device_id`.

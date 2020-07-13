@@ -51,5 +51,5 @@ protocol StoryWatcher {
     OnModuleAdded(ModuleData module_data);
 
     /// DEPRECATED
-    OnModuleFocused(vector<string> module_path);
+    OnModuleFocused(vector<string:MAX>:MAX module_path);
 };
