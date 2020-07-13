@@ -187,7 +187,7 @@ TEST_F(InstanceResponderTest, MulticastRateLimit) {
   ExpectPostTaskForTimeAndInvoke(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();
 
-  // Third question - no delay.
+  // Third question - no delay, because 60 virtual seconds have passed.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
                              addresses().multicast_reply(), sender_address0);
   ExpectGetPublicationCall(true, "",

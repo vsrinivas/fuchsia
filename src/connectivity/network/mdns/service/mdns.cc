@@ -266,6 +266,9 @@ void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question) {
 void Mdns::SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
                         const ReplyAddress& reply_address) {
   FX_DCHECK(resource);
+  // |reply_address| should never be the V6 multicast address, because the V4 multicast address
+  // is used to indicate a multicast reply.
+  FX_DCHECK(reply_address.socket_address() != addresses_->v6_multicast());
 
   if (section == MdnsResourceSection::kExpired) {
     // Expirations are distributed to local agents. We handle this case
@@ -396,6 +399,10 @@ void Mdns::SendMessages() {
 
 void Mdns::ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
                            const ReplyAddress& sender_address) {
+  // |reply_address| should never be the V6 multicast address, because the V4 multicast address
+  // is used to indicate a multicast reply.
+  FX_DCHECK(reply_address.socket_address() != addresses_->v6_multicast());
+
   // Renewer doesn't need questions.
   DPROHIBIT_AGENT_REMOVAL();
   for (auto& [_, agent_info] : agent_info_by_agent_) {

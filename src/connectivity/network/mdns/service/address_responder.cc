@@ -27,8 +27,35 @@ void AddressResponder::ReceiveQuestion(const DnsQuestion& question,
   if ((question.type_ == DnsType::kA || question.type_ == DnsType::kAaaa ||
        question.type_ == DnsType::kAny) &&
       question.name_.dotted_string_ == host_full_name_) {
-    SendAddresses(MdnsResourceSection::kAnswer, reply_address);
+    MaybeSendAddresses(reply_address);
   }
+}
+
+void AddressResponder::MaybeSendAddresses(const ReplyAddress& reply_address) {
+  // We only throttle multicast sends. A V4 multicast reply address indicates V4 and V6 multicast.
+  if (reply_address.socket_address() == addresses().v4_multicast()) {
+    if (throttle_state_ == kThrottleStatePending) {
+      // The send is already happening.
+      return;
+    }
+
+    if (throttle_state_ + kMinMulticastInterval > now()) {
+      // A send happened less than a second ago, and no send is currently scheduled. We need to
+      // schedule a multicast send for one second after the previous one.
+      PostTaskForTime(
+          [this, reply_address]() {
+            SendAddresses(MdnsResourceSection::kAnswer, reply_address);
+            throttle_state_ = now();
+          },
+          throttle_state_ + kMinMulticastInterval);
+
+      throttle_state_ = kThrottleStatePending;
+      return;
+    }
+  }
+
+  SendAddresses(MdnsResourceSection::kAnswer, reply_address);
+  throttle_state_ = now();
 }
 
 }  // namespace mdns

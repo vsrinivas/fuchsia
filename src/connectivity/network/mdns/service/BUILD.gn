@@ -120,6 +120,7 @@ source_set("source_set") {
 
 test("mdns_test") {
   sources = [
+    "test/address_responder_test.cc",
     "test/agent_test.cc",
     "test/agent_test.h",
     "test/config_test.cc",

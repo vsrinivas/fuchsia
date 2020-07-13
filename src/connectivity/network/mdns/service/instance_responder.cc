@@ -156,7 +156,7 @@ void InstanceResponder::MaybeGetAndSendPublication(const std::string& subtype,
     return;
   }
 
-  // We only throttle multicast sends.
+  // We only throttle multicast sends. A V4 multicast reply address indicates V4 and V6 multicast.
   if (reply_address.socket_address() == addresses().v4_multicast()) {
     zx::time throttle_state = kThrottleStateIdle;
     auto iter = throttle_state_by_subtype_.find(subtype);
@@ -197,6 +197,7 @@ void InstanceResponder::GetAndSendPublication(bool query, const std::string& sub
       [this, query, subtype, reply_address](std::unique_ptr<Mdns::Publication> publication) {
         if (publication) {
           SendPublication(*publication, subtype, reply_address);
+          // A V4 multicast reply address indicates V4 and V6 multicast.
           if (query && reply_address.socket_address() == addresses().v4_multicast()) {
             throttle_state_by_subtype_[subtype] = now();
             // Remove the entry from |throttle_state_by_subtype_| later to prevent the map from

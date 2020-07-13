@@ -29,7 +29,14 @@ class AddressResponder : public MdnsAgent {
                        const ReplyAddress& sender_address) override;
 
  private:
+  static constexpr zx::duration kMinMulticastInterval = zx::sec(1);
+  static constexpr zx::time kThrottleStateIdle = zx::time::infinite_past();
+  static constexpr zx::time kThrottleStatePending = zx::time::infinite();
+
+  void MaybeSendAddresses(const ReplyAddress& reply_address);
+
   std::string host_full_name_;
+  zx::time throttle_state_ = kThrottleStateIdle;
 
  public:
   // Disallow copy, assign and move.
