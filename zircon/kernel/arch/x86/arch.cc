@@ -221,8 +221,6 @@ static int cmd_cpu(int argc, const cmd_args* argv, uint32_t flags) {
   usage:
     printf("usage:\n");
     printf("%s features\n", argv[0].str);
-    printf("%s unplug <cpu_id>\n", argv[0].str);
-    printf("%s hotplug <cpu_id>\n", argv[0].str);
     printf("%s rdmsr <cpu_id> <msr_id>\n", argv[0].str);
     printf("%s wdmsr <cpu_id> <msr_id> <value>\n", argv[0].str);
     return ZX_ERR_INTERNAL;
@@ -230,20 +228,6 @@ static int cmd_cpu(int argc, const cmd_args* argv, uint32_t flags) {
 
   if (!strcmp(argv[1].str, "features")) {
     x86_feature_debug();
-  } else if (!strcmp(argv[1].str, "unplug")) {
-    if (argc < 3) {
-      printf("specify a cpu_id\n");
-      goto usage;
-    }
-    zx_status_t status = mp_unplug_cpu((uint)argv[2].u);
-    printf("CPU %lu unplugged: %d\n", argv[2].u, status);
-  } else if (!strcmp(argv[1].str, "hotplug")) {
-    if (argc < 3) {
-      printf("specify a cpu_id\n");
-      goto usage;
-    }
-    zx_status_t status = mp_hotplug_cpu((uint)argv[2].u);
-    printf("CPU %lu hotplugged: %d\n", argv[2].u, status);
   } else if (!strcmp(argv[1].str, "rdmsr")) {
     if (argc != 4) {
       goto usage;

@@ -12,6 +12,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
+#include <lib/console.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <trace.h>
@@ -443,3 +444,40 @@ __WEAK zx_status_t platform_mp_prep_cpu_unplug(uint cpu_id) {
   return arch_mp_prep_cpu_unplug(cpu_id);
 }
 __WEAK zx_status_t platform_mp_cpu_unplug(uint cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
+
+static int cmd_mp(int argc, const cmd_args* argv, uint32_t flags) {
+  if (argc < 2) {
+    printf("not enough arguments\n");
+  usage:
+    printf("usage:\n");
+    printf("%s unplug <cpu_id>\n", argv[0].str);
+    printf("%s hotplug <cpu_id>\n", argv[0].str);
+    return ZX_ERR_INTERNAL;
+  }
+
+  if (!strcmp(argv[1].str, "unplug")) {
+    if (argc < 3) {
+      printf("specify a cpu_id\n");
+      goto usage;
+    }
+    zx_status_t status = mp_unplug_cpu((uint)argv[2].u);
+    printf("CPU %lu unplug %s %d\n", argv[2].u, (status == ZX_OK ? "succeeded" : "failed"), status);
+  } else if (!strcmp(argv[1].str, "hotplug")) {
+    if (argc < 3) {
+      printf("specify a cpu_id\n");
+      goto usage;
+    }
+    zx_status_t status = mp_hotplug_cpu((uint)argv[2].u);
+    printf("CPU %lu hotplug %s %d\n", argv[2].u, (status == ZX_OK ? "succeeded" : "failed"),
+           status);
+  } else {
+    printf("unknown command\n");
+    goto usage;
+  }
+
+  return ZX_OK;
+}
+
+STATIC_COMMAND_START
+STATIC_COMMAND("mp", "mp test commands", &cmd_mp)
+STATIC_COMMAND_END(mp)
