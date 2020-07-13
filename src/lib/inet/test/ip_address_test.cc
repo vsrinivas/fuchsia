@@ -163,9 +163,9 @@ TEST(IpAddressTest, FromString) {
             IpAddress::FromString("1234:5678:9abc:def0:0fed:cba9:8765:4321"));
   EXPECT_EQ(IpAddress(0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff),
             IpAddress::FromString("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"));
+  EXPECT_EQ(IpAddress(0, 0, 0, 0, 0, 0, 0, 1), IpAddress::FromString("::1"));
+  EXPECT_EQ(IpAddress(1, 0, 0, 0, 0, 0, 0, 0), IpAddress::FromString("1::"));
 
-  EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("::1"));
-  EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1::"));
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1:::2"));
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1::2::3"));
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString(":1::2"));

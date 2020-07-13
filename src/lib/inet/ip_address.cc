@@ -148,9 +148,17 @@ class Parser {
     size_t old_pos = pos_;
     uint16_t words[8];
     size_t word_index = 0;
-    size_t ellipsis_word_index = 0;
+    ssize_t ellipsis_word_index = -1;
 
-    if (MatchMax4DigitLowerHexWord(&words[word_index]) && Match(':')) {
+    if (Match(':')) {
+      ellipsis_word_index = 0;
+      words[0] = 0;
+    } else if (!MatchMax4DigitLowerHexWord(&words[word_index])) {
+      pos_ = old_pos;
+      return false;
+    }
+
+    if (Match(':')) {
       while (true) {
         // At this point, we've matched at least one word, we've just matched a
         // colon, and |word_index| indexes the last word we matched.
@@ -158,7 +166,7 @@ class Parser {
 
         // Check for "::" ellipsis.
         if (Match(':')) {
-          if (ellipsis_word_index != 0) {
+          if (ellipsis_word_index != -1) {
             // More than one "::" ellipsis.
             break;
           }
@@ -171,28 +179,34 @@ class Parser {
             // More words to read.
             continue;
           }
-        } else if (word_index == 1) {
-          // Need at least two words.
-          break;
         } else {
-          // We've read a ':' past the end.
-          --pos_;
+          // We didn't match that last word.
+          --word_index;
+          if (word_index == 0) {
+            if (ellipsis_word_index != 1) {
+              // Need at least two words, if we don't have a trailing pair of colons.
+              break;
+            }
+          } else {
+            // We've read a ':' past the end.
+            --pos_;
+          }
         }
 
         if (word_index == 7) {
-          if (ellipsis_word_index != 0) {
+          if (ellipsis_word_index != -1) {
             // We parsed 8 words, and there's an ellipsis.
             break;
           }
         } else {
-          if (ellipsis_word_index == 0) {
+          if (ellipsis_word_index == -1) {
             // We parsed less than 8 words, and there's no ellipsis.
             break;
           }
 
           // Insert zeros for the ellipsis.
-          size_t to = 7;
-          for (size_t from = word_index; from >= ellipsis_word_index; --from) {
+          ssize_t to = 7;
+          for (ssize_t from = word_index; from >= ellipsis_word_index; --from) {
             words[to] = words[from];
             --to;
           }
