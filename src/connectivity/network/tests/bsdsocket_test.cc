@@ -170,6 +170,17 @@ struct SockOption {
 
 constexpr int INET_ECN_MASK = 3;
 
+std::string socketTypeToString(const int type) {
+  switch (type) {
+    case SOCK_DGRAM:
+      return "Datagram";
+    case SOCK_STREAM:
+      return "Stream";
+    default:
+      return std::to_string(type);
+  }
+}
+
 using SocketKind = std::tuple<int, int>;
 
 std::string socketKindToString(const ::testing::TestParamInfo<SocketKind>& info) {
@@ -187,18 +198,7 @@ std::string socketKindToString(const ::testing::TestParamInfo<SocketKind>& info)
       domain_str = std::to_string(domain);
       break;
   }
-  std::string type_str;
-  switch (type) {
-    case SOCK_DGRAM:
-      type_str = "Datagram";
-      break;
-    case SOCK_STREAM:
-      type_str = "Stream";
-      break;
-    default:
-      type_str = std::to_string(type);
-  }
-  return domain_str + "_" + type_str;
+  return domain_str + "_" + socketTypeToString(type);
 }
 
 // Share common functions for SocketKind based tests.
@@ -1103,13 +1103,25 @@ INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
                                             ::testing::Values(SOCK_DGRAM, SOCK_STREAM)),
                          socketKindToString);
 
-class ReuseTest
-    : public ::testing::TestWithParam<::std::tuple<int /* type */, in_addr_t /* address */>> {};
+using typeMulticast = std::tuple<int, bool>;
+
+std::string typeMulticastToString(const ::testing::TestParamInfo<typeMulticast>& info) {
+  auto const& [type, multicast] = info.param;
+  std::string addr;
+  if (multicast) {
+    addr = "Multicast";
+  } else {
+    addr = "Loopback";
+  }
+  return socketTypeToString(type) + addr;
+}
+
+class ReuseTest : public ::testing::TestWithParam<typeMulticast> {};
 
 TEST_P(ReuseTest, AllowsAddressReuse) {
   const int on = true;
 
-  auto const& [type, address] = GetParam();
+  auto const& [type, multicast] = GetParam();
 
   int s1;
   ASSERT_GE(s1 = socket(AF_INET, type, 0), 0) << strerror(errno);
@@ -1118,7 +1130,13 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
 
   struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = address;
+  if (multicast) {
+    int n = inet_pton(addr.sin_family, "224.0.2.1", &addr.sin_addr);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+  } else {
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  }
   ASSERT_EQ(bind(s1, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
   socklen_t addrlen = sizeof(addr);
@@ -1137,8 +1155,8 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
 
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, ReuseTest,
                          ::testing::Combine(::testing::Values(SOCK_DGRAM, SOCK_STREAM),
-                                            ::testing::Values(htonl(INADDR_LOOPBACK),
-                                                              inet_addr("224.0.2.1"))));
+                                            ::testing::Values(false, true)),
+                         typeMulticastToString);
 
 TEST(LocalhostTest, Accept) {
   int serverfd;
