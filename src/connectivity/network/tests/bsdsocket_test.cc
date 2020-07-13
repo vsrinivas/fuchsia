@@ -173,38 +173,40 @@ constexpr int INET_ECN_MASK = 3;
 using SocketKind = std::tuple<int, int>;
 
 std::string socketKindToString(const ::testing::TestParamInfo<SocketKind>& info) {
-  std::string domain;
-  switch (std::get<0>(info.param)) {
+  auto const& [domain, type] = info.param;
+
+  std::string domain_str;
+  switch (domain) {
     case AF_INET:
-      domain = "IPv4";
+      domain_str = "IPv4";
       break;
     case AF_INET6:
-      domain = "IPv6";
+      domain_str = "IPv6";
       break;
     default:
-      domain = std::to_string(std::get<0>(info.param));
+      domain_str = std::to_string(domain);
       break;
   }
-  std::string type;
-  switch (std::get<1>(info.param)) {
+  std::string type_str;
+  switch (type) {
     case SOCK_DGRAM:
-      type = "Datagram";
+      type_str = "Datagram";
       break;
     case SOCK_STREAM:
-      type = "Stream";
+      type_str = "Stream";
       break;
     default:
-      type = std::to_string(std::get<1>(info.param));
+      type_str = std::to_string(type);
   }
-  return domain + "_" + type;
+  return domain_str + "_" + type_str;
 }
 
 // Share common functions for SocketKind based tests.
 class SocketKindTest : public ::testing::TestWithParam<SocketKind> {
  protected:
   fbl::unique_fd NewSocket() const {
-    SocketKind s = GetParam();
-    return fbl::unique_fd(socket(std::get<0>(s), std::get<1>(s), 0));
+    auto const& [domain, type] = GetParam();
+    return fbl::unique_fd(socket(domain, type, 0));
   }
 };
 
@@ -1107,14 +1109,16 @@ class ReuseTest
 TEST_P(ReuseTest, AllowsAddressReuse) {
   const int on = true;
 
+  auto const& [type, address] = GetParam();
+
   int s1;
-  ASSERT_GE(s1 = socket(AF_INET, ::testing::get<0>(GetParam()), 0), 0) << strerror(errno);
+  ASSERT_GE(s1 = socket(AF_INET, type, 0), 0) << strerror(errno);
 
   ASSERT_EQ(setsockopt(s1, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
 
   struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = ::testing::get<1>(GetParam());
+  addr.sin_addr.s_addr = address;
   ASSERT_EQ(bind(s1, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
   socklen_t addrlen = sizeof(addr);
@@ -2234,8 +2238,11 @@ using methodAndCloseTarget = std::tuple<sendMethod, closeSocket>;
 class SendSocketTest : public ::testing::TestWithParam<methodAndCloseTarget> {};
 
 TEST_P(SendSocketTest, CloseWhileSending) {
-  sendMethod whichMethod = std::get<0>(GetParam());
-  closeSocket whichSocket = std::get<1>(GetParam());
+  auto const& [methodBinding, socketBinding] = GetParam();
+  // NB: these are captured by lambda expressions below, and lambdas are not allowed to capture
+  // structured bindings.
+  auto whichMethod = methodBinding;
+  auto whichSocket = socketBinding;
 
   fbl::unique_fd client, server;
   {
@@ -2378,17 +2385,23 @@ TEST_P(SendSocketTest, CloseWhileSending) {
   EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
 }
 
+std::string methodAndCloseTargetToString(
+    const ::testing::TestParamInfo<methodAndCloseTarget>& info) {
+  // NB: this is a freestanding function because structured binding declarations are not allowed in
+  // lambdas.
+  auto const& [whichMethod, whichSocket] = info.param;
+  std::string method = sendMethodToString(whichMethod);
+  std::string target = closeSocketToString(whichSocket);
+
+  return "close" + target + "During" + method;
+}
+
 INSTANTIATE_TEST_SUITE_P(
     NetStreamTest, SendSocketTest,
     ::testing::Combine(::testing::Values(sendMethod::WRITE, sendMethod::WRITEV, sendMethod::SEND,
                                          sendMethod::SENDTO, sendMethod::SENDMSG),
                        ::testing::Values(closeSocket::CLIENT, closeSocket::SERVER)),
-    [](const ::testing::TestParamInfo<methodAndCloseTarget>& info) {
-      std::string method = sendMethodToString(std::get<0>(info.param));
-      std::string target = closeSocketToString(std::get<1>(info.param));
-
-      return "close" + target + "During" + method;
-    });
+    methodAndCloseTargetToString);
 
 // Use this routine to test blocking socket reads. On failure, this attempts to recover the blocked
 // thread.
@@ -3079,7 +3092,7 @@ INSTANTIATE_TEST_SUITE_P(NetSocket, SocketKindTest,
                                             ::testing::Values(SOCK_DGRAM, SOCK_STREAM)),
                          socketKindToString);
 
-using DomainProtocol = std::pair<int, int>;
+using DomainProtocol = std::tuple<int, int>;
 class IcmpSocketTest : public ::testing::TestWithParam<DomainProtocol> {};
 
 TEST_P(IcmpSocketTest, GetSockoptSoProtocol) {
@@ -3088,9 +3101,7 @@ TEST_P(IcmpSocketTest, GetSockoptSoProtocol) {
     GTEST_SKIP() << "This test requires root";
   }
 #endif
-  std::pair<int, int> p = GetParam();
-  int domain = std::get<0>(p);
-  int protocol = std::get<1>(p);
+  auto const& [domain, protocol] = GetParam();
 
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(domain, SOCK_DGRAM, protocol))) << strerror(errno);
