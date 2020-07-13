@@ -5,6 +5,7 @@
 use {
     crate::trie::*,
     anyhow::{format_err, Error},
+    base64::display::Base64Display,
     core::marker::PhantomData,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
     num_derive::{FromPrimitive, ToPrimitive},
@@ -16,6 +17,7 @@ use {
         cmp::Ordering,
         collections::HashMap,
         convert::{TryFrom, TryInto},
+        fmt::{Display, Formatter, Result as FmtResult},
         ops::{Add, AddAssign, MulAssign},
         sync::Arc,
     },
@@ -416,6 +418,48 @@ pub enum Property<Key = String> {
 
     /// The value is an unsigned integer array.
     UintArray(Key, ArrayContent<u64>),
+}
+
+impl<K> Property<K> {
+    pub fn key(&self) -> &K {
+        match self {
+            Property::String(k, _) => k,
+            Property::Bytes(k, _) => k,
+            Property::Int(k, _) => k,
+            Property::Uint(k, _) => k,
+            Property::Double(k, _) => k,
+            Property::Bool(k, _) => k,
+            Property::DoubleArray(k, _) => k,
+            Property::IntArray(k, _) => k,
+            Property::UintArray(k, _) => k,
+        }
+    }
+}
+
+impl<K> Display for Property<K>
+where
+    K: AsRef<str>,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        macro_rules! pair {
+            ($fmt:literal, $val:expr) => {
+                write!(f, "{}={}", self.key().as_ref(), format_args!($fmt, $val))
+            };
+        }
+        match self {
+            Property::String(_, v) => pair!("{}", v),
+            Property::Bytes(_, v) => {
+                pair!("b64:{}", Base64Display::with_config(v, base64::STANDARD).unwrap())
+            }
+            Property::Int(_, v) => pair!("{}", v),
+            Property::Uint(_, v) => pair!("{}", v),
+            Property::Double(_, v) => pair!("{}", v),
+            Property::Bool(_, v) => pair!("{}", v),
+            Property::DoubleArray(_, v) => pair!("{:?}", v),
+            Property::IntArray(_, v) => pair!("{:?}", v),
+            Property::UintArray(_, v) => pair!("{:?}", v),
+        }
+    }
 }
 
 #[allow(missing_docs)]
