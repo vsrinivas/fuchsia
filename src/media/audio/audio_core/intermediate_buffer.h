@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
 
@@ -21,7 +21,7 @@ class IntermediateBuffer : public WritableStream {
  public:
   IntermediateBuffer(const Format& output_format, uint32_t size_in_frames,
                      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-                     ClockReference ref_clock);
+                     AudioClock ref_clock);
 
   void* buffer() const { return vmo_.start(); }
   size_t frame_count() const { return frame_count_; }
@@ -29,13 +29,13 @@ class IntermediateBuffer : public WritableStream {
   // |media::audio::WritableStream|
   std::optional<Buffer> WriteLock(zx::time ref_time, int64_t frame, uint32_t frame_count) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
-  ClockReference reference_clock() const override { return reference_clock_; }
+  AudioClock reference_clock() const override { return audio_clock_; }
 
  private:
   fzl::OwnedVmoMapper vmo_;
   uint32_t frame_count_;
   fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames_;
-  ClockReference reference_clock_;
+  AudioClock audio_clock_;
 };
 
 }  // namespace media::audio

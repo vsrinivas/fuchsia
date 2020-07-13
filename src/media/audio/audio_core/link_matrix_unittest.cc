@@ -292,7 +292,7 @@ TEST_F(LinkMatrixTest, InitializationHooks) {
   auto source = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
   auto dest = std::make_shared<MockObject>(AudioObject::Type::Output);
   auto clock_mono = clock::CloneOfMonotonic();
-  auto ref_clock = ClockReference::MakeReadonly(clock_mono);
+  auto ref_clock = AudioClock::MakeReadonly(clock_mono);
 
   auto stream = std::make_shared<PacketQueue>(
       Format::Create({
@@ -320,7 +320,7 @@ TEST_F(LinkMatrixTest, LinkHandleHasStream) {
   auto source = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
   auto dest = std::make_shared<MockObject>(AudioObject::Type::Output);
   auto clock_mono = clock::CloneOfMonotonic();
-  auto ref_clock = ClockReference::MakeReadonly(clock_mono);
+  auto ref_clock = AudioClock::MakeReadonly(clock_mono);
 
   auto stream = std::make_shared<PacketQueue>(
       Format::Create({

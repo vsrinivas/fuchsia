@@ -13,8 +13,8 @@
 
 #include <fbl/ref_ptr.h>
 
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_object.h"
-#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
@@ -86,7 +86,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   LinkMatrix& link_matrix_;
   zx::clock clock_mono_;
-  ClockReference ref_clock_;
+  AudioClock ref_clock_;
 };
 
 }  // namespace media::audio::testing

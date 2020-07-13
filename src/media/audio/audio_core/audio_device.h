@@ -16,9 +16,9 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/audio_object.h"
-#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
@@ -98,13 +98,13 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // to get the process running.
   fit::promise<void, zx_status_t> Startup();
 
-  // Makes  certain that the shutdown process has started, synchronizes with processing tasks which
+  // Makes certain that the shutdown process has started, synchronizes with processing tasks which
   // were executing at the time, then finishes the shutdown by unlinking from all renderers and
   // capturers and cleaning up all resources.
   fit::promise<void> Shutdown();
 
-  // (read-only) clock reference from AudioDriver
-  ClockReference reference_clock() const;
+  // audio clock from AudioDriver
+  AudioClock reference_clock() const;
 
  protected:
   AudioDevice(Type type, ThreadingModel* threading_model, DeviceRegistry* registry,

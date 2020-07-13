@@ -12,7 +12,7 @@
 
 #include <optional>
 
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/format/format.h"
@@ -32,7 +32,7 @@ class BaseStream {
     uint32_t generation;
   };
   virtual TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const = 0;
-  virtual ClockReference reference_clock() const = 0;
+  virtual AudioClock reference_clock() const = 0;
 
   const Format& format() const { return format_; }
 

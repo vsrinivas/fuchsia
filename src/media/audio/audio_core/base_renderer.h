@@ -16,8 +16,7 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "src/media/audio/audio_core/audio_object.h"
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
@@ -60,7 +59,7 @@ class BaseRenderer : public AudioObject,
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
 
-  ClockReference reference_clock() const { return reference_clock_ref_; }
+  AudioClock reference_clock() const { return audio_clock_; }
 
  protected:
   BaseRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
@@ -145,7 +144,7 @@ class BaseRenderer : public AudioObject,
   // Whether default, optimal or custom clock, audio_core will treat this as not-rate-adjustable
   // (although if set to the optimal_clock_, tuning of that clock will be reflected here)
   zx::clock reference_clock_;
-  ClockReference reference_clock_ref_ = ClockReference::MakeReadonly(reference_clock_);
+  AudioClock audio_clock_ = AudioClock::MakeReadonly(reference_clock_);
 };
 
 }  // namespace media::audio

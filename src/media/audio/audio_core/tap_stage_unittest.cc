@@ -6,7 +6,7 @@
 
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
@@ -45,7 +45,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
                       zx::sec(1).to_nsecs());
     auto source_timeline_function =
         fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(rate));
-    ref_clock_ = ClockReference::MakeAdjustable(clock_mono_);
+    ref_clock_ = AudioClock::MakeAdjustable(clock_mono_);
     packet_queue_ =
         std::make_shared<PacketQueue>(kDefaultFormat, source_timeline_function, ref_clock_);
     ASSERT_TRUE(packet_queue_);
@@ -62,7 +62,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
     ClearRingBuffer();
   }
   zx::clock clock_mono_ = clock::AdjustableCloneOfMonotonic();
-  ClockReference ref_clock_;
+  AudioClock ref_clock_;
 
   template <typename T, size_t N>
   std::array<T, N>& as_array(void* ptr, size_t offset = 0) {

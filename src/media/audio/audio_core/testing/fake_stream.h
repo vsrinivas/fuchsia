@@ -7,7 +7,7 @@
 
 #include <lib/zx/clock.h>
 
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
@@ -29,7 +29,7 @@ class FakeStream : public ReadableStream {
   std::optional<Buffer> ReadLock(zx::time dest_ref_time, int64_t frame, uint32_t frame_count);
   void Trim(zx::time dest_ref_time) {}
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const;
-  ClockReference reference_clock() const { return reference_clock_; }
+  AudioClock reference_clock() const { return audio_clock_; }
 
  private:
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
@@ -39,7 +39,7 @@ class FakeStream : public ReadableStream {
   float gain_db_ = Gain::kUnityGainDb;
   std::unique_ptr<uint8_t[]> buffer_;
   zx::clock clock_mono_;
-  ClockReference reference_clock_;
+  AudioClock audio_clock_;
 };
 
 }  // namespace media::audio::testing

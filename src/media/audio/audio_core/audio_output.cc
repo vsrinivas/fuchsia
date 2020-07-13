@@ -163,7 +163,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioOutput::Initializ
 
 std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
     const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
-    TimelineFunction device_reference_clock_to_fractional_frame, ClockReference ref_clock) {
+    TimelineFunction device_reference_clock_to_fractional_frame, AudioClock ref_clock) {
   auto pipeline =
       std::make_unique<OutputPipelineImpl>(config, volume_curve, max_block_size_frames,
                                            device_reference_clock_to_fractional_frame, ref_clock);

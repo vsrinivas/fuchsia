@@ -13,7 +13,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/pending_flush_token.h"
 #include "src/media/audio/audio_core/stream.h"
@@ -24,10 +24,10 @@ namespace media::audio {
 
 class PacketQueue : public ReadableStream {
  public:
-  PacketQueue(Format format, ClockReference ref_clock);
+  PacketQueue(Format format, AudioClock ref_clock);
   PacketQueue(Format format,
               fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-              ClockReference ref_clock);
+              AudioClock ref_clock);
   ~PacketQueue();
 
   bool empty() const {
@@ -57,7 +57,7 @@ class PacketQueue : public ReadableStream {
                        zx::duration underflow_duration) override;
   void ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_offset,
                               int64_t dest_mix_offset) override;
-  ClockReference reference_clock() const override { return reference_clock_; }
+  AudioClock reference_clock() const override { return audio_clock_; }
 
  private:
   void ReadUnlock(bool fully_consumed);
@@ -77,7 +77,7 @@ class PacketQueue : public ReadableStream {
   std::atomic<uint16_t> underflow_count_ = {0};
   std::atomic<uint16_t> partial_underflow_count_ = {0};
   fit::function<void(zx::duration)> underflow_reporter_;
-  ClockReference reference_clock_;
+  AudioClock audio_clock_;
 };
 
 }  // namespace media::audio

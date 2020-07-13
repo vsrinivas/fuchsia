@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/stream.h"
 
 namespace media::audio {
@@ -26,7 +26,7 @@ class TapStage : public ReadableStream {
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
     return source_->ReferenceClockToFractionalFrames();
   }
-  ClockReference reference_clock() const override { return source_->reference_clock(); }
+  AudioClock reference_clock() const override { return source_->reference_clock(); }
 
   void SetMinLeadTime(zx::duration min_lead_time) override;
 

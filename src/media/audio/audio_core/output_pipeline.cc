@@ -4,7 +4,7 @@
 
 #include "src/media/audio/audio_core/output_pipeline.h"
 
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/effects_stage.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/tap_stage.h"
@@ -36,7 +36,7 @@ OutputPipelineImpl::OutputPipelineImpl(const PipelineConfig& config,
                                        const VolumeCurve& volume_curve,
                                        uint32_t max_block_size_frames,
                                        TimelineFunction ref_clock_to_fractional_frame,
-                                       ClockReference ref_clock, Mixer::Resampler sampler)
+                                       AudioClock ref_clock, Mixer::Resampler sampler)
     : OutputPipelineImpl(State(config, volume_curve, max_block_size_frames,
                                ref_clock_to_fractional_frame, ref_clock, sampler)) {}
 
@@ -46,7 +46,7 @@ OutputPipelineImpl::OutputPipelineImpl(State state)
 OutputPipelineImpl::State::State(const PipelineConfig& config, const VolumeCurve& volume_curve,
                                  uint32_t max_block_size_frames,
                                  TimelineFunction ref_clock_to_fractional_frame,
-                                 ClockReference ref_clock, Mixer::Resampler sampler) {
+                                 AudioClock ref_clock, Mixer::Resampler sampler) {
   reference_clock = ref_clock;
   uint32_t usage_mask = 0;
   stream =
@@ -88,7 +88,7 @@ fit::result<void, fuchsia::media::audio::UpdateEffectError> OutputPipelineImpl::
 std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve,
     uint32_t max_block_size_frames,
-    fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, ClockReference ref_clock,
+    fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, AudioClock ref_clock,
     uint32_t* usage_mask, Mixer::Resampler sampler) {
   auto output_format = FormatForMixGroup(spec);
 

@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 
 namespace media::audio {
@@ -26,7 +26,7 @@ TEST_F(IntermediateBufferTest, WriteLock) {
   auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
       TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
   auto clock_mono = clock::CloneOfMonotonic();
-  ClockReference ref_clock = ClockReference::MakeReadonly(clock_mono);
+  AudioClock ref_clock = AudioClock::MakeReadonly(clock_mono);
 
   auto intermediate_buffer =
       std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms, ref_clock);
@@ -56,7 +56,7 @@ TEST_F(IntermediateBufferTest, ClampLengthToBufferSize) {
   auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
       TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
   auto clock_mono = clock::CloneOfMonotonic();
-  ClockReference ref_clock = ClockReference::MakeReadonly(clock_mono);
+  AudioClock ref_clock = AudioClock::MakeReadonly(clock_mono);
 
   auto intermediate_buffer =
       std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms, ref_clock);

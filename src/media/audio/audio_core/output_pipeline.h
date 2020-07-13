@@ -13,7 +13,7 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/effects_stage.h"
 #include "src/media/audio/audio_core/mix_stage.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
@@ -66,7 +66,7 @@ class OutputPipelineImpl : public OutputPipeline {
   // mix stages together.
   OutputPipelineImpl(const PipelineConfig& config, const VolumeCurve& volume_curve,
                      uint32_t max_block_size_frames,
-                     TimelineFunction reference_clock_to_fractional_frame, ClockReference ref_clock,
+                     TimelineFunction reference_clock_to_fractional_frame, AudioClock ref_clock,
                      Mixer::Resampler sampler = Mixer::Resampler::Default);
   ~OutputPipelineImpl() override = default;
 
@@ -100,19 +100,19 @@ class OutputPipelineImpl : public OutputPipeline {
     ReadableStream::SetMinLeadTime(min_lead_time);
     state_.stream->SetMinLeadTime(min_lead_time);
   }
-  ClockReference reference_clock() const override { return state_.reference_clock; }
+  AudioClock reference_clock() const override { return state_.reference_clock; }
 
  private:
   struct State {
     State() = default;
 
     State(const PipelineConfig& config, const VolumeCurve& curve, uint32_t max_block_size_frames,
-          TimelineFunction ref_clock_to_fractional_frame, ClockReference ref_clock,
+          TimelineFunction ref_clock_to_fractional_frame, AudioClock ref_clock,
           Mixer::Resampler sampler);
 
     std::shared_ptr<ReadableStream> CreateMixStage(
         const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve, uint32_t block_size,
-        fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, ClockReference ref_clock,
+        fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, AudioClock ref_clock,
         uint32_t* usage_mask, Mixer::Resampler sampler);
 
     std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<StreamUsage>>> mix_stages;
@@ -125,7 +125,7 @@ class OutputPipelineImpl : public OutputPipeline {
 
     std::shared_ptr<ReadableStream> loopback;
 
-    ClockReference reference_clock;
+    AudioClock reference_clock;
   };
 
   OutputPipelineImpl(State state);

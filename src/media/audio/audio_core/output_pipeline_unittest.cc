@@ -6,10 +6,9 @@
 
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/process_config.h"
-// #include "src/media/audio/audio_core/testing/custom_clock_ref.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -93,7 +92,7 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
 
     auto pipeline_config = PipelineConfig(root);
     return std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                kDefaultTransform, reference_clock_);
+                                                kDefaultTransform, audio_clock_);
   }
 
   void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
@@ -106,7 +105,7 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   void TestDifferentMixRates(bool use_clock_offset);
 
   zx::clock clock_mono_ = clock::AdjustableCloneOfMonotonic();
-  ClockReference reference_clock_ = ClockReference::MakeAdjustable(clock_mono_);
+  AudioClock audio_clock_ = AudioClock::MakeAdjustable(clock_mono_);
 };
 
 TEST_F(OutputPipelineTest, Trim) {
@@ -116,13 +115,13 @@ TEST_F(OutputPipelineTest, Trim) {
       clock::testing::CreateCustomClock({.mono_offset = zx::sec(kNumSecondsOffset)});
   ASSERT_TRUE(custom_clock_result.is_ok());
   auto custom_clock = custom_clock_result.take_value();
-  auto clock_ref = ClockReference::MakeAdjustable(custom_clock);
+  auto audio_clock = AudioClock::MakeAdjustable(custom_clock);
 
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(kDefaultTransform);
-  auto stream1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, clock_ref);
-  auto stream2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, reference_clock_);
-  auto stream3 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, reference_clock_);
-  auto stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, reference_clock_);
+  auto stream1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock);
+  auto stream2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
+  auto stream3 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
+  auto stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
 
   // Add some streams so that one is routed to each mix stage in our pipeline.
   auto pipeline = CreateOutputPipeline();
@@ -226,7 +225,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, reference_clock_);
+                                                       kDefaultTransform, audio_clock_);
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
@@ -298,7 +297,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, reference_clock_);
+                                                       kDefaultTransform, audio_clock_);
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
@@ -363,7 +362,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, reference_clock_);
+                                                       kDefaultTransform, audio_clock_);
 
   pipeline->UpdateEffect(kInstanceName, kConfig);
 
@@ -438,7 +437,7 @@ TEST_F(OutputPipelineTest, ReportMinLeadTime) {
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline =
       std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128, kDefaultTransform,
-                                           reference_clock_, Mixer::Resampler::SampleAndHold);
+                                           audio_clock_, Mixer::Resampler::SampleAndHold);
 
   // Add 2 streams, one with a MEDIA usage and one with COMMUNICATION usage. These should receive
   // different lead times since they have different effects (with different latencies) applied.
@@ -510,17 +509,17 @@ void OutputPipelineTest::TestDifferentMixRates(bool use_clock_offset) {
         clock::testing::CreateCustomClock({.mono_offset = zx::sec(kNumSecondsOffset)});
     ASSERT_TRUE(custom_clock_result.is_ok());
     custom_clock = custom_clock_result.take_value();
-    auto clock_ref = ClockReference::MakeAdjustable(custom_clock);
+    auto audio_clock = AudioClock::MakeAdjustable(custom_clock);
 
-    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, clock_ref);
+    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock);
   } else {
-    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, reference_clock_);
+    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
   }
 
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(
-      pipeline_config, volume_curve, 480, kDefaultTransform, reference_clock_, resampler);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 480,
+                                                       kDefaultTransform, audio_clock_, resampler);
 
   pipeline->AddInput(stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), resampler);
 
@@ -613,7 +612,7 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, reference_clock_);
+                                                       kDefaultTransform, audio_clock_);
 
   // Verify the pipeline format includes the rechannel effect.
   EXPECT_EQ(4u, pipeline->format().channels());
@@ -672,7 +671,7 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
   ASSERT_EQ(audio::clock::DuplicateClock(writable_clock, &readonly_clock), ZX_OK);
   clock::testing::VerifyReadOnlyRights(readonly_clock);
 
-  auto ref_clock = ClockReference::MakeReadonly(readonly_clock);
+  auto ref_clock = AudioClock::MakeReadonly(readonly_clock);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, ref_clock);
 

@@ -11,7 +11,7 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 
 namespace media::audio {
@@ -24,7 +24,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
     // (ex: frame 1 will be consumed after 1ms).
     auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
         TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
-    ref_clock_ = ClockReference::MakeAdjustable(clock_mono_);
+    ref_clock_ = AudioClock::MakeAdjustable(clock_mono_);
 
     return std::make_unique<PacketQueue>(
         Format::Create({
@@ -69,7 +69,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
   std::vector<int64_t> released_packets_;
 
   zx::clock clock_mono_ = clock::AdjustableCloneOfMonotonic();
-  ClockReference ref_clock_;
+  AudioClock ref_clock_;
 };
 
 TEST_F(PacketQueueTest, PushPacket) {

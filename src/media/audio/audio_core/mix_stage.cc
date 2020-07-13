@@ -37,14 +37,14 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
 }  // namespace
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
-                   TimelineFunction reference_clock_to_fractional_frame, ClockReference ref_clock)
+                   TimelineFunction reference_clock_to_fractional_frame, AudioClock ref_clock)
     : MixStage(output_format, block_size,
                fbl::MakeRefCounted<VersionedTimelineFunction>(reference_clock_to_fractional_frame),
                ref_clock) {}
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
-                   ClockReference ref_clock)
+                   AudioClock ref_clock)
     : MixStage(std::make_shared<IntermediateBuffer>(
           output_format, block_size, reference_clock_to_fractional_frame, ref_clock)) {}
 
@@ -486,7 +486,7 @@ void MixStage::UpdateSourceTrans(const ReadableStream& stream, Mixer::Bookkeepin
 // Why use a PID? Sources do not simply chase the dest clock's rate -- they chases its position.
 // Note that even if we don't adjust our rate, we still want a composed transformation for offsets.
 //
-// This will be a flag added to ClockReference, rather than a const.
+// This will be a flag added to AudioClock, rather than a const.
 constexpr bool kAssumeOptimalClock = true;
 
 void MixStage::UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk) {

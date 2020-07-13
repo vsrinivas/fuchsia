@@ -6,7 +6,6 @@ source_set("testing") {
   testonly = true
 
   sources = [
-    "custom_clock_ref.h",
     "fake_audio_device.h",
     "fake_audio_driver.h",
     "fake_audio_driver_v1.cc",

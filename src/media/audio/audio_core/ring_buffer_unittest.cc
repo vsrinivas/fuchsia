@@ -32,7 +32,7 @@ class InputRingBufferTest : public ::testing::Test {
     auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
         0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
         zx::sec(1).to_nsecs()));
-    ref_clock_ = ClockReference::MakeReadonly(clock_mono_);
+    ref_clock_ = AudioClock::MakeReadonly(clock_mono_);
 
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
         format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount);
@@ -41,13 +41,13 @@ class InputRingBufferTest : public ::testing::Test {
   }
 
   ReadableRingBuffer* ring_buffer() const { return ring_buffer_.get(); }
-  ClockReference reference_clock() const { return ref_clock_; }
+  AudioClock reference_clock() const { return ref_clock_; }
 
  private:
   std::shared_ptr<ReadableRingBuffer> ring_buffer_;
   zx::clock clock_mono_ = clock::CloneOfMonotonic();
 
-  ClockReference ref_clock_;
+  AudioClock ref_clock_;
 };
 
 class OutputRingBufferTest : public ::testing::Test {
@@ -57,7 +57,7 @@ class OutputRingBufferTest : public ::testing::Test {
     auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
         0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
         zx::sec(1).to_nsecs()));
-    ref_clock_ = ClockReference::MakeReadonly(clock_mono_);
+    ref_clock_ = AudioClock::MakeReadonly(clock_mono_);
 
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
         format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount);
@@ -66,13 +66,13 @@ class OutputRingBufferTest : public ::testing::Test {
   }
 
   WritableRingBuffer* ring_buffer() const { return ring_buffer_.get(); }
-  ClockReference reference_clock() const { return ref_clock_; }
+  AudioClock reference_clock() const { return ref_clock_; }
 
  private:
   std::shared_ptr<WritableRingBuffer> ring_buffer_;
   zx::clock clock_mono_ = clock::CloneOfMonotonic();
 
-  ClockReference ref_clock_;
+  AudioClock ref_clock_;
 };
 
 TEST_F(InputRingBufferTest, ReadEmptyRing) {
@@ -210,7 +210,7 @@ TEST(RingBufferTest, FrameOffset) {
       0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
       zx::sec(1).to_nsecs()));
   auto clock_mono = clock::CloneOfMonotonic();
-  auto ref_clock = ClockReference::MakeReadonly(clock_mono);
+  auto ref_clock = AudioClock::MakeReadonly(clock_mono);
 
   auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
       format, std::move(timeline_function), ref_clock, kRingBufferFrameCount, frame_offset);

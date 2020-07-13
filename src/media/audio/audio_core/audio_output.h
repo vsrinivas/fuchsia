@@ -68,7 +68,7 @@ class AudioOutput : public AudioDevice {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   virtual std::unique_ptr<OutputPipeline> CreateOutputPipeline(
       const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
-      TimelineFunction device_reference_clock_to_fractional_frame, ClockReference ref_clock);
+      TimelineFunction device_reference_clock_to_fractional_frame, AudioClock ref_clock);
 
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
 
