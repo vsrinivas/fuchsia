@@ -1146,7 +1146,8 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
   ASSERT_EQ(addrlen, sizeof(addr));
 
   fbl::unique_fd s2;
-  ASSERT_TRUE(s2 = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
+  ASSERT_TRUE(s2 = fbl::unique_fd(socket(AF_INET, ::testing::get<0>(GetParam()), 0)))
+      << strerror(errno);
   ASSERT_EQ(setsockopt(s2.get(), SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
   ASSERT_EQ(bind(s2.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
