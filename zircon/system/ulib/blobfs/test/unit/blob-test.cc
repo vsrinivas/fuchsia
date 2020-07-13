@@ -115,9 +115,9 @@ TEST_F(BlobTest, SyncBehavior) {
 
 TEST_F(BlobTest, ReadingBlobVerifiesTail) {
   // Remount without compression so that we can manipulate the data that is loaded.
-  MountOptions options = {
-      .compression_settings = { .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED, }
-  };
+  MountOptions options = {.compression_settings = {
+                              .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
+                          }};
   ASSERT_OK(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
                            zx::resource(), &fs_));
 
@@ -171,6 +171,55 @@ TEST_F(BlobTest, ReadingBlobVerifiesTail) {
   size_t actual;
   uint8_t data;
   EXPECT_STATUS(file->Read(&data, 1, 0, &actual), ZX_ERR_IO_DATA_INTEGRITY);
+}
+
+TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
+  CompressionAlgorithm algorithms[] = {
+      CompressionAlgorithm::UNCOMPRESSED, CompressionAlgorithm::LZ4,
+      CompressionAlgorithm::ZSTD,         CompressionAlgorithm::ZSTD_SEEKABLE,
+      CompressionAlgorithm::CHUNKED,
+  };
+
+  for (auto algorithm : algorithms) {
+    MountOptions options = {.compression_settings = {
+                                .compression_algorithm = algorithm,
+                            }};
+
+    // Remount with new compression algorithm
+    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
+                             zx::resource(), &fs_));
+
+    auto root = OpenRoot();
+    std::unique_ptr<BlobInfo> info;
+
+    // Write the blob
+    {
+      ASSERT_NO_FAILURES(GenerateRealisticBlob("", 1 << 16, &info));
+      fbl::RefPtr<fs::Vnode> file;
+      ASSERT_OK(root->Create(&file, info->path + 1, 0));
+      size_t out_actual = 0;
+      EXPECT_OK(file->Truncate(info->size_data));
+      EXPECT_OK(file->Write(info->data.get(), info->size_data, 0, &out_actual));
+      EXPECT_EQ(out_actual, info->size_data);
+    }
+
+    // Remount with same compression algorithm.
+    // This prevents us from relying on caching when we read back the blob.
+    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
+                             zx::resource(), &fs_));
+    root = OpenRoot();
+
+    // Read back the blob
+    {
+      fbl::RefPtr<fs::Vnode> file;
+      ASSERT_OK(root->Lookup(&file, info->path + 1));
+      size_t actual;
+      uint8_t data[info->size_data];
+      EXPECT_OK(file->Read(&data, info->size_data, 0, &actual));
+      EXPECT_EQ(info->size_data, actual);
+      EXPECT_BYTES_EQ(data, info->data.get(), info->size_data);
+    }
+  }
 }
 
 }  // namespace
