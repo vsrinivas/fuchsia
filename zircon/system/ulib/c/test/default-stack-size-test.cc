@@ -28,14 +28,39 @@ TEST(StackSizeTests, MainThreadStackSize) {
   EXPECT_EQ(kExpectedSize, size);
 }
 
+// Simple RAII wrapper for pthread_mutex_t.
+class PthreadLockGuard {
+ public:
+  explicit PthreadLockGuard(pthread_mutex_t* mtx) : mtx_(mtx) {
+    ASSERT_EQ(pthread_mutex_lock(mtx_), 0);
+  }
+  ~PthreadLockGuard() { Reset(); }
+
+  void Reset() {
+    if (mtx_) {
+      pthread_mutex_unlock(mtx_);
+    }
+    mtx_ = nullptr;
+  }
+ private:
+  pthread_mutex_t* mtx_ = nullptr;
+};
+
 TEST(StackSizeTests, NewThreadStackSize) {
+  pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
+  PthreadLockGuard lock(&mtx);
   pthread_t th;
   ASSERT_EQ(0, pthread_create(
-                   &th, nullptr, [](void*) -> void* { return nullptr; }, nullptr));
+                   &th, nullptr, [](void* arg) -> void* {
+                       pthread_mutex_t* mtx = reinterpret_cast<pthread_mutex_t*>(arg);
+                       PthreadLockGuard lock(mtx);
+                       return nullptr;
+                   }, &mtx));
 
   size_t size;
   ASSERT_NO_FATAL_FAILURES(FetchStackSize(th, &size), "Cannot retrieve new thread's stack size");
   EXPECT_EQ(kExpectedSize, size);
+  lock.Reset();
 
   void* result = &result;
   EXPECT_EQ(0, pthread_join(th, &result));
