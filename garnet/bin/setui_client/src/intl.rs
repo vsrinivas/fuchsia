@@ -28,7 +28,7 @@ pub async fn command(
 
     if settings == IntlSettings::empty() {
         // No values set, perform a watch instead.
-        let setting_value = proxy.watch2().await?;
+        let setting_value = proxy.watch().await?;
         Ok(format!("{:#?}", setting_value))
     } else {
         match proxy.set(settings).await? {

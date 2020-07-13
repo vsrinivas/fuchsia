@@ -44,7 +44,7 @@ pub async fn command(
         && input_muted.is_none();
 
     if none_set {
-        let setting_value = proxy.watch2().await?;
+        let setting_value = proxy.watch().await?;
         let setting_string = format!("{:#?}", setting_value);
         output.push_str(&setting_string);
     } else {

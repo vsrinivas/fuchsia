@@ -302,7 +302,7 @@ async fn validate_intl_watch() -> Result<(), Error> {
     const TEST_HOUR_CYCLE: fidl_fuchsia_settings::HourCycle = fidl_fuchsia_settings::HourCycle::H12;
 
     let env = create_service!(Services::Intl,
-        IntlRequest::Watch2 { responder } => {
+        IntlRequest::Watch { responder } => {
             responder.send(IntlSettings {
                 locales: Some(vec![LocaleId { id: TEST_LOCALE.into() }]),
                 temperature_unit: Some(TEST_TEMPERATURE_UNIT),
@@ -379,7 +379,7 @@ async fn validate_display(
                 panic!("Unexpected call to set");
             }
         },
-        DisplayRequest::Watch2 { responder } => {
+        DisplayRequest::Watch { responder } => {
             responder.send(DisplaySettings {
                 auto_brightness: Some(false),
                 brightness_value: Some(0.5),
@@ -515,7 +515,7 @@ async fn validate_accessibility_set() -> Result<(), Error> {
 async fn validate_accessibility_watch() -> Result<(), Error> {
     let env = create_service!(
         Services::Accessibility,
-        AccessibilityRequest::Watch2 { responder } => {
+        AccessibilityRequest::Watch { responder } => {
             responder.send(AccessibilitySettings::empty())?;
         }
     );
@@ -546,7 +546,7 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
                 }
             }
         },
-        AudioRequest::Watch2 { responder } => {
+        AudioRequest::Watch { responder } => {
             responder.send(AudioSettings {
                 streams: Some(vec![AudioStreamSettings {
                     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
@@ -914,7 +914,7 @@ async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> R
                 panic!("Unexpected call to set");
             }
         },
-        PrivacyRequest::Watch2 { responder } => {
+        PrivacyRequest::Watch { responder } => {
             responder.send(PrivacySettings {
                 user_data_sharing_consent: Some(false),
             })?;
@@ -937,7 +937,7 @@ async fn validate_privacy_set_output(
         Services::Privacy, PrivacyRequest::Set { settings: _, responder, } => {
             responder.send(&mut Ok(()))?;
         },
-        PrivacyRequest::Watch2 { responder } => {
+        PrivacyRequest::Watch { responder } => {
             responder.send(PrivacySettings {
                 user_data_sharing_consent: Some(expected_user_data_sharing_consent),
             })?;
@@ -969,7 +969,7 @@ async fn validate_privacy_watch_output(
         Services::Privacy, PrivacyRequest::Set { settings: _, responder, } => {
             responder.send(&mut Ok(()))?;
         },
-        PrivacyRequest::Watch2 { responder } => {
+        PrivacyRequest::Watch { responder } => {
             responder.send(PrivacySettings {
                 user_data_sharing_consent: expected_user_data_sharing_consent,
             })?;

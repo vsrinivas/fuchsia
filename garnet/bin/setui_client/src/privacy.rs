@@ -24,7 +24,7 @@ pub async fn command(
             Err(err) => Ok(format!("{:?}", err)),
         }
     } else {
-        let setting_value = proxy.watch2().await?;
+        let setting_value = proxy.watch().await?;
         Ok(format!("{:?}", setting_value))
     }
 }
