@@ -360,7 +360,7 @@ impl<T: 'static + File> FileConnection<T> {
 
     async fn handle_read_at(&mut self, offset: u64, count: u64) -> (Status, Vec<u8>) {
         if self.flags & OPEN_RIGHT_READABLE == 0 {
-            return (Status::ACCESS_DENIED, vec![]);
+            return (Status::BAD_HANDLE, vec![]);
         }
 
         match self.file.read_at(offset, count).await {
@@ -378,7 +378,7 @@ impl<T: 'static + File> FileConnection<T> {
 
     async fn handle_write_at(&mut self, offset: u64, content: &[u8]) -> (Status, u64) {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return (Status::ACCESS_DENIED, 0);
+            return (Status::BAD_HANDLE, 0);
         }
 
         match self.file.write_at(offset, content).await {
@@ -390,7 +390,7 @@ impl<T: 'static + File> FileConnection<T> {
     /// Move seek position to byte `offset` relative to the origin specified by `start`.
     async fn handle_seek(&mut self, offset: i64, start: SeekOrigin) -> (Status, u64) {
         if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
-            return (Status::ACCESS_DENIED, 0);
+            return (Status::BAD_HANDLE, 0);
         }
 
         let (status, new_seek) = match start {
@@ -433,7 +433,7 @@ impl<T: 'static + File> FileConnection<T> {
 
     async fn handle_truncate(&mut self, length: u64) -> Status {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return Status::ACCESS_DENIED;
+            return Status::BAD_HANDLE;
         }
 
         match self.file.truncate(length).await {
@@ -849,7 +849,7 @@ mod tests {
     async fn test_read_not_readable() {
         let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_WRITABLE);
         let (status, _data) = env.proxy.read(10).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1012,7 +1012,7 @@ mod tests {
     async fn test_truncate_no_perms() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let status = env.proxy.truncate(10).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
     }
@@ -1039,7 +1039,7 @@ mod tests {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let data = "Hello, world!".as_bytes();
         let (status, _count) = env.proxy.write(data).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
     }
