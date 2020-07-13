@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_TESTS_FIDL_ASYNC_LLCPP_DRIVER_DRIVER_H_
-#define SRC_DEVICES_TESTS_FIDL_ASYNC_LLCPP_DRIVER_DRIVER_H_
+#ifndef SRC_DEVICES_TESTS_DDK_FIDL_TEST_FIDL_LLCPP_DRIVER_H_
+#define SRC_DEVICES_TESTS_DDK_FIDL_TEST_FIDL_LLCPP_DRIVER_H_
 
 #include <fuchsia/hardware/test/llcpp/fidl.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -37,4 +37,4 @@ class DdkFidlDevice : public DeviceType,
 };
 }  // namespace fidl
 
-#endif  // SRC_DEVICES_TESTS_FIDL_ASYNC_LLCPP_DRIVER_DRIVER_H_
+#endif  // SRC_DEVICES_TESTS_DDK_FIDL_TEST_FIDL_LLCPP_DRIVER_H_

@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "driver.h"
+#include "fidl-llcpp-driver.h"
 
 #include <memory>
-#include <optional>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/function.h>
 
 namespace fidl {
 
@@ -43,31 +43,18 @@ zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
 zx_status_t DdkFidlDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   fuchsia::hardware::test::Device::Dispatch(this, msg, &transaction);
-  return ZX_ERR_ASYNC;
+  return transaction.Status();
 }
 
 void DdkFidlDevice::GetChannel(GetChannelCompleter::Sync completer) {
-  struct CompletionContext {
-    std::optional<GetChannelCompleter::Async> completer;
-  };
-  auto context = std::make_unique<CompletionContext>();
-  context->completer = completer.ToAsync();
-
-  ZX_ASSERT(ZX_OK == DdkScheduleWork(
-                         [](void* ctx) {
-                           auto context = std::unique_ptr<CompletionContext>(
-                               reinterpret_cast<CompletionContext*>(ctx));
-
-                           zx::channel local;
-                           zx::channel remote;
-                           zx::channel::create(0, &local, &remote);
-                           __UNUSED auto dummy = local.release();
-                           context->completer->Reply(std::move(remote));
-                         },
-                         context.release()));
+  zx::channel local;
+  zx::channel remote;
+  zx::channel::create(0, &local, &remote);
+  __UNUSED auto dummy = local.release();
+  completer.Reply(std::move(remote));
 }
 
-zx_status_t DdkFidlDevice::Bind() { return DdkAdd("ddk-async-fidl"); }
+zx_status_t DdkFidlDevice::Bind() { return DdkAdd("ddk-fidl"); }
 
 void DdkFidlDevice::DdkRelease() { delete this; }
 
@@ -84,6 +71,6 @@ constexpr zx_driver_ops_t driver_ops = []() {
 ZIRCON_DRIVER_BEGIN(ddk_fidl, fidl::driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_DDKFIDL_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_DDKASYNCFIDL),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_DDKFIDL),
 ZIRCON_DRIVER_END(ddk_fidl)
     // clang-format on

@@ -36,6 +36,7 @@ void CheckTransaction(const board_test::DeviceEntry& entry, const char* driver_p
 
   args.load_drivers.push_back(driver_path);
   args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+  args.path_prefix = "/pkg/";
 
   // Create the isolated Devmgr.
   zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);

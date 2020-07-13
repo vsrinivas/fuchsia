@@ -35,7 +35,6 @@ common_test_contents = [
   "//src/devices/sysmem/tests/sysmem",
   "//src/devices/tee/drivers/optee:optee-message-test",
   "//src/devices/tests/crash-device",
-  "//src/devices/tests/ddk-fidl-test",
   "//src/devices/tests/ddk-lifecycle",
   "//src/devices/tests/ddk-power",
   "//src/devices/tests/ddk-runcompatibilityhook",
