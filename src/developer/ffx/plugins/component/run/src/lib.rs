@@ -4,8 +4,8 @@
 
 use {
     anyhow::{anyhow, Context, Error},
+    ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
-    ffx_run_component_args::RunComponentCommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_sys::{

@@ -6,7 +6,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "run-component", description = "run component")]
+#[argh(subcommand, name = "run", description = "run a component")]
 pub struct RunComponentCommand {
     #[argh(positional)]
     /// url of component to run
@@ -19,7 +19,7 @@ pub struct RunComponentCommand {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const CMD_NAME: &'static [&'static str] = &["run-component"];
+    const CMD_NAME: &'static [&'static str] = &["run"];
 
     #[test]
     fn test_command() {
