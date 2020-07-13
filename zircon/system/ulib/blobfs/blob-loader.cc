@@ -358,7 +358,7 @@ zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
     return status;
   }
 
-  metrics_->read_metrics().IncrementDiskRead(merkle_size, ticker.End());
+  metrics_->IncrementMerkleDiskRead(merkle_size, ticker.End());
   return ZX_OK;
 }
 
@@ -372,7 +372,8 @@ zx_status_t BlobLoader::LoadData(uint32_t node_index, const Inode& inode,
   if ((status = LoadDataInternal(node_index, inode, vmo, &read_duration, &bytes_read)) != ZX_OK) {
     return status;
   }
-  metrics_->read_metrics().IncrementDiskRead(bytes_read, read_duration);
+  metrics_->unpaged_read_metrics().IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED, bytes_read,
+                                                     read_duration);
   return ZX_OK;
 }
 
@@ -419,6 +420,7 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
                                  &bytes_read)) != ZX_OK) {
     return status;
   }
+  metrics_->unpaged_read_metrics().IncrementDiskRead(algorithm, bytes_read, read_duration);
 
   fs::Ticker ticker(metrics_->Collecting());
 
@@ -442,8 +444,7 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-  metrics_->read_metrics().IncrementDecompression(compressed_size, inode.blob_size, read_duration,
-                                                  ticker.End());
+  metrics_->unpaged_read_metrics().IncrementDecompression(algorithm, inode.blob_size, ticker.End());
 
   return ZX_OK;
 }

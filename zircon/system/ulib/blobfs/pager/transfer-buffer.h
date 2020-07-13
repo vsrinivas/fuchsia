@@ -19,6 +19,7 @@
 #include <storage/buffer/owned_vmoid.h>
 
 #include "../iterator/block-iterator-provider.h"
+#include "../metrics.h"
 #include "../transaction-manager.h"
 #include "user-pager-info.h"
 
@@ -56,7 +57,8 @@ class StorageBackedTransferBuffer : public TransferBuffer {
   // Creates an instance of |StorageBackedTransferBuffer| with a VMO of size |size| bytes.
   // |size| must be a multiple of the block size of the underlying storage device.
   [[nodiscard]] static zx::status<std::unique_ptr<StorageBackedTransferBuffer>> Create(
-      size_t size, TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider);
+      size_t size, TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
+      BlobfsMetrics* metrics);
 
   [[nodiscard]] zx::status<> Populate(uint64_t offset, uint64_t length,
                                       const UserPagerInfo& info) final;
@@ -66,13 +68,14 @@ class StorageBackedTransferBuffer : public TransferBuffer {
  private:
   StorageBackedTransferBuffer(zx::vmo vmo, storage::OwnedVmoid vmoid,
                               TransactionManager* txn_manager,
-                              BlockIteratorProvider* block_iter_provider);
+                              BlockIteratorProvider* block_iter_provider, BlobfsMetrics* metrics);
 
   TransactionManager* txn_manager_ = nullptr;
   BlockIteratorProvider* block_iter_provider_ = nullptr;
 
   zx::vmo vmo_;
   storage::OwnedVmoid vmoid_;
+  BlobfsMetrics* metrics_ = nullptr;
 };
 
 }  // namespace pager

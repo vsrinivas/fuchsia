@@ -7,11 +7,15 @@
 #include <fcntl.h>
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
+#include <lib/async/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/service/cpp/reader.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -1632,11 +1636,59 @@ TEST_F(BlobfsTestWithFvm, VmoCloneWatchingTest) {
   ASSERT_NO_FAILURES(RunVmoCloneWatchingTest(environment_->ramdisk()));
 }
 
-TEST_F(FdioTest, InspectServedTest) {
-  zx::channel inspect_client, inspect_server;
-  ASSERT_OK(zx::channel::create(0, &inspect_client, &inspect_server));
-  ASSERT_OK(
-      fdio_service_connect_at(diagnostics_dir(), "fuchsia.inspect.Tree", inspect_server.release()));
+void TakeSnapshot(zx_handle_t diagnostics_dir,
+                  fit::result<inspect::Hierarchy>& hierarchy_or_error) {
+  // Connect to the inspect service
+  fuchsia::inspect::TreePtr tree;
+  async::Loop tree_loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(tree_loop.StartThread("inspect-treeptr"));
+
+  async_set_default_dispatcher(tree_loop.dispatcher());
+  ASSERT_OK(fdio_service_connect_at(diagnostics_dir, "fuchsia.inspect.Tree",
+                                    tree.NewRequest().TakeChannel().release()));
+
+  // Read in a snapshot of the tree
+  auto read = inspect::ReadFromTree(std::move(tree));
+  fit::single_threaded_executor exec;
+  exec.schedule_task(read.then(
+      [&](fit::result<inspect::Hierarchy>& res) { hierarchy_or_error = std::move(res); }));
+  exec.run();
+}
+
+TEST_F(FdioTest, AllocateIncrementsMetricTest) {
+  // Take a snapshot of the inspect tree
+  fit::result<inspect::Hierarchy> hierarchy_or_error;
+  ASSERT_NO_FAILURES(TakeSnapshot(diagnostics_dir(), hierarchy_or_error));
+  auto hierarchy = std::move(hierarchy_or_error.value());
+
+  // Verify that no blobs are created
+  auto allocation_stats = hierarchy.GetByPath({"allocation_stats"});
+  ASSERT_NOT_NULL(allocation_stats);
+  auto blobs_created =
+      allocation_stats->node().get_property<inspect::UintPropertyValue>("blobs_created");
+  ASSERT_NOT_NULL(blobs_created);
+  ASSERT_EQ(blobs_created->value(), 0);
+
+  // Create a new blob with random contents on the mounted filesystem.
+  std::unique_ptr<blobfs::BlobInfo> info;
+  ASSERT_NO_FAILURES(GenerateRandomBlob(".", 1 << 8, &info));
+  fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd.is_valid());
+  ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+  ASSERT_EQ(blobfs::StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
+            "Failed to write Data");
+
+  // Take a snapshot of the inspect tree
+  ASSERT_NO_FAILURES(TakeSnapshot(diagnostics_dir(), hierarchy_or_error));
+  hierarchy = std::move(hierarchy_or_error.value());
+
+  // Verify that blobs created count is incremented
+  allocation_stats = hierarchy.GetByPath({"allocation_stats"});
+  ASSERT_NOT_NULL(allocation_stats);
+  blobs_created =
+      allocation_stats->node().get_property<inspect::UintPropertyValue>("blobs_created");
+  ASSERT_NOT_NULL(blobs_created);
+  ASSERT_EQ(blobs_created->value(), 1);
 }
 
 }  // namespace

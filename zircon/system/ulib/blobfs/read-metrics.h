@@ -11,6 +11,7 @@
 
 #include <mutex>
 
+#include <blobfs/compression-settings.h>
 #include <fs/ticker.h>
 
 namespace blobfs {
@@ -18,54 +19,55 @@ namespace blobfs {
 // The |ReadMetrics| class tracks blobfs metrics that are updated on the read path, i.e. metrics
 // related to disk reads and decompression.
 //
-// This class is thread-safe. The current blobfs implementation can update these metrics both from
-// the blobfs main thread (for blobs that cannot be paged), and the userpager thread (for blobs that
-// support paging).
+// This class is thread-safe. Two instances of this class are stored in |BlobfsMetrics|,
+// one for each thread.
 class ReadMetrics {
  public:
   ReadMetrics() = default;
   ReadMetrics(const ReadMetrics&) = delete;
   ReadMetrics& operator=(const ReadMetrics&) = delete;
 
-  // Increments aggregate information about reading blobs from storage
-  // since mounting.
-  void IncrementDiskRead(uint64_t read_size, fs::Duration read_duration);
+  // Increments aggregate information about reading blobs
+  // from storage since mounting.
+  void IncrementDiskRead(CompressionAlgorithm algorithm, uint64_t read_size,
+                         fs::Duration read_duration);
 
   // Increments aggregate information about decompressing blobs from storage
   // since mounting.
-  void IncrementDecompression(uint64_t compressed_size, uint64_t decompressed_size,
-                              fs::Duration read_duration, fs::Duration decompress_duration);
+  void IncrementDecompression(CompressionAlgorithm algorithm, uint64_t decompressed_size,
+                              fs::Duration decompress_duration);
 
-  struct DiskReadSnapshot {
-    uint64_t read_size;
-    zx_ticks_t read_time;
+  struct PerCompressionSnapshot {
+    // Metrics for reads from disk
+    zx_ticks_t read_ticks;
+    uint64_t read_bytes;
+
+    // Metrics for decompression
+    zx_ticks_t decompress_ticks;
+    uint64_t decompress_bytes;
   };
 
-  struct DecompressionSnapshot {
-    uint64_t compr_size;
-    uint64_t decompr_size;
-    zx_ticks_t compr_read_time;
-    zx_ticks_t decompr_time;
-  };
-
-  // Returns a snapshot of the disk read metrics.
-  DiskReadSnapshot GetDiskRead();
-
-  // Returns a snapshot of the decompression metrics.
-  DecompressionSnapshot GetDecompression();
+  // Returns a snapshot of metrics recorded by this class.
+  PerCompressionSnapshot GetSnapshot(CompressionAlgorithm algorithm);
 
  private:
-  // Total time waiting for reads from disk.
-  zx::ticks total_read_from_disk_time_ticks_ __TA_GUARDED(disk_read_mutex_) = {};
-  uint64_t bytes_read_from_disk_ __TA_GUARDED(disk_read_mutex_) = 0;
+  struct PerCompressionMetrics {
+    // Metrics for reads from disk
+    zx::ticks read_ticks = {};
+    uint64_t read_bytes = 0;
 
-  zx::ticks total_read_compressed_time_ticks_ __TA_GUARDED(decompr_mutex_) = {};
-  zx::ticks total_decompress_time_ticks_ __TA_GUARDED(decompr_mutex_) = {};
-  uint64_t bytes_compressed_read_from_disk_ __TA_GUARDED(decompr_mutex_) = 0;
-  uint64_t bytes_decompressed_from_disk_ __TA_GUARDED(decompr_mutex_) = 0;
+    // Metrics for decompression
+    zx::ticks decompress_ticks = {};
+    uint64_t decompress_bytes = 0;
+  };
 
-  std::mutex disk_read_mutex_;
-  std::mutex decompr_mutex_;
+  ReadMetrics::PerCompressionMetrics* GetMetrics(CompressionAlgorithm algorithm);
+
+  PerCompressionMetrics uncompressed_metrics_ = {};
+  PerCompressionMetrics lz4_metrics_ = {};
+  PerCompressionMetrics zstd_metrics_ = {};
+  PerCompressionMetrics zstd_seekable_metrics_ = {};
+  PerCompressionMetrics chunked_metrics_ = {};
 };
 
 }  // namespace blobfs

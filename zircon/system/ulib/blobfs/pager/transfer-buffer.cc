@@ -9,15 +9,18 @@ namespace pager {
 
 StorageBackedTransferBuffer::StorageBackedTransferBuffer(zx::vmo vmo, storage::OwnedVmoid vmoid,
                                                          TransactionManager* txn_manager,
-                                                         BlockIteratorProvider* block_iter_provider)
+                                                         BlockIteratorProvider* block_iter_provider,
+                                                         BlobfsMetrics* metrics)
     : txn_manager_(txn_manager),
       block_iter_provider_(block_iter_provider),
       vmo_(std::move(vmo)),
-      vmoid_(std::move(vmoid)) {}
+      vmoid_(std::move(vmoid)),
+      metrics_(metrics) {}
 
 zx::status<std::unique_ptr<StorageBackedTransferBuffer>> StorageBackedTransferBuffer::Create(
-    size_t size, TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider) {
-  ZX_DEBUG_ASSERT(txn_manager != nullptr && block_iter_provider != nullptr);
+    size_t size, TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
+    BlobfsMetrics* metrics) {
+  ZX_DEBUG_ASSERT(metrics != nullptr && txn_manager != nullptr && block_iter_provider != nullptr);
   if (size % kBlobfsBlockSize != 0 || size % PAGE_SIZE != 0) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -37,11 +40,12 @@ zx::status<std::unique_ptr<StorageBackedTransferBuffer>> StorageBackedTransferBu
   }
 
   return zx::ok(std::unique_ptr<StorageBackedTransferBuffer>(new StorageBackedTransferBuffer(
-      std::move(vmo), std::move(vmoid), txn_manager, block_iter_provider)));
+      std::move(vmo), std::move(vmoid), txn_manager, block_iter_provider, metrics)));
 }
 
 zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t length,
                                                    const UserPagerInfo& info) {
+  fs::Ticker ticker(metrics_->Collecting());
   if (offset % kBlobfsBlockSize != 0) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -81,7 +85,15 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
     return zx::error(status);
   }
 
-  // TODO(xbhatnag): Update read metrics.
+  // Update read metrics
+  if (info.decompressor == nullptr) {
+    metrics_->paged_read_metrics().IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED,
+                                                     block_count * kBlobfsBlockSize, ticker.End());
+  } else {
+    // TODO(xbhatnag): Get the correct compression algorithm. We're making an assumption here.
+    metrics_->paged_read_metrics().IncrementDiskRead(CompressionAlgorithm::CHUNKED,
+                                                     block_count * kBlobfsBlockSize, ticker.End());
+  }
   return zx::ok();
 }
 

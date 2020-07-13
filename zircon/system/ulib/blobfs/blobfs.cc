@@ -161,13 +161,14 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
 
   if (options->pager) {
     auto fs_ptr = fs.get();
-    auto status_or_buffer =
-        pager::StorageBackedTransferBuffer::Create(pager::kTransferBufferSize, fs_ptr, fs_ptr);
+    auto status_or_buffer = pager::StorageBackedTransferBuffer::Create(
+        pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
     if (!status_or_buffer.is_ok()) {
       FS_TRACE_ERROR("blobfs: Could not initialize pager transfer buffer\n");
       return status_or_buffer.status_value();
     }
-    auto status_or_pager = pager::UserPager::Create(std::move(status_or_buffer).value());
+    auto status_or_pager =
+        pager::UserPager::Create(std::move(status_or_buffer).value(), fs_ptr->Metrics());
     if (!status_or_pager.is_ok()) {
       FS_TRACE_ERROR("blobfs: Could not initialize user pager\n");
       return status_or_pager.status_value();

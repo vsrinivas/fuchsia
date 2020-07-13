@@ -261,7 +261,7 @@ class BlobfsPagerTest : public zxtest::Test {
   void SetUp() override {
     auto buffer = MockTransferBuffer::Create(kTransferBufferSize);
     buffer_ = buffer.get();
-    auto status_or_pager = UserPager::Create(std::move(buffer));
+    auto status_or_pager = UserPager::Create(std::move(buffer), &metrics_);
     ASSERT_TRUE(status_or_pager.is_ok());
     pager_ = std::move(status_or_pager).value();
     factory_ = std::make_unique<MockBlobFactory>(pager_.get(), &metrics_);

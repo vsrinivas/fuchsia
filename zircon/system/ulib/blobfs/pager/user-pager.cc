@@ -17,16 +17,20 @@
 #include <fs/trace.h>
 
 #include "compression/zstd-seekable.h"
+#include "metrics.h"
 
 namespace blobfs {
 namespace pager {
 
-zx::status<std::unique_ptr<UserPager>> UserPager::Create(std::unique_ptr<TransferBuffer> buffer) {
-  ZX_DEBUG_ASSERT(buffer != nullptr && buffer->vmo().is_valid());
+UserPager::UserPager(BlobfsMetrics* metrics) : metrics_(metrics) {}
+
+zx::status<std::unique_ptr<UserPager>> UserPager::Create(std::unique_ptr<TransferBuffer> buffer,
+                                                         BlobfsMetrics* metrics) {
+  ZX_DEBUG_ASSERT(metrics != nullptr && buffer != nullptr && buffer->vmo().is_valid());
 
   TRACE_DURATION("blobfs", "UserPager::Create");
 
-  auto pager = std::unique_ptr<UserPager>(new UserPager());
+  auto pager = std::unique_ptr<UserPager>(new UserPager(metrics));
   pager->transfer_buffer_ = std::move(buffer);
 
   zx_status_t status = zx::vmo::create(kDecompressionBufferSize, 0, &pager->decompression_buffer_);
@@ -245,6 +249,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   }
   auto unmap_decompression = fbl::MakeAutoCall([&]() { decompressed_mapper.Unmap(); });
 
+  // Decompress the data
+  fs::Ticker ticker(metrics_->Collecting());
   size_t decompressed_size = mapping.decompressed_length;
   uint8_t* src = static_cast<uint8_t*>(compressed_mapper.start()) + offset_of_compressed_data;
   status =
@@ -255,6 +261,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
                    zx_status_get_string(status));
     return ToPagerErrorStatus(status);
   }
+  metrics_->paged_read_metrics().IncrementDecompression(CompressionAlgorithm::CHUNKED,
+                                                        decompressed_size, ticker.End());
 
   // Verify the decompressed pages.
   const uint64_t rounded_length =
@@ -280,6 +288,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   return PagerErrorStatus::kOK;
 }
 
+// TODO(55540): Remove this code path, since it is not in use and metrics are not
+// being recorded for it.
 PagerErrorStatus UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_offset,
                                                            uint64_t requested_length,
                                                            const zx::vmo& vmo,

@@ -109,7 +109,7 @@ class BlobLoaderTest : public zxtest::Test {
 
   FakeTransferBuffer& InitPager(std::unique_ptr<FakeTransferBuffer> buffer) {
     FakeTransferBuffer& buffer_ref = *buffer;
-    auto status_or_pager = pager::UserPager::Create(std::move(buffer));
+    auto status_or_pager = pager::UserPager::Create(std::move(buffer), fs_->Metrics());
     EXPECT_TRUE(status_or_pager.is_ok());
     pager_ = std::move(status_or_pager).value();
     return buffer_ref;

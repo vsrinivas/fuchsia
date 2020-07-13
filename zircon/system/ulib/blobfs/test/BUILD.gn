@@ -200,6 +200,7 @@ test("blobfs-integration") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/devices/block/bin/ftl_proxy:ftl-util",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

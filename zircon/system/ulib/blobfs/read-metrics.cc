@@ -4,39 +4,46 @@
 
 #include "read-metrics.h"
 
+#include <blobfs/compression-settings.h>
+
 namespace blobfs {
 
-void ReadMetrics::IncrementDiskRead(uint64_t read_size, fs::Duration read_duration) {
-  std::scoped_lock guard(disk_read_mutex_);
-  total_read_from_disk_time_ticks_ += read_duration;
-  bytes_read_from_disk_ += read_size;
+ReadMetrics::PerCompressionMetrics* ReadMetrics::GetMetrics(CompressionAlgorithm algorithm) {
+  switch (algorithm) {
+    case CompressionAlgorithm::UNCOMPRESSED:
+      return &uncompressed_metrics_;
+    case CompressionAlgorithm::LZ4:
+      return &lz4_metrics_;
+    case CompressionAlgorithm::ZSTD:
+      return &zstd_metrics_;
+    case CompressionAlgorithm::CHUNKED:
+      return &chunked_metrics_;
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
+      return &zstd_seekable_metrics_;
+  }
 }
 
-void ReadMetrics::IncrementDecompression(uint64_t compressed_size, uint64_t decompressed_size,
-                                         fs::Duration read_duration,
+void ReadMetrics::IncrementDiskRead(CompressionAlgorithm algorithm, uint64_t read_size,
+                                    fs::Duration read_duration) {
+  auto metrics = GetMetrics(algorithm);
+  metrics->read_ticks += read_duration;
+  metrics->read_bytes += read_size;
+}
+
+void ReadMetrics::IncrementDecompression(CompressionAlgorithm algorithm, uint64_t decompressed_size,
                                          fs::Duration decompress_duration) {
-  std::scoped_lock guard(decompr_mutex_);
-  bytes_compressed_read_from_disk_ += compressed_size;
-  bytes_decompressed_from_disk_ += decompressed_size;
-  total_read_compressed_time_ticks_ += read_duration;
-  total_decompress_time_ticks_ += decompress_duration;
+  auto metrics = GetMetrics(algorithm);
+  metrics->decompress_ticks += decompress_duration;
+  metrics->decompress_bytes += decompressed_size;
 }
 
-ReadMetrics::DiskReadSnapshot ReadMetrics::GetDiskRead() {
-  std::scoped_lock guard(disk_read_mutex_);
-  return DiskReadSnapshot{
-      .read_size = bytes_read_from_disk_,
-      .read_time = total_read_from_disk_time_ticks_.get(),
-  };
-}
-
-ReadMetrics::DecompressionSnapshot ReadMetrics::GetDecompression() {
-  std::scoped_lock guard(decompr_mutex_);
-  return DecompressionSnapshot{
-      .compr_size = bytes_compressed_read_from_disk_,
-      .decompr_size = bytes_decompressed_from_disk_,
-      .compr_read_time = total_read_compressed_time_ticks_.get(),
-      .decompr_time = total_decompress_time_ticks_.get(),
+ReadMetrics::PerCompressionSnapshot ReadMetrics::GetSnapshot(CompressionAlgorithm algorithm) {
+  auto metrics = GetMetrics(algorithm);
+  return PerCompressionSnapshot{
+      .read_ticks = metrics->read_ticks.get(),
+      .read_bytes = metrics->read_bytes,
+      .decompress_ticks = metrics->decompress_ticks.get(),
+      .decompress_bytes = metrics->decompress_bytes,
   };
 }
 

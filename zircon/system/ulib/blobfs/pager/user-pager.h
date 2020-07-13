@@ -16,6 +16,7 @@
 
 #include <memory>
 
+#include "../metrics.h"
 #include "../transaction-manager.h"
 #include "transfer-buffer.h"
 #include "user-pager-info.h"
@@ -93,7 +94,7 @@ class UserPager {
   // A new thread is created and started to process page fault requests.
   // |buffer| is used to retrieve and buffer data from the underlying storage.
   [[nodiscard]] static zx::status<std::unique_ptr<UserPager>> Create(
-      std::unique_ptr<TransferBuffer> buffer);
+      std::unique_ptr<TransferBuffer> buffer, BlobfsMetrics* metrics);
 
   // Returns the pager handle.
   const zx::pager& Pager() const { return pager_; }
@@ -122,7 +123,8 @@ class UserPager {
   zx::pager pager_;
 
  private:
-  UserPager() = default;
+  explicit UserPager(BlobfsMetrics* metrics);
+  UserPager() = delete;
   struct ReadRange {
     uint64_t offset;
     uint64_t length;
@@ -171,6 +173,9 @@ class UserPager {
 
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  // Records all metrics for this instance of blobfs.
+  BlobfsMetrics* metrics_ = nullptr;
 };
 
 }  // namespace pager
