@@ -260,7 +260,7 @@ void IntlPropertyProviderImpl::GetProfile(
 }
 
 void IntlPropertyProviderImpl::StartSettingsWatcher() {
-  settings_client_->Watch2([this](fuchsia::settings::IntlSettings settings) {
+  settings_client_->Watch([this](fuchsia::settings::IntlSettings settings) {
     FX_VLOGS(2) << "New settings value: " << settings;
     fuchsia::intl::merge::Data new_profile_data = GetDefaultRawData(raw_profile_data_);
     Merge(settings, &new_profile_data);

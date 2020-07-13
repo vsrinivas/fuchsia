@@ -35,7 +35,7 @@ mod tests {
         /// Tries to create a new timezone setter.
         pub async fn try_new(timezone: &str) -> Result<ScopedTimezone, Error> {
             let client = intl_client()?;
-            let response = client.watch2().await?;
+            let response = client.watch().await?;
             fx_log_info!("setting timezone for test: {}", timezone);
             let old_timezone = response.time_zone_id.unwrap().id;
             let setter = ScopedTimezone { timezone: old_timezone, client: client };

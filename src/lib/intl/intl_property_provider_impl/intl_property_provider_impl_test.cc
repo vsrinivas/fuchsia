@@ -83,8 +83,8 @@ class FakeSettingsService : public fuchsia::settings::testing::Intl_TestBase {
     Notify();
   }
 
-  // Implements `fuchsia.settings.Watch2`, but only for a single watcher.
-  void Watch2(Watch2Callback callback) override {
+  // Implements `fuchsia.settings.Watch`, but only for a single watcher.
+  void Watch(WatchCallback callback) override {
     watcher_ = std::move(callback);
     if (state_changed_) {
       Notify();
@@ -112,9 +112,9 @@ class FakeSettingsService : public fuchsia::settings::testing::Intl_TestBase {
   fidl::BindingSet<fuchsia::settings::Intl> bindings_;
 
   // The fake implementation of the watch protocol works for one listener only.
-  Watch2Callback watcher_;
+  WatchCallback watcher_;
 
-  // Settings reported on a Watch2 call.
+  // Settings reported on a Watch call.
   fuchsia::settings::IntlSettings intl_settings_;
 
   // If set, it means that any incoming watch should return immediately.
