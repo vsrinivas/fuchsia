@@ -43,17 +43,16 @@ void UserConsentWatcher::RestartWatching() {
 }
 
 void UserConsentWatcher::Watch() {
-  privacy_settings_ptr_->Watch2(
-      [this](fuchsia::settings::PrivacySettings settings) {
-        // Reset the exponential backoff since we successfully watched once.
-        backoff_.Reset();
+  privacy_settings_ptr_->Watch([this](fuchsia::settings::PrivacySettings settings) {
+    // Reset the exponential backoff since we successfully watched once.
+    backoff_.Reset();
 
-        privacy_settings_ = std::move(settings);
-        Update();
+    privacy_settings_ = std::move(settings);
+    Update();
 
-        // We watch for the next update, following the hanging get pattern.
-        Watch();
-      });
+    // We watch for the next update, following the hanging get pattern.
+    Watch();
+  });
 }
 
 void UserConsentWatcher::ResetConsent() {
