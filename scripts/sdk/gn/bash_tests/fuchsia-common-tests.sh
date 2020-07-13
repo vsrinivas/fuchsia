@@ -280,5 +280,24 @@ TEST_set_and_get-fuchsia-property() {
   BT_EXPECT_EQ "$value" ""
 }
 
+TEST_migrate_ssh_key() {
+  BT_ASSERT_FUNCTION_EXISTS get-fuchsia-auth-keys-file
+
+  # Generate a key in the old location
+  legacy_ssh_dir="$(get-fuchsia-sdk-data-dir)/.ssh"
+  local legacy_keyfile="${legacy_ssh_dir}/pkey"
+  legacy_authfile="${legacy_ssh_dir}/authorized_keys"
+  mkdir -p "${legacy_ssh_dir}"
+  echo "legacy private key" > "${legacy_keyfile}"
+  echo "legacy authorized keys" > "${legacy_authfile}"
+
+  local authfile
+  authfile="$(get-fuchsia-auth-keys-file)"
+  BT_EXPECT_EQ "${authfile}" "${HOME}/.ssh/fuchsia_authorized_keys"
+  BT_ASSERT_FILE_CONTAINS "${authfile}" "legacy authorized keys"
+
+  local keyfile="${HOME}/.ssh/fuchsia_ed25519"
+  BT_ASSERT_FILE_CONTAINS "${keyfile}" "legacy private key"
+}
 
 BT_RUN_TESTS "$@"

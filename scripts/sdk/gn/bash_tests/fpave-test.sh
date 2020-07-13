@@ -220,7 +220,7 @@ TEST_fpave_default_keys() {
   # shellcheck disable=SC1090
   source "${FUCHSIA_WORK_DIR}/image/pave.sh.mock_state"
 
-  local expected_args=( _ANY_ --authorized-keys "${FUCHSIA_WORK_DIR}/.ssh/authorized_keys" -1 )
+  local expected_args=( _ANY_ --authorized-keys "${HOME}/.ssh/fuchsia_authorized_keys" -1 )
   gn-test-check-mock-args "${expected_args[@]}"
 
   # shellcheck disable=SC1090
@@ -273,7 +273,7 @@ TEST_fpave_in_zedboot() {
   # shellcheck disable=SC1090
   source "${FUCHSIA_WORK_DIR}/image/pave.sh.mock_state"
 
-  local expected_args=( _ANY_ --authorized-keys "${FUCHSIA_WORK_DIR}/.ssh/authorized_keys" -1 )
+  local expected_args=( _ANY_ --authorized-keys "${HOME}/.ssh/fuchsia_authorized_keys" -1 )
   gn-test-check-mock-args "${expected_args[@]}"
 
   # shellcheck disable=SC1090
