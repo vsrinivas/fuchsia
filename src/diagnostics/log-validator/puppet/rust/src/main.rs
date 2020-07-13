@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    diagnostic_streams::{encode::Encoder, StreamError},
+    diagnostic_streams::encode::{Encoder, EncodingError},
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_validate_logs::{ValidateError, ValidateRequest, ValidateRequestStream},
     fuchsia_async as fasync,
@@ -31,7 +31,7 @@ async fn run_validate_service(mut stream: ValidateRequestStream) -> Result<(), E
                 vmo.write(&encoded, 0)?;
                 responder.send(&mut Ok(Buffer { vmo, size: encoded.len() as u64 }))?;
             }
-            Err(StreamError::Unsupported) => {
+            Err(EncodingError::Unsupported) => {
                 responder.send(&mut Err(ValidateError::UnsupportedRecord))?
             }
             Err(e) => {

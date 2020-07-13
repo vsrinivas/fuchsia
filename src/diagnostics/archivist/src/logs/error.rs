@@ -29,8 +29,11 @@ pub enum StreamError {
     #[error("unrecognized value type encountered")]
     UnrecognizedValue,
 
-    #[error("couldn't parse message: {:?}", .parse_error)]
-    ParseError { parse_error: ParseError },
+    #[error("couldn't parse message: {parse_error:?}")]
+    ParseError {
+        #[from]
+        parse_error: ParseError,
+    },
 
     #[error("string with invalid UTF-8 encoding: {source:?}")]
     InvalidString {
@@ -64,13 +67,5 @@ impl PartialEq for StreamError {
             (Io { source }, Io { source: s2 }) => source.kind() == s2.kind(),
             _ => false,
         }
-    }
-}
-
-// This impl is manually provided as deriving it with thiserror
-// requires the source to implement std::error::Error
-impl From<ParseError> for StreamError {
-    fn from(parse_error: ParseError) -> Self {
-        Self::ParseError { parse_error }
     }
 }

@@ -1,10 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
 //! Encoding diagnostic records using the Fuchsia Tracing format.
 
-use {
-    crate::{ArgType, Header, StreamError, StringRef},
-    fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
-    std::io::Cursor,
-};
+use crate::{ArgType, Header, StringRef};
+use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value};
+use std::{array::TryFromSliceError, io::Cursor};
+use thiserror::Error;
 
 /// An `Encoder` wraps any value implementing `BufMutShared` and writes diagnostic stream records
 /// into it.
@@ -25,7 +27,7 @@ where
     ///
     /// Fails if there is insufficient space in the buffer for encoding, but it does not yet attempt
     /// to zero out any partial record writes.
-    pub fn write_record(&mut self, record: &Record) -> Result<(), StreamError> {
+    pub fn write_record(&mut self, record: &Record) -> Result<(), EncodingError> {
         // TODO(adamperry): on failure, zero out the region we were using
         let starting_idx = self.buf.cursor();
 
@@ -49,7 +51,7 @@ where
         Ok(())
     }
 
-    pub(super) fn write_argument(&mut self, argument: &Argument) -> Result<(), StreamError> {
+    pub(super) fn write_argument(&mut self, argument: &Argument) -> Result<(), EncodingError> {
         let starting_idx = self.buf.cursor();
 
         let header_slot = self.buf.put_slot(std::mem::size_of::<Header>())?;
@@ -80,7 +82,7 @@ where
                 header.set_value_ref(StringRef::for_str(t).mask());
                 self.write_string(t)
             }
-            _ => Err(StreamError::Unsupported),
+            _ => Err(EncodingError::Unsupported),
         }?;
 
         let record_len = self.buf.cursor() - starting_idx;
@@ -93,23 +95,23 @@ where
     }
 
     /// Write an unsigned integer.
-    fn write_u64(&mut self, n: u64) -> Result<(), StreamError> {
-        self.buf.put_u64_le(n).map_err(|_| StreamError::BufferSize)
+    fn write_u64(&mut self, n: u64) -> Result<(), EncodingError> {
+        self.buf.put_u64_le(n).map_err(|_| EncodingError::BufferTooSmall)
     }
 
     /// Write a signed integer.
-    fn write_i64(&mut self, n: i64) -> Result<(), StreamError> {
-        self.buf.put_i64_le(n).map_err(|_| StreamError::BufferSize)
+    fn write_i64(&mut self, n: i64) -> Result<(), EncodingError> {
+        self.buf.put_i64_le(n).map_err(|_| EncodingError::BufferTooSmall)
     }
 
     /// Write a floating-point number.
-    fn write_f64(&mut self, n: f64) -> Result<(), StreamError> {
-        self.buf.put_f64(n).map_err(|_| StreamError::BufferSize)
+    fn write_f64(&mut self, n: f64) -> Result<(), EncodingError> {
+        self.buf.put_f64(n).map_err(|_| EncodingError::BufferTooSmall)
     }
 
     /// Write a string padded to 8-byte alignment.
-    fn write_string(&mut self, src: &str) -> Result<(), StreamError> {
-        self.buf.put_slice(src.as_bytes()).map_err(|_| StreamError::BufferSize)?;
+    fn write_string(&mut self, src: &str) -> Result<(), EncodingError> {
+        self.buf.put_slice(src.as_bytes()).map_err(|_| EncodingError::BufferTooSmall)?;
         unsafe {
             let align = std::mem::size_of::<u64>();
             let num_padding_bytes = (align - src.len() % align) % align;
@@ -147,7 +149,7 @@ pub trait BufMutShared {
 
     /// Advances the write cursor without immediately writing any bytes to the buffer. The returned
     /// struct offers the ability to later write to the provided portion of the buffer.
-    fn put_slot(&mut self, width: usize) -> Result<WriteSlot, StreamError> {
+    fn put_slot(&mut self, width: usize) -> Result<WriteSlot, EncodingError> {
         if self.has_remaining(width) {
             let slot = WriteSlot { range: self.cursor()..(self.cursor() + width) };
             unsafe {
@@ -155,7 +157,7 @@ pub trait BufMutShared {
             }
             Ok(slot)
         } else {
-            Err(StreamError::BufferSize)
+            Err(EncodingError::BufferTooSmall)
         }
     }
 
@@ -311,5 +313,24 @@ impl BufMutShared for Cursor<Vec<u8>> {
     unsafe fn put_slice_at(&mut self, to_put: &[u8], offset: usize) {
         let dest = &mut self.get_mut()[offset..(offset + to_put.len())];
         dest.copy_from_slice(to_put);
+    }
+}
+
+/// An error that occurred while encoding data to the stream format.
+#[derive(Debug, Error)]
+pub enum EncodingError {
+    /// The provided buffer is too small.
+    #[error("buffer is too small")]
+    BufferTooSmall,
+
+    /// We attempted to encode values which are not yet supported by this implementation of
+    /// the Fuchsia Tracing format.
+    #[error("unsupported value type")]
+    Unsupported,
+}
+
+impl From<TryFromSliceError> for EncodingError {
+    fn from(_: TryFromSliceError) -> Self {
+        EncodingError::BufferTooSmall
     }
 }

@@ -183,7 +183,7 @@ impl Message {
     ///
     /// [log encoding] https://fuchsia.dev/fuchsia-src/development/logs/encodings
     pub fn from_structured(bytes: &[u8]) -> Result<Self, StreamError> {
-        let (_, record) = diagnostic_streams::parse::parse_record(bytes)?;
+        let (record, _) = diagnostic_streams::parse::parse_record(bytes)?;
         let properties = Result::from_iter(record.arguments.into_iter().map(|a| {
             let label = Field::from(a.name);
 

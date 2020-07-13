@@ -6,11 +6,8 @@
 
 #![warn(clippy::all, missing_docs)]
 
-use {
-    bitfield::bitfield,
-    std::{array::TryFromSliceError, convert::TryFrom},
-    thiserror::Error,
-};
+use bitfield::bitfield;
+use std::convert::TryFrom;
 
 pub use fidl_fuchsia_diagnostics::Severity;
 pub use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value};
@@ -74,7 +71,7 @@ enum ArgType {
 }
 
 impl TryFrom<u8> for ArgType {
-    type Error = StreamError;
+    type Error = parse::ParseError;
     fn try_from(b: u8) -> Result<Self, Self::Error> {
         Ok(match b {
             0 => ArgType::Null,
@@ -86,7 +83,7 @@ impl TryFrom<u8> for ArgType {
             6 => ArgType::String,
             7 => ArgType::Pointer,
             8 => ArgType::Koid,
-            _ => return Err(StreamError::ValueOutOfValidRange),
+            _ => return Err(parse::ParseError::ValueOutOfValidRange),
         })
     }
 }
@@ -128,57 +125,13 @@ impl<'a> ToString for StringRef<'a> {
     }
 }
 
-/// Errors which occur when interacting with streams of diagnostic records.
-#[derive(Debug, Error)]
-pub enum StreamError {
-    /// The provided buffer is incorrectly sized, usually due to being too small.
-    #[error("buffer is incorrectly sized")]
-    BufferSize,
-
-    /// We attempted to parse bytes as a type for which the bytes are not a valid pattern.
-    #[error("value out of range")]
-    ValueOutOfValidRange,
-
-    /// We attempted to parse or encode values which are not yet supported by this implementation of
-    /// the Fuchsia Tracing format.
-    #[error("unsupported value type")]
-    Unsupported,
-
-    /// We encountered a generic `nom` error while parsing.
-    #[error("nom parsing error: {:?}", .0)]
-    Nom(nom::error::ErrorKind),
-}
-
-impl From<TryFromSliceError> for StreamError {
-    fn from(_: TryFromSliceError) -> Self {
-        StreamError::BufferSize
-    }
-}
-
-impl From<std::str::Utf8Error> for StreamError {
-    fn from(_: std::str::Utf8Error) -> Self {
-        StreamError::ValueOutOfValidRange
-    }
-}
-
-impl nom::error::ParseError<&[u8]> for StreamError {
-    fn from_error_kind(_input: &[u8], kind: nom::error::ErrorKind) -> Self {
-        StreamError::Nom(kind)
-    }
-
-    fn append(_input: &[u8], kind: nom::error::ErrorKind, _prev: Self) -> Self {
-        // TODO support chaining these
-        StreamError::Nom(kind)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         crate::{
-            encode::{BufMutShared, Encoder},
-            parse::{parse_argument, parse_record, ParseResult},
+            encode::{BufMutShared, Encoder, EncodingError},
+            parse::{parse_argument, try_parse_record, ParseResult},
         },
         fidl_fuchsia_diagnostics::Severity,
         fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
@@ -190,7 +143,7 @@ mod tests {
 
     pub(crate) fn assert_roundtrips<T>(
         val: T,
-        encoder_method: impl Fn(&mut Encoder<Cursor<Vec<u8>>>, &T) -> Result<(), StreamError>,
+        encoder_method: impl Fn(&mut Encoder<Cursor<Vec<u8>>>, &T) -> Result<(), EncodingError>,
         parser: impl Fn(&[u8]) -> ParseResult<'_, T>,
         canonical: Option<&[u8]>,
     ) where
@@ -240,7 +193,7 @@ mod tests {
         assert_roundtrips(
             Record { timestamp, severity: Severity::Info, arguments: vec![] },
             Encoder::write_record,
-            parse_record,
+            try_parse_record,
             Some(&expected_record),
         );
     }
@@ -302,7 +255,7 @@ mod tests {
                 ],
             },
             Encoder::write_record,
-            parse_record,
+            try_parse_record,
             None,
         );
     }
@@ -329,7 +282,7 @@ mod tests {
                 ],
             },
             Encoder::write_record,
-            parse_record,
+            try_parse_record,
             None,
         );
     }
@@ -350,6 +303,6 @@ mod tests {
             })
             .unwrap();
 
-        assert!(parse_record(encoder.buf.get_ref()).is_err());
+        assert!(try_parse_record(encoder.buf.get_ref()).is_err());
     }
 }
