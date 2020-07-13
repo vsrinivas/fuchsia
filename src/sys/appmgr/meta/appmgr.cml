@@ -195,6 +195,10 @@
             protocol: "/svc/fuchsia.thermal.Controller",
             as: "/svc_for_sys/fuchsia.thermal.Controller",
         },
+        {
+            protocol: "/svc/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            as: "/svc_for_sys/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+        },
 
         // These services are used by appmgr directly
         {
