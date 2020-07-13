@@ -1123,13 +1123,9 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
 
   auto const& [type, multicast] = GetParam();
 
-  int s1;
-  ASSERT_GE(s1 = socket(AF_INET, type, 0), 0) << strerror(errno);
-
-  ASSERT_EQ(setsockopt(s1, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
-
-  struct sockaddr_in addr = {};
-  addr.sin_family = AF_INET;
+  struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+  };
   if (multicast) {
     int n = inet_pton(addr.sin_family, "224.0.2.1", &addr.sin_addr);
     ASSERT_GE(n, 0) << strerror(errno);
@@ -1137,19 +1133,22 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
   } else {
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   }
-  ASSERT_EQ(bind(s1, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+
+  fbl::unique_fd s1;
+  ASSERT_TRUE(s1 = fbl::unique_fd(socket(AF_INET, type, 0))) << strerror(errno);
+  ASSERT_EQ(setsockopt(s1.get(), SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
+  ASSERT_EQ(bind(s1.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
+
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(s1, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+  ASSERT_EQ(getsockname(s1.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
 
-  int s2 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  ASSERT_GE(s2, 0) << strerror(errno);
-
-  ASSERT_EQ(setsockopt(s2, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
-
-  ASSERT_EQ(bind(s2, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+  fbl::unique_fd s2;
+  ASSERT_TRUE(s2 = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
+  ASSERT_EQ(setsockopt(s2.get(), SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
+  ASSERT_EQ(bind(s2.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 }
 
