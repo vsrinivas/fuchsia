@@ -332,6 +332,26 @@ fuchsia_component("realpath-tests") {
   ]
 }
 
+test("rename_tests") {
+  sources = [ "rename.cc" ]
+  deps = [
+    ":fs_test",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fdio-caller",
+  ]
+}
+
+fuchsia_component("rename-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/rename-tests.cml"
+  deps = [
+    ":manifests",
+    ":rename_tests",
+  ]
+}
+
 fuchsia_test_package("fs-tests") {
   test_components = [
     ":access-tests",
@@ -349,6 +369,7 @@ fuchsia_test_package("fs-tests") {
     ":persist-tests",
     ":random-op-tests",
     ":realpath-tests",
+    ":rename-tests",
   ]
 }
 
@@ -395,6 +416,7 @@ action("manifests") {
     "$target_gen_dir/persist-tests.cml",
     "$target_gen_dir/random-op-tests.cml",
     "$target_gen_dir/realpath-tests.cml",
+    "$target_gen_dir/rename-tests.cml",
   ]
   args = rebase_path(sources, root_build_dir) +
          rebase_path(outputs, root_build_dir)

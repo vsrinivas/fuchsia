@@ -18,253 +18,244 @@
 
 #include <iterator>
 
-#include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 
-#include "filesystems.h"
 #include "misc.h"
+#include "src/storage/fs_test/fs_test_fixture.h"
+
+namespace fs_test {
+namespace {
+
+using RenameTest = FilesystemTest;
 
 namespace fio = ::llcpp::fuchsia::io;
 
-bool TestRenameBasic() {
-  BEGIN_TEST;
+TEST_P(RenameTest, Basic) {
   // Cannot rename when src does not exist
-  ASSERT_EQ(rename("::alpha", "::bravo"), -1, "");
+  ASSERT_EQ(rename(GetPath("alpha").c_str(), GetPath("bravo").c_str()), -1);
 
   // Renaming to self is fine
-  ASSERT_EQ(mkdir("::alpha", 0755), 0, "");
-  ASSERT_EQ(rename("::alpha", "::alpha"), 0, "");
-  ASSERT_EQ(rename("::alpha/.", "::alpha/."), 0, "");
-  ASSERT_EQ(rename("::alpha/", "::alpha"), 0, "");
-  ASSERT_EQ(rename("::alpha", "::alpha/"), 0, "");
-  ASSERT_EQ(rename("::alpha/", "::alpha/"), 0, "");
-  ASSERT_EQ(rename("::alpha/./../alpha", "::alpha/./../alpha"), 0, "");
+  ASSERT_EQ(mkdir(GetPath("alpha").c_str(), 0755), 0);
+  ASSERT_EQ(rename(GetPath("alpha").c_str(), GetPath("alpha").c_str()), 0);
+  ASSERT_EQ(rename(GetPath("alpha/.").c_str(), GetPath("alpha/.").c_str()), 0);
+  ASSERT_EQ(rename(GetPath("alpha/").c_str(), GetPath("alpha").c_str()), 0);
+  ASSERT_EQ(rename(GetPath("alpha").c_str(), GetPath("alpha/").c_str()), 0);
+  ASSERT_EQ(rename(GetPath("alpha/").c_str(), GetPath("alpha/").c_str()), 0);
+  ASSERT_EQ(rename(GetPath("alpha/./../alpha").c_str(), GetPath("alpha/./../alpha").c_str()), 0);
 
   // Cannot rename dir to file
-  int fd = open("::bravo", O_RDWR | O_CREAT | O_EXCL, 0644);
-  ASSERT_GT(fd, 0, "");
-  ASSERT_EQ(close(fd), 0, "");
-  ASSERT_EQ(rename("::alpha", "::bravo"), -1, "");
-  ASSERT_EQ(unlink("::bravo"), 0, "");
+  int fd = open(GetPath("bravo").c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
+  ASSERT_GT(fd, 0);
+  ASSERT_EQ(close(fd), 0);
+  ASSERT_EQ(rename(GetPath("alpha").c_str(), GetPath("bravo").c_str()), -1);
+  ASSERT_EQ(unlink(GetPath("bravo").c_str()), 0);
 
   // Rename dir (dst does not exist)
-  ASSERT_EQ(rename("::alpha", "::bravo"), 0, "");
-  ASSERT_EQ(mkdir("::alpha", 0755), 0, "");
+  ASSERT_EQ(rename(GetPath("alpha").c_str(), GetPath("bravo").c_str()), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha").c_str(), 0755), 0);
   // Rename dir (dst does exist)
-  ASSERT_EQ(rename("::bravo", "::alpha"), 0, "");
+  ASSERT_EQ(rename(GetPath("bravo").c_str(), GetPath("alpha").c_str()), 0);
 
   // Rename file (dst does not exist)
-  fd = open("::alpha/charlie", O_RDWR | O_CREAT | O_EXCL, 0644);
-  ASSERT_GT(fd, 0, "");
-  ASSERT_EQ(rename("::alpha/charlie", "::alpha/delta"), 0, "");
+  fd = open(GetPath("alpha/charlie").c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
+  ASSERT_GT(fd, 0);
+  ASSERT_EQ(rename(GetPath("alpha/charlie").c_str(), GetPath("alpha/delta").c_str()), 0);
   // File rename to self
-  ASSERT_EQ(rename("::alpha/delta", "::alpha/delta"), 0, "");
+  ASSERT_EQ(rename(GetPath("alpha/delta").c_str(), GetPath("alpha/delta").c_str()), 0);
   // Not permitted with trailing '/'
-  ASSERT_EQ(rename("::alpha/delta", "::alpha/delta/"), -1, "");
-  ASSERT_EQ(rename("::alpha/delta/", "::alpha/delta"), -1, "");
-  ASSERT_EQ(rename("::alpha/delta/", "::alpha/delta/"), -1, "");
-  ASSERT_EQ(close(fd), 0, "");
+  ASSERT_EQ(rename(GetPath("alpha/delta").c_str(), GetPath("alpha/delta/").c_str()), -1);
+  ASSERT_EQ(rename(GetPath("alpha/delta/").c_str(), GetPath("alpha/delta").c_str()), -1);
+  ASSERT_EQ(rename(GetPath("alpha/delta/").c_str(), GetPath("alpha/delta/").c_str()), -1);
+  ASSERT_EQ(close(fd), 0);
 
   // Rename file (dst does not exist)
-  fd = open("::alpha/charlie", O_RDWR | O_CREAT | O_EXCL, 0644);
-  ASSERT_GT(fd, 0, "");
-  ASSERT_EQ(rename("::alpha/delta", "::alpha/charlie"), 0, "");
-  ASSERT_EQ(close(fd), 0, "");
+  fd = open(GetPath("alpha/charlie").c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
+  ASSERT_GT(fd, 0);
+  ASSERT_EQ(rename(GetPath("alpha/delta").c_str(), GetPath("alpha/charlie").c_str()), 0);
+  ASSERT_EQ(close(fd), 0);
 
   // Rename to different directory
-  ASSERT_EQ(mkdir("::bravo", 0755), 0, "");
-  ASSERT_EQ(rename("::alpha/charlie", "::charlie"), 0, "");
-  ASSERT_EQ(rename("::charlie", "::alpha/charlie"), 0, "");
-  ASSERT_EQ(rename("::bravo", "::alpha/bravo"), 0, "");
-  ASSERT_EQ(rename("::alpha/charlie", "::alpha/bravo/charlie"), 0, "");
+  ASSERT_EQ(mkdir(GetPath("bravo").c_str(), 0755), 0);
+  ASSERT_EQ(rename(GetPath("alpha/charlie").c_str(), GetPath("charlie").c_str()), 0);
+  ASSERT_EQ(rename(GetPath("charlie").c_str(), GetPath("alpha/charlie").c_str()), 0);
+  ASSERT_EQ(rename(GetPath("bravo").c_str(), GetPath("alpha/bravo").c_str()), 0);
+  ASSERT_EQ(rename(GetPath("alpha/charlie").c_str(), GetPath("alpha/bravo/charlie").c_str()), 0);
 
   // Cannot rename directory to subdirectory of itself
-  ASSERT_EQ(rename("::alpha", "::alpha/bravo"), -1, "");
-  ASSERT_EQ(rename("::alpha", "::alpha/bravo/charlie"), -1, "");
-  ASSERT_EQ(rename("::alpha", "::alpha/bravo/charlie/delta"), -1, "");
-  ASSERT_EQ(rename("::alpha", "::alpha/delta"), -1, "");
-  ASSERT_EQ(rename("::alpha/bravo", "::alpha/bravo/charlie"), -1, "");
-  ASSERT_EQ(rename("::alpha/bravo", "::alpha/bravo/charlie/delta"), -1, "");
+  ASSERT_EQ(rename(GetPath("alpha").c_str(), GetPath("alpha/bravo").c_str()), -1);
+  ASSERT_EQ(rename(GetPath("alpha").c_str(), GetPath("alpha/bravo/charlie").c_str()), -1);
+  ASSERT_EQ(rename(GetPath("alpha").c_str(), GetPath("alpha/bravo/charlie/delta").c_str()), -1);
+  ASSERT_EQ(rename(GetPath("alpha").c_str(), GetPath("alpha/delta").c_str()), -1);
+  ASSERT_EQ(rename(GetPath("alpha/bravo").c_str(), GetPath("alpha/bravo/charlie").c_str()), -1);
+  ASSERT_EQ(rename(GetPath("alpha/bravo").c_str(), GetPath("alpha/bravo/charlie/delta").c_str()),
+            -1);
   // Cannot rename to non-empty directory
-  ASSERT_EQ(rename("::alpha/bravo/charlie", "::alpha/bravo"), -1, "");
-  ASSERT_EQ(rename("::alpha/bravo/charlie", "::alpha"), -1, "");
-  ASSERT_EQ(rename("::alpha/bravo", "::alpha"), -1, "");
+  ASSERT_EQ(rename(GetPath("alpha/bravo/charlie").c_str(), GetPath("alpha/bravo").c_str()), -1);
+  ASSERT_EQ(rename(GetPath("alpha/bravo/charlie").c_str(), GetPath("alpha").c_str()), -1);
+  ASSERT_EQ(rename(GetPath("alpha/bravo").c_str(), GetPath("alpha").c_str()), -1);
 
   // Clean up
-  ASSERT_EQ(unlink("::alpha/bravo/charlie"), 0, "");
-  ASSERT_EQ(unlink("::alpha/bravo"), 0, "");
-  ASSERT_EQ(unlink("::alpha"), 0, "");
-
-  END_TEST;
+  ASSERT_EQ(unlink(GetPath("alpha/bravo/charlie").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("alpha/bravo").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("alpha").c_str()), 0);
 }
 
-bool TestRenameWithChildren() {
-  BEGIN_TEST;
+TEST_P(RenameTest, Children) {
+  ASSERT_EQ(mkdir(GetPath("dir_before_move").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("dir_before_move/dir1").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("dir_before_move/dir2").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("dir_before_move/dir2/subdir").c_str(), 0755), 0);
+  int fd = open(GetPath("dir_before_move/file").c_str(), O_RDWR | O_CREAT, 0644);
+  ASSERT_GT(fd, 0);
 
-  ASSERT_EQ(mkdir("::dir_before_move", 0755), 0, "");
-  ASSERT_EQ(mkdir("::dir_before_move/dir1", 0755), 0, "");
-  ASSERT_EQ(mkdir("::dir_before_move/dir2", 0755), 0, "");
-  ASSERT_EQ(mkdir("::dir_before_move/dir2/subdir", 0755), 0, "");
-  int fd = open("::dir_before_move/file", O_RDWR | O_CREAT, 0644);
-  ASSERT_GT(fd, 0, "");
+  static constexpr uint8_t file_contents_array[] = "This should be in the file";
+  constexpr std::basic_string_view file_contents = file_contents_array;
+  ASSERT_EQ(write(fd, file_contents.data(), file_contents.size()),
+            static_cast<ssize_t>(file_contents.size()));
 
-  const char file_contents[] = "This should be in the file";
-  ASSERT_STREAM_ALL(write, fd, (uint8_t*)file_contents, strlen(file_contents));
-
-  ASSERT_EQ(rename("::dir_before_move", "::dir"), 0, "Could not rename");
+  ASSERT_EQ(rename(GetPath("dir_before_move").c_str(), GetPath("dir").c_str()), 0);
 
   // Check that the directory layout has persisted across rename
-  expected_dirent_t dir_contents[] = {
-      {false, ".", DT_DIR},
-      {false, "dir1", DT_DIR},
-      {false, "dir2", DT_DIR},
-      {false, "file", DT_REG},
+  ExpectedDirectoryEntry dir_contents[] = {
+      {".", DT_DIR},
+      {"dir1", DT_DIR},
+      {"dir2", DT_DIR},
+      {"file", DT_REG},
   };
-  ASSERT_TRUE(check_dir_contents("::dir", dir_contents, std::size(dir_contents)), "");
-  expected_dirent_t dir2_contents[] = {
-      {false, ".", DT_DIR},
-      {false, "subdir", DT_DIR},
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("dir").c_str(), dir_contents));
+  ExpectedDirectoryEntry dir2_contents[] = {
+      {".", DT_DIR},
+      {"subdir", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::dir/dir2", dir2_contents, std::size(dir2_contents)), "");
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("dir/dir2").c_str(), dir2_contents));
 
   // Check the our file data has lasted (without re-opening)
-  ASSERT_TRUE(check_file_contents(fd, (uint8_t*)file_contents, strlen(file_contents)), "");
+  ASSERT_NO_FATAL_FAILURE(CheckFileContents(fd, file_contents));
 
   // Check the our file data has lasted (with re-opening)
-  ASSERT_EQ(close(fd), 0, "");
-  fd = open("::dir/file", O_RDONLY, 06444);
-  ASSERT_GT(fd, 0, "");
-  ASSERT_TRUE(check_file_contents(fd, (uint8_t*)file_contents, strlen(file_contents)), "");
-  ASSERT_EQ(close(fd), 0, "");
+  ASSERT_EQ(close(fd), 0);
+  fd = open(GetPath("dir/file").c_str(), O_RDONLY, 06444);
+  ASSERT_GT(fd, 0);
+  ASSERT_NO_FATAL_FAILURE(CheckFileContents(fd, file_contents));
+  ASSERT_EQ(close(fd), 0);
 
   // Clean up
-  ASSERT_EQ(unlink("::dir/dir1"), 0, "");
-  ASSERT_EQ(unlink("::dir/dir2/subdir"), 0, "");
-  ASSERT_EQ(unlink("::dir/dir2"), 0, "");
-  ASSERT_EQ(unlink("::dir/file"), 0, "");
-  ASSERT_EQ(unlink("::dir"), 0, "");
-
-  END_TEST;
+  ASSERT_EQ(unlink(GetPath("dir/dir1").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("dir/dir2/subdir").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("dir/dir2").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("dir/file").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("dir").c_str()), 0);
 }
 
-bool TestRenameAbsoluteRelative() {
-  BEGIN_TEST;
-
+TEST_P(RenameTest, AbsoluteRelative) {
   char cwd[PATH_MAX];
-  ASSERT_NONNULL(getcwd(cwd, sizeof(cwd)), "");
+  ASSERT_NE(getcwd(cwd, sizeof(cwd)), nullptr);
 
   // Change the cwd to a known directory
-  ASSERT_EQ(mkdir("::working_dir", 0755), 0, "");
-  DIR* dir = opendir("::working_dir");
-  ASSERT_NONNULL(dir, "");
-  ASSERT_EQ(chdir("::working_dir"), 0, "");
+  ASSERT_EQ(mkdir(GetPath("working_dir").c_str(), 0755), 0);
+  DIR* dir = opendir(GetPath("working_dir").c_str());
+  ASSERT_NE(dir, nullptr);
+  ASSERT_EQ(chdir(GetPath("working_dir").c_str()), 0);
 
   // Make a "foo" directory in the cwd
   int fd = dirfd(dir);
-  ASSERT_NE(fd, -1, "");
-  ASSERT_EQ(mkdirat(fd, "foo", 0755), 0, "");
-  expected_dirent_t dir_contents_foo[] = {
-      {false, ".", DT_DIR},
-      {false, "foo", DT_DIR},
+  ASSERT_NE(fd, -1);
+  ASSERT_EQ(mkdirat(fd, "foo", 0755), 0);
+  ExpectedDirectoryEntry dir_contents_foo[] = {
+      {".", DT_DIR},
+      {"foo", DT_DIR},
   };
-  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_foo, std::size(dir_contents_foo)), "");
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(dir, dir_contents_foo));
 
   // Rename "foo" to "bar" using mixed paths
-  ASSERT_EQ(rename("::working_dir/foo", "bar"), 0, "Could not rename foo to bar");
-  expected_dirent_t dir_contents_bar[] = {
-      {false, ".", DT_DIR},
-      {false, "bar", DT_DIR},
+  ASSERT_EQ(rename(GetPath("working_dir/foo").c_str(), "bar"), 0);
+  ExpectedDirectoryEntry dir_contents_bar[] = {
+      {".", DT_DIR},
+      {"bar", DT_DIR},
   };
-  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_bar, std::size(dir_contents_bar)), "");
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(dir, dir_contents_bar));
 
   // Rename "bar" back to "foo" using mixed paths in the other direction
-  ASSERT_EQ(rename("bar", "::working_dir/foo"), 0, "Could not rename bar to foo");
-  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_foo, std::size(dir_contents_foo)), "");
+  ASSERT_EQ(rename("bar", GetPath("working_dir/foo").c_str()), 0);
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(dir, dir_contents_foo));
 
-  ASSERT_EQ(rmdir("::working_dir/foo"), 0, "");
+  ASSERT_EQ(rmdir(GetPath("working_dir/foo").c_str()), 0);
 
   // Change the cwd back to the original, whatever it was before
   // this test started
-  ASSERT_EQ(chdir(cwd), 0, "Could not return to original cwd");
+  ASSERT_EQ(chdir(cwd), 0) << "Could not return to original cwd";
 
-  ASSERT_EQ(rmdir("::working_dir"), 0, "");
-  ASSERT_EQ(closedir(dir), 0, "");
-
-  END_TEST;
+  ASSERT_EQ(rmdir(GetPath("working_dir").c_str()), 0);
+  ASSERT_EQ(closedir(dir), 0);
 }
 
-bool TestRenameAt() {
-  BEGIN_TEST;
-
-  ASSERT_EQ(mkdir("::foo", 0755), 0, "");
-  ASSERT_EQ(mkdir("::foo/baz", 0755), 0, "");
-  ASSERT_EQ(mkdir("::bar", 0755), 0, "");
+TEST_P(RenameTest, At) {
+  ASSERT_EQ(mkdir(GetPath("foo").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("foo/baz").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("bar").c_str(), 0755), 0);
 
   // Normal case of renameat, from one directory to another
-  int foofd = open("::foo", O_RDONLY | O_DIRECTORY, 0644);
-  ASSERT_GT(foofd, 0, "");
-  int barfd = open("::bar", O_RDONLY | O_DIRECTORY, 0644);
-  ASSERT_GT(barfd, 0, "");
+  int foofd = open(GetPath("foo").c_str(), O_RDONLY | O_DIRECTORY, 0644);
+  ASSERT_GT(foofd, 0);
+  int barfd = open(GetPath("bar").c_str(), O_RDONLY | O_DIRECTORY, 0644);
+  ASSERT_GT(barfd, 0);
 
-  ASSERT_EQ(renameat(foofd, "baz", barfd, "zab"), 0, "");
+  ASSERT_EQ(renameat(foofd, "baz", barfd, "zab"), 0);
 
-  expected_dirent_t empty_contents[] = {
-      {false, ".", DT_DIR},
+  ExpectedDirectoryEntry empty_contents[] = {
+      {".", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::foo", empty_contents, std::size(empty_contents)), "");
-  expected_dirent_t contains_zab[] = {
-      {false, ".", DT_DIR},
-      {false, "zab", DT_DIR},
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("foo").c_str(), empty_contents));
+  ExpectedDirectoryEntry contains_zab[] = {
+      {".", DT_DIR},
+      {"zab", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::bar", contains_zab, std::size(contains_zab)), "");
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("bar").c_str(), contains_zab));
 
   // Alternate case of renameat, where an absolute path ignores
   // the file descriptor.
   //
   // Here, barfd is used (in the first argument) but ignored (in the second argument).
-  ASSERT_EQ(renameat(barfd, "zab", barfd, "::foo/baz"), 0, "");
-  expected_dirent_t contains_baz[] = {
-      {false, ".", DT_DIR},
-      {false, "baz", DT_DIR},
+  ASSERT_EQ(renameat(barfd, "zab", barfd, GetPath("foo/baz").c_str()), 0);
+  ExpectedDirectoryEntry contains_baz[] = {
+      {".", DT_DIR},
+      {"baz", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::foo", contains_baz, std::size(contains_baz)), "");
-  ASSERT_TRUE(check_dir_contents("::bar", empty_contents, std::size(empty_contents)), "");
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("foo").c_str(), contains_baz));
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("bar").c_str(), empty_contents));
 
   // The 'absolute-path-ignores-fd' case should also work with invalid fds.
-  ASSERT_EQ(renameat(-1, "::foo/baz", -1, "::bar/baz"), 0, "");
-  ASSERT_TRUE(check_dir_contents("::foo", empty_contents, std::size(empty_contents)), "");
-  ASSERT_TRUE(check_dir_contents("::bar", contains_baz, std::size(contains_baz)), "");
+  ASSERT_EQ(renameat(-1, GetPath("foo/baz").c_str(), -1, GetPath("bar/baz").c_str()), 0);
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("foo").c_str(), empty_contents));
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("bar").c_str(), contains_baz));
 
   // However, relative paths should not be allowed with invalid fds.
-  ASSERT_EQ(renameat(-1, "baz", foofd, "baz"), -1, "");
-  ASSERT_EQ(errno, EBADF, "");
+  ASSERT_EQ(renameat(-1, "baz", foofd, "baz"), -1);
+  ASSERT_EQ(errno, EBADF);
 
   // Additionally, we shouldn't be able to renameat to a file.
   int fd = openat(barfd, "filename", O_CREAT | O_RDWR | O_EXCL);
-  ASSERT_GT(fd, 0, "");
-  ASSERT_EQ(renameat(foofd, "baz", fd, "baz"), -1, "");
+  ASSERT_GT(fd, 0);
+  ASSERT_EQ(renameat(foofd, "baz", fd, "baz"), -1);
   // NOTE: not checking for "ENOTDIR", since ENOTSUPPORTED might be returned instead.
 
   // Clean up
-  ASSERT_EQ(close(fd), 0, "");
-  ASSERT_EQ(unlink("::bar/filename"), 0, "");
-  ASSERT_EQ(rmdir("::bar/baz"), 0, "");
-  ASSERT_EQ(close(foofd), 0, "");
-  ASSERT_EQ(close(barfd), 0, "");
-  ASSERT_EQ(rmdir("::foo"), 0, "");
-  ASSERT_EQ(rmdir("::bar"), 0, "");
-  END_TEST;
+  ASSERT_EQ(close(fd), 0);
+  ASSERT_EQ(unlink(GetPath("bar/filename").c_str()), 0);
+  ASSERT_EQ(rmdir(GetPath("bar/baz").c_str()), 0);
+  ASSERT_EQ(close(foofd), 0);
+  ASSERT_EQ(close(barfd), 0);
+  ASSERT_EQ(rmdir(GetPath("foo").c_str()), 0);
+  ASSERT_EQ(rmdir(GetPath("bar").c_str()), 0);
 }
 
 // Rename using the raw FIDL interface.
-bool TestRenameRaw() {
-  BEGIN_TEST;
+TEST_P(RenameTest, Raw) {
+  ASSERT_EQ(mkdir(GetPath("alpha").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha/bravo").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha/bravo/charlie").c_str(), 0755), 0);
 
-  ASSERT_EQ(mkdir("::alpha", 0755), 0, "");
-  ASSERT_EQ(mkdir("::alpha/bravo", 0755), 0, "");
-  ASSERT_EQ(mkdir("::alpha/bravo/charlie", 0755), 0, "");
-
-  fbl::unique_fd fd(open("::alpha", O_RDONLY | O_DIRECTORY, 0644));
+  fbl::unique_fd fd(open(GetPath("alpha").c_str(), O_RDONLY | O_DIRECTORY, 0644));
   ASSERT_TRUE(fd);
   fdio_cpp::FdioCaller caller(std::move(fd));
 
@@ -283,14 +274,13 @@ bool TestRenameRaw() {
   ASSERT_EQ(rename_result.Unwrap()->s, ZX_ERR_INVALID_ARGS);
 
   // Clean up
-  ASSERT_EQ(unlink("::alpha/bravo/charlie"), 0, "");
-  ASSERT_EQ(unlink("::alpha/bravo"), 0, "");
-  ASSERT_EQ(unlink("::alpha"), 0, "");
-
-  END_TEST;
+  ASSERT_EQ(unlink(GetPath("alpha/bravo/charlie").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("alpha/bravo").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("alpha").c_str()), 0);
 }
 
-RUN_FOR_ALL_FILESYSTEMS(rename_tests,
-                        RUN_TEST_MEDIUM(TestRenameBasic) RUN_TEST_MEDIUM(TestRenameWithChildren)
-                            RUN_TEST_MEDIUM(TestRenameAbsoluteRelative)
-                                RUN_TEST_MEDIUM(TestRenameAt) RUN_TEST_MEDIUM(TestRenameRaw))
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, RenameTest, testing::ValuesIn(AllTestFilesystems()),
+                         testing::PrintToStringParamName());
+
+}  // namespace
+}  // namespace fs_test
