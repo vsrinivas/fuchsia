@@ -10,9 +10,20 @@ executable("blktest") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
-  sources = [ "main.c" ]
+  sources = [
+    "blktest.cc",
+    "main.c",
+  ]
   deps = [
-    "//zircon/system/ulib/blktest",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/unittest",
   ]
 }

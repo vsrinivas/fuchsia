@@ -5,8 +5,9 @@
 #include <getopt.h>
 #include <stdlib.h>
 
-#include <blktest/blktest.h>
 #include <unittest/unittest.h>
+
+#include "blktest.h"
 
 void print_usage(char* self) { fprintf(stderr, "Usage: %s -d <blkdev_path>\n", self); }
 

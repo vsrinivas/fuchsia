@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "blktest.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -24,7 +26,6 @@
 #include <limits>
 #include <memory>
 
-#include <blktest/blktest.h>
 #include <block-client/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
