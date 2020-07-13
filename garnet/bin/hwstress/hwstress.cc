@@ -24,8 +24,6 @@ namespace hwstress {
 
 constexpr std::string_view kDefaultTemperatureSensorPath = "/dev/class/thermal/000";
 
-constexpr uint64_t kDefaultFlashToTest = 16 * 1024 * 1024;
-
 int Run(int argc, const char** argv) {
   // Parse arguments
   fitx::result<std::string, CommandLineArgs> result =
@@ -48,12 +46,6 @@ int Run(int argc, const char** argv) {
                               ? zx::duration::infinite()
                               : SecsToDuration(args.test_duration_seconds);
 
-  // Calculate the amount of flash memory to test.
-  uint64_t flash_to_test = kDefaultFlashToTest;
-  if (args.mem_to_test_megabytes.has_value()) {
-    flash_to_test = args.mem_to_test_megabytes.value() * 1024 * 1024;
-  }
-
   // Attempt to create a hardware sensor.
   std::unique_ptr<TemperatureSensor> sensor =
       CreateSystemTemperatureSensor(kDefaultTemperatureSensorPath);
@@ -73,7 +65,7 @@ int Run(int argc, const char** argv) {
         DestroyFlashTestPartitions(&status);
         success = true;
       } else {
-        success = StressFlash(&status, args.fvm_path, flash_to_test, duration);
+        success = StressFlash(&status, args, duration);
       }
       break;
     case StressTest::kLight:

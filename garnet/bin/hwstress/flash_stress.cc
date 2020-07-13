@@ -29,7 +29,7 @@ namespace {
 
 constexpr uint32_t kSectorSize = 512;
 constexpr uint32_t kTransferSize = 512 * 1024;
-constexpr uint32_t kMinFvmFreeSpace = 16 * 1024 * 1024;
+constexpr uint32_t kMinFvmFreeSpace = 100 * 1024 * 1024;
 constexpr uint32_t kMinPartitionFreeSpace = 2 * 1024 * 1024;
 
 struct BlockDevice {
@@ -215,42 +215,18 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, bool is_wri
 
 }  // namespace
 
-std::unique_ptr<TemporaryFvmPartition> TemporaryFvmPartition::Create(const std::string& fvm_path,
-                                                                     uint64_t bytes_requested) {
-  // Access FVM
-  fbl::unique_fd fvm_fd(open(fvm_path.c_str(), O_RDWR));
-  if (!fvm_fd) {
-    fprintf(stderr, "Error: Could not open FVM\n");
-    return nullptr;
-  }
-
-  // Calculate available space and number of slices needed.
-  fuchsia_hardware_block_volume_VolumeInfo info;
-  if (fvm_query(fvm_fd.get(), &info) != ZX_OK) {
-    fprintf(stderr, "Error: Could not get FVM info\n");
-    return nullptr;
-  }
-
-  uint64_t num_slices =
-      RoundUp(bytes_requested + kMinPartitionFreeSpace, info.slice_size) / info.slice_size;
-  uint64_t slices_available = info.pslice_total_count - info.pslice_allocated_count;
-  if (num_slices > slices_available) {
-    fprintf(stderr, "Error: %ld slices needed but %ld slices available", num_slices,
-            slices_available);
-    num_slices = slices_available - RoundUp(kMinFvmFreeSpace, info.slice_size) / info.slice_size;
-  }
-  uint64_t partition_size = num_slices * info.slice_size;
-
+std::unique_ptr<TemporaryFvmPartition> TemporaryFvmPartition::Create(int fvm_fd,
+                                                                     uint64_t slices_requested) {
   uuid::Uuid unique_guid = uuid::Uuid::Generate();
 
-  alloc_req_t request{.slice_count = num_slices,
+  alloc_req_t request{.slice_count = slices_requested,
                       .name = "flash-test-fs",
                       .flags = fuchsia::hardware::block::volume::ALLOCATE_PARTITION_FLAG_INACTIVE};
   memcpy(request.guid, unique_guid.bytes(), sizeof(request.guid));
   memcpy(request.type, kTestPartGUID.bytes(), sizeof(request.type));
 
   // Create a new partition.
-  fbl::unique_fd fd(fvm_allocate_partition(fvm_fd.get(), &request));
+  fbl::unique_fd fd(fvm_allocate_partition(fvm_fd, &request));
   if (!fd) {
     fprintf(stderr, "Error: Could not allocate and open FVM partition\n");
     return nullptr;
@@ -265,15 +241,11 @@ std::unique_ptr<TemporaryFvmPartition> TemporaryFvmPartition::Create(const std::
   }
 
   return std::unique_ptr<TemporaryFvmPartition>(
-      new TemporaryFvmPartition(partition_path, partition_size, info.slice_size, unique_guid));
+      new TemporaryFvmPartition(partition_path, unique_guid));
 }
 
-TemporaryFvmPartition::TemporaryFvmPartition(std::string partition_path, uint64_t partition_size,
-                                             uint64_t slice_size, uuid::Uuid unique_guid)
-    : partition_path_(partition_path),
-      partition_size_(partition_size),
-      slice_size_(slice_size),
-      unique_guid_(unique_guid) {}
+TemporaryFvmPartition::TemporaryFvmPartition(std::string partition_path, uuid::Uuid unique_guid)
+    : partition_path_(partition_path), unique_guid_(unique_guid) {}
 
 TemporaryFvmPartition::~TemporaryFvmPartition() {
   ZX_ASSERT(destroy_partition(unique_guid_.bytes(), kTestPartGUID.bytes()) == ZX_OK);
@@ -281,15 +253,41 @@ TemporaryFvmPartition::~TemporaryFvmPartition() {
 
 std::string TemporaryFvmPartition::GetPartitionPath() { return partition_path_; }
 
-uint64_t TemporaryFvmPartition::GetPartitionSize() { return partition_size_; }
-
-uint64_t TemporaryFvmPartition::GetSliceSize() { return slice_size_; }
-
 // Start a stress test.
-bool StressFlash(StatusLine* status, const std::string& fvm_path, uint64_t bytes_to_test,
-                 zx::duration duration) {
+bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration duration) {
+  // Access the FVM.
+  fbl::unique_fd fvm_fd(open(args.fvm_path.c_str(), O_RDWR));
+  if (!fvm_fd) {
+    status->Log("Error: Could not open FVM\n");
+    return false;
+  }
+
+  // Calculate available space and number of slices needed.
+  fuchsia_hardware_block_volume_VolumeInfo info;
+  if (fvm_query(fvm_fd.get(), &info) != ZX_OK) {
+    status->Log("Error: Could not get FVM info\n");
+    return false;
+  }
+
+  // Default to using all available disk space.
+  uint64_t slices_available = info.pslice_total_count - info.pslice_allocated_count;
+  uint64_t bytes_to_test = slices_available * info.slice_size -
+                           RoundUp(kMinFvmFreeSpace, info.slice_size) - kMinPartitionFreeSpace;
+  // If a value was specified and does not exceed the free disk space, use that.
+  if (args.mem_to_test_megabytes.has_value()) {
+    uint64_t bytes_requested = args.mem_to_test_megabytes.value() * 1024 * 1024;
+    if (bytes_requested <= bytes_to_test) {
+      bytes_to_test = bytes_requested;
+    } else {
+      status->Log("Specified disk size (%ld bytes) exceeds available disk size (%ld bytes).\n",
+                  bytes_requested, bytes_to_test);
+      return false;
+    }
+  }
+  uint64_t slices_requested = RoundUp(bytes_to_test, info.slice_size) / info.slice_size;
+
   std::unique_ptr<TemporaryFvmPartition> fvm_partition =
-      TemporaryFvmPartition::Create(fvm_path, bytes_to_test);
+      TemporaryFvmPartition::Create(fvm_fd.get(), slices_requested);
 
   if (fvm_partition == nullptr) {
     status->Log("Failed to create FVM partition");
@@ -297,11 +295,8 @@ bool StressFlash(StatusLine* status, const std::string& fvm_path, uint64_t bytes
   }
 
   std::string partition_path = fvm_partition->GetPartitionPath();
-  if (bytes_to_test > (fvm_partition->GetPartitionSize() - kMinPartitionFreeSpace)) {
-    bytes_to_test = fvm_partition->GetPartitionSize() - kMinPartitionFreeSpace;
-  }
 
-  uint64_t vmo_size = fvm_partition->GetSliceSize();
+  uint64_t vmo_size = info.slice_size;
 
   BlockDevice device;
   if (OpenBlockDevice(partition_path.c_str(), vmo_size, &device) != ZX_OK) {

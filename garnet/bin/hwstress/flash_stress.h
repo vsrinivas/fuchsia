@@ -11,6 +11,7 @@
 
 #include <src/lib/uuid/uuid.h>
 
+#include "args.h"
 #include "status.h"
 
 namespace hwstress {
@@ -36,31 +37,20 @@ class TemporaryFvmPartition {
   // bytes may not actually be available.
   //
   // Returns nullptr on failure.
-  static std::unique_ptr<TemporaryFvmPartition> Create(const std::string& fvm_path,
-                                                       uint64_t bytes_requested);
+  static std::unique_ptr<TemporaryFvmPartition> Create(int fvm_fd, uint64_t slices_requested);
 
   // Get the path to the created partition.
   std::string GetPartitionPath();
 
-  // Get the size of the partition in bytes.
-  uint64_t GetPartitionSize();
-
-  // Get the size of a slice in bytes.
-  uint64_t GetSliceSize();
-
  private:
   std::string partition_path_;
-  uint64_t partition_size_;
-  uint64_t slice_size_;
   uuid::Uuid unique_guid_;
 
-  TemporaryFvmPartition(std::string partition_path, uint64_t partition_size, uint64_t slice_size,
-                        uuid::Uuid unique_guid);
+  TemporaryFvmPartition(std::string partition_path, uuid::Uuid unique_guid);
 };
 
 // Start a stress test.
-bool StressFlash(StatusLine* status, const std::string& fvm_path, uint64_t bytes_to_test,
-                 zx::duration duration);
+bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration duration);
 
 // Delete any persistent flash test partitions
 void DestroyFlashTestPartitions(StatusLine* status);

@@ -34,9 +34,12 @@ TEST(Flash, FlashStress) {
       isolated_devmgr::CreateFvmInstance(ramdisk->path(), kDefaultFvmSliceSize);
   ASSERT_TRUE(fvm_path.is_ok());
 
+  CommandLineArgs args;
+  args.fvm_path = fvm_path.value();
+  args.mem_to_test_megabytes = 16;
+
   StatusLine status;
-  ASSERT_TRUE(
-      StressFlash(&status, fvm_path.value(), /*bytes_to_test=*/16 * 1024 * 1024, zx::msec(1)));
+  ASSERT_TRUE(StressFlash(&status, args, zx::msec(1)));
 }
 
 TEST(Flash, DeletePartition) {
