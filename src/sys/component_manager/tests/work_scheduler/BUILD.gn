@@ -38,7 +38,6 @@ rustc_test("work_scheduler_integration_test_bin") {
     "//src/sys/component_manager:lib",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
-    "//third_party/rust_crates:anyhow",
   ]
 }
 

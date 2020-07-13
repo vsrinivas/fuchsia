@@ -3,70 +3,75 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
     test_utils_lib::{events::*, test_utils::*},
     work_scheduler_dispatch_reporter::{DispatchedEvent, WorkSchedulerDispatchReporter},
 };
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn basic_work_scheduler_test() -> Result<(), Error> {
+async fn basic_work_scheduler_test() {
     let root_component_url =
         "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/bound_worker.cm";
-    let test = OpaqueTest::default(root_component_url).await?;
+    let test = OpaqueTest::default(root_component_url).await.unwrap();
 
-    let event_source = test.connect_to_event_source().await?;
-    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
+    let event_source = test.connect_to_event_source().await.unwrap();
+    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    event_source.install_injector(work_scheduler_dispatch_reporter.clone(), None).await?;
+    event_source.install_injector(work_scheduler_dispatch_reporter.clone(), None).await.unwrap();
 
-    event_source.start_component_tree().await?;
+    event_source.start_component_tree().await.unwrap();
 
     // Expect the root component to be bound to
-    let event =
-        event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await?;
-    event.resume().await?;
+    let event = event_stream
+        .expect_exact::<Started>(EventMatcher::new().expect_moniker("."))
+        .await
+        .unwrap();
+    assert!(event.error.is_none());
+    event.resume().await.unwrap();
 
     let dispatched_event = work_scheduler_dispatch_reporter
         .wait_for_dispatched(std::time::Duration::from_secs(10))
-        .await?;
+        .await
+        .unwrap();
     assert_eq!(DispatchedEvent::new("TEST".to_string()), dispatched_event);
-
-    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn unbound_work_scheduler_test() -> Result<(), Error> {
+async fn unbound_work_scheduler_test() {
     let root_component_url =
         "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/unbound_child_worker_parent.cm";
-    let test = OpaqueTest::default(root_component_url).await?;
+    let test = OpaqueTest::default(root_component_url).await.unwrap();
 
-    let event_source = test.connect_to_event_source().await?;
-    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
+    let event_source = test.connect_to_event_source().await.unwrap();
+    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    event_source.install_injector(work_scheduler_dispatch_reporter.clone(), None).await?;
+    event_source.install_injector(work_scheduler_dispatch_reporter.clone(), None).await.unwrap();
 
-    event_source.start_component_tree().await?;
+    event_source.start_component_tree().await.unwrap();
 
     // Expect the root component to be bound to
-    let event =
-        event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await?;
-    event.resume().await?;
+    let event = event_stream
+        .expect_exact::<Started>(EventMatcher::new().expect_moniker("."))
+        .await
+        .unwrap();
+    assert!(event.error.is_none());
+    event.resume().await.unwrap();
 
     // `/worker_sibling:0` has started.
     let event = event_stream
         .expect_exact::<Started>(EventMatcher::new().expect_moniker("./worker_sibling:0"))
-        .await?;
-    event.resume().await?;
+        .await
+        .unwrap();
+    assert!(event.error.is_none());
+    event.resume().await.unwrap();
 
     // We no longer need to track `StartInstance` events.
     drop(event_stream);
 
     let dispatched_event = work_scheduler_dispatch_reporter
         .wait_for_dispatched(std::time::Duration::from_secs(10))
-        .await?;
+        .await
+        .unwrap();
     assert_eq!(DispatchedEvent::new("TEST".to_string()), dispatched_event);
-
-    Ok(())
 }
