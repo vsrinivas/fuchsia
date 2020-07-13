@@ -4,17 +4,47 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
+import("//src/sys/cmc/build/cmx.gni")
 
 template("_audio_core_package") {
+  forward_variables_from(invoker, [ "extra_cmx" ])
+  cmx_deps = []
+  processed_meta = []
+  if (!defined(extra_cmx)) {
+    processed_meta = invoker.meta
+  } else {
+    processed_meta = []
+    foreach(manifest, invoker.meta) {
+      cmx_name = get_path_info(manifest.path, "file")
+      manifest_merge_target = "${cmx_name}_merge"
+      cmx_merge(manifest_merge_target) {
+        sources = [ manifest.path ]
+        sources += extra_cmx
+        output_name = "${cmx_name}.merged.cmx"
+      }
+
+      merged_manifest = get_target_outputs(":${manifest_merge_target}")
+      merged_manifest = merged_manifest[0]
+      cmx_deps += [ ":${manifest_merge_target}" ]
+      processed_meta += [
+        {
+          path = rebase_path(merged_manifest)
+          dest = manifest.dest
+        },
+      ]
+    }
+  }
+
   package(target_name) {
     forward_variables_from(invoker,
                            [
                              "effects",
-                             "meta",
                              "package_name",
                              "testonly",
                            ])
     deps = [ "//src/media/audio/audio_core:audio_core_bin" ]
+    deps += cmx_deps
+    meta = processed_meta
 
     binaries = [
       {
@@ -59,6 +89,7 @@ template("audio_core_test_package") {
     forward_variables_from(invoker,
                            [
                              "effects",
+                             "extra_cmx",
                              "package_name",
                            ])
 
@@ -93,6 +124,11 @@ template("audio_core_test_package") {
 #     package_name (optional)
 #       The name of the audio_core package. Defaults to 'target_name'.
 #
+#     extra_cmx (optional)
+#       Additinoal CMX manifests that will be merged with the base audio_core.cmx manifest.
+#       This can be used to add additional services or features that may be needed by different
+#       audio effects.
+#
 #     test_package_name (optional)
 #       The name of the audio_core test package. This package contains manifests that allow
 #       for the component to run in a hermetic test environment. No package will be generated
@@ -116,6 +152,7 @@ template("audio_core_package") {
     forward_variables_from(invoker,
                            [
                              "effects",
+                             "extra_cmx",
                              "package_name",
                            ])
     meta = [
@@ -128,7 +165,11 @@ template("audio_core_package") {
 
   if (defined(test_package_name)) {
     audio_core_test_package(test_package_name) {
-      forward_variables_from(invoker, [ "effects" ])
+      forward_variables_from(invoker,
+                             [
+                               "effects",
+                               "extra_cmx",
+                             ])
 
       package_name = test_package_name
     }
