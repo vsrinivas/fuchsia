@@ -562,9 +562,9 @@ fn no_dots_in_open() {
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
-        open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
-        open_as_directory_assert_err!(&root, flags, "./dir", Status::INVALID_ARGS);
+        open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::BAD_PATH);
+        open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::BAD_PATH);
+        open_as_directory_assert_err!(&root, flags, "./dir", Status::BAD_PATH);
 
         assert_close!(root);
     });
@@ -580,12 +580,12 @@ fn no_consequtive_slashes_in_open() {
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
-        open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
-        open_as_directory_assert_err!(&root, flags, "dir//dir2", Status::INVALID_ARGS);
-        open_as_directory_assert_err!(&root, flags, "dir/dir2//", Status::INVALID_ARGS);
-        open_as_directory_assert_err!(&root, flags, "//dir/dir2", Status::INVALID_ARGS);
-        open_as_directory_assert_err!(&root, flags, "./dir", Status::INVALID_ARGS);
+        open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::BAD_PATH);
+        open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::BAD_PATH);
+        open_as_directory_assert_err!(&root, flags, "dir//dir2", Status::BAD_PATH);
+        open_as_directory_assert_err!(&root, flags, "dir/dir2//", Status::BAD_PATH);
+        open_as_directory_assert_err!(&root, flags, "//dir/dir2", Status::BAD_PATH);
+        open_as_directory_assert_err!(&root, flags, "./dir", Status::BAD_PATH);
 
         assert_close!(root);
     });

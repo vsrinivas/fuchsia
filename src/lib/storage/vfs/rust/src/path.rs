@@ -7,7 +7,10 @@
 //! approach is used to allow passing the path string, from one `open()` method to the next,
 //! without the need to copy the path itself.
 
-use fuchsia_zircon::Status;
+use {
+    fidl_fuchsia_io::{MAX_FILENAME, MAX_PATH},
+    fuchsia_zircon::Status,
+};
 
 #[derive(Debug)]
 pub struct Path {
@@ -29,6 +32,12 @@ impl Path {
         Source: Into<String>,
     {
         let path = path.into();
+
+        // Make sure that we don't accept paths longer than POSIX's PATH_MAX, plus one character
+        // which accounts for the null terminator.
+        if (path.len() as u64) > std::cmp::min(MAX_PATH, libc::PATH_MAX as u64 - 1) {
+            return Err(Status::BAD_PATH);
+        }
 
         match path.as_str() {
             "" => {
@@ -56,8 +65,10 @@ impl Path {
                         let _ = check.next_back();
                     }
 
-                    if check.any(|c| c.is_empty() || c == ".." || c == ".") {
-                        return Err(Status::INVALID_ARGS);
+                    if check.any(|c| {
+                        c.is_empty() || c == ".." || c == "." || (c.len() as u64) > MAX_FILENAME
+                    }) {
+                        return Err(Status::BAD_PATH);
                     }
                 }
 
@@ -149,9 +160,7 @@ impl Path {
 
 #[cfg(test)]
 mod tests {
-    use super::Path;
-
-    use fuchsia_zircon::Status;
+    use super::*;
 
     macro_rules! simple_construction_test {
         (path: $str:expr, $path:ident => $body:block) => {
@@ -174,7 +183,7 @@ mod tests {
                 Ok(path) => {
                     panic!("Constructed '{}' with {}: {:?}", stringify!($path), $details, path)
                 }
-                Err(status) => assert_eq!(status, Status::INVALID_ARGS),
+                Err(status) => assert_eq!(status, Status::BAD_PATH),
             }
         };
     }
@@ -417,6 +426,59 @@ mod tests {
         negative_construction_test! {
             path: "a/../b",
             "'..' components"
+        };
+    }
+
+    #[test]
+    fn too_long_filename() {
+        let string = "a".repeat(MAX_FILENAME as usize + 1);
+        negative_construction_test! {
+            path: &string,
+            "filename too long"
+        };
+    }
+
+    #[test]
+    fn too_long_path() {
+        let filename = "a".repeat(MAX_FILENAME as usize);
+        let mut path = String::new();
+        while path.len() < MAX_PATH as usize {
+            path.push('/');
+            path.push_str(&filename);
+        }
+        assert_eq!(path.len(), MAX_PATH as usize);
+        negative_construction_test! {
+            path: &path,
+            "path too long"
+        };
+    }
+
+    #[test]
+    fn long_path() {
+        let mut path = "a/".repeat((MAX_PATH as usize - 1) / 2);
+        if path.len() < MAX_PATH as usize - 1 {
+            path.push('a');
+        }
+        assert_eq!(path.len(), MAX_PATH as usize - 1);
+        simple_construction_test! {
+            path: &path,
+            mut path => {
+                assert!(!path.is_empty());
+                assert_eq!(path.next(), Some("a"));
+            }
+        };
+    }
+
+    #[test]
+    fn long_filename() {
+        let string = "a".repeat(MAX_FILENAME as usize);
+        simple_construction_test! {
+            path: &string,
+            mut path => {
+                assert!(!path.is_empty());
+                assert!(path.is_single_component());
+                assert_eq!(path.next(), Some(string.as_str()));
+            }
         };
     }
 }
