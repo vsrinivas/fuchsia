@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-test("hid") {
-  output_name = "hid-driver-test"
+test("hid-driver-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "hid-driver.cc" ]
   deps = [
@@ -24,13 +23,19 @@ test("hid") {
   ]
 }
 
-unittest_package("hid-package") {
+isolated_devmgr_unittest_package("hid-test") {
   package_name = "hid"
-  deps = [ ":hid" ]
-
-  tests = [
-    {
-      name = "hid-driver-test"
-    },
+  executable_path = "test/hid-driver-test"
+  deps = [
+    ":hid-driver-test",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/ui/input/drivers/hid",
+    "//src/ui/input/drivers/hidctl",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":hid-test" ]
 }
