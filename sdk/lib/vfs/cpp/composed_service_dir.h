@@ -33,6 +33,7 @@ class ComposedServiceDir : public vfs::internal::Directory {
 
   zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const final;
 
+  // NOTE(fxbug.dev/55769): Readdir() will NOT return any entries from |fallback_dir_|.
   zx_status_t Readdir(uint64_t offset, void* data, uint64_t len, uint64_t* out_offset,
                       uint64_t* out_actual) final;
 

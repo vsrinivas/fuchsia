@@ -104,6 +104,8 @@ TEST_F(ComposedServiceDirectorySimpleTest, ConnectToServices) {
 TEST_F(ComposedServiceDirectorySimpleTest, ReadDir) {
   auto ptr = GetSyncConnection(&dir_);
 
+  // Since directory entries "echo4" and "echo5" are in the fallback dir,
+  // they are incorrectly excluded here due to a bug.  See fxbug.dev/55769.
   std::vector<Dirent> expected_dirents = {
       Dirent::DirentForDot(),
       Dirent::DirentForService("echo1"),
