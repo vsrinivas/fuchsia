@@ -4,6 +4,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_X64_H_
 #define SRC_STORAGE_LIB_PAVER_X64_H_
 
+#include "src/storage/lib/paver/abr-client.h"
 #include "src/storage/lib/paver/gpt.h"
 
 namespace paver {
@@ -52,6 +53,13 @@ class X64PartitionerFactory : public DevicePartitionerFactory {
                                                      const zx::channel& svc_root, Arch arch,
                                                      std::shared_ptr<Context> context,
                                                      const fbl::unique_fd& block_device) final;
+};
+
+class X64AbrClientFactory : public abr::ClientFactory {
+ public:
+  zx::status<std::unique_ptr<abr::Client>> New(fbl::unique_fd devfs_root,
+                                               const zx::channel& svc_root,
+                                               std::shared_ptr<paver::Context> context) final;
 };
 
 }  // namespace paver

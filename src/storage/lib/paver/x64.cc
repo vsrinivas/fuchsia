@@ -260,4 +260,25 @@ zx::status<std::unique_ptr<DevicePartitioner>> X64PartitionerFactory::New(
   return EfiDevicePartitioner::Initialize(std::move(devfs_root), svc_root, arch, block_device);
 }
 
+zx::status<std::unique_ptr<abr::Client>> X64AbrClientFactory::New(
+    fbl::unique_fd devfs_root, const zx::channel& svc_root,
+    std::shared_ptr<paver::Context> context) {
+  fbl::unique_fd none;
+  auto partitioner = EfiDevicePartitioner::Initialize(std::move(devfs_root), std::move(svc_root),
+                                                      paver::Arch::kX64, none);
+
+  if (partitioner.is_error()) {
+    return partitioner.take_error();
+  }
+
+  // ABR metadata has no need of a content type since it's always local rather
+  // than provided in an update package, so just use the default content type.
+  auto partition = partitioner->FindPartition(paver::PartitionSpec(paver::Partition::kAbrMeta));
+  if (partition.is_error()) {
+    return partition.take_error();
+  }
+
+  return abr::AbrPartitionClient::Create(std::move(partition.value()));
+}
+
 }  // namespace paver

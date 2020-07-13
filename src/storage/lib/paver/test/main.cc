@@ -22,5 +22,6 @@ int main(int argc, char** argv) {
   paver::DevicePartitionerFactory::Register(std::make_unique<paver::DefaultPartitionerFactory>());
   abr::ClientFactory::Register(std::make_unique<paver::AstroAbrClientFactory>());
   abr::ClientFactory::Register(std::make_unique<paver::SherlockAbrClientFactory>());
+  abr::ClientFactory::Register(std::make_unique<paver::X64AbrClientFactory>());
   return RUN_ALL_TESTS(argc, argv);
 }

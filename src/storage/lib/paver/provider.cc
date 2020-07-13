@@ -43,6 +43,7 @@ zx_status_t Init(void** out_ctx) {
   paver::DevicePartitionerFactory::Register(std::make_unique<paver::DefaultPartitionerFactory>());
   abr::ClientFactory::Register(std::make_unique<paver::AstroAbrClientFactory>());
   abr::ClientFactory::Register(std::make_unique<paver::SherlockAbrClientFactory>());
+  abr::ClientFactory::Register(std::make_unique<paver::X64AbrClientFactory>());
   return ZX_OK;
 }
 
