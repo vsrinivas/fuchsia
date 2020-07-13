@@ -13,13 +13,13 @@
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
 #include <src/lib/files/unique_fd.h>
-#include <src/modular/lib/modular_config/modular_config_constants.h>
 #include <src/modular/lib/pseudo_dir/pseudo_dir_server.h>
 #include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
 
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 class ModularConfigReaderTest : public gtest::RealLoopFixture {};
 
@@ -55,16 +55,13 @@ TEST_F(ModularConfigReaderTest, OverrideConfigDir) {
 
 // Test that ModularConfigReader uses default values if it fails to read the config data from file.
 TEST_F(ModularConfigReaderTest, FailToReadConfigDir) {
-  constexpr char kDefaultSessionShell[] =
-      "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
-      "ermine_session_shell.cmx";
-
   // Create a root directory without a config file.
   modular::PseudoDirServer server(std::make_unique<vfs::PseudoDir>());
   modular::ModularConfigReader reader(server.OpenAt("."));
 
   auto config = reader.GetBasemgrConfig();
-  EXPECT_EQ(kDefaultSessionShell, config.session_shell_map().at(0).config().app_config().url());
+  EXPECT_EQ(modular_config::kDefaultSessionShellUrl,
+            config.session_shell_map().at(0).config().app_config().url());
 }
 
 // Test that ModularConfigReader finds and reads the AgentServiceIndex.
@@ -113,7 +110,7 @@ TEST_F(ModularConfigReaderTest, ProvideAgentServiceIndex) {
 }
 
 TEST_F(ModularConfigReaderTest, GetConfigAsString) {
-  std::string base_shell_url = "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx";
+  std::string base_shell_url = "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx";
   std::string startup_agent = "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx";
   std::string agent_service_name = "fuchsia.modular.ModularConfigReaderTest";
   std::string agent_url =
@@ -172,7 +169,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
 }
 
 TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
-  std::string base_shell_url = "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx";
+  std::string base_shell_url = "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx";
   std::string startup_agent = "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx";
   std::string session_agent = "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx";
   std::string agent_service_name = "fuchsia.modular.ModularConfigReaderTest";

@@ -25,11 +25,11 @@ The file may contain (non-standard JSON) C-style comments
     "enable_cobalt": false,
     "use_session_shell_for_story_shell_factory": true,
     "base_shell": {
-      "url": "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
+      "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
     },
     "session_shells": [
       {
-        "url": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
+        "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
         "display_usage": "near",
         "screen_height": 50.0,
         "screen_width": 100.0
@@ -64,19 +64,23 @@ The file may contain (non-standard JSON) C-style comments
 
 ## Basemgr fields
 
-- `base_shell` **boolean** _(required)_
-  - `url`: **string** _(required)_
-    - The fuchsia component url for which base shell to use.
+- `base_shell` **object** _(optional)_
+  - **WARNING:** Basemgr no longer launches base shells. This configuration is
+    used only to start sessions with either a persistent or random session ID.
+  - TODO(fxbug.dev/51752): Replace `base_shell` with `use_random_session_id` flag
+  - `url`: **string** _(optional)_
+    - **This field is unused.**
+    - **default**: `fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx`
   - `keep_alive_after_login` **boolean** _(optional)_
-    - When set to true, the base shell is kept alive after a log in. This is
-      used for testing because current integration tests expect base shell
-      to always be running.
+    - **This field is unused.**
     - **default**: `false`
   - `args` **string[]** _(optional)_
-    - A list of arguments to be passed to the base shell specified by url.
-      Arguments must be prefixed with --.
-- `session_shells` **array** _(required)_
-  - List of max one session shell containing the following
+    - If this list contains the string `--persist_user`, the session will be
+      started with a persistent session ID. Otherwise, it will be started
+      with a random ID.
+    - **default**: []
+- `session_shells` **array** _(optional)_
+  - List of exactly one session shell containing the following
     fields (is an Array type for backwards compatibility):
     - `url`: **string** _(required)_
       - The fuchsia component url for which session shell to use.
@@ -92,9 +96,14 @@ The file may contain (non-standard JSON) C-style comments
       - The screen height in millimeters for the session shell's display.
     - `screen_width`: **float** _(optional)_
       - The screen width in millimeters for the session shell's display.
+  - **default**: A single session shell with the following properties:
+    - `url`: `fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_session_shell.cmx`
+    - `display_usage`: `unknown`
+    - `screen_height`: `0`
+    - `screen_width`: `0`
 - `story_shell_url`: **string** _(optional)_
   - The fuchsia component url for which story shell to use.
-  - **default**: `fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx`
+  - **default**: `fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx`
 - `enable_cobalt`: **boolean** _(optional)_
   - When set to false, Cobalt statistics are disabled.
   - **default**: `true`

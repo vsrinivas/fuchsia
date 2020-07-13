@@ -60,12 +60,11 @@ constexpr char kInspectModulePath[] = "module_path";
 
 // Shell constants
 inline constexpr char kDefaultBaseShellUrl[] =
-    "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/"
-    "auto_login_base_shell.cmx";
+    "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx";
 inline constexpr char kDefaultSessionShellUrl[] =
-    "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
-    "ermine_session_shell.cmx";
-constexpr char kDefaultStoryShellUrl[] = "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx";
+    "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx";
+constexpr char kDefaultStoryShellUrl[] =
+    "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx";
 constexpr char kBaseShell[] = "base_shell";
 constexpr char kKeepAliveAfterLogin[] = "keep_alive_after_login";
 constexpr char kName[] = "name";

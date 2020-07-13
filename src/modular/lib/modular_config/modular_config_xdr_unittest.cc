@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/files/file.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
 
@@ -29,15 +30,15 @@ TEST(ModularConfigXdr, BasemgrWriteDefaultValues) {
       },
       "session_shells": [
         {
-          "name": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
+          "name": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
           "display_usage": "unknown",
           "screen_height": 0.0,
           "screen_width": 0.0,
-          "url": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
+          "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
           "args": []
         }
       ],
-      "story_shell_url": "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"
+      "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
     })";
   rapidjson::Document expected_json_doc;
   expected_json_doc.Parse(kExpectedJson);
@@ -61,28 +62,19 @@ TEST(ModularConfigXdr, BasemgrReadDefaultValues) {
   EXPECT_TRUE(read_config.enable_cobalt());
   EXPECT_FALSE(read_config.use_session_shell_for_story_shell_factory());
 
-  EXPECT_EQ(
-      "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/"
-      "auto_login_base_shell.cmx",
-      read_config.base_shell().app_config().url());
+  EXPECT_EQ(modular_config::kDefaultBaseShellUrl, read_config.base_shell().app_config().url());
   EXPECT_FALSE(read_config.base_shell().keep_alive_after_login());
   EXPECT_EQ(0u, read_config.base_shell().app_config().args().size());
 
   ASSERT_EQ(1u, read_config.session_shell_map().size());
-  EXPECT_EQ(
-      "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
-      "ermine_session_shell.cmx",
-      read_config.session_shell_map().at(0).name());
-  EXPECT_EQ(
-      "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
-      "ermine_session_shell.cmx",
-      read_config.session_shell_map().at(0).config().app_config().url());
+  EXPECT_EQ(modular_config::kDefaultSessionShellUrl, read_config.session_shell_map().at(0).name());
+  EXPECT_EQ(modular_config::kDefaultSessionShellUrl,
+            read_config.session_shell_map().at(0).config().app_config().url());
   EXPECT_EQ(fuchsia::ui::policy::DisplayUsage::kUnknown,
             read_config.session_shell_map().at(0).config().display_usage());
   EXPECT_EQ(0, read_config.session_shell_map().at(0).config().screen_height());
   EXPECT_EQ(0, read_config.session_shell_map().at(0).config().screen_width());
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx",
-            read_config.story_shell().app_config().url());
+  EXPECT_EQ(modular_config::kDefaultStoryShellUrl, read_config.story_shell().app_config().url());
 }
 
 // Tests that default JSON values are set correctly when SessionmgrConfig contains no values.

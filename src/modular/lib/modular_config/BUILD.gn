@@ -55,6 +55,7 @@ source_set("unittests") {
   deps = [
     ":json_xdr",
     ":modular_config",
+    ":modular_config_constants",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/sys/cpp/testing:integration",
