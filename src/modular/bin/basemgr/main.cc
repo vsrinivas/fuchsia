@@ -41,8 +41,7 @@ fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatc
   return modular::InitializeCobalt(dispatcher, component_context);
 };
 
-// Configures Basemgr by passing in connected services.
-std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
+std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
     fuchsia::modular::session::ModularConfig& config, sys::ComponentContext* component_context,
     async::Loop* loop) {
   fit::deferred_action<fit::closure> cobalt_cleanup =
@@ -62,31 +61,6 @@ std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
         loop->Quit();
       });
 }
-
-// Delegates lifecycle requests to BasemgrImpl if available. Otherwise, exits the given async loop.
-class LifecycleImpl : public fuchsia::modular::Lifecycle {
- public:
-  LifecycleImpl(async::Loop* loop, sys::ComponentContext* component_context) : loop_(loop) {
-    component_context->outgoing()->AddPublicService<fuchsia::modular::Lifecycle>(
-        bindings_.GetHandler(this));
-  }
-
-  void set_sink(modular::BasemgrImpl* basemgr) { basemgr_ = basemgr; }
-
- private:
-  // |fuchsia::modular::Lifecycle|
-  void Terminate() override {
-    if (basemgr_) {
-      basemgr_->Terminate();
-    } else {
-      loop_->Quit();
-    }
-  }
-
-  modular::BasemgrImpl* basemgr_ = nullptr;
-  async::Loop* loop_;
-  fidl::BindingSet<fuchsia::modular::Lifecycle> bindings_;
-};
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"basemgr"});
@@ -111,9 +85,6 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::ComponentContext> component_context(
       sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
-  std::unique_ptr<modular::BasemgrImpl> basemgr_impl;
-  LifecycleImpl lifecycle_impl(&loop, component_context.get());
-
   // Clients can specify whether a stable session ID is used by setting a
   // property against base shell in the modular config. Parse the
   // |auto_login_to_guest| build flag to set the same property.
@@ -125,11 +96,7 @@ int main(int argc, const char** argv) {
         std::move(override_base_shell));
   }
 
-  std::unique_ptr<modular::BasemgrImpl> basemgr =
-      ConfigureBasemgr(modular_config, component_context.get(), &loop);
-
-  basemgr_impl = std::move(basemgr);
-  lifecycle_impl.set_sink(basemgr_impl.get());
+  auto basemgr_impl = CreateBasemgrImpl(modular_config, component_context.get(), &loop);
 
   // NOTE: component_controller.events.OnDirectoryReady() is triggered when a
   // component's out directory has mounted. basemgr_launcher uses this signal
@@ -140,8 +107,8 @@ int main(int argc, const char** argv) {
   // configurations have been parsed.
   component_context->outgoing()->debug_dir()->AddEntry(
       modular_config::kBasemgrConfigName,
-      std::make_unique<vfs::Service>([basemgr_impl = basemgr_impl.get()](zx::channel request,
-                                                                         async_dispatcher_t*) {
+      std::make_unique<vfs::Service>([basemgr_impl = basemgr_impl.get()](
+                                         zx::channel request, async_dispatcher_t* /* unused */) {
         basemgr_impl->Connect(
             fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug>(std::move(request)));
       }));

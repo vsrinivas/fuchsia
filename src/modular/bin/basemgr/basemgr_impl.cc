@@ -33,8 +33,8 @@ constexpr char kFactoryResetKey[] = "FactoryReset";
 }  // namespace
 
 BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
-                         const std::shared_ptr<sys::ServiceDirectory> incoming_services,
-                         const std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
+                         std::shared_ptr<sys::ServiceDirectory> incoming_services,
+                         std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
                          fuchsia::sys::LauncherPtr launcher,
                          fuchsia::ui::policy::PresenterPtr presenter,
                          fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
@@ -98,10 +98,16 @@ void BasemgrImpl::Start() {
 
   fuchsia::modular::session::AppConfig sessionmgr_app_config;
   sessionmgr_app_config.set_url(modular_config::kSessionmgrUrl);
+
   fuchsia::modular::session::AppConfig story_shell_config;
   config_.basemgr_config().story_shell().app_config().Clone(&story_shell_config);
+
   auto intl_property_provider = IntlPropertyProviderImpl::Create(component_context_services_);
   outgoing_services_->AddPublicService(intl_property_provider->GetHandler());
+
+  outgoing_services_->AddPublicService<fuchsia::modular::Lifecycle>(
+      lifecycle_bindings_.GetHandler(this));
+
   session_provider_.reset(new SessionProvider(
       /* delegate= */ this, launcher_.get(), std::move(device_administrator_),
       std::move(sessionmgr_app_config), CloneStruct(session_shell_config_),
