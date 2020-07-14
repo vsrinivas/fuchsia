@@ -198,6 +198,5 @@ group("zircon") {
   public_deps = [
     "//garnet/tests/zircon:zircon_fuzzers",
     "//garnet/tests/zircon:zircon_tests",
-    "//src/devices/tests/libdriver-integration-test:libdriver-integration-test",
   ]
 }
