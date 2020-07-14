@@ -23,6 +23,24 @@ class TestPlatformSysmemConnection {
     EXPECT_LE(16384u, buffer->size());
   }
 
+  static void TestCreateBufferWithName() {
+    auto connection = CreateConnection();
+
+    ASSERT_NE(nullptr, connection.get());
+
+    std::unique_ptr<magma::PlatformBuffer> buffer;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              connection->AllocateBuffer(MAGMA_SYSMEM_FLAG_FOR_CLIENT, 16384, &buffer));
+    ASSERT_TRUE(buffer != nullptr);
+    EXPECT_LE(16384u, buffer->size());
+    uint32_t handle;
+    EXPECT_TRUE(buffer->duplicate_handle(&handle));
+    auto platform_handle = magma::PlatformHandle::Create(handle);
+    EXPECT_TRUE(platform_handle);
+
+    EXPECT_EQ("MagmaUnprotectedSysmemForClient", platform_handle->GetName());
+  }
+
   static void TestSetConstraints() {
     auto connection = CreateConnection();
 
@@ -259,6 +277,9 @@ class TestPlatformSysmemConnection {
 };
 
 TEST(PlatformSysmemConnection, CreateBuffer) { TestPlatformSysmemConnection::TestCreateBuffer(); }
+TEST(PlatformSysmemConnection, CreateBufferWithName) {
+  TestPlatformSysmemConnection::TestCreateBufferWithName();
+}
 
 TEST(PlatformSysmemConnection, SetConstraints) {
   TestPlatformSysmemConnection::TestSetConstraints();

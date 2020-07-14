@@ -419,10 +419,15 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     }
     constraints.image_format_constraints_count = 0;
 
-    const char* kBufferName =
+    std::string buffer_name =
         (flags & MAGMA_SYSMEM_FLAG_PROTECTED) ? "MagmaProtectedSysmem" : "MagmaUnprotectedSysmem";
+    if (flags & MAGMA_SYSMEM_FLAG_FOR_CLIENT) {
+      // Signal that the memory was allocated for a vkAllocateMemory that the client asked for
+      // directly.
+      buffer_name += "ForClient";
+    }
     llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
-    magma_status_t result = AllocateBufferCollection(constraints, std::string(kBufferName), &info);
+    magma_status_t result = AllocateBufferCollection(constraints, buffer_name, &info);
     if (result != MAGMA_STATUS_OK)
       return DRET(result);
 

@@ -105,6 +105,9 @@ enum {
 
 #define MAGMA_SYSMEM_FLAG_PROTECTED (1 << 0)
 #define MAGMA_SYSMEM_FLAG_DISPLAY (1 << 1)
+// This flag is only used to modify the name of the buffer to signal that the client requested it
+// using vkAllocateMemory or similar.
+#define MAGMA_SYSMEM_FLAG_FOR_CLIENT (1 << 2)
 
 #define MAGMA_MAX_IMAGE_PLANES 4
 
