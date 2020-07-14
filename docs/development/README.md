@@ -72,7 +72,7 @@ This section covers developing drivers on Fuchsia.
 ## Testing
 
  - [Debugging workflow](/docs/development/debugging/debugging.md)
- - [Fuzz testing with LibFuzzer](/docs/development/testing/fuzzing/libfuzzer.md)
+ - [Fuzz testing with LibFuzzer](/docs/development/testing/fuzzing/overview.md)
  - [Test components](/docs/concepts/testing/test_component.md)
  - [Test environments](/docs/concepts/testing/environments.md)
  - [Testability rubrics](/docs/concepts/testing/testability_rubric.md)

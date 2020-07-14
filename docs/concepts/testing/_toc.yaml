@@ -20,3 +20,5 @@ toc:
   path:  /docs/concepts/testing/entropy_quality_tests.md
 - title: "Testing isolated cache storage"
   path: /docs/concepts/testing/testing_isolated_cache_storage.md
+- title: "Fuzz testing"
+  path: /docs/concepts/testing/fuzz_testing.md

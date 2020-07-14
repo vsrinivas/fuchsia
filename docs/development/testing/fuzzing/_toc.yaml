@@ -2,13 +2,18 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "LibFuzzer in Fuchsia"
-  path: /docs/development/testing/fuzzing/libfuzzer.md
-- title: "LibFuzzer and Go"
-  path: /docs/development/testing/fuzzing/libfuzzer_go.md
-- title: "LibFuzzer and FIDL"
-  path: /docs/development/testing/fuzzing/libfuzzer_fidl.md
-- title: "LibFuzzer and Rust"
-  path: /docs/development/testing/fuzzing/libfuzzer_rust.md
-- title: "Fuzzing the FIDL host tools"
-  path:  /docs/development/testing/fuzzing/fuzzing_fidl.md
+- title: "Overview"
+  path: /docs/development/testing/fuzzing/overview.md
+- title: "Write a Fuzzer"
+  path: /docs/development/testing/fuzzing/write-a-fuzzer.md
+- title: "Build a Fuzzer"
+  path: /docs/development/testing/fuzzing/build-a-fuzzer.md
+- title: "Run a Fuzzer"
+  path: /docs/development/testing/fuzzing/run-a-fuzzer.md
+- title: "Handling Results Found Through Fuzzing"
+  path: /docs/development/testing/fuzzing/handle-results.md
+- title: "Improving Your Fuzzer"
+  path: /docs/development/testing/fuzzing/improve-a-fuzzer.md
+  section:
+  - title: "Additional Topics"
+    path: /docs/development/testing/fuzzing/fidl-fuzzing.md
