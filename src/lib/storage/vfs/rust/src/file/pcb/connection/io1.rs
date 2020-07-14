@@ -271,11 +271,12 @@ impl FileConnection {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             FileRequest::GetAttr { responder } => {
+                let size = self.buffer.len() as u64;
                 let mut attrs = NodeAttributes {
                     mode: MODE_TYPE_FILE | self.posix_protection_attributes(),
                     id: INO_UNKNOWN,
-                    content_size: 0,
-                    storage_size: 0,
+                    content_size: size,
+                    storage_size: size,
                     link_count: 1,
                     creation_time: 0,
                     modification_time: 0,

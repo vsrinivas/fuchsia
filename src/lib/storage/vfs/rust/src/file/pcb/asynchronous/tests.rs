@@ -925,14 +925,16 @@ fn clone_inherit_access() {
 
 #[test]
 fn get_attr_read_only() {
-    run_server_client(OPEN_RIGHT_READABLE, read_only_static(b"Content"), |proxy| async move {
+    let content = b"Content";
+    let content_len = content.len() as u64;
+    run_server_client(OPEN_RIGHT_READABLE, read_only_static(content), |proxy| async move {
         assert_get_attr!(
             proxy,
             NodeAttributes {
                 mode: MODE_TYPE_FILE | S_IRUSR,
                 id: INO_UNKNOWN,
-                content_size: 0,
-                storage_size: 0,
+                content_size: content_len,
+                storage_size: content_len,
                 link_count: 1,
                 creation_time: 0,
                 modification_time: 0,
@@ -967,10 +969,12 @@ fn get_attr_write_only() {
 
 #[test]
 fn get_attr_read_write() {
+    let content = b"Content";
+    let content_len = content.len() as u64;
     run_server_client(
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         read_write(
-            || future::ready(Ok(b"Content".to_vec())),
+            move || future::ready(Ok(content.to_vec())),
             10,
             |_content| async move { panic!("No changes") },
         ),
@@ -980,8 +984,8 @@ fn get_attr_read_write() {
                 NodeAttributes {
                     mode: MODE_TYPE_FILE | S_IWUSR | S_IRUSR,
                     id: INO_UNKNOWN,
-                    content_size: 0,
-                    storage_size: 0,
+                    content_size: content_len,
+                    storage_size: content_len,
                     link_count: 1,
                     creation_time: 0,
                     modification_time: 0,
