@@ -23,6 +23,8 @@ rustc_library("fidl-fuchsia-pkg-rewrite-ext") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",
   ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 test_package("fidl-fuchsia-pkg-rewrite-ext-tests") {

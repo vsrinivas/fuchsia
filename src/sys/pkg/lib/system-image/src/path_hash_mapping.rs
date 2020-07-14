@@ -4,7 +4,7 @@
 
 use {
     crate::errors::PathHashMappingError,
-    fuchsia_merkle::Hash,
+    fuchsia_hash::Hash,
     fuchsia_pkg::PackagePath,
     std::{
         io::{self, BufRead as _},

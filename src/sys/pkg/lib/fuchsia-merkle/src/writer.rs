@@ -69,7 +69,7 @@ impl<W: Write> Write for MerkleTreeWriter<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hash::Hash;
+    use crate::Hash;
 
     macro_rules! test_case {
         ($name:ident, $input:expr, $output:expr) => {

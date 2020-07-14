@@ -4,7 +4,7 @@
 
 use thiserror::Error;
 
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
+#[derive(PartialEq, Debug, Error)]
 pub enum ParseError {
     #[error("invalid scheme")]
     InvalidScheme,
@@ -34,7 +34,13 @@ pub enum ParseError {
     InvalidVariant,
 
     #[error("invalid hash")]
-    InvalidHash,
+    InvalidHash(#[source] fuchsia_hash::ParseHashError),
+
+    #[error("uppercase hex characters in hash")]
+    UpperCaseHash,
+
+    #[error("multiple hash query parameters")]
+    MultipleHashes,
 
     #[error("invalid resource path")]
     InvalidResourcePath,
@@ -60,6 +66,6 @@ pub enum ParseError {
     #[error("invalid repository URI")]
     InvalidRepository,
 
-    #[error("parse error: {}", _0)]
+    #[error("url parse error")]
     UrlParseError(#[from] url::ParseError),
 }

@@ -7,7 +7,7 @@
 use {
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, FileProxy},
-    fuchsia_merkle::Hash,
+    fuchsia_hash::Hash,
     thiserror::Error,
 };
 

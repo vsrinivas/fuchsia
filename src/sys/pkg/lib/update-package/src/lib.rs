@@ -25,7 +25,7 @@ pub use crate::{
     update_mode::{ParseUpdateModeError, UpdateMode},
 };
 
-use {fidl_fuchsia_io::DirectoryProxy, fuchsia_merkle::Hash, fuchsia_url::pkg_url::PkgUrl};
+use {fidl_fuchsia_io::DirectoryProxy, fuchsia_hash::Hash, fuchsia_url::pkg_url::PkgUrl};
 
 /// An open handle to an "update" package.
 #[derive(Debug)]

@@ -110,13 +110,13 @@ impl Rule {
             (_, None) => PkgUrl::new_package(
                 self.host_replacement.clone(),
                 new_path,
-                uri.package_hash().map(|s| s.to_owned()),
+                uri.package_hash().cloned(),
             ),
 
             (_, Some(resource)) => PkgUrl::new_resource(
                 self.host_replacement.clone(),
                 new_path,
-                uri.package_hash().map(|s| s.to_owned()),
+                uri.package_hash().cloned(),
                 resource.to_owned(),
             ),
         })
@@ -347,6 +347,7 @@ mod serde_tests {
 mod rule_tests {
     use super::*;
     use fuchsia_inspect::assert_inspect_tree;
+    use matches::assert_matches;
     use proptest::prelude::*;
 
     macro_rules! test_new_error {
@@ -408,6 +409,7 @@ mod rule_tests {
         }
     }
 
+    // Assumes apply creates a valid PkgUrl if it matches
     macro_rules! test_apply {
         (
             $(
@@ -434,14 +436,10 @@ mod rule_tests {
 
                     $(
                         let input = PkgUrl::parse($input).unwrap();
-                        let output: Option<Result<&str, ParseError>> = $output;
-                        let output: Option<Result<PkgUrl, _>> = match output {
-                            Some(Ok(s)) => Some(Ok(PkgUrl::parse(s).unwrap())),
-                            Some(Err(x)) => Some(Err(x)),
-                            None => None,
-                        };
+                        let output: Option<&str> = $output;
+                        let output = output.map(|s| PkgUrl::parse(s).unwrap());
                         assert_eq!(
-                            rule.apply(&input),
+                            rule.apply(&input).map(|res| res.unwrap()),
                             output,
                             "\n\nusing rule {:?}\nexpected {}\nto map to {},\nbut got {:?}\n\n",
                             rule,
@@ -460,11 +458,11 @@ mod rule_tests {
             host = "fuchsia.com" => "fuchsia.com",
             path = "/" => "/",
             cases = [
-                "fuchsia-pkg://fuchsia.com/rolldice" => Some(Ok("fuchsia-pkg://fuchsia.com/rolldice")),
-                "fuchsia-pkg://fuchsia.com/rolldice/0" => Some(Ok("fuchsia-pkg://fuchsia.com/rolldice/0")),
-                "fuchsia-pkg://fuchsia.com/rolldice/0#meta/bin.cmx" => Some(Ok("fuchsia-pkg://fuchsia.com/rolldice/0#meta/bin.cmx")),
-                "fuchsia-pkg://fuchsia.com/foo/0?hash=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff" => Some(Ok(
-                "fuchsia-pkg://fuchsia.com/foo/0?hash=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")),
+                "fuchsia-pkg://fuchsia.com/rolldice" => Some("fuchsia-pkg://fuchsia.com/rolldice"),
+                "fuchsia-pkg://fuchsia.com/rolldice/0" => Some("fuchsia-pkg://fuchsia.com/rolldice/0"),
+                "fuchsia-pkg://fuchsia.com/rolldice/0#meta/bin.cmx" => Some("fuchsia-pkg://fuchsia.com/rolldice/0#meta/bin.cmx"),
+                "fuchsia-pkg://fuchsia.com/foo/0?hash=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff" => Some(
+                "fuchsia-pkg://fuchsia.com/foo/0?hash=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
 
                 "fuchsia-pkg://example.com/rolldice" => None,
                 "fuchsia-pkg://example.com/rolldice/0" => None,
@@ -474,8 +472,8 @@ mod rule_tests {
             host = "fuchsia.com" => "test.fuchsia.com",
             path = "/" => "/",
             cases = [
-                "fuchsia-pkg://fuchsia.com/rolldice" => Some(Ok("fuchsia-pkg://test.fuchsia.com/rolldice")),
-                "fuchsia-pkg://fuchsia.com/rolldice/0" => Some(Ok("fuchsia-pkg://test.fuchsia.com/rolldice/0")),
+                "fuchsia-pkg://fuchsia.com/rolldice" => Some("fuchsia-pkg://test.fuchsia.com/rolldice"),
+                "fuchsia-pkg://fuchsia.com/rolldice/0" => Some("fuchsia-pkg://test.fuchsia.com/rolldice/0"),
 
                 "fuchsia-pkg://example.com/rolldice" => None,
                 "fuchsia-pkg://example.com/rolldice/0" => None,
@@ -485,24 +483,24 @@ mod rule_tests {
             host = "fuchsia.com" => "fuchsia.com",
             path = "/foo" => "/foo/bar",
             cases = [
-                "fuchsia-pkg://fuchsia.com/foo" => Some(Ok("fuchsia-pkg://fuchsia.com/foo/bar")),
+                "fuchsia-pkg://fuchsia.com/foo" => Some("fuchsia-pkg://fuchsia.com/foo/bar"),
                 // TODO not supported until fuchsia-pkg URIs allow arbitrary package paths
-                //"fuchsia-pkg://fuchsia.com/foo/0" => Some(Ok("fuchsia-pkg://fuchsia.com/foo/bar/0")),
+                //"fuchsia-pkg://fuchsia.com/foo/0" => Some("fuchsia-pkg://fuchsia.com/foo/bar/0")),
             ],
         }
         test_inject_parent_dir => {
             host = "fuchsia.com" => "fuchsia.com",
             path = "/foo" => "/bar/foo",
             cases = [
-                "fuchsia-pkg://fuchsia.com/foo" => Some(Ok("fuchsia-pkg://fuchsia.com/bar/foo")),
+                "fuchsia-pkg://fuchsia.com/foo" => Some("fuchsia-pkg://fuchsia.com/bar/foo"),
             ],
         }
         test_replace_host => {
             host = "fuchsia.com" => "example.com",
             path = "/" => "/",
             cases = [
-                "fuchsia-pkg://fuchsia.com/rolldice" => Some(Ok("fuchsia-pkg://example.com/rolldice")),
-                "fuchsia-pkg://fuchsia.com/rolldice/0" => Some(Ok("fuchsia-pkg://example.com/rolldice/0")),
+                "fuchsia-pkg://fuchsia.com/rolldice" => Some("fuchsia-pkg://example.com/rolldice"),
+                "fuchsia-pkg://fuchsia.com/rolldice/0" => Some("fuchsia-pkg://example.com/rolldice/0"),
 
                 "fuchsia-pkg://example.com/rolldice" => None,
                 "fuchsia-pkg://example.com/rolldice/0" => None,
@@ -512,7 +510,7 @@ mod rule_tests {
             host = "fuchsia.com" => "example.com",
             path = "/rolldice" => "/rolldice",
             cases = [
-                "fuchsia-pkg://fuchsia.com/rolldice" => Some(Ok("fuchsia-pkg://example.com/rolldice")),
+                "fuchsia-pkg://fuchsia.com/rolldice" => Some("fuchsia-pkg://example.com/rolldice"),
 
                 // this path pattern is a literal match
                 "fuchsia-pkg://fuchsia.com/rolldicer" => None,
@@ -525,8 +523,8 @@ mod rule_tests {
             host = "fuchsia.com" => "example.com",
             path = "/rolldice/" => "/rolldice/",
             cases = [
-                "fuchsia-pkg://fuchsia.com/rolldice/0" => Some(Ok("fuchsia-pkg://example.com/rolldice/0")),
-                "fuchsia-pkg://fuchsia.com/rolldice/stable" => Some(Ok("fuchsia-pkg://example.com/rolldice/stable")),
+                "fuchsia-pkg://fuchsia.com/rolldice/0" => Some("fuchsia-pkg://example.com/rolldice/0"),
+                "fuchsia-pkg://fuchsia.com/rolldice/stable" => Some("fuchsia-pkg://example.com/rolldice/stable"),
 
                 // package with same name as directory doesn't match
                 "fuchsia-pkg://fuchsia.com/rolldice" => None,
@@ -536,7 +534,7 @@ mod rule_tests {
             host = "fuchsia.com" => "fuchsia.com",
             path = "/fake" => "/real",
             cases = [
-                "fuchsia-pkg://fuchsia.com/fake" => Some(Ok("fuchsia-pkg://fuchsia.com/real")),
+                "fuchsia-pkg://fuchsia.com/fake" => Some("fuchsia-pkg://fuchsia.com/real"),
 
                 // not the same packages
                 "fuchsia-pkg://fuchsia.com/fakeout" => None,
@@ -546,20 +544,22 @@ mod rule_tests {
             host = "fuchsia.com" => "fuchsia.com",
             path = "/fake/" => "/real/",
             cases = [
-                "fuchsia-pkg://fuchsia.com/fake/0" => Some(Ok("fuchsia-pkg://fuchsia.com/real/0")),
-                "fuchsia-pkg://fuchsia.com/fake/package" => Some(Ok("fuchsia-pkg://fuchsia.com/real/package")),
+                "fuchsia-pkg://fuchsia.com/fake/0" => Some("fuchsia-pkg://fuchsia.com/real/0"),
+                "fuchsia-pkg://fuchsia.com/fake/package" => Some("fuchsia-pkg://fuchsia.com/real/package"),
 
                 // a package called "fake", not a directory.
                 "fuchsia-pkg://fuchsia.com/fake" => None,
             ],
         }
-        test_invalid_new_path => {
-            host = "fuchsia.com" => "fuchsia.com",
-            path = "/" => "/a+b/",
-            cases = [
-                "fuchsia-pkg://fuchsia.com/foo" => Some(Err(ParseError::InvalidName)),
-            ],
-        }
+    }
+
+    #[test]
+    fn test_apply_creates_invalid_url() {
+        let rule = Rule::new("fuchsia.com", "fuchsia.com", "/", "/a+b/").unwrap();
+        assert_matches!(
+            rule.apply(&"fuchsia-pkg://fuchsia.com/foo".parse().unwrap()),
+            Some(Err(ParseError::InvalidName))
+        );
     }
 
     prop_compose! {

@@ -164,11 +164,10 @@ group("heck") {
   deps = [ ":heck-v0_3_1" ]
 }
 
-if (is_fuchsia) {
-  group("hex") {
-    deps = [ ":hex-v0_3_2" ]
-  }
+group("hex") {
+  deps = [ ":hex-v0_3_2" ]
 }
+
 if (is_fuchsia) {
   group("http") {
     deps = [ ":http-v0_2_1" ]

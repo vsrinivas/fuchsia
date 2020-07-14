@@ -5,7 +5,7 @@
 use crate::errors::{self, Error};
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface, UpdatePolicy};
 use fuchsia_component::client::connect_to_service;
-use fuchsia_merkle::Hash;
+use fuchsia_hash::Hash;
 use fuchsia_zircon as zx;
 use std::io;
 use update_package::UpdatePackage;
@@ -133,7 +133,7 @@ async fn latest_system_image_merkle(
     let hash = system_image
         .package_hash()
         .ok_or(errors::UpdatePackage::UnPinnedSystemImage(system_image.clone()))?;
-    hash.parse().map_err(errors::UpdatePackage::ParseSystemImageMerkle)
+    Ok(hash.to_owned())
 }
 
 #[cfg(test)]

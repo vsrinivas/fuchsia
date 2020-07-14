@@ -79,6 +79,9 @@ pub enum ParsePackageError {
     #[error("'{0}' is an invalid line for a `packages` file")]
     InvalidLine(String),
 
+    #[error("'{0}' contains an invalid hash")]
+    InvalidHash(String, #[source] fuchsia_hash::ParseHashError),
+
     #[error("could not open '{0}'")]
     FailedToOpen(&'static str, #[source] io_util::node::OpenError),
 
@@ -107,12 +110,16 @@ pub(crate) fn parse_packages(contents: &str) -> Result<Vec<PkgUrl>, ParsePackage
         }
         let mut parts = line.trim().split('=');
         let err = || ParsePackageError::InvalidLine(line.to_owned());
-        let key = parts.next().ok_or_else(err)?;
-        let value = parts.next().ok_or_else(err)?.to_string();
+        let path = parts.next().ok_or_else(err)?;
+        let hash = parts
+            .next()
+            .ok_or_else(err)?
+            .parse()
+            .map_err(|e| ParsePackageError::InvalidHash(line.to_owned(), e))?;
         if let Some(_) = parts.next() {
             return Err(err());
         }
-        let url = PkgUrl::new_package("fuchsia.com".to_string(), format!("/{}", key), Some(value));
+        let url = PkgUrl::new_package("fuchsia.com".to_string(), format!("/{}", path), Some(hash));
         out.push(url.map_err(|e| ParsePackageError::URLParseError(line.into(), e))?);
     }
     Ok(out)
@@ -193,7 +200,7 @@ mod tests {
         let packages = "    ls/0 =     71bad1a35b87a073f72f582065f6b6efec7b6a4a129868f37f6131f02107f1ea  \npkg-resolver/0   =26d43a3fc32eaa65e6981791874b6ab80fae31fbfca1ce8c31ab64275fd4e8c0 ";
         assert_matches!(
             parse_packages(packages),
-            Err(ParsePackageError::URLParseError(line, _))
+            Err(ParsePackageError::InvalidHash(line, _))
                 if line ==
                 "    ls/0 =     71bad1a35b87a073f72f582065f6b6efec7b6a4a129868f37f6131f02107f1ea  "
         );

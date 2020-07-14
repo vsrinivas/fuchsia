@@ -18,8 +18,8 @@ use fidl_fuchsia_update_ext::{
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
+use fuchsia_hash::Hash;
 use fuchsia_inspect as finspect;
-use fuchsia_merkle::Hash;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use futures::channel::{mpsc, oneshot};
 use futures::future::BoxFuture;

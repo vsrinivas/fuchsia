@@ -160,7 +160,7 @@ pub async fn cache_package<'a>(
     // package ever actually existed in the repo or that the merkle pin refers to the named
     // package.
     let (merkle, size) = if let Some(merkle_pin) = url.package_hash() {
-        (merkle_pin.parse().expect("package_hash() to always return a valid merkleroot"), None)
+        (BlobId::from(*merkle_pin), None)
     } else {
         (merkle, Some(size))
     };

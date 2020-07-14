@@ -4,9 +4,7 @@
 
 //! Typesafe wrappers around the /pkgfs/versions filesystem.
 
-use {
-    crate::package, fidl_fuchsia_io::DirectoryProxy, fuchsia_merkle::Hash, fuchsia_zircon::Status,
-};
+use {crate::package, fidl_fuchsia_io::DirectoryProxy, fuchsia_hash::Hash, fuchsia_zircon::Status};
 
 /// An open handle to /pkgfs/versions
 #[derive(Debug, Clone)]

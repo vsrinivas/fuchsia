@@ -107,7 +107,7 @@ pub enum MetaContentsError {
     IoError(#[from] io::Error),
 
     #[error("invalid hash: '{}'", _0)]
-    ParseHash(#[from] fuchsia_merkle::ParseHashError),
+    ParseHash(#[from] fuchsia_hash::ParseHashError),
 }
 
 #[derive(Debug, Error)]

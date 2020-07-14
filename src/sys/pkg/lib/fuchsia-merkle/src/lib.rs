@@ -6,13 +6,12 @@
 
 #![deny(missing_docs)]
 
+pub use fuchsia_hash::{Hash, HASH_SIZE};
+
 /// The size of a single block of data (or hashes), in bytes.
 pub const BLOCK_SIZE: usize = 8192;
 
 mod util;
-
-mod hash;
-pub use crate::hash::{Hash, ParseHashError};
 
 mod tree;
 pub use crate::tree::MerkleTree;

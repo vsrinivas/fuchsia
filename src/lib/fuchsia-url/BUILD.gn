@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -13,12 +12,15 @@ rustc_library("fuchsia-url") {
   with_unit_tests = true
 
   deps = [
+    "//src/sys/pkg/lib/fuchsia-hash",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:percent-encoding",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",
   ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 test_package("fuchsia-url-tests") {

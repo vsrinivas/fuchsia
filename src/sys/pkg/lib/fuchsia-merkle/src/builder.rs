@@ -4,10 +4,9 @@
 
 use std::cmp::min;
 
-use crate::hash::Hash;
 use crate::tree::MerkleTree;
 use crate::util::{hash_block, hash_hashes, HASHES_PER_BLOCK};
-use crate::BLOCK_SIZE;
+use crate::{Hash, BLOCK_SIZE};
 
 /// A `MerkleTreeBuilder` generates a [`MerkleTree`] from one or more write calls.
 ///

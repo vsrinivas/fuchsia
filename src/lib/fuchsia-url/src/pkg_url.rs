@@ -4,6 +4,7 @@
 
 pub use crate::errors::ParseError;
 pub use crate::parse::{check_resource, is_hash, is_name};
+pub use fuchsia_hash::Hash;
 use percent_encoding::{self, percent_decode};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::TryFrom;
@@ -27,7 +28,7 @@ use url::{Host, Url};
 pub struct PkgUrl {
     repo: RepoUrl,
     path: String,
-    hash: Option<String>,
+    hash: Option<Hash>,
     resource: Option<String>,
     name: String,
 }
@@ -82,8 +83,8 @@ impl PkgUrl {
         &self.path
     }
 
-    pub fn package_hash(&self) -> Option<&str> {
-        self.hash.as_ref().map(|s| &**s)
+    pub fn package_hash(&self) -> Option<&Hash> {
+        self.hash.as_ref()
     }
 
     pub fn resource(&self) -> Option<&str> {
@@ -120,17 +121,14 @@ impl PkgUrl {
     pub fn new_package(
         host: String,
         path: String,
-        hash: Option<String>,
+        hash: Option<Hash>,
     ) -> Result<PkgUrl, ParseError> {
         let repo = RepoUrl::new(host)?;
         let (name, variant) = parse_path(path.as_str())?;
         let name = name.to_string();
-        if let Some(ref h) = hash {
+        if hash.is_some() {
             if variant.is_none() {
                 return Err(ParseError::InvalidVariant);
-            }
-            if !is_hash(h) {
-                return Err(ParseError::InvalidHash);
             }
         }
         Ok(PkgUrl { repo, path, hash, resource: None, name })
@@ -139,7 +137,7 @@ impl PkgUrl {
     pub fn new_resource(
         host: String,
         path: String,
-        hash: Option<String>,
+        hash: Option<Hash>,
         resource: String,
     ) -> Result<PkgUrl, ParseError> {
         let mut url = PkgUrl::new_package(host, path, hash)?;
@@ -354,17 +352,18 @@ fn parse_path(mut path: &str) -> Result<(&str, Option<&str>), ParseError> {
     Ok((name, variant))
 }
 
-fn parse_query_pairs(pairs: url::form_urlencoded::Parse<'_>) -> Result<Option<String>, ParseError> {
+fn parse_query_pairs(pairs: url::form_urlencoded::Parse<'_>) -> Result<Option<Hash>, ParseError> {
     let mut query_hash = None;
     for (key, value) in pairs {
         if key == "hash" {
             if query_hash.is_some() {
-                return Err(ParseError::InvalidHash);
+                return Err(ParseError::MultipleHashes);
             }
+            query_hash = Some(value.parse().map_err(ParseError::InvalidHash)?);
+            // fuchsia-pkg URLs require lowercase hex characters, which is not enforced by Hash.
             if !is_hash(&value) {
-                return Err(ParseError::InvalidHash);
+                return Err(ParseError::UpperCaseHash);
             }
-            query_hash = Some(value.to_string());
         } else {
             return Err(ParseError::ExtraQueryParameters);
         }
@@ -375,6 +374,7 @@ fn parse_query_pairs(pairs: url::form_urlencoded::Parse<'_>) -> Result<Option<St
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
 
     macro_rules! test_parse_ok {
         (
@@ -404,7 +404,7 @@ mod tests {
                                     host: $pkg_host.to_string(),
                                 },
                                 path: $pkg_path.to_string(),
-                                hash: $pkg_hash.map(|s: &str| s.to_string()),
+                                hash: $pkg_hash.map(|s: &str| s.parse().unwrap()),
                                 resource: $pkg_resource.map(|s: &str| s.to_string()),
                                 name: $pkg_name.to_string()
                             })
@@ -414,7 +414,7 @@ mod tests {
                         assert_eq!(url.path(), $pkg_path);
                         assert_eq!(url.name(), $pkg_name);
                         assert_eq!(url.variant(), $pkg_variant);
-                        assert_eq!(url.package_hash(), $pkg_hash);
+                        assert_eq!(url.package_hash(), $pkg_hash.map(|s: &str| s.parse().unwrap()).as_ref());
                         assert_eq!(url.resource(), $pkg_resource);
                     }
 
@@ -438,7 +438,7 @@ mod tests {
             $(
                 $test_name:ident => {
                     urls = $urls:expr,
-                    err = $err:expr,
+                    err = $err:pat,
                 }
             )+
         ) => {
@@ -446,9 +446,9 @@ mod tests {
                 #[test]
                 fn $test_name() {
                     for url in &$urls {
-                        assert_eq!(
+                        assert_matches!(
                             PkgUrl::parse(url),
-                            Err($err),
+                            Err($err)
                         );
                     }
                 }
@@ -607,21 +607,32 @@ mod tests {
             urls = [
                 "fuchsia-pkg://fuchsia.com/fonts/stable?hash=",
             ],
-            err = ParseError::InvalidHash,
+            err = ParseError::InvalidHash(_),
         }
         test_parse_hash_cannot_have_invalid_characters => {
             urls = [
                 "fuchsia-pkg://fuchsia.com/fonts/stable?hash=8$e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+            ],
+            err = ParseError::InvalidHash(_),
+        }
+        test_parse_hash_cannot_have_uppercase_characters => {
+            urls = [
                 "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80E8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
             ],
-            err = ParseError::InvalidHash,
+            err = ParseError::UpperCaseHash,
         }
         test_parse_hash_must_be_64_chars => {
             urls = [
                 "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4",
                 "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4aa",
             ],
-            err = ParseError::InvalidHash,
+            err = ParseError::InvalidHash(_),
+        }
+        test_parse_hash_cannot_have_multiple_hashes => {
+            urls = [
+                "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a&hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+            ],
+            err = ParseError::MultipleHashes,
         }
         test_parse_path_cannot_have_extra_segments => {
             urls = [
@@ -716,7 +727,7 @@ mod tests {
             parsed = PkgUrl::new_package(
                 "fuchsia.com".to_string(),
                 "/fonts/stable".to_string(),
-                Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".to_string()),
+                Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a").map(|s| s.parse().unwrap()),
             ).unwrap(),
             formatted = "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
         }
@@ -736,7 +747,9 @@ mod tests {
         let url = PkgUrl::new_package(
             "fuchsia.com".to_string(),
             "/fonts/stable".to_string(),
-            Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".to_string()),
+            Some(
+                "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap(),
+            ),
         )
         .unwrap();
         assert_eq!("fuchsia.com", url.host());
@@ -744,45 +757,42 @@ mod tests {
         assert_eq!("fonts", url.name());
         assert_eq!(Some("stable"), url.variant());
         assert_eq!(
-            Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"),
+            Some(
+                "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap()
+            )
+            .as_ref(),
             url.package_hash()
         );
         assert_eq!(None, url.resource());
         assert_eq!(url, url.root_url());
 
-        assert_eq!(
+        assert_matches!(
             PkgUrl::new_package("".to_string(), "/fonts".to_string(), None),
             Err(ParseError::InvalidHost)
         );
-        assert_eq!(
+        assert_matches!(
             PkgUrl::new_package("fuchsia.com".to_string(), "fonts".to_string(), None),
             Err(ParseError::InvalidPath)
         );
-        assert_eq!(
+        assert_matches!(
             PkgUrl::new_package("fuchsia.com".to_string(), "/".to_string(), None),
             Err(ParseError::MissingName)
         );
-        assert_eq!(
+        assert_matches!(
             PkgUrl::new_package("fuchsia.com".to_string(), "/fonts/$".to_string(), None),
             Err(ParseError::InvalidVariant)
         );
-        assert_eq!(
+        assert_matches!(
             PkgUrl::new_package(
                 "fuchsia.com".to_string(),
                 "/fonts".to_string(),
                 Some(
-                    "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".to_string()
+                    "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"
+                        .parse()
+                        .unwrap()
                 )
             ),
             Err(ParseError::InvalidVariant)
-        );
-        assert_eq!(
-            PkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/fonts/stable".to_string(),
-                Some("$".to_string())
-            ),
-            Err(ParseError::InvalidHash)
         );
     }
 
@@ -791,7 +801,9 @@ mod tests {
         let url = PkgUrl::new_resource(
             "fuchsia.com".to_string(),
             "/fonts/stable".to_string(),
-            Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".to_string()),
+            Some(
+                "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap(),
+            ),
             "foo/bar".to_string(),
         )
         .unwrap();
@@ -800,8 +812,10 @@ mod tests {
         assert_eq!("fonts", url.name());
         assert_eq!(Some("stable"), url.variant());
         assert_eq!(
-            Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"),
-            url.package_hash()
+            Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a")
+                .map(|s| s.parse::<Hash>().unwrap())
+                .as_ref(),
+            url.package_hash(),
         );
         assert_eq!(Some("foo/bar"), url.resource());
         let mut url_no_resource = url.clone();
@@ -835,20 +849,13 @@ mod tests {
                 "fuchsia.com".to_string(),
                 "/fonts".to_string(),
                 Some(
-                    "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".to_string()
+                    "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"
+                        .parse()
+                        .unwrap()
                 ),
                 "foo/bar".to_string()
             ),
             Err(ParseError::InvalidVariant)
-        );
-        assert_eq!(
-            PkgUrl::new_resource(
-                "fuchsia.com".to_string(),
-                "/fonts/stable".to_string(),
-                Some("$".to_string()),
-                "foo/bar".to_string()
-            ),
-            Err(ParseError::InvalidHash)
         );
         assert_eq!(
             PkgUrl::new_resource(

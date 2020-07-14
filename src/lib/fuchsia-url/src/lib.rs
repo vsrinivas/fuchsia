@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub use fuchsia_hash::{Hash, HASH_SIZE};
+
 pub mod boot_url;
 pub mod errors;
 mod parse;

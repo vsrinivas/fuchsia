@@ -1,13 +1,15 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::util::HASH_SIZE;
 use hex::{FromHex, FromHexError, ToHex};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::str;
 use thiserror::Error;
+
+/// The size of a hash in bytes.
+pub const HASH_SIZE: usize = 32;
 
 /// A SHA-256 hash.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

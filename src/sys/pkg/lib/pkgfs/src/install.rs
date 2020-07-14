@@ -6,7 +6,7 @@
 
 use {
     fidl_fuchsia_io::{DirectoryProxy, FileProxy},
-    fuchsia_merkle::Hash,
+    fuchsia_hash::Hash,
     fuchsia_zircon::Status,
     thiserror::Error,
 };

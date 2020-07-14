@@ -5,10 +5,8 @@
 use mundane::hash::{Digest, Hasher, Sha256};
 use std::mem::{size_of, size_of_val};
 
-use crate::hash::Hash;
-use crate::BLOCK_SIZE;
+use crate::{Hash, BLOCK_SIZE, HASH_SIZE};
 
-pub(crate) const HASH_SIZE: usize = 32;
 pub(crate) const HASHES_PER_BLOCK: usize = BLOCK_SIZE / HASH_SIZE;
 
 type BlockIdentity = [u8; size_of::<u64>() + size_of::<u32>()];

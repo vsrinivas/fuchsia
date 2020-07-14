@@ -12,7 +12,7 @@ pub enum Error {
     ReadSystemMeta(#[source] io::Error),
 
     #[error("parsing /pkgfs/system/meta merkle")]
-    ParseSystemMeta(#[source] fuchsia_merkle::ParseHashError),
+    ParseSystemMeta(#[source] fuchsia_hash::ParseHashError),
 
     #[error("connecting to PackageResolver")]
     ConnectPackageResolver(#[source] anyhow::Error),
@@ -49,9 +49,6 @@ pub enum UpdatePackage {
 
     #[error("system_image/0 pkg url was not merkle pinned: {0}")]
     UnPinnedSystemImage(PkgUrl),
-
-    #[error("parsing the system_image merkle from the 'packages' manifest")]
-    ParseSystemImageMerkle(#[source] fuchsia_merkle::ParseHashError),
 
     #[error("extracting package hash")]
     Hash(#[source] update_package::HashError),

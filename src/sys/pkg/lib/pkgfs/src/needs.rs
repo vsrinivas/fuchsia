@@ -6,7 +6,7 @@
 
 use {
     fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_merkle::{Hash, ParseHashError},
+    fuchsia_hash::{Hash, ParseHashError},
     fuchsia_zircon::Status,
     futures::prelude::*,
     std::collections::HashSet,

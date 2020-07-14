@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Context as _},
-    fuchsia_merkle::Hash,
+    fuchsia_hash::Hash,
     fuchsia_syslog::fx_log_err,
     serde::{Deserialize, Serialize},
     std::{

@@ -8,7 +8,7 @@ use fidl_fuchsia_sys::{LauncherMarker, LauncherProxy};
 use fidl_fuchsia_update_ext::Initiator;
 use fuchsia_async::futures::{future::BoxFuture, FutureExt};
 use fuchsia_component::client::{connect_to_service, launch};
-use fuchsia_merkle::Hash;
+use fuchsia_hash::Hash;
 use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 
