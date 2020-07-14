@@ -21,42 +21,6 @@ use crate::environments::{KnownServices, Manager, Netstack2, TestSandboxExt as _
 use crate::ipv6::write_ndp_message;
 use crate::Result;
 
-/// Tests that dns-resolver does not support `fuchsia.net.name/LookupAdmin.SetDefaultDnsServers`.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_set_default_dns_servers() -> Result {
-    /// Static DNS server given directly to `LookupAdmin`.
-    const STATIC_DNS_SERVER: fidl_fuchsia_net::IpAddress = fidl_ip!(123.12.34.99);
-
-    let name = "test_set_default_dns_servers";
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-
-    let client_environment = sandbox
-        .create_environment(name, &[KnownServices::LookupAdmin])
-        .context("failed to create environment")?;
-
-    // Connect to `fuchsia.net.name,LookupAdmin` and attempt to set the default servers. This
-    // should fail with a not supported error as dns-resolver only uses `SetDnsServers` to
-    // configure DNS servers.
-    let lookup_admin = client_environment
-        .connect_to_service::<fidl_fuchsia_net_name::LookupAdminMarker>()
-        .context("failed to connect to LookupAdmin")?;
-    let ret = lookup_admin
-        .set_default_dns_servers(&mut vec![STATIC_DNS_SERVER].iter_mut())
-        .await
-        .context("Failed to set default DNS servers")?
-        .map_err(fuchsia_zircon::Status::from_raw);
-    let want_err = fuchsia_zircon::Status::NOT_SUPPORTED;
-    let () = match ret {
-        Ok(()) => Err(anyhow::anyhow!("call to SetDefaultDnsServers unexpectedly succeeded")),
-        Err(status) if status == want_err => Ok(()),
-        Err(status) => {
-            Err(anyhow::anyhow!("got unexpected error; got = {}, want = {}", status, want_err))
-        }
-    }?;
-
-    Ok(())
-}
-
 /// Tests that Netstack exposes DNS servers discovered dynamically and NetworkManager
 /// configures the Lookup service.
 #[variants_test]

@@ -10,19 +10,6 @@ using zx;
 /// Provides administration controls over name resolution settings.
 [Discoverable]
 protocol LookupAdmin {
-    /// Sets the default DNS servers to `servers`.
-    ///
-    /// This method is deprecated. New implementations should use `SetDnsServers`.
-    ///
-    /// + request `servers` The list of servers to use for domain name resolution, in priority
-    /// order. An empty list means no default servers will be used. Only valid unicast addresses
-    /// will be accepted. Servers obtained at runtime via DHCP or NDP will be preferred over the
-    /// ones specified here.
-    /// * error Returns `ZX_ERR_INVALID_ARGS` if any of the provided addresses does not meet the
-    /// conditions above.
-    // TODO(52055): Remove this method.
-    SetDefaultDnsServers(vector<fuchsia.net.IpAddress>:MAX servers) -> () error zx.status;
-
     /// Sets the DNS servers to `servers`
     ///
     /// + request `servers` The list of servers to use for domain name resolution, in priority

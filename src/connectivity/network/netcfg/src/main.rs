@@ -344,9 +344,9 @@ struct NetCfg<'a> {
     dns_servers: DnsServers,
 }
 
-/// Returns a [`fnet_name::DnsServer_`] with a static source from a [`fnet::IpAddress`].
-fn static_source_from_ip(f: fnet::IpAddress) -> fnet_name::DnsServer_ {
-    let socket_addr = match f {
+/// Returns a [`fnet_name::DnsServer_`] with a static source from a [`std::net::IpAddr`].
+fn static_source_from_ip(f: std::net::IpAddr) -> fnet_name::DnsServer_ {
+    let socket_addr = match fnet_ext::IpAddress(f).into() {
         fnet::IpAddress::Ipv4(addr) => fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
             address: addr,
             port: DEFAULT_DNS_PORT,
@@ -431,42 +431,6 @@ impl<'a> NetCfg<'a> {
         }
 
         Ok(())
-    }
-
-    /// Updates the default DNS servers used by the DNS resolver.
-    async fn update_default_dns_servers(
-        &mut self,
-        mut servers: Vec<fnet::IpAddress>,
-    ) -> Result<(), anyhow::Error> {
-        trace!("updating default DNS servers to {:?}", servers);
-
-        // fuchsia.net.name/LookupAdmin.SetDefaultDnsServers is deprecated so the
-        // LookupAdmin service may not implement it. We still try to set the default
-        // servers with this method until it is removed just in case the LookupAdmin
-        // in the enclosing environment still uses it.
-        //
-        // TODO(52055): Remove the call to fuchsia.net.name/LookupAdmin.SetDefaultDnsServers
-        let () = self
-            .lookup_admin
-            .set_default_dns_servers(&mut servers.iter_mut())
-            .await
-            .context("set default DNS servers request")?
-            .map_err(zx::Status::from_raw)
-            .or_else(|e| {
-                if e == zx::Status::NOT_SUPPORTED {
-                    warn!("LookupAdmin does not support setting default DNS servers");
-                    Ok(())
-                } else {
-                    Err(e)
-                }
-            })
-            .context("set default DNS servers")?;
-
-        self.update_dns_servers(
-            DnsServersUpdateSource::Default,
-            servers.into_iter().map(static_source_from_ip).collect(),
-        )
-        .await
     }
 
     /// Updates the DNS servers used by the DNS resolver.
@@ -1250,14 +1214,12 @@ async fn main() -> Result<(), anyhow::Error> {
     let () =
         netcfg.update_filters(filter_config).await.context("update filters based on config")?;
 
-    let servers = servers
-        .into_iter()
-        .map(fnet_ext::IpAddress)
-        .map(Into::into)
-        .collect::<Vec<fnet::IpAddress>>();
+    let servers = servers.into_iter().map(static_source_from_ip).collect();
     debug!("updating default servers to {:?}", servers);
-    let () =
-        netcfg.update_default_dns_servers(servers).await.context("updating default servers")?;
+    let () = netcfg
+        .update_dns_servers(DnsServersUpdateSource::Default, servers)
+        .await
+        .context("updating default servers")?;
 
     netcfg.run().await.context("run eventloop")
 }

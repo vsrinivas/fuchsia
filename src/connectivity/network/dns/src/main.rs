@@ -379,12 +379,6 @@ async fn run_lookup_admin(
     stream
         .try_filter_map(|req| async {
             match req {
-                // TODO(51998, 52055): deprecate `SetDefaultDnsServers` and use `SetDnsServers`
-                // to configure the DNS servers to use with name resolution.
-                LookupAdminRequest::SetDefaultDnsServers { responder, .. } => {
-                    let () = responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
-                    Ok(None)
-                }
                 LookupAdminRequest::SetDnsServers { servers, responder } => {
                     let (mut response, ret) = if servers.iter().any(|s| {
                         // Addresses must not be an unspecified or multicast address.
@@ -529,7 +523,7 @@ mod tests {
     use dns::DEFAULT_PORT;
     use fidl_fuchsia_net_ext::IntoExt as _;
     use fuchsia_inspect::assert_inspect_tree;
-    use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip_v4, std_ip_v6};
+    use net_declare::{fidl_ip_v4, fidl_ip_v6, std_ip_v4, std_ip_v6};
     use trust_dns_proto::{
         op::Query,
         rr::{Name, RData, Record},
@@ -984,30 +978,6 @@ mod tests {
         })
         .await;
         assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), Vec::new());
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_set_default_server_names_error() {
-        let env = TestEnvironment::new();
-
-        // Assert that mock config has no servers originally.
-        assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), vec![]);
-
-        env.run_admin(|proxy| async move {
-            // Attempt to set bad addresses.
-
-            // SetDefaultDnsServers is not supported.
-            let status = proxy
-                .set_default_dns_servers(&mut vec![fidl_ip!(224.0.0.1)].iter_mut())
-                .await
-                .expect("Failed to call SetDefaultDnsServers")
-                .expect_err("SetDefaultDnsServers should fail for not supported method");
-            assert_eq!(zx::Status::from_raw(status), zx::Status::NOT_SUPPORTED);
-        })
-        .await;
-
-        // Assert that config didn't change.
-        assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), vec![]);
     }
 
     #[fasync::run_singlethreaded(test)]
