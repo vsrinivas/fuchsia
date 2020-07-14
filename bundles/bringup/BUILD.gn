@@ -132,7 +132,6 @@ group("tests") {
     "//zircon/system/utest/exit:exit-package",
     "//zircon/system/utest/fidl-utils:fidl-utils-package",
     "//zircon/system/utest/fpu:fpu-package",
-    "//zircon/system/utest/fvm:fvm-tests",  # This is a package.
     "//zircon/system/utest/getentropy:getentropy-package",
     "//zircon/system/utest/inspector:inspector-package",
     "//zircon/system/utest/int-types:int-types-package",
