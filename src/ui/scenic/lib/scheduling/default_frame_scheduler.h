@@ -26,7 +26,7 @@ namespace scheduling {
 
 // TODOs can be found in the frame scheduler epic: SCN-1202. Any new bugs filed concerning the frame
 // scheduler should be added to it as well.
-class DefaultFrameScheduler : public FrameScheduler {
+class DefaultFrameScheduler final : public FrameScheduler {
  public:
   explicit DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
                                  std::unique_ptr<FramePredictor> predictor,
@@ -109,6 +109,9 @@ class DefaultFrameScheduler : public FrameScheduler {
   std::pair<zx::time, zx::time> ComputePresentationAndWakeupTimesForTargetTime(
       zx::time requested_presentation_time) const;
 
+  // Adds pending SessionUpdaters to the active list and clears out stale ones.
+  void RefreshSessionUpdaters();
+
   // Executes updates that are scheduled up to and including a given presentation time.
   bool ApplyUpdates(zx::time target_presentation_time, zx::time latched_time,
                     uint64_t frame_number);
@@ -126,6 +129,13 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   // Signal all Present2 callbacks for |id_pair.session| up to |id_pair.present_id|.
   void SignalPresent2CallbackForInfosUpTo(SchedulingIdPair id_pair, zx::time presented_time);
+
+  // Get map of latch times for each present up to |id_pair.present_id| for |id_pair.session_id|.
+  std::map<PresentId, zx::time> ExtractLatchTimestampsUpTo(SchedulingIdPair id_pair);
+
+  // Set all unset latched times for each registered present of |session_id|, up to and including
+  // |present_id|.
+  void SetLatchedTimeForPresentsUpTo(SchedulingIdPair id_pair, zx::time latched_time);
 
   // Set all unset latched times for each Present2Info of |session_id|, up to and including
   // |present_id|.
@@ -154,13 +164,20 @@ class DefaultFrameScheduler : public FrameScheduler {
   // presentation time for each present.
   std::map<SchedulingIdPair, zx::time> pending_present_requests_;
 
+  // TODO(47308): A lot of logic is temporarily duplicated while clients are being converted over.
+  // When both session and and image pipes have been converted to handling their own callbacks,
+  // delete unnecessary tracking state.
   struct FrameUpdate {
     uint64_t frame_number;
     std::unordered_map<SessionId, PresentId> updated_sessions;
+    zx::time latched_time;
   };
   // Queue of session updates mapped to frame numbers. Used when triggering callbacks in
   // OnFramePresented.
-  std::queue<FrameUpdate> handled_updates_;
+  std::queue<FrameUpdate> latched_updates_;
+
+  // All currently tracked presents and their associated latched_times.
+  std::map<SchedulingIdPair, /*latched_time*/ std::optional<zx::time>> presents_;
 
   // Ordered maps of per-present data ordered by SessionId and then PresentId.
   // Per-present callbacks for Present1 and ImagePipe clients.

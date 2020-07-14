@@ -95,6 +95,8 @@ PresentId DefaultFrameScheduler::RegisterPresent(
   present_id = present_id == 0 ? scheduling::GetNextPresentId() : present_id;
 
   SchedulingIdPair id_pair{session_id, present_id};
+  presents_[id_pair] = std::nullopt;  // Initialize an empty entry in |presents_|.
+
   if (auto present1_callback = std::get_if<OnPresentedCallback>(&present_information)) {
     present1_callbacks_.emplace(id_pair, std::move(*present1_callback));
   } else {
@@ -446,6 +448,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 
 void DefaultFrameScheduler::RemoveSession(SessionId session_id) {
   present2_callback_map_.erase(session_id);
+  RemoveSessionIdFromMap(session_id, &presents_);
   RemoveSessionIdFromMap(session_id, &pending_present_requests_);
   RemoveSessionIdFromMap(session_id, &present1_callbacks_);
   RemoveSessionIdFromMap(session_id, &present2_infos_);
@@ -481,16 +484,16 @@ std::unordered_map<SessionId, PresentId> DefaultFrameScheduler::CollectUpdatesFo
 
 void DefaultFrameScheduler::PrepareUpdates(const std::unordered_map<SessionId, PresentId>& updates,
                                            zx::time latched_time, uint64_t frame_number) {
-  handled_updates_.push({.frame_number = frame_number, .updated_sessions = updates});
-
-  for (const auto [session_id, present_id] : updates) {
+  latched_updates_.push({.frame_number = frame_number, .updated_sessions = updates});
+  for (const auto& [session_id, present_id] : updates) {
+    SetLatchedTimeForPresentsUpTo({session_id, present_id}, latched_time);
     SetLatchedTimeForPresent2Infos({session_id, present_id}, latched_time);
     MoveReleaseFencesToSignaller({session_id, present_id}, frame_number);
   }
 }
 
-SessionUpdater::UpdateResults DefaultFrameScheduler::ApplyUpdatesToEachUpdater(
-    const std::unordered_map<SessionId, PresentId>& sessions_to_update, uint64_t frame_number) {
+void DefaultFrameScheduler::RefreshSessionUpdaters() {
+  // Add pending SessionUpdaters.
   std::move(new_session_updaters_.begin(), new_session_updaters_.end(),
             std::back_inserter(session_updaters_));
   new_session_updaters_.clear();
@@ -500,7 +503,10 @@ SessionUpdater::UpdateResults DefaultFrameScheduler::ApplyUpdatesToEachUpdater(
       std::remove_if(session_updaters_.begin(), session_updaters_.end(),
                      [](std::weak_ptr<SessionUpdater> updater) { return updater.expired(); }),
       session_updaters_.end());
+}
 
+SessionUpdater::UpdateResults DefaultFrameScheduler::ApplyUpdatesToEachUpdater(
+    const std::unordered_map<SessionId, PresentId>& sessions_to_update, uint64_t frame_number) {
   // Apply updates to each SessionUpdater.
   SessionUpdater::UpdateResults update_results;
   std::for_each(
@@ -523,6 +529,19 @@ SessionUpdater::UpdateResults DefaultFrameScheduler::ApplyUpdatesToEachUpdater(
       });
 
   return update_results;
+}
+
+void DefaultFrameScheduler::SetLatchedTimeForPresentsUpTo(SchedulingIdPair id_pair,
+                                                          zx::time latched_time) {
+  const auto begin_it = presents_.lower_bound({id_pair.session_id, 0});
+  const auto end_it = presents_.upper_bound(id_pair);
+  std::for_each(begin_it, end_it,
+                [latched_time](std::pair<const SchedulingIdPair, std::optional<zx::time>>& pair) {
+                  // Update latched time for Present2Infos that haven't already been latched on
+                  // previous frames.
+                  if (pair.second == std::nullopt)
+                    pair.second = latched_time;
+                });
 }
 
 void DefaultFrameScheduler::SetLatchedTimeForPresent2Infos(SchedulingIdPair id_pair,
@@ -575,6 +594,7 @@ bool DefaultFrameScheduler::ApplyUpdates(zx::time target_presentation_time, zx::
 
   TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
 
+  RefreshSessionUpdaters();
   const auto update_map = CollectUpdatesForThisFrame(target_presentation_time);
   const bool have_updates = !update_map.empty();
   if (have_updates) {
@@ -642,18 +662,48 @@ void DefaultFrameScheduler::SignalPresentCallbacksUpTo(
     uint64_t frame_number, fuchsia::images::PresentationInfo presentation_info) {
   // Get last present_id up to |frame_number| for each session.
   std::unordered_map<SessionId, PresentId> last_updates;
-  while (!handled_updates_.empty() && handled_updates_.front().frame_number <= frame_number) {
-    for (auto [session_id, present_id] : handled_updates_.front().updated_sessions) {
+  std::unordered_map<SessionId, std::map<PresentId, zx::time>> latched_times;
+  while (!latched_updates_.empty() && latched_updates_.front().frame_number <= frame_number) {
+    for (const auto& [session_id, present_id] : latched_updates_.front().updated_sessions) {
+      latched_times[session_id] = ExtractLatchTimestampsUpTo({session_id, present_id});
+
       last_updates[session_id] = present_id;
     }
-    handled_updates_.pop();
+    latched_updates_.pop();
   }
 
-  for (auto [session_id, present_id] : last_updates) {
+  for (const auto& [session_id, present_id] : last_updates) {
     SignalPresent1CallbacksUpTo({session_id, present_id}, presentation_info);
     SignalPresent2CallbackForInfosUpTo({session_id, present_id},
                                        zx::time(presentation_info.presentation_time));
   }
+
+  const PresentTimestamps present_timestamps{
+      .presented_time = zx::time(presentation_info.presentation_time),
+      .vsync_interval = zx::duration(presentation_info.presentation_interval),
+  };
+  for (auto updater : session_updaters_) {
+    if (auto locked = updater.lock()) {
+      locked->OnFramePresented(latched_times, present_timestamps);
+    }
+  }
+}
+
+std::map<PresentId, zx::time> DefaultFrameScheduler::ExtractLatchTimestampsUpTo(
+    SchedulingIdPair id_pair) {
+  std::map<PresentId, zx::time> timestamps;
+
+  auto begin_it = presents_.lower_bound({id_pair.session_id, 0});
+  auto end_it = presents_.upper_bound(id_pair);
+  FX_DCHECK(std::distance(begin_it, end_it) >= 0);
+  std::for_each(begin_it, end_it,
+                [&timestamps](std::pair<const SchedulingIdPair, std::optional<zx::time>>& pair) {
+                  FX_DCHECK(pair.second);
+                  timestamps[pair.first.present_id] = pair.second.value();
+                });
+  presents_.erase(begin_it, end_it);
+
+  return timestamps;
 }
 
 void DefaultFrameScheduler::SetOnFramePresentedCallbackForSession(

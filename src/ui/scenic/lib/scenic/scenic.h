@@ -56,6 +56,14 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
   UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
       uint64_t trace_id) override;
+  // |scheduling::SessionUpdater|
+  void OnFramePresented(
+      const std::unordered_map<scheduling::SessionId,
+                               std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
+          latched_times,
+      scheduling::PresentTimestamps present_times) override {
+    // TODO(47308): Implement and stop pushing callbacks into FrameScheduler.
+  }
 
   // Register a delegate class for implementing top-level Scenic operations (e.g., GetDisplayInfo).
   // This delegate must outlive the Scenic instance.

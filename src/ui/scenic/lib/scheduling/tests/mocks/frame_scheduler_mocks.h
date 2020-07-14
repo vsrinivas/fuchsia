@@ -111,6 +111,16 @@ class MockSessionUpdater : public SessionUpdater {
     return update_sessions_return_value_;
   }
 
+  // |SessionUpdater|
+  void OnFramePresented(
+      const std::unordered_map<scheduling::SessionId,
+                               std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
+          latched_times,
+      scheduling::PresentTimestamps present_times) override {
+    last_latched_times_ = latched_times;
+    last_presented_time_ = present_times.presented_time;
+  }
+
   void SetUpdateSessionsReturnValue(SessionUpdater::UpdateResults new_value) {
     update_sessions_return_value_ = new_value;
   }
@@ -120,11 +130,22 @@ class MockSessionUpdater : public SessionUpdater {
     return last_sessions_to_update_;
   };
 
+  std::unordered_map<SessionId, std::map<PresentId, zx::time>> last_latched_times() const {
+    return last_latched_times_;
+  }
+
+  zx::time last_presented_time() const { return last_presented_time_; }
+
  private:
   SessionUpdater::UpdateResults update_sessions_return_value_;
 
   uint64_t update_sessions_call_count_ = 0;
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> last_sessions_to_update_;
+
+  std::unordered_map<scheduling::SessionId,
+                     std::map<scheduling::PresentId, /*latched_time*/ zx::time>>
+      last_latched_times_;
+  zx::time last_presented_time_;
 };
 
 class MockFrameRenderer : public FrameRenderer {

@@ -1486,6 +1486,71 @@ TEST_F(FrameSchedulerTest, SquashedPresents_ShouldSignalAllCallbacksInOrder) {
   EXPECT_THAT(callback_order, ::testing::ElementsAreArray({1, 2, 3}));
 }
 
+// Tests whether the SessionUpdater::OnPresented is called at the correct times with the correct
+// data.
+TEST_F(FrameSchedulerTest, SessionUpdater_OnPresented_Test) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId1 = 1;
+  constexpr SessionId kSessionId2 = 2;
+
+  // Schedule a couple of updates, all of which should be handled this frame.
+  ScheduleUpdateAndCallback(scheduler, kSessionId1, zx::time(0), [](auto...) {});
+  ScheduleUpdateAndCallback(scheduler, kSessionId1, zx::time(0), [](auto...) {});
+  ScheduleUpdateAndCallback(scheduler, kSessionId1, zx::time(0), [](auto...) {});
+  ScheduleUpdateAndCallback(scheduler, kSessionId2, zx::time(0), [](auto...) {});
+
+  // Schedule updates for next frame.
+  ScheduleUpdateAndCallback(scheduler, kSessionId1,
+                            zx::time(0) + zx::duration(2 * vsync_timing_->vsync_interval().get()),
+                            [](auto...) {});
+  ScheduleUpdateAndCallback(scheduler, kSessionId2,
+                            zx::time(0) + zx::duration(2 * vsync_timing_->vsync_interval().get()),
+                            [](auto...) {});
+
+  EXPECT_TRUE(mock_updater_->last_latched_times().empty());
+
+  RunLoopFor(vsync_timing_->vsync_interval());
+  const zx::time kPresentationTime1 = Now();
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ kPresentationTime1);
+  RunLoopUntilIdle();
+  {
+    // The first batch of updates should have been presented.
+    auto result_map = mock_updater_->last_latched_times();
+    auto last_presented_time = mock_updater_->last_presented_time();
+    EXPECT_EQ(last_presented_time, kPresentationTime1);
+    EXPECT_EQ(result_map.size(), 2u);  // Both sessions sould have updates.
+    EXPECT_EQ(result_map.at(kSessionId1).size(), 3u);
+    EXPECT_EQ(result_map.at(kSessionId2).size(), 1u);
+    for (auto& [session_id, present_map] : result_map) {
+      for (auto& [present_id, latched_time] : present_map) {
+        // We don't know latched time, but it should have been set.
+        EXPECT_NE(latched_time, zx::time(0));
+      }
+    }
+  }
+
+  // End next frame.
+  RunLoopFor(zx::sec(2));
+  const zx::time kPresentationTime2 = Now();
+  mock_renderer_->EndFrame(/* frame number */ 1, /*time_done*/ kPresentationTime2);
+  RunLoopUntilIdle();
+  {
+    // The second batch of updates should have been presented.
+    auto result_map = mock_updater_->last_latched_times();
+    auto last_presented_time = mock_updater_->last_presented_time();
+    EXPECT_EQ(last_presented_time, kPresentationTime2);
+    EXPECT_EQ(result_map.size(), 2u);
+    EXPECT_EQ(result_map.at(kSessionId1).size(), 1u);
+    EXPECT_EQ(result_map.at(kSessionId2).size(), 1u);
+    for (auto& [session_id, present_map] : result_map) {
+      for (auto& [present_id, latched_time] : present_map) {
+        EXPECT_NE(latched_time, zx::time(0));
+      }
+    }
+  }
+}
+
 TEST_F(FrameSchedulerTest, SquashedPresent2s_ShouldHaveCorrectNumberOfHandledPresentsInCallback) {
   auto scheduler = CreateDefaultFrameScheduler();
 

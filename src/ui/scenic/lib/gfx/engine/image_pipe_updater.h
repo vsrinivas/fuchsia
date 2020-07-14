@@ -55,6 +55,14 @@ class ImagePipeUpdater : public scheduling::SessionUpdater,
   UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
       uint64_t trace_id) override;
+  // |scheduling::SessionUpdater|
+  void OnFramePresented(
+      const std::unordered_map<scheduling::SessionId,
+                               std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
+          latched_times,
+      scheduling::PresentTimestamps present_times) override {
+    // TODO(47308): Implement and stop pushing callbacks into FrameScheduler.
+  }
 
   // For tests.
   scheduling::SessionId GetSchedulingId() { return scheduling_id_; }

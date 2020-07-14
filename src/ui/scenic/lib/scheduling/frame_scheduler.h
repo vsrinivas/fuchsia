@@ -28,6 +28,11 @@ using OnPresentedCallback = fit::function<void(fuchsia::images::PresentationInfo
 using OnFramePresentedCallback =
     fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>;
 
+struct PresentTimestamps {
+  zx::time presented_time = zx::time(0);
+  zx::duration vsync_interval = zx::duration(0);
+};
+
 // Interface for performing session updates.
 class SessionUpdater {
  public:
@@ -39,11 +44,17 @@ class SessionUpdater {
 
   virtual ~SessionUpdater() = default;
 
-  // For each known session in |sessions_to_update|, apply all of the "ready" updates.  A "ready"
-  // update is one that is scheduled at or before |presentation_time|, and for which all other
-  // preconditions have been met (for example, all acquire fences have been signaled).
+  // For each known session in |sessions_to_update|, apply all updates up to and including
+  // |PresentId|.
   virtual UpdateResults UpdateSessions(
       const std::unordered_map<SessionId, PresentId>& sessions_to_update, uint64_t trace_id) = 0;
+
+  // Called whenever a new set of presents have been presented to the screen. |latched_times| gives
+  // information about when each individual update was latched.
+  virtual void OnFramePresented(
+      const std::unordered_map<SessionId, std::map<PresentId, /*latched_time*/ zx::time>>&
+          latched_times,
+      PresentTimestamps present_times) = 0;
 };
 
 // Result of a call to FrameRenderer::RenderFrame(). See below.

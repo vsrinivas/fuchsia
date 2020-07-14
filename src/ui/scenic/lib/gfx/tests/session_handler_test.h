@@ -60,6 +60,12 @@ class SessionHandlerTest : public ErrorReportingTest {
     UpdateResults UpdateSessions(
         const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
         uint64_t trace_id) override;
+    // |scheduling::SessionUpdater|
+    void OnFramePresented(
+        const std::unordered_map<scheduling::SessionId,
+                                 std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
+            latched_times,
+        scheduling::PresentTimestamps present_times) override {}
 
    private:
     Engine* engine_;
