@@ -210,8 +210,9 @@ void BusTransactionInitiatorDispatcher::PrintQuarantineWarningLocked(BtiPageLeak
       break;
   }
 
-  KERNEL_OOPS("Bus Transaction Initiator (ID 0x%lx, name \"%s\") has leaked %" PRIu64
-              " pages in %zu VMOs. Leak was caused by %s. The last handle was closed by process "
-              "\"%s\", and thread \"%s\"\n",
-              bti_id_, bti_name, leaked_pages, num_entries, leak_cause, proc_name, thread_name);
+  // TODO(fxb/56157): Make this an OOPS once the driver bugs are fixed.
+  printf("KERN: Bus Transaction Initiator (ID 0x%lx, name \"%s\") has leaked %" PRIu64
+         " pages in %zu VMOs. Leak was caused by %s. The last handle was closed by process "
+         "\"%s\", and thread \"%s\"\n",
+         bti_id_, bti_name, leaked_pages, num_entries, leak_cause, proc_name, thread_name);
 }
