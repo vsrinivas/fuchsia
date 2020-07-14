@@ -9,6 +9,7 @@
 #include <limits.h>  // PAGE_SIZE
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <limits>
 #include <map>
 #include <vector>
@@ -211,7 +212,12 @@ bool ZirconPlatformBuffer::MapCpuConstrained(void** va_out, uint64_t length, uin
     uintptr_t child_addr;
     zx::vmar child_vmar;
 
-    const uint64_t upper_limit_offset = upper_limit - base_addr;
+    const uint64_t upper_limit_max = parent_vmar_->Length();
+    const uint64_t upper_limit_offset = std::min(upper_limit - base_addr, upper_limit_max);
+
+    DLOG("upper_limit=0x%lx upper_limit_max=0x%lx upper_limit_offset=0x%lx", upper_limit,
+         upper_limit_max, upper_limit_offset);
+
     const zx_vm_option_t alignment_flag = alignment_log2 << ZX_VM_ALIGN_BASE;
     const zx_vm_option_t flags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC |
                                  ZX_VM_OFFSET_IS_UPPER_LIMIT | alignment_flag;
