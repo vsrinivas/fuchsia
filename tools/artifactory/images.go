@@ -28,7 +28,7 @@ func imageUploads(mods imgModules, namespace string) []Upload {
 	}
 
 	// The same image might appear in multiple entries.
-	seen := make(map[string]bool)
+	seen := make(map[string]struct{})
 	for _, img := range mods.Images() {
 		if _, ok := seen[img.Path]; !ok {
 			files = append(files, Upload{
@@ -36,7 +36,7 @@ func imageUploads(mods imgModules, namespace string) []Upload {
 				Destination: path.Join(namespace, img.Path),
 				Compress:    true,
 			})
-			seen[img.Path] = true
+			seen[img.Path] = struct{}{}
 		}
 	}
 	return files

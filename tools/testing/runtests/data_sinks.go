@@ -156,7 +156,7 @@ func getDataSinkReference(viewer remoteViewer, remoteOutputDir string) (DataSink
 // the references.
 func copyDataSinks(viewer remoteViewer, references []DataSinkReference, remoteOutputDir, localOutputDir string) (DataSinkMap, error) {
 	sinks := DataSinkMap{}
-	copied := make(map[string]bool)
+	copied := make(map[string]struct{})
 	for _, ref := range references {
 		for name, files := range ref {
 			if _, ok := sinks[name]; !ok {
@@ -171,7 +171,7 @@ func copyDataSinks(viewer remoteViewer, references []DataSinkReference, remoteOu
 				if err := viewer.copyFile(src, dest); err != nil {
 					return nil, fmt.Errorf("failed to copy data sink %q: %w", file.File, err)
 				}
-				copied[file.File] = true
+				copied[file.File] = struct{}{}
 				sinks[name] = append(sinks[name], file)
 			}
 		}

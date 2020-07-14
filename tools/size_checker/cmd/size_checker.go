@@ -245,9 +245,9 @@ func processSizes(r io.Reader) (map[string]int64, error) {
 
 type processingState struct {
 	blobMap               map[string]*Blob
-	assetMap              map[string]bool
+	assetMap              map[string]struct{}
 	assetSize             int64
-	distributedShlibs     map[string]bool
+	distributedShlibs     map[string]struct{}
 	distributedShlibsSize int64
 	root                  *Node
 }
@@ -286,7 +286,7 @@ func processBlobsJSON(
 		// If the blob is an asset, we don't add it to the tree.
 		// We check the path instead of the source path because prebuilt packages have hashes as the
 		// source path for their blobs
-		if state.assetMap[filepath.Ext(blob.Path)] {
+		if _, ok := state.assetMap[filepath.Ext(blob.Path)]; ok {
 			// The size of each blob is the total space occupied by the blob in blobfs (each blob may be
 			// referenced several times by different packages). Therefore, once we have already add the
 			// size, we should remove it from the map
@@ -294,7 +294,7 @@ func processBlobsJSON(
 				state.assetSize += state.blobMap[blob.Merkle].size
 				delete(state.blobMap, blob.Merkle)
 			}
-		} else if state.distributedShlibs[blob.Path] {
+		} else if _, ok := state.distributedShlibs[blob.Path]; ok {
 			if state.blobMap[blob.Merkle] != nil {
 				state.distributedShlibsSize += state.blobMap[blob.Merkle].size
 				delete(state.blobMap, blob.Merkle)
@@ -322,14 +322,14 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 	}
 
 	// We create a set of extensions that should be considered as assets.
-	assetMap := make(map[string]bool)
+	assetMap := make(map[string]struct{})
 	for _, ext := range input.AssetExt {
-		assetMap[ext] = true
+		assetMap[ext] = struct{}{}
 	}
 	// We also create a map of paths that should be considered distributed shlibs.
-	distributedShlibs := make(map[string]bool)
+	distributedShlibs := make(map[string]struct{})
 	for _, path := range input.DistributedShlibs {
-		distributedShlibs[path] = true
+		distributedShlibs[path] = struct{}{}
 	}
 	st := processingState{
 		blobMap,

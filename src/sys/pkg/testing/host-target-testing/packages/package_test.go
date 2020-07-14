@@ -30,11 +30,12 @@ func TestExpand(t *testing.T) {
 	}
 
 	// Make a "set" of all files we expect to see in the expand directory.
-	expectedFiles := make(map[string]bool)
-	expectedFiles["meta/contents"] = true
-	expectedFiles["meta/package"] = true
+	expectedFiles := map[string]struct{}{
+		"meta/contents": {},
+		"meta/package":  {},
+	}
 	for _, item := range build.TestFiles {
-		expectedFiles[item] = true
+		expectedFiles[item] = struct{}{}
 	}
 
 	expandedData := make(map[string]FileData)

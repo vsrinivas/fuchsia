@@ -64,11 +64,14 @@ func (s *TokenStream) Eat(typ TokenType) error {
 // contatenated output with outer spaces trimmed.
 func (s *TokenStream) ConcatUntil(anyOf ...TokenType) string {
 	var values string
-	stopAtType := map[TokenType]bool{TypeEOF: true}
+	stopAtType := map[TokenType]struct{}{TypeEOF: {}}
 	for i := range anyOf {
-		stopAtType[anyOf[i]] = true
+		stopAtType[anyOf[i]] = struct{}{}
 	}
-	for !stopAtType[s.iter.Peek().Type] {
+	for {
+		if _, ok := stopAtType[s.iter.Peek().Type]; ok {
+			break
+		}
 		values += s.iter.Next().Value
 	}
 	return values

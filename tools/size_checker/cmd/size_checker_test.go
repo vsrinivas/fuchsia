@@ -131,9 +131,9 @@ func Test_processBlobsJSON(t *testing.T) {
 	tests := []struct {
 		name                  string
 		blobMap               map[string]*Blob
-		assetMap              map[string]bool
+		assetMap              map[string]struct{}
 		assetSize             int64
-		distributedShlibsMap  map[string]bool
+		distributedShlibsMap  map[string]struct{}
 		distributedShlibsSize int64
 		blobs                 []BlobFromJSON
 		expectedBlobMap       map[string]*Blob
@@ -142,9 +142,9 @@ func Test_processBlobsJSON(t *testing.T) {
 		{
 			"Adding Asset Blob",
 			map[string]*Blob{"hash": {size: 1}},
-			map[string]bool{".asset": true},
+			map[string]struct{}{".asset": {}},
 			0,
-			map[string]bool{"lib/ld.so.1": true},
+			map[string]struct{}{"lib/ld.so.1": {}},
 			0,
 			[]BlobFromJSON{{Path: "test.asset", Merkle: "hash"}},
 			map[string]*Blob{},
@@ -153,9 +153,9 @@ func Test_processBlobsJSON(t *testing.T) {
 		{
 			"Adding Non-asset Blob",
 			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
-			map[string]bool{".asset": true},
+			map[string]struct{}{".asset": {}},
 			0,
-			map[string]bool{"lib/ld.so.1": true},
+			map[string]struct{}{"lib/ld.so.1": {}},
 			0,
 			[]BlobFromJSON{{Path: "test.notasset", Merkle: "hash"}},
 			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
@@ -217,7 +217,7 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 		},
 	}
 
-	var dummyMap map[string]bool
+	var dummyMap map[string]struct{}
 	var dummySize int64
 
 	for _, test := range tests {

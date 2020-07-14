@@ -146,12 +146,13 @@ func TestAddResource(t *testing.T) {
 		t.Fatalf("%s expects to have %s, but has %s", newResource, newResource, string(newData))
 	}
 
-	expectedFiles := make(map[string]bool)
-	expectedFiles["meta/contents"] = true
-	expectedFiles["meta/package"] = true
-	expectedFiles["blah/z"] = true
+	expectedFiles := map[string]struct{}{
+		"meta/contents": {},
+		"meta/package":  {},
+		"blah/z":        {},
+	}
 	for _, item := range build.TestFiles {
-		expectedFiles[item] = true
+		expectedFiles[item] = struct{}{}
 	}
 
 	for key := range pkgBuilder.Contents {

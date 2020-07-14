@@ -42,7 +42,7 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 
 	var uploads []Upload
 	var fuchsiaBuildIDs []string
-	buildIDSet := map[string]bool{}
+	buildIDSet := make(map[string]struct{})
 
 	breakpadEmitted, err := mods.Args().BoolValue(outputBreakpadSymsGNArg)
 	if err != nil && err != build.ErrArgNotSet {
@@ -62,7 +62,7 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 		if _, ok := buildIDSet[id]; ok {
 			continue
 		}
-		buildIDSet[id] = true
+		buildIDSet[id] = struct{}{}
 
 		// We upload all debug binaries to a flat namespace.
 		debugSrc := filepath.Join(mods.BuildDir(), bin.Debug)

@@ -237,87 +237,87 @@ func (r *Root) findUnion(eci EncodedCompoundIdentifier) *Union {
 	return nil
 }
 
-var reservedWords = map[string]bool{
-	"as":       true,
-	"box":      true,
-	"break":    true,
-	"const":    true,
-	"continue": true,
-	"crate":    true,
-	"else":     true,
-	"enum":     true,
-	"extern":   true,
-	"false":    true,
-	"fn":       true,
-	"for":      true,
-	"if":       true,
-	"impl":     true,
-	"in":       true,
-	"let":      true,
-	"loop":     true,
-	"match":    true,
-	"mod":      true,
-	"move":     true,
-	"mut":      true,
-	"pub":      true,
-	"ref":      true,
-	"return":   true,
-	"self":     true,
-	"Self":     true,
-	"static":   true,
-	"struct":   true,
-	"super":    true,
-	"trait":    true,
-	"true":     true,
-	"type":     true,
-	"unsafe":   true,
-	"use":      true,
-	"where":    true,
-	"while":    true,
+var reservedWords = map[string]struct{}{
+	"as":       {},
+	"box":      {},
+	"break":    {},
+	"const":    {},
+	"continue": {},
+	"crate":    {},
+	"else":     {},
+	"enum":     {},
+	"extern":   {},
+	"false":    {},
+	"fn":       {},
+	"for":      {},
+	"if":       {},
+	"impl":     {},
+	"in":       {},
+	"let":      {},
+	"loop":     {},
+	"match":    {},
+	"mod":      {},
+	"move":     {},
+	"mut":      {},
+	"pub":      {},
+	"ref":      {},
+	"return":   {},
+	"self":     {},
+	"Self":     {},
+	"static":   {},
+	"struct":   {},
+	"super":    {},
+	"trait":    {},
+	"true":     {},
+	"type":     {},
+	"unsafe":   {},
+	"use":      {},
+	"where":    {},
+	"while":    {},
 
 	// Keywords reserved for future use (future-proofing...)
-	"abstract": true,
-	"alignof":  true,
-	"await":    true,
-	"become":   true,
-	"do":       true,
-	"final":    true,
-	"macro":    true,
-	"offsetof": true,
-	"override": true,
-	"priv":     true,
-	"proc":     true,
-	"pure":     true,
-	"sizeof":   true,
-	"typeof":   true,
-	"unsized":  true,
-	"virtual":  true,
-	"yield":    true,
+	"abstract": {},
+	"alignof":  {},
+	"await":    {},
+	"become":   {},
+	"do":       {},
+	"final":    {},
+	"macro":    {},
+	"offsetof": {},
+	"override": {},
+	"priv":     {},
+	"proc":     {},
+	"pure":     {},
+	"sizeof":   {},
+	"typeof":   {},
+	"unsized":  {},
+	"virtual":  {},
+	"yield":    {},
 
 	// Weak keywords (special meaning in specific contexts)
 	// These are ok in all contexts of fidl names.
-	//"default":	true,
-	//"union":	true,
+	//"default":	{},
+	//"union":	{},
 
 	// Things that are not keywords, but for which collisions would be very unpleasant
-	"Result":  true,
-	"Ok":      true,
-	"Err":     true,
-	"Vec":     true,
-	"Option":  true,
-	"Some":    true,
-	"None":    true,
-	"Box":     true,
-	"Future":  true,
-	"Stream":  true,
-	"Never":   true,
-	"Send":    true,
-	"fidl":    true,
-	"futures": true,
-	"zx":      true,
-	"async":   true,
-	"on_open": true,
-	"OnOpen":  true,
+	"Result":  {},
+	"Ok":      {},
+	"Err":     {},
+	"Vec":     {},
+	"Option":  {},
+	"Some":    {},
+	"None":    {},
+	"Box":     {},
+	"Future":  {},
+	"Stream":  {},
+	"Never":   {},
+	"Send":    {},
+	"fidl":    {},
+	"futures": {},
+	"zx":      {},
+	"async":   {},
+	"on_open": {},
+	"OnOpen":  {},
 }
 
 var reservedSuffixes = []string{
@@ -400,7 +400,7 @@ var handleSubtypes = map[types.HandleSubtype]string{
 type compiler struct {
 	decls                  types.DeclMap
 	library                types.LibraryIdentifier
-	externCrates           map[string]bool
+	externCrates           map[string]struct{}
 	requestResponsePayload map[types.EncodedCompoundIdentifier]types.Struct
 }
 
@@ -440,7 +440,7 @@ func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) strin
 	strs := []string{}
 	if c.inExternalLibrary(val) {
 		externName := compileLibraryName(val.Library)
-		c.externCrates[externName] = true
+		c.externCrates[externName] = struct{}{}
 		strs = append(strs, externName)
 	}
 	str := changeIfReserved(val.Name)
@@ -1336,7 +1336,7 @@ func Compile(r types.Root) Root {
 	c := compiler{
 		r.DeclsWithDependencies(),
 		thisLibParsed,
-		map[string]bool{},
+		map[string]struct{}{},
 		map[types.EncodedCompoundIdentifier]types.Struct{},
 	}
 

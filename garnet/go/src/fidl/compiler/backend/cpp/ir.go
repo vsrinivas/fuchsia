@@ -368,118 +368,118 @@ func (m *Method) CallbackWrapper() string {
 	return "fit::function"
 }
 
-var reservedWords = map[string]bool{
-	"alignas":          true,
-	"alignof":          true,
-	"and":              true,
-	"and_eq":           true,
-	"asm":              true,
-	"assert":           true,
-	"atomic_cancel":    true,
-	"atomic_commit":    true,
-	"atomic_noexcept":  true,
-	"auto":             true,
-	"bitand":           true,
-	"bitor":            true,
-	"bool":             true,
-	"break":            true,
-	"case":             true,
-	"catch":            true,
-	"char":             true,
-	"char16_t":         true,
-	"char32_t":         true,
-	"class":            true,
-	"compl":            true,
-	"concept":          true,
-	"const":            true,
-	"constexpr":        true,
-	"const_cast":       true,
-	"continue":         true,
-	"co_await":         true,
-	"co_return":        true,
-	"co_yield":         true,
-	"decltype":         true,
-	"default":          true,
-	"delete":           true,
-	"do":               true,
-	"double":           true,
-	"dynamic_cast":     true,
-	"else":             true,
-	"enum":             true,
-	"explicit":         true,
-	"export":           true,
-	"extern":           true,
-	"false":            true,
-	"float":            true,
-	"for":              true,
-	"friend":           true,
-	"goto":             true,
-	"if":               true,
-	"import":           true,
-	"inline":           true,
-	"int":              true,
-	"long":             true,
-	"module":           true,
-	"mutable":          true,
-	"namespace":        true,
-	"new":              true,
-	"noexcept":         true,
-	"not":              true,
-	"not_eq":           true,
-	"NULL":             true,
-	"nullptr":          true,
-	"offsetof":         true,
-	"operator":         true,
-	"or":               true,
-	"or_eq":            true,
-	"private":          true,
-	"protected":        true,
-	"public":           true,
-	"register":         true,
-	"reinterpret_cast": true,
-	"requires":         true,
-	"return":           true,
-	"short":            true,
-	"signed":           true,
-	"sizeof":           true,
-	"static":           true,
-	"static_assert":    true,
-	"static_cast":      true,
-	"struct":           true,
-	"switch":           true,
-	"synchronized":     true,
-	"template":         true,
-	"this":             true,
-	"thread_local":     true,
-	"throw":            true,
-	"true":             true,
-	"try":              true,
-	"typedef":          true,
-	"typeid":           true,
-	"typename":         true,
-	"union":            true,
-	"unsigned":         true,
-	"using":            true,
-	"virtual":          true,
-	"void":             true,
-	"volatile":         true,
-	"wchar_t":          true,
-	"while":            true,
-	"xor":              true,
-	"xor_eq":           true,
-	"xunion":           true,
+var reservedWords = map[string]struct{}{
+	"alignas":          {},
+	"alignof":          {},
+	"and":              {},
+	"and_eq":           {},
+	"asm":              {},
+	"assert":           {},
+	"atomic_cancel":    {},
+	"atomic_commit":    {},
+	"atomic_noexcept":  {},
+	"auto":             {},
+	"bitand":           {},
+	"bitor":            {},
+	"bool":             {},
+	"break":            {},
+	"case":             {},
+	"catch":            {},
+	"char":             {},
+	"char16_t":         {},
+	"char32_t":         {},
+	"class":            {},
+	"compl":            {},
+	"concept":          {},
+	"const":            {},
+	"constexpr":        {},
+	"const_cast":       {},
+	"continue":         {},
+	"co_await":         {},
+	"co_return":        {},
+	"co_yield":         {},
+	"decltype":         {},
+	"default":          {},
+	"delete":           {},
+	"do":               {},
+	"double":           {},
+	"dynamic_cast":     {},
+	"else":             {},
+	"enum":             {},
+	"explicit":         {},
+	"export":           {},
+	"extern":           {},
+	"false":            {},
+	"float":            {},
+	"for":              {},
+	"friend":           {},
+	"goto":             {},
+	"if":               {},
+	"import":           {},
+	"inline":           {},
+	"int":              {},
+	"long":             {},
+	"module":           {},
+	"mutable":          {},
+	"namespace":        {},
+	"new":              {},
+	"noexcept":         {},
+	"not":              {},
+	"not_eq":           {},
+	"NULL":             {},
+	"nullptr":          {},
+	"offsetof":         {},
+	"operator":         {},
+	"or":               {},
+	"or_eq":            {},
+	"private":          {},
+	"protected":        {},
+	"public":           {},
+	"register":         {},
+	"reinterpret_cast": {},
+	"requires":         {},
+	"return":           {},
+	"short":            {},
+	"signed":           {},
+	"sizeof":           {},
+	"static":           {},
+	"static_assert":    {},
+	"static_cast":      {},
+	"struct":           {},
+	"switch":           {},
+	"synchronized":     {},
+	"template":         {},
+	"this":             {},
+	"thread_local":     {},
+	"throw":            {},
+	"true":             {},
+	"try":              {},
+	"typedef":          {},
+	"typeid":           {},
+	"typename":         {},
+	"union":            {},
+	"unsigned":         {},
+	"using":            {},
+	"virtual":          {},
+	"void":             {},
+	"volatile":         {},
+	"wchar_t":          {},
+	"while":            {},
+	"xor":              {},
+	"xor_eq":           {},
+	"xunion":           {},
 
 	// names used in specific contexts e.g. union accessors
-	"FidlType":        true,
-	"New":             true,
-	"Tag":             true,
-	"Which":           true,
-	"has_invalid_tag": true,
-	"which":           true,
-	"Unknown":         true,
-	"unknown":         true,
-	"IsEmpty":         true,
-	"HandleEvents":    true,
+	"FidlType":        {},
+	"New":             {},
+	"Tag":             {},
+	"Which":           {},
+	"has_invalid_tag": {},
+	"which":           {},
+	"Unknown":         {},
+	"unknown":         {},
+	"IsEmpty":         {},
+	"HandleEvents":    {},
 	// TODO(ianloic) add: "Clone"
 	// There are Clone methods on a couple of protocols that are used
 	// across layers so this will be a breaking change.
@@ -554,7 +554,7 @@ type compiler struct {
 	symbolPrefix       string
 	decls              types.DeclMap
 	library            types.LibraryIdentifier
-	handleTypes        map[types.HandleSubtype]bool
+	handleTypes        map[types.HandleSubtype]struct{}
 	namespaceFormatter func(types.LibraryIdentifier, string) string
 	resultForStruct    map[types.EncodedCompoundIdentifier]*Result
 	resultForUnion     map[types.EncodedCompoundIdentifier]*Result
@@ -693,7 +693,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.FullDecl = r.Decl
 		r.NeedsDtor = true
 	case types.HandleType:
-		c.handleTypes[val.HandleSubtype] = true
+		c.handleTypes[val.HandleSubtype] = struct{}{}
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
 		r.FullDecl = r.Decl
 		r.LLDecl = r.Decl
@@ -1068,7 +1068,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 	}
 
 	// Construct a deduped list of decls for IsMemcpyCompatible template definitions.
-	memcpyCompatibleDepMap := map[string]bool{}
+	memcpyCompatibleDepMap := make(map[string]struct{})
 	for _, member := range r.Members {
 		// The dangerous identifiers test package contains identifiers that won't compile.
 		// e.g. ::fidl::test::dangerous::struct::types::camel::Interface gives an
@@ -1078,7 +1078,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 			memcpyCompatibleDepMap = nil
 			break
 		}
-		memcpyCompatibleDepMap[member.Type.FullDecl] = true
+		memcpyCompatibleDepMap[member.Type.FullDecl] = struct{}{}
 	}
 	for decl := range memcpyCompatibleDepMap {
 		r.FullDeclMemcpyCompatibleDeps = append(r.FullDeclMemcpyCompatibleDeps, decl)
@@ -1229,7 +1229,7 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 		formatLibraryPrefix(raw_library),
 		r.DeclsWithDependencies(),
 		types.ParseLibraryName(r.Name),
-		make(map[types.HandleSubtype]bool),
+		make(map[types.HandleSubtype]struct{}),
 		namespaceFormatter,
 		make(map[types.EncodedCompoundIdentifier]*Result),
 		make(map[types.EncodedCompoundIdentifier]*Result),
@@ -1312,7 +1312,7 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 
 	// zx::channel is always referenced by the protocols in llcpp bindings API
 	if len(r.Protocols) > 0 {
-		c.handleTypes["channel"] = true
+		c.handleTypes["channel"] = struct{}{}
 	}
 
 	// find all unique handle types referenced by the library

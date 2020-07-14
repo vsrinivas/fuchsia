@@ -252,12 +252,12 @@ func (s *Server) handleDiscover(hreq hdr, opts options) {
 		if len(s.leases) < len(s.addrs) {
 			// Find an unused address.
 			// TODO: avoid building this state on each request.
-			alloced := make(map[tcpip.Address]bool)
+			alloced := make(map[tcpip.Address]struct{})
 			for _, lease := range s.leases {
-				alloced[lease.addr] = true
+				alloced[lease.addr] = struct{}{}
 			}
 			for _, addr := range s.addrs {
-				if !alloced[addr] {
+				if _, ok := alloced[addr]; !ok {
 					lease = serverLease{
 						start: time.Now(),
 						addr:  addr,

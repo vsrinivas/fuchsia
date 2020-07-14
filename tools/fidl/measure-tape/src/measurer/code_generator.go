@@ -14,14 +14,14 @@ import (
 // size.
 type CodeGenerator struct {
 	toProcess []*MeasuringTape
-	done      map[*MeasuringTape]bool
+	done      map[*MeasuringTape]struct{}
 }
 
 // NewCodeGenerator creates a new code generator.
 func NewCodeGenerator(mt *MeasuringTape) *CodeGenerator {
 	return &CodeGenerator{
 		toProcess: []*MeasuringTape{mt},
-		done:      make(map[*MeasuringTape]bool),
+		done:      make(map[*MeasuringTape]struct{}),
 	}
 }
 
@@ -55,7 +55,7 @@ func (cg *CodeGenerator) genAllMethods() map[MethodID]*Method {
 }
 
 func (cg *CodeGenerator) add(mt *MeasuringTape) {
-	if !cg.done[mt] {
+	if _, ok := cg.done[mt]; !ok {
 		cg.toProcess = append(cg.toProcess, mt)
 	}
 }
@@ -69,7 +69,7 @@ func (cg *CodeGenerator) nextMt() *MeasuringTape {
 		var mt *MeasuringTape
 		mt, cg.toProcess = cg.toProcess[0], cg.toProcess[1:]
 
-		if !cg.done[mt] {
+		if _, ok := cg.done[mt]; !ok {
 			return mt
 		}
 	}

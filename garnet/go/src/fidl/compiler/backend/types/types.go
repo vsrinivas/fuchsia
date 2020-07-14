@@ -449,17 +449,17 @@ func (el Attributes) DocComments() []string {
 	return strings.Split(doc.Value[0:len(doc.Value)-1], "\n")
 }
 
-func (el Attributes) Transports() map[string]bool {
-	transports := map[string]bool{}
+func (el Attributes) Transports() map[string]struct{} {
+	transports := make(map[string]struct{})
 	raw, ok := el.LookupAttribute("Transport")
 	if ok && raw.Value != "" {
 		for _, transport := range strings.Split(raw.Value, ",") {
-			transports[strings.TrimSpace(transport)] = true
+			transports[strings.TrimSpace(transport)] = struct{}{}
 		}
 	}
 	// No transport attribute => just Channel
 	if !ok {
-		transports["Channel"] = true
+		transports["Channel"] = struct{}{}
 	}
 	return transports
 }

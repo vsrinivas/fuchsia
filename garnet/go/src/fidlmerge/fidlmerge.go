@@ -76,9 +76,9 @@ func (a Amendments) ApplyExclusions(root types.Root) types.Root {
 		return root
 	}
 
-	excludeMap := make(map[types.EncodedCompoundIdentifier]bool)
+	excludeMap := make(map[types.EncodedCompoundIdentifier]struct{})
 	for _, excludedDecl := range a.ExcludedDecls {
-		excludeMap[excludedDecl] = true
+		excludeMap[excludedDecl] = struct{}{}
 		delete(root.Decls, excludedDecl)
 	}
 

@@ -26,7 +26,7 @@ type Config struct {
 	BaseDir             string   `json:"baseDir"`
 	Target              string   `json:"target"`
 	LogLevel            string   `json:"logLevel"`
-	TextExtensions      map[string]bool
+	TextExtensions      map[string]struct{}
 }
 
 // Init populates Config object with values found in the json config file
@@ -48,8 +48,8 @@ func (config *Config) Init(configJson *string) error {
 }
 
 func (config *Config) createTextExtensions() {
-	config.TextExtensions = make(map[string]bool)
+	config.TextExtensions = make(map[string]struct{})
 	for _, item := range config.TextExtensionList {
-		config.TextExtensions[item] = true
+		config.TextExtensions[item] = struct{}{}
 	}
 }

@@ -40,7 +40,7 @@ func Generate(bfrs []elflib.BinaryFileRef, dumpSymsPath string) (path string, er
 
 	g := &generator{
 		dumpSymsPath: dumpSymsPath,
-		visited:      make(map[string]bool),
+		visited:      make(map[string]struct{}),
 		visitedMutex: &sync.Mutex{},
 	}
 
@@ -70,7 +70,7 @@ type generator struct {
 	dumpSymsPath string
 
 	// Filepaths that have already been processed by this generator.
-	visited      map[string]bool
+	visited      map[string]struct{}
 	visitedMutex *sync.Mutex
 }
 
@@ -156,9 +156,9 @@ func (g *generator) readSoName(path string) (string, error) {
 func (g *generator) markVisited(path string) (succeeded bool) {
 	g.visitedMutex.Lock()
 	defer g.visitedMutex.Unlock()
-	if g.visited[path] {
+	if _, ok := g.visited[path]; ok {
 		return false
 	}
-	g.visited[path] = true
+	g.visited[path] = struct{}{}
 	return true
 }

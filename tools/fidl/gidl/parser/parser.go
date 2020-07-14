@@ -83,7 +83,7 @@ var tokenKindStrings = []string{
 }
 
 var (
-	isUnitTokenKind = make(map[tokenKind]bool)
+	isUnitTokenKind = make(map[tokenKind]struct{})
 	textToTokenKind = make(map[string]tokenKind)
 )
 
@@ -93,7 +93,7 @@ func init() {
 			continue
 		}
 		kind := tokenKind(index)
-		isUnitTokenKind[kind] = true
+		isUnitTokenKind[kind] = struct{}{}
 		textToTokenKind[text] = kind
 	}
 }
@@ -112,7 +112,7 @@ type token struct {
 }
 
 func (t token) String() string {
-	if isUnitTokenKind[t.kind] {
+	if _, ok := isUnitTokenKind[t.kind]; ok {
 		return t.kind.String()
 	} else {
 		return t.value
@@ -168,15 +168,15 @@ type body struct {
 }
 
 type sectionMetadata struct {
-	requiredKinds map[bodyElement]bool
-	optionalKinds map[bodyElement]bool
+	requiredKinds map[bodyElement]struct{}
+	optionalKinds map[bodyElement]struct{}
 	setter        func(name string, body body, all *ir.All)
 }
 
 var sections = map[string]sectionMetadata{
 	"success": {
-		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
+		requiredKinds: map[bodyElement]struct{}{isValue: {}, isBytes: {}},
+		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}, isBindingsDenylist: {}},
 		setter: func(name string, body body, all *ir.All) {
 			encodeSuccess := ir.EncodeSuccess{
 				Name:              name,
@@ -197,8 +197,8 @@ var sections = map[string]sectionMetadata{
 		},
 	},
 	"encode_success": {
-		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
+		requiredKinds: map[bodyElement]struct{}{isValue: {}, isBytes: {}},
+		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.EncodeSuccess{
 				Name:              name,
@@ -210,8 +210,8 @@ var sections = map[string]sectionMetadata{
 		},
 	},
 	"decode_success": {
-		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
+		requiredKinds: map[bodyElement]struct{}{isValue: {}, isBytes: {}},
+		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.DecodeSuccess{
 				Name:              name,
@@ -223,8 +223,8 @@ var sections = map[string]sectionMetadata{
 		},
 	},
 	"encode_failure": {
-		requiredKinds: map[bodyElement]bool{isValue: true, isErr: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
+		requiredKinds: map[bodyElement]struct{}{isValue: {}, isErr: {}},
+		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}, isBindingsDenylist: {}},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.EncodeFailure{
 				Name:  name,
@@ -241,8 +241,8 @@ var sections = map[string]sectionMetadata{
 		},
 	},
 	"decode_failure": {
-		requiredKinds: map[bodyElement]bool{isType: true, isBytes: true, isErr: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
+		requiredKinds: map[bodyElement]struct{}{isType: {}, isBytes: {}, isErr: {}},
+		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}, isBindingsDenylist: {}},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.DecodeFailure{
 				Name:              name,
@@ -256,8 +256,8 @@ var sections = map[string]sectionMetadata{
 		},
 	},
 	"benchmark": {
-		requiredKinds: map[bodyElement]bool{isValue: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true, isEnableSendEventBenchmark: true, isEnableEchoCallBenchmark: true},
+		requiredKinds: map[bodyElement]struct{}{isValue: {}},
+		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}, isBindingsDenylist: {}, isEnableSendEventBenchmark: {}, isEnableEchoCallBenchmark: {}},
 		setter: func(name string, body body, all *ir.All) {
 			benchmark := ir.Benchmark{
 				Name:                     name,
@@ -315,10 +315,10 @@ func (p *Parser) parsePreamble() (sectionMetadata, string, error) {
 	return section, name, nil
 }
 
-func (p *Parser) parseBody(requiredKinds map[bodyElement]bool, optionalKinds map[bodyElement]bool) (body, error) {
+func (p *Parser) parseBody(requiredKinds map[bodyElement]struct{}, optionalKinds map[bodyElement]struct{}) (body, error) {
 	var (
 		result      body
-		parsedKinds = make(map[bodyElement]bool)
+		parsedKinds = make(map[bodyElement]struct{})
 	)
 	bodyTok, err := p.peekToken()
 	if err != nil {
@@ -330,19 +330,21 @@ func (p *Parser) parseBody(requiredKinds map[bodyElement]bool, optionalKinds map
 		return result, err
 	}
 	for requiredKind := range requiredKinds {
-		if !parsedKinds[requiredKind] {
+		if _, ok := parsedKinds[requiredKind]; !ok {
 			return result, p.newParseError(bodyTok, "missing required parameter '%s'", requiredKind)
 		}
 	}
 	for parsedKind := range parsedKinds {
-		if !requiredKinds[parsedKind] && !optionalKinds[parsedKind] {
+		_, requiredKind := requiredKinds[parsedKind]
+		_, optionalKind := optionalKinds[parsedKind]
+		if !requiredKind && !optionalKind {
 			return result, p.newParseError(bodyTok, "parameter '%s' does not apply to element", parsedKind)
 		}
 	}
 	return result, nil
 }
 
-func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) error {
+func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct{}) error {
 	tok, err := p.consumeToken(tText)
 	if err != nil {
 		return err
@@ -422,10 +424,10 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 	if kind == 0 {
 		panic("kind must be set")
 	}
-	if all[kind] {
+	if _, ok := all[kind]; ok {
 		return p.newParseError(tok, "duplicate %s found", kind)
 	}
-	all[kind] = true
+	all[kind] = struct{}{}
 	return nil
 }
 

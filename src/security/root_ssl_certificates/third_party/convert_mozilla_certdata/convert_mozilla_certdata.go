@@ -190,7 +190,7 @@ func parseInput(inFile io.Reader) (license, cvsId string, objects []*Object) {
 func outputTrustedCerts(out *os.File, objects []*Object) {
 	certs := filterObjectsByClass(objects, "CKO_CERTIFICATE")
 	trusts := filterObjectsByClass(objects, "CKO_NSS_TRUST")
-	filenames := make(map[string]bool)
+	filenames := make(map[string]struct{})
 	for _, cert := range certs {
 		derBytes := cert.attrs["CKA_VALUE"].value
 		hash := sha1.New()
@@ -267,7 +267,7 @@ func outputTrustedCerts(out *os.File, objects []*Object) {
 				}
 				filename = label + "-" + strconv.Itoa(i)
 			}
-			filenames[filename] = true
+			filenames[filename] = struct{}{}
 			file, err := os.Create(filename + ".pem")
 			if err != nil {
 				log.Fatalf("Failed to create output file: %s\n", err)

@@ -145,27 +145,27 @@ type compiler struct {
 	library types.LibraryIdentifier
 }
 
-var reservedWords = map[string]bool{
-	"array":     true,
-	"buffer":    true,
-	"int8":      true,
-	"int16":     true,
-	"int32":     true,
-	"int64":     true,
-	"intptr":    true,
-	"ptr":       true,
-	"type":      true,
-	"len":       true,
-	"string":    true,
-	"stringnoz": true,
-	"const":     true,
-	"in":        true,
-	"out":       true,
-	"flags":     true,
-	"bytesize":  true,
-	"bitsize":   true,
-	"text":      true,
-	"void":      true,
+var reservedWords = map[string]struct{}{
+	"array":     {},
+	"buffer":    {},
+	"int8":      {},
+	"int16":     {},
+	"int32":     {},
+	"int64":     {},
+	"intptr":    {},
+	"ptr":       {},
+	"type":      {},
+	"len":       {},
+	"string":    {},
+	"stringnoz": {},
+	"const":     {},
+	"in":        {},
+	"out":       {},
+	"flags":     {},
+	"bytesize":  {},
+	"bitsize":   {},
+	"text":      {},
+	"void":      {},
 }
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{
@@ -710,19 +710,19 @@ func Compile(fidlData types.Root) Root {
 		root.Protocols = append(root.Protocols, c.compileProtocol(v))
 	}
 
-	exists := make(map[string]bool)
+	exists := make(map[string]struct{})
 	for _, i := range root.Protocols {
 		for _, m := range i.Methods {
 			for _, s := range m.Structs {
 				if _, ok := exists[s.Name]; !ok {
 					root.Structs = append(root.Structs, s)
-					exists[s.Name] = true
+					exists[s.Name] = struct{}{}
 				}
 			}
 			for _, s := range m.Unions {
 				if _, ok := exists[s.Name]; !ok {
 					root.Unions = append(root.Unions, s)
-					exists[s.Name] = true
+					exists[s.Name] = struct{}{}
 				}
 			}
 		}

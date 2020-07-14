@@ -88,9 +88,9 @@ func extractDepsFromTest(test Test, fuchsiaBuildDir string) (Test, []string, err
 
 func dedupe(l []string) []string {
 	var deduped []string
-	m := make(map[string]bool)
+	m := make(map[string]struct{})
 	for _, s := range l {
-		m[s] = true
+		m[s] = struct{}{}
 	}
 	for s := range m {
 		deduped = append(deduped, s)

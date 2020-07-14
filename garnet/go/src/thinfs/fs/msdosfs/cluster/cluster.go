@@ -60,7 +60,7 @@ func (m *Manager) Unmount() error {
 // Returns an error if the cluster chain is malformed or cannot be read.
 func (m *Manager) ClusterCollect(cluster uint32) ([]uint32, error) {
 	glog.V(2).Infof("Cluster collect: %x\n", cluster)
-	clusterSet := make(map[uint32]bool)
+	clusterSet := make(map[uint32]struct{})
 	var res []uint32
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -69,13 +69,13 @@ func (m *Manager) ClusterCollect(cluster uint32) ([]uint32, error) {
 	}
 
 	for !m.fat.IsEOF(cluster) && !m.fat.IsFree(cluster) {
-		clusterSet[cluster] = true
+		clusterSet[cluster] = struct{}{}
 		tail, err := m.fat.Get(cluster)
 		if err != nil {
 			return nil, err
 		} else if m.fat.IsFree(tail) {
 			return nil, errors.New("Malformed cluster chain does not point to EOF")
-		} else if clusterSet[tail] {
+		} else if _, ok := clusterSet[tail]; ok {
 			return nil, errors.New("Malformed cluster chain contains a loop")
 		}
 
