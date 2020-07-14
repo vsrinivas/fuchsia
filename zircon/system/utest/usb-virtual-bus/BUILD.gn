@@ -20,24 +20,6 @@ group("test") {
   deps = [
     ":usb-virtual-bus-cdc-acm",
     ":usb-virtual-bus-cdc-ecm",
-    ":usb-virtual-bus-ftdi",
-  ]
-}
-
-test("usb-virtual-bus-ftdi") {
-  output_name = "usb-virtual-bus-ftdi-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "ftdi-test.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
-    "//sdk/lib/fdio",
-    "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
 }
 
@@ -128,17 +110,6 @@ unittest_package("usb-virtual-bus-test-package") {
   tests = [
     {
       name = "usb-virtual-bus-test-test"
-    },
-  ]
-}
-
-unittest_package("usb-virtual-bus-ftdi-package") {
-  package_name = "usb-virtual-bus-ftdi"
-  deps = [ ":usb-virtual-bus-ftdi" ]
-
-  tests = [
-    {
-      name = "usb-virtual-bus-ftdi-test"
     },
   ]
 }

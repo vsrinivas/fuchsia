@@ -20,7 +20,6 @@ group("tests") {
     "//src/devices/nand/drivers/broker/test:nand-broker-package",
     "//src/devices/pci/lib/test:pci-roothost-package",
     "//src/devices/rtc/lib/rtc/test:rtc-lib-package",
-    "//src/devices/serial/drivers/ftdi/test:ftdi-i2c-test-package",
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-test-package",
     "//src/devices/usb/tests/usb:usb-package",
@@ -151,7 +150,6 @@ group("tests") {
     "//zircon/system/utest/thread-safe-deleter:thread-safe-deleter-package",
     "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-cdc-acm-package",
     "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-cdc-ecm-package",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-ftdi-package",
     "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-test-package",
   ]
 }

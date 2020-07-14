@@ -56,3 +56,11 @@ driver_module("ftdi-fake-usb") {
     "//zircon/public/lib/zircon-internal",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "test:ftdi-i2c-test-package",
+    "test:ftdi-integration-test",
+  ]
+}

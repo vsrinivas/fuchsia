@@ -221,9 +221,9 @@ zx_status_t FakeFtdiFunction::UsbFunctionInterfaceSetConfigured(void* ctx, bool 
             },
         .ctx = ctx,
     };
-    zxlogf(ERROR, "ftdi-function: about to configure!");
+    zxlogf(INFO, "ftdi-function: about to configure!");
     if (func->data_out_req_) {
-      zxlogf(ERROR, "We have data out!");
+      zxlogf(INFO, "We have data out!");
     }
     func->RequestQueue(func->data_out_req_->request(), &complete);
   } else {
@@ -347,10 +347,10 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace fake_ftdi_function
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_hid_function, fake_ftdi_function::driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(ftdi_function, fake_ftdi_function::driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_VENDOR),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_VENDOR),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_TEST_FTDI),
-ZIRCON_DRIVER_END(usb_hid_function)
+ZIRCON_DRIVER_END(ftdi_function)
     // clang-format on

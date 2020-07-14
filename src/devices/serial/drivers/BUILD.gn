@@ -7,6 +7,7 @@ group("tests") {
 
   deps = [
     "aml-uart:tests",
+    "ftdi:tests",
     "serial:tests",
     "serial-async:tests",
   ]
