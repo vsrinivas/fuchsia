@@ -8,7 +8,7 @@
                     "--isolated-devmgr"
                 ],
                 "fuchsia.wlan.devmgr.IsolatedDevmgr": [
-                    "fuchsia-pkg://fuchsia.com/wlan_devmgr#meta/wlan_devmgr.cmx"
+                    "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/wlan-devmgr.cmx"
                 ],
                 "fuchsia.wlan.service.Wlan": [
                     "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
@@ -17,7 +17,7 @@
         }
     },
     "program": {
-        "binary": "test/multi_ifaces"
+        "binary": "bin/multi_ifaces"
     },
     "sandbox": {
         "services": [

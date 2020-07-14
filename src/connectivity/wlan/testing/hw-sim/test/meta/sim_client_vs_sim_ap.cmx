@@ -8,7 +8,7 @@
                     "--isolated-devmgr"
                 ],
                 "fuchsia.wlan.devmgr.IsolatedDevmgr": [
-                    "fuchsia-pkg://fuchsia.com/wlan_devmgr#meta/wlan_devmgr.cmx"
+                    "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/wlan-devmgr.cmx"
                 ],
                 "fuchsia.wlan.policy.AccessPointProvider": [
                     "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
@@ -20,7 +20,7 @@
         }
     },
     "program": {
-        "binary": "test/sim_client_vs_sim_ap"
+        "binary": "bin/sim_client_vs_sim_ap"
     },
     "sandbox": {
         "services": [

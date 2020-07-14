@@ -10,7 +10,7 @@
                     "--wep-supported"
                 ],
                 "fuchsia.wlan.devmgr.IsolatedDevmgr": [
-                    "fuchsia-pkg://fuchsia.com/wlan_devmgr#meta/wlan_devmgr.cmx"
+                    "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/wlan-devmgr.cmx"
                 ],
                 "fuchsia.wlan.service.Wlan": [
                     "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
@@ -19,7 +19,7 @@
         }
     },
     "program": {
-        "binary": "test/configure_legacy_privacy_on"
+        "binary": "bin/configure_legacy_privacy_on"
     },
     "sandbox": {
         "services": [
