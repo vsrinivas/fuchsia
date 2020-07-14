@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/closure-queue/closure_queue.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 
@@ -128,8 +129,11 @@ class Device final : public DdkDeviceType,
   };
 
   Driver* parent_driver_ = nullptr;
+  inspect::Inspector inspector_;
   async::Loop loop_;
   thrd_t loop_thrd_;
+
+  inspect::Node heaps_;
 
   ddk::PDevProtocolClient pdev_;
   zx::bti bti_;

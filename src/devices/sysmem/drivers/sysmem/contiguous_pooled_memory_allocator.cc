@@ -11,8 +11,8 @@
 namespace sysmem_driver {
 
 ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
-    Owner* parent_device, const char* allocation_name, uint64_t pool_id, uint64_t size,
-    bool is_cpu_accessible, bool is_ready, async_dispatcher_t* dispatcher)
+    Owner* parent_device, const char* allocation_name, inspect::Node* parent_node, uint64_t pool_id,
+    uint64_t size, bool is_cpu_accessible, bool is_ready, async_dispatcher_t* dispatcher)
     : parent_device_(parent_device),
       allocation_name_(allocation_name),
       pool_id_(pool_id),
@@ -23,6 +23,10 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
   snprintf(child_name_, sizeof(child_name_), "%s-child", allocation_name_);
   // Ensure NUL-terminated.
   child_name_[sizeof(child_name_) - 1] = 0;
+  node_ = parent_node->CreateChild(allocation_name);
+  size_property_ = node_.CreateUint("size", size);
+  high_water_mark_property_ = node_.CreateUint("high_water_mark", 0);
+  used_size_property_ = node_.CreateUint("used_size", 0);
 
   if (dispatcher) {
     zx_status_t status = zx::event::create(0, &trace_observer_event_);
@@ -194,8 +198,18 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
     name = "Unknown";
   }
 
-  regions_.emplace(
-      std::make_pair(result_parent_vmo.get(), std::make_pair(*std::move(name), std::move(region))));
+  RegionData data;
+  data.name = std::move(*name);
+  data.node = node_.CreateChild(node_.UniqueName("vmo-"));
+  data.size_property = data.node.CreateUint("size", size);
+  zx_info_handle_basic_t handle_info;
+  status = result_parent_vmo.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
+                                      nullptr, nullptr);
+  ZX_ASSERT(status == ZX_OK);
+  data.koid = handle_info.koid;
+  data.koid_property = data.node.CreateUint("koid", handle_info.koid);
+  data.ptr = std::move(region);
+  regions_.emplace(std::make_pair(result_parent_vmo.get(), std::move(data)));
   *parent_vmo = std::move(result_parent_vmo);
 
   return ZX_OK;
@@ -250,12 +264,8 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
       allocation_name_, unused_size, max_free_size, region_allocator_.AllocatedRegionCount(),
       region_allocator_.AvailableRegionCount());
   for (auto& [vmo, region] : regions_) {
-    zx_info_handle_basic_t handle_info;
-    zx_status_t status = zx_object_get_info(vmo, ZX_INFO_HANDLE_BASIC, &handle_info,
-                                            sizeof(handle_info), nullptr, nullptr);
-    ZX_ASSERT(status == ZX_OK);
-    DRIVER_ERROR("Region koid %ld name %s size %zu", handle_info.koid, region.first.c_str(),
-                 region.second->size);
+    DRIVER_ERROR("Region koid %ld name %s size %zu", region.koid, region.name.c_str(),
+                 region.ptr->size);
   }
 }
 
@@ -265,11 +275,13 @@ void ContiguousPooledMemoryAllocator::TracePoolSize(bool initial_trace) {
     used_size += r->size;
     return true;
   });
+  used_size_property_.Set(used_size);
   TRACE_COUNTER("gfx", "Contiguous pool size", pool_id_, "size", used_size);
   bool trace_high_water_mark = initial_trace;
   if (used_size > high_water_mark_) {
     high_water_mark_ = used_size;
     trace_high_water_mark = true;
+    high_water_mark_property_.Set(high_water_mark_);
   }
   if (trace_high_water_mark) {
     TRACE_INSTANT("gfx", "Increased high water mark", TRACE_SCOPE_THREAD, "allocation_name",

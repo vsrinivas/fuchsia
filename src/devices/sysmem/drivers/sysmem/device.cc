@@ -238,6 +238,8 @@ void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
 }
 
 zx_status_t Device::Bind() {
+  heaps_ = inspector_.GetRoot().CreateChild("heaps");
+
   zx_status_t status = ddk::PDevProtocolClient::CreateFromDevice(parent_, &pdev_);
   if (status != ZX_OK) {
     DRIVER_ERROR("Failed device_get_protocol() ZX_PROTOCOL_PDEV - status: %d", status);
@@ -281,8 +283,8 @@ zx_status_t Device::Bind() {
     constexpr bool kIsCpuAccessible = true;
     constexpr bool kIsReady = true;
     auto pooled_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-        this, "SysmemContiguousPool", fuchsia_sysmem_HeapType_SYSTEM_RAM, contiguous_memory_size,
-        kIsCpuAccessible, kIsReady, loop_.dispatcher());
+        this, "SysmemContiguousPool", &heaps_, fuchsia_sysmem_HeapType_SYSTEM_RAM,
+        contiguous_memory_size, kIsCpuAccessible, kIsReady, loop_.dispatcher());
     if (pooled_allocator->Init() != ZX_OK) {
       DRIVER_ERROR("Contiguous system ram allocator initialization failed");
       return ZX_ERR_NO_MEMORY;
@@ -297,7 +299,7 @@ zx_status_t Device::Bind() {
     constexpr bool kIsCpuAccessible = false;
     constexpr bool kIsReady = false;
     auto amlogic_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-        this, "SysmemAmlogicProtectedPool", fuchsia_sysmem_HeapType_AMLOGIC_SECURE,
+        this, "SysmemAmlogicProtectedPool", &heaps_, fuchsia_sysmem_HeapType_AMLOGIC_SECURE,
         protected_memory_size, kIsCpuAccessible, kIsReady, loop_.dispatcher());
     // Request 64kB alignment because the hardware can only modify protections along 64kB
     // boundaries.
@@ -317,7 +319,9 @@ zx_status_t Device::Bind() {
     return status;
   }
 
-  status = DdkAdd("sysmem", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
+  status = DdkAdd(ddk::DeviceAddArgs("sysmem")
+                      .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+                      .set_inspect_vmo(inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     DRIVER_ERROR("Failed to bind device");
     return status;
@@ -501,7 +505,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           constexpr bool kIsCpuAccessible = false;
           constexpr bool kIsReady = true;
           auto secure_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-              this, "tee_secure", static_cast<uint64_t>(heap.heap), heap.size_bytes,
+              this, "tee_secure", &heaps_, static_cast<uint64_t>(heap.heap), heap.size_bytes,
               kIsCpuAccessible, kIsReady, loop_.dispatcher());
           status = secure_allocator->InitPhysical(heap.physical_address);
           // A failing status is fatal for now.
