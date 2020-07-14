@@ -265,7 +265,7 @@ zx_status_t OtRadioDeviceBootloader::GetFirmwareBytes(std::vector<uint8_t> *fw_b
   size_t size;
 
   zx_status_t load_fw_status =
-      load_firmware(dev_handle_->parent(), "ot-ncp-app-release.bin", &vmo, &size);
+      load_firmware(dev_handle_->parent(), OT_NCP_FIRMWARE_BIN, &vmo, &size);
 
   if (load_fw_status == ZX_OK) {
     zxlogf(DEBUG, "ot-radio: load_firmware succeeded");

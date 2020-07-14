@@ -6,6 +6,12 @@ import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 
+if (internal_access) {
+  # TODO (paragdixit), make this conditional based on 'fx set'
+  # command for fct product else use release binary
+  firmware_name = "ot-ncp-app-development.bin"
+}
+
 driver_module("ot-radio") {
   output_name = "ot-radio-driver"
 
@@ -40,7 +46,10 @@ driver_module("ot-radio") {
 
   if (internal_access) {
     sources += [ "ot_radio_bootloader.cc" ]
-    defines = [ "INTERNAL_ACCESS" ]
+    defines = [
+      "INTERNAL_ACCESS",
+      "OT_NCP_FIRMWARE_BIN=\"" + firmware_name + "\"",
+    ]
     deps += [ ":version-string" ]
   }
 
@@ -56,14 +65,16 @@ if (internal_access) {
   }
 
   copy("ot-radio-firmware") {
-    sources = [ "//prebuilt/connectivity/openthread/radio-firmware/ot-ncp-app-release.bin" ]
+    sources =
+        [ "//prebuilt/connectivity/openthread/radio-firmware/" + firmware_name ]
     outputs = [ "$root_out_dir/firmware/{{source_file_part}}" ]
   }
 
   action("gen-version-string") {
     visibility = [ ":version-string" ]
     outputs = [ "$target_gen_dir/ot_radio_firmware_version_string.cc" ]
-    sources = [ "//prebuilt/connectivity/openthread/radio-firmware/ot-ncp-app-release.bin" ]
+    sources =
+        [ "//prebuilt/connectivity/openthread/radio-firmware/" + firmware_name ]
     script = "gen-version-string.sh"
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(sources, root_build_dir)
@@ -91,7 +102,7 @@ driver_package("openthread") {
 
     libraries = [
       {
-        name = "firmware/ot-ncp-app-release.bin"
+        name = "firmware/" + firmware_name
       },
     ]
   }
