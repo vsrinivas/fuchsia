@@ -4,15 +4,11 @@
 
 pub use crate::{
     assert_inspect_tree,
-    testing::{
-        macros::{
-            AnyProperty, HistogramAssertion, NodeHierarchyGetter, PropertyAssertion, TreeAssertion,
-        },
-        reader::{ComponentSelector, InspectDataFetcher},
+    testing::macros::{
+        AnyProperty, HistogramAssertion, NodeHierarchyGetter, PropertyAssertion, TreeAssertion,
     },
     tree_assertion,
 };
 
 #[macro_use]
 mod macros;
-mod reader;

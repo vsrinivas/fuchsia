@@ -6,7 +6,8 @@ use {
     cs::log_stats::{LogSeverity, LogStats},
     fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
-    fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty, InspectDataFetcher},
+    fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
+    fuchsia_inspect_contrib::reader::ArchiveReader,
     log::info,
     selectors,
 };
@@ -16,7 +17,7 @@ const TEST_COMPONENT: &str =
 
 // Verifies that archivist attributes logs from this component.
 async fn verify_component_attributed(url: &str, expected_info_count: u64) {
-    let mut response = InspectDataFetcher::new()
+    let mut response = ArchiveReader::new()
         .add_selector(format!(
             "archivist:root/log_stats/by_component/{}:*",
             selectors::sanitize_string_for_selectors(&url)
@@ -39,7 +40,7 @@ async fn read_v2_components_inspect() {
         .await
         .expect("Failed to create dynamic component");
 
-    let data = InspectDataFetcher::new()
+    let data = ArchiveReader::new()
         .add_selector("driver/coll\\:auto-*:root")
         .get()
         .await

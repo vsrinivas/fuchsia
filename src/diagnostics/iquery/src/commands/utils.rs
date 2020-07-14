@@ -8,7 +8,7 @@ use {
         types::Error,
     },
     diagnostics_schema::InspectSchema,
-    fuchsia_inspect::testing::InspectDataFetcher,
+    fuchsia_inspect_contrib::reader::ArchiveReader,
     fuchsia_inspect_node_hierarchy::NodeHierarchy,
     serde_json,
 };
@@ -41,7 +41,7 @@ pub async fn get_selectors_for_manifest(
 /// Returns the component "moniker" and the hierarchy data for results of
 /// reading from the archive using the given selectors.
 pub async fn fetch_data(selectors: &[String]) -> Result<Vec<(String, NodeHierarchy)>, Error> {
-    let mut fetcher = InspectDataFetcher::new().retry_if_empty(false);
+    let mut fetcher = ArchiveReader::new().retry_if_empty(false);
     // We support receiving the moniker or a tree selector
     for selector in selectors {
         if selector.contains(":") {

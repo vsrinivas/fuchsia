@@ -1,6 +1,6 @@
 use {
     anyhow::{format_err, Error},
-    fuchsia_inspect::reader::NodeHierarchy,
+    fuchsia_inspect_contrib::reader::NodeHierarchy,
 };
 
 use crate::harness::{

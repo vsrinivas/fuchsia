@@ -11,7 +11,7 @@ use {
     },
     anyhow::{bail, Error},
     fidl_test_inspect_validate::TestResult,
-    fuchsia_inspect::testing::{ComponentSelector, InspectDataFetcher},
+    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector},
 };
 
 pub async fn run_all_trials(url: &str, results: &mut results::Results) {
@@ -251,7 +251,7 @@ async fn try_compare<ActionType: std::fmt::Debug>(
             }
         }
         if results.test_archive {
-            let archive_data = match InspectDataFetcher::new()
+            let archive_data = match ArchiveReader::new()
                 .add_selector(ComponentSelector::new(vec![
                     puppet.environment_name().to_string(),
                     puppet.component_name(),

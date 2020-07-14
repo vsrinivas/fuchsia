@@ -15,7 +15,7 @@ use {
         },
         hci_emulator::Emulator,
     },
-    fuchsia_inspect::{self as inspect, reader::NodeHierarchy},
+    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, NodeHierarchy},
     fuchsia_zircon::DurationNum,
     futures::{future::BoxFuture, FutureExt},
     std::path::PathBuf,
@@ -49,8 +49,8 @@ pub type InspectHarness = ExpectationHarness<InspectState, ControlProxy>;
 
 pub async fn handle_inspect_updates(harness: InspectHarness) -> Result<(), Error> {
     loop {
-        let fetcher = inspect::testing::InspectDataFetcher::new()
-            .add_selector(inspect::testing::ComponentSelector::new(vec!["bt-gap.cmx".to_string()]));
+        let fetcher = ArchiveReader::new()
+            .add_selector(ComponentSelector::new(vec!["bt-gap.cmx".to_string()]));
         harness.write_state().hierarchies =
             fetcher.get().await?.into_iter().flat_map(|result| result.payload).collect();
         harness.notify_state_changed();

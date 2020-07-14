@@ -4,10 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fuchsia_inspect::{
-        reader::{NodeHierarchy, Property},
-        testing::InspectDataFetcher,
-    },
+    fuchsia_inspect_contrib::reader::{ArchiveReader, NodeHierarchy, Property},
     fuchsia_zircon as zx,
     std::{cmp::Reverse, collections::HashMap, fmt, str::FromStr},
 };
@@ -117,7 +114,7 @@ pub struct LogStats {
 
 impl LogStats {
     pub async fn new(min_severity: LogSeverity) -> Result<Self, Error> {
-        let mut response = InspectDataFetcher::new()
+        let mut response = ArchiveReader::new()
             .add_selector("archivist.cmx:root/log_stats/by_component/*:*")
             .add_selector("archivist.cmx:root/event_stats/recent_events/*:*")
             .get()

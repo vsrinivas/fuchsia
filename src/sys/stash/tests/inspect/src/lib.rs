@@ -6,7 +6,8 @@ use {
     anyhow::Error,
     fuchsia_async::{self as fasync},
     fuchsia_component::client::{launcher, AppBuilder},
-    fuchsia_inspect::testing::{assert_inspect_tree, InspectDataFetcher},
+    fuchsia_inspect::testing::assert_inspect_tree,
+    fuchsia_inspect_contrib::reader::ArchiveReader,
 };
 
 const STASH_URL: &str = "fuchsia-pkg://fuchsia.com/stash-integration-tests#meta/stash.cmx";
@@ -18,7 +19,7 @@ async fn stash_inspect() -> Result<(), Error> {
     let launcher = launcher()?;
     let _stash = AppBuilder::new(STASH_URL).spawn(&launcher)?;
 
-    let data = InspectDataFetcher::new().add_selector("stash.cmx:root").get().await?;
+    let data = ArchiveReader::new().add_selector("stash.cmx:root").get().await?;
 
     assert_eq!(1, data.len());
 
@@ -38,7 +39,7 @@ async fn stash_secure_inspect() -> Result<(), Error> {
     let launcher = launcher()?;
     let _stash = AppBuilder::new(SECURE_STASH_URL).spawn(&launcher)?;
 
-    let data = InspectDataFetcher::new().add_selector("stash_secure.cmx:root").get().await?;
+    let data = ArchiveReader::new().add_selector("stash_secure.cmx:root").get().await?;
 
     assert_eq!(1, data.len());
 

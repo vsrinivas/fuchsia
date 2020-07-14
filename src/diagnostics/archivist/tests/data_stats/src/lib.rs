@@ -7,7 +7,8 @@ use {
     fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client::{launcher, AppBuilder, Stdio},
-    fuchsia_inspect::testing::{assert_inspect_tree, InspectDataFetcher},
+    fuchsia_inspect::testing::assert_inspect_tree,
+    fuchsia_inspect_contrib::reader::ArchiveReader,
     fuchsia_zircon::DurationNum,
     std::{
         fs::{create_dir, create_dir_all, write, File},
@@ -55,7 +56,7 @@ async fn data_stats() -> Result<(), Error> {
         .spawn(&launcher)?;
     let archive_accessor = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
 
-    let results = InspectDataFetcher::new()
+    let results = ArchiveReader::new()
         .with_archive(archive_accessor)
         .add_selector("observer_with_data_stats.cmx:root/data_stats")
         .get()

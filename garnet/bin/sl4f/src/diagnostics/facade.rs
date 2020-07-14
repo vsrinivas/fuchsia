@@ -4,7 +4,7 @@
 
 use {
     crate::diagnostics::types::SnapshotInspectArgs, anyhow::Error,
-    fuchsia_inspect::testing::InspectDataFetcher, serde_json::Value,
+    fuchsia_inspect_contrib::reader::ArchiveReader, serde_json::Value,
 };
 
 /// Facade providing access to diagnostics interface.
@@ -17,7 +17,7 @@ impl DiagnosticsFacade {
     }
 
     pub async fn snapshot_inspect(&self, args: SnapshotInspectArgs) -> Result<Value, Error> {
-        InspectDataFetcher::new()
+        ArchiveReader::new()
             .retry_if_empty(false)
             .add_selectors(args.selectors.into_iter())
             .get_raw_json()

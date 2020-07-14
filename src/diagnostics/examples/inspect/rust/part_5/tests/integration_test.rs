@@ -16,10 +16,8 @@ use {
 // [START include_test_stuff]
 use {
     anyhow::format_err,
-    fuchsia_inspect::{
-        reader::NodeHierarchy,
-        testing::{self, assert_inspect_tree, AnyProperty},
-    },
+    fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
+    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, NodeHierarchy},
 };
 // [END include_test_stuff]
 
@@ -68,8 +66,8 @@ impl IntegrationTest {
 
     // [START get_inspect]
     async fn get_inspect_hierarchy(&self) -> Result<NodeHierarchy, Error> {
-        testing::InspectDataFetcher::new()
-            .add_selector(testing::ComponentSelector::new(vec![
+        ArchiveReader::new()
+            .add_selector(ComponentSelector::new(vec![
                 self.environment_label.clone(),
                 "inspect_rust_codelab_part_5.cmx".to_string(),
             ]))

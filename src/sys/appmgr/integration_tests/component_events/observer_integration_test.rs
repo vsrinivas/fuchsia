@@ -9,7 +9,8 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::client::{connect_to_service, launch},
-    fuchsia_inspect::{assert_inspect_tree, testing},
+    fuchsia_inspect::assert_inspect_tree,
+    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector},
     fuchsia_zircon::Duration,
     futures::stream::StreamExt,
     lazy_static::lazy_static,
@@ -53,13 +54,13 @@ async fn check_nested(
     realm_path: Option<Vec<String>>,
     expected_results: usize,
 ) -> Result<(), Error> {
-    let mut fetcher = testing::InspectDataFetcher::new();
+    let mut fetcher = ArchiveReader::new();
     if expected_results == 0 {
         fetcher = fetcher.with_timeout(Duration::from_seconds(5));
     }
     if let Some(mut moniker) = realm_path {
         moniker.push(TEST_COMPONENT.clone());
-        fetcher = fetcher.add_selector(testing::ComponentSelector::new(moniker));
+        fetcher = fetcher.add_selector(ComponentSelector::new(moniker));
     }
     let results = fetcher.get().await?.into_iter().collect::<Vec<_>>();
     assert_eq!(results.len(), expected_results);

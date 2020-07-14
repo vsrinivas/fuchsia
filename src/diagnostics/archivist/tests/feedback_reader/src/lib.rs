@@ -8,7 +8,7 @@ use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client::{launch, launcher},
     fuchsia_component::client::{App, AppBuilder},
-    fuchsia_inspect::testing::InspectDataFetcher,
+    fuchsia_inspect_contrib::reader::ArchiveReader,
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
     lazy_static::lazy_static,
@@ -113,7 +113,7 @@ async fn retrieve_and_validate_results(
         )
         .unwrap();
 
-    let results = InspectDataFetcher::new()
+    let results = ArchiveReader::new()
         .with_archive(archive_accessor)
         .add_selectors(custom_selectors.clone().into_iter())
         .with_minimum_schema_count(expected_results_count)
