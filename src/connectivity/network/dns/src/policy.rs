@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_net as net;
-use futures::sink::Sink;
-use futures::task::{Context, Poll};
-use futures::SinkExt;
-use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::marker::Unpin;
 use std::pin::Pin;
 use std::sync::Arc;
+
+use fidl_fuchsia_net as net;
+
+use futures::sink::Sink;
+use futures::task::{Context, Poll};
+use futures::SinkExt;
+use parking_lot::Mutex;
 
 /// Alias for a list of [`net::SocketAddress`].
 ///
@@ -33,19 +35,26 @@ impl ServerConfigState {
         Self(Mutex::new(ServerConfigInner { servers: Vec::new() }))
     }
 
-    /// Sets the servers.
-    fn set_servers(&self, servers: impl IntoIterator<Item = net::SocketAddress>) {
-        self.0.lock().servers = servers.into_iter().collect();
+    /// Returns the servers.
+    pub fn servers(&self) -> ServerList {
+        let inner = self.0.lock();
+        inner.servers.clone()
     }
 
-    /// Consolidates the current configuration into a vector of [`Server`]s in
-    /// priority order.
+    /// Sets the servers after deduplication.
     ///
-    /// The returned servers will be deduplicated.
-    pub fn consolidate(&self) -> ServerList {
+    /// Returns `false` if the servers did not change.
+    fn set_servers(&self, mut servers: ServerList) -> bool {
         let mut set = HashSet::new();
-        let inner = self.0.lock();
-        inner.servers.iter().filter(move |s| set.insert(*s)).cloned().collect()
+        let () = servers.retain(|s| set.insert(*s));
+
+        let mut inner = self.0.lock();
+        if inner.servers == servers {
+            return false;
+        }
+
+        inner.servers = servers;
+        return true;
     }
 }
 
@@ -63,7 +72,7 @@ impl ServerConfigState {
 ///
 /// `ServerConfigSink` itself is a [`Sink`] that takes [`ServerList`] items,
 /// consolidates all configurations using the policy described above and
-/// forwards the result to `S`.
+/// forwards the result to `S` if it is different from the current state.
 pub struct ServerConfigSink<S> {
     state: Arc<ServerConfigState>,
     changes_sink: S,
@@ -119,12 +128,14 @@ impl<S: Sink<ServerList> + Unpin> Sink<ServerList> for ServerConfigSink<S> {
 
     fn start_send(self: Pin<&mut Self>, item: ServerList) -> Result<(), Self::Error> {
         let me = self.get_mut();
-        let () = me.state.set_servers(item);
+        if !me.state.set_servers(item) {
+            return Ok(());
+        }
 
         // Send the conslidated list of servers following the policy (documented
         // on `ServerConfigSink`) to the configurations sink.
         Pin::new(&mut me.changes_sink)
-            .start_send(me.state.consolidate())
+            .start_send(me.state.servers())
             .map_err(ServerConfigSinkError::SinkError)
     }
 
@@ -148,6 +159,7 @@ mod tests {
     use fidl_fuchsia_net as fnet;
     use fuchsia_async as fasync;
 
+    use futures::future::FutureExt as _;
     use futures::StreamExt;
 
     use super::*;
@@ -159,7 +171,7 @@ mod tests {
 
         let test = |servers: Vec<fnet::SocketAddress>, expected: Vec<fnet::SocketAddress>| {
             policy.state.set_servers(servers);
-            assert_eq!(policy.state.consolidate(), expected);
+            assert_eq!(policy.state.servers(), expected);
         };
 
         // Empty inputs become empty output.
@@ -193,5 +205,36 @@ mod tests {
         .await;
         let () = combined_result.expect("Sink forwarding failed");
         assert_eq!(None, dst_rcv.next().await, "Configuration sink must have reached end");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_duplicate_update() {
+        let (snd, mut rcv) = futures::channel::mpsc::channel::<ServerList>(1);
+        let mut policy = ServerConfigSink::new(snd);
+
+        let servers = vec![DHCP_SERVER, NDP_SERVER];
+        matches::assert_matches!(policy.send(servers.clone()).await, Ok(()));
+        assert_eq!(rcv.next().await.expect("should get servers"), servers);
+
+        // Receiving the same servers in a different order should update the resolver.
+        let servers = vec![NDP_SERVER, DHCP_SERVER];
+        matches::assert_matches!(policy.send(servers.clone()).await, Ok(()));
+        assert_eq!(rcv.next().await.expect("should get servers"), servers);
+
+        // Receiving the same servers again should do nothing.
+        matches::assert_matches!(policy.send(servers.clone()).await, Ok(()));
+        matches::assert_matches!(rcv.next().now_or_never(), None);
+
+        // Receiving a different list that is the same after deduplication should do nothing.
+        matches::assert_matches!(
+            policy.send(vec![NDP_SERVER, NDP_SERVER, DHCP_SERVER]).await,
+            Ok(())
+        );
+        matches::assert_matches!(rcv.next().now_or_never(), None);
+
+        // New servers should update the resolver.
+        let servers = vec![NDP_SERVER];
+        matches::assert_matches!(policy.send(servers.clone()).await, Ok(()));
+        assert_eq!(rcv.next().await.expect("should get servers"), servers);
     }
 }

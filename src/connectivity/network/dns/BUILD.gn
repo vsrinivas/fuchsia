@@ -23,6 +23,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:trust-dns-proto",
     "//third_party/rust_crates:trust-dns-resolver",
   ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 fuchsia_unittest_package("dns-tests") {

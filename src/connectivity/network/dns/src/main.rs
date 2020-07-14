@@ -400,7 +400,7 @@ async fn run_lookup_admin(
                     Ok(ret)
                 }
                 LookupAdminRequest::GetDnsServers { responder } => {
-                    let () = responder.send(&mut policy_state.consolidate().iter_mut())?;
+                    let () = responder.send(&mut policy_state.servers().iter_mut())?;
                     Ok(None)
                 }
             }
@@ -451,7 +451,7 @@ fn add_config_state_inspect(
         let config_state = config_state.clone();
         async move {
             let srv = fuchsia_inspect::Inspector::new();
-            let server_list = config_state.consolidate();
+            let server_list = config_state.servers();
             for (i, server) in server_list.into_iter().enumerate() {
                 let child = srv.root().create_child(format!("{}", i));
                 let net_ext::SocketAddress(addr) = server.into();
