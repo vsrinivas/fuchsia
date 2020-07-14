@@ -311,7 +311,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/devices/spi/drivers/dw-spi",
     "//src/devices/spi/drivers/mtk-spi",
     "//src/devices/tests/crash-device",
-    "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-test",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-perf",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-test",
     "//src/devices/tests/devhost-test:devhost-test-child",

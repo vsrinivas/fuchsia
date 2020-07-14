@@ -141,6 +141,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/ddk-lifecycle-test#meta/ddk-lifecycle-test-package.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/ddk-metadata-test#meta/ddk-metadata-test.cmx",
          "max_severity": "ERROR"
       },

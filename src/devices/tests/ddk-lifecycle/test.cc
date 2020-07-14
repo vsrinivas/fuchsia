@@ -31,6 +31,7 @@ class LifecycleTest : public zxtest::Test {
   void SetUp() override {
     IsolatedDevmgr::Args args;
     args.load_drivers.push_back("/boot/driver/ddk-lifecycle-test.so");
+    args.path_prefix = "/pkg/";
 
     board_test::DeviceEntry dev = {};
     dev.vid = PDEV_VID_TEST;

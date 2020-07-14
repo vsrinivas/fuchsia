@@ -9,6 +9,7 @@ group("tests") {
     "bind-fail-test",
     "ddk-fidl-test:tests",
     "ddk-instance-lifecycle-test",
+    "ddk-lifecycle:tests",
     "ddk-metadata-test",
     "ddk-power:tests",
     "ddk-runcompatibilityhook:tests",

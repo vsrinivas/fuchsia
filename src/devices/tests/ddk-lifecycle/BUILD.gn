@@ -5,6 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 fidl("fuchsia.device.lifecycle.test") {
   sources = [ "lifecycle.test.fidl" ]
@@ -12,9 +13,6 @@ fidl("fuchsia.device.lifecycle.test") {
 }
 
 driver_module("ddk-lifecycle-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -35,9 +33,6 @@ driver_module("ddk-lifecycle-test") {
 }
 
 test("ddk-lifecycle") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test.cc" ]
   deps = [
@@ -55,4 +50,21 @@ test("ddk-lifecycle") {
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
   ]
+}
+
+isolated_devmgr_unittest_package("ddk-lifecycle-test-package") {
+  package_name = "ddk-lifecycle-test"
+  executable_path = "test/ddk-lifecycle"
+  deps = [
+    ":ddk-lifecycle",
+    ":ddk-lifecycle-test",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/tests/sysdev",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":ddk-lifecycle-test-package" ]
 }
