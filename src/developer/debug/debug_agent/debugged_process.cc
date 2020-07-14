@@ -563,8 +563,8 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
   DebuggedThread::CreateInfo create_info = {};
   create_info.process = this;
   create_info.koid = exception_info.tid;
+  // TODO(brettw) this should use ThreadException::GetThread().
   create_info.handle = std::make_unique<ZirconThreadHandle>(
-      arch_provider_, koid_, exception_info.tid,
       object_provider_->GetThreadFromException(exception.get()));
   create_info.exception = std::make_unique<ZirconThreadException>(std::move(exception));
   create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;

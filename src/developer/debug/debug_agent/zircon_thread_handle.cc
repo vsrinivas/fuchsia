@@ -74,12 +74,8 @@ ThreadHandle::State ThreadStateToEnums(uint32_t input) {
 
 }  // namespace
 
-ZirconThreadHandle::ZirconThreadHandle(std::shared_ptr<arch::ArchProvider> arch_provider,
-                                       zx_koid_t process_koid, zx_koid_t thread_koid, zx::thread t)
-    : arch_provider_(std::move(arch_provider)),
-      process_koid_(process_koid),
-      thread_koid_(thread_koid),
-      thread_(std::move(t)) {}
+ZirconThreadHandle::ZirconThreadHandle(zx::thread t)
+    : thread_koid_(zircon::KoidForObject(t)), thread_(std::move(t)) {}
 
 std::string ZirconThreadHandle::GetName() const { return zircon::NameForObject(thread_); }
 
@@ -104,9 +100,9 @@ zx::suspend_token ZirconThreadHandle::Suspend() {
   return result;
 }
 
-debug_ipc::ThreadRecord ZirconThreadHandle::GetThreadRecord() const {
+debug_ipc::ThreadRecord ZirconThreadHandle::GetThreadRecord(zx_koid_t process_koid) const {
   debug_ipc::ThreadRecord record;
-  record.process_koid = process_koid_;
+  record.process_koid = process_koid;
   record.thread_koid = thread_koid_;
 
   // Name.
@@ -156,7 +152,7 @@ std::vector<debug_ipc::Register> ZirconThreadHandle::ReadRegisters(
     const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const {
   std::vector<debug_ipc::Register> regs;
   for (const auto& cat_type : cats_to_get)
-    arch_provider_->ReadRegisters(cat_type, thread_, &regs);
+    arch::ReadRegisters(thread_, cat_type, regs);
   return regs;
 }
 
@@ -179,13 +175,13 @@ std::vector<debug_ipc::Register> ZirconThreadHandle::WriteRegisters(
 
   for (const auto& [cat_type, cat_regs] : categories) {
     FX_DCHECK(cat_type != debug_ipc::RegisterCategory::kNone);
-    if (auto res = arch_provider_->WriteRegisters(cat_type, cat_regs, &thread_); res != ZX_OK) {
+    if (auto res = arch::WriteRegisters(thread_, cat_type, cat_regs); res != ZX_OK) {
       FX_LOGS(WARNING) << "Could not write category "
                        << debug_ipc::RegisterCategoryToString(cat_type) << ": "
                        << debug_ipc::ZxStatusToString(res);
     }
 
-    if (auto res = arch_provider_->ReadRegisters(cat_type, thread_, &written); res != ZX_OK) {
+    if (auto res = arch::ReadRegisters(thread_, cat_type, written); res != ZX_OK) {
       FX_LOGS(WARNING) << "Could not read category "
                        << debug_ipc::RegisterCategoryToString(cat_type) << ": "
                        << debug_ipc::ZxStatusToString(res);
@@ -241,7 +237,7 @@ arch::WatchpointInstallationResult ZirconThreadHandle::InstallWatchpoint(
   DEBUG_LOG(Thread) << "Before installing watchpoint for range " << range.ToString() << std::endl
                     << arch::DebugRegistersToString(debug_regs);
 
-  auto result = arch::SetupWatchpoint(&debug_regs, type, range, arch_provider_->watchpoint_count());
+  auto result = arch::SetupWatchpoint(&debug_regs, type, range, arch::GetHardwareWatchpointCount());
   if (result.status != ZX_OK)
     return arch::WatchpointInstallationResult(result.status);
 
@@ -263,7 +259,7 @@ zx_status_t ZirconThreadHandle::UninstallWatchpoint(const debug_ipc::AddressRang
 
   // x64 doesn't support ranges.
   if (zx_status_t status =
-          arch::RemoveWatchpoint(&debug_regs, range, arch_provider_->watchpoint_count());
+          arch::RemoveWatchpoint(&debug_regs, range, arch::GetHardwareWatchpointCount());
       status != ZX_OK)
     return status;
 

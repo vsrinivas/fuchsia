@@ -15,8 +15,9 @@ namespace {
 TEST(ArchArm64, ReadTPIDR) {
   zx_thread_state_general_regs_t regs_in;
   regs_in.tpidr = 0xdeadbeeff00dbabe;
+
   std::vector<debug_ipc::Register> regs_out;
-  ArchProvider::SaveGeneralRegs(regs_in, &regs_out);
+  arch::SaveGeneralRegs(regs_in, regs_out);
 
   const debug_ipc::Register* found = nullptr;
   for (const auto& reg : regs_out) {

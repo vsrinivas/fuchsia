@@ -64,70 +64,10 @@ void SetRegister(const Register& reg, std::vector<Register>* regs) {
   regs->push_back(reg);
 }
 
-// Creates a thread with no process backed by a MockThreadHandle and returns the thread and the
-// handle.
-std::pair<std::unique_ptr<DebuggedThread>, MockThreadHandle*> CreateThread(zx_koid_t process_koid,
-                                                                           zx_koid_t thread_koid) {
-  auto owning_handle = std::make_unique<MockThreadHandle>(process_koid, thread_koid);
-  MockThreadHandle* handle = owning_handle.get();
-
-  DebuggedThread::CreateInfo create_info = {};
-  create_info.process = nullptr;
-  create_info.koid = thread_koid;
-  create_info.handle = std::move(owning_handle);
-  create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
-  create_info.arch_provider = std::make_shared<arch::ArchProvider>();
-  return {std::make_unique<DebuggedThread>(nullptr, std::move(create_info)), handle};
-}
-
-class FakeArchProvider : public arch::ArchProvider {
- public:
-  zx_status_t ReadRegisters(const debug_ipc::RegisterCategory& type, const zx::thread&,
-                            std::vector<debug_ipc::Register>* out) override {
-    auto it = to_read_.find(type);
-    if (it == to_read_.end())
-      return ZX_ERR_INVALID_ARGS;
-
-    out->insert(out->end(), it->second.begin(), it->second.end());
-    return ZX_OK;
-  }
-
-  // This also updates the "to_read" so the value will be updated next time it is read.
-  zx_status_t WriteRegisters(const debug_ipc::RegisterCategory& cat,
-                             const std::vector<debug_ipc::Register>& registers,
-                             zx::thread*) override {
-    auto& written_cat = regs_written_[cat];
-    for (const Register& reg : registers) {
-      written_cat.push_back(reg);
-      SetRegister(reg, &to_read_[cat]);
-    }
-
-    return ZX_OK;
-  }
-
-  void AddCategory(RegisterCategory type, size_t reg_count) {
-    auto& cat = to_read_[type];
-    cat.reserve(reg_count);
-    for (uint32_t i = 0; i < reg_count; i++) {
-      auto& reg = cat.emplace_back();
-      reg.id = static_cast<debug_ipc::RegisterID>(i);
-      // No data for now.
-    }
-  }
-
-  const std::map<RegisterCategory, std::vector<Register>>& regs_written() const {
-    return regs_written_;
-  }
-
- private:
-  std::map<RegisterCategory, std::vector<Register>> to_read_;
-  std::map<RegisterCategory, std::vector<Register>> regs_written_;
-};
-
 // Ref-counted Suspension --------------------------------------------------------------------------
 
 TEST(DebuggedThread, NormalSuspension) {
-  auto arch_provider = std::make_shared<FakeArchProvider>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t kProcessKoid = 0x8723456;
@@ -150,8 +90,7 @@ TEST(DebuggedThread, NormalSuspension) {
     create_info.koid = current_thread_koid;
     // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
     // with that in a way that will make the DebuggedThread happy.
-    create_info.handle = std::make_unique<ZirconThreadHandle>(
-        arch_provider, kProcessKoid, current_thread_koid, std::move(current_thread));
+    create_info.handle = std::make_unique<ZirconThreadHandle>(std::move(current_thread));
     create_info.arch_provider = arch_provider;
     debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
 
@@ -197,7 +136,7 @@ TEST(DebuggedThread, NormalSuspension) {
 }
 
 TEST(DebuggedThread, RefCountedSuspension) {
-  auto arch_provider = std::make_shared<FakeArchProvider>();
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t kProcessKoid = 0x8723456;
@@ -220,8 +159,7 @@ TEST(DebuggedThread, RefCountedSuspension) {
     create_info.koid = current_thread_koid;
     // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
     // with that in a way that will make the DebuggedThread happy.
-    create_info.handle = std::make_unique<ZirconThreadHandle>(
-        arch_provider, kProcessKoid, current_thread_koid, std::move(current_thread));
+    create_info.handle = std::make_unique<ZirconThreadHandle>(std::move(current_thread));
     create_info.arch_provider = arch_provider;
     debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
 

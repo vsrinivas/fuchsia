@@ -441,7 +441,7 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
 // even while processing an exception (an external program can kill it out from under us).
 debug_ipc::ThreadRecord DebuggedThread::GetThreadRecord(
     debug_ipc::ThreadRecord::StackAmount stack_amount, std::optional<GeneralRegisters> regs) const {
-  debug_ipc::ThreadRecord record = thread_handle_->GetThreadRecord();
+  debug_ipc::ThreadRecord record = thread_handle_->GetThreadRecord(process_->koid());
 
   // Unwind the stack if requested. This requires the registers which are available when suspended
   // or blocked in an exception.

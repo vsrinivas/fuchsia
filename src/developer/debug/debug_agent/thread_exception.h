@@ -6,30 +6,32 @@
 
 #include <lib/fitx/result.h>
 
+#include <memory>
+
 #include "src/lib/fxl/macros.h"
 
 namespace debug_agent {
 
-// ThreadException abstracts zx::exception, allowing for a more straightforward
-// implementation in tests in overrides of this class.
+class ThreadHandle;
+
+// ThreadException abstracts zx::exception, allowing for a more straightforward implementation in
+// tests in overrides of this class.
 class ThreadException {
  public:
   ThreadException() = default;
   virtual ~ThreadException() = default;
 
-  // Returns the koid of the exception's thread or ZX_KOID_INVALID if the
-  // exception is invalid.
-  virtual fitx::result<zx_status_t, zx_koid_t> GetThreadKoid() const = 0;
+  // Returns a handle to the excepting thread. Will return a null pointer on failure.
+  virtual std::unique_ptr<ThreadHandle> GetThreadHandle() const = 0;
 
-  // Returns the associated ZX_EXCEPTION_STATE_* constant characterizing
-  // the state of the exception.
+  // Returns the associated ZX_EXCEPTION_STATE_* constant characterizing the state of the exception.
   virtual fitx::result<zx_status_t, uint32_t> GetState() const = 0;
 
   // Given a ZX_EXCEPTION_STATE_* constant, sets the state of the exception.
   virtual zx_status_t SetState(uint32_t state) = 0;
 
-  // Returns the associated ZX_EXCEPTION_STRATEGY_* constant characterizing
-  // the exception handling strategy.
+  // Returns the associated ZX_EXCEPTION_STRATEGY_* constant characterizing the exception handling
+  // strategy.
   virtual fitx::result<zx_status_t, uint32_t> GetStrategy() const = 0;
 
   // Given a ZX_EXCEPTION_STRAGEY_* constant, sets the handling strategy.

@@ -22,7 +22,30 @@ class ThreadHandle;
 
 namespace arch {
 
+// This file contains architecture-specific low-level helper functions. It is like zircon_utils but
+// the functions will have different implementations depending on CPU architecture.
+//
+// The functions here should be very low-level and are designed for the real (*_zircon.cc)
+// implementations of the the various primitives. Cross-platform code should use interfaces like
+// ThreadHandle for anything that might need mocking out.
+
 extern const BreakInstructionType kBreakInstruction;
+
+// Returns the number of hardware breakpoints and watchpoints on the current system.
+uint32_t GetHardwareBreakpointCount();
+uint32_t GetHardwareWatchpointCount();
+
+// Converts the given register structure to a vector of debug_ipc registers.
+void SaveGeneralRegs(const zx_thread_state_general_regs& input,
+                     std::vector<debug_ipc::Register>& out);
+
+// The registers in the given category are appended to the given output vector.
+zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCategory& cat,
+                          std::vector<debug_ipc::Register>& out);
+
+// The registers must all be in the same category.
+zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory& cat,
+                           const std::vector<debug_ipc::Register>& registers);
 
 // Class in charge of abstracting the low-level functionalities of the platform.
 //
@@ -34,12 +57,6 @@ class ArchProvider {
   virtual ~ArchProvider() = default;
 
   ::debug_ipc::Arch GetArch();
-
-  uint32_t hw_breakpoint_count() const { return hw_breakpoint_count_; }
-  void set_hw_breakpoint_count(uint32_t count) { hw_breakpoint_count_ = count; }
-
-  uint32_t watchpoint_count() const { return watchpoint_count_; }
-  void set_watchpoint_count(uint32_t count) { watchpoint_count_ = count; }
 
   // General Exceptions ----------------------------------------------------------------------------
 
@@ -70,19 +87,6 @@ class ArchProvider {
   // to be used for our breakpoints, but also checks other encodings that may
   // have been written into the program.
   virtual bool IsBreakpointInstruction(zx::process& process, uint64_t address);
-
-  // Converts the given register structure to a vector of debug_ipc registers.
-  static void SaveGeneralRegs(const zx_thread_state_general_regs& input,
-                              std::vector<debug_ipc::Register>* out);
-
-  // The registers in the given category are appended to the given output vector.
-  virtual zx_status_t ReadRegisters(const debug_ipc::RegisterCategory& cat, const zx::thread&,
-                                    std::vector<debug_ipc::Register>* out);
-
-  // The registers must all be in the same category.
-  virtual zx_status_t WriteRegisters(const debug_ipc::RegisterCategory&,
-                                     const std::vector<debug_ipc::Register>& registers,
-                                     zx::thread*);
 
   // Hardware Exceptions ---------------------------------------------------------------------------
 

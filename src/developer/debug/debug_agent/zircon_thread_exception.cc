@@ -3,28 +3,15 @@
 
 #include "src/developer/debug/debug_agent/zircon_thread_exception.h"
 
+#include "src/developer/debug/debug_agent/zircon_thread_handle.h"
+
 namespace debug_agent {
 
-fitx::result<zx_status_t, zx_koid_t> ZirconThreadException::GetThreadKoid() const {
-  if (thread_koid_ == ZX_KOID_INVALID) {
-    zx::thread thread;
-    {
-      zx_status_t status = exception_.get_thread(&thread);
-      if (status != ZX_OK) {
-        return fitx::error(status);
-      }
-    }
-    zx_info_handle_basic_t info;
-    {
-      zx_status_t status =
-          thread.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-      if (status != ZX_OK) {
-        return fitx::error(status);
-      }
-    }
-    thread_koid_ = info.koid;
-  }
-  return fitx::ok(thread_koid_);
+std::unique_ptr<ThreadHandle> ZirconThreadException::GetThreadHandle() const {
+  zx::thread thread;
+  if (zx_status_t status = exception_.get_thread(&thread); status != ZX_OK)
+    return nullptr;
+  return std::make_unique<ZirconThreadHandle>(std::move(thread));
 }
 
 fitx::result<zx_status_t, uint32_t> ZirconThreadException::GetState() const {
@@ -36,6 +23,10 @@ fitx::result<zx_status_t, uint32_t> ZirconThreadException::GetState() const {
   return fitx::ok(state);
 }
 
+zx_status_t ZirconThreadException::SetState(uint32_t state) {
+  return exception_.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
+}
+
 fitx::result<zx_status_t, uint32_t> ZirconThreadException::GetStrategy() const {
   uint32_t strategy = 0;
   zx_status_t status =
@@ -44,6 +35,10 @@ fitx::result<zx_status_t, uint32_t> ZirconThreadException::GetStrategy() const {
     return fitx::error(status);
   }
   return fitx::ok(strategy);
+}
+
+zx_status_t ZirconThreadException::SetStrategy(uint32_t strategy) {
+  return exception_.set_property(ZX_PROP_EXCEPTION_STRATEGY, &strategy, sizeof(strategy));
 }
 
 }  // namespace debug_agent

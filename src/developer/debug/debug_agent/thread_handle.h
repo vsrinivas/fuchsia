@@ -53,8 +53,9 @@ class ThreadHandle {
 
   virtual State GetState() const = 0;
 
-  // Fills in everything but the stack into the returned thread record.
-  virtual debug_ipc::ThreadRecord GetThreadRecord() const = 0;
+  // Fills in everything but the stack into the returned thread record. Since the process koid
+  // isn't known by the thread handle, it is passed in.
+  virtual debug_ipc::ThreadRecord GetThreadRecord(zx_koid_t process_koid) const = 0;
 
   // ExceptionRecord.valid will be false on failure.
   virtual debug_ipc::ExceptionRecord GetExceptionRecord() const = 0;

@@ -9,7 +9,7 @@
 namespace debug_agent {
 
 void GeneralRegisters::CopyTo(std::vector<debug_ipc::Register>& dest) const {
-  arch::ArchProvider::SaveGeneralRegs(regs_, &dest);
+  arch::SaveGeneralRegs(regs_, dest);
 }
 
 }  // namespace debug_agent

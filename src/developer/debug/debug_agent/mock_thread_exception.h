@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "sdk/lib/syslog/cpp/macros.h"
+#include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/lib/fxl/macros.h"
 
@@ -23,8 +24,8 @@ class MockThreadException : public ThreadException {
   explicit MockThreadException(uint64_t thread_koid) : thread_koid_(thread_koid) {}
   ~MockThreadException() = default;
 
-  fitx::result<zx_status_t, zx_koid_t> GetThreadKoid() const override {
-    return fitx::ok(thread_koid_);
+  std::unique_ptr<ThreadHandle> GetThreadHandle() const override {
+    return std::make_unique<MockThreadHandle>(thread_koid_);
   }
 
   fitx::result<zx_status_t, uint32_t> GetState() const override { return fitx::ok(state_); }

@@ -95,24 +95,6 @@ DebugAgent::DebugAgent(std::unique_ptr<SystemInterface> system_interface,
   FX_DCHECK(limbo_provider_);
   FX_DCHECK(object_provider_);
 
-  // Get some resources.
-  uint32_t val = 0;
-  if (zx_status_t status = zx_system_get_features(ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT, &val);
-      status == ZX_OK) {
-    DEBUG_LOG(Agent) << "Got HW breakpoint count: " << val;
-    arch_provider_->set_hw_breakpoint_count(val);
-  } else {
-    FX_LOGS(WARNING) << "Could not get HW breakpoint count: " << zx_status_get_string(status);
-  }
-
-  if (zx_status_t status = zx_system_get_features(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT, &val);
-      status == ZX_OK) {
-    DEBUG_LOG(Agent) << "Got watchpoint count: " << val;
-    arch_provider_->set_watchpoint_count(val);
-  } else {
-    FX_LOGS(WARNING) << "Could not get Watchpoint count: " << zx_status_get_string(status);
-  }
-
   // Set a callback to the limbo_provider to let us know when new processes enter the limbo.
   limbo_provider_->set_on_enter_limbo([agent = GetWeakPtr()](const LimboProvider::Record& record) {
     if (!agent)
@@ -199,7 +181,7 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
       process_record.process_name = record.process->GetName();
 
       // For now, only fill the thread blocked on exception.
-      process_record.threads.push_back(record.thread->GetThreadRecord());
+      process_record.threads.push_back(record.thread->GetThreadRecord(process_koid));
 
       reply->limbo.push_back(std::move(process_record));
     }
@@ -394,8 +376,8 @@ void DebugAgent::OnSysInfo(const debug_ipc::SysInfoRequest& request,
   reply->num_cpus = zx_system_get_num_cpus();
   reply->memory_mb = zx_system_get_physmem() / kMegabyte;
 
-  reply->hw_watchpoint_count = arch_provider_->hw_breakpoint_count();
-  reply->hw_watchpoint_count = arch_provider_->watchpoint_count();
+  reply->hw_breakpoint_count = arch::GetHardwareBreakpointCount();
+  reply->hw_watchpoint_count = arch::GetHardwareWatchpointCount();
 }
 
 void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,

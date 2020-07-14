@@ -10,8 +10,8 @@ namespace debug_agent {
 
 zx::thread MockThreadHandle::null_handle_;
 
-MockThreadHandle::MockThreadHandle(zx_koid_t process_koid, zx_koid_t thread_koid, std::string name)
-    : process_koid_(process_koid), thread_koid_(thread_koid), name_(std::move(name)) {
+MockThreadHandle::MockThreadHandle(zx_koid_t thread_koid, std::string name)
+    : thread_koid_(thread_koid), name_(std::move(name)) {
   // Tests could accidentally write to this handle since it's returned as a mutable value in some
   // cases. Catch accidents like that.
   FX_DCHECK(!null_handle_);
@@ -79,9 +79,9 @@ size_t MockThreadHandle::TotalWatchpointUninstallCalls() const {
   return total;
 }
 
-debug_ipc::ThreadRecord MockThreadHandle::GetThreadRecord() const {
+debug_ipc::ThreadRecord MockThreadHandle::GetThreadRecord(zx_koid_t process_koid) const {
   debug_ipc::ThreadRecord record;
-  record.process_koid = process_koid_;
+  record.process_koid = process_koid;
   record.thread_koid = thread_koid_;
   record.name = "test thread";
   record.state = state_.state;

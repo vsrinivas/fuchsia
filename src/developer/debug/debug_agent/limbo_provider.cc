@@ -20,12 +20,8 @@ namespace {
 
 LimboProvider::Record MetadataToRecord(ProcessExceptionMetadata metadata) {
   LimboProvider::Record record;
-
   record.process = std::make_unique<ZirconProcessHandle>(std::move(*metadata.mutable_process()));
-  record.thread = std::make_unique<ZirconThreadHandle>(
-      std::make_shared<arch::ArchProvider>(), metadata.info().process_koid,
-      metadata.info().thread_koid, std::move(*metadata.mutable_thread()));
-
+  record.thread = std::make_unique<ZirconThreadHandle>(std::move(*metadata.mutable_thread()));
   return record;
 }
 
@@ -159,13 +155,10 @@ fitx::result<zx_status_t, LimboProvider::RetrievedException> LimboProvider::Retr
     return fitx::error(result.err());
 
   fuchsia::exception::ProcessException exception = result.response().ResultValue_();
-  zx_koid_t thread_koid = zircon::KoidForObject(exception.thread());
   RetrievedException retrieved;
   retrieved.process =
       std::make_unique<ZirconProcessHandle>(std::move(*exception.mutable_process()));
-  retrieved.thread =
-      std::make_unique<ZirconThreadHandle>(std::make_shared<arch::ArchProvider>(), process_koid,
-                                           thread_koid, std::move(*exception.mutable_thread()));
+  retrieved.thread = std::make_unique<ZirconThreadHandle>(std::move(*exception.mutable_thread()));
   retrieved.exception =
       std::make_unique<ZirconThreadException>(std::move(*exception.mutable_exception()));
 

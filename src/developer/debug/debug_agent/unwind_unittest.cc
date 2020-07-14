@@ -54,8 +54,7 @@ void __attribute__((noinline)) ThreadFunc1(ThreadData* data) {
   zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
 
   // Here we use fake koids for the process and thread because those aren't necessary for the test.
-  data->thread = std::make_unique<ZirconThreadHandle>(std::make_shared<arch::ArchProvider>(), 1, 2,
-                                                      std::move(handle));
+  data->thread = std::make_unique<ZirconThreadHandle>(std::move(handle));
 
   // Put another function on the stack.
   ThreadFunc2(data);

@@ -220,8 +220,7 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
                       context.arch_provider, context.object_provider);
 
-  auto owning_thread_handle =
-      std::make_unique<MockThreadHandle>(process.koid(), thread_object->koid);
+  auto owning_thread_handle = std::make_unique<MockThreadHandle>(thread_object->koid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
 
   // Create the thread that will be on an exception.
@@ -275,8 +274,7 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
                       context.arch_provider, context.object_provider);
 
-  auto owning_thread_handle =
-      std::make_unique<MockThreadHandle>(process.koid(), thread_object->koid);
+  auto owning_thread_handle = std::make_unique<MockThreadHandle>(thread_object->koid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
 
   // Create the thread that will be on an exception.
@@ -368,8 +366,7 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
                       context.arch_provider, context.object_provider);
 
-  auto owning_thread_handle =
-      std::make_unique<MockThreadHandle>(process.koid(), thread_object->koid);
+  auto owning_thread_handle = std::make_unique<MockThreadHandle>(thread_object->koid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
 
   // Create the thread that will be on an exception.
@@ -440,8 +437,7 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
                       context.arch_provider, context.object_provider);
 
-  auto owning_thread_handle =
-      std::make_unique<MockThreadHandle>(process.koid(), thread_object->koid);
+  auto owning_thread_handle = std::make_unique<MockThreadHandle>(thread_object->koid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
 
   // Create the thread that will be on an exception.

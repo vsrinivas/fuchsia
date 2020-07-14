@@ -80,74 +80,72 @@ inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length, const 
   return reg;
 }
 
-zx_status_t ReadGeneralRegs(const zx::thread& thread, std::vector<debug_ipc::Register>* out) {
+zx_status_t ReadGeneralRegs(const zx::thread& thread, std::vector<debug_ipc::Register>& out) {
   zx_thread_state_general_regs gen_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &gen_regs, sizeof(gen_regs));
   if (status != ZX_OK)
     return status;
 
-  ArchProvider::SaveGeneralRegs(gen_regs, out);
+  SaveGeneralRegs(gen_regs, out);
   return ZX_OK;
 }
 
-zx_status_t ReadFPRegs(const zx::thread& thread, std::vector<debug_ipc::Register>* out) {
+zx_status_t ReadFPRegs(const zx::thread& thread, std::vector<debug_ipc::Register>& out) {
   zx_thread_state_fp_regs fp_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_FP_REGS, &fp_regs, sizeof(fp_regs));
   if (status != ZX_OK)
     return status;
 
-  out->push_back(CreateRegister(RegisterID::kX64_fcw, 2u, &fp_regs.fcw));
-  out->push_back(CreateRegister(RegisterID::kX64_fsw, 2u, &fp_regs.fsw));
-  out->push_back(CreateRegister(RegisterID::kX64_ftw, 2u, &fp_regs.ftw));
-  out->push_back(CreateRegister(RegisterID::kX64_fop, 2u, &fp_regs.fop));
-  out->push_back(CreateRegister(RegisterID::kX64_fip, 2u, &fp_regs.fip));
-  out->push_back(CreateRegister(RegisterID::kX64_fdp, 2u, &fp_regs.fdp));
+  out.push_back(CreateRegister(RegisterID::kX64_fcw, 2u, &fp_regs.fcw));
+  out.push_back(CreateRegister(RegisterID::kX64_fsw, 2u, &fp_regs.fsw));
+  out.push_back(CreateRegister(RegisterID::kX64_ftw, 2u, &fp_regs.ftw));
+  out.push_back(CreateRegister(RegisterID::kX64_fop, 2u, &fp_regs.fop));
+  out.push_back(CreateRegister(RegisterID::kX64_fip, 2u, &fp_regs.fip));
+  out.push_back(CreateRegister(RegisterID::kX64_fdp, 2u, &fp_regs.fdp));
 
   // Each entry is 16 bytes long, but only 10 are actually used.
-  out->push_back(CreateRegister(RegisterID::kX64_st0, 16u, &fp_regs.st[0]));
-  out->push_back(CreateRegister(RegisterID::kX64_st1, 16u, &fp_regs.st[1]));
-  out->push_back(CreateRegister(RegisterID::kX64_st2, 16u, &fp_regs.st[2]));
-  out->push_back(CreateRegister(RegisterID::kX64_st3, 16u, &fp_regs.st[3]));
-  out->push_back(CreateRegister(RegisterID::kX64_st4, 16u, &fp_regs.st[4]));
-  out->push_back(CreateRegister(RegisterID::kX64_st5, 16u, &fp_regs.st[5]));
-  out->push_back(CreateRegister(RegisterID::kX64_st6, 16u, &fp_regs.st[6]));
-  out->push_back(CreateRegister(RegisterID::kX64_st7, 16u, &fp_regs.st[7]));
+  out.push_back(CreateRegister(RegisterID::kX64_st0, 16u, &fp_regs.st[0]));
+  out.push_back(CreateRegister(RegisterID::kX64_st1, 16u, &fp_regs.st[1]));
+  out.push_back(CreateRegister(RegisterID::kX64_st2, 16u, &fp_regs.st[2]));
+  out.push_back(CreateRegister(RegisterID::kX64_st3, 16u, &fp_regs.st[3]));
+  out.push_back(CreateRegister(RegisterID::kX64_st4, 16u, &fp_regs.st[4]));
+  out.push_back(CreateRegister(RegisterID::kX64_st5, 16u, &fp_regs.st[5]));
+  out.push_back(CreateRegister(RegisterID::kX64_st6, 16u, &fp_regs.st[6]));
+  out.push_back(CreateRegister(RegisterID::kX64_st7, 16u, &fp_regs.st[7]));
 
   return ZX_OK;
 }
 
-inline zx_status_t ReadVectorRegs(const zx::thread& thread, std::vector<debug_ipc::Register>* out) {
+zx_status_t ReadVectorRegs(const zx::thread& thread, std::vector<debug_ipc::Register>& out) {
   zx_thread_state_vector_regs vec_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &vec_regs, sizeof(vec_regs));
   if (status != ZX_OK)
     return status;
 
-  out->push_back(CreateRegister(RegisterID::kX64_mxcsr, 4u, &vec_regs.mxcsr));
+  out.push_back(CreateRegister(RegisterID::kX64_mxcsr, 4u, &vec_regs.mxcsr));
 
   auto base = static_cast<uint32_t>(RegisterID::kX64_zmm0);
   for (size_t i = 0; i < 32; i++) {
     auto reg_id = static_cast<RegisterID>(base + i);
-    out->push_back(CreateRegister(reg_id, 64u, &vec_regs.zmm[i]));
+    out.push_back(CreateRegister(reg_id, 64u, &vec_regs.zmm[i]));
   }
 
   return ZX_OK;
 }
 
-// TODO: Enable this when the zircon patch for debug registers lands.
-
-inline zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Register>* out) {
+zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Register>& out) {
   zx_thread_state_debug_regs_t debug_regs;
   zx_status_t status =
       thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
   if (status != ZX_OK)
     return status;
 
-  out->push_back(CreateRegister(RegisterID::kX64_dr0, 8u, &debug_regs.dr[0]));
-  out->push_back(CreateRegister(RegisterID::kX64_dr1, 8u, &debug_regs.dr[1]));
-  out->push_back(CreateRegister(RegisterID::kX64_dr2, 8u, &debug_regs.dr[2]));
-  out->push_back(CreateRegister(RegisterID::kX64_dr3, 8u, &debug_regs.dr[3]));
-  out->push_back(CreateRegister(RegisterID::kX64_dr6, 8u, &debug_regs.dr6));
-  out->push_back(CreateRegister(RegisterID::kX64_dr7, 8u, &debug_regs.dr7));
+  out.push_back(CreateRegister(RegisterID::kX64_dr0, 8u, &debug_regs.dr[0]));
+  out.push_back(CreateRegister(RegisterID::kX64_dr1, 8u, &debug_regs.dr[1]));
+  out.push_back(CreateRegister(RegisterID::kX64_dr2, 8u, &debug_regs.dr[2]));
+  out.push_back(CreateRegister(RegisterID::kX64_dr3, 8u, &debug_regs.dr[3]));
+  out.push_back(CreateRegister(RegisterID::kX64_dr6, 8u, &debug_regs.dr6));
+  out.push_back(CreateRegister(RegisterID::kX64_dr7, 8u, &debug_regs.dr7));
 
   return ZX_OK;
 }
@@ -182,6 +180,110 @@ class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
 };
 
 }  // namespace
+
+void SaveGeneralRegs(const zx_thread_state_general_regs& input,
+                     std::vector<debug_ipc::Register>& out) {
+  out.push_back(CreateRegister(RegisterID::kX64_rax, 8u, &input.rax));
+  out.push_back(CreateRegister(RegisterID::kX64_rbx, 8u, &input.rbx));
+  out.push_back(CreateRegister(RegisterID::kX64_rcx, 8u, &input.rcx));
+  out.push_back(CreateRegister(RegisterID::kX64_rdx, 8u, &input.rdx));
+  out.push_back(CreateRegister(RegisterID::kX64_rsi, 8u, &input.rsi));
+  out.push_back(CreateRegister(RegisterID::kX64_rdi, 8u, &input.rdi));
+  out.push_back(CreateRegister(RegisterID::kX64_rbp, 8u, &input.rbp));
+  out.push_back(CreateRegister(RegisterID::kX64_rsp, 8u, &input.rsp));
+  out.push_back(CreateRegister(RegisterID::kX64_r8, 8u, &input.r8));
+  out.push_back(CreateRegister(RegisterID::kX64_r9, 8u, &input.r9));
+  out.push_back(CreateRegister(RegisterID::kX64_r10, 8u, &input.r10));
+  out.push_back(CreateRegister(RegisterID::kX64_r11, 8u, &input.r11));
+  out.push_back(CreateRegister(RegisterID::kX64_r12, 8u, &input.r12));
+  out.push_back(CreateRegister(RegisterID::kX64_r13, 8u, &input.r13));
+  out.push_back(CreateRegister(RegisterID::kX64_r14, 8u, &input.r14));
+  out.push_back(CreateRegister(RegisterID::kX64_r15, 8u, &input.r15));
+  out.push_back(CreateRegister(RegisterID::kX64_rip, 8u, &input.rip));
+  out.push_back(CreateRegister(RegisterID::kX64_rflags, 8u, &input.rflags));
+  out.push_back(CreateRegister(RegisterID::kX64_fsbase, 8u, &input.fs_base));
+  out.push_back(CreateRegister(RegisterID::kX64_gsbase, 8u, &input.gs_base));
+}
+
+zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCategory& cat,
+                          std::vector<debug_ipc::Register>& out) {
+  switch (cat) {
+    case debug_ipc::RegisterCategory::kGeneral:
+      return ReadGeneralRegs(thread, out);
+    case debug_ipc::RegisterCategory::kFloatingPoint:
+      return ReadFPRegs(thread, out);
+    case debug_ipc::RegisterCategory::kVector:
+      return ReadVectorRegs(thread, out);
+    case debug_ipc::RegisterCategory::kDebug:
+      return ReadDebugRegs(thread, out);
+    case debug_ipc::RegisterCategory::kNone:
+    case debug_ipc::RegisterCategory::kLast:
+      FX_LOGS(ERROR) << "Asking to get none/last category";
+      return ZX_ERR_INVALID_ARGS;
+  }
+}
+
+zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory& category,
+                           const std::vector<debug_ipc::Register>& registers) {
+  switch (category) {
+    case debug_ipc::RegisterCategory::kGeneral: {
+      zx_thread_state_general_regs_t regs;
+      zx_status_t res = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      // Overwrite the values.
+      res = WriteGeneralRegisters(registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+    }
+    case debug_ipc::RegisterCategory::kFloatingPoint: {
+      zx_thread_state_fp_regs_t regs;
+      zx_status_t res = thread.read_state(ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      // Overwrite the values.
+      res = WriteFloatingPointRegisters(registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread.write_state(ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs));
+    }
+    case debug_ipc::RegisterCategory::kVector: {
+      zx_thread_state_vector_regs_t regs;
+      zx_status_t res = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      // Overwrite the values.
+      res = WriteVectorRegisters(registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread.write_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
+    }
+    case debug_ipc::RegisterCategory::kDebug: {
+      zx_thread_state_debug_regs_t regs;
+      zx_status_t res = thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      res = WriteDebugRegisters(registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread.write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
+    }
+    case debug_ipc::RegisterCategory::kNone:
+    case debug_ipc::RegisterCategory::kLast:
+      break;
+  }
+  FX_NOTREACHED();
+  return ZX_ERR_INVALID_ARGS;
+}
 
 const BreakInstructionType kBreakInstruction = 0xCC;
 
@@ -223,30 +325,6 @@ bool ArchProvider::IsBreakpointInstruction(zx::process& process, uint64_t addres
   return data == kBreakInstruction;
 }
 
-void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
-                                   std::vector<debug_ipc::Register>* out) {
-  out->push_back(CreateRegister(RegisterID::kX64_rax, 8u, &input.rax));
-  out->push_back(CreateRegister(RegisterID::kX64_rbx, 8u, &input.rbx));
-  out->push_back(CreateRegister(RegisterID::kX64_rcx, 8u, &input.rcx));
-  out->push_back(CreateRegister(RegisterID::kX64_rdx, 8u, &input.rdx));
-  out->push_back(CreateRegister(RegisterID::kX64_rsi, 8u, &input.rsi));
-  out->push_back(CreateRegister(RegisterID::kX64_rdi, 8u, &input.rdi));
-  out->push_back(CreateRegister(RegisterID::kX64_rbp, 8u, &input.rbp));
-  out->push_back(CreateRegister(RegisterID::kX64_rsp, 8u, &input.rsp));
-  out->push_back(CreateRegister(RegisterID::kX64_r8, 8u, &input.r8));
-  out->push_back(CreateRegister(RegisterID::kX64_r9, 8u, &input.r9));
-  out->push_back(CreateRegister(RegisterID::kX64_r10, 8u, &input.r10));
-  out->push_back(CreateRegister(RegisterID::kX64_r11, 8u, &input.r11));
-  out->push_back(CreateRegister(RegisterID::kX64_r12, 8u, &input.r12));
-  out->push_back(CreateRegister(RegisterID::kX64_r13, 8u, &input.r13));
-  out->push_back(CreateRegister(RegisterID::kX64_r14, 8u, &input.r14));
-  out->push_back(CreateRegister(RegisterID::kX64_r15, 8u, &input.r15));
-  out->push_back(CreateRegister(RegisterID::kX64_rip, 8u, &input.rip));
-  out->push_back(CreateRegister(RegisterID::kX64_rflags, 8u, &input.rflags));
-  out->push_back(CreateRegister(RegisterID::kX64_fsbase, 8u, &input.fs_base));
-  out->push_back(CreateRegister(RegisterID::kX64_gsbase, 8u, &input.gs_base));
-}
-
 std::pair<debug_ipc::AddressRange, int> ArchProvider::InstructionForWatchpointHit(
     const DebugRegisters& in_regs) const {
   const zx_thread_state_debug_regs_t& debug_regs = in_regs.GetNativeRegisters();
@@ -284,88 +362,6 @@ uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t exception_addr) 
 }
 
 ::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kX64; }
-
-zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory& cat,
-                                        const zx::thread& thread,
-                                        std::vector<debug_ipc::Register>* out) {
-  switch (cat) {
-    case debug_ipc::RegisterCategory::kGeneral:
-      return ReadGeneralRegs(thread, out);
-    case debug_ipc::RegisterCategory::kFloatingPoint:
-      return ReadFPRegs(thread, out);
-    case debug_ipc::RegisterCategory::kVector:
-      return ReadVectorRegs(thread, out);
-    case debug_ipc::RegisterCategory::kDebug:
-      return ReadDebugRegs(thread, out);
-    case debug_ipc::RegisterCategory::kNone:
-    case debug_ipc::RegisterCategory::kLast:
-      FX_LOGS(ERROR) << "Asking to get none/last category";
-      return ZX_ERR_INVALID_ARGS;
-  }
-}
-
-zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& category,
-                                         const std::vector<debug_ipc::Register>& registers,
-                                         zx::thread* thread) {
-  switch (category) {
-    case debug_ipc::RegisterCategory::kGeneral: {
-      zx_thread_state_general_regs_t regs;
-      zx_status_t res = thread->read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
-      if (res != ZX_OK)
-        return res;
-
-      // Overwrite the values.
-      res = WriteGeneralRegisters(registers, &regs);
-      if (res != ZX_OK)
-        return res;
-
-      return thread->write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
-    }
-    case debug_ipc::RegisterCategory::kFloatingPoint: {
-      zx_thread_state_fp_regs_t regs;
-      zx_status_t res = thread->read_state(ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs));
-      if (res != ZX_OK)
-        return res;
-
-      // Overwrite the values.
-      res = WriteFloatingPointRegisters(registers, &regs);
-      if (res != ZX_OK)
-        return res;
-
-      return thread->write_state(ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs));
-    }
-    case debug_ipc::RegisterCategory::kVector: {
-      zx_thread_state_vector_regs_t regs;
-      zx_status_t res = thread->read_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
-      if (res != ZX_OK)
-        return res;
-
-      // Overwrite the values.
-      res = WriteVectorRegisters(registers, &regs);
-      if (res != ZX_OK)
-        return res;
-
-      return thread->write_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
-    }
-    case debug_ipc::RegisterCategory::kDebug: {
-      zx_thread_state_debug_regs_t regs;
-      zx_status_t res = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
-      if (res != ZX_OK)
-        return res;
-
-      res = WriteDebugRegisters(registers, &regs);
-      if (res != ZX_OK)
-        return res;
-
-      return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
-    }
-    case debug_ipc::RegisterCategory::kNone:
-    case debug_ipc::RegisterCategory::kLast:
-      break;
-  }
-  FX_NOTREACHED();
-  return ZX_ERR_INVALID_ARGS;
-}
 
 // Hardware Exceptions ---------------------------------------------------------
 

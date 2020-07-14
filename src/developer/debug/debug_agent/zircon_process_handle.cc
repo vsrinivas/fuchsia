@@ -18,11 +18,8 @@ std::string ZirconProcessHandle::GetName() const { return zircon::NameForObject(
 
 std::vector<std::unique_ptr<ThreadHandle>> ZirconProcessHandle::GetChildThreads() const {
   std::vector<std::unique_ptr<ThreadHandle>> result;
-  for (auto& child : zircon::GetChildThreads(process_)) {
-    zx_koid_t thread_koid = zircon::KoidForObject(child);
-    result.push_back(std::make_unique<ZirconThreadHandle>(
-        std::make_shared<arch::ArchProvider>(), process_koid_, thread_koid, std::move(child)));
-  }
+  for (auto& child : zircon::GetChildThreads(process_))
+    result.push_back(std::make_unique<ZirconThreadHandle>(std::move(child)));
   return result;
 }
 

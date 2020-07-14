@@ -16,10 +16,7 @@ namespace debug_agent {
 
 class ZirconThreadHandle final : public ThreadHandle {
  public:
-  // The process koid and thread koid are provided in the constructor since these are normally known
-  // in advance and they never change.
-  ZirconThreadHandle(std::shared_ptr<arch::ArchProvider> arch_provider, zx_koid_t process_koid,
-                     zx_koid_t thread_koid, zx::thread t);
+  explicit ZirconThreadHandle(zx::thread t);
 
   // ThreadHandle implementation.
   const zx::thread& GetNativeHandle() const override { return thread_; }
@@ -27,7 +24,7 @@ class ZirconThreadHandle final : public ThreadHandle {
   zx_koid_t GetKoid() const override { return thread_koid_; }
   std::string GetName() const override;
   State GetState() const override;
-  debug_ipc::ThreadRecord GetThreadRecord() const override;
+  debug_ipc::ThreadRecord GetThreadRecord(zx_koid_t process_koid) const override;
   debug_ipc::ExceptionRecord GetExceptionRecord() const override;
   zx::suspend_token Suspend() override;
   std::optional<GeneralRegisters> GetGeneralRegisters() const override;
@@ -49,9 +46,6 @@ class ZirconThreadHandle final : public ThreadHandle {
   zx_status_t ReadDebugRegisters(zx_thread_state_debug_regs* regs) const;
   zx_status_t WriteDebugRegisters(const zx_thread_state_debug_regs& regs);
 
-  std::shared_ptr<arch::ArchProvider> arch_provider_;
-
-  zx_koid_t process_koid_;
   zx_koid_t thread_koid_;
   zx::thread thread_;
 };

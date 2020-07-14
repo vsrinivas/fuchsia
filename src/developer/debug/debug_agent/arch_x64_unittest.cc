@@ -15,7 +15,7 @@ TEST(ArchX64, ReadSegmentRegs) {
   regs_in.fs_base = 0xdeadbeeff00dbabe;
   regs_in.gs_base = 0xabadd00dbeadfeed;
   std::vector<debug_ipc::Register> regs_out;
-  ArchProvider::SaveGeneralRegs(regs_in, &regs_out);
+  SaveGeneralRegs(regs_in, regs_out);
 
   const debug_ipc::Register* fs = nullptr;
   const debug_ipc::Register* gs = nullptr;
