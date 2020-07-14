@@ -22,14 +22,61 @@ TEST(Bti, Create) {
   zx::iommu iommu;
   zx::bti bti;
   zx::pmt pmt;
+
   // Please do not use get_root_resource() in new code. See ZX-1467.
   zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
+
   // Please do not use get_root_resource() in new code. See ZX-1467.
   ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
   ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+}
+
+TEST(Bti, NameSupport) {
+  zx::iommu iommu;
+  zx::bti bti;
+
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  zx::unowned_resource root_res(get_root_resource());
+  zx_iommu_desc_dummy_t desc;
+
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                            iommu.reset_and_get_address()),
+            ZX_OK);
+  ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+  static char name_buffer[ZX_MAX_NAME_LEN];
+
+  // Initially, there should be no name assigned to the BTI
+  ASSERT_OK(bti.get_property(ZX_PROP_NAME, name_buffer, sizeof(name_buffer)));
+  ASSERT_EQ(0, strlen(name_buffer));
+
+  // Setting the name to normal name length should succeed.
+  const char normal_name[] = "Core Test BTI";
+  ASSERT_LE(strlen(normal_name), (ZX_MAX_NAME_LEN - 1), "normal_name would be truncated");
+  ASSERT_OK(bti.set_property(ZX_PROP_NAME, normal_name, sizeof(normal_name)));
+  ASSERT_OK(bti.get_property(ZX_PROP_NAME, name_buffer, sizeof(name_buffer)));
+  ASSERT_STR_EQ(normal_name, name_buffer);
+
+  // Setting the name to long_name should succeed, but the result will be truncated.
+  const char long_name[] =
+      "0123456789012345678901234567890123456789"
+      "0123456789012345678901234567890123456789";
+  ASSERT_GT(strlen(long_name), (ZX_MAX_NAME_LEN - 1), "long_name would not be truncated");
+  ASSERT_OK(bti.set_property(ZX_PROP_NAME, long_name, sizeof(long_name)));
+  ASSERT_OK(bti.get_property(ZX_PROP_NAME, name_buffer, sizeof(name_buffer)));
+  ASSERT_EQ(0, name_buffer[sizeof(name_buffer) - 1]);
+  ASSERT_BYTES_EQ(long_name, name_buffer, sizeof(name_buffer) - 1);
+
+  // Setting the name to an empty string should be OK.
+  const char empty_name[] = "";
+  ASSERT_LE(strlen(empty_name), (ZX_MAX_NAME_LEN - 1), "empty_name would be truncated");
+  ASSERT_OK(bti.set_property(ZX_PROP_NAME, empty_name, sizeof(empty_name)));
+  ASSERT_OK(bti.get_property(ZX_PROP_NAME, name_buffer, sizeof(name_buffer)));
+  ASSERT_STR_EQ(empty_name, name_buffer);
 }
 
 void bti_pin_test_helper(bool contiguous_vmo) {

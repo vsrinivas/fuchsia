@@ -50,6 +50,8 @@ class BusTransactionInitiatorDispatcher final
   void ReleaseQuarantine();
 
   void on_zero_handles() final;
+  zx_status_t set_name(const char* name, size_t len) final __NONNULL((2));
+  void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2));
 
   fbl::RefPtr<Iommu> iommu() const { return iommu_; }
   uint64_t bti_id() const { return bti_id_; }
@@ -97,6 +99,9 @@ class BusTransactionInitiatorDispatcher final
   QuarantineList quarantine_ TA_GUARDED(get_lock());
 
   bool zero_handles_ TA_GUARDED(get_lock());
+
+  // The user-friendly BTI name. For debug purposes only.
+  fbl::Name<ZX_MAX_NAME_LEN> name_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_BUS_TRANSACTION_INITIATOR_DISPATCHER_H_

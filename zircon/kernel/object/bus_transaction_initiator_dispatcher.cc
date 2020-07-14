@@ -104,6 +104,18 @@ void BusTransactionInitiatorDispatcher::on_zero_handles() {
   }
 }
 
+zx_status_t BusTransactionInitiatorDispatcher::set_name(const char* name, size_t len) {
+  // The kernel implementation of fbl::Name is protected using an internal
+  // spinlock.  No need for any special locks here.
+  return name_.set(name, len);
+}
+
+void BusTransactionInitiatorDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
+  // The kernel implementation of fbl::Name is protected using an internal
+  // spinlock.  No need for any special locks here.
+  name_.get(ZX_MAX_NAME_LEN, out_name);
+}
+
 void BusTransactionInitiatorDispatcher::AddPmoLocked(PinnedMemoryTokenDispatcher* pmt) {
   DEBUG_ASSERT(!fbl::InContainer<PmtListTag>(*pmt));
   pinned_memory_.push_back(pmt);
