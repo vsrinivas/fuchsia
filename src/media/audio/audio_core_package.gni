@@ -69,20 +69,43 @@ template("_audio_core_package") {
 
 # Creates a 'audio_core' test package, designed to be used in the hermetic testing envirionment.
 #
-# Parameters
-#     effects (optional)
-#       A scope defining a loadable module that implements audio effects.
-#
-#     package_name (optional)
-#       The name of the audio_core package. Defaults to 'target_name'.
-#
-# Ex:
+# Example:
+# ```
 #   audio_core_test_package("foo-audio-for-test") {
+#     package_name = "foo-audio-for-test"
 #     effects = {
 #       target = "//path/to/effects/module"
 #       name = "module_name.so"
 #     }
+#     extra_cmx = [
+#       "meta/manifest.cmx",
+#     ]
 #   }
+# ```
+#
+# Parameters
+#     package_name (optional)
+#       The name of the audio_core package. Defaults to 'target_name'.
+#       Type: string
+#       Default: ${target_name}
+#
+#     effects (optional)
+#       A scope defining a loadable module that implements audio effects.
+#       Type: scope with the entries:
+#
+#         target (required)
+#           The GN `loadable_module` target that builds the effects module.
+#           Type: path
+#
+#         name (required)
+#           The name of the loadable module.
+#           Type: string
+#
+#     extra_cmx (optional)
+#       Additinoal CMX manifests that will be merged with the base audio_core.cmx manifest.
+#       This can be used to add additional services or features that may be needed by different
+#       audio effects.
+#       Type: list(path)
 template("audio_core_test_package") {
   _audio_core_package(target_name) {
     testonly = true
@@ -117,12 +140,38 @@ template("audio_core_test_package") {
 # Creates a 'audio_core' package. All packages created with this template will be identical, except
 # for the addition of the effects module.
 #
+# Example:
+# ```
+#   audio_core_package("foo_audio") {
+#     package_name = "audio_package"
+#     test_package_name = "test_audio_package"
+#     effects = {
+#       target = "//path/to/effects/module"
+#       name = "module_name.so"
+#     }
+#     extra_cmx = [
+#       "meta/manifest.cmx",
+#     ]
+#   }
+# ```
+#
 # Parameters
 #     effects (optional)
 #       A scope defining a loadable module that implements audio effects.
+#       Type: scope with the entries:
+#
+#         target (required)
+#           The GN `loadable_module` target that builds the effects module.
+#           Type: path
+#
+#         name (required)
+#           The name of the loadable module.
+#           Type: string
 #
 #     package_name (optional)
 #       The name of the audio_core package. Defaults to 'target_name'.
+#       Type: string
+#       Default: ${target_name}
 #
 #     extra_cmx (optional)
 #       Additinoal CMX manifests that will be merged with the base audio_core.cmx manifest.
@@ -133,14 +182,13 @@ template("audio_core_test_package") {
 #       The name of the audio_core test package. This package contains manifests that allow
 #       for the component to run in a hermetic test environment. No package will be generated
 #       if this is not provided.
+#       Type: string
 #
-# Ex:
-#   audio_core_package("foo_audio") {
-#     effects = {
-#       target = "//path/to/effects/module"
-#       name = "module_name.so"
-#     }
-#   }
+#     extra_cmx (optional)
+#       Additinoal CMX manifests that will be merged with the base audio_core.cmx manifest.
+#       This can be used to add additional services or features that may be needed by different
+#       audio effects.
+#       Type: list(path)
 template("audio_core_package") {
   forward_variables_from(invoker,
                          [
