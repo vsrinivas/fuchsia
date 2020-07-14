@@ -58,8 +58,8 @@ $ fx syslog | fx symbolize
 [11156.652165][1048][1187][klog] INFO: devmgr: crash_analyzer_listener: analyzing exception type 0x108
 ... same output as "raw" backtrace ...
 start of symbolized stack:
-#01: blind_write at ../../src/developer/feedback/crasher/crasher.c:21
-#02: main at ../../src/developer/feedback/crasher/crasher.c:137
+#01: blind_write at ../../src/developer/forensics/crasher/cpp/crasher.c:21
+#02: main at ../../src/developer/forensics/crasher/cpp/crasher.c:137
 #03: start_main at ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:49
 #04: unknown, can't find pc, sp or app/library in line
 end of symbolized stack

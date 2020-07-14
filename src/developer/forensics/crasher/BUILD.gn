@@ -1,29 +1,12 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//src/sys/build/components.gni")
 
 fuchsia_package("crasher") {
-  deps = [ ":crasher_app" ]
-}
-
-fuchsia_component("crasher_app") {
-  component_name = "crasher"
-
-  manifest = "meta/crasher.cmx"
-
-  deps = [ ":crasher_exe" ]
-}
-
-executable("crasher_exe") {
-  output_name = "crasher"
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [
-    "cpp_specific.cc",
-    "crasher.c",
+  deps = [
+    "//src/developer/forensics/crasher/cpp:crasher",
+    "//src/developer/forensics/crasher/rust:crasher",
   ]
-  cflags = [ "-fstack-protector-all" ]
-  deps = [ "//sdk/lib/fdio" ]
-  libs = [ "zircon" ]
 }
