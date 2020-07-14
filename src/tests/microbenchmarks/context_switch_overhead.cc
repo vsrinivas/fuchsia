@@ -22,7 +22,7 @@ constexpr const char* kPath = "/bin/context_switch_overhead_helper";
 
 // Measure the time taken for NUM_CPUS pairs of threads, running in parallel, to each start up and
 // then execute |number_of_switches| round trips (via eventpair wakeup), when running in a separate
-// process.
+// process. Each pair of threads is pinned to a different CPU on the system.
 //
 // The flow is as follows:
 // Host = this process

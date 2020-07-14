@@ -1,4 +1,11 @@
 {
+   "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.scheduler.ProfileProvider"
+            ]
+        }
+    },
     "program": {
         "binary": "test/fuchsia_microbenchmarks"
     },
@@ -9,6 +16,7 @@
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Launcher"
         ]
     }
