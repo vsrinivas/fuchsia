@@ -17,6 +17,22 @@
             durability: "persistent",
         },
     ],
+    capabilities: [
+        {
+            storage: "minfs",
+            from: "parent",
+            path: "/data",
+        },
+        {
+            runner: "dart_runner",
+            from: "self",
+            path: "/svc/fuchsia.sys2.Runner",
+        },
+        {
+            resolver: "pkg_resolver",
+            path: "/svc/fuchsia.pkg.Resolver",
+        },
+    ],
     use: [
         { runner: "elf" },
         {
@@ -90,26 +106,6 @@
             to: "parent",
             rights: [ "rw*" ],
             subdir: "blob",
-        },
-    ],
-    resolvers: [
-        {
-            name: "pkg_resolver",
-            path: "/svc/fuchsia.pkg.Resolver",
-        },
-    ],
-    runners: [
-        {
-            name: "dart_runner",
-            from: "self",
-            path: "/svc/fuchsia.sys2.Runner",
-        },
-    ],
-    storage: [
-        {
-            name: "minfs",
-            from: "parent",
-            path: "/data",
         },
     ],
     environments: [

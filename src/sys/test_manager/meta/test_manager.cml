@@ -27,6 +27,13 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        {
+            storage: "runner_storage",
+            from: "#runner_memfs",
+            path: "/memfs",
+        },
+    ],
     use: [
         { runner: "elf" },
         { protocol: "/svc/fuchsia.logger.LogSink" },
@@ -102,13 +109,6 @@
         {
             protocol: "/svc/fuchsia.test.manager.Harness",
             from: "self",
-        },
-    ],
-    storage: [
-        {
-            name: "runner_storage",
-            from: "#runner_memfs",
-            path: "/memfs",
         },
     ],
     environments: [

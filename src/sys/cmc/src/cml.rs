@@ -303,19 +303,7 @@ pub enum EnvironmentRef {
 /// A reference in a `storage from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
 #[reference(expected = "\"parent\", \"self\", or \"#<child-name>\"")]
-pub enum StorageFromRef {
-    /// A reference to a child.
-    Named(Name),
-    /// A reference to the parent.
-    Parent,
-    /// A reference to this component.
-    Self_,
-}
-
-/// A reference in a `runner from`.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"parent\", \"self\", or \"#<child-name>\"")]
-pub enum RunnerFromRef {
+pub enum CapabilityFromRef {
     /// A reference to a child.
     Named(Name),
     /// A reference to the parent.
@@ -462,12 +450,10 @@ pub struct Document {
     pub r#use: Option<Vec<Use>>,
     pub expose: Option<Vec<Expose>>,
     pub offer: Option<Vec<Offer>>,
+    pub capabilities: Option<Vec<Capability>>,
     pub children: Option<Vec<Child>>,
     pub collections: Option<Vec<Collection>>,
-    pub storage: Option<Vec<Storage>>,
     pub facets: Option<Map<String, Value>>,
-    pub runners: Option<Vec<Runner>>,
-    pub resolvers: Option<Vec<Resolver>>,
     pub environments: Option<Vec<Environment>>,
 }
 
@@ -509,32 +495,56 @@ impl Document {
     }
 
     pub fn all_storage_names(&self) -> Vec<&Name> {
-        if let Some(storage) = self.storage.as_ref() {
-            storage.iter().map(|s| &s.name).collect()
+        if let Some(capabilities) = self.capabilities.as_ref() {
+            capabilities
+                .iter()
+                .filter_map(|c| match c.storage.as_ref() {
+                    Some(s) => Some(s),
+                    None => None,
+                })
+                .collect()
         } else {
             vec![]
         }
     }
 
-    pub fn all_storage_and_sources<'a>(&'a self) -> HashMap<&'a Name, &'a StorageFromRef> {
-        if let Some(storage) = self.storage.as_ref() {
-            storage.iter().map(|s| (&s.name, &s.from)).collect()
+    pub fn all_storage_and_sources<'a>(&'a self) -> HashMap<&'a Name, &'a CapabilityFromRef> {
+        if let Some(capabilities) = self.capabilities.as_ref() {
+            capabilities
+                .iter()
+                .filter_map(|c| match (c.storage.as_ref(), c.from.as_ref()) {
+                    (Some(s), Some(f)) => Some((s, f)),
+                    _ => None,
+                })
+                .collect()
         } else {
             HashMap::new()
         }
     }
 
     pub fn all_runner_names(&self) -> Vec<&Name> {
-        if let Some(runners) = self.runners.as_ref() {
-            runners.iter().map(|s| &s.name).collect()
+        if let Some(capabilities) = self.capabilities.as_ref() {
+            capabilities
+                .iter()
+                .filter_map(|c| match c.runner.as_ref() {
+                    Some(r) => Some(r),
+                    None => None,
+                })
+                .collect()
         } else {
             vec![]
         }
     }
 
     pub fn all_resolver_names(&self) -> Vec<&Name> {
-        if let Some(resolvers) = self.resolvers.as_ref() {
-            resolvers.iter().map(|s| &s.name).collect()
+        if let Some(capabilities) = self.capabilities.as_ref() {
+            capabilities
+                .iter()
+                .filter_map(|c| match c.resolver.as_ref() {
+                    Some(r) => Some(r),
+                    None => None,
+                })
+                .collect()
         } else {
             vec![]
         }
@@ -586,6 +596,16 @@ pub struct ResolverRegistration {
     pub resolver: Name,
     pub from: RegistrationRef,
     pub scheme: cm_types::UrlScheme,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct Capability {
+    pub storage: Option<Name>,
+    pub runner: Option<Name>,
+    pub resolver: Option<Name>,
+    pub from: Option<CapabilityFromRef>,
+    pub path: Path,
 }
 
 #[derive(Deserialize, Debug)]
@@ -657,29 +677,6 @@ pub struct Collection {
     pub environment: Option<EnvironmentRef>,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct Storage {
-    pub name: Name,
-    pub from: StorageFromRef,
-    pub path: Path,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct Runner {
-    pub name: Name,
-    pub from: RunnerFromRef,
-    pub path: Path,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct Resolver {
-    pub name: Name,
-    pub path: Path,
-}
-
 pub trait FromClause {
     fn from_(&self) -> OneOrMany<AnyRef<'_>>;
 }
@@ -688,7 +685,8 @@ pub trait CapabilityClause {
     fn service(&self) -> &Option<Path>;
     fn protocol(&self) -> &Option<OneOrMany<Path>>;
     fn directory(&self) -> &Option<Path>;
-    fn storage(&self) -> &Option<StorageType>;
+    fn storage(&self) -> &Option<Name>;
+    fn storage_type(&self) -> &Option<StorageType>;
     fn runner(&self) -> &Option<Name>;
     fn resolver(&self) -> &Option<Name>;
     fn event(&self) -> &Option<OneOrMany<Name>>;
@@ -710,6 +708,65 @@ pub trait FilterClause {
     fn filter(&self) -> Option<&Map<String, Value>>;
 }
 
+impl CapabilityClause for Capability {
+    fn service(&self) -> &Option<Path> {
+        &None
+    }
+    fn protocol(&self) -> &Option<OneOrMany<Path>> {
+        &None
+    }
+    fn directory(&self) -> &Option<Path> {
+        &None
+    }
+    fn storage(&self) -> &Option<Name> {
+        &self.storage
+    }
+    fn storage_type(&self) -> &Option<StorageType> {
+        &None
+    }
+    fn runner(&self) -> &Option<Name> {
+        &self.runner
+    }
+    fn resolver(&self) -> &Option<Name> {
+        &self.resolver
+    }
+    fn event(&self) -> &Option<OneOrMany<Name>> {
+        &None
+    }
+    fn event_stream(&self) -> &Option<OneOrMany<Name>> {
+        &None
+    }
+    fn capability_name(&self) -> &'static str {
+        if self.storage.is_some() {
+            "storage"
+        } else if self.runner.is_some() {
+            "runner"
+        } else if self.resolver.is_some() {
+            "resolver"
+        } else {
+            ""
+        }
+    }
+    fn decl_type(&self) -> &'static str {
+        "capability"
+    }
+    fn supported(&self) -> &[&'static str] {
+        &["storage", "runner", "resolver"]
+    }
+}
+
+impl AsClause for Capability {
+    fn r#as(&self) -> Option<&NameOrPath> {
+        None
+    }
+}
+
+impl FilterClause for Capability {
+    fn filter(&self) -> Option<&Map<String, Value>> {
+        None
+    }
+}
+
 impl CapabilityClause for Use {
     fn service(&self) -> &Option<Path> {
         &self.service
@@ -720,7 +777,10 @@ impl CapabilityClause for Use {
     fn directory(&self) -> &Option<Path> {
         &self.directory
     }
-    fn storage(&self) -> &Option<StorageType> {
+    fn storage(&self) -> &Option<Name> {
+        &None
+    }
+    fn storage_type(&self) -> &Option<StorageType> {
         &self.storage
     }
     fn runner(&self) -> &Option<Name> {
@@ -792,7 +852,10 @@ impl CapabilityClause for Expose {
     fn directory(&self) -> &Option<Path> {
         &self.directory
     }
-    fn storage(&self) -> &Option<StorageType> {
+    fn storage(&self) -> &Option<Name> {
+        &None
+    }
+    fn storage_type(&self) -> &Option<StorageType> {
         &None
     }
     fn runner(&self) -> &Option<Name> {
@@ -858,7 +921,10 @@ impl CapabilityClause for Offer {
     fn directory(&self) -> &Option<Path> {
         &self.directory
     }
-    fn storage(&self) -> &Option<StorageType> {
+    fn storage(&self) -> &Option<Name> {
+        &None
+    }
+    fn storage_type(&self) -> &Option<StorageType> {
         &self.storage
     }
     fn runner(&self) -> &Option<Name> {
@@ -909,18 +975,6 @@ impl AsClause for Offer {
 impl FilterClause for Offer {
     fn filter(&self) -> Option<&Map<String, Value>> {
         self.filter.as_ref()
-    }
-}
-
-impl FromClause for Storage {
-    fn from_(&self) -> OneOrMany<AnyRef<'_>> {
-        OneOrMany::One(AnyRef::from(&self.from))
-    }
-}
-
-impl FromClause for Runner {
-    fn from_(&self) -> OneOrMany<AnyRef<'_>> {
-        OneOrMany::One(AnyRef::from(&self.from))
     }
 }
 
@@ -1130,10 +1184,8 @@ mod tests {
         assert_matches!(json5::from_str::<Use>("{ unknown: \"\" }"), Err(_));
         assert_matches!(json5::from_str::<Expose>("{ unknown: \"\" }"), Err(_));
         assert_matches!(json5::from_str::<Offer>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(json5::from_str::<Capability>("{ unknown: \"\" }"), Err(_));
         assert_matches!(json5::from_str::<Child>("{ unknown: \"\" }"), Err(_));
         assert_matches!(json5::from_str::<Collection>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<Storage>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<Runner>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<Resolver>("{ unknown: \"\" }"), Err(_));
     }
 }

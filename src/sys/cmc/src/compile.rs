@@ -75,15 +75,7 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     out.children = document.children.as_ref().map(translate_children).transpose()?;
     out.uses = document.r#use.as_ref().map(translate_use).transpose()?;
     out.exposes = document.expose.as_ref().map(translate_expose).transpose()?;
-    if let Some(storage) = document.storage.as_ref() {
-        out.capabilities.get_or_insert(vec![]).append(&mut translate_storage(storage)?);
-    }
-    if let Some(runners) = document.runners.as_ref() {
-        out.capabilities.get_or_insert(vec![]).append(&mut translate_runners(runners)?);
-    }
-    if let Some(resolvers) = document.resolvers.as_ref() {
-        out.capabilities.get_or_insert(vec![]).append(&mut translate_resolvers(resolvers)?);
-    }
+    out.capabilities = document.capabilities.as_ref().map(translate_capabilities).transpose()?;
     if let Some(offer) = document.offer.as_ref() {
         let all_children = document.all_children_names().into_iter().collect();
         let all_collections = document.all_collection_names().into_iter().collect();
@@ -163,7 +155,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 rights,
                 subdir,
             }));
-        } else if let Some(s) = use_.storage() {
+        } else if let Some(s) = use_.storage_type() {
             let target_path = match all_target_capability_ids(use_, use_) {
                 Some(OneOrMany::One(target_id)) => {
                     let target_path = target_id.extract_path()?;
@@ -350,7 +342,7 @@ fn translate_offer(
                         .unwrap_or(cm::DependencyType::default()),
                 }));
             }
-        } else if let Some(s) = offer.storage() {
+        } else if let Some(s) = offer.storage_type() {
             let source = extract_single_offer_storage_source(offer)?;
             let targets = extract_storage_targets(offer, all_children, all_collections)?;
             for target in targets {
@@ -440,42 +432,33 @@ fn translate_collections(
     Ok(out_collections)
 }
 
-fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Capability>, Error> {
-    storage_in
-        .iter()
-        .map(|storage| {
-            Ok(cm::Capability::Storage(cm::Storage {
-                name: storage.name.clone(),
-                source_path: storage.path.clone(),
-                source: extract_single_offer_source(storage)?,
-            }))
-        })
-        .collect()
-}
-
-fn translate_runners(runners_in: &Vec<cml::Runner>) -> Result<Vec<cm::Capability>, Error> {
-    runners_in
-        .iter()
-        .map(|runner| {
-            Ok(cm::Capability::Runner(cm::Runner {
-                name: runner.name.clone(),
-                source_path: runner.path.clone(),
-                source: extract_single_offer_source(runner)?,
-            }))
-        })
-        .collect()
-}
-
-fn translate_resolvers(resolvers_in: &Vec<cml::Resolver>) -> Result<Vec<cm::Capability>, Error> {
-    resolvers_in
-        .iter()
-        .map(|resolver| {
-            Ok(cm::Capability::Resolver(cm::Resolver {
-                name: resolver.name.clone(),
-                source_path: resolver.path.clone(),
-            }))
-        })
-        .collect()
+fn translate_capabilities(
+    capabilities_in: &Vec<cml::Capability>,
+) -> Result<Vec<cm::Capability>, Error> {
+    let mut out_capabilities = vec![];
+    for capability in capabilities_in {
+        if let Some(n) = &capability.storage {
+            out_capabilities.push(cm::Capability::Storage(cm::Storage {
+                name: n.clone(),
+                source_path: capability.path.clone(),
+                source: offer_source_from_ref(capability.from.as_ref().unwrap().into())?,
+            }));
+        } else if let Some(n) = &capability.runner {
+            out_capabilities.push(cm::Capability::Runner(cm::Runner {
+                name: n.clone(),
+                source_path: capability.path.clone(),
+                source: offer_source_from_ref(capability.from.as_ref().unwrap().into())?,
+            }));
+        } else if let Some(n) = &capability.resolver {
+            out_capabilities.push(cm::Capability::Resolver(cm::Resolver {
+                name: n.clone(),
+                source_path: capability.path.clone(),
+            }));
+        } else {
+            return Err(Error::internal(format!("no capability in use declaration")));
+        }
+    }
+    Ok(out_capabilities)
 }
 
 fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Environment>, Error> {
@@ -744,6 +727,8 @@ where
             })
         } else if let Some(p) = in_obj.directory() {
             Some(OneOrMany::One(cml::NameOrPath::Path(p.clone())))
+        } else if let Some(p) = in_obj.storage() {
+            Some(OneOrMany::One(cml::NameOrPath::Name(p.clone())))
         } else if let Some(p) = in_obj.runner() {
             Some(OneOrMany::One(cml::NameOrPath::Name(p.clone())))
         } else if let Some(p) = in_obj.resolver() {
@@ -752,7 +737,7 @@ where
             Some(OneOrMany::One(cml::NameOrPath::Name(event.clone())))
         } else if let Some(OneOrMany::Many(events)) = in_obj.event() {
             Some(OneOrMany::Many(events.iter().map(|e| cml::NameOrPath::Name(e.clone())).collect()))
-        } else if let Some(type_) = in_obj.storage() {
+        } else if let Some(type_) = in_obj.storage_type() {
             match type_ {
                 cml::StorageType::Data => Some(OneOrMany::One("/data".parse().unwrap())),
                 cml::StorageType::Cache => Some(OneOrMany::One("/cache".parse().unwrap())),
@@ -1358,9 +1343,9 @@ mod tests {
                         "durability": "persistent",
                     },
                 ],
-                "storage": [
+                "capabilities": [
                     {
-                        "name": "logger-storage",
+                        "storage": "logger-storage",
                         "path": "/minfs",
                         "from": "#logger",
                     },
@@ -1809,25 +1794,21 @@ mod tests {
 
         test_compile_capabilities => {
             input = json!({
-                "storage": [
+                "capabilities": [
                     {
-                        "name": "mystorage",
+                        "storage": "mystorage",
                         "path": "/storage",
                         "from": "#minfs",
-                    }
-                ],
-                "runners": [
+                    },
                     {
-                        "name": "myrunner",
+                        "runner": "myrunner",
                         "path": "/runner",
                         "from": "self"
-                    }
-                ],
-                "resolvers": [
+                    },
                     {
-                        "name": "myresolver",
+                        "resolver": "myresolver",
                         "path": "/resolver"
-                    }
+                    },
                 ],
                 "children": [
                     {
@@ -2058,23 +2039,17 @@ mod tests {
                         "durability": "persistent",
                     },
                 ],
+                "capabilities": [
+                    {
+                        "runner": "myrunner",
+                        "path": "/runner",
+                        "from": "self",
+                    },
+                ],
                 "facets": {
                     "author": "Fuchsia",
                     "year": 2018,
                 },
-                "runners": [
-                    {
-                        "name": "myrunner",
-                        "path": "/runner",
-                        "from": "self",
-                    }
-                ],
-                "resolvers": [
-                    {
-                        "name": "myresolver",
-                        "path": "/myresolver",
-                    }
-                ],
                 "environments": [
                     {
                         "name": "myenv",
@@ -2224,12 +2199,6 @@ mod tests {
                     "self": {}
                 },
                 "source_path": "/runner"
-            }
-        },
-        {
-            "resolver": {
-                "name": "myresolver",
-                "source_path": "/myresolver"
             }
         }
     ],

@@ -142,7 +142,7 @@ struct ValidationContext<'a> {
     document: &'a cml::Document,
     all_children: HashMap<&'a cml::Name, &'a cml::Child>,
     all_collections: HashSet<&'a cml::Name>,
-    all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::StorageFromRef>,
+    all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::CapabilityFromRef>,
     all_runners: HashSet<&'a cml::Name>,
     all_resolvers: HashSet<&'a cml::Name>,
     all_environment_names: HashSet<&'a cml::Name>,
@@ -164,6 +164,7 @@ enum CapabilityId<'a> {
     Service(&'a cml::Path),
     Protocol(&'a cml::Path),
     Directory(&'a cml::Path),
+    Storage(&'a cml::Name),
     Runner(&'a cml::Name),
     Resolver(&'a cml::Name),
     StorageType(&'a cml::StorageType),
@@ -175,9 +176,10 @@ impl<'a> CapabilityId<'a> {
     /// Return the string ID of this clause.
     pub fn as_str(&self) -> &'a str {
         match self {
-            CapabilityId::Runner(n) | CapabilityId::Resolver(n) | CapabilityId::Event(n) => {
-                n.as_str()
-            }
+            CapabilityId::Storage(n)
+            | CapabilityId::Runner(n)
+            | CapabilityId::Resolver(n)
+            | CapabilityId::Event(n) => n.as_str(),
             CapabilityId::Service(p)
             | CapabilityId::Protocol(p)
             | CapabilityId::Directory(p)
@@ -192,6 +194,7 @@ impl<'a> CapabilityId<'a> {
             CapabilityId::Service(_) => "service",
             CapabilityId::Protocol(_) => "protocol",
             CapabilityId::Directory(_) => "directory",
+            CapabilityId::Storage(_) => "storage",
             CapabilityId::Runner(_) => "runner",
             CapabilityId::Resolver(_) => "resolver",
             CapabilityId::StorageType(_) => "storage type",
@@ -245,6 +248,8 @@ impl<'a> CapabilityId<'a> {
             };
         } else if let Some(p) = clause.directory().as_ref() {
             return Ok(vec![CapabilityId::Directory(cml::alias_or_path(alias, p)?)]);
+        } else if let Some(n) = clause.storage().as_ref() {
+            return Ok(vec![CapabilityId::Storage(cml::alias_or_name(alias, n)?)]);
         } else if let Some(n) = clause.runner().as_ref() {
             return Ok(vec![CapabilityId::Runner(cml::alias_or_name(alias, n)?)]);
         } else if let Some(n) = clause.resolver().as_ref() {
@@ -279,7 +284,7 @@ impl<'a> CapabilityId<'a> {
 
         // Offers rules prohibit using the "as" clause for storage; this is validated outside the
         // scope of this function.
-        if let Some(p) = clause.storage().as_ref() {
+        if let Some(p) = clause.storage_type().as_ref() {
             return Ok(vec![CapabilityId::StorageType(p)]);
         }
 
@@ -353,6 +358,14 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Validate "capabilities".
+        if let Some(capabilities) = self.document.capabilities.as_ref() {
+            let mut used_ids = HashMap::new();
+            for capability in capabilities.iter() {
+                self.validate_capability(&capability, &mut used_ids)?;
+            }
+        }
+
         // Validate "use".
         if let Some(uses) = self.document.r#use.as_ref() {
             let mut used_ids = HashMap::new();
@@ -374,20 +387,6 @@ impl<'a> ValidationContext<'a> {
             let mut used_ids = HashMap::new();
             for offer in offers.iter() {
                 self.validate_offer(&offer, &mut used_ids, &mut strong_dependencies)?;
-            }
-        }
-
-        // Validate "storage".
-        if let Some(storage) = self.document.storage.as_ref() {
-            for s in storage.iter() {
-                self.validate_component_ref("\"storage\" source", cml::AnyRef::from(&s.from))?;
-            }
-        }
-
-        // Validate "runners".
-        if let Some(runners) = self.document.runners.as_ref() {
-            for r in runners.iter() {
-                self.validate_component_ref("\"runner\" source", cml::AnyRef::from(&r.from))?;
             }
         }
 
@@ -455,6 +454,43 @@ impl<'a> ValidationContext<'a> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn validate_capability(
+        &self,
+        capability: &'a cml::Capability,
+        used_ids: &mut HashMap<&'a str, CapabilityId<'a>>,
+    ) -> Result<(), Error> {
+        match (&capability.storage, &capability.from) {
+            (Some(_), None) => Err(Error::validate("\"from\" should be present with \"storage\"")),
+            _ => Ok(()),
+        }?;
+        match (&capability.runner, &capability.from) {
+            (Some(_), None) => Err(Error::validate("\"from\" should be present with \"runner\"")),
+            _ => Ok(()),
+        }?;
+        match (&capability.resolver, &capability.from) {
+            (Some(_), Some(_)) => {
+                Err(Error::validate("\"from\" should not be present with \"resolver\""))
+            }
+            _ => Ok(()),
+        }?;
+        if let Some(from) = capability.from.as_ref() {
+            self.validate_component_ref("\"capabilities\" source", cml::AnyRef::from(from))?;
+        }
+
+        // Disallow multiple capability ids of the same name.
+        let capability_ids = CapabilityId::from_clause(capability)?;
+        for capability_id in capability_ids {
+            if used_ids.insert(capability_id.as_str(), capability_id).is_some() {
+                return Err(Error::validate(format!(
+                    "\"{}\" is a duplicate \"capability\" name",
+                    capability_id.as_str(),
+                )));
+            }
+        }
+
         Ok(())
     }
 
@@ -736,7 +772,7 @@ impl<'a> ValidationContext<'a> {
                 // Storage can only have a single `from` clause and this has been
                 // verified.
                 if let OneOrMany::One(cml::OfferFromRef::Named(name)) = &offer.from {
-                    if let Some(cml::StorageFromRef::Named(source)) =
+                    if let Some(cml::CapabilityFromRef::Named(source)) =
                         self.all_storage_and_sources.get(&name)
                     {
                         if to_target == source {
@@ -814,7 +850,7 @@ impl<'a> ValidationContext<'a> {
         // as a storage name. Otherwise, it should be interpreted as a child
         // or collection.
         let reference_description = format!("\"{}\" source", verb);
-        if cap.storage().is_some() {
+        if cap.storage_type().is_some() {
             for from_clause in from {
                 self.validate_storage_ref(&reference_description, from_clause)?;
             }
@@ -1596,9 +1632,9 @@ mod tests {
                         "from": "self",
                     },
                 ],
-                "resolvers": [
+                "capabilities": [
                     {
-                        "name": "pkg_resolver",
+                        "resolver": "pkg_resolver",
                         "path": "/svc/fuchsia.sys2.ComponentResolver",
                     },
                 ]
@@ -1739,13 +1775,13 @@ mod tests {
                         "durability": "persistent",
                     },
                 ],
-                "storage": [
+                "capabilities": [
                     {
-                        "name": "minfs",
+                        "storage": "minfs",
                         "from": "parent",
                         "path": "/minfs",
                     },
-                ]
+                ],
             }),
             Ok(())
         ),
@@ -1795,9 +1831,9 @@ mod tests {
                         "url": "https://www.google.com/gmail"
                     },
                 ],
-                "storage": [
+                "capabilities": [
                     {
-                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
+                        "storage": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
                         "path": "/example"
                     }
@@ -1969,8 +2005,8 @@ mod tests {
                     "name": "logger",
                     "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
                 } ],
-                "storage": [ {
-                    "name": "minfs",
+                "capabilities": [ {
+                    "storage": "minfs",
                     "from": "#logger",
                     "path": "/minfs",
                 } ],
@@ -2024,8 +2060,8 @@ mod tests {
                         "to": [ "#echo_server" ]
                     }
                 ],
-                "storage": [ {
-                    "name": "minfs",
+                "capabilities": [ {
+                    "storage": "minfs",
                     "from": "self",
                     "path": "/minfs"
                 } ],
@@ -2111,9 +2147,9 @@ mod tests {
                         "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
                     },
                 ],
-                "resolvers": [
+                "capabilities": [
                     {
-                        "name": "pkg_resolver",
+                        "resolver": "pkg_resolver",
                         "path": "/svc/fuchsia.sys2.ComponentResolver",
                     },
                 ]
@@ -2474,93 +2510,87 @@ mod tests {
         // storage
         test_cml_storage(
             json!({
-                "storage": [
+                "capabilities": [
                     {
-                        "name": "a",
+                        "storage": "a",
                         "from": "#minfs",
-                        "path": "/minfs"
+                        "path": "/minfs",
                     },
                     {
-                        "name": "b",
+                        "storage": "b",
                         "from": "parent",
-                        "path": "/data"
+                        "path": "/data",
                     },
                     {
-                        "name": "c",
+                        "storage": "c",
                         "from": "self",
-                        "path": "/storage"
-                    }
+                        "path": "/storage",
+                    },
                 ],
                 "children": [
                     {
                         "name": "minfs",
-                        "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm"
-                    }
-                ]
+                        "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm",
+                    },
+                ],
             }),
             Ok(())
         ),
         test_cml_storage_all_valid_chars(
             json!({
+                "capabilities": [
+                    {
+                        "storage": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
+                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
+                        "path": "/example",
+                    },
+                ],
                 "children": [
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-from",
-                        "url": "https://www.google.com/gmail"
+                        "url": "https://www.google.com/gmail",
                     },
                 ],
-                "storage": [
-                    {
-                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
-                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
-                        "path": "/example"
-                    }
-                ]
             }),
             Ok(())
         ),
-        test_cml_storage_missing_props(
+        test_cml_storage_invalid_from(
             json!({
-                "storage": [ {} ]
-            }),
-            Err(Error::Parse { err, .. }) if &err == "missing field `name`"
-        ),
-        test_cml_storage_missing_from(
-            json!({
-                    "storage": [ {
-                        "name": "minfs",
+                    "capabilities": [ {
+                        "storage": "minfs",
                         "from": "#missing",
                         "path": "/minfs"
                     } ]
                 }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"storage\" source \"#missing\" does not appear in \"children\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"capabilities\" source \"#missing\" does not appear in \"children\""
         ),
 
         // runner
         test_cml_runner(
             json!({
-                "runners": [
+                "capabilities": [
                     {
-                        "name": "a",
+                        "runner": "a",
                         "from": "#minfs",
-                        "path": "/minfs"
+                        "path": "/minfs",
                     },
                     {
-                        "name": "b",
+                        "runner": "b",
                         "from": "parent",
-                        "path": "/data"
+                        "path": "/data",
                     },
                     {
-                        "name": "c",
+                        "runner": "c",
                         "from": "self",
-                        "path": "/runner"
-                    }
+                        "path": "/runner",
+                    },
                 ],
                 "children": [
                     {
                         "name": "minfs",
-                        "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm"
-                    }
-                ]
+                        "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm",
+                    },
+                ],
             }),
             Ok(())
         ),
@@ -2572,31 +2602,25 @@ mod tests {
                         "url": "https://www.google.com/gmail"
                     },
                 ],
-                "runners": [
+                "capabilities": [
                     {
-                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-runner",
+                        "runner": "abcdefghijklmnopqrstuvwxyz0123456789_-runner",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
-                        "path": "/example"
-                    }
+                        "path": "/example",
+                    },
                 ]
             }),
             Ok(())
         ),
-        test_cml_runner_missing_props(
+        test_cml_runner_invalid_from(
             json!({
-                "runners": [ {} ]
-            }),
-            Err(Error::Parse { err, .. }) if &err == "missing field `name`"
-        ),
-        test_cml_runner_missing_from(
-            json!({
-                    "runners": [ {
-                        "name": "minfs",
+                    "capabilities": [ {
+                        "runner": "minfs",
                         "from": "#missing",
                         "path": "/minfs"
                     } ]
                 }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"runner\" source \"#missing\" does not appear in \"children\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"capabilities\" source \"#missing\" does not appear in \"children\""
         ),
 
         // environments
@@ -2701,9 +2725,9 @@ mod tests {
                         ]
                     }
                 ],
-                "runners": [
+                "capabilities": [
                      {
-                         "name": "dart",
+                         "runner": "dart",
                          "path": "/svc/fuchsia.component.Runner",
                          "from": "parent"
                      }
@@ -3321,9 +3345,9 @@ mod tests {
                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     }
                ],
-               "storage": [
+               "capabilities": [
                     {
-                        "name": "logger",
+                        "storage": "logger",
                         "path": "/logs",
                         "from": "parent"
                     }
@@ -3339,9 +3363,9 @@ mod tests {
                         "durability": "transient"
                     }
                 ],
-                "storage": [
+                "capabilities": [
                     {
-                        "name": "logger",
+                        "storage": "logger",
                         "path": "/logs",
                         "from": "parent"
                     }
@@ -3357,9 +3381,9 @@ mod tests {
                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     }
                ],
-               "runners": [
+               "capabilities": [
                     {
-                        "name": "logger",
+                        "runner": "logger",
                         "path": "/logs",
                         "from": "parent"
                     }
@@ -3388,41 +3412,54 @@ mod tests {
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Component has a \'program\' block defined, but doesn\'t \'use\' a runner capability. Components need to \'use\' a runner to actually execute code."
         ),
 
-        // Resolvers
-        test_cml_resolvers_duplicates(
+        // Capabilities
+        test_cml_capability_missing_name(
             json!({
-                "resolvers": [
-                    {
-                        "name": "pkg_resolver",
-                        "path": "/svc/fuchsia.sys2.ComponentResolver",
-                    },
-                    {
-                        "name": "pkg_resolver",
-                        "path": "/svc/my-resolver",
-                    },
-                ]
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"pkg_resolver\" is defined twice, once in \"resolvers\" and once in \"resolvers\""
-        ),
-        test_cml_resolvers_missing_name(
-            json!({
-                "resolvers": [
+                "capabilities": [
                     {
                         "path": "/svc/fuchsia.sys2.ComponentResolver",
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "missing field `name`"
+            Err(Error::Validate { err, .. }) if &err == "`capability` declaration is missing a capability keyword, one of: \"storage\", \"runner\", \"resolver\""
         ),
-        test_cml_resolvers_missing_path(
+        test_cml_capabilities_missing_path(
             json!({
-                "resolvers": [
+                "capabilities": [
                     {
-                        "name": "pkg_resolver",
+                        "resolver": "pkg_resolver",
                     },
                 ]
             }),
             Err(Error::Parse { err, .. }) if &err == "missing field `path`"
+        ),
+        test_cml_capabilities_extraneous_from(
+            json!({
+                "capabilities": [
+                    {
+                        "resolver": "pkg_resolver",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                        "from": "self",
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"from\" should not be present with \"resolver\""
+        ),
+        test_cml_capabilities_duplicates(
+            json!({
+                "capabilities": [
+                    {
+                        "runner": "pkg_resolver",
+                        "from": "self",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                    },
+                    {
+                        "resolver": "pkg_resolver",
+                        "path": "/svc/my-resolver",
+                    },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"pkg_resolver\" is defined twice, once in \"resolvers\" and once in \"runners\""
         ),
 
         // deny unknown fields

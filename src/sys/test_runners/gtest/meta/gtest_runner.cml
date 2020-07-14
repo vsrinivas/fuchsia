@@ -2,6 +2,13 @@
     program: {
         binary: "bin/gtest_runner",
     },
+    capabilities: [
+        {
+            runner: "gtest_runner",
+            from: "self",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
     use: [
         { runner: "elf" },
         { storage: "data" },
@@ -20,13 +27,6 @@
         {
             runner: "gtest_runner",
             from: "self",
-        },
-    ],
-    runners: [
-        {
-            name: "gtest_runner",
-            from: "self",
-            path: "/svc/fuchsia.component.runner.ComponentRunner",
         },
     ],
 }

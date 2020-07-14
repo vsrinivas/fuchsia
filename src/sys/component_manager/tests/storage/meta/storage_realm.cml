@@ -11,6 +11,13 @@
             startup: "eager",
         },
     ],
+    capabilities: [
+        {
+            storage: "mystorage",
+            from: "#memfs",
+            path: "/memfs",
+        },
+    ],
     offer: [
         {
             storage: "data",
@@ -24,13 +31,6 @@
                 "#memfs",
                 "#storage_user",
             ],
-        },
-    ],
-    storage: [
-        {
-            name: "mystorage",
-            from: "#memfs",
-            path: "/memfs",
         },
     ],
 }

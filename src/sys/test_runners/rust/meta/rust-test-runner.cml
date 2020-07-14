@@ -2,6 +2,13 @@
     program: {
         binary: "bin/rust_test_runner",
     },
+    capabilities: [
+        {
+            runner: "rust_test_runner",
+            from: "self",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
     use: [
         { runner: "elf" },
         { storage: "data" },
@@ -20,13 +27,6 @@
         {
             runner: "rust_test_runner",
             from: "self",
-        },
-    ],
-    runners: [
-        {
-            name: "rust_test_runner",
-            from: "self",
-            path: "/svc/fuchsia.component.runner.ComponentRunner",
         },
     ],
 }

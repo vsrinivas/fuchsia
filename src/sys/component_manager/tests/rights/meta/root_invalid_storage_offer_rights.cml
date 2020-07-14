@@ -10,6 +10,13 @@
             url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
         },
     ],
+    capabilities: [
+        {
+            storage: "mystorage",
+            from: "#expose_dir_rights",
+            path: "/read_only",
+        },
+    ],
     offer: [
         {
             storage: "data",
@@ -21,13 +28,6 @@
         {
             protocol: "/svc/fidl.test.components.Trigger",
             from: "#use_storage",
-        },
-    ],
-    storage: [
-        {
-            name: "mystorage",
-            from: "#expose_dir_rights",
-            path: "/read_only",
         },
     ],
 }
