@@ -302,7 +302,8 @@ extern "C" void arm64_secondary_entry() {
 
   arch_mp_init_percpu();
 
-  arm64_feature_debug(false);
+  const bool full_dump = arm64_feature_current_is_first_in_cluster();
+  arm64_feature_debug(full_dump);
 
   lk_secondary_cpu_entry();
 }

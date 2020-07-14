@@ -259,6 +259,11 @@ static void print_cpu_info() {
           (uint32_t)((mpidr & MPIDR_AFF0_MASK) >> MPIDR_AFF0_SHIFT));
 }
 
+bool arm64_feature_current_is_first_in_cluster() {
+  const uint64_t mpidr = __arm_rsr64("mpidr_el1");
+  return ((mpidr & MPIDR_AFF0_MASK) >> MPIDR_AFF0_SHIFT) == 0;
+}
+
 // call on every cpu to save features
 void arm64_feature_init() {
   // set up some global constants based on the boot cpu

@@ -57,6 +57,10 @@ void arm64_feature_init(void);
 // dump the feature set
 void arm64_feature_debug(bool full);
 
+// Returns true if the current CPU is the first member of a cluster according to
+// MPIDR.
+bool arm64_feature_current_is_first_in_cluster();
+
 void arm64_get_cache_info(arm64_cache_info_t* info);
 void arm64_dump_cache_info(uint32_t cpu);
 
