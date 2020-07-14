@@ -159,45 +159,48 @@ symbols in the binary that you pushed to the Fuchsia target device.
 
 See [Diagnosing symbol problems](#diagnosing-symbol-problems).
 
-#### Set the symbol location
+#### Set the symbol location {#set-symbol-location}
 
-To specify new symbol locations for zxdb, use the `-s` command-line flag:
+There are three command-line flags to control the symbol lookup locations for
+zxdb: `--build-id-dir`, `--ids-txt`, and a general `--symbol-path`. They all
+have the corresponding settings that can be manipulated using `set` or `get`.
 
-```sh
-zxdb -s path/to/my_binary -s some/other_location
-```
-
-Or add it to the `symbol_paths` list option in the interactive UI:
-
-```
-[zxdb] set symbol-paths += /my/new/symbol/path
-```
-
-It's best if your build makes a ".build-id" directory. You then pass the parent
-directory as a symbol dir. For example, the Fuchsia build itself makes a
-".build-id" directory inside the build directory. For example, if your build
-directory is `out/x64`:
+For example, to add a ".build-id" directory, either use `--build-id-dir` flag:
 
 ```sh
-out/x64/host_x64/zxdb -s out/x64
+zxdb --build-id-dir some/other_location/.build-id
 ```
 
-Some builds produce a file called "ids.txt" that lists build IDs and local
-paths to the corresponding binaries. This is the second-best option.
+Or add it to the `build-id-dirs` list option in the interactive UI:
 
-If you don't have that, you can just list the name of the file you're debugging
-directly. You can pass multiple "-s" flags to list multiple symbol locations.
+```
+[zxdb] set build-id-dirs += some/other_location/.build-id
+```
 
-The `-s` flag accepts three possible things:
+For in-tree development, `fx debug` automatically sets up all necessary
+flags.
 
-   * Directory names. If the given directory contains a ".build-id"
-     subdirectory that will be used. Otherwise all ELF files in the given
-     directory will be indexed.
+##### `build-id-dir`
 
-   * File names ending in ".txt". Zxdb will treat this as a "ids.txt" file
-     mapping build IDs to binaries.
+Some builds produce a `.build-id` directory. Symbol files in it are already
+indexed according to their build IDs. For example, the Fuchsia build itself
+makes a `.build-id` directory inside the build directory, e.g.,
+`out/x64/.build-id`. They can be added to zxdb by `--build-id-dir` command-line
+flag or `build-id-dirs` setting. This is the best option.
 
-   * Any other file name will be treated as an ELF file with symbols.
+##### `ids-txt`
+
+Instead of a `.build-id` directory, some builds produce a file called `ids.txt`
+that lists build IDs and local paths to the corresponding binaries. They can be
+added to zxdb by `--ids-txt` command-line flag or `ids-txts` setting. This is
+the second-best option.
+
+##### `symbol-path`
+
+In addition, `--symbol-path` flag can be used to add arbitrary files or
+directories to symbol index. If the path is pointing to a file, it will be
+treated as an ELF file and added to the symbol index. If it's a directory, all
+binaries under the given path are indexed.
 
 #### Set the source code location {#set-source-code-location}
 

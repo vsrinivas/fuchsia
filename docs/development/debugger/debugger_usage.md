@@ -378,14 +378,14 @@ fx debug -c upload_file_minidump-e71256ba30163a0.dmp
 
 #### Downloading symbols
 
-You can tell `zxdb` to look for debug symbols for your core dump in a GCS URL and download them
-automatically. You'll need to run with a few command-line options:
+To tell `zxdb` to look for debug symbols for your core dump in a GCS URL and
+download those symbols automatically, run the following command:
 
 ```
-zxdb --symbol-cache $HOME --symbol-server gs://my-bucket-name/namespace
+zxdb --symbol-server gs://my-bucket-name/namespace
 ```
 
-In-tree users will automatically have these options set, with the server pointed to a bucket
+In-tree users automatically have the option set, with the server pointed to a bucket
 containing symbols for all release builds.
 
 The first time you use the symbol server, you will have to authenticate using the `auth` command.

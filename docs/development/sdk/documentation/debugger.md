@@ -41,27 +41,5 @@ The debugger expects unstripped ELF files to be available on the local host
 system. Symbols on the target are not used. The location where the local build
 stores symbols must be passed to the `zxdb` client.
 
-Local symbols can be passed on the command line:
-
-```
-zxdb --symbol-path=/path-to-symbols
-```
-
-The path can be any of:
-
-  * An individual symbolized ELF file.
-  * An ids.txt file mapping build IDs to local files.
-  * A directory name. If the directory is a GNU-style symbol repo (see below),
-    symbols will be taken from the .build-id folder beneath it, otherwise the
-    directory will be searched (non-recursively) for symbolized ELF files.
-
-GNU-style symbol repos are directories of any layout which contain a folder at
-the root called .build-id. This folder contains the symbolized binaries
-indexed by the binaries' build IDs. Often these are symlinks pointing to
-various locations in the folder itself.
-```
-Multiple `--symbol-path` parameters may be specified if there are symbols in
-more than one location. All locations will be searched.
-
-Symbol locations can also be edited interactively in the client using the
-global "symbol-paths" setting (see the interactive "get" and "set" commands).
+For more information on how to specify symbol paths, see [set the symbol
+location](/docs/development/debugger/README.md#set-symbol-location)
