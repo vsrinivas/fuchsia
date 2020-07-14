@@ -2,11 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
@@ -50,7 +49,7 @@ executable("ftl-proxy-bin") {
   ]
 }
 
-executable("ftl-proxy-bin-test") {
+test("ftl-proxy-bin-test") {
   output_name = "ftl-proxy-test"
   testonly = true
   sources = [ "ftl_util_test.cc" ]
@@ -71,37 +70,25 @@ executable("ftl-proxy-bin-test") {
   ]
 }
 
-devmgr_manifest("devmgr-manifest") {
-}
-
-package("ftl-proxy") {
+fuchsia_component("ftl-proxy-component") {
+  manifest = "meta/ftl-proxy.cmx"
+  component_name = "ftl-proxy"
   deps = [ ":ftl-proxy-bin" ]
-  binaries = [
-    {
-      name = "ftl-proxy"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/ftl-proxy.cmx")
-      dest = "ftl-proxy.cmx"
-    },
-  ]
 }
 
-test_package("ftl-proxy-tests") {
-  deps = [
-    ":devmgr-manifest",
-    ":ftl-proxy-bin-test",
-  ]
+fuchsia_package("ftl-proxy") {
+  deps = [ ":ftl-proxy-component" ]
+}
 
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-  tests = [
-    {
-      name = "ftl-proxy-test"
-      environments = basic_envs
-    },
+isolated_devmgr_unittest_package("ftl-proxy-tests") {
+  executable_path = "test/ftl-proxy-test"
+
+  deps = [
+    ":ftl-proxy-bin-test",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ftl",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/nand/drivers/ram-nand",
   ]
 }
