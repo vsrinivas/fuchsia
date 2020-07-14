@@ -145,16 +145,11 @@ TEST_F(BlobfsTest, Basics) { RunBasicsTest(); }
 
 TEST_F(BlobfsTestWithFvm, Basics) { RunBasicsTest(); }
 
-void StartMockCorruptionHandlerService(std::unique_ptr<CorruptBlobHandler>* out) {
+void StartMockCorruptionHandlerService(async_dispatcher_t* dispatcher,
+                                       std::unique_ptr<CorruptBlobHandler>* out) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "");
-
-  async_loop_t* loop = NULL;
-  ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop), "");
-  ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "corruption-dispatcher", NULL), "");
-
-  async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
   auto handler = std::unique_ptr<CorruptBlobHandler>(new CorruptBlobHandler());
   ASSERT_EQ(ZX_OK, handler->Bind(dispatcher, std::move(server)));
 
@@ -165,7 +160,10 @@ void StartMockCorruptionHandlerService(std::unique_ptr<CorruptBlobHandler>* out)
 void RunBlobCorruptionTest() {
   // Start the corruption handler server.
   std::unique_ptr<CorruptBlobHandler> corruption_server;
-  ASSERT_NO_FAILURES(StartMockCorruptionHandlerService(&corruption_server));
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(ZX_OK, loop.StartThread("corruption-dispatcher"));
+
+  ASSERT_NO_FAILURES(StartMockCorruptionHandlerService(loop.dispatcher(), &corruption_server));
   zx_handle_t blobfs_client = corruption_server->GetClientHandle();
 
   // Pass the client end to blobfs.
@@ -190,6 +188,7 @@ void RunBlobCorruptionTest() {
   ASSERT_NO_FAILURES(ReadBlobCorrupted(info.get()));
   // TODO fxb/55664 Make this check wait conditionally on IsCalled instead.
   // ASSERT_TRUE(corruption_server->IsCalled());
+  loop.Shutdown();
 }
 
 TEST_F(BlobfsTest, CorruptBlobNotify) { RunBlobCorruptionTest(); }
