@@ -474,18 +474,30 @@ TEST(PortTest, Timestamp) {
 }
 
 // Queue a packet while another thread is closing the port.  See that queuing thread observes
-// ZX_ERR_BAD_HANDLE.  This test is inherently racy.
-// TODO(55824): Disabled as this asserts when the port is full.
-TEST(PortTest, DISABLED_CloseQueueRace) {
+// ZX_ERR_BAD_HANDLE. This test is inherently racy in that we can not always get both the
+// closing thread and the queuing thread to enter the code under test at the same time.
+TEST(PortTest, CloseQueueRace) {
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
+  const uint64_t kBatchSize = 200;
 
   auto queue_loop = [](zx_handle_t handle, std::atomic<uint64_t>* count, zx_status_t* result) {
     constexpr zx_port_packet_t kPacket = {1ull, ZX_PKT_TYPE_USER, 0, {{}}};
     zx_status_t status = ZX_OK;
-    while (status == ZX_OK || status == ZX_ERR_SHOULD_WAIT || status == ZX_ERR_NO_MEMORY) {
+    while (status == ZX_OK) {
       status = zx_port_queue(handle, &kPacket);
-      count->fetch_add(1);
+      auto prev_count = count->fetch_add(1);
+      if (prev_count == kBatchSize) {
+        // Read the queued packets, as to not hit the port depth limit. While reading
+        // we keep the visible counter equal to zero.
+        count->store(0u);
+        uint64_t unload_count = 0u;
+        zx_port_packet read_packet;
+        while ((status == ZX_OK) && (unload_count <= kBatchSize)) {
+          status = zx_port_wait(handle, ZX_TIME_INFINITE, &read_packet);
+          ++unload_count;
+        }
+      }
     }
     *result = status;
   };
