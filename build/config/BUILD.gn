@@ -146,67 +146,15 @@ config("toolchain_version_stamp") {
 }
 
 config("relative_paths") {
-  # Make builds independent of absolute file path.  The file names
-  # embedded in debugging information will be expressed as relative to
-  # the build directory, e.g. "../.." for an "out/subdir" under //.
-  #
-  # This is consistent with the file names in __FILE__ expansions
-  # (e.g. in assertion messages), which the compiler doesn't provide a
-  # way to remap.  That way source file names in logging and
-  # symbolization can all be treated the same way.  This won't go well
-  # if $root_build_dir is not a subdirectory of //, but there isn't
-  # a better option to keep all source file name references uniformly
-  # relative to a single root. Stripping out per-user or per-config
-  # path information additionally allows caching compilers (like Goma)
-  # to reuse compilation results amongst users/configs.
-  #
-  # Given a build directory of of the form
-  # "/xxx/yyy/fuchsia/out/my-config-name", we want to normalize as
-  # follows:
-  #
-  #    /xxx/yyy/fuchsia/out/my-config-name         → .
-  #    /xxx/yyy/fuchsia/out/my-config-name.zircon  → ../my-config-name.zircon
-  #    /xxx/yyy/fuchsia/out                        → ..
-  #    /xxx/yyy/fuchsia/src                        → ../src
-  #
-  # GCC and Clang only perform naïve prefix matching, so we need to
-  # match replace multiple prefixes
-  # ("/xxx/yyy/fuchsia/out/my-config-name", "/xxx/yyy/fuchsia/out",
-  # "/xxx/yyy/fuchsia") to avoid excess path information leaking into
-  # the debug symbols.
+  cflags = [
+    # Make builds independent of the absolute file path. -fdebug-prefix-map=
+    # can be used to the same effect, but it requires putting the absolute path
+    # to the build directory in the compile command, thus making it dependent
+    # on the absolute path of build directory. -fdebug-compilation-dir is
+    # designed to address this issue, making both debug info and the compile
+    # command itself independent of the absolute path of the build directory.
+    "-fdebug-compilation-dir", ".",
 
-  if (use_goma) {
-    # TODO(TC-585): `-fdebug-prefix-map` is also used by Goma to canonicalize
-    # build commands, allowing it to reuse compilation results for users running
-    # out of different working directories. However, it only supports a single
-    # "-fdebug-prefix-map" prefix. Attempting to provide more than one causes
-    # canonicalization to fail, meaning that builds running out of different
-    # directories won't share cache results. For now, we just provide a single
-    # debug-prefix-map, even though more would be ideal.
-
-    # Map "/some/dir/fuchsia" to "../..".
-    cflags = [ "-fdebug-prefix-map=" + rebase_path("//") + "=" +
-               rebase_path("//", root_build_dir) ]
-  } else {
-    cflags = [
-      # Map "/some/dir/fuchsia/out/my-build.my-arch" to ".".
-      "-fdebug-prefix-map=" + rebase_path(root_build_dir) + "=.",
-
-      # Map "/some/dir/fuchsia/out" to "..".
-      "-fdebug-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
-
-      # Map "/some/dir/fuchsia" to "../..".
-      "-fdebug-prefix-map=" + rebase_path("//.") + "=" +
-          rebase_path("//.", root_build_dir),
-    ]
-  }
-
-  rustflags = [
-    "--remap-path-prefix",
-    rebase_path("//") + "=" + rebase_path("//", root_build_dir),
-  ]
-
-  cflags += [
     # This makes sure that include directories in the toolchain are
     # represented as relative to the build directory (because that's how
     # we invoke the compiler), rather than absolute.  This can affect
@@ -220,6 +168,11 @@ config("relative_paths") {
   ]
   asmflags = cflags
   ldflags = cflags
+
+  rustflags = [
+    "--remap-path-prefix",
+    rebase_path("//") + "=" + rebase_path("//", root_build_dir),
+  ]
 }
 
 config("debug") {

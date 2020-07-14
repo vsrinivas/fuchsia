@@ -229,30 +229,40 @@ config("relative_paths") {
   # TODO(BLD-353): After build unification, the definitions in
   # //build/config/BUILD.gn should be sufficient for Zircon.
 
-  if (use_goma) {
-    # TODO(TC-585): `-fdebug-prefix-map` is also used by Goma to canonicalize
-    # build commands, allowing it to reuse compilation results for users running
-    # out of different working directories. However, it only supports a single
-    # "-fdebug-prefix-map" prefix. Attempting to provide more than one causes
-    # canonicalization to fail, meaning that builds running out of different
-    # directories won't share cache results. For now, we just provide a single
-    # debug-prefix-map, even though more would be ideal.
-
-    # Map "/some/dir/fuchsia" to "../..".
-    compiler_flags = [ "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
-                       rebase_path("$zx/..", root_build_dir) ]
-  } else {
-    compiler_flags = [
-      # Map "/some/dir/fuchsia/out/my-build.my-arch" to ".".
-      "-fdebug-prefix-map=" + rebase_path(root_build_dir) + "=.",
-
-      # Map "/some/dir/fuchsia/out" to "..".
-      "-fdebug-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
+  if(is_gcc) {
+    if (use_goma) {
+      # TODO(TC-585): `-fdebug-prefix-map` is also used by Goma to canonicalize
+      # build commands, allowing it to reuse compilation results for users running
+      # out of different working directories. However, it only supports a single
+      # "-fdebug-prefix-map" prefix. Attempting to provide more than one causes
+      # canonicalization to fail, meaning that builds running out of different
+      # directories won't share cache results. For now, we just provide a single
+      # debug-prefix-map, even though more would be ideal.
 
       # Map "/some/dir/fuchsia" to "../..".
-      "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
-          rebase_path("$zx/..", root_build_dir),
-    ]
+      compiler_flags = [ "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
+                         rebase_path("$zx/..", root_build_dir) ]
+    } else {
+      compiler_flags = [
+        # Map "/some/dir/fuchsia/out/my-build.my-arch" to ".".
+        "-fdebug-prefix-map=" + rebase_path(root_build_dir) + "=.",
+
+        # Map "/some/dir/fuchsia/out" to "..".
+        "-fdebug-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
+
+        # Map "/some/dir/fuchsia" to "../..".
+        "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
+            rebase_path("$zx/..", root_build_dir),
+      ]
+    }
+  } else {
+    # Make builds independent of the absolute file path. -fdebug-prefix-map=
+    # can be used to the same effect, but it requires putting the absolute path
+    # to the build directory in the compile command, thus making it dependent
+    # on the absolute path of build directory. -fdebug-compilation-dir is
+    # designed to address this issue, making both debug info and the compile
+    # command itself independent of the absolute path of the build directory.
+    compiler_flags = [ "-fdebug-compilation-dir", "." ]
   }
 
   if (!is_gcc) {
