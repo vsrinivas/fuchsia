@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 driver_module("usb-hid") {
   defines = [ "_ALL_SOURCE" ]
@@ -79,4 +81,43 @@ group("fake") {
     ":usb-one-endpoint-hid-fake-usb",
     ":usb-two-endpoint-hid-fake-usb",
   ]
+}
+
+test("usb-hid-test") {
+  sources = [ "usb-hid-test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/usb-virtual-bus-launcher",
+  ]
+}
+
+isolated_devmgr_unittest_package("usb-hid-test-package") {
+  package_name = "usb-hid-test"
+  executable_path = "test/usb-hid-test"
+  deps = [
+    ":fake",
+    ":usb-hid",
+    ":usb-hid-test",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/usb/drivers/usb-bus",
+    "//src/devices/usb/drivers/usb-composite",
+    "//src/devices/usb/drivers/usb-peripheral",
+    "//src/devices/usb/drivers/usb-virtual-bus",
+    "//src/ui/input/drivers/hid",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":usb-hid-test-package" ]
 }

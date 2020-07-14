@@ -21,26 +21,6 @@ group("test") {
     ":usb-virtual-bus-cdc-acm",
     ":usb-virtual-bus-cdc-ecm",
     ":usb-virtual-bus-ftdi",
-    ":usb-virtual-bus-hid",
-  ]
-}
-
-test("usb-virtual-bus-hid") {
-  output_name = "usb-virtual-bus-hid-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "usb-hid-test.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
-    "//sdk/lib/fdio",
-    "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
 }
 
@@ -159,17 +139,6 @@ unittest_package("usb-virtual-bus-ftdi-package") {
   tests = [
     {
       name = "usb-virtual-bus-ftdi-test"
-    },
-  ]
-}
-
-unittest_package("usb-virtual-bus-hid-package") {
-  package_name = "usb-virtual-bus-hid"
-  deps = [ ":usb-virtual-bus-hid" ]
-
-  tests = [
-    {
-      name = "usb-virtual-bus-hid-test"
     },
   ]
 }

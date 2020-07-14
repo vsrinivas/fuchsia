@@ -546,6 +546,10 @@
          "max_severity":"ERROR"
       },
       {
+         "url":"fuchsia-pkg://fuchsia.com/usb-hid-test#meta/usb-hid-test-package.cmx",
+         "max_severity":"ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/vulkan-tests#meta/vkloop.cmx",
          "max_severity": "ERROR"
       },

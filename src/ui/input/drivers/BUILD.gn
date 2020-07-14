@@ -31,6 +31,7 @@ group("tests") {
     "hid-input-report:hid-input-report-test",
     "hidctl:tests",
     "i2c-hid:tests",
+    "usb-hid:tests",
     "virtio:tests",
   ]
 }
