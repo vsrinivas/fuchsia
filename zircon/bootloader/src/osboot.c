@@ -561,6 +561,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
   }
 
   if (!have_network && zedboot_kernel == NULL && kernel == NULL && kernel_b == NULL) {
+    printf("No valid kernel image found to load. Abort.\n");
     goto fail;
   }
 

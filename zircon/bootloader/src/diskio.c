@@ -84,6 +84,10 @@ static efi_status disk_read(disk_t* disk, size_t offset, void* data, size_t leng
   uint64_t size = (disk->last - disk->first) * disk->blksz;
 
   if ((offset > size) || ((size - offset) < length)) {
+    printf(
+        "ERROR: Disk read invalid params. offset:%llu length:%llu disk: [%llu to %llu] size:%llu  "
+        "blksz:%d\n",
+        offset, size, length, disk->first, disk->last, disk->blksz);
     return EFI_INVALID_PARAMETER;
   }
 
@@ -283,7 +287,7 @@ static int disk_find_kernel(disk_t* disk, bool verbose, const uint8_t* guid_valu
 void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz,
                            const uint8_t* guid_value, const char* guid_name) {
   static bool verbose = false;
-  static uint8_t sector[512];
+  uint8_t sector[512];
   efi_boot_services* bs = sys->BootServices;
   disk_t disk;
 
@@ -299,6 +303,7 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz,
 
   efi_status status = disk_read(&disk, 0, sector, 512);
   if (status != EFI_SUCCESS) {
+    printf("Failed to read disk: %zu\n", status);
     goto fail0;
   }
 

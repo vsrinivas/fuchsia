@@ -38,6 +38,7 @@ size_t cmdline_to_string(char* ptr, size_t max) {
   for (size_t n = 0; n < entry_count; n++) {
     if ((entry[n].klen + entry[n].vlen + 3) > max) {
       // require space for: space + key + equal + value + null
+      printf("WARNING: Not enough space to store cmdline\n");
       break;
     }
     if (n > 0) {
@@ -112,7 +113,7 @@ void cmdline_append(const char* ptr, size_t len) {
 
 restart:
   while (len > 0) {
-    if (isspace(*ptr)) {
+    if (!(*ptr) || isspace(*ptr)) {
       ptr++;
       len--;
       continue;
