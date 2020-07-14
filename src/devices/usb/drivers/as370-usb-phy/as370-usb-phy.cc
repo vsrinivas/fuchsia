@@ -140,7 +140,7 @@ zx_status_t UsbPhy::RemoveDwc2Device() {
 
   // devmgr will own the device until it is destroyed.
   __UNUSED auto* dev = dwc2_device_.release();
-  dev->DdkRemoveDeprecated();
+  dev->DdkAsyncRemove();
 
   return ZX_OK;
 }
@@ -191,9 +191,9 @@ zx_status_t UsbPhy::Init() {
   return ZX_OK;
 }
 
-void UsbPhy::DdkUnbindDeprecated() {
+void UsbPhy::DdkUnbindNew(ddk::UnbindTxn txn) {
   RemoveDwc2Device();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void UsbPhy::DdkRelease() { delete this; }
