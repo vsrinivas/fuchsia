@@ -142,7 +142,7 @@ paths.
    import("//src/sys/build/components.gni")
 
    rustc_binary("bin") {
-     name = "my_program"
+     output_name = "my_program"
    }
 
    fuchsia_component("my-component") {
@@ -652,7 +652,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "timekeeper"
+  output_name = "timekeeper"
   edition = "2018"
   with_unit_tests = true
   deps = [ ... ]
@@ -719,7 +719,7 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "timekeeper"
+  output_name = "timekeeper"
   edition = "2018"
   with_unit_tests = true
   deps = [ ... ]
