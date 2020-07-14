@@ -4,16 +4,16 @@
 
 #include <fidl/flat_ast.h>
 #include <fidl/types.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "test_library.h"
 
 namespace fidl {
 namespace flat {
 
-bool CheckPrimitiveType(const Library* library, Typespace* typespace, const char* name,
+void CheckPrimitiveType(const Library* library, Typespace* typespace, const char* name,
                         types::PrimitiveSubtype subtype) {
-  ASSERT_NONNULL(typespace);
+  ASSERT_NOT_NULL(typespace);
 
   auto the_type_name = Name::CreateDerived(library, SourceSpan(), std::string(name));
   const Type* the_type;
@@ -21,18 +21,14 @@ bool CheckPrimitiveType(const Library* library, Typespace* typespace, const char
                                 std::optional<types::HandleSubtype>(), nullptr /* handle_rights */,
                                 nullptr /* maybe_size */, types::Nullability::kNonnullable,
                                 &the_type, nullptr));
-  ASSERT_NONNULL(the_type, name);
+  ASSERT_NOT_NULL(the_type, "%s", name);
   auto the_type_p = static_cast<const PrimitiveType*>(the_type);
-  ASSERT_EQ(the_type_p->subtype, subtype, name);
-
-  return true;
+  ASSERT_EQ(the_type_p->subtype, subtype, "%s", name);
 }
 
 // Tests that we can look up root types with global names, i.e. those absent
 // of any libraries.
-bool root_types_with_no_library_in_lookup() {
-  BEGIN_TEST;
-
+TEST(TypesTests, root_types_with_no_library_in_lookup) {
   Typespace typespace = Typespace::RootTypes(nullptr);
   Library* library = nullptr;
 
@@ -47,15 +43,11 @@ bool root_types_with_no_library_in_lookup() {
   CheckPrimitiveType(library, &typespace, "uint64", types::PrimitiveSubtype::kUint64);
   CheckPrimitiveType(library, &typespace, "float32", types::PrimitiveSubtype::kFloat32);
   CheckPrimitiveType(library, &typespace, "float64", types::PrimitiveSubtype::kFloat64);
-
-  END_TEST;
 }
 
 // Tests that we can look up root types with local names, i.e. those within
 // the context of a library.
-bool root_types_with_some_library_in_lookup() {
-  BEGIN_TEST;
-
+TEST(TypesTests, root_types_with_some_library_in_lookup) {
   Typespace typespace = Typespace::RootTypes(nullptr);
 
   TestLibrary library("library fidl.test;");
@@ -73,14 +65,7 @@ bool root_types_with_some_library_in_lookup() {
   CheckPrimitiveType(library_ptr, &typespace, "uint64", types::PrimitiveSubtype::kUint64);
   CheckPrimitiveType(library_ptr, &typespace, "float32", types::PrimitiveSubtype::kFloat32);
   CheckPrimitiveType(library_ptr, &typespace, "float64", types::PrimitiveSubtype::kFloat64);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(types_tests)
-RUN_TEST(root_types_with_no_library_in_lookup)
-RUN_TEST(root_types_with_some_library_in_lookup)
-END_TEST_CASE(types_tests)
 
 }  // namespace flat
 }  // namespace fidl

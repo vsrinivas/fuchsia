@@ -9,7 +9,7 @@
 #include <regex>
 
 #include <fidl/flat_ast.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -18,15 +18,13 @@ using fidl::flat::Name;
 using fidl::types::HandleSubtype;
 using fidl::types::Nullability;
 
-static bool implicit_assumptions() {
+TEST(FlatAstTests, implicit_assumptions) {
   // Preconditions to unit test cases: if these change, we need to rewrite the tests themselves.
   EXPECT_TRUE(HandleSubtype::kChannel < HandleSubtype::kEvent);
   EXPECT_TRUE(Nullability::kNullable < Nullability::kNonnullable);
-
-  return true;
 }
 
-static bool compare_handles() {
+TEST(FlatAstTests, compare_handles) {
   auto name_not_important = Name::CreateIntrinsic("ignore");
   HandleType nonnullable_channel(name_not_important, HandleSubtype::kChannel, nullptr,
                                  Nullability::kNonnullable);
@@ -42,13 +40,6 @@ static bool compare_handles() {
   EXPECT_TRUE(nullable_event < nonnullable_event);
   EXPECT_TRUE(nonnullable_channel < nonnullable_event);
   EXPECT_TRUE(nullable_channel < nullable_event);
-
-  return true;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(flat_ast_tests)
-RUN_TEST(implicit_assumptions)
-RUN_TEST(compare_handles)
-END_TEST_CASE(flat_ast_tests)

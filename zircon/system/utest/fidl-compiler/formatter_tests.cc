@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <regex>
+
 #include <fidl/flat_ast.h>
 #include <fidl/formatter.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 #include <fidl/tree_visitor.h>
-#include <unittest/unittest.h>
-
-#include <regex>
+#include <zxtest/zxtest.h>
 
 #include "examples.h"
 #include "test_library.h"
@@ -33,8 +33,8 @@ void InitializeContents() {
 }
 
 // Tests that repeatedly applying the formatter results in no change.
-bool idempotence_test() {
-  BEGIN_TEST;
+TEST(FormatterTests, idempotence_test) {
+  InitializeContents();
 
   for (auto element : formatted_output_) {
     TestLibrary library(element.first, element.second);
@@ -47,12 +47,10 @@ bool idempotence_test() {
     EXPECT_STR_EQ(element.second.c_str(), visitor.formatted_output()->c_str(),
                   "Applying formatting multiple times produces different results");
   }
-
-  END_TEST;
 }
 
-bool basic_formatting_rules_test() {
-  BEGIN_TEST;
+TEST(FormatterTests, basic_formatting_rules_test) {
+  InitializeContents();
 
   std::regex trailing_ws(".*\\s+$");
   std::regex top_level_decl("^\\s*(?:struct|enum|union)\\s+.*");
@@ -103,12 +101,11 @@ bool basic_formatting_rules_test() {
     // RULE: End the file with exactly one newline (no blank lines at the end).
     ASSERT_NE(lines[lines.size() - 1].size(), 0, "No newline at EOF");
   }
-
-  END_TEST;
 }
 
-bool golden_file_test() {
-  BEGIN_TEST;
+TEST(FormatterTests, golden_file_test) {
+  InitializeContents();
+
   std::string good_output;
   std::string formatted_bad_output;
 
@@ -125,14 +122,6 @@ bool golden_file_test() {
 
   ASSERT_STR_EQ(good_output.c_str(), formatted_bad_output.c_str(),
                 "Formatting for badformat.fidl looks weird");
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(formatter_tests)
-InitializeContents();
-RUN_TEST(idempotence_test)
-RUN_TEST(basic_formatting_rules_test)
-RUN_TEST(golden_file_test)
-END_TEST_CASE(formatter_tests)

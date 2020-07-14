@@ -7,7 +7,7 @@
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 #include <fidl/tree_visitor.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "examples.h"
 #include "test_library.h"
@@ -77,9 +77,7 @@ std::string targeted_diff(const char* expected, const char* actual, size_t size)
 
 // Test that the AST visitor works: ensure that if you visit a file, you can
 // reconstruct its original contents.
-bool read_and_write_direct_test() {
-  BEGIN_TEST;
-
+TEST(VisitorTests, read_and_write_direct_test) {
   for (auto element : Examples::map()) {
     TestLibrary library(element.first, element.second);
     std::unique_ptr<fidl::raw::File> ast;
@@ -95,15 +93,9 @@ bool read_and_write_direct_test() {
       std::string d = targeted_diff(expected.c_str(), actual, output.size());
       d = element.first + ": " + d;
 
-      EXPECT_STR_EQ(expected.c_str(), actual, d.c_str());
+      EXPECT_STR_EQ(expected.c_str(), actual, "%s", d.c_str());
     }
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(visitor_tests)
-RUN_TEST(read_and_write_direct_test)
-END_TEST_CASE(visitor_tests)

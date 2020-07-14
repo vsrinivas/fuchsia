@@ -6,16 +6,15 @@
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-bool invalid_strictness(const std::string& type, const std::string& definition) {
-  BEGIN_TEST;
-
+void invalid_strictness(const std::string& type, const std::string& definition) {
   std::string fidl_library = "library example;\n\n" + definition + "\n";
 
   TestLibrary library(fidl_library);
@@ -25,11 +24,9 @@ bool invalid_strictness(const std::string& type, const std::string& definition) 
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyStrict);
   ASSERT_STR_STR(errors[0]->msg.c_str(), type.c_str());
-
-  END_TEST;
 }
 
-bool redundant_strictness(const std::string& strictness, const std::string& definition) {
+void redundant_strictness(const std::string& strictness, const std::string& definition) {
   // TODO(fxb/7847): Prepending a redundant "strict" qualifier is currently
   // allowed for bits, enums and unions to more easily transition those FIDL
   // types to be flexible by default. This test should be updated and re-enabled
@@ -37,12 +34,9 @@ bool redundant_strictness(const std::string& strictness, const std::string& defi
   //
   // The original code for this is at
   // <https://fuchsia.git.corp.google.com/fuchsia/+/d66c40c674e1a37fc674c016e76cebd7c8edcd2d/zircon/system/utest/fidl-compiler/strictness_tests.cc#31>.
-  return true;
 }
 
-bool bits_strictness() {
-  BEGIN_TEST;
-
+TEST(StrictnessTests, bits_strictness) {
   TestLibrary library(
       R"FIDL(
 library example;
@@ -60,13 +54,9 @@ flexible bits FlexibleFoo {
   ASSERT_TRUE(library.Compile());
   EXPECT_EQ(library.LookupBits("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupBits("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
-
-  END_TEST;
 }
 
-bool enum_strictness() {
-  BEGIN_TEST;
-
+TEST(StrictnessTests, enum_strictness) {
   TestLibrary library(
       R"FIDL(
 library example;
@@ -84,44 +74,40 @@ flexible enum FlexibleFoo {
   ASSERT_TRUE(library.Compile());
   EXPECT_EQ(library.LookupEnum("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupEnum("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
-
-  END_TEST;
 }
 
-bool strict_enum_redundant() {
-  return redundant_strictness("strict", R"FIDL(
+TEST(StrictnessTests, strict_enum_redundant) {
+  redundant_strictness("strict", R"FIDL(
 strict enum Foo {
   BAR = 1;
 };
 )FIDL");
 }
 
-bool strict_bits_redundant() {
-  return redundant_strictness("strict", R"FIDL(
+TEST(StrictnessTests, strict_bits_redundant) {
+  redundant_strictness("strict", R"FIDL(
 strict bits Foo {
   BAR = 0x1;
 };
 )FIDL");
 }
 
-bool invalid_strictness_struct() {
-  return invalid_strictness("struct", R"FIDL(
+TEST(StrictnessTests, invalid_strictness_struct) {
+  invalid_strictness("struct", R"FIDL(
 strict struct Foo {
     int32 i;
 };
 )FIDL");
 }
 
-bool invalid_strictness_table() {
-  return invalid_strictness("table", R"FIDL(
+TEST(StrictnessTests, invalid_strictness_table) {
+  invalid_strictness("table", R"FIDL(
 strict table StrictFoo {
 };
 )FIDL");
 }
 
-bool union_strictness() {
-  BEGIN_TEST;
-
+TEST(StrictnessTests, union_strictness) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -142,13 +128,9 @@ strict union StrictFoo {
   EXPECT_EQ(library.LookupUnion("Foo")->strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(library.LookupUnion("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupUnion("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
-
-  END_TEST;
 }
 
-bool strict_union_redundant() {
-  BEGIN_TEST;
-
+TEST(StrictnessTests, strict_union_redundant) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -159,19 +141,6 @@ strict union Foo {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   ASSERT_EQ(library.LookupUnion("Foo")->strictness, fidl::types::Strictness::kStrict);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(strictness_tests)
-RUN_TEST(bits_strictness);
-RUN_TEST(strict_bits_redundant);
-RUN_TEST(enum_strictness);
-RUN_TEST(union_strictness);
-RUN_TEST(strict_enum_redundant);
-RUN_TEST(invalid_strictness_table);
-RUN_TEST(invalid_strictness_struct);
-RUN_TEST(strict_union_redundant);
-END_TEST_CASE(strictness_tests)
