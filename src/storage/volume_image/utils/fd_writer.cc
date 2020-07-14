@@ -29,7 +29,7 @@ fit::result<FdWriter, std::string> FdWriter::Create(std::string_view path) {
   return fit::ok(FdWriter(std::move(fd), path));
 }
 
-std::string FdWriter::Write(uint64_t offset, fbl::Span<const uint8_t> buffer) {
+fit::result<void, std::string> FdWriter::Write(uint64_t offset, fbl::Span<const uint8_t> buffer) {
   size_t bytes_written = 0;
   while (bytes_written < buffer.size()) {
     const uint8_t* source = buffer.data() + bytes_written;
@@ -38,11 +38,11 @@ std::string FdWriter::Write(uint64_t offset, fbl::Span<const uint8_t> buffer) {
     int result = pwrite(fd_.get(), source, remaining_bytes, target_offset);
 
     if (result < 0) {
-      return "Write failed from " + name_ + ". More specifically " + strerror(errno);
+      return fit::error("Write failed from " + name_ + ". More specifically " + strerror(errno));
     }
     bytes_written += result;
   }
-  return std::string();
+  return fit::ok();
 }
 
 }  // namespace storage::volume_image

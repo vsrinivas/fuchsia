@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_READER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_READER_H_
 
+#include <lib/fit/result.h>
+
 #include <string>
 
 #include <fbl/span.h>
@@ -20,11 +22,11 @@ class Reader {
  public:
   virtual ~Reader() = default;
 
-  // Returns empty string when data at [|offset|, |offset| + |buffer.size()|] are read into
+  // On success data at [|offset|, |offset| + |buffer.size()|] are read into
   // |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  virtual std::string Read(uint64_t offset, fbl::Span<uint8_t> buffer) const = 0;
+  virtual fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const = 0;
 };
 
 }  // namespace storage::volume_image

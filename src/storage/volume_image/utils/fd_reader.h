@@ -31,11 +31,11 @@ class FdReader final : Reader {
   FdReader& operator=(const FdReader&) = delete;
   FdReader& operator=(FdReader&&) = default;
 
-  // Returns empty string when data at [|offset|, |offset| + |buffer.size()|] are read into
+  // On success data at [|offset|, |offset| + |buffer.size()|] are read into
   // |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  std::string Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final;
+  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final;
 
   // Returns a unique identifier for this |FdReader|.
   std::string_view name() const { return name_; }

@@ -72,7 +72,10 @@ source_set("io-interfaces") {
     "reader.h",
     "writer.h",
   ]
-  public_deps = [ "//zircon/public/lib/fbl" ]
+  public_deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+  ]
 }
 
 source_set("fd-io") {

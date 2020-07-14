@@ -30,7 +30,7 @@ fit::result<FdReader, std::string> FdReader::Create(std::string_view path) {
   return fit::ok(FdReader(std::move(fd), path));
 }
 
-std::string FdReader::Read(uint64_t offset, fbl::Span<uint8_t> buffer) const {
+fit::result<void, std::string> FdReader::Read(uint64_t offset, fbl::Span<uint8_t> buffer) const {
   size_t bytes_read = 0;
   while (bytes_read < buffer.size()) {
     uint8_t* destination = buffer.data() + bytes_read;
@@ -42,18 +42,18 @@ std::string FdReader::Read(uint64_t offset, fbl::Span<uint8_t> buffer) const {
       std::string_view error_description(strerror(errno));
       std::string error = "Read failed from ";
       error.append(name_).append(". More specifically ").append(error_description);
-      return error;
+      return fit::error(error);
     }
     if (result == 0) {
       std::string_view error_description(strerror(errno));
       std::string error = "Read failed from  ";
       error.append(name_).append(". End of file reached before reading requested bytes.");
-      return error;
+      return fit::error(error);
     }
 
     bytes_read += result;
   }
-  return std::string();
+  return fit::ok();
 }
 
 }  // namespace storage::volume_image

@@ -73,7 +73,9 @@ class FakeReader final : public Reader {
  public:
   ~FakeReader() final = default;
 
-  std::string Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final { return ""; }
+  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+    return fit::ok();
+  }
 };
 
 TEST(PartitionTest, CreateFromValidVolumeImageIsOk) {

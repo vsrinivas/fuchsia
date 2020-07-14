@@ -31,11 +31,11 @@ class FdWriter final : Writer {
   FdWriter& operator=(const FdWriter&) = delete;
   FdWriter& operator=(FdWriter&&) = default;
 
-  // Returns empty string when data at [|offset|, |offset| + |buffer.size()|] are read into
-  // |buffer|.
+  // On success data backing this writer is updated at [|offset|, |offset| +
+  // |buffer.size()|] to |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  std::string Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final;
+  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final;
 
   // Returns a unique identifier for this |FdWriter|.
   std::string_view name() const { return name_; }

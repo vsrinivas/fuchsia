@@ -71,8 +71,8 @@ TEST(FdReaderTest, ReadReturnsCorrectContents) {
   auto reader = fd_reader_or_error.take_value();
 
   std::vector<uint8_t> buffer(kFileContents.size(), 0);
-  std::string error = reader.Read(0, buffer);
-  ASSERT_TRUE(error.empty()) << error;
+  auto read_result = reader.Read(0, buffer);
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error();
 
   EXPECT_TRUE(memcmp(kFileContents.data(), buffer.data(), kFileContents.size()) == 0);
 }
@@ -95,8 +95,8 @@ TEST(FdReaderTest, ReadReturnsCorrectContentsAtOffset) {
   auto reader = fd_reader_or_error.take_value();
 
   std::vector<uint8_t> buffer(kFileContents.size() - kOffset, 0);
-  std::string error = reader.Read(kOffset, buffer);
-  ASSERT_TRUE(error.empty()) << error;
+  auto read_result = reader.Read(kOffset, buffer);
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error();
 
   EXPECT_TRUE(
       memcmp(kFileContents.data() + kOffset, buffer.data(), kFileContents.size() - kOffset) == 0);
@@ -123,8 +123,8 @@ TEST(FdReaderTest, ReadAreIdempotent) {
   // This checks that, for example a different implementation using read instead of pread, would
   // do appropiate seeks before reading.
   for (uint64_t offset = 0; offset < kFileContents.size() - 1; ++offset) {
-    std::string error = reader.Read(offset, fbl::Span(buffer.data(), buffer.size() - offset));
-    ASSERT_TRUE(error.empty()) << error;
+    auto read_result = reader.Read(offset, fbl::Span(buffer.data(), buffer.size() - offset));
+    ASSERT_TRUE(read_result.is_ok()) << read_result.error();
 
     EXPECT_TRUE(
         memcmp(kFileContents.data() + offset, buffer.data(), kFileContents.size() - offset) == 0);
@@ -150,10 +150,10 @@ TEST(FdReaderTest, ReadOutOfBoundsIsError) {
   std::vector<uint8_t> buffer(kFileContents.size(), 0);
 
   // Offset out of bounds.
-  EXPECT_FALSE(reader.Read(kFileContents.size(), fbl::Span(buffer.data(), 1)).empty());
+  EXPECT_TRUE(reader.Read(kFileContents.size(), fbl::Span(buffer.data(), 1)).is_error());
 
   // Try to read too much.
-  EXPECT_FALSE(reader.Read(1, fbl::Span(buffer.data(), buffer.size())).empty());
+  EXPECT_TRUE(reader.Read(1, fbl::Span(buffer.data(), buffer.size())).is_error());
 }
 
 }  // namespace

@@ -91,8 +91,8 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
   // Write the header.
   fvm::sparse_image_t header = FvmSparseGenerateHeader(descriptor);
   auto result = writer->Write(current_offset, FixedSizeStructToSpan(header));
-  if (!result.empty()) {
-    return fit::error(result);
+  if (result.is_error()) {
+    return result.take_error_result();
   }
   current_offset += sizeof(fvm::sparse_image_t);
 
@@ -100,15 +100,15 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
     FvmSparsePartitionEntry entry =
         FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition);
     auto partition_result = writer->Write(current_offset, FixedSizeStructToSpan(entry.descriptor));
-    if (!partition_result.empty()) {
-      return fit::error(partition_result);
+    if (partition_result.is_error()) {
+      return partition_result.take_error_result();
     }
     current_offset += sizeof(fvm::partition_descriptor_t);
 
     for (const auto& extent : entry.extents) {
       auto extent_result = writer->Write(current_offset, FixedSizeStructToSpan(extent));
-      if (!extent_result.empty()) {
-        return fit::error(extent_result);
+      if (extent_result.is_error()) {
+        return extent_result.take_error_result();
       }
       current_offset += sizeof(fvm::extent_descriptor_t);
     }
@@ -121,9 +121,9 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
   std::vector<uint8_t> data(kReadBufferSize, 0);
   compressor->Prepare(
       [&current_offset, writer](auto compressed_data) -> fit::result<void, std::string> {
-        std::string extent_data_write_error = writer->Write(current_offset, compressed_data);
-        if (!extent_data_write_error.empty()) {
-          return fit::error(extent_data_write_error);
+        auto extent_data_write_result = writer->Write(current_offset, compressed_data);
+        if (extent_data_write_result.is_error()) {
+          return extent_data_write_result.take_error_result();
         }
         current_offset += compressed_data.size();
         return fit::ok();
@@ -141,9 +141,9 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
         remaining_bytes -= bytes_to_read;
         auto buffer_view = fbl::Span(data.data(), bytes_to_read);
 
-        std::string extent_data_read_error = reader->Read(read_offset, buffer_view);
-        if (!extent_data_read_error.empty()) {
-          return fit::error(extent_data_read_error);
+        auto extent_data_read_result = reader->Read(read_offset, buffer_view);
+        if (extent_data_read_result.is_error()) {
+          return extent_data_read_result.take_error_result();
         }
         read_offset += bytes_to_read;
 

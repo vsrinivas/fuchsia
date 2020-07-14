@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_WRITER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_WRITER_H_
 
+#include <lib/fit/result.h>
+
 #include <string>
 
 #include <fbl/span.h>
@@ -20,11 +22,12 @@ class Writer {
  public:
   virtual ~Writer() = default;
 
-  // Returns empty string when data backing this writer is updated at [|offset|, |offset| +
+  // On success data backing this writer is updated at [|offset|, |offset| +
   // |buffer.size()|] to |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  virtual std::string Write(uint64_t offset, fbl::Span<const uint8_t> buffer) = 0;
+  virtual fit::result<void, std::string> Write(uint64_t offset,
+                                               fbl::Span<const uint8_t> buffer) = 0;
 };
 
 }  // namespace storage::volume_image

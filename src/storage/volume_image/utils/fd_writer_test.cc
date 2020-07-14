@@ -64,9 +64,9 @@ TEST(FdWriterTest, WriteUpdateContentsReturnsNoError) {
   auto fd_writer_or_error = FdWriter::Create(file.path());
   ASSERT_TRUE(fd_writer_or_error.is_ok()) << fd_writer_or_error.error();
   auto writer = fd_writer_or_error.take_value();
-  std::string error = writer.Write(
+  auto write_result = writer.Write(
       0, fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()), kFileContents.size()));
-  ASSERT_TRUE(error.empty()) << error;
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
 
   std::vector<char> buffer(kFileContents.size(), 0);
   fbl::unique_fd target_fd(open(file.path().data(), O_RDONLY));
@@ -85,11 +85,11 @@ TEST(FdWriterTest, WriteReturnsCorrectContentsAtOffset) {
   auto fd_writer_or_error = FdWriter::Create(file.path());
   ASSERT_TRUE(fd_writer_or_error.is_ok()) << fd_writer_or_error.error();
   auto writer = fd_writer_or_error.take_value();
-  std::string error = writer.Write(
+  auto write_result = writer.Write(
       kOffset,
       fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()), kFileContents.size())
           .subspan(kOffset));
-  ASSERT_TRUE(error.empty()) << error;
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
 
   std::vector<char> buffer(kFileContents.size(), 0);
   fbl::unique_fd target_fd(open(file.path().data(), O_RDONLY));
@@ -111,10 +111,10 @@ TEST(FdWriterTest, WritesAreIdempotent) {
 
   // If writes are idempotent, we should see the same written value as if we written once.
   for (unsigned int i = 0; i < kFileContents.size() - 1; i++) {
-    std::string error = writer.Write(
+    auto write_result = writer.Write(
         i, fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()), kFileContents.size())
                .subspan(i));
-    ASSERT_TRUE(error.empty()) << error;
+    ASSERT_TRUE(write_result.is_ok()) << write_result.error();
   }
 
   std::vector<char> buffer(kFileContents.size(), 0);
@@ -141,21 +141,21 @@ TEST(FdWriterTest, WritingPastEndOfFileIsOk) {
   EXPECT_TRUE(writer
                   .Write(0, fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()),
                                       kFileContents.size()))
-                  .empty());
+                  .is_ok());
 
   // Try to start writing at the end.
   EXPECT_TRUE(writer
                   .Write(kFileContents.size(),
                          fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()),
                                    kFileContents.size()))
-                  .empty());
+                  .is_ok());
 
   // Try to start writing at random offset
   EXPECT_TRUE(writer
                   .Write(4 * kFileContents.size(),
                          fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()),
                                    kFileContents.size()))
-                  .empty());
+                  .is_ok());
 
   std::vector<char> buffer(kFileContents.size() * 5, 0);
   ASSERT_NO_FATAL_FAILURE(Read(target_fd.get(), buffer));

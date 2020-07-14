@@ -82,7 +82,7 @@ TEST(FvmSparseImageTest, GetPartitionFlagMapsUnknownEncryptionCorrectly) {
   EXPECT_EQ(0u, flag);
 }
 
-static constexpr std::string_view kSerializedVolumeImage1 = R"(
+constexpr std::string_view kSerializedVolumeImage1 = R"(
 {
     "volume": {
       "magic": 11602964,
@@ -118,7 +118,7 @@ static constexpr std::string_view kSerializedVolumeImage1 = R"(
     }
 })";
 
-static constexpr std::string_view kSerializedVolumeImage2 = R"(
+constexpr std::string_view kSerializedVolumeImage2 = R"(
 {
     "volume": {
       "magic": 11602964,
@@ -248,15 +248,16 @@ TEST(FvmSparseImageTest,
 // check.
 class FakeReader : public Reader {
  public:
-  explicit FakeReader(fit::function<std::string(uint64_t, fbl::Span<uint8_t>)> filler)
+  explicit FakeReader(
+      fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> filler)
       : filler_(std::move(filler)) {}
 
-  std::string Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     return filler_(offset, buffer);
   }
 
  private:
-  fit::function<std::string(uint64_t offset, fbl::Span<uint8_t>)> filler_;
+  fit::function<fit::result<void, std::string>(uint64_t offset, fbl::Span<uint8_t>)> filler_;
 };
 
 // Fake writer implementations that writes into a provided buffer.
@@ -264,12 +265,12 @@ class BufferWriter : public Writer {
  public:
   explicit BufferWriter(fbl::Span<uint8_t> buffer) : buffer_(buffer) {}
 
-  std::string Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
     if (offset > buffer_.size() || offset + buffer.size() > buffer_.size()) {
-      return "Out of Range";
+      return fit::error("Out of Range");
     }
     memcpy(buffer_.data() + offset, buffer.data(), buffer.size());
-    return "";
+    return fit::ok();
   }
 
  private:
@@ -277,11 +278,11 @@ class BufferWriter : public Writer {
 };
 
 template <int shift>
-std::string GetContents(uint64_t offset, fbl::Span<uint8_t> buffer) {
+fit::result<void, std::string> GetContents(uint64_t offset, fbl::Span<uint8_t> buffer) {
   for (uint64_t index = 0; index < buffer.size(); ++index) {
     buffer[index] = (offset + index + shift) % sizeof(uint64_t);
   }
-  return "";
+  return fit::ok();
 }
 
 template <typename T, size_t size>
@@ -374,7 +375,7 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataUncompressedCompliesWithFormat) 
     for (const auto& mapping : partition.address().mappings) {
       extent_content.resize(mapping.count * partition.volume().block_size, 0);
       ASSERT_TRUE(
-          read_content(mapping.source * partition.volume().block_size, extent_content).empty());
+          read_content(mapping.source * partition.volume().block_size, extent_content).is_ok());
       EXPECT_TRUE(memcmp(extents[partition_index][extent_index], extent_content.data(),
                          extent_content.size()) == 0);
     }
@@ -480,7 +481,7 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataCompressedCompliesWithFormat) {
     for (const auto& mapping : partition.address().mappings) {
       extent_content.resize(mapping.count * partition.volume().block_size, 0);
       ASSERT_TRUE(
-          read_content(mapping.source * partition.volume().block_size, extent_content).empty());
+          read_content(mapping.source * partition.volume().block_size, extent_content).is_ok());
       EXPECT_TRUE(memcmp(extents[partition_index][extent_index], extent_content.data(),
                          extent_content.size()) == 0);
     }
@@ -493,12 +494,12 @@ class ErrorWriter final : public Writer {
       : error_(error), error_offset_(error_offset) {}
   ~ErrorWriter() final = default;
 
-  std::string Write([[maybe_unused]] uint64_t offset,
-                    [[maybe_unused]] fbl::Span<const uint8_t> buffer) final {
+  fit::result<void, std::string> Write([[maybe_unused]] uint64_t offset,
+                                       [[maybe_unused]] fbl::Span<const uint8_t> buffer) final {
     if (offset >= error_offset_) {
-      return error_;
+      return fit::error(error_);
     }
-    return "";
+    return fit::ok();
   }
 
  private:
@@ -519,7 +520,7 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageWithReadErrorIsError) {
       kSerializedVolumeImage1,
       std::make_unique<FakeReader>(
           []([[maybe_unused]] uint64_t offset, [[maybe_unused]] fbl::Span<uint8_t> buffer) {
-            return std::string(kReadError);
+            return fit::error(std::string(kReadError));
           }));
   ASSERT_TRUE(partition_1_result.is_ok()) << partition_1_result.error();
 
@@ -683,10 +684,10 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseCompressedSerializedData) {
       ASSERT_EQ(ZX_OK, sparse_reader->ReadData(decompressed_extent_content.data(),
                                                decompressed_extent_content.size(), &read_bytes));
       ASSERT_EQ(decompressed_extent_content.size(), read_bytes);
-      std::string read_result = partition.reader()->Read(
+      auto read_result = partition.reader()->Read(
           mapping.source,
           fbl::Span(original_extent_content.data(), original_extent_content.size()));
-      ASSERT_TRUE(read_result.empty()) << read_result;
+      ASSERT_TRUE(read_result.is_ok()) << read_result.error();
       EXPECT_TRUE(memcmp(decompressed_extent_content.data(), original_extent_content.data(),
                          decompressed_extent_content.size()));
     }
