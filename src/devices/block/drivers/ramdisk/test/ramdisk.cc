@@ -11,6 +11,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fifo.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -253,6 +254,7 @@ TEST(RamdiskTests, RamdiskStatsTest) {
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(client.Transaction(&requests[0], 1), ZX_OK);
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 TEST(RamdiskTests, RamdiskGrowTestDimensionsChange) {
@@ -693,6 +695,7 @@ TEST(RamdiskTests, RamdiskTestFifoBasic) {
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(client.Transaction(&requests[0], 1), ZX_OK);
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 TEST(RamdiskTests, RamdiskTestFifoNoGroup) {
@@ -784,6 +787,7 @@ TEST(RamdiskTests, RamdiskTestFifoNoGroup) {
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(fifo.write(requests, 1, nullptr), ZX_OK);
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 typedef struct {
@@ -910,6 +914,7 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmo) {
   for (size_t i = 0; i < objs.size(); i++) {
     ASSERT_NO_FATAL_FAILURES(close_vmo_helper(&client, &objs[i], group));
   }
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 typedef struct {
@@ -984,6 +989,7 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmoMultithreaded) {
     ASSERT_EQ(thrd_join(threads[i], &res), thrd_success);
     ASSERT_EQ(res, 0);
   }
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 // TODO(smklein): Test ops across different vmos
@@ -1025,6 +1031,7 @@ TEST(RamdiskTests, RamdiskTestFifoLargeOpsCount) {
 
     ASSERT_EQ(client.Transaction(&requests[0], requests.size()), ZX_OK);
   }
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 TEST(RamdiskTests, RamdiskTestFifoLargeOpsCountShutdown) {
@@ -1076,6 +1083,7 @@ TEST(RamdiskTests, RamdiskTestFifoLargeOpsCountShutdown) {
   ZX_ASSERT(fifo.write(sizeof(block_fifo_request_t), &requests[0], requests.size(), &actual) ==
             ZX_OK);
   usleep(100);
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
   fifo.reset();
 }
 
@@ -1157,6 +1165,7 @@ TEST(RamdiskTests, RamdiskTestFifoIntermediateOpFailure) {
       ASSERT_EQ(tmpbuf[i], 0);
     }
   }
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 TEST(RamdiskTests, RamdiskTestFifoBadClientVmoid) {
@@ -1192,6 +1201,7 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientVmoid) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_IO, "Expected IO error with bad vmoid");
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 TEST(RamdiskTests, RamdiskTestFifoBadClientUnalignedRequest) {
@@ -1230,6 +1240,7 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientUnalignedRequest) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_INVALID_ARGS);
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 TEST(RamdiskTests, RamdiskTestFifoBadClientOverflow) {
@@ -1293,6 +1304,7 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientOverflow) {
   request.vmo_offset = 0;
   request.dev_offset = std::numeric_limits<uint64_t>::max();
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 TEST(RamdiskTests, RamdiskTestFifoBadClientBadVmo) {
@@ -1344,6 +1356,7 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientBadVmo) {
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
   request.length = 2;
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 TEST(RamdiskTests, RamdiskTestFifoSleepUnavailable) {
@@ -1449,6 +1462,7 @@ TEST(RamdiskTests, RamdiskTestFifoSleepUnavailable) {
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(client.Transaction(&requests[0], 1), ZX_OK);
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 // This thread and its arguments can be used to wake a ramdisk that sleeps with deferred writes.
@@ -1613,6 +1627,7 @@ TEST(RamdiskTests, RamdiskTestFifoSleepDeferred) {
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(client.Transaction(&requests[0], 1), ZX_OK);
+  fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
 TEST(RamdiskTests, RamdiskCreateAt) {
@@ -1622,6 +1637,7 @@ TEST(RamdiskTests, RamdiskCreateAt) {
   args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
   args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
   args.driver_search_paths.push_back("/boot/driver");
+  args.path_prefix = "/pkg/";
   ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
 
   fbl::unique_fd fd;
@@ -1642,6 +1658,7 @@ TEST(RamdiskTests, RamdiskCreateAtGuid) {
   args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
   args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
   args.driver_search_paths.push_back("/boot/driver");
+  args.path_prefix = "/pkg/";
   ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
 
   fbl::unique_fd fd;
@@ -1662,6 +1679,7 @@ TEST(RamdiskTests, RamdiskCreateAtVmo) {
   args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
   args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
   args.driver_search_paths.push_back("/boot/driver");
+  args.path_prefix = "/pkg/";
   ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
   zx::vmo vmo;
   ASSERT_EQ(zx::vmo::create(256 * PAGE_SIZE, 0, &vmo), ZX_OK);
@@ -1676,3 +1694,38 @@ TEST(RamdiskTests, RamdiskCreateAtVmo) {
 }
 
 }  // namespace tests
+
+int main(int argc, char** argv) {
+  devmgr_integration_test::IsolatedDevmgr devmgr;
+  auto args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+  args.disable_block_watcher = false;
+  args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
+  args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+  args.driver_search_paths.push_back("/boot/driver");
+  args.path_prefix = "/pkg/";
+  zx_status_t status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to create IsolatedDevmgr: %d\n", status);
+    return status;
+  }
+  fbl::unique_fd fd;
+  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl", &fd);
+  if (status != ZX_OK) {
+    fprintf(stderr, "ramctl didn't enumerate: %d\n", status);
+    return status;
+  }
+
+  fdio_ns_t* ns;
+  status = fdio_ns_get_installed(&ns);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Could not create get namespace: %d\n", status);
+    return status;
+  }
+  status = fdio_ns_bind_fd(ns, "/dev", devmgr.devfs_root().get());
+  if (status != ZX_OK) {
+    fprintf(stderr, "Could not bind /dev namespace: %d\n", status);
+    return status;
+  }
+
+  return RUN_ALL_TESTS(argc, argv);
+}

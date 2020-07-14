@@ -4,6 +4,7 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("ramdisk") {
   output_name = "ramdisk-test"
@@ -28,13 +29,14 @@ test("ramdisk") {
   ]
 }
 
-unittest_package("ramdisk-package") {
-  package_name = "ramdisk"
-  deps = [ ":ramdisk" ]
+isolated_devmgr_unittest_package("ramdisk-test") {
+  executable_path = "test/ramdisk-test"
 
-  tests = [
-    {
-      name = "ramdisk-test"
-    },
+  deps = [
+    ":ramdisk",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
   ]
 }

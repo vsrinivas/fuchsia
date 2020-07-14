@@ -12,7 +12,6 @@ group("tests") {
     "//src/devices/block/drivers/ftl/test:ftl-package",
     "//src/devices/block/drivers/fvm/test:fvm-driver-unittests-package",
     "//src/devices/block/drivers/fvm/test/integration:fvm-driver-integration-package",
-    "//src/devices/block/drivers/ramdisk/test:ramdisk-package",
     "//src/devices/block/lib/scsi/test:scsilib-disk-test-package",
     "//src/devices/bus/drivers/pci/test:pci-driver-package",
     "//src/devices/bus/drivers/pci/test:pci-unit-package",

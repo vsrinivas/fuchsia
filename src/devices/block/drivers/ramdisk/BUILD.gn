@@ -31,3 +31,8 @@ driver_module("ramdisk") {
     "//zircon/system/ulib/fzl",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:ramdisk-test" ]
+}

@@ -9,6 +9,7 @@ group("tests") {
     "aml-sd-emmc:tests",
     "block-verity:tests",
     "mtk-sdmmc:tests",
+    "ramdisk:tests",
     "sdhci:tests",
     "sdmmc:tests",
     "usb-mass-storage:tests",
