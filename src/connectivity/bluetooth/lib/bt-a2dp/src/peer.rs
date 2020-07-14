@@ -4,13 +4,16 @@
 
 use {
     anyhow::Context,
+    bt_a2dp_metrics as metrics,
     bt_avdtp::{
-        self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint, StreamEndpointId,
+        self as avdtp, MediaCodecType, ServiceCapability, ServiceCategory, StreamEndpoint,
+        StreamEndpointId,
     },
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::{ChannelParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{inspect::DebugExt, types::PeerId},
+    fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
@@ -21,6 +24,7 @@ use {
     log::{info, trace, warn},
     parking_lot::Mutex,
     std::{
+        collections::HashSet,
         pin::Pin,
         sync::{Arc, Weak},
     },
@@ -49,20 +53,31 @@ pub struct Peer {
     /// when the peer disconnects.
     #[inspect(skip)]
     closed_wakers: Arc<Mutex<Option<Vec<Waker>>>>,
+    /// Cobalt Sender, if we are sending metrics.
+    #[inspect(skip)]
+    cobalt_sender: Option<CobaltSender>,
 }
 
 impl Peer {
     /// Make a new Peer which is connected to the peer `id` using the AVDTP `peer`.
     /// The `streams` are the local endpoints available to the peer.
     /// `profile` will be used to initiate connections for Media Transport.
+    /// If `cobalt_sender` is included, metrics for codec availability will be reported.
     /// This also starts a task on the executor to handle incoming events from the peer.
-    pub fn create(id: PeerId, peer: avdtp::Peer, streams: Streams, profile: ProfileProxy) -> Self {
+    pub fn create(
+        id: PeerId,
+        peer: avdtp::Peer,
+        streams: Streams,
+        profile: ProfileProxy,
+        cobalt_sender: Option<CobaltSender>,
+    ) -> Self {
         let res = Self {
             id,
             inner: Arc::new(Mutex::new(PeerInner::new(peer, id, streams))),
             profile,
             descriptor: Mutex::new(None),
             closed_wakers: Arc::new(Mutex::new(Some(Vec::new()))),
+            cobalt_sender,
         };
         res.start_requests_task();
         res
@@ -94,6 +109,7 @@ impl Peer {
         let avdtp = self.avdtp();
         let get_all = self.descriptor.lock().map_or(false, a2dp_version_check);
         let inner = self.inner.clone();
+        let cobalt_sender = self.cobalt_sender.clone();
         async move {
             if let Some(caps) = inner.lock().remote_endpoints() {
                 return Ok(caps);
@@ -122,7 +138,22 @@ impl Peer {
                 };
             }
             inner.lock().set_remote_endpoints(&remote_streams);
+            if let Some(sender) = cobalt_sender {
+                Self::record_cobalt_metrics(sender, &remote_streams);
+            }
             Ok(remote_streams)
+        }
+    }
+
+    fn record_cobalt_metrics(mut cobalt_sender: CobaltSender, endpoints: &[StreamEndpoint]) {
+        let codec_metrics: HashSet<_> = endpoints
+            .iter()
+            .filter_map(|endpoint| {
+                endpoint.codec_type().map(|t| codectype_to_availability_metric(t) as u32)
+            })
+            .collect();
+        for metric in codec_metrics {
+            cobalt_sender.log_event(metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID, metric);
         }
     }
 
@@ -462,6 +493,21 @@ impl PeerInner {
     }
 }
 
+fn codectype_to_availability_metric(
+    codec_type: &MediaCodecType,
+) -> metrics::A2dpCodecAvailabilityMetricDimensionCodec {
+    match codec_type {
+        &MediaCodecType::AUDIO_SBC => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Sbc,
+        &MediaCodecType::AUDIO_MPEG12 => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Mpeg12,
+        &MediaCodecType::AUDIO_AAC => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Aac,
+        &MediaCodecType::AUDIO_ATRAC => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Atrac,
+        &MediaCodecType::AUDIO_NON_A2DP => {
+            metrics::A2dpCodecAvailabilityMetricDimensionCodec::VendorSpecific
+        }
+        _ => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Unknown,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -472,6 +518,8 @@ mod tests {
         Channel, ChannelMode, ProfileMarker, ProfileRequest, ProfileRequestStream,
         ServiceClassProfileIdentifier,
     };
+    use fidl_fuchsia_cobalt::CobaltEvent;
+    use futures::channel::mpsc;
     use futures::pin_mut;
     use matches::assert_matches;
     use std::convert::TryInto;
@@ -480,6 +528,12 @@ mod tests {
     use crate::media_task::tests::TestMediaTaskBuilder;
     use crate::media_types::*;
     use crate::stream::tests::make_sbc_endpoint;
+
+    fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
+        const BUFFER_SIZE: usize = 100;
+        let (sender, receiver) = mpsc::channel(BUFFER_SIZE);
+        (CobaltSender::new(sender), receiver)
+    }
 
     fn setup_avdtp_peer() -> (avdtp::Peer, zx::Socket) {
         let (remote, signaling) =
@@ -507,13 +561,20 @@ mod tests {
 
     /// Creates a Peer object, returning a socket connected ot the remote end, a
     /// ProfileRequestStream connected to the profile_proxy, and the Peer object.
-    fn setup_peer_test() -> (zx::Socket, ProfileRequestStream, Peer) {
+    fn setup_peer_test() -> (zx::Socket, ProfileRequestStream, mpsc::Receiver<CobaltEvent>, Peer) {
         let (avdtp, remote) = setup_avdtp_peer();
+        let (cobalt_sender, cobalt_receiver) = fake_cobalt_sender();
         let (profile_proxy, requests) =
             create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
-        let peer = Peer::create(PeerId(1), avdtp, build_test_streams(), profile_proxy);
+        let peer = Peer::create(
+            PeerId(1),
+            avdtp,
+            build_test_streams(),
+            profile_proxy,
+            Some(cobalt_sender),
+        );
 
-        (remote, requests, peer)
+        (remote, requests, cobalt_receiver, peer)
     }
 
     fn expect_get_capabilities_and_respond(
@@ -576,7 +637,7 @@ mod tests {
         let id = PeerId(1);
 
         let avdtp = avdtp::Peer::new(signaling).expect("peer should be creatable");
-        let peer = Peer::create(id, avdtp, Streams::new(), proxy);
+        let peer = Peer::create(id, avdtp, Streams::new(), proxy, None);
 
         let closed_fut = peer.closed();
 
@@ -594,7 +655,7 @@ mod tests {
     fn test_peer_collect_capabilities_success() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        let (remote, _, peer) = setup_peer_test();
+        let (remote, _, mut cobalt_receiver, peer) = setup_peer_test();
 
         let p: ProfileDescriptor = ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
@@ -679,6 +740,12 @@ mod tests {
             }
         }
 
+        // Should have sent two Cobalt events, one for each endpoint.
+        let event = cobalt_receiver.try_next().expect("Should get a CobaltEvent").unwrap();
+        assert_eq!(metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID, event.metric_id);
+        let event = cobalt_receiver.try_next().expect("Should get a second CobaltEvent").unwrap();
+        assert_eq!(metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID, event.metric_id);
+
         // The second time, we don't expect to ask the peer again.
         let collect_future = peer.collect_capabilities();
         pin_mut!(collect_future);
@@ -687,13 +754,16 @@ mod tests {
             Poll::Ready(Ok(endpoints)) => assert_eq!(2, endpoints.len()),
             x => panic!("Expected get remote capabilities to be done, got {:?}", x),
         };
+
+        // Shouldn't report any more to cobalt since we already did so.
+        assert!(cobalt_receiver.try_next().is_err());
     }
 
     #[test]
     fn test_peer_collect_all_capabilities_success() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        let (remote, _, peer) = setup_peer_test();
+        let (remote, _, mut cobalt_receiver, peer) = setup_peer_test();
         let p: ProfileDescriptor = ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
             major_version: 1,
@@ -777,6 +847,12 @@ mod tests {
             }
         }
 
+        // Should have sent two Cobalt events, one for each endpoint.
+        let event = cobalt_receiver.try_next().expect("Should get a CobaltEvent").unwrap();
+        assert_eq!(metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID, event.metric_id);
+        let event = cobalt_receiver.try_next().expect("Should get a second CobaltEvent").unwrap();
+        assert_eq!(metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID, event.metric_id);
+
         // The second time, we don't expect to ask the peer again.
         let collect_future = peer.collect_capabilities();
         pin_mut!(collect_future);
@@ -785,13 +861,16 @@ mod tests {
             Poll::Ready(Ok(endpoints)) => assert_eq!(2, endpoints.len()),
             x => panic!("Expected get remote capabilities to be done, got {:?}", x),
         };
+
+        // Shouldn't report any more to cobalt since we already did so.
+        assert!(cobalt_receiver.try_next().is_err());
     }
 
     #[test]
     fn test_peer_collect_capabilities_discovery_fails() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        let (remote, _, peer) = setup_peer_test();
+        let (remote, _, _, peer) = setup_peer_test();
 
         let collect_future = peer.collect_capabilities();
         pin_mut!(collect_future);
@@ -828,7 +907,7 @@ mod tests {
     fn test_peer_collect_capabilities_get_capability_fails() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        let (remote, _, peer) = setup_peer_test();
+        let (remote, _, _, peer) = setup_peer_test();
 
         let collect_future = peer.collect_capabilities();
         pin_mut!(collect_future);
@@ -920,7 +999,7 @@ mod tests {
     fn test_peer_stream_start_success() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        let (remote, mut profile_request_stream, peer) = setup_peer_test();
+        let (remote, mut profile_request_stream, _, peer) = setup_peer_test();
 
         // This needs to match the test stream.
         let local_seid = 1_u8.try_into().unwrap();
@@ -990,7 +1069,7 @@ mod tests {
     fn test_peer_stream_start_fails_to_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        let (remote, mut profile_request_stream, peer) = setup_peer_test();
+        let (remote, mut profile_request_stream, _, peer) = setup_peer_test();
 
         // This needs to match the local stream id.
         let local_seid = 1_u8.try_into().unwrap();
@@ -1052,7 +1131,7 @@ mod tests {
         let next_task_fut = test_builder.next_task();
         pin_mut!(next_task_fut);
 
-        let peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy);
+        let peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy, None);
         let remote_peer = avdtp::Peer::new(remote).expect("create peer failure");
 
         let discover_fut = remote_peer.discover();

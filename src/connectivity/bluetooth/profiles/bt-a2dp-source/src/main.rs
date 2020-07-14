@@ -195,7 +195,7 @@ impl Peers {
         let id = entry.key();
         let socket = channel.socket.ok_or(format_err!("No socket in control connection"))?;
         let avdtp_peer = avdtp::Peer::new(socket).map_err(|e| avdtp::Error::ChannelSetup(e))?;
-        let peer = Peer::create(id.clone(), avdtp_peer, streams, profile);
+        let peer = Peer::create(id.clone(), avdtp_peer, streams, profile, None);
         // Start the streaming task if the profile information is populated.
         // Otherwise, `self.discovered()` will do so.
         let start_streaming_flag = desc.map_or(false, |d| {
