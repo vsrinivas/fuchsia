@@ -179,22 +179,39 @@ TEST(Vmar, MapInUppderLimitTest) {
 
   // Set the upper limit for all maps to the midpoint of the parent region.
   const uintptr_t upper_limit = region_size / 2;
+  const zx_vm_option_t options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_OFFSET_IS_UPPER_LIMIT;
+
+  // An upper limit beyond the end of the parent region should fail.
+  ASSERT_EQ(
+      zx_vmar_map(parent_region, options, region_size + PAGE_SIZE, vmo, 0, PAGE_SIZE, &map_addr),
+      ZX_ERR_INVALID_ARGS);
+
+  // A size greater than the upper limit should fail.
+  ASSERT_EQ(zx_vmar_map(parent_region, options, PAGE_SIZE, vmo, 0, PAGE_SIZE * 2, &map_addr),
+            ZX_ERR_INVALID_ARGS);
+
+  // A size larger than the parent region should fail.
+  ASSERT_EQ(
+      zx_vmar_map(parent_region, options, PAGE_SIZE, vmo, 0, region_size + PAGE_SIZE, &map_addr),
+      ZX_ERR_INVALID_ARGS);
+
+  // A size and upper limit equal to the parent region should succeed.
+  ASSERT_EQ(zx_vmar_map(parent_region, options, region_size, vmo, 0, region_size, &map_addr),
+            ZX_OK);
+  ASSERT_EQ(parent_region_addr, map_addr);
+
+  ASSERT_EQ(zx_vmar_unmap(parent_region, map_addr, region_size), ZX_OK);
 
   // Every map should conform to the upper limit.
   for (size_t i = 0; i < kSubRegions; i++) {
-    ASSERT_EQ(
-        zx_vmar_map(parent_region, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_OFFSET_IS_UPPER_LIMIT,
-                    upper_limit, vmo, 0, map_size, &map_addr),
-        ZX_OK);
+    ASSERT_EQ(zx_vmar_map(parent_region, options, upper_limit, vmo, 0, map_size, &map_addr), ZX_OK);
     EXPECT_GE(map_addr, parent_region_addr);
     EXPECT_LE(map_addr + map_size, parent_region_addr + upper_limit);
   }
 
   // Mapping one more time should fail now that all of the VMAR below the upper limit is consumed.
-  ASSERT_EQ(
-      zx_vmar_map(parent_region, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_OFFSET_IS_UPPER_LIMIT,
-                  upper_limit, vmo, 0, map_size, &map_addr),
-      ZX_ERR_NO_MEMORY);
+  ASSERT_EQ(zx_vmar_map(parent_region, options, upper_limit, vmo, 0, map_size, &map_addr),
+            ZX_ERR_NO_MEMORY);
 
   // Mapping one more time without the upper limit should succeed.
   ASSERT_EQ(zx_vmar_map(parent_region, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, map_size,

@@ -129,7 +129,10 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  if (offset >= size_ || size > size_ - offset) {
+  if (!is_upper_bound && (offset >= size_ || size > size_ - offset)) {
+      return ZX_ERR_INVALID_ARGS;
+  }
+  if (is_upper_bound && (offset > size_ || size > size_ || size > offset)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
