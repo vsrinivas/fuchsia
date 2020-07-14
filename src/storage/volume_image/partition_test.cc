@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/volume_image/fvm/partition.h"
+#include "src/storage/volume_image/partition.h"
 
 #include <algorithm>
 #include <string_view>
@@ -11,7 +11,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/storage/volume_image/fvm/address_descriptor.h"
+#include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/utils/guid.h"
 #include "src/storage/volume_image/volume_descriptor.h"
 

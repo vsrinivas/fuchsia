@@ -12,8 +12,8 @@
 #include <vector>
 
 #include "src/storage/volume_image/fvm/options.h"
-#include "src/storage/volume_image/fvm/partition.h"
 #include "src/storage/volume_image/options.h"
+#include "src/storage/volume_image/partition.h"
 
 namespace storage::volume_image {
 namespace internal {

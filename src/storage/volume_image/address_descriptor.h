@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_VOLUME_IMAGE_FVM_ADDRESS_DESCRIPTOR_H_
-#define SRC_STORAGE_VOLUME_IMAGE_FVM_ADDRESS_DESCRIPTOR_H_
+#ifndef SRC_STORAGE_VOLUME_IMAGE_ADDRESS_DESCRIPTOR_H_
+#define SRC_STORAGE_VOLUME_IMAGE_ADDRESS_DESCRIPTOR_H_
 
 #include <lib/fit/result.h>
 
@@ -59,4 +59,4 @@ struct AddressDescriptor {
 
 }  // namespace storage::volume_image
 
-#endif  // SRC_STORAGE_VOLUME_IMAGE_FVM_ADDRESS_DESCRIPTOR_H_
+#endif  // SRC_STORAGE_VOLUME_IMAGE_ADDRESS_DESCRIPTOR_H_

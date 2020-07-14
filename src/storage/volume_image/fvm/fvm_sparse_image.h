@@ -7,7 +7,7 @@
 
 #include <fvm/fvm-sparse.h>
 
-#include "src/storage/volume_image/fvm/address_descriptor.h"
+#include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 #include "src/storage/volume_image/utils/compressor.h"
 #include "src/storage/volume_image/utils/writer.h"

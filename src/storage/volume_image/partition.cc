@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/volume_image/fvm/partition.h"
+#include "src/storage/volume_image/partition.h"
 
 #include <sstream>
 
@@ -10,7 +10,7 @@
 #include "rapidjson/error/en.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "src/storage/volume_image/fvm/address_descriptor.h"
+#include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/volume_descriptor.h"
 
 namespace storage::volume_image {

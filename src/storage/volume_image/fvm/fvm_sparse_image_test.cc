@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/storage/volume_image/fvm/address_descriptor.h"
+#include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"

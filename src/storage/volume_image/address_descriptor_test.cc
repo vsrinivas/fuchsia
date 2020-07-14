@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/volume_image/fvm/address_descriptor.h"
+#include "src/storage/volume_image/address_descriptor.h"
 
 #include <string>
 #include <string_view>

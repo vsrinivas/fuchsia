@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_VOLUME_IMAGE_FVM_PARTITION_H_
-#define SRC_STORAGE_VOLUME_IMAGE_FVM_PARTITION_H_
+#ifndef SRC_STORAGE_VOLUME_IMAGE_PARTITION_H_
+#define SRC_STORAGE_VOLUME_IMAGE_PARTITION_H_
 
 #include <memory>
 #include <string>
 
 #include "lib/fit/result.h"
-#include "src/storage/volume_image/fvm/address_descriptor.h"
+#include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/utils/reader.h"
 #include "src/storage/volume_image/volume_descriptor.h"
 
@@ -74,4 +74,4 @@ class Partition {
 
 }  // namespace storage::volume_image
 
-#endif  // SRC_STORAGE_VOLUME_IMAGE_FVM_PARTITION_H_
+#endif  // SRC_STORAGE_VOLUME_IMAGE_PARTITION_H_

@@ -23,13 +23,38 @@ source_set("volume-descriptor") {
   ]
 }
 
+source_set("address-descriptor") {
+  sources = [ "address_descriptor.cc" ]
+  public = [ "address_descriptor.h" ]
+  public_deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+  ]
+  deps = [ "//third_party/rapidjson" ]
+}
+
+source_set("partition") {
+  sources = [ "partition.cc" ]
+  public = [ "partition.h" ]
+  public_deps = [
+    ":address-descriptor",
+    "//src/storage/volume_image:volume-descriptor",
+    "//src/storage/volume_image/utils:io-interfaces",
+  ]
+  deps = [ "//third_party/rapidjson" ]
+}
+
 source_set("volume-descriptor-test") {
   testonly = true
   sources = [
+    "address_descriptor_test.cc",
     "options_test.cc",
+    "partition_test.cc",
     "volume_descriptor_test.cc",
   ]
   deps = [
+    ":address-descriptor",
+    ":partition",
     ":volume-descriptor",
     "serialization:schema",
     "//src/lib/json_parser",
