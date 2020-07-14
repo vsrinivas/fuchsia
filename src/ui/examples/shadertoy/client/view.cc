@@ -39,7 +39,7 @@ ViewImpl::ViewImpl(sys::ComponentContext* component_context, scenic::Session* se
 
   // Create an ImagePipe and pass one end of it to the ShadertoyFactory in order to obtain a
   // Shadertoy.
-  fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe_handle;
+  fidl::InterfaceHandle<fuchsia::images::ImagePipe2> image_pipe_handle;
   auto image_pipe_request = image_pipe_handle.NewRequest();
   shadertoy_factory_->NewImagePipeShadertoy(shadertoy_.NewRequest(), std::move(image_pipe_handle));
   shadertoy_.set_error_handler([this](zx_status_t status) {
@@ -63,7 +63,7 @@ ViewImpl::ViewImpl(sys::ComponentContext* component_context, scenic::Session* se
   // Pass the other end of the ImagePipe to the Session, and wrap the resulting resource in a
   // Material.
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic::NewCreateImagePipeCmd(image_pipe_id, std::move(image_pipe_request)));
+  session()->Enqueue(scenic::NewCreateImagePipe2Cmd(image_pipe_id, std::move(image_pipe_request)));
   scenic::Material material(session());
   material.SetTexture(image_pipe_id);
   session()->ReleaseResource(image_pipe_id);

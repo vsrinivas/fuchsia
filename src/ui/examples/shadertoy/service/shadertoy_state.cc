@@ -14,7 +14,7 @@
 namespace shadertoy {
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
-    App* app, fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
+    App* app, fidl::InterfaceHandle<fuchsia::images::ImagePipe2> image_pipe) {
   return fxl::AdoptRef(new ShadertoyStateForImagePipe(app, std::move(image_pipe)));
 }
 

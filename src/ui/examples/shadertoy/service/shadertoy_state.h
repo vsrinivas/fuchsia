@@ -33,7 +33,7 @@ class ShadertoyState : public escher::Resource {
  public:
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForImagePipe(
-      App* app, fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe);
+      App* app, fidl::InterfaceHandle<fuchsia::images::ImagePipe2> image_pipe);
 
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForView(App* app, zx::eventpair view_token,
