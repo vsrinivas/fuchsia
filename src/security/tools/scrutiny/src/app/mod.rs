@@ -6,3 +6,4 @@ pub mod app;
 pub mod builtin;
 pub mod logo;
 pub mod shell;
+pub mod error;

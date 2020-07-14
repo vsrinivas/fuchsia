@@ -46,6 +46,7 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:termion",
+      "//third_party/rust_crates:thiserror",
     ]
   }
 }

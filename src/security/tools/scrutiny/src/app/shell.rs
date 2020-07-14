@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::builtin::{Builtin, BuiltinCommand},
+    super::{
+        error::ShellError,
+        builtin::{Builtin, BuiltinCommand},
+    },
     log::info,
     scrutiny::engine::{
         dispatcher::{ControllerDispatcher, DispatcherError},
@@ -11,12 +14,13 @@ use {
         plugin::PluginDescriptor,
         scheduler::CollectorScheduler,
     },
-    serde_json::json,
+    serde_json::{self, json, Value},
     std::collections::VecDeque,
     std::io::{stdin, stdout, Write},
     std::process,
     std::sync::{Arc, Mutex, RwLock},
     termion::{self, clear, color, cursor, style},
+    anyhow::{Error, Result},
 };
 
 pub struct Shell {
@@ -173,23 +177,61 @@ impl Shell {
         false
     }
 
-    /// Attempts to transform the command into a dispatcher command to see if
-    /// any plugin services that url. Two syntaxes are supported /foo/bar or
-    /// foo.bar both will be translated into /foo/bar before being sent to the
-    /// dispatcher.
-    fn plugin(&mut self, command: String) -> bool {
-        let mut tokens: VecDeque<&str> = command.split_whitespace().collect();
+    /// Parses a command returning the namespace and arguments as a json value.
+    /// This can fail if any of the command arguments are invalid. This function
+    /// does not check whether the command exists just verifies the input is
+    /// sanitized.
+    fn parse_command(command: impl Into<String>) -> Result<(String, Value)> {
+        let mut tokens: VecDeque<String> =
+            command.into().split_whitespace().map(|s| String::from(s)).collect();
         if tokens.len() == 0 {
-            return false;
+            return Err(Error::new(ShellError::empty_command()));
         }
         // Transform foo.bar to /foo/bar
         let head = tokens.pop_front().unwrap();
         let namespace = if head.starts_with("/") {
             head.to_string()
         } else {
-            "/api/".to_owned() + &str::replace(head, ".", "/")
+            "/api/".to_owned() + &str::replace(&head, ".", "/")
         };
-        let result = self.dispatcher.read().unwrap().query(namespace, json!(""));
+
+        // Parse the command arguments.
+        let mut query = json!("");
+        if !tokens.is_empty() {
+            if tokens.front().unwrap().starts_with("`") {
+                let mut body = Vec::from(tokens).join(" ");
+                if body.len() > 2 && body.ends_with("`") {
+                    body.remove(0);
+                    body.pop();
+                    match serde_json::from_str(&body) {
+                        Ok(expr) => {
+                            query = expr;
+                        }
+                        Err(err) => {
+                            return Err(Error::new(err));
+                        }
+                    }
+                } else {
+                    return Err(Error::new(ShellError::unescaped_json_string(body)));
+                }
+            }
+        }
+        Ok((namespace, query))
+    }
+
+    /// Attempts to transform the command into a dispatcher command to see if
+    /// any plugin services that url. Two syntaxes are supported /foo/bar or
+    /// foo.bar both will be translated into /foo/bar before being sent to the
+    /// dispatcher.
+    fn plugin(&mut self, command: String) -> bool {
+        let command_result = Self::parse_command(command);
+        if let Err(err) = command_result {
+            println!("Error: {}", err);
+            return true;
+        }
+        let (namespace, query) = command_result.unwrap();
+
+        let result = self.dispatcher.read().unwrap().query(namespace, query);
         match result {
             Err(e) => {
                 if let Some(dispatch_error) = e.downcast_ref::<DispatcherError>() {
@@ -234,5 +276,25 @@ impl Shell {
                 break;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_command_errors() {
+        assert_eq!(Shell::parse_command("foo").is_ok(), true);
+        assert_eq!(Shell::parse_command("foo `{}`").is_ok(), true);
+        assert_eq!(Shell::parse_command("foo `{\"abc\": 1}`").is_ok(), true);
+        assert_eq!(Shell::parse_command("foo `{aaa}`").is_ok(), false);
+        assert_eq!(Shell::parse_command("foo `{").is_ok(), false);
+        assert_eq!(Shell::parse_command("foo `").is_ok(), false);
+    }
+    #[test]
+    fn test_parse_command_tokens() {
+        assert_eq!(Shell::parse_command("foo").unwrap().0, "/api/foo");
+        assert_eq!(Shell::parse_command("foo `{\"a\": 1}`").unwrap().1, json!({"a": 1}));
     }
 }
