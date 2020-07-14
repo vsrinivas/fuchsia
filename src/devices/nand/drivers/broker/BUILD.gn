@@ -29,3 +29,8 @@ driver_module("nand-broker") {
     "//zircon/public/lib/zx",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:nandpart-broker-test" ]
+}

@@ -66,6 +66,9 @@ zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
 
   zx::channel ctl_svc;
   zx_status_t st = fdio_get_service_handle(control.release(), ctl_svc.reset_and_get_address());
+  if (st != ZX_OK) {
+    return st;
+  }
 
   char name[fuchsia_hardware_nand_NAME_LEN + 1];
   size_t out_name_size;

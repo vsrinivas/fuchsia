@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fdio/namespace.h>
 #include <zircon/hw/gpt.h>
 
 #include <zxtest/zxtest.h>
@@ -45,6 +46,38 @@ constexpr fuchsia_hardware_nand_PartitionMap kPartitionMap = {
 ParentDevice* g_parent_device_;
 
 int main(int argc, char** argv) {
+  driver_integration_test::IsolatedDevmgr::Args args;
+  args.driver_search_paths.push_back("/boot/driver");
+  args.load_drivers.push_back("/boot/driver/ram-nand.so");
+  args.path_prefix = "/pkg/";
+  args.disable_block_watcher = true;
+
+  driver_integration_test::IsolatedDevmgr devmgr;
+  zx_status_t st = driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr);
+  if (st != ZX_OK) {
+    fprintf(stderr, "Could not create driver manager, %d\n", st);
+    return st;
+  }
+
+  fdio_ns_t* ns;
+  st = fdio_ns_get_installed(&ns);
+  if (st != ZX_OK) {
+    fprintf(stderr, "Could not create get namespace, %d\n", st);
+    return st;
+  }
+  st = fdio_ns_bind_fd(ns, "/dev", devmgr.devfs_root().get());
+  if (st != ZX_OK) {
+    fprintf(stderr, "Could not bind /dev namespace, %d\n", st);
+    return st;
+  }
+
+  fbl::unique_fd ctl;
+  st = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "misc/nand-ctl", &ctl);
+  if (st != ZX_OK) {
+    fprintf(stderr, "misc/nand-ctl failed to enumerate: %d\n", st);
+    return st;
+  }
+
   ParentDevice::TestConfig config = {};
   config.info = kNandInfo;
   config.partition_map = kPartitionMap;
@@ -55,25 +88,19 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  // TODO(ZX-3193)
-#if OPENAT_FIXED
-  // Wait for nandpart to spawn.
-  fbl::unique_fd dir(dup(parent.get()));
-  fbl::unique_fd nandpart;
-  zx_status_t status =
-      devmgr_integration_test::WaitForFile(dir, "test", zx::deadline_after(zx::sec(1)), &nandpart);
-  if (status != ZX_OK) {
-    printf("Unable to attach to device: %d\n", status);
-    return -1;
-  }
-#else
-  usleep(50000);
-#endif
-
   // Construct path to nandpart partition.
   char path[PATH_MAX];
   strcpy(path, parent.Path());
   strcat(path, "/test");
+
+  // Wait for nandpart to spawn.
+  fbl::unique_fd nandpart;
+  zx_status_t status =
+      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), &path[5], &nandpart);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Unable to attach to device: %d\n", status);
+    return st;
+  }
 
   ParentDevice::TestConfig nandpart_config = {};
   nandpart_config.path = path;

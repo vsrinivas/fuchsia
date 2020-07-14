@@ -4,6 +4,7 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 source_set("common") {
   visibility = [ ":*" ]
@@ -70,13 +71,18 @@ unittest_package("nand-broker-package") {
   ]
 }
 
-unittest_package("nandpart-broker-package") {
-  package_name = "nandpart-broker"
-  deps = [ ":nandpart-broker" ]
+isolated_devmgr_unittest_package("nandpart-broker-test") {
+  executable_path = "test/nandpart-broker-test"
 
-  tests = [
-    {
-      name = "nandpart-broker-test"
-    },
+  deps = [
+    ":nandpart-broker",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/nand/drivers/broker:nand-broker",
+    "//src/devices/nand/drivers/nand",
+    "//src/devices/nand/drivers/nandpart",
+    "//src/devices/nand/drivers/ram-nand",
+    "//src/devices/nand/drivers/skip-block",
+    "//src/devices/tests/sysdev",
   ]
 }
