@@ -12,12 +12,12 @@ source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
 usage() {
   cat << EOF
-usage: fserve-remote.sh [--no-serve] [--device-name <device hostname>]  HOSTNAME REMOTE-PATH
+usage: fserve-remote.sh [--no-serve] [--device-name <device hostname>] HOSTNAME REMOTE-PATH
     Uses SSH port forwarding to connect to a remote server and forward package serving and other connections to a local device.
 
   --device-name <device hostname>
       Connects to a device by looking up the given device hostname.
-  --image <image name> 
+  --image <image name>
       Name of prebuilt image packages to serve.
   --bucket <bucket name>
       Name of GCS bucket containing the image archive.
@@ -102,7 +102,7 @@ if ! DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "${DEVICE_NAME}"); th
   exit 1
 fi
 
-if [[  -z "${DEVICE_IP}" ]]; then
+if [[ -z "${DEVICE_IP}" ]]; then
   fx-error "unable to discover device. Is the target up?"
   exit 1
 fi
@@ -110,21 +110,55 @@ fi
 echo "Using remote ${REMOTE_HOST}:${REMOTE_DIR}"
 echo "Using target device ${DEVICE_NAME}"
 
+# Use a dedicated ControlPath so script can manage a connection seperately from the user's. We
+# intentionally do not use %h/%p in the control path because there can only be one forwarding
+# session at a time (due to the local forward of 8083).
+ssh_base_args=(
+  "${REMOTE_HOST}"
+  -S "${HOME}/.ssh/control-fuchsia-fx-remote"
+  -o "ControlMaster=auto"
+)
+
+ssh_exit() {
+  if ! ssh "${ssh_base_args[@]}" -O exit > /dev/null 2>&1; then
+    echo "Error exiting session: $?"
+  fi
+}
+
+
+# When we exit the script, close the background ssh connection.
+trap_exit() {
+  ssh_exit
+  exit
+}
+trap trap_exit EXIT
+
+
 # First we need to check if we already have a control master for the
 # host, if we do, we might already have the forwards and so we don't
 # need to worry about tearing down:
-if ! ssh -O check "${REMOTE_HOST}" > /dev/null 2>&1; then
+if ssh "${ssh_base_args[@]}" -O check > /dev/null 2>&1; then
+  # If there is already control master then exit it. We can't be sure its to the right host and it
+  # also could be stale.
+  fx-warn "Cleaning up existing remote session"
+  ssh_exit
+fi
+
   # If we didn't have a control master, and the device already has 8022
   # bound, then there's a good chance there's a stale sshd instance
   # running from another device or another session that will block the
   # forward, so we'll check for that and speculatively attempt to clean
   # it up. Unfortunately this means authing twice, but it's likely the
   # best we can do for now.
-  if ssh "${REMOTE_HOST}" 'ss -ln | grep :8022' > /dev/null; then
-    ssh "${REMOTE_HOST}" "pkill -u \$USER sshd"
-    ssh "${REMOTE_HOST}" -O exit > /dev/null 2>&1
+  if ssh "${ssh_base_args[@]}" 'ss -ln | grep :8022' > /dev/null; then
+    fx-warn "Found existing port forwarding, attempting to kill remote sshd sessions."
+    if pkill_result="$(ssh "${ssh_base_args[@]}" "pkill -u \$USER sshd")"; then
+      echo "SSH session cleaned up."
+    else
+      fx-error "Unexpected message from remote: ${pkill_result}"
+      exit 1
+    fi
   fi
-fi
 
 args=(
   -6 # We want ipv6 binds for the port forwards
@@ -134,28 +168,51 @@ args=(
   -R "8443:[${DEVICE_IP}]:8443" # port 8443 on workstation to target port 8443
   -R "9080:[${DEVICE_IP}]:80" # port 9080 on workstation to target port 80
   -o "ExitOnForwardFailure=yes"
-  "${REMOTE_HOST}"
 )
 
+# Set the configuration properties to match the remote device.
+remote_cmds=(
+  "cd \$HOME" "&&" # change directories to home, to avoid issues if the remote dir was deleted out from under us.
+  "cd ${REMOTE_DIR}" "&&"
+  "./bin/fconfig.sh set device-ip 127.0.0.1"
+  )
+
+if [[ "${BUCKET}" != "" ]]; then
+    remote_cmds+=("&&" "./bin/fconfig.sh set bucket ${BUCKET}")
+fi
+
+if [[ "${IMAGE}" != "" ]]; then
+    remote_cmds+=("&&" "./bin/fconfig.sh set image ${IMAGE}")
+fi
+
+# Run fconfig.sh list to print out the settings, this will help diagnosing any
+# problems.
+remote_cmds+=("&&" "./bin/fconfig.sh list")
+
+# The variables here should be expanded locally, disabling the shellcheck lint
+# message about ssh and variables.
+# shellcheck disable=SC2029
+ssh "${ssh_base_args[@]}" "${remote_cmds[@]}"
+
+if ((START_SERVE)); then
 # If the user requested serving, then we'll check to see if there's a
 # server already running and kill it, this prevents most cases where
 # signal propagation seems to sometimes not make it to "pm".
-if ((START_SERVE)) && ssh "${args[@]}" 'ss -ln | grep :8083' > /dev/null; then
-  ssh "${args[@]}" "pkill -u \$USER pm"
+  if ssh "${ssh_base_args[@]}" 'ss -ln | grep :8083' > /dev/null; then
+    fx-warn "Cleaning up \`pm\` running on remote desktop"
+    if ssh "${ssh_base_args[@]}" "pkill -u \$USER pm"; then
+      echo "Success"
+    fi
+  fi
 fi
 
 if ((START_SERVE)); then
   # Starts a package server
-  args+=(cd "${REMOTE_DIR}" "&&" ./bin/fconfig.sh set device-ip 127.0.0.1 "&&"  ./bin/fserve.sh)
-  if [[ "${BUCKET}" != "" ]]; then
-    args+=(--bucket "${BUCKET}")
-  fi
-  if [[ "${IMAGE}" ]]; then
-    args+=(--image "${IMAGE}")
-  fi
+  args+=(cd "\$HOME" "&&" cd "${REMOTE_DIR}" "&&" ./bin/fserve.sh)
 else
   # Starts nothing, just goes to sleep
   args+=("-nNT")
 fi
 
-ssh "${args[@]}"
+# shellcheck disable=SC2029
+ssh "${ssh_base_args[@]}" "${args[@]}"

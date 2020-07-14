@@ -9,8 +9,6 @@ set -e
 
 FSERVE_REMOTE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve-remote.sh"
 FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
-EXPECTED_REDIRECTS=(-R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
-  -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"  -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80")
 
 # Sets up an ssh mock binary on the $PATH of any subshell.
 set_up_ssh() {
@@ -52,38 +50,76 @@ TEST_fserve_remote() {
 
   REMOTE_PATH="/home/path_to_samples/third_party/fuchsia-sdk"
 
+# Create a mock that simulates a clean environment, nothing is running.
+  cat > "${SSH_MOCK_PATH}/ssh.mock_side_effects" <<"EOF"
+    if [[ "$*" =~ SSH_CONNECTION ]]; then
+      echo "172.20.100.10 38618 100.90.250.100 22"
+      return 0
+    elif [[ "$*" =~ "amber_ctl add_src" ]]; then
+      return 0
+    fi
+
+    # No existing session.
+    if [[ "$*" =~ "-O check" ]]; then
+      return 255
+    fi
+
+    # No existing forwarding for 8022
+    if [[ "$*" =~ "grep :8022" ]]; then
+      return 2
+    fi
+
+    # No existing forwarding for 8083
+    if [[ "$*" =~ "grep :8083" ]]; then
+      return 2
+    fi
+    echo $@
+EOF
+
   # Run command.
   BT_EXPECT "${FSERVE_REMOTE_CMD}" glinux.google.com "${REMOTE_PATH}" > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
+
+  # Common command line args, used for each call to ssh
+  ssh_common_expected=(_ANY_  "glinux.google.com" )
+  ssh_common_expected+=(-S "${HOME}/.ssh/control-fuchsia-fx-remote")
+  ssh_common_expected+=(-o "ControlMaster=auto")
 
   # First SSH is to check if the mux session to the host exists
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.1"
-  expected=(_ANY_ "-O" "check" "glinux.google.com")
+  expected=("${ssh_common_expected[@]}" -O check)
+  gn-test-check-mock-args "${expected[@]}"
 
-  expected_ssh_args=("${SSH_MOCK_PATH}/ssh" -6 -L "\*:8083:localhost:8083")
-  expected_ssh_args+=("${EXPECTED_REDIRECTS[@]}")
-  expected_ssh_args+=(-o "ExitOnForwardFailure=yes" "glinux.google.com")
-
-  # Next SSH is checking socket status
+  # Check for an existing forwarding for port 8022.
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected=("${expected_ssh_args[@]}")
-  expected+=("ss -ln | grep :8083")
+  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8022")
   gn-test-check-mock-args "${expected[@]}"
 
-  # Next SSH is to kill pm
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.3"
-  expected=("${expected_ssh_args[@]}")
-  expected+=("pkill -u \$USER pm")
+  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&" "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"  "./bin/fconfig.sh set device-ip 127.0.0.1" "&&" "./bin/fconfig.sh list")
+ gn-test-check-mock-args "${expected[@]}"
+
+# shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.4"
+  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8083")
   gn-test-check-mock-args "${expected[@]}"
 
-  # Last  SSH is to start up pm
-  # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.4"
-  expected=("${expected_ssh_args[@]}")
-  expected+=(cd  "${REMOTE_PATH}" "&&" "./bin/fconfig.sh" "set" "device-ip" 127.0.0.1 "&&" "./bin/fserve.sh")
+# shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.5"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=(-6 -L "\*:8083:localhost:8083" -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345" -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443")
+  expected+=(-R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes" "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh")
   gn-test-check-mock-args "${expected[@]}"
+
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.6"
+   expected=("${ssh_common_expected[@]}" -O "exit")
+  gn-test-check-mock-args "${expected[@]}"
+
+  BT_ASSERT_FILE_DOES_NOT_EXIST "${SSH_MOCK_PATH}/ssh.mock_state.7"
 }
 
 TEST_fserve_remote_with_config() {
@@ -94,40 +130,258 @@ TEST_fserve_remote_with_config() {
 
   BT_EXPECT "${FCONFIG_CMD}" set image "test-image"
   BT_EXPECT "${FCONFIG_CMD}" set bucket "custom-bucket"
-  
+
+  # Create a mock that simulates a clean environment, nothing is running.
+  cat > "${SSH_MOCK_PATH}/ssh.mock_side_effects" <<"EOF"
+    if [[ "$*" =~ SSH_CONNECTION ]]; then
+      echo "172.20.100.10 38618 100.90.250.100 22"
+      return 0
+    elif [[ "$*" =~ "amber_ctl add_src" ]]; then
+      return 0
+    fi
+
+    # No existing session.
+    if [[ "$*" =~ "-O check" ]]; then
+      return 255
+    fi
+
+    # No existing forwarding for 8022
+    if [[ "$*" =~ "grep :8022" ]]; then
+      return 2
+    fi
+
+    # No existing forwarding for 8083
+    if [[ "$*" =~ "grep :8083" ]]; then
+      return 2
+    fi
+    echo $@
+EOF
+
+
   # Run command.
   BT_EXPECT "${FSERVE_REMOTE_CMD}" glinux.google.com "${REMOTE_PATH}" > "${BT_TEMP_DIR}/fserve_remote_with_config_log.txt" 2>&1
+
+  ssh_common_expected=(_ANY_  "glinux.google.com" )
+  ssh_common_expected+=(-S "${HOME}/.ssh/control-fuchsia-fx-remote")
+  ssh_common_expected+=(-o "ControlMaster=auto")
+
+   # First SSH is to check if the mux session to the host exists
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
+   expected=("${ssh_common_expected[@]}" -O check)
+   gn-test-check-mock-args "${expected[@]}"
+
+  # Look for an existing port forwarding for 8022
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
+  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8022")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.3"
+  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&" "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"  "./bin/fconfig.sh set device-ip 127.0.0.1" "&&")
+  expected+=("./bin/fconfig.sh set bucket custom-bucket" "&&" "./bin/fconfig.sh set image test-image" "&&" "./bin/fconfig.sh list")
+  gn-test-check-mock-args "${expected[@]}"
+
+# shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.4"
+  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8083")
+  gn-test-check-mock-args "${expected[@]}"
+
+# shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.5"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=(-6 -L "\*:8083:localhost:8083" -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345" -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443")
+  expected+=(-R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes" "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh")
+  gn-test-check-mock-args "${expected[@]}"
+
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.6"
+   expected=("${ssh_common_expected[@]}" -O "exit")
+  gn-test-check-mock-args "${expected[@]}"
+
+  BT_ASSERT_FILE_DOES_NOT_EXIST "${SSH_MOCK_PATH}/ssh.mock_state.7"
+}
+
+TEST_fserve_remote_existing_session() {
+  set_up_ssh
+  set_up_device_finder
+
+  REMOTE_PATH="/home/path_to_samples/third_party/fuchsia-sdk"
+
+# Create a mock that simulates fserve-remote is already running.
+  cat > "${SSH_MOCK_PATH}/ssh.mock_side_effects" <<"EOF"
+    if [[ "$*" =~ SSH_CONNECTION ]]; then
+      echo "172.20.100.10 38618 100.90.250.100 22"
+      return 0
+    elif [[ "$*" =~ "amber_ctl add_src" ]]; then
+      return 0
+    fi
+
+    # No existing session.
+    if [[ "$*" =~ "-O check" ]]; then
+      return 0
+    fi
+
+    # No existing forwarding for 8022
+    if [[ "$*" =~ "grep :8022" ]]; then
+      return 0
+    fi
+
+    # No existing forwarding for 8083
+    if [[ "$*" =~ "grep :8083" ]]; then
+      return 2
+    fi
+
+    # simulate kill working successfully.
+    if [[ "$*" =~ "pkill -u \$USER sshd" ]]; then
+      return 0
+    fi
+    echo $@
+EOF
+
+  # Run command.
+  BT_EXPECT "${FSERVE_REMOTE_CMD}" glinux.google.com "${REMOTE_PATH}" > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
+
+  # Common command line args, used for each call to ssh
+  ssh_common_expected=(_ANY_  "glinux.google.com" )
+  ssh_common_expected+=(-S "${HOME}/.ssh/control-fuchsia-fx-remote")
+  ssh_common_expected+=(-o "ControlMaster=auto")
 
   # First SSH is to check if the mux session to the host exists
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.1"
-  expected=(_ANY_ "-O" "check" "glinux.google.com")
+  expected=("${ssh_common_expected[@]}" -O check)
   gn-test-check-mock-args "${expected[@]}"
 
-  expected_ssh_args=("${SSH_MOCK_PATH}/ssh" -6 -L "\*:8083:localhost:8083")
-  expected_ssh_args+=("${EXPECTED_REDIRECTS[@]}")
-  expected_ssh_args+=(-o "ExitOnForwardFailure=yes" "glinux.google.com")
-
-  # Next SSH is checking socket status
+  # Exit the existing the control session.
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected=("${expected_ssh_args[@]}")
-  expected+=("ss -ln | grep :8083")
+  expected=("${ssh_common_expected[@]}" -O "exit")
   gn-test-check-mock-args "${expected[@]}"
 
-  # Next SSH is to kill pm
+  # Check for an existing forwarding for port 8022.
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.3"
-  expected=("${expected_ssh_args[@]}")
-  expected+=("pkill -u \$USER pm")
+  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8022")
   gn-test-check-mock-args "${expected[@]}"
 
-  # Last  SSH is to start up pm
+  # Kill sshd.
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.4"
-  expected=("${expected_ssh_args[@]}")
-  expected+=(cd  "${REMOTE_PATH}" "&&" "./bin/fconfig.sh" "set" "device-ip" 127.0.0.1 "&&" "./bin/fserve.sh" "--bucket" "custom-bucket" "--image" "test-image")
+  expected=("${ssh_common_expected[@]}" "pkill -u \$USER sshd")
   gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.5"
+  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&" "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"  "./bin/fconfig.sh set device-ip 127.0.0.1" "&&" "./bin/fconfig.sh list")
+ gn-test-check-mock-args "${expected[@]}"
+
+# shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.6"
+  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8083")
+  gn-test-check-mock-args "${expected[@]}"
+
+# shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.7"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=(-6 -L "\*:8083:localhost:8083" -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345" -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443")
+  expected+=(-R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes" "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh")
+  gn-test-check-mock-args "${expected[@]}"
+
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.8"
+   expected=("${ssh_common_expected[@]}" -O "exit")
+  gn-test-check-mock-args "${expected[@]}"
+
+  BT_ASSERT_FILE_DOES_NOT_EXIST "${SSH_MOCK_PATH}/ssh.mock_state.9"
+}
+
+TEST_fserve_remote_pm_running() {
+  set_up_ssh
+  set_up_device_finder
+
+  REMOTE_PATH="/home/path_to_samples/third_party/fuchsia-sdk"
+
+# Create a mock that simulates a clean environment, except pm is running on the remote.
+  cat > "${SSH_MOCK_PATH}/ssh.mock_side_effects" <<"EOF"
+    if [[ "$*" =~ SSH_CONNECTION ]]; then
+      echo "172.20.100.10 38618 100.90.250.100 22"
+      return 0
+    elif [[ "$*" =~ "amber_ctl add_src" ]]; then
+      return 0
+    fi
+
+    # No existing session.
+    if [[ "$*" =~ "-O check" ]]; then
+      return 255
+    fi
+
+    # No existing forwarding for 8022
+    if [[ "$*" =~ "grep :8022" ]]; then
+      return 2
+    fi
+
+    # No existing forwarding for 8083
+    if [[ "$*" =~ "grep :8083" ]]; then
+      return 0
+    fi
+    echo $@
+EOF
+
+  # Run command.
+  BT_EXPECT "${FSERVE_REMOTE_CMD}" glinux.google.com "${REMOTE_PATH}" > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
+
+  # Common command line args, used for each call to ssh
+  ssh_common_expected=(_ANY_  "glinux.google.com" )
+  ssh_common_expected+=(-S "${HOME}/.ssh/control-fuchsia-fx-remote")
+  ssh_common_expected+=(-o "ControlMaster=auto")
+
+  # First SSH is to check if the mux session to the host exists
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
+  expected=("${ssh_common_expected[@]}" -O check)
+  gn-test-check-mock-args "${expected[@]}"
+
+
+  # Check for an existing forwarding for port 8022.
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
+  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8022")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.3"
+  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&" "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"  "./bin/fconfig.sh set device-ip 127.0.0.1" "&&" "./bin/fconfig.sh list")
+ gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.4"
+  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8083")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # Check for killing existing pm server running
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.5"
+  expected=("${ssh_common_expected[@]}" "pkill -u \$USER pm")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.6"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=(-6 -L "\*:8083:localhost:8083" -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345" -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443")
+  expected+=(-R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes" "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh")
+  gn-test-check-mock-args "${expected[@]}"
+
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.7"
+  expected=("${ssh_common_expected[@]}" -O "exit")
+  gn-test-check-mock-args "${expected[@]}"
+
+  BT_ASSERT_FILE_DOES_NOT_EXIST "${SSH_MOCK_PATH}/ssh.mock_state.8"
 }
 
 # Test initialization.
