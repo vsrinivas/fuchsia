@@ -9,7 +9,13 @@
 
 #include <lib/arch/intrin.h>
 
-/* use the cpu local thread context pointer to store current_thread */
+// Routines to directly access the current thread pointer out of the current
+// cpu structure pointed the TPIDR_EL1 register.
+
+// NOTE: must be included after the definition of Thread due to the offsetof
+// applied in the following routines.
+
+// Use the cpu local thread context pointer to store current_thread.
 static inline Thread* arch_get_current_thread() {
 #ifdef __clang__
   // Clang with --target=aarch64-fuchsia -mtp=el1 reads

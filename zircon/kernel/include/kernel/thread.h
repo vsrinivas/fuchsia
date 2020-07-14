@@ -1056,7 +1056,8 @@ struct Thread {
 };
 
 // For the moment, the arch-specific current thread implementations need to come here, after the
-// Thread definition.
+// Thread definition. One of the arches needs to know the structure of Thread to compute the offset
+// that the hardware pointer holds into Thread.
 #include <arch/current_thread.h>
 Thread* Thread::Current::Get() { return arch_get_current_thread(); }
 
