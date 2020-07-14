@@ -27,7 +27,7 @@ using CrashSkippedReason = crashpad::Metrics::CrashSkippedReason;
 using OperationStatus = crashpad::CrashReportDatabase::OperationStatus;
 
 constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
-constexpr StorageSize kCrashpadDatabaseMaxSize = StorageSize::Kilobytes(512u);
+constexpr StorageSize kCrashpadDatabaseMaxSize = StorageSize::Kilobytes(5120u);
 
 std::unique_ptr<Database> Database::TryCreate(std::shared_ptr<InfoContext> info_context,
                                               StorageSize max_crashpad_database_size) {
