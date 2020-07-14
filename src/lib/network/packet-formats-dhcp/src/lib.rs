@@ -2,4 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod client;
+#![deny(missing_docs, unreachable_patterns)]
+
+//! Parsing and serialization for DHCP messages.
+
+pub mod v6;

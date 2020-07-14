@@ -20,6 +20,7 @@ rustc_binary("dhcpv6_client") {
     "//src/lib/fuchsia-component",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/packet",
+    "//src/lib/network/packet-formats-dhcp",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",

@@ -5,10 +5,10 @@
 //! Core DHCPv6 client state transitions.
 
 use {
-    crate::protocol::{
+    packet::serialize::InnerPacketBuilder,
+    packet_formats_dhcp::v6::{
         Dhcpv6Message, Dhcpv6MessageBuilder, Dhcpv6MessageType, Dhcpv6Option, Dhcpv6OptionCode,
     },
-    packet::serialize::InnerPacketBuilder,
     rand::Rng,
     std::{default::Default, net::Ipv6Addr, time::Duration},
     zerocopy::ByteSlice,
@@ -193,7 +193,7 @@ impl InformationRequesting {
         let mut information_refresh_time = IRT_DEFAULT;
         let mut dns_servers: Option<Vec<Ipv6Addr>> = None;
 
-        for opt in msg.options.iter() {
+        for opt in msg.options() {
             match opt {
                 Dhcpv6Option::InformationRefreshTime(refresh_time) => {
                     information_refresh_time = Duration::from_secs(u64::from(refresh_time))
@@ -380,10 +380,10 @@ impl<R: Rng> Dhcpv6ClientStateMachine<R> {
     ///
     /// `handle_reply` panics if current state is None.
     pub fn handle_message_receive<B: ByteSlice>(&mut self, msg: Dhcpv6Message<'_, B>) -> Actions {
-        if msg.transaction_id != &self.transaction_id {
+        if msg.transaction_id() != &self.transaction_id {
             Vec::new() // Ignore messages for other clients.
         } else {
-            match msg.msg_type {
+            match msg.msg_type() {
                 Dhcpv6MessageType::Reply => {
                     let (new_state, actions) = self
                         .state

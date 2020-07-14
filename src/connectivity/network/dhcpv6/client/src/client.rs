@@ -5,10 +5,7 @@
 ///! Implements a DHCPv6 client.
 use {
     anyhow::{Context as _, Result},
-    dhcpv6_core::{
-        client::{Action, Actions, Dhcpv6ClientStateMachine, Dhcpv6ClientTimerType},
-        protocol::{Dhcpv6Message, Dhcpv6OptionCode, ProtocolError},
-    },
+    dhcpv6_core::client::{Action, Actions, Dhcpv6ClientStateMachine, Dhcpv6ClientTimerType},
     dns_server_watcher::DEFAULT_DNS_PORT,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_net as fnet,
@@ -26,6 +23,7 @@ use {
     },
     net_declare::std_ip,
     packet::ParsablePacket,
+    packet_formats_dhcp::v6::{Dhcpv6Message, Dhcpv6OptionCode, Dhcpv6ParseError},
     rand::{rngs::StdRng, thread_rng, FromEntropy, Rng},
     std::{
         collections::{
@@ -51,8 +49,8 @@ pub enum ClientError {
     TimerOverflow(Duration),
     #[error("IO error: {}", _0)]
     Io(std::io::Error),
-    #[error("protocol error: {}", _0)]
-    Protocol(ProtocolError),
+    #[error("parsing error: {}", _0)]
+    Parse(Dhcpv6ParseError),
     #[error("fidl error: {}", _0)]
     Fidl(fidl::Error),
     #[error("got watch request while the previous one is pending")]
@@ -324,7 +322,7 @@ impl Dhcpv6Client {
 
     /// Handles a received message.
     async fn handle_message_recv(&mut self, mut msg: &[u8]) -> Result<(), ClientError> {
-        let msg = Dhcpv6Message::parse(&mut msg, ()).map_err(ClientError::Protocol)?;
+        let msg = Dhcpv6Message::parse(&mut msg, ()).map_err(ClientError::Parse)?;
         let actions = self.state_machine.handle_message_receive(msg);
         self.run_actions(actions).await
     }
@@ -471,7 +469,6 @@ pub(crate) async fn start_client(
 mod tests {
     use {
         super::*,
-        dhcpv6_core::protocol::{Dhcpv6MessageBuilder, Dhcpv6MessageType, Dhcpv6Option},
         fidl::endpoints::create_endpoints,
         fidl_fuchsia_net_dhcpv6::{ClientMarker, OperationalModels, DEFAULT_CLIENT_PORT},
         fuchsia_async as fasync,
@@ -481,6 +478,7 @@ mod tests {
             fidl_ip_v6, fidl_socket_addr, fidl_socket_addr_v6, std_ip_v6, std_socket_addr,
         },
         packet::serialize::InnerPacketBuilder,
+        packet_formats_dhcp::v6::{Dhcpv6MessageBuilder, Dhcpv6MessageType, Dhcpv6Option},
         std::{collections::HashSet, task::Poll},
     };
 
@@ -502,9 +500,9 @@ mod tests {
             socket.recv_from(&mut buf).await.expect("failed to receive on test server socket");
         assert_eq!(from_addr, want_from_addr);
         let buf = &mut &buf[..size]; // Implements BufferView.
-        assert_matches!(
-            Dhcpv6Message::parse(buf, ()),
-            Ok(Dhcpv6Message { msg_type: Dhcpv6MessageType::InformationRequest, .. })
+        assert_eq!(
+            Dhcpv6Message::parse(buf, ()).map(|x| x.msg_type()),
+            Ok(Dhcpv6MessageType::InformationRequest)
         )
     }
 

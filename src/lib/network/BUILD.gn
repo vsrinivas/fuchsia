@@ -13,6 +13,7 @@ group("network") {
     "fidl_fuchsia_netstack_ext",
     "packet",
     "packet-formats",
+    "packet-formats-dhcp",
   ]
 }
 
@@ -27,6 +28,7 @@ group("tests") {
     "fidl_fuchsia_net_stack_ext:fidl-fuchsia-net-stack-ext-tests",
     "fidl_fuchsia_netstack_ext:fidl-fuchsia-netstack-ext-tests",
     "packet:packet-test",
-    "packet-formats:packet-formats-test",
+    "packet-formats:tests",
+    "packet-formats-dhcp:tests",
   ]
 }
