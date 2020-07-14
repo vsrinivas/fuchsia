@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_SSHD_HOST_SERVICE_H_
 #define GARNET_BIN_SSHD_HOST_SERVICE_H_
 
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 
@@ -17,6 +18,13 @@ namespace sshd_host {
 
 constexpr zx_rights_t kChildJobRights =
     ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_DESTROY | ZX_RIGHT_MANAGE_JOB;
+
+constexpr char kAuthorizedKeysBootloaderFileName[] = "ssh.authorized_keys";
+constexpr char kSshDirectory[] = "/data/ssh";
+constexpr char kAuthorizedKeysPath[] = "/data/ssh/authorized_keys";
+
+zx_status_t provision_authorized_keys_from_bootloader_file(
+    std::shared_ptr<sys::ServiceDirectory> service_directory);
 
 zx_status_t make_child_job(const zx::job& parent, std::string name, zx::job* job);
 

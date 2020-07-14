@@ -6,6 +6,7 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fuchsia/boot/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -15,16 +16,22 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
 #include <memory>
 #include <vector>
+
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
 
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/macros.h"
@@ -35,6 +42,77 @@ const auto kSshdPath = "/pkg/bin/sshd";
 const char* kSshdArgv[] = {kSshdPath, "-ie", "-f", "/config/data/sshd_config", nullptr};
 
 namespace sshd_host {
+zx_status_t provision_authorized_keys_from_bootloader_file(
+    std::shared_ptr<sys::ServiceDirectory> service_directory) {
+  zx_status_t status;
+  fuchsia::boot::ItemsSyncPtr boot_items;
+  status = service_directory->Connect(boot_items.NewRequest());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Provisioning keys from boot item: failed to connect to boot items service: "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
+  zx::vmo vmo;
+  status = boot_items->GetBootloaderFile(kAuthorizedKeysBootloaderFileName, &vmo);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Provisioning keys from boot item: GetBootloaderFile failed with: "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
+  if (!vmo.is_valid()) {
+    FX_LOGS(INFO) << "Provisioning keys from boot item: bootloader file not found: "
+                  << kAuthorizedKeysBootloaderFileName;
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  uint64_t size;
+  status = vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Provisioning keys from boot item: unable to get file size: "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
+  auto buffer = std::make_unique<uint8_t[]>(size);
+
+  status = vmo.read(buffer.get(), 0, size);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Provisioning keys from boot item: failed to read file: "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
+  if (mkdir(kSshDirectory, 0700) && errno != EEXIST) {
+    FX_LOGS(ERROR) << "Provisioning keys from boot item: failed to create directory: "
+                   << kSshDirectory << " Error: " << strerror(errno);
+    return ZX_ERR_IO;
+  }
+
+  fbl::unique_fd kfd(open(kAuthorizedKeysPath, O_CREAT | O_EXCL | O_WRONLY));
+  if (!kfd) {
+    FX_LOGS(ERROR) << "Provisioning keys from boot item: open failed: " << kAuthorizedKeysPath
+                   << " error: " << strerror(errno);
+    return errno == EEXIST ? ZX_ERR_ALREADY_EXISTS : ZX_ERR_IO;
+  }
+
+  if (write(kfd.get(), buffer.get(), size) != static_cast<ssize_t>(size)) {
+    FX_LOGS(ERROR) << "Provisioning keys from boot item: write failed: " << strerror(errno);
+    return ZX_ERR_IO;
+  }
+
+  fsync(kfd.get());
+
+  if (close(kfd.release())) {
+    FX_LOGS(ERROR) << "Provisioning keys from boot item: close failed: " << strerror(errno);
+    return ZX_ERR_IO;
+  }
+
+  FX_LOGS(INFO) << "Provisioning keys from boot item: authorized_keys provisioned";
+  return ZX_OK;
+}
+
 zx_status_t make_child_job(const zx::job& parent, std::string name, zx::job* job) {
   zx_status_t s;
   if ((s = zx::job::create(parent, 0, job)) != ZX_OK) {

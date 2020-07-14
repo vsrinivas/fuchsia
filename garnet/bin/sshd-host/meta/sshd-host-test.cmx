@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/sshd-host-test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ]
     }
 }
