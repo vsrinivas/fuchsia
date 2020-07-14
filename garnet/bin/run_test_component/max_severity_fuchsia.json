@@ -542,6 +542,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url":"fuchsia-pkg://fuchsia.com/ums-integration-test#meta/ums-integration-test.cmx",
+         "max_severity":"ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/vulkan-tests#meta/vkloop.cmx",
          "max_severity": "ERROR"
       },

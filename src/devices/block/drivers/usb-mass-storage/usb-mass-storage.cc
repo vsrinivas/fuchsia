@@ -66,6 +66,9 @@ void UsbMassStorageDevice::DdkRelease() {
   if (data_transfer_req_) {
     usb_request_release(data_transfer_req_);
   }
+  if (worker_thread_.has_value() && worker_thread_->joinable()) {
+    worker_thread_->join();
+  }
   delete this;
 }
 

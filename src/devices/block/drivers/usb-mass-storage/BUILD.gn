@@ -5,6 +5,8 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 driver_module("usb-mass-storage") {
   defines = [ "_ALL_SOURCE" ]
@@ -40,7 +42,7 @@ source_set("block") {
 }
 
 test("ums-block") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "ums-block-test"
   sources = [ "tests/block.cc" ]
   deps = [
     ":block",
@@ -52,8 +54,13 @@ test("ums-block") {
   ]
 }
 
+fuchsia_unittest_package("ums-block-test") {
+  executable_path = "test/ums-block-test"
+  deps = [ ":ums-block" ]
+}
+
 test("ums") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "ums-test"
   sources = [
     "tests/usb-mass-storage.cc",
     "usb-mass-storage.cc",
@@ -72,34 +79,53 @@ test("ums") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-unittest_package("ums-block-package") {
-  package_name = "ums-block"
-  deps = [ ":ums-block" ]
+fuchsia_unittest_package("ums-test") {
+  executable_path = "test/ums-test"
+  deps = [ ":ums" ]
+}
 
-  tests = [
-    {
-      name = "ums-block"
-      environments = basic_envs
-    },
+test("ums-integration") {
+  output_name = "ums-integration-test"
+  sources = [ "tests/ums-test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral.block:fuchsia.hardware.usb.peripheral.block_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/usb-virtual-bus-launcher",
+  ]
+}
+
+isolated_devmgr_unittest_package("ums-integration-test") {
+  executable_path = "test/ums-integration-test"
+  deps = [
+    ":ums-integration",
+    ":usb-mass-storage",
+    "//src/devices/block/bin/blktest",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ums-function",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/usb/drivers/usb-bus",
+    "//src/devices/usb/drivers/usb-composite",
+    "//src/devices/usb/drivers/usb-peripheral",
+    "//src/devices/usb/drivers/usb-virtual-bus",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":ums-block-package",
-    ":ums-package",
-  ]
-}
-
-unittest_package("ums-package") {
-  package_name = "ums"
-  deps = [ ":ums" ]
-
-  tests = [
-    {
-      name = "ums"
-      environments = basic_envs
-    },
+    ":ums-block-test",
+    ":ums-integration-test",
+    ":ums-test",
   ]
 }

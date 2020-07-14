@@ -25,29 +25,6 @@ group("test") {
   ]
 }
 
-test("usb-virtual-bus-ums") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "ums-test.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral.block:fuchsia.hardware.usb.peripheral.block_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
-    "//sdk/lib/fdio",
-    "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fidl-async",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/usb-virtual-bus-launcher",
-  ]
-}
-
 test("usb-virtual-bus-hid") {
   output_name = "usb-virtual-bus-hid-test"
   configs += [ "//build/unification/config:zircon-migrated" ]

@@ -197,8 +197,8 @@ static void ums_start_transfer(usb_ums_t* ums, ums_data_state_t state, uint64_t 
   size_t length = blocks * BLOCK_SIZE;
 
   if (offset + length > STORAGE_SIZE) {
-    zxlogf(ERROR, "ums_start_transfer: transfer out of range state: %d, lba: %zu blocks: %u",
-           state, lba, blocks);
+    zxlogf(ERROR, "ums_start_transfer: transfer out of range state: %d, lba: %zu blocks: %u", state,
+           lba, blocks);
     // TODO(voydanoff) report error to host
     return;
   }
@@ -545,11 +545,16 @@ usb_function_interface_protocol_ops_t ums_device_ops = {
 static void usb_ums_unbind(void* ctx) {
   zxlogf(DEBUG, "usb_ums_unbind");
   usb_ums_t* ums = ctx;
-  int retval;
+
+  usb_function_cancel_all(&ums->function, ums->bulk_out_addr);
+  usb_function_cancel_all(&ums->function, ums->bulk_in_addr);
+  usb_function_cancel_all(&ums->function, descriptors.intf.bInterfaceNumber);
+
   mtx_lock(&ums->mtx);
   ums->active = false;
   cnd_signal(&ums->event);
   mtx_unlock(&ums->mtx);
+  int retval;
   thrd_join(ums->thread, &retval);
   device_unbind_reply(ums->zxdev);
 }
