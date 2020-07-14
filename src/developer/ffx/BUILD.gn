@@ -22,8 +22,6 @@ if (host_toolchain == current_toolchain) {
 
     plugin_deps = [
       "//src/developer/ffx/device:ffx_powerctl",
-      "//src/developer/ffx/discovery:ffx_knock",
-      "//src/developer/ffx/discovery:ffx_select",
       "//src/developer/ffx/plugins/component:ffx_component",
       "//src/developer/ffx/plugins/config:ffx_config_plugin",
       "//src/developer/ffx/plugins/daemon:ffx_daemon_suite",
