@@ -121,8 +121,12 @@ func main() {
 	checks := []tefmocheck.FailureModeCheck{}
 	checks = append(checks, tefmocheck.StringInLogsChecks()...)
 	checks = append(checks, tefmocheck.MassTestFailureCheck{MaxFailed: 5})
-	// TaskStateChecks should go at the end, since they're not very specific.
+	// TaskStateChecks should go toward the end, since they're not very specific.
 	checks = append(checks, tefmocheck.TaskStateChecks...)
+	// No tests being run is only an issue if the task didn't fail for another
+	// reason, since conditions handled by many other checks can result in a
+	// missing summary.json. So run this check last.
+	checks = append(checks, tefmocheck.NoTestsRanCheck{})
 
 	checkTests, err := tefmocheck.RunChecks(checks, &testingOutputs, *outputsDir)
 	if err != nil {
