@@ -203,8 +203,6 @@ static void arm64_cpu_early_init() {
 
 void arch_early_init() {
   arm64_cpu_early_init();
-
-  platform_init_mmu_mappings();
 }
 
 void arch_prevm_init() {}

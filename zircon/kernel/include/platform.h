@@ -48,9 +48,6 @@ void platform_prevm_init(void);
 /* later init, after the kernel has come up */
 void platform_init(void);
 
-/* called by the arch init code to get the platform to set up any mmu mappings it may need */
-void platform_init_mmu_mappings(void);
-
 /* platform_panic_start informs the system that a panic message is about
  * to be printed and that platform_halt will be called shortly.  The
  * platform should stop other CPUs if possible and do whatever is necessary
@@ -80,9 +77,6 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
 
 /* optionally stop the current cpu in a way the platform finds appropriate */
 void platform_halt_cpu(void);
-
-/* called during chain loading to make sure drivers and platform is put into a stopped state */
-void platform_quiesce(void);
 
 /* returns pointer to ramdisk image, or NULL if none.
  * Sets size to ramdisk size or zero if none.
