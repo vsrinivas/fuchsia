@@ -332,10 +332,65 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
   }
 }
 
-// TODO(smklein): Test against chains of extents which cause loops, such as:
-//  - Inode -> Itself
-//  - Inode -> Container A -> Container B -> Container A
-// TODO(smklein): Test that we can defend against manually corrupted extent counts.
+TEST(AllocatedEXtentIteratorTest, VerifyIteration) {
+  MockSpaceManager space_manager;
+  std::unique_ptr<Allocator> allocator;
+  fbl::Vector<Extent> allocated_extents;
+  fbl::Vector<uint32_t> allocated_nodes;
+  constexpr size_t kAllocatedExtents = kInlineMaxExtents + (2 * kContainerMaxExtents) + 1;
+  constexpr size_t kAllocatedNodes = 4;
+
+  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
+                               &space_manager, &allocator, &allocated_extents, &allocated_nodes));
+
+  // After walking, observe that the inode is allocated.
+  const uint32_t node_index = allocated_nodes[0];
+  const InodePtr inode = allocator->GetNode(node_index);
+  ASSERT_TRUE(inode->header.IsAllocated());
+  ASSERT_EQ(kAllocatedExtents, inode->extent_count);
+
+  // Normal successful iteration
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()), ZX_OK);
+
+  // Corrupt last node extent count to be too high.
+  allocator->GetNode(allocated_nodes[3])->AsExtentContainer()->extent_count++;
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()),
+            ZX_ERR_OUT_OF_RANGE);
+
+  // Correct extent count.
+  allocator->GetNode(allocated_nodes[3])->AsExtentContainer()->extent_count--;
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()), ZX_OK);
+
+  // Skip to the last node from the second, should notice a non-packed node.
+  allocator->GetNode(allocated_nodes[1])->AsExtentContainer()->header.next_node =
+      allocated_nodes[3];
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()),
+            ZX_ERR_BAD_STATE);
+
+  // Correct the node pointer.
+  allocator->GetNode(allocated_nodes[1])->AsExtentContainer()->header.next_node =
+      allocated_nodes[2];
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()), ZX_OK);
+
+  // Loop node 2 to point at node 1 to detect the cycle on fast iteration.
+  allocator->GetNode(allocated_nodes[2])->AsExtentContainer()->header.next_node =
+      allocated_nodes[1];
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()),
+            ZX_ERR_IO_DATA_INTEGRITY);
+
+  // Correct the list pointer.
+  allocator->GetNode(allocated_nodes[2])->AsExtentContainer()->header.next_node =
+      allocated_nodes[3];
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()), ZX_OK);
+
+  // Loop node 2 to point at itself to detect the cycle on slow iteration.
+  inode->extent_count = 999;
+  allocator->GetNode(allocated_nodes[2])->AsExtentContainer()->header.next_node =
+      allocated_nodes[2];
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()),
+            ZX_ERR_IO_DATA_INTEGRITY);
+
+}
 
 }  // namespace
 }  // namespace blobfs

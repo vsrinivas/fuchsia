@@ -11,6 +11,7 @@
 
 #include <blobfs/format.h>
 
+#include "allocated-node-iterator.h"
 #include "extent-iterator.h"
 
 namespace blobfs {
@@ -43,6 +44,9 @@ class AllocatedExtentIterator : public ExtentIterator {
   // It is unsafe to call this method if |Done()| is true.
   uint32_t NodeIndex() const;
 
+  // Returns |ZX_OK| when the node list can be safely traversed.
+  static zx_status_t VerifyIteration(NodeFinder* finder, Inode* inode);
+
  private:
   // Indicates if the current node is the inode (as opposed to a container).
   bool IsInode() const;
@@ -56,9 +60,6 @@ class AllocatedExtentIterator : public ExtentIterator {
   // Acquires the current extent.
   const Extent* GetExtent() const;
 
-  // Acquires the index of the next node in the chain of nodes.
-  uint32_t GetNextNode() const;
-
   // Moves from either an inode to a container, or from one container to another.
   //
   // Returns an error if this container is unallocated, or not marked as a container.
@@ -68,11 +69,10 @@ class AllocatedExtentIterator : public ExtentIterator {
   InodePtr inode_;
   // The index of the node we're currently observing.
   uint32_t node_index_;
+  AllocatedNodeIterator node_iterator_;
   ExtentContainer* extent_node_ = nullptr;
   // The block index, indicating how many blocks we've iterated past thus far.
   uint64_t block_index_ = 0;
-  // The extent index into the global inode (monotonically increases).
-  uint32_t extent_index_ = 0;
   // The extent index into the current inode or container.
   uint32_t local_index_ = 0;
 };

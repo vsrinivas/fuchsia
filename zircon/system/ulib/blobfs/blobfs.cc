@@ -47,6 +47,7 @@
 #include "blob.h"
 #include "blobfs-checker.h"
 #include "compression/compressor.h"
+#include "iterator/allocated-node-iterator.h"
 #include "iterator/block-iterator.h"
 #include "pager/transfer-buffer.h"
 #include "pager/user-pager-info.h"
@@ -810,6 +811,14 @@ zx_status_t Blobfs::InitializeVnodes() {
     // Nothing much to do here if this is not an Inode
     if (inode->header.IsExtentContainer()) {
       continue;
+    }
+
+    zx_status_t validation_status = AllocatedExtentIterator::VerifyIteration(
+        GetNodeFinder(), inode.get());
+    if (validation_status != ZX_OK) {
+      // Whatever the more differentiated error is here, the real root issue is
+      // the integrity of the data that was just mirrored from the disk.
+      return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
     fbl::RefPtr<Blob> vnode = fbl::MakeRefCounted<Blob>(this, node_index, *inode);
