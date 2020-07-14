@@ -18,11 +18,11 @@ pub const MAX_DATAGRAM_LEN: usize = 2032;
 pub const MAX_TAGS: usize = 5;
 pub const MAX_TAG_LEN: usize = 64;
 
-const PID_LABEL: &str = "__pid";
-const TID_LABEL: &str = "__tid";
-const DROPPED_LABEL: &str = "__dropped";
-const TAG_LABEL: &str = "__tag";
-const MESSAGE_LABEL: &str = "__msg";
+pub const PID_LABEL: &str = "pid";
+pub const TID_LABEL: &str = "tid";
+pub const DROPPED_LABEL: &str = "num_dropped";
+pub const TAG_LABEL: &str = "tag";
+pub const MESSAGE_LABEL: &str = "message";
 
 /// An enum containing well known argument names passed through logs, as well
 /// as an `Other` variant for any other argument names.
@@ -30,7 +30,6 @@ const MESSAGE_LABEL: &str = "__msg";
 /// This contains the fields of logs sent as a [`LogMessage`].
 ///
 /// [`LogMessage`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogMessage
-// TODO(53222) - rename enum to avoid clashes with MESSAGE_LABEL above.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Field {
     ProcessId,

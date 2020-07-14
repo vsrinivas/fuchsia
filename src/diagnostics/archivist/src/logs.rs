@@ -429,7 +429,10 @@ mod tests {
     use {
         super::*,
         crate::logs::debuglog::tests::{TestDebugEntry, TestDebugLog},
-        crate::logs::message::{fx_log_packet_t, Severity, MAX_DATAGRAM_LEN},
+        crate::logs::message::{
+            fx_log_packet_t, Severity, DROPPED_LABEL, MAX_DATAGRAM_LEN, MESSAGE_LABEL, PID_LABEL,
+            TAG_LABEL, TID_LABEL,
+        },
         diagnostic_streams::{
             encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
         },
@@ -997,7 +1000,7 @@ mod tests {
                 timestamp: 6,
                 severity: StreamSeverity::Info,
                 arguments: vec![Argument {
-                    name: "__msg".to_string(),
+                    name: MESSAGE_LABEL.into(),
                     value: Value::Text("hi".to_string()),
                 }],
             },
@@ -1006,15 +1009,12 @@ mod tests {
                 timestamp: 19,
                 severity: StreamSeverity::Warn,
                 arguments: vec![
-                    Argument { name: String::from("__pid"), value: Value::UnsignedInt(0x1d1) },
-                    Argument { name: String::from("__tid"), value: Value::UnsignedInt(0x1d2) },
-                    Argument { name: String::from("__dropped"), value: Value::UnsignedInt(23) },
+                    Argument { name: PID_LABEL.into(), value: Value::UnsignedInt(0x1d1) },
+                    Argument { name: TID_LABEL.into(), value: Value::UnsignedInt(0x1d2) },
+                    Argument { name: DROPPED_LABEL.into(), value: Value::UnsignedInt(23) },
+                    Argument { name: TAG_LABEL.into(), value: Value::Text(String::from("tag")) },
                     Argument {
-                        name: String::from("__tag"),
-                        value: Value::Text(String::from("tag")),
-                    },
-                    Argument {
-                        name: String::from("__msg"),
+                        name: MESSAGE_LABEL.into(),
                         value: Value::Text(String::from("message")),
                     },
                 ],
@@ -1023,14 +1023,8 @@ mod tests {
                 timestamp: 21,
                 severity: StreamSeverity::Warn,
                 arguments: vec![
-                    Argument {
-                        name: String::from("__tag"),
-                        value: Value::Text(String::from("tag-1")),
-                    },
-                    Argument {
-                        name: String::from("__tag"),
-                        value: Value::Text(String::from("tag-2")),
-                    },
+                    Argument { name: TAG_LABEL.into(), value: Value::Text(String::from("tag-1")) },
+                    Argument { name: TAG_LABEL.into(), value: Value::Text(String::from("tag-2")) },
                 ],
             },
         ];

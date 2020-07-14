@@ -161,7 +161,7 @@ mod tests {
             severity: StreamSeverity::Fatal,
             arguments: vec![
                 Argument { name: "key".to_string(), value: Value::Text("value".to_string()) },
-                Argument { name: "__tag".to_string(), value: Value::Text("tag-a".to_string()) },
+                Argument { name: "tag".to_string(), value: Value::Text("tag-a".to_string()) },
             ],
         };
         let mut buffer = Cursor::new(vec![0u8; 1024]);
