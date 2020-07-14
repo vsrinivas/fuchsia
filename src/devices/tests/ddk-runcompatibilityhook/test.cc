@@ -29,6 +29,7 @@ TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookSuccess) {
   IsolatedDevmgr::Args args;
   args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test.so");
   args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test-child.so");
+  args.path_prefix = "/pkg/";
 
   board_test::DeviceEntry dev = {};
   struct compatibility_test_metadata test_metadata = {
@@ -77,6 +78,7 @@ TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookMissingAddInB
 
   args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test.so");
   args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test-child.so");
+  args.path_prefix = "/pkg/";
 
   board_test::DeviceEntry dev = {};
   struct compatibility_test_metadata test_metadata = {
@@ -121,6 +123,7 @@ TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookMissingRemove
 
   args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test.so");
   args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test-child.so");
+  args.path_prefix = "/pkg/";
 
   board_test::DeviceEntry dev = {};
   struct compatibility_test_metadata test_metadata = {

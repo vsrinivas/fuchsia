@@ -314,8 +314,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-test",
     "//src/devices/tests/ddk-power:ddk-power-test-child",
     "//src/devices/tests/ddk-power:ddk-power-test",
-    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child",
-    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-perf",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-test",
     "//src/devices/tests/devhost-test:devhost-test-child",

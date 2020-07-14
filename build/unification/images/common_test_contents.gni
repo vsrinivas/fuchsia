@@ -37,7 +37,6 @@ common_test_contents = [
   "//src/devices/tests/crash-device",
   "//src/devices/tests/ddk-lifecycle",
   "//src/devices/tests/ddk-power",
-  "//src/devices/tests/ddk-runcompatibilityhook",
   "//src/devices/tests/ddk-schedule-work",
   "//src/devices/tests/devfs",
   "//src/devices/tests/devhost-test",
