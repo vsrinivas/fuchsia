@@ -91,6 +91,7 @@ void TestDevice::SetupDevmgr() {
   // practice -- zxcrypt is part of the bootfs anyway, so on any system you'd
   // be able to install and use zxcrypt, you'd have the same lib in /boot.
   args.driver_search_paths.push_back("/boot/driver");
+  args.path_prefix = "/pkg/";
 
   // Preload the sysdev driver.
   args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
@@ -442,6 +443,8 @@ void TestDevice::Disconnect() {
   }
 
   if (client_) {
+    zx_status_t status;
+    fuchsia_hardware_block_BlockCloseFifo(zxcrypt_channel()->get(), &status);
     memset(&req_, 0, sizeof(req_));
     block_fifo_release_client(client_);
     client_ = nullptr;

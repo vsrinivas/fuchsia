@@ -560,6 +560,10 @@
       {
          "url":"fuchsia-pkg://fuchsia.com/xhci-transfer-ring-unittest#meta/xhci-transfer-ring-unittest.cmx",
          "max_severity":"ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/zxcrypt-test#meta/zxcrypt-test.cmx",
+         "max_severity": "ERROR"
       }
    ]
 }

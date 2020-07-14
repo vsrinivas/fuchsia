@@ -32,7 +32,6 @@ group("tests") {
     "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",
     "//src/media/audio/drivers/sherlock-tdm-output/test:sherlock-audio-out-test-package",
-    "//src/security/zxcrypt/tests:zxcrypt-package",
     "//src/zircon/tests/entropy:entropy-package",
     "//src/zircon/tests/events:events-package",
     "//src/zircon/tests/exception:exception-package",

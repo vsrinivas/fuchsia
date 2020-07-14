@@ -17,5 +17,6 @@ group("tests") {
     "kms:tests",
     "tee_manager:tests",
     "tools:tests",
+    "zxcrypt:tests",
   ]
 }
