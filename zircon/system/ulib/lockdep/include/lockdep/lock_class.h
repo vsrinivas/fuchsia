@@ -48,7 +48,7 @@ template <typename Class, typename LockType, size_t Index, LockFlags Flags>
 class LockClass {
  public:
   // Returns the unique lock class id for this lock class.
-  static LockClassId Id() { return lock_class_state_.id(); }
+  static constexpr LockClassId Id() { return lock_class_state_.id(); }
 
   // Returns the LockClassState instance for this lock class.
   static LockClassState* GetLockClassState() { return &lock_class_state_; }
@@ -88,7 +88,7 @@ LockDependencySet LockClass<Class, LockType, Index, Flags>::dependency_set_;
 // Dummy type used in place of LockClass when validation is disabled. This type
 // does not create static dependency tracking structures that LockClass does.
 struct DummyLockClass {
-  static LockClassId Id() { return kInvalidLockClassId; }
+  static constexpr LockClassId Id() { return kInvalidLockClassId; }
 };
 
 // Alias that selects LockClass<Class, LockType, Index, Flags> when validation
@@ -206,8 +206,8 @@ class __TA_CAPABILITY("mutex") Lock {
 
   // Dummy type that stores nothing when validation is disabled.
   struct Dummy {
-    Dummy(LockClassId) {}
-    LockClassId value() const { return kInvalidLockClassId; }
+    constexpr Dummy(LockClassId) {}
+    LockClassId constexpr value() const { return kInvalidLockClassId; }
   };
 
   // Selects between Value or Dummy based on whether validation is enabled.
@@ -258,8 +258,8 @@ class __TA_CAPABILITY("mutex") Lock<GlobalReference<LockType, Reference>> {
     LockClassId value() const { return value_; }
   };
   struct Dummy {
-    Dummy(LockClassId) {}
-    LockClassId value() const { return kInvalidLockClassId; }
+    constexpr Dummy(LockClassId) {}
+    LockClassId constexpr value() const { return kInvalidLockClassId; }
   };
 
   using IdValue = IfLockValidationEnabled<Value, Dummy>;
