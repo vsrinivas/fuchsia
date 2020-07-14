@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+test("simple-codec-unittest-bin") {
+  testonly = true
+  sources = [ "test.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.codec",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/ddktl",
+    "//src/media/audio/lib/simple-codec",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("test-package") {
+  package_name = "simple-codec-unittest"
+  executable_path = "test/simple-codec-unittest-bin"
+  deps = [ ":simple-codec-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
