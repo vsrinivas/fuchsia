@@ -29,9 +29,6 @@
 #include <vm/init.h>
 #include <vm/vm.h>
 
-extern void (*const __init_array_start[])();
-extern void (*const __init_array_end[])();
-
 static uint secondary_idle_thread_count;
 
 static int bootstrap2(void* arg);
@@ -40,17 +37,30 @@ KCOUNTER(timeline_threading, "boot.timeline.threading")
 KCOUNTER(timeline_init, "boot.timeline.init")
 
 static void call_constructors() {
-  for (void (*const* a)() = __init_array_start; a != __init_array_end; a++)
+  const bool trace = false;
+
+  extern void (*const __init_array_start[])();
+  extern void (*const __init_array_end[])();
+
+  for (void (*const* a)() = __init_array_start; a != __init_array_end; a++) {
+    if (trace) {
+      printf("Calling global constructor %p\n", *a);
+    }
     (*a)();
+  }
 }
 
 // called from arch code
 void lk_main() {
-  // serial prints to console based on compile time switch
-  dlog_bypass_init_early();
-
-  // get us into some sort of thread context
+  // get us into some sort of thread context so Thread::Current works.
   thread_init_early();
+
+  // bring the debuglog up early so we can safely printf
+  dlog_init_early();
+
+  // we can safely printf now since we have both the debuglog and the current thread
+  // set which holds a per-line buffer
+  dprintf(SPEW, "printing enabled\n");
 
   // deal with any static constructors
   call_constructors();

@@ -28,7 +28,7 @@ class FILE {
 
   FILE() = default;
 
-  FILE(Callback* write, void* ptr) : write_(write), ptr_(ptr) {}
+  constexpr FILE(Callback* write, void* ptr) : write_(write), ptr_(ptr) {}
 
   template <typename T>
   explicit FILE(T* writer)

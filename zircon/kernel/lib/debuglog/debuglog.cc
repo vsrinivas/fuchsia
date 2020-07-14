@@ -9,6 +9,7 @@
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/io.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <lib/version.h>
 #include <platform.h>
 #include <stdint.h>
@@ -32,10 +33,10 @@ static_assert((DLOG_SIZE & DLOG_MASK) == 0u, "must be power of two");
 static_assert(DLOG_MAX_RECORD <= DLOG_SIZE, "wat");
 static_assert((DLOG_MAX_RECORD & 3) == 0, "E_DONT_DO_THAT");
 
+static lazy_init::LazyInit<DLog, lazy_init::CheckType::None, lazy_init::Destructor::Disabled> DLOG;
+
 static constexpr char kDlogNotifierThreadName[] = "debuglog-notifier";
 static constexpr char kDlogDumperThreadName[] = "debuglog-dumper";
-
-static DLog DLOG = DLog();
 
 static Thread* notifier_thread;
 static Thread* dumper_thread;
@@ -44,29 +45,40 @@ static Thread* dumper_thread;
 static ktl::atomic<bool> notifier_shutdown_requested;
 static ktl::atomic<bool> dumper_shutdown_requested;
 
-// dlog_bypass_ will directly write to console. It also has the side effect of
-// disabling uart Tx interrupts. So all serial console writes are polling.
-static bool dlog_bypass_ = false;
+FILE gDlogSerialFile{[](void*, ktl::string_view str) {
+                       dlog_serial_write(str);
+                       return static_cast<int>(str.size());
+                     },
+                     nullptr};
 
+// dlog_bypass_ will cause printfs to directly write to console. It also has the
+// side effect of disabling uart Tx interrupts, which causes all of the serial
+// writes to be polling.
+//
 // We need to preserve the compile time switch (ENABLE_KERNEL_LL_DEBUG), even
 // though we add a kernel cmdline (kernel.bypass-debuglog), to bypass the debuglog.
 // This is to allow very early prints in the kernel to go to the serial console.
+bool dlog_bypass_ =
+#if ENABLE_KERNEL_LL_DEBUG
+    true;
+#else
+    false;
+#endif
 
 // Called first thing in init, so very early printfs can go to serial console.
-void dlog_bypass_init_early(void) {
-#ifdef ENABLE_KERNEL_LL_DEBUG
-  dlog_bypass_ = true;
-#endif
+void dlog_init_early() {
+  // Construct the debuglog. Done here so we can construct it manually before
+  // the global constructors are run.
+  DLOG.Initialize();
 }
 
 // Called after kernel cmdline options are parsed (in platform_early_init()).
 // The compile switch (if enabled) overrides the kernel cmdline switch.
-void dlog_bypass_init(void) {
-  if (dlog_bypass_ == false)
+void dlog_bypass_init() {
+  if (dlog_bypass_ == false) {
     dlog_bypass_ = gCmdline.GetBool("kernel.bypass-debuglog", false);
+  }
 }
-
-bool dlog_bypass(void) { return dlog_bypass_; }
 
 // The debug log maintains a circular buffer of debug log records,
 // consisting of a common header (dlog_header_t) followed by up
@@ -95,7 +107,7 @@ bool dlog_bypass(void) { return dlog_bypass_; }
 //           H         H
 
 zx_status_t dlog_write(uint32_t severity, uint32_t flags, ktl::string_view str) {
-  return DLOG.write(severity, flags, str);
+  return DLOG->write(severity, flags, str);
 }
 
 zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str) {
@@ -418,10 +430,10 @@ static int debuglog_dumper(void* arg) {
   return 0;
 }
 
-void dlog_bluescreen_init(void) {
+void dlog_bluescreen_init() {
   // if we're panicing, stop processing log writes
   // they'll fail over to kernel console and serial
-  DLOG.panic = true;
+  DLOG->panic = true;
 
   udisplay_bind_gfxconsole();
 
@@ -433,7 +445,7 @@ void dlog_bluescreen_init(void) {
   crashlog.base_address = (uintptr_t)__code_start;
 }
 
-void dlog_force_panic(void) { dlog_bypass_ = true; }
+void dlog_force_panic() { dlog_bypass_ = true; }
 
 static zx_status_t dlog_shutdown_thread(Thread* thread, const char* name,
                                         ktl::atomic<bool>* shutdown_requested, Event* event,
@@ -457,13 +469,13 @@ zx_status_t dlog_shutdown(zx_time_t deadline) {
   // |dumper_thread| will continue to read records and drain the queue even after shutdown is
   // requested.  If we don't stop the flow up stream, then a sufficiently speedy write could prevent
   // the |dumper_thread| from terminating.
-  DLOG.shutdown();
+  DLOG->shutdown();
 
   // Shutdown the notifier thread first. Ordering is important because the notifier thread is
   // responsible for passing log records to the dumper.
   zx_status_t notifier_status =
       dlog_shutdown_thread(notifier_thread, kDlogNotifierThreadName, &notifier_shutdown_requested,
-                           &DLOG.event, deadline);
+                           &DLOG->event, deadline);
   notifier_thread = nullptr;
 
   zx_status_t dumper_status = dlog_shutdown_thread(
@@ -495,9 +507,3 @@ static void dlog_init_hook(uint level) {
 }
 
 LK_INIT_HOOK(debuglog, dlog_init_hook, LK_INIT_LEVEL_PLATFORM)
-
-FILE gDlogSerialFile{[](void*, ktl::string_view str) {
-                       dlog_serial_write(str);
-                       return static_cast<int>(str.size());
-                     },
-                     nullptr};

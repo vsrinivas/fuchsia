@@ -40,14 +40,15 @@ struct DLog {
   AutounsignalEvent event;
 
   DECLARE_LOCK(DLog, Mutex) readers_lock;
-  fbl::DoublyLinkedList<DlogReader*> readers;
-
-  uint8_t data[DLOG_SIZE]{0};
+  fbl::DoublyLinkedList<DlogReader*> readers TA_GUARDED(readers_lock);
 
  private:
   // Indicates that this |DLog| object is being shutdown.  When true, |write| will immediately
   // return an error.
   bool shutdown_requested_ TA_GUARDED(lock) = false;
+
+ public:
+  uint8_t data[DLOG_SIZE]{0};
 };
 
 #endif  // ZIRCON_KERNEL_LIB_DEBUGLOG_DEBUGLOG_INTERNAL_H_

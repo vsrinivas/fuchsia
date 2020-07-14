@@ -102,13 +102,16 @@ extern FILE gDlogSerialFile;
 // bluescreen_init should be called at the "start" of a fatal fault or
 // panic to ensure that the fault output (via kernel printf/dprintf)
 // is captured or displayed to the user
-void dlog_bluescreen_init(void);
+void dlog_bluescreen_init();
 
 // Force the dlog into panic mode.  Can be used in special circumstances to
 // force log messages to the serial console in the event that interrupts are off
 // and will never be turned back on (for example, when about to force a watchdog
 // to fire).
-void dlog_force_panic(void);
+void dlog_force_panic();
+
+// Initialize the debuglog subsystem. Called once at extremely early boot.
+void dlog_init_early();
 
 // Shutdown the debuglog subsystem.
 //
@@ -119,8 +122,14 @@ void dlog_force_panic(void);
 // Returns ZX_OK on success.
 zx_status_t dlog_shutdown(zx_time_t deadline);
 
-void dlog_bypass_init_early(void);
-void dlog_bypass_init(void);
-bool dlog_bypass(void);
+// Called as soon as command line parsing is available to check for any kernel
+// command line options that may affect the debug log.
+void dlog_bypass_init();
+
+// Accessor to quickly determine if the debuglog bypass is enabled.
+static inline bool dlog_bypass() {
+  extern bool dlog_bypass_;
+  return dlog_bypass_;
+}
 
 #endif  // ZIRCON_KERNEL_LIB_DEBUGLOG_INCLUDE_LIB_DEBUGLOG_H_
