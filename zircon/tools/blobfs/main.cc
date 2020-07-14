@@ -133,6 +133,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
   std::mutex mtx;
   for (unsigned j = n_threads; j > 0; j--) {
     threads.push_back(std::thread([&] {
+      std::vector<blobfs::MerkleInfo> local_merkle_list;
       unsigned i = 0;
       while (true) {
         mtx.lock();
@@ -143,7 +144,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
         i = blob_index++;
         mtx.unlock();
         if (i >= blob_list_.size()) {
-          return;
+          break;
         }
         const char* path = blob_list_[i].c_str();
         zx_status_t res;
@@ -166,10 +167,12 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
 
         info.path = path;
 
-        mtx.lock();
-        merkle_list_.push_back(std::move(info));
-        mtx.unlock();
+        local_merkle_list.push_back(std::move(info));
       }
+      mtx.lock();
+      merkle_list_.insert(merkle_list_.end(), std::make_move_iterator(local_merkle_list.begin()),
+        std::make_move_iterator(local_merkle_list.end()));
+      mtx.unlock();
     }));
   }
 
