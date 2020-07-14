@@ -29,6 +29,7 @@ class FvmVolumeManagerApiTest : public zxtest::Test {
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
+    args.path_prefix = "/pkg/";
     devmgr_ = std::make_unique<devmgr_integration_test::IsolatedDevmgr>();
     ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), devmgr_.get()));
   }

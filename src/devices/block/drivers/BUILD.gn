@@ -8,6 +8,7 @@ group("tests") {
   deps = [
     "aml-sd-emmc:tests",
     "block-verity:tests",
+    "fvm:tests",
     "mtk-sdmmc:tests",
     "ramdisk:tests",
     "sdhci:tests",

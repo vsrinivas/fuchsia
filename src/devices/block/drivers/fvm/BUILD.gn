@@ -48,3 +48,11 @@ source_set("shared") {
     "//zircon/system/ulib/gpt",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "test:fvm-driver-unittests-package",
+    "test/integration:fvm-driver-integration-test",
+  ]
+}

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("fvm-driver-integration") {
   output_name = "fvm-driver-integration-test"
@@ -22,13 +22,15 @@ test("fvm-driver-integration") {
   ]
 }
 
-unittest_package("fvm-driver-integration-package") {
-  package_name = "fvm-driver-integration"
-  deps = [ ":fvm-driver-integration" ]
+isolated_devmgr_unittest_package("fvm-driver-integration-test") {
+  executable_path = "test/fvm-driver-integration-test"
 
-  tests = [
-    {
-      name = "fvm-driver-integration-test"
-    },
+  deps = [
+    ":fvm-driver-integration",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
   ]
 }
