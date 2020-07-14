@@ -12,6 +12,7 @@
 #include "magma_common_defs.h"
 #include "magma_util/macros.h"
 #include "platform_sysmem_connection.h"
+#include "platform_thread.h"
 
 using magma::Status;
 
@@ -297,6 +298,10 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
     collection_ =
         std::make_unique<llcpp::fuchsia::sysmem::BufferCollection::SyncClient>(std::move(h1));
 
+    collection_->SetDebugClientInfo(
+        fidl::unowned_str(magma::PlatformProcessHelper::GetCurrentProcessName()),
+        magma::PlatformProcessHelper::GetCurrentProcessId());
+
     return MAGMA_STATUS_OK;
   }
 
@@ -488,6 +493,10 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to allocate buffer: %d", status);
 
     llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(h1));
+
+    collection.SetDebugClientInfo(
+        fidl::unowned_str(magma::PlatformProcessHelper::GetCurrentProcessName()),
+        magma::PlatformProcessHelper::GetCurrentProcessId());
 
     if (!name.empty()) {
       collection.SetName(10, fidl::unowned_str(name));

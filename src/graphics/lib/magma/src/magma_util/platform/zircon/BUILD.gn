@@ -207,6 +207,7 @@ source_set("sysmem_connection") {
   deps = [
     ":buffer",
     "..:sysmem_connection_header",
+    "..:thread",
     "..:trace",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//zircon/public/lib/zx",
