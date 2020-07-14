@@ -85,8 +85,13 @@ class BusTransactionInitiatorDispatcher final
   void Quarantine(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) TA_EXCL(get_lock());
 
  private:
+  enum class BtiPageLeakReason {
+    BtiClose,
+    PmtClose,
+  };
+
   BusTransactionInitiatorDispatcher(fbl::RefPtr<Iommu> iommu, uint64_t bti_id);
-  void PrintQuarantineWarningLocked() TA_REQ(get_lock());
+  void PrintQuarantineWarningLocked(BtiPageLeakReason reason) TA_REQ(get_lock());
 
   const fbl::RefPtr<Iommu> iommu_;
   const uint64_t bti_id_;

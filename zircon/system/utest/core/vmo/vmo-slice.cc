@@ -224,7 +224,7 @@ TEST(VmoSliceTestCase, ChildSliceOfContiguousParentIsContiguous) {
 
   zx_iommu_desc_dummy_t desc;
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "ChildSliceOfContiguousParentIsContiguous");
   EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &parent_contig_vmo));
 
   // Create child slice.
@@ -363,7 +363,7 @@ TEST(VmoSliceTestCase, RoundUpSizePhysical) {
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "RoundUpSizePhysical");
   EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &parent_contig_vmo));
 
   // Create child slice with size < PAGE_SIZE, should round up and succeed.
@@ -419,7 +419,7 @@ TEST(VmoSliceTestCase, Pin) {
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoSliceTestCase::Pin");
 
   // Pin the slice, this should block decommits in the parent.
   zx_paddr_t paddr;

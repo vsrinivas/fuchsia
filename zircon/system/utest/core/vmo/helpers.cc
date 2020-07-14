@@ -81,4 +81,16 @@ zx::status<PhysVmo> GetTestPhysVmo(size_t size) {
   return zx::ok(std::move(ret));
 }
 
+zx::bti CreateNamedBti(const zx::iommu& fake_iommu, uint32_t options, uint64_t bti_id,
+                       const char* name) {
+  zx::bti ret;
+  EXPECT_OK(zx::bti::create(fake_iommu, options, bti_id, &ret));
+
+  if (ret.is_valid()) {
+    EXPECT_OK(ret.set_property(ZX_PROP_NAME, name, strlen(name)));
+  }
+
+  return ret;
+}
+
 }  // namespace vmo_test

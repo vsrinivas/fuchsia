@@ -837,7 +837,8 @@ class VmoCloneResizeTests : public VmoClone2TestCase {
       zx_iommu_desc_dummy_t desc;
       ASSERT_OK(
           zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-      ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+      ASSERT_NO_FAILURES(bti =
+                             vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoCloneResizeTests"));
       ASSERT_OK(zx::vmo::create_contiguous(bti, 4 * ZX_PAGE_SIZE, 0, &vmo));
     } else {
       ASSERT_OK(zx::vmo::create(4 * ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo));
@@ -1343,7 +1344,7 @@ TEST_F(VmoClone2TestCase, ForbidContiguousVmo) {
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  ASSERT_NO_FAILURES(bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "ForbidContiguousVmo"));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create_contiguous(bti, ZX_PAGE_SIZE, 0, &vmo));
@@ -1368,7 +1369,8 @@ TEST_F(VmoClone2TestCase, PinBeforeCreateFailure) {
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  ASSERT_NO_FAILURES(bti =
+                         vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "PinBeforeCreateFailure"));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
@@ -1399,7 +1401,7 @@ TEST_F(VmoClone2TestCase, PinClonePages) {
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
   ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  ASSERT_NO_FAILURES(bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "PinClonePages"));
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   constexpr size_t kPageCount = 4;

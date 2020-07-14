@@ -15,6 +15,8 @@
 #include <new>
 
 #include <dev/iommu.h>
+#include <object/process_dispatcher.h>
+#include <object/thread_dispatcher.h>
 #include <vm/pinned_vm_object.h>
 #include <vm/vm_object.h>
 
@@ -100,7 +102,7 @@ void BusTransactionInitiatorDispatcher::on_zero_handles() {
   // at least the pinned parts of the VMOs, since we have no assurance that
   // hardware is not still reading/writing to it.
   if (!quarantine_.is_empty()) {
-    PrintQuarantineWarningLocked();
+    PrintQuarantineWarningLocked(BtiPageLeakReason::BtiClose);
   }
 }
 
@@ -136,7 +138,7 @@ void BusTransactionInitiatorDispatcher::Quarantine(fbl::RefPtr<PinnedMemoryToken
   if (zero_handles_) {
     // If we quarantine when at zero handles, this PMT will be leaked.  See
     // the comment in on_zero_handles().
-    PrintQuarantineWarningLocked();
+    PrintQuarantineWarningLocked(BtiPageLeakReason::PmtClose);
   }
 }
 
@@ -152,7 +154,7 @@ uint64_t BusTransactionInitiatorDispatcher::quarantine_count() const {
   return quarantine_.size_slow();
 }
 
-void BusTransactionInitiatorDispatcher::PrintQuarantineWarningLocked() {
+void BusTransactionInitiatorDispatcher::PrintQuarantineWarningLocked(BtiPageLeakReason reason) {
   uint64_t leaked_pages = 0;
   size_t num_entries = 0;
   for (const auto& pmt : quarantine_) {
@@ -160,6 +162,56 @@ void BusTransactionInitiatorDispatcher::PrintQuarantineWarningLocked() {
     num_entries++;
   }
 
-  KERNEL_OOPS("Bus Transaction Initiator 0x%lx has leaked %" PRIu64 " pages in %zu VMOs\n", bti_id_,
-              leaked_pages, num_entries);
+  char proc_name[ZX_MAX_NAME_LEN] = {0};
+  char thread_name[ZX_MAX_NAME_LEN] = {0};
+  char bti_name[ZX_MAX_NAME_LEN] = {0};
+
+  // If we have no current thread dispatcher, then this is a kernel thread.  We
+  // have no process to report, just report that the action was taken by a
+  // kernel thread and leave it at that.
+  ThreadDispatcher* thread_disp = ThreadDispatcher::GetCurrent();
+  if (thread_disp == nullptr) {
+    snprintf(proc_name, sizeof(proc_name), "<kernel>");
+    snprintf(thread_name, sizeof(thread_name), "<kernel>");
+  } else {
+    // Get the name of the user mode process and thread which closed the handle
+    // to the object which eventually resulted in the leak.
+    ProcessDispatcher::GetCurrent()->get_name(proc_name);
+    thread_disp->get_name(thread_name);
+  }
+
+  // Fetch the BTI name (if any).
+  this->get_name(bti_name);
+
+  // If any of these strings are empty, replace them with just "<unknown>".
+  if (!proc_name[0]) {
+    snprintf(proc_name, sizeof(proc_name), "<unknown>");
+  }
+  if (!thread_name[0]) {
+    snprintf(thread_name, sizeof(thread_name), "<unknown>");
+  }
+  if (!bti_name[0]) {
+    snprintf(bti_name, sizeof(bti_name), "<unknown>");
+  }
+
+  // Finally, print the message describing the leak, as best we can.
+  const char* leak_cause;
+  switch (reason) {
+    case BtiPageLeakReason::BtiClose:
+      leak_cause = "a BTI being closed with a non-empty quarantine list";
+      break;
+
+    case BtiPageLeakReason::PmtClose:
+      leak_cause = "a pinned PMT being closed, when the BTI used to pin it was already closed";
+      break;
+
+    default:
+      leak_cause = "<unknown>";
+      break;
+  }
+
+  KERNEL_OOPS("Bus Transaction Initiator (ID 0x%lx, name \"%s\") has leaked %" PRIu64
+              " pages in %zu VMOs. Leak was caused by %s. The last handle was closed by process "
+              "\"%s\", and thread \"%s\"\n",
+              bti_id_, bti_name, leaked_pages, num_entries, leak_cause, proc_name, thread_name);
 }

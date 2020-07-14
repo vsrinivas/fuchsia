@@ -108,11 +108,9 @@ TEST(VmoZeroTestCase, Contiguous) {
 
   zx_iommu_desc_dummy_t desc;
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-
-  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoZero Contiguous");
 
   zx::vmo vmo;
-
   EXPECT_OK(zx::vmo::create_contiguous(bti, PAGE_SIZE * 2, 0, &vmo));
   EXPECT_EQ(PAGE_SIZE * 2, VmoCommittedBytes(vmo));
 

@@ -495,7 +495,7 @@ TEST(VmoTestCase, Info) {
     EXPECT_EQ(zx_iommu_create((*root_res).get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                               iommu.reset_and_get_address()),
               ZX_OK);
-    EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+    bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoTestCase::Info");
 
     len = PAGE_SIZE * 12;
     EXPECT_OK(zx::vmo::create_contiguous(bti, len, 0, &vmo));
@@ -1277,7 +1277,7 @@ TEST(VmoTestCase, CompressedContiguous) {
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoTestCase::CompressedContiguous");
 
   zx_info_bti_t bti_info;
   EXPECT_OK(bti.get_info(ZX_INFO_BTI, &bti_info, sizeof(bti_info), nullptr, nullptr));
@@ -1321,7 +1321,7 @@ TEST(VmoTestCase, UncachedContiguous) {
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoTestCase::UncachedContiguous");
 
   constexpr uint64_t kSize = PAGE_SIZE * 4;
 
@@ -1373,7 +1373,7 @@ TEST(VmoTestCase, PinTests) {
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoTestCase::PinTests");
 
   enum class VmoFlavor { Normal, Contig, Physical };
   constexpr std::array FLAVORS = {VmoFlavor::Normal, VmoFlavor::Contig, VmoFlavor::Physical};
@@ -1495,7 +1495,6 @@ TEST(VmoTestCase, DecommitChildSliceTests) {
     child.size_past_end = parent.size_past_end + (parent.size - (child.size + child.offset));
   }
 
-
   // OK, now we should be ready to test each of the levels.
   for (const auto &level : levels) {
     // Make sure that we test ranges which have starting and ending points
@@ -1526,8 +1525,7 @@ TEST(VmoTestCase, DecommitChildSliceTests) {
         }
 
         EXPECT_STATUS(
-            level.vmo.op_range(ZX_VMO_OP_DECOMMIT, start, size, nullptr, 0),
-            expected_status,
+            level.vmo.op_range(ZX_VMO_OP_DECOMMIT, start, size, nullptr, 0), expected_status,
             "Decommit op was offset 0x%zx size 0x%zx in VMO (offset 0x%zx size 0x%zx spe 0x%zx)",
             start, size, level.offset, level.size, level.size_past_end);
       }
