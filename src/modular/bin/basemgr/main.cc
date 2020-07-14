@@ -51,8 +51,6 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
       std::move(config), component_context->svc(), component_context->outgoing(),
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
       component_context->svc()->Connect<fuchsia::ui::policy::Presenter>(),
-      component_context->svc()->Connect<fuchsia::devicesettings::DeviceSettingsManager>(),
-      component_context->svc()->Connect<fuchsia::wlan::service::Wlan>(),
       component_context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>(),
       /*on_shutdown=*/
       [loop, cobalt_cleanup = std::move(cobalt_cleanup), component_context]() mutable {

@@ -5,7 +5,6 @@
 #ifndef SRC_MODULAR_BIN_BASEMGR_BASEMGR_IMPL_H_
 #define SRC_MODULAR_BIN_BASEMGR_BASEMGR_IMPL_H_
 
-#include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
@@ -13,7 +12,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/wlan/service/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/service_namespace.h>
@@ -43,16 +41,12 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // the modular framework environment.
   // |launcher| Environment service for creating component instances.
   // |presenter| Service to initialize the presentation.
-  // |device_settings_manager| Service to look-up whether device needs factory
-  // reset.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   explicit BasemgrImpl(fuchsia::modular::session::ModularConfig config,
                        std::shared_ptr<sys::ServiceDirectory> incoming_services,
                        std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
                        fuchsia::sys::LauncherPtr launcher,
                        fuchsia::ui::policy::PresenterPtr presenter,
-                       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
-                       fuchsia::wlan::service::WlanPtr wlan,
                        fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                        fit::function<void()> on_shutdown);
 
@@ -72,9 +66,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   void Start();
 
   void Shutdown() override;
-
-  // Handles factory reset if one is pending and starts a new session if not.
-  void HandleResetOrStartSession();
 
   // Starts a new session.
   void StartSession(bool use_random_id);
@@ -107,10 +98,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   fuchsia::sys::LauncherPtr launcher_;
   // Used to connect the |presentation_container_| to scenic.
   fuchsia::ui::policy::PresenterPtr presenter_;
-  // Used to look-up whether device needs a factory reset.
-  fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager_;
-  // Used to reset Wi-Fi during factory reset.
-  fuchsia::wlan::service::WlanPtr wlan_;
   // Used to trigger device reboot.
   fuchsia::hardware::power::statecontrol::AdminPtr device_administrator_;
   fit::function<void()> on_shutdown_;

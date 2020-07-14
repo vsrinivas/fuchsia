@@ -10,15 +10,13 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.deprecatedtimezone.Timezone",
-            "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.logger.LogSink",
             "fuchsia.settings.Intl",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.lifecycle.LifecycleController",
-            "fuchsia.ui.policy.Presenter",
-            "fuchsia.wlan.service.Wlan"
+            "fuchsia.ui.policy.Presenter"
         ]
     }
 }
