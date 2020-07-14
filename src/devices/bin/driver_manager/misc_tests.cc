@@ -380,8 +380,9 @@ TEST(MiscTestCase, BindDevices) {
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
       nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
-      {} /* driver_path */, {} /* args */, false /* invisible */, false /* has_init */,
-      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
+      {} /* driver_path */, {} /* args */, false /* invisible */, false /* skip_autobind */,
+      false /* has_init */, true /* always_init */, zx::vmo() /*inspect*/,
+      zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
@@ -432,8 +433,9 @@ TEST(MiscTestCase, TestOutput) {
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
       nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
-      {} /* driver_path */, {} /* args */, false /* invisible */, false /* has_init */,
-      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
+      {} /* driver_path */, {} /* args */, false /* invisible */, false /* skip_autobind */,
+      false /* has_init */, true /* always_init */, zx::vmo() /*inspect*/,
+      zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
@@ -511,8 +513,8 @@ void AddDeviceWithProperties(const llcpp::fuchsia::device::manager::DeviceProper
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
       props_data, props_count, "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
-      false /* invisible */, false /* has_init */, true /* always_init */, zx::vmo() /*inspect*/,
-      zx::channel() /* client_remote */, &device);
+      false /* invisible */, false /* skip_autobind */, false /* has_init */,
+      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
 
   // Check that the device has been added to the coordinator, with the correct properties.

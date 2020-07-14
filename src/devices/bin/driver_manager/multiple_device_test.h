@@ -109,6 +109,8 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void AddDevice(const fbl::RefPtr<Device>& parent, const char* name, uint32_t protocol_id,
                  fbl::String driver, bool invisible, bool has_init, bool reply_to_init,
                  bool always_init, zx::vmo inspect, size_t* device_index);
+  void AddDeviceSkipAutobind(const fbl::RefPtr<Device>& parent, const char* name,
+                             uint32_t protocol_id, size_t* device_index);
   void AddDevice(const fbl::RefPtr<Device>& parent, const char* name, uint32_t protocol_id,
                  fbl::String driver, size_t* device_index);
   void RemoveDevice(size_t device_index);

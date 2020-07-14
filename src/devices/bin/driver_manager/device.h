@@ -44,34 +44,37 @@ struct UnbindTaskOpts;
 // clang-format off
 
 // This device is never destroyed
-#define DEV_CTX_IMMORTAL           0x01
+#define DEV_CTX_IMMORTAL           0x0001
 
 // This device requires that children are created in a
 // new driver_host attached to a proxy device
-#define DEV_CTX_MUST_ISOLATE       0x02
+#define DEV_CTX_MUST_ISOLATE       0x0002
 
 // This device may be bound multiple times
-#define DEV_CTX_MULTI_BIND         0x04
+#define DEV_CTX_MULTI_BIND         0x0004
 
 // This device is bound and not eligible for binding
 // again until unbound.  Not allowed on MULTI_BIND ctx.
-#define DEV_CTX_BOUND              0x08
+#define DEV_CTX_BOUND              0x0008
 
 // Device has been remove()'d
-#define DEV_CTX_DEAD               0x10
+#define DEV_CTX_DEAD               0x0010
 
 // This device is a fragment of a composite device and
 // can be part of multiple composite devices.
-#define DEV_CTX_ALLOW_MULTI_COMPOSITE    0x20
+#define DEV_CTX_ALLOW_MULTI_COMPOSITE    0x0020
 
 // Device is a proxy -- its "parent" is the device it's
 // a proxy to.
-#define DEV_CTX_PROXY              0x40
+#define DEV_CTX_PROXY              0x0040
 
 // Device is not visible in devfs or bindable.
 // Devices may be created in this state, but may not
 // return to this state once made visible.
-#define DEV_CTX_INVISIBLE          0x80
+#define DEV_CTX_INVISIBLE          0x0080
+
+// Device should not go through auto-bind process
+#define DEV_CTX_SKIP_AUTOBIND      0x0100
 
 // Signals used on the test event
 #define TEST_BIND_DONE_SIGNAL ZX_USER_SIGNAL_0
@@ -117,12 +120,6 @@ class Device
   void PublishMetadata(::fidl::StringView device_path, uint32_t key,
                        ::fidl::VectorView<uint8_t> data,
                        PublishMetadataCompleter::Sync _completer) override;
-  void AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller,
-                          ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
-                          ::fidl::StringView name, uint32_t protocol_id,
-                          ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init,
-                          ::zx::vmo inspect, ::zx::channel client_remote,
-                          AddDeviceInvisibleCompleter::Sync _completer) override;
   void MakeVisible(MakeVisibleCompleter::Sync _completer) override;
   void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync _completer) override;
   void GetTopologicalPath(GetTopologicalPathCompleter::Sync _completer) override;
@@ -278,8 +275,9 @@ class Device
                             fbl::String name, fbl::String driver_path, fbl::String args,
                             uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
                             zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                            bool wait_make_visible, bool want_init_task, zx::vmo inspect,
-                            zx::channel client_remote, fbl::RefPtr<Device>* device);
+                            bool wait_make_visible, bool want_init_task, bool skip_autobind,
+                            zx::vmo inspect, zx::channel client_remote,
+                            fbl::RefPtr<Device>* device);
   static zx_status_t CreateComposite(Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
                                      const CompositeDevice& composite, zx::channel coordinator_rpc,
                                      zx::channel device_controller_rpc,
@@ -357,10 +355,12 @@ class Device
     return !(flags & (DEV_CTX_BOUND | DEV_CTX_INVISIBLE)) && (state_ != Device::State::kDead);
   }
 
+  bool should_skip_autobind() const { return flags & DEV_CTX_SKIP_AUTOBIND; }
+
   bool is_visible() const { return !(flags & DEV_CTX_INVISIBLE); }
 
   bool is_composite_bindable() const {
-    if (flags & (DEV_CTX_DEAD | DEV_CTX_INVISIBLE)) {
+    if (flags & (DEV_CTX_DEAD | DEV_CTX_INVISIBLE | DEV_CTX_SKIP_AUTOBIND)) {
       return false;
     }
     if ((flags & DEV_CTX_BOUND) && !(flags & DEV_CTX_ALLOW_MULTI_COMPOSITE)) {

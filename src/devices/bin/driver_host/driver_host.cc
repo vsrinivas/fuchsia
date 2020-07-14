@@ -204,6 +204,12 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   if (child->flags() & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
     add_device_config |= fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE;
   }
+  if (add_invisible) {
+    add_device_config |= fuchsia::device::manager::AddDeviceConfig::INVISIBLE;
+  }
+  if (child->flags() & DEV_FLAG_UNBINDABLE) {
+    add_device_config |= fuchsia::device::manager::AddDeviceConfig::SKIP_AUTOBIND;
+  }
 
   zx_status_t status;
   zx::channel coordinator, coordinator_remote;
@@ -236,39 +242,23 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   zx_status_t call_status = ZX_OK;
   static_assert(sizeof(zx_device_prop_t) == sizeof(uint64_t));
   uint64_t device_id = 0;
-  if (add_invisible) {
-    auto response = fuchsia::device::manager::Coordinator::Call::AddDeviceInvisible(
-        zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
-        std::move(device_controller_remote), ::fidl::unowned_vec(props_list),
-        ::fidl::unowned_str(child->name(), strlen(child->name())), child->protocol_id(),
-        ::fidl::unowned_str(child->driver->libname()),
-        ::fidl::unowned_str(proxy_args, proxy_args_len), child->ops()->init /* has_init */,
-        std::move(inspect), std::move(client_remote));
-    status = response.status();
-    if (status == ZX_OK) {
-      if (response.Unwrap()->result.is_response()) {
-        device_id = response.Unwrap()->result.response().local_device_id;
+  auto response = fuchsia::device::manager::Coordinator::Call::AddDevice(
+      zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
+      std::move(device_controller_remote), ::fidl::unowned_vec(props_list),
+      ::fidl::unowned_str(child->name(), strlen(child->name())), child->protocol_id(),
+      ::fidl::unowned_str(child->driver->libname()),
+      ::fidl::unowned_str(proxy_args, proxy_args_len), add_device_config,
+      child->ops()->init /* has_init */, std::move(inspect), std::move(client_remote));
+  status = response.status();
+  if (status == ZX_OK) {
+    if (response.Unwrap()->result.is_response()) {
+      device_id = response.Unwrap()->result.response().local_device_id;
+      if (add_invisible) {
         // Mark child as invisible until the init function is replied.
         child->set_flag(DEV_FLAG_INVISIBLE);
-      } else {
-        call_status = response.Unwrap()->result.err();
       }
-    }
-  } else {
-    auto response = fuchsia::device::manager::Coordinator::Call::AddDevice(
-        zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
-        std::move(device_controller_remote), ::fidl::unowned_vec(props_list),
-        ::fidl::unowned_str(child->name(), strlen(child->name())), child->protocol_id(),
-        ::fidl::unowned_str(child->driver->libname()),
-        ::fidl::unowned_str(proxy_args, proxy_args_len), add_device_config,
-        child->ops()->init /* has_init */, std::move(inspect), std::move(client_remote));
-    status = response.status();
-    if (status == ZX_OK) {
-      if (response.Unwrap()->result.is_response()) {
-        device_id = response.Unwrap()->result.response().local_device_id;
-      } else {
-        call_status = response.Unwrap()->result.err();
-      }
+    } else {
+      call_status = response.Unwrap()->result.err();
     }
   }
 

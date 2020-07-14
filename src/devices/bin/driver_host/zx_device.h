@@ -375,7 +375,7 @@ struct zx_device
   void set_complete_bind_rebind_after_init(bool value) { complete_bind_rebind_after_init_ = value; }
 
   DeviceInspect& inspect() { return *inspect_; }
-  void FreeInspect() { inspect_.reset();}
+  void FreeInspect() { inspect_.reset(); }
 
  private:
   explicit zx_device(DriverHostContext* ctx, std::string name, zx_driver_t* driver);
@@ -473,7 +473,7 @@ struct zx_device
 #define DEV_FLAG_DEAD                  0x00000001  // this device has been removed and
                                                    // is safe for ref0 and release()
 #define DEV_FLAG_INITIALIZING          0x00000002  // device is being initialized
-#define DEV_FLAG_UNBINDABLE            0x00000004  // nobody may bind to this device
+#define DEV_FLAG_UNBINDABLE            0x00000004  // nobody may autobind to this device
 #define DEV_FLAG_BUSY                  0x00000010  // device being created
 #define DEV_FLAG_INSTANCE              0x00000020  // this device was created-on-open
 #define DEV_FLAG_MULTI_BIND            0x00000080  // this device accepts many children

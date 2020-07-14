@@ -84,8 +84,9 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
                            fbl::String name, fbl::String driver_path, fbl::String args,
                            uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
                            zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                           bool wait_make_visible, bool want_init_task, zx::vmo inspect,
-                           zx::channel client_remote, fbl::RefPtr<Device>* device) {
+                           bool wait_make_visible, bool want_init_task, bool skip_autobind,
+                           zx::vmo inspect, zx::channel client_remote,
+                           fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
   // *its* parent which is the device that it is proxying.
@@ -100,6 +101,10 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
       protocol_id, std::move(inspect), std::move(client_remote), wait_make_visible);
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
+  }
+
+  if (skip_autobind) {
+    dev->flags |= DEV_CTX_SKIP_AUTOBIND;
   }
 
   // Initialise and publish device inspect
@@ -816,10 +821,15 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
   fbl::StringPiece args(args_view.data(), args_view.size());
 
+  bool invisible = static_cast<bool>(device_add_config &
+                                     llcpp::fuchsia::device::manager::AddDeviceConfig::INVISIBLE);
+  bool skip_autobind = static_cast<bool>(
+      device_add_config & llcpp::fuchsia::device::manager::AddDeviceConfig::SKIP_AUTOBIND);
+
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
       parent, std::move(device_controller_client), std::move(coordinator), props.data(),
-      props.count(), name, protocol_id, driver_path, args, false /* invisible */, has_init,
+      props.count(), name, protocol_id, driver_path, args, invisible, skip_autobind, has_init,
       kEnableAlwaysInit, std::move(inspect), std::move(client_remote), &device);
   if (device != nullptr &&
       (device_add_config &
@@ -854,35 +864,6 @@ void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
     completer.Reply(std::move(response));
   } else {
     fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response> resp;
-    response.set_response(fidl::unowned_ptr(&resp));
-    completer.Reply(std::move(response));
-  }
-}
-
-void Device::AddDeviceInvisible(
-    ::zx::channel coordinator, ::zx::channel device_controller_client,
-    ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
-    ::fidl::StringView name_view, uint32_t protocol_id, ::fidl::StringView driver_path_view,
-    ::fidl::StringView args_view, bool has_init, ::zx::vmo inspect, ::zx::channel client_remote,
-    AddDeviceInvisibleCompleter::Sync completer) {
-  auto parent = fbl::RefPtr(this);
-  fbl::StringPiece name(name_view.data(), name_view.size());
-  fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
-  fbl::StringPiece args(args_view.data(), args_view.size());
-
-  fbl::RefPtr<Device> device;
-  zx_status_t status = parent->coordinator->AddDevice(
-      parent, std::move(device_controller_client), std::move(coordinator), props.data(),
-      props.count(), name, protocol_id, driver_path, args, true /* invisible */, has_init,
-      kEnableAlwaysInit, std::move(inspect), std::move(client_remote), &device);
-  uint64_t local_id = device != nullptr ? device->local_id() : 0;
-  llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
-  if (status != ZX_OK) {
-    response.set_err(fidl::unowned_ptr(&status));
-    completer.Reply(std::move(response));
-  } else {
-    llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response resp{.local_device_id =
-                                                                                      local_id};
     response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }

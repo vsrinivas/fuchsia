@@ -261,8 +261,8 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface {
                         const llcpp::fuchsia::device::manager::DeviceProperty* props_data,
                         size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
                         fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible,
-                        bool has_init, bool always_init, zx::vmo inspect, zx::channel client_remote,
-                        fbl::RefPtr<Device>* new_device);
+                        bool skip_autobind, bool has_init, bool always_init, zx::vmo inspect,
+                        zx::channel client_remote, fbl::RefPtr<Device>* new_device);
   // Begin scheduling for removal of the device and unbinding of its children.
   void ScheduleRemove(const fbl::RefPtr<Device>& dev);
   // This is for scheduling the initial unbind task as a result of a driver_host's |ScheduleRemove|

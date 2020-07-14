@@ -136,7 +136,8 @@ void MultipleDeviceTestCase::SetUp() {
     status = coordinator_.AddDevice(
         coordinator_.sys_device()->proxy(), std::move(local), std::move(local2),
         /* props_data */ nullptr, /* props_count */ 0, "platform-bus", 0, /* driver_path */ {},
-        /* args */ {}, /* invisible */ false, /* has_init */ false, /* always_init */ true,
+        /* args */ {}, /* invisible */ false, /* skip_autobind */ false, /* has_init */ false,
+        /* always_init */ true,
         /*inspect*/ zx::vmo(), /* client_remote */ zx::channel(), &platform_bus_.device);
     ASSERT_OK(status);
     coordinator_loop_.RunUntilIdle();
@@ -198,8 +199,9 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
 
   status = coordinator_.AddDevice(
       parent, std::move(local), std::move(local2), /* props_data */ nullptr, /* props_count */ 0,
-      name, /* driver_path */ protocol_id, driver.data(), /* args */ {}, invisible, has_init,
-      always_init, std::move(inspect), /* client_remote */ zx::channel(), &state.device);
+      name, /* driver_path */ protocol_id, driver.data(), /* args */ {}, invisible,
+      /* skip_autobind */ false, has_init, always_init, std::move(inspect),
+      /* client_remote */ zx::channel(), &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);
   coordinator_loop_.RunUntilIdle();
@@ -217,6 +219,34 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
                                        uint32_t protocol_id, fbl::String driver, size_t* index) {
   AddDevice(parent, name, protocol_id, driver, /* invisible */ false, /* has_init */ false,
             /* reply_to_init */ true, /* always_init */ true, /* inspect */ zx::vmo(), index);
+}
+
+void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& parent,
+                                                   const char* name, uint32_t protocol_id,
+                                                   size_t* index) {
+  DeviceState state;
+
+  zx::channel local, local2;
+  zx_status_t status = zx::channel::create(0, &local, &state.controller_remote);
+  ASSERT_OK(status);
+
+  status = zx::channel::create(0, &local2, &state.coordinator_remote);
+  ASSERT_OK(status);
+
+  status = coordinator_.AddDevice(
+      parent, std::move(local), std::move(local2), /* props_data */ nullptr, /* props_count */ 0,
+      name, /* driver_path */ protocol_id, /* driver */ "", /* args */ {}, /* invisible */ false,
+      /* skip_autobind */ true, /* has_init */ false, /* always_init */ true,
+      /* inspect */ zx::vmo(),
+      /* client_remote */ zx::channel(), &state.device);
+  ASSERT_OK(status);
+  coordinator_loop_.RunUntilIdle();
+
+  devices_.push_back(std::move(state));
+  *index = devices_.size() - 1;
+
+  ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(device(*index)->controller_remote));
+  coordinator_loop()->RunUntilIdle();
 }
 
 void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {

@@ -55,17 +55,6 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
-  void AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller,
-                          ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
-                          ::fidl::StringView name, uint32_t protocol_id,
-                          ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init,
-                          ::zx::vmo inspect, ::zx::channel client_remote,
-                          AddDeviceInvisibleCompleter::Sync completer) override {
-    llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::unowned_ptr(&status));
-    completer.Reply(std::move(response));
-  }
   void MakeVisible(MakeVisibleCompleter::Sync completer) override {
     llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;

@@ -498,8 +498,8 @@ zx_status_t Coordinator::AddDevice(
     const fbl::RefPtr<Device>& parent, zx::channel device_controller, zx::channel coordinator,
     const llcpp::fuchsia::device::manager::DeviceProperty* props_data, size_t props_count,
     fbl::StringPiece name, uint32_t protocol_id, fbl::StringPiece driver_path,
-    fbl::StringPiece args, bool invisible, bool has_init, bool always_init, zx::vmo inspect,
-    zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
+    fbl::StringPiece args, bool invisible, bool skip_autobind, bool has_init, bool always_init,
+    zx::vmo inspect, zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
   static_assert(fuchsia_device_manager_DEVICE_NAME_MAX == ZX_DEVICE_NAME_MAX);
   static_assert(fuchsia_device_manager_PROPERTIES_MAX <= UINT32_MAX);
@@ -555,10 +555,11 @@ zx_status_t Coordinator::AddDevice(
   // TODO(fxb/43261): remove |has_init| once device_make_visible() is deprecated.
   bool init_wait_make_visible = invisible && !has_init;
   fbl::RefPtr<Device> dev;
-  zx_status_t status = Device::Create(
-      this, parent, std::move(name_str), std::move(driver_path_str), std::move(args_str),
-      protocol_id, std::move(props), std::move(coordinator), std::move(device_controller),
-      init_wait_make_visible, want_init_task, std::move(inspect), std::move(client_remote), &dev);
+  zx_status_t status =
+      Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
+                     std::move(args_str), protocol_id, std::move(props), std::move(coordinator),
+                     std::move(device_controller), init_wait_make_visible, want_init_task,
+                     skip_autobind, std::move(inspect), std::move(client_remote), &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -1230,6 +1231,7 @@ void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
       }
     }
   }
+
   // TODO(tesienbe): We probably should do something with the return value
   // from this...
   BindDevice(dev, {} /* libdrvname */, true /* new device */);
@@ -1482,7 +1484,8 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
     drivers_.push_back(std::move(drv));
     zx_status_t status = BindDriver(borrow_ref);
     if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
-      LOGF(ERROR, "Failed to bind driver '%s': %s", drv->name.data(), zx_status_get_string(status));
+      LOGF(ERROR, "Failed to bind driver '%s': %s", borrow_ref->name.data(),
+           zx_status_get_string(status));
     }
   });
 }
@@ -1544,6 +1547,10 @@ zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, cons
   if ((dev->flags & DEV_CTX_BOUND) && !(dev->flags & DEV_CTX_ALLOW_MULTI_COMPOSITE) &&
       !(dev->flags & DEV_CTX_MULTI_BIND)) {
     return ZX_ERR_ALREADY_BOUND;
+  }
+
+  if (autobind && dev->should_skip_autobind()) {
+    return ZX_ERR_NEXT;
   }
 
   if (!dev->is_bindable() && !(dev->is_composite_bindable())) {

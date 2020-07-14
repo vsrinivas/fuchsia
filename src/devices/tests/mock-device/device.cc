@@ -466,8 +466,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
             reinterpret_cast<zx_device_prop_t*>(add_device_action.properties.mutable_data()),
             add_device_action.properties.count());
 
-        status = dev->DdkAdd(
-            ddk::DeviceAddArgs(name).set_flags(DEVICE_ADD_NON_BINDABLE).set_props(props));
+        status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
         if (status == ZX_OK) {
           // Devmgr now owns this
           __UNUSED auto ptr = dev.release();
