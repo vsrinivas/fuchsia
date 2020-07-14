@@ -5,7 +5,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "blktest.h"
 
@@ -35,8 +35,5 @@ int main(int argc, char** argv) {
     setenv(BLKTEST_BLK_DEV, blkdev, 1);
   }
 
-  bool success = unittest_run_all_tests(argc, argv);
-
-  unsetenv(BLKTEST_BLK_DEV);
-  return success ? 0 : -1;
+  return zxtest_run_all_tests(argc, argv);
 }

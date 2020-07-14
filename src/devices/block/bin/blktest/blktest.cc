@@ -32,13 +32,13 @@
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <pretty/hexdump.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace tests {
 
-static int get_testdev(uint64_t* blk_size, uint64_t* blk_count) {
+static void get_testdev(uint64_t* blk_size, uint64_t* blk_count, fbl::unique_fd* fd_result) {
   const char* blkdev_path = getenv(BLKTEST_BLK_DEV);
-  ASSERT_NONNULL(blkdev_path, "No test device specified");
+  ASSERT_NOT_NULL(blkdev_path, "No test device specified");
   // Open the block device
   int fd = open(blkdev_path, O_RDWR);
   if (fd < 0) {
@@ -54,14 +54,13 @@ static int get_testdev(uint64_t* blk_size, uint64_t* blk_count) {
 
   *blk_size = info.block_size;
   *blk_count = info.block_count;
-  return fd;
+  fd_result->reset(fd);
 }
 
-static bool blkdev_test_simple(void) {
-  BEGIN_TEST;
-
+TEST(BlkdevTests, blkdev_test_simple) {
   uint64_t blk_size, blk_count;
-  fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
   int64_t buffer_size = blk_size * 2;
 
   fbl::AllocChecker checker;
@@ -83,15 +82,12 @@ static bool blkdev_test_simple(void) {
   ASSERT_EQ(memcmp(out.get(), buf.get(), buffer_size), 0);
   ASSERT_EQ(read(fd.get(), out.get(), buffer_size / 2), buffer_size / 2);
   ASSERT_EQ(memcmp(out.get(), buf.get(), buffer_size / 2), 0);
-
-  END_TEST;
 }
 
-bool blkdev_test_bad_requests(void) {
-  BEGIN_TEST;
-
+TEST(BlkdevTests, blkdev_test_bad_requests) {
   uint64_t blk_size, blk_count;
-  fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
 
   fbl::AllocChecker checker;
   std::unique_ptr<uint8_t[]> buf(new (&checker) uint8_t[blk_size * 4]);
@@ -118,16 +114,13 @@ bool blkdev_test_bad_requests(void) {
   ASSERT_EQ(lseek(fd.get(), dev_size, SEEK_SET), dev_size);
   ASSERT_EQ(write(fd.get(), buf.get(), blk_size), -1);
   ASSERT_EQ(read(fd.get(), buf.get(), blk_size), -1);
-
-  END_TEST;
 }
 
 #if 0
-bool blkdev_test_multiple(void) {
+TEST(BlkdevTests, DISABLED_blkdev_test_multiple) {
   uint8_t buf[PAGE_SIZE];
   uint8_t out[PAGE_SIZE];
 
-  BEGIN_TEST;
   int fd1 = get_testdev("blkdev-test-A", PAGE_SIZE, 512);
   int fd2 = get_testdev("blkdev-test-B", PAGE_SIZE, 512);
 
@@ -149,16 +142,14 @@ bool blkdev_test_multiple(void) {
   ASSERT_EQ(read(fd1, out, sizeof(buf)), (ssize_t)sizeof(buf), "");
   ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0, "");
   close(fd1);
-
-  END_TEST;
 }
 #endif
 
-bool blkdev_test_fifo_no_op(void) {
+TEST(BlkdevTests, blkdev_test_fifo_no_op) {
   // Get a FIFO connection to a blkdev and immediately close it
-  BEGIN_TEST;
   uint64_t blk_size, blk_count;
-  fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
 
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
@@ -170,7 +161,6 @@ bool blkdev_test_fifo_no_op(void) {
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  END_TEST;
 }
 
 static void fill_random(uint8_t* buf, uint64_t size) {
@@ -179,11 +169,11 @@ static void fill_random(uint8_t* buf, uint64_t size) {
   }
 }
 
-bool blkdev_test_fifo_basic(void) {
-  BEGIN_TEST;
+TEST(BlkdevTests, blkdev_test_fifo_basic) {
   uint64_t blk_size, blk_count;
   // Set up the initial handshake connection with the blkdev
-  fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -251,14 +241,13 @@ bool blkdev_test_fifo_basic(void) {
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   block_fifo_release_client(client);
-  END_TEST;
 }
 
-bool blkdev_test_fifo_whole_disk(void) {
-  BEGIN_TEST;
+TEST(BlkdevTests, DISABLED_blkdev_test_fifo_whole_disk) {
   uint64_t blk_size, blk_count;
   // Set up the initial handshake connection with the blkdev
-  fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -316,7 +305,6 @@ bool blkdev_test_fifo_whole_disk(void) {
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   block_fifo_release_client(client);
-  END_TEST;
 }
 
 typedef struct {
@@ -327,7 +315,7 @@ typedef struct {
 } test_vmo_object_t;
 
 // Creates a VMO, fills it with data, and gives it to the block device.
-bool create_vmo_helper(const zx::channel& channel, test_vmo_object_t* obj, size_t kBlockSize) {
+void create_vmo_helper(const zx::channel& channel, test_vmo_object_t* obj, size_t kBlockSize) {
   obj->vmo_size = kBlockSize + (rand() % 5) * kBlockSize;
   ASSERT_EQ(zx::vmo::create(obj->vmo_size, 0, &obj->vmo), ZX_OK, "Failed to create vmo");
   obj->buf.reset(new uint8_t[obj->vmo_size]);
@@ -341,14 +329,13 @@ bool create_vmo_helper(const zx::channel& channel, test_vmo_object_t* obj, size_
                                                   &obj->vmoid),
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  return true;
 }
 
 // Write all vmos in a striped pattern on disk.
 // For objs.size() == 10,
 // i = 0 will write vmo block 0, 1, 2, 3... to dev block 0, 10, 20, 30...
 // i = 1 will write vmo block 0, 1, 2, 3... to dev block 1, 11, 21, 31...
-bool write_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size_t i, size_t objs,
+void write_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size_t i, size_t objs,
                               groupid_t group, size_t kBlockSize) {
   // Make a separate request for each block
   size_t blocks = obj->vmo_size / kBlockSize;
@@ -363,11 +350,10 @@ bool write_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, siz
   }
   // Write entire vmos at once
   ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), ZX_OK, "");
-  return true;
 }
 
 // Verifies the result from "write_striped_vmo_helper"
-bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size_t i, size_t objs,
+void read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size_t i, size_t objs,
                              groupid_t group, size_t kBlockSize) {
   // First, empty out the VMO
   std::unique_ptr<uint8_t[]> out(new uint8_t[obj->vmo_size]());
@@ -392,25 +378,23 @@ bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size
   ASSERT_EQ(obj->vmo.read(out.get(), 0, obj->vmo_size), ZX_OK);
   ASSERT_EQ(memcmp(obj->buf.get(), out.get(), obj->vmo_size), 0,
             "Read data not equal to written data");
-  return true;
 }
 
 // Tears down an object created by "create_vmo_helper".
-bool close_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, groupid_t group) {
+void close_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, groupid_t group) {
   block_fifo_request_t request;
   request.group = group;
   request.vmoid = obj->vmoid.id;
   request.opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_OK, "");
   obj->vmo.reset();
-  return true;
 }
 
-bool blkdev_test_fifo_multiple_vmo(void) {
-  BEGIN_TEST;
+TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo) {
   // Set up the initial handshake connection with the blkdev
   uint64_t blk_size, blk_count;
-  fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -426,25 +410,26 @@ bool blkdev_test_fifo_multiple_vmo(void) {
   // Create multiple VMOs
   fbl::Array<test_vmo_object_t> objs(new test_vmo_object_t[10](), 10);
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_TRUE(create_vmo_helper(*channel, &objs[i], blk_size), "");
+    ASSERT_NO_FATAL_FAILURES(create_vmo_helper(*channel, &objs[i], blk_size), "");
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_TRUE(write_striped_vmo_helper(client, &objs[i], i, objs.size(), group, blk_size), "");
+    ASSERT_NO_FATAL_FAILURES(
+        write_striped_vmo_helper(client, &objs[i], i, objs.size(), group, blk_size), "");
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_TRUE(read_striped_vmo_helper(client, &objs[i], i, objs.size(), group, blk_size), "");
+    ASSERT_NO_FATAL_FAILURES(
+        read_striped_vmo_helper(client, &objs[i], i, objs.size(), group, blk_size), "");
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_TRUE(close_vmo_helper(client, &objs[i], group), "");
+    ASSERT_NO_FATAL_FAILURES(close_vmo_helper(client, &objs[i], group), "");
   }
 
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   block_fifo_release_client(client);
-  END_TEST;
 }
 
 typedef struct {
@@ -457,8 +442,7 @@ typedef struct {
   size_t kBlockSize;
 } test_thread_arg_t;
 
-int fifo_vmo_thread(void* arg) {
-  test_thread_arg_t* fifoarg = (test_thread_arg_t*)arg;
+void fifo_vmo_thread(test_thread_arg_t* fifoarg) {
   test_vmo_object_t* obj = fifoarg->obj;
   size_t i = fifoarg->i;
   size_t objs = fifoarg->objs;
@@ -467,18 +451,22 @@ int fifo_vmo_thread(void* arg) {
   groupid_t group = fifoarg->group;
   size_t kBlockSize = fifoarg->kBlockSize;
 
-  ASSERT_TRUE(create_vmo_helper(*channel, obj, kBlockSize), "");
-  ASSERT_TRUE(write_striped_vmo_helper(client, obj, i, objs, group, kBlockSize), "");
-  ASSERT_TRUE(read_striped_vmo_helper(client, obj, i, objs, group, kBlockSize), "");
-  ASSERT_TRUE(close_vmo_helper(client, obj, group), "");
+  ASSERT_NO_FATAL_FAILURES(create_vmo_helper(*channel, obj, kBlockSize), "");
+  ASSERT_NO_FATAL_FAILURES(write_striped_vmo_helper(client, obj, i, objs, group, kBlockSize), "");
+  ASSERT_NO_FATAL_FAILURES(read_striped_vmo_helper(client, obj, i, objs, group, kBlockSize), "");
+  ASSERT_NO_FATAL_FAILURES(close_vmo_helper(client, obj, group), "");
+}
+
+int fifo_vmo_thread_wrapper(void* arg) {
+  fifo_vmo_thread(reinterpret_cast<test_thread_arg_t*>(arg));
   return 0;
 }
 
-bool blkdev_test_fifo_multiple_vmo_multithreaded(void) {
-  BEGIN_TEST;
+TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo_multithreaded) {
   // Set up the initial handshake connection with the blkdev
   uint64_t kBlockSize, blk_count;
-  fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -508,7 +496,7 @@ bool blkdev_test_fifo_multiple_vmo_multithreaded(void) {
     thread_args[i].client = client;
     thread_args[i].group = static_cast<groupid_t>(i);
     thread_args[i].kBlockSize = kBlockSize;
-    ASSERT_EQ(thrd_create(&threads[i], fifo_vmo_thread, &thread_args[i]), thrd_success, "");
+    ASSERT_EQ(thrd_create(&threads[i], fifo_vmo_thread_wrapper, &thread_args[i]), thrd_success, "");
   }
 
   for (size_t i = 0; i < num_threads; i++) {
@@ -520,14 +508,15 @@ bool blkdev_test_fifo_multiple_vmo_multithreaded(void) {
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   block_fifo_release_client(client);
-  END_TEST;
 }
 
-bool blkdev_test_fifo_unclean_shutdown(void) {
-  BEGIN_TEST;
+// TODO(smklein): Test ops across different vmos
+// Disabled due to issue 44600.
+TEST(BlkdevTests, DISABLED_blkdev_test_fifo_unclean_shutdown) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
-  fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
   fbl::Array<test_vmo_object_t> objs(new test_vmo_object_t[10](), 10);
   groupid_t group = 0;
   {
@@ -544,7 +533,7 @@ bool blkdev_test_fifo_unclean_shutdown(void) {
 
     // Create multiple VMOs
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_TRUE(create_vmo_helper(*channel, &objs[i], kBlockSize), "");
+      ASSERT_NO_FATAL_FAILURES(create_vmo_helper(*channel, &objs[i], kBlockSize), "");
     }
 
     // Now that we've set up the connection for a few VMOs, shut down the fifo
@@ -568,32 +557,32 @@ bool blkdev_test_fifo_unclean_shutdown(void) {
     ASSERT_EQ(block_fifo_create_client(fifo.release(), &client), ZX_OK, "");
 
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_TRUE(create_vmo_helper(*channel, &objs[i], kBlockSize), "");
+      ASSERT_NO_FATAL_FAILURES(create_vmo_helper(*channel, &objs[i], kBlockSize), "");
     }
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_TRUE(write_striped_vmo_helper(client, &objs[i], i, objs.size(), group, kBlockSize),
-                  "");
+      ASSERT_NO_FATAL_FAILURES(
+          write_striped_vmo_helper(client, &objs[i], i, objs.size(), group, kBlockSize), "");
     }
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_TRUE(read_striped_vmo_helper(client, &objs[i], i, objs.size(), group, kBlockSize), "");
+      ASSERT_NO_FATAL_FAILURES(
+          read_striped_vmo_helper(client, &objs[i], i, objs.size(), group, kBlockSize), "");
     }
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_TRUE(close_vmo_helper(client, &objs[i], group), "");
+      ASSERT_NO_FATAL_FAILURES(close_vmo_helper(client, &objs[i], group), "");
     }
 
     ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
     ASSERT_EQ(status, ZX_OK);
     block_fifo_release_client(client);
   }
-  END_TEST;
 }
 
-bool blkdev_test_fifo_bad_client_vmoid(void) {
+TEST(BlkdevTests, blkdev_test_fifo_bad_client_vmoid) {
   // Try to flex the server's error handling by sending 'malicious' client requests.
-  BEGIN_TEST;
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
-  fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -608,7 +597,7 @@ bool blkdev_test_fifo_bad_client_vmoid(void) {
 
   // Create a vmo
   test_vmo_object_t obj;
-  ASSERT_TRUE(create_vmo_helper(*channel, &obj, kBlockSize), "");
+  ASSERT_NO_FATAL_FAILURES(create_vmo_helper(*channel, &obj, kBlockSize), "");
 
   // Bad request: Writing to the wrong vmoid
   block_fifo_request_t request;
@@ -623,15 +612,14 @@ bool blkdev_test_fifo_bad_client_vmoid(void) {
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   block_fifo_release_client(client);
-  END_TEST;
 }
 
-bool blkdev_test_fifo_bad_client_unaligned_request(void) {
+TEST(BlkdevTests, blkdev_test_fifo_bad_client_unaligned_request) {
   // Try to flex the server's error handling by sending 'malicious' client requests.
-  BEGIN_TEST;
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
-  fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -648,7 +636,7 @@ bool blkdev_test_fifo_bad_client_unaligned_request(void) {
   // be reading "kBlockSize" bytes from an offset below, and we want it
   // to fit within the bounds of the VMO.
   test_vmo_object_t obj;
-  ASSERT_TRUE(create_vmo_helper(*channel, &obj, kBlockSize * 2), "");
+  ASSERT_NO_FATAL_FAILURES(create_vmo_helper(*channel, &obj, kBlockSize * 2), "");
 
   block_fifo_request_t request;
   request.group = group;
@@ -664,15 +652,14 @@ bool blkdev_test_fifo_bad_client_unaligned_request(void) {
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   block_fifo_release_client(client);
-  END_TEST;
 }
 
-bool blkdev_test_fifo_bad_client_overflow(void) {
+TEST(BlkdevTests, blkdev_test_fifo_bad_client_overflow) {
   // Try to flex the server's error handling by sending 'malicious' client requests.
-  BEGIN_TEST;
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
-  fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -689,7 +676,7 @@ bool blkdev_test_fifo_bad_client_overflow(void) {
   // be reading "kBlockSize" bytes from an offset below, and we want it
   // to fit within the bounds of the VMO.
   test_vmo_object_t obj;
-  ASSERT_TRUE(create_vmo_helper(*channel, &obj, kBlockSize * 2), "");
+  ASSERT_NO_FATAL_FAILURES(create_vmo_helper(*channel, &obj, kBlockSize * 2), "");
 
   block_fifo_request_t request;
   request.group = group;
@@ -729,15 +716,14 @@ bool blkdev_test_fifo_bad_client_overflow(void) {
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   block_fifo_release_client(client);
-  END_TEST;
 }
 
-bool blkdev_test_fifo_bad_client_bad_vmo(void) {
+TEST(BlkdevTests, blkdev_test_fifo_bad_client_bad_vmo) {
   // Try to flex the server's error handling by sending 'malicious' client requests.
-  BEGIN_TEST;
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
-  fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -786,29 +772,6 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   block_fifo_release_client(client);
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(blkdev_tests)
-RUN_TEST(blkdev_test_simple)
-RUN_TEST(blkdev_test_bad_requests)
-#if 0
-RUN_TEST(blkdev_test_multiple)
-#endif
-RUN_TEST(blkdev_test_fifo_no_op)
-RUN_TEST(blkdev_test_fifo_basic)
-// RUN_TEST(blkdev_test_fifo_whole_disk)
-RUN_TEST(blkdev_test_fifo_multiple_vmo)
-RUN_TEST(blkdev_test_fifo_multiple_vmo_multithreaded)
-// TODO(smklein): Test ops across different vmos
-#if 0
-// Disabled due to issue 44600.
-RUN_TEST(blkdev_test_fifo_unclean_shutdown)
-#endif
-RUN_TEST(blkdev_test_fifo_bad_client_vmoid)
-RUN_TEST(blkdev_test_fifo_bad_client_unaligned_request)
-RUN_TEST(blkdev_test_fifo_bad_client_overflow)
-RUN_TEST(blkdev_test_fifo_bad_client_bad_vmo)
-END_TEST_CASE(blkdev_tests)
 
 }  // namespace tests
