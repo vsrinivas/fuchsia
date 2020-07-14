@@ -8,7 +8,9 @@
 )]
 
 #[allow(unused_imports)]
-use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
+use fidl::{
+    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
@@ -54,7 +56,10 @@ fidl_xunion! {
 /// struct comment #1
 ///
 /// struct comment #3
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
 pub struct Struct {
     /// struct member comment #1
     ///
@@ -62,7 +67,7 @@ pub struct Struct {
     pub field: i32,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Struct,
   members: [
     field {
@@ -70,8 +75,7 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
-  padding: [
-  ],
+
   size_v1: 4,
   align_v1: 4,
 }

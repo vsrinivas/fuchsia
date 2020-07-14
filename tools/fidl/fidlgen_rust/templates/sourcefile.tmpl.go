@@ -26,6 +26,7 @@ use fidl::{
 	fidl_enum,
 	fidl_empty_struct,
 	fidl_struct,
+	fidl_struct_copy,
 	fidl_table,
 	fidl_xunion,
 };

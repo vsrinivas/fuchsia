@@ -13,6 +13,9 @@ const Struct = `
 ///{{ . }}
 {{- end}}
 {{ .Derives }}
+{{ if .UseFidlStructCopy -}}
+#[repr(C)]
+{{- end }}
 pub struct {{ .Name }} {
   {{- range .Members }}
   {{- range .DocComments}}
@@ -22,7 +25,11 @@ pub struct {{ .Name }} {
   {{- end }}
 }
 
+{{ if .UseFidlStructCopy -}}
+fidl_struct_copy! {
+{{- else -}}
 fidl_struct! {
+{{- end }}
   name: {{ .Name }},
   members: [
   {{- range .Members }}
@@ -32,6 +39,7 @@ fidl_struct! {
     },
   {{- end }}
   ],
+  {{ if not .UseFidlStructCopy -}}
   padding: [
   {{- range .PaddingMarkers }}
   {
@@ -41,6 +49,7 @@ fidl_struct! {
   },
   {{- end }}
   ],
+  {{- end }}
   size_v1: {{ .Size }},
   align_v1: {{ .Alignment }},
 }

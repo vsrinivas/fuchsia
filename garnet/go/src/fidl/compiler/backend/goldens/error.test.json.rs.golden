@@ -8,7 +8,9 @@
 )]
 
 #[allow(unused_imports)]
-use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
+use fidl::{
+    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
@@ -17,12 +19,15 @@ use fuchsia_zircon_status as zx_status;
 
 pub type ExampleFooResult = std::result::Result<(i64), u32>;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
 pub struct ExampleFooResponse {
     pub y: i64,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: ExampleFooResponse,
   members: [
     y {
@@ -30,8 +35,7 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
-  padding: [
-  ],
+
   size_v1: 8,
   align_v1: 8,
 }

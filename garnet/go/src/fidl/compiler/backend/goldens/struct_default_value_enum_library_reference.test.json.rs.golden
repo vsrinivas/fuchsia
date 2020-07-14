@@ -8,7 +8,9 @@
 )]
 
 #[allow(unused_imports)]
-use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
+use fidl::{
+    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
@@ -16,6 +18,7 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon_status as zx_status;
 
 #[derive(Debug, PartialEq)]
+
 pub struct Foo {
     pub field: fidl_dependent::MyEnum,
 }

@@ -8,7 +8,9 @@
 )]
 
 #[allow(unused_imports)]
-use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
+use fidl::{
+    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
@@ -332,6 +334,7 @@ fidl_xunion! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct Pizza {
     pub toppings: Vec<String>,
 }
@@ -351,6 +354,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct Pasta {
     pub sauce: String,
 }
@@ -370,6 +374,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct NullableUnionStruct {
     pub the_union: Option<Box<Union>>,
 }
@@ -391,6 +396,7 @@ fidl_struct! {
 fidl_empty_struct!(Empty);
 
 #[derive(Debug, PartialEq)]
+
 pub struct StructWithNullableXUnion {
     pub x1: Option<Box<OlderSimpleUnion>>,
 }

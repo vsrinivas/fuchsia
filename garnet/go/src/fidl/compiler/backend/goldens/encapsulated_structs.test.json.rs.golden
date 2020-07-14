@@ -8,7 +8,9 @@
 )]
 
 #[allow(unused_imports)]
-use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
+use fidl::{
+    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
@@ -16,6 +18,7 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon_status as zx_status;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct Int8Int32 {
     pub a: i8,
     pub b: i32,
@@ -45,6 +48,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct Int16Int8 {
     pub a: i16,
     pub b: i8,
@@ -74,6 +78,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct ArrayInt16Int8 {
     pub arr: [Int16Int8; 3],
 }
@@ -93,6 +98,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct StructPaddingTestStruct {
     pub trailing: Int16Int8,
     pub inner: Int8Int32,
@@ -122,6 +128,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct NonInlineStructTestStruct {
     pub element: Option<Box<Int16Int8>>,
     pub h: fidl::Handle,
@@ -151,6 +158,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct TopLevelStruct {
     pub a: StructPaddingTestStruct,
     pub b: NonInlineStructTestStruct,

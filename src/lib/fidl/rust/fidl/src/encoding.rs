@@ -2011,6 +2011,9 @@ macro_rules! fidl_struct_copy {
         size_v1: $size_v1:expr,
         align_v1: $align_v1:expr,
     ) => {
+        static_assertions::const_assert_eq!(std::mem::size_of::<$name>(), $size_v1);
+        static_assertions::const_assert_eq!(std::mem::align_of::<$name>(), $align_v1);
+
         impl $crate::encoding::Layout for $name {
             fn inline_align(_context: &$crate::encoding::Context) -> usize {
                 $align_v1
@@ -2028,7 +2031,8 @@ macro_rules! fidl_struct_copy {
         impl $crate::encoding::Encodable for $name {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, _recursion_depth: usize) -> $crate::Result<()> {
                 let bytes = zerocopy::AsBytes::as_bytes(self);
-                encoder.buf[offset..offset + bytes.len()].copy_from_slice(bytes);
+                let len = bytes.len();
+                encoder.mut_buffer()[offset..offset+len].copy_from_slice(bytes);
                 Ok(())
             }
         }
@@ -2045,7 +2049,7 @@ macro_rules! fidl_struct_copy {
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 let bytes: &mut [u8] = zerocopy::AsBytes::as_bytes_mut(self);
                 let size = bytes.len();
-                bytes.copy_from_slice(&decoder.buf[offset..offset + size]);
+                bytes.copy_from_slice(&decoder.buffer()[offset..offset + size]);
                 Ok(())
             }
         }

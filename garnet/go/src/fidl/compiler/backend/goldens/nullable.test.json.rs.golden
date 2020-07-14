@@ -8,7 +8,9 @@
 )]
 
 #[allow(unused_imports)]
-use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
+use fidl::{
+    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
@@ -31,6 +33,7 @@ fidl_xunion! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct StructWithNullableString {
     pub val: Option<String>,
 }
@@ -50,6 +53,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct StructWithNullableVector {
     pub val: Option<Vec<i32>>,
 }
@@ -69,6 +73,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct StructWithNullableHandle {
     pub val: Option<fidl::Vmo>,
 }
@@ -88,6 +93,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct StructWithNullableProtocol {
     pub val: Option<fidl::endpoints::ClientEnd<SimpleProtocolMarker>>,
 }
@@ -107,6 +113,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct StructWithNullableRequest {
     pub val: Option<fidl::endpoints::ServerEnd<SimpleProtocolMarker>>,
 }
@@ -125,12 +132,15 @@ fidl_struct! {
   align_v1: 4,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
 pub struct Int32Wrapper {
     pub val: i32,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Int32Wrapper,
   members: [
     val {
@@ -138,13 +148,13 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
-  padding: [
-  ],
+
   size_v1: 4,
   align_v1: 4,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct StructWithNullableStruct {
     pub val: Option<Box<Int32Wrapper>>,
 }
@@ -164,6 +174,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
+
 pub struct StructWithNullableUnion {
     pub val: Option<Box<SimpleUnion>>,
 }

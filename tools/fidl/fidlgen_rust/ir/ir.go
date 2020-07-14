@@ -98,8 +98,11 @@ type Struct struct {
 	// numbers will be different if the struct contains a union within it. Only
 	// structs have this information because fidl::encoding only uses these
 	// precalculated numbers for structs and unions.
-	Size      int
-	Alignment int
+	Size       int
+	Alignment  int
+	HasPadding bool
+	// True iff the fidl_struct_copy! macro should be used instead of fidl_struct!.
+	UseFidlStructCopy bool
 }
 
 type StructMember struct {
@@ -873,6 +876,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	for _, v := range val.Members {
 		member := c.compileStructMember(v)
 		r.Members = append(r.Members, member)
+		r.HasPadding = r.HasPadding || (v.FieldShapeV1.Padding != 0)
 	}
 
 	return r
@@ -967,7 +971,10 @@ const (
 	derivesOrd
 	derivesPartialOrd
 	derivesHash
-	derivesAll derives = (1 << iota) - 1
+	derivesAsBytes
+	derivesFromBytes
+	derivesAll            derives = (1 << iota) - 1
+	derivesAllButZerocopy         = derivesAll & ^derivesAsBytes & ^derivesFromBytes
 	// note: ensure any new flags don't outnumber the number of bits in `derives`
 )
 
@@ -983,8 +990,12 @@ func (v derives) and(others derives) derives {
 	return v & others
 }
 
-func (v derives) remove(others derives) derives {
-	return v & ^others
+func (v derives) remove(others ...derives) derives {
+	result := v
+	for _, other := range others {
+		result &= ^other
+	}
+	return result
 }
 
 func (v derives) andUnknown() derives {
@@ -999,6 +1010,10 @@ func (v derives) andUnknown() derives {
 	return v.and(newDerives(derivesDebug, derivesPartialEq))
 }
 
+func (v derives) contains(other derives) bool {
+	return (v & other) != 0
+}
+
 func (v derives) String() string {
 	deriveToName := map[derives]string{
 		derivesDebug:      "Debug",
@@ -1009,10 +1024,12 @@ func (v derives) String() string {
 		derivesOrd:        "Ord",
 		derivesPartialOrd: "PartialOrd",
 		derivesHash:       "Hash",
+		derivesAsBytes:    "zerocopy::AsBytes",
+		derivesFromBytes:  "zerocopy::FromBytes",
 	}
 	var parts []string
 	for bit := derives(1); bit&derivesAll != 0; bit <<= 1 {
-		if v.and(bit) != derives(0) {
+		if v.contains(bit) {
 			parts = append(parts, deriveToName[bit])
 		}
 	}
@@ -1113,19 +1130,19 @@ func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) deri
 typeSwitch:
 	switch declType {
 	case types.ConstDeclType:
-		fallthrough
+		panic("const decl should never have derives")
 	case types.BitsDeclType:
 		fallthrough
 	case types.EnumDeclType:
 		// Enums and bits are always simple, non-float primitives which
-		// implement all derivable traits.
-		derivesOut = derivesAll
+		// implement all derivable traits except zerocopy.
+		derivesOut = derivesAllButZerocopy
 	case types.ProtocolDeclType:
 		// Derives output for protocols is only used when talking about ClientEnds,
 		// which are neither Copy nor Clone. Note: this does *not* refer to the
 		// derives used in either the `Request` or `Event` enums, which are the
 		// values filled in by this function.
-		derivesOut = derivesAll.remove(newDerives(derivesCopy, derivesClone))
+		derivesOut = derivesAllButZerocopy.remove(derivesCopy, derivesClone)
 
 		// Check if the derives have already been calculated
 		if deriveStatus.complete {
@@ -1173,7 +1190,11 @@ typeSwitch:
 		for _, member := range st.Members {
 			derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 		}
+		if st.HasPadding {
+			derivesOut = derivesOut.remove(derivesAsBytes, derivesFromBytes)
+		}
 		st.Derives = derivesOut
+		st.UseFidlStructCopy = st.Derives.contains(derivesAsBytes) && st.Derives.contains(derivesFromBytes)
 	case types.TableDeclType:
 		table := dc.root.findTable(eci)
 		if table == nil {
@@ -1184,7 +1205,7 @@ typeSwitch:
 			derivesOut = table.Derives
 			break typeSwitch
 		}
-		derivesOut = derivesAll
+		derivesOut = derivesAllButZerocopy
 		for _, member := range table.Members {
 			derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 		}
@@ -1211,7 +1232,7 @@ typeSwitch:
 				derivesOut = union.Derives
 				break typeSwitch
 			}
-			derivesOut = derivesAll
+			derivesOut = derivesAllButZerocopy
 			for _, member := range union.Members {
 				derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 			}
@@ -1229,7 +1250,7 @@ typeSwitch:
 				derivesOut = result.Derives
 				break typeSwitch
 			}
-			derivesOut = derivesAll
+			derivesOut = derivesAllButZerocopy
 			for _, oktype := range result.OkOGTypes {
 				derivesOut = derivesOut.and(dc.fillDerivesForType(oktype))
 			}
@@ -1281,44 +1302,30 @@ func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
 			return dc.fillDerivesForType(*ogType.ElementType)
 		}
 	case types.VectorType:
-		return derivesAll.remove(derivesCopy).and(dc.fillDerivesForType(*ogType.ElementType))
+		return derivesAllButZerocopy.remove(derivesCopy).and(dc.fillDerivesForType(*ogType.ElementType))
 	case types.StringType:
-		return derivesAll.remove(derivesCopy)
+		return derivesAllButZerocopy.remove(derivesCopy)
 	case types.HandleType:
 		fallthrough
 	case types.RequestType:
-		return derivesAll.remove(newDerives(derivesCopy, derivesClone))
+		return derivesAllButZerocopy.remove(derivesCopy, derivesClone)
 	case types.PrimitiveType:
 		switch ogType.PrimitiveSubtype {
 		case types.Bool:
-			fallthrough
-		case types.Int8:
-			fallthrough
-		case types.Int16:
-			fallthrough
-		case types.Int32:
-			fallthrough
-		case types.Int64:
-			fallthrough
-		case types.Uint8:
-			fallthrough
-		case types.Uint16:
-			fallthrough
-		case types.Uint32:
-			fallthrough
-		case types.Uint64:
+			return derivesAllButZerocopy
+		case types.Int8, types.Int16, types.Int32, types.Int64:
 			return derivesAll
-		case types.Float32:
-			fallthrough
-		case types.Float64:
+		case types.Uint8, types.Uint16, types.Uint32, types.Uint64:
+			return derivesAll
+		case types.Float32, types.Float64:
 			// Floats don't have a total ordering due to NAN and its multiple representations.
-			return derivesAll.remove(newDerives(derivesEq, derivesOrd, derivesHash))
+			return derivesAllButZerocopy.remove(derivesEq, derivesOrd, derivesHash)
 		}
 	case types.IdentifierType:
 		internalTypeDerives := dc.fillDerivesForECI(ogType.Identifier)
 		if ogType.Nullable {
 			// Nullable identifier types are put in an Option<Box<...>> and so aren't Copy
-			return internalTypeDerives.remove(derivesCopy)
+			return internalTypeDerives.remove(derivesCopy, derivesAsBytes, derivesFromBytes)
 		} else {
 			return internalTypeDerives
 		}

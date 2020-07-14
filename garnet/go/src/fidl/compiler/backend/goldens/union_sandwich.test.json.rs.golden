@@ -8,7 +8,9 @@
 )]
 
 #[allow(unused_imports)]
-use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
+use fidl::{
+    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
@@ -60,6 +62,7 @@ fidl_xunion! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct SandwichUnionSize8Alignment4 {
     pub before: u32,
     pub union: UnionSize8Alignment4,
@@ -99,6 +102,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct SandwichUnionSize12Alignment4 {
     pub before: u32,
     pub union: UnionSize12Alignment4,
@@ -137,13 +141,16 @@ fidl_struct! {
   align_v1: 8,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
 pub struct StructSize16Alignment8 {
     pub f1: u64,
     pub f2: u64,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: StructSize16Alignment8,
   members: [
     f1 {
@@ -155,13 +162,13 @@ fidl_struct! {
       offset_v1: 8,
     },
   ],
-  padding: [
-  ],
+
   size_v1: 16,
   align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct SandwichUnionSize24Alignment8 {
     pub before: u32,
     pub union: UnionSize24Alignment8,
@@ -201,6 +208,7 @@ fidl_struct! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+
 pub struct SandwichUnionSize36Alignment4 {
     pub before: u32,
     pub union: UnionSize36Alignment4,
