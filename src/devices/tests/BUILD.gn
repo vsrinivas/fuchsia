@@ -10,6 +10,7 @@ group("tests") {
     "ddk-fidl-test:tests",
     "ddk-instance-lifecycle-test",
     "ddk-metadata-test",
+    "ddk-power:tests",
     "ddk-runcompatibilityhook:tests",
     "driver-inspect-test",
     "isolateddevmgr:tests",

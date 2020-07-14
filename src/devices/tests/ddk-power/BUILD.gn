@@ -5,6 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 fidl("fuchsia.device.power.test") {
   sources = [ "test.fidl" ]
@@ -44,10 +45,6 @@ driver_module("ddk-power-test-child") {
 }
 
 test("ddk-power") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test.cc" ]
   deps = [
     ":fuchsia.device.power.test_llcpp",
@@ -62,4 +59,22 @@ test("ddk-power") {
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
   ]
+}
+
+isolated_devmgr_unittest_package("ddk-power-test-package") {
+  package_name = "ddk-power-test"
+  executable_path = "test/ddk-power"
+  deps = [
+    ":ddk-power",
+    ":ddk-power-test",
+    ":ddk-power-test-child",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/tests/sysdev",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":ddk-power-test-package" ]
 }
