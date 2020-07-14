@@ -36,7 +36,7 @@ TEST_P(MmapTest, Empty) {
   ASSERT_TRUE(fd);
 
   char tmp[] = "this is a temporary buffer";
-  void* addr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0);
+  void* addr = mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_EQ(write(fd.get(), tmp, sizeof(tmp)), static_cast<ssize_t>(sizeof(tmp)));
   ASSERT_EQ(memcmp(addr, tmp, sizeof(tmp)), 0);
@@ -58,7 +58,7 @@ TEST_P(MmapTest, Readable) {
   ASSERT_EQ(write(fd.get(), tmp1, sizeof(tmp1)), static_cast<ssize_t>(sizeof(tmp1)));
 
   // Demonstrate that a simple buffer can be mapped
-  void* addr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0);
+  void* addr = mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0);
 
@@ -88,7 +88,7 @@ TEST_P(MmapTest, Writable) {
   ASSERT_EQ(write(fd.get(), tmp1, sizeof(tmp1)), static_cast<ssize_t>(sizeof(tmp1)));
 
   // Demonstrate that a simple buffer can be mapped
-  void* addr = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
+  void* addr = mmap(nullptr, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0);
 
@@ -132,7 +132,7 @@ TEST_P(MmapTest, Unlinked) {
   ASSERT_EQ(write(fd.get(), tmp, sizeof(tmp)), static_cast<ssize_t>(sizeof(tmp)));
 
   // Demonstrate that a simple buffer can be mapped
-  void* addr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0);
+  void* addr = mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_EQ(memcmp(addr, tmp, sizeof(tmp)), 0);
 
@@ -162,7 +162,7 @@ TEST_P(MmapTest, Shared) {
   ASSERT_EQ(write(fd.get(), tmp, sizeof(tmp)), static_cast<ssize_t>(sizeof(tmp)));
 
   // Demonstrate that a simple buffer can be mapped
-  void* addr1 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
+  void* addr1 = mmap(nullptr, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr1, MAP_FAILED);
   ASSERT_EQ(memcmp(addr1, tmp, sizeof(tmp)), 0);
 
@@ -170,7 +170,7 @@ TEST_P(MmapTest, Shared) {
   ASSERT_TRUE(fd2);
 
   // Demonstrate that the buffer can be mapped multiple times
-  void* addr2 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd2.get(), 0);
+  void* addr2 = mmap(nullptr, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd2.get(), 0);
   ASSERT_NE(addr2, MAP_FAILED);
   ASSERT_EQ(memcmp(addr2, tmp, sizeof(tmp)), 0);
 
@@ -193,7 +193,7 @@ TEST_P(MmapTest, Shared) {
   // Demonstrate that we can map a read-only file as shared + readable
   fd.reset(open(filename.c_str(), O_RDONLY));
   ASSERT_TRUE(fd);
-  addr2 = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0);
+  addr2 = mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr2, MAP_FAILED);
   ASSERT_EQ(memcmp(addr1, tmp3, sizeof(tmp3)), 0);
   ASSERT_EQ(memcmp(addr2, tmp3, sizeof(tmp3)), 0);
@@ -216,11 +216,11 @@ TEST_P(MmapTest, Private) {
   ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
 
   // Demonstrate that a simple buffer can be mapped
-  void* addr1 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd.get(), 0);
+  void* addr1 = mmap(nullptr, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd.get(), 0);
   ASSERT_NE(addr1, MAP_FAILED);
   ASSERT_EQ(memcmp(addr1, buf, sizeof(buf)), 0);
   // ... multiple times
-  void* addr2 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd.get(), 0);
+  void* addr2 = mmap(nullptr, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd.get(), 0);
   ASSERT_NE(addr2, MAP_FAILED);
   ASSERT_EQ(memcmp(addr2, buf, sizeof(buf)), 0);
 
@@ -257,7 +257,7 @@ TEST_P(MmapTest, Evil) {
   ASSERT_EQ(mkdir(mydir.c_str(), 0666), 0);
   fbl::unique_fd fd(open(mydir.c_str(), O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
   ASSERT_EQ(close(fd.release()), 0);
@@ -268,19 +268,19 @@ TEST_P(MmapTest, Evil) {
   ASSERT_TRUE(fd);
 
   // Mmap without MAP_PRIVATE or MAP_SHARED
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, 0, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, 0, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EINVAL);
   errno = 0;
   // Mmap with both MAP_PRIVATE and MAP_SHARED
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED | MAP_PRIVATE, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED | MAP_PRIVATE, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EINVAL);
   errno = 0;
   // Mmap with unaligned offset
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 1), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 1), MAP_FAILED);
   ASSERT_EQ(errno, EINVAL);
   errno = 0;
   // Mmap with a length of zero
-  ASSERT_EQ(mmap(NULL, 0, PROT_READ, MAP_SHARED, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, 0, PROT_READ, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EINVAL);
   errno = 0;
   ASSERT_EQ(close(fd.release()), 0);
@@ -288,22 +288,22 @@ TEST_P(MmapTest, Evil) {
   // a readable file.
   fd.reset(open(myfile.c_str(), O_WRONLY));
   ASSERT_TRUE(fd);
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_PRIVATE, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_PRIVATE, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_PRIVATE, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_WRITE, MAP_PRIVATE, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
   ASSERT_EQ(close(fd.release()), 0);
@@ -312,17 +312,17 @@ TEST_P(MmapTest, Evil) {
   // file, since it makes a copy).
   fd.reset(open(myfile.c_str(), O_RDONLY));
   ASSERT_TRUE(fd);
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
   ASSERT_EQ(close(fd.release()), 0);
   // PROT_WRITE requires that the file is NOT append-only
   fd.reset(open(myfile.c_str(), O_RDONLY | O_APPEND));
   ASSERT_TRUE(fd);
-  ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
+  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
   ASSERT_EQ(close(fd.release()), 0);
@@ -341,7 +341,7 @@ TEST_P(MmapTest, TruncateAccess) {
   ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
 
   // Map all pages and validate their contents.
-  void* addr = mmap(NULL, sizeof(buf), PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
+  void* addr = mmap(nullptr, sizeof(buf), PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_EQ(memcmp(addr, buf, sizeof(buf)), 0);
 
@@ -377,7 +377,7 @@ TEST_P(MmapTest, TruncateExtend) {
   ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
 
   // Map all pages and validate their contents.
-  void* addr = mmap(NULL, sizeof(buf), PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
+  void* addr = mmap(nullptr, sizeof(buf), PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_EQ(memcmp(addr, buf, sizeof(buf)), 0);
 
@@ -418,7 +418,7 @@ TEST_P(MmapTest, TruncateWriteExtend) {
   ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
 
   // Map all pages and validate their contents.
-  void* addr = mmap(NULL, sizeof(buf), PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
+  void* addr = mmap(nullptr, sizeof(buf), PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_EQ(memcmp(addr, buf, sizeof(buf)), 0);
 
@@ -464,7 +464,7 @@ class MmapDeathTest : public FilesystemTest {
     const std::string inaccessible = GetPath("inaccessible");
     fbl::unique_fd fd(open(inaccessible.c_str(), O_RDWR));
     ASSERT_TRUE(fd);
-    void* addr = mmap(NULL, PAGE_SIZE, prot, flags, fd.get(), 0);
+    void* addr = mmap(nullptr, PAGE_SIZE, prot, flags, fd.get(), 0);
     ASSERT_NE(addr, MAP_FAILED);
     ASSERT_EQ(close(fd.release()), 0);
 

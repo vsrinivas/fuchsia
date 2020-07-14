@@ -14,44 +14,38 @@
 
 #include <iterator>
 
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>
 
-#include "filesystems.h"
-#include "misc.h"
+#include "src/storage/fs_test/fs_test_fixture.h"
 
+namespace fs_test {
 namespace {
 
-// Test that zero length read and write operations are valid.
-bool TestZeroLengthOperations() {
-  BEGIN_TEST;
+using RwTest = FilesystemTest;
 
-  const char* filename = "::zero_length_ops";
-  fbl::unique_fd fd(open(filename, O_RDWR | O_CREAT, 0644));
+// Test that zero length read and write operations are valid.
+TEST_P(RwTest, ZeroLengthOperations) {
+  const std::string filename = GetPath("zero_length_ops");
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT, 0644));
   ASSERT_TRUE(fd);
 
   // Zero-length write.
-  ASSERT_EQ(write(fd.get(), NULL, 0), 0);
-  ASSERT_EQ(pwrite(fd.get(), NULL, 0, 0), 0);
+  ASSERT_EQ(write(fd.get(), nullptr, 0), 0);
+  ASSERT_EQ(pwrite(fd.get(), nullptr, 0, 0), 0);
 
   // Zero-length read.
-  ASSERT_EQ(read(fd.get(), NULL, 0), 0);
-  ASSERT_EQ(pread(fd.get(), NULL, 0, 0), 0);
+  ASSERT_EQ(read(fd.get(), nullptr, 0), 0);
+  ASSERT_EQ(pread(fd.get(), nullptr, 0, 0), 0);
 
   // Seek pointer unchanged.
   ASSERT_EQ(lseek(fd.get(), 0, SEEK_CUR), 0);
 
   ASSERT_EQ(close(fd.release()), 0);
-  ASSERT_EQ(unlink(filename), 0);
-
-  END_TEST;
+  ASSERT_EQ(unlink(filename.c_str()), 0);
 }
 
 // Test that non-zero length read_at and write_at operations are valid.
-bool TestOffsetOperations() {
-  BEGIN_TEST;
-
+TEST_P(RwTest, OffsetOperations) {
   srand(0xDEADBEEF);
 
   constexpr size_t kBufferSize = PAGE_SIZE;
@@ -74,15 +68,16 @@ bool TestOffsetOperations() {
   };
 
   for (const auto& opt : options) {
-    const char* filename = "::offset_ops";
-    fbl::unique_fd fd(open(filename, O_RDWR | O_CREAT, 0644));
+    const std::string filename = GetPath("offset_ops");
+    fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT, 0644));
     ASSERT_TRUE(fd);
 
     uint8_t buf[kBufferSize];
     memset(buf, 0, sizeof(buf));
 
     // 1) Write "kBufferSize" bytes at opt.write_start
-    ASSERT_EQ(pwrite(fd.get(), expected, sizeof(expected), opt.write_start), sizeof(expected));
+    ASSERT_EQ(pwrite(fd.get(), expected, sizeof(expected), opt.write_start),
+              static_cast<ssize_t>(sizeof(expected)));
 
     // 2) Read "kBufferSize" bytes at opt.read_start;
     //    actually read opt.expected_read_length bytes.
@@ -106,41 +101,34 @@ bool TestOffsetOperations() {
     ASSERT_EQ(st.st_size, static_cast<ssize_t>(opt.write_start + sizeof(expected)));
 
     ASSERT_EQ(close(fd.release()), 0);
-    ASSERT_EQ(unlink(filename), 0);
+    ASSERT_EQ(unlink(filename.c_str()), 0);
   }
-
-  END_TEST;
 }
 
-bool TestMaxFileSize() {
-  BEGIN_TEST;
-
-  constexpr uint8_t test_data[] = "hello";
-  constexpr size_t test_data_len = 5;
-  off_t offset = test_info->max_file_size - test_data_len;
+TEST_P(RwTest, MaxFileSize) {
+  constexpr std::string_view kTestData = "hello";
+  off_t offset = fs().GetTraits().max_file_size - kTestData.size();
+  const std::string foo = GetPath("foo");
   {
-    fbl::unique_fd fd(open("::foo", O_RDWR | O_CREAT, 0644));
+    fbl::unique_fd fd(open(foo.c_str(), O_RDWR | O_CREAT, 0644));
     ASSERT_TRUE(fd);
-    ASSERT_EQ(pwrite(fd.get(), test_data, test_data_len, offset), test_data_len);
+    ASSERT_EQ(pwrite(fd.get(), kTestData.data(), kTestData.size(), offset),
+              static_cast<ssize_t>(kTestData.size()));
     ASSERT_EQ(fsync(fd.get()), 0);  // Deliberate sync so that close is likely to unload the vnode.
     ASSERT_EQ(close(fd.release()), 0);
   }
   {
-    fbl::unique_fd fd(open("::foo", O_RDONLY));
+    fbl::unique_fd fd(open(foo.c_str(), O_RDONLY));
     ASSERT_TRUE(fd);
-    uint8_t buf[test_data_len];
-    ASSERT_EQ(pread(fd.get(), buf, test_data_len, offset), test_data_len);
-    ASSERT_BYTES_EQ(buf, test_data, test_data_len, "buf != test_data");
+    uint8_t buf[kTestData.size()];
+    ASSERT_EQ(pread(fd.get(), buf, kTestData.size(), offset),
+              static_cast<ssize_t>(kTestData.size()));
+    ASSERT_EQ(memcmp(buf, kTestData.data(), kTestData.size()), 0);
   }
-
-  END_TEST;
 }
 
-}  // namespace
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, RwTest, testing::ValuesIn(AllTestFilesystems()),
+                         testing::PrintToStringParamName());
 
-// clang-format off
-RUN_FOR_ALL_FILESYSTEMS(rw_tests,
-                        RUN_TEST_MEDIUM(TestZeroLengthOperations)
-                        RUN_TEST_MEDIUM(TestOffsetOperations)
-                        RUN_TEST_MEDIUM(TestMaxFileSize))
-// clang-format on
+}  // namespace
+}  // namespace fs_test

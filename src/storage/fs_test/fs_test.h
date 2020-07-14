@@ -12,6 +12,7 @@
 
 #include <fbl/unique_fd.h>
 #include <fs-management/format.h>
+#include <minfs/format.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 
@@ -61,6 +62,7 @@ class Filesystem {
     bool supports_hard_links = true;
     bool supports_mmap = false;
     bool supports_resize = false;
+    uint64_t max_file_size = std::numeric_limits<uint64_t>::max();
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
@@ -94,6 +96,8 @@ class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
         .supports_hard_links = true,
         .supports_mmap = false,
         .supports_resize = true,
+        .max_file_size = minfs::kMinfsMaxFileSize,
+
     };
     return traits;
   }
@@ -111,6 +115,7 @@ class MemfsFilesystem : public FilesystemImpl<MemfsFilesystem> {
         .supports_hard_links = true,
         .supports_mmap = true,
         .supports_resize = false,
+        .max_file_size = 512 * 1024 * 1024,
     };
     return traits;
   }
@@ -126,6 +131,9 @@ class FatFilesystem : public FilesystemImpl<FatFilesystem> {
         .can_unmount = true,
         .timestamp_granularity = zx::sec(1),
         .supports_hard_links = false,
+        .supports_mmap = false,
+        .supports_resize = false,
+        .max_file_size = 4'294'967'295,
     };
     return traits;
   }

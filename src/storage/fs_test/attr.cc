@@ -82,7 +82,7 @@ TEST_P(AttrTest, Utimes) {
 
   zx_nanosleep(zx_deadline_after(fs().GetTraits().timestamp_granularity.to_nsecs()));
 
-  ASSERT_EQ(utimes(file.c_str(), NULL), 0);
+  ASSERT_EQ(utimes(file.c_str(), nullptr), 0);
   struct stat statb2;
   ASSERT_EQ(stat(file.c_str(), &statb2), 0);
   ASSERT_GT(ToNanoSeconds(statb2.st_mtim), ToNanoSeconds(statb1.st_mtim));

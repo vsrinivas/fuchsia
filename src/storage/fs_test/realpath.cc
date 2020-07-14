@@ -41,7 +41,7 @@ bool is_resolved(const char* path) {
     } else if (path[0] == '.' && path[1] == '.' && terminator(path[2])) {
       return false;
     }
-    if ((path = strchr(path, '/')) == NULL) {
+    if ((path = strchr(path, '/')) == nullptr) {
       return true;
     }
     path += 1;

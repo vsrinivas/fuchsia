@@ -54,6 +54,7 @@ shared_library("fs_test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs-management",
+    "//zircon/system/ulib/minfs",
   ]
 }
 
@@ -374,6 +375,25 @@ fuchsia_component("resize-tests") {
   ]
 }
 
+test("rw_tests") {
+  sources = [ "rw.cc" ]
+  deps = [
+    ":fs_test",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("rw-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/rw-tests.cml"
+  deps = [
+    ":manifests",
+    ":rw_tests",
+  ]
+}
+
 fuchsia_test_package("fs-tests") {
   test_components = [
     ":access-tests",
@@ -393,6 +413,7 @@ fuchsia_test_package("fs-tests") {
     ":realpath-tests",
     ":rename-tests",
     ":resize-tests",
+    ":rw-tests",
   ]
 }
 
@@ -441,6 +462,7 @@ action("manifests") {
     "$target_gen_dir/realpath-tests.cml",
     "$target_gen_dir/rename-tests.cml",
     "$target_gen_dir/resize-tests.cml",
+    "$target_gen_dir/rw-tests.cml",
   ]
   args = rebase_path(sources, root_build_dir) +
          rebase_path(outputs, root_build_dir)

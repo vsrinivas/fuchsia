@@ -45,7 +45,7 @@ TEST_P(BasicTest, Basic) {
   ASSERT_GT(fd1, 0);
 
   // Zero-sized reads should always succeed
-  ASSERT_EQ(read(fd1, NULL, 0), 0);
+  ASSERT_EQ(read(fd1, nullptr, 0), 0);
   // But nonzero reads to directories should always fail
   char buf;
   ASSERT_EQ(read(fd1, &buf, 1), -1);
