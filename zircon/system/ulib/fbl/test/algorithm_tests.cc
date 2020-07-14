@@ -69,6 +69,26 @@ TEST(AlgorithmTest, RoundDown) {
 }
 
 template <typename T>
+void RoundUpPowerOfTwo() {
+  constexpr T kWidth = std::numeric_limits<T>::digits;
+  constexpr T kOne = static_cast<T>(1);
+  EXPECT_EQ(kOne, fbl::roundup_pow2(static_cast<T>(0)));
+  EXPECT_EQ(kOne, fbl::roundup_pow2(static_cast<T>(1)));
+  EXPECT_EQ(kOne << (kWidth - 1), fbl::roundup_pow2(kOne << (kWidth - 1)));
+  for (size_t i = 2; i < kWidth - 2; i++) {
+    T val = (kOne << i);
+    EXPECT_EQ(val, fbl::roundup_pow2(val));
+    EXPECT_EQ(val, fbl::roundup_pow2(static_cast<T>(val - 1)));
+    EXPECT_EQ(val << kOne, fbl::roundup_pow2(static_cast<T>(val + 1)));
+  }
+
+#ifdef __Fuchsia__
+  ASSERT_DEATH([] { fbl::roundup_pow2(1 + (kOne << (kWidth - 1))); });
+  ASSERT_DEATH([] { fbl::roundup_pow2(std::numeric_limits<T>::max()); });
+#endif
+}
+
+template <typename T>
 void IsPowerOfTwo() {
   T val = 0;
   EXPECT_FALSE(fbl::is_pow2<T>(val));
@@ -84,11 +104,24 @@ void IsPowerOfTwo() {
 #define IS_POW2_TEST(_type) \
   TEST(AlgorithmTest, IsPow2_##_type) { ASSERT_NO_FAILURES(IsPowerOfTwo<_type>()); }
 
+#define ROUNDUP_POW2_TEST(_type) \
+  TEST(AlgorithmTest, RoundUpPow2_##_type) { ASSERT_NO_FAILURES(RoundUpPowerOfTwo<_type>()); }
+
+#if TEST_WILL_NOT_COMPILE || 0
+ROUNDUP_POW2_TEST(uint8_t)
+#endif
+#if TEST_WILL_NOT_COMPILE || 0
+ROUNDUP_POW2_TEST(int32_t)
+#endif
+
 IS_POW2_TEST(uint8_t)
 IS_POW2_TEST(uint16_t)
 IS_POW2_TEST(uint32_t)
 IS_POW2_TEST(uint64_t)
 IS_POW2_TEST(size_t)
+ROUNDUP_POW2_TEST(uint32_t)
+ROUNDUP_POW2_TEST(uint64_t)
 #undef IS_POW2_TEST
+#undef ROUNDUP_POW2_TEST
 
 }  // namespace
