@@ -8,10 +8,12 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fit/function.h>
 
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace component {
 class Realm;
@@ -33,7 +35,7 @@ class EnvironmentControllerImpl : public fuchsia::sys::EnvironmentController {
   void OnCreated();
 
  private:
-  // Kills realm and returns self object extracted form parent realm.
+  // Returns self object extracted from parent realm.
   std::unique_ptr<EnvironmentControllerImpl> ExtractEnvironmentController();
 
   void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,

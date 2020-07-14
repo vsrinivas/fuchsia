@@ -27,6 +27,8 @@ std::string TerminationReasonToString(fuchsia::sys::TerminationReason terminatio
       return "RUNNER_FAILED";
     case fuchsia::sys::TerminationReason::RUNNER_TERMINATED:
       return "RUNNER_TERMINATED";
+    case fuchsia::sys::TerminationReason::REALM_SHUTTING_DOWN:
+      return "REALM_SHUTTING_DOWN";
     default:
       return std::to_string(static_cast<int>(termination_reason));
   }
@@ -46,6 +48,8 @@ std::string HumanReadableTerminationReason(fuchsia::sys::TerminationReason termi
       return "failed to start runner for process";
     case fuchsia::sys::TerminationReason::RUNNER_TERMINATED:
       return "runner failed to execute";
+    case fuchsia::sys::TerminationReason::REALM_SHUTTING_DOWN:
+      return "realm shutting down";
     default:
       std::ostringstream out;
       out << "failed to create component (" << TerminationReasonToString(termination_reason) << ")";

@@ -8,9 +8,12 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
+
 namespace component {
 
-ComponentEventProviderImpl::ComponentEventProviderImpl(Realm* realm, async_dispatcher_t* dispatcher)
+ComponentEventProviderImpl::ComponentEventProviderImpl(fxl::WeakPtr<Realm> realm,
+                                                       async_dispatcher_t* dispatcher)
     : executor_(dispatcher), binding_(this), realm_(realm), weak_ptr_factory_(this) {}
 
 ComponentEventProviderImpl::~ComponentEventProviderImpl() = default;
@@ -70,12 +73,13 @@ void ComponentEventProviderImpl::NotifyComponentDirReady(
   }
 }
 
-std::vector<std::string> ComponentEventProviderImpl::RelativeRealmPath(const Realm* leaf_realm) {
+std::vector<std::string> ComponentEventProviderImpl::RelativeRealmPath(
+    const fxl::WeakPtr<Realm>& leaf_realm) {
   std::vector<std::string> relative_realm_path;
-  const Realm* realm = leaf_realm;
+  auto realm = leaf_realm;
 
   // We stop traversing the realm tree bottom up until we arrive to this realm_ or the root.
-  while (realm && realm != realm_) {
+  while (realm && realm.get() != realm_.get()) {
     relative_realm_path.push_back(realm->label());
     realm = realm->parent();
   }
@@ -83,7 +87,7 @@ std::vector<std::string> ComponentEventProviderImpl::RelativeRealmPath(const Rea
   // We arrived to root and we couldn't find |realm_| therefore this realm is not in the path.
   // Just a sanity check, this shouldn't occur given that this provider only calls this method with
   // realms under it.
-  if (realm != realm_) {
+  if (realm.get() != realm_.get()) {
     FX_LOGS(ERROR) << "Unreachable: ComponentEventProvider attempted to get a relative realm path "
                    << "from a realm not in its tree";
     return {};
@@ -94,7 +98,7 @@ std::vector<std::string> ComponentEventProviderImpl::RelativeRealmPath(const Rea
 }
 
 void ComponentEventProviderImpl::NotifyOfExistingComponents() {
-  std::queue<Realm*> pending_realms;
+  std::queue<fxl::WeakPtr<Realm>> pending_realms;
   pending_realms.push(realm_);
   while (!pending_realms.empty()) {
     auto realm = pending_realms.front();
@@ -103,8 +107,8 @@ void ComponentEventProviderImpl::NotifyOfExistingComponents() {
     // Make sure we notify about all components in sub-realms of this realm which don't have an
     // event listener attached.
     for (auto& pair : realm->children()) {
-      if (!pair.first->HasComponentEventListenerBound()) {
-        pending_realms.push(pair.first);
+      if (!pair.second->realm()->HasComponentEventListenerBound()) {
+        pending_realms.push(pair.second->realm()->weak_ptr());
       }
     }
     auto relative_realm_path = RelativeRealmPath(realm);
@@ -123,7 +127,7 @@ void ComponentEventProviderImpl::NotifyOfExistingComponents() {
         // its actual realm which might not be the realm where the runner is.
         fxl::WeakPtr<Realm> realm = component_bridge->realm();
         if (realm) {
-          NotifyAboutExistingComponent(RelativeRealmPath(realm.get()), component_bridge);
+          NotifyAboutExistingComponent(RelativeRealmPath(realm), component_bridge);
         }
       }
     }

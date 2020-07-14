@@ -22,7 +22,7 @@ EnvironmentControllerImpl::EnvironmentControllerImpl(
   if (request.is_valid()) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this](zx_status_t status) {
-      realm_->parent()->ExtractChild(realm_.get());
+      ExtractEnvironmentController();
       // The destructor of the temporary returned by ExtractChild destroys
       // |this| at the end of the previous statement.
     });
@@ -48,7 +48,6 @@ EnvironmentControllerImpl::ExtractEnvironmentController() {
   if (realm_) {
     wait_.Cancel();
     auto self = realm_->parent()->ExtractChild(realm_.get());
-    realm_ = nullptr;
     return self;
   }
   return nullptr;
@@ -58,7 +57,17 @@ EnvironmentControllerImpl::~EnvironmentControllerImpl() = default;
 
 void EnvironmentControllerImpl::Kill(KillCallback callback) {
   auto self = ExtractEnvironmentController();
-  callback();
+  if (self) {
+    realm_->ShutdownNamespace([callback = std::move(callback), self = std::move(self)]() {
+      callback();
+      // The |self| destructor destroys |this| when we unwind this stack frame.
+    });
+    // kill realm, no need to preserve it
+    realm_ = nullptr;
+    callback = nullptr;
+  } else {
+    callback();
+  }
   // The |self| destructor destroys |this| when we unwind this stack frame.
 }
 

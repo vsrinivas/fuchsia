@@ -75,7 +75,9 @@ class ProcessFinder {
     if (found_) {
       return zx::ok(found_);
     }
-    if (status != ZX_OK) {
+
+    if (status != ZX_OK && status != ZX_ERR_BAD_HANDLE) {  // BAD_HANDLE means that this job is dead
+                                                           // so no point of returning a error.
       return zx::error(status);
     }
     return zx::ok(false);
@@ -285,7 +287,7 @@ void ComponentControllerBase::SendOnTerminationEvent(
   on_terminated_event_sent_ = true;
 }
 
-ComponentControllerBase::~ComponentControllerBase() = default;
+ComponentControllerBase::~ComponentControllerBase() { ns_->FlushAndShutdown(ns_); };
 
 HubInfo ComponentControllerBase::HubInfo() {
   return component::HubInfo(label_, hub_instance_id_, hub_.dir());
@@ -338,12 +340,10 @@ ComponentControllerImpl::ComponentControllerImpl(
   if (job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &watch_job) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to duplicate job handle";
   }
+  ComputeComponentInstancePath();
   auto realm = this->ns()->realm();
-  if (realm && realm->cpu_watcher()) {
-    InstancePath path = GetComponentInstancePath();
-    if (!path.empty()) {
-      realm->cpu_watcher()->AddTask(path, std::move(watch_job));
-    }
+  if (realm && realm->cpu_watcher() && !instance_path_.empty()) {
+    realm->cpu_watcher()->AddTask(instance_path_, std::move(watch_job));
   }
 }
 
@@ -364,9 +364,8 @@ ComponentControllerImpl::~ComponentControllerImpl() {
 
   auto realm = this->ns()->realm();
   if (realm && realm->cpu_watcher()) {
-    InstancePath path = GetComponentInstancePath();
-    if (!path.empty()) {
-      realm->cpu_watcher()->RemoveTask(path);
+    if (!instance_path_.empty()) {
+      realm->cpu_watcher()->RemoveTask(instance_path_);
     }
   }
 
@@ -412,31 +411,32 @@ void ComponentControllerImpl::Handler(async_dispatcher_t* dispatcher, async::Wai
   FX_DCHECK(status == ZX_OK);
   FX_DCHECK(signal->observed == ZX_TASK_TERMINATED);
   FX_VLOGS(1) << "ComponentControllerImpl::Handler() called";
+
   bool terminated = SendReturnCodeIfTerminated();
   FX_DCHECK(terminated);
 
   process_.reset();
-
   container_->ExtractComponent(this);
   // The destructor of the temporary returned by ExtractComponent destroys
   // |this| at the end of the previous statement.
 }
 
-InstancePath ComponentControllerImpl::GetComponentInstancePath() const {
+void ComponentControllerImpl::ComputeComponentInstancePath() {
+  if (!instance_path_.empty()) {
+    return;
+  }
   std::vector<std::string> path;
   auto realm = this->ns()->realm();
   if (realm) {
-    path.push_back(this->label());
-    auto* cur = realm.get();
+    instance_path_.push_back(this->label());
+    auto cur = realm;
     while (cur) {
-      path.push_back(cur->label());
+      instance_path_.push_back(cur->label());
       cur = cur->parent();
     }
-    std::reverse(path.begin(), path.end());
-    path.push_back(job_koid_);
+    std::reverse(instance_path_.begin(), instance_path_.end());
+    instance_path_.push_back(job_koid_);
   }
-
-  return path;
 }
 
 zx::status<bool> ComponentControllerImpl::ContainsProcess(zx_koid_t process_koid) {

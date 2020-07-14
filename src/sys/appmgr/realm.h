@@ -28,6 +28,7 @@
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/sys/appmgr/cache_control.h"
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/component_controller_impl.h"
@@ -63,7 +64,7 @@ enum class StorageType { DATA, CACHE, TEMP };
 }  // namespace internal
 
 struct RealmArgs {
-  static RealmArgs Make(Realm* parent, std::string label, std::string data_path,
+  static RealmArgs Make(fxl::WeakPtr<Realm> parent, std::string label, std::string data_path,
                         std::string cache_path, std::string temp_path,
                         const std::shared_ptr<sys::ServiceDirectory>& env_services,
                         bool run_virtual_console, fuchsia::sys::EnvironmentOptions options,
@@ -71,13 +72,13 @@ struct RealmArgs {
                         fbl::RefPtr<ComponentIdIndex> component_id_index);
 
   static RealmArgs MakeWithAdditionalServices(
-      Realm* parent, std::string label, std::string data_path, std::string cache_path,
+      fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
       std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
       bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
       fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
       fbl::RefPtr<ComponentIdIndex> component_id_index);
 
-  Realm* parent;
+  fxl::WeakPtr<Realm> parent;
   std::string label;
   std::string data_path;
   std::string cache_path;
@@ -93,6 +94,7 @@ struct RealmArgs {
 
 class Realm : public ComponentContainer<ComponentControllerImpl> {
  public:
+  using ShutdownNamespaceCallback = fit::callback<void()>;
   static std::unique_ptr<Realm> Create(RealmArgs args);
 
   // Constructor to create a Realm object. Clients should call |Create|.
@@ -100,7 +102,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   ~Realm();
 
-  Realm* parent() const { return parent_; }
+  fxl::WeakPtr<Realm> parent() const { return parent_; }
   CpuWatcher* cpu_watcher() const { return cpu_watcher_; }
   const std::string& label() const { return label_; }
   const std::string& data_path() const { return data_path_; }
@@ -134,6 +136,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   const std::unordered_map<Realm*, std::unique_ptr<EnvironmentControllerImpl>>& children() const {
     return children_;
   }
+
+  fxl::WeakPtr<Realm> weak_ptr() { return weak_ptr_factory_.GetWeakPtr(); }
 
   void CreateNestedEnvironment(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
@@ -220,6 +224,9 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   std::string IsolatedPathForComponentInstance(const FuchsiaPkgUrl& fp,
                                                internal::StorageType storage_type);
 
+  // Shutdown realm's namespace processing all pending messages.
+  void ShutdownNamespace(ShutdownNamespaceCallback callback = nullptr);
+
  private:
   static uint32_t next_numbered_label_;
 
@@ -264,7 +271,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   // Called by `FindComponent`. This function returns realm path in reverse order.
   zx::status<fuchsia::sys::internal::SourceIdentity> FindComponentInternal(zx_koid_t process_koid);
 
-  Realm* const parent_;
+  fxl::WeakPtr<Realm> const parent_;
   fuchsia::sys::LoaderPtr loader_;
   std::string label_;
   std::string data_path_;

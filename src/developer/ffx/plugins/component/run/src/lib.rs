@@ -132,6 +132,7 @@ pub async fn run_component(
             RunnerFailed => "Runner failed to start",
             RunnerTerminated => "Runner crashed",
             Unsupported => "Component uses unsupported feature",
+            RealmShuttingDown => "Realm is shutting down. Can't create component",
             Exited => unreachable!(),
         };
         eprintln!("Error: {}. \nThere may be a more detailed error in the system logs.", message);

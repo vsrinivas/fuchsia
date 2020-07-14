@@ -74,7 +74,7 @@ TEST_F(ComponentEventProviderTest, NotificationAfterShutdownDoesNotCrash) {
   context_provider_->ConnectToPublicService(client.NewRequest(dispatcher()), kListenerName);
 
   {
-    ComponentEventProviderImpl event_provider(realm.get(), dispatcher());
+    ComponentEventProviderImpl event_provider(realm->weak_ptr(), dispatcher());
     event_provider.SetListener(std::move(client));
     // Let event_provider go out of scope on purpose while still having a listener.
   }

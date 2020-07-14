@@ -83,7 +83,7 @@ fxl::RefPtr<Namespace> CreateFakeNamespace(const std::vector<const char*>& extra
   for (auto& service : extra_service_names) {
     service_list->names.push_back(service);
   }
-  return fxl::MakeRefCounted<Namespace>(nullptr, nullptr, std::move(service_list), nullptr);
+  return fxl::MakeRefCounted<Namespace>(nullptr, std::move(service_list), nullptr);
 }
 
 std::vector<std::string> SplitPath(const std::string& path) {

@@ -23,6 +23,8 @@ enum TerminationReason {
     RUNNER_TERMINATED = 7;
     /// Attempted to use an unsupported feature.
     UNSUPPORTED = 8;
+    /// Attempted to create a component in a realm which is shutting down.
+    REALM_SHUTTING_DOWN = 9;
 };
 
 /// An interface for controlling components.

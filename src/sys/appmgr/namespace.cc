@@ -12,20 +12,29 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/trace/event.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <utility>
 
 #include "fbl/ref_ptr.h"
+#include "fuchsia/sys/cpp/fidl.h"
+#include "lib/async/cpp/task.h"
 #include "src/sys/appmgr/job_provider_impl.h"
 #include "src/sys/appmgr/realm.h"
 #include "src/sys/appmgr/util.h"
 
 namespace component {
 
-Namespace::Namespace(fxl::RefPtr<Namespace> parent, fxl::WeakPtr<Realm> realm,
+Namespace::Namespace(fxl::WeakPtr<Realm> realm, fuchsia::sys::ServiceListPtr additional_services,
+                     const std::vector<std::string>* service_allowlist)
+    : Namespace(PrivateConstructor{}, nullptr, std::move(realm), std::move(additional_services),
+                service_allowlist) {}
+
+Namespace::Namespace(PrivateConstructor p, fxl::RefPtr<Namespace> parent, fxl::WeakPtr<Realm> realm,
                      fuchsia::sys::ServiceListPtr additional_services,
                      const std::vector<std::string>* service_allowlist)
-    : vfs_(async_get_default_dispatcher()) {
+    : vfs_(async_get_default_dispatcher()), weak_ptr_factory_(this), status_(Status::RUNNING) {
   fbl::RefPtr<LogConnectorImpl> connector;
   if (realm) {
     connector = realm->log_connector();
@@ -38,20 +47,27 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, fxl::WeakPtr<Realm> realm,
   // realms, and this list should not be expanded.
   services_->AddService(
       fuchsia::sys::Environment::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        environment_bindings_.AddBinding(
-            this, fidl::InterfaceRequest<fuchsia::sys::Environment>(std::move(channel)));
+        if (status_ == Status::RUNNING) {
+          environment_bindings_.AddBinding(
+              this, fidl::InterfaceRequest<fuchsia::sys::Environment>(std::move(channel)));
+        }
         return ZX_OK;
       })));
   services_->AddService(Launcher::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-                          launcher_bindings_.AddBinding(
-                              this, fidl::InterfaceRequest<Launcher>(std::move(channel)));
+                          if (status_ == Status::RUNNING) {
+                            launcher_bindings_.AddBinding(
+                                this, fidl::InterfaceRequest<Launcher>(std::move(channel)));
+                          }
                           return ZX_OK;
                         })));
   services_->AddService(
       fuchsia::process::Launcher::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->Connect(
-            fidl::InterfaceRequest<fuchsia::process::Launcher>(std::move(channel)));
-        return ZX_OK;
+        if (realm_) {
+          realm_->environment_services()->Connect(
+              fidl::InterfaceRequest<fuchsia::process::Launcher>(std::move(channel)));
+          return ZX_OK;
+        }
+        return ZX_ERR_BAD_STATE;
       })));
   services_->AddService(
       fuchsia::process::Resolver::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
@@ -90,12 +106,32 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, fxl::WeakPtr<Realm> realm,
   // |additional_services| takes priority.
   if (parent) {
     services_->set_parent(parent->services());
+    parent_ = parent->weak_ptr_factory_.GetWeakPtr();
   }
 
   services_->InitLogging();
 }
 
 Namespace::~Namespace() {}
+
+fxl::RefPtr<Namespace> Namespace::CreateChildNamespace(
+    fxl::RefPtr<Namespace>& parent, fxl::WeakPtr<Realm> realm,
+    fuchsia::sys::ServiceListPtr additional_services,
+    const std::vector<std::string>* service_allowlist) {
+  ZX_ASSERT(parent);
+  if (parent->status_ != Status::RUNNING) {
+    return nullptr;
+  }
+  fxl::RefPtr<Namespace> ns =
+      fxl::MakeRefCounted<Namespace>(PrivateConstructor{}, parent, std::move(realm),
+                                     std::move(additional_services), service_allowlist);
+  parent->AddChild(ns);
+  return ns;
+}
+
+void Namespace::AddChild(fxl::RefPtr<Namespace> child) {
+  children_.emplace(child.get(), std::move(child));
+}
 
 void Namespace::AddBinding(fidl::InterfaceRequest<fuchsia::sys::Environment> environment) {
   environment_bindings_.AddBinding(this, std::move(environment));
@@ -105,8 +141,10 @@ void Namespace::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller, std::string label,
     fuchsia::sys::ServiceListPtr additional_services, fuchsia::sys::EnvironmentOptions options) {
-  realm_->CreateNestedEnvironment(std::move(environment), std::move(controller), std::move(label),
-                                  std::move(additional_services), options);
+  if (realm_ && status_ == Status::RUNNING) {
+    realm_->CreateNestedEnvironment(std::move(environment), std::move(controller), std::move(label),
+                                    std::move(additional_services), options);
+  }
 }
 
 void Namespace::GetLauncher(fidl::InterfaceRequest<Launcher> launcher) {
@@ -124,19 +162,35 @@ zx_status_t Namespace::ServeServiceDirectory(zx::channel directory_request) {
 void Namespace::CreateComponent(
     fuchsia::sys::LaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
+  if (status_ != Status::RUNNING) {
+    ComponentRequestWrapper component_request(std::move(controller));
+    component_request.SetReturnValues(-1, fuchsia::sys::TerminationReason::REALM_SHUTTING_DOWN);
+    return;
+  }
   auto cc_trace_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("appmgr", "Namespace::CreateComponent", cc_trace_id, "launch_info.url",
                     launch_info.url);
-  realm_->CreateComponent(std::move(launch_info), std::move(controller),
-                          [cc_trace_id](std::weak_ptr<ComponentControllerImpl> component) {
-                            TRACE_ASYNC_END("appmgr", "Namespace::CreateComponent", cc_trace_id);
-                          });
+  if (realm_) {
+    realm_->CreateComponent(std::move(launch_info), std::move(controller),
+                            [cc_trace_id](std::weak_ptr<ComponentControllerImpl> component) {
+                              TRACE_ASYNC_END("appmgr", "Namespace::CreateComponent", cc_trace_id);
+                            });
+  } else {
+    ComponentRequestWrapper component_request(std::move(controller));
+    component_request.SetReturnValues(-1, fuchsia::sys::TerminationReason::REALM_SHUTTING_DOWN);
+  }
 }
 
 zx::channel Namespace::OpenServicesAsDirectory() { return Util::OpenAsDirectory(&vfs_, services_); }
 
 void Namespace::Resolve(std::string name, fuchsia::process::Resolver::ResolveCallback callback) {
-  realm_->Resolve(name, std::move(callback));
+  if (realm_) {
+    realm_->Resolve(name, std::move(callback));
+  } else {
+    zx::vmo binary;
+    fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader;
+    callback(ZX_ERR_UNAVAILABLE, std::move(binary), std::move(loader));
+  }
 }
 
 void Namespace::NotifyComponentDiagnosticsDirReady(
@@ -169,10 +223,70 @@ void Namespace::MaybeAddComponentEventProvider() {
     services_->AddService(
         fuchsia::sys::internal::ComponentEventProvider::Name_,
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-          return realm_->BindComponentEventProvider(
-              fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider>(
-                  std::move(channel)));
+          if (realm_) {
+            return realm_->BindComponentEventProvider(
+                fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider>(
+                    std::move(channel)));
+          }
+          return ZX_ERR_BAD_STATE;
         })));
+  }
+}
+
+void Namespace::RunShutdownIfNoChildren() {
+  if (status_ == Status::SHUTTING_DOWN && children_.empty()) {
+    vfs_.CloseAllConnectionsForVnode(*services_, [this]() {
+      status_ = Status::STOPPED;
+      for (auto& callback : shutdown_callbacks_) {
+        async::PostTask(async_get_default_dispatcher(),
+                        [callback = std::move(callback)]() mutable { callback(); });
+      }
+      shutdown_callbacks_.clear();
+      vfs_.Shutdown([this](zx_status_t /*unused*/) { self_for_shutdown_.reset(); });
+    });
+  }
+}
+
+void Namespace::ExtractChild(Namespace* child) {
+  children_.erase(child);
+  RunShutdownIfNoChildren();
+}
+
+void Namespace::FlushAndShutdown(fxl::RefPtr<Namespace> self,
+                                 fs::ManagedVfs::CloseAllConnectionsForVnodeCallback callback) {
+  ZX_ASSERT(self.get() == this);
+  switch (status_) {
+    case Status::SHUTTING_DOWN:
+      // We are already shutting down. Store callback and return.
+      if (callback) {
+        shutdown_callbacks_.push_back(std::move(callback));
+      }
+      return;
+    case Status::STOPPED:
+      if (callback) {
+        async::PostTask(async_get_default_dispatcher(),
+                        [self, callback = std::move(callback)]() mutable { callback(); });
+      }
+      return;
+    case Status::RUNNING:
+      if (callback) {
+        shutdown_callbacks_.push_back(std::move(callback));
+      }
+      break;
+  }
+  status_ = Status::SHUTTING_DOWN;
+  environment_bindings_.CloseAll();
+  launcher_bindings_.CloseAll();
+  self_for_shutdown_ = std::move(self);
+  if (children_.empty()) {
+    RunShutdownIfNoChildren();
+    return;
+  }
+
+  for (auto& child : children_) {
+    async::PostTask(async_get_default_dispatcher(), [this, ns = child.second]() {
+      ns->FlushAndShutdown(ns, [this, ptr = ns.get()]() { ExtractChild(ptr); });
+    });
   }
 }
 

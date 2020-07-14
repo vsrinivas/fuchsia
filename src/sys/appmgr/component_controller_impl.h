@@ -186,11 +186,11 @@ class ComponentControllerImpl : public ComponentControllerBase {
   void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal* signal);
 
-  // Returns the path down the component tree to this component instance.
+  // Compute the path from the component tree root to this component instance, and store it.
   //
   // The path includes the names of all realms, the component name, and the koid of the component's
   // job.
-  InstancePath GetComponentInstancePath() const;
+  void ComputeComponentInstancePath();
 
   bool SendReturnCodeIfTerminated();
 
@@ -203,6 +203,8 @@ class ComponentControllerImpl : public ComponentControllerBase {
   async::WaitMethod<ComponentControllerImpl, &ComponentControllerImpl::Handler> wait_;
 
   SystemDiagnosticsDirectory system_diagnostics_;
+
+  InstancePath instance_path_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentControllerImpl);
 };

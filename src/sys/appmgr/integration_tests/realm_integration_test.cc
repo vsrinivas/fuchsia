@@ -38,6 +38,7 @@
 #include <gtest/gtest.h>
 #include <test/appmgr/integration/cpp/fidl.h>
 
+#include "lib/vfs/cpp/service.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -227,6 +228,28 @@ TEST_F(RealmTest, KillRealmKillsComponent) {
   // send a msg, without that error handler won't be called.
   echo->EchoString(message, [&](::fidl::StringPtr retval) { ret_msg = retval; });
   RunLoopUntil([&] { return killed; });
+}
+
+// test that service is connected even when realm dies right after connect request.
+TEST_F(RealmTest, ConnectToServiceWhenRealmDies) {
+  auto env_services = CreateServices();
+  bool connected = false;
+  auto fake_service = std::make_shared<vfs::Service>(
+      [&](zx::channel client_handle, async_dispatcher_t* /*unused*/) mutable { connected = true; });
+  env_services->AddSharedService(fake_service, fidl::examples::echo::Echo::Name_);
+
+  auto enclosing_environment = CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
+
+  // make sure echo service is running.
+  fidl::examples::echo::EchoPtr echo;
+  enclosing_environment->ConnectToService(echo.NewRequest());
+  bool killed = false;
+  // kill enclosing env
+  enclosing_environment->Kill([&]() { killed = true; });
+  RunLoopUntil([&] { return killed; });
+  // make sure we can receive connect request.
+  RunLoopUntil([&] { return connected; });
 }
 
 TEST_F(RealmTest, EnvironmentControllerRequired) {

@@ -39,6 +39,7 @@
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/substitute.h"
@@ -48,6 +49,7 @@
 #include "src/sys/appmgr/dynamic_library_loader.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
 #include "src/sys/appmgr/introspector.h"
+#include "src/sys/appmgr/namespace.h"
 #include "src/sys/appmgr/namespace_builder.h"
 #include "src/sys/appmgr/policy_checker.h"
 #include "src/sys/appmgr/scheme_map.h"
@@ -219,7 +221,7 @@ std::string ComponentUrlToPathComponent(const FuchsiaPkgUrl& fp) {
 
 ComponentIdIndex::Moniker ComputeMoniker(Realm* realm, const FuchsiaPkgUrl& fp) {
   std::vector<std::string> realm_path;
-  for (Realm* leaf = realm; leaf != nullptr; leaf = leaf->parent()) {
+  for (Realm* leaf = realm; leaf != nullptr; leaf = leaf->parent().get()) {
     realm_path.push_back(leaf->label());
   }
   std::reverse(realm_path.begin(), realm_path.end());
@@ -229,7 +231,7 @@ ComponentIdIndex::Moniker ComputeMoniker(Realm* realm, const FuchsiaPkgUrl& fp) 
 }  // namespace
 
 // static
-RealmArgs RealmArgs::Make(Realm* parent, std::string label, std::string data_path,
+RealmArgs RealmArgs::Make(fxl::WeakPtr<Realm> parent, std::string label, std::string data_path,
                           std::string cache_path, std::string temp_path,
                           const std::shared_ptr<sys::ServiceDirectory>& env_services,
                           bool run_virtual_console, fuchsia::sys::EnvironmentOptions options,
@@ -249,7 +251,7 @@ RealmArgs RealmArgs::Make(Realm* parent, std::string label, std::string data_pat
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
-    Realm* parent, std::string label, std::string data_path, std::string cache_path,
+    fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
     std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
     fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
@@ -294,7 +296,7 @@ std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
 }
 
 Realm* GetRootRealm(Realm* r) {
-  for (; r->parent() != nullptr; r = r->parent()) {
+  for (; r->parent(); r = r->parent().get()) {
   }
   return r;
 }
@@ -316,7 +318,7 @@ Realm::Realm(RealmArgs args, zx::job job)
       component_id_index_(std::move(args.component_id_index)),
       weak_ptr_factory_(this) {
   // Only need to create this channel for the root realm.
-  if (parent_ == nullptr) {
+  if (!parent_) {
     auto status =
         zx::channel::create(0, &first_nested_realm_svc_server_, &first_nested_realm_svc_client_);
     FX_CHECK(status == ZX_OK) << "Cannot create channel: " << zx_status_get_string(status);
@@ -337,13 +339,12 @@ Realm::Realm(RealmArgs args, zx::job job)
     job_.set_property(ZX_PROP_JOB_KILL_ON_OOM, &property_value, sizeof(property_value));
   }
 
-  if (args.options.inherit_parent_services) {
-    default_namespace_ =
-        fxl::MakeRefCounted<Namespace>(parent_->default_namespace_, weak_ptr_factory_.GetWeakPtr(),
-                                       std::move(args.additional_services), nullptr);
+  if (args.options.inherit_parent_services && parent_->default_namespace_) {
+    default_namespace_ = Namespace::CreateChildNamespace(
+        parent_->default_namespace_, weak_ptr(), std::move(args.additional_services), nullptr);
   } else {
-    default_namespace_ = fxl::MakeRefCounted<Namespace>(
-        nullptr, weak_ptr_factory_.GetWeakPtr(), std::move(args.additional_services), nullptr);
+    default_namespace_ =
+        fxl::MakeRefCounted<Namespace>(weak_ptr(), std::move(args.additional_services), nullptr);
   }
 
   fsl::SetObjectName(job_.get(), label_);
@@ -403,6 +404,8 @@ Realm::Realm(RealmArgs args, zx::job job)
 
 Realm::~Realm() {
   job_.kill();
+
+  ShutdownNamespace();
 
   if (delete_storage_on_death_) {
     if (!files::DeletePath(data_path(), true)) {
@@ -475,11 +478,12 @@ void Realm::CreateNestedEnvironment(
   std::string nested_temp_path = files::JoinPath(temp_path(), "r/" + label);
   if (additional_services) {
     args = RealmArgs::MakeWithAdditionalServices(
-        this, label, nested_data_path, nested_cache_path, nested_temp_path, environment_services_,
+        weak_ptr(), label, nested_data_path, nested_cache_path, nested_temp_path,
+        environment_services_,
         /*run_virtual_console=*/false, std::move(additional_services), std::move(options),
         appmgr_config_dir_.duplicate(), component_id_index_);
   } else {
-    args = RealmArgs::Make(this, label, nested_data_path, nested_cache_path, nested_temp_path,
+    args = RealmArgs::Make(weak_ptr(), label, nested_data_path, nested_cache_path, nested_temp_path,
                            environment_services_,
                            /*run_virtual_console=*/false, std::move(options),
                            appmgr_config_dir_.duplicate(), component_id_index_);
@@ -502,7 +506,7 @@ void Realm::CreateNestedEnvironment(
   // If this is the first nested realm created in the root realm, serve the
   // child realm's service directory on this channel so that
   // BindFirstNestedRealmSvc can be used to connect to it.
-  if (parent_ == nullptr && children_.size() == 0) {
+  if (!parent_ && children_.empty()) {
     child->default_namespace_->ServeServiceDirectory(std::move(first_nested_realm_svc_server_));
   }
 
@@ -762,8 +766,13 @@ void Realm::CreateComponentWithRunnerForScheme(std::string runner_url,
     return;
   }
 
-  fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
-      default_namespace_, weak_ptr_factory_.GetWeakPtr(), nullptr, nullptr);
+  fxl::RefPtr<Namespace> ns =
+      Namespace::CreateChildNamespace(default_namespace_, weak_ptr(), nullptr, nullptr);
+
+  if (ns.get() == nullptr) {
+    component_request.SetReturnValues(-1, fuchsia::sys::TerminationReason::UNSUPPORTED);
+    return;
+  }
 
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
   component_request.Extract(&controller);
@@ -959,9 +968,14 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
                                               .flags = ZX_POL_OVERRIDE_DENY});
     }
 
-    fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
-        default_namespace_, weak_ptr_factory_.GetWeakPtr(),
-        std::move(launch_info.additional_services), service_allowlist);
+    fxl::RefPtr<Namespace> ns = Namespace::CreateChildNamespace(
+        default_namespace_, weak_ptr(), std::move(launch_info.additional_services),
+        service_allowlist);
+
+    if (ns.get() == nullptr) {
+      component_request.SetReturnValues(-1, fuchsia::sys::TerminationReason::UNSUPPORTED);
+      return;
+    }
 
     if (security_policy->enable_component_event_provider) {
       ns->MaybeAddComponentEventProvider();
@@ -1104,14 +1118,14 @@ Realm* Realm::GetRunnerRealm() {
   auto realm = this;
 
   while (realm->use_parent_runners_ && realm->parent_) {
-    realm = realm->parent_;
+    realm = realm->parent_.get();
   }
 
   return realm;
 }
 
 zx_status_t Realm::BindFirstNestedRealmSvc(zx::channel channel) {
-  if (parent_ != nullptr) {
+  if (parent_) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   return fdio_service_clone_to(first_nested_realm_svc_client_.get(), channel.release());
@@ -1228,7 +1242,7 @@ internal::EventNotificationInfo Realm::GetEventNotificationInfo(const std::strin
     provider = this->component_event_provider_.get();
   } else {
     relative_realm_path.push_back(label_);
-    Realm* realm = this;
+    auto realm = weak_ptr();
 
     // Stop traversing the path to the root once a child of the root realm "app" is found.
     // "root" won't have a ComponentEventProvider.
@@ -1255,7 +1269,7 @@ zx_status_t Realm::BindComponentEventProvider(
     fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider> request) {
   if (!component_event_provider_) {
     component_event_provider_ =
-        std::make_unique<ComponentEventProviderImpl>(this, async_get_default_dispatcher());
+        std::make_unique<ComponentEventProviderImpl>(weak_ptr(), async_get_default_dispatcher());
   }
   auto status = component_event_provider_->Connect(std::move(request));
   return status;
@@ -1302,6 +1316,11 @@ zx::status<fuchsia::sys::internal::SourceIdentity> Realm::FindComponentInternal(
     }
   }
   return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+void Realm::ShutdownNamespace(ShutdownNamespaceCallback callback) {
+  job_.kill();
+  default_namespace_->FlushAndShutdown(default_namespace_, std::move(callback));
 }
 
 }  // namespace component

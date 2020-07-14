@@ -12,6 +12,7 @@
 #include <queue>
 
 #include "lib/fidl/cpp/binding.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/realm.h"
 
@@ -20,7 +21,7 @@ namespace component {
 class ComponentEventProviderImpl : public fuchsia::sys::internal::ComponentEventProvider {
  public:
   // Does not take ownership of realm or dispatcher.
-  ComponentEventProviderImpl(Realm* realm, async_dispatcher_t* dispatcher);
+  ComponentEventProviderImpl(fxl::WeakPtr<Realm> realm, async_dispatcher_t* dispatcher);
   ~ComponentEventProviderImpl() override;
 
   bool listener_bound() { return listener_.is_bound(); }
@@ -60,12 +61,12 @@ class ComponentEventProviderImpl : public fuchsia::sys::internal::ComponentEvent
   // The realm to which this ComponentEventProvider belongs. The provider will only notify about
   // events of components in this realm and sub-realms, except for realms that have a provider.
   // Not owned.
-  Realm* const realm_;
+  fxl::WeakPtr<Realm> const realm_;
 
   fxl::WeakPtrFactory<ComponentEventProviderImpl> weak_ptr_factory_;
 
   // Returns the relative realm path from the queries |leaf_realm| up to this provider |realm_|.
-  std::vector<std::string> RelativeRealmPath(const Realm* leaf_realm);
+  std::vector<std::string> RelativeRealmPath(const fxl::WeakPtr<Realm>& leaf_realm);
 };
 
 }  // namespace component
