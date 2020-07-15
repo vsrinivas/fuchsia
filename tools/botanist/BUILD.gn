@@ -9,6 +9,7 @@ import("//build/go/go_test.gni")
 go_library("botanist_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/botanist/lib"
   deps = [
+    ":constants",
     "//src/sys/pkg/lib/repo",
     "//tools/build",
     "//tools/lib/logger",

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -30,7 +31,7 @@ func FetchAndCopyFile(ctx context.Context, t tftp.Client, path, name, outDir str
 				time.Sleep(time.Second)
 				continue
 			default:
-				return fmt.Errorf("failed to receive file %s: %s", path, err)
+				return fmt.Errorf("%s %s: %s", constants.FailedToReceiveFileMsg, path, err)
 			}
 			break
 		}

@@ -57,7 +57,7 @@ func (c stringInLogCheck) Check(to *TestingOutputs) bool {
 		for _, block := range c.ExceptBlocks {
 			closestStartIndex := bytes.LastIndex(beforeBlock, []byte(block.startString))
 			if closestStartIndex < 0 {
-				// There is no start string before this occurence, so it must not be
+				// There is no start string before this occurrence, so it must not be
 				// included in this exceptBlock. Check the next exceptBlock.
 				continue
 			}
@@ -65,8 +65,8 @@ func (c stringInLogCheck) Check(to *TestingOutputs) bool {
 			if closestEndIndex < closestStartIndex {
 				// There is no end string between the start string and the string to
 				// check, so check if end string appears after. If so, then this
-				// occurence is included in this exceptBlock, so we can break and
-				// check the next occurence of the string.
+				// occurrence is included in this exceptBlock, so we can break and
+				// check the next occurrence of the string.
 				if bytes.Index(afterBlock, []byte(block.endString)) >= 0 {
 					foundString = false
 					break
@@ -131,6 +131,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// For fxbug.dev/53854
 	ret = append(ret, driverHostCrash("composite-device", ""))
 	ret = append(ret, driverHostCrash("pci", ""))
+	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToReceiveFileMsg), Type: swarmingOutputType})
 	// Don't fail if we see PDEV_DID_CRASH_TEST, defined in
 	// zircon/system/ulib/ddk-platform-defs/include/ddk/platform-defs.h.
 	// That's used for a test that intentionally crashes a driver host.
