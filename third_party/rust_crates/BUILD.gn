@@ -176,6 +176,11 @@ group("hex") {
   deps = [ ":hex-v0_3_2" ]
 }
 
+if (!is_fuchsia) {
+  group("home") {
+    deps = [ ":home-v0_5_3" ]
+  }
+}
 if (is_fuchsia) {
   group("http") {
     deps = [ ":http-v0_2_1" ]
@@ -3145,6 +3150,30 @@ rust_library("hex-v0_3_2") {
     "--edition=2015",
     "-Cmetadata=67ad4b3000c63154",
     "-Cextra-filename=-67ad4b3000c63154",
+  ]
+}
+
+rust_library("home-v0_5_3") {
+  crate_name = "home"
+  crate_root = "//third_party/rust_crates/vendor/home/src/lib.rs"
+  output_name = "home-9a402443b9ac5998"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  if (false) {
+    deps += [ ":winapi-v0_3_8" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=9a402443b9ac5998",
+    "-Cextra-filename=-9a402443b9ac5998",
   ]
 }
 
@@ -9442,6 +9471,7 @@ rust_library("winapi-v0_3_8") {
     "--cfg=feature=\"ntstatus\"",
     "--cfg=feature=\"processenv\"",
     "--cfg=feature=\"profileapi\"",
+    "--cfg=feature=\"shlobj\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"sysinfoapi\"",
     "--cfg=feature=\"timezoneapi\"",
