@@ -379,7 +379,6 @@ test("rw_tests") {
   sources = [ "rw.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
@@ -391,6 +390,24 @@ fuchsia_component("rw-tests") {
   deps = [
     ":manifests",
     ":rw_tests",
+  ]
+}
+
+test("sparse_tests") {
+  sources = [ "sparse.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("sparse-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/sparse-tests.cml"
+  deps = [
+    ":manifests",
+    ":sparse_tests",
   ]
 }
 
@@ -414,6 +431,7 @@ fuchsia_test_package("fs-tests") {
     ":rename-tests",
     ":resize-tests",
     ":rw-tests",
+    ":sparse-tests",
   ]
 }
 
@@ -436,8 +454,29 @@ fuchsia_component("max-file-tests") {
   ]
 }
 
+test("sparse_large_tests") {
+  sources = [ "sparse_large.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("sparse-large-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/sparse-large-tests.cml"
+  deps = [
+    ":manifests",
+    ":sparse_large_tests",
+  ]
+}
+
 fuchsia_test_package("large-fs-tests") {
-  test_components = [ ":max-file-tests" ]
+  test_components = [
+    ":max-file-tests",
+    ":sparse-large-tests",
+  ]
 }
 
 action("manifests") {
@@ -463,6 +502,8 @@ action("manifests") {
     "$target_gen_dir/rename-tests.cml",
     "$target_gen_dir/resize-tests.cml",
     "$target_gen_dir/rw-tests.cml",
+    "$target_gen_dir/sparse-tests.cml",
+    "$target_gen_dir/sparse-large-tests.cml",
   ]
   args = rebase_path(sources, root_build_dir) +
          rebase_path(outputs, root_build_dir)
