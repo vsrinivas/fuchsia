@@ -356,11 +356,7 @@ template("go_build") {
 
       if (defined(invoker.deps)) {
         deps += invoker.deps
-        args += [
-          "--root-build-dir",
-          rebase_path(root_build_dir),
-          "--go-dep-files",
-        ]
+        args += [ "--go-dep-files" ]
         foreach(dep, invoker.deps) {
           gen_dir = get_label_info(dep, "target_gen_dir")
           name = get_label_info(dep, "name")
