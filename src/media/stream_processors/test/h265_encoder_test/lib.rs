@@ -5,13 +5,17 @@
 mod h265;
 mod test_suite;
 
-use crate::h265::*;
 use crate::test_suite::*;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_async as fasync;
+use lazy_static::lazy_static;
 use std::rc::Rc;
 use stream_processor_test::*;
+
+lazy_static! {
+    static ref LOGGER: () = ::fuchsia_syslog::init().expect("Initializing syslog");
+}
 
 // Instructions for capturing output of encoder:
 // 1. Set the `output_file` field to write the encoded output into "/tmp/".
@@ -23,6 +27,7 @@ use stream_processor_test::*;
 
 #[test]
 fn h265_stream_output_generated() -> Result<()> {
+    *LOGGER;
     const WIDTH: u32 = 320;
     const HEIGHT: u32 = 240;
     let mut exec = fasync::Executor::new()?;
@@ -54,23 +59,7 @@ fn h265_stream_output_generated() -> Result<()> {
                 ..HevcEncoderSettings::empty()
             })
         }),
-        expected_nals: Some(vec![
-            H265NalKind::VPS,
-            H265NalKind::SPS,
-            H265NalKind::PPS,
-            H265NalKind::IRAP,
-            H265NalKind::NonIRAP,
-            H265NalKind::VPS,
-            H265NalKind::SPS,
-            H265NalKind::PPS,
-            H265NalKind::IRAP,
-            H265NalKind::NonIRAP,
-            H265NalKind::VPS,
-            H265NalKind::SPS,
-            H265NalKind::PPS,
-            H265NalKind::IRAP,
-            H265NalKind::NonIRAP,
-        ]),
+        expected_key_frames: Some(3),
         output_file: None,
     };
     exec.run_singlethreaded(test_case.run())?;

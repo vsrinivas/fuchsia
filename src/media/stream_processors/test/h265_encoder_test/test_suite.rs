@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_zircon as zx;
+use log::*;
 use std::io::Write;
 use std::rc::Rc;
 use stream_processor_encoder_factory::*;
@@ -15,8 +16,11 @@ use video_frame_stream::*;
 
 use crate::h265::*;
 
+/// Validates that the expected number of frames and key frames are received,
+/// and that all received NAL's are valid.
 pub struct H265NalValidator {
-    pub expected_nals: Option<Vec<H265NalKind>>,
+    pub expected_frames: Option<usize>,
+    pub expected_key_frames: Option<usize>,
     pub output_file: Option<&'static str>,
 }
 
@@ -41,31 +45,42 @@ impl OutputValidator for H265NalValidator {
             stream.append(&mut packet.data.clone());
         }
 
-        if let None = self.expected_nals {
-            return Ok(());
-        }
-        let expected = self.expected_nals.as_ref().unwrap();
+        let nals: Vec<H265NalKind> = stream.nal_iter().map(|n| n.kind).collect();
+        info!("nals {:?}", nals);
 
-        let mut current = 0;
+        let mut seen_frames = 0;
+        let mut seen_key_frames = 0;
         for nal in stream.nal_iter() {
-            if current >= expected.len() {
-                // ok to get more, we only validate the expected list
-                break;
+            if nal.kind == H265NalKind::IRAP || nal.kind == H265NalKind::NonIRAP {
+                seen_frames += 1;
+                if nal.kind == H265NalKind::IRAP {
+                    seen_key_frames += 1;
+                }
             }
 
-            if nal.kind != expected[current] {
+            if nal.kind == H265NalKind::Unknown {
+                return Err(format_err!("unknown NAL received"));
+            }
+        }
+
+        if let Some(expected_frames) = self.expected_frames {
+            if seen_frames != expected_frames {
                 return Err(format_err!(
-                    "Expected NAL kind {:?} got {:?} at index {}",
-                    expected[current],
-                    nal.kind,
-                    current
+                    "Wrong number of frames received {} {}",
+                    seen_frames,
+                    expected_frames
                 ));
             }
-            current += 1;
         }
 
-        if current != expected.len() {
-            return Err(format_err!("Too few NAL received"));
+        if let Some(expected_key_frames) = self.expected_key_frames {
+            if seen_key_frames != expected_key_frames {
+                return Err(format_err!(
+                    "Wrong number of key frames received {} {}",
+                    seen_key_frames,
+                    expected_key_frames
+                ));
+            }
         }
 
         Ok(())
@@ -77,7 +92,7 @@ pub struct H265EncoderTestCase {
     pub input_format: sysmem::ImageFormat2,
     // This is a function because FIDL unions are not Copy or Clone.
     pub settings: Rc<dyn Fn() -> EncoderSettings>,
-    pub expected_nals: Option<Vec<H265NalKind>>,
+    pub expected_key_frames: Option<usize>,
     pub output_file: Option<&'static str>,
 }
 
@@ -85,7 +100,8 @@ impl H265EncoderTestCase {
     pub async fn run(self) -> Result<()> {
         let stream = self.create_test_stream()?;
         let mut validators: Vec<Rc<dyn OutputValidator>> = vec![Rc::new(H265NalValidator {
-            expected_nals: self.expected_nals.clone(),
+            expected_frames: Some(self.num_frames),
+            expected_key_frames: self.expected_key_frames,
             output_file: self.output_file,
         })];
 
