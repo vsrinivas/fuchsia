@@ -17,27 +17,7 @@ import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":usb-virtual-bus-cdc-acm",
-    ":usb-virtual-bus-cdc-ecm",
-  ]
-}
-
-test("usb-virtual-bus-cdc-acm") {
-  output_name = "usb-virtual-bus-cdc-acm-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "usb-cdc-acm-test.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
-    "//sdk/lib/fdio",
-    "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/usb-virtual-bus-launcher",
-  ]
+  deps = [ ":usb-virtual-bus-cdc-ecm" ]
 }
 
 test("usb-virtual-bus-test") {
@@ -78,17 +58,6 @@ test("usb-virtual-bus-cdc-ecm") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
-  ]
-}
-
-unittest_package("usb-virtual-bus-cdc-acm-package") {
-  package_name = "usb-virtual-bus-cdc-acm"
-  deps = [ ":usb-virtual-bus-cdc-acm" ]
-
-  tests = [
-    {
-      name = "usb-virtual-bus-cdc-acm-test"
-    },
   ]
 }
 

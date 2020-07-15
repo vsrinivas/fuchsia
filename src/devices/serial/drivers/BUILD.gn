@@ -10,5 +10,6 @@ group("tests") {
     "ftdi:tests",
     "serial:tests",
     "serial-async:tests",
+    "usb-cdc-acm:tests",
   ]
 }

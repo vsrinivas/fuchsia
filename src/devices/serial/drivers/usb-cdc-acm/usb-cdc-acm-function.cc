@@ -211,9 +211,9 @@ zx_status_t FakeUsbCdcAcmFunction::UsbFunctionInterfaceSetConfigured(bool config
             },
         .ctx = this,
     };
-    zxlogf(ERROR, "usb-cdc-acm-function: about to configure!");
+    zxlogf(INFO, "usb-cdc-acm-function: about to configure!");
     if (data_out_req_) {
-      zxlogf(ERROR, "We have data out!");
+      zxlogf(INFO, "We have data out!");
     }
     RequestQueue(data_out_req_->request(), &complete);
   } else {

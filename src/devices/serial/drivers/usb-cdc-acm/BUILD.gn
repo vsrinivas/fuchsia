@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 driver_module("usb-cdc-acm") {
   defines = [ "_ALL_SOURCE" ]
@@ -47,4 +49,41 @@ driver_module("fake-usb-cdc-acm") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
   ]
+}
+
+test("usb-cdc-acm-integration") {
+  output_name = "usb-cdc-acm-integration-test"
+  sources = [ "usb-cdc-acm-test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/usb-virtual-bus-launcher",
+  ]
+}
+
+isolated_devmgr_unittest_package("usb-cdc-acm-integration-test") {
+  executable_path = "test/usb-cdc-acm-integration-test"
+  deps = [
+    ":fake-usb-cdc-acm",
+    ":usb-cdc-acm",
+    ":usb-cdc-acm-integration",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/serial/drivers/serial",
+    "//src/devices/usb/drivers/usb-bus",
+    "//src/devices/usb/drivers/usb-composite",
+    "//src/devices/usb/drivers/usb-peripheral",
+    "//src/devices/usb/drivers/usb-virtual-bus",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":usb-cdc-acm-integration-test" ]
 }

@@ -305,7 +305,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/devices/power/drivers/power:power-test",
     "//src/devices/power/drivers/vs680-power",
     "//src/devices/serial/bin/serial-test",
-    "//src/devices/serial/drivers/usb-cdc-acm:fake-usb-cdc-acm",
     "//src/devices/serial/drivers/virtio-console:virtio_console",
     "//src/devices/spi/drivers/dw-spi",
     "//src/devices/spi/drivers/mtk-spi",
