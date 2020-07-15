@@ -130,8 +130,12 @@ if (have_prebuilt_libvulkan) {
     ]
 
     # TODO(fxb/55650): Remove this once goldfish no longer depends on the
-    # library.
-    deps = [ "//zircon/system/ulib/async-default" ]
+    # async-default library.
+    deps = [
+      # libc.so.1 is needed by async-default.
+      "//build/unification/lib/sysroot",
+      "//zircon/system/ulib/async-default",
+    ]
     public_configs = [ ":libvulkan_config" ]
   }
 }
