@@ -136,7 +136,10 @@ class VmObjectPaged final : public VmObject {
   zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) override;
   zx_status_t FailPageRequests(uint64_t offset, uint64_t len, zx_status_t error_status) override;
 
-  void Dump(uint depth, bool verbose) override;
+  void Dump(uint depth, bool verbose) override {
+    Guard<Mutex> guard{&lock_};
+    DumpLocked(depth, verbose);
+  }
 
   zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
                             PageRequest* page_request, vm_page_t**, paddr_t*) override
@@ -180,6 +183,15 @@ class VmObjectPaged final : public VmObject {
   // Otherwise 'true' is returned and the page will have been returned to the pmm with a zero page
   // marker put in its place.
   bool DedupZeroPage(vm_page_t* page, uint64_t offset);
+
+  // This performs a very expensive validation that checks if pages have been split correctly in
+  // this VMO and is intended as a debugging aid. A return value of false indicates that the VMO
+  // hierarchy is corrupt and the system should probably panic as soon as possible. As a result,
+  // if false is returned this may write various additional information to the debuglog.
+  bool DebugValidatePageSplits() const {
+    Guard<Mutex> guard{&lock_};
+    return DebugValidatePageSplitsLocked();
+  }
 
  private:
   // private constructor (use Create())
@@ -397,6 +409,10 @@ class VmObjectPaged final : public VmObject {
     AssertHeld(ret.lock_);
     return ret;
   }
+
+  // Internal implementations that assume lock is already held.
+  void DumpLocked(uint depth, bool verbose) const TA_REQ(lock_);
+  bool DebugValidatePageSplitsLocked() const TA_REQ(lock_);
 
   // members
   const uint32_t options_;

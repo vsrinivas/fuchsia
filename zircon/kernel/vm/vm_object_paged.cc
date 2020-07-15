@@ -1149,13 +1149,10 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
   }
 }
 
-void VmObjectPaged::Dump(uint depth, bool verbose) {
+void VmObjectPaged::DumpLocked(uint depth, bool verbose) const {
   canary_.Assert();
 
-  // This can grab our lock.
-  uint64_t parent_id = parent_user_id();
-
-  Guard<Mutex> guard{&lock_};
+  uint64_t parent_id = original_parent_user_id_;
 
   size_t count = 0;
   page_list_.ForEveryPage([&count](const auto& p, uint64_t) {
@@ -3483,4 +3480,94 @@ bool VmObjectPaged::EvictPage(vm_page_t* page, uint64_t offset) {
 
   // |page| is now owned by the caller.
   return true;
+}
+
+bool VmObjectPaged::DebugValidatePageSplitsLocked() const {
+  if (!is_hidden()) {
+    // Nothing to validate on a leaf vmo.
+    return true;
+  }
+  // Assume this is valid until we prove otherwise.
+  bool valid = true;
+  page_list_.ForEveryPage([this, &valid](const VmPageOrMarker& page, uint64_t offset) {
+    if (!page.IsPage()) {
+      return ZX_ERR_NEXT;
+    }
+    vm_page_t* p = page.Page();
+    AssertHeld(this->lock_);
+    // We found a page in the hidden VMO, if it has been forked in either direction then we
+    // expect that if we search down that path we will find that the forked page and that no
+    // descendant can 'see' back to this page.
+    const VmObjectPaged* expected = nullptr;
+    if (p->object.cow_left_split) {
+      expected = &left_child_locked();
+    } else if (p->object.cow_right_split) {
+      expected = &right_child_locked();
+    } else {
+      return ZX_ERR_NEXT;
+    }
+
+    // We know this must be true as this is a hidden vmo and so left_child_locked and
+    // right_child_locked will never have returned null.
+    DEBUG_ASSERT(expected);
+
+    // No leaf VMO in expected should be able to 'see' this page and potentially re-fork it. To
+    // validate this we need to walk the entire sub tree.
+    const VmObjectPaged* cur = expected;
+    uint64_t off = offset;
+    // We start with cur being an immediate child of 'this', so we can preform subtree traversal
+    // until we end up back in 'this'.
+    while (cur != this) {
+      AssertHeld(cur->lock_);
+      // Check that we can see this page in the parent. Importantly this first checks if
+      // |off < cur->parent_offset_| allowing us to safely perform that subtraction from then on.
+      if (off < cur->parent_offset_ || off - cur->parent_offset_ < cur->parent_start_limit_ ||
+          off - cur->parent_offset_ >= cur->parent_limit_) {
+        // This blank case is used to capture the scenario where current does not see the target
+        // offset in the parent, in which case there is no point traversing into the children.
+      } else if (cur->is_hidden()) {
+        // A hidden VMO *may* have the page, but not necessarily if both children forked it out.
+        const VmPageOrMarker* l = cur->page_list_.Lookup(off - cur->parent_offset_);
+        if (!l || l->IsEmpty()) {
+          // Page not found, we need to recurse down into our children.
+          off -= cur->parent_offset_;
+          cur = &cur->left_child_locked();
+          continue;
+        }
+      } else {
+        // We already checked in the first 'if' branch that this offset was visible, and so this
+        // leaf VMO *must* have a page or marker to prevent it 'seeing' the already forked original.
+        const VmPageOrMarker* l = cur->page_list_.Lookup(off - cur->parent_offset_);
+        if (!l || l->IsEmpty()) {
+          printf("Failed to find fork of page %p (off %p) from %p in leaf node %p (off %p)\n", p,
+                 (void*)offset, this, cur, (void*)(off - cur->parent_offset_));
+          cur->DumpLocked(1, true);
+          this->DumpLocked(1, true);
+          valid = false;
+          return ZX_ERR_STOP;
+        }
+      }
+
+      // Find our next node by walking up until we see we have come from a left path, then go right.
+      do {
+        VmObjectPaged* next = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+        AssertHeld(next->lock_);
+        off += next->parent_offset_;
+        if (next == this) {
+          cur = next;
+          break;
+        }
+
+        // If we came from the left, go back down on the right, otherwise just keep going up.
+        if (cur == &next->left_child_locked()) {
+          off -= next->parent_offset_;
+          cur = &next->right_child_locked();
+          break;
+        }
+        cur = next;
+      } while (1);
+    }
+    return ZX_ERR_NEXT;
+  });
+  return valid;
 }

@@ -2057,6 +2057,30 @@ static bool vmo_eviction_test() {
   END_TEST;
 }
 
+// This test exists to provide a location for VmObjectPaged::DebugValidatePageSplits to be
+// regularly called so that it doesn't bitrot. Additionally it *might* detect VMO object corruption,
+// but it's primary goal is to test the implementation of DebugValidatePageSplits
+static bool vmo_validate_page_splits_test() {
+  BEGIN_TEST;
+
+  zx_status_t status = VmObject::ForEach([](const VmObject& vmo) -> zx_status_t {
+    if (vmo.is_paged()) {
+      const VmObjectPaged& paged = static_cast<const VmObjectPaged&>(vmo);
+      if (!paged.DebugValidatePageSplits()) {
+        return ZX_ERR_INTERNAL;
+      }
+    }
+    return ZX_OK;
+  });
+
+  // Although DebugValidatePageSplits says to panic as soon as possible if it returns false, this
+  // test errs on side of assuming that the validation is broken, and not the hierarchy, and so does
+  // not panic. Either way the test still fails, this is just more graceful.
+  EXPECT_EQ(ZX_OK, status);
+
+  END_TEST;
+}
+
 // TODO(ZX-1431): The ARM code's error codes are always ZX_ERR_INTERNAL, so
 // special case that.
 #if ARCH_ARM64
@@ -3314,6 +3338,7 @@ VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(vmo_move_pages_on_access_test)
 VM_UNITTEST(vmo_eviction_test)
+VM_UNITTEST(vmo_validate_page_splits_test)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(vm_kernel_region_test)
 VM_UNITTEST(region_list_get_alloc_spot_test)
