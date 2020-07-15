@@ -5,6 +5,7 @@
 use {
     anyhow::Result,
     serde_json::value::Value,
+    std::collections::hash_map::Iter,
     std::sync::{Arc, RwLock},
 };
 
@@ -44,4 +45,6 @@ pub trait Collection {
     fn get(&self, key: &str) -> Result<Element>;
     /// Forces this collection to be written to disk.
     fn flush(&self) -> Result<()>;
+    /// Iterator over the key,value pairs in the collection.
+    fn iter(&self) -> Iter<'_, String, Value>;
 }

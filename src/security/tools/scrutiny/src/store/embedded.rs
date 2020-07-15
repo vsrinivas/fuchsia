@@ -11,6 +11,7 @@ use {
     log::{info, trace},
     serde::{Deserialize, Serialize},
     serde_json::value::Value,
+    std::collections::hash_map::Iter,
     std::collections::HashMap,
     std::fs::{self, File},
     std::io::Write,
@@ -108,6 +109,7 @@ impl Store for EmbeddedStore {
 
     /// Flushes all the collections to disk.
     fn flush(&self) -> Result<()> {
+        info!("Store: flushing to disk {}", self.uri);
         for collection in self.collections.values() {
             collection.read().unwrap().flush()?;
         }
@@ -176,6 +178,10 @@ impl Collection for EmbeddedCollection {
         let mut file = File::create(&self.path)?;
         file.write_all(serialized.as_bytes())?;
         Ok(())
+    }
+
+    fn iter(&self) -> Iter<'_, String, Value> {
+        self.collection.elements.iter()
     }
 }
 

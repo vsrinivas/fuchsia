@@ -21,26 +21,51 @@ pub struct DataModel {
     components: RwLock<Vec<Component>>,
     manifests: RwLock<Vec<Manifest>>,
     routes: RwLock<Vec<Route>>,
-    _store: Box<dyn Store>,
+    store: RwLock<Box<dyn Store>>,
 }
 
 impl DataModel {
     /// Connects to the internal data store and setups everything.
     pub fn connect(uri: String) -> Result<Self> {
-        let store: Box<dyn Store> = Box::new(EmbeddedStore::connect(uri)?);
+        let store: RwLock<Box<dyn Store>> =
+            DataModel::setup_schema(Box::new(EmbeddedStore::connect(uri)?))?;
+
+        let mut components = Vec::new();
+        if let Ok(guard) = store.write().unwrap().get("components") {
+            let collection = guard.read().unwrap();
+            for (_index, component) in collection.iter() {
+                components.push(serde_json::from_value(component.clone())?);
+            }
+        }
+
+        let mut manifests = Vec::new();
+        if let Ok(guard) = store.write().unwrap().get("manifests") {
+            let collection = guard.read().unwrap();
+            for (_index, manifest) in collection.iter() {
+                manifests.push(serde_json::from_value(manifest.clone())?);
+            }
+        }
+
+        let mut routes = Vec::new();
+        if let Ok(guard) = store.write().unwrap().get("routes") {
+            let collection = guard.read().unwrap();
+            for (_index, route) in collection.iter() {
+                routes.push(serde_json::from_value(route.clone())?);
+            }
+        }
+
         Ok(Self {
-            components: RwLock::new(Vec::new()),
-            manifests: RwLock::new(Vec::new()),
-            routes: RwLock::new(Vec::new()),
-            _store: DataModel::setup_schema(store)?,
+            components: RwLock::new(components),
+            manifests: RwLock::new(manifests),
+            routes: RwLock::new(routes),
+            store,
         })
     }
 
     /// Verifies the underlying data model is running the correct current
     /// schema.
-    fn setup_schema(mut store: Box<dyn Store>) -> Result<Box<dyn Store>> {
-        let collection_names =
-            vec!["components", "component_instances", "manifests", "routes", "protocols"];
+    fn setup_schema(mut store: Box<dyn Store>) -> Result<RwLock<Box<dyn Store>>> {
+        let collection_names = vec!["components", "manifests", "routes"];
 
         if let Ok(collection) = store.get("scrutiny") {
             let scrutiny: Scrutiny =
@@ -81,7 +106,7 @@ impl DataModel {
             }
             store.flush()?;
         }
-        Ok(store)
+        Ok(RwLock::new(store))
     }
 
     pub fn components(&self) -> &RwLock<Vec<Component>> {
@@ -94,6 +119,30 @@ impl DataModel {
 
     pub fn routes(&self) -> &RwLock<Vec<Route>> {
         &self.routes
+    }
+
+    pub fn flush(&self) -> Result<()> {
+        let mut store = self.store.write().unwrap();
+        if let Ok(mut collection) = store.get("components").unwrap().write() {
+            for component in self.components.read().unwrap().iter() {
+                collection
+                    .insert(component.id.to_string(), serde_json::to_value(component).unwrap())?;
+            }
+        }
+        if let Ok(mut collection) = store.get("routes").unwrap().write() {
+            for route in self.routes.read().unwrap().iter() {
+                collection.insert(route.id.to_string(), serde_json::to_value(route).unwrap())?;
+            }
+        }
+        if let Ok(mut collection) = store.get("manifests").unwrap().write() {
+            for manifest in self.manifests.read().unwrap().iter() {
+                collection.insert(
+                    manifest.component_id.to_string(),
+                    serde_json::to_value(manifest).unwrap(),
+                )?;
+            }
+        }
+        store.flush()
     }
 }
 
@@ -172,4 +221,34 @@ pub struct Protocol {
     pub id: i32,
     pub interface: String,
     pub path: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, tempfile::tempdir};
+
+    fn create_model() -> (String, DataModel) {
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        let uri_clone = uri.clone();
+        (uri, DataModel::connect(uri_clone).unwrap())
+    }
+
+    #[test]
+    fn test_model_flush_empty() {
+        let (_, model) = create_model();
+        assert_eq!(model.flush().is_ok(), true);
+    }
+
+    #[test]
+    fn test_model_flush_insert() {
+        let (uri, model) = create_model();
+        let component = Component { id: 0, url: "foo".to_string(), version: 1, inferred: true };
+        model.components().write().unwrap().push(component);
+        assert_eq!(model.flush().is_ok(), true);
+        drop(model);
+
+        let reloaded_model = DataModel::connect(uri.clone()).unwrap();
+        assert_eq!(reloaded_model.components.read().unwrap().len(), 1);
+    }
 }

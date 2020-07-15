@@ -63,13 +63,16 @@ impl CollectorInstance {
                         *state = CollectorState::Running;
                     }
 
-                    if let Err(e) = data_collector.collect(model) {
+                    if let Err(e) = data_collector.collect(Arc::clone(&model)) {
                         error!("Collector failed with error {}", e);
                     }
 
                     {
                         let mut state = collector_state.lock().unwrap();
                         *state = CollectorState::Idle;
+                        if let Err(e) = model.flush() {
+                            error!("Store failed to flush results after colletion {}", e);
+                        }
                     }
                 }
                 CollectorMessage::Terminate => {
