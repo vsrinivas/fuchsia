@@ -27,6 +27,17 @@ impl<T: Send> Task<T> {
         super::executor::spawn(future);
         Task { remote_handle }
     }
+
+    /// Spawn a new task backed by a thread
+    /// TODO: Consider using a backing thread pool to alleviate the cost of spawning new threads
+    /// if this proves to be a bottleneck.
+    pub fn blocking(future: impl Future<Output = T> + Send + 'static) -> Task<T> {
+        let (future, remote_handle) = future.remote_handle();
+        std::thread::spawn(move || {
+            super::executor::Executor::new().unwrap().run_singlethreaded(future)
+        });
+        Task { remote_handle }
+    }
 }
 
 impl<T> Task<T> {
