@@ -1,2 +1,7 @@
 [
+  {
+    "label": "//sdk/lib/fdio:fdio",
+    "name": "fdio",
+    "sdk": true
+  }
 ]

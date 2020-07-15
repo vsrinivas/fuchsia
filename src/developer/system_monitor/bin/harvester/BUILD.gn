@@ -124,9 +124,9 @@ executable("system_monitor_harvester_test") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
-    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fdio",
   ]
 }
 
