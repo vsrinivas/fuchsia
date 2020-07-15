@@ -356,10 +356,16 @@ zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
   session_state->wait.options = 0;
   session_state->svc = svc;
 
+  // If loader_serice_attach is being called from a different thread than the
+  // dispatcher, it is important that the refcount is already correct, thus we
+  // must increment here and decrement after wait registration if that fails.
+
+  loader_service_addref(svc);  // Balanced below or by |loader_service_handler|.
+
   status = async_begin_wait(svc->dispatcher, &session_state->wait);
 
-  if (status == ZX_OK) {
-    loader_service_addref(svc);  // Balanced in |loader_service_handler|.
+  if (status != ZX_OK) {
+    loader_service_deref(svc);
   }
 
 done:
