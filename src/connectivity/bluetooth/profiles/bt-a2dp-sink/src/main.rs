@@ -9,7 +9,7 @@ use {
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
     bt_a2dp::{codec::MediaCodecConfig, media_types::*, stream},
-    bt_a2dp_sink_metrics as metrics,
+    bt_a2dp_metrics as metrics,
     bt_avdtp::{
         self as avdtp, AvdtpControllerPool, ServiceCapability, ServiceCategory, StreamEndpoint,
     },
@@ -36,9 +36,7 @@ use crate::connected_peers::ConnectedPeers;
 
 mod avrcp_relay;
 mod connected_peers;
-mod inspect_types;
 mod latm;
-mod peer;
 mod player;
 mod sink_task;
 mod volume_relay;
@@ -222,7 +220,7 @@ fn handle_connection(
     peers.connected(peer_id.clone(), channel, initiate);
     if let Some(peer) = peers.get(&peer_id) {
         // Add the controller to the peers
-        controller_pool.peer_connected(peer_id.clone(), peer.read().avdtp_peer());
+        controller_pool.peer_connected(peer_id.clone(), peer.read().avdtp());
     }
 }
 

@@ -7,16 +7,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//third_party/cobalt/metrics_registry.gni")
 import("//third_party/protobuf/proto_library.gni")
-
-metrics_registry("bt_a2dp_sink_metrics") {
-  # This must match the ID of our Cobalt project as specified in:
-  # third_party/cobalt_config/projects.yaml
-  project_id = 2322225253
-  generate_rust = true
-  generate_binarypb = false
-}
 
 rustc_binary("bin") {
   name = "bt_a2dp_sink"
@@ -24,7 +15,6 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    ":bt_a2dp_sink_metrics_rustlib",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avdtp:fuchsia.bluetooth.avdtp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
@@ -38,6 +28,7 @@ rustc_binary("bin") {
     "//src/connectivity/bluetooth/fidl:component-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/connectivity/bluetooth/lib/bt-a2dp",
+    "//src/connectivity/bluetooth/lib/bt-a2dp:bt_a2dp_metrics_rustlib",
     "//src/connectivity/bluetooth/lib/bt-avdtp",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-codec",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
@@ -72,7 +63,7 @@ rustc_binary("bin") {
 package("bt-a2dp-sink") {
   deps = [
     ":bin",
-    ":bt_a2dp_sink_metrics",
+    "//src/connectivity/bluetooth/lib/bt-a2dp:bt_a2dp_metrics",
   ]
 
   binaries = [

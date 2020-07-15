@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     bt_a2dp::{codec::MediaCodecConfig, inspect::DataStreamInspect, media_task::*},
-    bt_a2dp_sink_metrics as metrics,
+    bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, MediaStream},
     fuchsia_async,
     fuchsia_bluetooth::types::PeerId,

@@ -5,7 +5,7 @@
 use {
     anyhow::format_err,
     bt_a2dp::media_types::*,
-    bt_a2dp::stream::Streams,
+    bt_a2dp::{peer::Peer, stream::Streams},
     bt_avdtp as avdtp,
     fidl_fuchsia_bluetooth_bredr::{Channel, ProfileDescriptor, ProfileProxy},
     fuchsia_async as fasync,
@@ -15,18 +15,19 @@ use {
     },
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::Inspect,
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     parking_lot::RwLock,
     std::{collections::hash_map::Entry, collections::HashMap, convert::TryInto, sync::Arc},
 };
 
-use crate::{avrcp_relay::AvrcpRelay, peer, SBC_SEID};
+use crate::{avrcp_relay::AvrcpRelay, SBC_SEID};
 
 /// ConnectedPeers owns the set of connected peers and manages peers based on
 /// discovery, connections and disconnections.
 pub struct ConnectedPeers {
     /// The set of connected peers.
-    connected: DetachableMap<PeerId, RwLock<peer::Peer>>,
+    connected: DetachableMap<PeerId, RwLock<Peer>>,
     /// ProfileDescriptors from discovering the peer.
     descriptors: HashMap<PeerId, Option<ProfileDescriptor>>,
     /// The set of streams that are made available to peers.
@@ -60,7 +61,7 @@ impl ConnectedPeers {
         }
     }
 
-    pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<RwLock<peer::Peer>>> {
+    pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<RwLock<Peer>>> {
         self.connected.get(id).and_then(|p| p.upgrade())
     }
 
@@ -69,10 +70,10 @@ impl ConnectedPeers {
     }
 
     async fn start_streaming(
-        peer: &DetachableWeak<PeerId, RwLock<peer::Peer>>,
+        peer: &DetachableWeak<PeerId, RwLock<Peer>>,
     ) -> Result<(), anyhow::Error> {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
-        let remote_streams = strong.read().get_remote_capabilities().await?;
+        let remote_streams = strong.read().collect_capabilities().await?;
 
         // Find the SBC stream, which should exist (it is required)
         // TODO(39321): Prefer AAC when remote peer supports AAC.
@@ -102,7 +103,7 @@ impl ConnectedPeers {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
         let _ = strong
             .read()
-            .start_stream(
+            .stream_start(
                 SBC_SEID.try_into().unwrap(),
                 remote_stream.local_id().clone(),
                 sbc_settings.clone(),
@@ -147,14 +148,17 @@ impl ConnectedPeers {
                     }
                 };
 
-                let mut peer = peer::Peer::create(
+                let mut peer = Peer::create(
                     id,
                     avdtp_peer,
                     self.streams.as_new(),
                     self.profile.clone(),
-                    self.inspect.create_child(inspect::unique_name("peer_")),
-                    self.cobalt_sender.clone(),
+                    Some(self.cobalt_sender.clone()),
                 );
+
+                if let Err(e) = peer.iattach(&self.inspect, inspect::unique_name("peer_")) {
+                    fx_log_warn!("Couldn't attach peer {} to inspect tree: {:?}", id, e);
+                }
 
                 // Start remote discovery if profile information exists for the device_id
                 // and a2dp sink not assuming the INT role.
@@ -226,12 +230,12 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
-    fn exercise_avdtp(exec: &mut fasync::Executor, remote: zx::Socket, peer: &peer::Peer) {
+    fn exercise_avdtp(exec: &mut fasync::Executor, remote: zx::Socket, peer: &Peer) {
         let remote_avdtp = avdtp::Peer::new(remote).expect("remote control should be creatable");
         let mut remote_requests = remote_avdtp.take_request_stream();
 
         // Should be able to actually communicate via the peer.
-        let avdtp = peer.avdtp_peer();
+        let avdtp = peer.avdtp();
         let discover_fut = avdtp.discover();
 
         futures::pin_mut!(discover_fut);
