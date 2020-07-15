@@ -22,11 +22,23 @@ namespace modular {
 using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
 using intl::IntlPropertyProviderImpl;
 
+namespace {
+
+// TODO(MF-134): This key is duplicated in
+// topaz/lib/settings/lib/device_info.dart. Remove this key once factory reset
+// is provided to topaz as a service.
+// The key for factory reset toggles.
+constexpr char kFactoryResetKey[] = "FactoryReset";
+
+}  // namespace
+
 BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
                          std::shared_ptr<sys::ServiceDirectory> incoming_services,
                          std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
                          fuchsia::sys::LauncherPtr launcher,
                          fuchsia::ui::policy::PresenterPtr presenter,
+                         fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
+                         fuchsia::wlan::service::WlanPtr wlan,
                          fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                          fit::function<void()> on_shutdown)
     : config_(std::move(config)),
@@ -34,6 +46,8 @@ BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
       outgoing_services_(std::move(outgoing_services)),
       launcher_(std::move(launcher)),
       presenter_(std::move(presenter)),
+      device_settings_manager_(std::move(device_settings_manager)),
+      wlan_(std::move(wlan)),
       device_administrator_(std::move(device_administrator)),
       on_shutdown_(std::move(on_shutdown)),
       session_provider_("SessionProvider") {
@@ -106,11 +120,11 @@ void BasemgrImpl::Start() {
           return;
         }
         FX_DLOGS(INFO) << "Re-starting due to session closure";
-        StartSession(use_random_session_id_);
+        HandleResetOrStartSession();
       }));
 
   ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToBaseMgr);
-  StartSession(use_random_session_id_);
+  HandleResetOrStartSession();
 }
 
 void BasemgrImpl::Shutdown() {
@@ -170,6 +184,33 @@ void BasemgrImpl::UpdateSessionShellConfig() {
     FX_LOGS(WARNING) << "More than one session shell config defined, using first in list: "
                      << session_shell_config_.url();
   }
+}
+
+void BasemgrImpl::HandleResetOrStartSession() {
+  auto start_session = [this] { StartSession(use_random_session_id_); };
+
+  // TODO(MF-347): Handle scenario where device settings manager channel is
+  // dropped before error handler is set.
+  // TODO(MF-134): Modular should not be handling factory reset.
+  device_settings_manager_.set_error_handler(
+      [start_session](zx_status_t status) { start_session(); });
+  device_settings_manager_->GetInteger(
+      kFactoryResetKey,
+      [this, start_session](int factory_reset_value, fuchsia::devicesettings::Status status) {
+        if (status == fuchsia::devicesettings::Status::ok && factory_reset_value > 0) {
+          FX_LOGS(INFO) << "Factory reset initiated";
+          // Unset the factory reset flag.
+          device_settings_manager_->SetInteger(kFactoryResetKey, 0, [](bool result) {
+            if (!result) {
+              FX_LOGS(WARNING) << "Factory reset flag was not updated.";
+            }
+          });
+
+          wlan_->ClearSavedNetworks(start_session);
+        } else {
+          start_session();
+        }
+      });
 }
 
 void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
