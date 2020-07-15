@@ -195,7 +195,9 @@ def main():
     env = {
         # /usr/bin:/bin are required for basic things like bash(1) and env(1). Note
         # that on Mac, ld is also found from /usr/bin.
-        'PATH': "/usr/bin:/bin",
+        'PATH': os.path.join(build_goroot, 'bin') + ":/usr/bin:/bin",
+        # Disable modules to ensure Go doesn't try to download dependencies.
+        'GO111MODULE': 'off',
         'GOARCH': goarch,
         'GOOS': goos,
         'GOPATH': gopath,
