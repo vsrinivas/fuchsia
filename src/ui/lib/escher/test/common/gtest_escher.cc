@@ -86,11 +86,11 @@ void EscherEnvironment::SetUp() {
     }
 
     VulkanDeviceQueues::Params device_params(
-        {{VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME, VK_KHR_MAINTENANCE1_EXTENSION_NAME,
-          VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
-
+        {{VK_KHR_MAINTENANCE1_EXTENSION_NAME, VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
           VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME, VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME},
-         {},
+         {
+             VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
+         },
          vk::SurfaceKHR()});
 #ifdef VK_USE_PLATFORM_FUCHSIA
     device_params.required_extension_names.insert(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
