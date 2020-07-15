@@ -2792,8 +2792,6 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
   char* ram_cmp;
   zx_status_t err;
   bool ret = true;
-  int address;
-  int offset;
   int len;
 
   /* read back and verify */
@@ -2804,8 +2802,9 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
     return true;
   }
 
-  address = ram_addr;
-  offset = 0;
+  const char* expected_data = static_cast<const char*>(ram_data);
+  int address = ram_addr;
+  int offset = 0;
   while (offset < (int)ram_sz) {
     len = ((offset + MEMBLOCK) < (int)ram_sz) ? MEMBLOCK : ram_sz - offset;
     err = brcmf_sdiod_ramrw(sdiodev, false, address, (uint8_t*)ram_cmp, len);
@@ -2813,8 +2812,15 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
       BRCMF_ERR("error %d on reading %d membytes at 0x%08x", err, len, address);
       ret = false;
       break;
-    } else if (memcmp(ram_cmp, static_cast<const char*>(ram_data) + offset, len)) {
-      BRCMF_ERR("Downloaded RAM image is corrupted, block offset is %d, len is %d", offset, len);
+    } else if (memcmp(ram_cmp, expected_data + offset, len)) {
+      /* On failure, find the byte offset so we can print a detailed error */
+      for (int ndx = 0; ndx < len; ndx++) {
+        if (ram_cmp[ndx] != expected_data[offset + ndx]) {
+          BRCMF_ERR("Downloaded RAM image is corrupted at offset %d of %zu (saw:%#x expect:%#x)",
+                    offset, ram_sz, ram_cmp[ndx], expected_data[offset + ndx]);
+          break;
+        }
+      }
       ret = false;
       break;
     }
