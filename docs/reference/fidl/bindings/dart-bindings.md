@@ -5,17 +5,17 @@
 Given the library declaration:
 
 ```fidl
-library games.tictactoe;
+library fuchsia.examples;
 ```
 
 The bindings code for this library is generated into a
-`fidl_games_tictactoe_async` dart library. The `fidl_` prefix and `_async`
+`fidl_fuchsia_examples_async` dart library. The `fidl_` prefix and `_async`
 suffix are hardcoded by the FIDL toolchain.
 
 This code can then be imported using:
 
 ```dart
-import 'package:fidl_games_tictactoe/fidl_async.dart' as tictactoe;
+{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fidl_packages/test/types_test.dart" region_tag="import" %}
 ```
 
 ## Constants {#constants}
@@ -24,8 +24,7 @@ All [constants][lang-constants] are generated as a `const`. For example, the
 following constants:
 
 ```fidl
-const uint8 BOARD_SIZE = 9;
-const string NAME = "Tic-Tac-Toe";
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 ```
 
 Are generated as:
@@ -107,11 +106,7 @@ after receiving the empty response from the server.
 Given the [bits][lang-bits] definition:
 
 ```fidl
-bits FileMode : uint16 {
-    READ = 0b001;
-    WRITE = 0b010;
-    EXECUTE = 0b100;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="bits" %}
 ```
 
 The FIDL toolchain generates a `FileMode` class with `static const` variables
@@ -130,50 +125,57 @@ for each bits member, as well as for a `FileMode` with no flags set:
 * `FileMode operator &(FileMode other)`: Bitwise and operator.
 * `bool operator(dynamic other)`: Equality operator.
 
+Example usage:
+
+```dart
+{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="bits" adjust_indentation="auto" %}
+```
+
 ### Enums {#enums}
 
 Given the [enum][lang-enums] definition:
 
 ```fidl
-enum Color {
-    RED = 1;
-    GREEN = 2;
-    BLUE = 3;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
-The FIDL toolchain generates a `Color` class with `static const` variables for
+The FIDL toolchain generates a `LocationType` class with `static const` variables for
 each enum member:
 
-* `static const Color red`
-* `static const Color green`
-* `static const Color blue`
+* `static const LocationType museum`
+* `static const LocationType airport`
+* `static const LocationType restaurant`
 
 As well as the following variables:
 
-* `static const Map<String, Color> $valuesMap`: A mapping ofthe string
-  representation of the member (`'red'`, `'green'`, or `'blue'`) to its
-  corresponding enum value (`Color.red`, `Color.green`, or `Color.blue`)
-* `static const List<Color> $values`: A list of all of the Colors.
+* `static const Map<String, LocationType> $valuesMap`: A mapping ofthe string
+  representation of the member (`'museum'`, `'airport'`, or `'restaurant'`) to
+  its corresponding enum value (`LocationType.museum`, `LocationType.airport`,
+  or `LocationType.restaurant`)
+* `static const List<LocationType> $values`: A list of all of the LocationTypes.
 
-`Color` provides the following methods:
+`LocationType` provides the following methods:
 
-* `factory Color(int v)`: Factory constructor that returns the corresponding
-  `Color` static const variable (`red`, `green`, or `blue`) if the input matches
-  one of the discriminants, or `null` otherwise.
-* `static Color $valueOf(String name)`: Look up a string name in the
+* `factory LocationType(int v)`: Factory constructor that returns the
+  corresponding `LocationType` static const variable (`museum`, `airport`, or
+  `restaurant`) if the input matches one of the discriminants, or `null`
+  otherwise.
+* `static LocationType $valueOf(String name)`: Look up a string name in the
   `$valuesMap`.
-* `String toString()`: Returns a readable representation of the `Color`.
+* `String toString()`: Returns a readable representation of the `LocationType`.
+
+Example usage:
+
+```dart
+{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" adjust_indentation="auto" %}
+```
 
 ### Structs {#structs}
 
 Given the [struct][lang-structs] declaration:
 
 ```fidl
-struct Color {
-    uint32 id;
-    string name = "red";
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
 ```
 
 The FIDL toolchain generates a `Color` class with the following methods:
@@ -181,6 +183,8 @@ The FIDL toolchain generates a `Color` class with the following methods:
 * `const Color({@required id, name})`: The constructor for `Color` takes named
   arguments corresponding to the `struct`'s fields. Fields that are not nullable
   and do not have a default value specified are marked as `@required`.
+* `int get id`: Getter for the `id` field.
+* `String get name`: Getter for the `name` field.
 * `Color.clone(Color, {int id, String name})`: Clone constructor that will clone
   an existing `Color`, possibly overriding specific field values based on the
   provided named arguments.
@@ -189,16 +193,18 @@ The FIDL toolchain generates a `Color` class with the following methods:
 * `bool operator==(dynamic other)`: Equality operator that performs a deep
   comparison when compared to another instance of a `Color`.
 
+Example usage:
+
+```dart
+{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" adjust_indentation="auto" %}
+```
+
 ### Unions {#unions}
 
 Given the union definition:
 
 ```fidl
-union JsonValue {
-    1: reserved;
-    2: int32 int_value;
-    3: string string_value;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
 ```
 
 FIDL generates an `enum` representing the [tags][union-lexicon] of the union:
@@ -220,10 +226,16 @@ As well as a `JsonValue` class with the following methods:
   value. If the instance's variant does not match the getter method, `null` is
   returned.
 * `String toString()`: Returns a readable string of the `JsonValue`.
-* `int get $ordinal`: Setter for the underlying [ordinal][union-lexicon] value.
-* `Object get $data`: Setter for the underlying union data.
+* `int get $ordinal`: Getter for the underlying [ordinal][union-lexicon] value.
+* `Object get $data`: Getter for the underlying union data.
 * `bool operator ==(dynamic other)`: Equality operator that performs deep
    comparison when compared to another `JsonValue` of the same variant.
+
+Example usage:
+
+```dart
+{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" adjust_indentation="auto" %}
+```
 
 #### Flexible unions and unknown variants
 
@@ -253,20 +265,24 @@ unknown variant.
 
 Given the [table][lang-tables] definition:
 
-```table
-table User {
-    1: reserved;
-    2: uint8 age;
-    3: string name;
-};
+```fidl
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
 ```
 
 The FIDL toolchain generates a `User` class that defines the following methods:
 
 * `const User({age, name})`: Constructor for `User`.
+* `int get age`: Getter for the `age` field.
+* `String get name`: Getter for the `name` field.
 * `Map<int, dynamic> get $fields`: Returns a map of ordinals to field values.
 * `bool operator ==(dynamic other)`: Equality operator that performs deep
   comparison when compared to another `User`.
+
+Example usage:
+
+```dart
+{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" adjust_indentation="auto" %}
+```
 
 ## Protocols {#protocols}
 
