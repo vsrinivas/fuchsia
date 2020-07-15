@@ -20,8 +20,8 @@
             ],
             inspect: [
                 {
-                    path: "timezone.cmx",
-                    contents: {
+                    moniker: "timezone.cmx",
+                    payload: {
                         root: {
                             "fuchsia.inspect.Health": {
                                 start_timestamp_nanos: 17453421103,
@@ -39,8 +39,8 @@
             no: [],
             inspect: [
                 {
-                    path: "timezone.cmx",
-                    contents: {
+                    moniker: "timezone.cmx",
+                    payload: {
                         root: {
                             "fuchsia.inspect.Health": {
                                 start_timestamp_nanos: 17453421103,

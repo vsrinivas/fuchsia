@@ -118,8 +118,8 @@ mod test {
         };
         let content = r#"[
             {
-                "path": "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
-                "contents": {
+                "moniker": "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
+                "payload": {
                     "root": {
                         "data_stats": {
                             "global_data": {
@@ -152,8 +152,8 @@ mod test {
         };
         let content = r#"[
             {
-                "path": "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
-                "contents": {
+                "moniker": "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
+                "payload": {
                     "root": {
                         "data_stats": {
                             "global_data": {

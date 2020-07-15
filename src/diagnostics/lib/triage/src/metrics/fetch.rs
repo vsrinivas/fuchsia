@@ -106,10 +106,7 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
         }
 
         fn path_from(component: &JsonValue) -> Result<String, Error> {
-            let value = match extract_json_value(component, "moniker") {
-                Err(_) => extract_json_value(component, "path"),
-                v => v,
-            }?;
+            let value = extract_json_value(component, "moniker")?;
             Ok(value
                 .as_str()
                 .ok_or_else(|| anyhow!("Inspect component path wasn't a valid string"))?
@@ -126,10 +123,7 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
             .map(|raw_component| {
                 let path = path_from(raw_component)?;
                 let moniker = moniker_from(&path)?;
-                let raw_contents = match extract_json_value(raw_component, "payload") {
-                    Err(_) => extract_json_value(raw_component, "contents"),
-                    v => v,
-                }?;
+                let raw_contents = extract_json_value(raw_component, "payload")?;
                 let processed_data: NodeHierarchy = serde_json::from_value(raw_contents.clone())
                     .with_context(|| {
                         format!(
@@ -213,10 +207,10 @@ mod test {
     fn test_fetch() -> Result<(), Error> {
         let json_options = vec![
             r#"[
-        {"path":"asdf/foo/qwer",
-         "contents":{"root":{"dataInt":5, "child":{"dataFloat":2.3}}}},
-        {"path":"zxcv/bar/hjkl",
-         "contents":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
+        {"moniker":"asdf/foo/qwer",
+         "payload":{"root":{"dataInt":5, "child":{"dataFloat":2.3}}}},
+        {"moniker":"zxcv/bar/hjkl",
+         "payload":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
         ]"#,
             r#"[
         {"moniker":"asdf/foo/qwer",

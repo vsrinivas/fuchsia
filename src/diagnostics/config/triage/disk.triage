@@ -31,8 +31,8 @@
             no: [],
             inspect: [
                 {
-                    path: "archivist.cmx",
-                    contents: {
+                    moniker: "archivist.cmx",
+                    payload: {
                         root: {
                             data_stats: {
                                 global_data: {
@@ -54,8 +54,8 @@
             ],
             inspect: [
                 {
-                    path: "archivist.cmx",
-                    contents: {
+                    moniker: "archivist.cmx",
+                    payload: {
                         root: {
                             data_stats: {
                                 global_data: {

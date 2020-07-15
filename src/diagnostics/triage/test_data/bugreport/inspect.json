@@ -1,7 +1,7 @@
 [
     {
-        "path": "/hub/c/feedback_agent.cmx/1641492/out/inspect/root.inspect",
-        "contents": {
+        "moniker": "/hub/c/feedback_agent.cmx/1641492/out/inspect/root.inspect",
+        "payload": {
             "root": {
                 "current_num_connections": 1,
                 "total_num_connections": 1
@@ -9,8 +9,8 @@
         }
     },
     {
-        "path": "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
-        "contents": {
+        "moniker": "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
+        "payload": {
             "root": {
                 "data_stats": {
                     "global_data": {
