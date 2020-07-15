@@ -201,20 +201,20 @@ TEST(XUnion, SimpleTable) {
 }
 
 TEST(XUnion, SerializeAndDeserializeInt32) {
-  SampleXUnion input;
-  input.set_i(0xdeadbeef);
+  SampleXUnionInStruct input;
+  input.xu.set_i(0xdeadbeef);
 
-  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnionInStruct>(input)));
 }
 
 TEST(XUnion, SerializeAndDeserializeSimpleUnion) {
   SimpleUnion su;
   su.set_str("hello");
 
-  SampleXUnion input;
-  input.set_su(std::move(su));
+  SampleXUnionInStruct input;
+  input.xu.set_su(std::move(su));
 
-  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnionInStruct>(input)));
 }
 
 TEST(XUnion, SerializeAndDeserializeSimpleTable) {
@@ -222,10 +222,10 @@ TEST(XUnion, SerializeAndDeserializeSimpleTable) {
   st.set_x(42);
   st.set_y(67);
 
-  SampleXUnion input;
-  input.set_st(std::move(st));
+  SampleXUnionInStruct input;
+  input.xu.set_st(std::move(st));
 
-  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnionInStruct>(input)));
 }
 
 TEST(InlineXUnionInStruct, VerifyWireFormatXUnionIsPresent) {

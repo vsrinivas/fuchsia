@@ -28,7 +28,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	const auto expected = {{ .Bytes }};
 	{{/* Must use a variable because macros don't understand commas in template args. */}}
 	const auto result =
-		fidl::test::util::ValueToBytes<{{ .ValueType }}, {{ .EncoderType }}>(
+		fidl::test::util::ValueToBytes<{{ .ValueType }}>(
 			{{ .ValueVar }}, expected);
 	EXPECT_TRUE(result);
 }
@@ -47,7 +47,7 @@ TEST(Conformance, {{ .Name }}_Decode) {
 {{ range .EncodeFailureCases }}
 TEST(Conformance, {{ .Name }}_Encode_Failure) {
 	{{ .ValueBuild }}
-	fidl::test::util::CheckEncodeFailure<{{ .ValueType }}, {{ .EncoderType }}>(
+	fidl::test::util::CheckEncodeFailure<{{ .ValueType }}>(
 		{{ .ValueVar }}, {{ .ErrorCode }});
 }
 {{ end }}
@@ -68,7 +68,7 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, EncoderType, ValueType, ValueBuild, ValueVar, Bytes string
+	Name, ValueType, ValueBuild, ValueVar, Bytes string
 }
 
 type decodeSuccessCase struct {
@@ -76,7 +76,7 @@ type decodeSuccessCase struct {
 }
 
 type encodeFailureCase struct {
-	Name, EncoderType, ValueType, ValueBuild, ValueVar, ErrorCode string
+	Name, ValueType, ValueBuild, ValueVar, ErrorCode string
 }
 
 type decodeFailureCase struct {
@@ -131,12 +131,11 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-				Name:        testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				EncoderType: encoderType(encoding.WireFormat),
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				ValueType:   declName(decl),
-				Bytes:       bytesBuilder(encoding.Bytes),
+				Name:       testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				ValueBuild: valueBuild,
+				ValueVar:   valueVar,
+				ValueType:  declName(decl),
+				Bytes:      bytesBuilder(encoding.Bytes),
 			})
 		}
 	}
@@ -165,9 +164,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				ValueBuild: valueBuild,
 				ValueVar:   valueVar,
 				ValueType:  declName(decl),
-				Bytes: bytesBuilder(append(
-					transactionHeaderBytes(encoding.WireFormat),
-					encoding.Bytes...)),
+				Bytes:      bytesBuilder(encoding.Bytes),
 			})
 		}
 	}
@@ -194,12 +191,11 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 				continue
 			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-				Name:        testCaseName(encodeFailure.Name, wireFormat),
-				EncoderType: encoderType(wireFormat),
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				ValueType:   declName(decl),
-				ErrorCode:   errorCode,
+				Name:       testCaseName(encodeFailure.Name, wireFormat),
+				ValueBuild: valueBuild,
+				ValueVar:   valueVar,
+				ValueType:  declName(decl),
+				ErrorCode:  errorCode,
 			})
 		}
 	}
@@ -222,9 +218,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 				Name:      testCaseName(decodeFailure.Name, encoding.WireFormat),
 				ValueType: valueType,
-				Bytes: bytesBuilder(append(
-					transactionHeaderBytes(encoding.WireFormat),
-					encoding.Bytes...)),
+				Bytes:     bytesBuilder(encoding.Bytes),
 				ErrorCode: errorCode,
 			})
 		}
@@ -239,25 +233,6 @@ func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("%s_%s", baseName,
 		fidlcommon.ToUpperCamelCase(wireFormat.String()))
-}
-
-func encoderType(wireFormat gidlir.WireFormat) string {
-	return fmt.Sprintf("fidl::test::util::EncoderFactory%s",
-		fidlcommon.ToUpperCamelCase(wireFormat.String()))
-}
-
-func transactionHeaderBytes(wireFormat gidlir.WireFormat) []byte {
-	// See the FIDL wire format spec for the transaction header layout:
-	switch wireFormat {
-	case gidlir.V1WireFormat:
-		// Flags[0] == 1 (union represented as xunion bytes)
-		return []byte{
-			0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		}
-	default:
-		panic(fmt.Sprintf("unexpected wire format %v", wireFormat))
-	}
 }
 
 func cppErrorCode(code gidlir.ErrorCode) string {
