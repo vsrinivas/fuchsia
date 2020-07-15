@@ -32,18 +32,17 @@ void Process::LoadHandleInfo(Inference* inference) {
           FX_LOGS(ERROR) << "msg: " << handles.err().msg();
         } else {
           for (const auto& handle : handles.value()) {
-            fidl_codec::semantic::HandleDescription* description =
-                inference->GetHandleDescription(koid_, handle.handle_value);
-            if (description != nullptr) {
+            HandleInfo* handle_info = SearchHandleInfo(handle.handle_value);
+            if (handle_info != nullptr) {
               // Associate the koid and the object type to the handle only if the handle is
               // currently used by the monitored process. That is if the handle if referenced by an
               // event.
               // That means that we may need an extra load if the handle is already known by the
               // kernel but not yet needed by the monitored process. This way we avoid creating
-              // handle description for handles we don't know the semantic.
-              description->set_object_type(handle.type);
-              description->set_rights(handle.rights);
-              description->set_koid(handle.koid);
+              // a Handle object for handles we don't know the semantic.
+              handle_info->set_object_type(handle.type);
+              handle_info->set_rights(handle.rights);
+              handle_info->set_koid(handle.koid);
             }
             if (handle.related_koid != ZX_HANDLE_INVALID) {
               // However, the associated of koids is always useful.
@@ -58,14 +57,14 @@ void Process::LoadHandleInfo(Inference* inference) {
       });
 }
 
-bool SyscallEvent::NeedsToLoadHandleInfo(zx_koid_t pid, Inference* inference) {
+bool SyscallEvent::NeedsToLoadHandleInfo(Inference* inference) {
   for (const auto& field : inline_fields_) {
-    if (field.second->NeedsToLoadHandleInfo(pid, inference)) {
+    if (field.second->NeedsToLoadHandleInfo(thread()->koid(), inference)) {
       return true;
     }
   }
   for (const auto& field : outline_fields_) {
-    if (field.second->NeedsToLoadHandleInfo(pid, inference)) {
+    if (field.second->NeedsToLoadHandleInfo(thread()->koid(), inference)) {
       return true;
     }
   }

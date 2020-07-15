@@ -29,26 +29,26 @@ std::unique_ptr<SystemCallTest> ZxChannelCreate(int64_t result, std::string_view
   PerformDisplayTest(&controller, "$plt(zx_channel_create)",                                 \
                      ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);             \
   SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
-  const fidl_codec::semantic::HandleDescription* description0 =                              \
-      dispatcher->inference().GetHandleDescription(kFirstPid, out0);                         \
-  ASSERT_NE(description0, nullptr);                                                          \
-  ASSERT_EQ(description0->type(), "channel");                                                \
-  ASSERT_EQ(description0->fd(), 0);                                                          \
-  const fidl_codec::semantic::HandleDescription* description1 =                              \
-      dispatcher->inference().GetHandleDescription(kFirstPid, out1);                         \
-  ASSERT_NE(description1, nullptr);                                                          \
-  ASSERT_EQ(description1->type(), "channel");                                                \
-  ASSERT_EQ(description1->fd(), 1);                                                          \
-  const fidl_codec::semantic::HandleDescription* description2 =                              \
-      dispatcher->inference().GetHandleDescription(kSecondPid, out0);                        \
-  ASSERT_NE(description2, nullptr);                                                          \
-  ASSERT_EQ(description2->type(), "channel");                                                \
-  ASSERT_EQ(description2->fd(), 2);                                                          \
-  const fidl_codec::semantic::HandleDescription* description3 =                              \
-      dispatcher->inference().GetHandleDescription(kSecondPid, out1);                        \
-  ASSERT_NE(description3, nullptr);                                                          \
-  ASSERT_EQ(description3->type(), "channel");                                                \
-  ASSERT_EQ(description3->fd(), 3);                                                          \
+  const fidl_codec::semantic::InferredHandleInfo* info0 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kFirstPid, out0);                        \
+  ASSERT_NE(info0, nullptr);                                                                 \
+  ASSERT_EQ(info0->type(), "channel");                                                       \
+  ASSERT_EQ(info0->fd(), 0);                                                                 \
+  const fidl_codec::semantic::InferredHandleInfo* info1 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kFirstPid, out1);                        \
+  ASSERT_NE(info1, nullptr);                                                                 \
+  ASSERT_EQ(info1->type(), "channel");                                                       \
+  ASSERT_EQ(info1->fd(), 1);                                                                 \
+  const fidl_codec::semantic::InferredHandleInfo* info2 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kSecondPid, out0);                       \
+  ASSERT_NE(info2, nullptr);                                                                 \
+  ASSERT_EQ(info2->type(), "channel");                                                       \
+  ASSERT_EQ(info2->fd(), 2);                                                                 \
+  const fidl_codec::semantic::InferredHandleInfo* info3 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kSecondPid, out1);                       \
+  ASSERT_NE(info3, nullptr);                                                                 \
+  ASSERT_EQ(info3->type(), "channel");                                                       \
+  ASSERT_EQ(info3->fd(), 3);                                                                 \
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out0), out1);                 \
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out1), out0);                 \
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out0), out1);                \
@@ -75,26 +75,26 @@ CREATE_DISPLAY_TEST(
   PerformInterleavedDisplayTest(&controller, "$plt(zx_channel_create)",                      \
                                 ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);  \
   SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
-  const fidl_codec::semantic::HandleDescription* description0 =                              \
-      dispatcher->inference().GetHandleDescription(kFirstPid, out0);                         \
-  ASSERT_NE(description0, nullptr);                                                          \
-  ASSERT_EQ(description0->type(), "channel");                                                \
-  ASSERT_EQ(description0->fd(), 0);                                                          \
-  const fidl_codec::semantic::HandleDescription* description1 =                              \
-      dispatcher->inference().GetHandleDescription(kFirstPid, out1);                         \
-  ASSERT_NE(description1, nullptr);                                                          \
-  ASSERT_EQ(description1->type(), "channel");                                                \
-  ASSERT_EQ(description1->fd(), 1);                                                          \
-  const fidl_codec::semantic::HandleDescription* description2 =                              \
-      dispatcher->inference().GetHandleDescription(kSecondPid, out0);                        \
-  ASSERT_NE(description2, nullptr);                                                          \
-  ASSERT_EQ(description2->type(), "channel");                                                \
-  ASSERT_EQ(description2->fd(), 2);                                                          \
-  const fidl_codec::semantic::HandleDescription* description3 =                              \
-      dispatcher->inference().GetHandleDescription(kSecondPid, out1);                        \
-  ASSERT_NE(description3, nullptr);                                                          \
-  ASSERT_EQ(description3->type(), "channel");                                                \
-  ASSERT_EQ(description3->fd(), 3);                                                          \
+  const fidl_codec::semantic::InferredHandleInfo* info0 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kFirstPid, out0);                        \
+  ASSERT_NE(info0, nullptr);                                                                 \
+  ASSERT_EQ(info0->type(), "channel");                                                       \
+  ASSERT_EQ(info0->fd(), 0);                                                                 \
+  const fidl_codec::semantic::InferredHandleInfo* info1 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kFirstPid, out1);                        \
+  ASSERT_NE(info1, nullptr);                                                                 \
+  ASSERT_EQ(info1->type(), "channel");                                                       \
+  ASSERT_EQ(info1->fd(), 1);                                                                 \
+  const fidl_codec::semantic::InferredHandleInfo* info2 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kSecondPid, out0);                       \
+  ASSERT_NE(info2, nullptr);                                                                 \
+  ASSERT_EQ(info2->type(), "channel");                                                       \
+  ASSERT_EQ(info2->fd(), 2);                                                                 \
+  const fidl_codec::semantic::InferredHandleInfo* info3 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kSecondPid, out1);                       \
+  ASSERT_NE(info3, nullptr);                                                                 \
+  ASSERT_EQ(info3->type(), "channel");                                                       \
+  ASSERT_EQ(info3->fd(), 3);                                                                 \
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out0), out1);                 \
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out1), out0);                 \
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out0), out1);                \

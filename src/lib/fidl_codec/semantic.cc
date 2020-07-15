@@ -90,32 +90,34 @@ bool ExpressionSlash::Execute(SemanticContext* context, ExpressionValue* result)
   if (!left_->Execute(context, &left_value) || !right_->Execute(context, &right_value)) {
     return false;
   }
-  const HandleDescription* description = left_value.handle_description();
-  if ((description == nullptr) && (left_value.handle() != ZX_HANDLE_INVALID)) {
-    description =
-        context->handle_semantic()->GetHandleDescription(context->pid(), left_value.handle());
+  const InferredHandleInfo* inferred_handle_info = left_value.inferred_handle_info();
+  if ((inferred_handle_info == nullptr) && (left_value.handle() != ZX_HANDLE_INVALID)) {
+    inferred_handle_info =
+        context->handle_semantic()->GetInferredHandleInfo(context->pid(), left_value.handle());
   }
-  if (description == nullptr) {
+  if (inferred_handle_info == nullptr) {
     return false;
   }
   if (right_value.string()) {
-    if (description->path().empty()) {
-      result->set(description->type(), description->fd(), *right_value.string());
+    if (inferred_handle_info->path().empty()) {
+      result->set(inferred_handle_info->type(), inferred_handle_info->fd(), *right_value.string());
       return true;
     }
     if (*right_value.string() == ".") {
-      result->set(description->type(), description->fd(), description->path());
+      result->set(inferred_handle_info->type(), inferred_handle_info->fd(),
+                  inferred_handle_info->path());
       return true;
     }
     std::string path(*right_value.string());
     if (path.find("./") == 0) {
       path.erase(0, 2);
     }
-    if (description->path() == "/") {
-      result->set(description->type(), description->fd(), "/" + path);
+    if (inferred_handle_info->path() == "/") {
+      result->set(inferred_handle_info->type(), inferred_handle_info->fd(), "/" + path);
       return true;
     }
-    result->set(description->type(), description->fd(), description->path() + "/" + path);
+    result->set(inferred_handle_info->type(), inferred_handle_info->fd(),
+                inferred_handle_info->path() + "/" + path);
     return true;
   }
   return false;
@@ -155,14 +157,14 @@ void Assignment::Execute(SemanticContext* context) const {
       }
       break;
   }
-  const HandleDescription* handle_description = source_value.handle_description();
-  if ((handle_description == nullptr) && (source_value.handle() != ZX_HANDLE_INVALID)) {
-    handle_description =
-        context->handle_semantic()->GetHandleDescription(context->pid(), source_value.handle());
+  const InferredHandleInfo* inferred_handle_info = source_value.inferred_handle_info();
+  if ((inferred_handle_info == nullptr) && (source_value.handle() != ZX_HANDLE_INVALID)) {
+    inferred_handle_info =
+        context->handle_semantic()->GetInferredHandleInfo(context->pid(), source_value.handle());
   }
-  context->handle_semantic()->CreateHandle(context->tid(), destination_handle);
-  context->handle_semantic()->AddHandleDescription(context->pid(), destination_handle,
-                                                   handle_description);
+  context->handle_semantic()->CreateHandleInfo(context->tid(), destination_handle);
+  context->handle_semantic()->AddInferredHandleInfo(context->pid(), destination_handle,
+                                                    inferred_handle_info);
 }
 
 void MethodSemantic::Dump(std::ostream& os) const {
@@ -177,7 +179,7 @@ void MethodSemantic::ExecuteAssignments(SemanticContext* context) const {
   }
 }
 
-std::string_view HandleDescription::Convert(uint32_t type) {
+std::string_view InferredHandleInfo::Convert(uint32_t type) {
   switch (type) {
     case PA_PROC_SELF:
       return "proc-self";
@@ -222,7 +224,7 @@ std::string_view HandleDescription::Convert(uint32_t type) {
   }
 }
 
-void HandleDescription::Display(PrettyPrinter& printer) const {
+void InferredHandleInfo::Display(PrettyPrinter& printer) const {
   if (!type_.empty()) {
     printer << Green << type_ << ResetColor;
     if (fd_ != -1) {

@@ -340,8 +340,7 @@ void SyscallDecoder::DecodeInputs() {
     if (dispatcher_->needs_stack_frame()) {
       CopyStackFrame(caller_locations(), &invoked_event_->stack_frame());
     }
-    if (invoked_event_->NeedsToLoadHandleInfo(fidlcat_thread()->process()->koid(),
-                                              &dispatcher_->inference())) {
+    if (invoked_event_->NeedsToLoadHandleInfo(&dispatcher_->inference())) {
       fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
     }
   }
@@ -445,8 +444,7 @@ void SyscallDecoder::DecodeOutputs() {
         ++outline_member;
       }
     }
-    if (output_event_->NeedsToLoadHandleInfo(fidlcat_thread()->process()->koid(),
-                                             &dispatcher_->inference())) {
+    if (output_event_->NeedsToLoadHandleInfo(&dispatcher_->inference())) {
       fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
     }
   }
@@ -496,8 +494,7 @@ void SyscallDisplay::DisplayInputs(SyscallDecoder* decoder) {
   }
   os_ << '\n';
 
-  FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process()->koid(), os_,
-                         line_header);
+  FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process(), os_, line_header);
 
   if (dispatcher_->decode_options().stack_level != kNoStack) {
     // Display caller locations.
@@ -545,8 +542,7 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
                     ':' + colors.red + std::to_string(decoder->fidlcat_thread()->koid()) +
                     colors.reset + ' ';
     }
-    FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process()->koid(), os_,
-                           line_header);
+    FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process(), os_, line_header);
     // Displays the returned value.
     printer << "  -> ";
     switch (decoder->syscall()->return_type()) {

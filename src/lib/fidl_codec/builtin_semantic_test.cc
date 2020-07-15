@@ -28,7 +28,7 @@ class BuiltinSemanticTest : public SemanticParserTest {
   BuiltinSemanticTest();
 
   void SetHandleSemantic(std::string_view type, std::string_view path) {
-    handle_semantic_.AddHandleDescription(kPid, kHandle, type, path);
+    handle_semantic_.AddInferredHandleInfo(kPid, kHandle, type, path);
   }
 
   void ExecuteWrite(const MethodSemantic* method_semantic, const StructValue* request,
@@ -88,10 +88,11 @@ TEST_F(BuiltinSemanticTest, CloneWrite) {
   ExecuteWrite(method->semantic(), &request, nullptr);
 
   // We have this handle semantic for kChannel1.
-  const HandleDescription* description = handle_semantic_.GetHandleDescription(kPid, kChannel1);
-  ASSERT_NE(description, nullptr);
-  ASSERT_EQ(description->type(), "dir");
-  ASSERT_EQ(description->path(), "/svc");
+  const InferredHandleInfo* inferred_handle_info =
+      handle_semantic_.GetInferredHandleInfo(kPid, kChannel1);
+  ASSERT_NE(inferred_handle_info, nullptr);
+  ASSERT_EQ(inferred_handle_info->type(), "dir");
+  ASSERT_EQ(inferred_handle_info->path(), "/svc");
 }
 
 // Check Node::Clone: request.object = handle
@@ -118,10 +119,11 @@ TEST_F(BuiltinSemanticTest, CloneRead) {
   ExecuteRead(method->semantic(), &request, nullptr);
 
   // We have this handle semantic for kChannel1.
-  const HandleDescription* description = handle_semantic_.GetHandleDescription(kPid, kChannel0);
-  ASSERT_NE(description, nullptr);
-  ASSERT_EQ(description->type(), "dir");
-  ASSERT_EQ(description->path(), "/svc");
+  const InferredHandleInfo* inferred_handle_info =
+      handle_semantic_.GetInferredHandleInfo(kPid, kChannel0);
+  ASSERT_NE(inferred_handle_info, nullptr);
+  ASSERT_EQ(inferred_handle_info->type(), "dir");
+  ASSERT_EQ(inferred_handle_info->path(), "/svc");
 }
 
 // Check Directory::Open: request.object = handle / request.path
@@ -149,10 +151,11 @@ TEST_F(BuiltinSemanticTest, Open) {
   ExecuteWrite(method->semantic(), &request, nullptr);
 
   // We have this handle semantic for kChannel1.
-  const HandleDescription* description = handle_semantic_.GetHandleDescription(kPid, kChannel1);
-  ASSERT_NE(description, nullptr);
-  ASSERT_EQ(description->type(), "dir");
-  ASSERT_EQ(description->path(), "/svc/fuchsia.sys.Launcher");
+  const InferredHandleInfo* inferred_handle_info =
+      handle_semantic_.GetInferredHandleInfo(kPid, kChannel1);
+  ASSERT_NE(inferred_handle_info, nullptr);
+  ASSERT_EQ(inferred_handle_info->type(), "dir");
+  ASSERT_EQ(inferred_handle_info->path(), "/svc/fuchsia.sys.Launcher");
 }
 
 // Check Launcher::CreateComponent.
@@ -186,15 +189,17 @@ TEST_F(BuiltinSemanticTest, CreateComponent) {
   ExecuteWrite(method->semantic(), &request, nullptr);
 
   // We have these handle semantics for kChannel1 and kChannel3.
-  const HandleDescription* description_1 = handle_semantic_.GetHandleDescription(kPid, kChannel1);
-  ASSERT_NE(description_1, nullptr);
-  ASSERT_EQ(description_1->type(), "server");
-  ASSERT_EQ(description_1->path(),
+  const InferredHandleInfo* inferred_handle_info_1 =
+      handle_semantic_.GetInferredHandleInfo(kPid, kChannel1);
+  ASSERT_NE(inferred_handle_info_1, nullptr);
+  ASSERT_EQ(inferred_handle_info_1->type(), "server");
+  ASSERT_EQ(inferred_handle_info_1->path(),
             "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx");
-  const HandleDescription* description_2 = handle_semantic_.GetHandleDescription(kPid, kChannel3);
-  ASSERT_NE(description_2, nullptr);
-  ASSERT_EQ(description_2->type(), "server-control");
-  ASSERT_EQ(description_2->path(),
+  const InferredHandleInfo* inferred_handle_info_2 =
+      handle_semantic_.GetInferredHandleInfo(kPid, kChannel3);
+  ASSERT_NE(inferred_handle_info_2, nullptr);
+  ASSERT_EQ(inferred_handle_info_2->type(), "server-control");
+  ASSERT_EQ(inferred_handle_info_2->path(),
             "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx");
 }
 

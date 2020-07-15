@@ -188,36 +188,27 @@ class MethodSemantic {
   std::vector<std::unique_ptr<Assignment>> assignments_;
 };
 
-// Holds the information we have about a handle.
+// Holds the information we have inferred for a handle.
 // Usually we can associate a type to a handle.
 // Depending on the type, we can also associate:
 // - a path (for example for directories and files).
 // - a file descriptor (for example for sockets).
-class HandleDescription {
+class InferredHandleInfo {
  public:
-  HandleDescription() = default;
+  InferredHandleInfo() = default;
 
-  explicit HandleDescription(std::string_view type) : type_(type) {}
+  explicit InferredHandleInfo(std::string_view type) : type_(type) {}
 
-  HandleDescription(std::string_view type, int64_t fd) : type_(type), fd_(fd) {}
+  InferredHandleInfo(std::string_view type, int64_t fd) : type_(type), fd_(fd) {}
 
-  HandleDescription(std::string_view type, std::string_view path) : type_(type), path_(path) {}
+  InferredHandleInfo(std::string_view type, std::string_view path) : type_(type), path_(path) {}
 
-  HandleDescription(std::string_view type, int64_t fd, std::string_view path)
+  InferredHandleInfo(std::string_view type, int64_t fd, std::string_view path)
       : type_(type), fd_(fd), path_(path) {}
-
-  HandleDescription(std::string_view type, int64_t fd, std::string_view path, zx_koid_t koid)
-      : type_(type), fd_(fd), path_(path), koid_(koid) {}
 
   const std::string& type() const { return type_; }
   int64_t fd() const { return fd_; }
   const std::string& path() const { return path_; }
-  zx_obj_type_t object_type() const { return object_type_; }
-  void set_object_type(zx_obj_type_t object_type) { object_type_ = object_type; }
-  zx_rights_t rights() const { return rights_; }
-  void set_rights(zx_rights_t rights) { rights_ = rights; }
-  zx_koid_t koid() const { return koid_; }
-  void set_koid(zx_koid_t koid) { koid_ = koid; }
 
   // Convert a handle type (found in zircon/system/public/zircon/processargs.h) into a string.
   static std::string_view Convert(uint32_t type);
@@ -234,19 +225,13 @@ class HandleDescription {
   // Path associated with the handle. We can have both fd and path defined at the
   // same time.
   const std::string path_;
-  // The object type for the handle.
-  zx_obj_type_t object_type_ = ZX_OBJ_TYPE_NONE;
-  // The rights for the handle.
-  zx_rights_t rights_ = 0;
-  // The unique id assigned by the kernel to the object referenced by the handle.
-  zx_koid_t koid_ = ZX_KOID_INVALID;
 };
 
 // Holds the handle semantic for one process. That is all the meaningful information we have been
 // able to infer for the handles owned by one process.
 struct ProcessSemantic {
   // All the handles for which we have some information.
-  std::map<zx_handle_t, std::unique_ptr<HandleDescription>> handles;
+  std::map<zx_handle_t, std::unique_ptr<InferredHandleInfo>> handles;
   // All the links between handle pairs.
   std::map<zx_handle_t, zx_handle_t> linked_handles;
 };
@@ -255,6 +240,7 @@ struct ProcessSemantic {
 class HandleSemantic {
  public:
   HandleSemantic() = default;
+  virtual ~HandleSemantic() = default;
 
   const std::map<zx_koid_t, ProcessSemantic>& process_handles() const { return process_handles_; }
   const std::map<zx_koid_t, zx_koid_t>& linked_koids() const { return linked_koids_; }
@@ -275,7 +261,7 @@ class HandleSemantic {
     return &process_semantic->second;
   }
 
-  HandleDescription* GetHandleDescription(zx_koid_t pid, zx_handle_t handle) const {
+  InferredHandleInfo* GetInferredHandleInfo(zx_koid_t pid, zx_handle_t handle) const {
     const auto& process_semantic = process_handles_.find(pid);
     if (process_semantic == process_handles_.end()) {
       return nullptr;
@@ -287,37 +273,39 @@ class HandleSemantic {
     return result->second.get();
   }
 
-  virtual void CreateHandle(zx_koid_t thread_koid, zx_handle_t handle) {}
+  virtual void CreateHandleInfo(zx_koid_t thread_koid, zx_handle_t handle) {}
 
-  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle,
-                            const HandleDescription* handle_description) {
-    if (handle_description != nullptr) {
+  virtual bool NeedsToLoadHandleInfo(zx_koid_t tid, zx_handle_t handle) const { return false; }
+
+  void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle,
+                             const InferredHandleInfo* inferred_handle_info) {
+    if (inferred_handle_info != nullptr) {
       process_handles_[pid].handles[handle] =
-          std::make_unique<HandleDescription>(*handle_description);
+          std::make_unique<InferredHandleInfo>(*inferred_handle_info);
     }
   }
 
-  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle,
-                            std::unique_ptr<HandleDescription> handle_description) {
-    process_handles_[pid].handles[handle] = std::move(handle_description);
+  void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle,
+                             std::unique_ptr<InferredHandleInfo> inferred_handle_info) {
+    process_handles_[pid].handles[handle] = std::move(inferred_handle_info);
   }
 
-  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, std::string_view type) {
-    process_handles_[pid].handles[handle] = std::make_unique<HandleDescription>(type);
+  void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle, std::string_view type) {
+    process_handles_[pid].handles[handle] = std::make_unique<InferredHandleInfo>(type);
   }
 
-  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, std::string_view type, int64_t fd) {
-    process_handles_[pid].handles[handle] = std::make_unique<HandleDescription>(type, fd);
+  void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle, std::string_view type, int64_t fd) {
+    process_handles_[pid].handles[handle] = std::make_unique<InferredHandleInfo>(type, fd);
   }
 
-  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, std::string_view type,
-                            std::string_view path) {
-    process_handles_[pid].handles[handle] = std::make_unique<HandleDescription>(type, path);
+  void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle, std::string_view type,
+                             std::string_view path) {
+    process_handles_[pid].handles[handle] = std::make_unique<InferredHandleInfo>(type, path);
   }
 
-  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, uint32_t type) {
+  void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle, uint32_t type) {
     process_handles_[pid].handles[handle] =
-        std::make_unique<HandleDescription>(HandleDescription::Convert(type));
+        std::make_unique<InferredHandleInfo>(InferredHandleInfo::Convert(type));
   }
 
   // Returns the handle peer for a channel.
@@ -363,18 +351,18 @@ class HandleSemantic {
 // Holds the evaluation of an expression. Only one of the three fields can be defined.
 class ExpressionValue {
  public:
-  ExpressionValue() : handle_description_() {}
+  ExpressionValue() : inferred_handle_info_() {}
 
   void set(const Value* value) { value_ = value; }
   void set(zx_handle_t handle) { handle_ = handle; }
   void set(std::string_view type, int64_t fd, std::string_view path) {
-    handle_description_ = std::make_unique<HandleDescription>(type, fd, path);
+    inferred_handle_info_ = std::make_unique<InferredHandleInfo>(type, fd, path);
   }
   void set(const std::string& string) { string_ = string; }
 
   const Value* value() const { return value_; }
   zx_handle_t handle() const { return handle_; }
-  const HandleDescription* handle_description() const { return handle_description_.get(); }
+  const InferredHandleInfo* inferred_handle_info() const { return inferred_handle_info_.get(); }
   const std::optional<std::string>& string() const { return string_; }
 
  private:
@@ -382,8 +370,8 @@ class ExpressionValue {
   const Value* value_ = nullptr;
   // If not ZX_HANDLE_INVALID, the value is a handle.
   zx_handle_t handle_ = ZX_HANDLE_INVALID;
-  // If not null, the value is a handle description.
-  std::unique_ptr<HandleDescription> handle_description_;
+  // If not null, the value is a inferred handle info.
+  std::unique_ptr<InferredHandleInfo> inferred_handle_info_;
   // A string.
   std::optional<std::string> string_;
 };

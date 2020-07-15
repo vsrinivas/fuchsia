@@ -33,16 +33,16 @@ std::unique_ptr<SystemCallTest> ZxPortCreate(int64_t status, std::string_view st
   PerformDisplayTest(&controller, "$plt(zx_port_create)",                                    \
                      ZxPortCreate(status, #status, 0, &handle), expected);                   \
   SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
-  const fidl_codec::semantic::HandleDescription* description0 =                              \
-      dispatcher->inference().GetHandleDescription(kFirstPid, handle);                       \
-  ASSERT_NE(description0, nullptr);                                                          \
-  ASSERT_EQ(description0->type(), "port");                                                   \
-  ASSERT_EQ(description0->fd(), 0);                                                          \
-  const fidl_codec::semantic::HandleDescription* description1 =                              \
-      dispatcher->inference().GetHandleDescription(kSecondPid, handle);                      \
-  ASSERT_NE(description1, nullptr);                                                          \
-  ASSERT_EQ(description1->type(), "port");                                                   \
-  ASSERT_EQ(description1->fd(), 1);
+  const fidl_codec::semantic::InferredHandleInfo* info0 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kFirstPid, handle);                      \
+  ASSERT_NE(info0, nullptr);                                                                 \
+  ASSERT_EQ(info0->type(), "port");                                                          \
+  ASSERT_EQ(info0->fd(), 0);                                                                 \
+  const fidl_codec::semantic::InferredHandleInfo* info1 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kSecondPid, handle);                     \
+  ASSERT_NE(info1, nullptr);                                                                 \
+  ASSERT_EQ(info1->type(), "port");                                                          \
+  ASSERT_EQ(info1->fd(), 1);
 
 #define PORT_CREATE_DISPLAY_TEST(name, status, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \

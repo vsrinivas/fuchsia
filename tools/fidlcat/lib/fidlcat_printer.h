@@ -16,12 +16,13 @@
 namespace fidlcat {
 
 class Location;
+class Process;
 class SyscallDisplayDispatcher;
 
 // Printer which allows us to print the infered data for handles.
 class FidlcatPrinter : public fidl_codec::PrettyPrinter {
  public:
-  FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, uint64_t process_id, std::ostream& os,
+  FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* process, std::ostream& os,
                  std::string_view line_header, int tabulations = 0);
 
   bool display_stack_frame() const { return display_stack_frame_; }
@@ -40,7 +41,7 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
 
  private:
   const Inference& inference_;
-  const uint64_t process_id_;
+  Process* const process_;
   const bool display_stack_frame_;
   const bool dump_messages_;
 };

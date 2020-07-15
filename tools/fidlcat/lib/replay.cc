@@ -83,17 +83,18 @@ bool Replay::ReplayProto(const std::string& proto_file_name) {
                      << proto_handle_description.thread_koid() << " not found for handle.";
       ok = false;
     } else {
-      dispatcher()->CreateHandle(thread, proto_handle_description.handle(),
-                                 proto_handle_description.creation_time(),
-                                 proto_handle_description.startup());
+      HandleInfo* handle_info = dispatcher()->CreateHandleInfo(
+          thread, proto_handle_description.handle(), proto_handle_description.creation_time(),
+          proto_handle_description.startup());
+      handle_info->set_object_type(proto_handle_description.object_type());
+      handle_info->set_koid(proto_handle_description.koid());
     }
-    auto handle_description = std::make_unique<fidl_codec::semantic::HandleDescription>(
+    auto inferred_handle_info = std::make_unique<fidl_codec::semantic::InferredHandleInfo>(
         proto_handle_description.type(), proto_handle_description.fd(),
-        proto_handle_description.path(), proto_handle_description.koid());
-    handle_description->set_object_type(proto_handle_description.object_type());
-    dispatcher()->inference().AddHandleDescription(thread->process()->koid(),
-                                                   proto_handle_description.handle(),
-                                                   std::move(handle_description));
+        proto_handle_description.path());
+    dispatcher()->inference().AddInferredHandleInfo(thread->process()->koid(),
+                                                    proto_handle_description.handle(),
+                                                    std::move(inferred_handle_info));
   }
   for (int index = 0; index < session.linked_koids_size(); ++index) {
     const proto::LinkedKoids& linked_koids = session.linked_koids(index);

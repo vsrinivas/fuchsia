@@ -1789,7 +1789,8 @@ class SyscallDecoderDispatcher {
   // |startup| is true if the handle has been given to the process during the process
   // initialization.
   // When created, the handle is first stored within the dispatcher.
-  Handle* CreateHandle(Thread* thread, uint32_t handle, int64_t creation_time, bool startup);
+  HandleInfo* CreateHandleInfo(Thread* thread, uint32_t handle, int64_t creation_time,
+                               bool startup);
 
   // Decode an intercepted system call.
   // Called when a thread reached a breakpoint on a system call.
@@ -1878,8 +1879,8 @@ class SyscallDecoderDispatcher {
   }
 
   // Called when we intercept processargs_extract_handles.
-  bool ExtractHandles(SyscallDecoder* decoder) {
-    inference_.ExtractHandles(decoder);
+  bool ExtractHandleInfos(SyscallDecoder* decoder) {
+    inference_.ExtractHandleInfos(decoder);
     return false;
   }
 
@@ -1947,7 +1948,7 @@ class SyscallDecoderDispatcher {
   std::map<zx_koid_t, std::unique_ptr<Thread>> threads_;
 
   // All the handles created by this dispatcher.
-  std::vector<std::unique_ptr<Handle>> handles_;
+  std::vector<std::unique_ptr<HandleInfo>> handle_infos_;
 
   // All the handles for which we have some information.
   Inference inference_;

@@ -360,16 +360,16 @@ SyscallDecoderDispatcher::SyscallDecoderDispatcher(const DecodeOptions& decode_o
   }
 }
 
-Handle* SyscallDecoderDispatcher::CreateHandle(Thread* thread, uint32_t handle,
-                                               int64_t creation_time, bool startup) {
-  auto old_value = thread->process()->SearchHandle(handle);
+HandleInfo* SyscallDecoderDispatcher::CreateHandleInfo(Thread* thread, uint32_t handle,
+                                                       int64_t creation_time, bool startup) {
+  auto old_value = thread->process()->SearchHandleInfo(handle);
   if (old_value != nullptr) {
     return old_value;
   }
-  auto result = std::make_unique<Handle>(thread, handle, creation_time, startup);
+  auto result = std::make_unique<HandleInfo>(thread, handle, creation_time, startup);
   auto returned_value = result.get();
-  thread->process()->handle_map().emplace(std::make_pair(handle, result.get()));
-  handles_.emplace_back(std::move(result));
+  thread->process()->handle_info_map().emplace(std::make_pair(handle, result.get()));
+  handle_infos_.emplace_back(std::move(result));
   return returned_value;
 }
 
@@ -464,21 +464,22 @@ void SyscallDecoderDispatcher::WriteSession() {
     proto_thread->set_koid(thread.second->koid());
     proto_thread->set_process_koid(thread.second->process()->koid());
   }
-  for (const auto& handle : handles_) {
-    fidl_codec::semantic::HandleDescription* handle_description =
-        inference().GetHandleDescription(handle->thread()->process()->koid(), handle->handle());
+  for (const auto& handle_info : handle_infos_) {
+    fidl_codec::semantic::InferredHandleInfo* inferred_handle_info =
+        inference().GetInferredHandleInfo(handle_info->thread()->process()->koid(),
+                                          handle_info->handle());
     proto::HandleDescription* proto_handle_description = session.add_handle_description();
-    proto_handle_description->set_handle(handle->handle());
-    proto_handle_description->set_thread_koid(handle->thread()->koid());
-    proto_handle_description->set_creation_time(handle->creation_time());
-    proto_handle_description->set_startup(handle->startup());
-    if (handle_description != nullptr) {
-      proto_handle_description->set_type(handle_description->type());
-      proto_handle_description->set_fd(handle_description->fd());
-      proto_handle_description->set_path(handle_description->path());
-      proto_handle_description->set_koid(handle_description->koid());
-      proto_handle_description->set_object_type(handle_description->object_type());
+    proto_handle_description->set_handle(handle_info->handle());
+    proto_handle_description->set_thread_koid(handle_info->thread()->koid());
+    proto_handle_description->set_creation_time(handle_info->creation_time());
+    proto_handle_description->set_startup(handle_info->startup());
+    if (inferred_handle_info != nullptr) {
+      proto_handle_description->set_type(inferred_handle_info->type());
+      proto_handle_description->set_fd(inferred_handle_info->fd());
+      proto_handle_description->set_path(inferred_handle_info->path());
     }
+    proto_handle_description->set_koid(handle_info->koid());
+    proto_handle_description->set_object_type(handle_info->object_type());
   }
   for (const auto& linked_koids : inference().linked_koids()) {
     proto::LinkedKoids* proto_linked_koids = session.add_linked_koids();
@@ -607,7 +608,7 @@ void SyscallDisplayDispatcher::DisplayInvokedEvent(const InvokedEvent* invoked_e
   }
   os_ << '\n';
 
-  FidlcatPrinter printer(this, invoked_event->thread()->process()->koid(), os_, line_header);
+  FidlcatPrinter printer(this, invoked_event->thread()->process(), os_, line_header);
 
   // We have been able to create values from the syscall => print them.
   invoked_event->PrettyPrint(printer);
@@ -655,7 +656,7 @@ void SyscallDisplayDispatcher::AddOutputEvent(std::shared_ptr<OutputEvent> outpu
                     ':' + colors().red + std::to_string(output_event->thread()->koid()) +
                     colors().reset + ' ';
     }
-    FidlcatPrinter printer(this, output_event->thread()->process()->koid(), os_, line_header);
+    FidlcatPrinter printer(this, output_event->thread()->process(), os_, line_header);
     // We have been able to create values from the syscall => print them.
     output_event->PrettyPrint(printer);
 
@@ -673,7 +674,7 @@ void SyscallDisplayDispatcher::AddExceptionEvent(std::shared_ptr<ExceptionEvent>
       exception_event->thread()->process()->name() + ' ' + colors().red +
       std::to_string(exception_event->thread()->process()->koid()) + colors().reset + ':' +
       colors().red + std::to_string(exception_event->thread()->koid()) + colors().reset + ' ';
-  FidlcatPrinter printer(this, exception_event->thread()->process()->koid(), os_, line_header);
+  FidlcatPrinter printer(this, exception_event->thread()->process(), os_, line_header);
   exception_event->PrettyPrint(printer);
 
   SaveEvent(std::move(exception_event));

@@ -27,21 +27,33 @@ class SyscallDecoder;
 class SyscallDisplayDispatcher;
 class Thread;
 
-class Handle {
+class HandleInfo {
  public:
-  Handle(Thread* thread, uint32_t handle, int64_t creation_time, bool startup)
+  HandleInfo(Thread* thread, uint32_t handle, int64_t creation_time, bool startup)
       : thread_(thread), handle_(handle), creation_time_(creation_time), startup_(startup) {}
 
   Thread* thread() const { return thread_; }
   uint32_t handle() const { return handle_; }
   int64_t creation_time() const { return creation_time_; }
   bool startup() const { return startup_; }
+  zx_obj_type_t object_type() const { return object_type_; }
+  void set_object_type(zx_obj_type_t object_type) { object_type_ = object_type; }
+  zx_rights_t rights() const { return rights_; }
+  void set_rights(zx_rights_t rights) { rights_ = rights; }
+  zx_koid_t koid() const { return koid_; }
+  void set_koid(zx_koid_t koid) { koid_ = koid; }
 
  private:
   Thread* const thread_;
   const uint32_t handle_;
   const int64_t creation_time_;
   const bool startup_;
+  // The object type for the handle.
+  zx_obj_type_t object_type_ = ZX_OBJ_TYPE_NONE;
+  // The rights for the handle.
+  zx_rights_t rights_ = 0;
+  // The unique id assigned by the kernel to the object referenced by the handle.
+  zx_koid_t koid_ = ZX_KOID_INVALID;
 };
 
 class Process {
@@ -52,13 +64,13 @@ class Process {
   const std::string& name() const { return name_; }
   zx_koid_t koid() const { return koid_; }
   zxdb::Process* zxdb_process() const { return zxdb_process_.get(); }
-  std::map<uint32_t, Handle*>& handle_map() { return handle_map_; }
+  std::map<uint32_t, HandleInfo*>& handle_info_map() { return handle_info_map_; }
 
   void LoadHandleInfo(Inference* inference);
 
-  Handle* SearchHandle(uint32_t handle) const {
-    auto result = handle_map_.find(handle);
-    if (result == handle_map_.end()) {
+  HandleInfo* SearchHandleInfo(uint32_t handle) const {
+    auto result = handle_info_map_.find(handle);
+    if (result == handle_info_map_.end()) {
       return nullptr;
     }
     return result->second;
@@ -75,7 +87,7 @@ class Process {
   bool loading_handle_info_ = false;
   // True if we need to load again the info after the current load will be finished.
   bool needs_to_load_handle_info_ = false;
-  std::map<uint32_t, Handle*> handle_map_;
+  std::map<uint32_t, HandleInfo*> handle_info_map_;
 };
 
 class Thread {
@@ -212,7 +224,7 @@ class SyscallEvent : public ThreadEvent {
   // Returns true if we need to load information about the handle (call to zx_object_get_info with
   // ZX_INFO_HANDLE_TABLE). We need to load information about the handle if one of the handles of
   // the event has an unknown koid.
-  bool NeedsToLoadHandleInfo(zx_koid_t pid, Inference* inference);
+  bool NeedsToLoadHandleInfo(Inference* inference);
 
   const fidl_codec::FidlMessageValue* GetMessage() const;
 

@@ -122,10 +122,9 @@ void StringValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitStringValue(this, for_type);
 }
 
-bool HandleValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+bool HandleValue::NeedsToLoadHandleInfo(zx_koid_t tid,
                                         semantic::HandleSemantic* handle_semantic) const {
-  auto description = handle_semantic->GetHandleDescription(pid, handle_.handle);
-  return (description == nullptr) || (description->koid() == ZX_KOID_INVALID);
+  return handle_semantic->NeedsToLoadHandleInfo(tid, handle_.handle);
 }
 
 int HandleValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
@@ -140,9 +139,9 @@ void HandleValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitHandleValue(this, for_type);
 }
 
-bool UnionValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+bool UnionValue::NeedsToLoadHandleInfo(zx_koid_t tid,
                                        semantic::HandleSemantic* handle_semantic) const {
-  return value_->NeedsToLoadHandleInfo(pid, handle_semantic);
+  return value_->NeedsToLoadHandleInfo(tid, handle_semantic);
 }
 
 int UnionValue::DisplaySize(const Type* for_type, int remaining_size) const {
@@ -197,10 +196,10 @@ void StructValue::AddField(std::string_view name, uint32_t id, std::unique_ptr<V
   }
 }
 
-bool StructValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+bool StructValue::NeedsToLoadHandleInfo(zx_koid_t tid,
                                         semantic::HandleSemantic* handle_semantic) const {
   for (const auto& field : fields_) {
-    if (field.second->NeedsToLoadHandleInfo(pid, handle_semantic)) {
+    if (field.second->NeedsToLoadHandleInfo(tid, handle_semantic)) {
       return true;
     }
   }
@@ -276,10 +275,10 @@ void StructValue::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   Visit(&visitor, nullptr);
 }
 
-bool VectorValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+bool VectorValue::NeedsToLoadHandleInfo(zx_koid_t tid,
                                         semantic::HandleSemantic* handle_semantic) const {
   for (const auto& value : values_) {
-    if (value->NeedsToLoadHandleInfo(pid, handle_semantic)) {
+    if (value->NeedsToLoadHandleInfo(tid, handle_semantic)) {
       return true;
     }
   }
@@ -379,10 +378,10 @@ bool TableValue::AddMember(std::string_view name, std::unique_ptr<Value> value) 
   return true;
 }
 
-bool TableValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+bool TableValue::NeedsToLoadHandleInfo(zx_koid_t tid,
                                        semantic::HandleSemantic* handle_semantic) const {
   for (const auto& member : members_) {
-    if (member.second->NeedsToLoadHandleInfo(pid, handle_semantic)) {
+    if (member.second->NeedsToLoadHandleInfo(tid, handle_semantic)) {
       return true;
     }
   }
@@ -476,11 +475,11 @@ FidlMessageValue::FidlMessageValue(fidl_codec::DecodedMessage* message, std::str
       response_errors_((unknown_direction_ || !is_request_) ? message->response_error_stream().str()
                                                             : "") {}
 
-bool FidlMessageValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+bool FidlMessageValue::NeedsToLoadHandleInfo(zx_koid_t tid,
                                              semantic::HandleSemantic* handle_semantic) const {
   for (const auto& handle : handles_) {
-    auto description = handle_semantic->GetHandleDescription(pid, handle.handle);
-    if (description == nullptr) {
+    auto inferred_handle_info = handle_semantic->GetInferredHandleInfo(tid, handle.handle);
+    if (inferred_handle_info == nullptr) {
       return true;
     }
   }

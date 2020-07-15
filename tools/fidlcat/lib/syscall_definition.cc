@@ -2572,7 +2572,7 @@ void SyscallDecoderDispatcher::Populate() {
         "handles", SyscallType::kUint32Hexa,
         std::make_unique<ArgumentAccess<uint32_t>>(handle_info),
         std::make_unique<ArgumentAccess<uint32_t>>(nhandles));
-    extract_handles->set_inputs_decoded_action(&SyscallDecoderDispatcher::ExtractHandles);
+    extract_handles->set_inputs_decoded_action(&SyscallDecoderDispatcher::ExtractHandleInfos);
   }
 
   {

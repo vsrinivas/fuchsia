@@ -16,17 +16,28 @@
 
 namespace fidlcat {
 
-void Inference::CreateHandle(zx_koid_t thread_koid, zx_handle_t handle) {
+void Inference::CreateHandleInfo(zx_koid_t thread_koid, zx_handle_t handle) {
   int64_t timestamp = time(NULL);
   Thread* thread = dispatcher_->SearchThread(thread_koid);
   FX_DCHECK(thread != nullptr);
-  dispatcher_->CreateHandle(thread, handle, timestamp, /*startup=*/false);
+  dispatcher_->CreateHandleInfo(thread, handle, timestamp, /*startup=*/false);
+}
+
+bool Inference::NeedsToLoadHandleInfo(zx_koid_t tid, zx_handle_t handle) const {
+  Thread* thread = dispatcher_->SearchThread(tid);
+  FX_DCHECK(thread != nullptr);
+  HandleInfo* handle_info = thread->process()->SearchHandleInfo(handle);
+  if (handle_info == nullptr) {
+    int64_t timestamp = time(NULL);
+    handle_info = dispatcher_->CreateHandleInfo(thread, handle, timestamp, /*startup=*/false);
+  }
+  return handle_info->koid() == ZX_KOID_INVALID;
 }
 
 // This is the first function which is intercepted. This gives us information about
 // all the handles an application have at startup. However, for directory handles,
 // we don't have the name of the directory.
-void Inference::ExtractHandles(SyscallDecoder* decoder) {
+void Inference::ExtractHandleInfos(SyscallDecoder* decoder) {
   constexpr int kNhandles = 0;
   constexpr int kHandles = 1;
   constexpr int kHandleInfo = 2;
@@ -41,20 +52,21 @@ void Inference::ExtractHandles(SyscallDecoder* decoder) {
   // The meaning of handle info is described in zircon/system/public/zircon/processargs.h
   for (uint32_t handle = 0; handle < nhandles; ++handle) {
     if (handles[handle] != 0) {
-      dispatcher_->CreateHandle(decoder->fidlcat_thread(), handles[handle], timestamp,
-                                /*startup=*/true);
+      dispatcher_->CreateHandleInfo(decoder->fidlcat_thread(), handles[handle], timestamp,
+                                    /*startup=*/true);
       uint32_t type = PA_HND_TYPE(handle_info[handle]);
       switch (type) {
         case PA_FD:
-          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle], "fd",
-                               PA_HND_ARG(handle_info[handle]));
+          AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle], "fd",
+                                PA_HND_ARG(handle_info[handle]));
           break;
         case PA_DIRECTORY_REQUEST:
-          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle],
-                               "directory-request", "/");
+          AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle],
+                                "directory-request", "/");
           break;
         default:
-          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle], type);
+          AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle],
+                                type);
           break;
       }
     }
@@ -84,29 +96,30 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
   // The meaning of handle info is described in zircon/system/public/zircon/processargs.h
   for (uint32_t handle = 0; handle < handle_count; ++handle) {
     if (handles[handle] != 0) {
-      dispatcher_->CreateHandle(decoder->fidlcat_thread(), handles[handle], timestamp,
-                                /*startup=*/true);
+      dispatcher_->CreateHandleInfo(decoder->fidlcat_thread(), handles[handle], timestamp,
+                                    /*startup=*/true);
       uint32_t type = PA_HND_TYPE(handle_info[handle]);
       switch (type) {
         case PA_NS_DIR: {
           uint32_t index = PA_HND_ARG(handle_info[handle]);
-          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle], "dir",
-                               (index < name_count)
-                                   ? reinterpret_cast<const char*>(
+          AddInferredHandleInfo(
+              decoder->fidlcat_thread()->process()->koid(), handles[handle], "dir",
+              (index < name_count) ? reinterpret_cast<const char*>(
                                          decoder->BufferContent(Stage::kEntry, names[index]))
                                    : "");
           break;
         }
         case PA_FD:
-          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle], "fd",
-                               PA_HND_ARG(handle_info[handle]));
+          AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle], "fd",
+                                PA_HND_ARG(handle_info[handle]));
           break;
         case PA_DIRECTORY_REQUEST:
-          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle],
-                               "directory-request", "/");
+          AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle],
+                                "directory-request", "/");
           break;
         default:
-          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle], type);
+          AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle],
+                                type);
           break;
       }
     }
@@ -163,15 +176,15 @@ void Inference::ZxChannelCreate(const OutputEvent* event) {
   if ((out0->handle().handle != ZX_HANDLE_INVALID) &&
       (out1->handle().handle != ZX_HANDLE_INVALID)) {
     int64_t timestamp = time(NULL);
-    dispatcher_->CreateHandle(event->thread(), out0->handle().handle, timestamp,
-                              /*startup=*/false);
-    dispatcher_->CreateHandle(event->thread(), out1->handle().handle, timestamp,
-                              /*startup=*/false);
+    dispatcher_->CreateHandleInfo(event->thread(), out0->handle().handle, timestamp,
+                                  /*startup=*/false);
+    dispatcher_->CreateHandleInfo(event->thread(), out1->handle().handle, timestamp,
+                                  /*startup=*/false);
     // Provides the minimal semantic for both handles (that is they are channels).
-    AddHandleDescription(event->thread()->process()->koid(), out0->handle().handle, "channel",
-                         next_channel_++);
-    AddHandleDescription(event->thread()->process()->koid(), out1->handle().handle, "channel",
-                         next_channel_++);
+    AddInferredHandleInfo(event->thread()->process()->koid(), out0->handle().handle, "channel",
+                          next_channel_++);
+    AddInferredHandleInfo(event->thread()->process()->koid(), out1->handle().handle, "channel",
+                          next_channel_++);
     // Links the two channels.
     AddLinkedHandles(event->thread()->process()->koid(), out0->handle().handle,
                      out1->handle().handle);
@@ -184,11 +197,11 @@ void Inference::ZxPortCreate(const OutputEvent* event) {
   FX_DCHECK(out != nullptr);
   if (out->handle().handle != ZX_HANDLE_INVALID) {
     int64_t timestamp = time(NULL);
-    dispatcher_->CreateHandle(event->thread(), out->handle().handle, timestamp,
-                              /*startup=*/false);
+    dispatcher_->CreateHandleInfo(event->thread(), out->handle().handle, timestamp,
+                                  /*startup=*/false);
     // Provides the minimal semantic for the handle (that is it's a port).
-    AddHandleDescription(event->thread()->process()->koid(), out->handle().handle, "port",
-                         next_port_++);
+    AddInferredHandleInfo(event->thread()->process()->koid(), out->handle().handle, "port",
+                          next_port_++);
   }
 }
 
@@ -198,11 +211,11 @@ void Inference::ZxTimerCreate(const OutputEvent* event) {
   FX_DCHECK(out != nullptr);
   if (out->handle().handle != ZX_HANDLE_INVALID) {
     int64_t timestamp = time(NULL);
-    dispatcher_->CreateHandle(event->thread(), out->handle().handle, timestamp,
-                              /*startup=*/false);
+    dispatcher_->CreateHandleInfo(event->thread(), out->handle().handle, timestamp,
+                                  /*startup=*/false);
     // Provides the minimal semantic for the handle (that is it's a timer).
-    AddHandleDescription(event->thread()->process()->koid(), out->handle().handle, "timer",
-                         next_timer_++);
+    AddInferredHandleInfo(event->thread()->process()->koid(), out->handle().handle, "timer",
+                          next_timer_++);
   }
 }
 

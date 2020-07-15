@@ -10,30 +10,31 @@
 
 namespace fidlcat {
 
-FidlcatPrinter::FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, uint64_t process_id,
+FidlcatPrinter::FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* process,
                                std::ostream& os, std::string_view line_header, int tabulations)
     : PrettyPrinter(os, dispatcher->colors(),
                     dispatcher->message_decoder_dispatcher().display_options().pretty_print,
                     line_header, dispatcher->columns(), dispatcher->with_process_info(),
                     tabulations),
       inference_(dispatcher->inference()),
-      process_id_(process_id),
+      process_(process),
       display_stack_frame_(dispatcher->decode_options().stack_level != kNoStack),
       dump_messages_(dispatcher->dump_messages()) {}
 
 void FidlcatPrinter::DisplayHandle(const zx_handle_info_t& handle) {
-  const fidl_codec::semantic::HandleDescription* known_handle =
-      inference_.GetHandleDescription(process_id_, handle.handle);
-  if ((handle.type == ZX_OBJ_TYPE_NONE) && (known_handle != nullptr)) {
+  HandleInfo* handle_info = process_->SearchHandleInfo(handle.handle);
+  if ((handle.type == ZX_OBJ_TYPE_NONE) && (handle_info != nullptr)) {
     zx_handle_info_t tmp = handle;
-    tmp.type = known_handle->object_type();
+    tmp.type = handle_info->object_type();
     fidl_codec::DisplayHandle(tmp, *this);
   } else {
     fidl_codec::DisplayHandle(handle, *this);
   }
-  if (known_handle != nullptr) {
+  const fidl_codec::semantic::InferredHandleInfo* inferred_handle_info =
+      inference_.GetInferredHandleInfo(process_->koid(), handle.handle);
+  if (inferred_handle_info != nullptr) {
     (*this) << '(';
-    known_handle->Display(*this);
+    inferred_handle_info->Display(*this);
     (*this) << ')';
   }
 }

@@ -57,20 +57,20 @@ std::unique_ptr<SystemCallTest> ProcessargsExtractHandles(
       kSecondPid, kSecondThreadKoid);                                                              \
   SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher();       \
   ASSERT_EQ(dispatcher->inference().handle_size(kFirstPid), nhandles_1);                           \
-  const fidl_codec::semantic::HandleDescription* description =                                     \
-      dispatcher->inference().GetHandleDescription(kFirstPid, kDuplicatedHandleValue);             \
-  ASSERT_NE(description, nullptr);                                                                 \
-  ASSERT_EQ(description->type(), "proc-self");                                                     \
-  description = dispatcher->inference().GetHandleDescription(kFirstPid, handles_1[8]);             \
-  ASSERT_NE(description, nullptr);                                                                 \
-  ASSERT_EQ(description->type(), "fd");                                                            \
-  ASSERT_EQ(description->fd(), 1);                                                                 \
+  const fidl_codec::semantic::InferredHandleInfo* info =                                           \
+      dispatcher->inference().GetInferredHandleInfo(kFirstPid, kDuplicatedHandleValue);            \
+  ASSERT_NE(info, nullptr);                                                                        \
+  ASSERT_EQ(info->type(), "proc-self");                                                            \
+  info = dispatcher->inference().GetInferredHandleInfo(kFirstPid, handles_1[8]);                   \
+  ASSERT_NE(info, nullptr);                                                                        \
+  ASSERT_EQ(info->type(), "fd");                                                                   \
+  ASSERT_EQ(info->fd(), 1);                                                                        \
                                                                                                    \
   ASSERT_EQ(dispatcher->inference().handle_size(kSecondPid), nhandles_2);                          \
-  description = dispatcher->inference().GetHandleDescription(kSecondPid, kDuplicatedHandleValue);  \
-  ASSERT_NE(description, nullptr);                                                                 \
-  ASSERT_EQ(description->type(), "fd");                                                            \
-  ASSERT_EQ(description->fd(), 1);
+  info = dispatcher->inference().GetInferredHandleInfo(kSecondPid, kDuplicatedHandleValue);        \
+  ASSERT_NE(info, nullptr);                                                                        \
+  ASSERT_EQ(info->type(), "fd");                                                                   \
+  ASSERT_EQ(info->fd(), 1);
 
 #define PROCESSARGS_EXTRACT_HANDLES_DISPLAY_TEST(name)                              \
   TEST_F(InterceptionWorkflowTestX64, name) { PROCESSARGS_EXTRACT_HANDLES_TEST(); } \
@@ -115,11 +115,11 @@ std::unique_ptr<SystemCallTest> LibcExtensionsInit(uint32_t nhandles, zx_handle_
   SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
   ASSERT_EQ(dispatcher->inference().handle_size(kFirstPid), defined_handles);                \
   ASSERT_EQ(dispatcher->inference().handle_size(kSecondPid), static_cast<size_t>(0));        \
-  const fidl_codec::semantic::HandleDescription* description =                               \
-      dispatcher->inference().GetHandleDescription(kFirstPid, handles[3]);                   \
-  ASSERT_NE(description, nullptr);                                                           \
-  ASSERT_EQ(description->type(), "dir");                                                     \
-  ASSERT_EQ(description->path(), "/pkg");
+  const fidl_codec::semantic::InferredHandleInfo* info =                                     \
+      dispatcher->inference().GetInferredHandleInfo(kFirstPid, handles[3]);                  \
+  ASSERT_NE(info, nullptr);                                                                  \
+  ASSERT_EQ(info->type(), "dir");                                                            \
+  ASSERT_EQ(info->path(), "/pkg");
 
 #define LIBC_EXTENSIONS_INIT_DISPLAY_TEST(name)                              \
   TEST_F(InterceptionWorkflowTestX64, name) { LIBC_EXTENSIONS_INIT_TEST(); } \

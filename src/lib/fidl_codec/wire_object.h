@@ -55,7 +55,7 @@ class Value {
   // Returns true if we need to load information about the handle (call to zx_object_get_info with
   // ZX_INFO_HANDLE_TABLE). We need to load information about the handle if one of the handles of
   // the value has an unknown koid.
-  virtual bool NeedsToLoadHandleInfo(zx_koid_t pid,
+  virtual bool NeedsToLoadHandleInfo(zx_koid_t tid,
                                      semantic::HandleSemantic* handle_semantic) const {
     return false;
   }
@@ -246,7 +246,7 @@ class HandleValue : public Value {
 
   const HandleValue* AsHandleValue() const override { return this; }
 
-  bool NeedsToLoadHandleInfo(zx_koid_t pid,
+  bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
@@ -268,7 +268,7 @@ class UnionValue : public Value {
   const UnionMember& member() const { return member_; }
   const std::unique_ptr<Value>& value() const { return value_; }
 
-  bool NeedsToLoadHandleInfo(zx_koid_t pid,
+  bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
@@ -305,7 +305,7 @@ class StructValue : public Value {
 
   const Value* GetFieldValue(std::string_view field_name) const;
 
-  bool NeedsToLoadHandleInfo(zx_koid_t pid,
+  bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
@@ -345,7 +345,7 @@ class VectorValue : public Value {
     values_.push_back(std::move(value));
   }
 
-  bool NeedsToLoadHandleInfo(zx_koid_t pid,
+  bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
@@ -378,7 +378,7 @@ class TableValue : public Value {
 
   bool AddMember(std::string_view name, std::unique_ptr<Value> value);
 
-  bool NeedsToLoadHandleInfo(zx_koid_t pid,
+  bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
@@ -444,7 +444,7 @@ class FidlMessageValue : public Value {
 
   const FidlMessageValue* AsFidlMessageValue() const override { return this; }
 
-  bool NeedsToLoadHandleInfo(zx_koid_t pid,
+  bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;

@@ -28,16 +28,16 @@ std::unique_ptr<SystemCallTest> ZxTimerCreate(int64_t result, std::string_view r
   PerformDisplayTest(&controller, "$plt(zx_timer_create)",                                   \
                      ZxTimerCreate(result, #result, 0, ZX_CLOCK_MONOTONIC, &out), expected); \
   SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
-  const fidl_codec::semantic::HandleDescription* description0 =                              \
-      dispatcher->inference().GetHandleDescription(kFirstPid, out);                          \
-  ASSERT_NE(description0, nullptr);                                                          \
-  ASSERT_EQ(description0->type(), "timer");                                                  \
-  ASSERT_EQ(description0->fd(), 0);                                                          \
-  const fidl_codec::semantic::HandleDescription* description1 =                              \
-      dispatcher->inference().GetHandleDescription(kSecondPid, out);                         \
-  ASSERT_NE(description1, nullptr);                                                          \
-  ASSERT_EQ(description1->type(), "timer");                                                  \
-  ASSERT_EQ(description1->fd(), 1);
+  const fidl_codec::semantic::InferredHandleInfo* info0 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kFirstPid, out);                         \
+  ASSERT_NE(info0, nullptr);                                                                 \
+  ASSERT_EQ(info0->type(), "timer");                                                         \
+  ASSERT_EQ(info0->fd(), 0);                                                                 \
+  const fidl_codec::semantic::InferredHandleInfo* info1 =                                    \
+      dispatcher->inference().GetInferredHandleInfo(kSecondPid, out);                        \
+  ASSERT_NE(info1, nullptr);                                                                 \
+  ASSERT_EQ(info1->type(), "timer");                                                         \
+  ASSERT_EQ(info1->fd(), 1);
 
 #define TIMER_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \

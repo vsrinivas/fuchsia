@@ -24,10 +24,12 @@ class Inference : public fidl_codec::semantic::HandleSemantic {
  public:
   explicit Inference(SyscallDecoderDispatcher* dispatcher) : dispatcher_(dispatcher) {}
 
-  void CreateHandle(zx_koid_t thread_koid, zx_handle_t handle) override;
+  void CreateHandleInfo(zx_koid_t thread_koid, zx_handle_t handle) override;
+
+  bool NeedsToLoadHandleInfo(zx_koid_t tid, zx_handle_t handle) const override;
 
   // Function called when processargs_extract_handles (from libc) is intercepted.
-  void ExtractHandles(SyscallDecoder* decoder);
+  void ExtractHandleInfos(SyscallDecoder* decoder);
 
   // Function called when __libc_extensions_init (from libc) is intercepted.
   void LibcExtensionsInit(SyscallDecoder* decoder);
