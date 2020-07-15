@@ -116,35 +116,6 @@ TEST(BlkdevTests, blkdev_test_bad_requests) {
   ASSERT_EQ(read(fd.get(), buf.get(), blk_size), -1);
 }
 
-#if 0
-TEST(BlkdevTests, DISABLED_blkdev_test_multiple) {
-  uint8_t buf[PAGE_SIZE];
-  uint8_t out[PAGE_SIZE];
-
-  int fd1 = get_testdev("blkdev-test-A", PAGE_SIZE, 512);
-  int fd2 = get_testdev("blkdev-test-B", PAGE_SIZE, 512);
-
-  // Write 'a' to fd1, write 'b', to fd2
-  memset(buf, 'a', sizeof(buf));
-  ASSERT_EQ(write(fd1, buf, sizeof(buf)), (ssize_t)sizeof(buf), "");
-  memset(buf, 'b', sizeof(buf));
-  ASSERT_EQ(write(fd2, buf, sizeof(buf)), (ssize_t)sizeof(buf), "");
-
-  ASSERT_EQ(lseek(fd1, 0, SEEK_SET), 0, "");
-  ASSERT_EQ(lseek(fd2, 0, SEEK_SET), 0, "");
-
-  // Read 'b' from fd2, read 'a' from fd1
-  ASSERT_EQ(read(fd2, out, sizeof(buf)), (ssize_t)sizeof(buf), "");
-  ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0, "");
-  close(fd2);
-
-  memset(buf, 'a', sizeof(buf));
-  ASSERT_EQ(read(fd1, out, sizeof(buf)), (ssize_t)sizeof(buf), "");
-  ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0, "");
-  close(fd1);
-}
-#endif
-
 TEST(BlkdevTests, blkdev_test_fifo_no_op) {
   // Get a FIFO connection to a blkdev and immediately close it
   uint64_t blk_size, blk_count;
