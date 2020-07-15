@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::convert::TryInto;
 use std::fmt::Debug;
 use std::mem::size_of;
 
@@ -14,7 +15,7 @@ use fuchsia_zircon as zx;
 
 use anyhow::{self, Context};
 use futures::future::{self, Future, FutureExt as _};
-use futures::stream::TryStreamExt as _;
+use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use net_types::ethernet::Mac;
 use net_types::ip::{self as net_types_ip, Ip};
 use net_types::{SpecifiedAddress, Witness};
@@ -629,4 +630,120 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result
         )
         .await?
         .ok_or(anyhow::anyhow!("failed to get next OnInterfaceChanged event"))
+}
+
+#[variants_test]
+async fn router_and_prefix_discovery<E: netemul::Endpoint>(name: &str) -> Result {
+    async fn send_ra_with_router_lifetime<'a>(
+        fake_ep: &netemul::TestFakeEndpoint<'a>,
+        lifetime: u16,
+        options: &[NdpOption<'_>],
+    ) -> Result {
+        let ra = RouterAdvertisement::new(
+            0,        /* current_hop_limit */
+            false,    /* managed_flag */
+            false,    /* other_config_flag */
+            lifetime, /* router_lifetime */
+            0,        /* reachable_time */
+            0,        /* retransmit_timer */
+        );
+        write_ndp_message::<&[u8], _>(
+            eth_consts::MAC_ADDR,
+            Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
+            ipv6_consts::LINK_LOCAL_ADDR,
+            net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            ra,
+            options,
+            fake_ep,
+        )
+        .await
+    }
+
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let (_network, _environment, netstack, iface, fake_ep) =
+        setup_network::<E, _>(&sandbox, name).await.context("failed to setup network")?;
+
+    let pi = PrefixInformation::new(
+        ipv6_consts::PREFIX.prefix(),  /* prefix_length */
+        true,                          /* on_link_flag */
+        false,                         /* autonomous_address_configuration_flag */
+        1000,                          /* valid_lifetime */
+        0,                             /* preferred_lifetime */
+        ipv6_consts::PREFIX.network(), /* prefix */
+    );
+    let options = [NdpOption::PrefixInformation(&pi)];
+    let () = send_ra_with_router_lifetime(&fake_ep, 1000, &options)
+        .await
+        .context("failed to send router advertisement")?;
+
+    // Test that the default router should be discovered after it is advertised.
+    assert!(stream::repeat(())
+        .take(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.into_seconds().try_into().unwrap())
+        .then(|()| {
+            async {
+                let () = crate::sleep(1).await;
+                Ok::<bool, anyhow::Error>(
+                    netstack
+                        .get_route_table()
+                        .await
+                        .context("failed to get route table")?
+                        .into_iter()
+                        .any(|rentry| {
+                            if let net::IpAddress::Ipv6(gateway) = rentry.gateway {
+                                if let net::IpAddress::Ipv6(destination) = rentry.destination {
+                                    let gateway = net_types_ip::Ipv6Addr::new(gateway.addr);
+                                    let destination = net_types_ip::Ipv6Addr::new(destination.addr);
+                                    if gateway == ipv6_consts::LINK_LOCAL_ADDR
+                                        && destination == net_types_ip::Ipv6::UNSPECIFIED_ADDRESS
+                                    {
+                                        return true;
+                                    }
+                                }
+                            }
+                            false
+                        }),
+                )
+            }
+            .boxed()
+        })
+        .try_skip_while(|x| future::ok(!x))
+        .try_next()
+        .await
+        .context("waiting for default route")?
+        .unwrap_or(false));
+
+    // Test that the prefix should be discovered after it is advertised.
+    assert!(stream::repeat(())
+        .take(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.into_seconds().try_into().unwrap())
+        .then(|()| {
+            async {
+                let () = crate::sleep(1).await;
+                Ok::<bool, anyhow::Error>(
+                    netstack
+                        .get_route_table()
+                        .await
+                        .context("failed to get route table")?
+                        .into_iter()
+                        .any(|rentry| {
+                            if let net::IpAddress::Ipv6(dest) = rentry.destination {
+                                let destination = net_types_ip::Ipv6Addr::new(dest.addr);
+                                if destination == ipv6_consts::PREFIX.network()
+                                    && (u64::from(rentry.nicid)) == iface.id()
+                                {
+                                    return true;
+                                }
+                            }
+                            false
+                        }),
+                )
+            }
+            .boxed()
+        })
+        .try_skip_while(|x| future::ok(!x))
+        .try_next()
+        .await
+        .context("waiting for on-link prefix")?
+        .unwrap_or(false));
+
+    Ok(())
 }

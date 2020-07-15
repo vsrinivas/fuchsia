@@ -17,6 +17,7 @@ mod socket;
 use std::convert::TryFrom;
 
 use fidl_fuchsia_hardware_ethertap as ethertap;
+use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
@@ -76,4 +77,9 @@ impl<'a> EthertapName for &'a str {
             usize::try_from(ethertap::MAX_NAME_LENGTH).expect("u32 could not fit into usize");
         &self[self.len().checked_sub(max_len).unwrap_or(0)..self.len()]
     }
+}
+
+/// Asynchronously sleeps for specified `secs` seconds.
+async fn sleep(secs: i64) {
+    fasync::Timer::new(zx::Duration::from_seconds(secs).after_now()).await;
 }
