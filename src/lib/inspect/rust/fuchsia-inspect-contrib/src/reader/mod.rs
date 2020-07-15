@@ -150,12 +150,6 @@ impl ArchiveReader {
         self
     }
 
-    // TODO: remove, just for soft-migration.
-    pub async fn get_hierarchy(self) -> Result<Vec<NodeHierarchy>, Error> {
-        let results = self.get().await?;
-        Ok(results.into_iter().filter_map(|result| result.payload).collect())
-    }
-
     /// Connects to the archivist observer.cmx and returns inspect data associated with the given
     /// component under the relative realm path given.
     pub async fn get(self) -> Result<Vec<InspectSchema>, Error> {
