@@ -117,7 +117,7 @@ the `bits` are based on). In the above example, `FileModeMask` has a value of
 Example usage:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="bits" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="bits" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Enums {#enums}
@@ -142,7 +142,7 @@ enum class LocationType : uint32_t {
 Example usage:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="enums" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="enums" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Structs {#structs}
@@ -177,7 +177,7 @@ Structs may have additional members if they represent the response variant of a
 Example usage:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="structs" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="structs" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Unions {#unions}
@@ -245,7 +245,7 @@ Unions may have additional methods if they represent the response variant of a
 Example usage:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="unions" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="unions" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 #### Flexible unions and unknown variants
@@ -311,7 +311,7 @@ The FIDL toolchain generates a `User` class with the following methods:
 Example usage:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="tables" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ## Protocols {#protocols}
