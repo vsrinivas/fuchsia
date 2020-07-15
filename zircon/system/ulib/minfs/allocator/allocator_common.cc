@@ -20,9 +20,7 @@ PendingChange::PendingChange(Allocator* allocator, Kind kind)
   allocator_.AddPendingChange(this);
 }
 
-PendingChange::~PendingChange() {
-  allocator_.RemovePendingChange(this);
-}
+PendingChange::~PendingChange() { allocator_.RemovePendingChange(this); }
 
 size_t PendingChange::GetReservedCount() const {
   // Allocations are reserved before we've committed, but after we've committed, we don't need to
@@ -72,7 +70,7 @@ zx_status_t Allocator::Create(fs::BufferedOperationsBuilder* builder,
 }
 
 size_t Allocator::GetAvailable() const {
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   return GetAvailableLocked();
 }
 
@@ -120,7 +118,7 @@ void Allocator::Commit(PendingWork* transaction, AllocatorReservation* reservati
   PendingAllocations& allocations = reservation->GetPendingAllocations(this);
   PendingDeallocations& deallocations = reservation->GetPendingDeallocations(this);
 
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
 
   ZX_ASSERT(!allocations.is_committed() && !deallocations.is_committed());
 
@@ -163,7 +161,7 @@ void Allocator::Commit(PendingWork* transaction, AllocatorReservation* reservati
 void Allocator::Free(AllocatorReservation* reservation, size_t index) {
   PendingAllocations& allocations = reservation->GetPendingAllocations(this);
   PendingDeallocations& deallocations = reservation->GetPendingDeallocations(this);
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   if (allocations.bitmap().GetOne(index)) {
     allocations.bitmap().ClearOne(index);
   } else {
@@ -188,7 +186,7 @@ zx_status_t Allocator::GrowMapLocked(size_t new_size, size_t* old_size) {
 }
 
 zx_status_t Allocator::Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count) {
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   if (GetAvailableLocked() < count) {
     // If we do not have enough free elements, attempt to extend the partition.
     auto grow_map =
@@ -210,14 +208,14 @@ zx_status_t Allocator::Reserve(AllocatorReservationKey, PendingWork* transaction
 }
 
 bool Allocator::CheckAllocated(size_t index) const {
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   return map_.Get(index, index + 1);
 }
 
 size_t Allocator::Allocate(AllocatorReservationKey, AllocatorReservation* reservation) {
   PendingAllocations& allocations = reservation->GetPendingAllocations(this);
 
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   ZX_DEBUG_ASSERT(reserved_ > 0);
 
   size_t new_index = FindLocked();
@@ -229,18 +227,18 @@ size_t Allocator::Allocate(AllocatorReservationKey, AllocatorReservation* reserv
 }
 
 void Allocator::Unreserve(AllocatorReservationKey, size_t count) {
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   ZX_DEBUG_ASSERT(reserved_ >= count);
   reserved_ -= count;
 }
 
 void Allocator::AddPendingChange(PendingChange* change) {
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   pending_changes_.push_back(change);
 }
 
 void Allocator::RemovePendingChange(PendingChange* change) {
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   if (change->GetReservedCount() > 0) {
     auto range = change->bitmap().begin();
     if (range != change->bitmap().end() && range->start() < first_free_) {

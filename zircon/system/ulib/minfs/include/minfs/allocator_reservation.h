@@ -11,7 +11,6 @@
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <minfs/format.h>
-#include <minfs/mutex.h>
 #include <minfs/pending_work.h>
 #include <minfs/superblock.h>
 
@@ -37,7 +36,7 @@ class AllocatorReservation {
 
   // Not copyable or movable.
   AllocatorReservation(const AllocatorReservation&) = delete;
-  AllocatorReservation& operator =(const AllocatorReservation&) = delete;
+  AllocatorReservation& operator=(const AllocatorReservation&) = delete;
 
   ~AllocatorReservation();
 

@@ -9,6 +9,7 @@
 #define ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_ALLOCATOR_H_
 
 #include <memory>
+#include <mutex>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
@@ -18,7 +19,6 @@
 #include <fs/transaction/buffered_operations_builder.h>
 #include <minfs/allocator_reservation.h>
 #include <minfs/format.h>
-#include <minfs/mutex.h>
 #include <minfs/superblock.h>
 #include <minfs/writeback.h>
 
@@ -213,7 +213,7 @@ class Allocator {
 
   // Protects the allocator's metadata.
   // Does NOT guard the allocator |storage_|.
-  mutable Mutex lock_;
+  mutable std::mutex lock_;
 
   // Total number of elements reserved by AllocatorReservation objects. Represents the maximum
   // number of elements that are allowed to be allocated or swapped in at a given time. Once an

@@ -39,12 +39,12 @@ class UnownedBuffer : public storage::BlockBuffer {
 }  // namespace
 
 Allocator::~Allocator() {
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   ZX_ASSERT(pending_changes_.empty());
 }
 
 zx_status_t Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   storage::OwnedVmoid vmoid;
   zx_status_t status = storage_->AttachVmo(map_.StorageUnsafe()->GetVmo(), &vmoid);
   if (status != ZX_OK) {
@@ -68,7 +68,7 @@ size_t Allocator::GetAvailableLocked() const {
 WriteData Allocator::GetMapDataLocked() { return map_.StorageUnsafe()->GetVmo().get(); }
 
 fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {
-  AutoLock lock(&lock_);
+  std::scoped_lock lock(lock_);
   fbl::Vector<BlockRegion> out_regions;
   uint64_t offset = 0;
   uint64_t end = 0;
