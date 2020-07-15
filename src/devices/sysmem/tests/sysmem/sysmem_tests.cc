@@ -31,6 +31,9 @@
 #include <hw/arch_ops.h>
 #include <zxtest/zxtest.h>
 
+// To dump a corpus file for sysmem_fuzz.cc test, enable SYSMEM_FUZZ_CORPUS.
+#define SYSMEM_FUZZ_CORPUS 0
+
 // We assume one sysmem since boot, for now.
 const char* kSysmemDevicePath = "/dev/class/sysmem/000";
 
@@ -575,6 +578,17 @@ TEST(Sysmem, TokenOneParticipantWithImageConstraints) {
   image_constraints.start_offset_divisor = 2;
   image_constraints.display_width_divisor = 1;
   image_constraints.display_height_divisor = 1;
+
+#ifdef SYSMEM_FUZZ_CORPUS
+  FILE* ofp = fopen("/data/sysmem_fuzz_corpus_buffer_collecton_constraints.dat", "wb");
+  if (ofp) {
+    fwrite(constraints.get(), sizeof(fuchsia_sysmem_BufferCollectionConstraints), 1, ofp);
+    fclose(ofp);
+  } else {
+    fprintf(stderr, "Failed to write sysmem BufferCollectionConstraints corpus file.\n");
+    fflush(stderr);
+  }
+#endif  // SYSMEM_FUZZ_CORPUS
 
   status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
                                                          constraints.release());

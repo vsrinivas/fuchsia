@@ -1,0 +1,66 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/test.gni")
+
+group("fuzz") {
+  testonly = true
+  deps = [ ":tests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":sysmem-fuzz" ]
+}
+
+fuzzers_package("sysmem-fuzz") {
+  # Fuzzers are defined for each supported language
+  cpp_fuzzers = [
+    # Each list of fuzzers can contain simple labels...
+    ":sysmem_fuzzer",
+  ]
+}
+
+fuzzer("sysmem_fuzzer") {
+  testonly = true
+  output_name = "sysmem_fuzzer"
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "sysmem_fuzz.cc" ]
+  corpus = "corpus"
+  deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
+    "//src/devices/lib/driver",
+    "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/region-alloc",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/closure-queue",
+    "//zircon/system/ulib/fidl-async-2",
+    "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/sysmem-make-tracking",
+    "//zircon/system/ulib/sysmem-version",
+    "//zircon/system/ulib/trace:trace-driver",
+  ]
+}
