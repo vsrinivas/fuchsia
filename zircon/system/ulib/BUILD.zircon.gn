@@ -84,6 +84,7 @@ group("ulib-host") {
     "$zx/third_party/ulib/safemath",
     "$zx/third_party/ulib/zstd",
     "$zx/third_party/ulib/zstd:zstdseek",
+    "async",
     "bitmap",
     "cmdline",
     "fbl",

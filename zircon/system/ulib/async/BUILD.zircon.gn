@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(is_fuchsia)
-
 zx_library("async") {
   sdk = "source"
   sdk_publishable = true
@@ -17,6 +15,7 @@ zx_library("async") {
     "lib/async/wait.h",
     "lib/async/irq.h",
   ]
+  host = true
   public_deps = [
     # <lib/async/cpp/wait.h> has #include <lib/fit/function.h>.
     "$zx/system/ulib/fit:headers",
