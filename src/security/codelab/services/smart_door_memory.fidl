@@ -1,0 +1,42 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.security.codelabsmartdoor;
+
+const uint8 TOKEN_ID_SIZE = 32;
+
+table Token {
+    1: string:TOKEN_ID_SIZE id;
+};
+
+[Discoverable]
+protocol Memory {
+    // Generate a random token that could be used to initialize a reader/writer.
+    GenerateToken() -> (Token token) error Error;
+    // Get a reader to read from smart door memory. The memory must have been
+    // previously written to using a writer obtained with the same token.
+    GetReader(Token token, request<Reader> request) -> () error Error;
+    // Get a writer to write to smart door memory. The token would be used to
+    // identify the storage that could be written to.
+    GetWriter(Token token, request<Writer> request) -> () error Error;
+};
+
+[Discoverable]
+protocol MemoryReset {
+    // Reset all the smart door memory state. For test purposes.
+    Reset() -> ();
+};
+
+[Discoverable]
+protocol Reader {
+    // Read all content in the smart door memory.
+    Read() -> (bytes:MAX bytes) error Error;
+};
+
+[Discoverable]
+protocol Writer {
+    // Write the bytes into the smart door memory.
+    // If success, following reads should read the same bytes out.
+    Write(bytes:MAX bytes) -> (uint32 bytes_written) error Error;
+};

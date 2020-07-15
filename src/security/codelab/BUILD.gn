@@ -1,0 +1,11 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("codelab") {
+  testonly = true
+  deps = [
+    "//build/validate:non_production_tag",
+    "//src/security/codelab/services:codelab",
+  ]
+}
