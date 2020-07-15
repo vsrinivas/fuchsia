@@ -12,14 +12,38 @@ use {
         inspect::Inspectable,
         types::{BondingData, HostData, HostInfo, Peer, PeerId},
     },
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     futures::{Future, FutureExt, StreamExt, TryFutureExt},
     parking_lot::RwLock,
     pin_utils::pin_mut,
-    std::{convert::TryInto, path::PathBuf, sync::Arc},
+    std::{
+        convert::TryInto,
+        path::PathBuf,
+        sync::{Arc, Weak},
+    },
 };
 
 use crate::types::{self, from_fidl_result, Error};
+
+// We use session tokens to track the reference counting for discovery/discoverable states
+// As long as at least one user maintains an Arc<> to the session, the state persists
+// Once all references are dropped, the `Drop` trait on the session causes the state
+// to be terminated.
+pub struct HostDiscoverySession {
+    adap: Weak<RwLock<HostDevice>>,
+}
+
+impl Drop for HostDiscoverySession {
+    fn drop(&mut self) {
+        fx_vlog!(1, "HostDiscoverySession ended");
+        if let Some(host) = self.adap.upgrade() {
+            if let Err(err) = host.write().stop_discovery() {
+                // TODO(45325) - we should close the host channel if an error is returned
+                fx_log_warn!("Unexpected error response when stopping discovery: {:?}", err);
+            }
+        }
+    }
+}
 
 pub struct HostDevice {
     pub path: PathBuf,
@@ -56,8 +80,11 @@ impl HostDevice {
         self.host.set_device_class(&mut cod).map(from_fidl_result)
     }
 
-    pub fn start_discovery(&mut self) -> impl Future<Output = types::Result<()>> {
-        self.host.start_discovery().map(from_fidl_result)
+    pub fn establish_discovery_session(
+        host: &Arc<RwLock<HostDevice>>,
+    ) -> impl Future<Output = types::Result<Arc<HostDiscoverySession>>> {
+        let token = Arc::new(HostDiscoverySession { adap: Arc::downgrade(host) });
+        host.write().host.start_discovery().map(from_fidl_result).map_ok(|_| token)
     }
 
     pub fn connect(&mut self, id: PeerId) -> impl Future<Output = types::Result<()>> {

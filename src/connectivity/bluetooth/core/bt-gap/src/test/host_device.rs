@@ -82,18 +82,7 @@ async fn host_device_set_local_name() -> Result<(), Error> {
     let _ = set_name_result.expect("failed to set name");
     let _ = expect_result.expect("FIDL result unsatisfied");
 
-    let refresh = refresh_host_info(host.clone());
-    let expect_fidl = expect_call(server.clone(), |_, e| match e {
-        HostRequest::WatchState { responder } => {
-            responder.send(FidlHostInfo::from(info.read().clone()))?;
-            Ok(())
-        }
-        _ => Err(format_err!("Unexpected!")),
-    });
-    let (refresh_result, expect_result) = join!(refresh, expect_fidl);
-    let _ = refresh_result.expect("did not receive HostInfo update");
-    let _ = expect_result.expect("FIDL result unsatisfied");
-
+    refresh_host(host.clone(), server.clone(), info.read().clone()).await;
     let host_name = host.read().get_info().local_name.clone();
     println!("name: {:?}", host_name);
     assert!(host_name == Some(name));
@@ -138,6 +127,70 @@ async fn test_inspect_vmo() -> Result<(), Error> {
     Ok(())
 }
 
+// Test that we can establish a host discovery session, then stop discovery on the host when
+// the session token is dropped
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_discovery_session() -> Result<(), Error> {
+    let (client, server) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
+
+    let info = HostInfo {
+        id: HostId(1),
+        technology: TechnologyType::DualMode,
+        address: Address::Public([0, 0, 0, 0, 0, 0]),
+        local_name: None,
+        active: false,
+        discoverable: false,
+        discovering: false,
+    };
+
+    let host = Arc::new(RwLock::new(HostDevice::new(
+        PathBuf::from("/dev/class/bt-host/test"),
+        client,
+        Inspectable::new(info.clone(), placeholder_node()),
+    )));
+
+    let info = Arc::new(RwLock::new(info));
+    let server = Arc::new(RwLock::new(server));
+
+    // Simulate request to establish discovery session
+    let establish_discovery_session = HostDevice::establish_discovery_session(&host);
+    let expect_fidl = expect_call(server.clone(), |_, e| match e {
+        HostRequest::StartDiscovery { responder } => {
+            info.write().discovering = true;
+            responder.send(&mut Ok(()))?;
+            Ok(())
+        }
+        _ => Err(format_err!("Unexpected!")),
+    });
+
+    let (discovery_result, expect_result) = join!(establish_discovery_session, expect_fidl);
+    let session = discovery_result.expect("did not receive discovery session token");
+    let _ = expect_result.expect("FIDL result unsatisfied");
+
+    // Assert that host is now marked as discovering
+    refresh_host(host.clone(), server.clone(), info.read().clone()).await;
+    let is_discovering = host.read().get_info().discovering.clone();
+    assert!(is_discovering);
+
+    // Simulate drop of discovery session
+    let expect_fidl = expect_call(server.clone(), |_, e| match e {
+        HostRequest::StopDiscovery { control_handle: _ } => {
+            info.write().discovering = false;
+            Ok(())
+        }
+        _ => Err(format_err!("Unexpected!")),
+    });
+    std::mem::drop(session);
+    expect_fidl.await.expect("FIDL result unsatisfied");
+
+    // Assert that host is no longer marked as discovering
+    refresh_host(host.clone(), server.clone(), info.read().clone()).await;
+    let is_discovering = host.read().get_info().discovering.clone();
+    assert!(!is_discovering);
+
+    Ok(())
+}
+
 // TODO(39373): Add host.fidl emulation to bt-fidl-mocks and use that instead.
 async fn expect_call<F>(stream: Arc<RwLock<HostRequestStream>>, f: F) -> Result<(), Error>
 where
@@ -151,4 +204,24 @@ where
     } else {
         Err(format_err!("No event received"))
     }
+}
+
+// Updates host with new info
+async fn refresh_host(
+    host: Arc<RwLock<HostDevice>>,
+    server: Arc<RwLock<HostRequestStream>>,
+    info: HostInfo,
+) {
+    let refresh = refresh_host_info(host);
+    let expect_fidl = expect_call(server, |_, e| match e {
+        HostRequest::WatchState { responder } => {
+            responder.send(FidlHostInfo::from(info))?;
+            Ok(())
+        }
+        _ => Err(format_err!("Unexpected!")),
+    });
+
+    let (refresh_result, expect_result) = join!(refresh, expect_fidl);
+    let _ = refresh_result.expect("did not receive HostInfo update");
+    let _ = expect_result.expect("FIDL result unsatisfied");
 }

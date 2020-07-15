@@ -42,7 +42,7 @@ use {
 
 use crate::{
     generic_access_service,
-    host_device::{self, HostDevice, HostListener},
+    host_device::{self, HostDevice, HostDiscoverySession, HostListener},
     services::pairing::{
         pairing_dispatcher::{PairingDispatcher, PairingDispatcherHandle},
         PairingDelegate,
@@ -66,22 +66,6 @@ pub enum HostService {
 // As long as at least one user maintains an Arc<> to the token, the state persists
 // Once all references are dropped, the `Drop` trait on the token causes the state
 // to be terminated.
-pub struct DiscoveryRequestToken {
-    adap: Weak<RwLock<HostDevice>>,
-}
-
-impl Drop for DiscoveryRequestToken {
-    fn drop(&mut self) {
-        fx_vlog!(1, "DiscoveryRequestToken dropped");
-        if let Some(host) = self.adap.upgrade() {
-            if let Err(err) = host.write().stop_discovery() {
-                // TODO(45325) - we should close the host channel if an error is returned
-                fx_log_warn!("Unexpected error response when stopping discovery: {:?}", err);
-            }
-        }
-    }
-}
-
 pub struct DiscoverableRequestToken {
     adap: Weak<RwLock<HostDevice>>,
 }
@@ -152,7 +136,7 @@ struct HostDispatcherState {
     // GAP state
     name: String,
     appearance: Appearance,
-    discovery: Option<Weak<DiscoveryRequestToken>>,
+    discovery: Option<Weak<HostDiscoverySession>>,
     discoverable: Option<Weak<DiscoverableRequestToken>>,
     pub input: InputCapability,
     pub output: OutputCapability,
@@ -479,21 +463,18 @@ impl HostDispatcher {
         self.state.write().set_control_pairing_delegate(delegate)
     }
 
-    pub async fn start_discovery(&self) -> types::Result<Arc<DiscoveryRequestToken>> {
-        let strong_current_token =
-            self.state.read().discovery.as_ref().and_then(|token| token.upgrade());
-        if let Some(token) = strong_current_token {
-            return Ok(Arc::clone(&token));
+    pub async fn start_discovery(&self) -> types::Result<Arc<HostDiscoverySession>> {
+        if let Some(existing_session) =
+            self.state.read().discovery.as_ref().and_then(|session| session.upgrade())
+        {
+            return Ok(Arc::clone(&existing_session));
         }
 
         match self.get_active_adapter().await {
             Some(host) => {
-                let weak_host = Arc::downgrade(&host);
-                let fut = host.write().start_discovery();
-                fut.await?;
-                let token = Arc::new(DiscoveryRequestToken { adap: weak_host });
-                self.state.write().discovery = Some(Arc::downgrade(&token));
-                Ok(token)
+                let session = HostDevice::establish_discovery_session(&host).await?;
+                self.state.write().discovery = Some(Arc::downgrade(&session));
+                Ok(session)
             }
             None => Err(types::Error::no_host()),
         }
