@@ -4,7 +4,7 @@
 
 use anyhow::{format_err, Error};
 use fuchsia_component::client::connect_to_service;
-use fuchsia_zircon::Status;
+use fuchsia_zircon::{Status, Vmo};
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use serde_json::Value;
 use std::fs::read_dir;
@@ -123,4 +123,54 @@ pub fn find_file(dir: &Path, pattern: &str) -> Result<PathBuf, Status> {
         }
     }
     Err(Status::INTERNAL)
+}
+
+/// The offset of the 8-byte size of the JSON data in the VMO.
+const JSON_VMO_SIZE_OFFSET: u64 = 0;
+
+/// The offset of the JSON data in the VMO.
+const JSON_VMO_DATA_OFFSET: u64 = std::mem::size_of::<u64>() as u64;
+
+/// Write an arbitrary JSON Value into a VMO. The Value can be recovered via read_json_from_vmo().
+/// # Arguments
+/// * 'vmo' - The VMO into which to write the JSON Value.
+/// * 'value' - The JSON Value to write.
+pub fn write_json_to_vmo(vmo: &Vmo, value: &Value) -> Result<(), Error> {
+    let value_str = serde_json::to_string(value)?;
+    let len = value_str.len() as u64;
+    let len_bytes = len.to_le_bytes();
+    vmo.set_size(JSON_VMO_DATA_OFFSET + len)?;
+    vmo.write(&len_bytes, JSON_VMO_SIZE_OFFSET)?;
+    vmo.write(value_str.as_bytes(), JSON_VMO_DATA_OFFSET)?;
+    Ok(())
+}
+
+/// Read an arbitrary JSON Value from a VMO. The Value must previously have been written into the
+/// VMO by write_json_to_vmo().
+/// # Arguments
+/// * 'vmo' - The VMO from which the JSON Value is to be read.
+pub fn read_json_from_vmo(vmo: &Vmo) -> Result<Value, Error> {
+    let mut len_bytes = [0u8; std::mem::size_of::<u64>()];
+    vmo.read(&mut len_bytes, JSON_VMO_SIZE_OFFSET)?;
+    let len = u64::from_le_bytes(len_bytes);
+    let mut value_bytes = vec![0u8; len as usize];
+    vmo.read(&mut value_bytes, JSON_VMO_DATA_OFFSET)?;
+    Ok(serde_json::from_str(std::str::from_utf8(&value_bytes)?)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fuchsia_zircon::VmoOptions;
+    use serde_json::json;
+
+    #[test]
+    fn json_to_and_from_vmo() -> Result<(), Error> {
+        let expected_value = json!([null, true, 1.5, "string", { "key": "value" }]);
+        let vmo = Vmo::create_with_opts(VmoOptions::RESIZABLE, 0)?;
+        write_json_to_vmo(&vmo, &expected_value)?;
+        let value = read_json_from_vmo(&vmo)?;
+        assert_eq!(value, expected_value);
+        Ok(())
+    }
 }

@@ -14,12 +14,6 @@ rustc_library("lib") {
   with_unit_tests = true
   edition = "2018"
 
-  # Only for internal use.
-  visibility = [
-    ":*",
-    "tests/*",
-  ]
-
   deps = [
     "//garnet/lib/rust/connectivity-testing",
     "//garnet/lib/rust/files_async",
@@ -112,6 +106,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:rouille",

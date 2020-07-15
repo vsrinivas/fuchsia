@@ -20,6 +20,7 @@ pub mod device;
 pub mod diagnostics;
 pub mod factory_reset;
 pub mod factory_store;
+pub mod fidl;
 pub mod file;
 pub mod gpio;
 pub mod hardware_power_statecontrol;

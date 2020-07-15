@@ -3,13 +3,18 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use fuchsia_syslog::macros::*;
+use fidl_fuchsia_testing_sl4f::{
+    FacadeIteratorMarker, FacadeIteratorSynchronousProxy, FacadeProviderMarker, FacadeProviderProxy,
+};
+use fuchsia_component::client::connect_to_service;
+use fuchsia_syslog::macros::{fx_log_err, fx_log_info, fx_log_warn};
+use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use maplit::{convert_args, hashmap};
 use parking_lot::RwLock;
 use rouille::{self, router, Request, Response};
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Read;
 use std::sync::Arc;
 
@@ -48,6 +53,7 @@ use crate::boot_arguments::facade::BootArgumentsFacade;
 use crate::camera::facade::CameraFacade;
 
 // Common
+use crate::common_utils::common::{read_json_from_vmo, write_json_to_vmo};
 use crate::common_utils::error::Sl4fError;
 
 // Component related includes
@@ -156,6 +162,14 @@ pub struct Sl4f {
     // facades: Mapping of method prefix to object implementing that facade's API.
     facades: HashMap<String, Arc<dyn Facade>>,
 
+    // NOTE: facade_provider and proxied_facades will eventually become a map from proxied facade
+    // to `FacadeProvider` client once we have support for multiple `FacadeProvider` instances.
+    // facade_provider: Channel to the `FacadeProvider` instance hosting private facades.
+    facade_provider: FacadeProviderProxy,
+
+    // proxied_facades: Set of facades hosted by facade_provider. May be empty.
+    proxied_facades: HashSet<String>,
+
     // connected clients
     clients: Arc<RwLock<Sl4fClients>>,
 }
@@ -222,7 +236,54 @@ impl Sl4f {
                 "wlan_policy" => WlanPolicyFacade::new()?,
             )
         );
-        Ok(Sl4f { facades, clients })
+
+        // Attempt to connect to the single `FacadeProvider` instance.
+        let mut proxied_facades = HashSet::<String>::new();
+        let facade_provider = match connect_to_service::<FacadeProviderMarker>() {
+            Ok(proxy) => proxy,
+            Err(error) => {
+                fx_log_err!("Failed to connect to FacadeProvider: {}", error);
+                return Err(error.into());
+            }
+        };
+        // Get the names of the facades hosted by the `FacadeProvider`.
+        // NOTE: Due to the inability to actively verify that connection succeeds, there are
+        // multiple layers of error checking at which a PEER_CLOSED means that there never was a
+        // `FacadeProvider` to connect to.
+        let (client_end, server_end) = fidl::endpoints::create_endpoints::<FacadeIteratorMarker>()?;
+        match facade_provider.get_facades(server_end) {
+            Ok(_) => {
+                let mut facade_iter =
+                    FacadeIteratorSynchronousProxy::new(client_end.into_channel());
+                loop {
+                    match facade_iter.get_next(zx::Time::INFINITE) {
+                        Ok(facades) if facades.is_empty() => break, // Indicates completion.
+                        Ok(facades) => proxied_facades.extend(facades.into_iter()),
+                        // A PEER_CLOSED error before any facades are read indicates that there was
+                        // never a successful connection.
+                        Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED))
+                        | Err(fidl::Error::ClientRead(zx::Status::PEER_CLOSED))
+                            if proxied_facades.is_empty() =>
+                        {
+                            break
+                        }
+                        Err(error) => {
+                            fx_log_err!("Failed to get proxied facade list: {}", error);
+                            proxied_facades.clear();
+                            break
+                        }
+                    };
+                }
+            }
+            // The channel's server end was closed due to no `FacadeProvider` instance.
+            Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) => (),
+            Err(error) => {
+                fx_log_err!("Failed to get FacadeIterator: {}", error);
+                return Err(error.into());
+            }
+        };
+
+        Ok(Sl4f { facades, facade_provider, proxied_facades, clients })
     }
 
     /// Gets the facade registered with the given name, if one exists.
@@ -231,9 +292,15 @@ impl Sl4f {
     }
 
     /// Implement the Facade trait method cleanup() to clean up state when "/cleanup" is queried.
-    pub fn cleanup(&self) {
+    pub async fn cleanup(&self) {
         for facade in self.facades.values() {
             facade.cleanup();
+        }
+        // If there are any proxied facades, make a synchronous request to cleanup transient state.
+        if !self.proxied_facades.is_empty() {
+            if let Err(error) = self.facade_provider.cleanup().await {
+                fx_log_err!("Failed to execute Cleanup() with: {}", error);
+            }
         }
         self.clients.write().cleanup_clients();
     }
@@ -243,9 +310,68 @@ impl Sl4f {
     }
 
     /// Implement the Facade trait method print() to log state when "/print" is queried.
-    pub fn print(&self) {
+    pub async fn print(&self) {
         for facade in self.facades.values() {
             facade.print();
+        }
+        // If there are any proxied facades, make a synchronous request to print state.
+        if !self.proxied_facades.is_empty() {
+            if let Err(error) = self.facade_provider.print().await {
+                fx_log_err!("Failed to execute Print() with: {}", error);
+            }
+        }
+    }
+
+    /// Returns true if the facade with the given name is hosted by a registered `FacadeProvider`.
+    /// # Arguments
+    /// * 'name' - A string representing the name of the facade.
+    pub fn has_proxy_facade(&self, name: &str) -> bool {
+        self.proxied_facades.contains(name)
+    }
+
+    /// Sends a request on a facade hosted by a registered `FacadeProvider` and waits
+    /// asynchronously for the response.
+    /// # Arguments
+    /// * 'facade' - A string representing the name of the facade.
+    /// * 'command' - A string representing the command to execute on the facade.
+    /// * 'args' - An arbitrary JSON Value containing any arguments to the command.
+    pub async fn handle_proxy_request(
+        &self,
+        facade: String,
+        command: String,
+        args: Value,
+    ) -> Result<Value, Error> {
+        // Populate a new VMO with a JSON blob containing the arguments.
+        let encode_params = async {
+            let params_blob = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, 0)?;
+            write_json_to_vmo(&params_blob, &args)?;
+            Ok::<zx::Vmo, Error>(params_blob)
+        };
+        let params_blob = match encode_params.await {
+            Ok(params_blob) => params_blob,
+            Err(error) => {
+                return Err(
+                    Sl4fError::new(&format!("Failed to write params with: {}", error)).into()
+                );
+            }
+        };
+
+        // Forward the request to the `FacadeProvider`.
+        match self.facade_provider.execute(&facade, &command, params_blob).await {
+            // Success with no response.
+            Ok((None, None)) => Ok(Value::Null),
+            // Success with response. The JSON blob must be read out from the returned VMO.
+            Ok((Some(vmo), None)) => match read_json_from_vmo(&vmo) {
+                Ok(result) => Ok(result),
+                Err(error) => {
+                    Err(Sl4fError::new(&format!("Failed to read result with: {}", error)).into())
+                }
+            },
+            // The command failed. Return the error string.
+            Ok((_, Some(string))) => Err(Sl4fError::new(&string).into()),
+            Err(error) => {
+                Err(Sl4fError::new(&format!("Failed to send command with {}", error)).into())
+            }
         }
     }
 }

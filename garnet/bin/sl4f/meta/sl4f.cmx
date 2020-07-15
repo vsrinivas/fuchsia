@@ -69,6 +69,7 @@
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",
             "fuchsia.test.manager.Harness",
+            "fuchsia.testing.sl4f.FacadeProvider",
             "fuchsia.tracing.controller.Controller",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.InputDevice",

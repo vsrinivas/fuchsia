@@ -7,3 +7,7 @@ pub const COMMAND_DELIMITER: &str = ".";
 
 // Number of clauses for an ACTS command
 pub const COMMAND_SIZE: usize = 2;
+
+// Maximum number of requests to handle concurrently
+// TODO(CONN-6) figure out a good parallel value for this
+pub const CONCURRENT_REQ_LIMIT: usize = 10;

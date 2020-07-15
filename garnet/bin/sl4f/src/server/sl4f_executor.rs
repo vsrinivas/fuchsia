@@ -11,12 +11,11 @@ use std::sync::Arc;
 
 // Sl4f related inclusions
 use crate::common_utils::error::Sl4fError;
+use crate::server::constants::CONCURRENT_REQ_LIMIT;
 use crate::server::sl4f::Sl4f;
 use crate::server::sl4f_types::{AsyncCommandRequest, AsyncRequest, AsyncResponse, MethodId};
 
 pub async fn run_fidl_loop(sl4f: Arc<Sl4f>, receiver: mpsc::UnboundedReceiver<AsyncRequest>) {
-    const CONCURRENT_REQ_LIMIT: usize = 10; // TODO(CONN-6) figure out a good parallel value for this
-
     let handler = move |request| handle_request(Arc::clone(&sl4f), request);
 
     receiver.for_each_concurrent(CONCURRENT_REQ_LIMIT, handler).await;
@@ -26,8 +25,8 @@ async fn handle_request(sl4f: Arc<Sl4f>, request: AsyncRequest) {
     match request {
         AsyncRequest::Cleanup(done) => {
             // Cleanup all resources associated with sl4f and notify the blocked request when done.
-            sl4f.cleanup();
-            sl4f.print();
+            sl4f.cleanup().await;
+            sl4f.print().await;
             done.send(()).unwrap();
         }
         AsyncRequest::Command(AsyncCommandRequest { tx, method_id, params }) => {
@@ -58,6 +57,8 @@ async fn handle_request(sl4f: Arc<Sl4f>, request: AsyncRequest) {
 async fn method_to_fidl(method_id: MethodId, args: Value, sl4f: Arc<Sl4f>) -> Result<Value, Error> {
     if let Some(facade) = sl4f.get_facade(&method_id.facade) {
         facade.handle_request(method_id.method, args).await
+    } else if sl4f.has_proxy_facade(&method_id.facade) {
+        sl4f.handle_proxy_request(method_id.facade, method_id.method, args).await
     } else {
         Err(Sl4fError::new(&format!("Invalid FIDL method type {:?}", &method_id.facade)).into())
     }
