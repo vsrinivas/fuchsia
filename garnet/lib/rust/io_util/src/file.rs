@@ -9,7 +9,8 @@ use {
     anyhow::Error,
     fidl::encoding::{decode_persistent, encode_persistent, Decodable, Encodable},
     fidl_fuchsia_io::{FileMarker, FileProxy, MAX_BUF},
-    fuchsia_zircon::Status,
+    fuchsia_async::{DurationExt, TimeoutExt},
+    fuchsia_zircon::{Duration, Status},
     thiserror::Error,
 };
 
@@ -28,6 +29,9 @@ pub enum ReadError {
 
     #[error("file was not a utf-8 encoded string: {0}")]
     InvalidUtf8(#[from] std::string::FromUtf8Error),
+
+    #[error("read timed out")]
+    Timeout,
 }
 
 /// An error encountered while reading a named file
@@ -208,6 +212,19 @@ pub async fn read_in_namespace_to_string(path: &str) -> Result<String, ReadNamed
     let string = String::from_utf8(bytes)
         .map_err(|source| ReadNamedError { path: path.to_owned(), source: source.into() })?;
     Ok(string)
+}
+
+/// Reads a utf-8 encoded string from the file at `path` in the current namespace. The path must be
+/// an absolute path. Times out if the read takes longer than the given `timeout` duration.
+pub async fn read_in_namespace_to_string_with_timeout(
+    path: &str,
+    timeout: Duration,
+) -> Result<String, ReadNamedError> {
+    read_in_namespace_to_string(&path)
+        .on_timeout(timeout.after_now(), || {
+            Err(ReadNamedError { path: path.to_owned(), source: ReadError::Timeout })
+        })
+        .await
 }
 
 /// Read the given FIDL message from binary form from a file open for reading.

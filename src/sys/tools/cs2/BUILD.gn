@@ -9,6 +9,13 @@ import("//build/rust/rustc_library.gni")
 rustc_library("lib") {
   name = "cs2"
   edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:futures",
+  ]
 }
 
 rustc_binary("bin") {

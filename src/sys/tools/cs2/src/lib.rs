@@ -1,19 +1,20 @@
-use std::{fs, iter::Iterator, path::PathBuf};
+use {
+    files_async::readdir_with_timeout,
+    fuchsia_zircon as zx,
+    futures::future::{BoxFuture, FutureExt},
+    io_util::{directory, file},
+};
 
-/// Convenience macro for reading the filenames of a directory's contents when
-/// the path is expected to exist and all its contents are expected
-/// to be readable.
-fn get_file_names(dir: fs::ReadDir) -> impl Iterator<Item = String> {
-    dir.map(|entry| {
-        entry
-            .expect("get_file_names: entry is unreadable")
-            .path()
-            .file_name()
-            .expect("get_file_names: invalid path")
-            .to_os_string()
-            .into_string()
-            .expect("get_file_names: unexpected characters")
-    })
+static IO_TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
+
+async fn get_file_names(path: String) -> Result<Vec<String>, files_async::Error> {
+    let dir = directory::open_in_namespace(&path, io_util::OPEN_RIGHT_READABLE).unwrap();
+    let result = readdir_with_timeout(&dir, IO_TIMEOUT).await;
+    result.map(|entries| entries.iter().map(|entry| entry.name.clone()).collect())
+}
+
+async fn get_file(path: String) -> Result<String, file::ReadNamedError> {
+    file::read_in_namespace_to_string_with_timeout(&path, IO_TIMEOUT).await
 }
 
 static SPACER: &str = "  ";
@@ -30,42 +31,50 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new_root_component(hub_path: PathBuf) -> Self {
-        Self::explore("<root>".to_string(), hub_path)
+    pub async fn new_root_component(hub_path: String) -> Self {
+        Self::explore("<root>".to_string(), hub_path).await
     }
 
-    fn explore(name: String, hub_path: PathBuf) -> Self {
-        let url = fs::read_to_string(hub_path.join("url")).expect("Could not read url from hub");
-        let id = fs::read_to_string(hub_path.join("id")).expect("Could not read id from hub");
-        let component_type = fs::read_to_string(hub_path.join("component_type"))
-            .expect("Could not read component_type from hub");
+    fn explore(name: String, hub_path: String) -> BoxFuture<'static, Self> {
+        async move {
+            let url_path = format!("{}/url", hub_path);
+            let id_path = format!("{}/id", hub_path);
+            let component_type_path = format!("{}/component_type", hub_path);
 
-        let exec_path = hub_path.join("exec");
-        let in_services = get_services(exec_path.join("in"));
-        let out_services = get_services(exec_path.join("out"));
-        let exposed_services = get_services(exec_path.join("exposed"));
+            let url = get_file(url_path).await.expect("Could not read url from hub");
+            let id = get_file(id_path).await.expect("Could not read id from hub");
+            let component_type: String = get_file(component_type_path)
+                .await
+                .expect("Could not read component_type from hub");
 
-        // Recurse on the children
-        let child_path = hub_path.join("children");
-        let child_dir = fs::read_dir(child_path).expect("could not open children directory");
-        let child_names = get_file_names(child_dir);
-        let mut children: Vec<Self> = vec![];
-        for child_name in child_names {
-            let path = hub_path.join("children").join(child_name.clone());
-            let child = Self::explore(child_name, path);
-            children.push(child);
+            let exec_path = format!("{}/exec", hub_path);
+            let in_services = get_services(format!("{}/in", exec_path)).await;
+            let out_services = get_services(format!("{}/out", exec_path)).await;
+            let exposed_services = get_services(format!("{}/exposed", exec_path)).await;
+
+            // Recurse on the children
+            let child_path = format!("{}/children", hub_path);
+            let child_names =
+                get_file_names(child_path).await.expect("Could not get children from hub");
+            let mut children: Vec<Self> = vec![];
+            for child_name in child_names {
+                let path = format!("{}/children/{}", hub_path, child_name);
+                let child = Self::explore(child_name, path).await;
+                children.push(child);
+            }
+
+            Self {
+                name,
+                url,
+                id,
+                component_type,
+                children,
+                in_services,
+                out_services,
+                exposed_services,
+            }
         }
-
-        Self {
-            name,
-            url,
-            id,
-            component_type,
-            children,
-            in_services,
-            out_services,
-            exposed_services,
-        }
+        .boxed()
     }
 
     pub fn generate_output(&self) -> Vec<String> {
@@ -112,11 +121,12 @@ impl Component {
     }
 }
 
-fn get_services(path: PathBuf) -> Vec<String> {
-    if let Ok(dir) = fs::read_dir(path.join("svc")) {
-        get_file_names(dir).collect()
-    } else {
-        vec![]
+async fn get_services(path: String) -> Vec<String> {
+    let full_path = format!("{}/svc", path);
+    let result = get_file_names(full_path).await;
+    match result {
+        Ok(entries) => entries,
+        Err(_) => vec![],
     }
 }
 

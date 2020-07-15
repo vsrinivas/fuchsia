@@ -1,6 +1,6 @@
 // Example realm that provisions an Echo client and service and eagerly runs the client.
 {
-    // Two children: a server and client. "echo_client" has "eager" startup so it
+    // Two children: a server and client. "indef_echo_client" has "eager" startup so it
     // will be started along with the realm.
     children: [
         {
@@ -8,8 +8,8 @@
             url: "fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_server.cm",
         },
         {
-            name: "echo_client",
-            url: "fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_client.cm",
+            name: "indef_echo_client",
+            url: "fuchsia-pkg://fuchsia.com/cs2_test#meta/indef_echo_client.cm",
             startup: "eager",
         },
     ],
@@ -19,7 +19,12 @@
         {
             protocol: "/svc/fidl.examples.routing.echo.Echo",
             from: "#echo_server",
-            to: [ "#echo_client" ],
+            to: [ "#indef_echo_client" ],
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#indef_echo_client" ],
         },
     ],
 }

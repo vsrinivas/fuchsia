@@ -10,12 +10,12 @@ use structopt::StructOpt;
 struct Opt {
     /// Path to HubV2 of a root component
     #[structopt()]
-    hub_v2_path: PathBuf,
+    hub_v2_path: String,
 }
 
 fn main() {
     let opt = Opt::from_args();
-    let lines = Component::new_root_component(opt.hub_v2_path).generate_output();
+    let lines = Component::new_root_component(opt.hub_v2_path).await.generate_output();
     let output = lines.join("\n");
     println!("{}", output);
 }
