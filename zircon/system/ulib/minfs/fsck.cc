@@ -106,9 +106,13 @@ class MinfsChecker {
   bool conforming_;
 
  private:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(MinfsChecker);
-
   MinfsChecker();
+
+  // Not copyable or movable
+  MinfsChecker(const MinfsChecker&) = delete;
+  MinfsChecker& operator=(const MinfsChecker&) = delete;
+  MinfsChecker(MinfsChecker&&) = delete;
+  MinfsChecker& operator=(MinfsChecker&&) = delete;
 
   // Reads the inode and optionally checks the magic value to ensure it is either a file or
   // directory.

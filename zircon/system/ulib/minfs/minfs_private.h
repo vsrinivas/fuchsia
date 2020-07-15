@@ -178,7 +178,11 @@ class Minfs :
     public TransactionalFs,
     public InspectableMinfs {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
+  // Not copyable or movable
+  Minfs(const Minfs&) = delete;
+  Minfs& operator=(const Minfs&) = delete;
+  Minfs(Minfs&&) = delete;
+  Minfs& operator=(Minfs&&) = delete;
 
   ~Minfs();
 

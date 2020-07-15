@@ -44,7 +44,12 @@ class InspectableInodeManager {
 class InodeManager : public InspectableInodeManager {
  public:
   InodeManager() = delete;
-  DISALLOW_COPY_ASSIGN_AND_MOVE(InodeManager);
+  // Not copyable or movable
+  InodeManager(const InodeManager&) = delete;
+  InodeManager& operator=(const InodeManager&) = delete;
+  InodeManager(InodeManager&&) = delete;
+  InodeManager& operator=(InodeManager&&) = delete;
+
   ~InodeManager() override = default;
 
 #ifdef __Fuchsia__

@@ -66,8 +66,13 @@ int emu_closedir(DIR* dirp);
 // RAII semantics to the underlying file descriptor.
 class FileWrapper {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(FileWrapper);
   constexpr FileWrapper() : hostfile_(false), fd_(0) {}
+
+  // Not copyable or movable
+  FileWrapper(const FileWrapper&) = delete;
+  FileWrapper& operator=(const FileWrapper&) = delete;
+  FileWrapper(FileWrapper&&) = delete;
+  FileWrapper& operator=(FileWrapper&&) = delete;
 
   ~FileWrapper() { Close(); }
 
@@ -111,8 +116,13 @@ class FileWrapper {
 // RAII semantics to the underlying directory.
 class DirWrapper {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(DirWrapper);
   constexpr DirWrapper() : hostdir_(false), dir_(NULL) {}
+
+  // Not copyable or movable
+  DirWrapper(const DirWrapper&) = delete;
+  DirWrapper& operator=(const DirWrapper&) = delete;
+  DirWrapper(DirWrapper&&) = delete;
+  DirWrapper& operator=(DirWrapper&&) = delete;
 
   ~DirWrapper() { Close(); }
 

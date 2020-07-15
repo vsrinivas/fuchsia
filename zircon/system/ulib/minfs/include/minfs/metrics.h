@@ -13,10 +13,15 @@ namespace minfs {
 
 class MinfsMetrics : public FsMetrics {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(MinfsMetrics);
-
   MinfsMetrics() = default;
   explicit MinfsMetrics(const ::llcpp::fuchsia::minfs::Metrics* metrics);
+
+  // Not copyable or movable
+  MinfsMetrics(const MinfsMetrics&) = delete;
+  MinfsMetrics& operator=(const MinfsMetrics&) = delete;
+  MinfsMetrics(MinfsMetrics&&) = delete;
+  MinfsMetrics& operator=(MinfsMetrics&&) = delete;
+
   ~MinfsMetrics() = default;
 
   // Copies to fields of fidl structure the corresponding fields of MinfsMetrics

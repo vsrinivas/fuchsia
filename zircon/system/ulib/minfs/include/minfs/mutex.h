@@ -23,9 +23,14 @@ using Mutex = std::mutex;
 
 class AutoLock {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(AutoLock);
-
   AutoLock(std::mutex* mutex) : mutex_(mutex) { mutex_->lock(); }
+
+  // Not copyable or movable
+  AutoLock(const AutoLock&) = delete;
+  AutoLock& operator=(const AutoLock&) = delete;
+  AutoLock(AutoLock&&) = delete;
+  AutoLock& operator=(AutoLock&&) = delete;
+
   ~AutoLock() { mutex_->unlock(); }
 
  private:

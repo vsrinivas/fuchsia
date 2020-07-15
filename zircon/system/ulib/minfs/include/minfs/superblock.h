@@ -37,8 +37,14 @@ namespace minfs {
 class SuperblockManager {
  public:
   SuperblockManager() = delete;
+
+  // Not copyable or movable
+  SuperblockManager(const SuperblockManager&) = delete;
+  SuperblockManager& operator=(const SuperblockManager&) = delete;
+  SuperblockManager(SuperblockManager&&) = delete;
+  SuperblockManager& operator=(SuperblockManager&&) = delete;
+
   ~SuperblockManager();
-  DISALLOW_COPY_ASSIGN_AND_MOVE(SuperblockManager);
 
   static zx_status_t Create(block_client::BlockDevice* device, const Superblock* info,
                             uint32_t max_blocks, IntegrityCheck checks,
@@ -72,8 +78,14 @@ class SuperblockManager {
 class SuperblockManager {
  public:
   SuperblockManager() = delete;
+
+  // Not copyable or movable
+  SuperblockManager(const SuperblockManager&) = delete;
+  SuperblockManager& operator=(const SuperblockManager&) = delete;
+  SuperblockManager(SuperblockManager&&) = delete;
+  SuperblockManager& operator=(SuperblockManager&&) = delete;
+
   ~SuperblockManager();
-  DISALLOW_COPY_ASSIGN_AND_MOVE(SuperblockManager);
 
   static zx_status_t Create(const Superblock* info, uint32_t max_blocks, IntegrityCheck checks,
                             std::unique_ptr<SuperblockManager>* out);

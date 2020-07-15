@@ -24,13 +24,13 @@
 #include <minfs/format.h>
 
 #ifdef __Fuchsia__
-#include <fs/transaction/device_transaction_handler.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/zx/vmo.h>
 
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
+#include <fs/transaction/device_transaction_handler.h>
 #include <fvm/client.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
@@ -48,8 +48,11 @@ zx_status_t FdToBlockDevice(fbl::unique_fd& fd, std::unique_ptr<block_client::Bl
 
 class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistry {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
-  friend class BlockNode;
+  // Not copyable or movable
+  Bcache(const Bcache&) = delete;
+  Bcache& operator=(const Bcache&) = delete;
+  Bcache(Bcache&&) = delete;
+  Bcache& operator=(Bcache&&) = delete;
 
   ~Bcache() = default;
 
@@ -59,8 +62,7 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
   ////////////////
   // fs::TransactionHandler interface.
 
-  zx_status_t RunRequests(
-      const std::vector<storage::BufferedOperation>& operations) override {
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) override {
     std::shared_lock lock(mutex_);
     return DeviceTransactionHandler::RunRequests(operations);
   }
@@ -113,6 +115,8 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
   void Resume();
 
  private:
+  friend class BlockNode;
+
   Bcache(block_client::BlockDevice* device, uint32_t max_blocks);
 
   // Used during initialization of this object.
@@ -131,8 +135,11 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
 
 class Bcache : public fs::TransactionHandler {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
-  friend class BlockNode;
+  // Not copyable or movable
+  Bcache(const Bcache&) = delete;
+  Bcache& operator=(const Bcache&) = delete;
+  Bcache(Bcache&&) = delete;
+  Bcache& operator=(Bcache&&) = delete;
 
   ~Bcache() {}
 
@@ -171,6 +178,8 @@ class Bcache : public fs::TransactionHandler {
   int Sync();
 
  private:
+  friend class BlockNode;
+
   Bcache(fbl::unique_fd fd, uint32_t max_blocks);
 
   const fbl::unique_fd fd_;

@@ -46,7 +46,11 @@ class Allocator;
 // restricted |Allocator| interfaces.
 class AllocatorReservationKey {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(AllocatorReservationKey);
+  // Not copyable or movable
+  AllocatorReservationKey(const AllocatorReservationKey&) = delete;
+  AllocatorReservationKey& operator=(const AllocatorReservationKey&) = delete;
+  AllocatorReservationKey(AllocatorReservationKey&&) = delete;
+  AllocatorReservationKey& operator=(AllocatorReservationKey&&) = delete;
 
  private:
   friend AllocatorReservation;
@@ -65,16 +69,13 @@ class AllocatorReservationKey {
 // This class is not thread-safe and should only be accessed by Allocator, under its lock.
 class PendingChange {
  public:
-  enum class Kind {
-    kAllocation,
-    kDeallocation
-  };
+  enum class Kind { kAllocation, kDeallocation };
 
   ~PendingChange();
 
   // Not copyable or movable.
   PendingChange(const PendingChange&) = delete;
-  PendingChange& operator =(const PendingChange&) = delete;
+  PendingChange& operator=(const PendingChange&) = delete;
 
   Kind kind() const { return kind_; }
 
@@ -163,8 +164,8 @@ class Allocator {
 
   // Reserve |count| elements. This is required in order to later allocate them.
   // Outputs a |reservation| which contains reservation details.
-  zx_status_t Reserve(AllocatorReservationKey, PendingWork* transaction,
-                      size_t count) FS_TA_EXCLUDES(lock_);
+  zx_status_t Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count)
+      FS_TA_EXCLUDES(lock_);
 
   // Unreserve |count| elements. This may be called in the event of failure, or if we
   // over-reserved initially.
