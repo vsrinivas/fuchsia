@@ -37,14 +37,14 @@ rustc_binary("dhcpv6_client") {
   ]
 }
 
-fuchsia_component("dhcpv6-client-component") {
+fuchsia_component("component") {
   component_name = "dhcpv6-client"
   manifest = "meta/dhcpv6-client.cmx"
   deps = [ ":dhcpv6_client" ]
 }
 
 fuchsia_package("dhcpv6-client") {
-  deps = [ ":dhcpv6-client-component" ]
+  deps = [ ":component" ]
 }
 
 group("client") {

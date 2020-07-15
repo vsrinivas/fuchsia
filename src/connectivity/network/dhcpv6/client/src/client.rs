@@ -12,6 +12,7 @@ use {
     fidl_fuchsia_net_dhcpv6::{
         ClientMarker, ClientRequest, ClientRequestStream, ClientWatchServersResponder,
         NewClientParams, OperationalModels, RequestableOptionCode, Stateless,
+        RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS, RELAY_AGENT_AND_SERVER_PORT,
     },
     fidl_fuchsia_net_ext as fnetext, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
     fuchsia_zircon as zx,
@@ -21,7 +22,6 @@ use {
         stream::futures_unordered::FuturesUnordered,
         task, Future, FutureExt as _, StreamExt as _, TryStreamExt as _,
     },
-    net_declare::std_ip,
     packet::ParsablePacket,
     packet_formats_dhcp::v6::{Dhcpv6Message, Dhcpv6OptionCode, Dhcpv6ParseError},
     rand::{rngs::StdRng, thread_rng, FromEntropy, Rng},
@@ -35,6 +35,7 @@ use {
         net::{IpAddr, Ipv6Addr, SocketAddr},
         num::TryFromIntError,
         pin::Pin,
+        str::FromStr as _,
         time::Duration,
     },
 };
@@ -58,17 +59,6 @@ pub enum ClientError {
     #[error("unsupported DHCPv6 operational models: {:?}, only stateless is supported", _0)]
     UnsupportedModels(OperationalModels),
 }
-
-/// The port DHCPv6 servers and relay agents should listen on according to [RFC 8415, Section 7.2].
-///
-/// [RFC 8415, Section 7.2]: https://tools.ietf.org/html/rfc8415#section-7.2
-const DHCPV6_AGENT_AND_SERVER_PORT: u16 = 547;
-
-/// A link-scoped multicast address used by a client to communicate with neighboring relay agents
-/// and servers according to [RFC 8415, Section 7.1].
-///
-/// [RFC 8415, Section 7.1]: https://tools.ietf.org/html/rfc8415#section-7.1
-const ALL_DHCP_AGENTS_AND_SERVERS: IpAddr = std_ip!(ff02::1:2);
 
 /// Theoretical size limit for UDP datagrams.
 ///
@@ -441,12 +431,19 @@ pub(crate) async fn start_client(
         }
 
         let fnetext::SocketAddress(addr) = fnet::SocketAddress::Ipv6(address).into();
+        let servers_addr = IpAddr::from_str(RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS)
+            .with_context(|| {
+                format!(
+                    "{} should be a valid IPv6 address",
+                    RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS,
+                )
+            })?;
         let mut client = Dhcpv6Client::start(
             transaction_id(),
             models,
             interface_id,
             create_socket(addr).await?,
-            SocketAddr::new(ALL_DHCP_AGENTS_AND_SERVERS, DHCPV6_AGENT_AND_SERVER_PORT),
+            SocketAddr::new(servers_addr, RELAY_AGENT_AND_SERVER_PORT),
             request.into_stream().context("getting new client request stream from channel")?,
         )
         .await?;

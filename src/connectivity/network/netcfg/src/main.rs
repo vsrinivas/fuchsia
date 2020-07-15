@@ -593,6 +593,7 @@ impl<'a> NetCfg<'a> {
         interface_id: u64,
         watchers: &mut DnsServerWatchers<'_>,
     ) -> Result<(), anyhow::Error> {
+        // TODO(56136): Configure interfaces that were not discovered through devfs.
         let state = match self.interface_states.remove(&interface_id) {
             Some(s) => s,
             None => {

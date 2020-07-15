@@ -38,6 +38,7 @@ rustc_test("netstack_integration_test_bin") {
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
+    "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
@@ -58,6 +59,7 @@ rustc_test("netstack_integration_test_bin") {
     "//src/lib/network/fidl_fuchsia_net_stack_ext",
     "//src/lib/network/packet",
     "//src/lib/network/packet-formats",
+    "//src/lib/network/packet-formats-dhcp",
     "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
@@ -149,6 +151,9 @@ fuchsia_test_package("netstack-integration-tests-inner") {
     # dhcpd is used to test DHCP address acquisition.
     ":dhcpd-testing-configs",
     "//src/connectivity/network/dhcp:component",
+
+    # DHCPv6 client is under test.
+    "//src/connectivity/network/dhcpv6/client:component",
 
     # dns_resolver integration with netstack is tested.
     "//src/connectivity/network/dns:component",

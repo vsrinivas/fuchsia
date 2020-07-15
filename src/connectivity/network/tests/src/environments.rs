@@ -55,6 +55,7 @@ pub enum KnownServices {
     MockCobalt,
     SecureStash,
     DhcpServer,
+    Dhcpv6Client,
     LookupAdmin,
 }
 
@@ -79,6 +80,8 @@ impl KnownServices {
                                            "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx"),
             KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                           "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpd.cmx"),
+            KnownServices::Dhcpv6Client => (<fidl_fuchsia_net_dhcpv6::ClientProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+                                          "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpv6-client.cmx"),
             KnownServices::LookupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                             "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dns-resolver.cmx")
         }

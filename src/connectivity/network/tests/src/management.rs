@@ -13,16 +13,62 @@ use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
-use futures::future::{self, FutureExt as _};
+use futures::future::{self, FusedFuture, Future, FutureExt as _};
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
 use netstack_testing_macros::variants_test;
 
-use crate::environments::{KnownServices, Manager as _, NetCfg, Netstack2, TestSandboxExt as _};
+use crate::environments::{KnownServices, Manager, NetCfg, Netstack2, TestSandboxExt as _};
 use crate::{
     try_all, try_any, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, DHCP_SERVER_DEFAULT_CONFIG_PATH,
 };
+
+/// Waits for a non-loopback interface to come up.
+///
+/// Useful when waiting for an interface to be discovered and brought up by a
+/// network manager.
+pub(crate) async fn wait_for_non_loopback_interface_up<
+    F: Unpin + FusedFuture + Future<Output = Result<fuchsia_component::client::ExitStatus>>,
+>(
+    netstack: &netstack::NetstackProxy,
+    mut wait_for_netmgr: &mut F,
+    timeout: zx::Duration,
+) -> Result<u32> {
+    let mut wait_for_interface = netstack
+        .take_event_stream()
+        .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+            future::ok(interfaces.into_iter().find_map(
+                |netstack::NetInterface { id, features, flags, .. }| {
+                    // Ignore the loopback device.
+                    if features & eth::INFO_FEATURE_LOOPBACK == 0
+                        && flags & netstack::NET_INTERFACE_FLAG_UP != 0
+                    {
+                        Some(id)
+                    } else {
+                        None
+                    }
+                },
+            ))
+        })
+        .map(|r| r.context("getting next OnInterfaceChanged event"));
+    let mut wait_for_interface = wait_for_interface
+        .try_next()
+        .on_timeout(timeout.after_now(), || {
+            Err(anyhow::anyhow!(
+                "timed out waiting for OnInterfaceseChanged event with a non-loopback interface"
+            ))
+        })
+        .fuse();
+    futures::select! {
+        wait_for_interface_res = wait_for_interface => {
+            wait_for_interface_res?.ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))
+        }
+        wait_for_netmgr_res = wait_for_netmgr => {
+            Err(anyhow::anyhow!("the network manager unexpectedly exited with exit status = {:?}", wait_for_netmgr_res?))
+        }
+    }
+}
 
 /// Test that NetCfg discovers a newly added device and it adds the device
 /// to the Netstack.
@@ -47,6 +93,7 @@ async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
 
     // Add a device to the environment.
     let endpoint = sandbox.create_endpoint::<E, _>(name).await.context("create endpoint")?;
+    let () = endpoint.set_link_up(true).await.context("set link up")?;
     let endpoint_mount_path = E::dev_path("ep");
     let endpoint_mount_path = endpoint_mount_path.as_path();
     let () = environment
@@ -54,41 +101,17 @@ async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
         .with_context(|| format!("add virtual device {}", endpoint_mount_path.display()))?;
 
     // Make sure the Netstack got the new device added.
+    let mut wait_for_netmgr = netmgr.wait().fuse();
     let netstack = environment
         .connect_to_service::<netstack::NetstackMarker>()
         .context("connect to netstack service")?;
-    let mut wait_for_interface = netstack
-        .take_event_stream()
-        .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            future::ok(interfaces.into_iter().find_map(
-                |netstack::NetInterface { id, features, .. }| {
-                    // Ignore the loopback device.
-                    if features & eth::INFO_FEATURE_LOOPBACK == 0 {
-                        Some(id)
-                    } else {
-                        None
-                    }
-                },
-            ))
-        })
-        .map(|r| r.context("getting next OnInterfaceChanged event"));
-    let mut wait_for_interface = wait_for_interface
-        .try_next()
-        .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-            Err(anyhow::anyhow!(
-                "timed out waiting for OnInterfaceseChanged event with a non-loopback interface"
-            ))
-        })
-        .fuse();
-    let mut wait_for_netmgr = netmgr.wait().fuse();
-    let _id = futures::select! {
-        wait_for_interface_res = wait_for_interface => {
-            wait_for_interface_res?.ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))
-        }
-        wait_for_netmgr_res = wait_for_netmgr => {
-            Err(anyhow::anyhow!("the network manager unexpectedly exited with exit status = {:?}", wait_for_netmgr_res?))
-        }
-    }?;
+    let _id: u32 = wait_for_non_loopback_interface_up(
+        &netstack,
+        &mut wait_for_netmgr,
+        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    )
+    .await
+    .context("wait for non loopback interface")?;
 
     environment
         .remove_virtual_device(endpoint_mount_path)

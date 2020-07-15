@@ -6,7 +6,10 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.dhcpv6") {
   sdk_category = "experimental"
-  sources = [ "client.fidl" ]
+  sources = [
+    "client.fidl",
+    "server.fidl",
+  ]
   public_deps = [
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.name",
