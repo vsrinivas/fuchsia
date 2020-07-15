@@ -9,11 +9,30 @@ use fuchsia_syslog_listener::AppWithLogs;
 #[fasync::run_singlethreaded(test)]
 async fn launch_example_and_read_hello_world() {
     let url = "fuchsia-pkg://fuchsia.com/rust-logs-example-tests#meta/rust-logs-example.cmx";
-    let (status, logs) = AppWithLogs::launch(url, None).wait().await;
+    let (status, mut logs) = AppWithLogs::launch(url, None).wait().await;
     assert!(status.success());
-    assert_eq!(logs.len(), 1);
 
-    assert_eq!(logs[0].severity, syslog::levels::INFO);
-    assert_eq!(logs[0].tags, vec!["rust-logs-example.cmx"]);
-    assert_eq!(logs[0].msg, "hello, world!");
+    logs.sort_by_key(|l| l.time);
+    let mut logs = logs.into_iter();
+
+    let next = logs.next().unwrap();
+    assert_eq!(next.severity, syslog::levels::DEBUG);
+    assert_eq!(next.tags, vec!["rust-logs-example.cmx", "rust_logs_example"]);
+    assert_eq!(next.msg, "should print ");
+    assert_ne!(next.pid, 0);
+    assert_ne!(next.tid, 0);
+
+    let next = logs.next().unwrap();
+    assert_eq!(next.severity, syslog::levels::INFO);
+    assert_eq!(next.tags, vec!["rust-logs-example.cmx", "rust_logs_example"]);
+    assert_eq!(next.msg, "hello, world! foo=1 bar=\"baz\" ");
+    assert_ne!(next.pid, 0);
+    assert_ne!(next.tid, 0);
+
+    let next = logs.next().unwrap();
+    assert_eq!(next.severity, syslog::levels::WARN);
+    assert_eq!(next.tags, vec!["rust-logs-example.cmx", "rust_logs_example"]);
+    assert_eq!(next.msg, "warning: using old api");
+    assert_ne!(next.pid, 0);
+    assert_ne!(next.tid, 0);
 }
