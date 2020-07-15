@@ -176,6 +176,7 @@ source_set("core") {
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/lib/ddk",
+    "//third_party/bcmdhd/crossdriver:bcmdhd_crossdriver",
   ]
   public_deps = [
     ":linuxisms",

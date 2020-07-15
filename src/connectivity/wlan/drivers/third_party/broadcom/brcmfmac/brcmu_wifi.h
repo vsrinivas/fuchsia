@@ -17,57 +17,23 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_WIFI_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_WIFI_H_
 
+#include <stdint.h>
+
+#include "third_party/bcmdhd/crossdriver/bcmwifi_channels.h"
+
 /*
- * A chanspec (uint16_t) holds the channel number, band, bandwidth and control
+ * A chanspec (chanspec_t) holds the channel number, band, bandwidth and control
  * sideband
  */
 
 /* channel defines */
-#define CH_UPPER_SB 0x01
-#define CH_LOWER_SB 0x02
-#define CH_EWA_VALID 0x04
 #define CH_30MHZ_APART 6
-#define CH_20MHZ_APART 4
-#define CH_10MHZ_APART 2
-#define CH_5MHZ_APART 1 /* 2G band channels are 5 Mhz apart */
 #define CH_MIN_2G_CHANNEL 1
-#define CH_MAX_2G_CHANNEL 14 /* Max channel in 2G band */
 #define CH_MIN_5G_CHANNEL 34
 
 /* bandstate array indices */
 #define BAND_2G_INDEX 0 /* wlc->bandstate[x] index */
 #define BAND_5G_INDEX 1 /* wlc->bandstate[x] index */
-
-/*
- * max # supported channels. The max channel no is 216, this is that + 1
- * rounded up to a multiple of NBBY (8). DO NOT MAKE it > 255: channels are
- * uint8_t's all over
- */
-#define MAXCHANNEL 224
-
-// clang-format off
-
-#define WL_CHANSPEC_CHAN_MASK    0x00ff
-#define WL_CHANSPEC_CHAN_SHIFT   0
-
-#define WL_CHANSPEC_CTL_SB_MASK  0x0300
-#define WL_CHANSPEC_CTL_SB_SHIFT 8
-#define WL_CHANSPEC_CTL_SB_LOWER 0x0100
-#define WL_CHANSPEC_CTL_SB_UPPER 0x0200
-#define WL_CHANSPEC_CTL_SB_NONE  0x0300
-
-#define WL_CHANSPEC_BW_MASK      0x0C00
-#define WL_CHANSPEC_BW_SHIFT     10
-#define WL_CHANSPEC_BW_10        0x0400
-#define WL_CHANSPEC_BW_20        0x0800
-#define WL_CHANSPEC_BW_40        0x0C00
-#define WL_CHANSPEC_BW_80        0x2000
-
-#define WL_CHANSPEC_BAND_MASK    0xf000
-#define WL_CHANSPEC_BAND_SHIFT   12
-#define WL_CHANSPEC_BAND_5G      0x1000
-#define WL_CHANSPEC_BAND_2G      0x2000
-#define INVCHANSPEC         255
 
 // clang-format on
 
@@ -103,59 +69,12 @@
 #define WLC_BAND_2G 2   /* 2.4 Ghz */
 #define WLC_BAND_ALL 3  /* all bands */
 
-#define CHSPEC_CHANNEL(chspec) ((uint8_t)((chspec)&WL_CHANSPEC_CHAN_MASK))
-#define CHSPEC_BAND(chspec) ((chspec)&WL_CHANSPEC_BAND_MASK)
-
-#define CHSPEC_CTL_SB(chspec) ((chspec)&WL_CHANSPEC_CTL_SB_MASK)
-#define CHSPEC_BW(chspec) ((chspec)&WL_CHANSPEC_BW_MASK)
-
-#define CHSPEC_IS10(chspec) (((chspec)&WL_CHANSPEC_BW_MASK) == WL_CHANSPEC_BW_10)
-
-#define CHSPEC_IS20(chspec) (((chspec)&WL_CHANSPEC_BW_MASK) == WL_CHANSPEC_BW_20)
-
-#define CHSPEC_IS40(chspec) (((chspec)&WL_CHANSPEC_BW_MASK) == WL_CHANSPEC_BW_40)
-
-#define CHSPEC_IS80(chspec) (((chspec)&WL_CHANSPEC_BW_MASK) == WL_CHANSPEC_BW_80)
-
-#define CHSPEC_IS5G(chspec) (((chspec)&WL_CHANSPEC_BAND_MASK) == WL_CHANSPEC_BAND_5G)
-
-#define CHSPEC_IS2G(chspec) (((chspec)&WL_CHANSPEC_BAND_MASK) == WL_CHANSPEC_BAND_2G)
-
 #define CHSPEC_SB_NONE(chspec) (((chspec)&WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_NONE)
-
-#define CHSPEC_SB_UPPER(chspec) (((chspec)&WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_UPPER)
-
-#define CHSPEC_SB_LOWER(chspec) (((chspec)&WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_LOWER)
-
 #define CHSPEC_CTL_CHAN(chspec)                                                \
-  ((CHSPEC_SB_LOWER(chspec)) ? (lower_20_sb(((chspec)&WL_CHANSPEC_CHAN_MASK))) \
-                             : (upper_20_sb(((chspec)&WL_CHANSPEC_CHAN_MASK))))
+  ((CHSPEC_SB_LOWER(chspec)) ? (LOWER_20_SB(((chspec)&WL_CHANSPEC_CHAN_MASK))) \
+                             : (UPPER_20_SB(((chspec)&WL_CHANSPEC_CHAN_MASK))))
 
 #define CHSPEC2BAND(chspec) (CHSPEC_IS5G(chspec) ? BRCM_BAND_5G : BRCM_BAND_2G)
-
-#define CHANSPEC_STR_LEN 8
-
-static inline int lower_20_sb(int channel) {
-  return channel > CH_10MHZ_APART ? (channel - CH_10MHZ_APART) : 0;
-}
-
-static inline int upper_20_sb(int channel) {
-  return (channel < (MAXCHANNEL - CH_10MHZ_APART)) ? channel + CH_10MHZ_APART : 0;
-}
-
-static inline int chspec_bandunit(uint16_t chspec) {
-  return CHSPEC_IS5G(chspec) ? BAND_5G_INDEX : BAND_2G_INDEX;
-}
-
-static inline uint16_t ch20mhz_chspec(int channel) {
-  uint16_t rc = channel <= CH_MAX_2G_CHANNEL ? WL_CHANSPEC_BAND_2G : WL_CHANSPEC_BAND_5G;
-
-  return (uint16_t)((uint16_t)channel | WL_CHANSPEC_BW_20 | WL_CHANSPEC_CTL_SB_NONE | rc);
-}
-
-static inline int next_20mhz_chan(int channel) {
-  return channel < (MAXCHANNEL - CH_20MHZ_APART) ? channel + CH_20MHZ_APART : 0;
-}
 
 /* defined rate in 500kbps */
 #define BRCM_MAXRATE 108  /* in 500kbps units */
@@ -175,8 +94,6 @@ static inline int next_20mhz_chan(int channel) {
 #define BRCM_2G_25MHZ_OFFSET 5 /* 2.4GHz band channel offset */
 
 #define MCSSET_LEN 16
-
-static inline bool ac_bitmap_tst(uint8_t bitmap, int prec) { return (bitmap & (1 << (prec))) != 0; }
 
 /* Enumerate crypto algorithms */
 #define CRYPTO_ALGO_OFF 0
