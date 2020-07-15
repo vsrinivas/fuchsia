@@ -9,7 +9,6 @@ pub mod test_utils;
 
 #[macro_use]
 mod common;
-mod connection;
 mod watchers;
 
 pub mod immutable;
@@ -17,6 +16,7 @@ pub mod mutable;
 
 pub mod simple;
 
+pub mod connection;
 pub mod dirents_sink;
 pub mod entry;
 pub mod entry_container;
