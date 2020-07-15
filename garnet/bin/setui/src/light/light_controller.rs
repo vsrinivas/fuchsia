@@ -14,6 +14,7 @@ use crate::switchboard::base::{
     SettingRequest, SettingResponse, SettingResponseResult, SettingType, SwitchboardError,
 };
 use crate::switchboard::light_types::{LightGroup, LightInfo, LightState, LightType, LightValue};
+use std::collections::hash_map::Entry;
 
 impl DeviceStorageCompatible for LightInfo {
     fn default_value() -> Self {
@@ -72,19 +73,18 @@ impl LightController {
     async fn set(&self, name: String, state: Vec<LightState>) -> SettingResponseResult {
         let mut current = self.client.read().await;
 
-        // TODO(fxb/53625): right now we automatically record any sets, need to connect to
-        // fuchsia.hardware.light so we only have real lights stored and can ignore sets to invalid
-        // lights.
-        current
-            .light_groups
-            .entry(name.clone())
-            .or_insert(LightGroup {
-                name: Some(name),
-                enabled: None,
-                light_type: None,
-                lights: None,
-            })
-            .lights = Some(state);
+        // TODO(fxb/55713): validate incoming values, not just name.
+        match current.light_groups.entry(name.clone()) {
+            Entry::Occupied(mut entry) => entry.get_mut().lights = Some(state),
+            Entry::Vacant(_) => {
+                // Reject sets if the light name is not known.
+                return Err(SwitchboardError::InvalidArgument {
+                    setting_type: SettingType::Light,
+                    argument: "name".to_string(),
+                    value: name,
+                });
+            }
+        }
 
         write(&self.client, current, false).await.into_response_result()
     }
@@ -172,6 +172,7 @@ impl LightController {
                 enabled: Some(true),
                 light_type: Some(light_type),
                 lights: Some(vec![LightState { value: Some(value) }]),
+                hardware_index: vec![index],
             },
         ))
     }

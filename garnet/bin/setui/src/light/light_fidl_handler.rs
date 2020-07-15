@@ -15,8 +15,7 @@ use futures::FutureExt;
 
 use crate::fidl_process_full;
 use crate::fidl_processor::RequestContext;
-use crate::request_respond;
-use crate::switchboard::base::FidlResponseErrorLogger;
+use crate::switchboard::base::{FidlResponseErrorLogger, SwitchboardError};
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
@@ -100,18 +99,25 @@ async fn process_request(
     match req {
         LightRequest::SetLightGroupValues { name, state, responder } => {
             fasync::spawn(async move {
-                request_respond!(
-                    context,
-                    responder,
-                    SettingType::Light,
-                    SettingRequest::SetLightGroupValue(
-                        name,
-                        state.into_iter().map(LightState::into).collect::<Vec<_>>(),
+                match context
+                    .request(
+                        SettingType::Light,
+                        SettingRequest::SetLightGroupValue(
+                            name,
+                            state.into_iter().map(LightState::into).collect::<Vec<_>>(),
+                        ),
+                    )
+                    .await
+                {
+                    Ok(_) => responder.send(&mut (Ok(()))),
+                    Err(e) => responder.send(
+                        &mut (Err(match e {
+                            SwitchboardError::InvalidArgument { .. } => LightError::InvalidName,
+                            _ => LightError::Failed,
+                        })),
                     ),
-                    Ok(()),
-                    Err(LightError::Failed),
-                    LightMarker::DEBUG_NAME
-                );
+                }
+                .log_fidl_response_error(LightMarker::DEBUG_NAME);
             });
         }
         LightRequest::WatchLightGroups { responder } => {
@@ -181,18 +187,17 @@ async fn validate_light_group_name(
 mod tests {
     use std::collections::HashMap;
 
-    use fidl_fuchsia_settings::{LightType, LightValue};
-
-    use crate::fidl_clone::FIDLClone;
-    use crate::switchboard::light_types::LightInfo;
-
-    use super::*;
+    use crate::switchboard::base::SettingResponse;
+    use crate::switchboard::light_types::{
+        LightGroup, LightInfo, LightState, LightType, LightValue,
+    };
 
     #[test]
     fn test_response_to_vector_empty() {
-        let response: Vec<LightGroup> = SettingResponse::into(SettingResponse::Light(LightInfo {
-            light_groups: Default::default(),
-        }));
+        let response: Vec<fidl_fuchsia_settings::LightGroup> =
+            SettingResponse::into(SettingResponse::Light(LightInfo {
+                light_groups: Default::default(),
+            }));
 
         assert_eq!(response, vec![]);
     }
@@ -202,27 +207,29 @@ mod tests {
         let light_group_1 = LightGroup {
             name: Some("test".to_string()),
             enabled: Some(true),
-            type_: Some(LightType::Simple),
-            lights: Some(vec![LightState { value: Some(LightValue::On(true)) }]),
+            light_type: Some(LightType::Simple),
+            lights: Some(vec![LightState { value: Some(LightValue::Simple(true)) }]),
+            hardware_index: vec![],
         };
         let light_group_2 = LightGroup {
             name: Some("test2".to_string()),
             enabled: Some(false),
-            type_: Some(LightType::Rgb),
+            light_type: Some(LightType::Rgb),
             lights: Some(vec![LightState { value: Some(LightValue::Brightness(42)) }]),
+            hardware_index: vec![],
         };
 
         let mut light_groups: HashMap<String, crate::switchboard::light_types::LightGroup> =
             HashMap::new();
-        light_groups.insert("test".to_string(), light_group_1.clone().into());
-        light_groups.insert("test2".to_string(), light_group_2.clone().into());
+        light_groups.insert("test".to_string(), light_group_1.clone());
+        light_groups.insert("test2".to_string(), light_group_2.clone());
 
-        let mut response: Vec<LightGroup> =
+        let mut response: Vec<fidl_fuchsia_settings::LightGroup> =
             SettingResponse::into(SettingResponse::Light(LightInfo { light_groups }));
 
         // Sort so light groups are in a predictable order.
         response.sort_by_key(|l| l.name.clone());
 
-        assert_eq!(response, vec![light_group_1, light_group_2]);
+        assert_eq!(response, vec![light_group_1.into(), light_group_2.into()]);
     }
 }

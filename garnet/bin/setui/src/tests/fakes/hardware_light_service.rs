@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::switchboard::light_types::{LightType, LightValue};
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
 use fidl::endpoints::ServerEnd;
@@ -34,20 +35,25 @@ impl HardwareLightService {
         }
     }
 
-    pub async fn insert_light_info(&self, index: u32, value: Info) {
-        self.light_info.lock().await.insert(index, value);
-    }
-
-    pub async fn insert_simple_value(&self, index: u32, value: bool) {
-        self.simple_values.lock().await.insert(index, value);
-    }
-
-    pub async fn insert_brightness_value(&self, index: u32, value: u8) {
-        self.brightness_values.lock().await.insert(index, value);
-    }
-
-    pub async fn insert_rgb_value(&self, index: u32, value: Rgb) {
-        self.rgb_values.lock().await.insert(index, value);
+    pub async fn insert_light(
+        &self,
+        index: u32,
+        name: String,
+        light_type: LightType,
+        value: LightValue,
+    ) {
+        self.light_info.lock().await.insert(index, Info { name, capability: light_type.into() });
+        match value {
+            LightValue::Brightness(value) => {
+                self.brightness_values.lock().await.insert(index, value);
+            }
+            LightValue::Rgb(value) => {
+                self.rgb_values.lock().await.insert(index, value.into());
+            }
+            LightValue::Simple(value) => {
+                self.simple_values.lock().await.insert(index, value);
+            }
+        };
     }
 }
 

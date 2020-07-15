@@ -23,17 +23,10 @@ pub struct LightGroup {
     pub enabled: Option<bool>,
     pub light_type: Option<LightType>,
     pub lights: Option<Vec<LightState>>,
-}
 
-impl From<fidl_fuchsia_settings::LightGroup> for LightGroup {
-    fn from(src: fidl_fuchsia_settings::LightGroup) -> Self {
-        LightGroup {
-            name: src.name,
-            enabled: src.enabled,
-            light_type: src.type_.map(LightType::from),
-            lights: src.lights.map(|lights| lights.into_iter().map(LightState::from).collect()),
-        }
-    }
+    /// Each light in the underlying fuchsia.hardware.light has a unique index, we need to remember
+    /// the index of the lights in this light group in order to write values back.
+    pub hardware_index: Vec<u32>,
 }
 
 impl From<LightGroup> for fidl_fuchsia_settings::LightGroup {
@@ -64,6 +57,17 @@ impl From<fidl_fuchsia_settings::LightType> for LightType {
     }
 }
 
+impl From<LightType> for fidl_fuchsia_settings::LightType {
+    fn from(src: LightType) -> Self {
+        match src {
+            LightType::Brightness => fidl_fuchsia_settings::LightType::Brightness,
+            LightType::Rgb => fidl_fuchsia_settings::LightType::Rgb,
+            LightType::Simple => fidl_fuchsia_settings::LightType::Simple,
+        }
+    }
+}
+
+/// Converts between a Capability and a LightType for convenience for tests.
 impl From<fidl_fuchsia_hardware_light::Capability> for LightType {
     fn from(src: fidl_fuchsia_hardware_light::Capability) -> Self {
         match src {
@@ -74,12 +78,13 @@ impl From<fidl_fuchsia_hardware_light::Capability> for LightType {
     }
 }
 
-impl From<LightType> for fidl_fuchsia_settings::LightType {
+/// Converts between a LightType and a Capability for convenience for tests.
+impl From<LightType> for fidl_fuchsia_hardware_light::Capability {
     fn from(src: LightType) -> Self {
         match src {
-            LightType::Brightness => fidl_fuchsia_settings::LightType::Brightness,
-            LightType::Rgb => fidl_fuchsia_settings::LightType::Rgb,
-            LightType::Simple => fidl_fuchsia_settings::LightType::Simple,
+            LightType::Brightness => fidl_fuchsia_hardware_light::Capability::Brightness,
+            LightType::Rgb => fidl_fuchsia_hardware_light::Capability::Rgb,
+            LightType::Simple => fidl_fuchsia_hardware_light::Capability::Simple,
         }
     }
 }
@@ -163,6 +168,18 @@ impl From<ColorRgb> for fidl_fuchsia_ui_types::ColorRgb {
             red: src.red.into(),
             green: src.green.into(),
             blue: src.blue.into(),
+        }
+    }
+}
+
+/// Converts between internal RGB representation and underlying fuchsia.hardware.light
+/// representation for convenience in tests.
+impl From<ColorRgb> for fidl_fuchsia_hardware_light::Rgb {
+    fn from(src: ColorRgb) -> Self {
+        fidl_fuchsia_hardware_light::Rgb {
+            red: src.red as u8,
+            green: src.green as u8,
+            blue: src.blue as u8,
         }
     }
 }
