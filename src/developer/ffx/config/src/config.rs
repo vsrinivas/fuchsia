@@ -10,7 +10,7 @@ use {
     crate::heuristic_config::{Heuristic, HeuristicFn},
     crate::runtime_config::Runtime,
     anyhow::Error,
-    ffx_core::ConfigLevel,
+    ffx_config_plugin_args::ConfigLevel,
     ffx_lib_args::Ffx,
     serde_json::Value,
     std::collections::HashMap,

@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Error},
-    ffx_core::ConfigLevel,
+    ffx_config_plugin_args::ConfigLevel,
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,

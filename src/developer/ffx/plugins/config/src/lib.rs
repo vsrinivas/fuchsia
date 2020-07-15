@@ -6,10 +6,10 @@ use {
     anyhow::{anyhow, Error},
     ffx_config::{environment::Environment, find_env_file, get, remove, set},
     ffx_config_plugin_args::{
-        ConfigCommand, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand, RemoveCommand,
-        SetCommand, SubCommand,
+        ConfigCommand, ConfigLevel, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand,
+        RemoveCommand, SetCommand, SubCommand,
     },
-    ffx_core::{ffx_plugin, ConfigLevel},
+    ffx_core::ffx_plugin,
     serde_json::Value,
     std::collections::HashMap,
     std::io::Write,

@@ -6,7 +6,7 @@ use {
     crate::api::{ReadConfig, WriteConfig},
     anyhow::{anyhow, Error},
     config_macros::include_default,
-    ffx_core::ConfigLevel,
+    ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
 };
 

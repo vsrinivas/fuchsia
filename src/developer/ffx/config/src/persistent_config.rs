@@ -6,7 +6,7 @@ use {
     crate::api::{ReadConfig, WriteConfig},
     crate::priority_config::Priority,
     anyhow::{anyhow, Error},
-    ffx_core::ConfigLevel,
+    ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
     std::io::{Read, Write},
 };

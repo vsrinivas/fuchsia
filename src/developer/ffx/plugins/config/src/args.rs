@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    argh::FromArgs,
-    ffx_core::{ffx_command, ConfigLevel},
-};
+use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -22,6 +19,14 @@ pub enum SubCommand {
     Get(GetCommand),
     Set(SetCommand),
     Remove(RemoveCommand),
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum ConfigLevel {
+    Defaults,
+    Build,
+    Global,
+    User,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]

@@ -6,7 +6,7 @@ use {
     crate::api::{ReadConfig, WriteConfig},
     crate::persistent_config::Persistent,
     anyhow::{anyhow, Error},
-    ffx_core::ConfigLevel,
+    ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
     std::fs::{File, OpenOptions},
     std::io::{BufReader, BufWriter},
