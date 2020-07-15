@@ -63,11 +63,17 @@ pub struct ReplaceReceiver {
 
 impl ReplaceReceiver {
     pub fn with(ty: Type) -> Self {
-        ReplaceReceiver { with: ty, as_trait: None }
+        ReplaceReceiver {
+            with: ty,
+            as_trait: None,
+        }
     }
 
     pub fn with_as_trait(ty: Type, as_trait: Path) -> Self {
-        ReplaceReceiver { with: ty, as_trait: Some(as_trait) }
+        ReplaceReceiver {
+            with: ty,
+            as_trait: Some(as_trait),
+        }
     }
 
     fn self_ty(&self, span: Span) -> Type {

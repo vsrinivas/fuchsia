@@ -29,7 +29,11 @@ pub struct CollectLifetimes {
 
 impl CollectLifetimes {
     pub fn new(name: &'static str) -> Self {
-        CollectLifetimes { elided: Vec::new(), explicit: Vec::new(), name }
+        CollectLifetimes {
+            elided: Vec::new(),
+            explicit: Vec::new(),
+            name,
+        }
     }
 
     fn visit_opt_lifetime(&mut self, lifetime: &mut Option<Lifetime>) {
