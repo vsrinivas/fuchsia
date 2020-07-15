@@ -5,6 +5,7 @@
 package typestest
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,8 @@ import (
 // AllExamples returns all examples by filename.
 // See also #GetExample.
 func AllExamples(basePath string) []string {
+	// Trim spurious trailing slash.
+	basePath = strings.TrimRight(basePath, "/")
 	paths, err := filepath.Glob(filepath.Join(basePath, "*.json"))
 	if err != nil {
 		panic(err)
@@ -25,15 +28,20 @@ func AllExamples(basePath string) []string {
 	if len(paths) == 0 {
 		panic("Wrong. There should be a few JSON golden.")
 	}
-	var examples []string
+	examples := make([]string, 0, len(paths))
 	for _, path := range paths {
-		examples = append(examples, path[len(basePath):])
+		examples = append(examples, path[len(basePath)+1:])
 	}
 	return examples
 }
 
 // GetExample retrieves an example by filename, and parses it.
 func GetExample(basePath, filename string) types.Root {
+	// Trim spurious trailing slash.
+	basePath = strings.TrimRight(basePath, "/")
+	if strings.HasPrefix(filename, "/") {
+		panic(fmt.Sprintf("ensure filename doesn't have / prefix: %q", filename))
+	}
 	fidl, err := types.ReadJSONIr(filepath.Join(basePath, filename))
 	if err != nil {
 		panic(err)
@@ -52,16 +60,13 @@ func GetGolden(basePath, filename string) []byte {
 }
 
 // AssertCodegenCmp assert that the actual codegen matches the expected codegen.
-func AssertCodegenCmp(t *testing.T, expected, actual []byte) {
-	if len(actual) == 0 && len(expected) != 0 {
+func AssertCodegenCmp(t *testing.T, want, got []byte) {
+	if len(want) == 0 && len(got) != 0 {
 		t.Fatalf("generated code was unexpectedly empty")
 	}
-
-	var (
-		splitExpected = strings.Split(strings.TrimSpace(string(expected)), "\n")
-		splitActual   = strings.Split(strings.TrimSpace(string(actual)), "\n")
-	)
-	if diff := cmp.Diff(splitActual, splitExpected); diff != "" {
-		t.Errorf("unexpected difference: %s\ngot: %s", diff, string(actual))
+	splitWant := strings.Split(strings.TrimSpace(string(want)), "\n")
+	splitGot := strings.Split(strings.TrimSpace(string(got)), "\n")
+	if diff := cmp.Diff(splitWant, splitGot); diff != "" {
+		t.Errorf("unexpected difference (-want/+got):\n%s", diff)
 	}
 }

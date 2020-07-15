@@ -26,7 +26,7 @@ var testPath = func() string {
 }()
 
 var (
-	basePath          = filepath.Join(testPath, "test_data", "fidlgen") + string(filepath.Separator)
+	basePath          = filepath.Join(testPath, "test_data", "fidlgen")
 	rustfmtPath       = filepath.Join(testPath, "test_data", "fidlgen_rust", "rustfmt")
 	rustfmtConfigPath = filepath.Join(testPath, "test_data", "fidlgen_rust", "rustfmt.toml")
 )

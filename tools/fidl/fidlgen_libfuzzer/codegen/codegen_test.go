@@ -21,8 +21,7 @@ var basePath = func() string {
 	if err != nil {
 		panic(err)
 	}
-	testDataDir := filepath.Join(filepath.Dir(testPath), "test_data", "fidlgen")
-	return fmt.Sprintf("%s%c", testDataDir, filepath.Separator)
+	return filepath.Join(filepath.Dir(testPath), "test_data", "fidlgen")
 }()
 
 type example string
