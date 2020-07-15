@@ -4,9 +4,18 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Software delivery
+#### DEPRECATED
 ### build Fuchsia and push to device
 
 ## usage: fx build-push [ninja option,...] [target,...]
+##
+## Deprecated: This command is deprecated as it is misleading. Packages in
+## Fuchsia are only cached, not installed, and the cache is updated on-demand
+## when a component is launched from a fuchsia package URL. An attempt to "push"
+## a package as implemented here only performs one of these resolutions, and may
+## or may not influence what happens "next" if a user "runs" a component url. As
+## such this command influences a poor mental model of the system and should be
+## avoided.
 ##
 ## Build ALL targets. After building all the targets, push the ones that were
 ## supplied to this command. If no targets were specified push all of them.
@@ -19,6 +28,12 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/updates.sh || exit $?
 fx-config-read
+
+fx-warn "build-push is deprecated"
+fx-warn "The concept of 'pushing' packages to the target is misleading"
+fx-warn "Users are best to move to one of:"
+fx-warn "  fx test"
+fx-warn "  fx run"
 
 function main {
   local args=()

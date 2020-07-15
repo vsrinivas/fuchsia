@@ -45,17 +45,10 @@ The process to add a new executable is to:
 The "Debug Agent Test Suite" is a more elaborate program that is used to create more complicated
 scenerios, such as adding several watchpoints on another process, send multiple channel calls, etc.
 
-To run you first must push the debug_agent_tests package:
+To build an update and run:
 
 ```
-fx build-push debug_agent_tests
-```
-
-With that, the package will be present at `/pkgfs/packages/debug_agent_tests/0`. The easies way to
-run the test suite is to call it as a component:
-
-```
-$ run debug_agent_test_suite.cmx
+fx run debug_agent_test_suite.cmx
 ```
 
 The suite has CLI instructions about to execute the different test cases. Each test case is

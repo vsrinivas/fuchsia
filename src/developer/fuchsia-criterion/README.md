@@ -35,9 +35,8 @@ One can run:
 
 ```shell
 $ fx set PRODUCT.BOARD --args=local_bench='true'
-$ fx build-push my_fib_bench
-$ fx shell
-$(device shell) my_fib_bench -n
+$ fx build
+$ fx shell my_fib_bench -n
 ```
 
 [Criterion benchmark suite]: https://github.com/bheisler/criterion.rs

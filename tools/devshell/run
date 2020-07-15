@@ -1,18 +1,104 @@
 #!/bin/bash
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-#### CATEGORY=Run, inspect and debug
-### run a component on the current target
-## Run a component on the target. See "fx run --help" for more flags.
+#### CATEGORY=Software delivery
+### build Fuchsia and push to device
+
+## usage: fx run [--no-build|[NINJA OPTION,...]] [--no-pkg-check] [--no-kill] [--no-restart-session] [TARGET,...]
 ##
-## Example usage:
-##    fx run rolldice.cmx
-##    fx run fuchsia-pkg://fuchsia.com/rolldice#meta/rolldice.cmx
+## Build ALL targets.
+## Execute 'fx shell killall TARGET' for each target.
+## Execute 'fx shell run TARGET' for each target.
+##
+##   --no-build               do not execute a build
+##   --no-pkg-check           do not check for a package server
+##   --no-kill                do not kill all instances of matching components
+##   --no-restart-session     do not perform a sessionctl restart_session
+##
+## NINJA OPTION
+## The following ninja options are passed to the build if invoked:
+##   -C, -f, -j, -k, -l, -t, -w.
+## See fx ninja --help for more information on these flags.
+##
+## TARGET is any form that 'run' on the target device accepts, as such it may
+## be a package url, or a non-ambiguous short-form.
+## Example:
+##   $ fx set core.x64 --with //exmaples/rolldice
+##   $ fx serve
+##   $ fx run rolldice.cmx
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/updates.sh || exit $?
+fx-config-read
 
-fx-command-run shell run "$@"
+function main {
+  local ninja_args=()
+  local targets=()
+  local build=true
+  local pkg_check=true
+  local kill_components=true
+  local restart_session=true
+  while (($#)); do
+    case "$1" in
+      --no-build)
+        build=false
+        ;;
+      --no-pkg-check)
+        pkg_check=false
+        ;;
+      --no-kill)
+        kill_components=false
+        ;;
+      --no-restart-session)
+        restart_session=false
+        ;;
+      -C|-f|-j|-k|-l|-t|-w)
+        ninja_args+=("$1")
+        shift
+        ninja_args+=("$1")
+        ;;
+      -n|-v)
+        ninja_args+=("$1")
+        ;;
+      *)
+        targets+=("$1")
+    esac
+    shift
+  done
+
+  if $build; then
+    fx-command-run build "${ninja_args[@]}"
+  fi
+
+  check-for-amber-server || return 1
+
+  if $restart_session; then
+    if ! fx-command-run shell sessionctl restart_session; then
+      fx-warn "Restarting session failed"
+    fi
+  fi
+
+  local r=0
+  for entry in "${targets[@]}"; do
+    # As running components are typically named after their cmx, the
+    # basename here avoids the case where a user has provided a full
+    # URL such as `fx run
+    # fuchsia-pkg://fuchsia.com/rolldice#meta/rolldice.cmx`. This
+    # strategy could be improved if implemented in a more featureful
+    # environment.
+    if $kill_components; then
+      echo >&2 Stopping "${entry} with killall $(basename "${entry}") ..."
+      fx-command-run shell killall "$(basename "${entry}")" || true
+    fi
+    echo >&2 Running "${entry} with run "${entry}" ..."
+    fx-command-run shell run "${entry}"
+    ((r += $?))
+  done
+  return r
+}
+
+main "$@"

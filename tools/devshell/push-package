@@ -4,9 +4,18 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Software delivery
+#### DEPRECATED
 ### push packages to a device
 
 ## usage: fx push-package [pkg1 pkg2 ...]
+##
+## Deprecated: This command is deprecated as it is misleading. Packages in
+## Fuchsia are only cached, not installed, and the cache is updated on-demand
+## when a component is launched from a fuchsia package URL. An attempt to "push"
+## a package as implemented here only performs one of these resolutions, and may
+## or may not influence what happens "next" if a user "runs" a component url. As
+## such this command influences a poor mental model of the system and should be
+## avoided.
 ##
 ## Push packages to a device. One or more package names may be supplied. If no
 ## package name is suppled all packages in the build output will be pushed. The
@@ -18,6 +27,11 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
+
+fx-warn "fx push-package is deprecated and should not be used"
+fx-warn "The notion of 'push' is falsified in this implementaiton and does not really exist."
+fx-warn "Users can simply 'fx run <component-url>' in order to affect cache updates."
+sleep 5
 
 function main {
   fx-standard-switches "$@"

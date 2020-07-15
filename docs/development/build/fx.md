@@ -319,14 +319,6 @@ software on the target (e.g. by closing it completely, or by invoking
 started again. Specifically for shutting down Modular and all dependant
 components, use `basemgr_launcher shutdown`.
 
-The commands `fx push-package` and `fx build-push` perform manual, forceful
-updates of packages on a target device. These commands do not however know
-how to re-start software on the device, as such they provide little benefit
-over simply restarting software correctly which, along with `fx serve`, will
-cause software to be updated as a natural course of restarting. These
-commands are sometimes used to diagnose issues, or in cases where automatic
-updates are disabled in special build configurations.
-
 Note: some software may not appear to be updating because it is being run
 inside of a "runner" process or some other surrounding environment that is
 "holding on" to resources for the previous package version, only spawning

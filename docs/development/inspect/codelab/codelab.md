@@ -445,26 +445,7 @@ state without needing to dig through logs.
 
 Now that you have added Inspect to your component, you can read what it says:
 
-1. Rebuild and push the component:
-
-   * {C++}
-
-      ```
-      fx build-push inspect_cpp_codelab
-      ```
-   * {Rust}
-
-      ```
-      fx build-push inspect_rust_codelab
-      ```
-
-   * {Dart}
-
-      ```
-      fx build-push inspect_dart_codelab_part_1
-      ```
-
-   In some cases you may find it useful to rebuild and update all components:
+1. Rebuild and update the target system
 
    ```
    fx build && fx update
@@ -475,19 +456,19 @@ Now that you have added Inspect to your component, you can read what it says:
    * {C++}
 
       ```
-      fx shell run inspect_cpp_codelab_client 1 Hello
+      fx run inspect_cpp_codelab_client 1 Hello
       ```
 
    * {Rust}
 
       ```
-      fx shell run inspect_rust_codelab_client 1 Hello
+      fx run inspect_rust_codelab_client 1 Hello
       ```
 
    * {Dart}
 
       ```
-      fx shell run inspect_dart_codelab_client 1 Hello
+      fx run inspect_dart_codelab_client 1 Hello
       ```
 
    Note that these should still hang.
