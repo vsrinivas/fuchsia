@@ -49,8 +49,9 @@ extern zx_duration_t g_wipe_timeout;
 
 namespace {
 
-constexpr uint64_t kGibibyte = 1024 * 1024 * 1024;
 constexpr uint64_t kMebibyte = 1024 * 1024;
+constexpr uint64_t kGibibyte = kMebibyte * 1024;
+constexpr uint64_t kTebibyte = kGibibyte * 1024;
 
 using devmgr_integration_test::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
@@ -297,7 +298,8 @@ TEST(PartitionSpec, ToStringWithContentType) {
 
 class GptDevicePartitionerTests : public zxtest::Test {
  protected:
-  GptDevicePartitionerTests(fbl::String board_name, uint32_t block_size) : block_size_(block_size) {
+  GptDevicePartitionerTests(fbl::String board_name = fbl::String(), uint32_t block_size = 512)
+      : block_size_(block_size) {
     paver::g_wipe_timeout = 0;
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
@@ -368,6 +370,41 @@ class GptDevicePartitionerTests : public zxtest::Test {
   IsolatedDevmgr devmgr_;
   const uint32_t block_size_;
 };
+
+TEST_F(GptDevicePartitionerTests, AddPartitionAtLargeOffset) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  // Create 2TB disk
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(2 * kTebibyte, &gpt_dev));
+
+  {
+    // Pause the block watcher while we write partitions to the disk.
+    // This is to avoid the block watcher seeing an intermediate state of the partition table
+    // and incorrectly treating it as an MBR.
+    // The watcher is automatically resumed when this goes out of scope.
+    auto pauser = BlockWatcherPauser::Create(GetSvcRoot());
+    ASSERT_OK(pauser);
+
+    std::unique_ptr<gpt::GptDevice> gpt;
+    ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
+
+    // Add a dummy partition of large size (~1.9TB)
+    ASSERT_OK(
+        gpt->AddPartition("dummy-partition", kEfiType, GetRandomGuid(), 0x1000, 0xF0000000, 0),
+        "%s", "dummy-partition");
+
+    ASSERT_OK(gpt->Sync());
+  }
+
+  // Iniitialize paver gpt device partitioner
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  auto status = paver::GptDevicePartitioner::InitializeGpt(devmgr_.devfs_root().duplicate(),
+                                                           GetSvcRoot(), std::move(gpt_fd));
+  ASSERT_OK(status);
+
+  // Check if a partition can be added after the "dummy-partition"
+  ASSERT_OK(status->gpt->AddPartition("test", uuid::Uuid(GUID_FVM_VALUE),
+                                      15LU * kGibibyte, 0));
+}
 
 class EfiDevicePartitionerTests : public GptDevicePartitionerTests {
  protected:
