@@ -110,8 +110,8 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
 
     // Since we are updating the file in "chunks", only update the on-disk inode size
     // with the portion we've written so far.
-    blk_t last_byte = (bno_start + bno_count) * kMinfsBlockSize;
-    ZX_ASSERT(last_byte <= fbl::round_up(allocation_state_.GetNodeSize(), kMinfsBlockSize));
+    blk_t last_byte = (bno_start + bno_count) * fs_->BlockSize();
+    ZX_ASSERT(last_byte <= fbl::round_up(allocation_state_.GetNodeSize(), fs_->BlockSize()));
 
     if (last_byte > inode_.size && last_byte < allocation_state_.GetNodeSize()) {
       // If we have written past the end of the recorded size but have not yet reached the

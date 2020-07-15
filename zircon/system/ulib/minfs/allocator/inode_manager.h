@@ -8,6 +8,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_INODE_MANAGER_H_
 #define ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_INODE_MANAGER_H_
 
+#include <cstdio>
 #include <memory>
 
 #include <fbl/macros.h>
@@ -95,12 +96,25 @@ class InodeManager : public InspectableInodeManager {
 
  private:
 #ifdef __Fuchsia__
-  explicit InodeManager(blk_t start_block);
+  explicit InodeManager(blk_t start_block, uint32_t block_size);
 #else
-  InodeManager(Bcache* bc, blk_t start_block);
+  InodeManager(Bcache* bc, blk_t start_block, uint32_t block_size);
 #endif
 
+  uint32_t BlockSize() const {
+    // Either intentionally or unintenttionally, we do not want to change block
+    // size to anything other than kMinfsBlockSize yet. This is because changing
+    // block size might lead to format change and also because anything other
+    // than 8k is not well tested. So assert when we find block size other
+    // than 8k.
+    ZX_ASSERT(block_size_ == kMinfsBlockSize);
+    return block_size_;
+  }
+
   blk_t start_block_;
+
+  // Filesystem block size.
+  uint32_t block_size_ = {};
   std::unique_ptr<Allocator> inode_allocator_;
 #ifdef __Fuchsia__
   fzl::ResizeableVmoMapper inode_table_;

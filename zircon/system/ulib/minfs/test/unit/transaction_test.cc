@@ -11,6 +11,7 @@
 #include <minfs/writeback.h>
 #include <zxtest/zxtest.h>
 
+#include "minfs/format.h"
 #include "minfs_private.h"
 #include "unowned_vmo_buffer.h"
 
@@ -32,9 +33,7 @@ class FakeStorage : public AllocatorStorage {
 
   ~FakeStorage() {}
 
-  zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final {
-    return ZX_OK;
-  }
+  zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final { return ZX_OK; }
 
   void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final {}
 
@@ -77,9 +76,7 @@ class FakeBlockDevice : public block_client::BlockDevice {
     return ZX_OK;
   }
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final { return ZX_OK; }
-  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final {
-    return ZX_OK;
-  }
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final { return ZX_OK; }
 
   zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const final {
     return ZX_OK;
@@ -98,6 +95,7 @@ class FakeMinfs : public TransactionalFs {
  public:
   FakeMinfs() {
     info_.inode_count = kTotalElements;
+    info_.block_size = kMinfsBlockSize;
   }
 
   fbl::Mutex* GetLock() const override { return &txn_lock_; }
@@ -121,9 +119,7 @@ class FakeMinfs : public TransactionalFs {
     return *block_allocator_;
   }
 
-  Allocator& GetInodeAllocator() override {
-    return GetInodeManager().inode_allocator();
-  }
+  Allocator& GetInodeAllocator() override { return GetInodeManager().inode_allocator(); }
 
   InodeManager& GetInodeManager() {
     if (!inode_manager_) {

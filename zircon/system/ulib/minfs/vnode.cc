@@ -110,8 +110,9 @@ zx_status_t VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
       indirect_block_pointers = (start - VnodeMapper::kDoubleIndirectFileStartBlock) +
                                 (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsDirectPerIndirect;
     }
-    indirect_file_->Shrink(fbl::round_up(indirect_block_pointers * sizeof(blk_t), kMinfsBlockSize) /
-                           kMinfsBlockSize);
+    indirect_file_->Shrink(
+        fbl::round_up(indirect_block_pointers * sizeof(blk_t), fs_->BlockSize()) /
+        fs_->BlockSize());
   }
   return ZX_OK;
 }
@@ -119,7 +120,7 @@ zx_status_t VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
 zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
   if (!indirect_file_) {
     zx::status<std::unique_ptr<LazyBuffer>> buffer =
-        LazyBuffer::Create(fs_->bc_.get(), "minfs-indirect-file", kMinfsBlockSize);
+        LazyBuffer::Create(fs_->bc_.get(), "minfs-indirect-file", fs_->BlockSize());
     if (buffer.is_error())
       return buffer.take_error();
     indirect_file_ = std::move(buffer).value();
@@ -144,7 +145,7 @@ zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
   }
 
   zx_status_t status;
-  const size_t vmo_size = fbl::round_up(GetSize(), kMinfsBlockSize);
+  const size_t vmo_size = fbl::round_up(GetSize(), fs_->BlockSize());
   if ((status = zx::vmo::create(vmo_size, ZX_VMO_RESIZABLE, &vmo_)) != ZX_OK) {
     FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
     return status;
@@ -164,7 +165,7 @@ zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
   status = iterator.Init(&mapper, nullptr, 0);
   if (status != ZX_OK)
     return status;
-  uint64_t block_count = vmo_size / kMinfsBlockSize;
+  uint64_t block_count = vmo_size / fs_->BlockSize();
   while (block_count > 0) {
     blk_t block = iterator.Blk();
     uint64_t count = iterator.GetContiguousBlockCount(block_count);
@@ -292,8 +293,8 @@ void VnodeMinfs::ValidateVmoTail(uint64_t inode_size) const {
 
   // Verify that everything not allocated to "inode_size" in the
   // last block is filled with zeroes.
-  char buf[kMinfsBlockSize];
-  const size_t vmo_size = fbl::round_up(inode_size, kMinfsBlockSize);
+  char buf[fs_->BlockSize()];
+  const size_t vmo_size = fbl::round_up(inode_size, fs_->BlockSize());
   ZX_ASSERT(vmo_.read(buf, inode_size, vmo_size - inode_size) == ZX_OK);
   for (size_t i = 0; i < vmo_size - inode_size; i++) {
     ZX_ASSERT_MSG(buf[i] == 0, "vmo[%" PRIu64 "] != 0 (inode size = %u)\n", inode_size + i,
@@ -392,13 +393,13 @@ zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size
 #else
   uint8_t* data = static_cast<uint8_t*>(vdata);
   uint8_t* start = data;
-  uint32_t n = static_cast<uint32_t>(off / kMinfsBlockSize);
-  size_t adjust = off % kMinfsBlockSize;
+  uint32_t n = static_cast<uint32_t>(off / fs_->BlockSize());
+  size_t adjust = off % fs_->BlockSize();
 
   while ((len > 0) && (n < kMinfsMaxFileBlock)) {
     size_t xfer;
-    if (len > (kMinfsBlockSize - adjust)) {
-      xfer = kMinfsBlockSize - adjust;
+    if (len > (fs_->BlockSize() - adjust)) {
+      xfer = fs_->BlockSize() - adjust;
     } else {
       xfer = len;
     }
@@ -408,7 +409,7 @@ zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size
       return status;
     }
     if (bno != 0) {
-      char bdata[kMinfsBlockSize];
+      char bdata[fs_->BlockSize()];
       if (fs_->ReadDat(bno, bdata)) {
         FS_TRACE_ERROR("minfs: Failed to read data block %u\n", bno);
         return ZX_ERR_IO;
@@ -449,21 +450,21 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
 #endif
 
   const uint8_t* const start = data;
-  uint32_t n = static_cast<uint32_t>(off / kMinfsBlockSize);
-  size_t adjust = off % kMinfsBlockSize;
+  uint32_t n = static_cast<uint32_t>(off / fs_->BlockSize());
+  size_t adjust = off % fs_->BlockSize();
 
   while ((len > 0) && (n < kMinfsMaxFileBlock)) {
     size_t xfer;
-    if (len > (kMinfsBlockSize - adjust)) {
-      xfer = kMinfsBlockSize - adjust;
+    if (len > (fs_->BlockSize() - adjust)) {
+      xfer = fs_->BlockSize() - adjust;
     } else {
       xfer = len;
     }
 
 #ifdef __Fuchsia__
-    size_t xfer_off = n * kMinfsBlockSize + adjust;
+    size_t xfer_off = n * fs_->BlockSize() + adjust;
     if ((xfer_off + xfer) > vmo_size_) {
-      size_t new_size = fbl::round_up(xfer_off + xfer, kMinfsBlockSize);
+      size_t new_size = fbl::round_up(xfer_off + xfer, fs_->BlockSize());
       ZX_DEBUG_ASSERT(new_size >= GetSize());  // Overflow.
       if ((status = vmo_.set_size(new_size)) != ZX_OK) {
         break;
@@ -489,13 +490,13 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
       break;
     }
     ZX_DEBUG_ASSERT(bno != 0);
-    char wdata[kMinfsBlockSize];
+    char wdata[fs_->BlockSize()];
     if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, wdata)) {
       break;
     }
     memcpy(wdata + adjust, data, xfer);
-    if (len < kMinfsBlockSize && max_size >= GetSize()) {
-      memset(wdata + adjust + xfer, 0, kMinfsBlockSize - (adjust + xfer));
+    if (len < fs_->BlockSize() && max_size >= GetSize()) {
+      memset(wdata + adjust + xfer, 0, fs_->BlockSize() - (adjust + xfer));
     }
     if (fs_->bc_->Writeblk(bno + fs_->Info().dat_block, wdata)) {
       break;
@@ -540,7 +541,7 @@ zx_status_t VnodeMinfs::GetAttributes(fs::VnodeAttributes* a) {
   a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic)) | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
   a->inode = ino_;
   a->content_size = GetSize();
-  a->storage_size = GetBlockCount() * kMinfsBlockSize;
+  a->storage_size = GetBlockCount() * fs_->BlockSize();
   a->link_count = inode_.link_count;
   a->creation_time = inode_.create_time;
   a->modification_time = inode_.modify_time;
@@ -628,7 +629,7 @@ zx_status_t VnodeMinfs::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* in
                 "Minfs name too long");
   Transaction transaction(fs_);
   *info = {};
-  info->block_size = kMinfsBlockSize;
+  info->block_size = fs_->BlockSize();
   info->max_filename_size = kMinfsMaxNameSize;
   info->fs_type = VFS_TYPE_MINFS;
   info->fs_id = fs_->GetFsId();
@@ -707,20 +708,20 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
   uint64_t inode_size = GetSize();
   if (len < inode_size) {
     // Truncate should make the file shorter.
-    blk_t bno = safemath::checked_cast<blk_t>(inode_size / kMinfsBlockSize);
+    blk_t bno = safemath::checked_cast<blk_t>(inode_size / fs_->BlockSize());
 
     // Truncate to the nearest block.
-    blk_t trunc_bno = static_cast<blk_t>(len / kMinfsBlockSize);
+    blk_t trunc_bno = static_cast<blk_t>(len / fs_->BlockSize());
     // [start_bno, EOF) blocks should be deleted entirely.
-    blk_t start_bno = static_cast<blk_t>((len % kMinfsBlockSize == 0) ? trunc_bno : trunc_bno + 1);
+    blk_t start_bno = static_cast<blk_t>((len % fs_->BlockSize() == 0) ? trunc_bno : trunc_bno + 1);
 
     if ((status = BlocksShrink(transaction, start_bno)) != ZX_OK) {
       return status;
     }
 
 #ifdef __Fuchsia__
-    uint64_t decommit_offset = fbl::round_up(len, kMinfsBlockSize);
-    uint64_t decommit_length = fbl::round_up(inode_size, kMinfsBlockSize) - decommit_offset;
+    uint64_t decommit_offset = fbl::round_up(len, fs_->BlockSize());
+    uint64_t decommit_length = fbl::round_up(inode_size, fs_->BlockSize()) - decommit_offset;
     if (decommit_length > 0) {
       status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, decommit_offset, decommit_length, nullptr, 0);
       if (status != ZX_OK) {
@@ -736,21 +737,21 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
 #endif
     // Shrink the size to be block-aligned if we are removing blocks from
     // the end of the vnode.
-    if (start_bno * kMinfsBlockSize < inode_size) {
-      SetSize(start_bno * kMinfsBlockSize);
+    if (start_bno * fs_->BlockSize() < inode_size) {
+      SetSize(start_bno * fs_->BlockSize());
     }
 
     // Write zeroes to the rest of the remaining block, if it exists
     if (len < GetSize()) {
-      char bdata[kMinfsBlockSize];
-      blk_t rel_bno = static_cast<blk_t>(len / kMinfsBlockSize);
+      char bdata[fs_->BlockSize()];
+      blk_t rel_bno = static_cast<blk_t>(len / fs_->BlockSize());
       bno = 0;
       if ((status = BlockGetReadable(rel_bno, &bno)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: Truncate failed to get block %u of file: %d\n", rel_bno, status);
         return ZX_ERR_IO;
       }
 
-      size_t adjust = len % kMinfsBlockSize;
+      size_t adjust = len % fs_->BlockSize();
 #ifdef __Fuchsia__
       bool allocated = (bno != 0);
       if (allocated || HasPendingAllocation(rel_bno)) {
@@ -758,9 +759,9 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
           FS_TRACE_ERROR("minfs: Truncate failed to read last block: %d\n", status);
           return ZX_ERR_IO;
         }
-        memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
+        memset(bdata + adjust, 0, fs_->BlockSize() - adjust);
 
-        if ((status = vmo_.write(bdata, len - adjust, kMinfsBlockSize)) != ZX_OK) {
+        if ((status = vmo_.write(bdata, len - adjust, fs_->BlockSize())) != ZX_OK) {
           FS_TRACE_ERROR("minfs: Truncate failed to write last block: %d\n", status);
           return ZX_ERR_IO;
         }
@@ -776,7 +777,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
         if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, bdata)) {
           return ZX_ERR_IO;
         }
-        memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
+        memset(bdata + adjust, 0, fs_->BlockSize() - adjust);
         if (fs_->bc_->Writeblk(bno + fs_->Info().dat_block, bdata)) {
           return ZX_ERR_IO;
         }
@@ -789,7 +790,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
       return ZX_ERR_INVALID_ARGS;
     }
 #ifdef __Fuchsia__
-    uint64_t new_size = fbl::round_up(len, kMinfsBlockSize);
+    uint64_t new_size = fbl::round_up(len, fs_->BlockSize());
     if ((status = vmo_.set_size(new_size)) != ZX_OK) {
       return status;
     }
