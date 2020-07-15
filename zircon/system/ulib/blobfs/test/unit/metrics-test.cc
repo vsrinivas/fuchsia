@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fzl/time.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <unistd.h>
 #include <zircon/time.h>
 
@@ -23,7 +24,8 @@ constexpr size_t MB = 1 << 20;
 const zx_ticks_t ms = fzl::NsToTicks(zx::nsec(zx::msec(1).to_nsecs())).get();
 
 TEST(ReadMetricsTest, UncompressedDiskRead) {
-  ReadMetrics read_metrics;
+  inspect::Node metrics_node;
+  ReadMetrics read_metrics(&metrics_node);
 
   auto stats = read_metrics.GetSnapshot(CompressionAlgorithm::UNCOMPRESSED);
   EXPECT_EQ(stats.read_bytes, 0);
@@ -43,7 +45,8 @@ TEST(ReadMetricsTest, UncompressedDiskRead) {
 }
 
 TEST(ReadMetricsTest, ChunkedDecompression) {
-  ReadMetrics read_metrics;
+  inspect::Node metrics_node;
+  ReadMetrics read_metrics(&metrics_node);
 
   auto stats = read_metrics.GetSnapshot(CompressionAlgorithm::CHUNKED);
   EXPECT_EQ(stats.decompress_bytes, 0);

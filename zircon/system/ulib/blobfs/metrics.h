@@ -123,6 +123,8 @@ class BlobfsMetrics {
   inspect::Node allocation_stats_ = root_.CreateChild("allocation_stats");
   inspect::Node writeback_stats_ = root_.CreateChild("writeback_stats");
   inspect::Node lookup_stats_ = root_.CreateChild("lookup_stats");
+  inspect::Node paged_read_stats_ = root_.CreateChild("paged_read_stats");
+  inspect::Node unpaged_read_stats_ = root_.CreateChild("unpaged_read_stats");
 
   // Allocation properties
   inspect::UintProperty blobs_created_property_ =
@@ -149,8 +151,8 @@ class BlobfsMetrics {
       lookup_stats_.CreateUint("blobs_opened_total_size", blobs_opened_total_size_);
 
   // READ STATS
-  ReadMetrics paged_read_metrics_;
-  ReadMetrics unpaged_read_metrics_;
+  ReadMetrics paged_read_metrics_{&paged_read_stats_};
+  ReadMetrics unpaged_read_metrics_{&unpaged_read_stats_};
   zx::ticks total_read_merkle_time_ticks_ = {};
   uint64_t bytes_merkle_read_from_disk_ = 0;
 

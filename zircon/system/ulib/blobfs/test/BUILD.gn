@@ -125,6 +125,7 @@ test("blobfs-unit") {
   deps = [
     ":test-utils",
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/lib/chunked-compression",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/lz4",

@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_READ_METRICS_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_READ_METRICS_H_
 
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>
 #include <zircon/time.h>
@@ -23,7 +24,8 @@ namespace blobfs {
 // one for each thread.
 class ReadMetrics {
  public:
-  ReadMetrics() = default;
+  explicit ReadMetrics(inspect::Node* read_metrics_node);
+  ReadMetrics() = delete;
   ReadMetrics(const ReadMetrics&) = delete;
   ReadMetrics& operator=(const ReadMetrics&) = delete;
 
@@ -52,6 +54,8 @@ class ReadMetrics {
 
  private:
   struct PerCompressionMetrics {
+    explicit PerCompressionMetrics(inspect::Node node);
+
     // Metrics for reads from disk
     zx::ticks read_ticks = {};
     uint64_t read_bytes = 0;
@@ -59,15 +63,22 @@ class ReadMetrics {
     // Metrics for decompression
     zx::ticks decompress_ticks = {};
     uint64_t decompress_bytes = 0;
+
+    // Inspect tree nodes
+    inspect::Node parent_node;
+    inspect::IntProperty read_ticks_node;
+    inspect::UintProperty read_bytes_node;
+    inspect::IntProperty decompress_ticks_node;
+    inspect::UintProperty decompress_bytes_node;
   };
 
   ReadMetrics::PerCompressionMetrics* GetMetrics(CompressionAlgorithm algorithm);
 
-  PerCompressionMetrics uncompressed_metrics_ = {};
-  PerCompressionMetrics lz4_metrics_ = {};
-  PerCompressionMetrics zstd_metrics_ = {};
-  PerCompressionMetrics zstd_seekable_metrics_ = {};
-  PerCompressionMetrics chunked_metrics_ = {};
+  PerCompressionMetrics uncompressed_metrics_;
+  PerCompressionMetrics lz4_metrics_;
+  PerCompressionMetrics zstd_metrics_;
+  PerCompressionMetrics zstd_seekable_metrics_;
+  PerCompressionMetrics chunked_metrics_;
 };
 
 }  // namespace blobfs

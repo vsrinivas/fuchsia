@@ -9,6 +9,13 @@ import 'package:sl4f/sl4f.dart' as sl4f;
 import 'util.dart';
 
 const String fshostPath = 'bootstrap/fshost:root';
+const String pagedPath = '$fshostPath/paged_read_stats/*';
+const String unpagedPath = '$fshostPath/unpaged_read_stats/*';
+
+Future<int> sumOfProperties(sl4f.Inspect inspect, String path) async {
+  final properties = await getInspectValues(inspect, path);
+  return properties.reduce((a, b) => a + b);
+}
 
 void main() {
   sl4f.Sl4f sl4fDriver;
@@ -64,5 +71,19 @@ void main() {
         await getInspectValues(inspect,
             '$fshostPath/writeback_stats:total_write_enqueue_time_ticks'),
         singleValue(greaterThanOrEqualTo(0)));
+  });
+
+  test('BlobFS exposes read statistics', () async {
+    final pagedBytesRead =
+        await sumOfProperties(inspect, '$pagedPath:read_bytes');
+    final unpagedBytesRead =
+        await sumOfProperties(inspect, '$unpagedPath:read_bytes');
+    expect(pagedBytesRead + unpagedBytesRead, greaterThan(0));
+
+    final pagedReadTicks =
+        await sumOfProperties(inspect, '$pagedPath:read_ticks');
+    final unpagedReadTicks =
+        await sumOfProperties(inspect, '$unpagedPath:read_ticks');
+    expect(pagedReadTicks + unpagedReadTicks, greaterThan(0));
   });
 }
