@@ -14,7 +14,7 @@ namespace utils {
 
 namespace {
 
-bool compare_id_to_words(std::string id, std::string expected_lowercase_words) {
+void compare_id_to_words(std::string id, std::string expected_lowercase_words) {
   std::ostringstream actual;
   for (auto word : id_to_words(id)) {
     if (actual.tellp() > 0) {
@@ -22,13 +22,11 @@ bool compare_id_to_words(std::string id, std::string expected_lowercase_words) {
     }
     actual << word;
   }
-  ASSERT_STRING_EQ(expected_lowercase_words, actual.str(), std::string("Failed for " + id).c_str());
-  return true;
+  ASSERT_STRING_EQ(expected_lowercase_words, actual.str(), "%s",
+                   std::string("Failed for " + id).c_str());
 }
 
-bool id_to_words() {
-  BEGIN_TEST;
-
+TEST(UtilsTests, id_to_words) {
   compare_id_to_words("agent_request_count", "agent request count");
   compare_id_to_words("common", "common");
   compare_id_to_words("Service", "service");
@@ -58,44 +56,38 @@ bool id_to_words() {
   // are consistent.
   compare_id_to_words("PppOE", "ppp oe");
   compare_id_to_words("PPPoE", "pp po e");
-
-  END_TEST;
 }
 
-bool case_test(bool valid_conversion, std::string case_name,
+void case_test(bool valid_conversion, std::string case_name,
                fit::function<bool(std::string)> is_case,
                fit::function<std::string(std::string)> to_case, std::string original,
                std::string expected) {
-  EXPECT_FALSE(is_case(original), (original + " is " + case_name).c_str());
+  EXPECT_FALSE(is_case(original), "%s", (original + " is " + case_name).c_str());
   std::string converted = to_case(original);
   EXPECT_STRING_EQ(
-      converted, expected,
+      converted, expected, "%s",
       ("from '" + original + "' to '" + converted + "' != '" + expected + "'").c_str());
   if (valid_conversion) {
     EXPECT_TRUE(
-        is_case(expected),
+        is_case(expected), "%s",
         ("from '" + original + "' expected '" + expected + "' is not " + case_name).c_str());
-    EXPECT_TRUE(is_case(converted),
+    EXPECT_TRUE(is_case(converted), "%s",
                 ("from '" + original + "' to '" + converted + "' is not " + case_name).c_str());
   } else {
-    EXPECT_FALSE(is_case(converted), ("from '" + original + "' to '" + converted +
-                                      "' was not expected to match " + case_name + ", but did!")
-                                         .c_str());
+    EXPECT_FALSE(is_case(converted), "%s",
+                 ("from '" + original + "' to '" + converted + "' was not expected to match " +
+                  case_name + ", but did!")
+                     .c_str());
   }
-  return true;
 }
 
 #define ASSERT_CASE(CASE, FROM, TO) \
-  EXPECT_TRUE(                      \
-      case_test(/*valid_conversion=*/true, #CASE, is_##CASE##_case, to_##CASE##_case, FROM, TO))
+  case_test(/*valid_conversion=*/true, #CASE, is_##CASE##_case, to_##CASE##_case, FROM, TO)
 
 #define ASSERT_BAD_CASE(CASE, FROM, TO) \
-  EXPECT_TRUE(                          \
-      case_test(/*valid_conversion=*/false, #CASE, is_##CASE##_case, to_##CASE##_case, FROM, TO))
+  case_test(/*valid_conversion=*/false, #CASE, is_##CASE##_case, to_##CASE##_case, FROM, TO)
 
-bool upper_camel_case() {
-  BEGIN_TEST;
-
+TEST(UtilsTests, upper_camel_case) {
   ASSERT_CASE(upper_camel, "x", "X");
   ASSERT_CASE(upper_camel, "xy", "Xy");
   ASSERT_BAD_CASE(upper_camel, "x_y", "XY");
@@ -124,13 +116,9 @@ bool upper_camel_case() {
   ASSERT_CASE(upper_camel, "urlLoader", "UrlLoader");
   ASSERT_CASE(upper_camel, "kUrlLoader", "UrlLoader");
   ASSERT_CASE(upper_camel, "kURLLoader", "UrlLoader");
-
-  END_TEST;
 }
 
-bool lower_camel_case() {
-  BEGIN_TEST;
-
+TEST(UtilsTests, lower_camel_case) {
   ASSERT_CASE(lower_camel, "X", "x");
   ASSERT_CASE(lower_camel, "XY", "xy");
   ASSERT_CASE(lower_camel, "X_Y", "xY");
@@ -159,13 +147,9 @@ bool lower_camel_case() {
   ASSERT_CASE(lower_camel, "URL_LOADER", "urlLoader");
   ASSERT_CASE(lower_camel, "kUrlLoader", "urlLoader");
   ASSERT_CASE(lower_camel, "kURLLoader", "urlLoader");
-
-  END_TEST;
 }
 
-bool upper_snake_case() {
-  BEGIN_TEST;
-
+TEST(UtilsTests, upper_snake_case) {
   ASSERT_CASE(upper_snake, "x", "X");
   ASSERT_CASE(upper_snake, "xy", "XY");
   ASSERT_CASE(upper_snake, "xY", "X_Y");
@@ -193,13 +177,9 @@ bool upper_snake_case() {
   ASSERT_CASE(upper_snake, "urlLoader", "URL_LOADER");
   ASSERT_CASE(upper_snake, "kUrlLoader", "URL_LOADER");
   ASSERT_CASE(upper_snake, "kURLLoader", "URL_LOADER");
-
-  END_TEST;
 }
 
-bool lower_snake_case() {
-  BEGIN_TEST;
-
+TEST(UtilsTests, lower_snake_case) {
   ASSERT_CASE(lower_snake, "X", "x");
   ASSERT_CASE(lower_snake, "Xy", "xy");
   ASSERT_CASE(lower_snake, "XY", "xy");
@@ -227,13 +207,9 @@ bool lower_snake_case() {
   ASSERT_CASE(lower_snake, "urlLoader", "url_loader");
   ASSERT_CASE(lower_snake, "kUrlLoader", "url_loader");
   ASSERT_CASE(lower_snake, "kURLLoader", "url_loader");
-
-  END_TEST;
 }
 
-bool konstant_case() {
-  BEGIN_TEST;
-
+TEST(UtilsTests, konstant_case) {
   ASSERT_CASE(konstant, "URLLoader", "kUrlLoader");
   ASSERT_CASE(konstant, "is_21Jump_street", "kIs21JumpStreet");
   ASSERT_CASE(konstant, "URLloader", "kUrLloader");
@@ -243,13 +219,9 @@ bool konstant_case() {
   ASSERT_CASE(konstant, "URL_LOADER", "kUrlLoader");
   ASSERT_CASE(konstant, "urlLoader", "kUrlLoader");
   ASSERT_CASE(konstant, "kURLLoader", "kUrlLoader");
-
-  END_TEST;
 }
 
-bool lower_no_separator_case() {
-  BEGIN_TEST;
-
+TEST(UtilsTests, lower_no_separator_case) {
   ASSERT_CASE(lower_no_separator, "URLLoader", "urlloader");
   ASSERT_CASE(lower_no_separator, "is_21Jump_street", "is21jumpstreet");
   ASSERT_CASE(lower_no_separator, "URLloader", "urlloader");
@@ -260,13 +232,9 @@ bool lower_no_separator_case() {
   ASSERT_CASE(lower_no_separator, "urlLoader", "urlloader");
   ASSERT_CASE(lower_no_separator, "kUrlLoader", "urlloader");
   ASSERT_CASE(lower_no_separator, "kURLLoader", "urlloader");
-
-  END_TEST;
 }
 
-bool whitespace_and_comments() {
-  BEGIN_TEST;
-
+TEST(UtilsTests, whitespace_and_comments) {
   ASSERT_TRUE(IsWhitespace(' '));
   ASSERT_TRUE(IsWhitespace('\t'));
   ASSERT_TRUE(IsWhitespace('\v'));
@@ -463,12 +431,9 @@ bool whitespace_and_comments() {
   ASSERT_FALSE(FirstLineIsRegularComment("///not blank    \n"));
   ASSERT_FALSE(FirstLineIsRegularComment("///  not blank\n"));
   ASSERT_FALSE(FirstLineIsRegularComment("///not blank\n"));
-
-  END_TEST;
 }
 
-bool is_only_whitespace() {
-  BEGIN_TEST;
+TEST(UtilsTests, is_only_whitespace) {
   std::string good_output;
   std::string bad_output;
 
@@ -481,12 +446,9 @@ bool is_only_whitespace() {
   }
 
   ASSERT_TRUE(OnlyWhitespaceChanged(bad_output, good_output));
-  END_TEST;
 }
 
-bool canonical_form() {
-  BEGIN_TEST;
-
+TEST(UtilsTests, canonical_form) {
   EXPECT_STRING_EQ(canonicalize(""), "");
 
   // Basic letter combinations.
@@ -568,24 +530,7 @@ bool canonical_form() {
   EXPECT_STRING_EQ(canonicalize("a_"), "a_");
   EXPECT_STRING_EQ(canonicalize("_a_"), "a_");
   EXPECT_STRING_EQ(canonicalize("__a__"), "a_");
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(utils_tests)
-
-RUN_TEST(id_to_words)
-RUN_TEST(upper_camel_case)
-RUN_TEST(lower_camel_case)
-RUN_TEST(upper_snake_case)
-RUN_TEST(lower_snake_case)
-RUN_TEST(konstant_case)
-RUN_TEST(lower_no_separator_case)
-RUN_TEST(whitespace_and_comments)
-RUN_TEST(is_only_whitespace)
-RUN_TEST(canonical_form)
-
-END_TEST_CASE(utils_tests)
 
 }  // namespace
 

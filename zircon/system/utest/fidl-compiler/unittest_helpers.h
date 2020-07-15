@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_UNITTEST_HELPERS_H_
 #define ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_UNITTEST_HELPERS_H_
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define ASSERT_STRING_EQ(lhs, rhs, ...) \
   ASSERT_STR_EQ(std::string(lhs).c_str(), std::string(rhs).c_str(), ##__VA_ARGS__)

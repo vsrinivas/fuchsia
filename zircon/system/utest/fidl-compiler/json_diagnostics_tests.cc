@@ -15,20 +15,12 @@ namespace {
 
 using diagnostics::Diagnostic;
 
-#define ASSERT_JSON(DIAGS, JSON) ASSERT_TRUE(ExpectJson(DIAGS, JSON), "Failed");
+#define ASSERT_JSON(DIAGS, JSON) ASSERT_NO_FATAL_FAILURES(ExpectJson(DIAGS, JSON))
 
-#define TEST_FAILED (!current_test_info->all_ok)
-
-bool DiagnosticsEmitThisJson(std::vector<Diagnostic*> diagnostics, std::string expected_json) {
-  BEGIN_HELPER;
-
+void ExpectJson(std::vector<Diagnostic*> diagnostics, std::string expected_json) {
   std::string actual_json = DiagnosticsJson(diagnostics).Produce().str();
 
-  EXPECT_STRING_EQ(
-      expected_json, actual_json,
-      "To compare results, run:\n\n diff ./json_diagnostics_tests_{expected,actual}.txt\n");
-
-  if (TEST_FAILED) {
+  if (expected_json != actual_json) {
     std::ofstream output_actual("json_diagnostics_tests_actual.txt");
     output_actual << actual_json;
     output_actual.close();
@@ -38,20 +30,12 @@ bool DiagnosticsEmitThisJson(std::vector<Diagnostic*> diagnostics, std::string e
     output_expected.close();
   }
 
-  END_HELPER;
+  EXPECT_STRING_EQ(
+      expected_json, actual_json,
+      "To compare results, run:\n\n diff ./json_diagnostics_tests_{expected,actual}.txt\n");
 }
 
-bool ExpectJson(std::vector<Diagnostic*> diagnostics, std::string expected_json) {
-  BEGIN_HELPER;
-
-  ASSERT_TRUE(DiagnosticsEmitThisJson(diagnostics, expected_json));
-
-  END_HELPER;
-}
-
-bool error() {
-  BEGIN_TEST;
-
+TEST(JsonDiagnosticsTests, error) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -73,13 +57,9 @@ table Table {
     "end_char": 30
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool warning() {
-  BEGIN_TEST;
-
+TEST(JsonDiagnosticsTests, warning) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -102,13 +82,9 @@ protocol Protocol {
     "end_char": 18
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool multiple_errors() {
-  BEGIN_TEST;
-
+TEST(JsonDiagnosticsTests, multiple_errors) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -142,13 +118,9 @@ table Table {
     "end_char": 16
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool span_is_eof() {
-  BEGIN_TEST;
-
+TEST(JsonDiagnosticsTests, span_is_eof) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -170,18 +142,7 @@ table Table {
     "end_char": 0
   }
 ])JSON");
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(json_diagnostics_tests)
-
-RUN_TEST(error)
-RUN_TEST(warning)
-RUN_TEST(multiple_errors)
-RUN_TEST(span_is_eof)
-
-END_TEST_CASE(json_diagnostics_tests)
 
 }  // namespace
 

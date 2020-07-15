@@ -15,12 +15,12 @@ namespace fidl {
 
 namespace {
 
-#define ASSERT_FINDINGS(TEST) ASSERT_TRUE(TEST.ExpectFindings(), "Failed")
+#define ASSERT_FINDINGS(TEST) ASSERT_NO_FATAL_FAILURES(TEST.ExpectFindings())
 
 #define ASSERT_FINDINGS_IN_ANY_POSITION(TEST) \
-  ASSERT_TRUE(TEST.ExpectFindingsInAnyPosition(), "Failed")
+  ASSERT_NO_FATAL_FAILURES(TEST.ExpectFindingsInAnyPosition())
 
-#define ASSERT_NO_FINDINGS(TEST) ASSERT_TRUE(TEST.ExpectNoFindings(), "Failed")
+#define ASSERT_NO_FINDINGS(TEST) ASSERT_NO_FATAL_FAILURES(TEST.ExpectNoFindings())
 
 class LintTest {
  public:
@@ -155,20 +155,18 @@ class LintTest {
     return *this;
   }
 
-  bool ExpectNoFindings() { return execute(/*expect_findings=*/false); }
+  void ExpectNoFindings() { execute(/*expect_findings=*/false); }
 
-  bool ExpectFindings() { return execute(/*expect_findings=*/true); }
+  void ExpectFindings() { execute(/*expect_findings=*/true); }
 
-  bool ExpectFindingsInAnyPosition() {
-    return execute(/*expect_findings=*/true,
-                   /*assert_positions_match=*/false);
+  void ExpectFindingsInAnyPosition() {
+    execute(/*expect_findings=*/true,
+            /*assert_positions_match=*/false);
   }
 
  private:
   // Removes all expected findings previously added with AddFinding().
-  bool execute_helper(bool expect_findings, bool assert_positions_match) {
-    BEGIN_HELPER;
-
+  void execute_helper(bool expect_findings, bool assert_positions_match) {
     std::ostringstream ss;
     if (default_check_id_.empty()) {
       ss << std::endl << "Failed test";
@@ -184,13 +182,13 @@ class LintTest {
     auto context = (ss.str() + "Bad test!");
 
     if (expect_findings && expected_findings_.empty()) {
-      ASSERT_FALSE(default_message_.empty(), context.c_str());
+      ASSERT_FALSE(default_message_.empty(), "%s", context.c_str());
       AddFinding(default_check_id_, default_message_);
     }
 
-    ASSERT_FALSE((!expect_findings) && (!expected_findings_.empty()), context.c_str());
+    ASSERT_FALSE((!expect_findings) && (!expected_findings_.empty()), "%s", context.c_str());
 
-    ASSERT_TRUE(ValidTest(), context.c_str());
+    ASSERT_NO_FATAL_FAILURES(ValidTest(), "%s", context.c_str());
 
     // The test looks good, so run the linter, and update the context
     // value by replacing "Bad test!" with the FIDL source code.
@@ -206,7 +204,7 @@ class LintTest {
         ss << "  * " << check_id << std::endl;
       }
       context = ss.str();
-      EXPECT_TRUE(excluded_check_ids_to_confirm_.empty(), context.c_str());
+      EXPECT_TRUE(excluded_check_ids_to_confirm_.empty(), "%s", context.c_str());
     }
 
     std::string source_code = std::string(library().source_file().data());
@@ -220,8 +218,7 @@ class LintTest {
     auto expected_finding = expected_findings_.begin();
 
     while (finding != findings.end() && expected_finding != expected_findings_.end()) {
-      EXPECT_TRUE(CompareExpectedToActualFinding(*expected_finding, *finding, ss.str(),
-                                                 assert_positions_match));
+      CompareExpectedToActualFinding(*expected_finding, *finding, ss.str(), assert_positions_match);
       expected_finding++;
       finding++;
     }
@@ -229,16 +226,14 @@ class LintTest {
       PrintFindings(ss, finding, findings.end(), "UNEXPECTED FINDINGS");
       context = ss.str();
       bool has_unexpected_findings = true;
-      EXPECT_FALSE(has_unexpected_findings, context.c_str());
+      EXPECT_FALSE(has_unexpected_findings, "%s", context.c_str());
     }
     if (expected_finding != expected_findings_.end()) {
       PrintFindings(ss, expected_finding, expected_findings_.end(), "EXPECTED FINDINGS NOT FOUND");
       context = ss.str();
       bool expected_findings_not_found = true;
-      EXPECT_FALSE(expected_findings_not_found, context.c_str());
+      EXPECT_FALSE(expected_findings_not_found, "%s", context.c_str());
     }
-
-    END_HELPER;
   }
 
   void Reset() {
@@ -251,13 +246,12 @@ class LintTest {
     that_ = "";
   }
 
-  bool execute(bool expect_findings, bool assert_positions_match = true) {
-    bool success = execute_helper(expect_findings, assert_positions_match);
+  void execute(bool expect_findings, bool assert_positions_match = true) {
+    execute_helper(expect_findings, assert_positions_match);
     Reset();
-    return success;
   }
 
-  bool ValidTest() const {
+  void ValidTest() const {
     ASSERT_FALSE(source_template_.str().empty(), "Missing source template");
     if (!substitutions_.empty()) {
       ASSERT_FALSE(source_template_.Substitute(substitutions_, false) !=
@@ -272,36 +266,35 @@ class LintTest {
       ASSERT_FALSE(expected_finding.message().empty(), "Missing message");
       ASSERT_FALSE(!expected_finding.span().valid(), "Missing position");
     }
-    return true;
   }
 
   // Complex templates with more than one substitution variable will typically
   // throw off the location match. Set |assert_positions_match| to false to
   // skip this check.
-  bool CompareExpectedToActualFinding(const Finding& expectf, const Finding& finding,
+  void CompareExpectedToActualFinding(const Finding& expectf, const Finding& finding,
                                       std::string test_context, bool assert_positions_match) const {
     std::ostringstream ss;
     ss << finding.span().position_str() << ": ";
     utils::PrintFinding(ss, finding);
     auto context = (test_context + ss.str());
-    ASSERT_STRING_EQ(expectf.subcategory(), finding.subcategory(), context.c_str());
+    ASSERT_STRING_EQ(expectf.subcategory(), finding.subcategory(), "%s", context.c_str());
     if (assert_positions_match) {
-      ASSERT_STRING_EQ(expectf.span().position_str(), finding.span().position_str(),
+      ASSERT_STRING_EQ(expectf.span().position_str(), finding.span().position_str(), "%s",
                        context.c_str());
     }
-    ASSERT_STRING_EQ(expectf.message(), finding.message(), context.c_str());
-    ASSERT_EQ(expectf.suggestion().has_value(), finding.suggestion().has_value(), context.c_str());
+    ASSERT_STRING_EQ(expectf.message(), finding.message(), "%s", context.c_str());
+    ASSERT_EQ(expectf.suggestion().has_value(), finding.suggestion().has_value(), "%s",
+              context.c_str());
     if (finding.suggestion().has_value()) {
       ASSERT_STRING_EQ(expectf.suggestion()->description(), finding.suggestion()->description(),
-                       context.c_str());
+                       "%s", context.c_str());
       ASSERT_EQ(expectf.suggestion()->replacement().has_value(),
-                finding.suggestion()->replacement().has_value(), context.c_str());
+                finding.suggestion()->replacement().has_value(), "%s", context.c_str());
       if (finding.suggestion()->replacement().has_value()) {
         ASSERT_STRING_EQ(*expectf.suggestion()->replacement(), *finding.suggestion()->replacement(),
-                         context.c_str());
+                         "%s", context.c_str());
       }
     }
-    return true;
   }
 
   template <typename Iter>
@@ -345,8 +338,7 @@ class LintTest {
   std::unique_ptr<TestLibrary> library_;
 };
 
-bool constant_repeats_enclosing_type_name() {
-  BEGIN_TEST;
+TEST(LintFindingsTests, constant_repeats_enclosing_type_name) {
   std::map<std::string, std::string> named_templates = {
       {"enum", R"FIDL(
 library fidl.repeater;
@@ -377,12 +369,9 @@ bits ConstantContainer : uint32 {
                  named_template.first + " 'ConstantContainer'");
     ASSERT_FINDINGS(test);
   }
-  END_TEST;
 }
 
-bool constant_repeats_library_name() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, constant_repeats_library_name) {
   std::map<std::string, std::string> named_templates = {
       {"constant", R"FIDL(
 library fidl.repeater;
@@ -417,15 +406,11 @@ bits Uint32Bitfield : uint32 {
                  " names (repeater) must not repeat names from the library 'fidl.repeater'");
     ASSERT_FINDINGS(test);
   }
-
-  END_TEST;
 }
 
-bool constant_should_use_common_prefix_suffix_please_implement_me() {
+TEST(LintFindingsTests, constant_should_use_common_prefix_suffix_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // Warning for "MINIMUM_..." or "MAXIMUM...", or maybe(?) "..._CAP" Also for instance
   // "SET_CLIENT_NAME_MAX_LEN" -> "MAX_CLIENT_NAME_LEN" or MAX_LEN_CLIENT_NAME", so detect
   // "_MAX" or "_MIN" as separate words in middle or at end of identifier.
@@ -503,13 +488,9 @@ const uint64 ${TEST} = 1234;
       .suggestion("change 'THRESHOLD_CAP' to 'THRESHOLD_MAX'")
       .replacement("THRESHOLD_MAX");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool copyright_should_not_be_doc_comment() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, copyright_should_not_be_doc_comment) {
   LintTest test;
   test.check_id("copyright-should-not-be-doc-comment")
       .message("Copyright notice should use non-flow-through comment markers")
@@ -532,13 +513,9 @@ ${TEST} found in the LICENSE file.
 library fidl.a;
 )FIDL");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool decl_member_repeats_enclosing_type_name() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, decl_member_repeats_enclosing_type_name) {
   std::map<std::string, std::string> named_templates = {
       {"struct", R"FIDL(
 library fidl.repeater;
@@ -583,13 +560,9 @@ xunion DeclName {
                  named_template.first + " 'DeclName'");
     ASSERT_FINDINGS(test);
   }
-
-  END_TEST;
 }
 
-bool decl_member_repeats_enclosing_type_name_but_may_disambiguate() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, decl_member_repeats_enclosing_type_name_but_may_disambiguate) {
   LintTest test;
   test.check_id("name-repeats-enclosing-type-name");
 
@@ -741,13 +714,9 @@ struct ShirtAndPantSupplies {
                   "shirt_and_pant_color");
 
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool decl_member_repeats_library_name() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, decl_member_repeats_library_name) {
   std::map<std::string, std::string> named_templates = {
       {"struct", R"FIDL(
 library fidl.repeater;
@@ -792,13 +761,9 @@ xunion DeclName {
                  "'fidl.repeater'");
     ASSERT_FINDINGS(test);
   }
-
-  END_TEST;
 }
 
-bool decl_name_repeats_library_name() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, decl_name_repeats_library_name) {
   std::map<std::string, std::string> named_templates = {
       {"protocol", R"FIDL(
 library fidl.repeater;
@@ -868,13 +833,9 @@ xunion ${TEST} {
                  " names (repeater) must not repeat names from the library 'fidl.repeater'");
     ASSERT_FINDINGS(test);
   }
-
-  END_TEST;
 }
 
-bool disallowed_library_name_component() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, disallowed_library_name_component) {
   LintTest test;
   test.check_id("disallowed-library-name-component")
       .message(
@@ -901,13 +862,9 @@ library fidl.${TEST};
   test.substitute("TEST", "common");
   // no suggestion
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool protocol_name_includes_service() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, protocol_name_includes_service) {
   // Error if ends in "Service", warning if includes "Service" as a word, but "Serviceability"
   // ("Service" is only part of a word) is OK.
 
@@ -943,13 +900,9 @@ protocol ${TEST} {};
 
   test.substitute("TEST", "ProtocolForService");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool event_names_must_start_with_on() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, event_names_must_start_with_on) {
   LintTest test;
   test.check_id("event-names-must-start-with-on")
       .message("Event names must start with 'On'")
@@ -971,15 +924,11 @@ protocol TestProtocol {
       .suggestion("change 'OntologyUpdate' to 'OnOntologyUpdate'")
       .replacement("OnOntologyUpdate");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool excessive_number_of_separate_protocols_for_file_please_implement_me() {
+TEST(LintFindingsTests, excessive_number_of_separate_protocols_for_file_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // Warning(?) if a fidl file contains more than some tolerance cap number of protocols.
   //
   // Or if a directory of fidl files contains more than some tolerance number of files AND any
@@ -1008,15 +957,11 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool excessive_number_of_separate_protocols_for_library_please_implement_me() {
+TEST(LintFindingsTests, excessive_number_of_separate_protocols_for_library_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // Or if a directory of fidl files contains more than some tolerance number of files AND any
   // fidl file(s) in that directory contains more than some smaller cap number of protocols per
   // fidl file. The fuchsia.ledger would be a good one to look at since it defines many protocols.
@@ -1043,15 +988,11 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool inconsistent_type_for_recurring_file_concept_please_implement_me() {
+TEST(LintFindingsTests, inconsistent_type_for_recurring_file_concept_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   LintTest test;
   test.check_id("inconsistent-type-for-recurring-file-concept")
       .message("Use consistent types for the same concept")
@@ -1070,15 +1011,11 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool inconsistent_type_for_recurring_library_concept_please_implement_me() {
+TEST(LintFindingsTests, inconsistent_type_for_recurring_library_concept_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   LintTest test;
   test.check_id("inconsistent-type-for-recurring-library-concept")
       .message("Ideally, types would be used consistently across library boundaries")
@@ -1097,13 +1034,9 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool invalid_case_for_constant() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, invalid_case_for_constant) {
   std::map<std::string, std::string> named_templates = {
       {"constants", R"FIDL(
 library fidl.a;
@@ -1145,13 +1078,9 @@ bits Uint32Bitfield : uint32 {
         .replacement("SOME_CONST");
     ASSERT_FINDINGS(test);
   }
-
-  END_TEST;
 }
 
-bool invalid_case_for_decl_member() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, invalid_case_for_decl_member) {
   std::map<std::string, std::string> named_templates = {
       {"parameters", R"FIDL(
 library fidl.a;
@@ -1204,13 +1133,9 @@ xunion DeclName {
         .replacement("agent_request_count");
     ASSERT_FINDINGS(test);
   }
-
-  END_TEST;
 }
 
-bool invalid_case_for_decl_name_c_style() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, invalid_case_for_decl_name_c_style) {
   std::map<std::string, std::string> named_templates = {
       {"protocols", R"FIDL(
 library zx;
@@ -1287,13 +1212,9 @@ xunion ${TEST} {
         .replacement("url_loader");
     ASSERT_FINDINGS(test);
   }
-
-  END_TEST;
 }
 
-bool invalid_case_for_decl_name_ipc_style() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, invalid_case_for_decl_name_ipc_style) {
   std::map<std::string, std::string> named_templates = {
       {"protocols", R"FIDL(
 library fidl.a;
@@ -1370,13 +1291,9 @@ xunion ${TEST} {
         .replacement("UrlLoader");
     ASSERT_FINDINGS(test);
   }
-
-  END_TEST;
 }
 
-bool invalid_case_for_decl_name_for_event() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, invalid_case_for_decl_name_for_event) {
   LintTest test;
   test.check_id("invalid-case-for-decl-name")
       .message("events must be named in UpperCamelCase")
@@ -1395,13 +1312,9 @@ protocol TestProtocol {
       .suggestion("change 'OnURLLoader' to 'OnUrlLoader'")
       .replacement("OnUrlLoader");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool invalid_case_for_primitive_alias() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, invalid_case_for_primitive_alias) {
   LintTest test;
   test.check_id("invalid-case-for-primitive-alias")
       .message("Primitive aliases must be named in lower_snake_case")
@@ -1419,13 +1332,9 @@ using bar as baz;
       .suggestion("change 'WhatIfSomeoneDoes_This' to 'what_if_someone_does_this'")
       .replacement("what_if_someone_does_this");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool invalid_copyright_for_platform_source_library() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, invalid_copyright_for_platform_source_library) {
   TemplateString copyright_template(
       R"FIDL(// Copyright ${YYYY} The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -1568,15 +1477,11 @@ library fidl.a;
       .suggestion("Update your header with:\n\n" + copyright_template.str())
       .AddFinding("${BLANK_LINE}");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool library_name_does_not_match_file_path_please_implement_me() {
+TEST(LintFindingsTests, library_name_does_not_match_file_path_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   LintTest test;
   test.check_id("library-name-does-not-match-file-path")
       .message(
@@ -1597,15 +1502,11 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool manager_protocols_are_discouraged_please_implement_me() {
+TEST(LintFindingsTests, manager_protocols_are_discouraged_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   LintTest test;
   test.check_id("manager-protocols-are-discouraged")
       .message(
@@ -1626,13 +1527,9 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool method_repeats_enclosing_type_name() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, method_repeats_enclosing_type_name) {
   LintTest test;
   test.check_id("name-repeats-enclosing-type-name").source_template(R"FIDL(
 library fidl.repeater;
@@ -1650,15 +1547,11 @@ protocol TestProtocol {
           "method names (protocol) must not repeat names from the enclosing protocol "
           "'TestProtocol'");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool method_return_status_missing_ok_please_implement_me() {
+TEST(LintFindingsTests, method_return_status_missing_ok_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // Warning or error(?) if returning a "status" enum that does not have an OK value. Note there
   // will be (or is) new guidance here.
   //
@@ -1690,15 +1583,11 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool method_returns_status_with_non_optional_result_please_implement_me() {
+TEST(LintFindingsTests, method_returns_status_with_non_optional_result_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // Warning if return a status and a non-optional result? we now have another more expressive
   // pattern for this, this section should be updated. Specifically, see:
   // https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/ftp/ftp-014.md.
@@ -1721,15 +1610,11 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool method_should_pipeline_protocols_please_implement_me() {
+TEST(LintFindingsTests, method_should_pipeline_protocols_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // Error(?) if the return tuple contains one value of another FIDL protocol type. Returning a
   // protocol is better done by sending a request for pipelining. This will be hard to lint at the
   // raw level, because you do not know to differentiate Bar from a protocol vs a message vs a bad
@@ -1753,15 +1638,11 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool no_commonly_reserved_words_please_implement_me() {
+TEST(LintFindingsTests, no_commonly_reserved_words_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   LintTest test;
   test.check_id("no-commonly-reserved-words")
       .message("Avoid commonly reserved words")
@@ -1952,13 +1833,11 @@ using foo as ${TEST};
     test.substitute("TEST", word);
     ASSERT_FINDINGS(test);
   }
-
-  END_TEST;
 }
 
-bool no_trailing_comment() {
-  BEGIN_TEST;
-
+// TODO(fxb/FIDL-656): Remove this check after issues are resolved with
+// trailing comments in existing source and tools
+TEST(LintFindingsTests, no_trailing_comment) {
   LintTest test;
   test.check_id("no-trailing-comment")
       .message("Place comments above the thing being described")
@@ -1995,13 +1874,9 @@ struct SeasonToShirtAndPantMapEntry {
       .AddFinding("// winter, spring, summer, or fall");
 
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool primitive_alias_repeats_library_name() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, primitive_alias_repeats_library_name) {
   LintTest test;
   test.check_id("name-repeats-library-name").source_template(R"FIDL(
 library fidl.repeater;
@@ -2017,15 +1892,11 @@ using uint64 as ${TEST};
           "primitive alias names (repeater) must not repeat names from the library "
           "'fidl.repeater'");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool service_hub_pattern_is_discouraged_please_implement_me() {
+TEST(LintFindingsTests, service_hub_pattern_is_discouraged_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // Warning(?) Note this is a low-priority check.
 
   LintTest test;
@@ -2046,13 +1917,9 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool string_bounds_not_specified() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, string_bounds_not_specified) {
   LintTest test;
   test.check_id("string-bounds-not-specified")
       .message("Specify bounds for string")
@@ -2115,13 +1982,9 @@ struct SomeStruct {
 
   test.substitute("TEST", "string:64");
   ASSERT_NO_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool todo_should_not_be_doc_comment() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, todo_should_not_be_doc_comment) {
   // Warning on TODO comments.
 
   std::string source_template = R"FIDL(
@@ -2194,13 +2057,9 @@ struct TestStruct {
       .AddFinding("\n");  // Linter fails on first character
 
   ASSERT_FINDINGS(parser_test);
-
-  END_TEST;
 }
 
-bool too_many_nested_libraries() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, too_many_nested_libraries) {
   LintTest test;
   test.check_id("too-many-nested-libraries")
       .message(
@@ -2224,15 +2083,11 @@ library ${TEST};
 
   test.substitute("TEST", "fuchsia.hardware.bar.baz.foo");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool unexpected_type_for_well_known_buffer_concept_please_implement_me() {
+TEST(LintFindingsTests, unexpected_type_for_well_known_buffer_concept_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // Warning on struct, union, and table member name patterns.
 
   LintTest test;
@@ -2255,15 +2110,11 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool unexpected_type_for_well_known_bytes_concept_please_implement_me() {
+TEST(LintFindingsTests, unexpected_type_for_well_known_bytes_concept_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // (two suggestions) recommend either bytes or array<uint8>. warning on struct, union, and table
   // member name patterns.
 
@@ -2285,15 +2136,11 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool unexpected_type_for_well_known_socket_handle_concept_please_implement_me() {
+TEST(LintFindingsTests, unexpected_type_for_well_known_socket_handle_concept_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // Warning on struct, union, and table member name patterns.
 
   LintTest test;
@@ -2317,15 +2164,11 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool unexpected_type_for_well_known_string_concept_please_implement_me() {
+TEST(LintFindingsTests, unexpected_type_for_well_known_string_concept_please_implement_me) {
   if (true)
-    return true;  // disabled pending feature implementation
-  BEGIN_TEST;
-
+    return;  // disabled pending feature implementation
   // Warning on struct, union, and table members that include certain well-known concepts (like
   // "filename" and "file_name") but their types don't match the type recommended (e.g., string,
   // in this case).
@@ -2348,13 +2191,9 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
       .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
       .replacement("!GOOD_VALUE!");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool vector_bounds_not_specified() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, vector_bounds_not_specified) {
   LintTest test;
   test.check_id("vector-bounds-not-specified")
       .message("Specify bounds for vector")
@@ -2406,13 +2245,9 @@ struct SomeStruct {
 
   test.substitute("TEST", "vector:64");
   ASSERT_NO_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool wrong_prefix_for_platform_source_library() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, wrong_prefix_for_platform_source_library) {
   LintTest test;
   test.check_id("wrong-prefix-for-platform-source-library")
       .message("FIDL library name is not currently allowed")
@@ -2433,13 +2268,9 @@ library ${TEST}.subcomponent;
       .suggestion("change 'mylibs' to fuchsia, perhaps?")
       .replacement("fuchsia, perhaps?");
   ASSERT_FINDINGS(test);
-
-  END_TEST;
 }
 
-bool include_and_exclude_checks() {
-  BEGIN_TEST;
-
+TEST(LintFindingsTests, include_and_exclude_checks) {
   LintTest test;
   test.check_id("multiple checks").source_template(R"FIDL(
 library ${LIBRARY};
@@ -2537,59 +2368,7 @@ struct ${STRUCT_NAME} {
                   "libraries)",
                   "${LIBRARY}");
   ASSERT_FINDINGS_IN_ANY_POSITION(test);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(lint_findings_tests)
-
-RUN_TEST(constant_repeats_enclosing_type_name)
-RUN_TEST(constant_repeats_library_name)
-RUN_TEST(constant_should_use_common_prefix_suffix_please_implement_me)
-RUN_TEST(copyright_should_not_be_doc_comment)
-RUN_TEST(decl_member_repeats_enclosing_type_name)
-RUN_TEST(decl_member_repeats_enclosing_type_name_but_may_disambiguate)
-RUN_TEST(decl_member_repeats_library_name)
-RUN_TEST(decl_name_repeats_library_name)
-RUN_TEST(disallowed_library_name_component)
-RUN_TEST(event_names_must_start_with_on)
-RUN_TEST(excessive_number_of_separate_protocols_for_file_please_implement_me)
-RUN_TEST(excessive_number_of_separate_protocols_for_library_please_implement_me)
-RUN_TEST(inconsistent_type_for_recurring_file_concept_please_implement_me)
-RUN_TEST(inconsistent_type_for_recurring_library_concept_please_implement_me)
-RUN_TEST(invalid_case_for_constant)
-RUN_TEST(invalid_case_for_decl_member)
-RUN_TEST(invalid_case_for_decl_name_c_style)
-RUN_TEST(invalid_case_for_decl_name_ipc_style)
-RUN_TEST(invalid_case_for_decl_name_for_event)
-RUN_TEST(invalid_case_for_primitive_alias)
-RUN_TEST(invalid_copyright_for_platform_source_library)
-RUN_TEST(library_name_does_not_match_file_path_please_implement_me)
-RUN_TEST(manager_protocols_are_discouraged_please_implement_me)
-RUN_TEST(method_repeats_enclosing_type_name)
-RUN_TEST(method_return_status_missing_ok_please_implement_me)
-RUN_TEST(method_returns_status_with_non_optional_result_please_implement_me)
-RUN_TEST(method_should_pipeline_protocols_please_implement_me)
-RUN_TEST(no_commonly_reserved_words_please_implement_me)
-RUN_TEST(no_trailing_comment)  // TODO(fxb/FIDL-656): Remove this check after
-                               // issues are resolved with trailing comments
-                               // in existing source and tools
-RUN_TEST(primitive_alias_repeats_library_name)
-RUN_TEST(protocol_name_includes_service)
-RUN_TEST(service_hub_pattern_is_discouraged_please_implement_me)
-RUN_TEST(string_bounds_not_specified)
-RUN_TEST(todo_should_not_be_doc_comment)
-RUN_TEST(too_many_nested_libraries)
-RUN_TEST(unexpected_type_for_well_known_buffer_concept_please_implement_me)
-RUN_TEST(unexpected_type_for_well_known_bytes_concept_please_implement_me)
-RUN_TEST(unexpected_type_for_well_known_socket_handle_concept_please_implement_me)
-RUN_TEST(unexpected_type_for_well_known_string_concept_please_implement_me)
-RUN_TEST(vector_bounds_not_specified)
-RUN_TEST(wrong_prefix_for_platform_source_library)
-
-RUN_TEST(include_and_exclude_checks)
-
-END_TEST_CASE(lint_findings_tests)
 
 }  // namespace
 

@@ -15,22 +15,14 @@ namespace fidl {
 
 namespace {
 
-#define ASSERT_JSON(TEST, JSON)                 \
-  ASSERT_TRUE(TEST.ExpectJson(JSON), "Failed"); \
+#define ASSERT_JSON(TEST, JSON)                    \
+  ASSERT_NO_FATAL_FAILURES(TEST.ExpectJson(JSON)); \
   TEST.Reset()
 
-#define TEST_FAILED (!current_test_info->all_ok)
-
-bool FindingsEmitThisJson(Findings& findings, std::string expected_json) {
-  BEGIN_HELPER;
-
+void FindingsEmitThisJson(Findings& findings, std::string expected_json) {
   std::string actual_json = fidl::FindingsJson(findings).Produce().str();
 
-  EXPECT_STRING_EQ(
-      expected_json, actual_json,
-      "To compare results, run:\n\n diff ./json_findings_tests_{expected,actual}.txt\n");
-
-  if (TEST_FAILED) {
+  if (expected_json != actual_json) {
     std::ofstream output_actual("json_findings_tests_actual.txt");
     output_actual << actual_json;
     output_actual.close();
@@ -40,7 +32,9 @@ bool FindingsEmitThisJson(Findings& findings, std::string expected_json) {
     output_expected.close();
   }
 
-  END_HELPER;
+  EXPECT_STRING_EQ(
+      expected_json, actual_json,
+      "To compare results, run:\n\n diff ./json_findings_tests_{expected,actual}.txt\n");
 }
 
 class JsonFindingsTest {
@@ -94,13 +88,7 @@ class JsonFindingsTest {
     return &findings_.emplace_back(span, args.check_id, args.message);
   }
 
-  bool ExpectJson(std::string expected_json) {
-    BEGIN_HELPER;
-
-    ASSERT_TRUE(FindingsEmitThisJson(findings_, expected_json));
-
-    END_HELPER;
-  }
+  void ExpectJson(std::string expected_json) { FindingsEmitThisJson(findings_, expected_json); }
 
   void Reset() { findings_.clear(); }
 
@@ -110,9 +98,7 @@ class JsonFindingsTest {
   Findings findings_;
 };
 
-bool simple_finding() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, simple_finding) {
   auto test = JsonFindingsTest("simple_finding_test_file", R"ANYLANG(Findings are
 language
 agnostic.
@@ -133,13 +119,9 @@ agnostic.
     "suggestions": []
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool simple_fidl() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, simple_fidl) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -164,13 +146,9 @@ protocol TestProtocol {
     "suggestions": []
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool zero_length_string() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, zero_length_string) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -195,13 +173,9 @@ protocol TestProtocol {
     "suggestions": []
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool starts_on_newline() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, starts_on_newline) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -224,13 +198,9 @@ protocol TestProtocol {
     "suggestions": []
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool ends_on_newline() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, ends_on_newline) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -254,13 +224,9 @@ protocol TestProtocol {
     "suggestions": []
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool ends_on_eof() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, ends_on_eof) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -283,13 +249,9 @@ protocol TestProtocol {
     "suggestions": []
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool finding_with_suggestion_no_replacement() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, finding_with_suggestion_no_replacement) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -318,13 +280,9 @@ protocol TestProtocol {
     ]
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool finding_with_replacement() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, finding_with_replacement) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -362,13 +320,9 @@ protocol TestProtocol {
     ]
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool finding_spans_2_lines() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, finding_spans_2_lines) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -393,13 +347,9 @@ protocol
     "suggestions": []
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool two_findings() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, two_findings) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -435,13 +385,9 @@ protocol TestProtocol {
     "suggestions": []
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool three_findings() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, three_findings) {
   auto test = JsonFindingsTest("simple.fidl", R"FIDL(
 library fidl.a;
 
@@ -510,13 +456,9 @@ protocol TestProtocol {
     ]
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool multiple_files() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, multiple_files) {
   auto test = JsonFindingsTest("simple_1.fidl", R"FIDL(
 library fidl.a;
 
@@ -563,13 +505,9 @@ struct TestStruct {
     "suggestions": []
   }
 ])JSON");
-
-  END_TEST;
 }
 
-bool fidl_json_end_to_end() {
-  BEGIN_TEST;
-
+TEST(JsonFindingsTests, fidl_json_end_to_end) {
   auto library = std::make_unique<TestLibrary>("example.fidl", R"FIDL(
 library fidl.a;
 
@@ -581,7 +519,7 @@ protocol TestProtocol {
   Findings findings;
   ASSERT_FALSE(library->Lint(&findings));
 
-  ASSERT_TRUE(FindingsEmitThisJson(findings, R"JSON([
+  ASSERT_NO_FATAL_FAILURES(FindingsEmitThisJson(findings, R"JSON([
   {
     "category": "fidl-lint/event-names-must-start-with-on",
     "message": "Event names must start with 'On'",
@@ -607,27 +545,7 @@ protocol TestProtocol {
     ]
   }
 ])JSON"));
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(json_findings_tests)
-
-RUN_TEST(simple_finding)
-RUN_TEST(simple_fidl)
-RUN_TEST(zero_length_string)
-RUN_TEST(starts_on_newline)
-RUN_TEST(ends_on_newline)
-RUN_TEST(ends_on_eof)
-RUN_TEST(finding_with_suggestion_no_replacement)
-RUN_TEST(finding_with_replacement)
-RUN_TEST(finding_spans_2_lines)
-RUN_TEST(two_findings)
-RUN_TEST(three_findings)
-RUN_TEST(multiple_files)
-RUN_TEST(fidl_json_end_to_end)
-
-END_TEST_CASE(json_findings_tests)
 
 }  // namespace
 
