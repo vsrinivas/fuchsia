@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_DISPLAY_H_
 
 #include <lib/device-protocol/display-panel.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
@@ -215,6 +216,9 @@ class AmlogicDisplay
   std::unique_ptr<amlogic_display::Osd> osd_;
   std::unique_ptr<amlogic_display::AmlogicDisplayClock> clock_;
   std::unique_ptr<amlogic_display::AmlDsiHost> dsi_host_;
+
+  // Monitoring
+  inspect::Inspector inspector_;
 };
 
 }  // namespace amlogic_display

@@ -7,6 +7,7 @@
 #include <float.h>
 #include <math.h>
 #include <stdint.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <zircon/errors.h>
 #include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
@@ -187,7 +188,7 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   if (rdma_channel < 0) {
     DISP_ERROR("Could not find any available RDMA channels!\n");
     Dump();
-    ZX_DEBUG_ASSERT(false);
+    rdma_allocation_failures_.Add(1);
     return;
   }
 

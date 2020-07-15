@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_OSD_H_
 
 #include <lib/device-protocol/platform-device.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
@@ -68,11 +69,14 @@ constexpr size_t kChannelBaseOffset = 512;
 
 class Osd {
  public:
-  Osd(uint32_t fb_width, uint32_t fb_height, uint32_t display_width, uint32_t display_height)
+  Osd(uint32_t fb_width, uint32_t fb_height, uint32_t display_width, uint32_t display_height,
+      inspect::Node* parent_node)
       : fb_width_(fb_width),
         fb_height_(fb_height),
         display_width_(display_width),
-        display_height_(display_height) {}
+        display_height_(display_height),
+        inspect_node_(parent_node->CreateChild("osd")),
+        rdma_allocation_failures_(inspect_node_.CreateUint("rdma_allocation_failures", 0)) {}
 
   zx_status_t Init(zx_device_t* parent);
   void HwInit();
@@ -139,6 +143,9 @@ class Osd {
   bool osd_enabled_gamma_ = false;
 
   bool initialized_ = false;
+
+  inspect::Node inspect_node_;
+  inspect::UintProperty rdma_allocation_failures_;
 };
 
 }  // namespace amlogic_display

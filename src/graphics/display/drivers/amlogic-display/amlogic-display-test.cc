@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mock-sysmem/mock-buffer-collection.h>
 
 #include "osd.h"
@@ -62,7 +63,8 @@ TEST(AmlogicDisplay, SysmemRequirements) {
 }
 
 TEST(AmlogicDisplay, FloatToFix3_10) {
-  amlogic_display::Osd osd = amlogic_display::Osd(100, 100, 100, 100);
+  inspect::Inspector inspector;
+  amlogic_display::Osd osd = amlogic_display::Osd(100, 100, 100, 100, &inspector.GetRoot());
   EXPECT_EQ(0x0000, osd.FloatToFixed3_10(0.0f));
   EXPECT_EQ(0x0066, osd.FloatToFixed3_10(0.1f));
   EXPECT_EQ(0x1f9a, osd.FloatToFixed3_10(-0.1f));
@@ -76,7 +78,8 @@ TEST(AmlogicDisplay, FloatToFix3_10) {
 }
 
 TEST(AmlogicDisplay, FloatToFixed2_10) {
-  amlogic_display::Osd osd = amlogic_display::Osd(100, 100, 100, 100);
+  inspect::Inspector inspector;
+  amlogic_display::Osd osd = amlogic_display::Osd(100, 100, 100, 100, &inspector.GetRoot());
   EXPECT_EQ(0x0000, osd.FloatToFixed2_10(0.0f));
   EXPECT_EQ(0x0066, osd.FloatToFixed2_10(0.1f));
   EXPECT_EQ(0x0f9a, osd.FloatToFixed2_10(-0.1f));

@@ -218,7 +218,8 @@ zx_status_t AmlogicDisplay::DisplayInit() {
     }
   }
   osd_ = fbl::make_unique_checked<amlogic_display::Osd>(
-      &ac, width_, height_, disp_setting_.h_active, disp_setting_.v_active);
+      &ac, width_, height_, disp_setting_.h_active, disp_setting_.v_active,
+      &inspector_.GetRoot());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -888,7 +889,9 @@ zx_status_t AmlogicDisplay::Bind() {
 
   auto cleanup = fbl::MakeAutoCall([&]() { DdkRelease(); });
 
-  status = DdkAdd("amlogic-display");
+  status = DdkAdd(ddk::DeviceAddArgs("amlogic-display")
+                  .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+                  .set_inspect_vmo(inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     DISP_ERROR("Could not add device\n");
     return status;
