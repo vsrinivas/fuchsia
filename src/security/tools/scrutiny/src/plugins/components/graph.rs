@@ -15,7 +15,7 @@ use {
     },
     anyhow::{anyhow, Result},
     lazy_static::lazy_static,
-    log::{debug, info},
+    log::{debug, error, info},
     regex::Regex,
     std::collections::HashMap,
     std::env,
@@ -120,12 +120,37 @@ impl PackageDataCollector {
                             self.package_reader.read_service_package_definition(merkle)?;
 
                         if let Some(services) = service_pkg.services {
-                            for (service_name, service_url) in services {
+                            for (service_name, service_url_or_array) in services {
                                 if combined.contains_key(&service_name) {
                                     debug!(
                                         "Service mapping collision on {} between {} and {}",
-                                        service_name, combined[&service_name], service_url
+                                        service_name, combined[&service_name], service_url_or_array
                                     );
+                                }
+
+                                // service_url_or_array could be a String array with the service_url as the first index, and command line args following
+                                let service_url: String;
+                                if service_url_or_array.is_array() {
+                                    let service_array = service_url_or_array.as_array().unwrap();
+                                    if service_array[0].is_string() {
+                                        service_url =
+                                            service_array[0].as_str().unwrap().to_string();
+                                    } else {
+                                        error!(
+                                            "Expected a string service url, instead got: {}:{}",
+                                            service_name, service_array[0]
+                                        );
+                                        continue;
+                                    }
+                                } else if service_url_or_array.is_string() {
+                                    service_url =
+                                        service_url_or_array.as_str().unwrap().to_string();
+                                } else {
+                                    error!(
+                                        "Unexpected service mapping found: {}:{}",
+                                        service_name, service_url_or_array
+                                    );
+                                    continue;
                                 }
 
                                 combined.insert(service_name, service_url);
@@ -135,6 +160,8 @@ impl PackageDataCollector {
                         }
                     }
                 }
+                // Stop looking for other config-data packages once we've found at least one.
+                break;
             }
         }
         // Add all builtin services
@@ -164,7 +191,7 @@ impl PackageDataCollector {
         let mut routes: Vec<Route> = Vec::new();
 
         // Iterate through all served packages, for each cmx they define, create a node.
-        let mut idx = 0; // FIXME: How to generate?
+        let mut idx = 0; // TODO(arkay) Do we want a consistent id generated? Or even a random id?
         for pkg in served_pkgs.iter() {
             for (path, cm) in &pkg.cms {
                 if path.starts_with("meta/") && path.ends_with(".cmx") {
@@ -174,7 +201,7 @@ impl PackageDataCollector {
                         url.clone(),
                         Component {
                             id: idx,
-                            url: url,
+                            url: url.clone(),
                             version: 0, // FIXME: Is this the version of the cmx? It doesn't seem to be defined anywhere.
                             inferred: false,
                         },
@@ -229,7 +256,7 @@ impl PackageDataCollector {
         // If a service provider node is not able to be found, create a new inferred service provider node.
         // Since manifests more naturally hold the list of services that the component requires, we iterate through
         // those instead. Can be changed relatively effortlessly if the model make sense otherwise.
-        let mut route_idx = 0; // FIXME:
+        let mut route_idx = 0;
         for mani in &manifests {
             for service_name in &mani.uses {
                 let target_id = {
@@ -453,7 +480,19 @@ mod tests {
 
     fn create_svc_pkg_def(entries: Vec<(String, String)>) -> ServicePackageDefinition {
         ServicePackageDefinition {
-            services: Some(entries.into_iter().map(|entry| (entry.0, entry.1)).collect()),
+            services: Some(
+                entries.into_iter().map(|entry| (entry.0, serde_json::json!(entry.1))).collect(),
+            ),
+        }
+    }
+
+    fn create_svc_pkg_def_with_array(
+        entries: Vec<(String, Vec<String>)>,
+    ) -> ServicePackageDefinition {
+        ServicePackageDefinition {
+            services: Some(
+                entries.into_iter().map(|entry| (entry.0, serde_json::json!(entry.1))).collect(),
+            ),
         }
     }
 
@@ -602,6 +641,41 @@ mod tests {
 
         let result = collector.merge_services(&served, builtins).unwrap();
         assert_eq!(3, result.len());
+    }
+
+    #[test]
+    fn test_merge_services_reads_first_value_when_given_an_array_for_service_url_mapping() {
+        let mock_reader = MockPackageReader::new();
+        // Create 2 service map definitions that map different services
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(vec![(
+            String::from("fuchsia.test.foo.service1"),
+            String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
+        )]));
+        mock_reader.append_service_pkg_def(create_svc_pkg_def_with_array(vec![(
+            String::from("fuchsia.test.foo.service2"),
+            vec![
+                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
+                String::from("--foo"),
+                String::from("--bar"),
+            ],
+        )]));
+
+        let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
+
+        let mut contents = HashMap::new();
+        contents.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
+        contents.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        let pkg = create_test_package_with_contents(String::from(CONFIG_DATA_PKG_URL), contents);
+        let served = vec![pkg];
+
+        let builtins = HashMap::new();
+
+        let result = collector.merge_services(&served, builtins).unwrap();
+        assert_eq!(2, result.len());
+        assert_eq!(
+            "fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx",
+            result.get("fuchsia.test.foo.service2").unwrap()
+        );
     }
 
     // =-=-=-=-= build_model() tests =-=-=-=-= //

@@ -5,6 +5,7 @@
 use {
     crate::plugins::components::types::*,
     serde::{Deserialize, Serialize},
+    serde_json::value::Value,
     std::collections::HashMap,
 };
 
@@ -78,7 +79,7 @@ pub struct Custom {
 /// Path: /blobs/{merkle}
 #[derive(Deserialize)]
 pub struct ServicePackageDefinition {
-    pub services: Option<HashMap<String, String>>,
+    pub services: Option<HashMap<String, Value>>,
     // FIXME: Other json structs are built such that unused fields are present but commented out.
     // This one omits the completely.
 }

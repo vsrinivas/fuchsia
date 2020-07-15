@@ -283,9 +283,9 @@ class ComponentMapperView {
           })
           .style("fill", defaultColorFill)
           .on("click", (e, i) => {
-            const query = "^" + e.name + "$";
+            const query = "id: " + e.id;
             view.search.value = query;
-            view.updateSidebarWithSearchResults("^"+e.name+"$");
+            view.updateSidebarWithSearchResults(query);
           });
 
       const label = svg.append("g").attr("class", "labels")
@@ -303,9 +303,9 @@ class ComponentMapperView {
           .style("font-weight", "bold")
           .style("fill", "#e8eaed")
           .on("click", (e, i) => {
-            const query = "^" + e.name + "$";
+            const query = "id: " + e.id;
             view.search.value = query;
-            view.updateSidebarWithSearchResults("^"+e.name+"$");
+            view.updateSidebarWithSearchResults(query);
           })
           .text(function(e) { return e.name; });
 
@@ -360,6 +360,8 @@ class ComponentMapperView {
     for (const graphNode of graphNodes) {
       const listNode = document.createElement("li");
       listNode.appendChild(document.createTextNode(graphNode["name"]));
+      listNode.appendChild(document.createElement("br"));
+      listNode.appendChild(document.createTextNode(graphNode["url"]));
 
       listNode.appendChild(document.createElement("br"));
       let hrefEle = document.createElement("button");
@@ -513,6 +515,15 @@ class ComponentMapperView {
             matchingNodes.push(node);
             break;
           }
+        }
+      }
+    } else if (query.startsWith("id: ")) {
+      const subquery = query.split(" ")[1];
+      for (const node of this.graphData["nodes"]) {
+        if (node["id"] == subquery) {
+          // Since ids are unique, we can stop after finding a single node.
+          matchingNodes.push(node);
+          break;
         }
       }
     } else {
