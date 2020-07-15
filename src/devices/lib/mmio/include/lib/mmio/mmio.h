@@ -19,6 +19,7 @@
 #include <ddk/mmio-buffer.h>
 #include <fbl/macros.h>
 #include <hw/arch_ops.h>
+#include <mmio-ptr/mmio-ptr.h>
 
 namespace ddk {
 
@@ -184,7 +185,7 @@ class MmioBuffer {
   }
 
   void reset() {
-    mmio_buffer_release(&mmio_); 
+    mmio_buffer_release(&mmio_);
     memset(&mmio_, 0, sizeof(mmio_));
   }
 
@@ -347,53 +348,40 @@ class MmioBuffer {
   template <typename T>
   static constexpr std::false_type always_false{};
 
-  template <typename T>
-  static T Read(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
-    ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio.size);
-    const uintptr_t ptr = reinterpret_cast<uintptr_t>(mmio.vaddr);
-    ZX_DEBUG_ASSERT(ptr);
-    return *reinterpret_cast<volatile T*>(ptr + offs);
-  }
-
-  template <typename T>
-  static void Write(const void* ctx, const mmio_buffer_t& mmio, T val, zx_off_t offs) {
-    ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio.size);
-    const uintptr_t ptr = reinterpret_cast<uintptr_t>(mmio.vaddr);
-    ZX_DEBUG_ASSERT(ptr);
-    *reinterpret_cast<volatile T*>(ptr + offs) = val;
-    hw_mb();
-  }
-
   static uint8_t Read8(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
-    return Read<uint8_t>(ctx, mmio, offs);
+    return MmioRead8(GetAddr<uint8_t>(ctx, mmio, offs));
   }
 
   static uint16_t Read16(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
-    return Read<uint16_t>(ctx, mmio, offs);
+    return MmioRead16(GetAddr<uint16_t>(ctx, mmio, offs));
   }
 
   static uint32_t Read32(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
-    return Read<uint32_t>(ctx, mmio, offs);
+    return MmioRead32(GetAddr<uint32_t>(ctx, mmio, offs));
   }
 
   static uint64_t Read64(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
-    return Read<uint64_t>(ctx, mmio, offs);
+    return MmioRead64(GetAddr<uint64_t>(ctx, mmio, offs));
   }
 
   static void Write8(const void* ctx, const mmio_buffer_t& mmio, uint8_t val, zx_off_t offs) {
-    Write<uint8_t>(ctx, mmio, val, offs);
+    MmioWrite8(val, GetAddr<uint8_t>(ctx, mmio, offs));
+    hw_mb();
   }
 
   static void Write16(const void* ctx, const mmio_buffer_t& mmio, uint16_t val, zx_off_t offs) {
-    Write<uint16_t>(ctx, mmio, val, offs);
+    MmioWrite16(val, GetAddr<uint16_t>(ctx, mmio, offs));
+    hw_mb();
   }
 
   static void Write32(const void* ctx, const mmio_buffer_t& mmio, uint32_t val, zx_off_t offs) {
-    Write<uint32_t>(ctx, mmio, val, offs);
+    MmioWrite32(val, GetAddr<uint32_t>(ctx, mmio, offs));
+    hw_mb();
   }
 
   static void Write64(const void* ctx, const mmio_buffer_t& mmio, uint64_t val, zx_off_t offs) {
-    Write<uint64_t>(ctx, mmio, val, offs);
+    MmioWrite64(val, GetAddr<uint64_t>(ctx, mmio, offs));
+    hw_mb();
   }
 
   static constexpr MmioBufferOps kDefaultOps = {
@@ -413,6 +401,14 @@ class MmioBuffer {
     ops_ = other.ops_;
     ctx_ = other.ctx_;
     memset(&other.mmio_, 0, sizeof(other.mmio_));
+  }
+
+  template <typename T>
+  static MMIO_PTR volatile T* GetAddr(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio.size);
+    const uintptr_t ptr = reinterpret_cast<uintptr_t>(mmio.vaddr);
+    ZX_DEBUG_ASSERT(ptr);
+    return reinterpret_cast<MMIO_PTR T*>(ptr + offs);
   }
 };
 

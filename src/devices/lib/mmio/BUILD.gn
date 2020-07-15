@@ -2,16 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36548.                         #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 import("//build/unification/zx_library.gni")
 
 zx_library("mmio") {
@@ -21,5 +11,7 @@ zx_library("mmio") {
   public_deps = [
     # <lib/mmio/mmio.h> has #include <fbl/macros.h>.
     "//zircon/public/lib/fbl",
+    # <lib/mmio/mmio.h> has #include <mmio-ptr/mmio-ptr.h>.
+    "//zircon/public/lib/mmio-ptr",
   ]
 }
