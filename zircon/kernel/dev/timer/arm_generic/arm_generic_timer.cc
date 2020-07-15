@@ -288,7 +288,7 @@ template <bool AllowDebugPrint = false>
 static inline affine::Ratio arm_generic_timer_compute_conversion_factors(uint32_t cntfrq) {
   affine::Ratio cntpct_to_nsec = {ZX_SEC(1), cntfrq};
   if constexpr (AllowDebugPrint) {
-    dprintf(SPEW, "cntpct_per_nsec: %u/%u", cntpct_to_nsec.numerator(),
+    dprintf(SPEW, "arm generic timer cntpct_per_nsec: %u/%u\n", cntpct_to_nsec.numerator(),
             cntpct_to_nsec.denominator());
   }
   return cntpct_to_nsec;
