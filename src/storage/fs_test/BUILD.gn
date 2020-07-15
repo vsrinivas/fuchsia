@@ -44,7 +44,7 @@ shared_library("fs_test") {
     "//zircon/system/ulib/memfs",
   ]
   if (false) {  # Enable for fatfs
-    deps += [ "//src/storage/fatfs/fatfs-fuchsia:fatfs" ]
+    deps += [ "//src/storage/fatfs/fuchsia-fatfs:fatfs" ]
     defines = [ "TEST_FATFS" ]
   }
   public_deps = [
