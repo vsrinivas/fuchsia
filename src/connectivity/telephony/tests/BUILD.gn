@@ -2,52 +2,75 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//src/sys/build/components.gni")
 
-devmgr_manifest("devmgr-manifest") {
-}
-
-test_package("telephony-tests") {
-  package_name = "telephony-tests"
+fuchsia_component("fake-at-driver-test") {
+  testonly = true
+  manifest = "meta/tel_fake_at_driver_test.cmx"
 
   deps = [
-    ":devmgr-manifest",
     "component-integration:fake-at-driver-test",
-    "component-integration:fake-at-query",
-    "component-integration:fake-qmi-query",
-    "component-integration:snooper",
-    "driver-integration:telephony-qmi-usb-integration-test",
-    "driver-unit:tel-driver-unit-test",
+    "//src/connectivity/telephony/lib/tel-devmgr:tel-devmgr-at",
   ]
+}
 
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
+fuchsia_component("fake-at-query") {
+  testonly = true
+  manifest = "meta/tel_fake_at_query.cmx"
 
-  tests = [
-    {
-      name = "telephony-qmi-usb-integration-test"
-      environments = basic_envs
-    },
-    {
-      name = "tel-driver-unit-test"
-      environments = basic_envs
-    },
-    {
-      name = "tel_fake_qmi_query"
-      environments = basic_envs
-    },
-    {
-      name = "tel_fake_at_query"
-      environments = basic_envs
-    },
-    {
-      name = "tel_fake_at_driver_test"
-      environments = basic_envs
-    },
-    {
-      name = "tel_snooper_multi_clients"
-      environments = basic_envs
-    },
+  deps = [
+    "component-integration:fake-at-query",
+    "//src/connectivity/telephony/lib/tel-devmgr:tel-devmgr-at",
+  ]
+}
+
+fuchsia_component("fake-qmi-query") {
+  testonly = true
+  manifest = "meta/tel_fake_qmi_query.cmx"
+
+  deps = [
+    "component-integration:fake-qmi-query",
+    "//src/connectivity/telephony/lib/tel-devmgr:tel-devmgr-qmi",
+  ]
+}
+
+fuchsia_component("snooper") {
+  testonly = true
+  manifest = "meta/tel_snooper_multi_clients.cmx"
+
+  deps = [
+    "component-integration:snooper",
+    "//src/connectivity/telephony/lib/tel-devmgr:tel-devmgr-qmi",
+  ]
+}
+
+fuchsia_component("telephony-qmi-usb-integration-test") {
+  testonly = true
+  manifest = "meta/telephony-qmi-usb-integration-test.cmx"
+
+  deps = [
+    "driver-integration:telephony-qmi-usb-integration-test",
+    "//src/connectivity/telephony/lib/tel-devmgr:tel-devmgr",
+  ]
+}
+
+fuchsia_component("tel-driver-unit-test") {
+  testonly = true
+  manifest = "meta/tel-driver-unit-test.cmx"
+
+  deps = [
+    "driver-unit:tel-driver-unit-test",
+    "//src/connectivity/telephony/lib/tel-devmgr:tel-devmgr",
+  ]
+}
+
+fuchsia_test_package("telephony-tests") {
+  test_components = [
+    ":fake-at-driver-test",
+    ":fake-at-query",
+    ":fake-qmi-query",
+    ":snooper",
+    ":telephony-qmi-usb-integration-test",
+    ":tel-driver-unit-test",
   ]
 }

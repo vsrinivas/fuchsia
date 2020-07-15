@@ -3,32 +3,19 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.tel.devmgr.IsolatedDevmgr": [
-                    "fuchsia-pkg://fuchsia.com/tel_devmgr#meta/tel_devmgr.cmx"
+                    "fuchsia-pkg://fuchsia.com/telephony-tests#meta/tel-devmgr.cmx"
                 ]
             }
         }
     },
     "program": {
-        "binary": "test/telephony-qmi-usb-integration-test"
+        "binary": "bin/telephony-qmi-usb-integration-test"
     },
     "sandbox": {
-        "boot": [
-            "bin",
-            "driver",
-            "lib"
-        ],
-        "dev": [
-            "class/qmi-transport",
-            "test/test"
-        ],
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
             "fuchsia.tel.devmgr.IsolatedDevmgr"
-        ],
-        "system": [
-            "driver",
-            "driver/qmi-transport.so"
         ]
     }
 }

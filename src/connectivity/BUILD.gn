@@ -42,6 +42,7 @@ group("tests") {
     "openthread:tests",
     "overnet:tests",
     "ppp:tests",
+    "telephony:tests",
     "weave:tests",
     "wlan:tests",
   ]

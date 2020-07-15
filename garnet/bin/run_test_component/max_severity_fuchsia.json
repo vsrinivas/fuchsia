@@ -534,6 +534,18 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/telephony-tests#meta/fake-at-query.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/telephony-tests#meta/telephony-qmi-usb-integration-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/telephony-tests-package#meta/telephony-tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/touch-input-test#meta/touch-input-test.cmx",
          "max_severity": "ERROR"
       },

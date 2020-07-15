@@ -29,7 +29,7 @@ constexpr uint8_t kQmiImeiResp[]{1,  41, 0,  128, 2,  1,  2,  1,  0,  37, 0,  29
                                  53, 57, 50, 54,  48, 48, 56, 48, 49, 54, 56, 51, 53, 49};
 
 const std::string isolated_devmgr_pkg_url =
-    "fuchsia-pkg://fuchsia.com/tel_devmgr#meta/tel_devmgr.cmx";
+    "fuchsia-pkg://fuchsia.com/telephony-tests#meta/tel-devmgr.cmx";
 const std::string isolated_devmgr_svc_name = "fuchsia.tel.devmgr.IsolatedDevmgr";
 
 class USBVirtualBusQmi : public usb_virtual_bus::USBVirtualBusBase {
