@@ -126,6 +126,9 @@ void lk_main() {
 static int bootstrap2(void*) {
   timeline_threading.Set(current_ticks());
 
+  // As this thread will initialize per-CPU state, ensure that it runs on the boot CPU.
+  Thread::Current::Get()->SetCpuAffinity(cpu_num_to_mask(BOOT_CPU_ID));
+
   dprintf(SPEW, "top of bootstrap2()\n");
 
   // Initialize the rest of the architecture and platform.
@@ -140,6 +143,7 @@ static int bootstrap2(void*) {
   // not yet be online).
 
   // Perform per-CPU set up on the boot CPU.
+  DEBUG_ASSERT(arch_curr_cpu_num() == BOOT_CPU_ID);
   dprintf(SPEW, "initializing late arch\n");
   lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM, LK_INIT_LEVEL_ARCH_LATE - 1);
   arch_late_init_percpu();
