@@ -33,6 +33,9 @@ pub const ALL_BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }
 {{- range .Benchmarks }}
 	("Encode/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_encode),
 	("Decode/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_decode),
+	{{ if .EnableSendEventBenchmark }}
+	("SendEvent/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_send_event),
+	{{- end -}}
 	{{ if .EnableEchoCallBenchmark }}
 	("EchoCall/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_echo_call),
 	{{- end -}}
@@ -74,6 +77,42 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 		BatchSize::SmallInput,
 	);
 }
+{{ if .EnableSendEventBenchmark }}
+async fn {{ .Name }}_send_event_receiver_thread(receiver_fidl_chan_end: zx::Channel, sender_fifo: std::sync::mpsc::SyncSender<()>) {
+	let async_receiver_fidl_chan_end = fuchsia_async::Channel::from_channel(receiver_fidl_chan_end).unwrap();
+	let proxy = {{ .ValueType }}EventProtocolProxy::new(async_receiver_fidl_chan_end);
+	let mut event_stream = proxy.take_event_stream();
+
+	while let Some(_event) = event_stream.next().await {
+		sender_fifo.send(()).unwrap();
+	};
+}
+fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
+	let (sender_fifo, receiver_fifo) = std::sync::mpsc::sync_channel(1);
+	let (sender_fidl_chan_end, receiver_fidl_chan_end) = zx::Channel::create().unwrap();
+	std::thread::spawn(|| {
+		fuchsia_async::Executor::new()
+			.unwrap()
+			.run_singlethreaded(async move {
+			{{ .Name }}_send_event_receiver_thread(receiver_fidl_chan_end, sender_fifo).await;
+		});
+	});
+	fuchsia_async::Executor::new()
+		.unwrap()
+		.run_singlethreaded(async move {
+			let async_sender_fidl_chan_end = fuchsia_async::Channel::from_channel(sender_fidl_chan_end).unwrap();
+			let sender = <{{ .ValueType }}EventProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(async_sender_fidl_chan_end);
+			b.iter_batched_ref(|| {
+				{{ .Value }}
+			},
+			|value| {
+				fidl::endpoints::RequestStream::control_handle(&sender).send_send_(value).unwrap();
+				receiver_fifo.recv().unwrap();
+			},
+			BatchSize::SmallInput);
+		});
+}
+{{- end -}}
 {{ if .EnableEchoCallBenchmark }}
 async fn {{ .Name }}_echo_call_server_thread(server_end: zx::Channel) {
 	let async_server_end = fuchsia_async::Channel::from_channel(server_end).unwrap();
@@ -120,8 +159,8 @@ type benchmarkTmplInput struct {
 }
 
 type benchmark struct {
-	Name, ChromeperfPath, Value, ValueType string
-	EnableEchoCallBenchmark                bool
+	Name, ChromeperfPath, Value, ValueType            string
+	EnableSendEventBenchmark, EnableEchoCallBenchmark bool
 }
 
 // GenerateBenchmarks generates Rust benchmarks.
@@ -136,13 +175,17 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, e
 		}
 		value := visit(gidlBenchmark.Value, decl)
 		benchmarks = append(benchmarks, benchmark{
-			Name:                    benchmarkName(gidlBenchmark.Name),
-			ChromeperfPath:          gidlBenchmark.Name,
-			Value:                   value,
-			ValueType:               declName(decl),
-			EnableEchoCallBenchmark: gidlBenchmark.EnableEchoCallBenchmark,
+			Name:                     benchmarkName(gidlBenchmark.Name),
+			ChromeperfPath:           gidlBenchmark.Name,
+			Value:                    value,
+			ValueType:                declName(decl),
+			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
+			EnableEchoCallBenchmark:  gidlBenchmark.EnableEchoCallBenchmark,
 		})
 		nBenchmarks += 2
+		if gidlBenchmark.EnableSendEventBenchmark {
+			nBenchmarks++
+		}
 		if gidlBenchmark.EnableEchoCallBenchmark {
 			nBenchmarks++
 		}
