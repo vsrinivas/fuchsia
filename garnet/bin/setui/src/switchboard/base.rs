@@ -38,7 +38,7 @@ pub enum SwitchboardError {
     InvalidArgument { setting_type: SettingType, argument: String, value: String },
 
     #[error(
-    "External failure for setting type:{setting_type:?} dependency: {dependency:?} reqeust:{request:?}"
+    "External failure for setting type:{setting_type:?} dependency: {dependency:?} request:{request:?}"
     )]
     ExternalFailure { setting_type: SettingType, dependency: String, request: String },
 

@@ -4,7 +4,8 @@
     },
     "sandbox": {
         "dev": [
-            "class/input"
+            "class/input",
+            "class/light"
         ],
         "features": [
             "build-info",

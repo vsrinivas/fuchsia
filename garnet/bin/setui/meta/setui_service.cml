@@ -10,6 +10,7 @@
                 "/svc/fuchsia.bluetooth.sys.Access",
                 "/svc/fuchsia.deprecatedtimezone.Timezone",
                 "/svc/fuchsia.devicesettings.DeviceSettingsManager",
+                "/svc/fuchsia.hardware.light.Light",
                 "/svc/fuchsia.hardware.power.statecontrol.Admin",
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.media.audio.VolumeControl",
@@ -28,6 +29,11 @@
         },
         {
             directory: "/dev/class/input",
+            from: "parent",
+            rights: [ "r*" ],
+        },
+        {
+            directory: "/dev/class/light",
             from: "parent",
             rights: [ "r*" ],
         },

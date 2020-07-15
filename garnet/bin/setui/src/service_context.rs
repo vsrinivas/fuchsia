@@ -7,7 +7,8 @@ use fidl::endpoints::{DiscoverableService, Proxy, ServiceMarker};
 use futures::future::BoxFuture;
 
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::{connect_to_service, connect_to_service_at_path};
+use glob::glob;
 
 use fuchsia_zircon as zx;
 use futures::lock::Mutex;
@@ -33,6 +34,10 @@ impl ServiceContext {
         Self { generate_service: generate_service }
     }
 
+    /// Connect to a service with the given ServiceMarker.
+    ///
+    /// If a GenerateService was specified at creation, the name of the service marker will be used
+    /// to generate a service.
     pub async fn connect<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
         if let Some(generate_service) = &self.generate_service {
             let (client, server) = zx::Channel::create()?;
@@ -43,6 +48,10 @@ impl ServiceContext {
         }
     }
 
+    /// Connect to a service with the given name and ServiceMarker.
+    ///
+    /// If a GenerateService was specified at creation, the given name will be used to generate a
+    /// service.
     pub async fn connect_named<S: ServiceMarker>(
         &self,
         service_name: &str,
@@ -56,6 +65,49 @@ impl ServiceContext {
             Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client)?))
         } else {
             Err(format_err!("No service generator"))
+        }
+    }
+
+    /// Connect to a service at the given path and ServiceMarker.
+    ///
+    /// If a GenerateService was specified at creation, the name of the service marker will be used
+    /// to generate a service and the path will be ignored.
+    pub async fn connect_path<S: DiscoverableService>(
+        &self,
+        path: &str,
+    ) -> Result<S::Proxy, Error> {
+        if let Some(generate_service) = &self.generate_service {
+            let (client, server) = zx::Channel::create()?;
+            ((generate_service)(S::SERVICE_NAME, server)).await?;
+            Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client)?))
+        } else {
+            connect_to_service_at_path::<S>(path)
+        }
+    }
+
+    /// Connect to a service by discovering a hardware device at the given glob-style pattern.
+    ///
+    /// The first discovered path will be used to connected.
+    ///
+    /// If a GenerateService was specified at creation, the name of the service marker will be used
+    /// to generate a service and the path will be ignored.
+    pub async fn connect_device_path<S: DiscoverableService>(
+        &self,
+        glob_pattern: &str,
+    ) -> Result<S::Proxy, Error> {
+        if self.generate_service.is_some() {
+            // If a generate_service is already specified, just connect through there
+            self.connect::<S>().await
+        } else {
+            let found_path = glob(glob_pattern)?
+                .filter_map(|entry| entry.ok())
+                .next()
+                .ok_or_else(|| format_err!("failed to enumerate devices"))?;
+
+            let path_str =
+                found_path.to_str().ok_or_else(|| format_err!("failed to convert path to str"))?;
+
+            connect_to_service_at_path::<S>(path_str)
         }
     }
 }

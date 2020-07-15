@@ -4,7 +4,8 @@
     },
     "sandbox": {
         "dev": [
-            "class/input"
+            "class/input",
+            "class/light"
         ],
         "features": [
             "build-info",
@@ -15,6 +16,7 @@
             "fuchsia.bluetooth.sys.Access",
             "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.hardware.light.Light",
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",

@@ -2,17 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(test)]
 use std::sync::Arc;
 
+use crate::agent::restore_agent;
 use fidl_fuchsia_settings::{LightMarker, LightProxy};
 use futures::lock::Mutex;
 
-#[cfg(test)]
 use crate::registry::device_storage::testing::*;
 use crate::registry::device_storage::DeviceStorage;
 use crate::switchboard::base::SettingType;
 use crate::switchboard::light_types::{LightGroup, LightInfo, LightState, LightValue};
+use crate::tests::fakes::hardware_light_service::HardwareLightService;
+use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;
+use fidl_fuchsia_hardware_light::{Capability, Info};
 
 const ENV_NAME: &str = "settings_service_light_test_environment";
 const CONTEXT_ID: u64 = 0;
@@ -26,7 +30,12 @@ async fn create_test_light_env(
         .await
         .get_device_storage::<LightInfo>(StorageAccessContext::Test, CONTEXT_ID);
 
+    let service_registry = ServiceRegistry::create();
+    let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
+    service_registry.lock().await.register_service(hardware_light_service_handle.clone());
+
     let env = EnvironmentBuilder::new(storage_factory)
+        .service(Box::new(ServiceRegistry::serve(service_registry)))
         .settings(&[SettingType::Light])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -46,6 +55,61 @@ async fn set_light_value(service: &LightProxy, name: &str, light_group: LightGro
         .await
         .expect("set completed")
         .expect("set successful");
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_light_restore() {
+    const LIGHT_INDEX: u32 = 0;
+    const NAME: &str = "light_name";
+    const CAPABILITY: Capability = Capability::Brightness;
+    const VALUE: u8 = 42;
+
+    let expected_light_group = LightGroup {
+        name: Some(NAME.to_string()),
+        enabled: Some(true),
+        light_type: Some(CAPABILITY.into()),
+        lights: Some(vec![LightState { value: Some(LightValue::Brightness(VALUE)) }]),
+    };
+
+    let storage_factory = InMemoryStorageFactory::create();
+
+    let store = storage_factory
+        .lock()
+        .await
+        .get_device_storage::<LightInfo>(StorageAccessContext::Test, CONTEXT_ID);
+
+    let service_registry = ServiceRegistry::create();
+    let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
+
+    // Set fake values before environment spawns so that restore can read them.
+    hardware_light_service_handle
+        .lock()
+        .await
+        .insert_light_info(LIGHT_INDEX, Info { name: NAME.to_string(), capability: CAPABILITY })
+        .await;
+    hardware_light_service_handle.lock().await.insert_brightness_value(LIGHT_INDEX, VALUE).await;
+
+    service_registry.lock().await.register_service(hardware_light_service_handle.clone());
+
+    let env = EnvironmentBuilder::new(storage_factory)
+        .service(Box::new(ServiceRegistry::serve(service_registry)))
+        .agents(&[restore_agent::blueprint::create()])
+        .settings(&[SettingType::Light])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
+
+    let light_service = env.connect_to_service::<LightMarker>().unwrap();
+
+    // Verify that the restored value is persisted.
+    let mut store_lock = store.lock().await;
+    let retrieved_struct = store_lock.get().await;
+    assert_eq!(&expected_light_group.clone(), retrieved_struct.light_groups.get(NAME).unwrap());
+
+    // Verify that the restored value is returned on a watch call.
+    let settings: fidl_fuchsia_settings::LightGroup =
+        light_service.watch_light_group(NAME).await.expect("watch completed");
+    assert_eq!(expected_light_group, settings.into());
 }
 
 #[fuchsia_async::run_until_stalled(test)]

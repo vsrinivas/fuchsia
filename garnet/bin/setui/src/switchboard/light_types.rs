@@ -16,6 +16,7 @@ impl LightInfo {
     }
 }
 
+/// Internal representation of a light group.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct LightGroup {
     pub name: Option<String>,
@@ -59,6 +60,16 @@ impl From<fidl_fuchsia_settings::LightType> for LightType {
             fidl_fuchsia_settings::LightType::Brightness => LightType::Brightness,
             fidl_fuchsia_settings::LightType::Rgb => LightType::Rgb,
             fidl_fuchsia_settings::LightType::Simple => LightType::Simple,
+        }
+    }
+}
+
+impl From<fidl_fuchsia_hardware_light::Capability> for LightType {
+    fn from(src: fidl_fuchsia_hardware_light::Capability) -> Self {
+        match src {
+            fidl_fuchsia_hardware_light::Capability::Brightness => LightType::Brightness,
+            fidl_fuchsia_hardware_light::Capability::Rgb => LightType::Rgb,
+            fidl_fuchsia_hardware_light::Capability::Simple => LightType::Simple,
         }
     }
 }
@@ -108,6 +119,16 @@ impl From<fidl_fuchsia_settings::LightValue> for LightValue {
             }
             fidl_fuchsia_settings::LightValue::Color(color) => LightValue::Rgb(color.into()),
         }
+    }
+}
+
+impl From<fidl_fuchsia_hardware_light::Rgb> for LightValue {
+    fn from(src: fidl_fuchsia_hardware_light::Rgb) -> Self {
+        LightValue::Rgb(ColorRgb {
+            red: src.red as f32,
+            green: src.green as f32,
+            blue: src.blue as f32,
+        })
     }
 }
 
