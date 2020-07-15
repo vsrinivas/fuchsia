@@ -17,6 +17,7 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
+#include <fbl/algorithm.h>
 #include <fbl/macros.h>
 
 namespace minfs {
@@ -192,17 +193,25 @@ struct Dirent {
   char name[];      // The name bytes follow immediately. There is no trailing null.
 };
 
+constexpr uint8_t kMinfsDirentAlignment = 4;
+constexpr uint8_t kMinfsDirentAlignmentMask = kMinfsDirentAlignment - 1;
+static_assert(kMinfsDirentAlignment == alignof(Dirent), "Dirent alignment changed");
+
 constexpr uint32_t kMinfsDirentSize = sizeof(Dirent);
 
 // Returns the length of the Dirent structure required to hold a name of the given length.
-constexpr uint32_t DirentSize(uint8_t namelen) { return kMinfsDirentSize + ((namelen + 3) & (~3)); }
+constexpr uint32_t DirentSize(uint8_t namelen) {
+  return kMinfsDirentSize + fbl::round_up<uint32_t>(namelen, kMinfsDirentAlignment);
+}
 
 constexpr uint8_t kMinfsMaxNameSize = 255;
 
 // The largest acceptable value of DirentSize(dirent->namelen). The 'dirent->reclen' field may be
 // larger after coalescing entries.
 constexpr uint32_t kMinfsMaxDirentSize = DirentSize(kMinfsMaxNameSize);
-constexpr uint32_t kMinfsMaxDirectorySize = (((1 << 20) - 1) & (~3));
+constexpr uint32_t kMinfsMaxDirectorySize = fbl::round_down((1u << 20) - 1, kMinfsDirentAlignment);
+static_assert(kMinfsMaxDirectorySize % kMinfsDirentAlignment == 0, "Invalid max directory size");
+static_assert(kMinfsMaxDirectorySize < (1u << 20), "Max directory size too large");
 
 // Storage for a Dirent padded out to the size for the maximum length. This is used as a buffer to
 // read into with the correct alignment.

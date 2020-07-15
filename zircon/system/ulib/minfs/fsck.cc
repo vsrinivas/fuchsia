@@ -282,8 +282,10 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
     uint32_t dlen = DirentSize(de->namelen);
     bool is_last = de->reclen & kMinfsReclenLast;
     if (!is_last && ((rlen < kMinfsDirentSize) || (dlen > rlen) || (dlen > kMinfsMaxDirentSize) ||
-                     (rlen & 3))) {
-      FS_TRACE_ERROR("check: ino#%u: de[%u]: bad dirent reclen (%u)\n", ino, eno, rlen);
+                     (rlen & kMinfsDirentAlignmentMask))) {
+      FS_TRACE_ERROR(
+          "check: ino#%u: de[%u]: bad dirent reclen (%u) dlen(%u), maxsize(%u), size(%u)\n", ino,
+          eno, rlen, dlen, kMinfsMaxDirentSize, kMinfsDirentSize);
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
     if (de->ino == 0) {

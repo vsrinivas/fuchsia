@@ -4,9 +4,8 @@
 
 // Tests minfs format behavior.
 
-#include <zxtest/zxtest.h>
-
 #include <minfs/format.h>
+#include <zxtest/zxtest.h>
 
 namespace minfs {
 namespace {
@@ -75,8 +74,23 @@ TEST(MinfsFormat, MinfsSuperblockOnFvm) {
 
   ASSERT_EQ(DataBlocks(info), info.dat_slices * blocks_per_slice);
 
-  ASSERT_EQ(NonDataBlocks(info), InodeBitmapBlocks(info) + BlockBitmapBlocks(info)
-                                 + InodeBlocks(info) + JournalBlocks(info));
+  ASSERT_EQ(NonDataBlocks(info), InodeBitmapBlocks(info) + BlockBitmapBlocks(info) +
+                                     InodeBlocks(info) + JournalBlocks(info));
+}
+
+TEST(DirentSizeTest, ZeroNameLength) {
+  constexpr uint8_t kNameLength = 0;
+  ASSERT_EQ(DirentSize(kNameLength), sizeof(Dirent));
+}
+
+TEST(DirentSizeTest, AlignedNameLength) {
+  constexpr uint8_t kNameLength = 3 * kMinfsDirentAlignment;
+  ASSERT_EQ(DirentSize(kNameLength), sizeof(Dirent) + kNameLength);
+}
+
+TEST(DirentSizeTest, UnalignedNameLength) {
+  constexpr uint8_t kNameLength = 4 * kMinfsDirentAlignment;
+  ASSERT_EQ(DirentSize(kNameLength - 1), sizeof(Dirent) + kNameLength);
 }
 
 }  // namespace

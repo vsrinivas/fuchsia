@@ -55,7 +55,7 @@ zx_status_t ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
     FS_TRACE_ERROR("vn_dir: Could not read dirent at offset: %zd\n", off);
     return ZX_ERR_IO;
   }
-  if ((off + reclen > kMinfsMaxDirectorySize) || (reclen & 3)) {
+  if ((off + reclen > kMinfsMaxDirectorySize) || (reclen & kMinfsDirentAlignmentMask)) {
     FS_TRACE_ERROR("vn_dir: bad reclen %u > %u\n", reclen, kMinfsMaxDirectorySize);
     return ZX_ERR_IO;
   }
