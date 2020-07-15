@@ -162,8 +162,6 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:02:4/clocks",
       "sys/platform/05:00:10/aml-canvas",
-      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot1/block",
-      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot2/block",
       "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
       "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-001/block",
       "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
