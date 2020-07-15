@@ -55,10 +55,10 @@ static zx_status_t brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint 
   uint32_t flags;
   if (cmd == BRCMF_C_GET_VAR) {
     // buf starts with a NULL-terminated string
-    BRCMF_DBG(BCDC, "Getting iovar '%.*s'", len, buf);
+    BRCMF_DBG(BCDC, "Getting iovar '%.*s'", len, static_cast<char *>(buf));
   } else if (cmd == BRCMF_C_SET_VAR) {
     // buf starts with a NULL-terminated string
-    BRCMF_DBG(BCDC, "Setting iovar '%.*s'", len, buf);
+    BRCMF_DBG(BCDC, "Setting iovar '%.*s'", len, static_cast<char *>(buf));
   } else {
     BRCMF_DBG(BCDC, "Enter");
   }
