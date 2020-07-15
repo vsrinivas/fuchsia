@@ -521,7 +521,9 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
     // If the device is already dead, we are detecting an expected disconnect from the driver_host.
     if (dev->state() != Device::State::kDead) {
-      LOGF(ERROR, "Disconnected device %p '%s'", dev.get(), dev->name().data());
+      // TODO(fxb/56208): Change this log back to error once isolated devmgr is fixed.
+      LOGF(WARNING, "Disconnected device %p '%s', see fxb/56208 for potential cause", dev.get(),
+           dev->name().data());
       dev->coordinator->RemoveDevice(dev, true);
     }
     // Do not start waiting again on this device's channel again
