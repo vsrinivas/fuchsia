@@ -12,6 +12,10 @@ group("arbitrary") {
   deps = [ ":arbitrary-v0_4_0" ]
 }
 
+group("arc-swap") {
+  deps = [ ":arc-swap-v0_4_4" ]
+}
+
 group("argh") {
   deps = [ ":argh-v0_1_3" ]
 }
