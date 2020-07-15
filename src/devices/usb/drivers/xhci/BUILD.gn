@@ -14,8 +14,6 @@ driver_module("xhci-x86") {
   }
   sources = [
     "usb-xhci.cc",
-    "xdc-transfer.cc",
-    "xdc.cc",
     "xhci-device-manager.cc",
     "xhci-root-hub.cc",
     "xhci-transfer-common.cc",

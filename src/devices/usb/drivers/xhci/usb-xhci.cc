@@ -25,7 +25,6 @@
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
 
-#include "xdc.h"
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
 #include "xhci-util.h"
@@ -189,7 +188,9 @@ void UsbXhci::DdkSuspend(ddk::SuspendTxn txn) {
 
 void UsbXhci::DdkUnbindNew(ddk::UnbindTxn txn) {
   zxlogf(INFO, "UsbXhci::DdkUnbind");
-  xhci_shutdown(xhci_.get());
+  if (init_success_) {
+    xhci_shutdown(xhci_.get());
+  }
   txn.Reply();
 }
 
@@ -241,11 +242,12 @@ int UsbXhci::CompleterThread(void* arg) {
 int UsbXhci::StartThread() {
   zxlogf(DEBUG, "%s start", __func__);
 
-  auto cleanup = fbl::MakeAutoCall([this]() { DdkRemoveDeprecated(); });
+  assert(init_txn_.has_value());
 
   fbl::AllocChecker ac;
   completers_.reset(new (&ac) Completer[xhci_->num_interrupts], xhci_->num_interrupts);
   if (!ac.check()) {
+    init_txn_->Reply(ZX_ERR_NO_MEMORY);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -261,44 +263,33 @@ int UsbXhci::StartThread() {
 
   // xhci_start will block, so do this part here instead of in usb_xhci_bind
   auto status = xhci_start(xhci_.get());
-#if defined(__x86_64__)
-  if (status == ZX_OK) {
-    // TODO(jocelyndang): start xdc in a new process.
-    status = xdc_bind(zxdev(), xhci_->bti_handle.get(), xhci_->mmio->get());
-    // XDC is not required for functioning XHCI. Not all boards support XDC.
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "xhci_start: xdc_bind failed %d", status);
-    }
-    status = ZX_OK;
-  }
-#endif
-
   if (status != ZX_OK) {
+    init_txn_->Reply(status);
     return status;
   }
 
-  DdkMakeVisible();
+  init_success_ = true;
+  // This will make the device visible and able to be unbound.
+  init_txn_->Reply(ZX_OK);
   for (uint32_t i = 0; i < xhci_->num_interrupts; i++) {
     thrd_create_with_name(&xhci_->completer_threads[i], CompleterThread, &completers_[i],
                           "xhci_completer_thread");
   }
 
   zxlogf(DEBUG, "%s done", __func__);
-  cleanup.cancel();
   return 0;
 }
 
 zx_status_t UsbXhci::FinishBind() {
-  auto status = DdkAdd("xhci", DEVICE_ADD_INVISIBLE);
-  if (status != ZX_OK) {
-    return status;
-  }
+  return DdkAdd("xhci");
+}
 
+void UsbXhci::DdkInit(ddk::InitTxn txn) {
   // Configure and fetch a deadline profile for the high priority USB completer
   // thread.  In a case where we are taking an interrupt on every microframe, we
   // will need to run at 8KHz and have reserved up to 66% of a CPU for work in
   // that period.
-  status = device_get_deadline_profile(
+  zx_status_t status = device_get_deadline_profile(
       zxdev_,
       ZX_USEC(80),   // capacity: we agree to run for no more than 80 uSec max
       ZX_USEC(120),  // deadline: we need to be done before the next microframe (125 uSec)
@@ -310,13 +301,14 @@ zx_status_t UsbXhci::FinishBind() {
            status);
   }
 
+  // The StartThread will reply to |init_txn_|.
+  init_txn_ = std::move(txn);
+
   thrd_t thread;
   thrd_create_with_name(
       &thread, [](void* arg) -> int { return reinterpret_cast<UsbXhci*>(arg)->StartThread(); },
       reinterpret_cast<void*>(this), "xhci_start_thread");
   thrd_detach(thread);
-
-  return ZX_OK;
 }
 
 zx_status_t UsbXhci::InitPci() {
