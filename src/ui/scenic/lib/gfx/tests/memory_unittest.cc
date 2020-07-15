@@ -103,9 +103,11 @@ VK_TEST_F(VkMemoryTest, ImportDeviceMemory) {
   vk::DeviceMemory memory = allocation_result.device_memory;
   // Import valid Vulkan device memory into Scenic.
   zx::vmo device_vmo = ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
-  ASSERT_TRUE(
-      Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(device_vmo), allocation_result.size,
-                                       fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
+  size_t vmo_size = 0u;
+  ASSERT_TRUE(device_vmo.get_size(&vmo_size) == ZX_OK);
+  ASSERT_GE(vmo_size, kVmoSize);
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(device_vmo), vmo_size,
+                                               fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
 
   // Confirm that the resource has a valid Vulkan memory object and cleanup.
   auto memory_resource = FindResource<Memory>(kMemoryId);
@@ -177,13 +179,16 @@ VK_TEST_F(VkMemoryTest, ImportReadOnlyDeviceMemory) {
       ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_WAIT, &read_only);
   ASSERT_EQ(ZX_OK, status);
 
+  size_t vmo_size = 0u;
+  ASSERT_TRUE(device_vmo.get_size(&vmo_size) == ZX_OK);
+  ASSERT_GE(vmo_size, kVmoSize);
+
   // Currently vulkan driver of AEMU supports importing read-only device VMOs
   // while magma lib doesn't support that since it cannot get memory types of a
   // read-only vmo.
   // Therefore, we require all VMOs to have read and write rights.
-  ASSERT_FALSE(
-      Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(read_only), allocation_result.size,
-                                       fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
+  ASSERT_FALSE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(read_only), vmo_size,
+                                                fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
   ExpectLastReportedError(
       "scenic_impl::gfx::Memory::ImportGpuMemory(): VMO doesn't have right ZX_RIGHT_WRITE");
 
