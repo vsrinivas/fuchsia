@@ -161,15 +161,6 @@ TYPED_TEST(GainControlTest, SetMute) {
   this->ExpectGainCallback(kUnityGainDb, expect_mute);
 }
 
-TYPED_TEST(GainControlTest, SetGainMute) {
-  constexpr float expect_gain_db = -5.5f;
-
-  this->SetGain(expect_gain_db);
-  this->SetMute(true);
-
-  this->ExpectGainCallback(expect_gain_db, true);
-}
-
 TYPED_TEST(GainControlTest, DuplicateSetGain) {
   constexpr float expect_gain_db = 20.0f;
 
