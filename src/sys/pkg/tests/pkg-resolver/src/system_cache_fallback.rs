@@ -3,6 +3,7 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
+    fuchsia_hash::Hash,
     fuchsia_inspect::assert_inspect_tree,
     fuchsia_pkg_testing::{
         serve::handler, Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder,
@@ -74,6 +75,86 @@ async fn test_cache_fallback_succeeds_no_network() {
     // Check that get_hash fallback behavior matches resolve.
     let hash = env.get_hash(pkg_url).await;
     assert_eq!(hash.unwrap(), cache_pkg.meta_far_merkle_root().clone().into());
+
+    env.stop().await;
+}
+
+// The package is in the cache_packages manifest and has the same hash as the pinned URL. Networking
+// is totally down. Fallback succeeds.
+#[fasync::run_singlethreaded(test)]
+async fn test_cache_fallback_succeeds_if_url_merkle_matches() {
+    let pkg_name = "test_cache_fallback_succeeds_if_url_merkle_matches";
+    let pkg = test_package(pkg_name, "some-contents").await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
+    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &pkg).await;
+
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&system_image_package)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = repo
+        .server()
+        .uri_path_override_handler(handler::StaticResponseCode::server_error())
+        .start()
+        .unwrap();
+    // System cache fallback is only triggered for fuchsia.com repos.
+    env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
+
+    let pkg_url =
+        format!("fuchsia-pkg://fuchsia.com/{}?hash={}", pkg_name, pkg.meta_far_merkle_root());
+    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    pkg.verify_contents(&package_dir).await.unwrap();
+
+    let hash = env.get_hash(pkg_url).await;
+    assert_eq!(hash.unwrap(), pkg.meta_far_merkle_root().clone().into());
+
+    env.stop().await;
+}
+
+fn make_different_hash(h: &Hash) -> Hash {
+    let mut bytes: [u8; fuchsia_hash::HASH_SIZE] = h.to_owned().into();
+    bytes[0] = !bytes[0];
+    bytes.into()
+}
+
+// The package is in the cache_packages manifest and has a different hash than the pinned URL.
+// Networking is totally down. Fallback fails.
+#[fasync::run_singlethreaded(test)]
+async fn test_cache_fallback_fails_if_url_merkle_differs() {
+    let pkg_name = "test_cache_fallback_fails_if_url_merkle_differs";
+    let pkg = test_package(pkg_name, "some-contents").await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
+    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &pkg).await;
+
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&system_image_package)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = repo
+        .server()
+        .uri_path_override_handler(handler::StaticResponseCode::server_error())
+        .start()
+        .unwrap();
+    // System cache fallback is only triggered for fuchsia.com repos.
+    env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
+    let wrong_hash = make_different_hash(pkg.meta_far_merkle_root());
+    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}?hash={}", pkg_name, wrong_hash);
+    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::INTERNAL));
+
+    // Check that get_hash fallback behavior matches resolve.
+    assert_matches!(env.get_hash(pkg_url).await, Err(Status::INTERNAL));
 
     env.stop().await;
 }

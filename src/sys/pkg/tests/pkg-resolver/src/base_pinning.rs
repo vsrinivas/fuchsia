@@ -83,6 +83,21 @@ async fn test_base_package_found() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_base_pinning_rejects_urls_with_resource() {
+    let pkg_name = "test_base_pinning_rejects_urls_with_resource";
+    let pkg = test_package(pkg_name, "static").await;
+    let system_image_package = SystemImageBuilder::new().static_packages(&[&pkg]).build().await;
+    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&pkg)).await;
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
+
+    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}/0#should-not-be-here", pkg_name,);
+    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::INVALID_ARGS));
+    assert_matches!(env.get_hash(pkg_url).await, Err(Status::INVALID_ARGS));
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_base_package_with_variant_found() {
     let pkg_name = "test_base_package_with_variant_found";
     let base_pkg = test_package(pkg_name, "static").await;

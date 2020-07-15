@@ -176,14 +176,7 @@ pub async fn run_resolver_service(
 }
 
 fn rewrite_url(rewriter: &RwLock<RewriteManager>, url: &PkgUrl) -> Result<PkgUrl, Status> {
-    let rewritten_url = rewriter.read().rewrite(url);
-    // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
-    // given one.
-    if rewritten_url.resource().is_some() {
-        fx_log_err!("package url should not contain a resource name: {}", rewritten_url);
-        return Err(Status::INVALID_ARGS);
-    }
-    Ok(rewritten_url)
+    Ok(rewriter.read().rewrite(url))
 }
 
 fn missing_cache_package_disk_fallback(
@@ -222,54 +215,35 @@ async fn hash_from_base_or_repo_or_cache(
     pkg_url: &PkgUrl,
     inspect_state: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
-    match unpinned_base_package(pkg_url, base_package_index) {
-        Some(blob) => {
-            fx_log_info!("get_hash for {} to {} with base pin", pkg_url, blob);
-            Ok(blob)
-        }
-        None => {
-            let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
-            hash_from_repo_or_cache(
-                repo_manager,
-                system_cache_list,
-                pkg_url,
-                &rewritten_url,
-                inspect_state,
-            )
-            .await
-            .map_err(|e| {
-                let status = e.to_resolve_status();
-                fx_log_err!(
-                    "error getting hash {} as {}: {:#}",
+    if let Some(blob) = unpinned_base_package(pkg_url, base_package_index) {
+        fx_log_info!("get_hash for {} to {} with base pin", pkg_url, blob);
+        return Ok(blob);
+    }
+
+    let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+    hash_from_repo_or_cache(repo_manager, system_cache_list, pkg_url, &rewritten_url, inspect_state)
+        .await
+        .map_err(|e| {
+            let status = e.to_resolve_status();
+            fx_log_err!("error getting hash {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
+            status
+        })
+        .map(|hash| match hash {
+            HashSource::Tuf(blob) => {
+                fx_log_info!("get_hash for {} as {} to {} with TUF", pkg_url, rewritten_url, blob);
+                blob
+            }
+            HashSource::SystemImageCachePackages(blob, tuf_err) => {
+                fx_log_info!(
+                    "get_hash for {} as {} to {} with cache_packages due to {:#}",
                     pkg_url,
                     rewritten_url,
-                    anyhow!(e)
+                    blob,
+                    tuf_err
                 );
-                status
-            })
-            .map(|hash| match hash {
-                HashSource::Tuf(blob) => {
-                    fx_log_info!(
-                        "get_hash for {} as {} to {} with TUF",
-                        pkg_url,
-                        rewritten_url,
-                        blob
-                    );
-                    blob
-                }
-                HashSource::SystemImageCachePackages(blob, tuf_err) => {
-                    fx_log_info!(
-                        "get_hash for {} as {} to {} with cache_packages due to {:#}",
-                        pkg_url,
-                        rewritten_url,
-                        blob,
-                        tuf_err
-                    );
-                    blob
-                }
-            })
-        }
-    }
+                blob
+            }
+        })
 }
 async fn hash_from_repo_or_cache(
     repo_manager: &RwLock<RepositoryManager>,
@@ -320,46 +294,43 @@ async fn package_from_base_or_repo_or_cache(
     blob_fetcher: BlobFetcher,
     inspect_state: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
-    match unpinned_base_package(pkg_url, base_package_index) {
-        Some(blob) => {
-            fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
-            Ok(blob)
-        }
-        None => {
-            let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
-            package_from_repo_or_cache(
-                repo_manager,
-                system_cache_list,
-                pkg_url,
-                &rewritten_url,
-                cache,
-                blob_fetcher,
-                inspect_state,
-            )
-            .await
-            .map_err(|e| {
-                let status = e.to_resolve_status();
-                fx_log_err!("error resolving {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
-                status
-            })
-            .map(|hash| match hash {
-                HashSource::Tuf(blob) => {
-                    fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, blob);
-                    blob
-                }
-                HashSource::SystemImageCachePackages(blob, tuf_err) => {
-                    fx_log_info!(
-                        "resolved {} as {} to {} with cache_packages due to {:#}",
-                        pkg_url,
-                        rewritten_url,
-                        blob,
-                        tuf_err
-                    );
-                    blob
-                }
-            })
-        }
+    if let Some(blob) = unpinned_base_package(pkg_url, base_package_index) {
+        fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
+        return Ok(blob);
     }
+
+    let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+    package_from_repo_or_cache(
+        repo_manager,
+        system_cache_list,
+        pkg_url,
+        &rewritten_url,
+        cache,
+        blob_fetcher,
+        inspect_state,
+    )
+    .await
+    .map_err(|e| {
+        let status = e.to_resolve_status();
+        fx_log_err!("error resolving {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
+        status
+    })
+    .map(|hash| match hash {
+        HashSource::Tuf(blob) => {
+            fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, blob);
+            blob
+        }
+        HashSource::SystemImageCachePackages(blob, tuf_err) => {
+            fx_log_info!(
+                "resolved {} as {} to {} with cache_packages due to {:#}",
+                pkg_url,
+                rewritten_url,
+                blob,
+                tuf_err
+            );
+            blob
+        }
+    })
 }
 
 async fn package_from_repo_or_cache(
@@ -427,13 +398,18 @@ fn unpinned_base_package(
     }
 }
 
+// Attempts to lookup the hash of a package from `system_cache_list`, which is populated from the
+// cache_packages manifest of the system_image package. The cache_packages manifest only includes
+// the package path and assumes all hosts are "fuchsia.com", so this fn can only succeed on
+// `PkgUrl`s with a host of "fuchsia.com".
 fn hash_from_cache_packages_manifest<'a>(
     url: &PkgUrl,
     system_cache_list: &'a CachePackages,
 ) -> Option<BlobId> {
-    if url.host() != "fuchsia.com" || url.resource().is_some() {
+    if url.host() != "fuchsia.com" {
         return None;
     }
+
     let variant = match url.variant() {
         Some("0") => "0",
         None => "0",
@@ -448,7 +424,18 @@ fn hash_from_cache_packages_manifest<'a>(
             )
         })
         .ok()?;
-    system_cache_list.hash_for_package(&package_path).map(Into::into)
+    let cache_hash = system_cache_list.hash_for_package(&package_path).map(Into::into);
+    match (cache_hash, url.package_hash()) {
+        // This arm is less useful than (Some, None) b/c generally metadata lookup for pinned URLs
+        // succeeds (because generally the package from the pinned URL exists in the repo), and if
+        // the blob fetching failed, then even if this fn returns success, the resolve will still
+        // end up failing when we try to open the package from pkg-cache. The arm is still useful
+        // if initial creation of the TUF client for fuchsia.com fails (e.g. because networking is
+        // down/not yet available).
+        (Some(cache), Some(url)) if cache == BlobId::from(*url) => Some(cache),
+        (Some(cache), None) => Some(cache),
+        _ => None,
+    }
 }
 
 async fn get_hash(
@@ -465,6 +452,12 @@ async fn get_hash(
             return Err(handle_bad_package_url(err, url));
         }
     };
+    // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
+    // given one.
+    if pkg_url.resource().is_some() {
+        fx_log_err!("package url should not contain a resource name: {}", pkg_url);
+        return Err(Status::INVALID_ARGS);
+    }
     trace::duration_begin!("app", "get-hash", "url" => pkg_url.to_string().as_str());
     let hash_or_status = hash_from_base_or_repo_or_cache(
         &repo_manager,
@@ -496,6 +489,12 @@ async fn resolve(
             return Err(handle_bad_package_url(err, &url));
         }
     };
+    // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
+    // given one.
+    if pkg_url.resource().is_some() {
+        fx_log_err!("package url should not contain a resource name: {}", pkg_url);
+        return Err(Status::INVALID_ARGS);
+    }
 
     let queued_fetch = package_fetcher.push(pkg_url.clone(), ());
     let merkle_or_status = queued_fetch.await.expect("expected queue to be open");
@@ -702,7 +701,6 @@ mod tests {
 
         let fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato").unwrap();
         let variant_zero_fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/0").unwrap();
-        let resource_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato#resource").unwrap();
         let other_repo_url = PkgUrl::parse("fuchsia-pkg://nope.com/potato/0").unwrap();
         let wrong_variant_fuchsia_url =
             PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/17").unwrap();
@@ -720,7 +718,6 @@ mod tests {
             hash_from_cache_packages_manifest(&wrong_variant_fuchsia_url, &cache_packages),
             None
         );
-        assert_eq!(hash_from_cache_packages_manifest(&resource_url, &cache_packages), None);
         assert_eq!(hash_from_cache_packages_manifest(&fuchsia_url, &empty_cache_packages), None);
     }
 }
