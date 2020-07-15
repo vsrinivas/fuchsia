@@ -33,6 +33,13 @@
 #define PSCI64_PSCI_STAT_RESIDENCY (0xC4000010)
 #define PSCI64_PSCI_STAT_COUNT (0xC4000011)
 
+// See: "Firmware interfaces for mitigating cache speculation vulnerabilities"
+//      "System Software on Arm Systems"
+#define PSCI64_SMCCC_VERSION (0x80000000)
+#define PSCI64_SMCCC_ARCH_FEATURES (0x80000001)
+#define PSCI64_SMCCC_ARCH_WORKAROUND_1 (0x80008000)
+#define PSCI64_SMCCC_ARCH_WORKAROUND_2 (0x80007FFF)
+
 #define PSCI_SUCCESS 0
 #define PSCI_NOT_SUPPORTED -1
 #define PSCI_INVALID_PARAMETERS -2
