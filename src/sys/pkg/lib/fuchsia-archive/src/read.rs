@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    ChunkType, DirectoryEntry, Index, IndexEntry, DIRECTORY_ENTRY_LEN, DIR_CHUNK, DIR_NAMES_CHUNK,
-    INDEX_ENTRY_LEN, MAGIC_INDEX_VALUE,
+use {
+    crate::{
+        ChunkType, DirectoryEntry, Error, Index, IndexEntry, DIRECTORY_ENTRY_LEN, DIR_CHUNK,
+        DIR_NAMES_CHUNK, INDEX_ENTRY_LEN, MAGIC_INDEX_VALUE,
+    },
+    bincode::deserialize_from,
+    std::{
+        collections::BTreeMap,
+        io::{Read, Seek, SeekFrom},
+        str,
+    },
 };
-use anyhow::{format_err, Error};
-use bincode::deserialize_from;
-use std::collections::BTreeMap;
-use std::io::{Read, Seek, SeekFrom};
-use std::str;
 
 /// A struct to open and read FAR-formatted archive.
 pub struct Reader<'a, T>
@@ -27,29 +30,29 @@ where
 {
     /// Create a new Reader for the provided source.
     pub fn new(source: &'a mut T) -> Result<Reader<'a, T>, Error> {
-        let index = Reader::<T>::read_index(source)?;
+        let index = Self::read_index(source)?;
 
         let (dir_index, dir_name_index) =
             Reader::<T>::read_index_entries(source, index.length / INDEX_ENTRY_LEN, &index)?;
 
-        let dir_index = dir_index.ok_or(format_err!("Invalid archive, missing directory index"))?;
-        let dir_name_index =
-            dir_name_index.ok_or(format_err!("Invalid archive, missing directory name index"))?;
+        let dir_index = dir_index.ok_or(Error::MissingDirectoryChunkIndexEntry)?;
+        let dir_name_index = dir_name_index.ok_or(Error::MissingDirectoryNamesChunkIndexEntry)?;
 
-        source.seek(SeekFrom::Start(dir_name_index.offset))?;
+        source.seek(SeekFrom::Start(dir_name_index.offset)).map_err(Error::Seek)?;
         let mut path_data = vec![0; dir_name_index.length as usize];
-        source.read_exact(&mut path_data)?;
+        source.read_exact(&mut path_data).map_err(Error::Read)?;
 
-        source.seek(SeekFrom::Start(dir_index.offset))?;
+        source.seek(SeekFrom::Start(dir_index.offset)).map_err(Error::Seek)?;
         let dir_entry_count = dir_index.length / DIRECTORY_ENTRY_LEN;
         let mut directory_entries = BTreeMap::new();
         for _ in 0..dir_entry_count {
-            let entry: DirectoryEntry = deserialize_from(&mut *source)?;
+            let entry: DirectoryEntry =
+                deserialize_from(&mut *source).map_err(Error::DeserializeDirectoryEntry)?;
             let name_start = entry.name_offset as usize;
             let after_name_end = name_start + entry.name_length as usize;
-            let file_name_str = str::from_utf8(&path_data[name_start..after_name_end])?;
-            let file_name = String::from(file_name_str);
-            directory_entries.insert(file_name, entry);
+            let file_name = str::from_utf8(&path_data[name_start..after_name_end])
+                .map_err(Error::PathDataInvalidUtf8)?;
+            directory_entries.insert(file_name.to_string(), entry);
         }
 
         Ok(Reader { source, directory_entries })
@@ -61,11 +64,12 @@ where
     }
 
     fn read_index(source: &mut T) -> Result<Index, Error> {
-        let decoded_index: Index = deserialize_from(&mut *source)?;
+        let decoded_index: Index =
+            deserialize_from(&mut *source).map_err(Error::DeserializeIndex)?;
         if decoded_index.magic != MAGIC_INDEX_VALUE {
-            Err(format_err!("Invalid archive, bad magic"))
+            Err(Error::InvalidMagic(decoded_index.magic))
         } else if decoded_index.length % INDEX_ENTRY_LEN != 0 {
-            Err(format_err!("Invalid archive, bad index length"))
+            Err(Error::InvalidIndexEntriesLen(decoded_index.length))
         } else {
             Ok(decoded_index)
         }
@@ -80,13 +84,17 @@ where
         let mut dir_name_index: Option<IndexEntry> = None;
         let mut last_chunk_type: Option<ChunkType> = None;
         for _ in 0..count {
-            let entry: IndexEntry = deserialize_from(&mut *source)?;
+            let entry: IndexEntry =
+                deserialize_from(&mut *source).map_err(Error::DeserializeIndexEntry)?;
 
             match last_chunk_type {
                 None => {}
                 Some(chunk_type) => {
                     if chunk_type > entry.chunk_type {
-                        return Err(format_err!("Invalid archive, invalid index entry order"));
+                        return Err(Error::IndexEntriesOutOfOrder {
+                            prev: chunk_type,
+                            next: entry.chunk_type,
+                        });
                     }
                 }
             }
@@ -94,7 +102,7 @@ where
             last_chunk_type = Some(entry.chunk_type);
 
             if entry.offset < index.length {
-                return Err(format_err!("Invalid archive, short offset"));
+                return Err(Error::ChunkOverlapsIndex(entry.chunk_type));
             }
 
             match entry.chunk_type {
@@ -105,7 +113,7 @@ where
                     dir_index = Some(entry);
                 }
                 _ => {
-                    return Err(format_err!("Invalid archive, invalid chunk type"));
+                    return Err(Error::InvalidChunkType(entry.chunk_type));
                 }
             }
         }
@@ -115,7 +123,7 @@ where
     fn find_directory_entry(&self, archive_path: &str) -> Result<&DirectoryEntry, Error> {
         self.directory_entries
             .get(archive_path)
-            .ok_or(format_err!("Path '{}' not found in archive", archive_path))
+            .ok_or_else(|| Error::PathNotPresent(archive_path.to_string()))
     }
 
     /// Create an EntryReader for an entry with the specified name.
@@ -159,26 +167,29 @@ where
 {
     pub fn read_at(&mut self, offset: u64) -> Result<Vec<u8>, Error> {
         if offset > self.length {
-            return Err(format_err!("Offset exceeds length of entry"));
+            return Err(Error::ReadPastEnd);
         }
-        self.source.seek(SeekFrom::Start(self.offset + offset))?;
+        self.source.seek(SeekFrom::Start(self.offset + offset)).map_err(Error::Seek)?;
         let clamped_length = self.length - offset;
 
         let mut data = vec![0; clamped_length as usize];
-        self.source.read_exact(&mut data)?;
+        self.source.read_exact(&mut data).map_err(Error::Read)?;
         Ok(data)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::tests::example_archive;
-    use crate::INDEX_LEN;
-    use bincode::serialize_into;
-    use itertools::assert_equal;
-    use std::io::{Cursor, Seek, SeekFrom};
-    use std::str;
+    use {
+        super::*,
+        crate::{tests::example_archive, INDEX_LEN},
+        bincode::serialize_into,
+        itertools::assert_equal,
+        std::{
+            io::{Cursor, Seek, SeekFrom},
+            str,
+        },
+    };
 
     fn empty_archive() -> Vec<u8> {
         vec![0xc8, 0xbf, 0xb, 0x48, 0xad, 0xab, 0xc5, 0x11, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]

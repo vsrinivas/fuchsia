@@ -124,14 +124,14 @@ pub enum MetaPackageError {
 
 #[derive(Debug, Error)]
 pub enum BuildError {
-    #[error("io error: '{}'", _0)]
-    IoError(io::Error),
+    #[error("io")]
+    IoError(#[from] io::Error),
 
-    #[error("meta contents error: '{}'", _0)]
-    MetaContents(MetaContentsError),
+    #[error("meta contents")]
+    MetaContents(#[from] MetaContentsError),
 
-    #[error("meta package error: '{}'", _0)]
-    MetaPackage(MetaPackageError),
+    #[error("meta package")]
+    MetaPackage(#[from] MetaPackageError),
 
     #[error(
         "the creation manifest contained a resource path that conflicts with a generated resource path: '{}'",
@@ -139,26 +139,8 @@ pub enum BuildError {
     )]
     ConflictingResource { conflicting_resource_path: String },
 
-    #[error("fuchsia_archive::write error: {}", _0)]
-    ArchiveWrite(anyhow::Error),
-}
-
-impl From<io::Error> for BuildError {
-    fn from(err: io::Error) -> Self {
-        BuildError::IoError(err)
-    }
-}
-
-impl From<MetaContentsError> for BuildError {
-    fn from(err: MetaContentsError) -> Self {
-        BuildError::MetaContents(err)
-    }
-}
-
-impl From<MetaPackageError> for BuildError {
-    fn from(err: MetaPackageError) -> Self {
-        BuildError::MetaPackage(err)
-    }
+    #[error("archive write")]
+    ArchiveWrite(#[from] fuchsia_archive::Error),
 }
 
 #[derive(Debug, Error, Eq, PartialEq)]

@@ -2,18 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    align, DirectoryEntry, Index, IndexEntry, CONTENT_ALIGNMENT, DIRECTORY_ENTRY_LEN, DIR_CHUNK,
-    DIR_NAMES_CHUNK, INDEX_ENTRY_LEN, INDEX_LEN, MAGIC_INDEX_VALUE,
+use {
+    crate::{
+        align, DirectoryEntry, Error, Index, IndexEntry, CONTENT_ALIGNMENT, DIRECTORY_ENTRY_LEN,
+        DIR_CHUNK, DIR_NAMES_CHUNK, INDEX_ENTRY_LEN, INDEX_LEN, MAGIC_INDEX_VALUE,
+    },
+    bincode::serialize_into,
+    std::{
+        collections::BTreeMap,
+        io::{copy, Read, Write},
+    },
 };
-use anyhow::{format_err, Error};
-use bincode::serialize_into;
-use std::collections::BTreeMap;
-use std::io::{copy, Read, Write};
 
 fn write_zeros(mut target: impl Write, count: usize) -> Result<(), Error> {
     let b = vec![0u8; count];
-    target.write_all(&b)?;
+    target.write_all(&b).map_err(Error::Write)?;
     Ok(())
 }
 
@@ -27,11 +30,16 @@ pub fn write(
     mut target: impl Write,
     path_content_map: BTreeMap<&str, (u64, Box<dyn Read + '_>)>,
 ) -> Result<(), Error> {
+    // `write` could be written to take the content chunks as one of:
+    // 1. Box<dyn Read>: requires an allocation per chunk
+    // 2. &mut dyn Read: requires that the caller retain ownership of the chunks, which could result
+    //                   in the caller building a mirror data structure just to own the chunks
+    // 3. impl Read: requires that all the chunks have the same type
     let mut path_data: Vec<u8> = vec![];
     let mut directory_entries = vec![];
     for (destination_name, (size, _)) in &path_content_map {
         if destination_name.len() > u16::max_value() as usize {
-            return Err(format_err!("Destination name is too long"));
+            return Err(Error::NameTooLong(destination_name.len()));
         }
         directory_entries.push(DirectoryEntry {
             name_offset: path_data.len() as u32,
@@ -58,21 +66,22 @@ pub fn write(
         length: align(path_data.len() as u64, 8),
     };
 
-    serialize_into(&mut target, &index)?;
+    serialize_into(&mut target, &index).map_err(Error::SerializeIndex)?;
 
-    serialize_into(&mut target, &dir_index)?;
+    serialize_into(&mut target, &dir_index).map_err(Error::SerializeDirectoryChunkIndexEntry)?;
 
-    serialize_into(&mut target, &name_index)?;
+    serialize_into(&mut target, &name_index)
+        .map_err(Error::SerializeDirectoryNamesChunkIndexEntry)?;
 
     let mut content_offset = align(name_index.offset + name_index.length, CONTENT_ALIGNMENT);
 
     for entry in &mut directory_entries {
         entry.data_offset = content_offset;
         content_offset = align(content_offset + entry.data_length, CONTENT_ALIGNMENT);
-        serialize_into(&mut target, &entry)?;
+        serialize_into(&mut target, &entry).map_err(Error::SerializeDirectoryEntry)?;
     }
 
-    target.write_all(&path_data)?;
+    target.write_all(&path_data).map_err(Error::Write)?;
 
     write_zeros(&mut target, name_index.length as usize - path_data.len())?;
 
@@ -82,14 +91,13 @@ pub fn write(
 
     for (entry_index, (archive_path, (_, mut contents))) in path_content_map.into_iter().enumerate()
     {
-        let bytes_read = copy(&mut contents, &mut target)?;
+        let bytes_read = copy(&mut contents, &mut target).map_err(Error::Copy)?;
         if bytes_read != directory_entries[entry_index].data_length {
-            return Err(format_err!(
-                "File at archive path '{}' had expected size {} but Reader supplied {} bytes.",
-                archive_path,
-                directory_entries[entry_index].data_length,
-                bytes_read
-            ));
+            return Err(Error::ContentChunkSizeMismatch {
+                expected: directory_entries[entry_index].data_length,
+                actual: bytes_read,
+                path: archive_path.to_string(),
+            });
         }
         let pos =
             directory_entries[entry_index].data_offset + directory_entries[entry_index].data_length;
@@ -102,11 +110,15 @@ pub fn write(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::tests::example_archive;
-    use itertools::assert_equal;
-    use std::collections::BTreeMap;
-    use std::io::{Cursor, Read};
+    use {
+        super::*,
+        crate::tests::example_archive,
+        itertools::assert_equal,
+        std::{
+            collections::BTreeMap,
+            io::{Cursor, Read},
+        },
+    };
 
     #[test]
     fn test_write() {

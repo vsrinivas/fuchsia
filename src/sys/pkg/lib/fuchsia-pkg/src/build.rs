@@ -82,8 +82,7 @@ fn build_with_file_system<'a>(
         meta_entries.insert(resource_path, (content.len() as u64, Box::new(content.as_slice())));
     }
 
-    fuchsia_archive::write(meta_far_writer, meta_entries)
-        .map_err(|e| BuildError::ArchiveWrite(e))?;
+    let () = fuchsia_archive::write(meta_far_writer, meta_entries)?;
 
     Ok(())
 }
