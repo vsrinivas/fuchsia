@@ -5,26 +5,38 @@
 use serde::de::Error;
 use serde::Deserialize;
 
-pub fn config_for_device(
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub(crate) enum IpAddressConfig {
+    Dhcp,
+    StaticIp(fidl_fuchsia_net_ext::Subnet),
+}
+
+pub(crate) struct InterfaceConfig {
+    pub fidl: fidl_fuchsia_netstack::InterfaceConfig,
+    pub ip_address_config: IpAddressConfig,
+}
+
+pub(crate) fn config_for_device(
     device_info: &fidl_fuchsia_hardware_ethernet_ext::EthernetInfo,
     name: String,
     topological_path: &str,
     metric: u32,
     rules: &Vec<InterfaceSpec>,
     filepath: &std::path::PathBuf,
-) -> fidl_fuchsia_netstack::InterfaceConfig {
+) -> InterfaceConfig {
     rules.iter().filter_map(|spec| matches_info(&spec, &topological_path, device_info)).fold(
-        fidl_fuchsia_netstack::InterfaceConfig {
-            name,
-            filepath: filepath.display().to_string(),
-            metric,
-            ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
+        InterfaceConfig {
+            fidl: fidl_fuchsia_netstack::InterfaceConfig {
+                name,
+                filepath: filepath.display().to_string(),
+                metric,
+            },
+            ip_address_config: IpAddressConfig::Dhcp,
         },
         |seed, opt| match opt {
-            ConfigOption::IpConfig(value) => fidl_fuchsia_netstack::InterfaceConfig {
-                ip_address_config: (*value).into(),
-                ..seed
-            },
+            ConfigOption::IpConfig(value) => {
+                InterfaceConfig { ip_address_config: (*value).into(), ..seed }
+            }
         },
     )
 }
@@ -76,23 +88,19 @@ impl InterfaceMatcher {
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum ConfigOption {
-    IpConfig(fidl_fuchsia_netstack_ext::IpAddressConfig),
+pub(crate) enum ConfigOption {
+    IpConfig(IpAddressConfig),
 }
 
 impl ConfigOption {
     fn parse_as_tuple(config: (&str, &str)) -> Result<Self, anyhow::Error> {
         match config {
-            ("ip_address", "dhcp") => {
-                Ok(ConfigOption::IpConfig(fidl_fuchsia_netstack_ext::IpAddressConfig::Dhcp))
-            }
-            ("ip_address", static_ip) => {
-                Ok(ConfigOption::IpConfig(fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
-                    static_ip
-                        .parse::<fidl_fuchsia_net_ext::Subnet>()
-                        .expect("subnet parse should succeed"),
-                )))
-            }
+            ("ip_address", "dhcp") => Ok(ConfigOption::IpConfig(IpAddressConfig::Dhcp)),
+            ("ip_address", static_ip) => Ok(ConfigOption::IpConfig(IpAddressConfig::StaticIp(
+                static_ip
+                    .parse::<fidl_fuchsia_net_ext::Subnet>()
+                    .expect("subnet parse should succeed"),
+            ))),
             (unknown, _) => {
                 Err(anyhow::format_err!("invalid config option for interface: {}", unknown))
             }
@@ -115,7 +123,7 @@ impl std::convert::TryInto<InterfaceSpec> for InterfaceSpecSyntax {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct InterfaceSpec {
+pub(crate) struct InterfaceSpec {
     pub matcher: InterfaceMatcher,
     pub config: ConfigOption,
 }
@@ -170,12 +178,12 @@ mod tests {
     #[test]
     fn test_config_option_parse_as_tuple() {
         assert_eq!(
-            ConfigOption::IpConfig(fidl_fuchsia_netstack_ext::IpAddressConfig::Dhcp),
+            ConfigOption::IpConfig(IpAddressConfig::Dhcp),
             ConfigOption::parse_as_tuple(("ip_address", "dhcp"))
                 .expect("parse config should succeed")
         );
         assert_eq!(
-            ConfigOption::IpConfig(fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
+            ConfigOption::IpConfig(IpAddressConfig::StaticIp(
                 "192.168.42.10/32"
                     .parse::<fidl_fuchsia_net_ext::Subnet>()
                     .expect("subnet parse should succeed")
@@ -199,31 +207,25 @@ mod tests {
             &vec![
                 InterfaceSpec {
                     matcher: InterfaceMatcher::All,
-                    config: ConfigOption::IpConfig(
-                        fidl_fuchsia_netstack_ext::IpAddressConfig::Dhcp,
-                    ),
+                    config: ConfigOption::IpConfig(IpAddressConfig::Dhcp),
                 },
                 InterfaceSpec {
                     matcher: InterfaceMatcher::All,
-                    config: ConfigOption::IpConfig(
-                        fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
-                            "127.0.0.1/32"
-                                .parse::<fidl_fuchsia_net_ext::Subnet>()
-                                .expect("subnet parse should succeed"),
-                        ),
-                    ),
+                    config: ConfigOption::IpConfig(IpAddressConfig::StaticIp(
+                        "127.0.0.1/32"
+                            .parse::<fidl_fuchsia_net_ext::Subnet>()
+                            .expect("subnet parse should succeed"),
+                    )),
                 },
             ],
             &std::path::PathBuf::from("filepath"),
         );
 
         assert_eq!(
-            Into::<fidl_fuchsia_netstack::IpAddressConfig>::into(
-                fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
-                    "127.0.0.1/32"
-                        .parse::<fidl_fuchsia_net_ext::Subnet>()
-                        .expect("subnet parse should succeed")
-                )
+            IpAddressConfig::StaticIp(
+                "127.0.0.1/32"
+                    .parse::<fidl_fuchsia_net_ext::Subnet>()
+                    .expect("subnet parse should succeed")
             ),
             got.ip_address_config
         );

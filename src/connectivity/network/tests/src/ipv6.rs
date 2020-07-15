@@ -165,7 +165,6 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
                 name: name[..fidl_fuchsia_posix_socket::INTERFACE_NAME_LENGTH.into()].to_string(),
                 filepath: "/fake/filepath/for_test".to_string(),
                 metric: 0,
-                ip_address_config: netstack::IpAddressConfig::Dhcp(true),
             },
             endpoint
                 .get_ethernet()

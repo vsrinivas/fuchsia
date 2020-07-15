@@ -38,14 +38,6 @@ struct InterfaceConfig {
     string filepath;
 
     uint32 metric;
-    /// Deprecated; to configure a network interface, use SetDhcpClientStatus
-    /// and SetInterfaceAddress instead.
-    IpAddressConfig ip_address_config;
-};
-
-union IpAddressConfig {
-    1: fuchsia.net.Subnet static_ip;
-    2: bool dhcp;
 };
 
 /// https://linux.die.net/man/7/netdevice

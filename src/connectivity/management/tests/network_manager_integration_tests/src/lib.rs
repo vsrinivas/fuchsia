@@ -180,7 +180,6 @@ async fn add_ethernet_device(
                 name: device_name.to_string(),
                 filepath: format!("/fake/filepath/for_test/{}", name),
                 metric: 0,
-                ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
             },
             device,
         )

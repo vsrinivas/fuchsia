@@ -7,7 +7,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_net,
     fidl_fuchsia_netemul_network::{DeviceConnection, EndpointManagerMarker, NetworkContextMarker},
-    fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
+    fidl_fuchsia_netstack::{InterfaceConfig, NetstackMarker},
     fuchsia_component::client,
     futures::TryStreamExt,
     std::io::{Read, Write},
@@ -18,7 +18,6 @@ use {
 const PORT: i32 = 8080;
 const HELLO_MSG_REQ: &str = "Hello World from Client!";
 const HELLO_MSG_RSP: &str = "Hello World from Server!";
-const IGNORED_IP_ADDRESS_CONFIG: IpAddressConfig = IpAddressConfig::Dhcp(true);
 const DEFAULT_METRIC: u32 = 100;
 
 pub struct ChildOptions {
@@ -107,7 +106,6 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
         name: if_name.to_string(),
         filepath: "[TBD]".to_string(),
         metric: DEFAULT_METRIC,
-        ip_address_config: IGNORED_IP_ADDRESS_CONFIG,
     };
     let mut if_changed = netstack.take_event_stream().try_filter_map(
         |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {

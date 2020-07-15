@@ -217,7 +217,6 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 
     fuchsia::netstack::InterfaceConfig config;
     config.name = kInterfaceName;
-    config.ip_address_config.set_static_ip(std::move(subnet));
 
     executor_.schedule_task(
         AddEthernetDevice(kInterfacePath, std::move(config))

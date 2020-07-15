@@ -851,12 +851,14 @@ impl<'a> NetCfg<'a> {
                     &filepath,
                 );
 
-                let interface_id =
-                    D::add_to_stack(self, topological_path.clone(), &mut config, device_instance)
-                        .await
-                        .with_context(|| {
-                            format!("add {} {} to stack", D::NAME, filepath.display())
-                        })?;
+                let interface_id = D::add_to_stack(
+                    self,
+                    topological_path.clone(),
+                    &mut config.fidl,
+                    device_instance,
+                )
+                .await
+                .with_context(|| format!("add {} {} to stack", D::NAME, filepath.display()))?;
 
                 let () = self
                     .configure_eth_interface(interface_id, &topological_path, &eth_info, &config)
@@ -908,7 +910,7 @@ impl<'a> NetCfg<'a> {
         interface_id: u64,
         topological_path: &str,
         info: &feth_ext::EthernetInfo,
-        config: &fnetstack::InterfaceConfig,
+        config: &matchers::InterfaceConfig,
     ) -> Result<(), anyhow::Error> {
         let interface_id_u32: u32 = interface_id.try_into().expect("NIC ID should fit in a u32");
 
@@ -938,7 +940,7 @@ impl<'a> NetCfg<'a> {
             );
 
             let () = self
-                .configure_wlan_ap_and_dhcp_server(interface_id_u32, config.name.clone())
+                .configure_wlan_ap_and_dhcp_server(interface_id_u32, config.fidl.name.clone())
                 .await?;
         } else {
             if let Some(state) = self.interface_states.get(&interface_id) {
@@ -963,7 +965,7 @@ impl<'a> NetCfg<'a> {
         &mut self,
         interface_id: u32,
         info: &feth_ext::EthernetInfo,
-        config: &fnetstack::InterfaceConfig,
+        config: &matchers::InterfaceConfig,
     ) -> Result<(), anyhow::Error> {
         if should_enable_filter(&self.filter_enabled_interface_types, &info.features) {
             info!("enable filter for nic {}", interface_id);
@@ -984,7 +986,7 @@ impl<'a> NetCfg<'a> {
         };
 
         match config.ip_address_config {
-            fnetstack::IpAddressConfig::Dhcp(_) => {
+            matchers::IpAddressConfig::Dhcp => {
                 let (dhcp_client, server_end) =
                     fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
                         .context("dhcp client: failed to create fidl endpoints")?;
@@ -1002,13 +1004,11 @@ impl<'a> NetCfg<'a> {
                     .map_err(zx::Status::from_raw)
                     .context("failed to start dhcp client")?;
             }
-            fnetstack::IpAddressConfig::StaticIp(fnet::Subnet {
-                addr: mut address,
-                prefix_len,
-            }) => {
+            matchers::IpAddressConfig::StaticIp(subnet) => {
+                let fnet::Subnet { mut addr, prefix_len } = subnet.into();
                 let fnetstack::NetErr { status, message } = self
                     .netstack
-                    .set_interface_address(interface_id, &mut address, prefix_len)
+                    .set_interface_address(interface_id, &mut addr, prefix_len)
                     .await
                     .context("set interface address request")?;
                 if status != fnetstack::Status::Ok {
@@ -1227,8 +1227,6 @@ async fn main() -> Result<(), anyhow::Error> {
 
 #[cfg(test)]
 mod tests {
-    use fidl_fuchsia_netstack_ext as fnetstack_ext;
-
     use futures::future::{self, FutureExt as _};
     use futures::stream::TryStreamExt as _;
     use matchers::{ConfigOption, InterfaceMatcher, InterfaceSpec};
@@ -1631,7 +1629,7 @@ mod tests {
         assert_eq!(
             vec![InterfaceSpec {
                 matcher: InterfaceMatcher::All,
-                config: ConfigOption::IpConfig(fnetstack_ext::IpAddressConfig::Dhcp),
+                config: ConfigOption::IpConfig(matchers::IpAddressConfig::Dhcp),
             }],
             default_config_rules
         );

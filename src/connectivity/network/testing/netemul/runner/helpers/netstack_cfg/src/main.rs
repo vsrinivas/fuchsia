@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_net_stack_ext::FidlReturn,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
-    fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
+    fidl_fuchsia_netstack::{InterfaceConfig, NetstackMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_syslog::fx_log_info,
@@ -35,7 +35,6 @@ struct Opt {
     skip_up_check: bool,
 }
 
-const IGNORED_IP_ADDRESS_CONFIG: IpAddressConfig = IpAddressConfig::Dhcp(true);
 const DEFAULT_METRIC: u32 = 100;
 
 async fn config_netstack(opt: Opt) -> Result<(), Error> {
@@ -62,7 +61,6 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         name: opt.endpoint.clone(),
         filepath: format!("/vdev/{}", opt.endpoint),
         metric: DEFAULT_METRIC,
-        ip_address_config: IGNORED_IP_ADDRESS_CONFIG,
     };
     let nicid = match device_connection {
         fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(e) => netstack

@@ -9,7 +9,7 @@ use {
         EndpointManagerMarker, FakeEndpointMarker, NetworkContextMarker, NetworkManagerMarker,
     },
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker},
-    fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
+    fidl_fuchsia_netstack::{InterfaceConfig, NetstackMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
@@ -60,11 +60,9 @@ async fn run_mock_guest(
     net.create_fake_endpoint(fake_ep_server_end)?;
 
     let netstack = client::connect_to_service::<NetstackMarker>()?;
-    let ip_addr_config = IpAddressConfig::Dhcp(true);
     let mut cfg = InterfaceConfig {
         name: "eth-test".to_string(),
         filepath: "[TBD]".to_string(),
-        ip_address_config: ip_addr_config,
         metric: DEFAULT_METRIC,
     };
 

@@ -1025,7 +1025,6 @@ impl NetCfg {
                     name: port.name,
                     metric: port.metric,
                     filepath: port.file_path,
-                    ip_address_config: netstack::IpAddressConfig::Dhcp(false),
                 },
                 fidl::endpoints::ClientEnd::<fidl_fuchsia_hardware_ethernet::DeviceMarker>::new(
                     channel,

@@ -93,7 +93,6 @@ async fn add_ethernet_device() -> Result {
                 name: name[..fidl_fuchsia_posix_socket::INTERFACE_NAME_LENGTH.into()].to_string(),
                 filepath: "/fake/filepath/for_test".to_string(),
                 metric: 0,
-                ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
             },
             // We're testing add_ethernet_device (netstack.fidl), which
             // does not have a network device entry point.
