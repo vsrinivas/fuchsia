@@ -537,6 +537,24 @@ bool runtime_test() {
   END_TEST;
 }
 
+bool backtrace_test() {
+  BEGIN_TEST;
+
+  char buffer[64]{};
+
+  // See that we don't write more than the specified length.
+  EXPECT_EQ(Thread::Current::AppendBacktrace(buffer, 1), 1U);
+  EXPECT_EQ(0, buffer[1]);
+
+  // See that we can generate a backtrace.  If this fails, then perhaps the code is compiled without
+  // frame pointers?
+  memset(buffer, 0, sizeof(buffer));
+  EXPECT_GT(Thread::Current::AppendBacktrace(buffer, sizeof(buffer) - 1), 0U);
+  EXPECT_NE(nullptr, strstr(buffer, "{{{bt:0:"));
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(thread_tests)
@@ -550,4 +568,5 @@ UNITTEST("set_migrate_fn_test", set_migrate_fn_test)
 UNITTEST("set_migrate_ready_threads_test", set_migrate_ready_threads_test)
 UNITTEST("migrate_unpinned_threads_test", migrate_unpinned_threads_test)
 UNITTEST("runtime_test", runtime_test)
+UNITTEST("backtrace_test", backtrace_test)
 UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests")
