@@ -25,10 +25,10 @@ fn main() {
     let mut fc = FuchsiaCriterion::default();
     let c: &mut Criterion = &mut fc;
     *c = mem::take(c)
-        .warm_up_time(Duration::from_millis(200))
-        .measurement_time(Duration::from_millis(1800))
+        .warm_up_time(Duration::from_millis(50))
+        .measurement_time(Duration::from_millis(1000))
         // We must reduce the sample size from the default of 100, otherwise
-        // Criterion will sometimes override the 200ms + 1800ms suggested times
+        // Criterion will sometimes override the 50ms + 1000ms suggested times
         // and run for much longer.
         .sample_size(10);
     fc.bench("fuchsia.fidl_microbenchmarks", benchmark);

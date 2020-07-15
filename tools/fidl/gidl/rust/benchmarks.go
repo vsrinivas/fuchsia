@@ -31,6 +31,7 @@ use {
 // ALL_BENCHMARKS is used by src/tests/benchmarks/fidl/rust/src/main.rs.
 pub const ALL_BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }}] = [
 {{- range .Benchmarks }}
+	("Builder/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_builder),
 	("Encode/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_encode),
 	("Decode/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_decode),
 	{{ if .EnableSendEventBenchmark }}
@@ -45,6 +46,11 @@ pub const ALL_BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }
 const V1_CONTEXT: &Context = &Context {};
 
 {{ range .Benchmarks }}
+fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
+	b.iter(|| {
+		{{ .Value }}
+	});
+}
 fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 	b.iter_batched_ref(
 		|| {
@@ -182,7 +188,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, e
 			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
 			EnableEchoCallBenchmark:  gidlBenchmark.EnableEchoCallBenchmark,
 		})
-		nBenchmarks += 2
+		nBenchmarks += 3
 		if gidlBenchmark.EnableSendEventBenchmark {
 			nBenchmarks++
 		}
