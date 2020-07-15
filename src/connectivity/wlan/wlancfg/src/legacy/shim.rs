@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_wlan_stats as fidl_wlan_stats, fuchsia_async, fuchsia_zircon as zx,
     futures::{lock::Mutex as FutureMutex, prelude::*, select},
     itertools::Itertools,
-    log::{error, info},
+    log::{debug, error, info},
     std::{
         cmp::Ordering,
         collections::HashMap,
@@ -80,19 +80,22 @@ async fn handle_request(
 ) -> Result<(), fidl::Error> {
     match req {
         legacy::WlanRequest::Scan { req, responder } => {
-            info!("Received a Scan request from legacy WLAN API.");
+            info!("Legacy WLAN API used for scan request");
             let mut r = scan(iface, req).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::Connect { req, responder } => {
+            info!("Legacy WLAN API used for connect request");
             let mut r = connect(iface, saved_networks, req).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::Disconnect { responder } => {
+            info!("Legacy WLAN API used for disconnect request");
             let mut r = disconnect(iface.clone()).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::Status { responder } => {
+            debug!("Legacy WLAN API used for status request");
             let mut r = status(&iface).await;
             responder.send(&mut r)
         }
@@ -105,11 +108,12 @@ async fn handle_request(
             responder.send(&mut not_supported())
         }
         legacy::WlanRequest::Stats { responder } => {
+            debug!("Legacy WLAN API used for stats request");
             let mut r = stats(&iface).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::ClearSavedNetworks { responder } => {
-            info!("Clearing all saved networks.");
+            info!("Legacy WLAN API used to clear all saved networks");
             if let Err(e) = saved_networks.clear().await {
                 error!("Error clearing network configs: {}", e);
             }
@@ -252,6 +256,7 @@ async fn connect(
 ) -> legacy::Error {
     let network_id = legacy_config_to_network_id(&legacy_req);
     let credential = legacy_config_to_policy_credential(&legacy_req);
+    info!("Automatically (re-)saving network used in legacy connect request");
     match saved_networks.store(network_id.clone(), credential.clone()).await {
         Ok(()) => {}
         Err(e) => {
