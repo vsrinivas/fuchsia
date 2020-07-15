@@ -92,7 +92,7 @@ TEST_F(InterpreterTest, EmitObject) {
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
   CHECK_RESULT(0, "{}");
-  CHECK_RESULT(1, "{alpha: uint64 = 100, beta: string = \"hello\"}");
+  CHECK_RESULT(1, "{alpha: uint64(100), beta: string(\"hello\")}");
 }
 
 TEST_F(InterpreterTest, EmitMultipleResults) {

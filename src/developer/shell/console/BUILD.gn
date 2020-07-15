@@ -22,6 +22,7 @@ source_set("lib") {
     ":common",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//sdk/lib/syslog/cpp",
+    "//src/developer/shell/common:lib",
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
     "//src/developer/shell/interpreter:shell_server_lib",
     "//src/developer/shell/parser",

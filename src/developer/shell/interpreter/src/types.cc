@@ -327,6 +327,23 @@ void TypeInteger::LoadVariable(const ExecutionScope* scope, size_t index, Value*
 
 void TypeInteger::Dump(std::ostream& os) const { os << "integer"; }
 
+bool TypeInteger::GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                                   const Variable* variable) const {
+  if (variable->type()->Kind() != TypeKind::kInt64 &&
+      variable->type()->Kind() != TypeKind::kInteger) {
+    std::stringstream ss;
+    ss << "Can't use variable of type " << *variable->type() << " for type " << *this << ".";
+    context->EmitError(id, ss.str());
+    return false;
+  }
+  code->LoadRaw(variable->index(), variable->type()->Size());
+  return true;
+}
+
+void TypeInteger::EmitResult(ExecutionContext* context, uint64_t value) const {
+  impl_->EmitResult(context, value);
+}
+
 // - type float32 ----------------------------------------------------------------------------------
 
 std::unique_ptr<Type> TypeFloat32::Duplicate() const { return std::make_unique<TypeFloat32>(); }

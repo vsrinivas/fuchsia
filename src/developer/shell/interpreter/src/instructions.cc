@@ -15,12 +15,15 @@ namespace interpreter {
 // - VariableDefinition ----------------------------------------------------------------------------
 
 void VariableDefinition::Dump(std::ostream& os) const {
-  os << (is_mutable_ ? "var " : "const ") << name_;
+  os << (is_mutable_ ? "var " : "const ") << name_ << ": ";
+
   if (!type_->IsUndefined()) {
-    os << ": " << *type_;
-  }
-  if (initial_value_ != nullptr) {
-    os << " = " << *initial_value_;
+    os << *type_;
+    if (initial_value_ != nullptr) {
+      os << '(' << *initial_value_ << ')';
+    }
+  } else if (initial_value_ != nullptr) {
+    os << *initial_value_;
   }
   os << '\n';
 }

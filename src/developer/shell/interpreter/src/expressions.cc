@@ -46,7 +46,14 @@ bool IntegerLiteral::Compile(ExecutionContext* context, code::Code* code,
 // - ObjectField -----------------------------------------------------------------------------------
 
 void ObjectDeclarationField::Dump(std::ostream& os) const {
-  os << field_schema_->name() << ": " << *(field_schema_->type()) << " = " << *expression_;
+  std::stringstream type_str;
+  field_schema_->type()->Dump(type_str);
+  std::string type = type_str.str();
+  if (type != "") {
+    os << field_schema_->name() << ": " << *(field_schema_->type()) << "(" << *expression_ << ")";
+  } else {
+    os << field_schema_->name() << ": " << *expression_;
+  }
 }
 
 // - ObjectDeclaration -----------------------------------------------------------------------------

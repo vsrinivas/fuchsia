@@ -94,8 +94,8 @@ TEST_F(InterpreterTest, VariableDefinition) {
   ASSERT_FALSE(last_text_result_partial());
   ASSERT_EQ(text_results().size(), static_cast<size_t>(3));
   ASSERT_EQ(text_results()[0], "var foo: uint64\n");
-  ASSERT_EQ(text_results()[1], "const bar: int64 = -1\n");
-  ASSERT_EQ(text_results()[2], "const x: uint64 = 10\n");
+  ASSERT_EQ(text_results()[1], "const bar: int64(-1)\n");
+  ASSERT_EQ(text_results()[2], "const x: uint64(10)\n");
 }
 
 TEST_F(InterpreterTest, BuiltinTypes) {
@@ -234,11 +234,11 @@ TEST_F(InterpreterTest, Objects) {
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
   ASSERT_EQ(GlobalString("obj1"), "{}");
-  ASSERT_EQ(GlobalString("obj2"), "{alpha: uint64 = 4, beta: uint64 = 5}");
-  ASSERT_EQ(GlobalString("obj3"), "{alpha: string = \"Hello\", beta: string = \"world!\"}");
+  ASSERT_EQ(GlobalString("obj2"), "{alpha: uint64(4), beta: uint64(5)}");
+  ASSERT_EQ(GlobalString("obj3"), "{alpha: string(\"Hello\"), beta: string(\"world!\")}");
   ASSERT_EQ(GlobalString("obj4"),
-            "{inner = {alpha: string = \"Hello\", beta: string = \"world!\"},"
-            " extra: string = \"Extra value\"}");
+            "{inner: {alpha: string(\"Hello\"), beta: string(\"world!\")},"
+            " extra: string(\"Extra value\")}");
 }
 
 TEST_F(InterpreterTest, VariableOk) {

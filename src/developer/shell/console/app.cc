@@ -75,23 +75,21 @@ bool App::Init(int argc, const char** argv, QuitCallback quit_callback) {
 }
 
 Err App::OnConsoleCommand(std::unique_ptr<Command> command) {
-  if (!command->parse_error().ok()) {
-    fprintf(stderr, "error: Invalid command: %s\n", command->parse_error().msg.c_str());
-    return Err(ZX_ERR_NEXT, zx_status_get_string(ZX_ERR_NEXT));
-  }
-  Err status = executor_.Execute(std::move(command), [this]() {
-    if (options_.command) {
-      Quit();
-    } else {
-      console_.GetNextCommand();
-    }
-  });
+  Err status = executor_.Execute(
+      std::move(command), [this](const std::string& out) { console_.out() << out << "\n"; },
+      [this](const std::string& err) { console_.err() << "Error: " << err << "\n"; },
+      [this]() {
+        if (options_.command) {
+          Quit();
+        }
+      });
   if (status.code == ZX_ERR_STOP) {
     Quit();
     return status;
   }
   if (status.code > 0 || (status.code != ZX_ERR_NEXT && status.code != ZX_ERR_ASYNC)) {
-    fprintf(stderr, "error: Failed to execute command: %d (%s)\n", status.code, status.msg.c_str());
+    console_.err() << "error: Failed to execute command: " << status.code << "(" << status.msg
+                   << ")" << std::endl;
     return Err(ZX_ERR_NEXT, zx_status_get_string(ZX_ERR_NEXT));
   }
   return status;

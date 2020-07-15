@@ -147,12 +147,16 @@ class ResultNodeObjectField {
       : field_(field), value_(std::move(value)) {}
 
   void Dump(std::ostream& os) const {
-    os << field_->name();
+    os << field_->name() << ": ";
+
     if (field_->type() != nullptr) {
-      field_->type()->Dump(os, ": ");
+      field_->type()->Dump(os, "");
+      os << "(";
+      value_->Dump(os);
+      os << ")";
+    } else {
+      value_->Dump(os);
     }
-    os << " = ";
-    value_->Dump(os);
   }
 
  private:

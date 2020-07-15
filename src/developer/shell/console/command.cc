@@ -59,7 +59,10 @@ class NodeASTVisitor : public parser::ast::NodeVisitor {
     // TODO: Multiple statements.
     for (const auto& child : node.Children()) {
       if (auto ch = child->AsVariableDecl()) {
-        return VisitVariableDecl(*ch);
+        VisitVariableDecl(*ch);
+        // Return the value of the variable to the command line when done evaluating.
+        builder_->AddEmitResult(builder_->AddVariable(ch->identifier()));
+        return;
       }
     }
 

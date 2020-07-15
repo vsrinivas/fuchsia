@@ -360,6 +360,11 @@ class TypeInteger : public TypeBuiltin {
 
   void GenerateDefaultValue(ExecutionContext* context, code::Code* code) const override;
 
+  bool GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                        const Variable* variable) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
+
  private:
   std::unique_ptr<TypeInt64> impl_;
 };

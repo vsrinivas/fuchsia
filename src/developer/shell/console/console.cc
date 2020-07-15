@@ -10,17 +10,21 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
+#include <iostream>
 #include <utility>
 
 namespace shell::console {
 
 Console::Client::~Client() = default;
 
-Console::Console(Client* client, async_dispatcher_t* dispatcher, int input_fd)
+Console::Console(Client* client, async_dispatcher_t* dispatcher, int input_fd, std::ostream& out,
+                 std::ostream& err)
     : client_(client),
       input_fd_(input_fd),
       input_waiter_(dispatcher),
-      interrupt_waiter_(dispatcher) {}
+      interrupt_waiter_(dispatcher),
+      out_stream_(out),
+      err_stream_(err) {}
 
 Console::~Console() {
   if (tty_) {

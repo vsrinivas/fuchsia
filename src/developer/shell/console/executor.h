@@ -25,7 +25,13 @@ class Executor {
   ~Executor();
 
   // Execute the given command.
-  Err Execute(std::unique_ptr<Command> command, fit::closure callback);
+  // The standard output should be passed to |out_callback|.
+  // The error output should be passed to |err_callback|.
+  // |done_callback| will be called exactly once, when we are done computing.
+  Err Execute(std::unique_ptr<Command> command,
+              fit::function<void(const std::string&)> out_callback,
+              fit::function<void(const std::string&)> err_callback,
+              fit::callback<void()> done_callback);
 
   // Terminate the task the executor is currently executing in the foreground, if any.
   void KillForegroundTask();

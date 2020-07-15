@@ -9,6 +9,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/unsafe.h>
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -67,7 +68,9 @@ class Console {
   // |STDIN_FILENO| but can be set to another valid file descriptor for testing.
   //
   // Uses |dispatcher| to schedule asynchronous waits on |input_fd|.
-  Console(Client* client, async_dispatcher_t* dispatcher, int input_fd);
+  // Writes to stdout and stderr.
+  Console(Client* client, async_dispatcher_t* dispatcher, int input_fd,
+          std::ostream& out = std::cout, std::ostream& err = std::cerr);
   ~Console();
 
   // Initialize the console.
@@ -90,6 +93,12 @@ class Console {
   // returned |ZX_ERR_ASYNC|.
   void GetNextCommand();
 
+  // Output the given string |output| to this console's standard output stream.
+  std::ostream& out() { return out_stream_; }
+
+  // Output the given string |output| to this console's standard error stream.
+  std::ostream& err() { return err_stream_; }
+
  private:
   void WaitForInputAsynchronously();
   void WaitForInterruptAsynchronously();
@@ -106,6 +115,9 @@ class Console {
   line_input::ModalLineInputStdout line_input_;
 
   bool should_read_ = false;
+
+  std::ostream& out_stream_;
+  std::ostream& err_stream_;
 };
 
 }  // namespace shell::console

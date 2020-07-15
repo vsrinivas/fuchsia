@@ -68,6 +68,7 @@ std::unique_ptr<Value> Object::GetField(const ObjectFieldSchema* field) const {
       v->SetUint32(*reinterpret_cast<const uint32_t*>(ptr));
       break;
     case Type::TypeKind::kInt64:
+    case Type::TypeKind::kInteger:
       v->SetInt64(*reinterpret_cast<const int64_t*>(ptr));
       break;
     case Type::TypeKind::kUint64:
@@ -96,7 +97,7 @@ void Object::Free() {
   // Call the destructor.
   this->~Object();
   // Deallocate the object using the same mechanism used to allocate it.
-  delete [] reinterpret_cast<uint8_t*>(this);
+  delete[] reinterpret_cast<uint8_t*>(this);
 }
 
 void Value::Set(const Value& value) {
