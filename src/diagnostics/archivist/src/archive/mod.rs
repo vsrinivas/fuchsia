@@ -629,14 +629,14 @@ async fn populate_inspect_repo(
                         diagnostics_ready_data.metadata.timestamp.clone(),
                     )
                     .unwrap_or_else(|e| {
-                        error!(
+                        warn!(
                             "Failed to add inspect artifacts for component: {:?} to repository: {:?}",
                             identifier, e
                         );
                     });
             }
             Err(e) => {
-                error!(
+                warn!(
                     "Failed to clone diagnostics proxy of component {:?} for a repository: {:?}",
                     identifier, e
                 );
