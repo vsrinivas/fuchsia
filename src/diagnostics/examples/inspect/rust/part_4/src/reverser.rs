@@ -112,11 +112,15 @@ mod tests {
         let node = inspector.root().create_child("reverser_service");
         let factory = ReverserServerFactory::new(node);
 
-        let (channel_closed_snd, channel_closed_rcv) = oneshot::channel::<()>();
+        let (channel_closed_snd_1, channel_closed_rcv_1) = oneshot::channel::<()>();
         let reverser1 = open_reverser(&factory, || {
-            channel_closed_snd.send(()).expect("send close event");
+            channel_closed_snd_1.send(()).expect("send close event");
         })?;
-        let reverser2 = open_reverser(&factory, || {})?;
+
+        let (channel_closed_snd_2, channel_closed_rcv_2) = oneshot::channel::<()>();
+        let reverser2 = open_reverser(&factory, || {
+            channel_closed_snd_2.send(()).expect("send close event");
+        })?;
 
         let result = reverser1.reverse("hello").await?;
         assert_eq!(result, "olleh");
@@ -145,7 +149,7 @@ mod tests {
         // [END assert_tree]
 
         drop(reverser1);
-        channel_closed_rcv.await?;
+        channel_closed_rcv_1.await?;
 
         assert_inspect_tree!(inspector, root: {
             reverser_service: {
@@ -157,6 +161,9 @@ mod tests {
                 },
             }
         });
+
+        drop(reverser2);
+        channel_closed_rcv_2.await?;
 
         Ok(())
     }
