@@ -209,6 +209,21 @@ void InspectManager::ExposeDatabase(uint64_t max_crashpad_database_size_in_kb) {
           .CreateUint("max_crashpad_database_size_in_kb", max_crashpad_database_size_in_kb);
 }
 
+void InspectManager::ExposeStore(StorageSize max_size) {
+  database_.max_crashpad_database_size_in_kb =
+      node_manager_.Get("/crash_reporter/store")
+          .CreateUint("max_size_in_kb", max_size.ToKilobytes());
+}
+
+void InspectManager::IncreaseReportsGarbageCollectedBy(uint64_t num_reports) {
+  if (!store_.num_garbage_collected) {
+    store_.num_garbage_collected = node_manager_.Get("/crash_reporter/store")
+                                       .CreateUint("num_reports_garbage_collected", num_reports);
+  } else {
+    store_.num_garbage_collected.Add(num_reports);
+  }
+}
+
 void InspectManager::UpsertComponentToProductMapping(const std::string& component_url,
                                                      const crash_reports::Product& product) {
   const std::string path =

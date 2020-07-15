@@ -353,6 +353,7 @@ source_set("store") {
 
   public_deps = [
     ":report",
+    "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/utils:storage_size",
   ]
 

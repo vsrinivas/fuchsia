@@ -424,6 +424,20 @@ TEST_F(InspectManagerTest, IncreaseReportsPrunedBy) {
   }
 }
 
+TEST_F(InspectManagerTest, IncreaseReportsGarbageCollectedBy) {
+  const uint64_t kNumReportsGarbageCollected = 10;
+  for (size_t i = 1; i < 5; ++i) {
+    inspect_manager_->IncreaseReportsGarbageCollectedBy(kNumReportsGarbageCollected);
+    EXPECT_THAT(InspectTree(),
+                ChildrenMatch(Contains(AllOf(
+                    NodeMatches(NameMatches("crash_reporter")),
+                    ChildrenMatch(Contains(NodeMatches(AllOf(
+                        NameMatches("store"),
+                        PropertyList(ElementsAre(UintIs("num_reports_garbage_collected",
+                                                        i * kNumReportsGarbageCollected)))))))))));
+  }
+}
+
 TEST_F(InspectManagerTest, SetQueueSize) {
   const uint64_t kQueueSize = 10u;
   inspect_manager_->SetQueueSize(kQueueSize);

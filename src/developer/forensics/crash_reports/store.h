@@ -10,6 +10,8 @@
 #include <optional>
 #include <string>
 
+#include "src/developer/forensics/crash_reports/info/info_context.h"
+#include "src/developer/forensics/crash_reports/info/store_info.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/utils/storage_size.h"
 
@@ -27,7 +29,8 @@ class Store {
   // will be stored in /tmp/store/foo/<report Uid>.
   // |max_size| is the maximum size the store can take, garbage collecting the reports of lowest
   // Uids.
-  Store(const std::string& root_dir, StorageSize max_size);
+  Store(std::shared_ptr<InfoContext> info_context, const std::string& root_dir,
+        StorageSize max_size);
 
   // Adds a report to the store. If the operation fails, std::nullopt is returned, else a unique
   // identifier referring to the report is returned.
@@ -37,7 +40,9 @@ class Store {
   // report from the filesystem, return std::nullopt.
   std::optional<Report> Get(const Uid& id);
 
-  void Remove(const Uid& id);
+  // Returns true if a report with Uid |id| is removed from the store.
+  bool Remove(const Uid& id);
+
   void RemoveAll();
 
   // Exposed for testing purposes.
@@ -73,8 +78,9 @@ class Store {
 
   // We store the Uids in FIFO order for easy garbage collection.
   std::deque<Uid> uids_;
-
   Uid next_id_{0};
+
+  StoreInfo info_;
 };
 
 }  // namespace crash_reports

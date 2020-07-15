@@ -124,8 +124,10 @@ bool ReadAttachment(const std::string& path, SizedData* attachment) {
 
 }  // namespace
 
-Store::Store(const std::string& root_dir, StorageSize max_size)
-    : root_dir_(root_dir), max_size_(max_size), current_size_(0u) {
+Store::Store(std::shared_ptr<InfoContext> info, const std::string& root_dir, StorageSize max_size)
+    : root_dir_(root_dir), max_size_(max_size), current_size_(0u), info_(std::move(info)) {
+  info_.LogMaxStoreSize(max_size_);
+
   // Clean up any empty directories under |root_dir_|. This may happen if the component stops
   // running while it is deleting a report.
   RemoveEmptyDirectories(root_dir_);
@@ -281,9 +283,9 @@ bool Store::Contains(const Uid& id) const {
   return id_to_metadata_.find(id) != id_to_metadata_.end();
 }
 
-void Store::Remove(const Uid& id) {
+bool Store::Remove(const Uid& id) {
   if (!Contains(id)) {
-    return;
+    return false;
   }
 
   //  The report is stored under /tmp/store/<program shortname>/$id.
@@ -305,6 +307,8 @@ void Store::Remove(const Uid& id) {
   current_size_ -= id_to_metadata_[id].size;
   id_to_metadata_.erase(id);
   uids_.erase(std::remove(uids_.begin(), uids_.end(), id), uids_.end());
+
+  return true;
 }
 
 void Store::RemoveAll() {
@@ -323,9 +327,13 @@ bool Store::MakeFreeSpace(const StorageSize required_space) {
     return false;
   }
 
+  size_t num_garbage_collected{0};
   while ((current_size_ + required_space) > max_size_ && !uids_.empty()) {
-    Remove(uids_.front());
+    if (Remove(uids_.front())) {
+      ++num_garbage_collected;
+    }
   }
+  info_.LogGarbageCollection(num_garbage_collected);
 
   return true;
 }

@@ -18,6 +18,7 @@
 #include "src/developer/forensics/crash_reports/settings.h"
 #include "src/developer/forensics/utils/inspect_node_manager.h"
 #include "src/developer/forensics/utils/inspect_protocol_stats.h"
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {
@@ -37,6 +38,9 @@ class InspectManager {
   // Exposes the static properties of the crash report database.
   void ExposeDatabase(uint64_t max_crashpad_database_size_in_kb);
 
+  // Exposes the static properties of the report store.
+  void ExposeStore(StorageSize max_size);
+
   // Records the current size of the queue of pending reports.
   void SetQueueSize(uint64_t size);
 
@@ -54,6 +58,9 @@ class InspectManager {
 
   // Increase the total number of pruned reports by |num_pruned|.
   void IncreaseReportsPrunedBy(uint64_t num_pruned);
+
+  // Increase the total number of garbage collected reports by |num_reports|.
+  void IncreaseReportsGarbageCollectedBy(uint64_t num_reports);
 
   // Adds a new report under the given program.
   //
@@ -111,6 +118,12 @@ class InspectManager {
     inspect::UintProperty num_cleaned;
   };
 
+  // Inspect node containing the store properties.
+  struct Store {
+    inspect::UintProperty max_size_in_kb;
+    inspect::UintProperty num_garbage_collected;
+  };
+
   // Inspect node containing the queue properties.
   struct Queue {
     inspect::UintProperty size;
@@ -151,6 +164,7 @@ class InspectManager {
   Config config_;
   Settings settings_;
   Database database_;
+  Store store_;
   Queue queue_;
   InspectProtocolStats crash_register_stats_;
   InspectProtocolStats crash_reporter_stats_;

@@ -13,30 +13,41 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/sized_data.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/timekeeper/test_clock.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 
 namespace forensics {
 namespace crash_reports {
 namespace {
 
+using inspect::testing::ChildrenMatch;
+using inspect::testing::NameMatches;
+using inspect::testing::NodeMatches;
+using inspect::testing::PropertyList;
+using inspect::testing::StringIs;
+using inspect::testing::UintIs;
+using testing::IsEmpty;
+using testing::IsSupersetOf;
 using testing::UnorderedElementsAreArray;
 
 SizedData MakeSizedData(const std::string& content) {
   return SizedData(content.begin(), content.end());
 }
 
-class StoreTest : public testing::Test {
+class StoreTest : public UnitTestFixture {
  public:
-  StoreTest() : store_(std::make_unique<Store>(tmp_dir_.path(), StorageSize::Megabytes(1))) {}
+  StoreTest() { MakeNewStore(StorageSize::Megabytes(1)); }
 
  protected:
   void MakeNewStore(const StorageSize max_size) {
-    store_ = std::make_unique<Store>(tmp_dir_.path(), max_size);
+    info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
+    store_ = std::make_unique<Store>(info_context_, tmp_dir_.path(), max_size);
   }
 
   std::optional<Store::Uid> Add(const std::string& program_shortname,
@@ -145,6 +156,8 @@ class StoreTest : public testing::Test {
                    programs.end());
     return programs;
   }
+  timekeeper::TestClock clock_;
+  std::shared_ptr<InfoContext> info_context_;
 
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<Store> store_;
@@ -327,6 +340,31 @@ TEST_F(StoreTest, Succeed_RebuildCleansEmptyDirectories) {
   MakeNewStore(StorageSize::Megabytes(1));
 
   EXPECT_FALSE(files::IsDirectory(empty_dir));
+}
+
+TEST_F(StoreTest, Check_InspectTree) {
+  const std::string minidump = "minidump";
+
+  // We set up the store so it can only hold one report at most, evicting the oldest ones first.
+  const StorageSize size = StorageSize::Bytes(minidump.size() + 4u /*the empty annotations.json*/);
+  MakeNewStore(size);
+
+  Add("program_name1", /*annotations=*/{}, /*attachments=*/{}, minidump);
+  Add("program_name2", /*annotations=*/{}, /*attachments=*/{}, minidump);
+
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(IsSupersetOf({
+          AllOf(NodeMatches(NameMatches("crash_reporter")),
+                ChildrenMatch(IsSupersetOf({
+                    AllOf(NodeMatches(AllOf(NameMatches("store"),
+                                            PropertyList(UnorderedElementsAreArray({
+                                                UintIs("max_size_in_kb", size.ToKilobytes()),
+                                                UintIs("num_reports_garbage_collected", 1u),
+                                            })))),
+                          ChildrenMatch(IsEmpty())),
+                }))),
+      })));
 }
 
 }  // namespace
