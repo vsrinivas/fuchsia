@@ -251,7 +251,7 @@ zx_status_t Device::LoadFirmware() {
 }
 
 zx_status_t Device::Remove(zx_status_t status, const char* note) {
-  device_remove_deprecated(zxdev_);
+  device_async_remove(zxdev_);
   errorf("%s: %s", note, zx_status_get_string(status));
   return status;
 }
