@@ -3940,40 +3940,6 @@ void brcmf_free_net_device_vif(struct net_device* ndev) {
   }
 }
 
-// TODO(cphoenix): Rename and/or refactor this function - it has way too many side effects for a
-// function that looks like it just returns info about state.
-static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_event_msg* e) {
-  uint32_t event = e->event_code;
-  uint32_t status = e->status;
-
-  // BRCMF_DBG(TEMP, "Enter, event %d, status %d, sme_state 0x%lx\n", event, status,
-  //          atomic_load(&vif->sme_state));
-  if (vif->profile.use_fwsup == BRCMF_PROFILE_FWSUP_PSK && event == BRCMF_E_PSK_SUP &&
-      status == BRCMF_E_STATUS_FWSUP_COMPLETED) {
-    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state);
-  }
-  if (event == BRCMF_E_SET_SSID && status == BRCMF_E_STATUS_SUCCESS) {
-    BRCMF_DBG(CONN, "Processing set ssid\n");
-    memcpy(vif->profile.bssid, e->addr, ETH_ALEN);
-    if (vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_PSK) {
-      // BRCMF_DBG(TEMP, "Ret true\n");
-      return true;
-    }
-
-    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state);
-  }
-
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state) &&
-      brcmf_test_bit_in_array(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state)) {
-    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state);
-    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state);
-    // BRCMF_DBG(TEMP, "Ret true\n");
-    return true;
-  }
-  // BRCMF_DBG(TEMP, "Ret false\n");
-  return false;
-}
-
 // Returns true if client is connected (also includes CONNECTING and DISCONNECTING).
 static bool brcmf_is_client_connected(brcmf_if* ifp) {
   return (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state) ||
@@ -3991,49 +3957,6 @@ static const char* brcmf_get_client_connect_state_string(brcmf_if* ifp) {
   } else {
     return "Not connected";
   }
-}
-// Returns true if client is in connected (includes CONNECTED, CONNECTING and DISCONNECTING) state
-// and a disconnect notification is received from the firmware.
-static bool brcmf_is_link_going_down(net_device* ndev, const brcmf_event_msg* e) {
-  uint32_t event = e->event_code;
-  uint16_t flags = e->flags;
-  brcmf_if* ifp = ndev_to_if(ndev);
-
-  if (event == BRCMF_E_DISASSOC_IND) {
-    BRCMF_DBG(CONN, "Processing link down\n");
-    // Adding this log for debugging disconnect issues.
-    // TODO(karthikrish) : Move this to CONN level for production code
-    BRCMF_INFO("Link Down Event: State: %s evt: %d flg: 0x%x rsn: %d sts: %d rssi: %d snr: %d\n",
-               brcmf_get_client_connect_state_string(ifp), event, flags, e->reason, e->status,
-               ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
-    // No need to process linkdown if disconnected
-    if (brcmf_is_client_connected(ifp))
-      return true;
-  }
-  return false;
-}
-
-static bool brcmf_is_nonetwork(struct brcmf_cfg80211_info* cfg, const struct brcmf_event_msg* e) {
-  uint32_t event = e->event_code;
-  uint32_t status = e->status;
-
-  if (event == BRCMF_E_LINK && status == BRCMF_E_STATUS_NO_NETWORKS) {
-    BRCMF_DBG(CONN, "Processing Link %s & no network found\n",
-              e->flags & BRCMF_EVENT_MSG_LINK ? "up" : "down");
-    return true;
-  }
-
-  if (event == BRCMF_E_SET_SSID && status != BRCMF_E_STATUS_SUCCESS) {
-    BRCMF_DBG(CONN, "Processing connecting & no network found: %d\n", status);
-    return true;
-  }
-
-  if (event == BRCMF_E_PSK_SUP && status != BRCMF_E_STATUS_FWSUP_COMPLETED) {
-    BRCMF_DBG(CONN, "Processing failed supplicant state: %u\n", status);
-    return true;
-  }
-
-  return false;
 }
 
 static void brcmf_clear_assoc_ies(struct brcmf_cfg80211_info* cfg) {
@@ -4261,31 +4184,6 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
   return ZX_OK;
 }
 
-static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cfg,
-                                                  struct net_device* ndev,
-                                                  const struct brcmf_event_msg* e, void* data) {
-  uint32_t event = e->event_code;
-  uint32_t reason = e->reason;
-
-  BRCMF_DBG(CONN, "event %s (%u), reason %d flags 0x%x\n",
-            brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(event)), event, reason,
-            e->flags);
-  if (event == BRCMF_E_DISASSOC_IND) {
-    // Client has disassociated
-    wlanif_disassoc_indication_t disassoc_ind_params;
-    memset(&disassoc_ind_params, 0, sizeof(disassoc_ind_params));
-    memcpy(disassoc_ind_params.peer_sta_address, e->addr, ETH_ALEN);
-    disassoc_ind_params.reason_code = e->reason;
-
-    BRCMF_DBG(WLANIF,
-              "Sending disassoc indication to SME. address: " MAC_FMT_STR ", reason: %" PRIu16 "\n",
-              MAC_FMT_ARGS(disassoc_ind_params.peer_sta_address), disassoc_ind_params.reason_code);
-
-    wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &disassoc_ind_params);
-  }
-  return ZX_OK;
-}
-
 // AUTH_IND handler. AUTH_IND is meant only for SoftAP IF
 static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
                                                 const struct brcmf_event_msg* e, void* data) {
@@ -4469,43 +4367,16 @@ static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
     return brcmf_indicate_client_disconnect(ifp, e, data);
 }
 
-static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
-                                               const struct brcmf_event_msg* e, void* data) {
-  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-  struct net_device* ndev = ifp->ndev;
-  zx_status_t err = ZX_OK;
-
-  BRCMF_DBG(TRACE, "Enter\n");
-  BRCMF_DBG(CONN, "IF: %d Event code %d, status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
-            e->event_code, e->status, e->reason, e->auth_type, e->flags);
-  if (e->event_code == BRCMF_E_DISASSOC_IND) {
-    brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
+static zx_status_t brcmf_process_set_ssid_event(struct brcmf_if* ifp,
+                                                const struct brcmf_event_msg* e, void* data) {
+  if (e->status == BRCMF_E_STATUS_SUCCESS) {
+    BRCMF_DBG(CONN, "set ssid success\n");
+    memcpy(ifp->vif->profile.bssid, e->addr, ETH_ALEN);
+  } else {
+    BRCMF_DBG(CONN, "set ssid failed - no network found\n");
+    brcmf_indicate_no_network(ifp);
   }
-
-  if (brcmf_is_apmode(ifp->vif)) {
-    err = brcmf_notify_connect_status_ap(cfg, ndev, e, data);
-  } else if (brcmf_is_linkup(ifp->vif, e)) {
-    BRCMF_DBG(CONN, "Linkup\n");
-    brcmf_bss_connect_done(cfg, ndev, true);
-    brcmf_net_setcarrier(ifp, true);
-  } else if (brcmf_is_link_going_down(ndev, e)) {
-    BRCMF_DBG(CONN, "Linkdown\n");
-    brcmf_bss_connect_done(cfg, ndev, false);
-    brcmf_disconnect_done(cfg);
-    brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e), e->reason);
-    brcmf_init_prof(ndev_to_prof(ndev));
-    if (ndev != cfg_to_ndev(cfg)) {
-      sync_completion_signal(&cfg->vif_disabled);
-    }
-    brcmf_net_setcarrier(ifp, false);
-  } else if (brcmf_is_nonetwork(cfg, e)) {
-    BRCMF_DBG(CONN, "No network\n");
-    brcmf_bss_connect_done(cfg, ndev, false);
-    brcmf_disconnect_done(cfg);
-  }
-
-  BRCMF_DBG(TRACE, "Exit\n");
-  return err;
+  return ZX_OK;
 }
 
 static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
@@ -4615,10 +4486,9 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_REASSOC_IND, brcmf_handle_assoc_ind);
   brcmf_fweh_register(cfg->pub, BRCMF_E_ROAM, brcmf_notify_roaming_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_MIC_ERROR, brcmf_notify_mic_status);
-  brcmf_fweh_register(cfg->pub, BRCMF_E_SET_SSID, brcmf_notify_connect_status);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_SET_SSID, brcmf_process_set_ssid_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_PFN_NET_FOUND, brcmf_notify_sched_scan_results);
   brcmf_fweh_register(cfg->pub, BRCMF_E_IF, brcmf_notify_vif_event);
-  brcmf_fweh_register(cfg->pub, BRCMF_E_PSK_SUP, brcmf_notify_connect_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_CSA_COMPLETE_IND, brcmf_notify_channel_switch);
   brcmf_fweh_register(cfg->pub, BRCMF_E_AP_STARTED, brcmf_notify_ap_started);
 }
