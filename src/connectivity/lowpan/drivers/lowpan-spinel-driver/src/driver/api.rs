@@ -15,7 +15,7 @@ use fidl_fuchsia_lowpan_device::{
 };
 use futures::future::ready;
 use futures::stream::BoxStream;
-use lowpan_driver_common::{Driver as LowpanDriver, FutureExt as _, ZxResult};
+use lowpan_driver_common::{AsyncConditionWait, Driver as LowpanDriver, FutureExt as _, ZxResult};
 
 /// API-related tasks. Implementation of [`lowpan_driver_common::Driver`].
 #[async_trait]
@@ -73,7 +73,55 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     }
 
     fn watch_device_state(&self) -> BoxStream<'_, ZxResult<DeviceState>> {
-        ready(Err(ZxStatus::NOT_SUPPORTED)).into_stream().boxed()
+        futures::stream::unfold(
+            None,
+            move |last_state: Option<(DeviceState, AsyncConditionWait<'_>)>| async move {
+                let mut snapshot;
+                if let Some((last_state, mut condition)) = last_state {
+                    // The first item has already been emitted by the stream, so
+                    // we need to wait for changes before we emit more.
+                    loop {
+                        // This loop is where our stream waits for
+                        // the next change to the device state.
+
+                        // Wait for the driver state change condition to unblock.
+                        condition.await;
+
+                        // Set up the condition for the next iteration.
+                        condition = self.driver_state_change.wait();
+
+                        snapshot = self.device_state_snapshot();
+                        if snapshot != last_state {
+                            break;
+                        }
+                    }
+
+                    // We start out with our "delta" being a clone of the
+                    // current device state. We will then selectively clear
+                    // the fields it contains so that only fields that have
+                    // changed are represented.
+                    let mut delta = snapshot.clone();
+
+                    if last_state.connectivity_state == snapshot.connectivity_state {
+                        delta.connectivity_state = None;
+                    }
+
+                    if last_state.role == snapshot.role {
+                        delta.role = None;
+                    }
+
+                    Some((Ok(delta), Some((snapshot, condition))))
+                } else {
+                    // This is the first item being emitted from the stream,
+                    // so we end up emitting the current device state and
+                    // setting ourselves up for the next iteration.
+                    let condition = self.driver_state_change.wait();
+                    snapshot = self.device_state_snapshot();
+                    Some((Ok(snapshot.clone()), Some((snapshot, condition))))
+                }
+            },
+        )
+        .boxed()
     }
 
     fn watch_identity(&self) -> BoxStream<'_, ZxResult<Identity>> {
@@ -227,5 +275,15 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
                 .boxed(),
         )
         .await
+    }
+}
+
+impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
+    fn device_state_snapshot(&self) -> DeviceState {
+        let driver_state = self.driver_state.lock();
+        DeviceState {
+            connectivity_state: Some(driver_state.connectivity_state),
+            role: Some(driver_state.role),
+        }
     }
 }

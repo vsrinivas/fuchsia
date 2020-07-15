@@ -59,6 +59,27 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     /// so that local state stays in sync with the device.
     pub(super) fn on_prop_value_is(&self, prop: Prop, value: &[u8]) -> Result<(), Error> {
         fx_log_info!("on_prop_value_is: {:?} {:?}", prop, value);
+        match prop {
+            Prop::Net(PropNet::Role) => {
+                let new_role = match NetRole::try_unpack_from_slice(value)? {
+                    NetRole::Detached => Role::Detached,
+                    NetRole::Child => Role::EndDevice,
+                    NetRole::Router => Role::Router,
+                    NetRole::Leader => Role::Leader,
+                    NetRole::Unknown(_) => Role::EndDevice,
+                };
+
+                let mut driver_state = self.driver_state.lock();
+
+                if new_role != driver_state.role {
+                    fx_log_info!("Role changed from {:?} to {:?}", driver_state.role, new_role);
+                    driver_state.role = new_role;
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                }
+            }
+            _ => {}
+        }
         Ok(())
     }
 

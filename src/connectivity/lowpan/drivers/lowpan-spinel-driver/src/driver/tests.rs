@@ -32,6 +32,17 @@ async fn test_spinel_lowpan_driver() {
         // Verify that our capabilities have been set by this point.
         assert_eq!(driver.get_driver_state_snapshot().caps.len(), 2);
 
+        let mut device_state_stream = driver.watch_device_state();
+
+        traceln!("app_task: Checking device state...");
+        assert_eq!(
+            device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
+            ConnectivityState::Inactive
+        );
+
+        traceln!("app_task: Making sure it only vends one state when nothing has changed.");
+        assert!(device_state_stream.next().now_or_never().is_none());
+
         for i in 1u8..32 {
             traceln!("app_task: Iteration {}", i);
 
@@ -77,6 +88,19 @@ async fn test_spinel_lowpan_driver() {
             traceln!("app_task: Attempting a reset...");
             assert_eq!(driver.reset().await, Ok(()));
             traceln!("app_task: Did reset!");
+
+            traceln!("app_task: Checking device state...");
+            assert_eq!(
+                driver
+                    .watch_device_state()
+                    .try_next()
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .connectivity_state
+                    .unwrap(),
+                ConnectivityState::Inactive
+            );
         }
     };
 

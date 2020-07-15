@@ -22,6 +22,11 @@ pub(super) struct DriverState {
     ///
     /// This is updated exclusively at initialization.
     pub(super) caps: Vec<Cap>,
+
+    /// The current role for this device on the current network.
+    ///
+    /// This is kept in sync by [`SpinelDriver::on_prop_value_is()`].
+    pub(super) role: Role,
 }
 
 impl Clone for DriverState {
@@ -30,6 +35,7 @@ impl Clone for DriverState {
             init_state: self.init_state.clone(),
             connectivity_state: self.connectivity_state.clone(),
             caps: self.caps.clone(),
+            role: self.role.clone(),
         }
     }
 }
@@ -39,6 +45,7 @@ impl PartialEq for DriverState {
         self.init_state.eq(&other.init_state)
             && self.connectivity_state.eq(&other.connectivity_state)
             && self.caps.eq(&other.caps)
+            && self.role.eq(&other.role)
     }
 }
 
@@ -50,6 +57,7 @@ impl Default for DriverState {
             init_state: Default::default(),
             connectivity_state: ConnectivityState::Inactive,
             caps: Default::default(),
+            role: Role::Detached,
         }
     }
 }
@@ -89,6 +97,7 @@ impl DriverState {
         }
 
         self.caps = Default::default();
+        self.role = Role::Detached;
 
         if old_state.is_invalid_during_initialization() {
             self.connectivity_state = ConnectivityState::Attaching;

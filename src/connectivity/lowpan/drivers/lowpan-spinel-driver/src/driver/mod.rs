@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod api;
+mod clone_ext;
 mod driver_state;
 mod error_adapter;
 mod inbound;
@@ -14,9 +15,10 @@ mod tasks;
 mod tests;
 
 use crate::spinel::*;
+use clone_ext::*;
 use driver_state::*;
 use error_adapter::*;
-use fidl_fuchsia_lowpan::ConnectivityState;
+use fidl_fuchsia_lowpan::{ConnectivityState, Role};
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon::Duration;
 use lowpan_driver_common::AsyncCondition;
