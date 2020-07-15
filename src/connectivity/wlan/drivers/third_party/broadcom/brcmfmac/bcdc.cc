@@ -21,6 +21,8 @@
 
 #include "bcdc.h"
 
+#include <zircon/status.h>
+
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
@@ -123,7 +125,7 @@ static zx_status_t brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx
   *fwerr = ZX_OK;
   ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, false);
   if (ret != ZX_OK) {
-    BRCMF_ERR("brcmf_proto_bcdc_msg failed w/status %d", ret);
+    BRCMF_ERR("brcmf_proto_bcdc_msg failed w/status %s", zx_status_get_string(ret));
     goto done;
   }
 
