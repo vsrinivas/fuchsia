@@ -16,11 +16,6 @@
         "binary": "test/h264_decoder_test"
     },
     "sandbox": {
-        "dev": [
-            "class/media-codec",
-            "class/sysmem"
-        ],
-        "features": [],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.mediacodec.CodecFactory",

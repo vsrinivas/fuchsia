@@ -11,10 +11,6 @@
         "binary": "test/audio_decoder_test"
     },
     "sandbox": {
-        "dev": [
-            "class/media-codec",
-            "class/sysmem"
-        ],
         "features": [
             "isolated-temp"
         ],

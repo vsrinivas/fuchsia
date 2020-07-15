@@ -16,10 +16,6 @@
         "binary": "test/h264_encoder_test"
     },
     "sandbox": {
-        "dev": [
-            "class/media-codec",
-            "class/sysmem"
-        ],
         "features": [
             "isolated-temp"
         ],
