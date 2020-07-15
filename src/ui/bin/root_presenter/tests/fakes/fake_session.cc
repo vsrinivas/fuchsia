@@ -27,11 +27,11 @@ void FakeSession::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
 
 void FakeSession::Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
                           std::vector<zx::event> release_fences, PresentCallback callback) {
-  present_called_ = true;
+  presents_called_++;
 }
 
 void FakeSession::Present(uint64_t presentation_time, PresentCallback callback) {
-  present_called_ = true;
+  presents_called_++;
 }
 
 void FakeSession::RequestPresentationTimes(zx_duration_t request_prediction_span,

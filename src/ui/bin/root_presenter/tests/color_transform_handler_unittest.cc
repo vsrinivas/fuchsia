@@ -98,6 +98,50 @@ TEST_F(ColorTransformHandlerTest, VerifyA11yColorTransform) {
   ASSERT_EQ(kCorrectDeuteranomaly, command.value().set_display_color_conversion().matrix);
 }
 
+// Ensures identical color transforms are sent to Scenic exactly once.
+TEST_F(ColorTransformHandlerTest, VerifyMultipleIdenticalA11yColorTransforms) {
+  // Create ColorTransformHandler.
+  color_transform_handler_ =
+      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  RunLoopUntilIdle();
+
+  const std::array<float, 9> matrix = {2, 1, 3, 4, 5, 6, 7, 8, 9};
+  // Change settings.
+  fuchsia::accessibility::ColorTransformConfiguration configuration;
+  configuration.set_color_correction(
+      fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY);
+  configuration.set_color_inversion_enabled(false);
+  configuration.set_color_adjustment_matrix(matrix);
+  configuration.set_color_adjustment_pre_offset(kZero);
+  configuration.set_color_adjustment_post_offset(kZero);
+
+  ASSERT_TRUE(configuration.has_color_adjustment_matrix());
+  color_transform_handler_->SetColorTransformConfiguration(std::move(configuration), [] {});
+  RunLoopUntilIdle();
+
+  // Verify that fake scenic received the correct matrix.
+  ASSERT_TRUE(fake_session_->PresentWasCalled());
+  int presents_called = fake_session_->PresentsCalled();
+
+  auto command = fake_session_->GetFirstCommand();
+  ASSERT_TRUE(command.has_value());
+  ASSERT_EQ(command.value().Which(), fuchsia::ui::gfx::Command::Tag::kSetDisplayColorConversion);
+  ASSERT_EQ(matrix, command.value().set_display_color_conversion().matrix);
+
+  configuration.set_color_correction(
+      fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY);
+  configuration.set_color_inversion_enabled(false);
+  configuration.set_color_adjustment_matrix(matrix);
+  configuration.set_color_adjustment_pre_offset(kZero);
+  configuration.set_color_adjustment_post_offset(kZero);
+
+  ASSERT_TRUE(configuration.has_color_adjustment_matrix());
+  color_transform_handler_->SetColorTransformConfiguration(std::move(configuration), [] {});
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(fake_session_->PresentsCalled(), presents_called);
+}
+
 // Verify that we don't call scenic when the accessibility matrix is missing.
 TEST_F(ColorTransformHandlerTest, A11yMissingMatrix) {
   // Create ColorTransformHandler.
@@ -187,6 +231,42 @@ TEST_F(ColorTransformHandlerTest, VerifyColorAdjustment) {
   auto command = fake_session_->GetFirstCommand();
   ASSERT_TRUE(command.has_value());
   ASSERT_EQ(command.value().Which(), fuchsia::ui::gfx::Command::Tag::kSetDisplayColorConversion);
+}
+
+// Verify that two identical color adjustments get sent to Scenic only once.
+TEST_F(ColorTransformHandlerTest, VerifyMultipleIdenticalColorAdjustments) {
+  // Create ColorTransformHandler.
+  color_transform_handler_ =
+      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  RunLoopUntilIdle();
+
+  // Change color adjustment via brightness.
+  fuchsia::ui::brightness::ColorAdjustmentTable table;
+  const std::array<float, 9> matrix = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+  table.set_matrix(matrix);
+
+  ASSERT_TRUE(table.has_matrix());
+  color_transform_handler_->SetColorAdjustment(std::move(table));
+  RunLoopUntilIdle();
+
+  // Verify that fake scenic received the correct matrix.
+  ASSERT_TRUE(fake_session_->PresentWasCalled());
+  int presents_called = fake_session_->PresentsCalled();
+
+  auto command = fake_session_->GetFirstCommand();
+  ASSERT_TRUE(command.has_value());
+  ASSERT_EQ(command.value().Which(), fuchsia::ui::gfx::Command::Tag::kSetDisplayColorConversion);
+
+  // Send the same matrix again.
+  table.set_matrix(matrix);
+
+  ASSERT_TRUE(table.has_matrix());
+  color_transform_handler_->SetColorAdjustment(std::move(table));
+  RunLoopUntilIdle();
+
+  // Verify that we do not call Present unnecessarily.
+  ASSERT_EQ(fake_session_->PresentsCalled(), presents_called);
 }
 
 // Verify that a color adjustment from the brightness API is not sent to scenic when accessibility

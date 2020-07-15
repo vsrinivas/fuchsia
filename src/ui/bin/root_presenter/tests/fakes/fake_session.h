@@ -39,7 +39,8 @@ class FakeSession : public fuchsia::ui::scenic::Session {
   void SetDebugName(std::string debug_name) override {}
 
   // Test method
-  bool PresentWasCalled() { return present_called_; }
+  bool PresentWasCalled() { return presents_called_ > 0; }
+  int PresentsCalled() { return presents_called_; }
 
   // Test method
   auto GetFirstCommand() {
@@ -48,7 +49,7 @@ class FakeSession : public fuchsia::ui::scenic::Session {
   }
 
  private:
-  bool present_called_ = false;
+  int presents_called_ = 0;
   std::vector<fuchsia::ui::scenic::Command> last_cmds_;
   fidl::Binding<fuchsia::ui::scenic::Session> binding_;
   fuchsia::ui::scenic::SessionListenerPtr listener_;

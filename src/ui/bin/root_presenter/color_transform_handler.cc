@@ -83,6 +83,18 @@ void ColorTransformHandler::SetScenicColorConversion(
     const std::array<float, 9> color_transform_matrix,
     const std::array<float, 3> color_transform_pre_offsets,
     const std::array<float, 3> color_transform_post_offsets) {
+  // Do nothing if the values are the same as before.
+  if (color_transform_values_initialized_ &&
+      prev_color_transform_matrix_ == color_transform_matrix &&
+      prev_color_transform_pre_offsets_ == color_transform_pre_offsets &&
+      prev_color_transform_post_offsets_ == color_transform_post_offsets)
+    return;
+
+  color_transform_values_initialized_ = true;
+  prev_color_transform_matrix_ = color_transform_matrix;
+  prev_color_transform_pre_offsets_ = color_transform_pre_offsets;
+  prev_color_transform_post_offsets_ = color_transform_post_offsets;
+
   // Create scenic color adjustment cmd.
   fuchsia::ui::gfx::Command color_adjustment_cmd;
   fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK display_color_conversion_cmd;
@@ -91,6 +103,7 @@ void ColorTransformHandler::SetScenicColorConversion(
   // Call scenic to apply color adjustment.
   color_adjustment_cmd.set_set_display_color_conversion(std::move(display_color_conversion_cmd));
   session_->Enqueue(std::move(color_adjustment_cmd));
+
   session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 }
 

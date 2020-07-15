@@ -86,6 +86,11 @@ class ColorTransformHandler : public fuchsia::accessibility::ColorTransformHandl
       const std::array<float, 3> color_transform_pre_offsets,
       const std::array<float, 3> color_transform_post_offsets);
 
+  bool color_transform_values_initialized_ = false;
+  std::array<float, 9> prev_color_transform_matrix_;
+  std::array<float, 3> prev_color_transform_pre_offsets_;
+  std::array<float, 3> prev_color_transform_post_offsets_;
+
   sys::ComponentContext* const component_context_ = nullptr;
   scenic::Session* session_ = nullptr;  // No ownership.
   const scenic::ResourceId compositor_id_;
