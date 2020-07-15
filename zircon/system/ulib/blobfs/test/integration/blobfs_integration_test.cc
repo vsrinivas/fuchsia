@@ -186,9 +186,10 @@ void RunBlobCorruptionTest() {
   }
 
   ASSERT_NO_FAILURES(ReadBlobCorrupted(info.get()));
-  // TODO fxb/55664 Make this check wait conditionally on IsCalled instead.
-  // ASSERT_TRUE(corruption_server->IsCalled());
+  // Shutdown explicitly calls "join" on the "corruption-dispatcher" thread and waits for it
+  // to increment num_calls_.
   loop.Shutdown();
+  ASSERT_TRUE(corruption_server->IsCalled());
 }
 
 TEST_F(BlobfsTest, CorruptBlobNotify) { RunBlobCorruptionTest(); }
