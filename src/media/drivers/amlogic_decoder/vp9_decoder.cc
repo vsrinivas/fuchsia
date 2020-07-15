@@ -868,7 +868,7 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
 
   ZX_DEBUG_ASSERT(fbl::round_up(current_frame_->frame->hw_width, 2u) ==
                   current_frame_->frame->coded_width);
-  ZX_DEBUG_ASSERT(fbl::round_up(current_frame_->frame->hw_height, 2u) ==
+  ZX_DEBUG_ASSERT(fbl::round_up(current_frame_->frame->hw_height, 8u) ==
                   current_frame_->frame->coded_height);
 
   if (use_compressed_output_) {
@@ -1226,7 +1226,9 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   uint32_t coded_width = fbl::round_up(params->hw_width, 2u);
   // TODO(dustingreen): AFAIK, we haven't seen an odd height reported from HW
   // yet.  We may need to create a test stream to cover this.
-  uint32_t coded_height = fbl::round_up(params->hw_height, 2u);
+  // Round heights to a multiple of 8, because otherwise the hardware may write
+  // past the end of the Y into the UV planes.
+  uint32_t coded_height = fbl::round_up(params->hw_height, 8u);
   uint32_t stride = fbl::round_up(params->hw_width, 32u);
 
   DLOG("coded_width: %u coded_height: %u stride: %u", coded_width, coded_height, stride);

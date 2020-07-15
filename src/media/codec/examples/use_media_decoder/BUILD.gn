@@ -161,6 +161,16 @@ test("use_vp9_decoder_test") {
   deps = [ ":use_media_decoder_source_set" ]
 }
 
+test("use_vp9_decoder_1280x546_test") {
+  testonly = true
+
+  output_name = "use_vp9_decoder_1280x546_test"
+
+  sources = [ "test/use_vp9_decoder_1280x546_test.cc" ]
+
+  deps = [ ":use_media_decoder_source_set" ]
+}
+
 test("use_vp9_decoder_stream_switching_test") {
   testonly = true
 
