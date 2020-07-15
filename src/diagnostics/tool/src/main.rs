@@ -2,13 +2,14 @@
 // // Use of this source code is governed by a BSD-style license that can be
 // // found in the LICENSE file.
 use {
-    anyhow::{format_err, Error},
+    anyhow::Error,
+    diagnostics_schema::InspectSchema,
     difference::{
         self,
         Difference::{Add, Rem, Same},
     },
     fidl_fuchsia_diagnostics::Selector,
-    fuchsia_inspect_node_hierarchy::{self, InspectHierarchyMatcher, NodeHierarchy},
+    fuchsia_inspect_node_hierarchy::{self, InspectHierarchyMatcher, NodeHierarchy, Property},
     selectors,
     std::cmp::{max, min},
     std::collections::HashSet,
@@ -25,12 +26,6 @@ use {
         raw::IntoRawMode,
     },
 };
-
-static VERSION_KEY: &str = "version";
-static PATH_KEY: &str = "path";
-static CONTENTS_KEY: &str = "contents";
-static MONIKER_KEY: &str = "moniker";
-static PAYLOAD_KEY: &str = "payload";
 
 #[derive(Debug, StructOpt)]
 struct Options {
@@ -185,79 +180,74 @@ impl Output {
 }
 
 fn filter_json_schema_by_selectors(
-    mut value: serde_json::Value,
+    mut schema: InspectSchema,
     selector_vec: &Vec<Arc<Selector>>,
-) -> Option<serde_json::Value> {
-    let (moniker_key, payload_key) = get_keys_from_schema(&value);
-    let moniker_string_opt = value[moniker_key].as_str();
-    let deserialized_hierarchy: Result<NodeHierarchy, _> =
-        serde_json::from_value(value[payload_key].clone());
+) -> Option<InspectSchema> {
+    // A failure here implies a malformed bugreport. We want to panic.
+    let moniker = selectors::parse_path_to_moniker(&schema.moniker)
+        .expect("Bugreport contained an unparsable path.");
 
-    match (moniker_string_opt, deserialized_hierarchy) {
-        (Some(moniker_path), Ok(hierarchy)) => {
-            // A failure here implies a malformed bugreport. We want to panic.
-            let moniker = selectors::parse_path_to_moniker(moniker_path)
-                .expect("Bugreport contained an unparsable path.");
+    if schema.payload.is_none() {
+        schema.payload = Some(NodeHierarchy::new(
+            "root",
+            vec![Property::String(
+                "filter error".to_string(),
+                format!("Node hierarchy was missing for {}", schema.moniker),
+            )],
+            vec![],
+        ));
+        return Some(schema);
+    }
+    let hierarchy = schema.payload.unwrap();
 
-            match selectors::match_component_moniker_against_selectors(&moniker, &selector_vec) {
-                Ok(matched_selectors) => {
-                    if matched_selectors.is_empty() {
-                        return None;
-                    }
+    match selectors::match_component_moniker_against_selectors(&moniker, &selector_vec) {
+        Ok(matched_selectors) => {
+            if matched_selectors.is_empty() {
+                return None;
+            }
 
-                    let inspect_matcher: InspectHierarchyMatcher =
-                        (&matched_selectors).try_into().unwrap();
+            let inspect_matcher: InspectHierarchyMatcher = (&matched_selectors).try_into().unwrap();
 
-                    match fuchsia_inspect_node_hierarchy::filter_node_hierarchy(
-                        hierarchy,
-                        &inspect_matcher,
-                    ) {
-                        Ok(Some(filtered)) => {
-                            let serialized_hierarchy = serde_json::to_value(filtered).unwrap();
-                            value[payload_key] = serialized_hierarchy;
-                            Some(value)
-                        }
-                        Ok(None) => {
-                            // Ok(None) implies the tree was fully filtered. This means that
-                            // it genuinely should not be included in the output.
-                            None
-                        }
-                        Err(e) => {
-                            value[payload_key] = serde_json::json!(format!(
-                                "Filtering the hierarchy of {}, an error occurred: {:?}",
-                                moniker_path, e
-                            ));
-                            Some(value)
-                        }
-                    }
+            match fuchsia_inspect_node_hierarchy::filter_node_hierarchy(hierarchy, &inspect_matcher)
+            {
+                Ok(Some(filtered)) => {
+                    schema.payload = Some(filtered);
+                    Some(schema)
+                }
+                Ok(None) => {
+                    // Ok(None) implies the tree was fully filtered. This means that
+                    // it genuinely should not be included in the output.
+                    None
                 }
                 Err(e) => {
-                    value[payload_key] = serde_json::json!(format!(
-                        "Evaulating selectors for {} met an unexpected error condition: {:?}",
-                        moniker_path, e
+                    schema.payload = Some(NodeHierarchy::new(
+                        "root",
+                        vec![Property::String(
+                            "filter error".to_string(),
+                            format!(
+                                "Filtering the hierarchy of {}, an error occurred: {:?}",
+                                schema.moniker, e
+                            ),
+                        )],
+                        vec![],
                     ));
-                    Some(value)
+                    Some(schema)
                 }
             }
         }
-        (potential_errorful_moniker, potential_errorful_hierarchy) => {
-            let mut errorful_report = String::new();
-            if potential_errorful_moniker.is_none() {
-                errorful_report.push_str(
-                    "The moniker entry in the provided schema was missing or an incorrect type. \n",
-                );
-            }
-
-            if potential_errorful_hierarchy.is_err() {
-                errorful_report.push_str(&format!(
-                    "The hierarchy entry was missing or failed to deserialize: {:?}",
-                    potential_errorful_hierarchy
-                        .err()
-                        .expect("We've already verified that the deserialization failed.")
-                ))
-            }
-            value[payload_key] = serde_json::json!(errorful_report);
-            Some(value)
+        Err(e) => {
+            schema.payload = Some(NodeHierarchy::new(
+                "root",
+                vec![Property::String(
+                    "filter error".to_string(),
+                    format!(
+                        "Evaulating selectors for {} met an unexpected error condition: {:?}",
+                        schema.moniker, e
+                    ),
+                )],
+                vec![],
+            ));
+            Some(schema)
         }
     }
 }
@@ -269,7 +259,7 @@ fn filter_json_schema_by_selectors(
 /// or an Error.
 fn filter_data_to_lines(
     selector_file: &str,
-    data: &serde_json::Value,
+    data: &[InspectSchema],
     requested_name_opt: &Option<String>,
 ) -> Result<Vec<Line>, Error> {
     let selector_vec: Vec<Arc<Selector>> =
@@ -278,48 +268,32 @@ fn filter_data_to_lines(
             .map(Arc::new)
             .collect();
 
-    let arr: Vec<serde_json::Value> = match data {
-        serde_json::Value::Array(arr) => arr.to_vec(),
-        _ => return Err(format_err!("Input Inspect JSON must be an array.")),
-    };
-
     // Filter the source data that we diff against to only contain the component
     // of interest.
-    let diffable_source = match requested_name_opt {
-        Some(requested_name) => arr
+    let diffable_source: Vec<InspectSchema> = match requested_name_opt {
+        Some(requested_name) => data
             .into_iter()
-            .filter(|value| {
-                let (moniker_key, _) = get_keys_from_schema(value);
-                match value[moniker_key].as_str() {
-                    Some(moniker_str) => {
-                        let moniker = selectors::parse_path_to_moniker(moniker_str)
-                            .expect("Bugreport contained an unparsable path.");
-                        let component_name = moniker.last().expect(
-                            "Monikers in provided data dumps are required to be non-empty.",
-                        );
-
-                        requested_name == component_name
-                    }
-                    None => false,
-                }
+            .cloned()
+            .filter(|schema| {
+                let moniker = selectors::parse_path_to_moniker(&schema.moniker)
+                    .expect("Bugreport contained an unparsable path.");
+                let component_name = moniker
+                    .last()
+                    .expect("Monikers in provided data dumps are required to be non-empty.");
+                requested_name == component_name
             })
             .collect(),
-        None => arr,
+        None => data.to_vec(),
     };
 
-    let filtered_node_hierarchies: Vec<serde_json::Value> = diffable_source
+    let filtered_node_hierarchies: Vec<InspectSchema> = diffable_source
         .clone()
         .into_iter()
-        .filter_map(|value| filter_json_schema_by_selectors(value, &selector_vec))
+        .filter_map(|schema| filter_json_schema_by_selectors(schema, &selector_vec))
         .collect();
 
-    let unfiltered_collection_array = serde_json::Value::Array(diffable_source);
-
-    // TODO(43937): Move inspect formatting utilities to the hierarchy library.
-    let filtered_collection_array = serde_json::Value::Array(filtered_node_hierarchies);
-
-    let orig_str = serde_json::to_string_pretty(&unfiltered_collection_array).unwrap();
-    let new_str = serde_json::to_string_pretty(&filtered_collection_array).unwrap();
+    let orig_str = serde_json::to_string_pretty(&diffable_source).unwrap();
+    let new_str = serde_json::to_string_pretty(&filtered_node_hierarchies).unwrap();
     let cs = difference::Changeset::new(&orig_str, &new_str, "\n");
 
     // "Added" lines only appear when a property that was once in the middle of a
@@ -356,37 +330,20 @@ fn filter_data_to_lines(
         .collect())
 }
 
-/// Determines the correct keys for extracting component moniker and payload from schema, based
-/// on version.
-fn get_keys_from_schema(value: &serde_json::Value) -> (&'static str, &'static str) {
-    match value.get(VERSION_KEY) {
-        Some(serde_json::Value::Number(_)) => (MONIKER_KEY, PAYLOAD_KEY),
-        _ => (PATH_KEY, CONTENTS_KEY),
-    }
-}
-
 fn generate_selectors<'a>(
-    data: &'a serde_json::Value,
+    data: Vec<InspectSchema>,
     component_name: Option<String>,
 ) -> Result<String, Error> {
-    let arr = match data {
-        serde_json::Value::Array(arr) => arr,
-        _ => return Err(format_err!("Input Inspect JSON must be an array.")),
-    };
-
     struct MatchedHierarchy {
         moniker: Vec<String>,
         hierarchy: NodeHierarchy,
     }
 
-    let matching_hierarchies: Vec<MatchedHierarchy> = arr
-        .iter()
-        .filter_map(|value| {
-            let (moniker_key, payload_key) = get_keys_from_schema(value);
-            let moniker = selectors::parse_path_to_moniker(value[moniker_key].as_str().expect(
-                &format!("Bugreport had an entry missing the moniker key: {}", moniker_key),
-            ))
-            .expect("Bugreport contained an unparsable path.");
+    let matching_hierarchies: Vec<MatchedHierarchy> = data
+        .into_iter()
+        .filter_map(|schema| {
+            let moniker = selectors::parse_path_to_moniker(&schema.moniker)
+                .expect("Bugreport contained an unparsable moniker.");
 
             let component_name_matches = component_name.is_none()
                 || component_name.as_ref().unwrap()
@@ -394,13 +351,13 @@ fn generate_selectors<'a>(
                         .last()
                         .expect("Monikers in provided data dumps are required to be non-empty.");
 
-            if component_name_matches {
-                let hierarchy: NodeHierarchy = serde_json::from_value(value[payload_key].clone())
-                    .expect("Couldn't deserialize node hierarchy");
-                Some(MatchedHierarchy { moniker, hierarchy: hierarchy })
-            } else {
-                None
-            }
+            schema.payload.and_then(|hierarchy| {
+                if component_name_matches {
+                    Some(MatchedHierarchy { moniker, hierarchy })
+                } else {
+                    None
+                }
+            })
         })
         .collect();
 
@@ -446,7 +403,7 @@ fn generate_selectors<'a>(
 }
 
 fn interactive_apply(
-    data: &serde_json::Value,
+    data: Vec<InspectSchema>,
     selector_file: &str,
     component_name: Option<String>,
 ) -> Result<(), Error> {
@@ -512,7 +469,7 @@ fn main() -> Result<(), Error> {
 
     let filename = &opts.bugreport;
 
-    let data: serde_json::Value = serde_json::from_str(
+    let data: Vec<InspectSchema> = serde_json::from_str(
         &read_to_string(filename).expect(&format!("Failed to read {} ", filename)),
     )
     .expect(&format!("Failed to parse {} as JSON", filename));
@@ -521,12 +478,12 @@ fn main() -> Result<(), Error> {
         Command::Generate { selector_file, component_name } => {
             std::fs::write(
                 &selector_file,
-                generate_selectors(&data, component_name)
+                generate_selectors(data, component_name)
                     .expect(&format!("failed to generate selectors")),
             )?;
         }
         Command::Apply { selector_file, component_name } => {
-            interactive_apply(&data, &selector_file, component_name)?;
+            interactive_apply(data, &selector_file, component_name)?;
         }
     }
 
@@ -540,30 +497,31 @@ mod tests {
 
     #[test]
     fn generate_selectors_test() {
-        let json_dump = get_legacy_json_dump();
+        let schemas: Vec<InspectSchema> =
+            serde_json::from_value(get_v1_json_dump()).expect("schemas");
 
-        eprintln!("json dump: {}", json_dump);
         let named_selector_string =
-            generate_selectors(&json_dump, Some("account_manager.cmx".to_string()))
+            generate_selectors(schemas.clone(), Some("account_manager.cmx".to_string()))
                 .expect("Generating selectors with matching name should succeed.");
 
-        let expected_named_selector_string = "account_manager.cmx:root/accounts:active
-account_manager.cmx:root/accounts:total
-account_manager.cmx:root/auth_providers:types
-account_manager.cmx:root/listeners:active
-account_manager.cmx:root/listeners:events
-account_manager.cmx:root/listeners:total_opened";
+        let expected_named_selector_string = "\
+            realm1/realm2/session5/account_manager.cmx:root/accounts:active\n\
+            realm1/realm2/session5/account_manager.cmx:root/accounts:total\n\
+            realm1/realm2/session5/account_manager.cmx:root/auth_providers:types\n\
+            realm1/realm2/session5/account_manager.cmx:root/listeners:active\n\
+            realm1/realm2/session5/account_manager.cmx:root/listeners:events\n\
+            realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
 
         assert_eq!(named_selector_string, expected_named_selector_string);
 
         assert_eq!(
-            generate_selectors(&json_dump, Some("bloop.cmx".to_string()))
+            generate_selectors(schemas.clone(), Some("bloop.cmx".to_string()))
                 .expect("Generating selectors with unmatching name should succeed"),
             ""
         );
 
         assert_eq!(
-            generate_selectors(&json_dump, None)
+            generate_selectors(schemas, None)
                 .expect("Generating selectors with no name should succeed"),
             expected_named_selector_string
         );
@@ -582,9 +540,11 @@ account_manager.cmx:root/listeners:total_opened";
             .write_all(selector_string.as_bytes())
             .expect("writing selectors to file should be fine...");
 
+        let schemas: Vec<InspectSchema> =
+            serde_json::from_value(source_hierarchy).expect("load schemas");
         let filtered_data_string = filter_data_to_lines(
             &selector_path.path().to_string_lossy(),
-            &source_hierarchy,
+            &schemas,
             &requested_component,
         )
         .expect("filtering hierarchy should have succeeded.")
@@ -604,58 +564,19 @@ account_manager.cmx:root/listeners:total_opened";
     }
 
     #[test]
-    fn legacy_filter_data_to_lines_test() {
-        let full_tree_selector = "account_manager.cmx:root/accounts:active
-account_*:root/accounts:total
-account_manager.cmx:root/auth_providers:types
-account_manager.cmx:root/listeners:active
-account_manager.cmx:root/listeners:events
-account_manager.cmx:root/listeners:total_opened";
-
-        setup_and_run_selector_filtering(
-            full_tree_selector,
-            get_legacy_json_dump(),
-            get_legacy_json_dump(),
-            None,
-        );
-
-        setup_and_run_selector_filtering(
-            full_tree_selector,
-            get_legacy_json_dump(),
-            get_legacy_json_dump(),
-            Some("account_manager.cmx".to_string()),
-        );
-
-        let single_value_selector = "account_manager.cmx:root/accounts:active";
-
-        setup_and_run_selector_filtering(
-            single_value_selector,
-            get_legacy_json_dump(),
-            get_legacy_single_value_json(),
-            None,
-        );
-
-        setup_and_run_selector_filtering(
-            single_value_selector,
-            get_legacy_json_dump(),
-            get_legacy_single_value_json(),
-            Some("account_manager.cmx".to_string()),
-        );
-
-        setup_and_run_selector_filtering(
-            single_value_selector,
-            get_legacy_json_dump(),
-            get_empty_value_json(),
-            Some("bloop.cmx".to_string()),
-        );
-    }
-
-    #[test]
     fn trailing_comma_diff_test() {
         let trailing_comma_hierarchy = serde_json::json!(
             [
                 {
-                    "contents": {
+                    "data_source": "Inspect",
+                    "metadata": {
+                        "errors": null,
+                        "filename": "fuchsia.inspect.Tree",
+                        "component_url": "fuchsia-pkg://fuchsia.com/blooper#meta/blooper.cmx",
+                        "timestamp": 0
+                    },
+                    "moniker": "blooper.cmx",
+                    "payload": {
                         "root": {
                             "a": {
                                 "b": 0,
@@ -663,7 +584,7 @@ account_manager.cmx:root/listeners:total_opened";
                             }
                         }
                     },
-                    "path": "blooper.cmx"
+                    "version": 1
                 }
             ]
         );
@@ -675,9 +596,16 @@ account_manager.cmx:root/listeners:total_opened";
         selector_path
             .write_all(selector.as_bytes())
             .expect("writing selectors to file should be fine...");
+        let mut schemas: Vec<InspectSchema> =
+            serde_json::from_value(trailing_comma_hierarchy).expect("ok");
+        for schema in schemas.iter_mut() {
+            if let Some(hierarchy) = &mut schema.payload {
+                hierarchy.sort();
+            }
+        }
         let filtered_data_string = filter_data_to_lines(
             &selector_path.path().to_string_lossy(),
-            &trailing_comma_hierarchy,
+            &schemas,
             &Some("blooper.cmx".to_string()),
         )
         .expect("filtering hierarchy should succeed.");
@@ -692,54 +620,6 @@ account_manager.cmx:root/listeners:total_opened";
 
         assert!(removed_lines.len() == 1);
         assert!(removed_lines.contains(&r#"          "c": 1"#.to_string()));
-    }
-
-    #[test]
-    fn filter_data_to_lines_test() {
-        let full_tree_selector = "*/realm2/session5/account_manager.cmx:root/accounts:active
-realm1/realm*/sessio*/account_manager.cmx:root/accounts:total
-realm1/realm2/session5/account_manager.cmx:root/auth_providers:types
-realm1/realm2/session5/account_manager.cmx:root/listeners:active
-realm1/realm2/session5/account_*:root/listeners:events
-realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
-
-        setup_and_run_selector_filtering(
-            full_tree_selector,
-            get_json_dump(),
-            get_json_dump(),
-            None,
-        );
-
-        setup_and_run_selector_filtering(
-            full_tree_selector,
-            get_json_dump(),
-            get_json_dump(),
-            Some("account_manager.cmx".to_string()),
-        );
-
-        let single_value_selector =
-            "realm1/realm2/session5/account_manager.cmx:root/accounts:active";
-
-        setup_and_run_selector_filtering(
-            single_value_selector,
-            get_json_dump(),
-            get_single_value_json(),
-            None,
-        );
-
-        setup_and_run_selector_filtering(
-            single_value_selector,
-            get_json_dump(),
-            get_single_value_json(),
-            Some("account_manager.cmx".to_string()),
-        );
-
-        setup_and_run_selector_filtering(
-            single_value_selector,
-            get_json_dump(),
-            get_empty_value_json(),
-            Some("bloop.cmx".to_string()),
-        );
     }
 
     #[test]
@@ -790,92 +670,6 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
         );
     }
 
-    fn get_legacy_json_dump() -> serde_json::Value {
-        serde_json::json!(
-            [
-                {
-                    "contents": {
-                        "root": {
-                            "accounts": {
-                                "active": 0,
-                                "total": 0
-                            },
-                            "auth_providers": {
-                                "types": "google"
-                            },
-                            "listeners": {
-                                "active": 1,
-                                "events": 0,
-                                "total_opened": 1
-                            }
-                        }
-                    },
-                    "path": "/hub/c/account_manager.cmx/25181/out/diagnostics/root.inspect"
-                }
-            ]
-        )
-    }
-
-    fn get_legacy_single_value_json() -> serde_json::Value {
-        serde_json::json!(
-            [
-                {
-                    "contents": {
-                        "root": {
-                            "accounts": {
-                                "active": 0
-                            }
-                        }
-                    },
-                    "path": "/hub/c/account_manager.cmx/25181/out/diagnostics/root.inspect"
-                }
-            ]
-        )
-    }
-
-    fn get_json_dump() -> serde_json::Value {
-        serde_json::json!(
-            [
-                {
-                    "contents": {
-                        "root": {
-                            "accounts": {
-                                "active": 0,
-                                "total": 0
-                            },
-                            "auth_providers": {
-                                "types": "google"
-                            },
-                            "listeners": {
-                                "active": 1,
-                                "events": 0,
-                                "total_opened": 1
-                            }
-                        }
-                    },
-                    "path": "realm1/realm2/session5/account_manager.cmx"
-                }
-            ]
-        )
-    }
-
-    fn get_single_value_json() -> serde_json::Value {
-        serde_json::json!(
-            [
-                {
-                    "contents": {
-                        "root": {
-                            "accounts": {
-                                "active": 0
-                            }
-                        }
-                    },
-                    "path": "realm1/realm2/session5/account_manager.cmx"
-                }
-            ]
-        )
-    }
-
     fn get_v1_json_dump() -> serde_json::Value {
         serde_json::json!(
             [
@@ -884,6 +678,7 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
                     "metadata":{
                         "errors":null,
                         "filename":"fuchsia.inspect.Tree",
+                        "component_url": "fuchsia-pkg://fuchsia.com/account#meta/account_manager.cmx",
                         "timestamp":0
                     },
                     "moniker":"realm1/realm2/session5/account_manager.cmx",
@@ -917,6 +712,7 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
                     "metadata":{
                         "errors":null,
                         "filename":"fuchsia.inspect.Tree",
+                        "component_url": "fuchsia-pkg://fuchsia.com/account#meta/account_manager.cmx",
                         "timestamp":0
                     },
                     "moniker":"realm1/realm2/session5/account_manager.cmx",

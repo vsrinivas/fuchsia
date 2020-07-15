@@ -377,7 +377,7 @@ impl ReaderServer {
                 let inspect_schema = Schema::for_inspect(
                     batch_item.moniker,
                     batch_item.hierarchy_data.hierarchy,
-                    batch_item.hierarchy_data.timestamp,
+                    batch_item.hierarchy_data.timestamp.into_nanos(),
                     batch_item.component_url,
                     batch_item.hierarchy_data.filename,
                     batch_item.hierarchy_data.errors,

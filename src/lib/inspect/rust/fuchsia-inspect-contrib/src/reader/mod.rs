@@ -406,7 +406,7 @@ mod tests {
                                                 vec![Property::Uint("x".to_string(), 1)],
                                                 vec![],
                                             )),
-                                            zx::Time::get(zx::ClockId::UTC),
+                                            0u64,
                                             "component-url",
                                             "filename",
                                             vec![],

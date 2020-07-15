@@ -86,7 +86,7 @@ impl LifecycleServer {
                     lifecycle_container.lifecycle_type,
                     lifecycle_container.payload,
                     lifecycle_container.component_url,
-                    lifecycle_container.event_timestamp,
+                    lifecycle_container.event_timestamp.into_nanos(),
                     Vec::new(),
                 );
                 formatter::write_schema_to_formatted_content(lifecycle_schema, format)

@@ -4,8 +4,6 @@
 
 use {
     fuchsia_inspect_node_hierarchy::NodeHierarchy,
-    fuchsia_zircon as zx,
-    fuchsia_zircon::Time,
     lazy_static::lazy_static,
     serde::{self, de::Deserializer, Deserialize, Serialize, Serializer},
     std::{
@@ -19,18 +17,18 @@ lazy_static! {
     static ref SCHEMA_VERSION: u64 = 1;
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum DataSource {
     Inspect,
     LifecycleEvent,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Clone, Eq)]
 pub struct Error {
     pub message: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum LifecycleType {
     Started,
     Stopped,
@@ -38,7 +36,7 @@ pub enum LifecycleType {
     DiagnosticsReady,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(untagged)]
 pub enum Metadata {
     Inspect(InspectMetadata),
@@ -46,23 +44,23 @@ pub enum Metadata {
 }
 
 /// Wraps a time for serialization and deserialization purposes.
-#[derive(Debug)]
-pub struct Timestamp(zx::Time);
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Timestamp(u64);
 
-impl From<zx::Time> for Timestamp {
-    fn from(time: zx::Time) -> Self {
-        Timestamp(time)
+impl From<u64> for Timestamp {
+    fn from(nanos: u64) -> Timestamp {
+        Timestamp(nanos)
     }
 }
 
-impl Into<zx::Time> for Timestamp {
-    fn into(self) -> zx::Time {
-        self.0
+impl From<i64> for Timestamp {
+    fn from(nanos: i64) -> Timestamp {
+        Timestamp(nanos as u64)
     }
 }
 
 impl Deref for Timestamp {
-    type Target = zx::Time;
+    type Target = u64;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -75,7 +73,7 @@ impl DerefMut for Timestamp {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct LifecycleEventMetadata {
     /// Optional vector of errors encountered by platform.
     pub errors: Option<Vec<Error>>,
@@ -90,7 +88,7 @@ pub struct LifecycleEventMetadata {
     pub timestamp: Timestamp,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct InspectMetadata {
     /// Optional vector of errors encountered by platform.
     pub errors: Option<Vec<Error>>,
@@ -102,7 +100,7 @@ pub struct InspectMetadata {
     pub timestamp: Timestamp,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Schema<Key: AsRef<str> + Hash + Eq + FromStr + Clone> {
     /// Enum specifying that this schema is encoding data.
     pub data_source: DataSource,
@@ -129,7 +127,7 @@ impl Schema<String> {
         lifecycle_event_type: LifecycleType,
         payload: Option<NodeHierarchy>,
         component_url: impl Into<String>,
-        timestamp: Time,
+        timestamp: impl Into<Timestamp>,
         errors: Vec<Error>,
     ) -> Schema<String> {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
@@ -154,7 +152,7 @@ impl Schema<String> {
     pub fn for_inspect(
         moniker: impl Into<String>,
         inspect_hierarchy: Option<NodeHierarchy>,
-        timestamp: Time,
+        timestamp_nanos: impl Into<Timestamp>,
         component_url: impl Into<String>,
         filename: impl Into<String>,
         errors: Vec<Error>,
@@ -162,7 +160,7 @@ impl Schema<String> {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
         let inspect_metadata = InspectMetadata {
-            timestamp: timestamp.into(),
+            timestamp: timestamp_nanos.into(),
             component_url: component_url.into(),
             filename: filename.into(),
             errors: errors_opt,
@@ -191,22 +189,6 @@ impl<'de> Deserialize<'de> for Error {
     {
         let message = String::deserialize(de)?;
         Ok(Error { message })
-    }
-}
-
-impl Serialize for Timestamp {
-    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
-        ser.serialize_i64(self.into_nanos())
-    }
-}
-
-impl<'de> Deserialize<'de> for Timestamp {
-    fn deserialize<D>(de: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let nanos = i64::deserialize(de)?;
-        Ok(Timestamp(zx::Time::from_nanos(nanos)))
     }
 }
 
@@ -247,7 +229,7 @@ mod tests {
         let json_schema = Schema::for_inspect(
             "a/b/c/d",
             Some(hierarchy),
-            Time::from_nanos(123456),
+            123456u64,
             TEST_URL,
             "test_file_plz_ignore.inspect",
             Vec::new(),
@@ -281,7 +263,7 @@ mod tests {
         let json_schema = Schema::for_inspect(
             "a/b/c/d",
             None,
-            Time::from_nanos(123456),
+            123456u64,
             TEST_URL,
             "test_file_plz_ignore.inspect",
             vec![Error { message: "too much fun being had.".to_string() }],
@@ -313,7 +295,7 @@ mod tests {
             LifecycleType::DiagnosticsReady,
             None,
             TEST_URL,
-            Time::from_nanos(123456),
+            123456u64,
             Vec::new(),
         );
 
@@ -343,7 +325,7 @@ mod tests {
             LifecycleType::DiagnosticsReady,
             None,
             TEST_URL,
-            Time::from_nanos(123456),
+            123456u64,
             vec![Error { message: "too much fun being had.".to_string() }],
         );
 
