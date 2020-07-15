@@ -90,7 +90,7 @@ static void ecm_update_online_status(ecm_ctx_t* ctx, bool is_online) {
     if (ctx->ethernet_ifc.ops) {
       ethernet_ifc_status(&ctx->ethernet_ifc, ETHERNET_STATUS_ONLINE);
     } else {
-      zxlogf(ERROR, "%s: not connected to ethermac interface", module_name);
+      zxlogf(WARNING, "%s: not connected to ethermac interface", module_name);
     }
   } else {
     zxlogf(INFO, "%s: no connection to network", module_name);
@@ -111,8 +111,8 @@ static zx_status_t ecm_ethernet_impl_query(void* ctx, uint32_t options, ethernet
 
   // No options are supported
   if (options) {
-    zxlogf(ERROR, "%s: unexpected options (0x%" PRIx32 ") to ecm_ethernet_impl_query",
-           module_name, options);
+    zxlogf(ERROR, "%s: unexpected options (0x%" PRIx32 ") to ecm_ethernet_impl_query", module_name,
+           options);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -456,12 +456,12 @@ static void ecm_handle_interrupt(ecm_ctx_t* ctx, usb_request_t* request) {
     usb_request_copy_from(request, &new_us_bps, 4, sizeof(usb_cdc_notification_t));
     usb_request_copy_from(request, &new_ds_bps, 4, sizeof(usb_cdc_notification_t) + 4);
     if (new_us_bps != ctx->us_bps) {
-      zxlogf(ERROR, "%s: connection speed change... upstream bits/s: %" PRIu32 "", module_name,
+      zxlogf(INFO, "%s: connection speed change... upstream bits/s: %" PRIu32 "", module_name,
              new_us_bps);
       ctx->us_bps = new_us_bps;
     }
     if (new_ds_bps != ctx->ds_bps) {
-      zxlogf(ERROR, "%s: connection speed change... downstream bits/s: %" PRIu32 "", module_name,
+      zxlogf(INFO, "%s: connection speed change... downstream bits/s: %" PRIu32 "", module_name,
              new_ds_bps);
       ctx->ds_bps = new_ds_bps;
     }
@@ -654,8 +654,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   int thread_result = thrd_create_with_name(&ecm_ctx->int_thread, ecm_int_handler_thread, ecm_ctx,
                                             "ecm_int_handler_thread");
   if (thread_result != thrd_success) {
-    zxlogf(ERROR, "%s: failed to create interrupt handler thread (%d)", module_name,
-           thread_result);
+    zxlogf(ERROR, "%s: failed to create interrupt handler thread (%d)", module_name, thread_result);
     goto fail;
   }
 

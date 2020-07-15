@@ -60,7 +60,7 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
     }
   }
 
-  zxlogf(ERROR, "%s: MAC address is %02X:%02X:%02X:%02X:%02X:%02X", module_name, ctx->mac_addr[0],
+  zxlogf(INFO, "%s: MAC address is %02X:%02X:%02X:%02X:%02X:%02X", module_name, ctx->mac_addr[0],
          ctx->mac_addr[1], ctx->mac_addr[2], ctx->mac_addr[3], ctx->mac_addr[4], ctx->mac_addr[5]);
   return true;
 }
@@ -158,7 +158,9 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
   }
   if (cdc_header_desc == NULL || cdc_eth_desc == NULL) {
     zxlogf(ERROR, "%s: CDC %s descriptor(s) not found", module_name,
-           cdc_header_desc ? "ethernet" : cdc_eth_desc ? "header" : "ethernet and header");
+           cdc_header_desc ? "ethernet"
+           : cdc_eth_desc  ? "header"
+                           : "ethernet and header");
     goto fail;
   }
   if (*int_ep == NULL || *tx_ep == NULL || *rx_ep == NULL) {

@@ -8,6 +8,7 @@ group("tests") {
   deps = [
     "ethernet:tests",
     "ethertap:tests",
+    "usb-cdc-ecm:tests",
     "virtio:virtio-ethernet-test-package",
   ]
 }

@@ -5,6 +5,8 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//src/sys/build/components.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 driver_module("usb-cdc-ecm") {
   defines = [ "_ALL_SOURCE" ]
@@ -34,11 +36,6 @@ source_set("usb-cdc-ecm-lib") {
 }
 
 test("usb-cdc-ecm-unittest") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  output_name = "usb-cdc-ecm-unittest"
   sources = [ "usb-cdc-ecm-unittest.cc" ]
   deps = [
     ":usb-cdc-ecm-lib",
@@ -48,6 +45,12 @@ test("usb-cdc-ecm-unittest") {
   ]
 }
 
+fuchsia_unittest_package("usb-cdc-ecm-unittest-package") {
+  package_name = "usb-cdc-ecm-unittest"
+  executable_path = "test/usb-cdc-ecm-unittest"
+  deps = [ ":usb-cdc-ecm-unittest" ]
+}
+
 fuzzer("usb-cdc-ecm-descriptor-fuzzer") {
   sources = [ "usb-cdc-ecm-descriptor-fuzzer.cc" ]
   deps = [
@@ -55,5 +58,54 @@ fuzzer("usb-cdc-ecm-descriptor-fuzzer") {
     "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuzzers_package("usb-cdc-ecm-fuzzers") {
+  fuzzers = [ ":usb-cdc-ecm-descriptor-fuzzer" ]
+}
+
+test("usb-cdc-ecm-integration") {
+  output_name = "usb-cdc-ecm-integration-test"
+  sources = [ "usb-cdc-ecm-test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/usb-virtual-bus-launcher",
+  ]
+}
+
+isolated_devmgr_unittest_package("usb-cdc-ecm-integration-test") {
+  executable_path = "test/usb-cdc-ecm-integration-test"
+  deps = [
+    ":usb-cdc-ecm",
+    ":usb-cdc-ecm-integration",
+    "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/ethernet/drivers/usb-cdc-function",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/usb/drivers/usb-bus",
+    "//src/devices/usb/drivers/usb-composite",
+    "//src/devices/usb/drivers/usb-peripheral",
+    "//src/devices/usb/drivers/usb-virtual-bus",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":usb-cdc-ecm-fuzzers",
+    ":usb-cdc-ecm-integration-test",
+    ":usb-cdc-ecm-unittest-package",
   ]
 }

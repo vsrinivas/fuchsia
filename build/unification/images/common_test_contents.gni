@@ -8,7 +8,6 @@
 # //build/unification/images:migrated-aux.
 common_test_contents = [
   "//src/connectivity/ethernet/drivers/asix-88179:usb-virtual-bus-asix-88179",
-  "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-unittest",
   "//src/devices/block/bin/biotime:biotime-test",
   "//src/devices/block/drivers/ahci:ahci-unittest",
   "//src/devices/block/drivers/core:core-unittest",

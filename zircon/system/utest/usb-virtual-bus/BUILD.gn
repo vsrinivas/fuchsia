@@ -17,7 +17,6 @@ import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":usb-virtual-bus-cdc-ecm" ]
 }
 
 test("usb-virtual-bus-test") {
@@ -37,38 +36,6 @@ test("usb-virtual-bus-test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
-  ]
-}
-
-test("usb-virtual-bus-cdc-ecm") {
-  output_name = "usb-virtual-bus-cdc-ecm-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "usb-cdc-ecm-test.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
-    "//sdk/lib/fdio",
-    "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/usb-virtual-bus-launcher",
-  ]
-}
-
-unittest_package("usb-virtual-bus-cdc-ecm-package") {
-  package_name = "usb-virtual-bus-cdc-ecm"
-  deps = [ ":usb-virtual-bus-cdc-ecm" ]
-
-  tests = [
-    {
-      name = "usb-virtual-bus-cdc-ecm-test"
-    },
   ]
 }
 
