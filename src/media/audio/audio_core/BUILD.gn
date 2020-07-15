@@ -17,8 +17,6 @@ config("audio_core_config") {
   if (!audio_core_trace_enabled) {
     defines = [ "NTRACE" ]
   }
-
-  cflags_cc = [ "-Wsuggest-override" ]
 }
 
 action_foreach("json_schema_headers") {

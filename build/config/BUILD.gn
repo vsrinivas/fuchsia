@@ -430,6 +430,11 @@ config("default_warnings") {
     # TODO(45689): Temporarily disable this warning until we roll toolchain,
     # then come back and fix the instances this appears after rolling.
     "-Wno-non-c-typedef-for-linkage",
+
+    # TODO(56202): Temporarily disable this warning until we roll toolchain,
+    # then come back and fix the instances this appears after rolling.
+    "-Wno-unknown-warning-option",
+    "-Wno-suggest-override",
   ]
 }
 
