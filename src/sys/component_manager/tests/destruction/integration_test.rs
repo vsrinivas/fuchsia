@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
     fuchsia_async as fasync,
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     std::cmp::min,
@@ -20,28 +19,30 @@ fn expect_next(events: &mut Vec<EventMatcher>, expected: Vec<EventMatcher>) {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn destruction() -> Result<(), Error> {
+async fn destruction() {
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/collection_realm.cm",
     )
-    .await?;
+    .await
+    .unwrap();
 
-    let event_source = test.connect_to_event_source().await?;
+    let event_source = test.connect_to_event_source().await.unwrap();
 
-    let event_log = event_source.record_events(vec![Stopped::NAME, Destroyed::NAME]).await?;
-    let mut event_stream = event_source.subscribe(vec![Destroyed::NAME]).await?;
-    event_source.start_component_tree().await?;
+    let event_log = event_source.record_events(vec![Stopped::NAME, Destroyed::NAME]).await.unwrap();
+    let mut event_stream = event_source.subscribe(vec![Destroyed::NAME]).await.unwrap();
+    event_source.start_component_tree().await.unwrap();
 
-    // Wait for `coll:root` to be destroyed.
+    // Wait for `coll:parent` to be destroyed.
     let event = event_stream
-        .wait_until_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:root:1"))
-        .await?;
+        .wait_until_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:parent:1"))
+        .await
+        .unwrap();
 
-    // Assert that root component has no children.
+    // Assert that parent component has no children.
     let child_dir_path = test.get_hub_v2_path().join("children");
     let child_dir_path = child_dir_path.to_str().expect("invalid chars");
-    let child_dir = open_directory_in_namespace(child_dir_path, OPEN_RIGHT_READABLE)?;
-    let child_dir_contents = list_directory(&child_dir).await?;
+    let child_dir = open_directory_in_namespace(child_dir_path, OPEN_RIGHT_READABLE).unwrap();
+    let child_dir_contents = list_directory(&child_dir).await.unwrap();
     assert!(child_dir_contents.is_empty());
 
     // Assert the expected lifecycle events. The leaves can be stopped/destroyed in either order.
@@ -52,16 +53,16 @@ async fn destruction() -> Result<(), Error> {
         vec![
             EventMatcher::new()
                 .expect_type::<Stopped>()
-                .expect_moniker("./coll:root:1/trigger_a:0"),
+                .expect_moniker("./coll:parent:1/trigger_a:0"),
             EventMatcher::new()
                 .expect_type::<Stopped>()
-                .expect_moniker("./coll:root:1/trigger_b:0"),
+                .expect_moniker("./coll:parent:1/trigger_b:0"),
         ],
     );
 
     expect_next(
         &mut events,
-        vec![EventMatcher::new().expect_type::<Stopped>().expect_moniker("./coll:root:1")],
+        vec![EventMatcher::new().expect_type::<Stopped>().expect_moniker("./coll:parent:1")],
     );
 
     expect_next(
@@ -69,20 +70,18 @@ async fn destruction() -> Result<(), Error> {
         vec![
             EventMatcher::new()
                 .expect_type::<Destroyed>()
-                .expect_moniker("./coll:root:1/trigger_a:0"),
+                .expect_moniker("./coll:parent:1/trigger_a:0"),
             EventMatcher::new()
                 .expect_type::<Destroyed>()
-                .expect_moniker("./coll:root:1/trigger_b:0"),
+                .expect_moniker("./coll:parent:1/trigger_b:0"),
         ],
     );
 
     expect_next(
         &mut events,
-        vec![EventMatcher::new().expect_type::<Destroyed>().expect_moniker("./coll:root:1")],
+        vec![EventMatcher::new().expect_type::<Destroyed>().expect_moniker("./coll:parent:1")],
     );
 
     assert!(events.is_empty());
-    event.resume().await?;
-
-    Ok(())
+    event.resume().await.unwrap();
 }

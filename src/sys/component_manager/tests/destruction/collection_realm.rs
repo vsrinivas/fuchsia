@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_syslog as syslog,
+    fuchsia_syslog as syslog, fuchsia_zircon as zx,
     io_util::{self, OPEN_RIGHT_READABLE},
     log::*,
     std::path::PathBuf,
@@ -27,7 +27,7 @@ async fn main() {
     {
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let child_decl = fsys::ChildDecl {
-            name: Some("root".to_string()),
+            name: Some("parent".to_string()),
             url: Some(
                 "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger_realm.cm"
                     .to_string(),
@@ -46,7 +46,7 @@ async fn main() {
     info!("Binding to child");
     {
         let mut child_ref =
-            fsys::ChildRef { name: "root".to_string(), collection: Some("coll".to_string()) };
+            fsys::ChildRef { name: "parent".to_string(), collection: Some("coll".to_string()) };
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         realm
             .bind_child(&mut child_ref, server_end)
@@ -61,7 +61,7 @@ async fn main() {
     info!("Destroying child");
     {
         let mut child_ref =
-            fsys::ChildRef { name: "root".to_string(), collection: Some("coll".to_string()) };
+            fsys::ChildRef { name: "parent".to_string(), collection: Some("coll".to_string()) };
         realm
             .destroy_child(&mut child_ref)
             .await
@@ -70,6 +70,9 @@ async fn main() {
     }
 
     info!("Done");
+    loop {
+        fasync::Timer::new(fasync::Time::after(zx::Duration::from_hours(1))).await;
+    }
 }
 
 fn open_trigger_svc(dir: &DirectoryProxy) -> Result<ftest::TriggerProxy, Error> {

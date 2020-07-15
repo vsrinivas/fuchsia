@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::Error,
     async_trait::async_trait,
     fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
@@ -29,53 +29,57 @@ impl Logger {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn storage() -> Result<(), Error> {
+async fn storage() {
     LOGGER.init();
 
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm.cm",
     )
-    .await?;
+    .await
+    .unwrap();
 
-    let event_source = test.connect_to_event_source().await?;
-    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
+    let event_source = test.connect_to_event_source().await.unwrap();
+    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
-    event_source.start_component_tree().await?;
+    event_source.start_component_tree().await.unwrap();
 
     // Expect the root component to be bound to
-    let event =
-        event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await?;
-    event.resume().await?;
+    let event = event_stream
+        .expect_exact::<Started>(EventMatcher::new().expect_moniker("."))
+        .await
+        .unwrap();
+    event.resume().await.unwrap();
 
     // Expect the 2 children to be bound to
-    let event = event_stream.expect_type::<Started>().await?;
-    event.resume().await?;
+    let event = event_stream.expect_type::<Started>().await.unwrap();
+    event.resume().await.unwrap();
 
-    let event = event_stream.expect_type::<Started>().await?;
-    event.resume().await?;
+    let event = event_stream.expect_type::<Started>().await.unwrap();
+    event.resume().await.unwrap();
 
     let component_manager_path = test.get_component_manager_path();
     let memfs_path =
         component_manager_path.join("out/hub/children/memfs/exec/out/svc/fuchsia.io.Directory");
     let data_path = component_manager_path.join("out/hub/children/storage_user/exec/out/data");
 
-    check_storage(memfs_path, data_path, "storage_user:0").await?;
-    Ok(())
+    check_storage(memfs_path, data_path, "storage_user:0").await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn storage_from_collection() -> Result<(), Error> {
+async fn storage_from_collection() {
     LOGGER.init();
 
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm_coll.cm",
     )
-    .await?;
+    .await
+    .unwrap();
 
-    let event_source = test.connect_to_event_source().await?;
+    let event_source = test.connect_to_event_source().await.unwrap();
     let mut event_stream = event_source
         .subscribe(vec![Started::NAME, Destroyed::NAME, CapabilityRouted::NAME])
-        .await?;
+        .await
+        .unwrap();
 
     // Create a mutex that is used to hold the response from the trigger
     // service until after the tests inspects the storage.
@@ -86,22 +90,24 @@ async fn storage_from_collection() -> Result<(), Error> {
     // rendezvous so the test can inspect storage before the child is
     // destroyed.
     let trigger_capability = TriggerCapability::new(trigger_lock.clone());
-    event_source.install_injector(trigger_capability, None).await?;
+    event_source.install_injector(trigger_capability, None).await.unwrap();
 
-    event_source.start_component_tree().await?;
+    event_source.start_component_tree().await.unwrap();
 
     // Expect the root component to be started
-    let event =
-        event_stream.wait_until_exact::<Started>(EventMatcher::new().expect_moniker(".")).await?;
-    event.resume().await?;
+    let event = event_stream
+        .wait_until_exact::<Started>(EventMatcher::new().expect_moniker("."))
+        .await
+        .unwrap();
+    event.resume().await.unwrap();
 
     // Expect 2 children to be started - one static and one dynamic
     // Order is irrelevant
-    let event = event_stream.wait_until_type::<Started>().await?;
-    event.resume().await?;
+    let event = event_stream.wait_until_type::<Started>().await.unwrap();
+    event.resume().await.unwrap();
 
-    let event = event_stream.wait_until_type::<Started>().await?;
-    event.resume().await?;
+    let event = event_stream.wait_until_type::<Started>().await.unwrap();
+    event.resume().await.unwrap();
 
     // With all children started, do the test
     let component_manager_path = test.get_component_manager_path();
@@ -109,7 +115,7 @@ async fn storage_from_collection() -> Result<(), Error> {
         component_manager_path.join("out/hub/children/memfs/exec/out/svc/fuchsia.io.Directory");
     let data_path = component_manager_path.join("out/hub/children/coll:storage_user/exec/out/data");
 
-    check_storage(memfs_path.clone(), data_path, "coll:storage_user:1").await?;
+    check_storage(memfs_path.clone(), data_path, "coll:storage_user:1").await;
 
     // The storage state is checked, drop the guard and allow the
     // TriggerService to respond to the root component.
@@ -118,19 +124,18 @@ async fn storage_from_collection() -> Result<(), Error> {
     // Expect the dynamic child to be destroyed
     let event = event_stream
         .wait_until_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:storage_user:1"))
-        .await?;
+        .await
+        .unwrap();
 
     println!("checking that storage was destroyed");
     let memfs_proxy = io_util::open_directory_in_namespace(
         memfs_path.to_str().unwrap(),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
-    .context("failed to open storage")?;
-    assert_eq!(list_directory(&memfs_proxy).await?, Vec::<String>::new());
+    .expect("failed to open storage");
+    assert_eq!(list_directory(&memfs_proxy).await.unwrap(), Vec::<String>::new());
 
-    event.resume().await?;
-
-    Ok(())
+    event.resume().await.unwrap();
 }
 
 struct TriggerCapability {
@@ -159,17 +164,13 @@ impl Injector for TriggerCapability {
     }
 }
 
-async fn check_storage(
-    memfs_path: PathBuf,
-    data_path: PathBuf,
-    user_moniker: &str,
-) -> Result<(), Error> {
+async fn check_storage(memfs_path: PathBuf, data_path: PathBuf, user_moniker: &str) {
     let memfs_path = memfs_path.to_str().expect("unexpected chars");
     let data_path = data_path.to_str().expect("unexpected chars");
 
     let child_data_proxy =
         io_util::open_directory_in_namespace(data_path, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
-            .context("failed to open storage")?;
+            .expect("failed to open storage");
 
     println!("successfully opened \"storage_user\" exposed data directory");
 
@@ -181,18 +182,15 @@ async fn check_storage(
         &PathBuf::from(file_name),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
     )
-    .context("failed to open file in storage")?;
-    let (s, _) = file.write(&file_contents.as_bytes()).await.unwrap_or_else(|_| {
-        println!("ERROR! Looping indefinitely");
-        loop {}
-    });
+    .expect("failed to open file in storage");
+    let (s, _) = file.write(&file_contents.as_bytes()).await.unwrap();
     assert_eq!(zx::Status::OK, zx::Status::from_raw(s), "writing to the file failed");
 
     println!("successfully wrote to file \"hippo\" in exposed data directory");
 
     let memfs_proxy =
         io_util::open_directory_in_namespace(memfs_path, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
-            .context("failed to open storage")?;
+            .expect("failed to open storage");
 
     println!("successfully opened \"memfs\" exposed directory");
 
@@ -201,11 +199,10 @@ async fn check_storage(
         &PathBuf::from(&format!("{}/data/hippo", user_moniker)),
         OPEN_RIGHT_READABLE,
     )
-    .context("failed to open file in memfs")?;
+    .expect("failed to open file in memfs");
     let read_contents =
-        io_util::read_file(&file_proxy).await.context("failed to read file in memfs")?;
+        io_util::read_file(&file_proxy).await.expect("failed to read file in memfs");
 
     println!("successfully read back contents of file from memfs directly");
     assert_eq!(read_contents, file_contents, "file contents did not match what was written");
-    Ok(())
 }

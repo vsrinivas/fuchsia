@@ -53,7 +53,7 @@ async fn main() -> Result<(), Error> {
         .context("delete_child failed")?
         .expect("failed to delete child");
 
-    // Wait up to 30 days before returning, the test should finish by then.
-    fasync::Timer::new(fasync::Time::after(zx::Duration::from_hours(24 * 30))).await;
-    Ok(())
+    loop {
+        fasync::Timer::new(fasync::Time::after(zx::Duration::from_hours(1))).await;
+    }
 }
