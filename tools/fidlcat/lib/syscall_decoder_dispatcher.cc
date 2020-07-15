@@ -357,6 +357,15 @@ SyscallDecoderDispatcher::SyscallDecoderDispatcher(const DecodeOptions& decode_o
   }
   if (!decode_options_.save.empty()) {
     needs_to_save_events_ = true;
+  } else {
+    switch (decode_options_.output_mode) {
+      case OutputMode::kNone:
+      case OutputMode::kStandard:
+        break;
+      case OutputMode::kTextProtobuf:
+        needs_to_save_events_ = true;
+        break;
+    }
   }
 }
 
@@ -437,15 +446,45 @@ void SyscallDecoderDispatcher::SaveEvent(std::shared_ptr<Event> event) {
 }
 
 void SyscallDecoderDispatcher::SessionEnded() {
-  if (must_save()) {
-    WriteSession();
+  bool generate_proto_session = false;
+  if (!decode_options_.save.empty()) {
+    generate_proto_session = true;
+  } else {
+    switch (decode_options_.output_mode) {
+      case OutputMode::kNone:
+      case OutputMode::kStandard:
+        break;
+      case OutputMode::kTextProtobuf:
+        generate_proto_session = true;
+        break;
+    }
+  }
+  if (generate_proto_session) {
+    proto::Session session;
+    GenerateProtoSession(&session);
+    if (!decode_options_.save.empty()) {
+      std::fstream output(decode_options_.save, std::ios::out | std::ios::trunc | std::ios::binary);
+      if (output.fail()) {
+        FX_LOGS(ERROR) << "Can't open <" << decode_options_.save << "> for writing.";
+      } else if (!session.SerializeToOstream(&output)) {
+        FX_LOGS(ERROR) << "Failed to write session to protobuf file <" << decode_options_.save
+                       << ">.";
+      }
+    }
+    switch (decode_options_.output_mode) {
+      case OutputMode::kNone:
+      case OutputMode::kStandard:
+        break;
+      case OutputMode::kTextProtobuf:
+        std::cout << session.DebugString();
+        break;
+    }
   }
 }
 
-void SyscallDecoderDispatcher::WriteSession() {
-  proto::Session session;
+void SyscallDecoderDispatcher::GenerateProtoSession(proto::Session* session) {
   for (const auto& process : processes_) {
-    proto::Process* proto_process = session.add_process();
+    proto::Process* proto_process = session->add_process();
     proto_process->set_koid(process.second->koid());
     proto_process->set_name(process.second->name());
     auto process_semantic = inference().GetProcessSemantic(process.second->koid());
@@ -460,7 +499,7 @@ void SyscallDecoderDispatcher::WriteSession() {
     }
   }
   for (const auto& thread : threads_) {
-    proto::Thread* proto_thread = session.add_thread();
+    proto::Thread* proto_thread = session->add_thread();
     proto_thread->set_koid(thread.second->koid());
     proto_thread->set_process_koid(thread.second->process()->koid());
   }
@@ -468,7 +507,7 @@ void SyscallDecoderDispatcher::WriteSession() {
     fidl_codec::semantic::InferredHandleInfo* inferred_handle_info =
         inference().GetInferredHandleInfo(handle_info->thread()->process()->koid(),
                                           handle_info->handle());
-    proto::HandleDescription* proto_handle_description = session.add_handle_description();
+    proto::HandleDescription* proto_handle_description = session->add_handle_description();
     proto_handle_description->set_handle(handle_info->handle());
     proto_handle_description->set_thread_koid(handle_info->thread()->koid());
     proto_handle_description->set_creation_time(handle_info->creation_time());
@@ -482,20 +521,14 @@ void SyscallDecoderDispatcher::WriteSession() {
     proto_handle_description->set_object_type(handle_info->object_type());
   }
   for (const auto& linked_koids : inference().linked_koids()) {
-    proto::LinkedKoids* proto_linked_koids = session.add_linked_koids();
+    proto::LinkedKoids* proto_linked_koids = session->add_linked_koids();
     if (linked_koids.first < linked_koids.second) {
       proto_linked_koids->set_koid_0(linked_koids.first);
       proto_linked_koids->set_koid_1(linked_koids.second);
     }
   }
   for (const auto& event : decoded_events_) {
-    event->Write(session.add_event());
-  }
-  std::fstream output(decode_options_.save, std::ios::out | std::ios::trunc | std::ios::binary);
-  if (output.fail()) {
-    FX_LOGS(ERROR) << "Can't open <" << decode_options_.save << "> for writing.";
-  } else if (!session.SerializeToOstream(&output)) {
-    FX_LOGS(ERROR) << "Failed to write session to protobuf file <" << decode_options_.save << ">.";
+    event->Write(session->add_event());
   }
 }
 
@@ -519,13 +552,16 @@ std::unique_ptr<ExceptionDecoder> SyscallDisplayDispatcher::CreateDecoder(
 
 void SyscallDisplayDispatcher::AddProcessLaunchedEvent(
     std::shared_ptr<ProcessLaunchedEvent> event) {
-  last_displayed_syscall_ = nullptr;
-  if (event->error_message().empty()) {
-    os_ << colors().green << "\nLaunched " << colors().blue << event->command() << colors().reset
-        << '\n';
-  } else {
-    os_ << colors().red << "\nCan't launch " << colors().blue << event->command() << colors().reset
-        << " : " << colors().red << event->error_message() << colors().reset << '\n';
+  if (decode_options().output_mode == OutputMode::kStandard) {
+    last_displayed_syscall_ = nullptr;
+    if (event->error_message().empty()) {
+      os_ << colors().green << "\nLaunched " << colors().blue << event->command() << colors().reset
+          << '\n';
+    } else {
+      os_ << colors().red << "\nCan't launch " << colors().blue << event->command()
+          << colors().reset << " : " << colors().red << event->error_message() << colors().reset
+          << '\n';
+    }
   }
 
   SaveEvent(std::move(event));
@@ -533,38 +569,42 @@ void SyscallDisplayDispatcher::AddProcessLaunchedEvent(
 
 void SyscallDisplayDispatcher::AddProcessMonitoredEvent(
     std::shared_ptr<ProcessMonitoredEvent> event) {
-  last_displayed_syscall_ = nullptr;
-  if (event->error_message().empty()) {
-    os_ << colors().green << "\nMonitoring ";
-  } else {
-    os_ << colors().red << "\nCan't monitor ";
-  }
+  if (decode_options().output_mode == OutputMode::kStandard) {
+    last_displayed_syscall_ = nullptr;
+    if (event->error_message().empty()) {
+      os_ << colors().green << "\nMonitoring ";
+    } else {
+      os_ << colors().red << "\nCan't monitor ";
+    }
 
-  if (event->process()->name().empty()) {
-    os_ << colors().reset << "process with koid ";
-  } else {
-    os_ << colors().blue << event->process()->name() << colors().reset << " koid=";
-  }
+    if (event->process()->name().empty()) {
+      os_ << colors().reset << "process with koid ";
+    } else {
+      os_ << colors().blue << event->process()->name() << colors().reset << " koid=";
+    }
 
-  os_ << colors().red << event->process()->koid() << colors().reset;
-  if (!event->error_message().empty()) {
-    os_ << " : " << colors().red << event->error_message() << colors().reset;
+    os_ << colors().red << event->process()->koid() << colors().reset;
+    if (!event->error_message().empty()) {
+      os_ << " : " << colors().red << event->error_message() << colors().reset;
+    }
+    os_ << '\n';
   }
-  os_ << '\n';
 
   SaveEvent(std::move(event));
 }
 
 void SyscallDisplayDispatcher::AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event) {
-  last_displayed_syscall_ = nullptr;
-  os_ << colors().green;
-  if (event->process()->name().empty()) {
-    os_ << "\nStop monitoring process with koid ";
-  } else {
-    os_ << "\nStop monitoring " << colors().blue << event->process()->name() << colors().reset
-        << " koid=";
+  if (decode_options().output_mode == OutputMode::kStandard) {
+    last_displayed_syscall_ = nullptr;
+    os_ << colors().green;
+    if (event->process()->name().empty()) {
+      os_ << "\nStop monitoring process with koid ";
+    } else {
+      os_ << "\nStop monitoring " << colors().blue << event->process()->name() << colors().reset
+          << " koid=";
+    }
+    os_ << colors().red << event->process()->koid() << colors().reset << '\n';
   }
-  os_ << colors().red << event->process()->koid() << colors().reset << '\n';
 
   SaveEvent(event);
 
@@ -599,6 +639,9 @@ void SyscallDisplayDispatcher::AddInvokedEvent(std::shared_ptr<InvokedEvent> inv
 }
 
 void SyscallDisplayDispatcher::DisplayInvokedEvent(const InvokedEvent* invoked_event) {
+  if (decode_options().output_mode != OutputMode::kStandard) {
+    return;
+  }
   std::string line_header = invoked_event->thread()->process()->name() + ' ' + colors().red +
                             std::to_string(invoked_event->thread()->process()->koid()) +
                             colors().reset + ':' + colors().red +
@@ -643,39 +686,43 @@ void SyscallDisplayDispatcher::AddOutputEvent(std::shared_ptr<OutputEvent> outpu
     // before displaying the outputs.
     DisplayInvokedEvent(output_event->invoked_event());
   }
-  if (output_event->syscall()->return_type() != SyscallReturnType::kNoReturn) {
-    if (last_displayed_event_ != output_event->invoked_event()) {
-      // Add a blank line to tell the user that this display is not linked to the
-      // previous displayed lines.
-      os_ << "\n";
-    }
-    std::string line_header;
-    if (with_process_info() || (last_displayed_event_ != output_event->invoked_event())) {
-      line_header = output_event->thread()->process()->name() + ' ' + colors().red +
-                    std::to_string(output_event->thread()->process()->koid()) + colors().reset +
-                    ':' + colors().red + std::to_string(output_event->thread()->koid()) +
-                    colors().reset + ' ';
-    }
-    FidlcatPrinter printer(this, output_event->thread()->process(), os_, line_header);
-    // We have been able to create values from the syscall => print them.
-    output_event->PrettyPrint(printer);
+  if (decode_options().output_mode == OutputMode::kStandard) {
+    if (output_event->syscall()->return_type() != SyscallReturnType::kNoReturn) {
+      if (last_displayed_event_ != output_event->invoked_event()) {
+        // Add a blank line to tell the user that this display is not linked to the
+        // previous displayed lines.
+        os_ << "\n";
+      }
+      std::string line_header;
+      if (with_process_info() || (last_displayed_event_ != output_event->invoked_event())) {
+        line_header = output_event->thread()->process()->name() + ' ' + colors().red +
+                      std::to_string(output_event->thread()->process()->koid()) + colors().reset +
+                      ':' + colors().red + std::to_string(output_event->thread()->koid()) +
+                      colors().reset + ' ';
+      }
+      FidlcatPrinter printer(this, output_event->thread()->process(), os_, line_header);
+      // We have been able to create values from the syscall => print them.
+      output_event->PrettyPrint(printer);
 
-    last_displayed_syscall_ = nullptr;
-    last_displayed_event_ = output_event.get();
+      last_displayed_syscall_ = nullptr;
+      last_displayed_event_ = output_event.get();
+    }
   }
 
   SaveEvent(std::move(output_event));
 }
 
 void SyscallDisplayDispatcher::AddExceptionEvent(std::shared_ptr<ExceptionEvent> exception_event) {
-  os_ << '\n';
+  if (decode_options().output_mode == OutputMode::kStandard) {
+    os_ << '\n';
 
-  std::string line_header =
-      exception_event->thread()->process()->name() + ' ' + colors().red +
-      std::to_string(exception_event->thread()->process()->koid()) + colors().reset + ':' +
-      colors().red + std::to_string(exception_event->thread()->koid()) + colors().reset + ' ';
-  FidlcatPrinter printer(this, exception_event->thread()->process(), os_, line_header);
-  exception_event->PrettyPrint(printer);
+    std::string line_header =
+        exception_event->thread()->process()->name() + ' ' + colors().red +
+        std::to_string(exception_event->thread()->process()->koid()) + colors().reset + ':' +
+        colors().red + std::to_string(exception_event->thread()->koid()) + colors().reset + ' ';
+    FidlcatPrinter printer(this, exception_event->thread()->process(), os_, line_header);
+    exception_event->PrettyPrint(printer);
+  }
 
   SaveEvent(std::move(exception_event));
 }

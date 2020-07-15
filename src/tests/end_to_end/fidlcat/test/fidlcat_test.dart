@@ -126,8 +126,9 @@ void main(List<String> arguments) {
 
       expect(
           instance.stdout,
-          contains(
-              'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
+          contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
+              '    value: string = "hello world"\n'
+              '  }'),
           reason: instance.additionalResult);
 
       await instance.agentResult;
@@ -168,10 +169,8 @@ void main(List<String> arguments) {
       final lines = instance.stdout.split('\n\n');
 
       /// The first displayed message must be EchoString.
-      expect(
-          lines[2],
-          contains(
-              'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
+      expect(lines[2],
+          contains('sent request fidl.examples.echo/Echo.EchoString = {\n'),
           reason: instance.additionalResult);
 
       await instance.agentResult;
@@ -192,13 +191,15 @@ void main(List<String> arguments) {
       /// filtered out).
       expect(
           lines[2],
-          contains(
-              'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
+          contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
+              '    value: string = "hello world"\n'
+              '  }'),
           reason: instance.additionalResult);
       expect(
           lines[3],
-          contains(
-              'received response fidl.examples.echo/Echo.EchoString = {"response":"hello world"}'),
+          contains('received response fidl.examples.echo/Echo.EchoString = {\n'
+              '      response: string = "hello world"\n'
+              '    }'),
           reason: instance.additionalResult);
 
       await instance.agentResult;
@@ -211,7 +212,7 @@ void main(List<String> arguments) {
 
       var instanceSave = RunFidlcat();
       await instanceSave.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
-        '--save',
+        '--to',
         savePath,
         'run',
         'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
@@ -219,20 +220,22 @@ void main(List<String> arguments) {
 
       expect(
           instanceSave.stdout,
-          contains(
-              'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
+          contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
+              '    value: string = "hello world"\n'
+              '  }'),
           reason: instanceSave.additionalResult);
 
       await instanceSave.agentResult;
 
       var instanceReplay = RunFidlcat();
       await instanceReplay.run(log, sl4fDriver, fidlcatPath,
-          RunMode.withoutAgent, ['--replay', savePath]);
+          RunMode.withoutAgent, ['--from', savePath]);
 
       expect(
           instanceReplay.stdout,
-          contains(
-              'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
+          contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
+              '    value: string = "hello world"\n'
+              '  }'),
           reason: instanceReplay.additionalResult);
     });
   }, timeout: _timeout);

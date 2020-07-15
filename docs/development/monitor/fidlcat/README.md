@@ -146,6 +146,35 @@ when one of of the "--remote-name" process is launched. Also, fidlcat stops when
 fx fidlcat --remote-name=echo --extra-name=appmgr run echo_client_cpp.cmx
 ```
 
+### Input options
+
+You have two input options:
+
+ * --from=device This is the default option which monitors in real time a device.
+
+ * --from=&lt;path&gt; With this option, fidlcat replay a previously saved session.
+
+### Session save
+
+The option --to=&lt;path&gt; The session is saved to the specified file (binary protobuf format).
+When a session is saved, you can replay it using "--from=&lt;path&gt;". The raw data is saved.
+That means that the data saved is independent from what is displayed.
+
+### Format (output) options
+
+You have the following output options:
+
+ * --format=pretty This is the default output. The session is pretty printed (with colors).
+
+ * --format=json The session is printed using a json format.
+
+ * --format=textproto The session is printed using a text protobuf format.
+
+ * --format= Nothing is displayed on the standard output (this option only makes sense when used
+ with --to=&lt;path&gt;). When there is no output, fidlcat is much faster (this is better when you
+ want to monitor real time components).
+
+
 ## Running without the fx tool
 
 Note that fidlcat needs two sources of information to work:

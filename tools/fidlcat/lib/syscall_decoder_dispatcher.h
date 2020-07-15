@@ -1739,9 +1739,6 @@ class SyscallDecoderDispatcher {
   // True if we need to save the events in memory.
   bool needs_to_save_events() const { return needs_to_save_events_; }
 
-  // True if, at the end of the session, we must save the events into a protobuf file.
-  bool must_save() const { return !decode_options_.save.empty(); }
-
   Syscall* SearchSyscall(const std::string& name) const {
     auto result = syscalls_.find(name);
     if (result == syscalls_.end()) {
@@ -1851,8 +1848,8 @@ class SyscallDecoderDispatcher {
   // events).
   virtual void SessionEnded();
 
-  // Writes the serialized protobuf session.
-  void WriteSession();
+  // Generate the serialized protobuf session.
+  void GenerateProtoSession(proto::Session* session);
 
  private:
   // Feeds syscalls_ with all the syscalls we can decode.
@@ -1964,7 +1961,7 @@ class SyscallDecoderDispatcher {
   // True if we need the stack frame.
   bool needs_stack_frame_ = false;
 
-  // True if we need to save the events.
+  // True if we need to save the events in memory.
   bool needs_to_save_events_ = false;
 
   // All the events we have decoded (only filled if needs_to_save_events_ is true).

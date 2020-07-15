@@ -14,6 +14,8 @@
 #include "src/lib/fxl/macros.h"
 
 enum StackLevel { kNoStack = 0, kPartialStack = 1, kFullStack = 2 };
+enum class InputMode { kDevice, kFile };
+enum class OutputMode { kNone, kStandard, kTextProtobuf };
 
 class Regex {
  public:
@@ -43,6 +45,10 @@ struct DecodeOptions {
   // If this is not empty, messages and syscalls are only displayed when a message method name
   // satisfies one of these filters.
   std::vector<std::unique_ptr<Regex>> trigger_filters;
+  // Input mode.
+  InputMode input_mode = InputMode::kDevice;
+  // Output mode.
+  OutputMode output_mode = OutputMode::kNone;
   // File name used to save the session.
   std::string save;
 

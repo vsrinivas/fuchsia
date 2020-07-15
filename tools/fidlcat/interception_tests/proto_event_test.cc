@@ -27,6 +27,7 @@ class ProtoEventTest : public ::testing::Test {
   ProtoEventTest() {
     loader_ = GetTestLibraryLoader();
     EXPECT_NE(loader_, nullptr);
+    decode_options_.output_mode = OutputMode::kStandard;
     dispatcher_ =
         std::make_unique<SyscallDisplayDispatcher>(loader_, decode_options_, display_options_, ss_);
     Process* process = dispatcher_->CreateProcess("my_process.cmx", kPid, nullptr);

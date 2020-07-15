@@ -18,14 +18,24 @@
 namespace fidlcat {
 
 bool Replay::DumpProto(const std::string& proto_file_name) {
+  if (proto_file_name == "-") {
+    return DumpProto(std::cin);
+  }
   std::fstream input(proto_file_name, std::ios::in | std::ios::binary);
   if (input.fail()) {
     FX_LOGS(ERROR) << "Can't open <" << proto_file_name << "> for reading.";
     return false;
   }
-  proto::Session session;
-  if (!session.ParseFromIstream(&input)) {
+  if (!DumpProto(input)) {
     FX_LOGS(ERROR) << "Failed to parse session from file <" << proto_file_name << ">.";
+    return false;
+  }
+  return true;
+}
+
+bool Replay::DumpProto(std::istream& is) {
+  proto::Session session;
+  if (!session.ParseFromIstream(&is)) {
     return false;
   }
   std::cout << session.DebugString();
@@ -33,22 +43,29 @@ bool Replay::DumpProto(const std::string& proto_file_name) {
 }
 
 bool Replay::ReplayProto(const std::string& proto_file_name) {
+  if (proto_file_name == "-") {
+    return ReplayProto("standard input", std::cin);
+  }
   std::fstream input(proto_file_name, std::ios::in | std::ios::binary);
   if (input.fail()) {
     FX_LOGS(ERROR) << "Can't open <" << proto_file_name << "> for reading.";
     return false;
   }
+  return ReplayProto("file <" + proto_file_name + ">", input);
+}
+
+bool Replay::ReplayProto(const std::string& file_name, std::istream& is) {
   proto::Session session;
-  if (!session.ParseFromIstream(&input)) {
-    FX_LOGS(ERROR) << "Failed to parse session from file <" << proto_file_name << ">.";
+  if (!session.ParseFromIstream(&is)) {
+    FX_LOGS(ERROR) << "Failed to parse session from " << file_name << ".";
     return false;
   }
   bool ok = true;
   for (int index = 0; index < session.process_size(); ++index) {
     const proto::Process& process = session.process(index);
     if (dispatcher()->SearchProcess(process.koid()) != nullptr) {
-      FX_LOGS(INFO) << "Error reading protobuf file <" << proto_file_name << ">: process "
-                    << process.name() << " koid=" << process.koid() << " defined multiple times.";
+      FX_LOGS(INFO) << "Error reading protobuf " << file_name << ": process " << process.name()
+                    << " koid=" << process.koid() << " defined multiple times.";
       ok = false;
     } else {
       dispatcher()->CreateProcess(process.name(), process.koid(), nullptr);
@@ -62,13 +79,13 @@ bool Replay::ReplayProto(const std::string& proto_file_name) {
   for (int index = 0; index < session.thread_size(); ++index) {
     const proto::Thread& thread = session.thread(index);
     if (dispatcher()->SearchThread(thread.koid()) != nullptr) {
-      FX_LOGS(INFO) << "Error reading protobuf file <" << proto_file_name << ">: thread "
-                    << thread.koid() << " defined multiple times.";
+      FX_LOGS(INFO) << "Error reading protobuf " << file_name << ": thread " << thread.koid()
+                    << " defined multiple times.";
       ok = false;
     } else {
       Process* process = dispatcher()->SearchProcess(thread.process_koid());
       if (process == nullptr) {
-        FX_LOGS(ERROR) << "Error reading protobuf file <" << proto_file_name << ">: process "
+        FX_LOGS(ERROR) << "Error reading protobuf " << file_name << ": process "
                        << thread.process_koid() << " not found for thread " << thread.koid() << '.';
         ok = false;
       }
@@ -79,7 +96,7 @@ bool Replay::ReplayProto(const std::string& proto_file_name) {
     const proto::HandleDescription& proto_handle_description = session.handle_description(index);
     Thread* thread = dispatcher()->SearchThread(proto_handle_description.thread_koid());
     if (thread == nullptr) {
-      FX_LOGS(ERROR) << "Error reading protobuf file <" << proto_file_name << ">: thread "
+      FX_LOGS(ERROR) << "Error reading protobuf file " << file_name << ": thread "
                      << proto_handle_description.thread_koid() << " not found for handle.";
       ok = false;
     } else {

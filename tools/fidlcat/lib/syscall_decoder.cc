@@ -479,7 +479,9 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
     return;
   }
   displayed_ = true;
-  DisplayInputs(decoder);
+  if (dispatcher_->decode_options().output_mode == OutputMode::kStandard) {
+    DisplayInputs(decoder);
+  }
 }
 
 void SyscallDisplay::DisplayInputs(SyscallDecoder* decoder) {
@@ -525,7 +527,7 @@ void SyscallDisplay::DisplayInputs(SyscallDecoder* decoder) {
 
 void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   // This code will be deleted when we will be able to generate events for all the syscalls.
-  if (!displayed_) {
+  if (!displayed_ || (dispatcher_->decode_options().output_mode != OutputMode::kStandard)) {
     return;
   }
   if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {

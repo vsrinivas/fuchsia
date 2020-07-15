@@ -15,36 +15,43 @@
 namespace fidlcat {
 
 struct CommandLineOptions {
+  // debug agent options:
   std::optional<std::string> connect;
-  std::vector<std::string> remote_pid;
-  std::vector<std::string> remote_name;
-  std::vector<std::string> extra_name;
-  std::string save;
-  std::string display_proto;
-  std::string replay;
-  std::vector<std::string> symbol_paths;
   std::vector<std::string> build_id_dirs;
-  std::vector<std::string> ids_txts;
-  std::optional<std::string> symbol_cache;
   std::vector<std::string> symbol_servers;
+  std::vector<std::string> symbol_paths;
+  std::optional<std::string> symbol_cache;
+  // fidlcat system option:
   std::vector<std::string> fidl_ir_paths;
+  std::vector<std::string> ids_txts;
+  bool quit_agent_on_exit = false;
+  // Input option:
+  std::string from;
+  // Session save option:
+  std::string to;
+  // Format (output) option:
+  std::optional<std::string> format;
+  // Session comparison option:
+  std::optional<std::string> compare_file;
+  // Display options:
+  bool with_process_info = false;
+  int stack_level = 0;
   std::vector<std::string> syscall_filters;
   std::vector<std::string> exclude_syscall_filters;
   std::vector<std::string> message_filters;
   std::vector<std::string> exclude_message_filters;
   std::vector<std::string> trigger_filters;
-  bool pretty_print = false;
-  bool with_process_info = false;
-  int stack_level = 0;
+  bool dump_messages = false;
   std::string colors = "auto";
   int columns = 0;
-  bool dump_messages = false;
-  bool quit_agent_on_exit = false;
-
+  // Logging options:
   std::optional<std::string> verbose;
   std::optional<std::string> quiet;
   std::optional<std::string> log_file;
-  std::optional<std::string> compare_file;
+  // Monitoring options:
+  std::vector<std::string> remote_pid;
+  std::vector<std::string> remote_name;
+  std::vector<std::string> extra_name;
 };
 
 // Parses the given |argc| and |argv| into the well-defined |options|.  If there

@@ -23,86 +23,119 @@
 ## - This scripts uses the tool "nc" for testing TCP connections. Check that it
 ##   is in $PATH and that it works.
 ##
-## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>] [--with-symbol-server]
+## Usage: fx fidlcat [(--port|-p) <PORT>] [--with-symbol-server] [--debug-mode]
+##                   [--symbol-path=<path>] [--fidl-ir-path=<path>] [--gdb]
+##                   [--from=<source>] [--to=<path>] [--format=<output>]
 ##                   [--with-process-info] [--stack=<value>]
-##                   [--syscalls=<regexp>] [--exclude-syscalls=<regexp>] [--dump-messages]
+##                   [--syscalls=<regexp>] [--exclude-syscalls=<regexp>]
+##                   [--messages=<regexp>] [--exclude-messages=<regexp>] [--trigger=<regexp>]
+##                   [--dump-messages]
 ##                   [--verbose=<value> | --quiet=<value>] [--log-file <path>]
-##                   [--remote-pid=<pid> | --remote-name=<name> | run <component specification>]
+##                   [--remote-pid=<pid>] [--remote-name=<name>] [--extra-name=<name>]
+##                   [run <component specification>]
 ##
-##    --port                 Port the debug agent will be listening on. Will use 2345
-##                           by default.
-##    --with-symbol-server   Connect to the symbol server. The first time you use this option,
-##                           fidlcat will give you a link to an authentication page.
-##                           You then have to use the generated key to authenticate.
-##    --debug-mode           Whether the debug agent's debug logs should be shown.
-##    --with-process-info    Display the process name, process id and thread id on
-##                           each line (useful for grep).
-##    --stack=<value>        Define the amount of stack frame to display
-##                           0: none (default value)
-##                           1: call site (1 to 4 levels)
-##                           2: full stack frame (adds some overhead)
-##    --syscalls             A regular expression which selects the syscalls to decode and display.
-##                           Can be passed multiple times.
-##                           By default, only zx_channel_.* syscalls are displayed.
-##                           To display all the syscalls, use: --syscalls ".*"
-##    --exclude-syscalls     A regular expression which selects the syscalls to not decode and
-##                           display.
-##                           Can be passed multiple times.
-##                           To be displayed, a syscall must verify --syscalls and not verify
-##                           --exclude-syscalls.
-##                           To display all the syscalls but the zx_handle syscalls, use:
-##                           --syscalls ".*" --exclude-syscalls "zx_handle_.*"
-##    --messages             A regular expression which selects the messages to display.
-##                           To display a message, the method name must satisfy the regexp.
-##                           This option can be specified multiple times.
-##                           Message filtering works on the method's fully qualified name.
-##    --exclude-messages     A regular expression which selects the messages to not display.
-##                           If a message method name satisfy the regexp, the message is not
-##                           displayed (even if it satifies --messages).
-##                           This option can be specified multiple times.
-##                           Message filtering works on the method's fully qualified name.
-##    --trigger=<regexp>     Start displaying messages and syscalls only when a message for which
-##                           the method name satisfies the filter is found.
-##                           This option can be specified multiple times.
-##                           Message filtering works on the method's fully qualified name.
-##    --dump-messages        Always does a hexadecimal dump of the messages even if we can
-##                           decode them.
-##    --verbose=<value>      The log verbosity.  Legal values are "info", "warning",
-##                           "error", "fatal", or a number, starting from 0. Extra
-##                           verbosity comes with higher levels.
-##    --quiet=<value>        The log verbosity.  Legal values are "info", "warning",
-##                           "error", "fatal", or a number, starting from 0. Extra
-##                           verbosity comes with lower levels.
-##    --log-file=<path>      The log file destination.
-##    --remote-pid           The koid of the remote process to trace
-##    --remote-name          A set of comma-separated regexes. Fidlcat will monitor all existing
-##                           and future processes whose names match one of the regexes.
-##                           Can be provided multiple times for multiple regexes.
-##    --extra-name           Like --remote-name, it monitors some processes. However, for these
-##                           processes, monitoring starts only when one of of the "--remote-name"
-##                           process is launched. Also, fidlcat stops when the last "--remote-name"
-##                           process stops (even if some "--extra-name" processes are still
-##                           monitored).
-##    --save=<path>          Save the session using protobuf in the specified file. All events are
-##                           saved including the messages which have been filtered out by --messages
-##                           or --exclude-messages.
-##    --display-proto=<path> Loads a previously saved session and displays the raw protobuf dump of
-##                           the file.
-##    --replay=<path>        Replays a previously saved session. You can filter the messages
-##                           displayed using --messages and/or --exclude-messages.
-##    --symbol-path=<path>   An extra location where fidlcat can find debug symbols.
-##    --fidl-ir-path=<path>  An extra location where fidlcat can find FIDL compiled files.
-##    --gdb                  Launch fidlcat using gdb. This is only useful to be able to debug
-##                           fidlcat. When this option is used, the string you have to type within
-##                           gdb to launch fidlcat is printed and then, gdb is launched.
-##                           This option only works if you have the unstripped version of fidlcat.
-##    run                    A token indicating that you want to invoke and trace
-##                           the following component. The component is specified
-##                           with either a bash regex that matches a component URL
-##                           known to the build, or a full component URL not known
-##                           to your build, but available to your target.
+## System options:
+##    --port                Port the debug agent will be listening on. Will use 2345 by default.
+##    --with-symbol-server  Connect to the symbol server. The first time you use this option,
+##                          fidlcat will give you a link to an authentication page.
+##                          You then have to use the generated key to authenticate.
+##    --debug-mode          Whether the debug agent's debug logs should be shown.
+##    --symbol-path=<path>  An extra location where fidlcat can find debug symbols.
+##    --fidl-ir-path=<path> An extra location where fidlcat can find FIDL compiled files.
+##    --gdb                 Launch fidlcat using gdb. This is only useful to be able to debug
+##                          fidlcat. When this option is used, the string you have to type within
+##                          gdb to launch fidlcat is printed and then, gdb is launched.
+##                          This option only works if you have the unstripped version of fidlcat.
 ##
-## Flags after -- are parsed by fidlcat.  Example usage:
+## Input options:
+##    --from=<source>    This option must be used at most once.
+##                       Source can be:
+##                       --from=device This is the default input. The input comes from the live
+##                                     monitoring of one or several processes.
+##                                     At least one of '--remote-pid', '--remote-name', 'run' must
+##                                     be specified.
+##                       --from=<path> The input comes from a previously recorded session (protobuf
+##                                     format). Path gives the name of the file to read. If path is
+##                                     '-' then the standard input is used.
+##
+## Session save option:
+##    --to=<path> The session is saved to the specified file (binary protobuf format).
+##                When a session is saved, you can replay it using "--from=<path>".
+##                The raw data is saved. That means that the data saved is independent from what is
+##                displayed.
+##
+## Format (output) options:
+##    --format=<output> This option must be used at most once.
+##                      The output format can be:
+##                      --format=pretty    This is the default output. The session is pretty printed
+##                                         (with colors).
+##                      --format=json      The session is printed using a json format.
+##                      --format=textproto The session is printed using a text protobuf format.
+##                      --format=          Nothing is displayed on the standard output (this option
+##                                         only makes sense when used with --to=<path>).
+##                                         When there is no output, fidlcat is much faster (this is
+##                                         better when you want to monitor real time components).
+##
+## Display options:
+##    --with-process-info         Display the process name, process id and thread id on
+##                                each line (useful for grep).
+##    --stack=<value>             Define the amount of stack frame to display
+##                                0: none (default value)
+##                                1: call site (1 to 4 levels)
+##                                2: full stack frame (adds some overhead)
+##    --syscalls=<regexp>         A regular expression which selects the syscalls to decode and
+##                                display.
+##                                Can be passed multiple times.
+##                                By default, only zx_channel_.* syscalls are displayed.
+##                                To display all the syscalls, use: --syscalls ".*"
+##    --exclude-syscalls=<regexp> A regular expression which selects the syscalls to not decode and
+##                                display.
+##                                Can be passed multiple times.
+##                                To be displayed, a syscall must verify --syscalls and not verify
+##                                --exclude-syscalls.
+##                                To display all the syscalls but the zx_handle syscalls, use:
+##                                --syscalls ".*" --exclude-syscalls "zx_handle_.*"
+##    --messages=<regexp>         A regular expression which selects the messages to display.
+##                                To display a message, the method name must satisfy the regexp.
+##                                This option can be specified multiple times.
+##                                Message filtering works on the method's fully qualified name.
+##    --exclude-messages=<regexp> A regular expression which selects the messages to not display.
+##                                If a message method name satisfy the regexp, the message is not
+##                                displayed (even if it satisfies --messages).
+##                                This option can be specified multiple times.
+##                                Message filtering works on the method's fully qualified name.
+##    --trigger=<regexp>          Start displaying messages and syscalls only when a message for
+##                                which the method name satisfies the filter is found.
+##                                This option can be specified multiple times.
+##                                Message filtering works on the method's fully qualified name.
+##    --dump-messages             Always does a hexadecimal dump of the messages even if we can
+##                                decode them.
+##
+## Logging options:
+##    --verbose=<value> The log verbosity.  Legal values are "info", "warning", "error", "fatal",
+##                      or a number, starting from 0. Extra verbosity comes with higher levels.
+##    --quiet=<value>   The log verbosity.  Legal values are "info", "warning", "error", "fatal",
+##                      or a number, starting from 0. Extra verbosity comes with lower levels.
+##    --log-file=<path> The log file destination.
+##
+## Monitoring options:
+##    --remote-pid=<pid>    The koid of the remote process to trace.
+##    --remote-name=<name>  A set of comma-separated regexes. Fidlcat will monitor all existing
+##                          and future processes whose names match one of the regexes.
+##                          Can be provided multiple times for multiple regexes.
+##    --extra-name=<name>   Like --remote-name, it monitors some processes. However, for these
+##                          processes, monitoring starts only when one of of the "--remote-name"
+##                          process is launched. Also, fidlcat stops when the last "--remote-name"
+##                          process stops (even if some "--extra-name" processes are still
+##                          monitored).
+##    run <component spec>  A token indicating that you want to invoke and trace the following
+##                          component. The component is specified with either a bash regex that
+##                          matches a component URL known to the build, or a full component URL not
+##                          known to your build, but available to your target.
+##
+## Flags after -- are parsed by fidlcat.
+##
+## Example usage:
 ##
 ## # Attaches to the process with the given pid on the target:
 ## fx fidlcat --remote-pid=4755
@@ -116,10 +149,10 @@
 ## # Will trace existing and future processes whose name contains "echo_client"
 ## fx fidlcat --remote-name=echo_client
 ##
-## All three options --remote-pid, --remote-name and run can be used together.
+## All options --remote-pid, --remote-name, --extra-name and, run can be used together.
 ## However, run must always be the last one.
-## When --remote-name and run are used together, only processes which match
-## --remote-name are monitored.
+## When --remote-name and run are used together, only processes which match --remote-name are
+## monitored.
 ##
 ## Examples (echo_server is launched by echo_client):
 ##
@@ -172,11 +205,33 @@ while [[ $# -gt 0 ]]; do
       agent_out="/dev/stdout"
       debug_mode="--debug-mode"
       ;;
+    --symbol-path=*)
+      arguments+=("$1")
+      ;;
+    --fidl-ir-path=*)
+      arguments+=("$1")
+      ;;
+    --gdb)
+      use_gdb=1
+      ;;
+    --from=device)
+      arguments+=("$1")
+      ;;
+    --from=*)
+      arguments+=("$1")
+      launch_agent=0
+      ;;
+    --to=*)
+      arguments+=("$1")
+      ;;
+    --format=)
+      arguments+=("--format=none")
+      ;;
+    --format=*)
+      arguments+=("$1")
+      ;;
     --with-process-info)
       arguments+=("--with-process-info")
-      ;;
-    --dump-messages)
-      arguments+=("--dump-messages")
       ;;
     --stack=*)
       arguments+=("$1")
@@ -196,6 +251,9 @@ while [[ $# -gt 0 ]]; do
     --trigger=*)
       arguments+=("$1")
       ;;
+    --dump-messages)
+      arguments+=("--dump-messages")
+      ;;
     --verbose=*)
       arguments+=("$1")
       ;;
@@ -213,26 +271,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --extra-name=*)
       arguments+=("$1")
-      ;;
-    --save=*)
-      arguments+=("$1")
-      ;;
-    --display-proto=*)
-      arguments+=("$1")
-      launch_agent=0
-      ;;
-    --replay=*)
-      arguments+=("$1")
-      launch_agent=0
-      ;;
-    --symbol-path=*)
-      arguments+=("$1")
-      ;;
-    --fidl-ir-path=*)
-      arguments+=("$1")
-      ;;
-    --gdb)
-      use_gdb=1
       ;;
     run)
       action="$1"
@@ -300,7 +338,6 @@ if [[ ${launch_agent} -eq 1 ]]; then
     arguments+=("--build-id-dir" "${ZIRCON_BUILDROOT}/.build-id")
     arguments+=("--build-id-dir" "${FUCHSIA_DIR}/prebuilt/.build-id")
     arguments+=("--build-id-dir" "${PREBUILT_CLANG_DIR}/lib/debug/.build-id")
-    arguments+=("--pretty-print")
     arguments+=("$@")
 
     if [[ ${use_gdb} -eq 1 ]]; then
@@ -325,7 +362,6 @@ if [[ ${launch_agent} -eq 1 ]]; then
   fi
 else
   arguments+=("--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt)
-  arguments+=("--pretty-print")
   arguments+=("$@")
 
   if [[ ${use_gdb} -eq 1 ]]; then

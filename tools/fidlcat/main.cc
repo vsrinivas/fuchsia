@@ -160,17 +160,18 @@ int ConsoleMain(int argc, const char* argv[]) {
                                        : std::make_unique<SyscallDisplayDispatcher>(
                                              &loader, decode_options, display_options, std::cout);
 
-  if (!options.display_proto.empty()) {
+  if (decode_options.input_mode == InputMode::kFile) {
     fidlcat::Replay replay(decoder_dispatcher.get());
-    if (!replay.DumpProto(options.display_proto)) {
-      return 1;
+    if (decode_options.output_mode == OutputMode::kTextProtobuf) {
+      if (!replay.DumpProto(options.from)) {
+        return 1;
+      }
+    } else {
+      if (!replay.ReplayProto(options.from)) {
+        return 1;
+      }
+      replay.dispatcher()->SessionEnded();
     }
-  } else if (!options.replay.empty()) {
-    fidlcat::Replay replay(decoder_dispatcher.get());
-    if (!replay.ReplayProto(options.replay)) {
-      return 1;
-    }
-    replay.dispatcher()->SessionEnded();
   } else {
     InterceptionWorkflow workflow;
     workflow.Initialize(options.symbol_paths, options.build_id_dirs, options.ids_txts,

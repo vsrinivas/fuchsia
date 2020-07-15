@@ -347,6 +347,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
 class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
  public:
   InterceptionWorkflowTest(debug_ipc::Arch arch, bool aborted) : data_(arch), aborted_(aborted) {
+    decode_options_.output_mode = OutputMode::kStandard;
     display_options_.pretty_print = true;
     display_options_.columns = 132;
     display_options_.needs_colors = true;

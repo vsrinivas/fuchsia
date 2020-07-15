@@ -20,9 +20,11 @@ class Replay : public EventDecoder {
 
   // Dumps in text a binary protobuf file which contains a session.
   bool DumpProto(const std::string& proto_file_name);
+  bool DumpProto(std::istream& is);
 
   // Replays a previously save session.
   bool ReplayProto(const std::string& proto_file_name);
+  bool ReplayProto(const std::string& file_name, std::istream& is);
 };
 
 }  // namespace fidlcat
