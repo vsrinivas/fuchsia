@@ -413,48 +413,44 @@ void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 extern "C" const fidl_type_t example_ExampleTableTable;
 const fidl_type_t* ExampleTable::FidlType = &example_ExampleTableTable;
 
-ExampleTable::ExampleTable() : has_member_(false) {}
+ExampleTable::ExampleTable() {}
 
 ExampleTable::ExampleTable(ExampleTable&& other) {
-  has_member_ = other.has_member_;
-  if (has_member_) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
     Construct(&member_value_.value, std::move(other.member_value_.value));
   }
 }
 
 ExampleTable::~ExampleTable() {
-  if (has_member_) {
+  if (field_presence_.IsSet<0>()) {
     Destruct(&member_value_.value);
   }
 }
 
 ExampleTable& ExampleTable::operator=(ExampleTable&& other) {
-  if (other.has_member_) {
-    if (has_member_) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
       member_value_.value = std::move(other.member_value_.value);
     } else {
-      has_member_ = true;
+      field_presence_.Set<0>();
       Construct(&member_value_.value, std::move(other.member_value_.value));
     }
-  } else if (has_member_) {
-    has_member_ = false;
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
     Destruct(&member_value_.value);
   }
   return *this;
 }
 
-bool ExampleTable::IsEmpty() const {
-  if (has_member_) return false;
-  return true;
-}
+bool ExampleTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void ExampleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = 0;
-  if (has_member_) max_ordinal = 1;
+  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
-  if (has_member_) {
+  if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -506,7 +502,7 @@ done_1:
 }
 
 zx_status_t ExampleTable::Clone(ExampleTable* result) const {
-  if (has_member_) {
+  if (field_presence_.IsSet<0>()) {
     zx_status_t _status =
         ::fidl::Clone(member_value_.value, result->mutable_member());
     if (_status != ZX_OK) return _status;

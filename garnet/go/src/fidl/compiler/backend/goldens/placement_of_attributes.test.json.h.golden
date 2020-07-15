@@ -397,21 +397,21 @@ class ExampleTable final {
   bool IsEmpty() const;
 
   const uint32_t& member() const {
-    ZX_ASSERT(has_member_);
+    ZX_ASSERT(field_presence_.IsSet<0>());
     return member_value_.value;
   }
-  bool has_member() const { return has_member_; }
+  bool has_member() const { return field_presence_.IsSet<0>(); }
 
   uint32_t* mutable_member() {
-    if (!has_member_) {
-      has_member_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&member_value_.value);
     }
     return &member_value_.value;
   }
   ExampleTable& set_member(uint32_t _value) {
-    if (!has_member_) {
-      has_member_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&member_value_.value, std::move(_value));
     } else {
       member_value_.value = std::move(_value);
@@ -419,10 +419,10 @@ class ExampleTable final {
     return *this;
   }
   void clear_member() {
-    if (!has_member_) {
+    if (!field_presence_.IsSet<0>()) {
       return;
     }
-    has_member_ = false;
+    field_presence_.Clear<0>();
     Destruct(&member_value_.value);
   }
 
@@ -450,7 +450,8 @@ class ExampleTable final {
   void Destruct(T* p) {
     p->~T();
   }
-  bool has_member_ : 1;
+
+  ::fidl::internal::BitSet<1> field_presence_;
   union ValueUnion_member {
     ValueUnion_member() {}
     ~ValueUnion_member() {}

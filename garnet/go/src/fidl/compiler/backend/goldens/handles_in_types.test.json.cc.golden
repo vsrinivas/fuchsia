@@ -167,48 +167,44 @@ void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 extern "C" const fidl_type_t test_name_TableWithHandleTable;
 const fidl_type_t* TableWithHandle::FidlType = &test_name_TableWithHandleTable;
 
-TableWithHandle::TableWithHandle() : has_h_(false) {}
+TableWithHandle::TableWithHandle() {}
 
 TableWithHandle::TableWithHandle(TableWithHandle&& other) {
-  has_h_ = other.has_h_;
-  if (has_h_) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
     Construct(&h_value_.value, std::move(other.h_value_.value));
   }
 }
 
 TableWithHandle::~TableWithHandle() {
-  if (has_h_) {
+  if (field_presence_.IsSet<0>()) {
     Destruct(&h_value_.value);
   }
 }
 
 TableWithHandle& TableWithHandle::operator=(TableWithHandle&& other) {
-  if (other.has_h_) {
-    if (has_h_) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
       h_value_.value = std::move(other.h_value_.value);
     } else {
-      has_h_ = true;
+      field_presence_.Set<0>();
       Construct(&h_value_.value, std::move(other.h_value_.value));
     }
-  } else if (has_h_) {
-    has_h_ = false;
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
     Destruct(&h_value_.value);
   }
   return *this;
 }
 
-bool TableWithHandle::IsEmpty() const {
-  if (has_h_) return false;
-  return true;
-}
+bool TableWithHandle::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void TableWithHandle::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = 0;
-  if (has_h_) max_ordinal = 1;
+  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
-  if (has_h_) {
+  if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -260,7 +256,7 @@ done_1:
 }
 
 zx_status_t TableWithHandle::Clone(TableWithHandle* result) const {
-  if (has_h_) {
+  if (field_presence_.IsSet<0>()) {
     zx_status_t _status = ::fidl::Clone(h_value_.value, result->mutable_h());
     if (_status != ZX_OK) return _status;
   } else {

@@ -198,15 +198,17 @@ type Table struct {
 
 type TableMember struct {
 	types.Attributes
-	Type              Type
-	Name              string
-	DefaultValue      string
-	Ordinal           int
-	FieldPresenceName string
-	FieldDataName     string
-	MethodHasName     string
-	MethodClearName   string
-	ValueUnionName    string
+	Type               Type
+	Name               string
+	DefaultValue       string
+	Ordinal            int
+	FieldPresenceIsSet string
+	FieldPresenceSet   string
+	FieldPresenceClear string
+	FieldDataName      string
+	MethodHasName      string
+	MethodClearName    string
+	ValueUnionName     string
 }
 
 type Struct struct {
@@ -1088,7 +1090,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 	return r
 }
 
-func (c *compiler) compileTableMember(val types.TableMember, appendNamespace string) TableMember {
+func (c *compiler) compileTableMember(val types.TableMember, appendNamespace string, index int) TableMember {
 	t := c.compileType(val.Type)
 
 	defaultValue := ""
@@ -1097,16 +1099,18 @@ func (c *compiler) compileTableMember(val types.TableMember, appendNamespace str
 	}
 
 	return TableMember{
-		Attributes:        val.Attributes,
-		Type:              t,
-		Name:              changeIfReserved(val.Name, ""),
-		DefaultValue:      defaultValue,
-		Ordinal:           val.Ordinal,
-		FieldPresenceName: fmt.Sprintf("has_%s_", val.Name),
-		FieldDataName:     fmt.Sprintf("%s_value_", val.Name),
-		MethodHasName:     fmt.Sprintf("has_%s", val.Name),
-		MethodClearName:   fmt.Sprintf("clear_%s", val.Name),
-		ValueUnionName:    fmt.Sprintf("ValueUnion_%s", val.Name),
+		Attributes:         val.Attributes,
+		Type:               t,
+		Name:               changeIfReserved(val.Name, ""),
+		DefaultValue:       defaultValue,
+		Ordinal:            val.Ordinal,
+		FieldPresenceIsSet: fmt.Sprintf("field_presence_.IsSet<%d>()", val.Ordinal-1),
+		FieldPresenceSet:   fmt.Sprintf("field_presence_.Set<%d>()", val.Ordinal-1),
+		FieldPresenceClear: fmt.Sprintf("field_presence_.Clear<%d>()", val.Ordinal-1),
+		FieldDataName:      fmt.Sprintf("%s_value_", val.Name),
+		MethodHasName:      fmt.Sprintf("has_%s", val.Name),
+		MethodClearName:    fmt.Sprintf("clear_%s", val.Name),
+		ValueUnionName:     fmt.Sprintf("ValueUnion_%s", val.Name),
 	}
 }
 
@@ -1127,8 +1131,8 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 		IsResource:     val.TypeShapeV1.IsResource,
 	}
 
-	for _, v := range val.SortedMembersNoReserved() {
-		m := c.compileTableMember(v, appendNamespace)
+	for i, v := range val.SortedMembersNoReserved() {
+		m := c.compileTableMember(v, appendNamespace, i)
 		if m.Ordinal > r.BiggestOrdinal {
 			r.BiggestOrdinal = m.Ordinal
 		}

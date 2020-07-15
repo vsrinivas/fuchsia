@@ -21,21 +21,21 @@ class SimpleTable final {
   bool IsEmpty() const;
 
   const int64_t& x() const {
-    ZX_ASSERT(has_x_);
+    ZX_ASSERT(field_presence_.IsSet<0>());
     return x_value_.value;
   }
-  bool has_x() const { return has_x_; }
+  bool has_x() const { return field_presence_.IsSet<0>(); }
 
   int64_t* mutable_x() {
-    if (!has_x_) {
-      has_x_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&x_value_.value);
     }
     return &x_value_.value;
   }
   SimpleTable& set_x(int64_t _value) {
-    if (!has_x_) {
-      has_x_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&x_value_.value, std::move(_value));
     } else {
       x_value_.value = std::move(_value);
@@ -43,29 +43,29 @@ class SimpleTable final {
     return *this;
   }
   void clear_x() {
-    if (!has_x_) {
+    if (!field_presence_.IsSet<0>()) {
       return;
     }
-    has_x_ = false;
+    field_presence_.Clear<0>();
     Destruct(&x_value_.value);
   }
 
   const int64_t& y() const {
-    ZX_ASSERT(has_y_);
+    ZX_ASSERT(field_presence_.IsSet<4>());
     return y_value_.value;
   }
-  bool has_y() const { return has_y_; }
+  bool has_y() const { return field_presence_.IsSet<4>(); }
 
   int64_t* mutable_y() {
-    if (!has_y_) {
-      has_y_ = true;
+    if (!field_presence_.IsSet<4>()) {
+      field_presence_.Set<4>();
       Construct(&y_value_.value);
     }
     return &y_value_.value;
   }
   SimpleTable& set_y(int64_t _value) {
-    if (!has_y_) {
-      has_y_ = true;
+    if (!field_presence_.IsSet<4>()) {
+      field_presence_.Set<4>();
       Construct(&y_value_.value, std::move(_value));
     } else {
       y_value_.value = std::move(_value);
@@ -73,10 +73,10 @@ class SimpleTable final {
     return *this;
   }
   void clear_y() {
-    if (!has_y_) {
+    if (!field_presence_.IsSet<4>()) {
       return;
     }
-    has_y_ = false;
+    field_presence_.Clear<4>();
     Destruct(&y_value_.value);
   }
 
@@ -104,8 +104,8 @@ class SimpleTable final {
   void Destruct(T* p) {
     p->~T();
   }
-  bool has_x_ : 1;
-  bool has_y_ : 1;
+
+  ::fidl::internal::BitSet<5> field_presence_;
   union ValueUnion_x {
     ValueUnion_x() {}
     ~ValueUnion_x() {}
@@ -131,21 +131,21 @@ class ReverseOrdinalTable final {
   bool IsEmpty() const;
 
   const int64_t& z() const {
-    ZX_ASSERT(has_z_);
+    ZX_ASSERT(field_presence_.IsSet<0>());
     return z_value_.value;
   }
-  bool has_z() const { return has_z_; }
+  bool has_z() const { return field_presence_.IsSet<0>(); }
 
   int64_t* mutable_z() {
-    if (!has_z_) {
-      has_z_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&z_value_.value);
     }
     return &z_value_.value;
   }
   ReverseOrdinalTable& set_z(int64_t _value) {
-    if (!has_z_) {
-      has_z_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&z_value_.value, std::move(_value));
     } else {
       z_value_.value = std::move(_value);
@@ -153,29 +153,29 @@ class ReverseOrdinalTable final {
     return *this;
   }
   void clear_z() {
-    if (!has_z_) {
+    if (!field_presence_.IsSet<0>()) {
       return;
     }
-    has_z_ = false;
+    field_presence_.Clear<0>();
     Destruct(&z_value_.value);
   }
 
   const int64_t& y() const {
-    ZX_ASSERT(has_y_);
+    ZX_ASSERT(field_presence_.IsSet<1>());
     return y_value_.value;
   }
-  bool has_y() const { return has_y_; }
+  bool has_y() const { return field_presence_.IsSet<1>(); }
 
   int64_t* mutable_y() {
-    if (!has_y_) {
-      has_y_ = true;
+    if (!field_presence_.IsSet<1>()) {
+      field_presence_.Set<1>();
       Construct(&y_value_.value);
     }
     return &y_value_.value;
   }
   ReverseOrdinalTable& set_y(int64_t _value) {
-    if (!has_y_) {
-      has_y_ = true;
+    if (!field_presence_.IsSet<1>()) {
+      field_presence_.Set<1>();
       Construct(&y_value_.value, std::move(_value));
     } else {
       y_value_.value = std::move(_value);
@@ -183,29 +183,29 @@ class ReverseOrdinalTable final {
     return *this;
   }
   void clear_y() {
-    if (!has_y_) {
+    if (!field_presence_.IsSet<1>()) {
       return;
     }
-    has_y_ = false;
+    field_presence_.Clear<1>();
     Destruct(&y_value_.value);
   }
 
   const int64_t& x() const {
-    ZX_ASSERT(has_x_);
+    ZX_ASSERT(field_presence_.IsSet<2>());
     return x_value_.value;
   }
-  bool has_x() const { return has_x_; }
+  bool has_x() const { return field_presence_.IsSet<2>(); }
 
   int64_t* mutable_x() {
-    if (!has_x_) {
-      has_x_ = true;
+    if (!field_presence_.IsSet<2>()) {
+      field_presence_.Set<2>();
       Construct(&x_value_.value);
     }
     return &x_value_.value;
   }
   ReverseOrdinalTable& set_x(int64_t _value) {
-    if (!has_x_) {
-      has_x_ = true;
+    if (!field_presence_.IsSet<2>()) {
+      field_presence_.Set<2>();
       Construct(&x_value_.value, std::move(_value));
     } else {
       x_value_.value = std::move(_value);
@@ -213,10 +213,10 @@ class ReverseOrdinalTable final {
     return *this;
   }
   void clear_x() {
-    if (!has_x_) {
+    if (!field_presence_.IsSet<2>()) {
       return;
     }
-    has_x_ = false;
+    field_presence_.Clear<2>();
     Destruct(&x_value_.value);
   }
 
@@ -244,9 +244,8 @@ class ReverseOrdinalTable final {
   void Destruct(T* p) {
     p->~T();
   }
-  bool has_z_ : 1;
-  bool has_y_ : 1;
-  bool has_x_ : 1;
+
+  ::fidl::internal::BitSet<3> field_presence_;
   union ValueUnion_z {
     ValueUnion_z() {}
     ~ValueUnion_z() {}
@@ -279,21 +278,21 @@ class OlderSimpleTable final {
   bool IsEmpty() const;
 
   const int64_t& x() const {
-    ZX_ASSERT(has_x_);
+    ZX_ASSERT(field_presence_.IsSet<0>());
     return x_value_.value;
   }
-  bool has_x() const { return has_x_; }
+  bool has_x() const { return field_presence_.IsSet<0>(); }
 
   int64_t* mutable_x() {
-    if (!has_x_) {
-      has_x_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&x_value_.value);
     }
     return &x_value_.value;
   }
   OlderSimpleTable& set_x(int64_t _value) {
-    if (!has_x_) {
-      has_x_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&x_value_.value, std::move(_value));
     } else {
       x_value_.value = std::move(_value);
@@ -301,10 +300,10 @@ class OlderSimpleTable final {
     return *this;
   }
   void clear_x() {
-    if (!has_x_) {
+    if (!field_presence_.IsSet<0>()) {
       return;
     }
-    has_x_ = false;
+    field_presence_.Clear<0>();
     Destruct(&x_value_.value);
   }
 
@@ -332,7 +331,8 @@ class OlderSimpleTable final {
   void Destruct(T* p) {
     p->~T();
   }
-  bool has_x_ : 1;
+
+  ::fidl::internal::BitSet<1> field_presence_;
   union ValueUnion_x {
     ValueUnion_x() {}
     ~ValueUnion_x() {}
@@ -351,21 +351,21 @@ class NewerSimpleTable final {
   bool IsEmpty() const;
 
   const int64_t& x() const {
-    ZX_ASSERT(has_x_);
+    ZX_ASSERT(field_presence_.IsSet<0>());
     return x_value_.value;
   }
-  bool has_x() const { return has_x_; }
+  bool has_x() const { return field_presence_.IsSet<0>(); }
 
   int64_t* mutable_x() {
-    if (!has_x_) {
-      has_x_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&x_value_.value);
     }
     return &x_value_.value;
   }
   NewerSimpleTable& set_x(int64_t _value) {
-    if (!has_x_) {
-      has_x_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&x_value_.value, std::move(_value));
     } else {
       x_value_.value = std::move(_value);
@@ -373,29 +373,29 @@ class NewerSimpleTable final {
     return *this;
   }
   void clear_x() {
-    if (!has_x_) {
+    if (!field_presence_.IsSet<0>()) {
       return;
     }
-    has_x_ = false;
+    field_presence_.Clear<0>();
     Destruct(&x_value_.value);
   }
 
   const int64_t& y() const {
-    ZX_ASSERT(has_y_);
+    ZX_ASSERT(field_presence_.IsSet<4>());
     return y_value_.value;
   }
-  bool has_y() const { return has_y_; }
+  bool has_y() const { return field_presence_.IsSet<4>(); }
 
   int64_t* mutable_y() {
-    if (!has_y_) {
-      has_y_ = true;
+    if (!field_presence_.IsSet<4>()) {
+      field_presence_.Set<4>();
       Construct(&y_value_.value);
     }
     return &y_value_.value;
   }
   NewerSimpleTable& set_y(int64_t _value) {
-    if (!has_y_) {
-      has_y_ = true;
+    if (!field_presence_.IsSet<4>()) {
+      field_presence_.Set<4>();
       Construct(&y_value_.value, std::move(_value));
     } else {
       y_value_.value = std::move(_value);
@@ -403,29 +403,29 @@ class NewerSimpleTable final {
     return *this;
   }
   void clear_y() {
-    if (!has_y_) {
+    if (!field_presence_.IsSet<4>()) {
       return;
     }
-    has_y_ = false;
+    field_presence_.Clear<4>();
     Destruct(&y_value_.value);
   }
 
   const int64_t& z() const {
-    ZX_ASSERT(has_z_);
+    ZX_ASSERT(field_presence_.IsSet<5>());
     return z_value_.value;
   }
-  bool has_z() const { return has_z_; }
+  bool has_z() const { return field_presence_.IsSet<5>(); }
 
   int64_t* mutable_z() {
-    if (!has_z_) {
-      has_z_ = true;
+    if (!field_presence_.IsSet<5>()) {
+      field_presence_.Set<5>();
       Construct(&z_value_.value);
     }
     return &z_value_.value;
   }
   NewerSimpleTable& set_z(int64_t _value) {
-    if (!has_z_) {
-      has_z_ = true;
+    if (!field_presence_.IsSet<5>()) {
+      field_presence_.Set<5>();
       Construct(&z_value_.value, std::move(_value));
     } else {
       z_value_.value = std::move(_value);
@@ -433,10 +433,10 @@ class NewerSimpleTable final {
     return *this;
   }
   void clear_z() {
-    if (!has_z_) {
+    if (!field_presence_.IsSet<5>()) {
       return;
     }
-    has_z_ = false;
+    field_presence_.Clear<5>();
     Destruct(&z_value_.value);
   }
 
@@ -464,9 +464,8 @@ class NewerSimpleTable final {
   void Destruct(T* p) {
     p->~T();
   }
-  bool has_x_ : 1;
-  bool has_y_ : 1;
-  bool has_z_ : 1;
+
+  ::fidl::internal::BitSet<6> field_presence_;
   union ValueUnion_x {
     ValueUnion_x() {}
     ~ValueUnion_x() {}
@@ -522,6 +521,8 @@ class EmptyTable final {
   void Destruct(T* p) {
     p->~T();
   }
+
+  ::fidl::internal::BitSet<0> field_presence_;
 };
 
 using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;

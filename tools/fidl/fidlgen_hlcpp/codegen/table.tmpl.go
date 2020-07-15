@@ -23,25 +23,25 @@ class {{ .Name }} final {
   ///{{ . }}
   {{- end}}
   const {{ .Type.Decl }}& {{ .Name }}() const {
-    ZX_ASSERT({{ .FieldPresenceName }});
+    ZX_ASSERT({{ .FieldPresenceIsSet }});
     return {{ .FieldDataName }}.value;
   }
   bool {{ .MethodHasName }}() const {
-    return {{ .FieldPresenceName }};
+    return {{ .FieldPresenceIsSet }};
   }
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
   {{ .Type.Decl }}* mutable_{{ .Name }}() {
-    if (!{{ .FieldPresenceName }}) {
-      {{ .FieldPresenceName }} = true;
+    if (!{{ .FieldPresenceIsSet }}) {
+      {{ .FieldPresenceSet }};
       Construct(&{{ .FieldDataName }}.value);
     }
     return &{{ .FieldDataName }}.value;
   }
   {{$.Name}}& set_{{ .Name }}({{ .Type.Decl }} _value) {
-    if (!{{ .FieldPresenceName }}) {
-      {{ .FieldPresenceName }} = true;
+    if (!{{ .FieldPresenceIsSet }}) {
+      {{ .FieldPresenceSet }};
       Construct(&{{ .FieldDataName }}.value, std::move(_value));
     } else {
       {{ .FieldDataName }}.value = std::move(_value);
@@ -49,10 +49,10 @@ class {{ .Name }} final {
     return *this;
   }
   void {{ .MethodClearName }}() {
-    if (!{{ .FieldPresenceName }}) {
+    if (!{{ .FieldPresenceIsSet }}) {
       return;
     }
-    {{ .FieldPresenceName }} = false;
+    {{ .FieldPresenceClear }};
     Destruct(&{{ .FieldDataName }}.value);
   }
   {{- end }}
@@ -79,9 +79,7 @@ class {{ .Name }} final {
     p->~T();
   }
 
-  {{- range .Members }}
-  bool {{ .FieldPresenceName }} : 1;
-  {{- end }}
+  ::fidl::internal::BitSet<{{ .BiggestOrdinal }}> field_presence_;
 
   {{- range .Members }}
   {{/* The raw values of a table field are placed inside a union to ensure
@@ -104,17 +102,12 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
-{{ .Name }}::{{ .Name }}(){{- if len .Members }} : {{- end -}}
-{{- range $index, $element := .Members -}}
-  {{ if $index }},{{ end }}
-  {{ $element.FieldPresenceName }}(false)
-{{- end }} {
-}
+{{ .Name }}::{{ .Name }}() {}
 
 {{ .Name }}::{{ .Name }}({{ .Name }}&& other) {
+  field_presence_ = other.field_presence_;
   {{- range .Members }}
-  {{ .FieldPresenceName }} = other.{{ .FieldPresenceName }};
-  if ({{ .FieldPresenceName }}) {
+  if ({{ .FieldPresenceIsSet }}) {
     Construct(&{{ .FieldDataName }}.value, std::move(other.{{ .FieldDataName }}.value));
   }
   {{- end }}
@@ -122,7 +115,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
 {{ .Name }}::~{{ .Name }}() {
   {{- range .Members }}
-  if ({{ .FieldPresenceName }}) {
+  if ({{ .FieldPresenceIsSet }}) {
     Destruct(&{{ .FieldDataName }}.value);
   }
   {{- end }}
@@ -130,15 +123,15 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
 {{ .Name }}& {{ .Name }}::operator=({{ .Name }}&& other) {
   {{- range .Members }}
-  if (other.{{ .FieldPresenceName }}) {
-    if ({{ .FieldPresenceName }}) {
+  if (other.{{ .FieldPresenceIsSet }}) {
+    if ({{ .FieldPresenceIsSet }}) {
       {{ .FieldDataName }}.value = std::move(other.{{ .FieldDataName }}.value);
     } else {
-      {{ .FieldPresenceName }} = true;
+      {{ .FieldPresenceSet }};
       Construct(&{{ .FieldDataName }}.value, std::move(other.{{ .FieldDataName }}.value));
     }
-  } else if ({{ .FieldPresenceName }}) {
-    {{ .FieldPresenceName }} = false;
+  } else if ({{ .FieldPresenceIsSet }}) {
+    {{ .FieldPresenceClear }};
     Destruct(&{{ .FieldDataName }}.value);
   }
   {{- end }}
@@ -146,24 +139,18 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 }
 
 bool {{ .Name }}::IsEmpty() const {
-  {{- range .Members }}
-  if ({{ .FieldPresenceName }}) return false;
-  {{- end }}
-  return true;
+  return field_presence_.IsEmpty();
 }
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = 0;
-  {{- range .Members }}
-  if ({{ .FieldPresenceName }}) max_ordinal = {{ .Ordinal }};
-  {{- end }}
+  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   {{- if len .Members }}
   size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
   {{- end }}
   {{- range .Members }}
-  if ({{ .FieldPresenceName }}) {
+  if ({{ .FieldPresenceIsSet }}) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -219,7 +206,7 @@ done_{{ .Ordinal }}:
 
 zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   {{- range .Members }}
-  if ({{ .FieldPresenceName }}) {
+  if ({{ .FieldPresenceIsSet }}) {
     zx_status_t _status = ::fidl::Clone({{ .FieldDataName }}.value, result->mutable_{{ .Name }}());
     if (_status != ZX_OK)
       return _status;

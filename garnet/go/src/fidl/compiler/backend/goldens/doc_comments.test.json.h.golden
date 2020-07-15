@@ -203,24 +203,24 @@ class Table final {
   ///
   /// table field comment #3
   const int32_t& Field() const {
-    ZX_ASSERT(has_Field_);
+    ZX_ASSERT(field_presence_.IsSet<0>());
     return Field_value_.value;
   }
-  bool has_Field() const { return has_Field_; }
+  bool has_Field() const { return field_presence_.IsSet<0>(); }
 
   /// table field comment #1
   ///
   /// table field comment #3
   int32_t* mutable_Field() {
-    if (!has_Field_) {
-      has_Field_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&Field_value_.value);
     }
     return &Field_value_.value;
   }
   Table& set_Field(int32_t _value) {
-    if (!has_Field_) {
-      has_Field_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&Field_value_.value, std::move(_value));
     } else {
       Field_value_.value = std::move(_value);
@@ -228,10 +228,10 @@ class Table final {
     return *this;
   }
   void clear_Field() {
-    if (!has_Field_) {
+    if (!field_presence_.IsSet<0>()) {
       return;
     }
-    has_Field_ = false;
+    field_presence_.Clear<0>();
     Destruct(&Field_value_.value);
   }
 
@@ -258,7 +258,8 @@ class Table final {
   void Destruct(T* p) {
     p->~T();
   }
-  bool has_Field_ : 1;
+
+  ::fidl::internal::BitSet<1> field_presence_;
   union ValueUnion_Field {
     ValueUnion_Field() {}
     ~ValueUnion_Field() {}

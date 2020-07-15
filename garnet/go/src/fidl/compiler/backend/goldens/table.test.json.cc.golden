@@ -10,68 +10,61 @@ namespace json {
 extern "C" const fidl_type_t fidl_test_json_SimpleTableTable;
 const fidl_type_t* SimpleTable::FidlType = &fidl_test_json_SimpleTableTable;
 
-SimpleTable::SimpleTable() : has_x_(false), has_y_(false) {}
+SimpleTable::SimpleTable() {}
 
 SimpleTable::SimpleTable(SimpleTable&& other) {
-  has_x_ = other.has_x_;
-  if (has_x_) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
     Construct(&x_value_.value, std::move(other.x_value_.value));
   }
-  has_y_ = other.has_y_;
-  if (has_y_) {
+  if (field_presence_.IsSet<4>()) {
     Construct(&y_value_.value, std::move(other.y_value_.value));
   }
 }
 
 SimpleTable::~SimpleTable() {
-  if (has_x_) {
+  if (field_presence_.IsSet<0>()) {
     Destruct(&x_value_.value);
   }
-  if (has_y_) {
+  if (field_presence_.IsSet<4>()) {
     Destruct(&y_value_.value);
   }
 }
 
 SimpleTable& SimpleTable::operator=(SimpleTable&& other) {
-  if (other.has_x_) {
-    if (has_x_) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
       x_value_.value = std::move(other.x_value_.value);
     } else {
-      has_x_ = true;
+      field_presence_.Set<0>();
       Construct(&x_value_.value, std::move(other.x_value_.value));
     }
-  } else if (has_x_) {
-    has_x_ = false;
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
     Destruct(&x_value_.value);
   }
-  if (other.has_y_) {
-    if (has_y_) {
+  if (other.field_presence_.IsSet<4>()) {
+    if (field_presence_.IsSet<4>()) {
       y_value_.value = std::move(other.y_value_.value);
     } else {
-      has_y_ = true;
+      field_presence_.Set<4>();
       Construct(&y_value_.value, std::move(other.y_value_.value));
     }
-  } else if (has_y_) {
-    has_y_ = false;
+  } else if (field_presence_.IsSet<4>()) {
+    field_presence_.Clear<4>();
     Destruct(&y_value_.value);
   }
   return *this;
 }
 
-bool SimpleTable::IsEmpty() const {
-  if (has_x_) return false;
-  if (has_y_) return false;
-  return true;
-}
+bool SimpleTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void SimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = 0;
-  if (has_x_) max_ordinal = 1;
-  if (has_y_) max_ordinal = 5;
+  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
-  if (has_x_) {
+  if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -86,7 +79,7 @@ void SimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
         FIDL_ALLOC_PRESENT;
   }
-  if (has_y_) {
+  if (field_presence_.IsSet<4>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -153,13 +146,13 @@ done_5:
 }
 
 zx_status_t SimpleTable::Clone(SimpleTable* result) const {
-  if (has_x_) {
+  if (field_presence_.IsSet<0>()) {
     zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
     if (_status != ZX_OK) return _status;
   } else {
     result->clear_x();
   }
-  if (has_y_) {
+  if (field_presence_.IsSet<4>()) {
     zx_status_t _status = ::fidl::Clone(y_value_.value, result->mutable_y());
     if (_status != ZX_OK) return _status;
   } else {
@@ -171,90 +164,79 @@ extern "C" const fidl_type_t fidl_test_json_ReverseOrdinalTableTable;
 const fidl_type_t* ReverseOrdinalTable::FidlType =
     &fidl_test_json_ReverseOrdinalTableTable;
 
-ReverseOrdinalTable::ReverseOrdinalTable()
-    : has_z_(false), has_y_(false), has_x_(false) {}
+ReverseOrdinalTable::ReverseOrdinalTable() {}
 
 ReverseOrdinalTable::ReverseOrdinalTable(ReverseOrdinalTable&& other) {
-  has_z_ = other.has_z_;
-  if (has_z_) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
     Construct(&z_value_.value, std::move(other.z_value_.value));
   }
-  has_y_ = other.has_y_;
-  if (has_y_) {
+  if (field_presence_.IsSet<1>()) {
     Construct(&y_value_.value, std::move(other.y_value_.value));
   }
-  has_x_ = other.has_x_;
-  if (has_x_) {
+  if (field_presence_.IsSet<2>()) {
     Construct(&x_value_.value, std::move(other.x_value_.value));
   }
 }
 
 ReverseOrdinalTable::~ReverseOrdinalTable() {
-  if (has_z_) {
+  if (field_presence_.IsSet<0>()) {
     Destruct(&z_value_.value);
   }
-  if (has_y_) {
+  if (field_presence_.IsSet<1>()) {
     Destruct(&y_value_.value);
   }
-  if (has_x_) {
+  if (field_presence_.IsSet<2>()) {
     Destruct(&x_value_.value);
   }
 }
 
 ReverseOrdinalTable& ReverseOrdinalTable::operator=(
     ReverseOrdinalTable&& other) {
-  if (other.has_z_) {
-    if (has_z_) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
       z_value_.value = std::move(other.z_value_.value);
     } else {
-      has_z_ = true;
+      field_presence_.Set<0>();
       Construct(&z_value_.value, std::move(other.z_value_.value));
     }
-  } else if (has_z_) {
-    has_z_ = false;
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
     Destruct(&z_value_.value);
   }
-  if (other.has_y_) {
-    if (has_y_) {
+  if (other.field_presence_.IsSet<1>()) {
+    if (field_presence_.IsSet<1>()) {
       y_value_.value = std::move(other.y_value_.value);
     } else {
-      has_y_ = true;
+      field_presence_.Set<1>();
       Construct(&y_value_.value, std::move(other.y_value_.value));
     }
-  } else if (has_y_) {
-    has_y_ = false;
+  } else if (field_presence_.IsSet<1>()) {
+    field_presence_.Clear<1>();
     Destruct(&y_value_.value);
   }
-  if (other.has_x_) {
-    if (has_x_) {
+  if (other.field_presence_.IsSet<2>()) {
+    if (field_presence_.IsSet<2>()) {
       x_value_.value = std::move(other.x_value_.value);
     } else {
-      has_x_ = true;
+      field_presence_.Set<2>();
       Construct(&x_value_.value, std::move(other.x_value_.value));
     }
-  } else if (has_x_) {
-    has_x_ = false;
+  } else if (field_presence_.IsSet<2>()) {
+    field_presence_.Clear<2>();
     Destruct(&x_value_.value);
   }
   return *this;
 }
 
-bool ReverseOrdinalTable::IsEmpty() const {
-  if (has_z_) return false;
-  if (has_y_) return false;
-  if (has_x_) return false;
-  return true;
-}
+bool ReverseOrdinalTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = 0;
-  if (has_z_) max_ordinal = 1;
-  if (has_y_) max_ordinal = 2;
-  if (has_x_) max_ordinal = 3;
+  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
-  if (has_z_) {
+  if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -269,7 +251,7 @@ void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
         FIDL_ALLOC_PRESENT;
   }
-  if (has_y_) {
+  if (field_presence_.IsSet<1>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -284,7 +266,7 @@ void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
         FIDL_ALLOC_PRESENT;
   }
-  if (has_x_) {
+  if (field_presence_.IsSet<2>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -366,19 +348,19 @@ done_3:
 }
 
 zx_status_t ReverseOrdinalTable::Clone(ReverseOrdinalTable* result) const {
-  if (has_z_) {
+  if (field_presence_.IsSet<0>()) {
     zx_status_t _status = ::fidl::Clone(z_value_.value, result->mutable_z());
     if (_status != ZX_OK) return _status;
   } else {
     result->clear_z();
   }
-  if (has_y_) {
+  if (field_presence_.IsSet<1>()) {
     zx_status_t _status = ::fidl::Clone(y_value_.value, result->mutable_y());
     if (_status != ZX_OK) return _status;
   } else {
     result->clear_y();
   }
-  if (has_x_) {
+  if (field_presence_.IsSet<2>()) {
     zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
     if (_status != ZX_OK) return _status;
   } else {
@@ -390,48 +372,44 @@ extern "C" const fidl_type_t fidl_test_json_OlderSimpleTableTable;
 const fidl_type_t* OlderSimpleTable::FidlType =
     &fidl_test_json_OlderSimpleTableTable;
 
-OlderSimpleTable::OlderSimpleTable() : has_x_(false) {}
+OlderSimpleTable::OlderSimpleTable() {}
 
 OlderSimpleTable::OlderSimpleTable(OlderSimpleTable&& other) {
-  has_x_ = other.has_x_;
-  if (has_x_) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
     Construct(&x_value_.value, std::move(other.x_value_.value));
   }
 }
 
 OlderSimpleTable::~OlderSimpleTable() {
-  if (has_x_) {
+  if (field_presence_.IsSet<0>()) {
     Destruct(&x_value_.value);
   }
 }
 
 OlderSimpleTable& OlderSimpleTable::operator=(OlderSimpleTable&& other) {
-  if (other.has_x_) {
-    if (has_x_) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
       x_value_.value = std::move(other.x_value_.value);
     } else {
-      has_x_ = true;
+      field_presence_.Set<0>();
       Construct(&x_value_.value, std::move(other.x_value_.value));
     }
-  } else if (has_x_) {
-    has_x_ = false;
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
     Destruct(&x_value_.value);
   }
   return *this;
 }
 
-bool OlderSimpleTable::IsEmpty() const {
-  if (has_x_) return false;
-  return true;
-}
+bool OlderSimpleTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void OlderSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = 0;
-  if (has_x_) max_ordinal = 1;
+  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
-  if (has_x_) {
+  if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -483,7 +461,7 @@ done_1:
 }
 
 zx_status_t OlderSimpleTable::Clone(OlderSimpleTable* result) const {
-  if (has_x_) {
+  if (field_presence_.IsSet<0>()) {
     zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
     if (_status != ZX_OK) return _status;
   } else {
@@ -495,89 +473,78 @@ extern "C" const fidl_type_t fidl_test_json_NewerSimpleTableTable;
 const fidl_type_t* NewerSimpleTable::FidlType =
     &fidl_test_json_NewerSimpleTableTable;
 
-NewerSimpleTable::NewerSimpleTable()
-    : has_x_(false), has_y_(false), has_z_(false) {}
+NewerSimpleTable::NewerSimpleTable() {}
 
 NewerSimpleTable::NewerSimpleTable(NewerSimpleTable&& other) {
-  has_x_ = other.has_x_;
-  if (has_x_) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
     Construct(&x_value_.value, std::move(other.x_value_.value));
   }
-  has_y_ = other.has_y_;
-  if (has_y_) {
+  if (field_presence_.IsSet<4>()) {
     Construct(&y_value_.value, std::move(other.y_value_.value));
   }
-  has_z_ = other.has_z_;
-  if (has_z_) {
+  if (field_presence_.IsSet<5>()) {
     Construct(&z_value_.value, std::move(other.z_value_.value));
   }
 }
 
 NewerSimpleTable::~NewerSimpleTable() {
-  if (has_x_) {
+  if (field_presence_.IsSet<0>()) {
     Destruct(&x_value_.value);
   }
-  if (has_y_) {
+  if (field_presence_.IsSet<4>()) {
     Destruct(&y_value_.value);
   }
-  if (has_z_) {
+  if (field_presence_.IsSet<5>()) {
     Destruct(&z_value_.value);
   }
 }
 
 NewerSimpleTable& NewerSimpleTable::operator=(NewerSimpleTable&& other) {
-  if (other.has_x_) {
-    if (has_x_) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
       x_value_.value = std::move(other.x_value_.value);
     } else {
-      has_x_ = true;
+      field_presence_.Set<0>();
       Construct(&x_value_.value, std::move(other.x_value_.value));
     }
-  } else if (has_x_) {
-    has_x_ = false;
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
     Destruct(&x_value_.value);
   }
-  if (other.has_y_) {
-    if (has_y_) {
+  if (other.field_presence_.IsSet<4>()) {
+    if (field_presence_.IsSet<4>()) {
       y_value_.value = std::move(other.y_value_.value);
     } else {
-      has_y_ = true;
+      field_presence_.Set<4>();
       Construct(&y_value_.value, std::move(other.y_value_.value));
     }
-  } else if (has_y_) {
-    has_y_ = false;
+  } else if (field_presence_.IsSet<4>()) {
+    field_presence_.Clear<4>();
     Destruct(&y_value_.value);
   }
-  if (other.has_z_) {
-    if (has_z_) {
+  if (other.field_presence_.IsSet<5>()) {
+    if (field_presence_.IsSet<5>()) {
       z_value_.value = std::move(other.z_value_.value);
     } else {
-      has_z_ = true;
+      field_presence_.Set<5>();
       Construct(&z_value_.value, std::move(other.z_value_.value));
     }
-  } else if (has_z_) {
-    has_z_ = false;
+  } else if (field_presence_.IsSet<5>()) {
+    field_presence_.Clear<5>();
     Destruct(&z_value_.value);
   }
   return *this;
 }
 
-bool NewerSimpleTable::IsEmpty() const {
-  if (has_x_) return false;
-  if (has_y_) return false;
-  if (has_z_) return false;
-  return true;
-}
+bool NewerSimpleTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = 0;
-  if (has_x_) max_ordinal = 1;
-  if (has_y_) max_ordinal = 5;
-  if (has_z_) max_ordinal = 6;
+  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
-  if (has_x_) {
+  if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -592,7 +559,7 @@ void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
         FIDL_ALLOC_PRESENT;
   }
-  if (has_y_) {
+  if (field_presence_.IsSet<4>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -607,7 +574,7 @@ void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
         FIDL_ALLOC_PRESENT;
   }
-  if (has_z_) {
+  if (field_presence_.IsSet<5>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
@@ -689,19 +656,19 @@ done_6:
 }
 
 zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
-  if (has_x_) {
+  if (field_presence_.IsSet<0>()) {
     zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
     if (_status != ZX_OK) return _status;
   } else {
     result->clear_x();
   }
-  if (has_y_) {
+  if (field_presence_.IsSet<4>()) {
     zx_status_t _status = ::fidl::Clone(y_value_.value, result->mutable_y());
     if (_status != ZX_OK) return _status;
   } else {
     result->clear_y();
   }
-  if (has_z_) {
+  if (field_presence_.IsSet<5>()) {
     zx_status_t _status = ::fidl::Clone(z_value_.value, result->mutable_z());
     if (_status != ZX_OK) return _status;
   } else {
@@ -714,16 +681,18 @@ const fidl_type_t* EmptyTable::FidlType = &fidl_test_json_EmptyTableTable;
 
 EmptyTable::EmptyTable() {}
 
-EmptyTable::EmptyTable(EmptyTable&& other) {}
+EmptyTable::EmptyTable(EmptyTable&& other) {
+  field_presence_ = other.field_presence_;
+}
 
 EmptyTable::~EmptyTable() {}
 
 EmptyTable& EmptyTable::operator=(EmptyTable&& other) { return *this; }
 
-bool EmptyTable::IsEmpty() const { return true; }
+bool EmptyTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void EmptyTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = 0;
+  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
 }

@@ -116,21 +116,21 @@ class TableWithHandle final {
   bool IsEmpty() const;
 
   const ::zx::vmo& h() const {
-    ZX_ASSERT(has_h_);
+    ZX_ASSERT(field_presence_.IsSet<0>());
     return h_value_.value;
   }
-  bool has_h() const { return has_h_; }
+  bool has_h() const { return field_presence_.IsSet<0>(); }
 
   ::zx::vmo* mutable_h() {
-    if (!has_h_) {
-      has_h_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&h_value_.value);
     }
     return &h_value_.value;
   }
   TableWithHandle& set_h(::zx::vmo _value) {
-    if (!has_h_) {
-      has_h_ = true;
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
       Construct(&h_value_.value, std::move(_value));
     } else {
       h_value_.value = std::move(_value);
@@ -138,10 +138,10 @@ class TableWithHandle final {
     return *this;
   }
   void clear_h() {
-    if (!has_h_) {
+    if (!field_presence_.IsSet<0>()) {
       return;
     }
-    has_h_ = false;
+    field_presence_.Clear<0>();
     Destruct(&h_value_.value);
   }
 
@@ -169,7 +169,8 @@ class TableWithHandle final {
   void Destruct(T* p) {
     p->~T();
   }
-  bool has_h_ : 1;
+
+  ::fidl::internal::BitSet<1> field_presence_;
   union ValueUnion_h {
     ValueUnion_h() {}
     ~ValueUnion_h() {}

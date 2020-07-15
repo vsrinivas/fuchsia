@@ -61,6 +61,7 @@
 #endif
 
 #include "lib/fidl/cpp/comparison.h"
+#include "lib/fidl/cpp/internal/bitset.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/vector.h"
 
