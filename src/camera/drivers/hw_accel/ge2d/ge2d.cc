@@ -104,6 +104,37 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
   return status;
 }
 
+zx_status_t Ge2dDevice::Ge2dInitTaskInPlaceWaterMark(
+    const buffer_collection_info_2_t* buffer_collection, const water_mark_info_t* info_list,
+    size_t info_count, const image_format_2_t* image_format_table_list,
+    size_t image_format_table_count, uint32_t image_format_index,
+    const hw_accel_frame_callback_t* frame_callback,
+    const hw_accel_res_change_callback_t* res_callback,
+    const hw_accel_remove_task_callback_t* task_remove_callback, uint32_t* out_task_index) {
+  if (out_task_index == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (info_count != image_format_table_count)
+    return ZX_ERR_INVALID_ARGS;
+
+  auto task = std::make_unique<Ge2dTask>();
+  zx_status_t status = task->InitInPlaceWatermark(
+      buffer_collection, info_list, image_format_table_list, image_format_table_count,
+      image_format_index, frame_callback, res_callback, task_remove_callback, bti_, canvas_);
+  if (status != ZX_OK) {
+    FX_PLOGST(ERROR, kTag, status) << "Task Creation Failed";
+    return status;
+  }
+
+  fbl::AutoLock al(&interface_lock_);
+  // Put an entry in the hashmap.
+  task_map_[next_task_index_] = std::move(task);
+  *out_task_index = next_task_index_;
+  next_task_index_++;
+
+  return status;
+}
+
 void Ge2dDevice::Ge2dRemoveTask(uint32_t task_index) {
   fbl::AutoLock al(&interface_lock_);
 
@@ -175,12 +206,16 @@ zx_status_t Ge2dDevice::Ge2dSetInputAndOutputResolution(uint32_t task_index,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (task_entry->second->Ge2dTaskType() != Ge2dTask::GE2D_WATERMARK) {
+  if (task_entry->second->Ge2dTaskType() != Ge2dTask::GE2D_WATERMARK &&
+      task_entry->second->Ge2dTaskType() != Ge2dTask::GE2D_IN_PLACE_WATERMARK) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Validate new image format index|.
-  if (!task_entry->second->IsInputFormatIndexValid(new_image_format_index) ||
+  if (!task_entry->second->IsInputFormatIndexValid(new_image_format_index)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (task_entry->second->has_output_images() &&
       !task_entry->second->IsOutputFormatIndexValid(new_image_format_index)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -286,8 +321,10 @@ void Ge2dDevice::ProcessSetCropRect(TaskInfo& info) { info.task->SetCropRect(inf
 void Ge2dDevice::ProcessChangeResolution(TaskInfo& info) {
   auto task = info.task;
 
-  // This has to free and reallocate the output buffer canvas ids.
-  task->Ge2dChangeOutputRes(info.index);
+  if (task->has_output_images()) {
+    // This has to free and reallocate the output buffer canvas ids.
+    task->Ge2dChangeOutputRes(info.index);
+  }
   if (info.op == GE2D_OP_SETINPUTOUTPUTRES) {
     // This has to free and reallocate the input buffer canvas ids.
     task->Ge2dChangeInputRes(info.index);
@@ -656,6 +693,7 @@ void Ge2dDevice::SetSrc1Input(const image_canvas_id_t& canvas) {
 void Ge2dDevice::SetSrc2Input(const image_canvas_id_t& canvas) {
   // Src2 doesn't support multiplanar images.
   ZX_ASSERT(!canvas.canvas_idx[kUVComponent].valid());
+  ZX_ASSERT(canvas.canvas_idx[kYComponent].valid());
   Src2DstCanvas::Get()
       .ReadFrom(&ge2d_mmio_)
       .set_src2(canvas.canvas_idx[kYComponent].id())
@@ -741,11 +779,63 @@ void Ge2dDevice::ProcessWatermarkTask(Ge2dTask* task, uint32_t input_buffer_inde
   ProcessAndWaitForIdle();
 }
 
+void Ge2dDevice::ProcessInPlaceWatermarkTask(Ge2dTask* task, uint32_t input_buffer_index) {
+  TRACE_DURATION("camera", "Ge2dDevice::ProcessInPlaceWatermarkTask");
+  image_format_2_t input_format = task->input_format();
+  image_format_2_t output_format = input_format;
+  image_format_2_t watermark_format = task->WatermarkFormat();
+  rect_t input_rect = {
+      .x = task->watermark_loc_x(),
+      .y = task->watermark_loc_y(),
+      .width = watermark_format.coded_width,
+      .height = watermark_format.coded_height,
+  };
+  rect_t watermark_origin_rect = FullImageRect(watermark_format);
+
+  auto& input_ids = task->GetInputCanvasIds(input_buffer_index);
+  auto& output_canvas = input_ids;
+
+  // Blend portion of input with watermark into temporary image (does colorspace conversion).
+  SetRects(input_rect, watermark_origin_rect);
+  SetSrc2InputRect(watermark_origin_rect);
+  SetBlending(true);
+  SetupInputOutputFormats(/*scaling_enabled=*/false, input_format, watermark_format);
+  SetSrc1Input(input_ids);
+  SetSrc2Input(task->watermark_input_canvas());
+  auto& intermediate_canvas = task->watermark_blended_canvas();
+  SetDstOutput(intermediate_canvas);
+
+  ProcessAndWaitForIdle();
+
+  // Copy from temporary image to correct region of output (does colorspace conversion).
+  SetRects(watermark_origin_rect, input_rect);
+  SetBlending(false);
+  SetupInputOutputFormats(/*scaling_enabled=*/false, watermark_format, output_format);
+  SetSrc1Input(intermediate_canvas);
+  SetDstOutput(output_canvas);
+
+  ProcessAndWaitForIdle();
+}
+
 void Ge2dDevice::ProcessFrame(TaskInfo& info) {
   auto task = info.task;
 
   auto input_buffer_index = info.index;
+  if (task->Ge2dTaskType() == Ge2dTask::GE2D_IN_PLACE_WATERMARK) {
+    ProcessInPlaceWatermarkTask(task, input_buffer_index);
+    // Invoke the callback function and tell about the output buffer index
+    // which is ready to be used.
+    frame_available_info f_info;
+    f_info.frame_status = FRAME_STATUS_OK;
+    f_info.buffer_id = input_buffer_index;
+    f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+    f_info.metadata.image_format_index = task->input_format_index();
+    f_info.metadata.input_buffer_index = input_buffer_index;
+    task->FrameReadyCallback(&f_info);
+    return;
+  }
 
+  ZX_DEBUG_ASSERT(task->has_output_images());
   auto output_buffer = task->WriteLockOutputBuffer();
   if (!output_buffer) {
     frame_available_info f_info;
@@ -761,6 +851,7 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
   if (task->Ge2dTaskType() == Ge2dTask::GE2D_RESIZE) {
     ProcessResizeTask(task, input_buffer_index, *output_buffer);
   } else {
+    ZX_DEBUG_ASSERT(task->Ge2dTaskType() == Ge2dTask::GE2D_WATERMARK);
     ProcessWatermarkTask(task, input_buffer_index, *output_buffer);
   }
   // Invoke the callback function and tell about the output buffer index

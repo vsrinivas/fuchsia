@@ -333,10 +333,16 @@ uint8_t* GetPointerToPixel(void* base, const image_format_2_t& format, uint32_t 
 void CheckYUVRegion(void* data, const image_format_2_t& format, uint8_t y_component, uint8_t u,
                     uint8_t v, uint32_t x_start, uint32_t width, uint32_t y_start,
                     uint32_t height) {
+  uint32_t error_count = 0;
   for (uint32_t y = 0; y < height; y++) {
     for (uint32_t x = 0; x < width; x++) {
       uint32_t value = *GetPointerToPixel(data, format, x_start + x, y_start + y, 0);
       EXPECT_EQ(y_component, value, "(%d, %d)", x, y);
+      if (y_component != value) {
+        error_count++;
+      }
+      if (error_count > 10)
+        return;
     }
   }
   for (uint32_t y = 0; y < height / 2; y++) {
@@ -345,6 +351,11 @@ void CheckYUVRegion(void* data, const image_format_2_t& format, uint8_t y_compon
           GetPointerToPixel(data, format, x_start + x, y_start + y, 1));
       EXPECT_EQ(u, uv_value & 0xff, "(%d, %d)", x, y);
       EXPECT_EQ(v, uv_value >> 8, "(%d, %d)", x, y);
+      if (u != (uv_value & 0xff) || (v != uv_value >> 8)) {
+        error_count++;
+      }
+      if (error_count > 10)
+        return;
     }
   }
 }
@@ -1151,6 +1162,62 @@ TEST_F(Ge2dDeviceTest, GlobalAlphaWatermark) {
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+// Try switching the in-place watermark to size 1 and ensuring the watermark is used correctly.
+TEST_F(Ge2dDeviceTest, InPlaceWatermarkOutputSize) {
+  SetupCallbacks();
+  SetupInput();
+  SetupWatermarkInfo();
+  uint32_t resolution_changed_count = 0;
+  SetResolutionChangedCallback([&resolution_changed_count](const frame_available_info* info) {
+    ++resolution_changed_count;
+  });
+  // Pure red in YUV.
+  WriteConstantColorToVmo(input_buffer_collection_.buffers[1].vmo, 82, 90, 240,
+                          output_image_format_table_[1]);
+
+  static constexpr uint32_t kSecondWatermarkOffset = 4;
+  SetFrameCallback([this](const frame_available_info* info) {
+    EXPECT_EQ(1u, info->buffer_id);
+    zx_handle_t vmo_a = input_buffer_collection_.buffers[info->buffer_id].vmo;
+    image_format_2_t& format = output_image_format_table_[1];
+
+    CacheInvalidateVmo(vmo_a);
+
+    fzl::VmoMapper mapper_a;
+    ASSERT_OK(mapper_a.Map(*zx::unowned_vmo(vmo_a), 0, 0, ZX_VM_PERM_READ));
+
+    // Check region above the watermark to ensure it hasn't changed.
+    CheckYUVRegion(mapper_a.start(), format, 82, 90, 240, 0, format.coded_width, 0,
+                   kSecondWatermarkOffset);
+
+    CheckYUVRegion(mapper_a.start(), format, 144, 54, 34, kSecondWatermarkOffset, kWatermarkWidth,
+                   kSecondWatermarkOffset, kWatermarkHeight);
+    sync_completion_signal(&completion_);
+  });
+
+  zx::vmo watermark_vmo = CreateWatermarkVmo();
+  WriteConstantRgbaToVmo(watermark_vmo.get(), 0, 0xff, 0, 0xff, watermark_info_.wm_image_format);
+  std::vector<water_mark_info_t> duplicated;
+  DuplicateWatermarkInfo(watermark_info_, watermark_vmo, kImageFormatTableSize, &duplicated);
+  duplicated[1].loc_x = kSecondWatermarkOffset;
+  duplicated[1].loc_y = kSecondWatermarkOffset;
+  uint32_t watermark_task;
+  zx_status_t status = ge2d_device_->Ge2dInitTaskInPlaceWaterMark(
+      &input_buffer_collection_, duplicated.data(), duplicated.size(), output_image_format_table_,
+      kImageFormatTableSize, 0, &frame_callback_, &res_callback_, &remove_task_callback_,
+      &watermark_task);
+  EXPECT_OK(status);
+
+  status = ge2d_device_->Ge2dSetInputAndOutputResolution(watermark_task, 1);
+  EXPECT_OK(status);
+
+  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 1);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+  EXPECT_EQ(1u, resolution_changed_count);
 }
 
 }  // namespace

@@ -54,9 +54,7 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
                                      const hw_accel_frame_callback_t* frame_callback,
                                      const hw_accel_res_change_callback_t* res_callback,
                                      const hw_accel_remove_task_callback_t* remove_task_callback) {
-  if (!IsBufferCollectionValid(input_buffer_collection,
-                               &input_image_format_table_list[input_image_format_index]) ||
-      !IsBufferCollectionValid(output_buffer_collection,
+  if (!IsBufferCollectionValid(output_buffer_collection,
                                &output_image_format_table_list[output_image_format_index])) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -68,13 +66,6 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
   }
   output_image_format_count_ = output_image_format_table_count;
   cur_output_image_format_index_ = output_image_format_index;
-
-  input_image_format_list_ = std::make_unique<image_format_2_t[]>(input_image_format_table_count);
-  for (uint32_t i = 0; i < input_image_format_table_count; i++) {
-    input_image_format_list_.get()[i] = input_image_format_table_list[i];
-  }
-  input_image_format_count_ = input_image_format_table_count;
-  cur_input_image_format_index_ = input_image_format_index;
 
   // Initialize the VMOPool and pin the output buffers
   zx::vmo output_vmos[output_buffer_collection->buffer_count];
@@ -101,6 +92,31 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
     FX_LOG(ERROR, kTag, "Unable to pin buffers");
     return status;
   }
+
+  return InitInputBuffers(input_buffer_collection, input_image_format_table_list,
+                          input_image_format_table_count, input_image_format_index, bti,
+                          frame_callback, res_callback, remove_task_callback);
+}
+
+zx_status_t GenericTask::InitInputBuffers(
+    const buffer_collection_info_2_t* input_buffer_collection,
+    const image_format_2_t* input_image_format_table_list, size_t input_image_format_table_count,
+    uint32_t input_image_format_index, const zx::bti& bti,
+    const hw_accel_frame_callback_t* frame_callback,
+    const hw_accel_res_change_callback_t* res_callback,
+    const hw_accel_remove_task_callback_t* remove_task_callback) {
+  if (!IsBufferCollectionValid(input_buffer_collection,
+                               &input_image_format_table_list[input_image_format_index])) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  input_image_format_list_ = std::make_unique<image_format_2_t[]>(input_image_format_table_count);
+  for (uint32_t i = 0; i < input_image_format_table_count; i++) {
+    input_image_format_list_.get()[i] = input_image_format_table_list[i];
+  }
+  input_image_format_count_ = input_image_format_table_count;
+  cur_input_image_format_index_ = input_image_format_index;
+  zx_status_t status = ZX_OK;
 
   // Pin the input buffers.
   input_buffers_ =

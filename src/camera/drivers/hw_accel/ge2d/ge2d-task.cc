@@ -90,7 +90,8 @@ zx_status_t Ge2dTask::AllocCanvasId(const image_format_2_t* image_format, zx_han
 }
 
 zx_status_t Ge2dTask::AllocInputCanvasIds(const buffer_collection_info_2_t* input_buffer_collection,
-                                          const image_format_2_t* input_image_format) {
+                                          const image_format_2_t* input_image_format,
+                                          bool enable_write) {
   if (input_image_format->pixel_format.type != fuchsia_sysmem_PixelFormatType_NV12 &&
       input_image_format->pixel_format.type != fuchsia_sysmem_PixelFormatType_R8G8B8A8) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -103,8 +104,11 @@ zx_status_t Ge2dTask::AllocInputCanvasIds(const buffer_collection_info_2_t* inpu
   auto input_image_canvas_ids =
       std::make_unique<input_image_canvas_id_t[]>(input_buffer_collection->buffer_count);
   for (uint32_t i = 0; i < input_buffer_collection->buffer_count; i++) {
+    uint32_t flags = CANVAS_FLAGS_READ;
+    if (enable_write)
+      flags |= CANVAS_FLAGS_WRITE;
     zx_status_t status = AllocCanvasId(input_image_format, input_buffer_collection->buffers[i].vmo,
-                                       input_image_canvas_ids[i].canvas_ids, CANVAS_FLAGS_READ);
+                                       input_image_canvas_ids[i].canvas_ids, flags);
     if (status != ZX_OK) {
       return status;
     }
@@ -173,11 +177,14 @@ zx_status_t Ge2dTask::AllocCanvasIds(const buffer_collection_info_2_t* input_buf
                                      const buffer_collection_info_2_t* output_buffer_collection,
                                      const image_format_2_t* input_image_format,
                                      const image_format_2_t* output_image_format) {
-  zx_status_t status = AllocInputCanvasIds(input_buffer_collection, input_image_format);
+  zx_status_t status = AllocInputCanvasIds(input_buffer_collection, input_image_format,
+                                           /*enable_write=*/!output_buffer_collection);
   if (status != ZX_OK) {
     return status;
   }
-  status = AllocOutputCanvasIds(output_buffer_collection, output_image_format);
+  if (output_buffer_collection) {
+    status = AllocOutputCanvasIds(output_buffer_collection, output_image_format);
+  }
   return status;
 }
 
@@ -209,15 +216,14 @@ void Ge2dTask::Ge2dChangeOutputRes(uint32_t new_output_buffer_index) {
     ZX_ASSERT(status == ZX_OK);
     it.second = std::move(canvas_ids);
   }
-  AllocateWatermarkCanvasIds();
 }
 
 void Ge2dTask::AllocateWatermarkCanvasIds() {
   for (auto& wm : wm_) {
     wm.input_canvas_id = image_canvas_id{};
   }
-  if (output_format_index() < wm_.size()) {
-    auto& wm = wm_[output_format_index()];
+  if (input_format_index() < wm_.size()) {
+    auto& wm = wm_[input_format_index()];
     image_canvas_id_t canvas_ids;
     zx_status_t status = AllocCanvasId(&wm.image_format, wm.watermark_input_vmo.get(), canvas_ids,
                                        CANVAS_FLAGS_READ);
@@ -242,6 +248,7 @@ void Ge2dTask::Ge2dChangeInputRes(uint32_t new_input_buffer_index) {
     ZX_ASSERT(status == ZX_OK);
     input_image_canvas_ids_[j].canvas_ids = std::move(canvas_ids);
   }
+  AllocateWatermarkCanvasIds();
 }
 
 zx_status_t Ge2dTask::Init(const buffer_collection_info_2_t* input_buffer_collection,
@@ -263,11 +270,18 @@ zx_status_t Ge2dTask::Init(const buffer_collection_info_2_t* input_buffer_collec
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status = InitBuffers(input_buffer_collection, output_buffer_collection,
-                                   input_image_format_table_list, input_image_format_table_count,
-                                   input_image_format_index, output_image_format_table_list,
-                                   output_image_format_table_count, output_image_format_index, bti,
-                                   frame_callback, res_callback, remove_task_callback);
+  zx_status_t status;
+  if (output_buffer_collection) {
+    status = InitBuffers(input_buffer_collection, output_buffer_collection,
+                         input_image_format_table_list, input_image_format_table_count,
+                         input_image_format_index, output_image_format_table_list,
+                         output_image_format_table_count, output_image_format_index, bti,
+                         frame_callback, res_callback, remove_task_callback);
+  } else {
+    status = InitInputBuffers(input_buffer_collection, input_image_format_table_list,
+                              input_image_format_table_count, input_image_format_index, bti,
+                              frame_callback, res_callback, remove_task_callback);
+  }
   if (status != ZX_OK) {
     FX_LOG(ERROR, kTag, "InitBuffers Failed");
     return status;
@@ -310,28 +324,11 @@ zx_status_t Ge2dTask::InitResize(const buffer_collection_info_2_t* input_buffer_
   return status;
 }
 
-zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buffer_collection,
-                                    const buffer_collection_info_2_t* output_buffer_collection,
-                                    const water_mark_info_t* wm_info,
-                                    const image_format_2_t* image_format_table_list,
-                                    size_t image_format_table_count, uint32_t image_format_index,
-                                    const hw_accel_frame_callback_t* frame_callback,
-                                    const hw_accel_res_change_callback_t* res_callback,
-                                    const hw_accel_remove_task_callback_t* remove_task_callback,
-                                    const zx::bti& bti, amlogic_canvas_protocol_t canvas) {
-  canvas_ = canvas;
-
-  zx_status_t status = Init(input_buffer_collection, output_buffer_collection,
-                            image_format_table_list, image_format_table_count, image_format_index,
-                            image_format_table_list, image_format_table_count, image_format_index,
-                            frame_callback, res_callback, remove_task_callback, bti);
-  if (status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Init Failed");
-    return status;
-  }
-  task_type_ = GE2D_WATERMARK;
-
+zx_status_t Ge2dTask::InitializeWatermarkImages(const water_mark_info_t* wm_info,
+                                                size_t image_format_table_count, const zx::bti& bti,
+                                                amlogic_canvas_protocol_t canvas) {
   size_t max_size = 0;
+  zx_status_t status;
   for (uint32_t i = 0; i < image_format_table_count; i++) {
     wm_.push_back({});
     auto& wm = wm_.back();
@@ -414,6 +411,52 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
   }
   watermark_blended_vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, max_size, nullptr, 0);
   AllocateWatermarkCanvasIds();
-  return status;
+  return ZX_OK;
+}
+
+zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buffer_collection,
+                                    const buffer_collection_info_2_t* output_buffer_collection,
+                                    const water_mark_info_t* wm_info,
+                                    const image_format_2_t* image_format_table_list,
+                                    size_t image_format_table_count, uint32_t image_format_index,
+                                    const hw_accel_frame_callback_t* frame_callback,
+                                    const hw_accel_res_change_callback_t* res_callback,
+                                    const hw_accel_remove_task_callback_t* remove_task_callback,
+                                    const zx::bti& bti, amlogic_canvas_protocol_t canvas) {
+  canvas_ = canvas;
+
+  zx_status_t status = Init(input_buffer_collection, output_buffer_collection,
+                            image_format_table_list, image_format_table_count, image_format_index,
+                            image_format_table_list, image_format_table_count, image_format_index,
+                            frame_callback, res_callback, remove_task_callback, bti);
+  if (status != ZX_OK) {
+    FX_LOG(ERROR, kTag, "Init Failed");
+    return status;
+  }
+  task_type_ = GE2D_WATERMARK;
+
+  return InitializeWatermarkImages(wm_info, image_format_table_count, bti, canvas);
+}
+
+zx_status_t Ge2dTask::InitInPlaceWatermark(
+    const buffer_collection_info_2_t* buffer_collection, const water_mark_info_t* wm_info,
+    const image_format_2_t* image_format_table_list, size_t image_format_table_count,
+    uint32_t image_format_index, const hw_accel_frame_callback_t* frame_callback,
+    const hw_accel_res_change_callback_t* res_callback,
+    const hw_accel_remove_task_callback_t* remove_task_callback, const zx::bti& bti,
+    amlogic_canvas_protocol_t canvas) {
+  canvas_ = canvas;
+
+  zx_status_t status =
+      Init(buffer_collection, nullptr, image_format_table_list, image_format_table_count,
+           image_format_index, image_format_table_list, image_format_table_count,
+           image_format_index, frame_callback, res_callback, remove_task_callback, bti);
+  if (status != ZX_OK) {
+    FX_LOG(ERROR, kTag, "Init Failed");
+    return status;
+  }
+  task_type_ = GE2D_IN_PLACE_WATERMARK;
+
+  return InitializeWatermarkImages(wm_info, image_format_table_count, bti, canvas);
 }
 }  // namespace ge2d

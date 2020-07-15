@@ -52,7 +52,7 @@ typedef struct input_image_canvas_id {
 
 class Ge2dTask : public generictask::GenericTask {
  public:
-  enum Ge2dTaskType { GE2D_RESIZE, GE2D_WATERMARK };
+  enum Ge2dTaskType { GE2D_RESIZE, GE2D_WATERMARK, GE2D_IN_PLACE_WATERMARK };
 
   // Note on Input and Output image formats :
   // Resize task takes 1 input format and a table of output formats. The resize
@@ -93,6 +93,17 @@ class Ge2dTask : public generictask::GenericTask {
                             const hw_accel_remove_task_callback_t* remove_task_callback,
                             const zx::bti& bti, amlogic_canvas_protocol_t canvas);
 
+  // We use the same image format list (and image format index) for both input and output
+  // for watermark tasks.
+  zx_status_t InitInPlaceWatermark(const buffer_collection_info_2_t* input_buffer_collection,
+                                   const water_mark_info_t* info_list,
+                                   const image_format_2_t* image_format_table_list,
+                                   size_t image_format_table_count, uint32_t image_format_index,
+                                   const hw_accel_frame_callback_t* frame_callback,
+                                   const hw_accel_res_change_callback_t* res_callback,
+                                   const hw_accel_remove_task_callback_t* remove_task_callback,
+                                   const zx::bti& bti, amlogic_canvas_protocol_t canvas);
+
   const image_canvas_id_t& GetOutputCanvasIds(zx_handle_t vmo) {
     auto entry = buffer_map_.find(vmo);
     ZX_ASSERT(entry != buffer_map_.end());
@@ -109,20 +120,25 @@ class Ge2dTask : public generictask::GenericTask {
   void Ge2dChangeOutputRes(uint32_t new_output_buffer_index);
   void Ge2dChangeInputRes(uint32_t new_input_buffer_index);
 
-  Ge2dTaskType Ge2dTaskType() { return task_type_; }
+  Ge2dTaskType Ge2dTaskType() const { return task_type_; }
 
   resize_info_t resize_info() const { return res_info_; }
 
   void SetCropRect(const rect_t& rect) { res_info_.crop = rect; }
 
-  image_format_2_t WatermarkFormat() { return wm_[output_format_index()].image_format; }
-  uint32_t watermark_loc_x() const { return wm_[output_format_index()].loc_x; }
-  uint32_t watermark_loc_y() const { return wm_[output_format_index()].loc_y; }
+  // Use input_format_index because that's valid for both in-place and non-in-place watermark tasks.
+  image_format_2_t WatermarkFormat() { return wm_[input_format_index()].image_format; }
+  uint32_t watermark_loc_x() const { return wm_[input_format_index()].loc_x; }
+  uint32_t watermark_loc_y() const { return wm_[input_format_index()].loc_y; }
 
   const image_canvas_id& watermark_input_canvas() {
-    return wm_[output_format_index()].input_canvas_id;
+    return wm_[input_format_index()].input_canvas_id;
   }
   const image_canvas_id& watermark_blended_canvas() { return wm_blended_canvas_id_; }
+
+  zx::vmo& watermark_blended_vmo() { return watermark_blended_vmo_; }
+
+  bool has_output_images() const { return Ge2dTaskType() != Ge2dTask::GE2D_IN_PLACE_WATERMARK; }
 
  private:
   zx_status_t Init(const buffer_collection_info_2_t* input_buffer_collection,
@@ -134,6 +150,9 @@ class Ge2dTask : public generictask::GenericTask {
                    const hw_accel_frame_callback_t* frame_callback,
                    const hw_accel_res_change_callback_t* res_callback,
                    const hw_accel_remove_task_callback_t* remove_task_callback, const zx::bti& bti);
+  zx_status_t InitializeWatermarkImages(const water_mark_info_t* wm_info,
+                                        size_t image_format_table_count, const zx::bti& bti,
+                                        amlogic_canvas_protocol_t canvas);
   // Allocates canvas ids for every frame in the input and output buffer collections
   // (amlogic). One canvas id is allocated per plane of the image frame. Internally,
   // canvas id allocation pins the vmos (zx_bit_pin()).
@@ -146,7 +165,7 @@ class Ge2dTask : public generictask::GenericTask {
   // Called from AllocCanvasIds() to allocate canvas ids for input and output buffer
   // collections.
   zx_status_t AllocInputCanvasIds(const buffer_collection_info_2_t* input_buffer_collection,
-                                  const image_format_2_t* input_image_format);
+                                  const image_format_2_t* input_image_format, bool enable_write);
   zx_status_t AllocOutputCanvasIds(const buffer_collection_info_2_t* output_buffer_collection,
                                    const image_format_2_t* output_image_format);
   void FreeCanvasIds();

@@ -87,6 +87,18 @@ protocol Ge2d {
                       ddk.protocol.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
                         -> (zx.status s, uint32 task_index);
 
+    // This watermark task modifies the images in the input buffer collection.  The output image
+    // index will be identical with the input image index, so the caller must manage the output
+    // buffer lifetimes.  Watermark info is per-resolution.
+    InitTaskInPlaceWaterMark(zircon.device.sysmem.BufferCollectionInfo_2 buffer_collection,
+                      vector<WaterMarkInfo> info,
+                      vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
+                      uint32 image_format_index,
+                      ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
+                      ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback,
+                      ddk.protocol.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
+                        -> (zx.status s, uint32 task_index);
+
     // De-registers the task.
     RemoveTask(uint32 task_index);
 
@@ -98,7 +110,7 @@ protocol Ge2d {
     ProcessFrame(uint32 task_index, uint32 input_buffer_index) -> (zx.status s);
 
     // Releases the frame |buffer_index| from the |output_buffer_collection| to be
-    // used again by the GE2D driver again.
+    // used again by the GE2D driver again. Not valid for in-place watermark tasks.
     ReleaseFrame(uint32 task_index, uint32 buffer_index);
 
     // Set the output resolution. This call sets the resolution on all the output canvas

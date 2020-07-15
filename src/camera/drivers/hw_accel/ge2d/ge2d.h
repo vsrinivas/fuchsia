@@ -90,6 +90,15 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
                                     const hw_accel_remove_task_callback_t* task_remove_callback,
                                     uint32_t* out_task_index);
 
+  // See ge2d-task.h for description of args.
+  zx_status_t Ge2dInitTaskInPlaceWaterMark(
+      const buffer_collection_info_2_t* buffer_collection, const water_mark_info_t* info_list,
+      size_t info_count, const image_format_2_t* image_format_table_list,
+      size_t image_format_table_count, uint32_t image_format_index,
+      const hw_accel_frame_callback_t* frame_callback,
+      const hw_accel_res_change_callback_t* res_callback,
+      const hw_accel_remove_task_callback_t* task_remove_callback, uint32_t* out_task_index);
+
   zx_status_t Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index);
   void Ge2dRemoveTask(uint32_t task_index);
   void Ge2dReleaseFrame(uint32_t task_index, uint32_t buffer_index);
@@ -162,6 +171,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
                          const fzl::VmoPool::Buffer& output_buffer);
   void ProcessWatermarkTask(Ge2dTask* task, uint32_t input_buffer_index,
                             const fzl::VmoPool::Buffer& output_buffer);
+  void ProcessInPlaceWatermarkTask(Ge2dTask* task, uint32_t input_buffer_index);
 
   // Used to access the processing queue.
   fbl::Mutex lock_;

@@ -124,6 +124,16 @@ class GenericTask {
                           const hw_accel_frame_callback_t* frame_callback,
                           const hw_accel_res_change_callback_t* res_callback,
                           const hw_accel_remove_task_callback_t* remove_task_callback);
+
+  // Just pins the input buffer collection.
+  zx_status_t InitInputBuffers(const buffer_collection_info_2_t* input_buffer_collection,
+                               const image_format_2_t* input_image_format_table_list,
+                               size_t input_image_format_table_count,
+                               uint32_t input_image_format_index, const zx::bti& bti,
+                               const hw_accel_frame_callback_t* frame_callback,
+                               const hw_accel_res_change_callback_t* res_callback,
+                               const hw_accel_remove_task_callback_t* remove_task_callback);
+
   // Guards Allocations and Frees of buffers in the output pool.
 
  private:
@@ -133,7 +143,7 @@ class GenericTask {
   uint32_t cur_input_image_format_index_;
   size_t output_image_format_count_;
   std::unique_ptr<image_format_2_t[]> output_image_format_list_;
-  uint32_t cur_output_image_format_index_;
+  uint32_t cur_output_image_format_index_ = UINT32_MAX;
   const hw_accel_frame_callback_t* frame_callback_;
   const hw_accel_res_change_callback_t* res_callback_;
   const hw_accel_remove_task_callback_t* remove_task_callback_;
