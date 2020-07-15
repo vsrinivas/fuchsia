@@ -18,7 +18,7 @@ use crate::inspect::DataStreamInspect;
 ///
 /// A builder that will make media tasks when congfigured correctly, or return an error if the
 /// configuration is not possible to complete.
-pub trait MediaTaskBuilder {
+pub trait MediaTaskBuilder: Send + Sync {
     /// Set up to stream based on the given `codec_config` parameters.
     /// Configuring a stream task is only allowed while not started.
     fn configure(
@@ -32,7 +32,7 @@ pub trait MediaTaskBuilder {
 /// StreamTask represents a task that is performed to consume or provide the data for a A2DP
 /// stream.  They are usually built by the MediaTaskBuilder associated with a stream when
 /// configured.
-pub trait MediaTask {
+pub trait MediaTask: Send {
     /// Start streaming using the MediaStream given.
     /// This procedure will often asynchronously start a process in the background to continue
     /// streaming.
