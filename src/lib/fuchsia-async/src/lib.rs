@@ -48,3 +48,6 @@ pub mod temp;
 pub mod futures {
     pub use futures::*;
 }
+
+/// Testing support for repeated runs
+pub mod test_support;

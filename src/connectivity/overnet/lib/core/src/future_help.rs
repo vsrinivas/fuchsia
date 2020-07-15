@@ -77,8 +77,8 @@ mod poll_mutex_test {
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn basics() {
-        let mutex = Mutex::new(42);
+    async fn basics(run: usize) {
+        let mutex = Mutex::new(run);
         let mut ctx = Context::from_waker(noop_waker_ref());
         let mut poll_mutex = PollMutex::new(&mutex);
         assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
@@ -92,8 +92,8 @@ mod poll_mutex_test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn wakes_up() -> Result<(), Error> {
-        let mutex = Mutex::new(42u8);
+    async fn wakes_up(run: usize) -> Result<(), Error> {
+        let mutex = Mutex::new(run);
         let (tx_saw_first_pending, rx_saw_first_pending) = oneshot::channel();
         let mut poll_mutex = PollMutex::new(&mutex);
         let mutex_guard = mutex.lock().await;
@@ -104,7 +104,7 @@ mod poll_mutex_test {
                     Poll::Pending
                 );
                 tx_saw_first_pending.send(()).map_err(|_| format_err!("cancelled"))?;
-                assert_eq!(*poll_fn(|ctx| poll_mutex.poll(ctx)).await, 42);
+                assert_eq!(*poll_fn(|ctx| poll_mutex.poll(ctx)).await, run);
                 Ok(())
             },
             async move {

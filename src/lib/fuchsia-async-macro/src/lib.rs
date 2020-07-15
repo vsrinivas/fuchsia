@@ -110,7 +110,7 @@ fn common(
         if !sig.generics.params.is_empty() || sig.generics.where_clause.is_some() {
             return Err(Error::new(sig.fn_token.span, "async entry may not have generics"));
         }
-        if !sig.inputs.is_empty() {
+        if !sig.inputs.is_empty() && !test {
             return Err(Error::new(sig.paren_token.span, "async entry takes no arguments"));
         }
         if let Some(dot3) = &sig.variadic {
@@ -138,6 +138,11 @@ fn common(
         return e.to_compile_error().into();
     }
 
+    let adapt_func = if test && sig.inputs.is_empty() {
+        quote! {let func = move |_| func()}
+    } else {
+        quote! {}
+    };
     let test = if test {
         quote! {#[test]}
     } else {
@@ -145,15 +150,17 @@ fn common(
     };
     let run_executor = proc_macro2::TokenStream::from(run_executor);
     let ret_type = sig.output;
+    let inputs = sig.inputs;
     let span = sig.ident.span();
     let ident = sig.ident;
     let output = quote_spanned! {span=>
         // Preserve any original attributes.
         #(#attrs)* #test
         fn #ident () #ret_type {
-            async fn func() #ret_type {
+            async fn func(#inputs) #ret_type {
                 #block
             }
+            #adapt_func;
             let mut #executor = ::fuchsia_async::Executor::new()
                 .expect("Failed to create executor");
 
@@ -187,13 +194,19 @@ fn common(
 pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
     let test = parse_macro_input!(attr as Option<kw::test>).is_some();
     let executor = executor_ident();
-    let run_executor = quote! {
-        let mut fut = func();
-        ::fuchsia_async::pin_mut!(fut);
-        match #executor.run_until_stalled(&mut fut) {
-            ::core::task::Poll::Ready(result) => result,
-            _ => panic!("Stalled without completing. Consider using \"run_singlethreaded\", \
-                         or check for a deadlock."),
+    let run_executor = if test {
+        quote! {
+            ::fuchsia_async::test_support::run_until_stalled_test(&mut #executor, func)
+        }
+    } else {
+        quote! {
+            let mut fut = func();
+            ::fuchsia_async::pin_mut!(fut);
+            match #executor.run_until_stalled(&mut fut) {
+                ::core::task::Poll::Ready(result) => result,
+                _ => panic!("Stalled without completing. Consider using \"run_singlethreaded\", \
+                             or check for a deadlock."),
+            }
         }
     };
     common(item, executor, run_executor.into(), test)
@@ -203,16 +216,38 @@ pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// Takes an optional `test` argument.
 ///
+/// Tests written using this macro can be run repeatedly.
+/// The environment variable `FASYNC_TEST_REPEAT_COUNT` sets the number of repetitions each test
+/// will be run for, while the environment variable `FASYNC_TEST_MAX_CONCURRENCY` bounds the
+/// maximum concurrent invocations of each test. If `FASYNC_TEST_MAX_CONCURRENCY` is set to 0 (the default)
+/// no bounds to concurrency are applied.
+///
 /// ```
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo() {}
+/// ```
+///
+/// The test can optionally take a usize argument which specifies which repetition of the test is
+/// being performed:
+///
+/// ```
+/// #[fuchsia_async::run_singlethreaded(test)]
+/// async fn test_foo(test_run: usize) {
+///   println!("Test repetition #{}", test_run);
+/// }
 /// ```
 #[proc_macro_attribute]
 pub fn run_singlethreaded(attr: TokenStream, item: TokenStream) -> TokenStream {
     let test = parse_macro_input!(attr as Option<kw::test>).is_some();
     let executor = executor_ident();
-    let run_executor = quote! {
-        #executor.run_singlethreaded(func())
+    let run_executor = if test {
+        quote! {
+            ::fuchsia_async::test_support::run_singlethreaded_test(&mut #executor, func)
+        }
+    } else {
+        quote! {
+            #executor.run_singlethreaded(func())
+        }
     };
     common(item, executor, run_executor.into(), test)
 }
@@ -236,17 +271,39 @@ impl Parse for RunAttributes {
 /// Number of threads is configured by `#[fuchsia_async::run(N)]`, and can also
 /// take an optional `test` argument.
 ///
+/// Tests written using this macro can be run repeatedly.
+/// The environment variable `FASYNC_TEST_REPEAT_COUNT` sets the number of repetitions each test
+/// will be run for, while the environment variable `FASYNC_TEST_MAX_CONCURRENCY` bounds the
+/// maximum concurrent invocations of each test. If `FASYNC_TEST_MAX_CONCURRENCY` is set to 0 (the default)
+/// no bounds to concurrency are applied.
+///
 /// ```
 /// #[fuchsia_async::run(4, test)]
 /// async fn test_foo() {}
+/// ```
+///
+/// The test can optionally take a usize argument which specifies which repetition of the test is
+/// being performed:
+///
+/// ```
+/// #[fuchsia_async::run(4, test)]
+/// async fn test_foo(test_run: usize) {
+///   println!("Test repetition #{}", test_run);
+/// }
 /// ```
 #[proc_macro_attribute]
 pub fn run(attr: TokenStream, item: TokenStream) -> TokenStream {
     let RunAttributes { threads, test } = parse_macro_input!(attr as RunAttributes);
 
     let executor = executor_ident();
-    let run_executor = quote! {
-        #executor.run(func(), #threads)
+    let run_executor = if test {
+        quote! {
+            ::fuchsia_async::test_support::run_test(&mut #executor, func, #threads)
+        }
+    } else {
+        quote! {
+            #executor.run(func(), #threads)
+        }
     };
     common(item, executor, run_executor.into(), test)
 }
