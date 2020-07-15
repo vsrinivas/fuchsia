@@ -178,8 +178,17 @@ zx_status_t UsbPeripheral::AllocStringDesc(fbl::String desc, uint8_t* out_index)
 zx_status_t UsbPeripheral::ValidateFunction(fbl::RefPtr<UsbFunction> function, void* descriptors,
                                             size_t length, uint8_t* out_num_interfaces) {
   auto* intf_desc = static_cast<usb_interface_descriptor_t*>(descriptors);
-  if (intf_desc->bDescriptorType != USB_DT_INTERFACE ||
-      intf_desc->bLength != sizeof(usb_interface_descriptor_t)) {
+  if (intf_desc->bDescriptorType == USB_DT_INTERFACE) {
+    if (intf_desc->bLength != sizeof(usb_interface_descriptor_t)) {
+      zxlogf(ERROR, "%s: interface descriptor is invalid", __func__);
+      return ZX_ERR_INVALID_ARGS;
+    }
+  } else if (intf_desc->bDescriptorType == USB_DT_INTERFACE_ASSOCIATION) {
+    if (intf_desc->bLength != sizeof(usb_interface_assoc_descriptor_t)) {
+      zxlogf(ERROR, "%s: interface association descriptor is invalid", __func__);
+      return ZX_ERR_INVALID_ARGS;
+    }
+  } else {
     zxlogf(ERROR, "%s: first descriptor not an interface descriptor", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -206,8 +215,7 @@ zx_status_t UsbPeripheral::ValidateFunction(fbl::RefPtr<UsbFunction> function, v
       auto* desc = reinterpret_cast<const usb_endpoint_descriptor_t*>(header);
       auto index = EpAddressToIndex(desc->bEndpointAddress);
       if (index == 0 || index >= countof(endpoint_map_) || endpoint_map_[index] != function) {
-        zxlogf(ERROR, "usb_func_set_interface: bad endpoint address 0x%X",
-               desc->bEndpointAddress);
+        zxlogf(ERROR, "usb_func_set_interface: bad endpoint address 0x%X", desc->bEndpointAddress);
         return ZX_ERR_INVALID_ARGS;
       }
     }
@@ -643,8 +651,8 @@ zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zxlogf(DEBUG, "usb_dev_control type: 0x%02X req: %d value: %d index: %d length: %d",
-         request_type, request, value, index, length);
+  zxlogf(DEBUG, "usb_dev_control type: 0x%02X req: %d value: %d index: %d length: %d", request_type,
+         request, value, index, length);
 
   switch (request_type & USB_RECIP_MASK) {
     case USB_RECIP_DEVICE:
