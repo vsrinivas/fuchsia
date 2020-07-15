@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_ZIRCON_TESTS_FUTEX_OWNERSHIP_UTILS_H_
+#define SRC_ZIRCON_TESTS_FUTEX_OWNERSHIP_UTILS_H_
+
 #include <lib/zx/channel.h>
 #include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
@@ -20,6 +24,11 @@
 // heap allocation behavior of fbl::Function or std::function)
 static constexpr size_t kMaxLambdaStorage = sizeof(void*) * 4;
 
+// TODO(55744): An extremely long timeout we use as a proxy for "forever".
+// Someday, if the test framework ever gives us an environment specific timeout
+// to use as a soft watchdog threshold, we should switch to using that instead.
+static constexpr zx::duration kLongTimeout = zx::sec(25);
+
 // A small helper which allows us to poll with a timeout for a condition to
 // become true.  Sadly, some of the futex-ownership tests require this as there
 // is no opportunity for a thread which has become blocked on a futex to signal
@@ -28,7 +37,7 @@ static constexpr size_t kMaxLambdaStorage = sizeof(void*) * 4;
 // the thread give us a signal, and then wait a "reasonable" amount of time for
 // the system to achieve the desired state (or not).
 using WaitFn = fbl::InlineFunction<bool(void), kMaxLambdaStorage>;
-bool WaitFor(zx_duration_t timeout, WaitFn wait_fn);
+bool WaitFor(zx::duration timeout, WaitFn wait_fn);
 
 // A small helper which fetches the Koid for the current thread.
 zx_koid_t CurrentThreadKoid();
@@ -42,7 +51,7 @@ class Event {
   Event() = default;
   DISALLOW_COPY_ASSIGN_AND_MOVE(Event);
 
-  zx_status_t Wait(zx_duration_t timeout);
+  zx_status_t Wait(zx::duration timeout);
   void Signal();
   void Reset();
 
@@ -76,8 +85,8 @@ class Thread {
   State state() const { return state_.load(); }
 
  private:
-  static constexpr zx_duration_t THREAD_TIMEOUT = ZX_SEC(15);
-  static constexpr zx_duration_t THREAD_POLL_INTERVAL = ZX_MSEC(1);
+  static constexpr zx::duration THREAD_TIMEOUT = kLongTimeout;
+  static constexpr zx::duration THREAD_POLL_INTERVAL = zx::msec(1);
 
   void SetState(State state) { state_.store(state); }
 
@@ -120,3 +129,5 @@ class ExternalThread {
   zx::thread external_thread_;
   zx::channel control_channel_;
 };
+
+#endif  // SRC_ZIRCON_TESTS_FUTEX_OWNERSHIP_UTILS_H_

@@ -5,7 +5,9 @@
 #include "utils.h"
 
 #include <lib/fdio/spawn.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/process.h>
+#include <lib/zx/time.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
@@ -15,17 +17,17 @@
 const char* ExternalThread::program_name_ = nullptr;
 const char* ExternalThread::helper_flag_ = "futex-owner-helper";
 
-bool WaitFor(zx_duration_t timeout, WaitFn wait_fn) {
-  constexpr zx_duration_t WAIT_POLL_INTERVAL = ZX_MSEC(1);
+bool WaitFor(zx::duration timeout, WaitFn wait_fn) {
+  constexpr zx::duration WAIT_POLL_INTERVAL = zx::msec(1);
 
-  ZX_ASSERT((timeout >= 0) && (timeout <= ZX_SEC(30)));
-  zx_time_t deadline = zx_deadline_after(timeout);
+  ZX_ASSERT(timeout >= zx::sec(0));
+  zx::time deadline = zx::deadline_after(timeout);
 
   while (!wait_fn()) {
-    if (zx_clock_get_monotonic() > deadline) {
+    if (zx::clock::get_monotonic() > deadline) {
       return false;
     }
-    zx_nanosleep(WAIT_POLL_INTERVAL);
+    zx::nanosleep(zx::deadline_after(WAIT_POLL_INTERVAL));
   }
 
   return true;
@@ -39,12 +41,11 @@ zx_koid_t CurrentThreadKoid() {
   return info.koid;
 }
 
-zx_status_t Event::Wait(zx_duration_t timeout) {
-  zx_time_t deadline =
-      (timeout == ZX_TIME_INFINITE) ? ZX_TIME_INFINITE : zx_deadline_after(timeout);
+zx_status_t Event::Wait(zx::duration timeout) {
+  zx::time deadline = zx::deadline_after(timeout);
 
   while (signaled_.load(fbl::memory_order_relaxed) == 0) {
-    zx_status_t res = zx_futex_wait(&signaled_, 0, ZX_HANDLE_INVALID, deadline);
+    zx_status_t res = zx_futex_wait(&signaled_, 0, ZX_HANDLE_INVALID, deadline.get());
     if ((res != ZX_OK) && (res != ZX_ERR_BAD_STATE)) {
       return res;
     }
@@ -101,7 +102,7 @@ void Thread::Start(const char* name, Thunk thunk) {
     }
 
     t->SetState(State::WAITING_TO_STOP);
-    t->stop_evt_.Wait(ZX_TIME_INFINITE);
+    t->stop_evt_.Wait(zx::duration::infinite());
     t->SetState(State::STOPPED);
     return ret;
   };
@@ -120,12 +121,12 @@ zx_status_t Thread::Stop() {
 
   stop_evt_.Signal();
 
-  zx_time_t deadline = zx_deadline_after(THREAD_TIMEOUT);
+  zx::time deadline = zx::deadline_after(THREAD_TIMEOUT);
   while (state() != State::STOPPED) {
-    if (zx_clock_get_monotonic() > deadline) {
+    if (zx::clock::get_monotonic() > deadline) {
       return ZX_ERR_TIMED_OUT;
     }
-    zx_nanosleep(THREAD_POLL_INTERVAL);
+    zx::nanosleep(zx::deadline_after(THREAD_POLL_INTERVAL));
   }
 
   thrd_join(thread_, nullptr);

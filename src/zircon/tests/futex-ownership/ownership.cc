@@ -128,7 +128,7 @@ TEST(FutexOwnershipTestCase, Wait) {
     t1_res.store(zx_futex_wait(&the_futex, 0, test_thread_handle, ZX_TIME_INFINITE));
     return 0;
   }));
-  ASSERT_TRUE(WaitFor(ZX_MSEC(1000), [&]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [&]() -> bool {
     res = zx_futex_get_owner(&the_futex, &koid);
     // Stop waiting if we fail to fetch the owner, or if the koid matches what we expect.
     return ((res != ZX_OK) || (koid == test_thread_koid));
@@ -225,14 +225,14 @@ TEST(FutexOwnershipTestCase, Wait) {
 
   t2_res.store(ZX_ERR_INTERNAL);
   ASSERT_NO_FATAL_FAILURES(thread2.Start("thread_2.5", [&]() -> int {
-    t2_res.store(
-        zx_futex_wait(&the_futex, 0, thread3.handle().get(), zx_deadline_after(ZX_MSEC(50))));
+    t2_res.store(zx_futex_wait(&the_futex, 0, thread3.handle().get(),
+                               zx::deadline_after(zx::msec(50)).get()));
     return 0;
   }));
   ASSERT_OK(thread2.Stop());
   ASSERT_EQ(t2_res.load(), ZX_ERR_TIMED_OUT);
 
-  ASSERT_TRUE(WaitFor(ZX_SEC(15), [&]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [&]() -> bool {
     res = zx_futex_get_owner(&the_futex, &koid);
     // Stop waiting if we fail to fetch the owner, or if the koid matches what we expect.
     return ((res != ZX_OK) || (koid == thread3.koid()));
@@ -256,7 +256,7 @@ TEST(FutexOwnershipTestCase, Wait) {
   ASSERT_OK(thread2.Stop());
   ASSERT_EQ(t2_res.load(), ZX_ERR_TIMED_OUT);
 
-  ASSERT_TRUE(WaitFor(ZX_SEC(15), [&]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [&]() -> bool {
     res = zx_futex_get_owner(&the_futex, &koid);
     // Stop waiting if we fail to fetch the owner, or if the koid matches what we expect.
     return ((res != ZX_OK) || (koid == test_thread_koid));
@@ -308,7 +308,7 @@ TEST(FutexOwnershipTestCase, Wait) {
     t2_res.store(zx_futex_wait(&the_futex, 0, ZX_HANDLE_INVALID, ZX_TIME_INFINITE));
     return 0;
   }));
-  ASSERT_TRUE(WaitFor(ZX_SEC(15), [&]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [&]() -> bool {
     res = zx_futex_get_owner(&the_futex, &koid);
     // Stop waiting if we fail to fetch the owner, or if the koid matches what we expect.
     return ((res != ZX_OK) || (koid == ZX_KOID_INVALID));
@@ -373,7 +373,7 @@ static void WakeOwnershipTest() {
 
     // Wait until all of the threads are blocked.
     res = ZX_ERR_INTERNAL;
-    ASSERT_TRUE(WaitFor(ZX_MSEC(1000), [&WAITERS, &res]() -> bool {
+    ASSERT_TRUE(WaitFor(kLongTimeout, [&WAITERS, &res]() -> bool {
       for (const auto& waiter : WAITERS) {
         // If we fail to fetch thread state, stop waiting.
         uint32_t state;
@@ -458,7 +458,7 @@ static void WakeOwnershipTest() {
       WaiterState* woken_waiter = nullptr;
       res = ZX_ERR_INTERNAL;
 
-      ASSERT_TRUE(WaitFor(ZX_MSEC(1000), [&WAITERS, &woken_waiter]() -> bool {
+      ASSERT_TRUE(WaitFor(kLongTimeout, [&WAITERS, &woken_waiter]() -> bool {
         for (auto& waiter : WAITERS) {
           if (!waiter.woken) {
             if (waiter.thread.state() == Thread::State::WAITING_TO_STOP) {
@@ -534,7 +534,7 @@ static void WakeZeroOwnershipTest() {
   }));
 
   // Wait until the thread has become blocked on the futex
-  ASSERT_TRUE(WaitFor(ZX_MSEC(1000), [&]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [&]() -> bool {
     res = thread1.GetRunState(&state);
     // Stop waiting if we fail to fetch the run state, or the thread has
     // reached our desired state.
@@ -575,7 +575,7 @@ static void WakeZeroOwnershipTest() {
   // Still, as long as this state is not atomically updated by the wake
   // operation, the test is always has the potential to flaky, which is why
   // the TODO.
-  ASSERT_FALSE(WaitFor(ZX_MSEC(100), [&]() -> bool {
+  ASSERT_FALSE(WaitFor(zx::msec(100), [&]() -> bool {
     res = thread1.GetRunState(&state);
     return ((res != ZX_OK) || (state != ZX_THREAD_STATE_BLOCKED_FUTEX));
   }));
@@ -645,7 +645,7 @@ TEST(FutexOwnershipTestCase, Requeue) {
 
   // Wait until all of the threads are blocked.
   res = ZX_ERR_INTERNAL;
-  ASSERT_TRUE(WaitFor(ZX_MSEC(1000), [&WAITERS, &res]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [&WAITERS, &res]() -> bool {
     for (const auto& waiter : WAITERS) {
       // If we fail to fetch thread state, stop waiting.
       uint32_t state;
@@ -733,7 +733,7 @@ TEST(FutexOwnershipTestCase, Requeue) {
   ASSERT_NOT_NULL(woken_waiter);
 
   // Wait until it has finished its lambda and waiting for our permission to stop.
-  ASSERT_TRUE(WaitFor(ZX_MSEC(1000), [woken_waiter]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [woken_waiter]() -> bool {
     return (woken_waiter->thread.state() == Thread::State::WAITING_TO_STOP);
   }));
 
@@ -857,7 +857,7 @@ TEST(FutexOwnershipTestCase, Requeue) {
   auto WaitForJustWoken = [&CountJustWoken](uint32_t expected) -> uint32_t {
     uint32_t just_woken = CountJustWoken();
 
-    WaitFor(ZX_SEC(20), [&]() -> bool {
+    WaitFor(kLongTimeout, [&]() -> bool {
       just_woken += CountJustWoken();
       return just_woken >= expected;
     });
@@ -866,7 +866,7 @@ TEST(FutexOwnershipTestCase, Requeue) {
     //
     // Note: See TODO above about possibly eliminating the need to perform this
     // arbitrary wait.
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    zx::nanosleep(zx::deadline_after(zx::msec(100)));
     just_woken += CountJustWoken();
     return just_woken;
   };
@@ -953,7 +953,7 @@ TEST(FutexOwnershipTestCase, OwnerExit) {
       }));
 
   // Wait until our waiter has become blocked by the futex.
-  ASSERT_TRUE(WaitFor(ZX_MSEC(1000), [&the_waiter, &res]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [&the_waiter, &res]() -> bool {
     // If we fail to fetch thread state, stop waiting.
     uint32_t state;
     res = the_waiter.GetRunState(&state);
@@ -1006,7 +1006,7 @@ TEST(FutexOwnershipTestCase, OwnerExit) {
   ASSERT_OK(the_owner.Stop());
 
   res = ZX_ERR_INTERNAL;
-  ASSERT_TRUE(WaitFor(ZX_SEC(10), [&the_futex, &res]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [&the_futex, &res]() -> bool {
     zx_koid_t koid = ~ZX_KOID_INVALID;
     res = zx_futex_get_owner(&the_futex, &koid);
 
@@ -1094,7 +1094,7 @@ TEST(FutexOwnershipTestCase, DeadThreadsCantOwnFutexes) {
   // proceed.  Futexes with no waiters have no state and can have no owners.  We
   // need to be certain that futex1 has at least one waiter in order for the
   // rest of the tests to function properly.
-  ASSERT_TRUE(WaitFor(ZX_SEC(20), [&the_waiter, &res]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [&the_waiter, &res]() -> bool {
     uint32_t run_state;
     res = the_waiter.GetRunState(&run_state);
     // stop waiting if there was an error, or we have achieved the blocked state.
@@ -1114,7 +1114,7 @@ TEST(FutexOwnershipTestCase, DeadThreadsCantOwnFutexes) {
 
   // Wait until we are certain that our thread has achieved the DEAD state from the kernel's
   // user-mode thread perspective.
-  ASSERT_TRUE(WaitFor(ZX_SEC(20), [&dead_owner, &res]() -> bool {
+  ASSERT_TRUE(WaitFor(kLongTimeout, [&dead_owner, &res]() -> bool {
     zx_info_thread_t info;
     res = dead_owner.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
     // stop waiting if there was an error, or we have achieved the dead state.
