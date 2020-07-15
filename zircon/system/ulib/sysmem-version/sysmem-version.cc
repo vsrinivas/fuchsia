@@ -117,7 +117,6 @@ fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::HeapType>> V2CopyFromV1Hea
     fidl::Allocator* allocator, const fidl::Array<llcpp::fuchsia::sysmem::HeapType, N>& v1a,
     const uint32_t v1_count) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1a);
   ZX_DEBUG_ASSERT(v1_count);
   if (v1_count > v1a.size()) {
     LOG(ERROR, "v1_count > v1a.size() - v1_count: %u v1a.size(): %zu", v1_count, v1a.size());
@@ -135,7 +134,6 @@ fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace>> V2CopyFromV1C
     fidl::Allocator* allocator, const fidl::Array<llcpp::fuchsia::sysmem::ColorSpace, N>& v1a,
     uint32_t v1_count) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1a);
   ZX_DEBUG_ASSERT(v1_count);
   if (v1_count > v1a.size()) {
     LOG(ERROR, "v1_count > v1a.size() - v1_count: %u v1a.size(): %zu", v1_count, v1a.size());
@@ -155,7 +153,6 @@ V2CopyFromV1ImageFormatConstraintsArray(
     const fidl::Array<llcpp::fuchsia::sysmem::ImageFormatConstraints, N>& v1a,
     const uint32_t v1_count) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1a);
   ZX_DEBUG_ASSERT(v1_count);
   if (v1_count > v1a.size()) {
     LOG(ERROR, "v1_count > v1a.size() - v1_count: %u v1a.size(): %zu", v1_count, v1a.size());
@@ -177,7 +174,6 @@ fit::result<> V2CopyFromV1BufferCollectionConstraintsMain(
   ZX_DEBUG_ASSERT(allocator);
   ZX_DEBUG_ASSERT(v2b_param);
   llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& v2b = *v2b_param;
-  ZX_DEBUG_ASSERT(&v1);
 
   // This sets usage regardless of whether the client set any usage bits within uage.  That's
   // checked later (regardless of v1 or v2 client).  If a v1 client said !has_constraints, we
@@ -215,7 +211,6 @@ fit::result<> V2CopyFromV1BufferCollectionConstraintsAuxBuffers(
   ZX_DEBUG_ASSERT(allocator);
   ZX_DEBUG_ASSERT(v2b_param);
   llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& v2b = *v2b_param;
-  ZX_DEBUG_ASSERT(&v1);
   PROCESS_SCALAR_FIELD_V1(need_clear_aux_buffers_for_secure);
   PROCESS_SCALAR_FIELD_V1(allow_clear_aux_buffers_for_secure);
   return fit::ok();
@@ -226,7 +221,6 @@ fit::result<> V2CopyFromV1BufferCollectionConstraintsAuxBuffers(
 llcpp::fuchsia::sysmem2::PixelFormat::Builder V2CopyFromV1PixelFormat(
     fidl::Allocator* allocator, const llcpp::fuchsia::sysmem::PixelFormat& v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1);
   auto v2b = allocator->make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>();
   PROCESS_SCALAR_FIELD_V1(type);
   if (v1.has_format_modifier) {
@@ -238,7 +232,6 @@ llcpp::fuchsia::sysmem2::PixelFormat::Builder V2CopyFromV1PixelFormat(
 llcpp::fuchsia::sysmem2::PixelFormat::Builder V2CopyFromV1PixelFormat(
     fidl::Allocator* allocator, const fuchsia_sysmem_PixelFormat& v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1);
   using CStruct = FidlStruct<fuchsia_sysmem_PixelFormat, llcpp::fuchsia::sysmem::PixelFormat>;
   return V2CopyFromV1PixelFormat(allocator, *CStruct::BorrowAsLlcpp(&v1));
 }
@@ -246,7 +239,6 @@ llcpp::fuchsia::sysmem2::PixelFormat::Builder V2CopyFromV1PixelFormat(
 llcpp::fuchsia::sysmem2::ColorSpace::Builder V2CopyFromV1ColorSpace(
     fidl::Allocator* allocator, const llcpp::fuchsia::sysmem::ColorSpace& v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1);
   auto v2b = allocator->make_table_builder<llcpp::fuchsia::sysmem2::ColorSpace>();
   PROCESS_SCALAR_FIELD_V1(type);
   return v2b;
@@ -262,7 +254,6 @@ fit::result<llcpp::fuchsia::sysmem2::ImageFormatConstraints::Builder>
 V2CopyFromV1ImageFormatConstraints(fidl::Allocator* allocator,
                                    const llcpp::fuchsia::sysmem::ImageFormatConstraints& v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1);
   auto v2b = allocator->make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>();
   v2b.set_pixel_format(
       MakeTracking(allocator, V2CopyFromV1PixelFormat(allocator, v1.pixel_format).build()));
@@ -313,7 +304,6 @@ V2CopyFromV1ImageFormatConstraints(fidl::Allocator* allocator,
 fit::result<llcpp::fuchsia::sysmem2::BufferUsage::Builder> V2CopyFromV1BufferUsage(
     fidl::Allocator* allocator, const llcpp::fuchsia::sysmem::BufferUsage& v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1);
   auto v2b = allocator->make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>();
   using foo = std::remove_reference<decltype((v1.none))>::type;
   static_assert(std::is_const<foo>::value);
@@ -335,7 +325,6 @@ fit::result<llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder>
 V2CopyFromV1BufferMemoryConstraints(fidl::Allocator* allocator,
                                     const llcpp::fuchsia::sysmem::BufferMemoryConstraints& v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1);
   auto v2b = allocator->make_table_builder<llcpp::fuchsia::sysmem2::BufferMemoryConstraints>();
   PROCESS_SCALAR_FIELD_V1(min_size_bytes);
   PROCESS_SCALAR_FIELD_V1(max_size_bytes);
@@ -401,7 +390,6 @@ V2CopyFromV1BufferCollectionConstraints(
 fit::result<llcpp::fuchsia::sysmem2::ImageFormat::Builder> V2CopyFromV1ImageFormat(
     fidl::Allocator* allocator, const llcpp::fuchsia::sysmem::ImageFormat_2& v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1);
   llcpp::fuchsia::sysmem2::ImageFormat::Builder v2b =
       allocator->make_table_builder<llcpp::fuchsia::sysmem2::ImageFormat>();
   v2b.set_pixel_format(
@@ -438,7 +426,6 @@ fit::result<llcpp::fuchsia::sysmem2::ImageFormat::Builder> V2CopyFromV1ImageForm
 V2CopyFromV1BufferMemorySettings(fidl::Allocator* allocator,
                                  const llcpp::fuchsia::sysmem::BufferMemorySettings& v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1);
   llcpp::fuchsia::sysmem2::BufferMemorySettings::Builder v2b =
       allocator->make_table_builder<llcpp::fuchsia::sysmem2::BufferMemorySettings>();
   PROCESS_SCALAR_FIELD_V1(size_bytes);
@@ -453,7 +440,6 @@ fit::result<llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder>
 V2CopyFromV1SingleBufferSettings(fidl::Allocator* allocator,
                                  const llcpp::fuchsia::sysmem::SingleBufferSettings& v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&v1);
   llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder v2b =
       allocator->make_table_builder<llcpp::fuchsia::sysmem2::SingleBufferSettings>();
   v2b.set_buffer_settings(sysmem::MakeTracking(
@@ -474,7 +460,6 @@ V2CopyFromV1SingleBufferSettings(fidl::Allocator* allocator,
 llcpp::fuchsia::sysmem2::VmoBuffer::Builder V2MoveFromV1VmoBuffer(
     fidl::Allocator* allocator, llcpp::fuchsia::sysmem::VmoBuffer&& to_move_v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&to_move_v1);
   llcpp::fuchsia::sysmem::VmoBuffer v1 = std::move(to_move_v1);
   llcpp::fuchsia::sysmem2::VmoBuffer::Builder v2b =
       allocator->make_table_builder<llcpp::fuchsia::sysmem2::VmoBuffer>();
@@ -490,7 +475,6 @@ fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo::Builder>
 V2MoveFromV1BufferCollectionInfo(fidl::Allocator* allocator,
                                  llcpp::fuchsia::sysmem::BufferCollectionInfo_2&& to_move_v1) {
   ZX_DEBUG_ASSERT(allocator);
-  ZX_DEBUG_ASSERT(&to_move_v1);
   llcpp::fuchsia::sysmem::BufferCollectionInfo_2 v1 = std::move(to_move_v1);
   llcpp::fuchsia::sysmem2::BufferCollectionInfo::Builder v2b =
       allocator->make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionInfo>();
@@ -513,7 +497,6 @@ fit::result<std::pair<std::optional<llcpp::fuchsia::sysmem::BufferCollectionCons
                       std::optional<llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>>>
 V1CopyFromV2BufferCollectionConstraints(
     const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& v2) {
-  ZX_DEBUG_ASSERT(&v2);
   llcpp::fuchsia::sysmem::BufferCollectionConstraints v1{};
   if (v2.IsEmpty()) {
     return fit::ok(
@@ -573,7 +556,6 @@ V1CopyFromV2BufferCollectionConstraints(
 
 fit::result<llcpp::fuchsia::sysmem::BufferMemoryConstraints> V1CopyFromV2BufferMemoryConstraints(
     const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& v2) {
-  ZX_DEBUG_ASSERT(&v2);
   llcpp::fuchsia::sysmem::BufferMemoryConstraints v1{};
   PROCESS_SCALAR_FIELD_V2(min_size_bytes);
   PROCESS_SCALAR_FIELD_V2(max_size_bytes);
@@ -599,7 +581,6 @@ fit::result<llcpp::fuchsia::sysmem::BufferMemoryConstraints> V1CopyFromV2BufferM
 
 llcpp::fuchsia::sysmem::BufferUsage V1CopyFromV2BufferUsage(
     const llcpp::fuchsia::sysmem2::BufferUsage& v2) {
-  ZX_DEBUG_ASSERT(&v2);
   llcpp::fuchsia::sysmem::BufferUsage v1{};
   PROCESS_SCALAR_FIELD_V2(none);
   PROCESS_SCALAR_FIELD_V2(cpu);
@@ -612,7 +593,6 @@ llcpp::fuchsia::sysmem::BufferUsage V1CopyFromV2BufferUsage(
 // v2 must have all fields set.
 llcpp::fuchsia::sysmem::BufferMemorySettings V1CopyFromV2BufferMemorySettings(
     const llcpp::fuchsia::sysmem2::BufferMemorySettings& v2) {
-  ZX_DEBUG_ASSERT(&v2);
   llcpp::fuchsia::sysmem::BufferMemorySettings v1{};
   PROCESS_SCALAR_FIELD_V2(size_bytes);
   PROCESS_SCALAR_FIELD_V2(is_physically_contiguous);
@@ -624,7 +604,6 @@ llcpp::fuchsia::sysmem::BufferMemorySettings V1CopyFromV2BufferMemorySettings(
 
 llcpp::fuchsia::sysmem::PixelFormat V1CopyFromV2PixelFormat(
     const llcpp::fuchsia::sysmem2::PixelFormat& v2) {
-  ZX_DEBUG_ASSERT(&v2);
   llcpp::fuchsia::sysmem::PixelFormat v1;
   PROCESS_SCALAR_FIELD_V2(type);
   v1.has_format_modifier = v2.has_format_modifier_value();
@@ -636,7 +615,6 @@ llcpp::fuchsia::sysmem::PixelFormat V1CopyFromV2PixelFormat(
 
 llcpp::fuchsia::sysmem::ColorSpace V1CopyFromV2ColorSpace(
     const llcpp::fuchsia::sysmem2::ColorSpace& v2) {
-  ZX_DEBUG_ASSERT(&v2);
   llcpp::fuchsia::sysmem::ColorSpace v1{};
   PROCESS_SCALAR_FIELD_V2(type);
   return v1;
@@ -644,7 +622,6 @@ llcpp::fuchsia::sysmem::ColorSpace V1CopyFromV2ColorSpace(
 
 fit::result<llcpp::fuchsia::sysmem::ImageFormatConstraints> V1CopyFromV2ImageFormatConstraints(
     const llcpp::fuchsia::sysmem2::ImageFormatConstraints& v2) {
-  ZX_DEBUG_ASSERT(&v2);
   llcpp::fuchsia::sysmem::ImageFormatConstraints v1;
   v1.pixel_format = V1CopyFromV2PixelFormat(v2.pixel_format());
   ZX_DEBUG_ASSERT(!v1.color_spaces_count);
@@ -686,7 +663,6 @@ fit::result<llcpp::fuchsia::sysmem::ImageFormatConstraints> V1CopyFromV2ImageFor
 
 fit::result<llcpp::fuchsia::sysmem::ImageFormat_2> V1CopyFromV2ImageFormat(
     llcpp::fuchsia::sysmem2::ImageFormat& v2) {
-  ZX_DEBUG_ASSERT(&v2);
   llcpp::fuchsia::sysmem::ImageFormat_2 v1;
   if (v2.has_pixel_format()) {
     v1.pixel_format = V1CopyFromV2PixelFormat(v2.pixel_format());
@@ -711,7 +687,6 @@ fit::result<llcpp::fuchsia::sysmem::ImageFormat_2> V1CopyFromV2ImageFormat(
 
 fit::result<llcpp::fuchsia::sysmem::SingleBufferSettings> V1CopyFromV2SingleBufferSettings(
     const llcpp::fuchsia::sysmem2::SingleBufferSettings& v2) {
-  ZX_DEBUG_ASSERT(&v2);
   llcpp::fuchsia::sysmem::SingleBufferSettings v1;
   v1.buffer_settings = V1CopyFromV2BufferMemorySettings(v2.buffer_settings());
   v1.has_image_format_constraints = v2.has_image_format_constraints();

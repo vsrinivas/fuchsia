@@ -693,7 +693,6 @@ uint32_t SharedUsageBitsCount(const llcpp::fuchsia::sysmem2::BufferUsage& a,
 bool IsBetterMatch(const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
                    uint32_t image_format_constraints_index, const UsagePixelFormatCostEntry* a,
                    const UsagePixelFormatCostEntry* b) {
-  ZX_DEBUG_ASSERT(&constraints);
   ZX_DEBUG_ASSERT(a);
   ZX_DEBUG_ASSERT(image_format_constraints_index < constraints.image_format_constraints().count());
   // We intentionally allow b to be nullptr.
