@@ -930,6 +930,18 @@ TEST(Sysmem, MultipleParticipants) {
   constraints_2->image_format_constraints[0].min_coded_width = 512;
   constraints_2->image_format_constraints[0].min_coded_height = 512;
 
+#ifdef SYSMEM_FUZZ_CORPUS
+  FILE* ofp = fopen("/data/sysmem_fuzz_corpus_multi_buffer_collecton_constraints.dat", "wb");
+  if (ofp) {
+    fwrite(constraints_1.get(), sizeof(fuchsia_sysmem_BufferCollectionConstraints), 1, ofp);
+    fwrite(constraints_2.get(), sizeof(fuchsia_sysmem_BufferCollectionConstraints), 1, ofp);
+    fclose(ofp);
+  } else {
+    fprintf(stderr, "Failed to write sysmem multi BufferCollectionConstraints corpus file.\n");
+    fflush(stderr);
+  }
+#endif  // SYSMEM_FUZZ_CORPUS
+
   status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_1.get(), true,
                                                          constraints_1.release());
   ASSERT_EQ(status, ZX_OK, "");
