@@ -193,49 +193,75 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
   last_pressed_keys_size_ = i;
 }
 
-void Keyboard::InputCallback(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                             zx_status_t status, const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
+void Keyboard::InputCallback(
+    llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result) {
+  if (result.is_err()) {
+    printf("vc: InputCallback returns error: %d!\n", result.err());
     return;
   }
-
-  if (!(signal->observed & DEV_STATE_READABLE)) {
-    return;
-  }
-
-  llcpp::fuchsia::input::report::InputDevice::ResultOf::GetReports result =
-      keyboard_client_->GetReports();
-  if (result.status() != ZX_OK) {
-    return;
-  }
-
-  for (auto& report : result->reports) {
+  for (auto& report : result.response().reports) {
     ProcessInput(report);
   }
 
-  // Queue ourselves up for another callback.
-  wait->Begin(dispatcher);
+  reader_client_->ReadInputReports(
+      [this](llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result) {
+        InputCallback(std::move(result));
+      });
+}
+
+zx_status_t Keyboard::StartReading() {
+  zx::channel server, client;
+  zx_status_t status = zx::channel::create(0, &server, &client);
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto result = keyboard_client_->GetInputReportsReader(std::move(server));
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+
+  status =
+      reader_client_.Bind(std::move(client), dispatcher_,
+                          [this](fidl::UnboundReason reason, zx_status_t status, zx::channel chan) {
+                            printf("vc: Keyboard Reader unbound.\n");
+                            InputReaderUnbound(reason, status, std::move(chan));
+                          });
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Queue up the first read.
+  reader_client_->ReadInputReports(
+      [this](llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result) {
+        InputCallback(std::move(result));
+      });
+  return ZX_OK;
+};
+
+void Keyboard::InputReaderUnbound(fidl::UnboundReason reason, zx_status_t status,
+                                  zx::channel chan) {
+  status = StartReading();
+  if (status != ZX_OK) {
+    delete this;
+  }
 }
 
 zx_status_t Keyboard::Setup(
     llcpp::fuchsia::input::report::InputDevice::SyncClient keyboard_client) {
   keyboard_client_ = std::move(keyboard_client);
-
   // XXX - check for LEDS here.
 
-  llcpp::fuchsia::input::report::InputDevice::ResultOf::GetReportsEvent result =
-      keyboard_client_->GetReportsEvent();
-  if (result.status() != ZX_OK) {
-    return result.status();
+  zx_status_t status = timer_task_.PostDelayed(dispatcher_, kLowRepeatKeyFreq);
+  if (status != ZX_OK) {
+    return status;
   }
-  keyboard_event_ = std::move(result->event);
 
-  input_wait_.set_object(keyboard_event_.get());
-  input_wait_.set_trigger(DEV_STATE_READABLE);
-  input_wait_.Begin(dispatcher_);
-
-  timer_task_.PostDelayed(dispatcher_, kLowRepeatKeyFreq);
-
+  // StartReading has to be last because once this succeeds then Keyboard is responsible for
+  // freeing itself.
+  status = StartReading();
+  if (status != ZX_OK) {
+    return status;
+  }
   return ZX_OK;
 }
 

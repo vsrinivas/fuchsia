@@ -54,22 +54,27 @@ class Keyboard {
  private:
   // The callback for when key-repeat is triggered.
   void TimerCallback(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
-  // The callback for when the device has a new input event.
-  void InputCallback(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                     const zx_packet_signal_t* signal);
+  void InputCallback(
+      llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result);
+
+  // This is the callback if reader_client_ is unbound. This tries to reconnect and
+  // will delete Keyboard if reconnecting fails.
+  void InputReaderUnbound(fidl::UnboundReason reason, zx_status_t status, zx::channel chan);
+
+  // Attempt to connect to an InputReportReader and start a ReadInputReports call.
+  zx_status_t StartReading();
 
   // Send a report to the device that enables/disables the capslock LED.
   void SetCapsLockLed(bool caps_lock);
 
   async_dispatcher_t* dispatcher_;
   async::TaskMethod<Keyboard, &Keyboard::TimerCallback> timer_task_{this};
-  async::WaitMethod<Keyboard, &Keyboard::InputCallback> input_wait_{this};
 
   keypress_handler_t handler_ = {};
 
   zx::duration repeat_interval_ = zx::duration::infinite();
-  zx::event keyboard_event_;
   std::optional<llcpp::fuchsia::input::report::InputDevice::SyncClient> keyboard_client_;
+  fidl::Client<llcpp::fuchsia::input::report::InputReportsReader> reader_client_;
 
   int modifiers_ = 0;
   bool repeat_enabled_ = true;
