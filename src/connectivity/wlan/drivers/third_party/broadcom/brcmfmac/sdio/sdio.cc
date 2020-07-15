@@ -2396,6 +2396,9 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
           "Not able to transmit queued frames right now, clkstate = %u, "
           "fcstate = %d, queue len = %d, txlimit = %u, data_ok = %s",
           bus->clkstate, bus->fcstate.load(), len, txlimit, data_ok(bus) ? "true" : "false");
+      if (!data_ok(bus)) {
+        BRCMF_INFO("The tx_window is not ready, tx_max: %d, tx_seq: %d", bus->tx_max, bus->tx_seq);
+      }
     }
   }
 
