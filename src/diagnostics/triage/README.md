@@ -50,9 +50,9 @@ TODO(cphoenix): Should these paths be relative to tree-root, or CWD?
 Config file format is described in [Configuring 'fx triage'](config.md). It includes:
 
  *   Selectors which specify the data to extract from the inspect.json produced
-         by bugreport.zip
- *   Eval expressions which specify calculations
- *   Actions to take if a condition is true (currently, only "print a warning")
+     by bugreport.zip.
+ *   Eval expressions which specify calculations.
+ *   Actions to take on specified values.
  *   Tests to ensure your actions trigger (or not) appropriately with sample data
      you supply.
 
