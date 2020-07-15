@@ -6,12 +6,14 @@
 
 #include <fuchsia/hardware/block/cpp/fidl.h>
 #include <fuchsia/hardware/block/volume/cpp/fidl.h>
+#include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <string>
@@ -51,14 +53,16 @@ void WriteSectorData(zx_vaddr_t start, uint64_t value) {
   }
 }
 
-uint64_t VerifySectorData(zx_vaddr_t start, uint64_t value) {
+void VerifySectorData(zx_vaddr_t start, uint64_t value) {
   uint64_t num_words = kSectorSize / sizeof(value);
   uint64_t* data = reinterpret_cast<uint64_t*>(start);
-  uint64_t errors_detected = 0;
   for (uint64_t i = 0; i < num_words; i++) {
-    errors_detected += (data[i] != value);
+    if (unlikely(data[i] != value)) {
+      ZX_PANIC("Found error: expected 0x%016" PRIX64 ", got 0x%016" PRIX64 " at offset %" PRIu64
+               "\n",
+               value, data[i], value * kSectorSize + i * sizeof(value));
+    }
   }
-  return errors_detected;
 }
 
 zx_status_t OpenBlockDevice(const char* path, size_t vmo_size, BlockDevice* block_device) {
@@ -157,8 +161,7 @@ zx_status_t SendCommandBlocking(const zx::fifo& fifo, const block_fifo_request_t
   return ZX_OK;
 }
 
-zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, bool is_write_test,
-                    uint64_t* errors_detected) {
+zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, bool is_write_test) {
   size_t vmo_byte_offset = 0;
   size_t bytes_per_request =
       kTransferSize > device.info.max_transfer_size ? device.info.max_transfer_size : kTransferSize;
@@ -169,10 +172,8 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, bool is_wri
   size_t blksize = device.info.block_size;
 
   size_t dev_off = 0;
-  uint64_t word = 0x01;
+  uint64_t word = 0;
   reqid_t next_reqid = 0;
-
-  *errors_detected = 0;
 
   while (count > 0) {
     if (is_write_test) {
@@ -196,8 +197,7 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, bool is_wri
 
     if (!is_write_test) {
       for (size_t i = 0; i < num_sectors; i++) {
-        *errors_detected +=
-            VerifySectorData(device.vmo_addr + vmo_byte_offset + kSectorSize * i, word++);
+        VerifySectorData(device.vmo_addr + vmo_byte_offset + kSectorSize * i, word++);
       }
     }
 
@@ -314,20 +314,15 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
   }
 
   zx::time end_time = zx::deadline_after(duration);
-  uint64_t errors_detected;
 
   do {
-    if (FlashIo(device, bytes_to_test, /*is_write_test=*/true, &errors_detected) != ZX_OK) {
+    if (FlashIo(device, bytes_to_test, /*is_write_test=*/true) != ZX_OK) {
       status->Log("Error writing to vmo.");
       return false;
     }
 
-    if (FlashIo(device, bytes_to_test, /*is_write_test=*/false, &errors_detected) != ZX_OK) {
+    if (FlashIo(device, bytes_to_test, /*is_write_test=*/false) != ZX_OK) {
       status->Log("Error reading from vmo.");
-      return false;
-    }
-    if (errors_detected > 0) {
-      status->Log("Found %lu errors.", errors_detected);
       return false;
     }
   } while (zx::clock::get_monotonic() < end_time);
