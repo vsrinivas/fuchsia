@@ -2647,7 +2647,13 @@ static zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, u
   std::atomic_thread_fence(std::memory_order_seq_cst);
   bus->ctrl_frame_stat.store(true);
   brcmf_sdio_trigger_dpc(bus);
-  sync_completion_wait(&bus->ctrl_wait, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC));
+
+  // Wait for a response from firmware
+  zx_status_t wait_status = sync_completion_wait(&bus->ctrl_wait, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC));
+  if (wait_status == ZX_ERR_TIMED_OUT) {
+    BRCMF_ERR("timed out waiting for txctl sdio operation to complete");
+  }
+
   ret = ZX_OK;
   if (bus->ctrl_frame_stat.load()) {
     sdio_claim_host(bus->sdiodev->func1);
