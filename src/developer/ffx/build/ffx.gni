@@ -25,8 +25,6 @@ template("ffx") {
   suite_name = ffx_name + "_lib"
 
   ffx_plugin_suite(suite_name) {
-    template = "command.md"
-    not_complete = "True"
     forward_variables_from(invoker, "*", [])
     args_deps = [ "core:lib" ]
 

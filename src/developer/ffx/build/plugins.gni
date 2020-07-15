@@ -34,13 +34,6 @@ template("plugins") {
     invoker.sub_command,
   ]
 
-  if (defined(invoker.not_complete)) {
-    script_args += [
-      "--not_complete",
-      invoker.not_complete,
-    ]
-  }
-
   action(target_name) {
     script = "//src/developer/ffx/build/gn_generate_plugins.py"
     args = script_args

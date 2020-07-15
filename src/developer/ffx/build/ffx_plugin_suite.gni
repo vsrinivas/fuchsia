@@ -81,15 +81,9 @@ template("ffx_plugin_suite") {
       }
     }
 
-    template = "suite_command.md"
-    if (defined(invoker.template)) {
-      template = invoker.template
-    }
-
     command(output_name + "_sub_command_gen") {
       output_name = "cmd_args.rs"
       plugin_deps = p_deps
-      template = template
     }
 
     args = output_name + "_args"
@@ -122,7 +116,6 @@ template("ffx_plugin_suite") {
                                "args_deps",
                                "extra_deps",
                                "args_source_root",
-                               "not_complete",
                                "source_root",
                                "target_name",
                              ])
@@ -154,7 +147,6 @@ template("ffx_plugin_suite") {
                                "name",
                                "deps",
                                "source_root",
-                               "not_complete",
                                "non_rust_deps",
                                "target_name",
                              ])

@@ -4,22 +4,19 @@
 
 use {
     crate::logger::setup_logger,
-    crate::target_formatter::TargetFormatter,
-    anyhow::{anyhow, format_err, Context, Error},
+    anyhow::{format_err, Context, Error},
     ffx_core::constants::DAEMON,
     ffx_daemon::{find_and_connect, is_daemon_running},
     ffx_lib_args::Ffx,
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, Target as FidlTarget},
+    fidl_fuchsia_developer_bridge::DaemonProxy,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
-    std::convert::TryFrom,
     std::env,
     std::process::Command,
 };
 
 mod logger;
-mod target_formatter;
 
 async fn spawn_daemon() -> Result<(), Error> {
     Command::new(env::current_exe().unwrap()).arg(DAEMON).arg("start").spawn()?;
@@ -31,25 +28,6 @@ async fn get_daemon_proxy() -> Result<DaemonProxy, Error> {
         spawn_daemon().await?;
     }
     Ok(find_and_connect().await?.expect("No daemon found."))
-}
-
-async fn list_targets(
-    daemon_proxy: DaemonProxy,
-    text: Option<String>,
-) -> Result<Vec<FidlTarget>, Error> {
-    match daemon_proxy
-        .list_targets(match text {
-            Some(ref t) => t,
-            None => "",
-        })
-        .await
-    {
-        Ok(r) => {
-            log::info!("SUCCESS: received {:?}", r);
-            return Ok(r);
-        }
-        Err(e) => panic!("ERROR: {:?}", e),
-    }
 }
 
 async fn get_remote_proxy() -> Result<RemoteControlProxy, Error> {
@@ -81,25 +59,7 @@ fn get_log_name(subcommand: &Subcommand) -> &'static str {
 async fn run() -> Result<(), Error> {
     let app: Ffx = argh::from_env();
     setup_logger(get_log_name(&app.subcommand)).await;
-    match app.subcommand {
-        Subcommand::List(c) => {
-            match list_targets(get_daemon_proxy().await?, c.nodename).await {
-                Ok(r) => match r.len() {
-                    0 => println!("No devices found."),
-                    _ => {
-                        let formatter = TargetFormatter::try_from(r)
-                            .map_err(|e| anyhow!("target malformed: {:?}", e))?;
-                        println!("{}", formatter.lines().join("\n"));
-                    }
-                },
-                Err(e) => {
-                    eprintln!("ERROR: {:?}", e);
-                }
-            }
-            Ok(())
-        }
-        _ => ffx_lib::ffx_plugin_impl(get_daemon_proxy, get_remote_proxy, app).await,
-    }
+    ffx_lib::ffx_plugin_impl(get_daemon_proxy, get_remote_proxy, app).await
 }
 
 #[fuchsia_async::run_singlethreaded]

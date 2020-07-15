@@ -23,10 +23,6 @@ template("command") {
   outputs = [ generated_file ]
 
   template = "command.md"
-  if (defined(invoker.template)) {
-    template = invoker.template
-  }
-
   lib_str = string_join(",", libraries)
   action(target_name) {
     script = "//src/developer/ffx/build/gn_generate_cmd.py"
@@ -40,9 +36,6 @@ template("command") {
     ]
 
     # Rebuild if the template changes
-    inputs = [
-      "//src/developer/ffx/build/templates/command.md",
-      "//src/developer/ffx/build/templates/suite_command.md",
-    ]
+    inputs = [ "//src/developer/ffx/build/templates/command.md" ]
   }
 }
