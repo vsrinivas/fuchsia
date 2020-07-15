@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/smart-door"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.security.codelabsmartdoor.Memory"
+        ]
+    }
+}

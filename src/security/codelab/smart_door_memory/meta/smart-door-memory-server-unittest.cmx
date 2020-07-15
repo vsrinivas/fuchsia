@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/smart-door-memory-server-unittest"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ]
+    }
+}

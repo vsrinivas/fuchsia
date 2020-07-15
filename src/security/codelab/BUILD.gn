@@ -7,5 +7,16 @@ group("codelab") {
   deps = [
     "//build/validate:non_production_tag",
     "//src/security/codelab/services:codelab",
+    "//src/security/codelab/smart_door:smart-door",
+    "//src/security/codelab/smart_door_memory:smart-door-memory",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "//build/validate:non_production_tag",
+    "//src/security/codelab/smart_door:tests",
+    "//src/security/codelab/smart_door_memory:tests",
   ]
 }

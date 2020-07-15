@@ -14,6 +14,7 @@ group("security") {
 group("tests") {
   testonly = true
   deps = [
+    "codelab:tests",
     "kms:tests",
     "tee_manager:tests",
     "tools:tests",

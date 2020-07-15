@@ -1,0 +1,21 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.security.codelabsmartdoor.Access": "fuchsia-pkg://fuchsia.com/smart-door#meta/smart-door.cmx",
+                "fuchsia.security.codelabsmartdoor.AccessReset": "fuchsia-pkg://fuchsia.com/smart-door#meta/smart-door.cmx",
+                "fuchsia.security.codelabsmartdoor.Memory": "fuchsia-pkg://fuchsia.com/smart-door-memory#meta/smart-door-memory.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/smart-door-functional-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.security.codelabsmartdoor.Access",
+            "fuchsia.security.codelabsmartdoor.AccessReset"
+        ]
+    }
+}

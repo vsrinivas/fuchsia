@@ -1,0 +1,141 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":smart-door-functional-test",
+    ":smart-door-server-unittest",
+  ]
+}
+
+executable("bin") {
+  output_name = "smart-door"
+  sources = [ "src/smart_door_server.cc" ]
+  deps = [
+    ":lib",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "src/smart_door_memory_client.cc",
+    "src/smart_door_memory_client.h",
+    "src/smart_door_server_app.cc",
+    "src/smart_door_server_app.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/json_parser",
+    "//src/security/codelab/services:codelab",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/digest",
+  ]
+}
+
+package("smart-door") {
+  deps = [
+    ":bin",
+    ":smart-door-config",
+    "//build/validate:non_production_tag",
+  ]
+
+  binaries = [
+    {
+      name = "smart-door"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/smart-door.cmx")
+      dest = "smart-door.cmx"
+    },
+  ]
+}
+
+config_data("smart-door-config") {
+  for_pkg = "smart-door"
+  outputs = [ "config.json" ]
+  sources = [ "config/config.json" ]
+}
+
+config_data("smart-door-config-for-unittest") {
+  for_pkg = "smart-door-server-unittest"
+  outputs = [ "config.json" ]
+  sources = [ "config/test_config.json" ]
+}
+
+test_package("smart-door-server-unittest") {
+  deps = [
+    ":smart-door-config-for-unittest",
+    ":smart-door-server-unittest-bin",
+  ]
+
+  binaries = [
+    {
+      name = "smart-door-server-unittest"
+    },
+  ]
+
+  tests = [
+    {
+      name = "smart-door-server-unittest"
+    },
+  ]
+}
+
+executable("smart-door-server-unittest-bin") {
+  testonly = true
+  output_name = "smart-door-server-unittest"
+
+  sources = [ "tests/smart_door_server_unittest.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
+
+test_package("smart-door-functional-test") {
+  deps = [ ":smart-door-functional-test-bin" ]
+
+  binaries = [
+    {
+      name = "smart-door-functional-test"
+    },
+  ]
+
+  tests = [
+    {
+      name = "smart-door-functional-test"
+    },
+  ]
+}
+
+executable("smart-door-functional-test-bin") {
+  testonly = true
+  output_name = "smart-door-functional-test"
+
+  sources = [ "tests/smart_door_functional_test.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/security/codelab/services:codelab",
+  ]
+}

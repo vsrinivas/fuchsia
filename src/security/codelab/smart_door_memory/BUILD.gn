@@ -1,0 +1,91 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":smart-door-memory-server-unittest",
+    "//src/security/codelab/smart_door:smart-door",
+    "//src/security/codelab/smart_door_memory:smart-door-memory",
+  ]
+}
+
+executable("bin") {
+  output_name = "smart-door-memory"
+  sources = [ "src/smart_door_memory_server.cc" ]
+  deps = [
+    ":lib",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "src/smart_door_memory_server_app.cc",
+    "src/smart_door_memory_server_app.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/security/codelab/services:codelab",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+package("smart-door-memory") {
+  deps = [
+    ":bin",
+    "//build/validate:non_production_tag",
+  ]
+
+  binaries = [
+    {
+      name = "smart-door-memory"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/smart-door-memory.cmx")
+      dest = "smart-door-memory.cmx"
+    },
+  ]
+}
+
+test_package("smart-door-memory-server-unittest") {
+  deps = [ ":smart-door-memory-server-unittest-bin" ]
+
+  binaries = [
+    {
+      name = "smart-door-memory-server-unittest"
+    },
+  ]
+
+  tests = [
+    {
+      name = "smart-door-memory-server-unittest"
+    },
+  ]
+}
+
+executable("smart-door-memory-server-unittest-bin") {
+  testonly = true
+  output_name = "smart-door-memory-server-unittest"
+
+  sources = [ "tests/smart_door_memory_server_unittest.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
