@@ -24,6 +24,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 
 	tuf "github.com/flynn/go-tuf"
+	tufData "github.com/flynn/go-tuf/data"
 )
 
 var roles = []string{"timestamp", "targets", "snapshot"}
@@ -310,10 +311,55 @@ func (r *Repo) CommitUpdates(dateVersioning bool) error {
 	return r.commitUpdates()
 }
 
+// hasTarget returns true if the given targetFiles contains a target matching
+// exactly all of name, version and merkle, and false otherwise.
+func (r *Repo) hasTarget(name, version, merkle string, targets tufData.TargetFiles) (bool, error) {
+	path := filepath.Join(name, version)
+	if targets[path].Custom == nil {
+		return false, nil
+	}
+	var custom customTargetMetadata
+
+	if err := json.Unmarshal(*targets[path].Custom, &custom); err != nil {
+		return false, err
+	}
+	return custom.Merkle == merkle, nil
+}
+
+// PublishManifests publishes the packages and blobs identified in the package
+// output manifests at the given paths, returning all input files involved, or an
+// error.
+func (r *Repo) PublishManifests(paths []string) ([]string, error) {
+	targets, err := r.Targets()
+	if err != nil {
+		return nil, err
+	}
+	var deps []string
+	for _, path := range paths {
+		pkgDeps, err := r.publishManifest(path, targets)
+		if err != nil {
+			return nil, err
+		}
+		deps = append(deps, pkgDeps...)
+	}
+	return deps, nil
+}
+
 // PublishManifest publishes the package and blobs identified in the package
 // output manifest at the given path, returning all input files involved, or an
 // error.
 func (r *Repo) PublishManifest(path string) ([]string, error) {
+	targets, err := r.Targets()
+	if err != nil {
+		return nil, err
+	}
+	return r.publishManifest(path, targets)
+}
+
+// publishManifest publishes the package and blobs identified in the package
+// output manifest at the given path, using a pre-loaded targets, and returning
+// all input files involved, or an error.
+func (r *Repo) publishManifest(path string, targets tufData.TargetFiles) ([]string, error) {
 	deps := []string{path}
 	f, err := os.Open(path)
 	if err != nil {
@@ -328,8 +374,26 @@ func (r *Repo) PublishManifest(path string) ([]string, error) {
 		return nil, fmt.Errorf("unknown version %q, can't publish", packageManifest.Version)
 	}
 
+	// first collect all the deps, and extract the package merkle root
+	var pkgMerkle string
 	for _, blob := range packageManifest.Blobs {
 		deps = append(deps, blob.SourcePath)
+		if blob.Path != "meta/" {
+			continue
+		}
+		pkgMerkle = blob.Merkle.String()
+	}
+
+	targetExists, err := r.hasTarget(packageManifest.Package.Name, packageManifest.Package.Version, pkgMerkle, targets)
+	if err != nil {
+		return nil, err
+	}
+	if targetExists {
+		return deps, nil
+	}
+
+	// publish the package if it's not already in targets.json
+	for _, blob := range packageManifest.Blobs {
 		if blob.Path == "meta/" {
 			p := packageManifest.Package
 			name := p.Name + "/" + p.Version

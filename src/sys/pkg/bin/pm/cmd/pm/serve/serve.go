@@ -105,16 +105,28 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 				}
 				defer f.Close()
 
+				var pkgManifestPaths []string
 				s := bufio.NewScanner(f)
 				for s.Scan() {
 					m := s.Text()
 					if _, err := os.Stat(m); err == nil {
-						repo.PublishManifest(m)
-						if err := w.Add(m); err != nil {
-							log.Printf("unable to watch %q", m)
-						}
+						pkgManifestPaths = append(pkgManifestPaths, m)
 					} else {
 						log.Printf("unable to publish %q", m)
+					}
+				}
+				if err := s.Err(); err != nil {
+					log.Printf("unable to publish manifests from %q", *publishList)
+					return
+				}
+				_, err = repo.PublishManifests(pkgManifestPaths)
+				if err != nil {
+					log.Printf("unable to publish manifests from %q: %s", *publishList, err)
+					return
+				}
+				for _, m := range pkgManifestPaths {
+					if err := w.Add(m); err != nil {
+						log.Printf("unable to watch %q", m)
 					}
 				}
 				if err := repo.CommitUpdates(config.TimeVersioned); err != nil {

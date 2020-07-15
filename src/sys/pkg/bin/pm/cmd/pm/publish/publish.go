@@ -173,20 +173,23 @@ func Run(cfg *build.Config, args []string) error {
 
 		scanner := bufio.NewScanner(f)
 
+		var pkgManifestPaths []string
 		for scanner.Scan() {
 			pkgManifestPath := scanner.Text()
 			if *verbose {
 				fmt.Printf("publishing: %s\n", pkgManifestPath)
 			}
-			pkgdeps, err := repo.PublishManifest(pkgManifestPath)
-			if err != nil {
-				return err
-			}
-			deps = append(deps, pkgdeps...)
+			pkgManifestPaths = append(pkgManifestPaths, pkgManifestPath)
 		}
 		if err := scanner.Err(); err != nil {
 			return err
 		}
+
+		pkgdeps, err := repo.PublishManifests(pkgManifestPaths)
+		if err != nil {
+			return err
+		}
+		deps = append(deps, pkgdeps...)
 
 		if *verbose {
 			fmt.Printf("committing updates\n")
