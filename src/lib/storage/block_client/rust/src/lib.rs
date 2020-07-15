@@ -18,6 +18,8 @@ use {
     },
 };
 
+pub use cache::Cache;
+
 pub mod cache;
 
 const BLOCK_VMOID_INVALID: u16 = 0;
