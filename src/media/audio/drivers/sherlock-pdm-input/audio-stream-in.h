@@ -33,6 +33,7 @@ class SherlockAudioStreamIn : public SimpleAudioStream {
                         zx::vmo* out_buffer) __TA_REQUIRES(domain_token()) override;
   zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_token()) override;
   zx_status_t Stop() __TA_REQUIRES(domain_token()) override;
+  void ShutdownHook() __TA_REQUIRES(domain_token()) override;
 
  protected:
   SherlockAudioStreamIn(zx_device_t* parent);

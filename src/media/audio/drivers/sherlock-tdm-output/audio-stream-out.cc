@@ -367,6 +367,7 @@ zx_status_t SherlockAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmt
 void SherlockAudioStreamOut::ShutdownHook() {
   aml_audio_->Shutdown();
   audio_en_.Write(0);
+  pinned_ring_buffer_.Unpin();
 }
 
 zx_status_t SherlockAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
@@ -459,7 +460,18 @@ zx_status_t SherlockAudioStreamOut::AddFormats() {
 }
 
 zx_status_t SherlockAudioStreamOut::InitBuffer(size_t size) {
-  zx_status_t status;
+  // Make sure the DMA is stopped before releasing quarantine.
+  aml_audio_->Stop();
+  // Make sure that all reads/writes have gone through.
+#if defined(__aarch64__)
+  asm __volatile__("dsb sy");
+#endif
+  auto status = bti_.release_quarantine();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not release quarantine bti - %d", __func__, status);
+    return status;
+  }
+
   // TODO(ZX-3149): Per johngro's suggestion preallocate contiguous memory (say in
   // platform bus) since we are likely to fail after running for a while and we need to
   // init again (say the devhost is restarted).

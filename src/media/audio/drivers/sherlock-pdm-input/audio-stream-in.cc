@@ -196,6 +196,11 @@ void SherlockAudioStreamIn::ProcessRingNotification() {
   NotifyPosition(resp);
 }
 
+void SherlockAudioStreamIn::ShutdownHook() {
+  Stop();
+  pinned_ring_buffer_.Unpin();
+}
+
 zx_status_t SherlockAudioStreamIn::Stop() {
   notify_timer_.Cancel();
   us_per_notification_ = 0;
@@ -225,11 +230,22 @@ zx_status_t SherlockAudioStreamIn::AddFormats() {
 }
 
 zx_status_t SherlockAudioStreamIn::InitBuffer(size_t size) {
+  // Make sure the DMA is stopped before releasing quarantine.
+  pdm_->Stop();
+  // Make sure that all reads/writes have gone through.
+#if defined(__aarch64__)
+  asm __volatile__("dsb sy");
+#endif
+  auto status = bti_.release_quarantine();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not release quarantine bti - %d", __func__, status);
+    return status;
+  }
+
   // TODO(ZX-3149): Per johngro's suggestion preallocate contiguous memory (say in
   // platform bus) since we are likely to fail after running for a while and we need to
   // init again (say the devhost is restarted).
-  zx_status_t status =
-      zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
+  status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
     return status;

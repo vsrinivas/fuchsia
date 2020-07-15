@@ -392,6 +392,7 @@ void AstroAudioStreamOut::ShutdownHook() {
   // safe the codec so it won't throw clock errors when tdm bus shuts down
   codec_->HardwareShutdown();
   aml_audio_->Shutdown();
+  pinned_ring_buffer_.Unpin();
 }
 
 zx_status_t AstroAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
@@ -477,7 +478,17 @@ zx_status_t AstroAudioStreamOut::AddFormats() {
 }
 
 zx_status_t AstroAudioStreamOut::InitBuffer(size_t size) {
-  zx_status_t status;
+  // Make sure the DMA is stopped before releasing quarantine.
+  aml_audio_->Stop();
+  // Make sure that all reads/writes have gone through.
+#if defined(__aarch64__)
+  asm __volatile__("dsb sy");
+#endif
+  auto status = bti_.release_quarantine();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not release quarantine bti - %d", __func__, status);
+    return status;
+  }
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
