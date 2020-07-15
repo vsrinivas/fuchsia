@@ -116,6 +116,10 @@ if (is_fuchsia) {
     deps = [ ":eui48-v0_4_6" ]
   }
 }
+group("fatfs") {
+  deps = [ ":fatfs-v0_4_0" ]
+}
+
 if (!is_fuchsia) {
   group("flate2") {
     deps = [ ":flate2-v1_0_14" ]
@@ -2388,6 +2392,37 @@ rust_library("eui48-v0_4_6") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"disp_hexstring\"",
     "--cfg=feature=\"serde\"",
+  ]
+}
+
+rust_library("fatfs-v0_4_0") {
+  crate_name = "fatfs"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/fatfs/src/lib.rs"
+  output_name = "fatfs-2449189d41d04e86"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":byteorder-v1_3_1" ]
+  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":log-v0_4_8" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=2449189d41d04e86",
+    "-Cextra-filename=-2449189d41d04e86",
+    "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"chrono\"",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"lfn\"",
+    "--cfg=feature=\"std\"",
+    "--cfg=feature=\"unicode\"",
   ]
 }
 

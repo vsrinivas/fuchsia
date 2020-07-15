@@ -41,6 +41,7 @@ criterion = { version = "0.2", default-features = false }
 crossbeam = "0.7.3"
 csv = "1.0.7"
 difference = "2.0.0"
+fatfs = "0.4.0"
 futures = "0.3.5"
 futures-executor = "0.3.5"
 futures-io = "0.3.5"
@@ -205,6 +206,9 @@ zip = { version = "0.5.5", default-features = false, features = ["deflate"] }
 # Keep this sorted alphabetically, please.
 backtrace-sys = { path = "tiny_mirrors/backtrace-sys" }
 cmake = { path = "tiny_mirrors/cmake"}
+# TODO(fxb/56201): Vendor fatfs when upstream makes a new release.
+# See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
+fatfs = { path = "tiny_mirrors/fatfs" }
 fuchsia-cprng = { path = "../../garnet/public/rust/fuchsia-cprng" }
 futures-timer = { path = "tiny_mirrors/futures-timer" }
 js-sys = { path = "tiny_mirrors/js-sys" }
