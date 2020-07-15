@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "asix-88179:tests",
     "ethernet:tests",
     "ethertap:tests",
     "usb-cdc-ecm:tests",

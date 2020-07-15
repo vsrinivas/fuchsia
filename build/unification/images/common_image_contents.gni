@@ -261,7 +261,6 @@ if (target_cpu == "arm64") {
 
 if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
   common_image_contents += [
-    "//src/connectivity/ethernet/drivers/asix-88179:fake-asix-88179",
     "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
     "//src/devices/block/drivers/as370-sdhci",
     "//src/devices/block/drivers/msm8x53-sdhci",

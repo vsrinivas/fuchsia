@@ -5,11 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-
-group("test") {
-  testonly = true
-  deps = [ ":usb-virtual-bus-asix-88179" ]
-}
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 driver_module("asix-88179") {
   defines = [ "_ALL_SOURCE" ]
@@ -67,11 +63,8 @@ driver_module("fake-asix-88179") {
   ]
 }
 
-test("usb-virtual-bus-asix-88179") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
-  configs += [ "//build/unification/config:zircon-migrated" ]
+test("asix-88179-integration") {
+  output_name = "asix-88179-integration-test"
   sources = [ "asix-88179-test.cc" ]
   deps = [
     ":asix-88179-test-helper_llcpp",
@@ -89,4 +82,25 @@ test("usb-virtual-bus-asix-88179") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
+}
+
+isolated_devmgr_unittest_package("asix-88179-integration-test") {
+  executable_path = "test/asix-88179-integration-test"
+  deps = [
+    ":asix-88179",
+    ":asix-88179-integration",
+    ":fake-asix-88179",
+    "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/usb/drivers/usb-bus",
+    "//src/devices/usb/drivers/usb-composite",
+    "//src/devices/usb/drivers/usb-peripheral",
+    "//src/devices/usb/drivers/usb-virtual-bus",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":asix-88179-integration-test" ]
 }

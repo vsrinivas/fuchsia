@@ -7,7 +7,6 @@
 # This list is mostly used by //build/unification/images:migrated-tests and
 # //build/unification/images:migrated-aux.
 common_test_contents = [
-  "//src/connectivity/ethernet/drivers/asix-88179:usb-virtual-bus-asix-88179",
   "//src/devices/block/bin/biotime:biotime-test",
   "//src/devices/block/drivers/ahci:ahci-unittest",
   "//src/devices/block/drivers/core:core-unittest",
