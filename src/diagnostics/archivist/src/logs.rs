@@ -180,7 +180,7 @@ impl LogManager {
                         .context("creating log stream from socket")
                     {
                         Ok(log_stream) => {
-                            self.add_interest_listener(&source, control_handle).await;
+                            self.try_add_interest_listener(&source, control_handle).await;
                             let fut =
                                 FutureObj::new(Box::new(self.clone().drain_messages(log_stream)));
                             let res = sender.unbounded_send(fut);
@@ -199,7 +199,7 @@ impl LogManager {
                         .context("creating log stream from socket")
                     {
                         Ok(log_stream) => {
-                            self.add_interest_listener(&source, control_handle).await;
+                            self.try_add_interest_listener(&source, control_handle).await;
                             let fut =
                                 FutureObj::new(Box::new(self.clone().drain_messages(log_stream)));
                             let res = sender.unbounded_send(fut);
@@ -245,11 +245,18 @@ impl LogManager {
 
     /// Add 'Interest' listener to connect the interest dispatcher to the
     /// LogSinkControlHandle (weak reference) associated with the given source.
-    async fn add_interest_listener(
+    /// Interest listeners are only supported for log connections where the
+    /// SourceIdentity includes an attributed component name. If no component
+    /// name is present, this function will exit without adding any listener.
+    async fn try_add_interest_listener(
         &self,
         source: &Arc<SourceIdentity>,
         control_handle: LogSinkControlHandle,
     ) {
+        if source.component_name.is_none() {
+            return;
+        }
+
         let event_listener = Arc::new(control_handle);
         self.inner
             .lock()
