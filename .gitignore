@@ -4,6 +4,7 @@
 .build_lock
 .cargo
 .clangd
+**/.cache/clangd
 .checkstyle
 .classpath
 .config
