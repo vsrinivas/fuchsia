@@ -7,10 +7,15 @@ mod fuchsia;
 #[cfg(target_os = "fuchsia")]
 use self::fuchsia as implementation;
 
-#[cfg(not(target_os = "fuchsia"))]
+#[cfg(all(not(target_os = "fuchsia"), not(target_arch = "wasm32")))]
 mod portable;
-#[cfg(not(target_os = "fuchsia"))]
+#[cfg(all(not(target_os = "fuchsia"), not(target_arch = "wasm32")))]
 use self::portable as implementation;
+
+#[cfg(all(not(target_os = "fuchsia"), target_arch = "wasm32"))]
+mod stub;
+#[cfg(all(not(target_os = "fuchsia"), target_arch = "wasm32"))]
+use self::stub as implementation;
 
 pub use implementation::{
     executor::{spawn, spawn_local, Executor, Time},
