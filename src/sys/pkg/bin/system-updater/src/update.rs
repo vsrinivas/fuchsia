@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::prelude::*,
+    serde::{Deserialize, Serialize},
     update_package::{Image, UpdateMode, UpdatePackage},
 };
 
@@ -39,6 +40,17 @@ enum CommitAction {
     RebootDeferred,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum State {
+    PREPARE,
+    DOWNLOAD,
+    STAGE,
+    REBOOT,
+    FINALIZE,
+    COMPLETE,
+    FAIL,
+}
+
 /// Updates the system in the given `Environment` using the provided config options.
 pub async fn update(config: Config, env: Environment) -> Result<(), ()> {
     // The only operation allowed to fail in this function is update_attempt. The rest of the
@@ -46,6 +58,8 @@ pub async fn update(config: Config, env: Environment) -> Result<(), ()> {
     // whether the update attempt succeeds or fails.
 
     let mut phase = metrics::Phase::Tufupdate;
+
+    let mut history = history::UpdateHistory::load().await;
 
     // wait for both the update attempt to finish and for all cobalt events to be flushed to the
     // service.
@@ -55,15 +69,19 @@ pub async fn update(config: Config, env: Environment) -> Result<(), ()> {
             fx_log_info!("starting system update with config: {:?}", config);
             cobalt.log_ota_start(&config.target_version, config.initiator, config.start_time);
 
-            let history = history::UpdateHistory::increment_or_create(
-                &config.source_version,
-                &config.target_version,
+            let attempt = history.start_update_attempt(
+                // TODO(fxb/55408): replace with the real options
+                history::UpdateOptions,
+                config.update_url.clone(),
                 config.start_time,
-            )
-            .await;
-
-            let res = update_attempt(&config, &env, &mut phase).await;
+            );
+            let mut target_version = history::Version::default();
+            let res = update_attempt(&config, &env, &mut phase, &mut target_version).await;
             let status_code = metrics::result_to_status_code(res.as_ref().map(|_| ()));
+
+            // TODO(fxb/55407): replace with the real terminal state
+            let attempt = attempt.finish(target_version, State::COMPLETE);
+            history.record_update_attempt(attempt);
 
             cobalt.log_ota_result_attempt(
                 &config.target_version,
@@ -120,6 +138,7 @@ async fn update_attempt(
     config: &Config,
     env: &Environment,
     phase: &mut metrics::Phase,
+    target_version: &mut history::Version,
 ) -> Result<(CommitAction, Vec<DirectoryProxy>), Error> {
     if let Err(e) = gc(&env.space_manager).await {
         fx_log_err!("unable to gc packages (1/2): {:#}", anyhow!(e));
@@ -127,6 +146,7 @@ async fn update_attempt(
 
     let update_pkg =
         resolver::resolve_update_package(&env.pkg_resolver, &config.update_url).await?;
+    *target_version = history::Version::for_update_package(&update_pkg).await;
     let () = update_pkg.verify_name().await?;
 
     if let Err(e) = gc(&env.space_manager).await {
