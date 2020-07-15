@@ -2104,7 +2104,7 @@ macro_rules! fidl_empty_struct {
 }
 
 /// Encode the provided value behind a FIDL "envelope".
-pub fn encode_in_envelope(
+pub unsafe fn encode_in_envelope(
     val: &mut Option<&mut dyn Encodable>,
     encoder: &mut Encoder<'_>,
     offset: usize,
@@ -2118,7 +2118,7 @@ pub fn encode_in_envelope(
         Some(x) => {
             // Start at offset 8 because we write the first 8 bytes (number of bytes and number
             // number of handles, both u32) at the end.
-            ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+            ALLOC_PRESENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
             let bytes_before = encoder.buf.len();
             let handles_before = encoder.handles.len();
             encoder.write_out_of_line(
@@ -2128,13 +2128,13 @@ pub fn encode_in_envelope(
             )?;
             let mut bytes_written = (encoder.buf.len() - bytes_before) as u32;
             let mut handles_written = (encoder.handles.len() - handles_before) as u32;
-            bytes_written.encode(encoder, offset, recursion_depth)?;
-            handles_written.encode(encoder, offset + 4, recursion_depth)?;
+            bytes_written.unsafe_encode(encoder, offset, recursion_depth)?;
+            handles_written.unsafe_encode(encoder, offset + 4, recursion_depth)?;
         }
         None => {
-            0u32.encode(encoder, offset, recursion_depth)?; // num_bytes
-            0u32.encode(encoder, offset + 4, recursion_depth)?; // num_handles
-            ALLOC_ABSENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+            0u32.unsafe_encode(encoder, offset, recursion_depth)?; // num_bytes
+            0u32.unsafe_encode(encoder, offset + 4, recursion_depth)?; // num_handles
+            ALLOC_ABSENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
         }
     }
     Ok(())
@@ -2228,7 +2228,13 @@ macro_rules! fidl_table {
                         encoder.padding(offset + prev_end_offset, cur_offset - prev_end_offset);
 
                         // Encode present field.
-                        $crate::encoding::encode_in_envelope(encodable, encoder, offset + cur_offset, recursion_depth)?;
+                        // # Safety:
+                        // bytes_len is calculated to fit 16*max(member.ordinal).
+                        // Since cur_offset is 16*(member.ordinal - 1) and the envelope takes 16 bytes, there is
+                        // always sufficient room.
+                        unsafe {
+                            $crate::encoding::encode_in_envelope(encodable, encoder, offset + cur_offset, recursion_depth)?;
+                        }
 
                         prev_end_offset = cur_offset + 16;
                     }
@@ -2537,7 +2543,7 @@ macro_rules! fidl_xunion {
             unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 let mut ordinal = self.ordinal();
                 // Encode ordinal
-                $crate::fidl_encode!(&mut ordinal, encoder, offset, recursion_depth)?;
+                $crate::fidl_unsafe_encode!(&mut ordinal, encoder, offset, recursion_depth)?;
                 match self {
                     $(
                         $name::$member_name ( val ) => $crate::encoding::encode_in_envelope(&mut Some(val), encoder, offset+8, recursion_depth),
