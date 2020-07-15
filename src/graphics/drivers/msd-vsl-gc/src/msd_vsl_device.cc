@@ -404,6 +404,12 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
         continue;
       }
 
+      if (batch->IsCommandBuffer()) {
+        auto* buffer = static_cast<CommandBuffer*>(batch.get())->GetBatchBuffer();
+        TRACE_VTHREAD_DURATION_END("magma", "Command Buffer", "GPU", buffer->id(),
+                                   magma::PlatformTrace::GetCurrentTicks(), "id", buffer->id());
+      }
+
       if (batch->GetSequenceNumber() > max_seq_num) {
         max_seq_num = batch->GetSequenceNumber();
         rb_new_head = events_[i].ringbuffer_offset;
@@ -911,8 +917,12 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<MsdVslContext> context,
 
   bool is_cmd_buf = mapped_batch->IsCommandBuffer();
   if (is_cmd_buf) {
-    auto* command_buf = reinterpret_cast<CommandBuffer*>(mapped_batch.get());
+    auto* command_buf = static_cast<CommandBuffer*>(mapped_batch.get());
     magma::PlatformBuffer* buf = command_buf->GetBatchBuffer();
+
+    TRACE_VTHREAD_DURATION_BEGIN("magma", "Command Buffer", "GPU", buf->id(),
+                                 magma::PlatformTrace::GetCurrentTicks(), "id", buf->id());
+
     uint32_t write_offset = command_buf->GetBatchBufferWriteOffset();
 
     // Write a LINK at the end of the command buffer that links back to the ringbuffer.
