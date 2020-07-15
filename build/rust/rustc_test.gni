@@ -141,9 +141,10 @@ template("rustc_test") {
     # tell rustc to compile in the test harness
     rustflags = features + [ "--test" ]
 
-    deps = []
+    # TODO(56138): Fix the leaks and remove this.
+    deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
     if (defined(invoker.deps)) {
-      deps = invoker.deps
+      deps += invoker.deps
     }
     if (defined(invoker.non_rust_deps)) {
       deps += invoker.non_rust_deps

@@ -200,7 +200,8 @@ template("rustc_binary") {
     configs = []
     configs = invoker.configs
 
-    deps = []
+    # TODO(56138): Fix the leaks and remove this.
+    deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
