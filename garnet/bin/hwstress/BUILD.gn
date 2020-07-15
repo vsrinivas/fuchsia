@@ -37,7 +37,6 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/uuid",
     "//zircon/public/lib/cmdline",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -112,12 +111,12 @@ executable("hwstress_v2_test") {
 
   deps = [
     ":lib",
+    "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/isolated_devmgr/v2_component",  # requires CFv2.
     "//src/lib/testing/predicates",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
   ]

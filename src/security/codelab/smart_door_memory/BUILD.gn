@@ -32,11 +32,11 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/security/codelab/services:codelab",
-    "//zircon/public/lib/fdio",
   ]
 }
 

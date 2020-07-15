@@ -58,10 +58,10 @@ source_set("inspect") {
     "inspect-manager.h",
   ]
   public_deps = [
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fsl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/memfs",
   ]
