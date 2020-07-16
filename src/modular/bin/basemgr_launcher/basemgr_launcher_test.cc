@@ -122,8 +122,9 @@ TEST_F(BasemgrLauncherTest, ShutdownBasemgrCommand) {
   RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 0; });
 }
 
+// TODO(fxbug.dev/56397) Re-enable flaky test
 // When shutdown is issued, ensure that scenic.cmx is also terminated.
-TEST_F(BasemgrLauncherTest, ShutdownBasemgrShutsdownScenic) {
+TEST_F(BasemgrLauncherTest, DISABLED_ShutdownBasemgrShutsdownScenic) {
   EXPECT_EQ(ZX_OK, RunBasemgrLauncher({}));
 
   // Get the exact service path, which includes a unique id, of the basemgr instance.
