@@ -191,10 +191,10 @@ void RunBlobCorruptionTest() {
   loop.Shutdown();
   ASSERT_TRUE(corruption_server->IsCalled());
 }
+// TODO Enable these fxb/56432
+TEST_F(BlobfsTest, DISABLED_CorruptBlobNotify) { RunBlobCorruptionTest(); }
 
-TEST_F(BlobfsTest, CorruptBlobNotify) { RunBlobCorruptionTest(); }
-
-TEST_F(BlobfsTestWithFvm, CorruptBlobNotify) { RunBlobCorruptionTest(); }
+TEST_F(BlobfsTestWithFvm, DISABLED_CorruptBlobNotify) { RunBlobCorruptionTest(); }
 
 void RunUnallocatedBlobTest() {
   std::unique_ptr<BlobInfo> info;
