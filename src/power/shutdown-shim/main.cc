@@ -175,7 +175,9 @@ zx_status_t set_system_state_transition_behavior(device_manager_fidl::SystemPowe
   return ZX_OK;
 }
 
-// Connect to fuchsia.sys2.SystemController and initiate a system shutdown.
+// Connect to fuchsia.sys2.SystemController and initiate a system shutdown. If
+// everything goes well, this function shouldn't return until shutdown is
+// complete.
 zx_status_t initiate_component_shutdown() {
   zx::channel local;
   zx_status_t status = connect_to_protocol(&sys2_fidl::SystemController::Name[0], &local);
@@ -189,12 +191,28 @@ zx_status_t initiate_component_shutdown() {
   return resp.status();
 }
 
+// Sleeps for MANUAL_SYSTEM_SHUTDOWN_TIMEOUT, and then exits the process
+void shutdown_timer() {
+  std::this_thread::sleep_for(MANUAL_SYSTEM_SHUTDOWN_TIMEOUT);
+
+  // We shouldn't still be running at this point
+
+  exit(1);
+}
+
 // Manually drive a shutdown by setting state as driver_manager's termination
 // behavior and then instructing component_manager to perform an orderly
 // shutdown of components. If the orderly shutdown takes too long the shim will
 // exit with a non-zero exit code, killing the root job.
-zx_status_t drive_shutdown_manually(device_manager_fidl::SystemPowerState state) {
+void drive_shutdown_manually(device_manager_fidl::SystemPowerState state) {
   printf("[shutdown-shim]: driving shutdown manually\n");
+
+  // Start a new thread that makes us exit uncleanly after a timeout. This will
+  // guarantee that shutdown doesn't take longer than
+  // MANUAL_SYSTEM_SHUTDOWN_TIMEOUT, because we're marked as critical to the
+  // root job and us exiting will bring down userspace and cause a reboot.
+  std::thread(shutdown_timer).detach();
+
   zx_status_t status = set_system_state_transition_behavior(state);
   if (status != ZX_OK) {
     fprintf(stderr,
@@ -216,13 +234,6 @@ zx_status_t drive_shutdown_manually(device_manager_fidl::SystemPowerState state)
     exit(1);
   }
   fprintf(stderr, "[shutdown-shim]: manual shutdown successfully initiated\n");
-
-  std::this_thread::sleep_for(MANUAL_SYSTEM_SHUTDOWN_TIMEOUT);
-
-  // If we're still running after that sleep shutdown should have finished by
-  // now. Exit with a non-zero exit code to force the system to restart.
-  fprintf(stderr, "[shutdown-shim]: we shouldn't still be running, crashing the system\n");
-  exit(1);
 }
 
 // Connects to power_manager and passes a SyncClient to the given function. The
@@ -235,22 +246,21 @@ void forward_command(
   zx::channel local;
   zx_status_t status =
       connect_to_protocol_with_timeout(&power_fidl::statecontrol::Admin::Name[0], &local);
-  if (status != ZX_OK) {
-    printf("[shutdown-shim]: failed to connect to power_manager\n");
-    // Call send_command with an invalid channel. It will observe a transport
-    // issue, and inform the client of success because we're going to drive the
-    // shutdown ourselves.
-    send_command(power_fidl::statecontrol::Admin::SyncClient(zx::channel()));
-
-    drive_shutdown_manually(fallback_state);
-    return;
+  if (status == ZX_OK) {
+    status = send_command(power_fidl::statecontrol::Admin::SyncClient(std::move(local)));
+    if (status == ZX_OK) {
+      return;
+    }
   }
 
-  status = send_command(power_fidl::statecontrol::Admin::SyncClient(std::move(local)));
-  if (status != ZX_OK) {
-    printf("[shutdown-shim]: failed to forward command to power_manager\n");
-    drive_shutdown_manually(fallback_state);
-  }
+  printf("[shutdown-shim]: failed to forward command to power_manager: %s\n",
+         zx_status_get_string(status));
+  drive_shutdown_manually(fallback_state);
+
+  // If we're still running after that sleep shutdown should have finished by
+  // now. Exit with a non-zero exit code to force the system to restart.
+  fprintf(stderr, "[shutdown-shim]: we shouldn't still be running, crashing the system\n");
+  exit(1);
 }
 
 void StateControlAdminServer::Suspend(
@@ -265,10 +275,6 @@ void StateControlAdminServer::Suspend(
                   [state, completer = completer.ToAsync()](auto admin_client) mutable {
                     auto resp = admin_client.Suspend(state);
                     if (resp.status() != ZX_OK) {
-                      // Transport error when forwarding command, we'll take ownership of
-                      // driving the shutdown so tell the client that the request was
-                      // successful.
-                      completer.ReplySuccess();
                       return resp.status();
                     } else if (resp->result.is_err()) {
                       completer.ReplyError(resp->result.err());
@@ -292,10 +298,6 @@ void StateControlAdminServer::Reboot(
                   [reboot_reason, completer = completer.ToAsync()](auto admin_client) mutable {
                     auto resp = admin_client.Reboot(reboot_reason);
                     if (resp.status() != ZX_OK) {
-                      // Transport error when forwarding command, we'll take ownership of
-                      // driving the shutdown so tell the client that the request was
-                      // successful.
-                      completer.ReplySuccess();
                       return resp.status();
                     } else if (resp->result.is_err()) {
                       completer.ReplyError(resp->result.err());
@@ -313,10 +315,6 @@ void StateControlAdminServer::RebootToBootloader(
                   [completer = completer.ToAsync()](auto admin_client) mutable {
                     auto resp = admin_client.RebootToBootloader();
                     if (resp.status() != ZX_OK) {
-                      // Transport error when forwarding command, we'll take ownership of
-                      // driving the shutdown so tell the client that the request was
-                      // successful.
-                      completer.ReplySuccess();
                       return resp.status();
                     } else if (resp->result.is_err()) {
                       completer.ReplyError(resp->result.err());
@@ -334,10 +332,6 @@ void StateControlAdminServer::RebootToRecovery(
                   [completer = completer.ToAsync()](auto admin_client) mutable {
                     auto resp = admin_client.RebootToRecovery();
                     if (resp.status() != ZX_OK) {
-                      // Transport error when forwarding command, we'll take ownership of
-                      // driving the shutdown so tell the client that the request was
-                      // successful.
-                      completer.ReplySuccess();
                       return resp.status();
                     } else if (resp->result.is_err()) {
                       completer.ReplyError(resp->result.err());
@@ -355,10 +349,6 @@ void StateControlAdminServer::Poweroff(
                   [completer = completer.ToAsync()](auto admin_client) mutable {
                     auto resp = admin_client.Poweroff();
                     if (resp.status() != ZX_OK) {
-                      // Transport error when forwarding command, we'll take ownership of
-                      // driving the shutdown so tell the client that the request was
-                      // successful.
-                      completer.ReplySuccess();
                       return resp.status();
                     } else if (resp->result.is_err()) {
                       completer.ReplyError(resp->result.err());
@@ -376,10 +366,6 @@ void StateControlAdminServer::Mexec(
                   [completer = completer.ToAsync()](auto admin_client) mutable {
                     auto resp = admin_client.Mexec();
                     if (resp.status() != ZX_OK) {
-                      // Transport error when forwarding command, we'll take ownership of
-                      // driving the shutdown so tell the client that the request was
-                      // successful.
-                      completer.ReplySuccess();
                       return resp.status();
                     } else if (resp->result.is_err()) {
                       completer.ReplyError(resp->result.err());
@@ -397,10 +383,6 @@ void StateControlAdminServer::SuspendToRam(
                   [completer = completer.ToAsync()](auto admin_client) mutable {
                     auto resp = admin_client.SuspendToRam();
                     if (resp.status() != ZX_OK) {
-                      // Transport error when forwarding command, we'll take ownership of
-                      // driving the shutdown so tell the client that the request was
-                      // successful.
-                      completer.ReplySuccess();
                       return resp.status();
                     } else if (resp->result.is_err()) {
                       completer.ReplyError(resp->result.err());
