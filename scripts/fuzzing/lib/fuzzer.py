@@ -48,8 +48,9 @@ class Fuzzer(object):
         'handle_segv', 'handle_bus', 'handle_ill', 'handle_fpe', 'handle_abrt'
     ]
 
-    # Wildcard pattern for fuzzer logs.
-    LOG_PATTERN = 'fuzz-*.log'
+    # Wildcard pattern for fuzzer logs (only matches up to job 9, due to glob
+    # limitations).
+    LOG_PATTERN = 'fuzz-[0-9].log'
 
     def __init__(self, device, package, executable):
         assert device, 'Fuzzer device not set.'

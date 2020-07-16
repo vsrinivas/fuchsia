@@ -358,18 +358,35 @@ class FuzzerTest(TestCaseWithFuzzer):
             log.write('==67890== libFuzzer: deadly signal\n')
             log.write('MS: 1 SomeMutation; base unit: foo\n')
 
+        # Make another log file to simulate the results of a previous run
+        old_log = os.path.join(self.fuzzer.output, 'fuzz-1234-56-78-9012-0.log')
+        self.host.touch(old_log)
+
         # Monitor the fuzzer until it exits
         self.fuzzer.monitor()
         self.assertGreaterEqual(self.host.elapsed, 15)
 
         # Verify we grabbed the logs and symbolized them.
         self.assertScpFrom(
-            self.ns.data_abspath('fuzz-*.log'), self.fuzzer.output)
-        cmd = ['rm', '-f', self.ns.data_abspath('fuzz-*.log')]
+            self.ns.data_abspath('fuzz-[0-9].log'), self.fuzzer.output)
+        cmd = ['rm', '-f', self.ns.data_abspath('fuzz-[0-9].log')]
         self.assertSsh(*cmd)
 
         cmd = self.symbolize_cmd()
         self.assertRan(*cmd)
+
+        # Log from scp should have been deleted
+        self.assertFalse(self.host.isfile(logname))
+
+        # Old log should be untouched
+        self.assertTrue(self.host.isfile(old_log))
+        self.assertFalse(self.host.isfile(self.fuzzer.logfile(1)))
+
+        # New log and symlink should exist
+        self.assertTrue(self.host.isfile(self.fuzzer.logfile(0)))
+        self.assertTrue(
+            self.host.isfile(
+                os.path.join(self.fuzzer.output, 'fuzz-latest.log')))
 
     def test_stop(self):
         # Stopping when stopped has no effect
@@ -430,7 +447,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         # misleading name here, all it really does is prepare a canned response
         # to an 'ls' command over SSH. This uses the wildcarded log pattern,
         # since that is what is passed to `ls` when the fuzzer is starting.
-        self.touch_on_device(self.ns.data_abspath('fuzz-*.log'))
+        self.touch_on_device(self.ns.data_abspath('fuzz-[0-9].log'))
 
         # Make the fuzzer run for 60 "seconds".
         cmd = [

@@ -275,7 +275,7 @@ class TestCaseWithFuzzer(TestCaseWithFactory):
 
     def create_log(self, start=None, end=None):
         self.touch_on_device(
-            self.ns.data_abspath('fuzz-*.log'),
+            self.ns.data_abspath('fuzz-[0-9].log'),
             start=start,
             end=end,
             reset=True)
