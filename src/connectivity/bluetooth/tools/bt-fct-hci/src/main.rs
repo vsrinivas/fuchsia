@@ -125,7 +125,7 @@ async fn raw_command(
         return Ok(());
     }
 
-    let out_opcode = decode_opcode(&payload[0..1]);
+    let out_opcode = decode_opcode(&payload[0..2]);
 
     if verbose {
         println!("Sending opcode: {} packet: {}", out_opcode, hex::encode(&payload));
@@ -147,7 +147,7 @@ async fn basic_command(
     payload: &[u8],
     command_channel: CommandChannel,
 ) -> Result<(), Error> {
-    let out_opcode = decode_opcode(&payload[0..1]);
+    let out_opcode = decode_opcode(&payload[0..2]);
 
     if verbose {
         println!("Sending opcode: {} packet: {}", out_opcode, hex::encode(&payload));
