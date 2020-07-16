@@ -1,8 +1,3 @@
-/**
- * Fuchsia Component Mapper tool styling. This is just some very basic styling to
- * improve usability of the application.
- */
-
 html, body, .wrapper {
   background-color: #121212;
   color: #FFFFFF;
@@ -12,6 +7,14 @@ html, body, .wrapper {
   border: 0;
   outline: 0;
   height: 100%;
+}
+
+a:link {
+    text-decoration: none;
+}
+
+a:visited {
+    text-decoration: none;
 }
 
 .header-text {
@@ -97,22 +100,56 @@ html, body, .wrapper {
 }
 
 .dashboard {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  padding: 0;
+  list-style: none;
+
   margin-top: 20px;
   margin-bottom: 20px;
   margin-left: 50px;
   margin-right: 50px;
-  border: 1px solid #5f6369;
-  border-radius: 10px;
+}
+
+.tile-header {
+  border-bottom: 1px solid #5f6369;
+  border-left: 0px;
+  border-right: 0px;
+  border-top: 0px;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  text-align: center;
+  padding: 5px;
+}
+
+.tile-body {
+  padding-bottom: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-top: 10px;
+  text-align: center;
+}
+
+.tile {
   background: #3c4045;
-  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #5f6369;
+  margin: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 25%;
 }
 
 .menu {
-    list-style-type: none;
-    list-style-position: inside;
-    margin: 0;
-    padding: 0;
-    margin-bottom: 10px;
+  list-style-type: none;
+  list-style-position: inside;
+  margin: 0;
+  padding: 0;
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
 .menu-button {
@@ -138,4 +175,3 @@ html, body, .wrapper {
     display: inline;
   }
 }
-
