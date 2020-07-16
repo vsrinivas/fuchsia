@@ -6,7 +6,7 @@ use {
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp},
     fidl_fuchsia_media::{self as fidl_media_types},
     fidl_fuchsia_media_sessions2::{self as fidl_media, SessionControlProxy, SessionInfoDelta},
-    fuchsia_syslog::{fx_log_warn, fx_vlog},
+    log::{trace, warn},
 };
 
 use crate::media::media_types::{
@@ -106,7 +106,7 @@ impl MediaState {
             fidl_avrcp::AvcPanelCommand::Forward => self.session_control.next_item(),
             fidl_avrcp::AvcPanelCommand::Backward => self.session_control.prev_item(),
             fidl_avrcp::AvcPanelCommand::VolumeUp | fidl_avrcp::AvcPanelCommand::VolumeDown => {
-                fx_vlog!(tag: "avrcp-tg", 1, "Received Volume passthrough command - no-op.");
+                trace!("Received Volume passthrough command - no-op.");
                 Ok(())
             }
             _ => return Err(fidl_avrcp::TargetPassthroughError::CommandNotImplemented),
@@ -212,7 +212,7 @@ impl SessionInfo {
                     ));
                 }
                 _ => {
-                    fx_log_warn!(
+                    warn!(
                         "Received get request for unsupported player application setting: {:?}.",
                         id
                     );
@@ -252,7 +252,7 @@ impl SessionInfo {
                 notification.player_id = Some(self.get_player_id());
             }
             _ => {
-                fx_log_warn!(
+                warn!(
                     "Received notification request for unsupported notification event_id {:?}",
                     event_id
                 );

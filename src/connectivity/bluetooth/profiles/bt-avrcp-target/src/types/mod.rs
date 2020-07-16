@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_warn,
+    log::warn,
 };
 
 pub mod bounded_queue;
@@ -114,7 +114,7 @@ impl NotificationData {
                 Ok(self.current_value.player_id != new_value.player_id)
             }
             _ => {
-                fx_log_warn!(
+                warn!(
                     "Received notification request for unsupported notification event_id {:?}",
                     event_id
                 );
@@ -124,14 +124,13 @@ impl NotificationData {
     }
 }
 
-/// `NotificationData` is no longer in use. Send the current value back over
-/// the responder before dropping.
 impl Drop for NotificationData {
     fn drop(&mut self) {
+        // Try to send the current value back over the responder before dropping.
+        // It is likely that the `NotificationData` does not contain an active responder, in
+        // which case this is a no-op.
         let curr_value = self.current_value.clone().only_event(&self.event_id);
-        if let Err(e) = self.send(Ok(curr_value)) {
-            fx_log_warn!("Error in dropping the responder: {}", e);
-        }
+        let _ = self.send(Ok(curr_value));
     }
 }
 

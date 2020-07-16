@@ -13,9 +13,9 @@ use {
     },
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_component::client::connect_to_service,
-    fuchsia_syslog::{fx_log_warn, fx_vlog},
     fuchsia_zircon::DurationNum,
     futures::{future, Future, TryStreamExt},
+    log::{trace, warn},
     parking_lot::RwLock,
     std::collections::HashMap,
     std::sync::Arc,
@@ -61,7 +61,7 @@ impl MediaSessions {
             .watch_sessions(watch_options, watcher_client)
             .context("Should be able to watch media sessions")
         {
-            fx_log_warn!("FIDL error watching sessions: {:?}", e);
+            warn!("FIDL error watching sessions: {:?}", e);
         }
         // End MediaSession Service Setup
 
@@ -135,7 +135,7 @@ impl MediaSessions {
                     responder,
                 } => {
                     responder.send()?;
-                    fx_vlog!(tag: "avrcp-tg", 1, "MediaSession update: id[{}], delta[{:?}]", id, delta);
+                    trace!("MediaSession update: id[{}], delta[{:?}]", id, delta);
 
                     // Since we are listening to all sessions, update the currently
                     // active media session id every time a watcher event is triggered and
@@ -162,7 +162,7 @@ impl MediaSessions {
                         &create_session_control_proxy,
                     )?;
 
-                    fx_vlog!(tag: "avrcp-tg", 1, "MediaSession state after update: state[{:?}]", sessions_inner);
+                    trace!("MediaSession state after update: state[{:?}]", sessions_inner);
                 }
                 SessionsWatcherRequest::SessionRemoved { session_id, responder } => {
                     // A media session with id `session_id` has been removed.
@@ -172,7 +172,11 @@ impl MediaSessions {
                     // Clear the currently active session, if it equals `session_id`.
                     // Clear entry in state map.
                     sessions_inner.write().clear_session(&MediaSessionId(session_id));
-                    fx_vlog!(tag: "avrcp-tg", 1, "Removed session [{:?}] from state map: {:?}", session_id, sessions_inner);
+                    trace!(
+                        "Removed session [{:?}] from state map: {:?}",
+                        session_id,
+                        sessions_inner
+                    );
                 }
             }
         }
@@ -250,10 +254,10 @@ impl MediaSessionsInner {
                 &fidl_avrcp::NotificationEvent::TrackChanged, // Irrelevant Event ID.
                 Err(fidl_avrcp::TargetAvcError::RejectedAddressedPlayerChanged),
             ) {
-                fx_log_warn!("There was an error clearing the responder: {:?}", e);
+                warn!("There was an error clearing the responder: {:?}", e);
             }
         }
-        fx_vlog!(tag: "avrcp-tg", 1, "After evicting cleared responders: {:?}", self.notifications);
+        trace!("After evicting cleared responders: {:?}", self.notifications);
     }
 
     /// Updates the target session with the new session specified by `id`.
@@ -301,7 +305,7 @@ impl MediaSessionsInner {
             })
             .collect();
 
-        fx_vlog!(tag: "avrcp-tg", 1, "After evicting updated responders: {:?}", self.notifications);
+        trace!("After evicting updated responders: {:?}", self.notifications);
     }
 
     /// If the entry, `id` doesn't exist in the map, create a `MediaState` entry

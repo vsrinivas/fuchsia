@@ -8,9 +8,8 @@ use {
     fidl_fuchsia_media::{self as fidl_media_types, Metadata, TimelineFunction},
     fidl_fuchsia_media_sessions2 as fidl_media,
     fidl_table_validation::ValidFidlTable,
-    fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_warn, fx_vlog},
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
+    log::{trace, warn},
     std::convert::TryInto,
 };
 
@@ -28,7 +27,7 @@ fn time_nanos_to_millis(t: i64) -> u32 {
 fn media_timeline_fn_to_position(t: TimelineFunction, current_time: i64) -> Option<u32> {
     let diff = current_time - t.reference_time;
     let ratio = if t.reference_delta == 0 {
-        fx_log_warn!("Reference delta is zero. Violation of TimelineFunction API.");
+        warn!("Reference delta is zero. Violation of TimelineFunction API.");
         return None;
     } else {
         (t.subject_delta / t.reference_delta) as i64
@@ -421,7 +420,7 @@ impl MediaInfo {
                     self.genre = Some(property.value);
                 }
                 _ => {
-                    fx_vlog!(tag: "avrcp-tg", 1, "Media metadata {:?} variant not supported.", property.label);
+                    trace!("Media metadata {:?} variant not supported.", property.label);
                 }
             }
         }
@@ -478,7 +477,7 @@ impl Notification {
             fidl_avrcp::NotificationEvent::VolumeChanged => {
                 res.volume = self.volume;
             }
-            _ => fx_log_warn!("Event id {:?} is not supported for Notification.", event_id),
+            _ => warn!("Event id {:?} is not supported for Notification.", event_id),
         }
         res
     }

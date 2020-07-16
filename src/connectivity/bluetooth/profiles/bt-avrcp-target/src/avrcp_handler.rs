@@ -12,8 +12,8 @@ use {
     },
     fidl_fuchsia_bluetooth_component::LifecycleState,
     fuchsia_component::client::connect_to_service,
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn},
     futures::TryStreamExt,
+    log::{trace, warn},
     std::sync::Arc,
 };
 
@@ -24,7 +24,7 @@ async fn handle_target_request(
     request: TargetHandlerRequest,
     media_sessions: Arc<MediaSessions>,
 ) -> Result<(), fidl::Error> {
-    fx_log_info!("Received request: {:?}", request);
+    trace!("Received target request: {:?}", request);
     match request {
         TargetHandlerRequest::GetEventsSupported { responder } => {
             // Send a static response of TG supported events.
@@ -134,7 +134,7 @@ pub(crate) async fn handle_target_requests(
     while let Some(req) = target_request_stream.try_next().await? {
         let fut = handle_target_request(req, media_sessions.clone());
         if let Err(e) = fut.await {
-            fx_log_warn!("Error handling request: {:?}", e);
+            warn!("Error handling request: {:?}", e);
         }
     }
 

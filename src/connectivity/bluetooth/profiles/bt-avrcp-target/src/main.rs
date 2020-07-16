@@ -24,7 +24,6 @@ use crate::media::media_sessions::MediaSessions;
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["avrcp-tg"]).expect("Unable to initialize logger");
-    fuchsia_syslog::set_verbosity(1);
 
     let mut fs = ServiceFs::new();
     let lifecycle = ComponentLifecycleServer::spawn();
