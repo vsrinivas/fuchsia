@@ -10,10 +10,6 @@
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
 
-#if defined(__x86_64__)
-#include "src/developer/debug/debug_agent/arch_x64_helpers.h"
-#endif
-
 namespace debug_agent {
 
 namespace {

@@ -11,6 +11,7 @@
 
 #include <utility>
 
+#include "src/developer/debug/debug_agent/align.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
@@ -447,7 +448,7 @@ zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
   //       that watchpoint installed and nominal ranges should be the same.
   //
   //       We make that check here and fail early if the range is not correctly aligned.
-  auto aligned_range = arch::AlignRange(range);
+  auto aligned_range = AlignRange(range);
   if (!aligned_range.has_value() || aligned_range.value() != range)
     return ZX_ERR_INVALID_ARGS;
 

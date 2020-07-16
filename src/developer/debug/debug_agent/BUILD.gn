@@ -14,10 +14,10 @@ static_library("lib") {
   sources = [
     "agent_configuration.cc",
     "agent_configuration.h",
+    "align.cc",
+    "align.h",
     "arch.cc",
     "arch.h",
-    "arch_helpers.cc",
-    "arch_helpers.h",
     "binary_launcher.cc",
     "binary_launcher.h",
     "breakpoint.cc",
@@ -81,14 +81,11 @@ static_library("lib") {
   if (current_cpu == "x64") {
     sources += [
       "arch_x64.cc",
-      "arch_x64_helpers.cc",
-      "arch_x64_helpers.h",
       "debug_registers_x64.cc",
     ]
   } else if (current_cpu == "arm64") {
     sources += [
       "arch_arm64.cc",
-      "arch_arm64_helpers.cc",
       "debug_registers_arm64.cc",
     ]
   } else {
@@ -191,7 +188,7 @@ executable("unit_tests") {
   output_name = "debug_agent_unit_tests"
 
   sources = [
-    "arch_helpers_unittest.cc",
+    "align_unittest.cc",
     "breakpoint_unittest.cc",
     "debug_agent_unittest.cc",
     "debugged_job_unittest.cc",
@@ -208,13 +205,11 @@ executable("unit_tests") {
 
   if (current_cpu == "x64") {
     sources += [
-      "arch_x64_helpers_unittest.cc",
       "arch_x64_unittest.cc",
       "debug_registers_x64_unittest.cc",
     ]
   } else if (current_cpu == "arm64") {
     sources += [
-      "arch_arm64_helpers_unittest.cc",
       "arch_arm64_unittest.cc",
       "debug_registers_arm64_unittest.cc",
     ]

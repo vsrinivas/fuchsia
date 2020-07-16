@@ -5,7 +5,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/hw/debug/x86.h>
 
-#include "src/developer/debug/debug_agent/arch_x64_helpers.h"
+#include "src/developer/debug/debug_agent/align.h"
 #include "src/developer/debug/debug_agent/debug_registers.h"
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -248,7 +248,7 @@ std::optional<WatchpointInfo> DebugRegisters::SetWatchpoint(debug_ipc::Breakpoin
     return std::nullopt;
 
   // Create an aligned range that will cover the watchpoint.
-  auto aligned_range = arch::AlignRange(range);
+  auto aligned_range = AlignRange(range);
   if (!aligned_range.has_value())
     return std::nullopt;
 

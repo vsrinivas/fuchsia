@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/arch_helpers.h"
+#include "src/developer/debug/debug_agent/align.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 namespace debug_agent {
-namespace arch {
 
 namespace {
 
@@ -97,5 +96,4 @@ std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange&
   return debug_ipc::AddressRange(aligned_address, aligned_address + next_size);
 }
 
-}  // namespace arch
 }  // namespace debug_agent

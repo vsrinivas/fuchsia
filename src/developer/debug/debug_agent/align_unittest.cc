@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/arch_helpers.h"
+#include "src/developer/debug/debug_agent/align.h"
 
 #include <gtest/gtest.h>
 
 namespace debug_agent {
-namespace arch {
+
 namespace {
 
 std::string PrintOptional(const std::optional<debug_ipc::AddressRange>& opt) {
@@ -24,6 +24,8 @@ bool VerifyRange(std::optional<debug_ipc::AddressRange> got,
   }
   return true;
 }
+
+}  // namespace
 
 TEST(AlignRange, AlignedRanges) {
   // 0 byte range.
@@ -168,6 +170,4 @@ TEST(AlignRange, InvalidRanges) {
   ASSERT_TRUE(VerifyRange(AlignRange({0x10, 0x1d}), std::nullopt));
 }
 
-}  // namespace
-}  // namespace arch
 }  // namespace debug_agent

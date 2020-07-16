@@ -10,7 +10,6 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
-#include "src/developer/debug/debug_agent/arch_helpers.h"
 #include "src/developer/debug/debug_agent/arch_types.h"
 #include "src/developer/debug/ipc/protocol.h"
 
@@ -51,6 +50,27 @@ zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCat
 // The registers must all be in the same category.
 zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory& cat,
                            const std::vector<debug_ipc::Register>& registers);
+
+// Given the current register value in |regs|, applies to it the new updated values for the
+// registers listed in |updates|.
+zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& updates,
+                                  zx_thread_state_general_regs_t* regs);
+zx_status_t WriteFloatingPointRegisters(const std::vector<debug_ipc::Register>& update,
+                                        zx_thread_state_fp_regs_t* regs);
+zx_status_t WriteVectorRegisters(const std::vector<debug_ipc::Register>& update,
+                                 zx_thread_state_vector_regs_t* regs);
+zx_status_t WriteDebugRegisters(const std::vector<debug_ipc::Register>& update,
+                                zx_thread_state_debug_regs_t* regs);
+
+// Writes the register data to the given output variable, checking that the register data is
+// the same size as the output.
+template <typename RegType>
+zx_status_t WriteRegisterValue(const debug_ipc::Register& reg, RegType* dest) {
+  if (reg.data.size() != sizeof(RegType))
+    return ZX_ERR_INVALID_ARGS;
+  memcpy(dest, reg.data.data(), sizeof(RegType));
+  return ZX_OK;
+}
 
 // Converts a Zircon exception type to a debug_ipc one. Some exception types require querying the
 // thread's debug registers. If needed, the given thread will be used for that.
