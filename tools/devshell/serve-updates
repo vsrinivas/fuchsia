@@ -66,6 +66,45 @@ log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [serve-updates] $@"
 }
 
+# In any multi-homing scenario (two target interfaces, or two host interfaces),
+# the resolve process can return different results at different times. As such
+# we pin the address here, and let the ssh check loop below perform a clear
+# whenever it is in the "discovery" state. This stabilizes the "connection"
+# under multi-homed conditions.
+serve_updates_target_addr=""
+target-addr() {
+  if [[ -z "${serve_updates_target_addr}" ]]; then
+    serve_updates_target_addr="$(get-device-addr-resource)"
+    if [[ -n "${serve_updates_target_addr}" && -n "$(get-device-ssh-port)" ]]; then
+      serve_updates_target_addr="${serve_updates_target_addr}:$(get-device-ssh-port)"
+    fi
+  fi
+
+  if [[ -n "$serve_updates_target_addr" ]]; then
+    echo "$serve_updates_target_addr"
+    return 0
+  fi
+
+  return 1
+}
+
+clear-target-addr() {
+  serve_updates_target_addr=""
+}
+
+with-pinned-target() {
+  # Ensure we pin in the running shell before making a subshell. We also want
+  # to make sure we get an address at all.
+  if ! target-addr > /dev/null; then
+    return 1
+  fi
+
+  (
+    export FUCHSIA_DEVICE_NAME="$(target-addr)"
+    "$@"
+  )
+}
+
 if [[ "${auto_config}" == false ]]; then
   log "Flag '--no-auto-config' used, automatic device configuration disabled."
   log "Use 'fx -d DEVICE add-update-source --port ${port}' to reconfigure devices as needed, since it is not persistent accross reboots."
@@ -99,10 +138,13 @@ while true; do
   fi
 
   if [[ "$state" == "discover" ]]; then
-    fx-command-run shell exit 2>/dev/null
+    # While we're still trying to connect to the device, clear the target
+    # address state so we re-resolve.
+    clear-target-addr
+    with-pinned-target fx-command-run shell exit 2>/dev/null
     ping_result=$?
   else
-    fx-command-run shell -O check > /dev/null 2>&1
+    with-pinned-target fx-command-run shell -O check > /dev/null 2>&1
     ping_result=$?
   fi
 
@@ -113,11 +155,11 @@ while true; do
 
   if [[ "$state" == "config" ]]; then
     log "Registering devhost as update source"
-    if fx-command-run add-update-source --port "${port}"; then
+    if with-pinned-target fx-command-run add-update-source --port "${port}"; then
       log "Ready to push packages!"
       # Log the uptime so that it is clear(er) from fx serve if the device rebooted.
       # The tr is present as the output sometimes contains spurious control characters.
-      clock=$(fx-command-run shell clock --monotonic )
+      clock=$(with-pinned-target fx-command-run shell clock --monotonic)
       if [[ -n ${clock} ]]; then
         uptime=$(echo $clock | tr '[[:cntrl:]]' ' ' )
         log "Target uptime: $(( $uptime / 1000000000 ))"
