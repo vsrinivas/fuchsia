@@ -27,6 +27,7 @@ protocol Intl {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
+    [Transitional = "Future replacement for Watch2"]
     Watch() -> (IntlSettings settings);
 
     /// Sets [IntlSettings] settings. Any field not explicitly set in the table performs a

@@ -33,6 +33,7 @@ protocol Accessibility {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
+    [Transitional = "Future replacement for Watch2"]
     Watch() -> (AccessibilitySettings settings);
 
     /// Sets [AccessibilitySettings] settings. Any field not explicitly set in the table performs a

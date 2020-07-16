@@ -27,6 +27,7 @@ protocol Privacy {
     /// wait on a value change before returning the new value. This follows the hanging get pattern.
     ///
     /// If this call fails, it is considered a fatal error and the channel will be closed.
+    [Transitional = "Future replacement for Watch2"]
     Watch() -> (PrivacySettings settings);
 
     /// Sets the privacy settings.
