@@ -447,6 +447,24 @@ fuchsia_component("sync-tests") {
   ]
 }
 
+test("unlink_tests") {
+  sources = [ "unlink.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("unlink-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/unlink-tests.cml"
+  deps = [
+    ":manifests",
+    ":unlink_tests",
+  ]
+}
+
 fuchsia_test_package("fs-tests") {
   test_components = [
     ":access-tests",
@@ -470,6 +488,7 @@ fuchsia_test_package("fs-tests") {
     ":rw-workers-tests",
     ":sparse-tests",
     ":sync-tests",
+    ":unlink-tests",
   ]
 }
 
@@ -544,6 +563,7 @@ action("manifests") {
     "$target_gen_dir/sparse-tests.cml",
     "$target_gen_dir/sparse-large-tests.cml",
     "$target_gen_dir/sync-tests.cml",
+    "$target_gen_dir/unlink-tests.cml",
   ]
   args = rebase_path(sources, root_build_dir) +
          rebase_path(outputs, root_build_dir)
