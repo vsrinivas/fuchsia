@@ -32,6 +32,11 @@ impl FatFilesystemInner {
     pub fn root_dir(&self) -> Dir<'_> {
         self.filesystem.root_dir()
     }
+
+    pub fn shut_down(self) -> Result<(), Status> {
+        self.filesystem.unmount().map_err(fatfs_error_to_status)
+        // TODO(55291): send flush to the underlying block device.
+    }
 }
 
 pub struct FatFilesystem {
@@ -73,6 +78,16 @@ impl FatFilesystem {
     /// Try and lock the underlying filesystem. Returns a LockResult, see `Mutex::lock`.
     pub fn lock(&self) -> LockResult<MutexGuard<'_, FatFilesystemInner>> {
         self.inner.lock()
+    }
+
+    /// Cleanly shut down the filesystem.
+    pub fn shut_down(self) -> Result<(), Status> {
+        // This is safe because we hold the only reference to `inner`, so there are no stray
+        // references to fatfs Dir or Files.
+        let arc = unsafe { Pin::into_inner_unchecked(self.inner) };
+        let mutex = Arc::try_unwrap(arc).map_err(|_| Status::UNAVAILABLE)?;
+        let inner = mutex.into_inner().map_err(|_| Status::UNAVAILABLE)?;
+        inner.shut_down()
     }
 }
 

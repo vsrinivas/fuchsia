@@ -15,6 +15,7 @@ use {
     futures::future::TryFutureExt,
     futures::stream::{StreamExt, TryStreamExt},
     remote_block_device::RemoteBlockDevice,
+    std::sync::{Arc, Mutex},
     vfs::{execution_scope::ExecutionScope, path::Path, registry::token_registry},
 };
 
@@ -22,11 +23,23 @@ enum Services {
     Admin(AdminRequestStream),
 }
 
-async fn handle_admin(mut stream: AdminRequestStream, _fs: &FatFs) -> Result<(), Error> {
+async fn handle_admin(
+    mut stream: AdminRequestStream,
+    fs: Arc<Mutex<Option<FatFs>>>,
+    scope: &ExecutionScope,
+) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await.context("Reading request")? {
         match request {
             AdminRequest::Shutdown { responder } => {
-                // TODO(fxb/53796): Need to call shutdown and call unmount here.
+                scope.shutdown();
+
+                match fs.lock().unwrap().take() {
+                    Some(value) => value
+                        .shut_down()
+                        .unwrap_or_else(|e| fx_log_err!("Failed to shutdown fatfs: {:?}", e)),
+                    None => {}
+                };
+
                 responder.send()?;
             }
         }
@@ -71,11 +84,13 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(Services::Admin);
     fs.take_and_serve_directory_handle()?;
 
+    let fatfs = Arc::new(Mutex::new(Some(fatfs)));
+
     // Handle all ServiceFs connections. VFS connections will be spawned as separate tasks.
     const MAX_CONCURRENT: usize = 10_000;
     fs.for_each_concurrent(MAX_CONCURRENT, |request| {
         match request {
-            Services::Admin(request) => handle_admin(request, &fatfs),
+            Services::Admin(request) => handle_admin(request, Arc::clone(&fatfs), &scope),
         }
         .unwrap_or_else(|e| fx_log_err!("{:?}", e))
     })
@@ -84,6 +99,14 @@ async fn main() -> Result<(), Error> {
     // At this point all direct connections to ServiceFs will have been closed (and cannot be
     // resurrected), but before we finish, we must wait for all VFS connections to be closed.
     scope.wait().await;
+
+    // Make sure that fatfs has been cleanly shut down.
+    match fatfs.lock().unwrap().take() {
+        Some(value) => {
+            value.shut_down().unwrap_or_else(|e| fx_log_err!("Failed to shutdown fatfs: {:?}", e))
+        }
+        None => {}
+    };
 
     Ok(())
 }

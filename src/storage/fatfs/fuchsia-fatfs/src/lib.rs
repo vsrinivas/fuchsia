@@ -5,6 +5,7 @@ use {
     crate::{directory::FatDirectory, filesystem::FatFilesystem},
     anyhow::Error,
     fatfs::{FsOptions, ReadWriteSeek},
+    fuchsia_zircon::Status,
     std::sync::Arc,
     vfs::directory::entry::DirectoryEntry,
 };
@@ -42,6 +43,22 @@ impl FatFs {
     /// Get the root directory of this filesystem.
     pub fn get_root(&self) -> Arc<dyn DirectoryEntry> {
         self.root.clone()
+    }
+
+    /// Shutdown the filesystem.
+    /// Will fail if there are still references to any files or directories in the filesystem.
+    pub fn shut_down(self) -> Result<(), Status> {
+        // `self.root` should be the only reference to the root FatDirectory left.
+        // We should be able to unwrap and drop it.
+        // If there are any open nodes in the filesystem, this will fail, as they will
+        // also have a reference to `self.root` (via their parents), so as long as this succeeds
+        // we can safely shut down the filesystem.
+        std::mem::drop(Arc::try_unwrap(self.root).map_err(|_| Status::UNAVAILABLE)?);
+        // Now, unwrap the FatFilesystem. All references to it should've been dropped when
+        // we dropped `self.root`.
+        let inner = Arc::try_unwrap(self.inner).map_err(|_| Status::UNAVAILABLE)?;
+        // Shut down the filesystem, consuming it.
+        inner.shut_down()
     }
 }
 
