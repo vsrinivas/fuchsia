@@ -21,7 +21,6 @@ const SHUTDOWN_SHIM_URL: &'static str =
 
 #[derive(Debug, PartialEq)]
 enum Admin {
-    Suspend(fstatecontrol::SystemPowerState),
     Reboot(fstatecontrol::RebootReason),
     RebootToBootloader,
     RebootToRecovery,
@@ -44,11 +43,6 @@ async fn run_statecontrol_admin(
     fx_log_info!("new connection to {}", fstatecontrol::AdminMarker::NAME);
     async move {
         match stream.try_next().await? {
-            Some(fstatecontrol::AdminRequest::Suspend { state, responder }) => {
-                fx_log_info!("Suspend called");
-                send_signals.unbounded_send(Signal::Statecontrol(Admin::Suspend(state)))?;
-                responder.send(&mut Ok(()))?;
-            }
             Some(fstatecontrol::AdminRequest::PowerFullyOn { responder }) => {
                 // PowerFullyOn is unsupported
                 responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
@@ -165,14 +159,6 @@ async fn run_power_manager_present_test(
     // We've created a child shutdown-shim and connected to its
     // statecontrol.Admin protocol. Send some calls, and confirm that the shim
     // forwarded the requests to our mock service.
-    let state = fstatecontrol::SystemPowerState::Poweroff;
-    shim_statecontrol.suspend(state).await?.unwrap();
-    assert_eq!(recv_signals.next().await, Some(Signal::Statecontrol(Admin::Suspend(state))));
-
-    let state = fstatecontrol::SystemPowerState::Mexec;
-    shim_statecontrol.suspend(state).await?.unwrap();
-    assert_eq!(recv_signals.next().await, Some(Signal::Statecontrol(Admin::Suspend(state))));
-
     let reason = fstatecontrol::RebootReason::SystemUpdate;
     shim_statecontrol.reboot(reason).await?.unwrap();
     let res = recv_signals.next().await;
@@ -221,10 +207,7 @@ async fn run_power_manager_missing_test(
             setup_shim("shutdown-shim-statecontrol-missing").await?;
 
         fasync::spawn(async move {
-            shim_statecontrol
-                .suspend(fstatecontrol::SystemPowerState::Poweroff)
-                .await
-                .expect_err("the shutdown shim should close the channel when manual shutdown driving is complete");
+            shim_statecontrol.poweroff().await.expect_err("the shutdown shim should close the channel when manual shutdown driving is complete");
         });
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
@@ -272,10 +255,7 @@ async fn run_power_manager_not_present_test(
             setup_shim("shutdown-shim-statecontrol-not-present").await?;
 
         fasync::spawn(async move {
-            shim_statecontrol
-                .suspend(fstatecontrol::SystemPowerState::Poweroff)
-                .await
-                .expect_err("the shutdown shim should close the channel when manual shutdown driving is complete");
+            shim_statecontrol.poweroff().await.expect_err("the shutdown shim should close the channel when manual shutdown driving is complete");
         });
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,

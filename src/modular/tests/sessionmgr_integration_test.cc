@@ -42,22 +42,13 @@ class IntlPropertyProviderImpl : public fuchsia::intl::PropertyProvider {
 
 class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_TestBase {
  public:
-  bool suspend_called() { return suspend_called_; }
+  bool reboot_called() { return reboot_called_; }
 
  private:
-  void Suspend(fuchsia::hardware::power::statecontrol::SystemPowerState state,
-               SuspendCallback callback) override {
-    ASSERT_FALSE(suspend_called_);
-    suspend_called_ = true;
-    ASSERT_EQ(fuchsia::hardware::power::statecontrol::SystemPowerState::REBOOT, state);
-    callback(fuchsia::hardware::power::statecontrol::Admin_Suspend_Result::WithResponse(
-        fuchsia::hardware::power::statecontrol::Admin_Suspend_Response(ZX_OK)));
-  }
-
   void Reboot(fuchsia::hardware::power::statecontrol::RebootReason reason,
               RebootCallback callback) override {
-    ASSERT_FALSE(suspend_called_);
-    suspend_called_ = true;
+    ASSERT_FALSE(reboot_called_);
+    reboot_called_ = true;
     ASSERT_EQ(fuchsia::hardware::power::statecontrol::RebootReason::SESSION_FAILURE, reason);
     callback(fuchsia::hardware::power::statecontrol::Admin_Reboot_Result::WithResponse(
         fuchsia::hardware::power::statecontrol::Admin_Reboot_Response(ZX_OK)));
@@ -68,7 +59,7 @@ class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_
     FX_NOTIMPLEMENTED() << name << " is not implemented";
   }
 
-  bool suspend_called_ = false;
+  bool reboot_called_ = false;
 };
 
 // Create a service in the test harness that is also provided by the session environment. Verify
@@ -191,8 +182,8 @@ TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetr
   }
   // Validate suspend is invoked
 
-  RunLoopUntil([&] { return mock_admin.suspend_called(); });
-  EXPECT_TRUE(mock_admin.suspend_called());
+  RunLoopUntil([&] { return mock_admin.reboot_called(); });
+  EXPECT_TRUE(mock_admin.reboot_called());
 }
 
 TEST_F(SessionmgrIntegrationTest, RestartSession) {
@@ -227,10 +218,10 @@ TEST_F(SessionmgrIntegrationTest, RestartSession) {
     basemgr->RestartSession([&] { session_restarted = true; });
     RunLoopUntil([&] { return !session_shell->is_running(); });
     RunLoopUntil([&] { return session_restarted; });
-    ASSERT_FALSE(mock_admin.suspend_called()) << "Suspend called on iteration #" << i;
+    ASSERT_FALSE(mock_admin.reboot_called()) << "Suspend called on iteration #" << i;
     RunLoopUntil([&] { return session_shell->is_running(); });
   }
-  ASSERT_FALSE(mock_admin.suspend_called());
+  ASSERT_FALSE(mock_admin.reboot_called());
 }
 
 TEST_F(SessionmgrIntegrationTest, RestartSessionAgentOnCrash) {

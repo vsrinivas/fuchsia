@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Error};
 use fidl_fuchsia_device_manager as fdevicemgr;
 use fidl_fuchsia_hardware_power_statecontrol as fpower;
-use std::convert::TryFrom;
 
 /// Type alias for the reboot reasons defined in fuchsia.hardware.power.statecontrol.RebootReason.
 pub type RebootReason = fpower::RebootReason;
@@ -19,24 +17,6 @@ pub enum ShutdownRequest {
     RebootBootloader,
     RebootRecovery,
     Mexec,
-}
-
-// TODO(fxbug.dev/53962): This function only exists to help convert incoming old-style Suspend
-// requests (which are deprecated) into the new style shutdown-type specific APIs. We can remove
-// this after all clients are using the new APIs and the old-style Suspend API has been removed.
-/// Converts a fuchsia.hardware.power.statecontrol.SystemPowerState into a ShutdownRequest.
-impl TryFrom<fpower::SystemPowerState> for ShutdownRequest {
-    type Error = anyhow::Error;
-    fn try_from(state: fpower::SystemPowerState) -> Result<Self, Error> {
-        Ok(match state {
-            fpower::SystemPowerState::Poweroff => ShutdownRequest::PowerOff,
-            fpower::SystemPowerState::Reboot => ShutdownRequest::Reboot(RebootReason::UserRequest),
-            fpower::SystemPowerState::RebootBootloader => ShutdownRequest::RebootBootloader,
-            fpower::SystemPowerState::RebootRecovery => ShutdownRequest::RebootRecovery,
-            fpower::SystemPowerState::Mexec => ShutdownRequest::Mexec,
-            _ => Err(format_err!("Invalid state: {:?}", state))?,
-        })
-    }
 }
 
 /// Converts a ShutdownRequest into a fuchsia.device.manager.SystemPowerState value.

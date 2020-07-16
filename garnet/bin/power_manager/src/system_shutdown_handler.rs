@@ -23,7 +23,6 @@ use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::Cell;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::rc::Rc;
 
 /// Node: SystemShutdownHandler
@@ -251,10 +250,6 @@ impl SystemShutdownHandler {
             async move {
                 while let Some(req) = stream.try_next().await? {
                     match req {
-                        fpowercontrol::AdminRequest::Suspend { state, responder } => {
-                            let result = self.handle_shutdown(state.try_into()?).await;
-                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
-                        }
                         fpowercontrol::AdminRequest::PowerFullyOn { responder } => {
                             let _ = responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
                         }

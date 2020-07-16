@@ -48,11 +48,6 @@ class StateControlAdminServer final : public power_fidl::statecontrol::Admin::In
   // inserted into a pseudo fs.
   static fbl::RefPtr<fs::Service> Create(async_dispatcher* dispatcher);
 
-  // Implementation of the Suspend method from the FIDL protocol.
-  void Suspend(
-      power_fidl::statecontrol::SystemPowerState state,
-      power_fidl::statecontrol::Admin::Interface::SuspendCompleter::Sync completer) override;
-
   void PowerFullyOn(
       power_fidl::statecontrol::Admin::Interface::PowerFullyOnCompleter::Sync completer) override;
 
@@ -261,29 +256,6 @@ void forward_command(
   // now. Exit with a non-zero exit code to force the system to restart.
   fprintf(stderr, "[shutdown-shim]: we shouldn't still be running, crashing the system\n");
   exit(1);
-}
-
-void StateControlAdminServer::Suspend(
-    power_fidl::statecontrol::SystemPowerState state,
-    power_fidl::statecontrol::Admin::Interface::SuspendCompleter::Sync completer) {
-  // Note: `state` can be safely cast here because
-  // fuchsia.device.manager.SystemPowerState has the same definition as
-  // fuchsia.hardware.power.statecontrol.SystemPowerState.
-  auto driver_manager_state = device_manager_fidl::SystemPowerState(state);
-
-  forward_command(driver_manager_state,
-                  [state, completer = completer.ToAsync()](auto admin_client) mutable {
-                    auto resp = admin_client.Suspend(state);
-                    if (resp.status() != ZX_OK) {
-                      return resp.status();
-                    } else if (resp->result.is_err()) {
-                      completer.ReplyError(resp->result.err());
-                      return ZX_OK;
-                    } else {
-                      completer.ReplySuccess();
-                      return ZX_OK;
-                    }
-                  });
 }
 
 void StateControlAdminServer::PowerFullyOn(
