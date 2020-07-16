@@ -27,7 +27,7 @@ enum Status {
 
 struct NetErr {
     Status status;
-    string message;
+    string:MAX message;
 };
 
 struct InterfaceConfig {
@@ -35,7 +35,7 @@ struct InterfaceConfig {
 
     /// An unstable file path corresponding to the interface. Used in watching the creation
     /// and destruction of the interface, or in accessing the interface using netdump.
-    string filepath;
+    string:MAX filepath;
 
     uint32 metric;
 };
@@ -64,7 +64,7 @@ struct NetInterface {
     /// If the interface does not have an IPv4 address, broadaddr is the
     /// unspecified IPv4 address (0.0.0.0).
     fuchsia.net.IpAddress broadaddr;
-    vector<fuchsia.net.Subnet> ipv6addrs;
+    vector<fuchsia.net.Subnet>:MAX ipv6addrs;
     bytes hwaddr;
 };
 
@@ -95,7 +95,7 @@ struct NetInterface2 {
     /// If the interface does not have an IPv4 address, broadaddr is the
     /// unspecified IPv4 address (0.0.0.0).
     fuchsia.net.IpAddress broadaddr;
-    vector<fuchsia.net.Subnet> ipv6addrs;
+    vector<fuchsia.net.Subnet>:MAX ipv6addrs;
     bytes hwaddr;
 };
 
@@ -129,32 +129,32 @@ struct SocketAddress {
 [Discoverable]
 protocol Netstack {
     /// Returns the list of registered network interfaces.
-    GetInterfaces() -> (vector<NetInterface> interfaces);
-    GetInterfaces2() -> (vector<NetInterface2> interfaces);
+    GetInterfaces() -> (vector<NetInterface>:MAX interfaces);
+    GetInterfaces2() -> (vector<NetInterface2>:MAX interfaces);
 
     /// Returns current route table.
-    GetRouteTable() -> (vector<RouteTableEntry> rt);
-    GetRouteTable2() -> (vector<RouteTableEntry2> rt);
+    GetRouteTable() -> (vector<RouteTableEntry>:MAX rt);
+    GetRouteTable2() -> (vector<RouteTableEntry2>:MAX rt);
 
     /// Sets the status (up or down) for the interface with the given nicid.
     SetInterfaceStatus(uint32 nicid, bool enabled);
 
     /// Sets the address for the interface with the given nicid.
     /// Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
-    SetInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefixLen) -> (NetErr result);
+    SetInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefix_len) -> (NetErr result);
 
     /// Removes the address for the interface with the given nicid.
     /// Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
-    RemoveInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefixLen) -> (NetErr result);
+    RemoveInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefix_len) -> (NetErr result);
 
     /// Sets the route metric for the interface with the given nicid.
     SetInterfaceMetric(uint32 nicid, uint32 metric) -> (NetErr result);
 
     /// Creates a bridge and returns the newly created nicid or an
     /// error if the creation fails.
-    BridgeInterfaces(vector<uint32> nicids) -> (NetErr result, uint32 nicid);
+    BridgeInterfaces(vector<uint32>:MAX nicids) -> (NetErr result, uint32 nicid);
 
-    AddEthernetDevice(string topological_path, InterfaceConfig interfaceConfig, fuchsia.hardware.ethernet.Device device) -> (uint32 nicid);
+    AddEthernetDevice(string:MAX topological_path, InterfaceConfig interface_config, fuchsia.hardware.ethernet.Device device) -> (uint32 nicid);
 
     // TODO(stijlist): re-home this protocol. GetDhcpClient should be a member
     // of the protocol that eventually owns network interface management
@@ -163,9 +163,9 @@ protocol Netstack {
 
     /// Begin a route transaction for atomically getting and setting the route
     /// table.  Returns true if a transaction can be started.
-    StartRouteTableTransaction(request<RouteTableTransaction> routeTableTransaction) -> (zx.status status);
+    StartRouteTableTransaction(request<RouteTableTransaction> route_table_transaction) -> (zx.status status);
 
-    -> OnInterfacesChanged(vector<NetInterface> interfaces);
+    -> OnInterfacesChanged(vector<NetInterface>:MAX interfaces);
 };
 
 [Discoverable]
