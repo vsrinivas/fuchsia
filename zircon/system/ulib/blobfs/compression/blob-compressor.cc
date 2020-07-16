@@ -95,7 +95,8 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
       }
       return BlobCompressor(std::move(compressor), std::move(compressed_blob));
     }
-    default:
+    case CompressionAlgorithm::UNCOMPRESSED:
+      ZX_DEBUG_ASSERT(false);
       return std::nullopt;
   }
 }

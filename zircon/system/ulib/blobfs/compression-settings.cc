@@ -24,23 +24,27 @@ const char* CompressionAlgorithmToString(CompressionAlgorithm algorithm) {
       return "ZSTD_CHUNKED";
     case CompressionAlgorithm::UNCOMPRESSED:
       return "UNCOMPRESSED";
-    default:
-      ZX_ASSERT(false);
-      return "";
   }
 }
 
 CompressionAlgorithm AlgorithmForInode(const Inode& inode) {
-  if (inode.header.flags & kBlobFlagLZ4Compressed) {
+  uint16_t flags = inode.header.flags & kBlobFlagMaskAnyCompression;
+  if (flags & kBlobFlagLZ4Compressed) {
     return CompressionAlgorithm::LZ4;
-  } else if (inode.header.flags & kBlobFlagZSTDCompressed) {
+  } else if (flags & kBlobFlagZSTDCompressed) {
     return CompressionAlgorithm::ZSTD;
-  } else if (inode.header.flags & kBlobFlagZSTDSeekableCompressed) {
+  } else if (flags & kBlobFlagZSTDSeekableCompressed) {
     return CompressionAlgorithm::ZSTD_SEEKABLE;
-  } else if (inode.header.flags & kBlobFlagChunkCompressed) {
+  } else if (flags & kBlobFlagChunkCompressed) {
     return CompressionAlgorithm::CHUNKED;
+  } else if (!flags) {
+    return CompressionAlgorithm::UNCOMPRESSED;
   }
-  return CompressionAlgorithm::UNCOMPRESSED;
+  static_assert(
+      kBlobFlagMaskAnyCompression == (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed |
+                                      kBlobFlagChunkCompressed | kBlobFlagZSTDSeekableCompressed),
+      "Missing algorithm case");
+  ZX_ASSERT(false);
 }
 
 uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm) {
@@ -55,9 +59,6 @@ uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm) {
       return kBlobFlagZSTDSeekableCompressed;
     case CompressionAlgorithm::CHUNKED:
       return kBlobFlagChunkCompressed;
-    default:
-      ZX_ASSERT(false);
-      return kBlobFlagZSTDCompressed;
   }
 }
 
@@ -82,9 +83,6 @@ bool CompressionSettings::IsValid() const {
     case CompressionAlgorithm::CHUNKED:
       return *compression_level >= chunked_compression::CompressionParams::MinCompressionLevel() &&
              *compression_level <= chunked_compression::CompressionParams::MaxCompressionLevel();
-    default:
-      ZX_ASSERT(false);
-      return false;
   }
 }
 

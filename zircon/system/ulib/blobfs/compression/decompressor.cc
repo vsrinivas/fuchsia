@@ -30,7 +30,8 @@ zx_status_t Decompressor::Create(CompressionAlgorithm algorithm,
     case CompressionAlgorithm::CHUNKED:
       *out = std::make_unique<ChunkedDecompressor>();
       break;
-    default:
+    case CompressionAlgorithm::UNCOMPRESSED:
+      ZX_DEBUG_ASSERT(false);
       return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;

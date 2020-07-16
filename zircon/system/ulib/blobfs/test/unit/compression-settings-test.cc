@@ -16,12 +16,6 @@ TEST(CompressionSettingsTest, CompressionAlgorithmToStringConvertLZ4) {
   ASSERT_STR_EQ(CompressionAlgorithmToString(CompressionAlgorithm::LZ4), "LZ4");
 }
 
-// Create an invalid enum to trigger assert.
-TEST(CompressionSettingsTest, CompressionAlgorithmToStringConvertUndefinedEnum) {
-  ASSERT_DEATH(([] { CompressionAlgorithmToString(static_cast<CompressionAlgorithm>(9999)); }),
-               "Enum value 9999 did not fail conversion.");
-}
-
 // Simple basic conversion for compression enabled.
 TEST(CompressionSettingsTest, AlgorithmForInodeConvertLZ4) {
   Inode inode;
@@ -39,12 +33,6 @@ TEST(CompressionSettingsTest, AlgorithmForInodeConvertUncompressed) {
 // Simple basic conversion test.
 TEST(CompressionSettingsTest, CompressionInodeHeaderFlagsConvertLZ4) {
   ASSERT_EQ(CompressionInodeHeaderFlags(CompressionAlgorithm::LZ4), kBlobFlagLZ4Compressed);
-}
-
-// Create an invalid enum to trigger assert.
-TEST(CompressionSettingsTest, CompressionInodeHeaderFlagsConvertUndefinedEnum) {
-  ASSERT_DEATH(([] { CompressionInodeHeaderFlags(static_cast<CompressionAlgorithm>(9999)); }),
-               "Enum value 9999 did not fail conversion.");
 }
 
 // Apply a couple of CompressionAlgorithms, verify that they come back right

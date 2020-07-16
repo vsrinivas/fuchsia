@@ -263,15 +263,23 @@ zx_status_t BlobLoader::InitForDecompression(
     std::unique_ptr<SeekableDecompressor>* decompressor_out,
     ZSTDSeekableBlobCollection** zstd_seekable_blob_collection_out) {
   CompressionAlgorithm algorithm = AlgorithmForInode(inode);
-  if (algorithm == CompressionAlgorithm::UNCOMPRESSED) {
-    return ZX_OK;
-  } else if (algorithm == CompressionAlgorithm::ZSTD_SEEKABLE) {
-    // The ZSTD Seekable strategy manages its decompressors independent of |BlobLoader|. Store a
-    // pointer to the object that encapsulates this management strategy and return.
-    *zstd_seekable_blob_collection_out = zstd_seekable_blob_collection_;
-    return ZX_OK;
-  } else if (algorithm != CompressionAlgorithm::CHUNKED) {
-    return ZX_ERR_NOT_SUPPORTED;
+  switch (algorithm) {
+    case CompressionAlgorithm::UNCOMPRESSED:
+      return ZX_OK;
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
+      *zstd_seekable_blob_collection_out = zstd_seekable_blob_collection_;
+      break;
+    case CompressionAlgorithm::CHUNKED:
+      break;
+    case CompressionAlgorithm::LZ4:
+    case CompressionAlgorithm::ZSTD:
+      // Callers should have guarded against calling this code path with an algorithm that
+      // does not support paging.
+      FS_TRACE_ERROR("Algorithm %s does not support paging; this path should not be called.\n"
+                     "This is most likely programmer error.\n",
+                     CompressionAlgorithmToString(algorithm));
+      ZX_DEBUG_ASSERT(false);
+      return ZX_ERR_NOT_SUPPORTED;
   }
 
   TRACE_DURATION("blobfs", "BlobLoader::InitDecompressor");
