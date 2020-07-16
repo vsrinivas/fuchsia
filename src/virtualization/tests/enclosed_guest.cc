@@ -194,6 +194,7 @@ zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<st
 zx_status_t ZirconEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) {
   launch_info->url = kZirconGuestUrl;
   launch_info->guest_config.mutable_cmdline_add()->push_back("kernel.serial=none");
+  launch_info->guest_config.set_virtio_magma(false);
   return ZX_OK;
 }
 
@@ -227,6 +228,7 @@ std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
 
 zx_status_t DebianEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) {
   launch_info->url = kDebianGuestUrl;
+  launch_info->guest_config.set_virtio_magma(false);
   return ZX_OK;
 }
 
