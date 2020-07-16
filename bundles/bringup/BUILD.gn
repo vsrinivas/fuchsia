@@ -7,7 +7,6 @@ group("tests") {
   deps = [
     "//src/bringup/bin/sysinfo:sysinfo-test",  # This is a package.
     "//src/bringup/tests/bootfs_test",  # This is a package.
-    "//src/connectivity/ethernet/tests/ethernet:ethernet-package",
     "//src/devices/block/drivers/ftl/test:ftl-integration-package",
     "//src/devices/block/drivers/ftl/test:ftl-package",
     "//src/devices/block/lib/scsi/test:scsilib-disk-test-package",

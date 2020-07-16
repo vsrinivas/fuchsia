@@ -7,9 +7,11 @@
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <fuchsia/hardware/ethertap/c/fidl.h>
 #include <inttypes.h>
+#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fzl/fifo.h>
@@ -927,4 +929,39 @@ TEST(EthernetDataTests, DISABLED_EthernetDataTest_Recv) {
   EXPECT_EQ(ZX_OK, client.rx_fifo()->write_one(entry));
 
   ASSERT_NO_FATAL_FAILURES(EthernetCleanupHelper(&tap, &client));
+}
+
+int main(int argc, char** argv) {
+  auto args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+  args.driver_search_paths.push_back("/boot/driver");
+  args.load_drivers.push_back("/boot/driver/ethertap.so");
+  args.path_prefix = "/pkg/";
+
+  devmgr_integration_test::IsolatedDevmgr devmgr;
+  zx_status_t status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Could not create driver manager, %d\n", status);
+    return status;
+  }
+
+  fdio_ns_t* ns;
+  status = fdio_ns_get_installed(&ns);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Could not create get namespace, %d\n", status);
+    return status;
+  }
+  status = fdio_ns_bind_fd(ns, "/dev", devmgr.devfs_root().get());
+  if (status != ZX_OK) {
+    fprintf(stderr, "Could not bind /dev namespace, %d\n", status);
+    return status;
+  }
+
+  fbl::unique_fd ctl;
+  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/tapctl", &ctl);
+  if (status != ZX_OK) {
+    fprintf(stderr, "test/tapctl failed to enumerate: %d\n", status);
+    return status;
+  }
+
+  return RUN_ALL_TESTS(argc, argv);
 }
