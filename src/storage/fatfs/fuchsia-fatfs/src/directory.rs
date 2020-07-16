@@ -7,7 +7,7 @@ use {
         filesystem::{FatFilesystem, FatFilesystemInner},
         refs::{FatfsDirRef, FatfsFileRef},
         types::{Dir, DirEntry},
-        util::fatfs_error_to_status,
+        util::{dos_to_unix_time, fatfs_error_to_status},
     },
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
@@ -105,6 +105,11 @@ impl FatDirectory {
         self.dir.borrow(fs)
     }
 
+    /// Borrow the underlying fatfs `DirEntry` that corresponds to this directory.
+    fn borrow_dirent<'a>(&'a self, fs: &'a FatFilesystemInner) -> Option<&'a DirEntry<'a>> {
+        self.dir.borrow_entry(fs)
+    }
+
     /// Gets a child directory entry from the underlying fatfs implementation.
     pub(crate) fn find_child<'a>(
         &'a self,
@@ -168,7 +173,7 @@ impl FatDirectory {
                 if entry.is_dir() {
                     // Safe because we give the FatDirectory a FatFilesystem which ensures that the
                     // FatfsDirRef will not outlive its FatFilesystem.
-                    let dir_ref = unsafe { FatfsDirRef::from(entry.to_dir()) };
+                    let dir_ref = unsafe { FatfsDirRef::from(entry) };
                     FatNode::Dir(FatDirectory::new(
                         dir_ref,
                         Some(self.clone()),
@@ -186,10 +191,12 @@ impl FatDirectory {
                 if flags & OPEN_FLAG_DIRECTORY != 0
                     || (mode & MODE_TYPE_MASK == MODE_TYPE_DIRECTORY)
                 {
-                    let new_dir = dir.create_dir(name).map_err(fatfs_error_to_status)?;
+                    dir.create_dir(name).map_err(fatfs_error_to_status)?;
+                    // This should never fail.
+                    let entry = self.find_child(&fs_lock, name)?.ok_or(Status::INTERNAL)?;
                     // Safe because we give the FatDirectory a FatFilesystem which ensures that the
                     // FatfsDirRef will not outlive its FatFilesystem.
-                    let dir_ref = unsafe { FatfsDirRef::from(new_dir) };
+                    let dir_ref = unsafe { FatfsDirRef::from(entry) };
                     FatNode::Dir(FatDirectory::new(
                         dir_ref,
                         Some(self.clone()),
@@ -416,7 +423,21 @@ impl Directory for FatDirectory {
     fn unregister_watcher(self: Arc<Self>, _key: usize) {}
 
     fn get_attrs(&self) -> Result<NodeAttributes, Status> {
-        Err(Status::NOT_SUPPORTED)
+        let fs_lock = self.filesystem.lock().unwrap();
+        let dirent = self.borrow_dirent(&fs_lock).unwrap();
+
+        let creation_time = dos_to_unix_time(dirent.created());
+        let modification_time = dos_to_unix_time(dirent.modified());
+        Ok(NodeAttributes {
+            // Mode is filled in by the caller.
+            mode: 0,
+            id: INO_UNKNOWN,
+            content_size: 0,
+            storage_size: 0,
+            link_count: 1,
+            creation_time,
+            modification_time,
+        })
     }
 }
 

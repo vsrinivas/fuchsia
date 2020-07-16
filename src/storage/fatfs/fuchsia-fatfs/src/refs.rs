@@ -11,13 +11,26 @@ use crate::{
 
 pub struct FatfsDirRef {
     inner: Option<Dir<'static>>,
+    dirent: Option<DirEntry<'static>>,
 }
 
 impl FatfsDirRef {
     /// Wraps and erases the lifetime. The caller assumes responsibility for
     /// ensuring the associated filesystem lives long enough and is pinned.
-    pub unsafe fn from(dir: Dir<'_>) -> Self {
-        FatfsDirRef { inner: Some(std::mem::transmute(dir)) }
+    pub unsafe fn from(entry: DirEntry<'_>) -> Self {
+        let dir = entry.to_dir();
+        FatfsDirRef {
+            inner: Some(std::mem::transmute(dir)),
+            dirent: Some(std::mem::transmute(entry)),
+        }
+    }
+
+    /// Wraps and erases the lifetime. The caller assumes responsibility for
+    /// ensuring the associated filesystem lives long enough and is pinned.
+    /// This is used to encapsulate the root directory, as it doesn't have a corresponding
+    /// DirEntry.
+    pub unsafe fn from_root(dir: Dir<'_>) -> Self {
+        FatfsDirRef { inner: Some(std::mem::transmute(dir)), dirent: None }
     }
 
     /// Extracts a reference to the wrapped value. The lifetime is restored to
@@ -26,9 +39,16 @@ impl FatfsDirRef {
         self.inner.as_ref().unwrap()
     }
 
+    /// Extracts a reference to the wrapped dirent. The lifetime is restored to that
+    /// of _fs. Will return None if the contained directory is the root directory.
+    pub fn borrow_entry<'a>(&'a self, _fs: &'a FatFilesystemInner) -> Option<&'a DirEntry<'a>> {
+        self.dirent.as_ref()
+    }
+
     /// Extracts the wrapped value, restoring its lifetime to that of _fs, and invalidate
     /// this FatfsDirRef. Any future calls to the borrow_*() functions will panic.
     pub fn take<'a>(&mut self, _fs: &'a FatFilesystemInner) -> Option<Dir<'a>> {
+        self.dirent.take();
         self.inner.take()
     }
 }
@@ -41,6 +61,7 @@ impl Drop for FatfsDirRef {
     fn drop(&mut self) {
         // Need to call take().
         assert!(self.inner.is_none());
+        assert!(self.dirent.is_none());
     }
 }
 
