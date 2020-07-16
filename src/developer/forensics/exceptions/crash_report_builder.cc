@@ -9,6 +9,11 @@
 namespace forensics {
 namespace exceptions {
 
+CrashReportBuilder& CrashReportBuilder::SetProcessName(const std::string& process_name) {
+  process_name_ = process_name;
+  return *this;
+}
+
 CrashReportBuilder& CrashReportBuilder::SetMinidump(zx::vmo minidump) {
   minidump_ = std::move(minidump);
   return *this;
@@ -25,6 +30,7 @@ CrashReportBuilder& CrashReportBuilder::SetRealmPath(const std::string& realm_pa
 }
 
 fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
+  FX_CHECK(process_name_.has_value()) << "Need a process name";
   FX_CHECK(is_valid_) << "Consume can only be called once";
   is_valid_ = false;
 
@@ -32,12 +38,12 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   CrashReport crash_report;
 
   const std::string program_name =
-      (component_url_.has_value()) ? component_url_.value() : process_name_;
+      (component_url_.has_value()) ? component_url_.value() : process_name_.value();
   crash_report.set_program_name(program_name.substr(0, fuchsia::feedback::MAX_PROGRAM_NAME_LENGTH));
 
   crash_report.mutable_annotations()->push_back(Annotation{
       .key = "crash.process.name",
-      .value = process_name_,
+      .value = process_name_.value(),
   });
 
   if (!component_url_.has_value()) {

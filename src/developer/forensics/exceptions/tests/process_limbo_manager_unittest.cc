@@ -365,7 +365,7 @@ TEST(ProcessLimboManager, FromExceptionBroker) {
   broker->OnException(std::move(excps[2].exception), infos[2], [&cb_call2]() { cb_call2 = true; });
 
   // There should not be an outgoing connection and no reports generated.
-  ASSERT_EQ(broker->crash_reporter_connections().size(), 0u);
+  ASSERT_EQ(broker->crash_reporters().size(), 0u);
 
   // There should be 3 exceptions on the limbo.
   auto& limbo = broker->limbo_manager().limbo();

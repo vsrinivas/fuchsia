@@ -43,6 +43,8 @@ source_set("lib") {
     "crash_report_builder.h",
     "crash_report_generation.cc",
     "crash_report_generation.h",
+    "crash_reporter.cc",
+    "crash_reporter.h",
     "exception_broker.cc",
     "exception_broker.h",
     "json_utils.cc",

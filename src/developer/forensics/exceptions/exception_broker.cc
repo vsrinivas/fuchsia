@@ -11,11 +11,9 @@
 #include <third_party/crashpad/util/file/string_file.h>
 
 #include "fuchsia/exception/cpp/fidl.h"
-#include "src/developer/forensics/exceptions/crash_report_generation.h"
 #include "src/developer/forensics/exceptions/json_utils.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/strings/join_strings.h"
 
 namespace forensics {
 namespace exceptions {
@@ -66,153 +64,39 @@ void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
   // Always call the callback when we're done.
   auto defer_cb = fit::defer([cb = std::move(cb)]() { cb(); });
 
-  ProcessException process_exception = {};
-  process_exception.set_exception(std::move(exception));
-  process_exception.set_info(std::move(info));
+  if (limbo_manager_.active()) {
+    ProcessException process_exception = {};
+    process_exception.set_exception(std::move(exception));
+    process_exception.set_info(std::move(info));
 
-  zx_status_t status;
-  zx::process process;
-  status = process_exception.exception().get_process(&process);
-  if (status != ZX_OK) {
-    FX_PLOGS(WARNING, status) << "Could not obtain process handle for exception.";
-  } else {
-    process_exception.set_process(std::move(process));
-  }
+    zx_status_t status;
+    zx::process process;
+    status = process_exception.exception().get_process(&process);
+    if (status != ZX_OK) {
+      FX_PLOGS(WARNING, status) << "Could not obtain process handle for exception.";
+    } else {
+      process_exception.set_process(std::move(process));
+    }
 
-  zx::thread thread;
-  status = process_exception.exception().get_thread(&thread);
-  if (status != ZX_OK) {
-    FX_PLOGS(WARNING, status) << "Could not obtain thread handle for exception.";
-  } else {
-    process_exception.set_thread(std::move(thread));
-  }
-
-  if (!limbo_manager_.active()) {
-    FileCrashReport(std::move(process_exception));
-  } else {
+    zx::thread thread;
+    status = process_exception.exception().get_thread(&thread);
+    if (status != ZX_OK) {
+      FX_PLOGS(WARNING, status) << "Could not obtain thread handle for exception.";
+    } else {
+      process_exception.set_thread(std::move(thread));
+    }
     limbo_manager_.AddToLimbo(std::move(process_exception));
+  } else {
+    uint64_t id = next_crash_reporter_id_++;
+    crash_reporters_.emplace(id, services_);
+
+    crash_reporters_.at(id).FileCrashReport(std::move(exception), [id, broker = GetWeakPtr()] {
+      if (!broker)
+        return;
+
+      broker->crash_reporters_.erase(id);
+    });
   }
-}
-
-// ExceptionBroker implementation ------------------------------------------------------------------
-
-void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
-  std::string process_name;
-  zx::vmo minidump_vmo = GenerateMinidumpVMO(process_exception.exception(), &process_name);
-
-  CrashReportBuilder builder(process_name);
-  if (minidump_vmo.is_valid()) {
-    builder.SetMinidump(std::move(minidump_vmo));
-  }
-
-  uint64_t id = next_connection_id_++;
-  crash_report_builders_.emplace(id, std::move(builder));
-
-  auto introspect_ptr = services_->Connect<fuchsia::sys::internal::Introspect>();
-  introspect_connections_[id] = std::move(introspect_ptr);
-
-  auto& introspect = introspect_connections_[id];
-
-  introspect.set_error_handler([id, broker = GetWeakPtr()](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.sys.internal.Introspect";
-
-    // If the broker is not there anymore, there is nothing more we can do.
-    if (!broker)
-      return;
-
-    broker->FileCrashReport(id);
-
-    // Remove the connection after we have filed the crash report. The connection must be removed at
-    // the end of the function because the InterfacePtr that owns the lambda is destroyed when the
-    // connection is removed.
-    broker->introspect_connections_.erase(id);
-  });
-
-  using fuchsia::sys::internal::Introspect_FindComponentByProcessKoid_Result;
-
-  const zx_koid_t process_koid = process_exception.info().process_koid;
-  introspect->FindComponentByProcessKoid(
-      process_koid,
-      // |process_exception| is moved into the call back to keep it alive until after the component
-      // information of the crashed process has been collected or has failed to be collected,
-      // otherwise the kernel would terminate the process.
-      [id, process_exception = std::move(process_exception),
-       broker = GetWeakPtr()](Introspect_FindComponentByProcessKoid_Result result) {
-        // If the broker is not there anymore, there is nothing more we can do.
-        if (!broker)
-          return;
-
-        auto& builder = broker->crash_report_builders_.at(id);
-
-        if (result.is_response()) {
-          if (!result.response().component_info.has_component_url()) {
-            FX_LOGS(ERROR) << "Did not receive a component url";
-          } else {
-            builder.SetComponentUrl(result.response().component_info.component_url());
-          }
-
-          if (!result.response().component_info.has_realm_path()) {
-            FX_LOGS(ERROR) << "Did not receive a realm path";
-          } else {
-            builder.SetRealmPath(
-                "/" + fxl::JoinStrings(result.response().component_info.realm_path(), "/"));
-          }
-        } else if (result.err() != ZX_ERR_NOT_FOUND) {
-          FX_PLOGS(ERROR, result.err()) << "Failed FindComponentByProcessKoid";
-        }
-
-        broker->FileCrashReport(id);
-
-        // Remove the connection after we have filed the crash report. The connection must be
-        // removed at the end of the function because the InterfacePtr that owns the lambda, and the
-        // reference to |broker|, is destroyed when the connection is removed.
-        broker->introspect_connections_.erase(id);
-      });
-}
-
-void ExceptionBroker::FileCrashReport(uint64_t id) {
-  if (crash_report_builders_.find(id) == crash_report_builders_.end()) {
-    return;
-  }
-
-  // Create a new connection to the crash reporter and keep track of it.
-  auto crash_reporter_ptr = services_->Connect<fuchsia::feedback::CrashReporter>();
-  crash_reporter_connections_[id] = std::move(crash_reporter_ptr);
-
-  // Get the ref to the crash reporter.
-  auto& crash_reporter = crash_reporter_connections_[id];
-
-  crash_reporter.set_error_handler([id, broker = GetWeakPtr()](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.feedback.CrashReporter";
-
-    // If the broker is not there anymore, there is nothing more we can do.
-    if (!broker)
-      return;
-
-    // Remove the connection after we have removed the exception. The connection must be
-    // removed at the end of the function because the InterfacePtr that owns the lambda, and the
-    // reference to |broker|, is destroyed when the connection is removed.
-    broker->crash_reporter_connections_.erase(id);
-  });
-
-  auto report = crash_report_builders_.at(id).Consume();
-  crash_report_builders_.erase(id);
-
-  crash_reporter->File(
-      std::move(report), [id, program_name = report.program_name(), broker = GetWeakPtr()](
-                             fuchsia::feedback::CrashReporter_File_Result result) {
-        if (result.is_err())
-          FX_PLOGS(ERROR, result.err()) << "Error filing crash report for " << program_name;
-
-        // If the broker is not there anymore, there is nothing more we can do.
-        if (!broker)
-          return;
-
-        // Remove the connection after we have removed the exception. The connection must be
-        // removed at the end of the function because the InterfacePtr that owns the lambda, and the
-        // reference to |broker|, is destroyed when the connection is removed.
-        broker->crash_reporter_connections_.erase(id);
-      });
 }
 
 }  // namespace exceptions

@@ -37,6 +37,7 @@ namespace {
 
 using fuchsia::exception::ExceptionInfo;
 using fuchsia::exception::ExceptionType;
+using fuchsia::exception::ProcessException;
 using testing::UnorderedElementsAreArray;
 
 // ExceptionBroker unit test -----------------------------------------------------------------------
@@ -279,7 +280,7 @@ TEST(ExceptionBroker, CallingMultipleExceptions) {
   broker->OnException(std::move(excps[2].exception), infos[2], [&cb_call2]() { cb_call2 = true; });
 
   // There should be many connections opened.
-  ASSERT_EQ(broker->introspect_connections().size(), 3u);
+  ASSERT_EQ(broker->crash_reporters().size(), 3u);
 
   // We wait until the crash reporter has received all exceptions.
   RunUntil(test_context.get(),
@@ -290,7 +291,7 @@ TEST(ExceptionBroker, CallingMultipleExceptions) {
   EXPECT_TRUE(cb_call2);
 
   // All connections should be killed now.
-  EXPECT_EQ(broker->introspect_connections().size(), 0u);
+  EXPECT_EQ(broker->crash_reporters().size(), 0u);
 
   auto& reports = test_context->crash_reporter->reports();
   ValidateReport(reports[0], "component_url_1", "/realm/path", true);
@@ -308,26 +309,20 @@ TEST(ExceptionBroker, CallingMultipleExceptions) {
   excps[2].job.kill();
 }
 
-TEST(ExceptionBroker, NoIntrospectConnection) {
+TEST(CrashReporter, NoIntrospectConnection) {
   auto test_context = CreateTestContext();
 
   // We add the services we're injecting.
   test_context->services.AddService(test_context->crash_reporter->GetHandler());
 
-  auto broker = ExceptionBroker::Create(test_context->loop.dispatcher(),
-                                        test_context->services.service_directory());
-  ASSERT_TRUE(broker);
+  CrashReporter crash_reporter(test_context->services.service_directory());
 
   // Create the exception.
   ExceptionContext exception;
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
-  ExceptionInfo info = ExceptionContextToExceptionInfo(exception);
 
   bool called = false;
-  broker->OnException(std::move(exception.exception), info, [&called]() { called = true; });
-
-  // There should be an outgoing connection.
-  ASSERT_EQ(broker->introspect_connections().size(), 1u);
+  crash_reporter.FileCrashReport(std::move(exception.exception), [&called]() { called = true; });
 
   // We wait until the crash reporter has received all exceptions.
   RunUntil(test_context.get(),
@@ -340,28 +335,20 @@ TEST(ExceptionBroker, NoIntrospectConnection) {
   exception.job.kill();
 }
 
-TEST(ExceptionBroker, NoCrashReporterConnection) {
+TEST(CrashReporter, NoCrashReporterConnection) {
   // We don't inject a stub service. This will make connecting to the service fail.
   auto test_context = CreateTestContext();
 
-  auto broker = ExceptionBroker::Create(test_context->loop.dispatcher(),
-                                        test_context->services.service_directory());
-  ASSERT_TRUE(broker);
+  CrashReporter crash_reporter(test_context->services.service_directory());
 
   // Create the exception.
   ExceptionContext exception;
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
-  ExceptionInfo info = ExceptionContextToExceptionInfo(exception);
 
   bool called = false;
-  broker->OnException(std::move(exception.exception), info, [&called]() { called = true; });
+  crash_reporter.FileCrashReport(std::move(exception.exception), [&called]() { called = true; });
 
-  // There should be an outgoing connection.
-  ASSERT_EQ(broker->introspect_connections().size(), 1u);
-
-  RunUntil(test_context.get(),
-           [&broker]() { return broker->crash_reporter_connections().empty(); });
-  ASSERT_TRUE(called);
+  RunUntil(test_context.get(), [&called]() { return called; });
 
   // The stub shouldn't be called.
   ASSERT_EQ(test_context->crash_reporter->reports().size(), 0u);
@@ -370,25 +357,19 @@ TEST(ExceptionBroker, NoCrashReporterConnection) {
   // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
   // environment and create noise on the overall system.
   exception.job.kill();
-
-  // Process limbo should be empty.
-  ASSERT_EQ(broker->limbo_manager().limbo().size(), 0u);
 }
 
-TEST(ExceptionBroker, GettingInvalidVMO) {
+TEST(CrashReporter, GettingInvalidVMO) {
   auto test_context = CreateTestContext();
   test_context->services.AddService(test_context->crash_reporter->GetHandler());
+  test_context->services.AddService(test_context->introspect->GetHandler());
 
-  auto broker = ExceptionBroker::Create(test_context->loop.dispatcher(),
-                                        test_context->services.service_directory());
-  ASSERT_TRUE(broker);
+  CrashReporter crash_reporter(test_context->services.service_directory());
 
   // We create a bogus exception, which will fail to create a valid VMO.
   bool called = false;
-  ExceptionInfo info = {};
-  broker->OnException({}, info, [&called]() { called = true; });
+  crash_reporter.FileCrashReport(zx::exception{}, [&called]() { called = true; });
 
-  ASSERT_EQ(broker->introspect_connections().size(), 1u);
   RunUntil(test_context.get(),
            [&test_context]() { return test_context->crash_reporter->reports().size() == 1u; });
   ASSERT_TRUE(called);

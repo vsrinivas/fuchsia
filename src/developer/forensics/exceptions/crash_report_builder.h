@@ -16,8 +16,7 @@ namespace exceptions {
 
 class CrashReportBuilder {
  public:
-  CrashReportBuilder(const std::string& process_name) : process_name_(process_name) {}
-
+  CrashReportBuilder& SetProcessName(const std::string& process_name);
   CrashReportBuilder& SetMinidump(zx::vmo minidump);
   CrashReportBuilder& SetComponentUrl(const std::string& component_url);
   CrashReportBuilder& SetRealmPath(const std::string& realm_path);
@@ -25,7 +24,7 @@ class CrashReportBuilder {
   fuchsia::feedback::CrashReport Consume();
 
  private:
-  std::string process_name_;
+  std::optional<std::string> process_name_;
   std::optional<zx::vmo> minidump_{std::nullopt};
   std::optional<std::string> component_url_{std::nullopt};
   std::optional<std::string> realm_path_{std::nullopt};
