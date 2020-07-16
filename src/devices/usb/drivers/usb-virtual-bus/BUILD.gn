@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 driver_module("usb-virtual-bus") {
   defines = [ "_ALL_SOURCE" ]
@@ -34,4 +36,86 @@ driver_module("usb-virtual-bus") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+driver_module("virtual-bus-tester") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "host.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.usb",
+    "//sdk/banjo/ddk.protocol.usb.composite",
+    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/fidl/fuchsia.hardware.usb.virtualbustest:fuchsia.hardware.usb.virtualbustest_llcpp",
+    "//src/devices/lib/driver",
+    "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+driver_module("virtual-bus-tester-function") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "peripheral.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.usb",
+    "//sdk/banjo/ddk.protocol.usb.function",
+    "//sdk/banjo/ddk.protocol.usb.request",
+    "//src/devices/lib/driver",
+    "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+  ]
+}
+
+test("usb-virtual-bus-test") {
+  sources = [ "usb-virtual-bus-test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.virtualbustest:fuchsia.hardware.usb.virtualbustest_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/usb-virtual-bus-launcher",
+  ]
+}
+
+isolated_devmgr_unittest_package("usb-virtual-bus-test-package") {
+  package_name = "usb-virtual-bus-test"
+  executable_path = "test/usb-virtual-bus-test"
+  deps = [
+    ":usb-virtual-bus-test",
+    ":virtual-bus-tester",
+    ":virtual-bus-tester-function",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/usb/drivers/usb-bus",
+    "//src/devices/usb/drivers/usb-composite",
+    "//src/devices/usb/drivers/usb-peripheral",
+    "//src/devices/usb/drivers/usb-virtual-bus",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":usb-virtual-bus-test-package" ]
 }

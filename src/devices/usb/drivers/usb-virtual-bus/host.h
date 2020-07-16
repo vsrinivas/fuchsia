@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_virtualbus_virtualbus_H_
-#define SRC_DEVICES_USB_DRIVERS_virtualbus_virtualbus_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_HOST_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_HOST_H_
 
 #include <fuchsia/hardware/usb/virtualbustest/llcpp/fidl.h>
 
@@ -64,4 +64,4 @@ class Device : public DeviceType,
 
 }  // namespace virtualbus
 
-#endif  // SRC_DEVICES_USB_DRIVERS_virtualbus_virtualbus_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_HOST_H_

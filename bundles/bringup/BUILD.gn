@@ -145,6 +145,5 @@ group("tests") {
     "//zircon/system/utest/sysconf:sysconf-package",
     "//zircon/system/utest/task-utils:task-utils-package",
     "//zircon/system/utest/thread-safe-deleter:thread-safe-deleter-package",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-test-package",
   ]
 }

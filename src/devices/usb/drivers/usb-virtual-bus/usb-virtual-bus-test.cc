@@ -80,7 +80,8 @@ void USBVirtualBus::InitUsbVirtualBus(std::optional<virtualbustest::BusTest::Syn
   std::vector<usb_peripheral::FunctionDescriptor> function_descs;
   function_descs.push_back(usb_cdc_ecm_function_desc);
 
-  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(function_descs)));
+  ASSERT_NO_FATAL_FAILURES(
+      SetupPeripheralDevice(std::move(device_desc), std::move(function_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/virtual-bus-test", O_RDONLY));
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_PERIPHERAL_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_PERIPHERAL_H_
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -63,3 +64,5 @@ class TestFunction : public DeviceType, public ddk::UsbFunctionInterfaceProtocol
   bool active_ = false;
 };
 }  // namespace virtualbus
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_PERIPHERAL_H_

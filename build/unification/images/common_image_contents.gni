@@ -172,8 +172,6 @@ common_image_contents = [
   "//src/devices/usb/drivers/usb-test/fx3",
   "//src/devices/usb/drivers/usb-test/usb-tester",
   "//src/devices/usb/drivers/usb-virtual-bus",
-  "//src/devices/usb/drivers/virtual-bus-tester:virtual-bus-tester-function",
-  "//src/devices/usb/drivers/virtual-bus-tester",
   "//src/diagnostics/dlog",
   "//src/graphics/display/drivers/aml-canvas",
   "//src/graphics/display/drivers/amlogic-display",
