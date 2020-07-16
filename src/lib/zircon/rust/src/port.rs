@@ -4,6 +4,7 @@
 
 //! Type-safe bindings for Zircon port objects.
 
+use bitflags::bitflags;
 use std::mem;
 
 use crate::ok;
@@ -344,11 +345,13 @@ impl Port {
     }
 }
 
-/// Options for wait_async.
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum WaitAsyncOpts {
-    Once = sys::ZX_WAIT_ASYNC_ONCE,
+bitflags! {
+    #[repr(transparent)]
+    /// Options for wait_async
+    pub struct WaitAsyncOpts: u32 {
+        /// When set, causes the system to capture a timestamp when the wait triggered.
+        const TIMESTAMP = sys::ZX_WAIT_ASYNC_TIMESTAMP;
+    }
 }
 
 #[cfg(test)]
@@ -381,9 +384,10 @@ mod tests {
 
         let port = Port::create().unwrap();
         let event = Event::create().unwrap();
+        let no_opts = WaitAsyncOpts::empty();
 
         assert!(event
-            .wait_async_handle(&port, key, Signals::USER_0 | Signals::USER_1, WaitAsyncOpts::Once)
+            .wait_async_handle(&port, key, Signals::USER_0 | Signals::USER_1, no_opts)
             .is_ok());
 
         // Waiting without setting any signal should time out.
@@ -407,7 +411,7 @@ mod tests {
         assert_eq!(port.wait(Time::after(ten_ms)), Err(Status::TIMED_OUT));
 
         // Calling wait_async again should result in another packet.
-        assert!(event.wait_async_handle(&port, key, Signals::USER_0, WaitAsyncOpts::Once).is_ok());
+        assert!(event.wait_async_handle(&port, key, Signals::USER_0, no_opts).is_ok());
         let read_packet = port.wait(Time::after(ten_ms)).unwrap();
         assert_eq!(read_packet.key(), key);
         assert_eq!(read_packet.status(), 0);
@@ -422,13 +426,13 @@ mod tests {
 
         // Calling wait_async_handle then cancel, we should not get a packet as cancel will
         // remove it from  the queue.
-        assert!(event.wait_async_handle(&port, key, Signals::USER_0, WaitAsyncOpts::Once).is_ok());
+        assert!(event.wait_async_handle(&port, key, Signals::USER_0, no_opts).is_ok());
         assert!(port.cancel(&event, key).is_ok());
         assert_eq!(port.wait(Time::after(ten_ms)), Err(Status::TIMED_OUT));
 
         // If the event is signalled after the cancel, we also shouldn't get a packet.
         assert!(event.signal_handle(Signals::USER_0, Signals::NONE).is_ok()); // clear signal
-        assert!(event.wait_async_handle(&port, key, Signals::USER_0, WaitAsyncOpts::Once).is_ok());
+        assert!(event.wait_async_handle(&port, key, Signals::USER_0, no_opts).is_ok());
         assert!(port.cancel(&event, key).is_ok());
         assert!(event.signal_handle(Signals::NONE, Signals::USER_0).is_ok());
         assert_eq!(port.wait(Time::after(ten_ms)), Err(Status::TIMED_OUT));

@@ -162,7 +162,7 @@ impl<'a, T: HandleBased> Unowned<'a, T> {
                 port.raw_handle(),
                 key,
                 signals.bits(),
-                options as u32,
+                options.bits(),
             )
         };
         ok(status)

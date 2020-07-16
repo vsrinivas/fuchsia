@@ -82,7 +82,7 @@ impl<'a> OnSignals<'a> {
             receiver.port(),
             receiver.key(),
             signals,
-            zx::WaitAsyncOpts::Once,
+            zx::WaitAsyncOpts::empty(),
         );
 
         OnSignals { state: res.map(|()| receiver).map_err(Into::into), marker: PhantomData }

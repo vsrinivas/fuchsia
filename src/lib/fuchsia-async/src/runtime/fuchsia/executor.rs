@@ -226,7 +226,7 @@ pub(crate) fn schedule_packet(
     key: u64,
     signals: zx::Signals,
 ) -> Result<(), zx::Status> {
-    handle.wait_async_handle(port, key, signals, zx::WaitAsyncOpts::Once)
+    handle.wait_async_handle(port, key, signals, zx::WaitAsyncOpts::empty())
 }
 
 /// A registration of a `PacketReceiver`.

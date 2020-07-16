@@ -221,7 +221,7 @@ where
                 self.signal_receiver.port(),
                 self.signal_receiver.key(),
                 signals,
-                zx::WaitAsyncOpts::Once,
+                zx::WaitAsyncOpts::empty(),
             );
 
             // The handle is borrowed, so we cannot drop it.
