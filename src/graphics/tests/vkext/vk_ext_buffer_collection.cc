@@ -21,14 +21,14 @@
 namespace {
 
 VkImageCreateInfo GetDefaultImageCreateInfo(bool use_protected_memory, VkFormat format,
-                                            uint32_t width, uint32_t height, bool linear) {
+                                            uint32_t width, bool linear) {
   VkImageCreateInfo image_create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .pNext = nullptr,
       .flags = use_protected_memory ? VK_IMAGE_CREATE_PROTECTED_BIT : 0u,
       .imageType = VK_IMAGE_TYPE_2D,
       .format = format,
-      .extent = VkExtent3D{width, height, 1},
+      .extent = VkExtent3D{width, 64, 1},
       .mipLevels = 1,
       .arrayLayers = 1,
       .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -64,7 +64,7 @@ class VulkanTest {
  public:
   ~VulkanTest();
   bool Initialize();
-  bool Exec(VkFormat format, uint32_t width, uint32_t height, bool direct, bool linear,
+  bool Exec(VkFormat format, uint32_t width, bool direct, bool linear,
             bool repeat_constraints_as_non_protected,
             const std::vector<fuchsia::sysmem::ImageFormatConstraints> &format_constraints =
                 std::vector<fuchsia::sysmem::ImageFormatConstraints>());
@@ -207,7 +207,7 @@ bool VulkanTest::InitFunctions() {
 }
 
 bool VulkanTest::Exec(
-    VkFormat format, uint32_t width, uint32_t height, bool direct, bool linear,
+    VkFormat format, uint32_t width, bool direct, bool linear,
     bool repeat_constraints_as_non_protected,
     const std::vector<fuchsia::sysmem::ImageFormatConstraints> &format_constraints) {
   const vk::Device &device = *ctx_->device();
@@ -250,7 +250,7 @@ bool VulkanTest::Exec(
     }
 
     VkImageCreateInfo image_create_info =
-        GetDefaultImageCreateInfo(/*use_protected_memory=*/false, format, width, height, linear);
+        GetDefaultImageCreateInfo(/*use_protected_memory=*/false, format, width, linear);
     VkBufferCollectionCreateInfoFUCHSIA import_info = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
         .pNext = nullptr,
@@ -269,7 +269,7 @@ bool VulkanTest::Exec(
   }
 
   VkImageCreateInfo image_create_info =
-      GetDefaultImageCreateInfo(use_protected_memory_, format, width, height, linear);
+      GetDefaultImageCreateInfo(use_protected_memory_, format, width, linear);
   VkBufferCollectionCreateInfoFUCHSIA import_info = {
       .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
       .pNext = nullptr,
@@ -670,49 +670,43 @@ class VulkanImageExtensionTest : public ::testing::TestWithParam<bool> {};
 TEST_P(VulkanImageExtensionTest, BufferCollectionNV12) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, false, GetParam(), false));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, false, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionI420) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 64, 64, false, GetParam(), false));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 64, false, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionNV12_1025) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1025, 64, false, GetParam(), false));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1025, false, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, false, GetParam(), false));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, false, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA_1025) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 1025, 64, false, GetParam(), false));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 1025, false, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionDirectNV12) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, true, GetParam(), false));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, true, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionDirectI420) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 64, 64, true, GetParam(), false));
-}
-
-TEST_P(VulkanImageExtensionTest, BufferCollectionDirectNV12_1280_546) {
-  VulkanTest test;
-  ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 8192, 546, true, GetParam(), false));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 64, true, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionUndefined) {
@@ -730,7 +724,7 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionUndefined) {
   std::vector<fuchsia::sysmem::ImageFormatConstraints> two_constraints{
       bgra_image_constraints, bgra_tiled_image_constraints};
 
-  ASSERT_TRUE(test.Exec(VK_FORMAT_UNDEFINED, 64, 64, true, GetParam(), false, two_constraints));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_UNDEFINED, 64, true, GetParam(), false, two_constraints));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionMultipleFormats) {
@@ -752,10 +746,9 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionMultipleFormats) {
   std::vector<fuchsia::sysmem::ImageFormatConstraints> all_constraints{
       nv12_image_constraints, bgra_image_constraints, bgra_tiled_image_constraints};
 
-  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, true, GetParam(), false,
-                        all_constraints));
   ASSERT_TRUE(
-      test.Exec(VK_FORMAT_B8G8R8A8_UNORM, 64, 64, true, GetParam(), false, all_constraints));
+      test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, true, GetParam(), false, all_constraints));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_B8G8R8A8_UNORM, 64, true, GetParam(), false, all_constraints));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionProtectedRGBA) {
@@ -763,7 +756,7 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionProtectedRGBA) {
   test.set_use_protected_memory(true);
   ASSERT_TRUE(test.Initialize());
   ASSERT_TRUE(test.device_supports_protected_memory());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, true, GetParam(), false));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, true, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, ProtectedAndNonprotectedConstraints) {
@@ -771,7 +764,7 @@ TEST_P(VulkanImageExtensionTest, ProtectedAndNonprotectedConstraints) {
   test.set_use_protected_memory(true);
   ASSERT_TRUE(test.Initialize());
   ASSERT_TRUE(test.device_supports_protected_memory());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, true, GetParam(), true));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, true, GetParam(), true));
 }
 
 INSTANTIATE_TEST_SUITE_P(, VulkanImageExtensionTest, ::testing::Bool());
