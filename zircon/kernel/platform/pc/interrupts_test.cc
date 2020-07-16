@@ -6,8 +6,11 @@
 
 #include <lib/unittest/unittest.h>
 
+#include <arch/x86/fake_msr_access.h>
+#include <arch/x86/pv.h>
 #include <ktl/iterator.h>
 #include <ktl/unique_ptr.h>
+#include <vm/physmap.h>
 
 #include "interrupt_manager.h"
 
@@ -257,10 +260,52 @@ bool TestHandlerAllocationAlignment() TA_NO_THREAD_SAFETY_ANALYSIS {
   END_TEST;
 }
 
+bool TestPvEoi() {
+  BEGIN_TEST;
+
+  // Can't signal if not enabled.
+  {
+    PvEoi pv;
+    pv.Init();
+    EXPECT_FALSE(pv.Eoi());
+  }
+
+  // Enable, signal, then disable.
+  {
+    FakeMsrAccess msr{};
+    msr.msrs_[0] = {X86_MSR_KVM_PV_EOI_EN, 0U};
+
+    PvEoi pv;
+    pv.Init();
+    pv.Enable(&msr);
+
+    // Find the PvEoi's state via MSR value.
+    uint64_t pa = msr.msrs_[0].value;
+    EXPECT_TRUE(pa & X86_MSR_KVM_PV_EOI_EN_ENABLE);
+    pa &= ~X86_MSR_KVM_PV_EOI_EN_ENABLE;
+    auto state = reinterpret_cast<uint64_t*>(paddr_to_physmap(pa));
+
+    EXPECT_EQ(*state, 0U);
+
+    EXPECT_FALSE(pv.Eoi());
+    EXPECT_EQ(*state, 0U);
+
+    *state = 1;
+    EXPECT_TRUE(pv.Eoi());
+    EXPECT_EQ(*state, 0U);
+
+    pv.Disable(&msr);
+    EXPECT_EQ(msr.msrs_[0].value, 0U);
+  }
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(pc_interrupt_tests)
 UNITTEST("RegisterInterruptHandler", TestRegisterInterruptHandler)
 UNITTEST("RegisterInterruptHandlerTwice", TestRegisterInterruptHandlerTwice)
 UNITTEST("UnregisterInterruptHandlerNotRegistered", TestUnregisterInterruptHandlerNotRegistered)
 UNITTEST("RegisterInterruptHandlerTooMany", TestRegisterInterruptHandlerTooMany)
 UNITTEST("HandlerAllocationAlignment", TestHandlerAllocationAlignment)
+UNITTEST("PvEoi", TestPvEoi)
 UNITTEST_END_TESTCASE(pc_interrupt_tests, "pc_interrupt", "Tests for external interrupts")

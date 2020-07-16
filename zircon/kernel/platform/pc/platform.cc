@@ -15,6 +15,7 @@
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/mmu.h>
+#include <arch/x86/pv.h>
 
 #include "platform_p.h"
 #if defined(WITH_KERNEL_PCIE)
@@ -799,6 +800,9 @@ void platform_init(void) {
 #if NO_USER_KEYBOARD
   platform_init_keyboard(&console_input_buf);
 #endif
+
+  // Initialize all PvEoi instances prior to starting secondary CPUs.
+  PvEoi::InitAll();
 
   platform_init_smp();
 

@@ -227,6 +227,12 @@ static void mp_unplug_trampoline() {
   auto unplug_done = reinterpret_cast<Event*>(ct->task_state().arg());
 
   Scheduler::MigrateUnpinnedThreads();
+  DEBUG_ASSERT(!mp_is_cpu_active(arch_curr_cpu_num()));
+
+  // Now that this CPU is no longer active, it is critical that this thread
+  // never block.  If this thread blocks, the scheduler may attempt to select
+  // this CPU's idle thread to run.  Doing so would violate an invariant: tasks
+  // may only be scheduled on active CPUs.
 
   // Note that before this invocation, but after we stopped accepting
   // interrupts, we may have received a synchronous task to perform.

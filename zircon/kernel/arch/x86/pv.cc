@@ -123,26 +123,43 @@ int pv_ipi(uint64_t mask_low, uint64_t mask_high, uint64_t start_id, uint64_t ic
 
 static PvEoi g_pv_eoi[SMP_MAX_CPUS];
 
+void PvEoi::InitAll() {
+  for (PvEoi& pv : g_pv_eoi) {
+    pv.Init();
+  }
+}
+
+void PvEoi::Init() {
+  ZX_DEBUG_ASSERT(!arch_blocking_disallowed());
+  ZX_DEBUG_ASSERT(!enabled_.load());
+  ZX_DEBUG_ASSERT(state_paddr_ == 0);
+
+  state_paddr_ = vaddr_to_paddr(&state_);
+  ZX_DEBUG_ASSERT(state_paddr_ != 0);
+  ZX_DEBUG_ASSERT(state_paddr_ % alignof(decltype(PvEoi::state_)) == 0);
+}
+
 PvEoi* PvEoi::get() { return &g_pv_eoi[arch_curr_cpu_num()]; }
 
 void PvEoi::Enable(MsrAccess* msr) {
-  paddr_t state_page_paddr;
-  zx_status_t status = pmm_alloc_page(0, &state_page_, &state_page_paddr);
-  ZX_ASSERT(status == ZX_OK);
+  // It is critical that this method does not block as it may be called early during boot, prior to
+  // the calling CPU being marked active.
 
-  arch_zero_page(paddr_to_physmap(state_page_paddr));
-  state_ = static_cast<uint64_t*>(paddr_to_physmap(state_page_paddr));
-  msr->write_msr(X86_MSR_KVM_PV_EOI_EN, state_page_paddr | X86_MSR_KVM_PV_EOI_EN_ENABLE);
+  ZX_DEBUG_ASSERT(!enabled_.load());
+  ZX_DEBUG_ASSERT(state_paddr_ != 0);
 
+  msr->write_msr(X86_MSR_KVM_PV_EOI_EN, state_paddr_ | X86_MSR_KVM_PV_EOI_EN_ENABLE);
   enabled_.store(true, ktl::memory_order_release);
 }
 
 void PvEoi::Disable(MsrAccess* msr) {
+  // It is critical that this method does not block as it may be called when the current CPU is
+  // being shutdown.
+
   // Mark as disabled before writing to the MSR; otherwise an interrupt appearing in the window
   // between the two could fail to EOI via the legacy mechanism.
   enabled_.store(false, ktl::memory_order_release);
   msr->write_msr(X86_MSR_KVM_PV_EOI_EN, 0);
-  pmm_free_page(state_page_);
 }
 
 bool PvEoi::Eoi() {
@@ -150,6 +167,10 @@ bool PvEoi::Eoi() {
     return false;
   }
 
-  uint64_t old_val = atomic_swap_u64(state_, 0u);
+  uint64_t old_val = state_.exchange(0);
   return old_val != 0;
+}
+
+PvEoi::~PvEoi() {
+  ZX_DEBUG_ASSERT(!enabled_.load());
 }

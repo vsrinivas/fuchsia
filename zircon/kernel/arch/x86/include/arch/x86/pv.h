@@ -78,13 +78,33 @@ int pv_ipi(uint64_t mask_low, uint64_t mask_high, uint64_t start_id, uint64_t ic
 
 class MsrAccess;
 
+// PvEoi provides optimized end-of-interrupt signaling for para-virtualized environments.
+//
+// The initialization sequence of PvEoi instances is tricky.  All PvEoi instances should be
+// initialized by the boot CPU prior to brining the secondary CPUs online (see |InitAll|).
 class PvEoi final {
  public:
-  // Get the current CPU's PV_EOI state.
+  ~PvEoi();
+
+  // Initialize all PvEoi instances.
+  //
+  // Must be called from a context in which blocking is allowed.
+  static void InitAll();
+
+  // Initialize this PvEoi instances.
+  //
+  // Must be called from a context in which blocking is allowed.
+  void Init();
+
+  // Get the current CPU's PvEoi instance.
   static PvEoi* get();
 
   // Enable PV_EOI for the current CPU. After it is enabled, callers may use Eoi() rather than
   // access a local APIC register if desired.
+  //
+  // Once enabled this PvEoi object must be disabled prior to destruction.
+  //
+  // It is an error to enable a PvEoi object more than once over its lifetime.
   void Enable(MsrAccess* msr);
 
   // Disable PV_EOI for the current CPU.
@@ -96,10 +116,16 @@ class PvEoi final {
   bool Eoi();
 
  private:
-  vm_page_t* state_page_;
-  uint64_t* state_;
+  // state_ must be contained within a single page.  If its alignment is greater than or equal to
+  // its size, then we know it's not straddling a page boundary.
+  ktl::atomic<uint64_t> state_{0};
+  static_assert(sizeof(PvEoi::state_) < PAGE_SIZE &&
+                alignof(decltype(PvEoi::state_)) >= sizeof(PvEoi::state_));
 
-  ktl::atomic<bool> enabled_;
+  // The physical address of state_;
+  paddr_t state_paddr_{0};
+
+  ktl::atomic<bool> enabled_{false};
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PV_H_
