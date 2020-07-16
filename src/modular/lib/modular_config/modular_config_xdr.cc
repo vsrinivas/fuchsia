@@ -24,7 +24,7 @@ void XdrBaseShellConfig(XdrContext* const xdr,
                         std::vector<std::string>());
 }
 
-fuchsia::ui::policy::DisplayUsage GetDisplayUsageFromString(std::string usage) {
+fuchsia::ui::policy::DisplayUsage GetDisplayUsageFromString(std::string_view usage) {
   if (usage == modular_config::kHandheld) {
     return fuchsia::ui::policy::DisplayUsage::kHandheld;
   } else if (usage == modular_config::kClose) {
@@ -145,6 +145,20 @@ fuchsia::modular::session::BaseShellConfig GetDefaultBaseShellConfig() {
 }
 
 }  // namespace
+
+void XdrModularConfig_v1(XdrContext* const xdr,
+                         fuchsia::modular::session::ModularConfig* const data) {
+  fuchsia::modular::session::BasemgrConfig default_basemgr_config;
+  bool has_basemgr_config = data->has_basemgr_config();
+  xdr->FieldWithDefault(modular_config::kBasemgrConfigName, data->mutable_basemgr_config(),
+                        XdrBasemgrConfig_v1, has_basemgr_config, std::move(default_basemgr_config));
+
+  fuchsia::modular::session::SessionmgrConfig default_sessionmgr_config;
+  bool has_sessionmgr_config = data->has_sessionmgr_config();
+  xdr->FieldWithDefault(modular_config::kSessionmgrConfigName, data->mutable_sessionmgr_config(),
+                        XdrSessionmgrConfig_v1, has_sessionmgr_config,
+                        std::move(default_sessionmgr_config));
+}
 
 void XdrBasemgrConfig_v1(XdrContext* const xdr,
                          fuchsia::modular::session::BasemgrConfig* const data) {

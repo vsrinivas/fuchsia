@@ -11,13 +11,20 @@
 
 namespace modular {
 
-// Serialization and deserialization of
-// fuchsia::modular::session::BasemgrConfig to and from JSON
+// Serialization and deserialization of Modular config tables to and from JSON
+void XdrModularConfig_v1(XdrContext* const xdr,
+                         fuchsia::modular::session::ModularConfig* const data);
+
 void XdrBasemgrConfig_v1(XdrContext* const xdr,
                          fuchsia::modular::session::BasemgrConfig* const data);
 
 void XdrSessionmgrConfig_v1(XdrContext* const xdr,
                             fuchsia::modular::session::SessionmgrConfig* const data);
+
+constexpr XdrFilterType<fuchsia::modular::session::ModularConfig> XdrModularConfig[] = {
+    XdrModularConfig_v1,
+    nullptr,
+};
 
 constexpr XdrFilterType<fuchsia::modular::session::BasemgrConfig> XdrBasemgrConfig[] = {
     XdrBasemgrConfig_v1,

@@ -190,4 +190,128 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   EXPECT_EQ(kSessionAgentUrl, read_config.restart_session_on_agent_crash().at(0));
 }
 
+// Tests that default values are set correctly for ModularConfig when reading an empty config.
+TEST(ModularConfigXdr, ModularReadDefaultValues) {
+  // Deserialize an empty JSON document into ModularConfig.
+  rapidjson::Document read_json_doc;
+  read_json_doc.SetObject();
+  fuchsia::modular::session::ModularConfig read_config;
+  EXPECT_TRUE(XdrRead(&read_json_doc, &read_config, XdrModularConfig));
+
+  EXPECT_TRUE(read_config.has_basemgr_config());
+  EXPECT_TRUE(read_config.has_sessionmgr_config());
+}
+
+// Tests that default JSON values are set correctly when ModularConfig contains no values.
+TEST(ModularConfigXdr, ModularWriteDefaultValues) {
+  static constexpr auto kExpectedJson = R"({
+      "basemgr": {
+        "enable_cobalt": true,
+        "use_session_shell_for_story_shell_factory": false,
+        "base_shell": {
+          "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
+          "keep_alive_after_login": false,
+          "args": []
+        },
+        "session_shells": [
+          {
+            "name": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+            "display_usage": "unknown",
+            "screen_height": 0.0,
+            "screen_width": 0.0,
+            "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+            "args": []
+          }
+        ],
+        "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+      },
+      "sessionmgr": {
+        "enable_cobalt": true,
+        "startup_agents": null,
+        "session_agents": null,
+        "component_args": null,
+        "agent_service_index": null,
+        "restart_session_on_agent_crash": null
+      }
+    })";
+  rapidjson::Document expected_json_doc;
+  expected_json_doc.Parse(kExpectedJson);
+  ASSERT_FALSE(expected_json_doc.HasParseError());
+
+  // Serialize an empty ModularConfig to JSON.
+  rapidjson::Document write_config_json_doc;
+  fuchsia::modular::session::ModularConfig write_config;
+  XdrWrite(&write_config_json_doc, &write_config, XdrModularConfig);
+
+  EXPECT_EQ(expected_json_doc, write_config_json_doc);
+}
+
+// Tests that values are set correctly for ModularConfig when reading JSON and
+// that values in the JSON document are equal to those in ModularConfig when writing JSON.
+TEST(ModularConfigXdr, ModularReadWriteValues) {
+  static constexpr auto kExpectedJson = R"(
+    {
+      "basemgr": {
+        "enable_cobalt": false,
+        "use_session_shell_for_story_shell_factory": false,
+        "base_shell": {
+          "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
+          "keep_alive_after_login": false,
+          "args": []
+        },
+        "session_shells": [
+          {
+            "name": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+            "display_usage": "unknown",
+            "screen_height": 0.0,
+            "screen_width": 0.0,
+            "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+            "args": []
+          }
+        ],
+        "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+      },
+      "sessionmgr": {
+        "enable_cobalt": false,
+        "startup_agents": null,
+        "session_agents": null,
+        "component_args": null,
+        "agent_service_index": null,
+        "restart_session_on_agent_crash": null
+      }
+    })";
+  rapidjson::Document expected_json_doc;
+  expected_json_doc.Parse(kExpectedJson);
+  ASSERT_FALSE(expected_json_doc.HasParseError());
+
+  // Create a BasemgrConfig with field set to a non-default value.
+  fuchsia::modular::session::BasemgrConfig basemgr_config;
+  basemgr_config.set_enable_cobalt(false);
+
+  // Create a SessionmgrConfig with field set to a non-default value.
+  fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
+  sessionmgr_config.set_enable_cobalt(false);
+
+  // Create a ModularConfig from the BasemgrConfig and SessionmgrConfig
+  fuchsia::modular::session::ModularConfig write_config;
+  write_config.set_basemgr_config(std::move(basemgr_config));
+  write_config.set_sessionmgr_config(std::move(sessionmgr_config));
+
+  // Serialize the config to JSON.
+  rapidjson::Document write_config_json_doc;
+  XdrWrite(&write_config_json_doc, &write_config, XdrModularConfig);
+
+  EXPECT_EQ(expected_json_doc, write_config_json_doc);
+
+  // Deserialize it from the expected JSON to a ModularConfig.
+  fuchsia::modular::session::ModularConfig read_config;
+  EXPECT_TRUE(XdrRead(&expected_json_doc, &read_config, XdrModularConfig));
+
+  EXPECT_TRUE(read_config.has_basemgr_config());
+  EXPECT_FALSE(read_config.basemgr_config().enable_cobalt());
+
+  EXPECT_TRUE(read_config.has_sessionmgr_config());
+  EXPECT_FALSE(read_config.sessionmgr_config().enable_cobalt());
+}
+
 }  // namespace modular
