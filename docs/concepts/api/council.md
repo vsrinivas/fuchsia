@@ -147,7 +147,7 @@ Members are appointed by each functional area of the project:
 | Security          | jsankey@google.com       |
 | Sessions          | lindkvist@google.com     |
 | Software Delivery | computerdruid@google.com |
-| Storage           | cpu@google.com           |
+| Storage           | manalib@google.com       |
 | System            | cpu@google.com           |
 | Toolchain         | mcgrathr@google.com      |
 | Virtualization    | abdulla@google.com       |
