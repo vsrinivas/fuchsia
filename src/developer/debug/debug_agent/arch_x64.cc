@@ -182,6 +182,8 @@ class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
 
 }  // namespace
 
+const BreakInstructionType kBreakInstruction = 0xCC;
+
 ::debug_ipc::Arch GetCurrentArch() { return ::debug_ipc::Arch::kX64; }
 
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
@@ -293,9 +295,7 @@ debug_ipc::ExceptionType DecodeExceptionType(const zx::thread& thread, uint32_t 
   return debug_ipc::DecodeException(exception_type, info);
 }
 
-const BreakInstructionType kBreakInstruction = 0xCC;
-
-debug_ipc::ExceptionRecord ArchProvider::FillExceptionRecord(const zx_exception_report_t& in) {
+debug_ipc::ExceptionRecord FillExceptionRecord(const zx_exception_report_t& in) {
   debug_ipc::ExceptionRecord record;
 
   record.valid = true;
@@ -306,74 +306,29 @@ debug_ipc::ExceptionRecord ArchProvider::FillExceptionRecord(const zx_exception_
   return record;
 }
 
-uint64_t ArchProvider::BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
-  // An X86 exception is 1 byte and a breakpoint exception is triggered with
-  // RIP pointing to the following instruction.
+uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
+  // An X86 exception is 1 byte and a breakpoint exception is triggered with RIP pointing to the
+  // following instruction.
   return exception_addr - 1;
 }
 
-uint64_t ArchProvider::NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
-  // Exception address is the one following the instruction that caused it,
-  // so nothing needs to be done.
+uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
+  // Exception address is the one following the instruction that caused it, so nothing needs to be
+  // done.
   return exception_addr;
 }
 
-bool ArchProvider::IsBreakpointInstruction(zx::process& process, uint64_t address) {
-  uint8_t data;
-  size_t actual_read = 0;
-  if (process.read_memory(address, &data, 1, &actual_read) != ZX_OK || actual_read != 1)
-    return false;
-
-  // This handles the normal encoding of debug breakpoints (0xCC). It's also
-  // possible to cause an interrupt 3 to happen using the opcode sequence
-  // 0xCD 0x03 but this has slightly different semantics and no assemblers emit
-  // this. We can't easily check for that here since the computation for the
-  // instruction address that is passed in assumes a 1-byte instruction. It
+bool IsBreakpointInstruction(BreakInstructionType instruction) {
+  // This handles the normal encoding of debug breakpoints (0xCC). It's also possible to cause an
+  // interrupt 3 to happen using the opcode sequence 0xCD 0x03 but this has slightly different
+  // semantics and no assemblers emit this. We can't easily check for that here since the
+  // computation for the instruction address that is passed in assumes a 1-byte instruction. It
   // should be OK to ignore this case in practice.
-  return data == kBreakInstruction;
+  return instruction == kBreakInstruction;
 }
 
-std::pair<debug_ipc::AddressRange, int> ArchProvider::InstructionForWatchpointHit(
-    const DebugRegisters& in_regs) const {
-  const zx_thread_state_debug_regs_t& debug_regs = in_regs.GetNativeRegisters();
-
-  // HW breakpoints have priority over single-step.
-  uint64_t addr = 0;
-  uint64_t length = 0;
-  int slot = 0;
-  if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0)) {
-    addr = debug_regs.dr[0];
-    length = GetWatchpointLength(debug_regs.dr7, 0);
-    slot = 0;
-  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B1)) {
-    addr = debug_regs.dr[1];
-    length = GetWatchpointLength(debug_regs.dr7, 1);
-    slot = 1;
-  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B2)) {
-    addr = debug_regs.dr[2];
-    length = GetWatchpointLength(debug_regs.dr7, 2);
-    slot = 2;
-  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B3)) {
-    addr = debug_regs.dr[3];
-    length = GetWatchpointLength(debug_regs.dr7, 3);
-    slot = 3;
-  } else {
-    FX_NOTREACHED() << "x86: No known hw exception set in DR6";
-    return {{}, -1};
-  }
-
-  return {{addr, addr + length}, slot};
-}
-
-uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t exception_addr) {
-  return exception_addr;
-}
-
-// Hardware Exceptions ---------------------------------------------------------
-
-uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr) {
-  // x86 returns the instruction *about* to be executed when hitting the hw
-  // breakpoint.
+uint64_t BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr) {
+  // x86 returns the instruction *about* to be executed when hitting the hw breakpoint.
   return exception_addr;
 }
 

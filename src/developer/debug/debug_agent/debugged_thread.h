@@ -69,8 +69,6 @@ class DebuggedThread {
     ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning;
 
     std::unique_ptr<ThreadException> exception;  // Optional.
-
-    std::shared_ptr<arch::ArchProvider> arch_provider;
   };
   DebuggedThread(DebugAgent*, CreateInfo&&);
   virtual ~DebuggedThread();
@@ -219,6 +217,9 @@ class DebuggedThread {
                                      ProcessBreakpoint* process_breakpoint,
                                      std::vector<debug_ipc::BreakpointStats>& hit_breakpoints);
 
+  // Returns true if there is a software breakpoint instruction at the given address.
+  bool IsBreakpointInstructionAtAddress(uint64_t address) const;
+
   DebugAgent* debug_agent_;   // Non-owning.
   DebuggedProcess* process_;  // Non-owning.
 
@@ -252,8 +253,6 @@ class DebuggedThread {
   // - When single-stepping over a breakpoint, this will be the breakpoint
   //   being stepped over.
   ProcessBreakpoint* current_breakpoint_ = nullptr;
-
-  std::shared_ptr<arch::ArchProvider> arch_provider_ = nullptr;
 
   fxl::WeakPtrFactory<DebuggedThread> weak_factory_;
 

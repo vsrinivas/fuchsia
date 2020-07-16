@@ -34,7 +34,6 @@ struct SystemProviders {
   // the real debugger.
   static SystemProviders CreateDefaults(std::shared_ptr<sys::ServiceDirectory> services);
 
-  std::shared_ptr<arch::ArchProvider> arch_provider;
   std::shared_ptr<LimboProvider> limbo_provider;
   std::shared_ptr<ObjectProvider> object_provider;
 };
@@ -223,7 +222,6 @@ class DebugAgent : public RemoteAPI,
 
   AgentConfiguration configuration_;
 
-  std::shared_ptr<arch::ArchProvider> arch_provider_;
   std::shared_ptr<LimboProvider> limbo_provider_;
   std::shared_ptr<ObjectProvider> object_provider_;
 

@@ -30,22 +30,19 @@ class ZirconThreadHandle final : public ThreadHandle {
   std::optional<GeneralRegisters> GetGeneralRegisters() const override;
   void SetGeneralRegisters(const GeneralRegisters& regs) override;
   std::optional<DebugRegisters> GetDebugRegisters() const override;
-  void SetDebugRegisters(const DebugRegisters& regs) override;
+  bool SetDebugRegisters(const DebugRegisters& regs) override;
   void SetSingleStep(bool single_step) override;
   std::vector<debug_ipc::Register> ReadRegisters(
       const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const override;
   std::vector<debug_ipc::Register> WriteRegisters(
       const std::vector<debug_ipc::Register>& regs) override;
-  zx_status_t InstallHWBreakpoint(uint64_t address) override;
-  zx_status_t UninstallHWBreakpoint(uint64_t address) override;
-  arch::WatchpointInstallationResult InstallWatchpoint(
-      debug_ipc::BreakpointType type, const debug_ipc::AddressRange& range) override;
-  zx_status_t UninstallWatchpoint(const debug_ipc::AddressRange& range) override;
+  bool InstallHWBreakpoint(uint64_t address) override;
+  bool UninstallHWBreakpoint(uint64_t address) override;
+  std::optional<WatchpointInfo> InstallWatchpoint(debug_ipc::BreakpointType type,
+                                                  const debug_ipc::AddressRange& range) override;
+  bool UninstallWatchpoint(const debug_ipc::AddressRange& range) override;
 
  private:
-  zx_status_t ReadDebugRegisters(zx_thread_state_debug_regs* regs) const;
-  zx_status_t WriteDebugRegisters(const zx_thread_state_debug_regs& regs);
-
   zx_koid_t thread_koid_;
   zx::thread thread_;
 };

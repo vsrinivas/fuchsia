@@ -23,48 +23,11 @@ namespace {
 
 // Dependencies -----------------------------------------------------------------------------------
 
-constexpr uint64_t kWatchpointLength = 8;
-
-// TODO(brettw) this should be removed and the necessary mocks provided by the MockThreadHandle.
-class MockBreakpointArchProvider : public arch::ArchProvider {
- public:
-  bool IsBreakpointInstruction(zx::process& process, uint64_t address) override {
-    for (uint64_t addr : breakpoints_) {
-      if (addr == address)
-        return true;
-    }
-
-    return false;
-  }
-
-  void AppendBreakpoint(uint64_t addr) { breakpoints_.push_back(addr); }
-
-  uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) override {
-    return exception_addr;
-  }
-
-  std::pair<debug_ipc::AddressRange, int> InstructionForWatchpointHit(
-      const DebugRegisters&) const override {
-    return {{exception_addr_, exception_addr_ + kWatchpointLength}, slot_};
-  }
-
-  void set_exception_addr(uint64_t addr) { exception_addr_ = addr; }
-  void set_slot(int slot) { slot_ = slot; }
-
- private:
-  uint64_t exception_addr_ = 0;
-  int slot_ = -1;
-
-  std::vector<uint64_t> breakpoints_;
-};
-
 class TestProcess : public MockProcess {
  public:
   TestProcess(DebugAgent* debug_agent, zx_koid_t koid, std::string name,
-              std::shared_ptr<arch::ArchProvider> arch_provider,
               std::shared_ptr<ObjectProvider> object_provider)
-      : MockProcess(debug_agent, koid, std::move(name), std::move(arch_provider),
-                    std::move(object_provider)) {}
+      : MockProcess(debug_agent, koid, std::move(name), std::move(object_provider)) {}
 
   SoftwareBreakpoint* FindSoftwareBreakpoint(uint64_t address) const override {
     auto it = software_breakpoints_.find(address);
@@ -94,16 +57,14 @@ class TestProcess : public MockProcess {
         std::make_unique<MockSoftwareBreakpoint>(breakpoint, this, address);
   }
 
-  void AppendHardwareBreakpoint(Breakpoint* breakpoint, uint64_t address,
-                                std::shared_ptr<arch::ArchProvider> arch_provider) {
-    hardware_breakpoints_[address] = std::make_unique<MockHardwareBreakpoint>(
-        breakpoint, this, address, std::move(arch_provider));
+  void AppendHardwareBreakpoint(Breakpoint* breakpoint, uint64_t address) {
+    hardware_breakpoints_[address] =
+        std::make_unique<MockHardwareBreakpoint>(breakpoint, this, address);
   }
 
-  void AppendWatchpoint(Breakpoint* breakpoint, debug_ipc::AddressRange range,
-                        std::shared_ptr<arch::ArchProvider> arch_provider) {
-    watchpoints_[range] = std::make_unique<Watchpoint>(
-        debug_ipc::BreakpointType::kWrite, breakpoint, this, std::move(arch_provider), range);
+  void AppendWatchpoint(Breakpoint* breakpoint, debug_ipc::AddressRange range) {
+    watchpoints_[range] =
+        std::make_unique<Watchpoint>(debug_ipc::BreakpointType::kWrite, breakpoint, this, range);
   }
 
  private:
@@ -138,7 +99,6 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
 // Helpers -----------------------------------------------------------------------------------------
 
 struct TestContext {
-  std::shared_ptr<MockBreakpointArchProvider> arch_provider;
   std::shared_ptr<LimboProvider> limbo_provider;
   std::shared_ptr<MockObjectProvider> object_provider;
 
@@ -150,13 +110,11 @@ TestContext CreateTestContext() {
   TestContext context;
 
   // Mock the system.
-  context.arch_provider = std::make_shared<MockBreakpointArchProvider>();
   context.limbo_provider = std::make_shared<LimboProvider>(nullptr);
   context.object_provider = CreateDefaultMockObjectProvider();
 
   // Create the debug agent.
   SystemProviders providers;
-  providers.arch_provider = context.arch_provider;
   providers.limbo_provider = context.limbo_provider;
   providers.object_provider = context.object_provider;
   context.debug_agent = std::make_unique<DebugAgent>(
@@ -211,7 +169,7 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   auto [proc_object, thread_object] =
       GetProcessThread(*context.object_provider, "job121-p2", "second-thread");
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
-                      context.arch_provider, context.object_provider);
+                      context.object_provider);
 
   auto owning_thread_handle = std::make_unique<MockThreadHandle>(thread_object->koid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
@@ -221,12 +179,10 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   create_info.process = &process;
   create_info.koid = thread_object->koid;
   create_info.handle = std::move(owning_thread_handle);
-  create_info.arch_provider = context.arch_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
-  context.arch_provider->set_exception_addr(kAddress);
 
   // The current thread address should agree with the exception.
   GeneralRegisters regs;
@@ -261,7 +217,7 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   auto [proc_object, thread_object] =
       GetProcessThread(*context.object_provider, "job121-p2", "second-thread");
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
-                      context.arch_provider, context.object_provider);
+                      context.object_provider);
 
   auto owning_thread_handle = std::make_unique<MockThreadHandle>(thread_object->koid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
@@ -271,16 +227,19 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   create_info.process = &process;
   create_info.koid = thread_object->koid;
   create_info.handle = std::move(owning_thread_handle);
-  create_info.arch_provider = context.arch_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
-  // Set the exception information the arch provider is going to return.
-  constexpr uint64_t kAddress = 0xdeadbeef;
-  context.arch_provider->set_exception_addr(kAddress);
+  // Set the exception information the arch provider is going to return. Some architectures like
+  // x64 will issue the exception on the following address, so we need to back-compute it.
+  constexpr uint64_t kBreakpointAddress = 0xdeadbeef;
+  const uint64_t kExceptionOffset =
+      kBreakpointAddress -
+      arch::BreakpointInstructionForSoftwareExceptionAddress(kBreakpointAddress);
+  const uint64_t kExceptionAddress = kBreakpointAddress + kExceptionOffset;
 
   // The current thread address should agree with the exception.
   GeneralRegisters regs;
-  regs.set_ip(kAddress);
+  regs.set_ip(kExceptionAddress);
   mock_thread_handle->SetGeneralRegisters(regs);
   mock_thread_handle->set_state(
       ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
@@ -313,11 +272,10 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   debug_ipc::BreakpointSettings settings = {};
   settings.id = kBreakpointId;
   settings.type = debug_ipc::BreakpointType::kSoftware;
-  settings.locations.push_back(CreateLocation(proc_object->koid, 0, kAddress));
+  settings.locations.push_back(CreateLocation(proc_object->koid, 0, kBreakpointAddress));
   breakpoint->SetSettings(settings);
 
-  process.AppendSofwareBreakpoint(breakpoint.get(), kAddress);
-  context.arch_provider->AppendBreakpoint(kAddress);
+  process.AppendSofwareBreakpoint(breakpoint.get(), kBreakpointAddress);
 
   // Throw the same breakpoint exception.
   thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
@@ -350,7 +308,7 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   auto [proc_object, thread_object] =
       GetProcessThread(*context.object_provider, "job121-p2", "second-thread");
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
-                      context.arch_provider, context.object_provider);
+                      context.object_provider);
 
   auto owning_thread_handle = std::make_unique<MockThreadHandle>(thread_object->koid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
@@ -360,12 +318,10 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   create_info.process = &process;
   create_info.koid = thread_object->koid;
   create_info.handle = std::move(owning_thread_handle);
-  create_info.arch_provider = context.arch_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
-  context.arch_provider->set_exception_addr(kAddress);
 
   // The current thread address should agree with the exception.
   GeneralRegisters regs;
@@ -384,7 +340,7 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   settings.locations.push_back(CreateLocation(proc_object->koid, 0, kAddress));
   breakpoint->SetSettings(settings);
 
-  process.AppendHardwareBreakpoint(breakpoint.get(), kAddress, context.arch_provider);
+  process.AppendHardwareBreakpoint(breakpoint.get(), kAddress);
 
   // Trigger the exception.
   thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
@@ -411,13 +367,15 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
 }
 
 TEST(DebuggedThreadBreakpoint, Watchpoint) {
+  constexpr uint64_t kWatchpointLength = 8;
+
   TestContext context = CreateTestContext();
 
   // Create a process from our mocked object hierarchy.
   auto [proc_object, thread_object] =
       GetProcessThread(*context.object_provider, "job121-p2", "second-thread");
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
-                      context.arch_provider, context.object_provider);
+                      context.object_provider);
 
   auto owning_thread_handle = std::make_unique<MockThreadHandle>(thread_object->koid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
@@ -427,7 +385,6 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   create_info.process = &process;
   create_info.koid = thread_object->koid;
   create_info.handle = std::move(owning_thread_handle);
-  create_info.arch_provider = context.arch_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Add a watchpoint.
@@ -442,18 +399,21 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   settings.locations.push_back(CreateLocation(proc_object->koid, 0, kRange));
   breakpoint.SetSettings(settings);
 
-  process.AppendWatchpoint(&breakpoint, kRange, context.arch_provider);
+  process.AppendWatchpoint(&breakpoint, kRange);
 
-  // Set the exception information the arch provider is going to return.
+  // Set the exception information in the debug registers to return. This should indicate the
+  // watchpoint that was set up, and that the watchpoing was triggered.
   const uint64_t kAddress = kRange.begin();
-  constexpr uint64_t kSlot = 0;
-  context.arch_provider->set_exception_addr(kAddress);
-  context.arch_provider->set_slot(kSlot);
+  DebugRegisters debug_regs;
+  auto set_result = debug_regs.SetWatchpoint(debug_ipc::BreakpointType::kWrite, kRange, 4);
+  ASSERT_TRUE(set_result);
+  debug_regs.SetForHitWatchpoint(set_result->slot);
 
   // The current thread address should agree with the exception.
   GeneralRegisters regs;
   regs.set_ip(kAddress);
   mock_thread_handle->SetGeneralRegisters(regs);
+  mock_thread_handle->SetDebugRegisters(debug_regs);
   mock_thread_handle->set_state(
       ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
@@ -467,7 +427,7 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
 
     EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kWatchpoint)
         << debug_ipc::ExceptionTypeToString(exception.type);
-    EXPECT_EQ(exception.hit_breakpoints.size(), 1u);
+    ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
     EXPECT_EQ(exception.hit_breakpoints[0].id, breakpoint.stats().id);
     EXPECT_EQ(breakpoint.stats().hit_count, 1u);
 

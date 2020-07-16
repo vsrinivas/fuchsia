@@ -7,11 +7,13 @@
 
 #include <lib/zx/thread.h>
 
+#include <optional>
 #include <vector>
 
 #include "src/developer/debug/debug_agent/arch_helpers.h"
 #include "src/developer/debug/debug_agent/debug_registers.h"
 #include "src/developer/debug/debug_agent/general_registers.h"
+#include "src/developer/debug/debug_agent/watchpoint_info.h"
 #include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
@@ -71,7 +73,7 @@ class ThreadHandle {
 
   // Reads and writes the debug thread registers.
   virtual std::optional<DebugRegisters> GetDebugRegisters() const = 0;
-  virtual void SetDebugRegisters(const DebugRegisters& regs) = 0;
+  virtual bool SetDebugRegisters(const DebugRegisters& regs) = 0;
 
   // Puts the thread in or out of single-step mode.
   virtual void SetSingleStep(bool single_step) = 0;
@@ -89,13 +91,13 @@ class ThreadHandle {
   // Hardware breakpoints --------------------------------------------------------------------------
 
   // Installs or uninstalls hardware breakpoints.
-  virtual zx_status_t InstallHWBreakpoint(uint64_t address) = 0;
-  virtual zx_status_t UninstallHWBreakpoint(uint64_t address) = 0;
+  virtual bool InstallHWBreakpoint(uint64_t address) = 0;
+  virtual bool UninstallHWBreakpoint(uint64_t address) = 0;
 
   // NOTE: AddressRange is what is used to differentiate watchpoints, not |type|.
-  virtual arch::WatchpointInstallationResult InstallWatchpoint(
-      debug_ipc::BreakpointType type, const debug_ipc::AddressRange& range) = 0;
-  virtual zx_status_t UninstallWatchpoint(const debug_ipc::AddressRange& range) = 0;
+  virtual std::optional<WatchpointInfo> InstallWatchpoint(debug_ipc::BreakpointType type,
+                                                          const debug_ipc::AddressRange& range) = 0;
+  virtual bool UninstallWatchpoint(const debug_ipc::AddressRange& range) = 0;
 };
 
 }  // namespace debug_agent

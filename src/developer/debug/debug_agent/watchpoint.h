@@ -12,6 +12,7 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
+#include "src/developer/debug/debug_agent/watchpoint_info.h"
 
 namespace debug_agent {
 
@@ -19,8 +20,7 @@ class Watchpoint : public ProcessBreakpoint {
  public:
   // |type| must be kRead, kReadWrite or kWrite.
   explicit Watchpoint(debug_ipc::BreakpointType type, Breakpoint* breakpoint,
-                      DebuggedProcess* process, std::shared_ptr<arch::ArchProvider> arch_provider,
-                      const debug_ipc::AddressRange& range);
+                      DebuggedProcess* process, const debug_ipc::AddressRange& range);
   ~Watchpoint();
 
   debug_ipc::BreakpointType Type() const override { return type_; }
@@ -38,14 +38,14 @@ class Watchpoint : public ProcessBreakpoint {
 
   // Getters.
 
-  const std::map<zx_koid_t, arch::WatchpointInstallationResult>& installed_threads() const {
+  const std::map<zx_koid_t, WatchpointInfo>& installed_threads() const {
     return installed_threads_;
   }
 
   const debug_ipc::AddressRange& range() const { return range_; }
 
  private:
-  zx_status_t Install(DebuggedThread* thread);
+  bool Install(DebuggedThread* thread);
 
   zx_status_t Uninstall(DebuggedThread* thread) override;
   zx_status_t Uninstall() override;
@@ -54,9 +54,7 @@ class Watchpoint : public ProcessBreakpoint {
 
   debug_ipc::AddressRange range_;
 
-  std::shared_ptr<arch::ArchProvider> arch_provider_;
-
-  std::map<zx_koid_t, arch::WatchpointInstallationResult> installed_threads_;
+  std::map<zx_koid_t, WatchpointInfo> installed_threads_;
   std::set<zx_koid_t> current_stepping_over_threads_;
 };
 

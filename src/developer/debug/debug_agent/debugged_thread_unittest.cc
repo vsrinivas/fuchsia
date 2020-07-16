@@ -67,11 +67,10 @@ void SetRegister(const Register& reg, std::vector<Register>* regs) {
 // Ref-counted Suspension --------------------------------------------------------------------------
 
 TEST(DebuggedThread, NormalSuspension) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t kProcessKoid = 0x8723456;
-  MockProcess process(nullptr, kProcessKoid, "", arch_provider, object_provider);
+  MockProcess process(nullptr, kProcessKoid, "", object_provider);
 
   // Create the event for coordination.
   zx::event event;
@@ -91,7 +90,6 @@ TEST(DebuggedThread, NormalSuspension) {
     // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
     // with that in a way that will make the DebuggedThread happy.
     create_info.handle = std::make_unique<ZirconThreadHandle>(std::move(current_thread));
-    create_info.arch_provider = arch_provider;
     debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
 
     // Let the test know it can continue.
@@ -136,11 +134,10 @@ TEST(DebuggedThread, NormalSuspension) {
 }
 
 TEST(DebuggedThread, RefCountedSuspension) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t kProcessKoid = 0x8723456;
-  MockProcess process(nullptr, kProcessKoid, "", arch_provider, object_provider);
+  MockProcess process(nullptr, kProcessKoid, "", object_provider);
 
   // Create the event for coordination.
   zx::event event;
@@ -160,7 +157,6 @@ TEST(DebuggedThread, RefCountedSuspension) {
     // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
     // with that in a way that will make the DebuggedThread happy.
     create_info.handle = std::make_unique<ZirconThreadHandle>(std::move(current_thread));
-    create_info.arch_provider = arch_provider;
     debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
 
     // Let the test know it can continue.

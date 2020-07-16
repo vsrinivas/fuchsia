@@ -85,10 +85,8 @@ class DebugAgentStreamBackend : public LocalStreamBackend {
 class DebugAgentMockProcess : public MockProcess {
  public:
   DebugAgentMockProcess(DebugAgent* debug_agent, zx_koid_t koid, std::string name,
-                        std::shared_ptr<ObjectProvider> object_provider,
-                        std::shared_ptr<arch::ArchProvider> arch_provider)
-      : MockProcess(debug_agent, koid, std::move(name), std::move(arch_provider),
-                    std::move(object_provider)) {}
+                        std::shared_ptr<ObjectProvider> object_provider)
+      : MockProcess(debug_agent, koid, std::move(name), std::move(object_provider)) {}
 
   ~DebugAgentMockProcess() = default;
 
@@ -219,12 +217,10 @@ struct TestContext {
 
   std::shared_ptr<TestObjectProvider> object_provider;
   std::shared_ptr<MockLimboProvider> limbo_provider;
-  std::shared_ptr<arch::ArchProvider> arch_provider;
 };
 
 SystemProviders ToSystemProviders(const TestContext& context) {
   SystemProviders providers;
-  providers.arch_provider = context.arch_provider;
   providers.limbo_provider = context.limbo_provider;
   providers.object_provider = context.object_provider;
 
@@ -233,7 +229,6 @@ SystemProviders ToSystemProviders(const TestContext& context) {
 
 std::unique_ptr<TestContext> CreateTestContext() {
   auto context = std::make_unique<TestContext>();
-  context->arch_provider = std::make_shared<arch::ArchProvider>();
   context->limbo_provider = std::make_shared<MockLimboProvider>();
   context->object_provider = std::make_unique<TestObjectProvider>();
   FillInMockObjectProvider(context->object_provider.get());
@@ -265,9 +260,8 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
   const std::string kProcessName1 = "process-1";
   constexpr uint64_t kProcess1ThreadKoid1 = 0x1;
 
-  auto process1 =
-      std::make_unique<MockProcess>(nullptr, kProcessKoid1, kProcessName1,
-                                    test_context->arch_provider, test_context->object_provider);
+  auto process1 = std::make_unique<MockProcess>(nullptr, kProcessKoid1, kProcessName1,
+                                                test_context->object_provider);
   process1->AddThread(kProcess1ThreadKoid1);
   debug_agent.InjectProcessForTest(std::move(process1));
 
@@ -286,9 +280,8 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
   constexpr uint64_t kProcess2ThreadKoid1 = 0x1;
   constexpr uint64_t kProcess2ThreadKoid2 = 0x2;
 
-  auto process2 =
-      std::make_unique<MockProcess>(nullptr, kProcessKoid2, kProcessName2,
-                                    test_context->arch_provider, test_context->object_provider);
+  auto process2 = std::make_unique<MockProcess>(nullptr, kProcessKoid2, kProcessName2,
+                                                test_context->object_provider);
   process2->AddThread(kProcess2ThreadKoid1);
   process2->AddThread(kProcess2ThreadKoid2);
   debug_agent.InjectProcessForTest(std::move(process2));
@@ -350,15 +343,13 @@ TEST_F(DebugAgentTests, OnProcessStatus) {
   constexpr uint64_t kProcessKoid1 = 0x1234;
   std::string kProcessName1 = "process-1";
   auto process1 = std::make_unique<DebugAgentMockProcess>(
-      &debug_agent, kProcessKoid1, kProcessName1, test_context->object_provider,
-      test_context->arch_provider);
+      &debug_agent, kProcessKoid1, kProcessName1, test_context->object_provider);
   debug_agent.InjectProcessForTest(std::move(process1));
 
   constexpr uint64_t kProcessKoid2 = 0x5678;
   std::string kProcessName2 = "process-2";
   auto process2 = std::make_unique<DebugAgentMockProcess>(
-      &debug_agent, kProcessKoid2, kProcessName2, test_context->object_provider,
-      test_context->arch_provider);
+      &debug_agent, kProcessKoid2, kProcessName2, test_context->object_provider);
   auto* process2_ptr = process2.get();
   debug_agent.InjectProcessForTest(std::move(process2));
 

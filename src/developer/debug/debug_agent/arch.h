@@ -17,7 +17,6 @@
 namespace debug_agent {
 
 class DebuggedThread;
-class DebugRegisters;
 class ThreadHandle;
 
 namespace arch {
@@ -29,6 +28,10 @@ namespace arch {
 // implementations of the the various primitives. Cross-platform code should use interfaces like
 // ThreadHandle for anything that might need mocking out.
 
+// Our canonical breakpoint instruction for the current architecture. This is what we'll write for
+// software breakpoints. Some platforms may have alternate encodings for software breakpoints, so to
+// check if something is a breakpoint instruction, use arch::IsBreakpointInstruction() rather than
+// checking for equality with this value.
 extern const BreakInstructionType kBreakInstruction;
 
 debug_ipc::Arch GetCurrentArch();
@@ -53,55 +56,23 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
 // thread's debug registers. If needed, the given thread will be used for that.
 debug_ipc::ExceptionType DecodeExceptionType(const zx::thread& thread, uint32_t exception_type);
 
-// Class in charge of abstracting the low-level functionalities of the platform.
-//
-// TODO(brettw) TRhis object is not currently used for any abstractions so we should be able to make
-// all functions standalone in the arch namespace.
-class ArchProvider {
- public:
-  ArchProvider() = default;
-  virtual ~ArchProvider() = default;
+// Converts an architecture-specific exception record to a cross-platform one.
+debug_ipc::ExceptionRecord FillExceptionRecord(const zx_exception_report_t& in);
 
-  // General Exceptions ----------------------------------------------------------------------------
+// Returns the address of the breakpoint instruction given the address of a software breakpoint
+// exception.
+uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
 
-  // Converts an architecture-specific exception record to a cross-platform one.
-  static debug_ipc::ExceptionRecord FillExceptionRecord(const zx_exception_report_t& in);
+// Returns the instruction following the one causing the given software exception.
+uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
 
-  // Software Exceptions ---------------------------------------------------------------------------
+// Returns true if the given opcode is a breakpoint instruction. This checked for equality with
+// kBreakInstruction and also checks other possible breakpoint encodings for the current platform.
+bool IsBreakpointInstruction(BreakInstructionType instruction);
 
-  // Returns the address of the breakpoint instruction given the address of
-  // a software breakpoint exception.
-  virtual uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
-
-  // Returns the instruction following the one causing the given software
-  // exception.
-  uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
-
-  uint64_t NextInstructionForWatchpointHit(uint64_t exception_addr);
-
-  // Address of the instruction that caused the watchpoint exception. Also returns the slot (which
-  // register triggered it).
-  //
-  // Returns {0, -1} on error or not found.
-  virtual std::pair<debug_ipc::AddressRange, int> InstructionForWatchpointHit(
-      const DebugRegisters& regs) const;
-
-  // Returns true if there is a breakpoint instruction at the given address.
-  // This doesn't just check equality of kBreakInstruction which is guaranteed
-  // to be used for our breakpoints, but also checks other encodings that may
-  // have been written into the program.
-  virtual bool IsBreakpointInstruction(zx::process& process, uint64_t address);
-
-  // Hardware Exceptions ---------------------------------------------------------------------------
-
-  // Returns the address of the instruction that hit the exception from the
-  // address reported by the exception.
-  uint64_t BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr);
-
- protected:
-  uint32_t hw_breakpoint_count_ = 0;
-  uint32_t watchpoint_count_ = 0;
-};
+// Returns the address of the instruction that hit the exception from the address reported by the
+// exception.
+uint64_t BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr);
 
 }  // namespace arch
 }  // namespace debug_agent

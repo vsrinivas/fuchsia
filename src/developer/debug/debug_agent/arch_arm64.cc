@@ -8,7 +8,6 @@
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
-#include "src/developer/debug/debug_agent/arch_arm64_helpers.h"
 #include "src/developer/debug/debug_agent/arch_helpers.h"
 #include "src/developer/debug/debug_agent/arch_types.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
@@ -224,6 +223,12 @@ class ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
 
 }  // namespace
 
+// "BRK 0" instruction.
+// - Low 5 bits = 0.
+// - High 11 bits = 11010100001
+// - In between 16 bits is the argument to the BRK instruction (in this case zero).
+const BreakInstructionType kBreakInstruction = 0xd4200000;
+
 ::debug_ipc::Arch GetCurrentArch() { return ::debug_ipc::Arch::kArm64; }
 
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
@@ -318,14 +323,7 @@ debug_ipc::ExceptionType DecodeExceptionType(const zx::thread& thread, uint32_t 
   return debug_ipc::DecodeException(exception_type, info);
 }
 
-// "BRK 0" instruction.
-// - Low 5 bits = 0.
-// - High 11 bits = 11010100001
-// - In between 16 bits is the argument to the BRK instruction (in this case
-//   zero).
-const BreakInstructionType kBreakInstruction = 0xd4200000;
-
-debug_ipc::ExceptionRecord ArchProvider::FillExceptionRecord(const zx_exception_report_t& in) {
+debug_ipc::ExceptionRecord FillExceptionRecord(const zx_exception_report_t& in) {
   debug_ipc::ExceptionRecord record;
 
   record.valid = true;
@@ -335,12 +333,12 @@ debug_ipc::ExceptionRecord ArchProvider::FillExceptionRecord(const zx_exception_
   return record;
 }
 
-uint64_t ArchProvider::BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
+uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
   // ARM reports the exception for the exception instruction itself.
   return exception_addr;
 }
 
-uint64_t ArchProvider::NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
+uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
   // For software exceptions, the exception address is the one that caused it,
   // so next one is just 4 bytes following.
   //
@@ -351,76 +349,14 @@ uint64_t ArchProvider::NextInstructionForSoftwareExceptionAddress(uint64_t excep
   return exception_addr + 4;
 }
 
-uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t) {
-  FX_NOTREACHED() << "Not implemented.";
-  return 0;
-}
-
-std::pair<debug_ipc::AddressRange, int> ArchProvider::InstructionForWatchpointHit(
-    const DebugRegisters& in_regs) const {
-  const zx_thread_state_debug_regs_t& debug_regs = in_regs.GetNativeRegisters();
-
-  DEBUG_LOG(ArchArm64) << "Got FAR: 0x" << std::hex << debug_regs.far;
-
-  // Get the closest watchpoint.
-  uint64_t min_distance = UINT64_MAX;
-  int closest_index = -1;
-  debug_ipc::AddressRange closest_range = {};
-  for (uint32_t i = 0; i < GetHardwareWatchpointCount(); i++) {
-    uint64_t dbgwcr = debug_regs.hw_wps[i].dbgwcr;
-    uint64_t dbgwvr = debug_regs.hw_wps[i].dbgwvr;  // The actual watchpoint address.
-
-    DEBUG_LOG(ArchArm64) << "DBGWCR " << i << ": 0x" << std::hex << dbgwcr;
-
-    if (!ARM64_DBGWCR_E_GET(dbgwcr))
-      continue;
-
-    uint32_t length = GetWatchpointLength(dbgwcr);
-    if (length == 0)
-      continue;
-
-    const debug_ipc::AddressRange wp_range = {dbgwvr, dbgwvr + length};
-    if (wp_range.InRange(debug_regs.far))
-      return {wp_range, i};
-
-    // Otherwise find the distance and then decide on the closest one.
-    uint64_t distance = UINT64_MAX;
-    if (debug_regs.far < wp_range.begin()) {
-      distance = wp_range.begin() - debug_regs.far;
-    } else if (debug_regs.far >= wp_range.end()) {
-      distance = debug_regs.far - wp_range.end();
-    } else {
-      FX_NOTREACHED() << "Invalid far/range combo. FAR: 0x" << std::hex << debug_regs.far
-                      << ", range: " << wp_range.begin() << ", " << wp_range.end();
-    }
-
-    if (distance < min_distance) {
-      min_distance = distance;
-      closest_index = i;
-      closest_range = wp_range;
-    }
-  }
-
-  return {closest_range, closest_index};
-}
-
-bool ArchProvider::IsBreakpointInstruction(zx::process& process, uint64_t address) {
-  BreakInstructionType data;
-  size_t actual_read = 0;
-  if (process.read_memory(address, &data, sizeof(BreakInstructionType), &actual_read) != ZX_OK ||
-      actual_read != sizeof(BreakInstructionType))
-    return false;
-
-  // The BRK instruction could have any number associated with it, even though
-  // we only write "BRK 0", so check for the low 5 and high 11 bytes as
-  // described above.
+bool IsBreakpointInstruction(BreakInstructionType instruction) {
+  // The BRK instruction could have any number associated with it, even though we only write "BRK
+  // 0", so check for the low 5 and high 11 bytes as described above.
   constexpr BreakInstructionType kMask = 0b11111111111000000000000000011111;
-  return (data & kMask) == kBreakInstruction;
+  return (instruction & kMask) == kBreakInstruction;
 }
 
-// HW Breakpoints --------------------------------------------------------------
-
-uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr) {
+uint64_t BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr) {
   // arm64 will return the address of the instruction *about* to be executed.
   return exception_addr;
 }

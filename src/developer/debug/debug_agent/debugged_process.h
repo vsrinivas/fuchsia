@@ -39,14 +39,13 @@ struct DebuggedProcessCreateInfo {
   // Constructor with only the required fields.
   DebuggedProcessCreateInfo(zx_koid_t koid, std::unique_ptr<ProcessHandle> handle);
   DebuggedProcessCreateInfo(zx_koid_t koid, std::unique_ptr<ProcessHandle> handle,
-                            std::shared_ptr<arch::ArchProvider>, std::shared_ptr<ObjectProvider>);
+                            std::shared_ptr<ObjectProvider>);
 
   // Required.
   zx_koid_t koid = 0;
   std::unique_ptr<ProcessHandle> handle;
 
   // Required.
-  std::shared_ptr<arch::ArchProvider> arch_provider;
   std::shared_ptr<ObjectProvider> object_provider;
 
   // Optional.
@@ -187,7 +186,6 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   bool from_limbo() const { return from_limbo_; }
 
  protected:
-  std::shared_ptr<arch::ArchProvider> arch_provider_;
   std::shared_ptr<ObjectProvider> object_provider_;
 
  private:

@@ -58,10 +58,9 @@ constexpr uint64_t kAddress = 0x1234;
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
-  MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
+  MockProcess process(nullptr, 0x1, "process", object_provider);
   MockThread* thread1 = process.AddThread(0x1001);
 
   MockProcessDelegate process_delegate;
@@ -73,7 +72,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   Breakpoint breakpoint1(&process_delegate);
   breakpoint1.SetSettings(settings);
 
-  HardwareBreakpoint hw_breakpoint(&breakpoint1, &process, kAddress, arch_provider);
+  HardwareBreakpoint hw_breakpoint(&breakpoint1, &process, kAddress);
   ASSERT_EQ(hw_breakpoint.breakpoints().size(), 1u);
 
   // Update should install one thread
@@ -207,12 +206,11 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
 }
 
 TEST(HardwareBreakpoint, StepSimple) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(nullptr, process_koid, process_name, arch_provider, object_provider);
+  MockProcess process(nullptr, process_koid, process_name, object_provider);
 
   MockProcessDelegate process_delegate;
   Breakpoint main_breakpoint(&process_delegate);
@@ -231,7 +229,7 @@ TEST(HardwareBreakpoint, StepSimple) {
   constexpr zx_koid_t kThread1Koid = 1;
   MockThread* mock_thread1 = process.AddThread(kThread1Koid);
 
-  HardwareBreakpoint bp(&main_breakpoint, &process, kAddress, arch_provider);
+  HardwareBreakpoint bp(&main_breakpoint, &process, kAddress);
   ASSERT_ZX_EQ(bp.Init(), ZX_OK);
 
   // Should've installed the breakpoint.
@@ -271,12 +269,11 @@ TEST(HardwareBreakpoint, StepSimple) {
 }
 
 TEST(HardwareBreakpoint, MultipleSteps) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(nullptr, process_koid, process_name, arch_provider, object_provider);
+  MockProcess process(nullptr, process_koid, process_name, object_provider);
 
   MockProcessDelegate process_delegate;
   Breakpoint main_breakpoint(&process_delegate);
@@ -299,7 +296,7 @@ TEST(HardwareBreakpoint, MultipleSteps) {
   MockThread* mock_thread2 = process.AddThread(kThread2Koid);
   MockThread* mock_thread3 = process.AddThread(kThread3Koid);
 
-  HardwareBreakpoint bp(&main_breakpoint, &process, kAddress, arch_provider);
+  HardwareBreakpoint bp(&main_breakpoint, &process, kAddress);
   ASSERT_ZX_EQ(bp.Init(), ZX_OK);
 
   // Should've installed the breakpoint.

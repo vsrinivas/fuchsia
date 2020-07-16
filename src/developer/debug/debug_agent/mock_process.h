@@ -19,7 +19,6 @@ class MockProcess : public DebuggedProcess {
   // |debug_agent| is optional and can be null. Be sure that your test doesn't use those resouces
   // though.
   MockProcess(DebugAgent* debug_agent, zx_koid_t koid, std::string name,
-              std::shared_ptr<arch::ArchProvider> arch_provider,
               std::shared_ptr<ObjectProvider> object_provider);
   ~MockProcess();
 

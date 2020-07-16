@@ -10,13 +10,12 @@
 
 namespace debug_agent {
 
-MockThread::MockThread(DebuggedProcess* process, zx_koid_t thread_koid,
-                       std::shared_ptr<arch::ArchProvider> arch_provider)
+MockThread::MockThread(DebuggedProcess* process, zx_koid_t thread_koid)
     : DebuggedThread(nullptr,
-                     DebuggedThread::CreateInfo{
-                         process, thread_koid, std::make_unique<MockThreadHandle>(thread_koid),
-                         ThreadCreationOption::kRunningKeepRunning,
-                         std::make_unique<MockThreadException>(), std::move(arch_provider)}) {}
+                     DebuggedThread::CreateInfo{process, thread_koid,
+                                                std::make_unique<MockThreadHandle>(thread_koid),
+                                                ThreadCreationOption::kRunningKeepRunning,
+                                                std::make_unique<MockThreadException>()}) {}
 
 MockThread::~MockThread() {}
 

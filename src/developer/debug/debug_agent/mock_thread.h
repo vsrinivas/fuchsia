@@ -12,8 +12,7 @@ namespace debug_agent {
 
 class MockThread : public DebuggedThread {
  public:
-  MockThread(DebuggedProcess* process, zx_koid_t thread_koid,
-             std::shared_ptr<arch::ArchProvider> arch_provider);
+  MockThread(DebuggedProcess* process, zx_koid_t thread_koid);
   ~MockThread();
 
   MockThreadHandle& mock_thread_handle() {

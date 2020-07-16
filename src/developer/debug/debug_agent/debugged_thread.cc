@@ -121,10 +121,7 @@ DebuggedThread::DebuggedThread(DebugAgent* debug_agent, CreateInfo&& create_info
       debug_agent_(debug_agent),
       process_(create_info.process),
       exception_handle_(std::move(create_info.exception)),
-      arch_provider_(std::move(create_info.arch_provider)),
       weak_factory_(this) {
-  FX_DCHECK(arch_provider_);
-
   switch (create_info.creation_option) {
     case ThreadCreationOption::kRunningKeepRunning:
       // do nothing
@@ -274,8 +271,7 @@ void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* except
 
 void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* exception,
                                               GeneralRegisters& regs) {
-  uint64_t breakpoint_address =
-      arch_provider_->BreakpointInstructionForHardwareExceptionAddress(regs.ip());
+  uint64_t breakpoint_address = arch::BreakpointInstructionForHardwareExceptionAddress(regs.ip());
   HardwareBreakpoint* found_bp = process_->FindHardwareBreakpoint(breakpoint_address);
   if (found_bp) {
     UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp,
@@ -300,22 +296,22 @@ void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
     return;
   }
 
-  auto [range, slot] = arch_provider_->InstructionForWatchpointHit(*debug_regs);
-  DEBUG_LOG(Thread) << "Found watchpoint hit at 0x" << std::hex << range.ToString() << " on slot "
-                    << std::dec << slot;
-
-  // If no process matches this watchpoint, we send the exception notification and let the client
-  // handle the exception.
-  if (slot == -1) {
+  std::optional<WatchpointInfo> hit = debug_regs->DecodeHitWatchpoint();
+  if (!hit) {
+    // When no watchpoint matches this watchpoint, send the exception notification and let the
+    // debugger frontend handle the exception.
     DEBUG_LOG(Thread) << "Could not find watchpoint.";
     SendExceptionNotification(exception, regs);
     return;
   }
 
+  DEBUG_LOG(Thread) << "Found watchpoint hit at 0x" << std::hex << hit->range.ToString()
+                    << " on slot " << std::dec << hit->slot;
+
   // Comparison is by the base of the address range.
-  Watchpoint* watchpoint = process_->FindWatchpoint(range);
+  Watchpoint* watchpoint = process_->FindWatchpoint(hit->range);
   if (!watchpoint) {
-    DEBUG_LOG(Thread) << "Could not find watchpoint for range " << range.ToString();
+    DEBUG_LOG(Thread) << "Could not find watchpoint for range " << hit->range.ToString();
     SendExceptionNotification(exception, regs);
     return;
   }
@@ -529,8 +525,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     GeneralRegisters& regs, std::vector<debug_ipc::BreakpointStats>& hit_breakpoints) {
   // Get the correct address where the CPU is after hitting a breakpoint
   // (this is architecture specific).
-  uint64_t breakpoint_address =
-      arch_provider_->BreakpointInstructionForSoftwareExceptionAddress(regs.ip());
+  uint64_t breakpoint_address = arch::BreakpointInstructionForSoftwareExceptionAddress(regs.ip());
 
   SoftwareBreakpoint* found_bp = process_->FindSoftwareBreakpoint(breakpoint_address);
   if (found_bp) {
@@ -554,11 +549,11 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     found_bp = nullptr;
   } else {
     // Hit a software breakpoint that doesn't correspond to any current breakpoint.
-    if (arch_provider_->IsBreakpointInstruction(process_->handle(), breakpoint_address)) {
+    if (IsBreakpointInstructionAtAddress(breakpoint_address)) {
       // The breakpoint is a hardcoded instruction in the program code. In this case we want to
       // continue from the following instruction since the breakpoint instruction will never go
       // away.
-      regs.set_ip(arch_provider_->NextInstructionForSoftwareExceptionAddress(regs.ip()));
+      regs.set_ip(arch::NextInstructionForSoftwareExceptionAddress(regs.ip()));
       thread_handle_->SetGeneralRegisters(regs);
 
       if (!process_->dl_debug_addr() && process_->RegisterDebugState()) {
@@ -615,6 +610,16 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
     if (stats.should_delete)
       process_->debug_agent()->RemoveBreakpoint(stats.id);
   }
+}
+
+bool DebuggedThread::IsBreakpointInstructionAtAddress(uint64_t address) const {
+  arch::BreakInstructionType instruction = 0;
+  size_t bytes_read = 0;
+  if (process_->process_handle().ReadMemory(address, &instruction, sizeof(instruction),
+                                            &bytes_read) != ZX_OK ||
+      bytes_read != sizeof(instruction))
+    return false;
+  return arch::IsBreakpointInstruction(instruction);
 }
 
 void DebuggedThread::ResumeForRunMode() {

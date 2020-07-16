@@ -65,10 +65,9 @@ bool ContainsKoids(const Watchpoint& watchpoint, const std::vector<zx_koid_t>& k
 const AddressRange kAddressRange = {0x1000, 0x2000};
 
 TEST(Watchpoint, SimpleInstallAndRemove) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
-  MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
+  MockProcess process(nullptr, 0x1, "process", object_provider);
   MockThread* thread1 = process.AddThread(0x1001);
 
   MockProcessDelegate process_delegate;
@@ -80,8 +79,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   Breakpoint breakpoint1(&process_delegate);
   breakpoint1.SetSettings(settings);
 
-  Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
-                        kAddressRange);
+  Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, kAddressRange);
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
   // Update should install one thread
@@ -213,10 +211,9 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
 }
 
 TEST(Watchpoint, InstalledRanges) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
-  MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
+  MockProcess process(nullptr, 0x1, "process", object_provider);
   MockThread* thread1 = process.AddThread(0x1001);
 
   MockProcessDelegate process_delegate;
@@ -228,8 +225,7 @@ TEST(Watchpoint, InstalledRanges) {
   Breakpoint breakpoint1(&process_delegate);
   breakpoint1.SetSettings(settings);
 
-  Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
-                        kAddressRange);
+  Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, kAddressRange);
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
   const debug_ipc::AddressRange kSubRange = {0x900, 0x2100};
@@ -256,17 +252,15 @@ TEST(Watchpoint, InstalledRanges) {
 
     auto it = installations.find(thread1->koid());
     ASSERT_NE(it, installations.end());
-    EXPECT_EQ(it->second.status, ZX_OK) << zx_status_get_string(it->second.status);
-    EXPECT_EQ(it->second.installed_range, kSubRange);
+    EXPECT_EQ(it->second.range, kSubRange);
     EXPECT_EQ(it->second.slot, kSlot);
   }
 }
 
 TEST(Watchpoint, MatchesException) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
-  MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
+  MockProcess process(nullptr, 0x1, "process", object_provider);
   MockThread* thread1 = process.AddThread(0x1001);
   MockThread* thread2 = process.AddThread(0x1002);
 
@@ -279,8 +273,7 @@ TEST(Watchpoint, MatchesException) {
   Breakpoint breakpoint1(&process_delegate);
   breakpoint1.SetSettings(settings);
 
-  Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
-                        kAddressRange);
+  Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, kAddressRange);
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
   const debug_ipc::AddressRange kSubRange = {0x900, 0x2100};
@@ -306,8 +299,7 @@ TEST(Watchpoint, MatchesException) {
 
     auto it = installations.find(thread1->koid());
     ASSERT_NE(it, installations.end());
-    EXPECT_EQ(it->second.status, ZX_OK) << zx_status_get_string(it->second.status);
-    EXPECT_EQ(it->second.installed_range, kSubRange);
+    EXPECT_EQ(it->second.range, kSubRange);
     EXPECT_EQ(it->second.slot, kSlot);
 
     // Only same slot and within range should work.
@@ -326,10 +318,9 @@ TEST(Watchpoint, MatchesException) {
 }
 
 TEST(Watchpoint, DifferentTypes) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
-  MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
+  MockProcess process(nullptr, 0x1, "process", object_provider);
   MockThread* thread1 = process.AddThread(0x1001);
 
   MockProcessDelegate process_delegate;
@@ -342,8 +333,7 @@ TEST(Watchpoint, DifferentTypes) {
     settings.type = debug_ipc::BreakpointType::kWrite;
     breakpoint1.SetSettings(settings);
 
-    Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
-                          kAddressRange);
+    Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, kAddressRange);
     ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
     ASSERT_EQ(watchpoint.Update(), ZX_OK);
@@ -362,7 +352,7 @@ TEST(Watchpoint, DifferentTypes) {
     breakpoint1.SetSettings(settings);
 
     Watchpoint watchpoint(debug_ipc::BreakpointType::kReadWrite, &breakpoint1, &process,
-                          arch_provider, kAddressRange);
+                          kAddressRange);
     ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
     ASSERT_EQ(watchpoint.Update(), ZX_OK);

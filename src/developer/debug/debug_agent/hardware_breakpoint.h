@@ -16,8 +16,7 @@ namespace debug_agent {
 
 class HardwareBreakpoint : public ProcessBreakpoint {
  public:
-  explicit HardwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process, uint64_t address,
-                              std::shared_ptr<arch::ArchProvider> arch_provider);
+  explicit HardwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process, uint64_t address);
   virtual ~HardwareBreakpoint();
 
   zx_status_t Update() override;
@@ -38,8 +37,6 @@ class HardwareBreakpoint : public ProcessBreakpoint {
 
   zx_status_t Uninstall(DebuggedThread* thread) override;
   zx_status_t Uninstall() override;
-
-  std::shared_ptr<arch::ArchProvider> arch_provider_;
 
   std::set<zx_koid_t> installed_threads_;
   std::set<zx_koid_t> current_stepping_over_threads_;

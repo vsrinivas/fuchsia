@@ -83,12 +83,13 @@ static_library("lib") {
       "arch_x64.cc",
       "arch_x64_helpers.cc",
       "arch_x64_helpers.h",
+      "debug_registers_x64.cc",
     ]
   } else if (current_cpu == "arm64") {
     sources += [
       "arch_arm64.cc",
       "arch_arm64_helpers.cc",
-      "arch_arm64_helpers.h",
+      "debug_registers_arm64.cc",
     ]
   } else {
     assert(false, "Un-supported CPU: ${current_cpu}")
@@ -209,12 +210,13 @@ executable("unit_tests") {
     sources += [
       "arch_x64_helpers_unittest.cc",
       "arch_x64_unittest.cc",
+      "debug_registers_x64_unittest.cc",
     ]
   } else if (current_cpu == "arm64") {
     sources += [
       "arch_arm64_helpers_unittest.cc",
-      "arch_arm64_helpers_unittest.h",
       "arch_arm64_unittest.cc",
+      "debug_registers_arm64_unittest.cc",
     ]
   } else {
     assert(false, "Un-supported CPU: ${current_cpu}")

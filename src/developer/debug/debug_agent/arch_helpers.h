@@ -7,6 +7,7 @@
 
 #include <string.h>
 #include <zircon/errors.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/types.h>
 
 #include "src/developer/debug/ipc/records.h"
@@ -20,6 +21,17 @@ struct Register;
 
 namespace debug_agent {
 namespace arch {
+
+// Given the current register value in |regs|, applies to it the new updated values for the
+// registers listed in |updates|.
+zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& updates,
+                                  zx_thread_state_general_regs_t* regs);
+zx_status_t WriteFloatingPointRegisters(const std::vector<debug_ipc::Register>& update,
+                                        zx_thread_state_fp_regs_t* regs);
+zx_status_t WriteVectorRegisters(const std::vector<debug_ipc::Register>& update,
+                                 zx_thread_state_vector_regs_t* regs);
+zx_status_t WriteDebugRegisters(const std::vector<debug_ipc::Register>& update,
+                                zx_thread_state_debug_regs_t* regs);
 
 // Writes the register data to the given output variable, checking that the register data is
 // the same size as the output.
@@ -46,24 +58,6 @@ zx_status_t WriteRegisterValue(const debug_ipc::Register& reg, RegType* dest) {
 //
 // If the range cannot be aligned (eg. unaligned 8 byte range), it will return a null option.
 std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange&);
-
-// If |status| != ZX_OK, all other fields are invalid.
-struct WatchpointInstallationResult {
-  WatchpointInstallationResult() = default;
-
-  // This is for setting errors.
-  explicit WatchpointInstallationResult(zx_status_t status) : status(status) {}
-  WatchpointInstallationResult(zx_status_t status, debug_ipc::AddressRange range, int slot)
-      : status(status), installed_range(range), slot(slot) {}
-
-  zx_status_t status = ZX_ERR_INVALID_ARGS;
-  debug_ipc::AddressRange installed_range = {};
-  int slot = -1;
-};
-
-WatchpointInstallationResult CreateResult(zx_status_t status,
-                                          debug_ipc::AddressRange installed_range = {},
-                                          int slot = -1);
 
 }  // namespace arch
 }  // namespace debug_agent

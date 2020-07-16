@@ -15,10 +15,6 @@
 
 namespace debug_agent {
 
-namespace arch {
-class ArchProvider;
-}
-
 class GeneralRegisters;
 class ProcessHandle;
 class ThreadHandle;

@@ -42,7 +42,6 @@ namespace debug_agent {
 
 SystemProviders SystemProviders::CreateDefaults(std::shared_ptr<sys::ServiceDirectory> services) {
   SystemProviders system_providers;
-  system_providers.arch_provider = std::make_shared<arch::ArchProvider>();
   system_providers.limbo_provider = std::make_shared<LimboProvider>(std::move(services));
   system_providers.object_provider = std::make_shared<ObjectProvider>();
 
@@ -87,11 +86,9 @@ DebugAgent::DebugAgent(std::unique_ptr<SystemInterface> system_interface,
                        std::shared_ptr<sys::ServiceDirectory> services, SystemProviders providers)
     : system_interface_(std::move(system_interface)),
       services_(services),
-      arch_provider_(std::move(providers.arch_provider)),
       limbo_provider_(std::move(providers.limbo_provider)),
       object_provider_(std::move(providers.object_provider)),
       weak_factory_(this) {
-  FX_DCHECK(arch_provider_);
   FX_DCHECK(limbo_provider_);
   FX_DCHECK(object_provider_);
 
@@ -674,7 +671,6 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
 
   DebuggedProcessCreateInfo create_info;
   create_info.koid = process_koid;
-  create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
   create_info.from_limbo = true;
   create_info.handle = std::move(exception.process);
@@ -720,7 +716,6 @@ zx_status_t DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t
   DebuggedProcessCreateInfo create_info = {};
   create_info.koid = process_koid;
   create_info.handle = std::move(process_handle);
-  create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
 
   DebuggedProcess* process = nullptr;
@@ -759,7 +754,6 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   create_info.handle = std::make_unique<ZirconProcessHandle>(std::move(process));
   create_info.out = launcher.ReleaseStdout();
   create_info.err = launcher.ReleaseStderr();
-  create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
 
   DebuggedProcess* new_process = nullptr;
@@ -898,7 +892,6 @@ void DebugAgent::OnProcessStart(const std::string& filter,
   create_info.handle = std::move(process_handle);
   create_info.out = std::move(handles.out);
   create_info.err = std::move(handles.err);
-  create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
 
   DebuggedProcess* new_process = nullptr;

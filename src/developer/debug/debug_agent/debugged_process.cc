@@ -83,18 +83,13 @@ DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid,
 
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(
     zx_koid_t process_koid, std::unique_ptr<ProcessHandle> handle,
-    std::shared_ptr<arch::ArchProvider> arch_provider,
     std::shared_ptr<ObjectProvider> object_provider)
-    : koid(process_koid),
-      handle(std::move(handle)),
-      arch_provider(std::move(arch_provider)),
-      object_provider(std::move(object_provider)) {}
+    : koid(process_koid), handle(std::move(handle)), object_provider(std::move(object_provider)) {}
 
 // DebuggedProcess ---------------------------------------------------------------------------------
 
 DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateInfo&& create_info)
-    : arch_provider_(std::move(create_info.arch_provider)),
-      object_provider_(std::move(create_info.object_provider)),
+    : object_provider_(std::move(create_info.object_provider)),
       debug_agent_(debug_agent),
       koid_(create_info.koid),
       process_handle_(std::move(create_info.handle)),
@@ -289,7 +284,6 @@ void DebuggedProcess::PopulateCurrentThreads() {
     create_info.koid = thread_koid;
     create_info.handle = std::move(thread);
     create_info.creation_option = ThreadCreationOption::kRunningKeepRunning;
-    create_info.arch_provider = arch_provider_;
 
     auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, std::move(create_info));
     threads_.emplace(thread_koid, std::move(new_thread));
@@ -459,8 +453,7 @@ zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
 
   auto it = watchpoints_.find(range);
   if (it == watchpoints_.end()) {
-    auto watchpoint =
-        std::make_unique<Watchpoint>(bp->settings().type, bp, this, arch_provider_, range);
+    auto watchpoint = std::make_unique<Watchpoint>(bp->settings().type, bp, this, range);
     if (zx_status_t status = watchpoint->Init(); status != ZX_OK)
       return status;
 
@@ -569,7 +562,6 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
   create_info.exception =
       std::make_unique<ZirconThreadException>(std::move(exception), exception_info);
   create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
-  create_info.arch_provider = arch_provider_;
 
   auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, std::move(create_info));
   auto added = threads_.emplace(exception_info.tid, std::move(new_thread));
@@ -780,7 +772,7 @@ void DebuggedProcess::UnregisterSoftwareBreakpoint(Breakpoint* bp, uint64_t addr
 zx_status_t DebuggedProcess::RegisterHardwareBreakpoint(Breakpoint* bp, uint64_t address) {
   auto found = hardware_breakpoints_.find(address);
   if (found == hardware_breakpoints_.end()) {
-    auto breakpoint = std::make_unique<HardwareBreakpoint>(bp, this, address, arch_provider_);
+    auto breakpoint = std::make_unique<HardwareBreakpoint>(bp, this, address);
     if (zx_status_t status = breakpoint->Init(); status != ZX_OK)
       return status;
 

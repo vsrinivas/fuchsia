@@ -57,9 +57,8 @@ class MockSoftwareBreakpoint : public SoftwareBreakpoint {
 class MockHardwareBreakpoint : public HardwareBreakpoint {
  public:
   explicit MockHardwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
-                                  uint64_t address,
-                                  std::shared_ptr<arch::ArchProvider> arch_provider)
-      : HardwareBreakpoint(breakpoint, process, address, std::move(arch_provider)) {}
+                                  uint64_t address)
+      : HardwareBreakpoint(breakpoint, process, address) {}
 
   debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kHardware; }
   bool Installed(zx_koid_t thread_koid) const override { return false; }

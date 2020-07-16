@@ -108,7 +108,10 @@ std::optional<DebugRegisters> MockThreadHandle::GetDebugRegisters() const {
   return debug_registers_;
 }
 
-void MockThreadHandle::SetDebugRegisters(const DebugRegisters& regs) { debug_registers_ = regs; }
+bool MockThreadHandle::SetDebugRegisters(const DebugRegisters& regs) {
+  debug_registers_ = regs;
+  return true;
+}
 
 void MockThreadHandle::SetSingleStep(bool single_step) {
   // Not implemented by this mock.
@@ -133,28 +136,27 @@ std::vector<debug_ipc::Register> MockThreadHandle::WriteRegisters(
   return regs;
 }
 
-zx_status_t MockThreadHandle::InstallHWBreakpoint(uint64_t address) {
+bool MockThreadHandle::InstallHWBreakpoint(uint64_t address) {
   bp_installs_[address]++;
-  return ZX_OK;
+  return true;
 }
 
-zx_status_t MockThreadHandle::UninstallHWBreakpoint(uint64_t address) {
+bool MockThreadHandle::UninstallHWBreakpoint(uint64_t address) {
   bp_uninstalls_[address]++;
-  return ZX_OK;
+  return true;
 }
 
-arch::WatchpointInstallationResult MockThreadHandle::InstallWatchpoint(
+std::optional<WatchpointInfo> MockThreadHandle::InstallWatchpoint(
     debug_ipc::BreakpointType type, const debug_ipc::AddressRange& range) {
   watchpoint_installs_.push_back(WatchpointInstallation{.type = type, .address_range = range});
 
   wp_installs_[range]++;
-  return arch::WatchpointInstallationResult(ZX_OK, watchpoint_range_to_return_,
-                                            watchpoint_slot_to_return_);
+  return WatchpointInfo(watchpoint_range_to_return_, watchpoint_slot_to_return_);
 }
 
-zx_status_t MockThreadHandle::UninstallWatchpoint(const debug_ipc::AddressRange& range) {
+bool MockThreadHandle::UninstallWatchpoint(const debug_ipc::AddressRange& range) {
   wp_uninstalls_[range]++;
-  return ZX_OK;
+  return true;
 }
 
 }  // namespace debug_agent

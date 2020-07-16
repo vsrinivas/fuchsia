@@ -12,8 +12,6 @@
 
 #if defined(__x86_64__)
 #include "src/developer/debug/debug_agent/arch_x64_helpers.h"
-#elif defined(__aarch64__)
-#include "src/developer/debug/debug_agent/arch_arm64_helpers.h"
 #endif
 
 namespace debug_agent {
@@ -90,7 +88,7 @@ debug_ipc::ExceptionRecord ZirconThreadHandle::GetExceptionRecord() const {
   zx_exception_report_t report = {};
   if (thread_.get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr,
                        nullptr) == ZX_OK)
-    return arch::ArchProvider::FillExceptionRecord(report);
+    return arch::FillExceptionRecord(report);
   return debug_ipc::ExceptionRecord();
 }
 
@@ -137,9 +135,9 @@ std::optional<DebugRegisters> ZirconThreadHandle::GetDebugRegisters() const {
   return std::nullopt;
 }
 
-void ZirconThreadHandle::SetDebugRegisters(const DebugRegisters& regs) {
-  thread_.write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs.GetNativeRegisters(),
-                      sizeof(zx_thread_state_debug_regs));
+bool ZirconThreadHandle::SetDebugRegisters(const DebugRegisters& regs) {
+  return thread_.write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs.GetNativeRegisters(),
+                             sizeof(zx_thread_state_debug_regs)) == ZX_OK;
 }
 
 void ZirconThreadHandle::SetSingleStep(bool single_step) {
@@ -191,90 +189,68 @@ std::vector<debug_ipc::Register> ZirconThreadHandle::WriteRegisters(
   return written;
 }
 
-zx_status_t ZirconThreadHandle::InstallHWBreakpoint(uint64_t address) {
-  zx_thread_state_debug_regs_t debug_regs;
-  if (zx_status_t status = ReadDebugRegisters(&debug_regs); status != ZX_OK)
-    return status;
+bool ZirconThreadHandle::InstallHWBreakpoint(uint64_t address) {
+  std::optional<DebugRegisters> regs = GetDebugRegisters();
+  if (!regs)
+    return false;
+  DEBUG_LOG(Thread) << "Before installing HW breakpoint:" << std::endl << regs->ToString();
 
-  DEBUG_LOG(Archx64) << "Before installing HW breakpoint: " << std::endl
-                     << arch::DebugRegistersToString(debug_regs);
+  if (!regs->SetHWBreakpoint(address))
+    return false;
 
-  if (zx_status_t status = arch::SetupHWBreakpoint(address, &debug_regs); status != ZX_OK)
-    return status;
-
-  DEBUG_LOG(Archx64) << "After installing HW breakpoint: " << std::endl
-                     << arch::DebugRegistersToString(debug_regs);
-
-  return WriteDebugRegisters(debug_regs);
+  DEBUG_LOG(Thread) << "After installing HW breakpoint: " << std::endl << regs->ToString();
+  return SetDebugRegisters(*regs);
 }
 
-zx_status_t ZirconThreadHandle::UninstallHWBreakpoint(uint64_t address) {
-  zx_thread_state_debug_regs_t debug_regs;
-  if (zx_status_t status = ReadDebugRegisters(&debug_regs); status != ZX_OK)
-    return status;
+bool ZirconThreadHandle::UninstallHWBreakpoint(uint64_t address) {
+  std::optional<DebugRegisters> regs = GetDebugRegisters();
+  if (!regs)
+    return false;
+  DEBUG_LOG(Thread) << "Before uninstalling HW breakpoint:" << std::endl << regs->ToString();
 
-  DEBUG_LOG(Archx64) << "Before uninstalling HW breakpoint: " << std::endl
-                     << arch::DebugRegistersToString(debug_regs);
+  if (!regs->RemoveHWBreakpoint(address))
+    return false;
 
-  if (zx_status_t status = arch::RemoveHWBreakpoint(address, &debug_regs); status != ZX_OK)
-    return status;
-
-  DEBUG_LOG(Archx64) << "After uninstalling HW breakpoint: " << std::endl
-                     << arch::DebugRegistersToString(debug_regs);
-
-  return WriteDebugRegisters(debug_regs);
+  DEBUG_LOG(Thread) << "After uninstalling HW breakpoint: " << std::endl << regs->ToString();
+  return SetDebugRegisters(*regs);
 }
 
-arch::WatchpointInstallationResult ZirconThreadHandle::InstallWatchpoint(
+std::optional<WatchpointInfo> ZirconThreadHandle::InstallWatchpoint(
     debug_ipc::BreakpointType type, const debug_ipc::AddressRange& range) {
   if (!debug_ipc::IsWatchpointType(type))
-    return arch::WatchpointInstallationResult(ZX_ERR_INVALID_ARGS);
+    return std::nullopt;
 
-  zx_thread_state_debug_regs_t debug_regs;
-  if (zx_status_t status = ReadDebugRegisters(&debug_regs); status != ZX_OK)
-    return arch::WatchpointInstallationResult(status);
+  std::optional<DebugRegisters> regs = GetDebugRegisters();
+  if (!regs)
+    return std::nullopt;
 
   DEBUG_LOG(Thread) << "Before installing watchpoint for range " << range.ToString() << std::endl
-                    << arch::DebugRegistersToString(debug_regs);
+                    << regs->ToString();
 
-  auto result = arch::SetupWatchpoint(&debug_regs, type, range, arch::GetHardwareWatchpointCount());
-  if (result.status != ZX_OK)
-    return arch::WatchpointInstallationResult(result.status);
+  auto result = regs->SetWatchpoint(type, range, arch::GetHardwareWatchpointCount());
+  if (!result)
+    return std::nullopt;
 
-  DEBUG_LOG(Thread) << "After installing watchpoint: " << std::endl
-                    << arch::DebugRegistersToString(debug_regs);
+  DEBUG_LOG(Thread) << "After installing watchpoint: " << std::endl << regs->ToString();
 
-  if (zx_status_t status = WriteDebugRegisters(debug_regs); status != ZX_OK)
-    return arch::WatchpointInstallationResult(status);
+  if (!SetDebugRegisters(*regs))
+    return std::nullopt;
   return result;
 }
 
-zx_status_t ZirconThreadHandle::UninstallWatchpoint(const debug_ipc::AddressRange& range) {
-  zx_thread_state_debug_regs_t debug_regs;
-  if (zx_status_t status = ReadDebugRegisters(&debug_regs); status != ZX_OK)
-    return status;
+bool ZirconThreadHandle::UninstallWatchpoint(const debug_ipc::AddressRange& range) {
+  std::optional<DebugRegisters> regs = GetDebugRegisters();
+  if (!regs)
+    return false;
 
-  DEBUG_LOG(Thread) << "Before uninstalling watchpoint: " << std::endl
-                    << arch::DebugRegistersToString(debug_regs);
+  DEBUG_LOG(Thread) << "Before uninstalling watchpoint: " << std::endl << regs->ToString();
 
   // x64 doesn't support ranges.
-  if (zx_status_t status =
-          arch::RemoveWatchpoint(&debug_regs, range, arch::GetHardwareWatchpointCount());
-      status != ZX_OK)
-    return status;
+  if (!regs->RemoveWatchpoint(range, arch::GetHardwareWatchpointCount()))
+    return false;
 
-  DEBUG_LOG(Thread) << "After uninstalling watchpoint: " << std::endl
-                    << arch::DebugRegistersToString(debug_regs);
-
-  return WriteDebugRegisters(debug_regs);
-}
-
-zx_status_t ZirconThreadHandle::ReadDebugRegisters(zx_thread_state_debug_regs* regs) const {
-  return thread_.read_state(ZX_THREAD_STATE_DEBUG_REGS, regs, sizeof(zx_thread_state_debug_regs));
-}
-
-zx_status_t ZirconThreadHandle::WriteDebugRegisters(const zx_thread_state_debug_regs& regs) {
-  return thread_.write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(zx_thread_state_debug_regs));
+  DEBUG_LOG(Thread) << "After uninstalling watchpoint: " << std::endl << regs->ToString();
+  return SetDebugRegisters(*regs);
 }
 
 }  // namespace debug_agent

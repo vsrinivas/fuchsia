@@ -94,11 +94,8 @@ std::set<zx_koid_t> HWThreadsTargeted(const ProcessBreakpoint& pb) {
 }  // namespace
 
 HardwareBreakpoint::HardwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
-                                       uint64_t address,
-                                       std::shared_ptr<arch::ArchProvider> arch_provider)
-    : ProcessBreakpoint(breakpoint, process, address), arch_provider_(std::move(arch_provider)) {
-  FX_DCHECK(arch_provider_);
-}
+                                       uint64_t address)
+    : ProcessBreakpoint(breakpoint, process, address) {}
 
 HardwareBreakpoint::~HardwareBreakpoint() { Uninstall(); }
 
@@ -196,10 +193,9 @@ zx_status_t HardwareBreakpoint::Install(DebuggedThread* thread) {
   auto suspend_token = thread->RefCountedSuspend(true);
 
   // Do the actual installation.
-  zx_status_t status = thread->thread_handle().InstallHWBreakpoint(address());
-  if (status != ZX_OK) {
-    Warn(FROM_HERE, WarningType::kInstall, thread->koid(), address(), status);
-    return status;
+  if (!thread->thread_handle().InstallHWBreakpoint(address())) {
+    Warn(FROM_HERE, WarningType::kInstall, thread->koid(), address(), ZX_ERR_INTERNAL);
+    return ZX_ERR_INTERNAL;
   }
 
   return ZX_OK;
@@ -231,10 +227,9 @@ zx_status_t HardwareBreakpoint::Uninstall(DebuggedThread* thread) {
                         << std::hex << address();
 
   auto suspend_token = thread->RefCountedSuspend(true);
-  zx_status_t status = thread->thread_handle().UninstallHWBreakpoint(address());
-  if (status != ZX_OK) {
-    Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address(), status);
-    return status;
+  if (!thread->thread_handle().UninstallHWBreakpoint(address())) {
+    Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address(), ZX_ERR_INTERNAL);
+    return ZX_ERR_INTERNAL;
   }
 
   return ZX_OK;

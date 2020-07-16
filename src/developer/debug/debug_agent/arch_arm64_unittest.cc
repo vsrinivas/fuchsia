@@ -5,7 +5,6 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
-#include "src/developer/debug/debug_agent/arch_arm64_helpers_unittest.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 
 namespace debug_agent {
