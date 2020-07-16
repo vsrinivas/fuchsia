@@ -98,7 +98,11 @@ void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding
   // Annotation views currently have the same bounding boxes as their parent views, so in order
   // to ensure that annotations appear superimposed on parent view content, the elevation should
   // be set to the top of the parent view.
-  const auto annotation_elevation = bounding_box.max.z;
+
+  // Add some offset to ensure these rectangles fall into the View bounding box
+  // so that it's drawable.
+  constexpr float kEpsilon = 0.001;
+  const auto annotation_elevation = parent_view_properties_.bounding_box.min.z * (1 - kEpsilon);
 
   // Used to translate edge rectangles.
   const auto bounding_box_center_x = (bounding_box.max.x + bounding_box.min.x) / 2.f;
@@ -190,6 +194,8 @@ void AnnotationView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> event
 
 void AnnotationView::HandleGfxEvent(const fuchsia::ui::gfx::Event& event) {
   if (event.Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
+    // Update parent View properties.
+    parent_view_properties_ = event.view_properties_changed().properties;
     view_properties_changed_callback_();
   } else if (event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene) {
     view_detached_callback_();

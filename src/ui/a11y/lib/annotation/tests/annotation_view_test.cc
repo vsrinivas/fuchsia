@@ -23,7 +23,7 @@ namespace a11y {
 namespace {
 
 static constexpr fuchsia::ui::gfx::ViewProperties kViewProperties = {
-    .bounding_box = {.min = {.x = 10, .y = 5}, .max = {.x = 100, .y = 50}}};
+    .bounding_box = {.min = {.x = 10, .y = 5, .z = -100}, .max = {.x = 100, .y = 50, .z = 0}}};
 
 struct ViewAttributes {
   uint32_t id;
@@ -486,27 +486,32 @@ TEST_F(AnnotationViewTest, TestDrawHighlight) {
   // Resource IDs 1-7 are used for the resources created in InitializeView(), so the next available
   // id is 8. Since resource ids are generated incrementally, we expect the four edge rectangles to
   // have ids 8-11.
+
+  // Before we set up the parent View bounding box, the z value of default
+  // bounding box is 0.
+  constexpr float kHighlightElevation = 0.0f;
+
   ExpectHighlightEdge(
       8u, AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
       bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.min.x,
-      (bounding_box.min.y + bounding_box.max.y) / 2, bounding_box.max.z);
+      (bounding_box.min.y + bounding_box.max.y) / 2, kHighlightElevation);
 
   ExpectHighlightEdge(
       9u, AnnotationView::kHighlightRightEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
       bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.max.x,
-      (bounding_box.min.y + bounding_box.max.y) / 2.f, bounding_box.max.z);
+      (bounding_box.min.y + bounding_box.max.y) / 2.f, kHighlightElevation);
 
   ExpectHighlightEdge(10u, AnnotationView::kHighlightTopEdgeNodeId,
                       bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
                       AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.max.y,
-                      bounding_box.max.z);
+                      kHighlightElevation);
 
   ExpectHighlightEdge(11u, AnnotationView::kHighlightBottomEdgeNodeId,
                       bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
                       AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.min.y,
-                      bounding_box.max.z);
+                      kHighlightElevation);
 
   // Verify that top-level content node (used to attach/detach annotations from view) was attached
   // to view.
@@ -565,6 +570,28 @@ TEST_F(AnnotationViewTest, TestViewPropertiesChangedEvent) {
 
   mock_session_->SendViewPropertiesChangedEvent();
   RunLoopUntilIdle();
+
+  EXPECT_TRUE(properties_changed_);
+}
+
+TEST_F(AnnotationViewTest, TestViewPropertiesChangedElevation) {
+  mock_session_->SendViewPropertiesChangedEvent();
+  RunLoopUntilIdle();
+
+  fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
+                                                .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0});
+  RunLoopUntilIdle();
+
+  // Same as the value defined in annotation_view.cc.
+  const float kEpsilon = 0.999f;
+  const float kExpectedElevation = kViewProperties.bounding_box.min.z * kEpsilon;
+
+  const auto& rectangles = mock_session_->rectangles();
+  EXPECT_FLOAT_EQ(rectangles.at(8u).elevation, kExpectedElevation);
+  EXPECT_FLOAT_EQ(rectangles.at(9u).elevation, kExpectedElevation);
+  EXPECT_FLOAT_EQ(rectangles.at(10u).elevation, kExpectedElevation);
+  EXPECT_FLOAT_EQ(rectangles.at(11u).elevation, kExpectedElevation);
 
   EXPECT_TRUE(properties_changed_);
 }

@@ -128,6 +128,9 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener, public Annot
   // Callback invoked when client view is detached from scene graph.
   ViewDetachedCallback view_detached_callback_;
 
+  // The properties (bounding box etc.) of its "parent" View.
+  fuchsia::ui::gfx::ViewProperties parent_view_properties_;
+
   // Client view koid.
   zx_koid_t client_view_koid_;
 
