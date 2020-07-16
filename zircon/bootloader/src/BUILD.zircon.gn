@@ -6,6 +6,7 @@ assert(toolchain.environment == "efi")
 
 source_set("src") {
   sources = [
+    "abr.c",
     "cmdline.c",
     "device_id.c",
     "diskio.c",
@@ -21,7 +22,9 @@ source_set("src") {
   include_dirs = [ "." ]
   deps = [
     "$zx/kernel/lib/efi",
+    "$zx/system/ulib/abr",
     "$zx/system/ulib/gfx-font-data",
     "$zx/system/ulib/tftp",
+    "$zx/third_party/ulib/cksum",
   ]
 }
