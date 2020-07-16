@@ -240,7 +240,7 @@ bool suspended_in_syscall_reg_access_thread_func_helper(
   END_HELPER;
 }
 
-int suspended_in_syscall_reg_access_thread_func(void* arg_) {
+void* suspended_in_syscall_reg_access_thread_func(void* arg_) {
   auto arg = reinterpret_cast<suspended_in_syscall_reg_access_arg_t*>(arg_);
 
   uint64_t sp;
@@ -259,10 +259,10 @@ int suspended_in_syscall_reg_access_thread_func(void* arg_) {
   arg->sp.store(sp);
 
   if (!suspended_in_syscall_reg_access_thread_func_helper(arg)) {
-    return -1;
+    return reinterpret_cast<void*>((uintptr_t)-1);
   }
 
-  return 0;
+  return nullptr;
 }
 
 // Channel calls are a little special in that they are a two part syscall,
@@ -297,14 +297,21 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
     arg.syscall_handle = syscall_handle;
   }
 
-  thrd_t thread_c11;
-  int ret = thrd_create_with_name(&thread_c11, suspended_in_syscall_reg_access_thread_func, &arg,
-                                  "reg-access thread");
-  ASSERT_EQ(ret, thrd_success);
+  // We use pthread attrs to get the size of the created stack.
+  pthread_attr_t pthread_attrs;
+  int ret = pthread_attr_init(&pthread_attrs);
+  ASSERT_EQ(ret, 0);
+
+  pthread_t thread_pthread;
+  ret = pthread_create(&thread_pthread, &pthread_attrs, suspended_in_syscall_reg_access_thread_func,
+                       &arg);
+  ASSERT_EQ(ret, 0);
+
   // Get our own copy of the thread handle to avoid lifetime issues of
   // thrd's copy.
   zx_handle_t thread = ZX_HANDLE_INVALID;
-  ASSERT_EQ(zx_handle_duplicate(thrd_get_zx_handle(thread_c11), ZX_RIGHT_SAME_RIGHTS, &thread),
+  ASSERT_EQ(zx_handle_duplicate(thrd_get_zx_handle(static_cast<thrd_t>(thread_pthread)),
+                                ZX_RIGHT_SAME_RIGHTS, &thread),
             ZX_OK);
 
   // Busy-wait until thread is blocked inside the syscall.
@@ -343,10 +350,23 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
 
   // The stack pointer is somewhere within the syscall.
   // Just verify the value we have is within range.
-  uint64_t sp_value = extract_sp_reg(&regs);
+
+  // First, get the size of the stack. We'll use this to compute an
+  // approximate bound on the stack.
+  size_t stack_size;
+  ret = pthread_attr_getstacksize(&pthread_attrs, &stack_size);
+  ASSERT_EQ(ret, 0);
+
+  // The current value of the stack pointer, while in the vdso.
+  uint64_t vdso_sp = extract_sp_reg(&regs);
+  // The originally snapshotted value of the stack pointer.
   uint64_t arg_sp = arg.sp.load();
-  EXPECT_LE(sp_value, arg_sp);
-  EXPECT_GE(sp_value + 1024, arg_sp);
+  // Stacks grow down, so the pointer while in the vdso should be
+  // below the pointer originally snapshotted.
+  EXPECT_LE(vdso_sp, arg_sp);
+
+  // Check that both vdso_sp is within |stack_size| of the arg_sp value.
+  EXPECT_LT(arg_sp, vdso_sp + stack_size);
 
   // wake the thread
   if (do_channel_call) {
@@ -375,9 +395,9 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
   }
 
   ASSERT_EQ(zx_handle_close(token), ZX_OK);
-  int thread_result = -1;
-  EXPECT_EQ(thrd_join(thread_c11, &thread_result), thrd_success);
-  EXPECT_EQ(thread_result, 0);
+  void* thread_result;
+  EXPECT_EQ(pthread_join(thread_pthread, &thread_result), 0);
+  EXPECT_NULL(thread_result);
   zx_handle_close(thread);
 
   zx_handle_close(port);
