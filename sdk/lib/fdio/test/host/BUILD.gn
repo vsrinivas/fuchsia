@@ -26,6 +26,7 @@ group("host") {
 test("fdio_hosttests") {
   sources = [
     "../fdio_eventfd.cc",
+    "../fdio_poll.cc",
     "../fdio_timerfd.cc",
   ]
   deps = [

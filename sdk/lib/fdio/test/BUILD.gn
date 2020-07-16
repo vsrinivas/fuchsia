@@ -51,6 +51,7 @@ test("fdio") {
     "fdio_null_namespace.cc",
     "fdio_open_max.c",
     "fdio_path_canonicalize.c",
+    "fdio_poll.cc",
     "fdio_root.c",
     "fdio_socket.cc",
     "fdio_socketpair.cc",

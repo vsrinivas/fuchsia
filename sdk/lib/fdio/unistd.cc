@@ -1977,7 +1977,7 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
   }
 
   int nfds = 0;
-  if (r == ZX_OK && nvalid > 0) {
+  if (r == ZX_OK) {
     zx_time_t tmo = ZX_TIME_INFINITE;
     // Check for overflows on every operation.
     if (timeout_ts && timeout_ts->tv_sec >= 0 && timeout_ts->tv_nsec >= 0 &&
