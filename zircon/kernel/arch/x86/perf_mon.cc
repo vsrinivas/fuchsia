@@ -49,6 +49,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/align.h>
+#include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/stats.h>
@@ -1467,7 +1468,7 @@ zx_status_t arch_perfmon_start() {
 }
 
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
-static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) {
+static void x86_perfmon_write_last_records(PerfmonState* state, cpu_num_t cpu) {
   PerfmonCpuData* data = &state->cpu_data[cpu];
   perfmon::RecordHeader* next = data->buffer_next;
 
@@ -1535,7 +1536,7 @@ static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) {
   data->buffer_next = next;
 }
 
-static void x86_perfmon_finalize_buffer(PerfmonState* state, uint32_t cpu) {
+static void x86_perfmon_finalize_buffer(PerfmonState* state, cpu_num_t cpu) {
   LTRACEF("Collecting last data for cpu %u\n", cpu);
 
   PerfmonCpuData* data = &state->cpu_data[cpu];
@@ -1702,7 +1703,7 @@ static perfmon::RecordHeader* x86_perfmon_write_last_branches(PerfmonState* stat
 // Returns true if success, false if buffer is full.
 
 static bool pmi_interrupt_handler(x86_iframe_t* frame, PerfmonState* state) {
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
   auto data = &state->cpu_data[cpu];
 
   // On x86 zx_ticks_get uses rdtsc.

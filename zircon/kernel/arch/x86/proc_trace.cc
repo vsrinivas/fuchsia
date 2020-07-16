@@ -45,6 +45,7 @@
 #include <arch/x86/mmu.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
+#include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
@@ -248,7 +249,7 @@ static void x86_ipt_start_cpu_task(void* raw_context) TA_REQ(IptLock::Get()) {
   DEBUG_ASSERT(active && raw_context);
 
   ipt_trace_state_t* context = reinterpret_cast<ipt_trace_state_t*>(raw_context);
-  uint32_t cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
   ipt_trace_state_t* state = &context[cpu];
 
   DEBUG_ASSERT(!(read_msr(IA32_RTIT_CTL) & IPT_CTL_TRACE_EN_MASK));
@@ -315,7 +316,7 @@ static void x86_ipt_stop_cpu_task(void* raw_context) TA_REQ(IptLock::Get()) {
   DEBUG_ASSERT(raw_context);
 
   ipt_trace_state_t* context = reinterpret_cast<ipt_trace_state_t*>(raw_context);
-  uint32_t cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
   ipt_trace_state_t* state = &context[cpu];
 
   // Disable the trace

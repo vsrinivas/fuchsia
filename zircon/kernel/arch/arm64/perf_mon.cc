@@ -32,6 +32,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/align.h>
+#include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/stats.h>
@@ -828,7 +829,7 @@ void arch_perfmon_fini() {
 // Returns true if success, false if buffer is full.
 
 static bool pmi_interrupt_handler(const iframe_t* frame, PerfmonState* state) {
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
   auto data = &state->cpu_data[cpu];
 
   zx_ticks_t now = current_ticks();

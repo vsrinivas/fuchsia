@@ -11,6 +11,7 @@
 
 #include <arch/arm64.h>
 #include <fbl/algorithm.h>
+#include <kernel/cpu.h>
 #include <ktl/iterator.h>
 
 // saved feature bitmap
@@ -71,7 +72,7 @@ void arm64_get_cache_info(arm64_cache_info_t* info) {
   }
 }
 
-void arm64_dump_cache_info(uint32_t cpu) {
+void arm64_dump_cache_info(cpu_num_t cpu) {
   arm64_cache_info_t* info = &(cache_info[cpu]);
   printf("==== ARM64 CACHE INFO CORE %u ====\n", cpu);
   printf("Inner Boundary = L%u\n", info->inner_boundary);

@@ -9,6 +9,7 @@
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
 #include <fbl/alloc_checker.h>
+#include <kernel/cpu.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <ktl/array.h>
@@ -20,7 +21,7 @@
 struct event_signal_from_dpc_context {
   Dpc dpc;
   Event event;
-  ktl::atomic<uint> expected_cpu;
+  ktl::atomic<cpu_num_t> expected_cpu;
   ktl::atomic<bool> dpc_started;
 };
 

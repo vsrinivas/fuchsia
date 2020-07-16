@@ -12,6 +12,7 @@
 #include <zircon/features.h>
 
 #include <arch/arm64.h>
+#include <kernel/cpu.h>
 
 __BEGIN_CDECLS
 
@@ -62,7 +63,7 @@ void arm64_feature_debug(bool full);
 bool arm64_feature_current_is_first_in_cluster();
 
 void arm64_get_cache_info(arm64_cache_info_t* info);
-void arm64_dump_cache_info(uint32_t cpu);
+void arm64_dump_cache_info(cpu_num_t cpu);
 
 __END_CDECLS
 

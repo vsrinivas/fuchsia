@@ -17,6 +17,7 @@
 #include <zircon/types.h>
 
 #include <arch/arm64/iframe.h>
+#include <kernel/cpu.h>
 
 __BEGIN_CDECLS
 
@@ -101,12 +102,12 @@ void arm_reset(void);
 /*
  * Creates a stack and sets the stack pointer for the specified secondary CPU.
  */
-zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid);
+zx_status_t arm64_create_secondary_stack(cpu_num_t cpu_num, uint64_t mpid);
 
 /*
  * Frees a stack created by |arm64_create_secondary_stack|.
  */
-zx_status_t arm64_free_secondary_stack(uint cpu_num);
+zx_status_t arm64_free_secondary_stack(cpu_num_t cpu_num);
 
 __END_CDECLS
 

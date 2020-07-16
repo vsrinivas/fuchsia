@@ -9,6 +9,7 @@
 #include <dev/interrupt.h>
 #include <fbl/auto_lock.h>
 #include <hypervisor/cpu.h>
+#include <kernel/cpu.h>
 #include <kernel/mutex.h>
 #include <ktl/move.h>
 #include <vm/physmap.h>
@@ -54,7 +55,7 @@ zx_status_t El2Stack::Alloc() { return page_.Alloc(0); }
 
 zx_paddr_t El2Stack::Top() const { return page_.PhysicalAddress() + PAGE_SIZE; }
 
-zx_status_t El2CpuState::OnTask(void* context, uint cpu_num) {
+zx_status_t El2CpuState::OnTask(void* context, cpu_num_t cpu_num) {
   auto cpu_state = static_cast<El2CpuState*>(context);
   El2TranslationTable& table = cpu_state->table_;
   El2Stack& stack = cpu_state->stacks_[cpu_num];

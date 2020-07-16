@@ -597,7 +597,7 @@ struct Thread {
   Thread();
   ~Thread();
 
-  static Thread* CreateIdleThread(uint cpu_num);
+  static Thread* CreateIdleThread(cpu_num_t cpu_num);
   // Creates a thread with |name| that will execute |entry| at |priority|. |arg|
   // will be passed to |entry| when executed, the return value of |entry| will be
   // passed to Exit().

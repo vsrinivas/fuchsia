@@ -31,6 +31,7 @@
 #include <arch/x86/mmu.h>
 #include <dev/hw_rng.h>
 #include <dev/interrupt.h>
+#include <kernel/cpu.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
 
@@ -464,14 +465,14 @@ void x86_force_halt_all_but_local_and_bsp(void) {
   }
 }
 
-zx_status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
+zx_status_t arch_mp_prep_cpu_unplug(cpu_num_t cpu_id) {
   if (cpu_id == 0 || cpu_id >= x86_num_cpus) {
     return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
 }
 
-zx_status_t arch_mp_cpu_unplug(uint cpu_id) {
+zx_status_t arch_mp_cpu_unplug(cpu_num_t cpu_id) {
   /* we do not allow unplugging the bootstrap processor */
   if (cpu_id == 0 || cpu_id >= x86_num_cpus) {
     return ZX_ERR_INVALID_ARGS;
@@ -488,7 +489,7 @@ zx_status_t arch_mp_cpu_unplug(uint cpu_id) {
   return ZX_OK;
 }
 
-zx_status_t arch_mp_cpu_hotplug(uint cpu_id) {
+zx_status_t arch_mp_cpu_hotplug(cpu_num_t cpu_id) {
   if (cpu_id >= x86_num_cpus) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -525,8 +526,8 @@ static void reset_idle_counters(X86IdleStates* idle_states) {
   }
 }
 
-static void report_idlestates(int cpu_num, const X86IdleStates& idle_states) {
-  printf("CPU %d:\n", cpu_num);
+static void report_idlestates(cpu_num_t cpu_num, const X86IdleStates& idle_states) {
+  printf("CPU %u:\n", cpu_num);
   const X86IdleState* states = idle_states.ConstStates();
   for (unsigned i = 0; i < idle_states.NumStates(); ++i) {
     const auto& state = states[i];
@@ -549,12 +550,12 @@ static int cmd_idlestates(int argc, const cmd_args* argv, uint32_t flags) {
   }
   if (!strcmp(argv[1].str, "resetstats")) {
     reset_idle_counters(bp_percpu.idle_states);
-    for (unsigned i = 1; i < x86_num_cpus; ++i) {
+    for (cpu_num_t i = 1; i < x86_num_cpus; ++i) {
       reset_idle_counters(ap_percpus[i - 1].idle_states);
     }
   } else if (!strcmp(argv[1].str, "printstats")) {
     report_idlestates(0, *bp_percpu.idle_states);
-    for (unsigned i = 1; i < x86_num_cpus; ++i) {
+    for (cpu_num_t i = 1; i < x86_num_cpus; ++i) {
       report_idlestates(i, *ap_percpus[i - 1].idle_states);
     }
   } else if (!strcmp(argv[1].str, "setmask")) {

@@ -14,6 +14,7 @@
 
 #include <arch/ops.h>
 #include <fbl/algorithm.h>
+#include <kernel/cpu.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
@@ -29,7 +30,7 @@ static void inorder_count_task(void* raw_context) {
   ASSERT(arch_ints_disabled());
   ASSERT(arch_blocking_disallowed());
   int* inorder_counter = (int*)raw_context;
-  uint cpu_num = arch_curr_cpu_num();
+  cpu_num_t cpu_num = arch_curr_cpu_num();
 
   int oldval = atomic_add(inorder_counter, 1);
   ASSERT(oldval == (int)cpu_num);
@@ -95,7 +96,7 @@ static bool sync_ipi_tests() {
   for (uint i = 0; i < runs; ++i) {
     LTRACEF("Sequential test\n");
     int inorder_counter = 0;
-    for (uint i = 0; i < num_cpus; ++i) {
+    for (cpu_num_t i = 0; i < num_cpus; ++i) {
       mp_sync_exec(MP_IPI_TARGET_MASK, 1u << i, inorder_count_task, &inorder_counter);
       LTRACEF("  Finished signaling CPU %u\n", i);
     }

@@ -18,6 +18,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/hwp.h>
 #include <arch/x86/platform_access.h>
+#include <kernel/cpu.h>
 #include <ktl/array.h>
 #include <ktl/unique_ptr.h>
 
@@ -64,7 +65,7 @@ static bool test_x64_msrs() {
 
   // Test read_msr_on_cpu.
   uint64_t initial_fmask = read_msr(X86_MSR_IA32_FMASK);
-  for (uint i = 0; i < arch_max_num_cpus(); i++) {
+  for (cpu_num_t i = 0; i < arch_max_num_cpus(); i++) {
     if (!mp_is_cpu_online(i)) {
       continue;
     }
@@ -73,7 +74,7 @@ static bool test_x64_msrs() {
   }
 
   // Test write_msr_on_cpu
-  for (uint i = 0; i < arch_max_num_cpus(); i++) {
+  for (cpu_num_t i = 0; i < arch_max_num_cpus(); i++) {
     if (!mp_is_cpu_online(i)) {
       continue;
     }
@@ -82,7 +83,7 @@ static bool test_x64_msrs() {
 
   // If RDTSCP is supported, check that the TSC_AUX MSR is correctly programmed.
   if (x86_feature_test(X86_FEATURE_RDTSCP)) {
-    for (uint i = 0; i < arch_max_num_cpus(); i++) {
+    for (cpu_num_t i = 0; i < arch_max_num_cpus(); i++) {
       if (!mp_is_cpu_online(i)) {
         continue;
       }

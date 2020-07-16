@@ -10,6 +10,7 @@
 #include <fbl/array.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/page.h>
+#include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <ktl/unique_ptr.h>
 
@@ -46,7 +47,7 @@ class El2CpuState : public hypervisor::IdAllocator<uint8_t, 64> {
 
   El2CpuState() = default;
 
-  static zx_status_t OnTask(void* context, uint cpu_num);
+  static zx_status_t OnTask(void* context, cpu_num_t cpu_num);
 };
 
 // Allocate and free virtual machine IDs.

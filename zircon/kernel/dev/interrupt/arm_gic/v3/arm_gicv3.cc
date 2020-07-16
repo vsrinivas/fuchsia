@@ -22,6 +22,7 @@
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic_common.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
+#include <kernel/cpu.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <lk/init.h>
@@ -91,7 +92,7 @@ static void gic_set_enable(uint vector, bool enable) {
   uint32_t mask = (uint32_t)(1ULL << (vector % 32));
 
   if (vector < 32) {
-    for (uint i = 0; i < arch_max_num_cpus(); i++) {
+    for (cpu_num_t i = 0; i < arch_max_num_cpus(); i++) {
       if (enable) {
         GICREG(0, GICR_ISENABLER0(i)) = mask;
       } else {
@@ -110,7 +111,7 @@ static void gic_set_enable(uint vector, bool enable) {
 }
 
 static void gic_init_percpu_early() {
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
 
   // redistributer config: configure sgi/ppi as non-secure group 1.
   GICREG(0, GICR_IGROUPR0(cpu)) = ~0;
@@ -209,7 +210,7 @@ static zx_status_t arm_gic_sgi(unsigned int irq, unsigned int flags, unsigned in
 
   arch::ThreadMemoryBarrier();
 
-  uint cpu = 0;
+  cpu_num_t cpu = 0;
   uint cluster = 0;
   uint64_t val = 0;
   while (cpu_mask && cpu < arch_max_num_cpus()) {
@@ -355,7 +356,7 @@ static void gic_handle_irq(iframe_t* frame) {
     CPU_STATS_INC(interrupts);
   }
 
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
 
   ktrace_tiny(TAG_IRQ_ENTER, (vector << 8) | cpu);
 
@@ -421,7 +422,7 @@ static bool is_ppi_enabled() {
   // PPIs are 16-31.
   uint32_t mask = 0xffff0000;
 
-  uint cpu_num = arch_curr_cpu_num();
+  cpu_num_t cpu_num = arch_curr_cpu_num();
   uint32_t reg = GICREG(0, GICR_ICENABLER0(cpu_num));
   if ((reg & mask) != 0) {
     return true;
@@ -434,7 +435,7 @@ static bool is_ppi_enabled() {
 static bool is_spi_enabled() {
   DEBUG_ASSERT(arch_ints_disabled());
 
-  uint cpu_num = arch_curr_cpu_num();
+  cpu_num_t cpu_num = arch_curr_cpu_num();
 
   // TODO(maniscalco): If/when we support AFF2/AFF3, update the mask below.
   uint aff0 = arch_cpu_num_to_cpu_id(cpu_num);
@@ -577,7 +578,7 @@ void arm_gic_v3_init_deny_regions(const void* driver_data, uint32_t length) {
 
   root_resource_filter_add_deny_region(driver->mmio_phys + driver->gicd_offset, GICD_REG_SIZE,
                                        ZX_RSRC_KIND_MMIO);
-  for (uint i = 0; i < arch_max_num_cpus(); i++) {
+  for (cpu_num_t i = 0; i < arch_max_num_cpus(); i++) {
     root_resource_filter_add_deny_region(
         driver->mmio_phys + driver->gicr_offset + (driver->gicr_stride * i), GICR_REG_SIZE,
         ZX_RSRC_KIND_MMIO);

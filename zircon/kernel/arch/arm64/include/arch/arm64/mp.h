@@ -38,7 +38,7 @@ __BEGIN_CDECLS
 // line sharing between cpus.
 struct arm64_percpu {
   // cpu number
-  uint32_t cpu_num;
+  cpu_num_t cpu_num;
 
   // Whether blocking is disallowed.  See arch_blocking_disallowed().
   uint32_t blocking_disallowed;
@@ -99,21 +99,21 @@ static inline uint arch_max_num_cpus(void) {
 }
 
 // translate a cpu number back to the cluster ID (AFF1)
-static inline uint arch_cpu_num_to_cluster_id(uint cpu) {
+static inline uint arch_cpu_num_to_cluster_id(cpu_num_t cpu) {
   extern uint arm64_cpu_cluster_ids[SMP_MAX_CPUS];
 
   return arm64_cpu_cluster_ids[cpu];
 }
 
 // translate a cpu number back to the MP cpu number within a cluster (AFF0)
-static inline uint arch_cpu_num_to_cpu_id(uint cpu) {
+static inline uint arch_cpu_num_to_cpu_id(cpu_num_t cpu) {
   extern uint arm64_cpu_cpu_ids[SMP_MAX_CPUS];
 
   return arm64_cpu_cpu_ids[cpu];
 }
 
 // translate mpidr to cpu number
-uint arm64_mpidr_to_cpu_num(uint64_t mpidr);
+cpu_num_t arm64_mpidr_to_cpu_num(uint64_t mpidr);
 
 #define READ_PERCPU_FIELD32(field) arm64_read_percpu_u32(offsetof(struct arm64_percpu, field))
 

@@ -41,6 +41,7 @@
 #include <explicit-memory/bytes.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/vector.h>
+#include <kernel/cpu.h>
 #include <lk/init.h>
 #include <platform/console.h>
 #include <platform/crashlog.h>
@@ -782,7 +783,7 @@ static void platform_init_smp(void) {
   x86_bringup_aps(apic_ids.data(), static_cast<uint32_t>(apic_ids.size()));
 }
 
-zx_status_t platform_mp_prep_cpu_unplug(uint cpu_id) {
+zx_status_t platform_mp_prep_cpu_unplug(cpu_num_t cpu_id) {
   // TODO: Make sure the IOAPIC and PCI have nothing for this CPU
   return arch_mp_prep_cpu_unplug(cpu_id);
 }

@@ -34,6 +34,7 @@
 #include <explicit-memory/bytes.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/cpu.h>
 #include <kernel/dpc.h>
 #include <kernel/spinlock.h>
 #include <ktl/atomic.h>
@@ -141,7 +142,7 @@ void platform_halt_cpu(void) {
   panic("psci_cpu_off returned %u\n", result);
 }
 
-static zx_status_t platform_start_cpu(uint cpu_id, uint64_t mpid) {
+static zx_status_t platform_start_cpu(cpu_num_t cpu_id, uint64_t mpid) {
   // Issue memory barrier before starting to ensure previous stores will be visible to new CPU.
   arch::ThreadMemoryBarrier();
 

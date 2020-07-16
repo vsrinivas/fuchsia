@@ -111,7 +111,7 @@ extern struct x86_percpu *ap_percpus;
 
 // This needs to be run very early in the boot process from start.S and as
 // each CPU is brought up.
-void x86_init_percpu(uint cpu_num);
+void x86_init_percpu(cpu_num_t cpu_num);
 
 /* used to set the bootstrap processor's apic_id once the APIC is initialized */
 void x86_set_local_apic_id(uint32_t apic_id);

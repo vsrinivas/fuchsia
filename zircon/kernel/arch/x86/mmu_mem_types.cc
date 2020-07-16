@@ -16,6 +16,7 @@
 #include <arch/x86.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/registers.h>
+#include <kernel/cpu.h>
 #include <kernel/mp.h>
 
 /* address widths from mmu.c */
@@ -145,7 +146,7 @@ static void x86_pat_sync_task(void* raw_context) {
 
   struct pat_sync_task_context* context = (struct pat_sync_task_context*)raw_context;
 
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
 
   /* Step 3: Wait for all processors to reach this point. */
   atomic_and(&context->barrier1, ~(1 << cpu));
@@ -300,7 +301,7 @@ static int cmd_memtype(int argc, const cmd_args* argv, uint32_t flags) {
     }
   } else if (!strcmp(argv[1].str, "pat")) {
     uint num_cpus = arch_max_num_cpus();
-    for (uint i = 0; i < num_cpus; ++i) {
+    for (cpu_num_t i = 0; i < num_cpus; ++i) {
       printf("CPU %u Page Attribute Table types:\n", i);
       mp_sync_exec(MP_IPI_TARGET_MASK, 1u << i, print_pat_entries, nullptr);
     }

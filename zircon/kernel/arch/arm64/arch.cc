@@ -25,6 +25,7 @@
 #include <arch/mp.h>
 #include <arch/ops.h>
 #include <arch/vm.h>
+#include <kernel/cpu.h>
 #include <kernel/thread.h>
 #include <ktl/atomic.h>
 #include <lk/init.h>
@@ -101,7 +102,7 @@ extern uint64_t arch_boot_el;  // Defined in start.S.
 
 uint64_t arm64_get_boot_el() { return arch_boot_el >> 2; }
 
-zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
+zx_status_t arm64_create_secondary_stack(cpu_num_t cpu_num, uint64_t mpid) {
   // Allocate a stack, indexed by CPU num so that |arm64_secondary_entry| can find it.
   DEBUG_ASSERT_MSG(cpu_num > 0 && cpu_num < SMP_MAX_CPUS, "cpu_num: %u", cpu_num);
   KernelStack* stack = &_init_thread[cpu_num - 1].stack();
@@ -151,7 +152,7 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
   return ZX_OK;
 }
 
-zx_status_t arm64_free_secondary_stack(uint cpu_num) {
+zx_status_t arm64_free_secondary_stack(cpu_num_t cpu_num) {
   DEBUG_ASSERT(cpu_num > 0 && cpu_num < SMP_MAX_CPUS);
   return _init_thread[cpu_num - 1].stack().Teardown();
 }
@@ -293,7 +294,7 @@ extern "C" void arm64_secondary_entry() {
     arch::Yield();
   }
 
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
   _init_thread[cpu - 1].SecondaryCpuInitEarly();
   // Run early secondary cpu init routines up to the threading level.
   lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);

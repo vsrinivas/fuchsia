@@ -20,6 +20,7 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <kernel/cpu.h>
 #include <kernel/init.h>
 #include <kernel/mutex.h>
 #include <kernel/percpu.h>
@@ -156,7 +157,7 @@ static int bootstrap2(void*) {
 }
 
 void lk_secondary_cpu_entry() {
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
   DEBUG_ASSERT(cpu != 0);
 
   if (cpu > secondary_idle_thread_count) {

@@ -28,6 +28,7 @@
 #include <dev/interrupt/arm_gicv2_regs.h>
 #include <dev/interrupt/arm_gicv2m.h>
 #include <dev/interrupt/arm_gicv2m_msi.h>
+#include <kernel/cpu.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <ktl/iterator.h>
@@ -286,7 +287,7 @@ static void gic_handle_irq(iframe_t* frame) {
   if (vector >= 32)
     CPU_STATS_INC(interrupts);
 
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
 
   ktrace_tiny(TAG_IRQ_ENTER, (vector << 8) | cpu);
 
@@ -390,7 +391,7 @@ static bool is_spi_enabled() {
 
   // We're going to check four interrupts at a time.  Build a repeated mask for the current CPU.
   // Each byte in the mask is a CPU bit mask corresponding to CPU0..CPU7 (lsb..msb).
-  uint cpu_num = arch_curr_cpu_num();
+  cpu_num_t cpu_num = arch_curr_cpu_num();
   DEBUG_ASSERT(cpu_num < 8);
   uint32_t mask = 0x01010101U << cpu_num;
 

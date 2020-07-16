@@ -17,6 +17,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <kernel/auto_lock.h>
+#include <kernel/cpu.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/spinlock.h>
@@ -216,7 +217,7 @@ static int timer_stress_worker(void* void_arg) {
     // Set a timer, then switch to a different CPU to ensure we race with it.
 
     arch_disable_ints();
-    uint timer_cpu = arch_curr_cpu_num();
+    cpu_num_t timer_cpu = arch_curr_cpu_num();
     const Deadline deadline = Deadline::no_slack(current_time() + timer_duration);
     t.Set(deadline, timer_stress_cb, void_arg);
     Thread::Current::Get()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
@@ -400,7 +401,7 @@ static bool trylock_or_cancel_canceled() {
 
   arch_disable_ints();
 
-  uint timer_cpu = arch_curr_cpu_num();
+  cpu_num_t timer_cpu = arch_curr_cpu_num();
   const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
   t.Set(deadline, timer_trylock_cb, &arg);
 
@@ -448,7 +449,7 @@ static bool trylock_or_cancel_get_lock() {
 
   arch_disable_ints();
 
-  uint timer_cpu = arch_curr_cpu_num();
+  cpu_num_t timer_cpu = arch_curr_cpu_num();
   const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
   t.Set(deadline, timer_trylock_cb, &arg);
 

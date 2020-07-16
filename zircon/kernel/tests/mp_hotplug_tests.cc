@@ -10,6 +10,7 @@
 #include <platform.h>
 #include <zircon/types.h>
 
+#include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <ktl/iterator.h>
@@ -17,7 +18,7 @@
 #include "tests.h"
 
 static int resume_cpu_test_thread(void* arg) {
-  *reinterpret_cast<uint*>(arg) = arch_curr_cpu_num();
+  *reinterpret_cast<cpu_num_t*>(arg) = arch_curr_cpu_num();
   return 0;
 }
 
@@ -27,7 +28,7 @@ static zx_status_t unplug_all_cores(Thread** leaked_threads) {
   return mp_unplug_cpu_mask(cpumask, ZX_TIME_INFINITE, leaked_threads);
 }
 
-static zx_status_t hotplug_core(uint i) {
+static zx_status_t hotplug_core(cpu_num_t i) {
   cpu_mask_t cpumask = cpu_num_to_mask(i);
   return mp_hotplug_cpu_mask(cpumask);
 }
@@ -62,7 +63,7 @@ static unsigned get_num_cpus_online() {
   // "Unplug" online secondary (non-BOOT) cores
   Thread* leaked_threads[SMP_MAX_CPUS] = {};
   ASSERT_EQ(unplug_all_cores(leaked_threads), ZX_OK, "unplugging all cores failed");
-  for (uint i = 0; i < num_cores; i++) {
+  for (cpu_num_t i = 0; i < num_cores; i++) {
     if (i == BOOT_CPU_ID) {
       continue;
     }
@@ -70,7 +71,7 @@ static unsigned get_num_cpus_online() {
     ASSERT_EQ(hotplug_core(i), ZX_OK, "hotplugging core failed");
     // Create a thread, affine it to the core just hotplugged
     // and make sure the thread does get scheduled there.
-    uint running_core;
+    cpu_num_t running_core;
     Thread* nt = Thread::Create("resume-test-thread", resume_cpu_test_thread, &running_core,
                                 DEFAULT_PRIORITY);
     ASSERT_NE(nullptr, nt, "Thread create failed");

@@ -9,6 +9,7 @@
 #include <arch/arch_perfmon.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/align.h>
+#include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <vm/vm.h>
@@ -72,7 +73,7 @@ zx_status_t arch_perfmon_init();
 // Perform MTRACE_PERFMON_ASSIGN_BUFFER: Assign |vmo| as the buffer for |cpu|.
 // The VMO is not mapped into kernel space yet, that is done later by
 // |arch_perfmon_start()|.
-zx_status_t arch_perfmon_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo);
+zx_status_t arch_perfmon_assign_buffer(cpu_num_t cpu, fbl::RefPtr<VmObject> vmo);
 
 // Perform MTRACE_PERFMON_STAGE_CONFIG: Record |config| as the configuration
 // of data to be collected.

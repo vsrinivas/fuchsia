@@ -13,6 +13,7 @@
 #include <arch/mp.h>
 #include <arch/ops.h>
 #include <dev/interrupt.h>
+#include <kernel/cpu.h>
 #include <kernel/event.h>
 
 #define LOCAL_TRACE 0
@@ -51,7 +52,7 @@ void arch_register_mpid(uint cpu_id, uint64_t mpid) {
   arm64_cpu_list[arm64_cpu_list_count++] = {.mpid = mpid, .cpu_id = cpu_id};
 }
 
-uint arm64_mpidr_to_cpu_num(uint64_t mpidr) {
+cpu_num_t arm64_mpidr_to_cpu_num(uint64_t mpidr) {
   mpidr &= kMpidAffMask;
   for (size_t i = 0; i < arm64_cpu_list_count; ++i) {
     if (arm64_cpu_list[i].mpid == mpidr) {
@@ -69,7 +70,7 @@ uint arm64_mpidr_to_cpu_num(uint64_t mpidr) {
 }
 
 // do the 'slow' lookup by mpidr to cpu number
-static uint arch_curr_cpu_num_slow() {
+static cpu_num_t arch_curr_cpu_num_slow() {
   uint64_t mpidr = __arm_rsr64("mpidr_el1");
   return arm64_mpidr_to_cpu_num(mpidr);
 }
@@ -101,7 +102,7 @@ void arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
 
 void arm64_init_percpu_early(void) {
   // slow lookup the current cpu id and setup the percpu structure
-  uint cpu = arch_curr_cpu_num_slow();
+  cpu_num_t cpu = arch_curr_cpu_num_slow();
   uint32_t midr = __arm_rsr64("midr_el1") & 0xFFFFFFFF;
 
   arm64_percpu_array[cpu].microarch = midr_to_microarch(midr);
@@ -117,14 +118,14 @@ void arch_flush_state_and_halt(Event* flush_done) {
   panic("control should never reach here\n");
 }
 
-zx_status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
+zx_status_t arch_mp_prep_cpu_unplug(cpu_num_t cpu_id) {
   if (cpu_id == 0 || cpu_id >= arm_num_cpus) {
     return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
 }
 
-zx_status_t arch_mp_cpu_unplug(uint cpu_id) {
+zx_status_t arch_mp_cpu_unplug(cpu_num_t cpu_id) {
   // we do not allow unplugging the bootstrap processor
   if (cpu_id == 0 || cpu_id >= arm_num_cpus) {
     return ZX_ERR_INVALID_ARGS;

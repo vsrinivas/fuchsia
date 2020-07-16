@@ -24,6 +24,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <kernel/align.h>
+#include <kernel/cpu.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
@@ -126,7 +127,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   interrupt_saved_state_t irqstate = arch_interrupt_save();
   arch::ThreadMemoryBarrier();
 
-  const uint local_cpu = arch_curr_cpu_num();
+  const cpu_num_t local_cpu = arch_curr_cpu_num();
 
   // remove self from target lists, since no need to IPI ourselves
   bool targetting_self = !!(mask & cpu_num_to_mask(local_cpu));
@@ -141,7 +142,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   };
 
   struct mp_ipi_task sync_tasks[SMP_MAX_CPUS] = {};
-  for (uint i = 0; i < num_cpus; ++i) {
+  for (cpu_num_t i = 0; i < num_cpus; ++i) {
     sync_tasks[i].func = mp_sync_task;
     sync_tasks[i].context = &sync_context;
   }
@@ -149,7 +150,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   // enqueue tasks
   mp.ipi_task_lock.Acquire();
   cpu_mask_t remaining = mask;
-  uint cpu_id = 0;
+  cpu_num_t cpu_id = 0;
   while (remaining && cpu_id < num_cpus) {
     if (remaining & 1) {
       mp.ipi_task_list[cpu_id].push_back(&sync_tasks[cpu_id]);
@@ -208,7 +209,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   // make sure the sync_tasks aren't in lists anymore, since they're
   // stack allocated
   mp.ipi_task_lock.AcquireIrqSave(irqstate);
-  for (uint i = 0; i < num_cpus; ++i) {
+  for (cpu_num_t i = 0; i < num_cpus; ++i) {
     // If a task is still around, it's because the CPU went offline.
     if (sync_tasks[i].InContainer()) {
       sync_tasks[i].RemoveFromContainer();
@@ -436,14 +437,14 @@ interrupt_eoi mp_mbx_interrupt_irq(void*) {
   return IRQ_EOI_DEACTIVATE;
 }
 
-__WEAK zx_status_t arch_mp_cpu_hotplug(uint cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
-__WEAK zx_status_t arch_mp_prep_cpu_unplug(uint cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
-__WEAK zx_status_t arch_mp_cpu_unplug(uint cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
-__WEAK zx_status_t platform_mp_cpu_hotplug(uint cpu_id) { return arch_mp_cpu_hotplug(cpu_id); }
-__WEAK zx_status_t platform_mp_prep_cpu_unplug(uint cpu_id) {
+__WEAK zx_status_t arch_mp_cpu_hotplug(cpu_num_t cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
+__WEAK zx_status_t arch_mp_prep_cpu_unplug(cpu_num_t cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
+__WEAK zx_status_t arch_mp_cpu_unplug(cpu_num_t cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
+__WEAK zx_status_t platform_mp_cpu_hotplug(cpu_num_t cpu_id) { return arch_mp_cpu_hotplug(cpu_id); }
+__WEAK zx_status_t platform_mp_prep_cpu_unplug(cpu_num_t cpu_id) {
   return arch_mp_prep_cpu_unplug(cpu_id);
 }
-__WEAK zx_status_t platform_mp_cpu_unplug(uint cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
+__WEAK zx_status_t platform_mp_cpu_unplug(cpu_num_t cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
 
 static int cmd_mp(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
@@ -460,14 +461,14 @@ static int cmd_mp(int argc, const cmd_args* argv, uint32_t flags) {
       printf("specify a cpu_id\n");
       goto usage;
     }
-    zx_status_t status = mp_unplug_cpu((uint)argv[2].u);
+    zx_status_t status = mp_unplug_cpu((cpu_num_t)argv[2].u);
     printf("CPU %lu unplug %s %d\n", argv[2].u, (status == ZX_OK ? "succeeded" : "failed"), status);
   } else if (!strcmp(argv[1].str, "hotplug")) {
     if (argc < 3) {
       printf("specify a cpu_id\n");
       goto usage;
     }
-    zx_status_t status = mp_hotplug_cpu((uint)argv[2].u);
+    zx_status_t status = mp_hotplug_cpu((cpu_num_t)argv[2].u);
     printf("CPU %lu hotplug %s %d\n", argv[2].u, (status == ZX_OK ? "succeeded" : "failed"),
            status);
   } else {
