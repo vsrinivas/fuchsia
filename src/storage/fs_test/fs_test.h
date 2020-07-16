@@ -129,7 +129,7 @@ class FatFilesystem : public FilesystemImpl<FatFilesystem> {
   const Traits& GetTraits() const override {
     static Traits traits{
         .can_unmount = true,
-        .timestamp_granularity = zx::sec(1),
+        .timestamp_granularity = zx::sec(2),
         .supports_hard_links = false,
         .supports_mmap = false,
         .supports_resize = false,
