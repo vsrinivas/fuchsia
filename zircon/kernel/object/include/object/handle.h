@@ -131,14 +131,14 @@ class HandleTableArena {
  public:
   // Alloc returns storage for a handle. GetNewBaseValue is a helper needed to actually create a
   // Handle.
-  static void* Alloc(const fbl::RefPtr<Dispatcher>&, const char* what, uint32_t* base_value);
-  static uint32_t GetNewBaseValue(void* addr);
+  void* Alloc(const fbl::RefPtr<Dispatcher>&, const char* what, uint32_t* base_value);
+  uint32_t GetNewBaseValue(void* addr);
 
-  static void Delete(Handle* handle);
+  void Delete(Handle* handle);
 
  private:
   // A helper for the GetNewBaseValue computation.
-  static uint32_t HandleToIndex(Handle* handle);
+  uint32_t HandleToIndex(Handle* handle);
 
   // Validate that all the fields we need to preserve fit within the preservation window.
   static_assert(offsetof(Handle, process_id_) + sizeof(Handle::process_id_) <=
@@ -147,10 +147,12 @@ class HandleTableArena {
                 Handle::PreserveSize);
   static_assert(offsetof(Handle, dispatcher_) + sizeof(Handle::dispatcher_) <=
                 Handle::PreserveSize);
-  static fbl::GPArena<Handle::PreserveSize, sizeof(Handle)> arena_;
+  fbl::GPArena<Handle::PreserveSize, sizeof(Handle)> arena_;
   // Give the Handle access to its arena.
   friend Handle;
 };
+
+extern HandleTableArena gHandleTableArena;
 
 // This can't be defined directly in the HandleDestroyer struct definition
 // because Handle is an incomplete type at that point.
@@ -158,7 +160,7 @@ inline void HandleDestroyer::operator()(Handle* handle) {
   // ktl::unique_ptr only calls its deleter when the pointer is non-null.
   // Still, we double check.
   DEBUG_ASSERT(handle != nullptr);
-  HandleTableArena::Delete(handle);
+  gHandleTableArena.Delete(handle);
 }
 
 // A minimal wrapper around a Dispatcher which is owned by the kernel.

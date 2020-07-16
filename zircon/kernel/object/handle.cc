@@ -55,9 +55,9 @@ static_assert((kHandleReservedBitsMask | kHandleGenerationMask | kHandleIndexMas
 
 }  // namespace
 
-fbl::GPArena<Handle::PreserveSize, sizeof(Handle)> HandleTableArena::arena_;
+HandleTableArena gHandleTableArena;
 
-void Handle::Init() { HandleTableArena::arena_.Init("handles", kMaxHandleCount); }
+void Handle::Init() { gHandleTableArena.arena_.Init("handles", kMaxHandleCount); }
 
 void Handle::set_process_id(zx_koid_t pid) {
   process_id_.store(pid, ktl::memory_order_relaxed);
@@ -116,7 +116,7 @@ void* HandleTableArena::Alloc(const fbl::RefPtr<Dispatcher>& dispatcher, const c
 
 HandleOwner Handle::Make(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights) {
   uint32_t base_value;
-  void* addr = HandleTableArena::Alloc(dispatcher, "new", &base_value);
+  void* addr = gHandleTableArena.Alloc(dispatcher, "new", &base_value);
   if (unlikely(!addr))
     return nullptr;
   kcounter_add(handle_count_made, 1);
@@ -126,7 +126,7 @@ HandleOwner Handle::Make(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights)
 
 HandleOwner Handle::Make(KernelHandle<Dispatcher> kernel_handle, zx_rights_t rights) {
   uint32_t base_value;
-  void* addr = HandleTableArena::Alloc(kernel_handle.dispatcher(), "new", &base_value);
+  void* addr = gHandleTableArena.Alloc(kernel_handle.dispatcher(), "new", &base_value);
   if (unlikely(!addr))
     return nullptr;
   kcounter_add(handle_count_made, 1);
@@ -143,7 +143,7 @@ Handle::Handle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights, uint32_t 
 
 HandleOwner Handle::Dup(Handle* source, zx_rights_t rights) {
   uint32_t base_value;
-  void* addr = HandleTableArena::Alloc(source->dispatcher(), "duplicate", &base_value);
+  void* addr = gHandleTableArena.Alloc(source->dispatcher(), "duplicate", &base_value);
   if (unlikely(!addr))
     return nullptr;
   kcounter_add(handle_count_duped, 1);
@@ -206,9 +206,9 @@ void HandleTableArena::Delete(Handle* handle) {
 
 Handle* Handle::FromU32(uint32_t value) {
   uintptr_t handle_addr = IndexToHandle(value & kHandleIndexMask);
-  if (unlikely(!HandleTableArena::arena_.Committed(reinterpret_cast<void*>(handle_addr))))
+  if (unlikely(!gHandleTableArena.arena_.Committed(reinterpret_cast<void*>(handle_addr))))
     return nullptr;
-  handle_addr = HandleTableArena::arena_.Confine(handle_addr);
+  handle_addr = gHandleTableArena.arena_.Confine(handle_addr);
   auto handle = reinterpret_cast<Handle*>(handle_addr);
   return reinterpret_cast<Handle*>(
       fbl::conditional_select_nospec_eq(handle->base_value(), value, handle_addr, 0));
@@ -219,13 +219,13 @@ uint32_t Handle::Count(const fbl::RefPtr<const Dispatcher>& dispatcher) {
 }
 
 size_t Handle::diagnostics::OutstandingHandles() {
-  return HandleTableArena::arena_.DiagnosticCount();
+  return gHandleTableArena.arena_.DiagnosticCount();
 }
 
-void Handle::diagnostics::DumpTableInfo() { HandleTableArena::arena_.Dump(); }
+void Handle::diagnostics::DumpTableInfo() { gHandleTableArena.arena_.Dump(); }
 
 uintptr_t Handle::IndexToHandle(uint32_t index) {
-  return reinterpret_cast<uintptr_t>(HandleTableArena::arena_.Base()) + index * sizeof(Handle);
+  return reinterpret_cast<uintptr_t>(gHandleTableArena.arena_.Base()) + index * sizeof(Handle);
 }
 
 uint32_t HandleTableArena::HandleToIndex(Handle* handle) {
