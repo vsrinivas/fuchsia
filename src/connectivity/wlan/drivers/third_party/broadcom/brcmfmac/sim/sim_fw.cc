@@ -358,6 +358,14 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
             BRCMF_ERR("Not starting an assoc on client iface.");
             return ZX_ERR_INVALID_ARGS;
           }
+
+          // This is a start point of authentication and association operation, make sure the client
+          // iface is allocated.
+          if (!iface_tbl_[kClientIfidx].allocated) {
+            BRCMF_ERR("client iface has not been allocated.");
+            return ZX_ERR_BAD_STATE;
+          }
+
           auto assoc_opts = std::make_unique<AssocOpts>();
           wlan_channel_t channel;
 
@@ -767,11 +775,11 @@ void SimFirmware::AuthStart() {
 
   ZX_ASSERT(auth_state_.state == AuthState::NOT_AUTHENTICATED);
   simulation::SimAuthType auth_type;
-  if (auth_state_.auth_type == BRCMF_AUTH_MODE_OPEN) {
+  if (iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_OPEN) {
     // Sequence number start from 0, end with at most 3.
     auth_type = simulation::AUTH_TYPE_OPEN;
   } else {
-    // When auth_state_.auth_type == BRCMF_AUTH_MODE_AUTO
+    // When iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_AUTO
     auth_type = simulation::AUTH_TYPE_SHARED_KEY;
   }
 
@@ -814,7 +822,7 @@ void SimFirmware::HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> 
     return;
   }
 
-  ZX_ASSERT_MSG(iface_tbl_[softap_ifidx_.value()].ap_config.auth_type == BRCMF_AUTH_MODE_OPEN,
+  ZX_ASSERT_MSG(iface_tbl_[softap_ifidx_.value()].auth_type == BRCMF_AUTH_MODE_OPEN,
                 "The only auth type we support now is BRCMF_AUTH_MODE_OPEN because softAP iface "
                 "only support OPEN and WPA2.");
   // Refuse auth req with auth type other than AUTH_TYPE_OPEN.
@@ -866,7 +874,7 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
   // Response received, cancel timer
   hw_.CancelCallback(auth_state_.auth_timer_id);
 
-  if (auth_state_.auth_type == BRCMF_AUTH_MODE_OPEN) {
+  if (iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_OPEN) {
     ZX_ASSERT(auth_state_.state == AuthState::EXPECTING_SECOND);
     ZX_ASSERT(frame->seq_num_ == 2);
     if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
@@ -878,12 +886,12 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
     auth_state_.bssid = assoc_state_.opts->bssid;
     AssocStart();
   } else {
-    // When auth_state_.auth_type == BRCMF_AUTH_MODE_AUTO
+    // When iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_AUTO
     if (auth_state_.state == AuthState::EXPECTING_SECOND && frame->seq_num_ == 2) {
       // Retry with AUTH_TYPE_OPEN_SYSTEM when refused in AUTH_TYPE_SHARED_KEY mode
       if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
         auth_state_.state = AuthState::NOT_AUTHENTICATED;
-        auth_state_.auth_type = BRCMF_AUTH_MODE_OPEN;
+        iface_tbl_[kClientIfidx].auth_type = BRCMF_AUTH_MODE_OPEN;
         AuthStart();
         return;
       }
@@ -1444,6 +1452,13 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
       BRCMF_ERR("Not joining with client iface.");
       return ZX_ERR_INVALID_ARGS;
     }
+
+    // This is a start point of authentication and association operation, make sure the client
+    // iface is allocated.
+    if (!iface_tbl_[kClientIfidx].allocated) {
+      BRCMF_ERR("Client iface has not been allocated.");
+      return ZX_ERR_BAD_STATE;
+    }
     // Don't cast yet because last element is variable length
     return HandleJoinRequest(value, value_len);
   }
@@ -1529,16 +1544,7 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
     }
 
     auto auth = reinterpret_cast<const uint32_t*>(value);
-    // TODO - IF operating mode maynot be set yet. Might need to save the value
-    // in the IF table and act on it at the appropriate time (that is the reason
-    // for not returning an error below.
-    if (softap_ifidx_ != std::nullopt && ifidx == softap_ifidx_) {
-      iface_tbl_[softap_ifidx_.value()].ap_config.auth_type = *auth;
-    } else if (iface_tbl_[kClientIfidx].allocated && ifidx == kClientIfidx) {
-      auth_state_.auth_type = *auth;
-    } else {
-      BRCMF_ERR("Iface is not allocated.");
-    }
+    iface_tbl_[ifidx].auth_type = *auth;
     return ZX_OK;
   }
 
@@ -1646,10 +1652,10 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     }
     memcpy(value_out, &iface_tbl_[ifidx].wpa_auth, sizeof(uint32_t));
   } else if (!std::strcmp(name, "auth")) {
-    if (value_len < sizeof(auth_state_.auth_type)) {
+    if (value_len < sizeof(iface_tbl_[ifidx].auth_type)) {
       return ZX_ERR_INVALID_ARGS;
     }
-    memcpy(value_out, &auth_state_.auth_type, sizeof(auth_state_.auth_type));
+    memcpy(value_out, &iface_tbl_[ifidx].auth_type, sizeof(iface_tbl_[ifidx].auth_type));
   } else if (!std::strcmp(name, "wsec_key")) {
     if (value_len < sizeof(brcmf_wsec_key_le)) {
       return ZX_ERR_INVALID_ARGS;

@@ -155,7 +155,6 @@ class SimFirmware {
       AUTHENTICATED
     } state = NOT_AUTHENTICATED;
 
-    uint16_t auth_type;
     uint64_t auth_timer_id;
     enum simulation::SimSecProtoType sec_type = simulation::SEC_PROTO_TYPE_OPEN;
     common::MacAddr bssid;
@@ -245,7 +244,6 @@ class SimFirmware {
     brcmf_ssid_le ssid;
     bool ap_started;
     std::list<std::shared_ptr<Client>> clients;
-    uint16_t auth_type;
   };
 
   /* This structure contains the variables related to an iface entry in SIM FW.
@@ -279,6 +277,7 @@ class SimFirmware {
     ApConfig ap_config;
     uint32_t arpoe = 0;
     uint32_t arp_ol = 0;
+    uint16_t auth_type = BRCMF_AUTH_MODE_OPEN;
   } sim_iface_entry_t;
 
   // This value is specific to firmware, and drives some behavior (notably the interpretation
