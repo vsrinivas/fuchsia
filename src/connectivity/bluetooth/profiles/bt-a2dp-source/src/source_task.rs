@@ -19,7 +19,7 @@ use {
     std::sync::Arc,
 };
 
-use crate::encoding::{EncodedStream, RtpPacketBuilder};
+use crate::encoding::EncodedStream;
 use crate::sources;
 
 /// SourceTaskBuilder is a MediaTaskBuilder will build `ConfiguredSourceTask`s when configured.
@@ -102,35 +102,32 @@ impl ConfiguredSourceTask {
         data_stream_inspect: Arc<Mutex<DataStreamInspect>>,
     ) -> Result<(), Error> {
         let frames_per_encoded = codec_config.pcm_frames_per_encoded_frame() as u32;
-        let mut packet_builder = RtpPacketBuilder::new(
-            codec_config.frames_per_packet() as u8,
-            MAX_PACKET_LEN,
-            codec_config.rtp_frame_header().to_vec(),
-        );
+        let mut packet_builder = codec_config.make_packet_builder(MAX_PACKET_LEN)?;
         loop {
             let encoded = match encoded_stream.try_next().await? {
                 None => continue,
                 Some(encoded) => encoded,
             };
-            let packet = match packet_builder.push_frame(encoded, frames_per_encoded) {
+            let packets = match packet_builder.add_frame(encoded, frames_per_encoded) {
                 Err(e) => {
                     fx_log_warn!("Can't add packet to RTP packet: {:?}", e);
                     continue;
                 }
-                Ok(None) => continue,
-                Ok(Some(packet)) => packet,
+                Ok(packets) => packets,
             };
 
-            trace::duration_begin!("bt-a2dp-source", "Media:PacketSent");
-            if let Err(e) = media_stream.write(&packet).await {
-                fx_log_info!("Failed sending packet to peer: {}", e);
-                let _ = data_stream_inspect.try_lock().map(|mut l| {
-                    l.record_transferred(packet.len(), fasync::Time::now());
-                });
+            for packet in packets {
+                trace::duration_begin!("bt-a2dp-source", "Media:PacketSent");
+                if let Err(e) = media_stream.write(&packet).await {
+                    fx_log_info!("Failed sending packet to peer: {}", e);
+                    let _ = data_stream_inspect.try_lock().map(|mut l| {
+                        l.record_transferred(packet.len(), fasync::Time::now());
+                    });
+                    trace::duration_end!("bt-a2dp-source", "Media:PacketSent");
+                    return Ok(());
+                }
                 trace::duration_end!("bt-a2dp-source", "Media:PacketSent");
-                return Ok(());
             }
-            trace::duration_end!("bt-a2dp-source", "Media:PacketSent");
         }
     }
 

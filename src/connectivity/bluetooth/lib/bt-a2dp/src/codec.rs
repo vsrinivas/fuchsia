@@ -11,6 +11,7 @@ use crate::media_types::{
     AacChannels, AacCodecInfo, SbcAllocation, SbcBlockCount, SbcChannelMode, SbcCodecInfo,
     SbcSamplingFrequency, SbcSubBands,
 };
+use crate::rtp::{FrameRtpPacketBuilder, RtpPacketBuilder};
 
 /// Stores the media codec configuration for an A2DP stream, and provides utility for integration
 /// with Fuchsia media.
@@ -74,6 +75,18 @@ impl MediaCodecConfig {
 
     pub fn codec_extra(&self) -> &[u8] {
         self.codec_extra.as_slice()
+    }
+
+    pub fn make_packet_builder(
+        &self,
+        max_packet_size: usize,
+    ) -> avdtp::Result<Box<dyn RtpPacketBuilder>> {
+        let builder = FrameRtpPacketBuilder::new(
+            self.frames_per_packet() as u8,
+            max_packet_size,
+            self.rtp_frame_header().to_vec(),
+        );
+        Ok(Box::new(builder))
     }
 
     /// Returns true if the given MediaCodecConfig is a compatible subset of this configuration.
