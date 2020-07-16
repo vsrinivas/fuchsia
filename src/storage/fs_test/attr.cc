@@ -172,24 +172,27 @@ TEST_P(AttrTest, ParentModificationTimeUpdatedCorrectly) {
   ASSERT_GT(ToNanoSeconds(statb.st_mtim), now);
   now = ToNanoSeconds(statb.st_mtim);
 
-  // Link the child into a second directory
-  zx_nanosleep(zx_deadline_after(fs().GetTraits().timestamp_granularity.to_nsecs()));
-  ASSERT_EQ(link(child.c_str(), child2.c_str()), 0);
-  // Source directory is not impacted
-  ASSERT_EQ(stat(parent.c_str(), &statb), 0);
-  ASSERT_EQ(ToNanoSeconds(statb.st_mtim), now);
-  // Target directory is updated
-  ASSERT_EQ(stat(parent2.c_str(), &statb), 0);
-  ASSERT_GT(ToNanoSeconds(statb.st_mtim), now);
-  now = ToNanoSeconds(statb.st_mtim);
+  // Don't test links on filesystems with no hard link support.
+  if (fs().GetTraits().supports_hard_links) {
+    // Link the child into a second directory
+    zx_nanosleep(zx_deadline_after(fs().GetTraits().timestamp_granularity.to_nsecs()));
+    ASSERT_EQ(link(child.c_str(), child2.c_str()), 0);
+    // Source directory is not impacted
+    ASSERT_EQ(stat(parent.c_str(), &statb), 0);
+    ASSERT_EQ(ToNanoSeconds(statb.st_mtim), now);
+    // Target directory is updated
+    ASSERT_EQ(stat(parent2.c_str(), &statb), 0);
+    ASSERT_GT(ToNanoSeconds(statb.st_mtim), now);
+    now = ToNanoSeconds(statb.st_mtim);
 
-  // Unlink the child, and the parent's time should
-  // move forward again
-  zx_nanosleep(zx_deadline_after(fs().GetTraits().timestamp_granularity.to_nsecs()));
-  ASSERT_EQ(unlink(child2.c_str()), 0);
-  ASSERT_EQ(stat(parent2.c_str(), &statb), 0);
-  ASSERT_GT(ToNanoSeconds(statb.st_mtim), now);
-  now = ToNanoSeconds(statb.st_mtim);
+    // Unlink the child, and the parent's time should
+    // move forward again
+    zx_nanosleep(zx_deadline_after(fs().GetTraits().timestamp_granularity.to_nsecs()));
+    ASSERT_EQ(unlink(child2.c_str()), 0);
+    ASSERT_EQ(stat(parent2.c_str(), &statb), 0);
+    ASSERT_GT(ToNanoSeconds(statb.st_mtim), now);
+    now = ToNanoSeconds(statb.st_mtim);
+  }
 
   // Rename the child, and both the source and dest
   // directories should be updated

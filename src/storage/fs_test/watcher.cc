@@ -114,13 +114,15 @@ bool TestWatcherAdd(void) {
   ASSERT_EQ(rename("::dir/foo", "::dir/bar"), 0);
   ASSERT_TRUE(check_for_event(&wb, client, "bar", fio::WATCH_EVENT_ADDED));
 
-  // Linking into directory should trigger the watcher
-  ASSERT_EQ(link("::dir/bar", "::dir/blat"), 0);
-  ASSERT_TRUE(check_for_event(&wb, client, "blat", fio::WATCH_EVENT_ADDED));
+  if (fs().GetTraits().supports_hard_links) {
+    // Linking into directory should trigger the watcher
+    ASSERT_EQ(link("::dir/bar", "::dir/blat"), 0);
+    ASSERT_TRUE(check_for_event(&wb, client, "blat", fio::WATCH_EVENT_ADDED));
+    ASSERT_EQ(unlink("::dir/blat"), 0);
+  }
 
   // Clean up
   ASSERT_EQ(unlink("::dir/bar"), 0);
-  ASSERT_EQ(unlink("::dir/blat"), 0);
 
   // There shouldn't be anything else sitting around on the channel
   ASSERT_TRUE(check_for_empty(&wb, client));
