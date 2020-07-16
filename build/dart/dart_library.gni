@@ -76,6 +76,11 @@ declare_args() {
 #   extra_sources (optional)
 #     Additional sources to consider for analysis.
 #
+#   pubspec (optional)
+#     Path to the pubspec.yaml. If not provided, will default to looking for
+#     the pubspec.yaml in the package root. It is not common that this value will
+#     need to be set but can be useful for generated code.
+#
 # Example of usage:
 #
 #   dart_library("baz") {
@@ -180,12 +185,16 @@ if (current_toolchain == dart_toolchain) {
         public_deps = invoker.non_dart_deps
       }
 
-      sources = package_files + [
-                  # Require a manifest file, allowing the analysis service to
-                  # identify the package.
-                  "$package_root/pubspec.yaml",
-                ]
+      sources = package_files
 
+      # Require a manifest file, allowing the analysis service to
+      # identify the package.
+
+      if (defined(invoker.pubspec)) {
+        sources += [ invoker.pubspec ]
+      } else {
+        sources += [ "$package_root/pubspec.yaml" ]
+      }
       outputs = [ dot_packages_file ]
 
       args = [
@@ -337,6 +346,23 @@ if (current_toolchain == dart_toolchain) {
       deps = dart_deps
 
       public_deps = group_deps
+
+      metadata = {
+        package_config_entries = [
+          {
+            name = package_name
+
+            # For now just hardcode to version 2.8 until we plumb this in from the pubspec
+            language_version = "2.8"
+            root_uri = rebase_path(package_root, root_build_dir)
+            if (defined(invoker.source_dir)) {
+              package_uri = invoker.source_dir
+            } else {
+              package_uri = "lib"
+            }
+          },
+        ]
+      }
     }
 
     ################################################
