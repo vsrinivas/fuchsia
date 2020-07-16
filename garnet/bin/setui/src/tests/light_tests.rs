@@ -154,6 +154,22 @@ async fn set_light_value(service: &LightProxy, light_group: LightGroup) {
         .expect("set successful");
 }
 
+/// Compares a vector of light group from the settings FIDL API and the light groups from a
+/// service-internal LightInfo object for equality.
+fn assert_lights_eq(mut groups: Vec<fidl_fuchsia_settings::LightGroup>, info: LightInfo) {
+    // Watch returns vector, internally we use a HashMap, so convert into a vector for comparison.
+    let mut expected_value = info
+        .light_groups
+        .into_iter()
+        .map(|(_, value)| fidl_fuchsia_settings::LightGroup::from(value))
+        .collect::<Vec<_>>();
+
+    // Sort by names for stability
+    groups.sort_by_key(|group: &fidl_fuchsia_settings::LightGroup| group.name.clone());
+    expected_value.sort_by_key(|group| group.name.clone());
+    assert_eq!(groups, expected_value);
+}
+
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_light_restore() {
     // Populate the fake service with the initial lights that will be restored.
@@ -180,6 +196,23 @@ async fn test_light_restore() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
+async fn test_light_restores_on_watch() {
+    let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
+
+    let (light_service, _) =
+        create_test_light_env_with_service(None, Some(hardware_light_service_handle.clone())).await;
+
+    // Don't populate the fake service with lights until after the service starts.
+    let expected_light_info = get_test_light_info();
+    populate_single_test_lights(hardware_light_service_handle.clone(), expected_light_info.clone())
+        .await;
+
+    // Upon a watch call, light controller will read the underlying value from the fake service.
+    let settings = light_service.watch_light_groups().await.expect("watch completed");
+    assert_lights_eq(settings, expected_light_info);
+}
+
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_light_store_and_watch() {
     let mut expected_light_info = get_test_light_info();
     let mut changed_light_group =
@@ -197,18 +230,9 @@ async fn test_light_store_and_watch() {
     assert_eq!(expected_light_info, store.lock().await.get().await);
 
     // Ensure value from Watch matches set value.
-    let mut settings: Vec<fidl_fuchsia_settings::LightGroup> =
+    let settings: Vec<fidl_fuchsia_settings::LightGroup> =
         light_service.watch_light_groups().await.expect("watch completed");
-    settings.sort_by_key(|group: &fidl_fuchsia_settings::LightGroup| group.name.clone());
-
-    // Watch returns vector, internally we use a HashMap, so convert into a vector for comparison.
-    let mut expected_value = expected_light_info
-        .light_groups
-        .drain()
-        .map(|(_, value)| fidl_fuchsia_settings::LightGroup::from(value))
-        .collect::<Vec<_>>();
-    expected_value.sort_by_key(|group| group.name.clone());
-    assert_eq!(settings, expected_value);
+    assert_lights_eq(settings, expected_light_info);
 }
 
 #[fuchsia_async::run_until_stalled(test)]

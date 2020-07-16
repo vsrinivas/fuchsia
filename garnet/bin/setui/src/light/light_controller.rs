@@ -61,7 +61,13 @@ impl controller::Handle for LightController {
         match request {
             SettingRequest::Restore => Some(self.restore().await),
             SettingRequest::SetLightGroupValue(name, state) => Some(self.set(name, state).await),
-            SettingRequest::Get => Some(Ok(Some(SettingResponse::Light(self.client.read().await)))),
+            SettingRequest::Get => {
+                // Read all light values from underlying fuchsia.hardware.light before returning a
+                // value to ensure we have the latest light state.
+                // TODO(fxb/56319): remove once all clients are migrated.
+                self.restore().await.ok();
+                Some(Ok(Some(SettingResponse::Light(self.client.read().await))))
+            }
             _ => None,
         }
     }
