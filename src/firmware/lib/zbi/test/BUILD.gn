@@ -2,46 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36139.                         #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 import("//build/test.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":zbi" ]
+  deps = [ ":firmware_zbi_test($host_toolchain)" ]
 }
 
-test("zbi") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  output_name = "libzbi-test"
+test("firmware_zbi_test") {
   sources = [ "zbi.cc" ]
   deps = [
+    "//src/firmware/lib/zbi",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/zbi",
     "//zircon/public/lib/zxtest",
   ]
-  if (is_fuchsia) {
-    deps += [
-      "//sdk/lib/fdio",
-      "//zircon/public/lib/zx",
-    ]
-  } else {
-    output_dir = "$root_out_dir/zircon-migrated"
-  }
 }

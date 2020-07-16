@@ -53,6 +53,7 @@ group("tests") {
     "diagnostics:tests",
     "experiences:tests",
     "factory:tests",
+    "firmware:tests",
     "fonts:tests",
     "graphics:tests",
     "hwinfo:tests",
