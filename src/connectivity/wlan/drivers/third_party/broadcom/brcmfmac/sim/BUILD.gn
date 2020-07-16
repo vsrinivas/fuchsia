@@ -44,4 +44,7 @@ source_set("sim") {
   ]
   public_configs = [ ":config_sim" ]
   friend = [ "test/*" ]
+
+  # TODO(fxb/56417): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
