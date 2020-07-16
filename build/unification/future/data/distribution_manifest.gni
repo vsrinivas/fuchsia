@@ -31,7 +31,7 @@
 #     [list of labels] The targets to generate a manifest for.
 #     See `gn help` for more details.
 #
-#   testonly, visibility, metadata (optional)
+#   data_deps, testonly, visibility, metadata (optional)
 #     See `gn help`.
 #
 #   outputs (optional)
@@ -91,6 +91,7 @@ template("distribution_manifest") {
   action(main_target) {
     forward_variables_from(invoker,
                            [
+                             "data_deps",
                              "deps",
                              "testonly",
                              "visibility",

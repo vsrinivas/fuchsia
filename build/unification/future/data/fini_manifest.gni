@@ -21,7 +21,7 @@ import("distribution_manifest.gni")
 #     [list of labels] The targets to generate a manifest for.
 #     See `gn help` for more details.
 #
-#   testonly, visibility, metadata (optional)
+#   data_deps, testonly, visibility, metadata (optional)
 #     See `gn help`.
 #
 #   outputs (optional)
@@ -29,7 +29,7 @@ import("distribution_manifest.gni")
 #     Defaults to `[ "$target_gen_dir/$target_name.fini" ]`.
 template("fini_manifest") {
   main_target = target_name
-  generate_target = "${target_name}_generate"
+  generate_target = "${target_name}_dist"
 
   # Build the name of the output files.
   if (defined(invoker.outputs)) {
@@ -46,6 +46,7 @@ template("fini_manifest") {
   distribution_manifest(generate_target) {
     forward_variables_from(invoker,
                            [
+                             "data_deps",
                              "deps",
 
                              # Metadata needs to be added on this target so that
