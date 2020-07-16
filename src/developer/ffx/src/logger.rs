@@ -1,6 +1,6 @@
 use {
+    ffx_config::constants::{LOG_DIR, LOG_ENABLED},
     ffx_config::get,
-    ffx_core::constants::{LOG_DIR, LOG_ENABLED},
     simplelog::{
         CombinedLogger, Config, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
     },

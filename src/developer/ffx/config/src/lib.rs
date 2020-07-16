@@ -6,10 +6,10 @@ use {
     crate::api::{PersistentConfig, ReadConfig, WriteConfig},
     crate::cache::load_config,
     crate::config::Config,
+    crate::constants::ENV_FILE,
     crate::environment::Environment,
     anyhow::{anyhow, Error},
     ffx_config_plugin_args::ConfigLevel,
-    ffx_core::constants::ENV_FILE,
     ffx_lib_args::Ffx,
     serde_json::Value,
     std::{env, fs::File, io::Write, path::PathBuf},
@@ -18,6 +18,7 @@ use {
 mod api;
 mod cache;
 mod config;
+pub mod constants;
 mod env_var_config;
 pub mod environment;
 mod file_backed_config;

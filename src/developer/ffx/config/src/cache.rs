@@ -4,11 +4,11 @@
 
 use {
     crate::config::Config,
+    crate::constants::CONFIG_CACHE_TIMEOUT,
     crate::environment::Environment,
     crate::heuristic_config::HeuristicFn,
     anyhow::{anyhow, Error},
     async_std::sync::{Arc, RwLock},
-    ffx_core::constants::CONFIG_CACHE_TIMEOUT,
     ffx_lib_args::Ffx,
     std::collections::HashMap,
     std::time::Instant,

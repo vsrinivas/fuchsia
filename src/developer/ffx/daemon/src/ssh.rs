@@ -4,8 +4,8 @@
 use {
     crate::target::TargetAddr,
     anyhow::{anyhow, Error},
+    ffx_config::constants::{SSH_PORT, SSH_PRIV},
     ffx_config::get,
-    ffx_core::constants::{SSH_PORT, SSH_PRIV},
     std::collections::HashSet,
     std::process::Command,
 };

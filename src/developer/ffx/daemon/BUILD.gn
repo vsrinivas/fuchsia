@@ -22,7 +22,6 @@ if (host_toolchain == current_toolchain) {
       "//src/developer/ffx:ffx_lib_args",
       "//src/developer/ffx:ffx_lib_sub_command",
       "//src/developer/ffx/config:lib",
-      "//src/developer/ffx/core:lib",
       "//src/developer/ffx/fastboot:lib",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",

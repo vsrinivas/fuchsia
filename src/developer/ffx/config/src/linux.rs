@@ -4,9 +4,9 @@
 #[cfg(target_os = "linux")]
 pub(crate) mod imp {
     use {
+        crate::constants::{LOG_DIR, LOG_ENABLED, SSH_PORT, SSH_PRIV, SSH_PUB},
         crate::heuristic_config::HeuristicFn,
         crate::heuristic_fns::find_ssh_keys,
-        ffx_core::constants::{LOG_DIR, LOG_ENABLED, SSH_PORT, SSH_PRIV, SSH_PUB},
         std::collections::HashMap,
     };
 

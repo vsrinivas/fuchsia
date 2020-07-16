@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::constants::{EVENT_TIMEOUT, SOCKET},
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::mdns::MdnsTargetFinder,
@@ -10,7 +11,6 @@ use {
     anyhow::{anyhow, Context, Error},
     async_std::task,
     async_trait::async_trait,
-    ffx_core::constants::{EVENT_TIMEOUT, SOCKET},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,

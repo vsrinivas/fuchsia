@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    crate::constants::{self, SOCKET},
     crate::ssh::build_ssh_command,
     crate::target::Target,
     anyhow::anyhow,
     anyhow::{Context, Error},
     async_std::io::prelude::BufReadExt,
     async_std::prelude::StreamExt,
-    ffx_core::constants,
-    ffx_core::constants::SOCKET,
     fidl_fuchsia_overnet::MeshControllerProxyInterface,
     futures::channel::oneshot,
     futures::future::FutureExt,

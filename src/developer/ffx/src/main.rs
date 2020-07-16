@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::constants::DAEMON,
     crate::logger::setup_logger,
     anyhow::{format_err, Context, Error},
-    ffx_core::constants::DAEMON,
     ffx_daemon::{find_and_connect, is_daemon_running},
     ffx_lib_args::Ffx,
     ffx_lib_sub_command::Subcommand,
@@ -16,6 +16,7 @@ use {
     std::process::Command,
 };
 
+mod constants;
 mod logger;
 
 async fn spawn_daemon() -> Result<(), Error> {

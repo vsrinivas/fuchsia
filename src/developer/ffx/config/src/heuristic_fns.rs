@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    ffx_core::constants::{SSH_PRIV, SSH_PUB},
+    crate::constants::{SSH_PRIV, SSH_PUB},
     serde_json::Value,
     std::path::Path,
 };

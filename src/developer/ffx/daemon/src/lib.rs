@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::constants::{MAX_RETRY_COUNT, SOCKET},
     crate::daemon::Daemon,
     anyhow::{Context, Error},
-    ffx_core::constants::{MAX_RETRY_COUNT, SOCKET},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequestStream},
     fidl_fuchsia_overnet::{
@@ -16,6 +16,7 @@ use {
     futures::prelude::*,
 };
 
+mod constants;
 mod daemon;
 mod discovery;
 mod events;
