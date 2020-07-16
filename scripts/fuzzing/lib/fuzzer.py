@@ -203,7 +203,15 @@ class Fuzzer(object):
 
         # Check if fuzzer built using '--with'.
         cmd = ['pkgctl', 'pkg-status', self.package_url]
-        out = self.device.ssh(cmd).check_output()
+        process = self.device.ssh(cmd)
+        process.stdout = subprocess.PIPE
+        p = process.popen()
+        out, _ = p.communicate()
+        # Exit code 2 means "pkg in tuf repo but not on disk", which is not an
+        # error for us (see sys/args.rs in pkgctl)
+        if p.returncode not in (0, 2):
+            raise subprocess.CalledProcessError(p.returncode, ' '.join(cmd), output=out)
+
         match = re.search(r'Package on disk: yes \(path=(.*)\)', str(out))
         if not match:
             return False

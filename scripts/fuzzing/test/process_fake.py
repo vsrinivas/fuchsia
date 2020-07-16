@@ -43,16 +43,17 @@ class FakeProcess(Process):
         self._popen._stdin.seek(0)
         return self._popen._stdin.read().split('\n')
 
-    def schedule(self, output, start=None, end=None):
+    def schedule(self, output, returncode=None, start=None, end=None):
         """Sets the output and/or error to be returned later.
 
-        The output will appear in the stdout of the process between the start
-        and end times. If start is None, it behaves as if start is now. If end
+        Between the start and end times, the output will appear in the process's
+        stdout, and any specified returncode will override the default return
+        code. If start is None, it behaves as if start is now. If end
         is None, the output is not removed once it is added.
         """
         if not start:
             start = self._host.elapsed
-        self._popen._outputs.append((output, start, end))
+        self._popen._outputs.append((output, returncode, start, end))
 
     def clear(self):
         self._popen._outputs = []
@@ -118,20 +119,26 @@ class FakeProcess(Process):
 
             This method will update the object's stdout and stderr according to
             the schedule and the elapsed time. It will set the returncode once
-            its specified duration has elapsed.
+            its specified duration has elapsed, using the most recently-added
+            return code set for the current time range, falling back to the
+            `succeeds` property if none was specified.
             """
             now = self._host.elapsed
             if not self.returncode and self._completion <= now:
                 self._stdout.truncate(0)
-                for output, start, end in self._outputs:
+                for output, returncode, start, end in self._outputs:
                     if now < start:
                         continue
                     if end and end <= now:
                         continue
                     self._stdout.write(output)
                     self._stdout.write('\n')
+                    self._returncode = returncode
                 self._stdout.flush()
-                self._returncode = 0 if self._succeeds else 1
+                # If no return code was explicitly specified for this time
+                # period, fall back to the `succeeds` setting
+                if not self._returncode:
+                    self._returncode = 0 if self._succeeds else 1
                 self._completion = None
             return self.returncode
 

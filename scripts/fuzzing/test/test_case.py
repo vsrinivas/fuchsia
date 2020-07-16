@@ -119,18 +119,19 @@ class TestCaseWithFactory(TestCaseWithIO):
         return self.parser.parse_args(args)
 
     def set_outputs(
-            self, args, outputs, start=None, end=None, reset=True, ssh=False):
-        """Sets what will be returned from the stdout of a fake process.
+            self, args, outputs, start=None, end=None, returncode=None, reset=True, ssh=False):
+        """Sets what will be returned from the stdout and return code of a fake
+        process.
 
         Providing a start and/or end will schedule the output to be added and/or
         removed, respectively, at a later time; see FakeProcess.schedule.
-        Setting reset to True will replace any e4xisting output for the command.
+        Setting reset to True will replace any existing output for the command.
         Setting ssh to true will automatically add the necessary SSH arguments.
         """
         process = self.get_process(args, ssh=ssh)
         if reset:
             process.clear()
-        process.schedule('\n'.join(outputs), start=start, end=end)
+        process.schedule('\n'.join(outputs), start=start, end=end, returncode=returncode)
 
     def set_running(self, package, executable, refresh=True, duration=None):
         """Marks a packaged executable as running on device.

@@ -43,7 +43,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         package_path = '/pkgfs/versions/deadbeef'
 
         self.set_outputs(
-            status_cmd, ['Package on disk: no'], end=10.0, ssh=True)
+            status_cmd, ['Package on disk: no'], end=10.0, ssh=True, returncode=2)
         self.set_outputs(
             status_cmd, ['Package on disk: yes (path={})'.format(package_path)],
             start=10.0,
