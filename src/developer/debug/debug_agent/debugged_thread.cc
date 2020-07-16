@@ -149,6 +149,14 @@ void DebuggedThread::OnException(std::unique_ptr<ThreadException> exception_hand
   exception.type = arch_provider_->DecodeExceptionType(*this, exception_info.type);
   exception.exception = thread_handle_->GetExceptionRecord();
 
+  auto strategy = exception_handle_->GetStrategy();
+  if (strategy.is_error()) {
+    FX_LOGS(WARNING) << "Could not determine exception strategy: "
+                     << zx_status_get_string(strategy.error_value());
+    return;
+  }
+  exception.exception.second_chance = (strategy.value() == ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+
   std::optional<GeneralRegisters> regs = thread_handle_->GetGeneralRegisters();
   if (!regs) {
     // This can happen, for example, if the thread was killed during the time the exception message
