@@ -144,26 +144,29 @@ class ScrollState extends State<Scroll> {
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: BoxConstraints.expand(),
-      child: Container(
-        color: Colors.white,
-        child: ListView(
-          controller: _controller,
-          children: <Widget>[
-            Container(height: 8192.0),
-            Center(
-              child: Text(
-                'Scroll Me!',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 32,
+    return Directionality(
+      textDirection: ui.TextDirection.ltr,
+      child: ConstrainedBox(
+        constraints: BoxConstraints.expand(),
+        child: Container(
+          color: Colors.white,
+          child: ListView(
+            controller: _controller,
+            children: <Widget>[
+              Container(height: 8192.0),
+              Center(
+                child: Text(
+                  'Scroll Me!',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 32,
+                  ),
                 ),
               ),
-            ),
-            Container(height: 8192.0),
-          ],
+              Container(height: 8192.0),
+            ],
+          ),
         ),
       ),
     );
