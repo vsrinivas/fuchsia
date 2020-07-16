@@ -24,6 +24,9 @@ class IntegrationTest(TestCaseWithIO):
     def test_e2e(self):
         # Set up hermetic environment.
         host = Host()
+        host.fd_out = self._stdout
+        host.fd_err = self._stderr
+
         with host.temp_dir() as temp_dir:
 
             # (Re-)parse the command line arguments, a la main.py.
