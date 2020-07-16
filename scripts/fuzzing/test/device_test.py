@@ -231,12 +231,17 @@ class DeviceTest(TestCaseWithFactory):
         local_path = 'test_fetch'
         remote_path = 'remote-path'
 
-        # Fails due to missing pathname.
+        # Fails due to missing local pathname.
         self.assertError(
             lambda: self.device.fetch(local_path, remote_path),
             'No such directory: test_fetch')
 
         self.host.mkdir(local_path)
+
+        # Fails due to empty source file list.
+        with self.assertRaises(ValueError):
+            self.device.fetch(local_path)
+
         self.device.fetch(local_path, remote_path)
         self.assertScpFrom(remote_path, local_path)
 

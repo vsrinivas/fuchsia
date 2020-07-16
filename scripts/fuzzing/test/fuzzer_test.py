@@ -300,6 +300,8 @@ class FuzzerTest(TestCaseWithFuzzer):
                 'Yet another line',
                 'artifact_prefix=\'data/\'; Test unit written to data/crash-aaaa',
             ])
+        self.assertScpFrom(
+            self.ns.data_abspath('crash-aaaa'), self.fuzzer.output)
 
     def test_symbolize_log_pid_from_stacktrace(self):
         self.symbolize_helper(
@@ -311,6 +313,8 @@ class FuzzerTest(TestCaseWithFuzzer):
                 'Yet another line',
                 'artifact_prefix=\'data/\'; Test unit written to data/crash-bbbb',
             ])
+        self.assertScpFrom(
+            self.ns.data_abspath('crash-bbbb'), self.fuzzer.output)
 
     def test_symbolize_log_pid_from_deadly_signal(self):
         self.symbolize_helper(
@@ -322,6 +326,8 @@ class FuzzerTest(TestCaseWithFuzzer):
                 'Yet another line',
                 'artifact_prefix=\'data/\'; Test unit written to data/crash-cccc',
             ])
+        self.assertScpFrom(
+            self.ns.data_abspath('crash-cccc'), self.fuzzer.output)
 
     def test_symbolize_log_with_job_num(self):
         self.symbolize_helper(

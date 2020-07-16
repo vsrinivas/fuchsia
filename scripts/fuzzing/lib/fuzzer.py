@@ -378,7 +378,10 @@ class Fuzzer(object):
             fd_out.write(line)
             if echo:
                 self.host.echo(line.strip())
-        self.ns.fetch(self.output, *artifacts)
+
+        if artifacts:
+            self.ns.fetch(self.output, *artifacts)
+
         return sym != None
 
     def monitor(self):

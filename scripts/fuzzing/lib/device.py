@@ -278,6 +278,9 @@ class Device(object):
            determine when the file(s) should be fetched. See Fuzzer._launch()
            for an example.
         """
+        if not args:
+            raise ValueError('No source files specified')
+
         if not self.host.isdir(host_dst):
             self.host.error('No such directory: {}'.format(host_dst))
 
