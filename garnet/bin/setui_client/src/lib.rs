@@ -31,9 +31,6 @@ pub enum SettingClient {
     Audio {
         #[structopt(flatten)]
         streams: AudioStreams,
-
-        #[structopt(flatten)]
-        input: AudioInput,
     },
 
     // Operations that use the Device interface.
@@ -217,12 +214,6 @@ struct UserVolume {
     volume_muted: Option<bool>,
 }
 
-#[derive(StructOpt, Debug)]
-pub struct AudioInput {
-    #[structopt(short = "m", long = "input_muted")]
-    input_muted: Option<bool>,
-}
-
 #[derive(StructOpt, Debug, Clone)]
 pub struct LightGroup {
     #[structopt(short, long)]
@@ -350,17 +341,14 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = privacy::command(privacy_service, user_data_sharing_consent).await?;
             println!("Privacy: {}", output);
         }
-        SettingClient::Audio { streams, input } => {
+        SettingClient::Audio { streams } => {
             let audio_service = connect_to_service::<fidl_fuchsia_settings::AudioMarker>()
                 .context("Failed to connect to audio service")?;
             let stream = streams.stream;
             let source = streams.source;
             let level = streams.user_volume.level;
             let volume_muted = streams.user_volume.volume_muted;
-            let input_muted = input.input_muted;
-            let output =
-                audio::command(audio_service, stream, source, level, volume_muted, input_muted)
-                    .await?;
+            let output = audio::command(audio_service, stream, source, level, volume_muted).await?;
             println!("Audio: {}", output);
         }
         SettingClient::Input { mic_muted } => {
