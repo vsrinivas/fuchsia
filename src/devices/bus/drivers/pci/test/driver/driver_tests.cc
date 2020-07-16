@@ -9,6 +9,7 @@
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+#include <sys/stat.h>
 
 #include <array>
 
@@ -49,10 +50,8 @@ class PciDriverTests : public zxtest::Test {
 //       \---------------> Fuchsia.Device.Test <-------------/
 TEST_F(PciDriverTests, TestRunner) {
   IsolatedDevmgr::Args args;
-  // /boot/ is for bringup builds, /system/ is for core/workstation/etc.
-  args.driver_search_paths.push_back("/pkg/bin");
+  args.path_prefix = "/pkg/";
   args.driver_search_paths.push_back("/boot/driver");
-  args.driver_search_paths.push_back("/system/driver");
   args.device_list.push_back(kDeviceEntry);
   args.disable_block_watcher = true;
   args.disable_netsvc = true;

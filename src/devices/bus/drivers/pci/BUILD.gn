@@ -133,3 +133,11 @@ if (platform_enable_user_pci) {
     ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "test:pci-driver-test",
+    "test:pci-unit-test",
+  ]
+}

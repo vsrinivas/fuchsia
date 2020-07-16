@@ -4,8 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 # The output of the test code below is made up of several binaries
 # pci-unit-test: A binary to run the unit tests defiend in test/
@@ -17,15 +16,6 @@ import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 # pci_test.so: A zxtest driver to test the PCI protocol
 test("pci-unit") {
   output_name = "pci-unit-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [
     "unit/allocation_tests.cc",
     "unit/config_tests.cc",
@@ -46,20 +36,8 @@ test("pci-driver") {
   if (is_fuchsia) {
     testonly = false
   }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [ "driver/driver_tests.cc" ]
   deps = [
-    ":pci_fake",
-    ":pci_fake.proxy",
-    ":pci_protocol_test_driver",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
@@ -71,20 +49,15 @@ test("pci-driver") {
   ]
 }
 
-devmgr_manifest("devmgr-manifest") {
-}
-
-test_package("pci-driver-package") {
-  package_name = "pci-driver"
+isolated_devmgr_unittest_package("pci-driver-test") {
+  executable_path = "test/pci-driver-test"
   deps = [
-    ":devmgr-manifest",
     ":pci-driver",
-  ]
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-  tests = [
-    {
-      name = "pci-driver-test"
-    },
+    ":pci_fake",
+    ":pci_fake.proxy",
+    ":pci_protocol_test_driver",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
   ]
 }
 
@@ -140,13 +113,7 @@ driver_module("pci_protocol_test_driver") {
   ]
 }
 
-unittest_package("pci-unit-package") {
-  package_name = "pci-unit"
+fuchsia_unittest_package("pci-unit-test") {
+  executable_path = "test/pci-unit-test"
   deps = [ ":pci-unit" ]
-
-  tests = [
-    {
-      name = "pci-unit-test"
-    },
-  ]
 }

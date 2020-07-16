@@ -13,7 +13,6 @@ common_test_contents = [
   "//src/devices/block/drivers/gpt:gpt-device-test",
   "//src/devices/block/drivers/mbr:mbr-test",
   "//src/devices/board/drivers/mt8167s_ref:mt8167s_ref-test",
-  "//src/devices/bus/drivers/pci/test:pci-driver",
   "//src/devices/bus/lib/device-protocol-pdev/test:device-protocol-pdev-test",
   "//src/devices/clock/drivers/amlogic-clk:amlogic-clk-test",
   "//src/devices/clock/drivers/msm8x53-clk:msm8x53-clk-test",
