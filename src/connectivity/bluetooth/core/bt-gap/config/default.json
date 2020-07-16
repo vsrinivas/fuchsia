@@ -1,0 +1,9 @@
+{
+  "le" : {
+    "privacy-enabled": true,
+    "background-scan-enabled": true
+  },
+  "bredr" : {
+    "connectable": true
+  }
+}

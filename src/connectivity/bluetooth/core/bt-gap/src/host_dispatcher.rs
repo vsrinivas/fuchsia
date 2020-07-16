@@ -41,7 +41,7 @@ use {
 };
 
 use crate::{
-    generic_access_service,
+    build_config, generic_access_service,
     host_device::{self, HostDevice, HostDiscoverySession, HostListener},
     services::pairing::{
         pairing_dispatcher::{PairingDispatcher, PairingDispatcherHandle},
@@ -140,6 +140,7 @@ struct HostDispatcherState {
     discoverable: Option<Weak<DiscoverableRequestToken>>,
     pub input: InputCapability,
     pub output: OutputCapability,
+    pub config_settings: build_config::Config,
     peers: HashMap<PeerId, Inspectable<Peer>>,
 
     // Sender end of a futures::mpsc channel to send LocalServiceDelegateRequests
@@ -384,6 +385,7 @@ impl HostDispatcher {
             appearance,
             input: InputCapability::None,
             output: OutputCapability::None,
+            config_settings: build_config::load_default(),
             peers: HashMap::new(),
             gas_channel_sender,
             host_vmo_sender,
@@ -765,6 +767,7 @@ impl HostDispatcher {
         //   - LE background scan for auto-connection
         //   - BR/EDR connectable mode
 
+        self.state.read().config_settings.apply(host_device.clone()).await?;
         let address = host_device.read().get_info().address.clone();
         assign_host_data(host_device.clone(), self.clone(), &address).await?;
         try_restore_bonds(host_device.clone(), self.clone(), &address)
@@ -778,16 +781,6 @@ impl HostDispatcher {
         let (gatt_server_proxy, remote_gatt_server) = fidl::endpoints::create_proxy()?;
         host_device.read().get_host().request_gatt_server_(remote_gatt_server)?;
         self.spawn_gas_proxy(gatt_server_proxy).await?;
-
-        // Enable privacy by default.
-        host_device.read().enable_privacy(true).map_err(|e| e.as_failure())?;
-
-        let fut = host_device.read().set_connectable(true);
-        fut.await.map_err(|_| format_err!("failed to set connectable"))?;
-        host_device
-            .read()
-            .enable_background_scan(true)
-            .map_err(|_| format_err!("failed to enable background scan"))?;
 
         // Ensure the current active pairing delegate (if it exists) handles this host
         self.handle_pairing_requests(host_device.clone());

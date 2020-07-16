@@ -33,6 +33,7 @@ use crate::{
 };
 
 mod adapters;
+mod build_config;
 mod generic_access_service;
 mod host_device;
 mod host_dispatcher;

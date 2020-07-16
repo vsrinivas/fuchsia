@@ -6,6 +6,9 @@
         "dev": [
             "class/bt-host"
         ],
+        "features": [
+            "config-data"
+        ],
         "services": [
             "fuchsia.device.NameProvider",
             "fuchsia.logger.LogSink",
