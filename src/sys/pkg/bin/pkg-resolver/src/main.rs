@@ -223,22 +223,12 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         )
     };
 
-    let admin_cb = move |stream| {
-        let experiment_state = Arc::clone(&experiment_state);
-        fasync::spawn_local(async move {
-            experiment::run_admin_service(experiment_state, stream)
-                .await
-                .unwrap_or_else(|e| fx_log_err!("while handling admin client {:#}", anyhow!(e)))
-        });
-    };
-
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(resolver_cb)
         .add_fidl_service(font_resolver_fb)
         .add_fidl_service(repo_cb)
-        .add_fidl_service(rewrite_cb)
-        .add_fidl_service(admin_cb);
+        .add_fidl_service(rewrite_cb);
 
     inspector.serve(&mut fs)?;
 

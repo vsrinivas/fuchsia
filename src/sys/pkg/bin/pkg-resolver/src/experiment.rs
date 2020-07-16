@@ -74,6 +74,9 @@ impl State {
     }
 }
 
+#[allow(unused)]
+// Disabling the service because there are no active experiments
+// and we don't want nor need to continuously audit it for security.
 pub(crate) async fn run_admin_service(
     experiment_state: Arc<RwLock<State>>,
     mut stream: PackageResolverAdminRequestStream,
