@@ -11,7 +11,6 @@ import '../status/status_container.dart';
 import '../story/clusters.dart';
 import '../story/fullscreen_story.dart';
 import '../support/keyboard_help.dart';
-import '../support/scrim.dart';
 import '../topbar/topbar.dart';
 
 class Home extends StatelessWidget {
@@ -37,9 +36,6 @@ class Home extends StatelessWidget {
 
               // Fullscreen story.
               FullscreenStory(model),
-
-              // Scrim to dismiss system overlays.
-              Scrim(model: model),
 
               // Keyboard shortcuts help.
               KeyboardHelp(model: model),

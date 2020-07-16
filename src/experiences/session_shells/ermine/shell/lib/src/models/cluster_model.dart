@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:tiler/tiler.dart' show TilerModel, TileModel;
@@ -208,6 +210,28 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
       currentCluster.value =
           clusters[clusters.indexOf(currentCluster.value) - 1];
     }
+  }
+
+  ErmineStory hitTest(Offset position, [GestureBinding gestureBinding]) {
+    final binding = gestureBinding ?? GestureBinding.instance;
+
+    final hitTests = HitTestResult();
+    binding.hitTest(hitTests, position);
+
+    if (hitTests.path.isEmpty) {
+      return null;
+    }
+
+    // Check if the topmost hit is a ChildView.
+    final childViewRenderBox = hitTests.path.first.target;
+    return currentCluster.value.stories.firstWhere(
+      (story) {
+        final key = GlobalObjectKey(story.childViewConnection);
+        final renderObject = key.currentContext?.findRenderObject();
+        return renderObject == childViewRenderBox;
+      },
+      orElse: () => null,
+    );
   }
 }
 

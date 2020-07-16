@@ -5,17 +5,19 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:async/async.dart';
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_policy/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:flutter/material.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
-import 'package:lib.widgets/utils.dart' show PointerEventsListener;
 
+import '../utils/pointer_events_stream.dart';
 import '../utils/presenter.dart';
+import '../utils/styles.dart';
 import '../utils/suggestions.dart';
 import '../widgets/ask/ask.dart';
 import 'cluster_model.dart';
@@ -28,7 +30,7 @@ import 'topbar_model.dart';
 /// like Overview, Recents, Ask and Status.
 class AppModel {
   KeyboardShortcuts _keyboardShortcuts;
-  PointerEventsListener _pointerEventsListener;
+  PointerEventsStream _pointerEventsStream;
   SuggestionService _suggestionService;
 
   final _intl = PropertyProviderProxy();
@@ -51,6 +53,7 @@ class AppModel {
   ValueNotifier<bool> peekNotifier = ValueNotifier(false);
   ValueNotifier<bool> recentsVisibility = ValueNotifier(false);
   Stream<Locale> _localeStream;
+  StreamSplitter<input.PointerEvent> _splitter;
 
   ClustersModel clustersModel;
   StatusModel statusModel;
@@ -59,13 +62,13 @@ class AppModel {
 
   AppModel({
     KeyboardShortcuts keyboardShortcuts,
-    PointerEventsListener pointerEventsListener,
+    PointerEventsStream pointerEventsStream,
     LocaleSource localeSource,
     SuggestionService suggestionService,
     this.statusModel,
     this.clustersModel,
   })  : _keyboardShortcuts = keyboardShortcuts,
-        _pointerEventsListener = pointerEventsListener,
+        _pointerEventsStream = pointerEventsStream,
         _suggestionService = suggestionService {
     // Setup child models.
     topbarModel = TopbarModel(appModel: this);
@@ -83,8 +86,17 @@ class AppModel {
     keyboardShortcutsHelpText = _keyboardShortcuts.helpText();
 
     // Setup pointer events listener.
-    _pointerEventsListener ??=
-        _PointerEventsListener.fromStartupContext(_startupContext);
+    _pointerEventsStream ??=
+        PointerEventsStream.fromStartupContext(_startupContext);
+    _splitter = StreamSplitter(_pointerEventsStream.stream)
+      ..split()
+          .where((event) => event.phase == input.PointerEventPhase.down)
+          .map((event) => Offset(event.x, event.y))
+          .listen(_onPointerDown)
+      ..split()
+          .where((event) => event.phase == input.PointerEventPhase.move)
+          .map((event) => Offset(event.x, event.y))
+          .listen(_onPointerMove);
 
     // Setup locale stream.
     if (localeSource == null) {
@@ -121,12 +133,6 @@ class AppModel {
 
   /// Called after runApp which initializes flutter's gesture system.
   Future<void> onStarted() async {
-    // Capture pointer events directly from Scenic.
-    if (_pointerEventsListener is _PointerEventsListener) {
-      _PointerEventsListener listener = _pointerEventsListener;
-      listener.listen(listener.presentation);
-    }
-
     // Update the current time every second.
     Timer.periodic(
         Duration(seconds: 1), (timer) => currentTime.value = DateTime.now());
@@ -259,11 +265,16 @@ class AppModel {
     }
   }
 
+  /// Returns true if any sysmtem overlay like [Ask], [Status], etc are visible.
+  bool get overlaysVisible =>
+      askVisibility.value || statusVisibility.value || helpVisibility.value;
+
   /// Called when the user initiates logout (using keyboard or UI).
   void onLogout() {
     onCancel();
     _keyboardShortcuts.dispose();
-    _pointerEventsListener.stop();
+    _pointerEventsStream.dispose();
+    _splitter.close();
 
     _intl?.ctrl?.close();
     _suggestionService.dispose();
@@ -283,22 +294,25 @@ class AppModel {
     // Topbar.
     topbarModel.onInspect(node.child('topbar'));
   }
-}
 
-class _PointerEventsListener extends PointerEventsListener {
-  final PresentationProxy presentation;
-
-  _PointerEventsListener(this.presentation) : super();
-
-  factory _PointerEventsListener.fromStartupContext(StartupContext context) {
-    final presentation = PresentationProxy();
-    context.incoming.connectToService(presentation);
-    return _PointerEventsListener(presentation);
+  void _onPointerDown(Offset position) {
+    // Set focus on story under the offset.
+    final story = clustersModel.hitTest(position);
+    if (story != null) {
+      story.focus();
+      // Also dismiss any system overlays.
+      onCancel();
+    }
   }
 
-  @override
-  void stop() {
-    super.stop();
-    presentation.ctrl.close();
+  void _onPointerMove(Offset position) {
+    if (isFullscreen && !overlaysVisible) {
+      if (position.dy == 0) {
+        peekNotifier.value = true;
+      } else if (position.dy >
+          ErmineStyle.kTopBarHeight + ErmineStyle.kStoryTitleHeight) {
+        peekNotifier.value = false;
+      }
+    }
   }
 }

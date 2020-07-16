@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
+import 'package:fidl_fuchsia_ui_input/fidl_async.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
-import 'package:lib.widgets/utils.dart' show PointerEventsListener;
 import 'package:test/test.dart';
 import 'package:mockito/mockito.dart';
 
@@ -15,31 +16,36 @@ import 'package:mockito/mockito.dart';
 import 'package:ermine/src/models/cluster_model.dart';
 import 'package:ermine/src/models/ermine_story.dart';
 import 'package:ermine/src/models/status_model.dart';
+import 'package:ermine/src/utils/pointer_events_stream.dart';
+import 'package:ermine/src/utils/styles.dart';
 import 'package:ermine/src/utils/suggestions.dart';
 import 'package:ermine/src/models/app_model.dart';
 
 void main() {
   AppModel appModel;
   KeyboardShortcuts keyboardShortcuts;
-  PointerEventsListener pointerEventsListener;
+  PointerEventsStream pointerEventsStream;
   LocaleSource localeSource;
   SuggestionService suggestionService;
   StatusModel statusModel;
   ClustersModel clustersModel;
+  StreamController<PointerEvent> controller;
 
   setUp(() async {
     keyboardShortcuts = MockKeyboardShortcuts();
-    pointerEventsListener = MockPointerEventsListener();
+    pointerEventsStream = MockPointerEventsStream();
     localeSource = MockLocaleSource();
     suggestionService = MockSuggestionService();
     statusModel = MockStatusModel();
     clustersModel = MockClustersModel();
+    controller = StreamController<PointerEvent>.broadcast();
 
     when(localeSource.stream()).thenAnswer((_) => Stream<Locale>.empty());
+    when(pointerEventsStream.stream).thenAnswer((_) => controller.stream);
 
     appModel = _TestAppModel(
       keyboardShortcuts: keyboardShortcuts,
-      pointerEventsListener: pointerEventsListener,
+      pointerEventsStream: pointerEventsStream,
       localeSource: localeSource,
       suggestionService: suggestionService,
       statusModel: statusModel,
@@ -49,12 +55,13 @@ void main() {
   });
 
   tearDown(() {
+    controller.close();
     when(clustersModel.hasStories).thenReturn(false);
 
     appModel.onLogout();
 
     verify(keyboardShortcuts.dispose()).called(1);
-    verify(pointerEventsListener.stop()).called(1);
+    verify(pointerEventsStream.dispose()).called(1);
     verify(suggestionService.dispose()).called(1);
     verify(statusModel.dispose()).called(1);
   });
@@ -188,19 +195,52 @@ void main() {
     appModel.onFullscreen();
     expect(appModel.isFullscreen, false);
   });
+
+  test('Should dismiss overlays on tap', () async {
+    when(clustersModel.hasStories).thenReturn(false);
+    // Make ask overlay visible.
+    appModel.askVisibility.value = true;
+
+    final story = MockErmineStory();
+    when(clustersModel.hitTest(Offset(100, 100))).thenReturn(story);
+
+    controller.add(_downEvent(100, 100));
+    await Future.delayed(Duration.zero);
+
+    expect(appModel.askVisibility.value, false);
+  });
+
+  test('Should update peekNotifier when fullscreen', () async {
+    final story = MockErmineStory();
+    when(clustersModel.fullscreenStory).thenReturn(story);
+
+    expect(appModel.isFullscreen, true);
+
+    appModel.peekNotifier.value = false;
+    controller.add(_moveEvent(100, 0));
+    await Future.delayed(Duration.zero);
+
+    expect(appModel.peekNotifier.value, true);
+
+    controller.add(_moveEvent(
+        100, ErmineStyle.kTopBarHeight + ErmineStyle.kStoryTitleHeight + 1));
+    await Future.delayed(Duration.zero);
+
+    expect(appModel.peekNotifier.value, false);
+  });
 }
 
 class _TestAppModel extends AppModel {
   _TestAppModel({
     KeyboardShortcuts keyboardShortcuts,
-    PointerEventsListener pointerEventsListener,
+    PointerEventsStream pointerEventsStream,
     LocaleSource localeSource,
     SuggestionService suggestionService,
     StatusModel statusModel,
     ClustersModel clustersModel,
   }) : super(
           keyboardShortcuts: keyboardShortcuts,
-          pointerEventsListener: pointerEventsListener,
+          pointerEventsStream: pointerEventsStream,
           localeSource: localeSource,
           suggestionService: suggestionService,
           statusModel: statusModel,
@@ -211,9 +251,27 @@ class _TestAppModel extends AppModel {
   void advertise() {}
 }
 
+PointerEvent _downEvent(double x, double y) =>
+    _pointerEvent(phase: PointerEventPhase.down, x: x, y: y);
+
+PointerEvent _moveEvent(double x, double y) =>
+    _pointerEvent(phase: PointerEventPhase.move, x: x, y: y);
+
+PointerEvent _pointerEvent({PointerEventPhase phase, double x, double y}) =>
+    PointerEvent(
+      phase: phase,
+      x: x,
+      y: y,
+      deviceId: 0,
+      type: PointerEventType.mouse,
+      buttons: 0,
+      eventTime: 0,
+      pointerId: 0,
+    );
+
 class MockKeyboardShortcuts extends Mock implements KeyboardShortcuts {}
 
-class MockPointerEventsListener extends Mock implements PointerEventsListener {}
+class MockPointerEventsStream extends Mock implements PointerEventsStream {}
 
 class MockLocaleSource extends Mock implements LocaleSource {}
 
