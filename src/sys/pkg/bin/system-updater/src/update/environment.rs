@@ -44,6 +44,10 @@ pub struct Environment<B = NamespaceBuildInfo, C = NamespaceCobaltConnector> {
 }
 
 impl Environment {
+    /// Opens connections to the various serrvices provided by the environment needed by a system
+    /// update installation attempt. While this method can detect missing services, it is possible
+    /// for this method to succeed but for the first interaction with a service to observe that the
+    /// connection has since been closed.
     pub fn connect_in_namespace() -> Result<Self, Error> {
         let (data_sink, boot_manager) = paver::connect_in_namespace()?;
         Ok(Self {

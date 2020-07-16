@@ -9,7 +9,7 @@ async fn uses_custom_update_package() {
     let env = TestEnv::new();
 
     env.resolver
-        .register_package("another-update/4", "upd4t3r")
+        .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -17,12 +17,11 @@ async fn uses_custom_update_package() {
         .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
+        initiator: Some(Initiator::User),
+        target: Some("m3rk13"),
         update: Some("fuchsia-pkg://fuchsia.com/another-update/4"),
-        reboot: None,
-        skip_recovery: None,
         oneshot: Some(true),
+        ..Default::default()
     })
     .await
     .expect("run system updater");
@@ -59,12 +58,11 @@ async fn rejects_invalid_update_package_url() {
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
-            initiator: "manual",
-            target: "m3rk13",
+            initiator: Some(Initiator::User),
+            target: Some("m3rk13"),
             update: Some(bogus_url),
-            reboot: None,
-            skip_recovery: None,
             oneshot: Some(true),
+            ..Default::default()
         })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -85,14 +83,10 @@ async fn rejects_unknown_flags() {
         .add_file("zbi", "fake zbi");
 
     let result = env
-        .run_system_updater_args(vec![
-            "--initiator",
-            "manual",
-            "--target",
-            "m3rk13",
-            "--foo",
-            "bar",
-        ])
+        .run_system_updater_args(
+            RawSystemUpdaterArgs(&["--initiator", "manual", "--target", "m3rk13", "--foo", "bar"]),
+            Default::default(),
+        )
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
     assert_eq!(env.take_interactions(), vec![]);
@@ -111,7 +105,10 @@ async fn rejects_extra_args() {
         .add_file("zbi", "fake zbi");
 
     let result = env
-        .run_system_updater_args(vec!["--initiator", "manual", "--target", "m3rk13", "foo"])
+        .run_system_updater_args(
+            RawSystemUpdaterArgs(&["--initiator", "manual", "--target", "m3rk13", "foo"]),
+            Default::default(),
+        )
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
@@ -131,12 +128,11 @@ async fn does_not_reboot_if_requested_not_to_reboot() {
         .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
+        initiator: Some(Initiator::User),
+        target: Some("m3rk13"),
         reboot: Some(false),
-        skip_recovery: None,
         oneshot: Some(true),
+        ..Default::default()
     })
     .await
     .expect("run system updater");
@@ -188,15 +184,13 @@ async fn oneshot_false_not_implemented() {
         )
         .add_file("zbi", "fake zbi");
 
+    let result = env.run_system_updater(SystemUpdaterArgs::default()).await;
+    assert!(result.is_err(), "system updater succeeded when it should fail");
+
+    assert_eq!(env.take_interactions(), vec![]);
+
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            initiator: "manual",
-            target: "m3rk13",
-            update: None,
-            reboot: Some(false),
-            skip_recovery: None,
-            oneshot: None,
-        })
+        .run_system_updater(SystemUpdaterArgs { oneshot: Some(false), ..Default::default() })
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 

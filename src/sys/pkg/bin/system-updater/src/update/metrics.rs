@@ -134,23 +134,6 @@ impl Client {
             duration_to_micros(duration),
         );
     }
-
-    // TODO(53133) Remove unused metric after switching system_updater implementations
-    pub fn log_ota_result_free_space_delta(
-        &mut self,
-        target_version: &str,
-        initiator: Initiator,
-        phase: Phase,
-        status: StatusCode,
-    ) {
-        self.0.with_component().log_event_count(
-            metrics::OTA_RESULT_FREE_SPACE_DELTA_METRIC_ID,
-            (initiator, phase, status),
-            target_version,
-            0,
-            0, // free space delta
-        );
-    }
 }
 
 #[cfg(test)]
