@@ -16,6 +16,7 @@
             "fuchsia.bluetooth.sys.Access",
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.media.sounds.Player",
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

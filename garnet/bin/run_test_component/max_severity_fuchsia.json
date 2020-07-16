@@ -289,6 +289,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/setui_service_tests#meta/settings_lib_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/isolated-devmgr-tests-package#meta/isolated-devmgr-tests.cmx",
          "max_severity": "ERROR"
       },
