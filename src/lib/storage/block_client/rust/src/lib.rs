@@ -7,11 +7,12 @@ use {
     fidl_fuchsia_hardware_block as block,
     fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::{channel::oneshot, task::AtomicWaker},
+    futures::channel::oneshot,
     std::{
         collections::HashMap,
         convert::TryInto,
         future::Future,
+        ops::DerefMut,
         pin::Pin,
         sync::{Arc, Mutex},
         task::{Context, Poll, Waker},
@@ -98,7 +99,10 @@ struct RequestState {
 }
 
 #[derive(Default)]
-struct Requests {
+struct FifoState {
+    // The fifo.
+    fifo: Option<fasync::Fifo<BlockFifoResponse, BlockFifoRequest>>,
+
     // The next request ID to be used.
     next_request_id: u32,
 
@@ -108,60 +112,35 @@ struct Requests {
     // Map from request ID to RequestState.
     map: HashMap<u32, RequestState>,
 
-    // Set to true when terminated.
-    terminate: bool,
+    // The waker for the FifoPoller.
+    poller_waker: Option<Waker>,
 }
 
-impl Requests {
+impl FifoState {
     fn terminate(&mut self) {
-        self.terminate = true;
+        self.fifo.take();
         for (_, request_state) in self.map.iter_mut() {
+            request_state.result.get_or_insert(zx::Status::CANCELED);
             if let Some(waker) = request_state.waker.take() {
                 waker.wake();
             }
         }
-    }
-}
-
-struct FifoState {
-    // The fifo.
-    fifo: fasync::Fifo<BlockFifoResponse, BlockFifoRequest>,
-
-    // Inflight requests, and related information.
-    requests: Mutex<Requests>,
-
-    // The waker for the FifoPoller to be used upon termination.
-    poller_waker: AtomicWaker,
-}
-
-impl FifoState {
-    async fn send(self: &Arc<Self>, mut request: BlockFifoRequest) -> Result<(), Error> {
-        let request_id;
-        {
-            let mut requests = self.requests.lock().unwrap();
-            request_id = requests.next_request_id;
-            requests.next_request_id = requests.next_request_id.overflowing_add(1).0;
-            assert!(
-                requests.map.insert(request_id, RequestState::default()).is_none(),
-                "request id in use!"
-            );
-            request.request_id = request_id;
-            requests.queue.push_back(request);
-            self.poller_waker.wake();
+        if let Some(waker) = self.poller_waker.take() {
+            waker.wake();
         }
-        let reply = ResponseFuture::new(self.clone(), request_id);
-        Ok(reply.await?)
     }
 }
+
+type FifoStateRef = Arc<Mutex<FifoState>>;
 
 // A future used for fifo responses.
 struct ResponseFuture {
     request_id: u32,
-    fifo_state: Arc<FifoState>,
+    fifo_state: FifoStateRef,
 }
 
 impl ResponseFuture {
-    fn new(fifo_state: Arc<FifoState>, request_id: u32) -> Self {
+    fn new(fifo_state: FifoStateRef, request_id: u32) -> Self {
         ResponseFuture { request_id, fifo_state }
     }
 }
@@ -170,13 +149,10 @@ impl Future for ResponseFuture {
     type Output = Result<(), zx::Status>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
-        let mut requests = self.fifo_state.requests.lock().unwrap();
-        let terminate = requests.terminate;
-        let request_state = requests.map.get_mut(&self.request_id).unwrap();
+        let mut state = self.fifo_state.lock().unwrap();
+        let request_state = state.map.get_mut(&self.request_id).unwrap();
         if let Some(result) = request_state.result {
             Poll::Ready(result.into())
-        } else if terminate {
-            Poll::Ready(Err(zx::Status::CANCELED))
         } else {
             request_state.waker.replace(context.waker().clone());
             Poll::Pending
@@ -186,7 +162,7 @@ impl Future for ResponseFuture {
 
 impl Drop for ResponseFuture {
     fn drop(&mut self) {
-        self.fifo_state.requests.lock().unwrap().map.remove(&self.request_id).unwrap();
+        self.fifo_state.lock().unwrap().map.remove(&self.request_id).unwrap();
     }
 }
 
@@ -222,7 +198,7 @@ pub struct RemoteBlockDevice {
     device: Mutex<block::BlockSynchronousProxy>,
     block_size: u32,
     block_count: u64,
-    fifo_state: Arc<FifoState>,
+    fifo_state: FifoStateRef,
     temp_vmo: futures::lock::Mutex<zx::Vmo>,
     temp_vmo_id: VmoId,
 }
@@ -260,11 +236,7 @@ impl RemoteBlockDevice {
         let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
         let (status, maybe_fifo) = block_device.get_fifo(zx::Time::INFINITE)?;
         let fifo = fasync::Fifo::from_fifo(maybe_fifo.ok_or(zx::Status::from_raw(status))?)?;
-        let fifo_state = Arc::new(FifoState {
-            fifo,
-            requests: Default::default(),
-            poller_waker: AtomicWaker::new(),
-        });
+        let fifo_state = Arc::new(Mutex::new(FifoState { fifo: Some(fifo), ..Default::default() }));
         let temp_vmo = zx::Vmo::create(TEMP_VMO_SIZE as u64)?;
         let (status, maybe_vmo_id) = block_device
             .attach_vmo(temp_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
@@ -290,18 +262,42 @@ impl RemoteBlockDevice {
 
     /// Detaches the given vmo-id from the device.
     pub async fn detach_vmo(&self, vmo_id: VmoId) -> Result<(), Error> {
-        self.fifo_state
-            .send(BlockFifoRequest {
-                op_code: BLOCKIO_CLOSE_VMO,
-                vmoid: vmo_id.into_id(),
-                ..Default::default()
-            })
-            .await
+        self.send(BlockFifoRequest {
+            op_code: BLOCKIO_CLOSE_VMO,
+            vmoid: vmo_id.into_id(),
+            ..Default::default()
+        })
+        .await?;
+        Ok(())
     }
 
     fn to_blocks(&self, bytes: u64) -> Result<u64, Error> {
         ensure!(bytes % self.block_size as u64 == 0, "bad alignment");
         Ok(bytes / self.block_size as u64)
+    }
+
+    // Sends the request and waits for the response.
+    async fn send(&self, mut request: BlockFifoRequest) -> Result<(), Error> {
+        let request_id;
+        {
+            let mut state = self.fifo_state.lock().unwrap();
+            if state.fifo.is_none() {
+                // Fifo has been closed.
+                return Err(zx::Status::CANCELED.into());
+            }
+            request_id = state.next_request_id;
+            state.next_request_id = state.next_request_id.overflowing_add(1).0;
+            assert!(
+                state.map.insert(request_id, RequestState::default()).is_none(),
+                "request id in use!"
+            );
+            request.request_id = request_id;
+            state.queue.push_back(request);
+            if let Some(waker) = state.poller_waker.take() {
+                waker.wake();
+            }
+        }
+        Ok(ResponseFuture::new(self.fifo_state.clone(), request_id).await?)
     }
 
     /// Reads from the device at |device_offset| into the given buffer slice.
@@ -312,16 +308,15 @@ impl RemoteBlockDevice {
     ) -> Result<(), Error> {
         match buffer_slice {
             MutableBufferSlice::VmoId { vmo_id, offset, length } => {
-                self.fifo_state
-                    .send(BlockFifoRequest {
-                        op_code: BLOCKIO_READ,
-                        vmoid: vmo_id.id(),
-                        block_count: self.to_blocks(length)?.try_into()?,
-                        vmo_block: self.to_blocks(offset)?,
-                        device_block: self.to_blocks(device_offset)?,
-                        ..Default::default()
-                    })
-                    .await?
+                self.send(BlockFifoRequest {
+                    op_code: BLOCKIO_READ,
+                    vmoid: vmo_id.id(),
+                    block_count: self.to_blocks(length)?.try_into()?,
+                    vmo_block: self.to_blocks(offset)?,
+                    device_block: self.to_blocks(device_offset)?,
+                    ..Default::default()
+                })
+                .await?
             }
             MutableBufferSlice::Memory(mut slice) => {
                 let temp_vmo = self.temp_vmo.lock().await;
@@ -329,16 +324,15 @@ impl RemoteBlockDevice {
                 loop {
                     let to_do = std::cmp::min(TEMP_VMO_SIZE, slice.len());
                     let block_count = self.to_blocks(to_do as u64)? as u32;
-                    self.fifo_state
-                        .send(BlockFifoRequest {
-                            op_code: BLOCKIO_READ,
-                            vmoid: self.temp_vmo_id.id(),
-                            block_count: block_count,
-                            vmo_block: 0,
-                            device_block: device_block,
-                            ..Default::default()
-                        })
-                        .await?;
+                    self.send(BlockFifoRequest {
+                        op_code: BLOCKIO_READ,
+                        vmoid: self.temp_vmo_id.id(),
+                        block_count: block_count,
+                        vmo_block: 0,
+                        device_block: device_block,
+                        ..Default::default()
+                    })
+                    .await?;
                     temp_vmo.read(&mut slice[..to_do], 0)?;
                     if to_do == slice.len() {
                         break;
@@ -359,16 +353,15 @@ impl RemoteBlockDevice {
     ) -> Result<(), Error> {
         match buffer_slice {
             BufferSlice::VmoId { vmo_id, offset, length } => {
-                self.fifo_state
-                    .send(BlockFifoRequest {
-                        op_code: BLOCKIO_WRITE,
-                        vmoid: vmo_id.id(),
-                        block_count: self.to_blocks(length)?.try_into()?,
-                        vmo_block: self.to_blocks(offset)?,
-                        device_block: self.to_blocks(device_offset)?,
-                        ..Default::default()
-                    })
-                    .await?;
+                self.send(BlockFifoRequest {
+                    op_code: BLOCKIO_WRITE,
+                    vmoid: vmo_id.id(),
+                    block_count: self.to_blocks(length)?.try_into()?,
+                    vmo_block: self.to_blocks(offset)?,
+                    device_block: self.to_blocks(device_offset)?,
+                    ..Default::default()
+                })
+                .await?;
             }
             BufferSlice::Memory(mut slice) => {
                 let temp_vmo = self.temp_vmo.lock().await;
@@ -377,16 +370,15 @@ impl RemoteBlockDevice {
                     let to_do = std::cmp::min(TEMP_VMO_SIZE, slice.len());
                     let block_count = self.to_blocks(to_do as u64)? as u32;
                     temp_vmo.write(&slice[..to_do], 0)?;
-                    self.fifo_state
-                        .send(BlockFifoRequest {
-                            op_code: BLOCKIO_WRITE,
-                            vmoid: self.temp_vmo_id.id(),
-                            block_count: block_count,
-                            vmo_block: 0,
-                            device_block: device_block,
-                            ..Default::default()
-                        })
-                        .await?;
+                    self.send(BlockFifoRequest {
+                        op_code: BLOCKIO_WRITE,
+                        vmoid: self.temp_vmo_id.id(),
+                        block_count: block_count,
+                        vmo_block: 0,
+                        device_block: device_block,
+                        ..Default::default()
+                    })
+                    .await?;
                     if to_do == slice.len() {
                         break;
                     }
@@ -412,37 +404,42 @@ impl Drop for RemoteBlockDevice {
         // It's OK to leak the VMO id because the server will dump all VMOs when the fifo is torn
         // down.
         self.temp_vmo_id.take().into_id();
-        self.fifo_state.requests.lock().unwrap().terminate();
-        self.fifo_state.poller_waker.wake();
+        self.fifo_state.lock().unwrap().terminate();
+        // Ignore errors here as there is not much we can do about it.
+        let _ = self.device.lock().unwrap().close_fifo(zx::Time::INFINITE);
     }
 }
 
 // FifoPoller is a future responsible for sending and receiving from the fifo.
 struct FifoPoller {
-    fifo_state: Arc<FifoState>,
+    fifo_state: FifoStateRef,
 }
 
 impl Future for FifoPoller {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
-        let mut requests = self.fifo_state.requests.lock().unwrap();
-        if requests.terminate {
+        let mut state_lock = self.fifo_state.lock().unwrap();
+        let state = state_lock.deref_mut(); // So that we can split the borrow.
+
+        let fifo = if let Some(fifo) = state.fifo.as_ref() {
+            fifo
+        } else {
             return Poll::Ready(());
-        }
+        };
 
         // Send requests.
         loop {
-            let slice = requests.queue.as_slices().0;
+            let slice = state.queue.as_slices().0;
             if slice.is_empty() {
                 break;
             }
-            match self.fifo_state.fifo.write(context, slice) {
+            match fifo.write(context, slice) {
                 Poll::Ready(Ok(sent)) => {
-                    requests.queue.drain(0..sent);
+                    state.queue.drain(0..sent);
                 }
                 Poll::Ready(Err(_)) => {
-                    requests.terminate();
+                    state.terminate();
                     return Poll::Ready(());
                 }
                 Poll::Pending => {
@@ -452,12 +449,12 @@ impl Future for FifoPoller {
         }
 
         // Receive responses.
-        while let Poll::Ready(result) = self.fifo_state.fifo.read(context) {
+        while let Poll::Ready(result) = fifo.read(context) {
             match result {
                 Ok(Some(response)) => {
                     let request_id = response.request_id;
                     // If the request isn't in the map, assume that it's a cancelled read.
-                    if let Some(request_state) = requests.map.get_mut(&request_id) {
+                    if let Some(request_state) = state.map.get_mut(&request_id) {
                         request_state.result.replace(zx::Status::from_raw(response.status));
                         if let Some(waker) = request_state.waker.take() {
                             waker.wake();
@@ -465,13 +462,13 @@ impl Future for FifoPoller {
                     }
                 }
                 _ => {
-                    requests.terminate();
+                    state.terminate();
                     return Poll::Ready(());
                 }
             }
         }
 
-        self.fifo_state.poller_waker.register(context.waker());
+        state.poller_waker = Some(context.waker().clone());
         Poll::Pending
     }
 }
@@ -480,6 +477,7 @@ impl Future for FifoPoller {
 mod tests {
     use {
         super::{BufferSlice, MutableBufferSlice, RemoteBlockDevice},
+        fidl_fuchsia_hardware_block::{self as block, BlockRequest},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{
             future::TryFutureExt,
@@ -628,5 +626,57 @@ mod tests {
             test_one(RAMDISK_BLOCK_SIZE, WRITE_LEN, 0xa3u8),
             test_one(2 * RAMDISK_BLOCK_SIZE + WRITE_LEN as u64, WRITE_LEN, 0x7fu8)
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_block_fifo_close_is_called() {
+        let (client, server) = zx::Channel::create().expect("Channel::create failed");
+        let server = fidl::endpoints::ServerEnd::<block::BlockMarker>::new(server);
+        let close_called = std::sync::Mutex::new(false);
+        // Have to spawn this on a different thread because RemoteBlockDevice uses a synchronous
+        // client and we are using a single threaded executor.
+        std::thread::spawn(|| {
+            // The drop here should cause CloseFifo to be sent.
+            RemoteBlockDevice::new_sync(client).expect("RemoteBlockDevice::new_sync failed");
+        });
+        // Now set up a mock server.
+        let (_client_fifo, server_fifo) =
+            zx::Fifo::create(16, std::mem::size_of::<super::BlockFifoRequest>())
+                .expect("Fifo::create failed");
+        let maybe_server_fifo = std::sync::Mutex::new(Some(server_fifo));
+        server
+            .into_stream()
+            .expect("into_stream failed")
+            .for_each(|request| async {
+                match request.expect("unexpected fidl error") {
+                    BlockRequest::GetInfo { responder } => {
+                        let mut block_info = block::BlockInfo {
+                            block_count: 1024,
+                            block_size: 512,
+                            max_transfer_size: 1024 * 1024,
+                            flags: 0,
+                            reserved: 0,
+                        };
+                        responder.send(zx::sys::ZX_OK, Some(&mut block_info)).expect("send failed");
+                    }
+                    BlockRequest::GetFifo { responder } => {
+                        responder
+                            .send(zx::sys::ZX_OK, maybe_server_fifo.lock().unwrap().take())
+                            .expect("send failed");
+                    }
+                    BlockRequest::AttachVmo { vmo: _, responder } => {
+                        let mut vmo_id = block::VmoId { id: 1 };
+                        responder.send(zx::sys::ZX_OK, Some(&mut vmo_id)).expect("send failed");
+                    }
+                    BlockRequest::CloseFifo { responder } => {
+                        *close_called.lock().unwrap() = true;
+                        responder.send(zx::sys::ZX_OK).expect("send failed");
+                    }
+                    _ => panic!("Unexpected message"),
+                }
+            })
+            .await;
+        // After the server has finished running, we can check to see that close was called.
+        assert!(*close_called.lock().unwrap());
     }
 }

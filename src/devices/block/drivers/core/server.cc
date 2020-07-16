@@ -58,10 +58,15 @@ void OutOfBandRespond(const fzl::fifo<block_fifo_response_t, block_fifo_request_
         return;
       case ZX_ERR_SHOULD_WAIT: {
         zx_signals_t signals;
-        status = zx_object_wait_one(fifo.get_handle(), ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED,
+        status = zx_object_wait_one(fifo.get_handle(),
+                                    ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate,
                                     ZX_TIME_INFINITE, &signals);
         if (status != ZX_OK) {
           FX_LOGS(WARNING) << "(fifo) zx_object_wait_one failed: " << zx_status_get_string(status);
+          return;
+        }
+        if (signals & kSignalFifoTerminate) {
+          // The server is shutting down and we shouldn't block, so dump the response and return.
           return;
         }
         break;
