@@ -10,7 +10,10 @@ use crate::{
     },
 };
 use anyhow::Error;
-use fidl_fuchsia_input_report::{FeatureReport, InputDeviceMarker, InputDeviceProxy, InputReport};
+use fidl_fuchsia_input_report::{
+    FeatureReport, InputDeviceMarker, InputDeviceProxy, InputReportsReaderMarker,
+    InputReportsReaderProxy,
+};
 use fuchsia_syslog::macros::*;
 use glob::glob;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
@@ -19,6 +22,7 @@ use std::vec::Vec;
 #[derive(Debug)]
 pub struct InputReportFacade {
     proxy: RwLock<Option<InputDeviceProxy>>,
+    reader: RwLock<Option<InputReportsReaderProxy>>,
 }
 
 fn connect_to_device(path: std::path::PathBuf) -> Option<InputDeviceProxy> {
@@ -63,12 +67,12 @@ async fn check_device_match(
 
 impl InputReportFacade {
     pub fn new() -> InputReportFacade {
-        Self { proxy: RwLock::new(None) }
+        Self { proxy: RwLock::new(None), reader: RwLock::new(None) }
     }
 
     #[cfg(test)]
     fn new_with_proxy(proxy: InputDeviceProxy) -> Self {
-        Self { proxy: RwLock::new(Some(proxy)) }
+        Self { proxy: RwLock::new(Some(proxy)), reader: RwLock::new(None) }
     }
 
     async fn get_proxy(&self, match_args: InputDeviceMatchArgs) -> Result<InputDeviceProxy, Error> {
@@ -100,16 +104,38 @@ impl InputReportFacade {
         }
     }
 
+    async fn get_reader(
+        &self,
+        match_args: InputDeviceMatchArgs,
+    ) -> Result<InputReportsReaderProxy, Error> {
+        let lock = self.reader.upgradable_read();
+        if let Some(reader) = lock.as_ref() {
+            Ok(reader.clone())
+        } else {
+            let (reader, server) = fidl::endpoints::create_proxy::<InputReportsReaderMarker>()?;
+            self.get_proxy(match_args).await?.get_input_reports_reader(server)?;
+            *RwLockUpgradableReadGuard::upgrade(lock) = Some(reader.clone());
+            Ok(reader)
+        }
+    }
+
     pub async fn get_reports(
         &self,
         match_args: InputDeviceMatchArgs,
     ) -> Result<Vec<SerializableInputReport>, Error> {
-        let reports: Vec<InputReport> = self.get_proxy(match_args).await?.get_reports().await?;
-        let mut serializable_reports = Vec::<SerializableInputReport>::new();
-        for report in reports {
-            serializable_reports.push(SerializableInputReport::new(&report));
+        match self.get_reader(match_args).await?.read_input_reports().await? {
+            Ok(r) => {
+                let mut serializable_reports = Vec::<SerializableInputReport>::new();
+                for report in r {
+                    serializable_reports.push(SerializableInputReport::new(&report));
+                }
+                Ok(serializable_reports)
+            }
+            Err(e) => {
+                let tag = "InputReportFacade::get_reporta";
+                fx_err_and_bail!(&with_line!(tag), format_err!("ReadInputReports failed: {:?}", e))
+            }
         }
-        Ok(serializable_reports)
     }
 
     pub async fn get_descriptor(
@@ -164,31 +190,65 @@ mod tests {
     use serde::de::Deserialize;
     use serde_json::{Map, Number, Value};
 
+    type ExpectationCallback = Box<
+        dyn FnOnce(
+                InputDeviceRequest,
+                &mut Option<fidl::endpoints::ServerEnd<InputReportsReaderMarker>>,
+            ) + Send
+            + 'static,
+    >;
+
+    type ReaderExpectationCallback = Box<dyn FnOnce(InputReportsReaderRequest) + Send + 'static>;
+
     struct MockInputReportBuilder {
-        expected: Vec<Box<dyn FnOnce(InputDeviceRequest) + Send + 'static>>,
+        expected: Vec<ExpectationCallback>,
+        reader_expected: Vec<ReaderExpectationCallback>,
     }
 
     impl MockInputReportBuilder {
         fn new() -> Self {
-            Self { expected: vec![] }
+            Self { expected: vec![], reader_expected: vec![] }
         }
 
-        fn push(mut self, request: impl FnOnce(InputDeviceRequest) + Send + 'static) -> Self {
+        fn expect_request(
+            mut self,
+            request: impl FnOnce(
+                    InputDeviceRequest,
+                    &mut Option<fidl::endpoints::ServerEnd<InputReportsReaderMarker>>,
+                ) + Send
+                + 'static,
+        ) -> Self {
             self.expected.push(Box::new(request));
             self
         }
 
-        fn expect_get_reports(self, reports: Vec<InputReport>) -> Self {
-            self.push(move |req| match req {
-                InputDeviceRequest::GetReports { responder } => {
-                    assert_matches!(responder.send(&mut reports.into_iter()), Ok(()));
+        fn expect_reader_request(
+            mut self,
+            request: impl FnOnce(InputReportsReaderRequest) + Send + 'static,
+        ) -> Self {
+            self.reader_expected.push(Box::new(request));
+            self
+        }
+
+        fn expect_read_input_reports(self, reports: Vec<InputReport>) -> Self {
+            self.expect_reader_request(move |req| match req {
+                InputReportsReaderRequest::ReadInputReports { responder } => {
+                    assert_matches!(responder.send(&mut Ok(reports)), Ok(()));
+                }
+            })
+        }
+
+        fn expect_get_input_reports_reader(self) -> Self {
+            self.expect_request(move |req, reader| match req {
+                InputDeviceRequest::GetInputReportsReader { reader: r, control_handle: _ } => {
+                    reader.replace(r);
                 }
                 req => panic!("unexpected request: {:?}", req),
             })
         }
 
         fn expect_get_descriptor(self, descriptor: DeviceDescriptor) -> Self {
-            self.push(move |req| match req {
+            self.expect_request(move |req, _reader| match req {
                 InputDeviceRequest::GetDescriptor { responder } => {
                     assert_matches!(responder.send(descriptor), Ok(()));
                 }
@@ -197,7 +257,7 @@ mod tests {
         }
 
         fn expect_get_feature_report(self, feature_report: FeatureReport) -> Self {
-            self.push(move |req| match req {
+            self.expect_request(move |req, _reader| match req {
                 InputDeviceRequest::GetFeatureReport { responder } => {
                     assert_matches!(responder.send(&mut Ok(feature_report)), Ok(()));
                 }
@@ -206,7 +266,7 @@ mod tests {
         }
 
         fn expect_set_feature_report(self, feature_report: FeatureReport) -> Self {
-            self.push(move |req| match req {
+            self.expect_request(move |req, _reader| match req {
                 InputDeviceRequest::SetFeatureReport { report, responder } => {
                     assert_eq!(report, feature_report);
                     assert_matches!(responder.send(&mut Ok(())), Ok(()));
@@ -219,9 +279,23 @@ mod tests {
             let (proxy, mut stream) =
                 fidl::endpoints::create_proxy_and_stream::<InputDeviceMarker>().unwrap();
             let fut = async move {
+                let mut reader: Option<fidl::endpoints::ServerEnd<InputReportsReaderMarker>> = None;
                 for expected in self.expected {
-                    expected(stream.next().await.unwrap().unwrap());
+                    expected(stream.next().await.unwrap().unwrap(), &mut reader);
                 }
+
+                if self.reader_expected.len() > 0 {
+                    assert!(reader.is_some());
+                    let reader_result = reader.unwrap().into_stream();
+                    assert!(reader_result.is_ok());
+
+                    let mut reader_stream = reader_result.unwrap();
+                    for expected in self.reader_expected {
+                        expected(reader_stream.next().await.unwrap().unwrap());
+                    }
+                    assert_matches!(reader_stream.next().await, None);
+                }
+
                 assert_matches!(stream.next().await, None);
             };
 
@@ -501,7 +575,8 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn get_reports() {
         let (facade, expectations) = MockInputReportBuilder::new()
-            .expect_get_reports(vec![
+            .expect_get_input_reports_reader()
+            .expect_read_input_reports(vec![
                 InputReport {
                     event_time: None,
                     mouse: None,
