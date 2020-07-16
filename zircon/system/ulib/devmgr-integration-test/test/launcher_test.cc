@@ -37,7 +37,7 @@ TEST(LauncherTest, LoadDrivers) {
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &fd));
 }
 
-TEST(LauncherTest, Namespace) {
+TEST(LauncherTest, DISABLED_Namespace) {
   devmgr_launcher::Args args;
   args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
   args.driver_search_paths.push_back("/test_drivers");
