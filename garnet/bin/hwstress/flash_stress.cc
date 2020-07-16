@@ -314,17 +314,30 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
   }
 
   zx::time end_time = zx::deadline_after(duration);
+  uint64_t num_tests = 1;
 
   do {
+    zx::time test_start = zx::clock::get_monotonic();
     if (FlashIo(device, bytes_to_test, /*is_write_test=*/true) != ZX_OK) {
       status->Log("Error writing to vmo.");
       return false;
     }
+    zx::duration test_duration = zx::clock::get_monotonic() - test_start;
+    status->Log("Test %4ld: Write: %0.3fs, throughput: %0.2f MiB/s", num_tests,
+                DurationToSecs(test_duration),
+                bytes_to_test / (DurationToSecs(test_duration) * 1024 * 1024));
 
+    test_start = zx::clock::get_monotonic();
     if (FlashIo(device, bytes_to_test, /*is_write_test=*/false) != ZX_OK) {
       status->Log("Error reading from vmo.");
       return false;
     }
+    test_duration = zx::clock::get_monotonic() - test_start;
+    status->Log("Test %4ld: Read: %0.3fs, throughput: %0.2f MiB/s", num_tests,
+                DurationToSecs(test_duration),
+                bytes_to_test / (DurationToSecs(test_duration) * 1024 * 1024));
+
+    num_tests++;
   } while (zx::clock::get_monotonic() < end_time);
 
   return true;
