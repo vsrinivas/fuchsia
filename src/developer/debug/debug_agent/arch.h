@@ -31,6 +31,8 @@ namespace arch {
 
 extern const BreakInstructionType kBreakInstruction;
 
+debug_ipc::Arch GetCurrentArch();
+
 // Returns the number of hardware breakpoints and watchpoints on the current system.
 uint32_t GetHardwareBreakpointCount();
 uint32_t GetHardwareWatchpointCount();
@@ -47,6 +49,10 @@ zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCat
 zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory& cat,
                            const std::vector<debug_ipc::Register>& registers);
 
+// Converts a Zircon exception type to a debug_ipc one. Some exception types require querying the
+// thread's debug registers. If needed, the given thread will be used for that.
+debug_ipc::ExceptionType DecodeExceptionType(const zx::thread& thread, uint32_t exception_type);
+
 // Class in charge of abstracting the low-level functionalities of the platform.
 //
 // TODO(brettw) TRhis object is not currently used for any abstractions so we should be able to make
@@ -55,8 +61,6 @@ class ArchProvider {
  public:
   ArchProvider() = default;
   virtual ~ArchProvider() = default;
-
-  ::debug_ipc::Arch GetArch();
 
   // General Exceptions ----------------------------------------------------------------------------
 
@@ -93,12 +97,6 @@ class ArchProvider {
   // Returns the address of the instruction that hit the exception from the
   // address reported by the exception.
   uint64_t BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr);
-
-  // Currently HW notifications can mean both a single step or a hardware debug
-  // register exception. We need platform-specific queries to figure which one
-  // is it.
-  virtual debug_ipc::ExceptionType DecodeExceptionType(const DebuggedThread&,
-                                                       uint32_t exception_type);
 
  protected:
   uint32_t hw_breakpoint_count_ = 0;

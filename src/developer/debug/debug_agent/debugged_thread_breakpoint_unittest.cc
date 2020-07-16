@@ -28,11 +28,6 @@ constexpr uint64_t kWatchpointLength = 8;
 // TODO(brettw) this should be removed and the necessary mocks provided by the MockThreadHandle.
 class MockBreakpointArchProvider : public arch::ArchProvider {
  public:
-  debug_ipc::ExceptionType DecodeExceptionType(const DebuggedThread&,
-                                               uint32_t exception_type) override {
-    return exception_type_;
-  }
-
   bool IsBreakpointInstruction(zx::process& process, uint64_t address) override {
     for (uint64_t addr : breakpoints_) {
       if (addr == address)
@@ -54,7 +49,6 @@ class MockBreakpointArchProvider : public arch::ArchProvider {
   }
 
   void set_exception_addr(uint64_t addr) { exception_addr_ = addr; }
-  void set_exception_type(debug_ipc::ExceptionType e) { exception_type_ = e; }
   void set_slot(int slot) { slot_ = slot; }
 
  private:
@@ -62,7 +56,6 @@ class MockBreakpointArchProvider : public arch::ArchProvider {
   int slot_ = -1;
 
   std::vector<uint64_t> breakpoints_;
-  debug_ipc::ExceptionType exception_type_ = debug_ipc::ExceptionType::kLast;
 };
 
 class TestProcess : public MockProcess {
@@ -234,7 +227,6 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
   context.arch_provider->set_exception_addr(kAddress);
-  context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kPageFault);
 
   // The current thread address should agree with the exception.
   GeneralRegisters regs;
@@ -244,11 +236,8 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
       ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Trigger the exception.
-  zx_exception_info exception_info = {};
-  exception_info.pid = proc_object->koid;
-  exception_info.tid = thread_object->koid;
-  exception_info.type = ZX_EXCP_FATAL_PAGE_FAULT;
-  thread.OnException(std::make_unique<MockThreadException>(), exception_info);
+  thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
+                                                           debug_ipc::ExceptionType::kPageFault));
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
@@ -288,7 +277,6 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
   context.arch_provider->set_exception_addr(kAddress);
-  context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kSoftware);
 
   // The current thread address should agree with the exception.
   GeneralRegisters regs;
@@ -298,11 +286,8 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
       ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Trigger the exception.
-  zx_exception_info exception_info = {};
-  exception_info.pid = proc_object->koid;
-  exception_info.tid = thread_object->koid;
-  exception_info.type = ZX_EXCP_SW_BREAKPOINT;
-  thread.OnException(std::make_unique<MockThreadException>(), exception_info);
+  thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
+                                                           debug_ipc::ExceptionType::kSoftware));
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
@@ -335,7 +320,8 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   context.arch_provider->AppendBreakpoint(kAddress);
 
   // Throw the same breakpoint exception.
-  thread.OnException(std::make_unique<MockThreadException>(), exception_info);
+  thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
+                                                           debug_ipc::ExceptionType::kSoftware));
 
   // We should've received an exception notification with hit breakpoints.
   ASSERT_EQ(context.backend->exceptions().size(), 2u);
@@ -380,7 +366,6 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
   context.arch_provider->set_exception_addr(kAddress);
-  context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kHardware);
 
   // The current thread address should agree with the exception.
   GeneralRegisters regs;
@@ -402,11 +387,8 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   process.AppendHardwareBreakpoint(breakpoint.get(), kAddress, context.arch_provider);
 
   // Trigger the exception.
-  zx_exception_info exception_info = {};
-  exception_info.pid = proc_object->koid;
-  exception_info.tid = thread_object->koid;
-  exception_info.type = ZX_EXCP_HW_BREAKPOINT;
-  thread.OnException(std::make_unique<MockThreadException>(), exception_info);
+  thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
+                                                           debug_ipc::ExceptionType::kHardware));
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
@@ -465,7 +447,6 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   // Set the exception information the arch provider is going to return.
   const uint64_t kAddress = kRange.begin();
   constexpr uint64_t kSlot = 0;
-  context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kWatchpoint);
   context.arch_provider->set_exception_addr(kAddress);
   context.arch_provider->set_slot(kSlot);
 
@@ -477,11 +458,8 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
       ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Trigger the exception.
-  zx_exception_info exception_info = {};
-  exception_info.pid = proc_object->koid;
-  exception_info.tid = thread_object->koid;
-  exception_info.type = ZX_EXCP_HW_BREAKPOINT;
-  thread.OnException(std::make_unique<MockThreadException>(), exception_info);
+  thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
+                                                           debug_ipc::ExceptionType::kWatchpoint));
 
   // We should've received an exception notification.
   {

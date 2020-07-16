@@ -59,7 +59,7 @@ ExceptionType DecodeHardwareRegister(uint64_t dr7, int slot) {
 
 }  // namespace
 
-ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info) {
+ExceptionType DecodeException(uint32_t code, const X64ExceptionInfo& info) {
   // All zircon exceptions don't need further analysis, except hardware which can represent a single
   // step, a hw breakpoint or a watchpoint.
   ExceptionType type = DecodeZircon(code);
@@ -67,7 +67,7 @@ ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info) {
     return type;
 
   std::optional<X64ExceptionInfo::DebugRegs> regs;
-  if (auto got = info->FetchDebugRegs()) {
+  if (auto got = info.FetchDebugRegs()) {
     DEBUG_LOG(Archx64) << "DR6: " << debug_ipc::DR6ToString(got->dr6);
     regs = std::move(got.value());
   }
@@ -134,7 +134,7 @@ ExceptionType DecodeESR(uint32_t esr) {
 
 }  // namespace
 
-ExceptionType DecodeException(uint32_t code, Arm64ExceptionInfo* info) {
+ExceptionType DecodeException(uint32_t code, const Arm64ExceptionInfo& info) {
   // HW exceptions have to be analysed further.
   ExceptionType type = DecodeZircon(code);
   if (type != ExceptionType::kHardware)
@@ -142,7 +142,7 @@ ExceptionType DecodeException(uint32_t code, Arm64ExceptionInfo* info) {
 
   uint32_t esr;
 
-  if (auto got = info->FetchESR()) {
+  if (auto got = info.FetchESR()) {
     esr = *got;
   } else {
     return ExceptionType::kUnknown;

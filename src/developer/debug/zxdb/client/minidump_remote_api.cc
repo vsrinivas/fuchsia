@@ -36,7 +36,7 @@ class X64ExceptionInfo : public debug_ipc::X64ExceptionInfo {
  public:
   X64ExceptionInfo(const crashpad::ExceptionSnapshot* snapshot) : snapshot_(snapshot) {}
 
-  std::optional<debug_ipc::X64ExceptionInfo::DebugRegs> FetchDebugRegs() override {
+  std::optional<debug_ipc::X64ExceptionInfo::DebugRegs> FetchDebugRegs() const override {
     debug_ipc::X64ExceptionInfo::DebugRegs ret;
     auto context = snapshot_->Context()->x86_64;
 
@@ -58,7 +58,7 @@ class Arm64ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
  public:
   Arm64ExceptionInfo(const crashpad::ExceptionSnapshot* snapshot) : snapshot_(snapshot) {}
 
-  std::optional<uint32_t> FetchESR() override { return snapshot_->ExceptionInfo(); }
+  std::optional<uint32_t> FetchESR() const override { return snapshot_->ExceptionInfo(); }
 
  private:
   const crashpad::ExceptionSnapshot* snapshot_;
@@ -706,12 +706,12 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
     switch (exception->Context()->architecture) {
       case crashpad::CPUArchitecture::kCPUArchitectureARM64: {
         Arm64ExceptionInfo info(exception);
-        exception_notification.type = debug_ipc::DecodeException(exception->Exception(), &info);
+        exception_notification.type = debug_ipc::DecodeException(exception->Exception(), info);
         break;
       }
       case crashpad::CPUArchitecture::kCPUArchitectureX86_64: {
         X64ExceptionInfo info(exception);
-        exception_notification.type = debug_ipc::DecodeException(exception->Exception(), &info);
+        exception_notification.type = debug_ipc::DecodeException(exception->Exception(), info);
         break;
       }
       default:

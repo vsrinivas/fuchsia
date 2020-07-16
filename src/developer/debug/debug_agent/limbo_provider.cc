@@ -155,12 +155,20 @@ fitx::result<zx_status_t, LimboProvider::RetrievedException> LimboProvider::Retr
     return fitx::error(result.err());
 
   fuchsia::exception::ProcessException exception = result.response().ResultValue_();
+
+  // Convert from the FIDL ExceptionInfo to the kernel zx_exception_info_t.
+  const auto& source_info = exception.info();
+  zx_exception_info_t info = {};
+  info.pid = source_info.process_koid;
+  info.tid = source_info.thread_koid;
+  info.type = static_cast<zx_excp_type_t>(source_info.type);
+
   RetrievedException retrieved;
   retrieved.process =
       std::make_unique<ZirconProcessHandle>(std::move(*exception.mutable_process()));
   retrieved.thread = std::make_unique<ZirconThreadHandle>(std::move(*exception.mutable_thread()));
   retrieved.exception =
-      std::make_unique<ZirconThreadException>(std::move(*exception.mutable_exception()));
+      std::make_unique<ZirconThreadException>(std::move(*exception.mutable_exception()), info);
 
   return fitx::ok(std::move(retrieved));
 }

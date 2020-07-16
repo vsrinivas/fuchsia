@@ -141,12 +141,11 @@ DebuggedThread::~DebuggedThread() = default;
 
 fxl::WeakPtr<DebuggedThread> DebuggedThread::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-void DebuggedThread::OnException(std::unique_ptr<ThreadException> exception_handle,
-                                 zx_exception_info_t exception_info) {
+void DebuggedThread::OnException(std::unique_ptr<ThreadException> exception_handle) {
   exception_handle_ = std::move(exception_handle);
 
   debug_ipc::NotifyException exception;
-  exception.type = arch_provider_->DecodeExceptionType(*this, exception_info.type);
+  exception.type = exception_handle_->GetType(*thread_handle_);
   exception.exception = thread_handle_->GetExceptionRecord();
 
   auto strategy = exception_handle_->GetStrategy();
@@ -166,8 +165,7 @@ void DebuggedThread::OnException(std::unique_ptr<ThreadException> exception_hand
   }
 
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Exception @ 0x" << std::hex << regs->ip()
-                    << std::dec << ": " << ExceptionTypeToString(exception_info.type) << " -> "
-                    << debug_ipc::ExceptionTypeToString(exception.type);
+                    << std::dec << ": " << debug_ipc::ExceptionTypeToString(exception.type);
 
   switch (exception.type) {
     case debug_ipc::ExceptionType::kSingleStep:
@@ -472,8 +470,8 @@ debug_ipc::ThreadRecord DebuggedThread::GetThreadRecord(
       uint32_t max_stack_depth =
           stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2 : 256;
 
-      UnwindStack(arch_provider_.get(), process_->process_handle(), process_->dl_debug_addr(),
-                  thread_handle(), *regs, max_stack_depth, &record.frames);
+      UnwindStack(process_->process_handle(), process_->dl_debug_addr(), thread_handle(), *regs,
+                  max_stack_depth, &record.frames);
     }
   } else {
     // Didn't bother querying the stack.
@@ -499,7 +497,7 @@ std::vector<debug_ipc::Register> DebuggedThread::WriteRegisters(
   // breakpoint.
   bool rip_change = false;
   debug_ipc::RegisterID rip_id =
-      GetSpecialRegisterID(arch_provider_->GetArch(), debug_ipc::SpecialRegisterType::kIP);
+      GetSpecialRegisterID(arch::GetCurrentArch(), debug_ipc::SpecialRegisterType::kIP);
   for (const debug_ipc::Register& reg : regs) {
     if (reg.id == rip_id) {
       rip_change = true;

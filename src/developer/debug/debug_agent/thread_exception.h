@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "src/developer/debug/ipc/records.h"
 #include "src/lib/fxl/macros.h"
 
 namespace debug_agent {
@@ -23,6 +24,13 @@ class ThreadException {
 
   // Returns a handle to the excepting thread. Will return a null pointer on failure.
   virtual std::unique_ptr<ThreadHandle> GetThreadHandle() const = 0;
+
+  // Returns the type of the exception for this and the current thread state.
+  //
+  // This requires getting the debug registers for the thread so the thread handle is passed in.
+  // This could be implemented without the parameter because this object can create thread handles,
+  // but that would be less efficient and all callers currently have existing ThreadHandles.
+  virtual debug_ipc::ExceptionType GetType(const ThreadHandle& thread) const = 0;
 
   // Returns the associated ZX_EXCEPTION_STATE_* constant characterizing the state of the exception.
   virtual fitx::result<zx_status_t, uint32_t> GetState() const = 0;

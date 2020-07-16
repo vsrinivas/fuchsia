@@ -12,7 +12,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 
@@ -81,8 +80,6 @@ zx::suspend_token SyncSuspendThread(ThreadHandle& thread) {
 }
 
 void DoUnwindTest() {
-  arch::ArchProvider arch_provider;
-
   zx::process handle;
   zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
   ZirconProcessHandle process(std::move(handle));
@@ -112,7 +109,7 @@ void DoUnwindTest() {
     ASSERT_NE(0u, debug_addr);
 
     // Do the unwinding.
-    status = UnwindStack(&arch_provider, process, debug_addr, *data.thread, *regs, 16, &stack);
+    status = UnwindStack(process, debug_addr, *data.thread, *regs, 16, &stack);
     ASSERT_EQ(ZX_OK, status);
 
     data.backtrace_done = true;

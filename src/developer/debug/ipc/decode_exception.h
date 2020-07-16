@@ -13,10 +13,14 @@
 
 namespace debug_ipc {
 
+// Most exceptions can be convered just from the Zircon exception. But some require looking at the
+// debug registers to disambiguate. Since getting the debug registers is uncommon, this API takes a
+// callback that will retrieve them if needed.
+
 class Arm64ExceptionInfo {
  public:
   // Get the value of the ESR register. A nullopt indicates failure.
-  virtual std::optional<uint32_t> FetchESR() = 0;
+  virtual std::optional<uint32_t> FetchESR() const = 0;
 };
 
 class X64ExceptionInfo {
@@ -31,11 +35,11 @@ class X64ExceptionInfo {
   };
 
   // Get the necessary debug registers for decoding exceptions. A nullopt indicates failure.
-  virtual std::optional<DebugRegs> FetchDebugRegs() = 0;
+  virtual std::optional<DebugRegs> FetchDebugRegs() const = 0;
 };
 
-ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info);
-ExceptionType DecodeException(uint32_t code, Arm64ExceptionInfo* info);
+ExceptionType DecodeException(uint32_t code, const X64ExceptionInfo& info);
+ExceptionType DecodeException(uint32_t code, const Arm64ExceptionInfo& info);
 
 }  // namespace debug_ipc
 

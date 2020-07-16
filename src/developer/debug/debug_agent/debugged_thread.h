@@ -94,8 +94,7 @@ class DebuggedThread {
 
   fxl::WeakPtr<DebuggedThread> GetWeakPtr();
 
-  void OnException(std::unique_ptr<ThreadException> exception_handle,
-                   zx_exception_info_t exception_info);
+  void OnException(std::unique_ptr<ThreadException> exception_handle);
 
   // Resumes execution of the thread. The thread should currently be in a
   // stopped state. If it's not stopped, this will be ignored.

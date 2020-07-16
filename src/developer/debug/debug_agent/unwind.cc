@@ -198,10 +198,9 @@ int LookupDso(void* context, unw_word_t pc, unw_word_t* base, const char** name)
   return 0;
 }
 
-zx_status_t UnwindStackNgUnwind(arch::ArchProvider* arch_provider, const ProcessHandle& process,
-                                uint64_t dl_debug_addr, const ThreadHandle& thread,
-                                const GeneralRegisters& regs, size_t max_depth,
-                                std::vector<debug_ipc::StackFrame>* stack) {
+zx_status_t UnwindStackNgUnwind(const ProcessHandle& process, uint64_t dl_debug_addr,
+                                const ThreadHandle& thread, const GeneralRegisters& regs,
+                                size_t max_depth, std::vector<debug_ipc::StackFrame>* stack) {
   stack->clear();
 
   // The modules are sorted by load address.
@@ -227,7 +226,7 @@ zx_status_t UnwindStackNgUnwind(arch::ArchProvider* arch_provider, const Process
     return ZX_ERR_INTERNAL;
 
   // Compute the register IDs for this platform's IP/SP.
-  auto arch = arch_provider->GetArch();
+  auto arch = arch::GetCurrentArch();
   RegisterID ip_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kIP);
   RegisterID sp_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kSP);
 
@@ -285,14 +284,12 @@ zx_status_t UnwindStackNgUnwind(arch::ArchProvider* arch_provider, const Process
 
 void SetUnwinderType(UnwinderType type) { unwinder_type = type; }
 
-zx_status_t UnwindStack(arch::ArchProvider* arch_provider, const ProcessHandle& process,
-                        uint64_t dl_debug_addr, const ThreadHandle& thread,
-                        const GeneralRegisters& regs, size_t max_depth,
+zx_status_t UnwindStack(const ProcessHandle& process, uint64_t dl_debug_addr,
+                        const ThreadHandle& thread, const GeneralRegisters& regs, size_t max_depth,
                         std::vector<debug_ipc::StackFrame>* stack) {
   switch (unwinder_type) {
     case UnwinderType::kNgUnwind:
-      return UnwindStackNgUnwind(arch_provider, process, dl_debug_addr, thread, regs, max_depth,
-                                 stack);
+      return UnwindStackNgUnwind(process, dl_debug_addr, thread, regs, max_depth, stack);
     case UnwinderType::kAndroid:
       return UnwindStackAndroid(process, dl_debug_addr, thread, regs, max_depth, stack);
   }

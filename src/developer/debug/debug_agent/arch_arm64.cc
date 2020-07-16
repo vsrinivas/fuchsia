@@ -201,14 +201,15 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Regis
   return ZX_OK;
 }
 
+// Adapter class to allow the exception decoder to get the debug registers if needed.
 class ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
  public:
-  ExceptionInfo(const DebuggedThread& thread) : thread_(thread) {}
+  explicit ExceptionInfo(const zx::thread& thread) : thread_(thread) {}
 
-  std::optional<uint32_t> FetchESR() override {
+  std::optional<uint32_t> FetchESR() const override {
     zx_thread_state_debug_regs_t debug_regs;
-    zx_status_t status = thread_.handle().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                                                     sizeof(zx_thread_state_debug_regs_t));
+    zx_status_t status = thread_.read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                                            sizeof(zx_thread_state_debug_regs_t));
     if (status != ZX_OK) {
       DEBUG_LOG(ArchArm64) << "Could not get ESR: " << zx_status_get_string(status);
       return std::nullopt;
@@ -218,10 +219,12 @@ class ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
   }
 
  private:
-  const DebuggedThread& thread_;
+  const zx::thread& thread_;
 };
 
 }  // namespace
+
+::debug_ipc::Arch GetCurrentArch() { return ::debug_ipc::Arch::kArm64; }
 
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
                      std::vector<debug_ipc::Register>& out) {
@@ -239,8 +242,6 @@ void SaveGeneralRegs(const zx_thread_state_general_regs& input,
   out.push_back(CreateRegister(RegisterID::kARMv8_cpsr, 8u, &input.cpsr));
   out.push_back(CreateRegister(RegisterID::kARMv8_tpidr, 8u, &input.tpidr));
 }
-
-::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kArm64; }
 
 zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCategory& cat,
                           std::vector<debug_ipc::Register>& out) {
@@ -310,6 +311,11 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
   }
   FX_NOTREACHED();
   return ZX_ERR_INVALID_ARGS;
+}
+
+debug_ipc::ExceptionType DecodeExceptionType(const zx::thread& thread, uint32_t exception_type) {
+  ExceptionInfo info(thread);
+  return debug_ipc::DecodeException(exception_type, info);
 }
 
 // "BRK 0" instruction.
@@ -410,12 +416,6 @@ bool ArchProvider::IsBreakpointInstruction(zx::process& process, uint64_t addres
   // described above.
   constexpr BreakInstructionType kMask = 0b11111111111000000000000000011111;
   return (data & kMask) == kBreakInstruction;
-}
-
-debug_ipc::ExceptionType ArchProvider::DecodeExceptionType(const DebuggedThread& thread,
-                                                           uint32_t exception_type) {
-  ExceptionInfo info(thread);
-  return debug_ipc::DecodeException(exception_type, &info);
 }
 
 // HW Breakpoints --------------------------------------------------------------

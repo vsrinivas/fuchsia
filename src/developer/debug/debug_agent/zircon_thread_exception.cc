@@ -14,6 +14,10 @@ std::unique_ptr<ThreadHandle> ZirconThreadException::GetThreadHandle() const {
   return std::make_unique<ZirconThreadHandle>(std::move(thread));
 }
 
+debug_ipc::ExceptionType ZirconThreadException::GetType(const ThreadHandle& thread) const {
+  return arch::DecodeExceptionType(thread.GetNativeHandle(), info_.type);
+}
+
 fitx::result<zx_status_t, uint32_t> ZirconThreadException::GetState() const {
   uint32_t state = 0;
   zx_status_t status = exception_.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));

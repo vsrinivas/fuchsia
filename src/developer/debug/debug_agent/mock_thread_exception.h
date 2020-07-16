@@ -21,12 +21,16 @@ namespace debug_agent {
 class MockThreadException : public ThreadException {
  public:
   MockThreadException() = default;
-  explicit MockThreadException(uint64_t thread_koid) : thread_koid_(thread_koid) {}
+  explicit MockThreadException(uint64_t thread_koid,
+                               debug_ipc::ExceptionType type = debug_ipc::ExceptionType::kGeneral)
+      : thread_koid_(thread_koid), type_(type) {}
   ~MockThreadException() = default;
 
   std::unique_ptr<ThreadHandle> GetThreadHandle() const override {
     return std::make_unique<MockThreadHandle>(thread_koid_);
   }
+
+  debug_ipc::ExceptionType GetType(const ThreadHandle& thread) const override { return type_; }
 
   fitx::result<zx_status_t, uint32_t> GetState() const override { return fitx::ok(state_); }
 
@@ -44,6 +48,7 @@ class MockThreadException : public ThreadException {
 
  private:
   uint64_t thread_koid_ = ZX_KOID_INVALID;
+  debug_ipc::ExceptionType type_ = debug_ipc::ExceptionType::kGeneral;
   uint32_t state_ = ZX_EXCEPTION_STATE_TRY_NEXT;
   uint32_t strategy_ = ZX_EXCEPTION_STRATEGY_FIRST_CHANCE;
 };

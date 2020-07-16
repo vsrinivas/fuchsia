@@ -566,7 +566,8 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
   // TODO(brettw) this should use ThreadException::GetThread().
   create_info.handle = std::make_unique<ZirconThreadHandle>(
       object_provider_->GetThreadFromException(exception.get()));
-  create_info.exception = std::make_unique<ZirconThreadException>(std::move(exception));
+  create_info.exception =
+      std::make_unique<ZirconThreadException>(std::move(exception), exception_info);
   create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
   create_info.arch_provider = arch_provider_;
 
@@ -614,8 +615,8 @@ void DebuggedProcess::OnException(zx::exception exception_token,
     return;
   }
 
-  thread->OnException(std::make_unique<ZirconThreadException>(std::move(exception_token)),
-                      exception_info);
+  thread->OnException(
+      std::make_unique<ZirconThreadException>(std::move(exception_token), exception_info));
 }
 
 void DebuggedProcess::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,

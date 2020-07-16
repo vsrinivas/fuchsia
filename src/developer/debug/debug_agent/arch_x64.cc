@@ -150,16 +150,17 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Regis
   return ZX_OK;
 }
 
+// Adapter class to allow the exception decoder to get the debug registers if needed.
 class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
  public:
-  ExceptionInfo(const DebuggedThread& thread) : thread_(thread) {}
+  explicit ExceptionInfo(const zx::thread& thread) : thread_(thread) {}
 
-  std::optional<debug_ipc::X64ExceptionInfo::DebugRegs> FetchDebugRegs() override {
+  std::optional<debug_ipc::X64ExceptionInfo::DebugRegs> FetchDebugRegs() const override {
     zx_thread_state_debug_regs_t debug_regs;
     zx_status_t status =
-        thread_.handle().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
-
+        thread_.read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
     if (status != ZX_OK) {
+      DEBUG_LOG(Archx64) << "Could not get debug regs: " << zx_status_get_string(status);
       return std::nullopt;
     }
 
@@ -176,10 +177,12 @@ class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
   }
 
  private:
-  const DebuggedThread& thread_;
+  const zx::thread& thread_;
 };
 
 }  // namespace
+
+::debug_ipc::Arch GetCurrentArch() { return ::debug_ipc::Arch::kX64; }
 
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
                      std::vector<debug_ipc::Register>& out) {
@@ -285,6 +288,11 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
   return ZX_ERR_INVALID_ARGS;
 }
 
+debug_ipc::ExceptionType DecodeExceptionType(const zx::thread& thread, uint32_t exception_type) {
+  ExceptionInfo info(thread);
+  return debug_ipc::DecodeException(exception_type, info);
+}
+
 const BreakInstructionType kBreakInstruction = 0xCC;
 
 debug_ipc::ExceptionRecord ArchProvider::FillExceptionRecord(const zx_exception_report_t& in) {
@@ -361,20 +369,12 @@ uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t exception_addr) 
   return exception_addr;
 }
 
-::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kX64; }
-
 // Hardware Exceptions ---------------------------------------------------------
 
 uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr) {
   // x86 returns the instruction *about* to be executed when hitting the hw
   // breakpoint.
   return exception_addr;
-}
-
-debug_ipc::ExceptionType ArchProvider::DecodeExceptionType(const DebuggedThread& thread,
-                                                           uint32_t exception_type) {
-  ExceptionInfo info(thread);
-  return debug_ipc::DecodeException(exception_type, &info);
 }
 
 }  // namespace arch

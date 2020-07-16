@@ -6,6 +6,7 @@
 
 #include <lib/zx/exception.h>
 #include <lib/zx/process.h>
+#include <zircon/syscalls/exception.h>
 
 #include <utility>
 
@@ -18,11 +19,13 @@ namespace debug_agent {
 // class.
 class ZirconThreadException : public ThreadException {
  public:
-  explicit ZirconThreadException(zx::exception exception) : exception_(std::move(exception)) {}
+  ZirconThreadException(zx::exception exception, const zx_exception_info_t& info)
+      : exception_(std::move(exception)), info_(info) {}
 
   ~ZirconThreadException() = default;
 
   std::unique_ptr<ThreadHandle> GetThreadHandle() const override;
+  debug_ipc::ExceptionType GetType(const ThreadHandle& thread) const override;
   fitx::result<zx_status_t, uint32_t> GetState() const override;
   zx_status_t SetState(uint32_t state) override;
   fitx::result<zx_status_t, uint32_t> GetStrategy() const override;
@@ -30,6 +33,7 @@ class ZirconThreadException : public ThreadException {
 
  private:
   zx::exception exception_;
+  zx_exception_info_t info_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ZirconThreadException);
 };
