@@ -35,14 +35,15 @@ executable("exe") {
   ]
 }
 
-fuchsia_component("limbo_client") {
+fuchsia_component("component") {
   manifest = "meta/limbo_client.cmx"
+  component_name = "limbo_client"
 
   deps = [ ":exe" ]
 }
 
 fuchsia_package("limbo-client") {
-  deps = [ ":limbo_client" ]
+  deps = [ ":component" ]
 }
 
 # Tests --------------------------------------------------------------------------------------------

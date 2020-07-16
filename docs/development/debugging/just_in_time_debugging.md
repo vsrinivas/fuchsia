@@ -26,7 +26,7 @@ The Process Limbo comes with a CLI tool that permits the user to query the curre
 limbo:
 
 ```
-$ run fuchsia-pkg://fuchsia.com/limbo_client#meta/limbo.cmx
+$ run run fuchsia-pkg://fuchsia.com/limbo-client#meta/limbo_client.cmx
 Usage: limbo [--help] <option>
 
   The process limbo is a service that permits the system to suspend any processes that throws an
@@ -52,10 +52,12 @@ debug.
 In order to do this, there is a configuration that has to be set into the build:
 
 ```
-fx set <YOUR CONFIG> --with //src/developer/exception_broker:enable_jitd_on_startup
+fx set <YOUR CONFIG> --with-base //src/developer/forensics/exceptions:enable_jitd_on_startup
 ```
 
-You can still use the Process Limbo CLI tool to disable and manipulate the limbo afterwards.
+Or add this label to the `base_package_labels` in your build args. You can still use the Process
+Limbo CLI tool to disable and manipulate the limbo afterwards. Then you will need to push an update
+to your device for this to take an effect.
 
 NOTE: Driver initialization is finicky and freezing crashing process can leave the system in an
 undefined state and "hang" it, so your mileage may vary when using this feature, especially for very
