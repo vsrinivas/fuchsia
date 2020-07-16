@@ -39,11 +39,6 @@ html, body, .wrapper {
   padding: 0.5em;
 }
 
-/* .header-search:focus {
-  width: 80%;
-} */
-
-
 .header-search-button {
   background-color: #121213;
   border: 1px solid #5f6369;
@@ -99,6 +94,34 @@ html, body, .wrapper {
 .map {
   height:100%;
   width:100%;
+}
+
+.dashboard {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  margin-left: 50px;
+  margin-right: 50px;
+  border: 1px solid #5f6369;
+  border-radius: 10px;
+  background: #3c4045;
+  padding: 10px;
+}
+
+.menu {
+    list-style-type: none;
+    list-style-position: inside;
+    margin: 0;
+    padding: 0;
+    margin-bottom: 10px;
+}
+
+.menu-button {
+  text-decoration: none;
+  background: #3c4045;
+  border: 1px solid #5f6369;
+  border-radius: 10px;
+  color: #e8eaee;
+  padding: 10px;
 }
 
 .nav {
