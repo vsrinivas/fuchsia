@@ -207,14 +207,21 @@ class Device(object):
         """Returns a map of file names to sizes for the given path."""
         results = {}
         try:
-            out = self.ssh(['ls', '-l', pathname]).check_output()
+            process = self.ssh(['ls', '-l', pathname])
+            # Suppress error messages
+            process.stderr = Host.DEVNULL
+            out = process.check_output()
             for line in str(out).split('\n'):
                 # Line ~= '-rw-r--r-- 1 0 0 8192 Mar 18 22:02 some-name'
                 parts = line.split()
                 if len(parts) > 8:
                     results[' '.join(parts[8:])] = int(parts[4])
-        except subprocess.CalledProcessError:
-            pass
+        except subprocess.CalledProcessError as e:
+            # The returncode is 1 when the file or directory is not found (see
+            # sbase/ls.c); for our purposes, this is not an error, but we don't
+            # want to mask other errors such as `ls` itself not being found.
+            if e.returncode != 1:
+                raise
         return results
 
     def mkdir(self, pathname):
