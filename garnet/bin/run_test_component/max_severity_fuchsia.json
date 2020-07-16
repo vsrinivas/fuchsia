@@ -69,6 +69,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/blobfs-ramdisk-tests#meta/blobfs-ramdisk-lib-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/brightness_manager_tests#meta/brightness_manager_test.cmx",
          "max_severity": "ERROR"
       },
@@ -415,6 +419,10 @@
       },
       {
          "url": "fuchsia-pkg://fuchsia.com/paver-test#meta/paver-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkgfs-tests#meta/pkgfs-lib-test.cmx",
          "max_severity": "ERROR"
       },
       {

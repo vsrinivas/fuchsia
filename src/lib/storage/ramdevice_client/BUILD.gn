@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("ramdevice_client") {
   with_unit_tests = true
@@ -22,55 +22,47 @@ rustc_library("ramdevice_client") {
   non_rust_deps = [ "//zircon/system/ulib/ramdevice-client" ]
 }
 
-test_package("ramdevice_client_tests") {
-  deps = [ ":ramdevice_client_test" ]
-  tests = [
-    {
-      name = "ramdevice_client_lib_test"
-      environments = basic_envs
-    },
+fuchsia_component("ramdevice-client-tests") {
+  testonly = true
+  manifest = "meta/ramdevice_client_lib_test.cmx"
+  deps = [
+    ":ramdevice_client_test",
+    ":ramdisk-isolated-devmgr-component",
   ]
 }
 
-devmgr_manifest("devmgr.manifest") {
-  testonly = true
+fuchsia_test_package("ramdevice-client-tests-package") {
+  package_name = "ramdevice-client-tests"
+  test_components = [ ":ramdevice-client-tests" ]
 }
 
 # Test component that exposes a /dev filesystem containing ramdisk support as
 # its fuchsia.test.IsolatedDevmgr service.
-package("ramdisk-isolated-devmgr") {
-  testonly = true
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
+isolated_devmgr_component("ramdisk-isolated-devmgr-component") {
+  component_name = "ramdisk-isolated-devmgr"
+  args = [
+    "--svc_name=fuchsia.test.IsolatedDevmgr",
+    "--load_driver=/boot/driver/ramdisk.so",
+    "--wait_for=misc/ramctl",
+  ]
+
   deps = [
-    ":devmgr.manifest",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ftl",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/gpt",
+    "//src/devices/block/drivers/mbr",
     "//src/devices/block/drivers/ramdisk",
-    "//src/lib/isolated_devmgr",
+    "//src/devices/tests/sysdev",
   ]
+}
 
-  binaries = [
-    {
-      name = "isolated_devmgr"
-    },
-  ]
-
-  loadable_modules = [
-    {
-      name = "ramdisk.so"
-    },
-  ]
-
-  meta = [
-    {
-      dest = "ramdisk-isolated-devmgr.cmx"
-      path = "meta/ramdisk-isolated-devmgr.cmx"
-    },
-  ]
+fuchsia_package("ramdisk-isolated-devmgr") {
+  testonly = true
+  deps = [ ":ramdisk-isolated-devmgr-component" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":ramdevice_client_tests",
-    ":ramdisk-isolated-devmgr",
-  ]
+  deps = [ ":ramdevice-client-tests-package" ]
 }

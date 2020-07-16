@@ -24,7 +24,7 @@
 //! "facets": {
 //!     "fuchsia.test": {
 //!         "injected-services": {
-//!             "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
+//!             "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdevice-client-tests#meta/ramdisk-isolated-devmgr.cmx"
 //!         }
 //!     }
 //! },
