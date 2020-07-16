@@ -32,7 +32,6 @@ executable_package("basemgr") {
   deps = [
     ":lib",
     "//garnet/public/lib/json",
-    "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
@@ -42,7 +41,6 @@ executable_package("basemgr") {
     "//sdk/fidl/fuchsia.ui.lifecycle",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/fidl/fuchsia.wlan.service",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
