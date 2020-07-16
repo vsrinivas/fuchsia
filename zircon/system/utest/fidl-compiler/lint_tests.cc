@@ -4,7 +4,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "test_library.h"
 
 namespace {
@@ -52,7 +51,7 @@ const uint64 kAllIsCalm = 1234;
   ASSERT_FALSE(library.Lint());
   ASSERT_WARNINGS(1, library, "kAllIsCalm");
   const auto& warnings = library.lints();
-  ASSERT_STR_STR(warnings[0].c_str(), "ALL_IS_CALM");
+  ASSERT_SUBSTR(warnings[0].c_str(), "ALL_IS_CALM");
 }
 
 TEST(LintTest, const_names_good) {
@@ -75,7 +74,7 @@ protocol URLLoader {};
   ASSERT_FALSE(library.Lint());
   ASSERT_WARNINGS(1, library, "URLLoader");
   const auto& warnings = library.lints();
-  ASSERT_STR_STR(warnings[0].c_str(), "UrlLoader");
+  ASSERT_SUBSTR(warnings[0].c_str(), "UrlLoader");
 }
 
 TEST(LintTest, protocol_names_good) {

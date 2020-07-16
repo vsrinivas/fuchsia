@@ -8,7 +8,6 @@
 #include <fidl/source_file.h>
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -306,7 +305,7 @@ table Example {
   EXPECT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrNonDenseOrdinal);
-  ASSERT_STR_STR(library.errors().at(0)->msg.c_str(), "2");
+  ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 
 }  // namespace

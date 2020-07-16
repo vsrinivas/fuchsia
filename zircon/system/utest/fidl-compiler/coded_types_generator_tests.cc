@@ -5,7 +5,6 @@
 #include <fidl/tables_generator.h>
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "fidl/coded_ast.h"
 #include "fidl/coded_types_generator.h"
 #include "test_library.h"
@@ -533,8 +532,8 @@ struct TwoLevelRecursiveOptionalStructB {
   auto struct_one_level = static_cast<const fidl::coded::StructType*>(type_one_level);
   ASSERT_EQ(struct_one_level->fields.size(), 1);
   EXPECT_EQ(struct_one_level->fields[0].type->kind, fidl::coded::Type::Kind::kStructPointer);
-  ASSERT_STR_STR(struct_one_level->fields[0].type->coded_name.c_str(),
-                 "OneLevelRecursiveOptionalStruct");
+  ASSERT_SUBSTR(struct_one_level->fields[0].type->coded_name.c_str(),
+                "OneLevelRecursiveOptionalStruct");
   EXPECT_EQ(struct_one_level->fields[0].offset, 0);
   EXPECT_EQ(struct_one_level->fields[0].padding, 0);
 
@@ -545,8 +544,8 @@ struct TwoLevelRecursiveOptionalStructB {
   auto struct_two_level_b = static_cast<const fidl::coded::StructType*>(type_two_level_b);
   ASSERT_EQ(struct_two_level_b->fields.size(), 1);
   EXPECT_EQ(struct_two_level_b->fields[0].type->kind, fidl::coded::Type::Kind::kStructPointer);
-  ASSERT_STR_STR(struct_two_level_b->fields[0].type->coded_name.c_str(),
-                 "TwoLevelRecursiveOptionalStructA");
+  ASSERT_SUBSTR(struct_two_level_b->fields[0].type->coded_name.c_str(),
+                "TwoLevelRecursiveOptionalStructA");
   EXPECT_EQ(struct_two_level_b->fields[0].offset, 0);
   EXPECT_EQ(struct_two_level_b->fields[0].padding, 0);
 
@@ -559,8 +558,8 @@ struct TwoLevelRecursiveOptionalStructB {
   auto struct_two_level_a = static_cast<const fidl::coded::StructType*>(type_two_level_a);
   ASSERT_EQ(struct_two_level_a->fields.size(), 1);
   EXPECT_EQ(struct_two_level_a->fields[0].type->kind, fidl::coded::Type::Kind::kStructPointer);
-  ASSERT_STR_STR(struct_two_level_a->fields[0].type->coded_name.c_str(),
-                 "TwoLevelRecursiveOptionalStructA");
+  ASSERT_SUBSTR(struct_two_level_a->fields[0].type->coded_name.c_str(),
+                "TwoLevelRecursiveOptionalStructA");
   EXPECT_EQ(struct_two_level_a->fields[0].offset, 0);
   EXPECT_EQ(struct_two_level_a->fields[0].padding, 0);
 }

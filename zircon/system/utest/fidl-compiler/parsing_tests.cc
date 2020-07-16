@@ -12,7 +12,6 @@
 #include <fidl/source_file.h>
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -43,7 +42,7 @@ library a_b;
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidLibraryNameComponent);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "a_b");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "a_b");
 }
 
 // Test that otherwise reserved words can be appropriarely parsed when context
@@ -247,7 +246,7 @@ struct Test {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "@");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "@");
 }
 
 TEST(ParsingTests, bad_char_slash_test) {
@@ -262,7 +261,7 @@ struct Test / {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "/");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "/");
 }
 
 TEST(ParsingTests, bad_identifier_test) {
@@ -277,7 +276,7 @@ struct test_ {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidIdentifier);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "test_");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "test_");
 }
 
 class LocaleSwapper {

@@ -5,7 +5,6 @@
 #include <fidl/names.h>
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -99,7 +98,7 @@ struct Bad {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "int64");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "int64");
 }
 
 TEST(TypeAliasTests, invalid_no_optional_on_aliased_primitive) {
@@ -117,7 +116,7 @@ struct Bad {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "int64");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "int64");
 }
 
 TEST(TypeAliasTests, vector_parametrized_on_decl) {

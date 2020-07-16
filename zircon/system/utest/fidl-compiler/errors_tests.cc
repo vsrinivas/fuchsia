@@ -4,7 +4,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -118,7 +117,7 @@ protocol Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnknownType);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "ErrorType");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ErrorType");
 }
 
 TEST(ErrorsTests, BadErrorWrongPrimitive) {

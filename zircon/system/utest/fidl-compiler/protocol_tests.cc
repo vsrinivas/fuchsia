@@ -8,7 +8,6 @@
 #include <fidl/source_file.h>
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -197,7 +196,7 @@ protocol Child {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnknownType);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "MissingParent");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "MissingParent");
 }
 
 TEST(ProtocolTests, invalid_cannot_compose_non_protocol) {
@@ -294,7 +293,7 @@ protocol Special {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodOrdinal);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "ClashTwo_");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ClashTwo_");
 }
 
 TEST(ProtocolTests, invalid_simple_constraint_applies_to_composed_methods_too) {
@@ -315,7 +314,7 @@ protocol YearningForSimplicity {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrMemberMustBeSimple);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "arg");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "arg");
 }
 
 TEST(ProtocolTests, invalid_request_must_be_protocol) {

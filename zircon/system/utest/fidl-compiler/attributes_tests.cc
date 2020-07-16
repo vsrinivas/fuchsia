@@ -10,7 +10,6 @@
 #include <fidl/source_file.h>
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -149,9 +148,9 @@ using we.should.not.care;
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrAttributesNotAllowedOnLibraryImport);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "Doc");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "NoAttributeOnUsing");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "EvenDoc");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Doc");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "NoAttributeOnUsing");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "EvenDoc");
 }
 
 // Test that a duplicate attribute is caught, and nicely reported.
@@ -169,7 +168,7 @@ protocol A {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateAttribute);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "dup");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dup");
 }
 
 // Test that doc comments and doc attributes clash are properly checked.
@@ -188,7 +187,7 @@ protocol A {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateAttribute);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "Doc");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Doc");
 }
 
 // Test that TODO
@@ -208,7 +207,7 @@ library fidl.test.dupattributes;
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateAttribute);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "dup");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dup");
 }
 
 // Test that a close attribute is caught.
@@ -226,8 +225,8 @@ protocol A {
   const auto& warnings = library.warnings();
   ASSERT_EQ(warnings.size(), 1);
   ASSERT_ERR(warnings[0], fidl::WarnAttributeTypo);
-  ASSERT_STR_STR(warnings[0]->msg.c_str(), "Duc");
-  ASSERT_STR_STR(warnings[0]->msg.c_str(), "Doc");
+  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "Duc");
+  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "Doc");
 }
 
 // This tests our ability to treat warnings as errors.  It is here because this
@@ -249,8 +248,8 @@ protocol A {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::WarnAttributeTypo);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "Duc");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "Doc");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Duc");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Doc");
 }
 
 TEST(AttributesTests, empty_transport) {
@@ -360,7 +359,7 @@ protocol MyProtocol {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "Transitional");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Transitional");
 }
 
 TEST(AttributesTests, unknown_invalid_placement_on_union) {
@@ -370,7 +369,7 @@ TEST(AttributesTests, unknown_invalid_placement_on_union) {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "Unknown");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Unknown");
 }
 
 TEST(AttributesTests, unknown_invalid_placement_on_bits_member) {
@@ -382,7 +381,7 @@ TEST(AttributesTests, unknown_invalid_placement_on_bits_member) {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "Unknown");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Unknown");
 }
 
 TEST(AttributesTests, unknown_invalid_on_strict_unions_enums) {
@@ -392,7 +391,7 @@ TEST(AttributesTests, unknown_invalid_on_strict_unions_enums) {
     const auto& errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_ERR(errors[0], fidl::ErrUnknownAttributeOnInvalidType);
-    ASSERT_STR_STR(errors[0]->msg.c_str(), "Unknown");
+    ASSERT_SUBSTR(errors[0]->msg.c_str(), "Unknown");
   }
 
   {
@@ -401,7 +400,7 @@ TEST(AttributesTests, unknown_invalid_on_strict_unions_enums) {
     const auto& errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_ERR(errors[0], fidl::ErrUnknownAttributeOnInvalidType);
-    ASSERT_STR_STR(errors[0]->msg.c_str(), "Unknown");
+    ASSERT_SUBSTR(errors[0]->msg.c_str(), "Unknown");
   }
 }
 
@@ -474,7 +473,7 @@ protocol MyProtocol {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 11);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "ForDeprecatedCBindings");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ForDeprecatedCBindings");
 }
 
 TEST(AttributesTests, deprecated_attributes) {
@@ -560,7 +559,7 @@ struct MyStruct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrAttributeConstraintNotSatisfied);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "MustHaveThreeMembers");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "MustHaveThreeMembers");
 }
 
 TEST(AttributesTests, constraint_only_three_members_on_method) {
@@ -585,7 +584,7 @@ protocol MyProtocol {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrAttributeConstraintNotSatisfied);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "MustHaveThreeMembers");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "MustHaveThreeMembers");
 }
 
 TEST(AttributesTests, constraint_only_three_members_on_protocol) {
@@ -612,7 +611,7 @@ protocol MyProtocol {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 2);  // 2 because there are two methods
   ASSERT_ERR(errors[0], fidl::ErrAttributeConstraintNotSatisfied);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "MustHaveThreeMembers");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "MustHaveThreeMembers");
 }
 
 TEST(AttributesTests, max_bytes) {
@@ -629,8 +628,8 @@ table MyTable {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrTooManyBytes);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "27");  // 27 allowed
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "40");  // 40 found
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "27");  // 27 allowed
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "40");  // 40 found
 }
 
 TEST(AttributesTests, max_bytes_bound_too_big) {
@@ -679,8 +678,8 @@ union MyUnion {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrTooManyHandles);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "2");  // 2 allowed
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "6");  // 6 found
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "2");  // 2 allowed
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "6");  // 6 found
 }
 
 TEST(AttributesTests, invalid_attribute_value) {

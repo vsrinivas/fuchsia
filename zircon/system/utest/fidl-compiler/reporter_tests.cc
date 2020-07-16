@@ -4,7 +4,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "fidl/diagnostics.h"
 #include "fidl/reporter.h"
 #include "test_library.h"
@@ -26,8 +25,8 @@ TEST(ReporterTests, ReportErrorFormatParams) {
 
   const auto& errors = reporter.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0]->msg.c_str(),
-                 "This test error has one string param 'param1' and another 'param2'.");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(),
+                "This test error has one string param 'param1' and another 'param2'.");
 }
 
 TEST(ReporterTests, MakeErrorThenReportIt) {
@@ -39,8 +38,8 @@ TEST(ReporterTests, MakeErrorThenReportIt) {
 
   const auto& errors = reporter.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0]->msg.c_str(),
-                 "This test error has one string param 'param1' and another 'param2'.");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(),
+                "This test error has one string param 'param1' and another 'param2'.");
 }
 
 }  // namespace

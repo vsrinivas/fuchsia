@@ -9,7 +9,6 @@
 #include <fidl/source_file.h>
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -286,7 +285,7 @@ union Example {
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrNonDenseOrdinal);
-  ASSERT_STR_STR(library.errors().at(0)->msg.c_str(), "2");
+  ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 
 TEST(UnionTests, must_have_at_least_one_non_reserved) {
@@ -374,7 +373,7 @@ union Foo {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "Selector");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Selector");
 }
 
 TEST(UnionTests, deprecated_xunion_error) {

@@ -4,7 +4,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -51,8 +50,8 @@ bits Fruit : uint64 {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "APPLE");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "ORANGE");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "APPLE");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ORANGE");
 }
 
 TEST(BitsTests, BadBitsTestWithNonUniqueValuesOutOfLine) {
@@ -71,8 +70,8 @@ const uint32 TWO_SQUARED = 4;
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "APPLE");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "ORANGE");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "APPLE");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ORANGE");
 }
 
 TEST(BitsTests, BadBitsTestUnsignedWithNegativeMember) {
@@ -88,7 +87,7 @@ bits Fruit : uint64 {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "-2");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "-2");
   ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
 }
 
@@ -105,7 +104,7 @@ bits Fruit : uint8 {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "256");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "256");
   ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
 }
 
@@ -123,7 +122,7 @@ bits Fruit : uint64 {
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberName);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "ORANGE");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ORANGE");
 }
 
 TEST(BitsTests, BadBitsTestNoMembers) {

@@ -9,7 +9,6 @@
 #include <fidl/source_file.h>
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -143,7 +142,7 @@ struct Foo {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrUnknownType);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "dependent.Bar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent.Bar");
 }
 
 TEST(UsingTests, invalid_unknown_using) {
@@ -161,7 +160,7 @@ struct Foo {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrUnknownLibrary);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "dependent");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent");
 }
 
 TEST(UsingTests, invalid_duplicate_using) {
@@ -186,7 +185,7 @@ using dependent; // duplicated
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrDuplicateLibraryImport);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "dependent");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent");
 }
 
 TEST(UsingTests, invalid_unused_using) {
@@ -216,7 +215,7 @@ struct Foo {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrUnusedImport);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "dependent");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dependent");
 }
 
 TEST(UsingTests, invalid_unknown_dependent_library) {
@@ -290,7 +289,7 @@ struct B{dep.A a;}; // So the import is used.
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "dep");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dep");
 }
 
 TEST(UsingTests, aliased_library_declaration_name_collision) {
@@ -321,7 +320,7 @@ struct B{dep.A a;}; // So the import is used.
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "x");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "x");
 }
 
 TEST(UsingTests, aliased_library_nonaliased_declaration_name_collision) {
@@ -352,7 +351,7 @@ struct B{depnoconflict.A a;}; // So the import is used.
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "dep");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "dep");
 }
 
 }  // namespace

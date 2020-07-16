@@ -4,7 +4,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -102,7 +101,7 @@ struct MyStruct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "MyEnum");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "MyEnum");
 }
 
 TEST(StructsTests, GoodEnumDefaultValueBitsMemberReference) {
@@ -162,7 +161,7 @@ struct MyStruct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "MyBits");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "MyBits");
 }
 
 // The old-style of enum-referencing should no longer work.

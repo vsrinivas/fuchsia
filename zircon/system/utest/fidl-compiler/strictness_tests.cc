@@ -8,7 +8,6 @@
 #include <fidl/source_file.h>
 #include <zxtest/zxtest.h>
 
-#include "assert_strstr.h"
 #include "error_test.h"
 #include "test_library.h"
 
@@ -23,7 +22,7 @@ void invalid_strictness(const std::string& type, const std::string& definition) 
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyStrict);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), type.c_str());
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), type.c_str());
 }
 
 void redundant_strictness(const std::string& strictness, const std::string& definition) {
