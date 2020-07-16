@@ -243,7 +243,6 @@ if (target_cpu == "arm64") {
   ]
 } else if (target_cpu == "x64") {
   common_image_contents += [
-    "//src/connectivity/ethernet/drivers/intel-ethernet",
     "//src/connectivity/ethernet/drivers/realtek-8111",
     "//src/devices/board/drivers/x86:platform-bus-x86",
     "//src/devices/misc/drivers/tpm",
