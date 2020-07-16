@@ -21,7 +21,6 @@ import (
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
-	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
@@ -598,7 +597,7 @@ func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
 	ns := newNetstack(t)
 
 	multicastPromiscuousModeEnabled := false
-	eth := deviceForAddEth(ethernet.Info{}, t)
+	eth, _ := testutil.MakeEthernetDevice(t, ethernet.Info{}, 1)
 	eth.ConfigMulticastSetPromiscuousModeImpl = func(enabled bool) (int32, error) {
 		multicastPromiscuousModeEnabled = enabled
 		return int32(zx.ErrOk), nil
@@ -654,16 +653,26 @@ func TestStaticIPConfiguration(t *testing.T) {
 		{name: "wlan", features: ethernet.InfoFeatureWlan},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			d := deviceForAddEth(ethernet.Info{Features: test.features}, t)
-			d.StopImpl = func() error { return nil }
+			d, _ := testutil.MakeEthernetDevice(t, ethernet.Info{
+				Features: test.features,
+			}, 1)
 			ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: t.Name()}, &d)
 			if err != nil {
 				t.Fatal(err)
 			}
+			stateChange := make(chan link.State, 1)
+			ifs.controller.SetOnStateChange(func(s link.State) {
+				stateChange <- s
+				ifs.stateChange(s)
+			})
 			defer func() {
 				if err := ifs.controller.Close(); err != nil {
 					t.Errorf("ifs.controller.Close() = %s", err)
 				}
+				if got, want := <-stateChange, link.StateClosed; got != want {
+					t.Errorf("got state = %s, want %s", got, want)
+				}
+				close(stateChange)
 			}()
 			name := ifs.ns.name(ifs.nicid)
 			result := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr)
@@ -686,6 +695,9 @@ func TestStaticIPConfiguration(t *testing.T) {
 			if err := ifs.controller.Down(); err != nil {
 				t.Fatal(err)
 			}
+			if got, want := <-stateChange, link.StateDown; got != want {
+				t.Errorf("got state = %s, want %s", got, want)
+			}
 
 			ifs.mu.Lock()
 			if ifs.mu.dhcp.enabled {
@@ -698,6 +710,9 @@ func TestStaticIPConfiguration(t *testing.T) {
 
 			if err := ifs.controller.Up(); err != nil {
 				t.Fatal(err)
+			}
+			if got, want := <-stateChange, link.StateStarted; got != want {
+				t.Errorf("got state = %s, want %s", got, want)
 			}
 
 			ifs.mu.Lock()
@@ -1211,43 +1226,5 @@ func TestDHCPAcquired(t *testing.T) {
 				t.Errorf("NIC %d not found in %v", ifState.nicid, infoMap)
 			}
 		})
-	}
-}
-
-// Returns an ethernetext.Device struct that implements
-// ethernet.Device and can be started and stopped.
-//
-// Reports the passed in ethernet.Info when Device#GetInfo is called.
-func deviceForAddEth(info ethernet.Info, t *testing.T) ethernetext.Device {
-	return ethernetext.Device{
-		TB:                t,
-		GetInfoImpl:       func() (ethernet.Info, error) { return info, nil },
-		SetClientNameImpl: func(string) (int32, error) { return 0, nil },
-		GetStatusImpl: func() (ethernet.DeviceStatus, error) {
-			return ethernet.DeviceStatusOnline, nil
-		},
-		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
-			const depth = 1
-			tx, _ := testutil.MakeEntryFifo(t, depth)
-			rx, _ := testutil.MakeEntryFifo(t, depth)
-			return int32(zx.ErrOk), &ethernet.Fifos{
-				Rx:      rx,
-				Tx:      tx,
-				RxDepth: depth,
-				TxDepth: depth,
-			}, nil
-		},
-		SetIoBufferImpl: func(zx.VMO) (int32, error) {
-			return int32(zx.ErrOk), nil
-		},
-		StartImpl: func() (int32, error) {
-			return int32(zx.ErrOk), nil
-		},
-		ConfigMulticastSetPromiscuousModeImpl: func(bool) (int32, error) {
-			return int32(zx.ErrOk), nil
-		},
-		StopImpl: func() error {
-			return nil
-		},
 	}
 }

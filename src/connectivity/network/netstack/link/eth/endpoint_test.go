@@ -21,7 +21,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
 
 	"fidl/fuchsia/hardware/ethernet"
-	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -121,8 +120,7 @@ func TestEndpoint(t *testing.T) {
 	for i := 0; i < bits.Len(maxDepth); i++ {
 		depth := uint32(1 << i)
 		t.Run(fmt.Sprintf("depth=%d", depth), func(t *testing.T) {
-			clientTxFifo, deviceTxFifo := testutil.MakeEntryFifo(t, uint(depth))
-			clientRxFifo, deviceRxFifo := testutil.MakeEntryFifo(t, uint(depth))
+			deviceImpl, deviceFifos := testutil.MakeEthernetDevice(t, ethernet.Info{}, depth)
 
 			var device struct {
 				iob       eth.IOBuffer
@@ -132,43 +130,19 @@ func TestEndpoint(t *testing.T) {
 				_ = device.iob.Close()
 			}()
 
-			client, err := eth.NewClient(t.Name(), "topo", "file", &ethernetext.Device{
-				TB: t,
-				GetInfoImpl: func() (ethernet.Info, error) {
-					return ethernet.Info{}, nil
-				},
-				GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
-					return int32(zx.ErrOk), &ethernet.Fifos{
-						Rx:      clientRxFifo,
-						RxDepth: depth,
-						Tx:      clientTxFifo,
-						TxDepth: depth,
-					}, nil
-				},
-				SetIoBufferImpl: func(vmo zx.VMO) (int32, error) {
-					mappedVmo, err := fifo.MapVMO(vmo)
-					if err != nil {
-						t.Fatal(err)
-					}
-					if err := vmo.Close(); err != nil {
-						t.Fatal(err)
-					}
-					device.iob = eth.IOBuffer{MappedVMO: mappedVmo}
-					return int32(zx.ErrOk), nil
-				},
-				StartImpl: func() (int32, error) {
-					return int32(zx.ErrOk), nil
-				},
-				StopImpl: func() error {
-					return nil
-				},
-				SetClientNameImpl: func(string) (int32, error) {
-					return int32(zx.ErrOk), nil
-				},
-				ConfigMulticastSetPromiscuousModeImpl: func(bool) (int32, error) {
-					return int32(zx.ErrOk), nil
-				},
-			})
+			deviceImpl.SetIoBufferImpl = func(vmo zx.VMO) (int32, error) {
+				mappedVmo, err := fifo.MapVMO(vmo)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := vmo.Close(); err != nil {
+					t.Fatal(err)
+				}
+				device.iob = eth.IOBuffer{MappedVMO: mappedVmo}
+				return int32(zx.ErrOk), nil
+			}
+
+			client, err := eth.NewClient(t.Name(), "topo", "file", &deviceImpl)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -188,10 +162,10 @@ func TestEndpoint(t *testing.T) {
 			// Attaching a dispatcher to the client should cause it to fill the device's RX buffer pool.
 			{
 				b := make([]eth_gen.FifoEntry, depth+1)
-				if _, err := zxwait.Wait(deviceRxFifo, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
+				if _, err := zxwait.Wait(deviceFifos.Rx, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
 					t.Fatal(err)
 				}
-				status, count := eth_gen.FifoRead(deviceRxFifo, b)
+				status, count := eth_gen.FifoRead(deviceFifos.Rx, b)
 				if status != zx.ErrOk {
 					t.Fatal(status)
 				}
@@ -236,10 +210,10 @@ func TestEndpoint(t *testing.T) {
 							for i := range b {
 								b[i].SetLength(0)
 							}
-							if _, err := zxwait.Wait(deviceRxFifo, zx.SignalFIFOWritable, zx.TimensecInfinite); err != nil {
+							if _, err := zxwait.Wait(deviceFifos.Rx, zx.SignalFIFOWritable, zx.TimensecInfinite); err != nil {
 								t.Fatal(err)
 							}
-							status, count := eth_gen.FifoWrite(deviceRxFifo, b)
+							status, count := eth_gen.FifoWrite(deviceFifos.Rx, b)
 							if status != zx.ErrOk {
 								t.Fatal(status)
 							}
@@ -250,10 +224,10 @@ func TestEndpoint(t *testing.T) {
 							}
 							toWrite -= count
 							for len(b) != 0 {
-								if _, err := zxwait.Wait(deviceRxFifo, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
+								if _, err := zxwait.Wait(deviceFifos.Rx, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
 									t.Fatal(err)
 								}
-								status, count := eth_gen.FifoRead(deviceRxFifo, b)
+								status, count := eth_gen.FifoRead(deviceFifos.Rx, b)
 								if status != zx.ErrOk {
 									t.Fatal(status)
 								}
@@ -280,10 +254,10 @@ func TestEndpoint(t *testing.T) {
 							t.Fatalf("got WritePackets(_) = %d, nil, want %d, nil", got, writeSize)
 						}
 
-						if err := cycleTX(deviceTxFifo, writeSize, device.iob, nil); err != nil {
+						if err := cycleTX(deviceFifos.Tx, writeSize, device.iob, nil); err != nil {
 							t.Fatal(err)
 						}
-						if err := checkTXDone(deviceTxFifo); err != nil {
+						if err := checkTXDone(deviceFifos.Tx); err != nil {
 							t.Fatal(err)
 						}
 
@@ -334,7 +308,7 @@ func TestEndpoint(t *testing.T) {
 						t.Fatal(err)
 					}
 
-					if err := cycleTX(deviceTxFifo, 1, device.iob, func(b []byte) {
+					if err := cycleTX(deviceFifos.Tx, 1, device.iob, func(b []byte) {
 						if len(b) < header.EthernetMinimumSize {
 							t.Fatalf("got len(b) = %d, want >= %d", len(b), header.EthernetMinimumSize)
 						}
@@ -353,7 +327,7 @@ func TestEndpoint(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				if err := checkTXDone(deviceTxFifo); err != nil {
+				if err := checkTXDone(deviceFifos.Tx); err != nil {
 					t.Fatal(err)
 				}
 			})
@@ -379,7 +353,7 @@ func TestEndpoint(t *testing.T) {
 					entry.SetLength(sendSize)
 
 					{
-						status, count := eth_gen.FifoWrite(deviceRxFifo, device.rxEntries[:1])
+						status, count := eth_gen.FifoWrite(deviceFifos.Rx, device.rxEntries[:1])
 						if status != zx.ErrOk {
 							t.Fatal(status)
 						}
@@ -387,11 +361,11 @@ func TestEndpoint(t *testing.T) {
 							t.Fatalf("got zx_fifo_write(...) = %d want = %d", count, 1)
 						}
 					}
-					if _, err := zxwait.Wait(deviceRxFifo, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
+					if _, err := zxwait.Wait(deviceFifos.Rx, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
 						t.Fatal(err)
 					}
 					// Assert that we read back only one entry (when depth is greater than 1).
-					status, count := eth_gen.FifoRead(deviceRxFifo, device.rxEntries)
+					status, count := eth_gen.FifoRead(deviceFifos.Rx, device.rxEntries)
 					if status != zx.ErrOk {
 						t.Fatal(status)
 					}

@@ -270,7 +270,16 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		}, zx.Signals(ethernet.SignalStatus), func() {
 			// Process ethernetStatusSignal.
 			if err := c.changeState(func() (link.State, error) {
-				return c.getState("FIFO signal")
+				status, err := c.device.GetStatus(context.Background())
+				if err != nil {
+					return link.StateUnknown, err
+				}
+				_ = syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s", status)
+				state := link.StateStarted
+				if status&ethernet.DeviceStatusOnline == 0 {
+					state = link.StateDown
+				}
+				return state, nil
 			}); err != nil {
 				_ = syslog.WarnTf(tag, "status error: %s", err)
 			}
@@ -340,16 +349,13 @@ func (c *Client) changeState(fn func() (link.State, error)) error {
 
 // Up enables the interface.
 func (c *Client) Up() error {
-	return c.changeState(func() (link.State, error) {
-		_ = syslog.VLogTf(syslog.TraceVerbosity, tag, "client Up")
-		if status, err := c.device.Start(context.Background()); err != nil {
-			return link.StateUnknown, err
-		} else if err := checkStatus(status, "Start"); err != nil {
-			return link.StateUnknown, err
-		}
-
-		return c.getState("Up")
-	})
+	_ = syslog.VLogTf(syslog.TraceVerbosity, tag, "client Up")
+	if status, err := c.device.Start(context.Background()); err != nil {
+		return err
+	} else if err := checkStatus(status, "Start"); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Down disables the interface.
@@ -420,20 +426,6 @@ func (c *Client) ListenTX() error {
 		return err
 	}
 	return nil
-}
-
-// getState fetches the current device state.
-func (c *Client) getState(debugSource string) (link.State, error) {
-	status, err := c.device.GetStatus(context.Background())
-	if err != nil {
-		return link.StateUnknown, err
-	}
-	_ = syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s (%s)", status, debugSource)
-	state := link.StateStarted
-	if status&ethernet.DeviceStatusOnline == 0 {
-		state = link.StateDown
-	}
-	return state, nil
 }
 
 func (c *Client) RxStats() *fifo.FifoStats {
