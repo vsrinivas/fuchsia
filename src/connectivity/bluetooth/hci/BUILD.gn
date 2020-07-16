@@ -8,6 +8,7 @@ group("hci") {
     "atheros",
     "emulator",
     "intel",
+    "lib:bt-hci",
     "passthrough",
   ]
 }
