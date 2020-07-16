@@ -119,7 +119,11 @@ bool test_hw_breakpoint_impl(zx_handle_t excp_channel) {
   ASSERT_EQ(status, ZX_OK);
   gBreakpointThreadShouldContinue = false;
 
-  tu_resume_from_exception(exception);
+  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+  status = zx_object_set_property(exception, ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
+  ASSERT_EQ(status, ZX_OK);
+
+  zx_handle_close(exception);
 
   // join the thread.
   int res = -1;

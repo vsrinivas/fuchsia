@@ -95,8 +95,6 @@ int tu_process_wait_exit(zx_handle_t process);
 // counter so that the exception can be resumed successfully.
 zx_status_t tu_cleanup_breakpoint(zx_handle_t thread);
 
-void tu_resume_from_exception(zx_handle_t exception_handle);
-
 // Add |handle| to the list of things |port| watches.
 // When |handle| is signaled with a signal in |signals| a zx_packet_signal_t
 // packet is sent to |port| with the key being the koid of |handle|.

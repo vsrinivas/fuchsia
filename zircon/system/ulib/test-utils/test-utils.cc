@@ -306,18 +306,6 @@ zx_status_t tu_cleanup_breakpoint(zx_handle_t thread) {
 #endif
 }
 
-void tu_resume_from_exception(zx_handle_t exception_handle) {
-  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
-  zx_status_t status =
-      zx_object_set_property(exception_handle, ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
-  if (status != ZX_OK)
-    tu_fatal(__func__, status);
-
-  status = zx_handle_close(exception_handle);
-  if (status != ZX_OK)
-    tu_fatal(__func__, status);
-}
-
 void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals) {
   zx_info_handle_basic_t info;
   zx_status_t status =

@@ -87,7 +87,9 @@ bool dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_
       break;
   }
 
-  tu_resume_from_exception(exception.get());
+  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+  status = exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
+  ASSERT_EQ(status, ZX_OK);
 
   END_HELPER;
 }
