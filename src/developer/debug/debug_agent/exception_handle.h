@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_THREAD_EXCEPTION_H_
-#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_THREAD_EXCEPTION_H_
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_EXCEPTION_HANDLE_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_EXCEPTION_HANDLE_H_
 
 #include <lib/fitx/result.h>
 
@@ -15,12 +15,12 @@ namespace debug_agent {
 
 class ThreadHandle;
 
-// ThreadException abstracts zx::exception, allowing for a more straightforward implementation in
+// ExceptionHandle abstracts zx::exception, allowing for a more straightforward implementation in
 // tests in overrides of this class.
-class ThreadException {
+class ExceptionHandle {
  public:
-  ThreadException() = default;
-  virtual ~ThreadException() = default;
+  ExceptionHandle() = default;
+  virtual ~ExceptionHandle() = default;
 
   // Returns a handle to the excepting thread. Will return a null pointer on failure.
   virtual std::unique_ptr<ThreadHandle> GetThreadHandle() const = 0;
@@ -48,4 +48,4 @@ class ThreadException {
 
 }  // namespace debug_agent
 
-#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_THREAD_EXCEPTION_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_EXCEPTION_HANDLE_H_

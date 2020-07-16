@@ -4,8 +4,8 @@
 
 #include "src/developer/debug/debug_agent/mock_thread.h"
 
+#include "src/developer/debug/debug_agent/mock_exception_handle.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
-#include "src/developer/debug/debug_agent/mock_thread_exception.h"
 #include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
@@ -15,7 +15,7 @@ MockThread::MockThread(DebuggedProcess* process, zx_koid_t thread_koid)
                      DebuggedThread::CreateInfo{process, thread_koid,
                                                 std::make_unique<MockThreadHandle>(thread_koid),
                                                 ThreadCreationOption::kRunningKeepRunning,
-                                                std::make_unique<MockThreadException>()}) {}
+                                                std::make_unique<MockExceptionHandle>()}) {}
 
 MockThread::~MockThread() {}
 

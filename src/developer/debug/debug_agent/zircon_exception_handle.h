@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ZIRCON_THREAD_EXCEPTION_H_
-#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ZIRCON_THREAD_EXCEPTION_H_
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ZIRCON_EXCEPTION_HANDLE_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ZIRCON_EXCEPTION_HANDLE_H_
 
 #include <lib/zx/exception.h>
 #include <lib/zx/process.h>
@@ -10,19 +10,19 @@
 
 #include <utility>
 
-#include "src/developer/debug/debug_agent/thread_exception.h"
+#include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/lib/fxl/macros.h"
 
 namespace debug_agent {
 
 // Wraps a zx::exception, which is expected to be valid for the lifetime of an instance of this
 // class.
-class ZirconThreadException : public ThreadException {
+class ZirconExceptionHandle : public ExceptionHandle {
  public:
-  ZirconThreadException(zx::exception exception, const zx_exception_info_t& info)
+  ZirconExceptionHandle(zx::exception exception, const zx_exception_info_t& info)
       : exception_(std::move(exception)), info_(info) {}
 
-  ~ZirconThreadException() = default;
+  ~ZirconExceptionHandle() = default;
 
   std::unique_ptr<ThreadHandle> GetThreadHandle() const override;
   debug_ipc::ExceptionType GetType(const ThreadHandle& thread) const override;
@@ -35,9 +35,9 @@ class ZirconThreadException : public ThreadException {
   zx::exception exception_;
   zx_exception_info_t info_;
 
-  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ZirconThreadException);
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ZirconExceptionHandle);
 };
 
 }  // namespace debug_agent
 
-#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ZIRCON_THREAD_EXCEPTION_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ZIRCON_EXCEPTION_HANDLE_H_

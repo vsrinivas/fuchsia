@@ -46,7 +46,7 @@ bool DebuggedJob::FilterInfo::Matches(const std::string& proc_name) {
 
 void DebuggedJob::OnProcessStarting(zx::exception exception_token,
                                     zx_exception_info_t exception_info) {
-  // TODO(brettw) convert this to ThreadException.
+  // TODO(brettw) convert this to ExceptionHandle.
   zx_handle_t zircon_handle = ZX_HANDLE_INVALID;
   zx_status_t status = zx_exception_get_process(exception_token.get(), &zircon_handle);
   FX_DCHECK(status == ZX_OK) << "Got: " << debug_ipc::ZxStatusToString(status);

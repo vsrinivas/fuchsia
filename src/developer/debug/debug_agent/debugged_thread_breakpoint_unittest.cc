@@ -7,11 +7,11 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
+#include "src/developer/debug/debug_agent/mock_exception_handle.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_breakpoint.h"
 #include "src/developer/debug/debug_agent/mock_system_interface.h"
-#include "src/developer/debug/debug_agent/mock_thread_exception.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
@@ -192,7 +192,7 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
       ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Trigger the exception.
-  thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
+  thread.OnException(std::make_unique<MockExceptionHandle>(thread_object->koid,
                                                            debug_ipc::ExceptionType::kPageFault));
 
   // We should've received an exception notification.
@@ -245,7 +245,7 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
       ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Trigger the exception.
-  thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
+  thread.OnException(std::make_unique<MockExceptionHandle>(thread_object->koid,
                                                            debug_ipc::ExceptionType::kSoftware));
 
   // We should've received an exception notification.
@@ -278,7 +278,7 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   process.AppendSofwareBreakpoint(breakpoint.get(), kBreakpointAddress);
 
   // Throw the same breakpoint exception.
-  thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
+  thread.OnException(std::make_unique<MockExceptionHandle>(thread_object->koid,
                                                            debug_ipc::ExceptionType::kSoftware));
 
   // We should've received an exception notification with hit breakpoints.
@@ -343,7 +343,7 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   process.AppendHardwareBreakpoint(breakpoint.get(), kAddress);
 
   // Trigger the exception.
-  thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
+  thread.OnException(std::make_unique<MockExceptionHandle>(thread_object->koid,
                                                            debug_ipc::ExceptionType::kHardware));
 
   // We should've received an exception notification.
@@ -418,7 +418,7 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
       ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Trigger the exception.
-  thread.OnException(std::make_unique<MockThreadException>(thread_object->koid,
+  thread.OnException(std::make_unique<MockExceptionHandle>(thread_object->koid,
                                                            debug_ipc::ExceptionType::kWatchpoint));
 
   // We should've received an exception notification.

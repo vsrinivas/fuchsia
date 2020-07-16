@@ -138,7 +138,7 @@ DebuggedThread::~DebuggedThread() = default;
 
 fxl::WeakPtr<DebuggedThread> DebuggedThread::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-void DebuggedThread::OnException(std::unique_ptr<ThreadException> exception_handle) {
+void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_handle) {
   exception_handle_ = std::move(exception_handle);
 
   debug_ipc::NotifyException exception;

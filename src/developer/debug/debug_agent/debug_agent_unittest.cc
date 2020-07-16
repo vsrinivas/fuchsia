@@ -10,11 +10,11 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
+#include "src/developer/debug/debug_agent/mock_exception_handle.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_handle.h"
 #include "src/developer/debug/debug_agent/mock_system_interface.h"
-#include "src/developer/debug/debug_agent/mock_thread_exception.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
@@ -106,12 +106,12 @@ class DebugAgentMockProcess : public MockProcess {
 class MockLimboProvider : public LimboProvider {
  public:
   struct MockRecord {
-    MockRecord(MockProcessHandle p, MockThreadHandle t, MockThreadException e)
+    MockRecord(MockProcessHandle p, MockThreadHandle t, MockExceptionHandle e)
         : process(std::move(p)), thread(std::move(t)), exception(std::move(e)) {}
 
     MockProcessHandle process;
     MockThreadHandle thread;
-    MockThreadException exception;
+    MockExceptionHandle exception;
   };
 
   MockLimboProvider() : LimboProvider(nullptr) {}
@@ -136,7 +136,7 @@ class MockLimboProvider : public LimboProvider {
     RetrievedException result;
     result.process = std::make_unique<MockProcessHandle>(it->second.process);
     result.thread = std::make_unique<MockThreadHandle>(it->second.thread);
-    result.exception = std::make_unique<MockThreadException>(it->second.exception);
+    result.exception = std::make_unique<MockExceptionHandle>(it->second.exception);
 
     mock_records_.erase(it);
     limbo_.erase(process_koid);
@@ -145,7 +145,7 @@ class MockLimboProvider : public LimboProvider {
   }
 
   void AppendException(MockProcessHandle process, MockThreadHandle thread,
-                       MockThreadException exception) {
+                       MockExceptionHandle exception) {
     zx_koid_t process_koid = process.GetKoid();
     mock_records_.insert(
         {process_koid, MockRecord(std::move(process), std::move(thread), std::move(exception))});
@@ -310,13 +310,13 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
   constexpr zx_koid_t kThreadKoid1 = 101;
   test_context->limbo_provider->AppendException(MockProcessHandle(kProcKoid1, "proc1"),
                                                 MockThreadHandle(kThreadKoid1, "thread1"),
-                                                MockThreadException(kThreadKoid1));
+                                                MockExceptionHandle(kThreadKoid1));
 
   constexpr zx_koid_t kProcKoid2 = 102;
   constexpr zx_koid_t kThreadKoid2 = 103;
   test_context->limbo_provider->AppendException(MockProcessHandle(kProcKoid2, "proc2"),
                                                 MockThreadHandle(kThreadKoid1, "thread2"),
-                                                MockThreadException(kThreadKoid2));
+                                                MockExceptionHandle(kThreadKoid2));
 
   reply = {};
   remote_api->OnStatus(request, &reply);
@@ -424,7 +424,7 @@ TEST_F(DebugAgentTests, OnAttachNotFound) {
   constexpr zx_koid_t kThreadKoid1 = 101;
   test_context->limbo_provider->AppendException(MockProcessHandle(kProcKoid1, "proc1"),
                                                 MockThreadHandle(kThreadKoid1, "thread1"),
-                                                MockThreadException(kThreadKoid1));
+                                                MockExceptionHandle(kThreadKoid1));
 
   // Even with limbo it should fail.
   remote_api->OnAttach(transaction_id++, attach_request);
@@ -515,7 +515,7 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
   mock_process.set_threads({mock_thread});
 
   test_context->limbo_provider->AppendException(mock_process, mock_thread,
-                                                MockThreadException(kThreadKoid));
+                                                MockExceptionHandle(kThreadKoid));
 
   debug_ipc::AttachRequest attach_request = {};
   attach_request.type = debug_ipc::TaskType::kProcess;
@@ -567,7 +567,7 @@ TEST_F(DebugAgentTests, OnEnterLimbo) {
   constexpr zx_koid_t kThreadKoid1 = 101;
   test_context->limbo_provider->AppendException(MockProcessHandle(kProcKoid1, "proc1"),
                                                 MockThreadHandle(kThreadKoid1, "thread1"),
-                                                MockThreadException(kThreadKoid1));
+                                                MockExceptionHandle(kThreadKoid1));
 
   // Call the limbo.
   test_context->limbo_provider->CallOnEnterLimbo();
@@ -612,7 +612,7 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
   constexpr zx_koid_t kThreadKoid1 = 101;
   test_context->limbo_provider->AppendException(MockProcessHandle(kProcKoid1, "proc1"),
                                                 MockThreadHandle(kThreadKoid1, "thread1"),
-                                                MockThreadException(kThreadKoid1));
+                                                MockExceptionHandle(kThreadKoid1));
   {
     debug_ipc::DetachRequest request = {};
     request.type = debug_ipc::TaskType::kProcess;
@@ -699,7 +699,7 @@ TEST_F(DebugAgentTests, Kill) {
   // This is a limbo process so we can not kill it.
   mock_process.set_kill_status(ZX_ERR_ACCESS_DENIED);
   MockThreadHandle mock_thread(kThreadKoid, "thread");
-  MockThreadException mock_exception(kThreadKoid);
+  MockExceptionHandle mock_exception(kThreadKoid);
   mock_process.set_threads({mock_thread});
   test_context->limbo_provider->AppendException(mock_process, mock_thread, mock_exception);
 

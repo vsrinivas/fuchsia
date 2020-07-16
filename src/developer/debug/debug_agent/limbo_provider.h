@@ -13,8 +13,8 @@
 #include <optional>
 #include <vector>
 
+#include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/developer/debug/debug_agent/process_handle.h"
-#include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace debug_agent {
@@ -34,7 +34,7 @@ class LimboProvider {
   // Used when taking over an exception from limbo. This adds on the exception to the normal process
   // and thread handles.
   struct RetrievedException : public Record {
-    std::unique_ptr<ThreadException> exception;
+    std::unique_ptr<ExceptionHandle> exception;
   };
 
   // Maps process koids to the corresponding records.

@@ -19,7 +19,7 @@
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
-#include "src/developer/debug/debug_agent/zircon_thread_exception.h"
+#include "src/developer/debug/debug_agent/zircon_exception_handle.h"
 #include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
@@ -557,11 +557,11 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
   DebuggedThread::CreateInfo create_info = {};
   create_info.process = this;
   create_info.koid = exception_info.tid;
-  // TODO(brettw) this should use ThreadException::GetThread().
+  // TODO(brettw) this should use ExceptionHandle::GetThread().
   create_info.handle = std::make_unique<ZirconThreadHandle>(
       object_provider_->GetThreadFromException(exception.get()));
   create_info.exception =
-      std::make_unique<ZirconThreadException>(std::move(exception), exception_info);
+      std::make_unique<ZirconExceptionHandle>(std::move(exception), exception_info);
   create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
 
   auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, std::move(create_info));
@@ -609,7 +609,7 @@ void DebuggedProcess::OnException(zx::exception exception_token,
   }
 
   thread->OnException(
-      std::make_unique<ZirconThreadException>(std::move(exception_token), exception_info));
+      std::make_unique<ZirconExceptionHandle>(std::move(exception_token), exception_info));
 }
 
 void DebuggedProcess::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,

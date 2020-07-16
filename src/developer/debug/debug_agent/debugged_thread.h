@@ -10,8 +10,8 @@
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/developer/debug/debug_agent/general_registers.h"
-#include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/developer/debug/debug_agent/thread_handle.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/macros.h"
@@ -68,7 +68,7 @@ class DebuggedThread {
     std::unique_ptr<ThreadHandle> handle;
     ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning;
 
-    std::unique_ptr<ThreadException> exception;  // Optional.
+    std::unique_ptr<ExceptionHandle> exception;  // Optional.
   };
   DebuggedThread(DebugAgent*, CreateInfo&&);
   virtual ~DebuggedThread();
@@ -84,15 +84,15 @@ class DebuggedThread {
   zx::thread& handle() { return thread_handle_->GetNativeHandle(); }
   const zx::thread& handle() const { return thread_handle_->GetNativeHandle(); }
 
-  ThreadException* exception_handle() { return exception_handle_.get(); }
-  const ThreadException* exception_handle() const { return exception_handle_.get(); }
-  void set_exception_handle(std::unique_ptr<ThreadException> exception) {
+  ExceptionHandle* exception_handle() { return exception_handle_.get(); }
+  const ExceptionHandle* exception_handle() const { return exception_handle_.get(); }
+  void set_exception_handle(std::unique_ptr<ExceptionHandle> exception) {
     exception_handle_ = std::move(exception);
   }
 
   fxl::WeakPtr<DebuggedThread> GetWeakPtr();
 
-  void OnException(std::unique_ptr<ThreadException> exception_handle);
+  void OnException(std::unique_ptr<ExceptionHandle> exception_handle);
 
   // Resumes execution of the thread. The thread should currently be in a
   // stopped state. If it's not stopped, this will be ignored.
@@ -242,7 +242,7 @@ class DebuggedThread {
   zx::suspend_token ref_counted_suspend_token_;
 
   // Active if the thread is currently on an exception.
-  std::unique_ptr<ThreadException> exception_handle_;
+  std::unique_ptr<ExceptionHandle> exception_handle_;
 
   // Whether this thread is currently stepping over.
   bool stepping_over_breakpoint_ = false;

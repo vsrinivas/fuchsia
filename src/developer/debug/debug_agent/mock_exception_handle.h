@@ -2,29 +2,29 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_THREAD_EXCEPTION_H_
-#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_THREAD_EXCEPTION_H_
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_EXCEPTION_HANDLE_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_EXCEPTION_HANDLE_H_
 
 #include <zircon/syscalls/exception.h>
 
 #include <utility>
 
 #include "sdk/lib/syslog/cpp/macros.h"
+#include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
-#include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/lib/fxl/macros.h"
 
 namespace debug_agent {
 
-// ThreadException abstracts zx::exception, allowing for a more straightforward
+// ExceptionHandle abstracts zx::exception, allowing for a more straightforward
 // implementation in tests in overrides of this class.
-class MockThreadException : public ThreadException {
+class MockExceptionHandle : public ExceptionHandle {
  public:
-  MockThreadException() = default;
-  explicit MockThreadException(uint64_t thread_koid,
+  MockExceptionHandle() = default;
+  explicit MockExceptionHandle(uint64_t thread_koid,
                                debug_ipc::ExceptionType type = debug_ipc::ExceptionType::kGeneral)
       : thread_koid_(thread_koid), type_(type) {}
-  ~MockThreadException() = default;
+  ~MockExceptionHandle() = default;
 
   std::unique_ptr<ThreadHandle> GetThreadHandle() const override {
     return std::make_unique<MockThreadHandle>(thread_koid_);
@@ -55,4 +55,4 @@ class MockThreadException : public ThreadException {
 
 }  // namespace debug_agent
 
-#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_THREAD_EXCEPTION_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_EXCEPTION_HANDLE_H_
