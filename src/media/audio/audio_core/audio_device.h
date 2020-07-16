@@ -59,8 +59,13 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   //             believes that it has something connected to its plug.
   // plug_time : The time (per zx::clock::get_monotonic() at which the plugged/unplugged state of
   //             this output or input last changed.
+  // routable  : False when a device's OutputPipeline is being updated in AudioDeviceManager. This
+  //             protects a device from being plugged or unplugged while undergoing the
+  //             PipelineConfig update, as well as ensures only one PipelineConfig update is applied
+  //             at a time.
   bool plugged() const { return plugged_; }
   zx::time plug_time() const { return plug_time_; }
+  bool routable() const { return routable_; }
   AudioDriver* driver() const { return driver_.get(); }
   uint64_t token() const;
   bool activated() const { return activated_; }
@@ -91,17 +96,17 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
                    fuchsia::media::AudioGainValidFlags set_flags);
 
   // Device info used during device enumeration and add-notifications.
-  fuchsia::media::AudioDeviceInfo GetDeviceInfo() const;
+  virtual fuchsia::media::AudioDeviceInfo GetDeviceInfo() const;
 
   // Gives derived classes a chance to set up hardware, then sets up the machinery needed for
   // scheduling processing tasks and schedules the first processing callback immediately in order
   // to get the process running.
-  fit::promise<void, zx_status_t> Startup();
+  virtual fit::promise<void, zx_status_t> Startup();
 
   // Makes certain that the shutdown process has started, synchronizes with processing tasks which
   // were executing at the time, then finishes the shutdown by unlinking from all renderers and
   // capturers and cleaning up all resources.
-  fit::promise<void> Shutdown();
+  virtual fit::promise<void> Shutdown();
 
   // audio clock from AudioDriver
   AudioClock reference_clock() const;
@@ -208,6 +213,13 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // Returns true if the plug state has changed, or false otherwise.
   bool UpdatePlugState(bool plugged, zx::time plug_time);
 
+  // UpdateRoutableState
+  //
+  // Called by the audio device manager on the main message loop when the device is
+  // undergoing an update to its OutputPipeline. Used to update the internal
+  // bookkeeping about the current routable/unroutable state.
+  void UpdateRoutableState(bool routable);
+
   // AudioDriver accessors.
   const std::shared_ptr<ReadableRingBuffer>& driver_readable_ring_buffer() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
@@ -276,6 +288,10 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // main message loop thread.
   bool plugged_ = false;
   zx::time plug_time_;
+
+  // Routable state is protected by the fact that it is only ever accessed on the
+  // main message loop thread.
+  bool routable_ = true;
 
   std::atomic<bool> shutting_down_{false};
   volatile bool shut_down_ = false;

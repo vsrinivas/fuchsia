@@ -103,6 +103,42 @@ fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioDeviceManager:
           });
 }
 
+fit::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
+    const std::string device_id, const PipelineConfig& config, const VolumeCurve& volume_curve) {
+  auto devices = GetDeviceInfos();
+  const auto dev = std::find_if(devices.begin(), devices.end(), [&device_id](auto candidate) {
+    return candidate.unique_id == device_id;
+  });
+  if (dev == devices.end()) {
+    return fit::make_error_promise(ZX_ERR_NOT_FOUND);
+  }
+  auto device = devices_[dev->token_id];
+  FX_DCHECK(device);
+
+  // UpdatePipelineConfig is only valid on a device that is currently routable; the routable state
+  // protects from devices being plugged or unplugged during update of the PipelineConfig,
+  // as well as ensures only one update to the PipelineConfig will be processed at a time.
+  if (!device->routable()) {
+    return fit::make_error_promise(ZX_ERR_BAD_STATE);
+  }
+
+  // UpdatePipelineConfig is only valid on a device without links (for the purpose of effects
+  // tuning). As such, the device is removed from route_graph to ensure all links are removed.
+  if (device->plugged()) {
+    route_graph_.RemoveDevice(device.get());
+  }
+  FX_DCHECK(link_matrix_.DestLinkCount(*device) == 0);
+  FX_DCHECK(link_matrix_.SourceLinkCount(*device) == 0);
+
+  device->UpdateRoutableState(false);
+  return device->UpdatePipelineConfig(config, volume_curve).and_then([this, device]() {
+    device->UpdateRoutableState(true);
+    if (device->plugged()) {
+      route_graph_.AddDevice(device.get());
+    }
+  });
+}
+
 void AudioDeviceManager::AddDevice(const std::shared_ptr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDevice");
   FX_DCHECK(device != nullptr);
@@ -304,7 +340,9 @@ void AudioDeviceManager::OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& d
 
   device->UpdatePlugState(/*plugged=*/false, plug_time);
 
-  route_graph_.RemoveDevice(device.get());
+  if (device->routable()) {
+    route_graph_.RemoveDevice(device.get());
+  }
   UpdateDefaultDevice(device->is_input());
 }
 
@@ -315,7 +353,9 @@ void AudioDeviceManager::OnDevicePlugged(const std::shared_ptr<AudioDevice>& dev
 
   device->UpdatePlugState(/*plugged=*/true, plug_time);
 
-  route_graph_.AddDevice(device.get());
+  if (device->routable()) {
+    route_graph_.AddDevice(device.get());
+  }
   UpdateDefaultDevice(device->is_input());
 }
 

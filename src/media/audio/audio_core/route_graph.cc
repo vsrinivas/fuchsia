@@ -78,6 +78,12 @@ void RouteGraph::RemoveDevice(AudioDevice* device) {
   UpdateGraphForDeviceChange();
 }
 
+bool RouteGraph::ContainsDevice(const AudioDevice* device) {
+  TRACE_DURATION("audio", "RouteGraph::ContainsDevice");
+  auto it = std::find(devices_.begin(), devices_.end(), device);
+  return (it == devices_.end() ? false : true);
+}
+
 void RouteGraph::AddRenderer(std::shared_ptr<AudioObject> renderer) {
   TRACE_DURATION("audio", "RouteGraph::AddRenderer");
   FX_DCHECK(throttle_output_);

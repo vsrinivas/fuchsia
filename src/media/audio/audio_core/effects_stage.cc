@@ -44,6 +44,8 @@ class MultiLibEffectsLoader {
       holder.lib_name = lib_name;
       zx_status_t status = EffectsLoader::CreateWithModule(holder.lib_name.c_str(), &holder.loader);
       if (status != ZX_OK) {
+        FX_PLOGS(ERROR, status) << "Effect " << effect_name << " from " << lib_name
+                                << " unable to be created";
         return {};
       }
       it = holders_.insert(it, std::move(holder));

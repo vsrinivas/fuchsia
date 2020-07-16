@@ -258,6 +258,12 @@ bool AudioDevice::UpdatePlugState(bool plugged, zx::time plug_time) {
   return false;
 }
 
+void AudioDevice::UpdateRoutableState(bool routable) {
+  TRACE_INSTANT("audio", "AudioDevice::UpdateRoutableState", TRACE_SCOPE_PROCESS, "Routable",
+                routable);
+  routable_ = routable;
+}
+
 const std::shared_ptr<ReadableRingBuffer>& AudioDevice::driver_readable_ring_buffer() const {
   return driver_->readable_ring_buffer();
 };

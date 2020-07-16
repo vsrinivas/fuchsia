@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <fuchsia/media/tuning/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -11,6 +12,8 @@
 #include <set>
 #include <vector>
 
+#include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/audio_tuner_impl.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/comparators.h"
@@ -289,6 +292,121 @@ TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerUpdateEffect) {
   opts.test_label = "check silence";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, num_frames, output_->frame_count()),
                       AudioBufferSlice<ASF::SIGNED_16>(), opts);
+}
+
+class AudioRendererPipelineTuningTest : public AudioRendererPipelineTest {
+ protected:
+  static void SetUpTestSuite() {
+    HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
+        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-inversion-filter",
+    });
+  }
+
+  void SetUp() override {
+    AudioRendererPipelineTest::SetUp();
+    environment()->ConnectToService(audio_tuner_.NewRequest());
+  }
+
+  void RunInversionFilter(AudioBuffer<ASF::SIGNED_16>* audio_buffer_ptr) {
+    auto& samples = audio_buffer_ptr->samples();
+    for (size_t sample = 0; sample < samples.size(); sample++) {
+      samples[sample] = -samples[sample];
+    }
+  }
+
+  fuchsia::media::tuning::AudioTunerPtr audio_tuner_;
+};
+
+// Verify the correct output is received before and after update of the OutputPipeline.
+//
+// AudioCore is launched with a default profile containing no effects; a renderer plays
+// a packet, and the output is verified as unchanged. Then, the AudioTuner service is used
+// to update the OutputPipeline with a PipelineConfig containing an inversion_filter effect.
+// A second packet is played, and the output is verified as having the inversion_filter effect
+// applied.
+TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) {
+  // Setup packet details.
+  auto num_packets = 1;
+  auto num_frames = num_packets * kPacketFrames;
+
+  // Initiate stream with first packets and send through default OutputPipeline (no effects).
+  auto first_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
+  auto first_packets = renderer_->AppendPackets({&first_buffer});
+  auto first_time = output_->NextSynchronizedTimestamp(this);
+  renderer_->Play(this, first_time, 0);
+  renderer_->WaitForPackets(this, first_time, first_packets);
+  auto ring_buffer = output_->SnapshotRingBuffer();
+
+  CompareAudioBufferOptions opts;
+  opts.num_frames_per_packet = kPacketFrames;
+  opts.test_label = "default config, first packet";
+  CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, num_frames),
+                      AudioBufferSlice(&first_buffer), opts);
+
+  // Clear payload to avoid overlap of values from old OutputPipeline ringout with values from new
+  // OutputPipeline.
+  renderer_->ClearPayload();
+
+  // Setup new output pipeline details.
+  auto device_id = AudioDevice::UniqueIdToString({{0xff, 0x00}});
+  PipelineConfig::MixGroup root{
+      .name = "linearize",
+      .input_streams =
+          {
+              RenderUsage::MEDIA,
+              RenderUsage::SYSTEM_AGENT,
+              RenderUsage::INTERRUPTION,
+              RenderUsage::COMMUNICATION,
+          },
+      .effects =
+          {
+              {
+                  .lib_name = "inversion_filter.so",
+                  .effect_name = "inversion_filter",
+                  .instance_name = "inverter",
+                  .effect_config = "",
+              },
+          },
+  };
+  auto pipeline_config = PipelineConfig(root);
+  auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
+  auto device_profile_with_inversion_effect =
+      ToAudioDeviceTuningProfile(pipeline_config, volume_curve);
+
+  // Update PipelineConfig through AudioTuner service.
+  audio_tuner_->SetAudioDeviceProfile(
+      device_id, std::move(device_profile_with_inversion_effect),
+      AddCallback("SetAudioDeviceProfile", [](zx_status_t status) { EXPECT_EQ(status, ZX_OK); }));
+
+  ExpectCallback();
+
+  // Send second set of packets through new OutputPipeline (with inversion effect); play the
+  // packets at least "min_lead_time" after the last audio frame previously written to the ring
+  // buffer.
+  auto min_lead_time = renderer_->GetMinLeadTime();
+  ASSERT_GT(min_lead_time, 0);
+  // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See fxb/52410.
+  constexpr auto kSchedulingDelayInPackets = 10;
+  const auto min_lead_time_in_packets =
+      (min_lead_time / ZX_MSEC(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;
+  const int64_t restart_packet = 2 + min_lead_time_in_packets;
+  const int64_t restart_pts = restart_packet * kPacketFrames;
+
+  auto second_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
+  auto second_packets = renderer_->AppendPackets({&second_buffer}, restart_pts);
+  auto second_time = first_time + ZX_MSEC(restart_packet * RendererShimImpl::kPacketMs);
+  renderer_->WaitForPackets(this, second_time, second_packets);
+  ring_buffer = output_->SnapshotRingBuffer();
+
+  // Prepare second buffer for comparison to expected ring buffer.
+  RunInversionFilter(&second_buffer);
+
+  // Verify the remaining packets have gone through the updated OutputPipeline and thus been
+  // modified by the inversion effect.
+  opts.num_frames_per_packet = kPacketFrames;
+  opts.test_label = "updated config, remaining packets";
+  CompareAudioBuffers(AudioBufferSlice(&ring_buffer, restart_pts, restart_pts + num_frames),
+                      AudioBufferSlice(&second_buffer), opts);
 }
 
 // /// Overall, need to add tests to validate various Renderer pipeline aspects

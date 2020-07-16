@@ -57,6 +57,9 @@ class RouteGraph {
   // Removes an |AudioInput| from the route graph. Any connected |AudioCapturer|s will be rerouted.
   void RemoveDevice(AudioDevice* input);
 
+  // Returns a boolean indicating if a |device| is contained in the route graph.
+  bool ContainsDevice(const AudioDevice* device);
+
   // Adds an |AudioRenderer| to the route graph. An |AudioRenderer| may be connected to
   // |AudioOutput|s.
   void AddRenderer(std::shared_ptr<AudioObject> renderer);

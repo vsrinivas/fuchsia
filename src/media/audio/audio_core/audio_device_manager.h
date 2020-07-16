@@ -71,6 +71,10 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& message);
 
+  fit::promise<void, zx_status_t> UpdatePipelineConfig(const std::string device_id,
+                                                       const PipelineConfig& config,
+                                                       const VolumeCurve& volume_curve);
+
   // |media::audio::DeviceRegistry|
   void AddDevice(const std::shared_ptr<AudioDevice>& device) override;
   void ActivateDevice(const std::shared_ptr<AudioDevice>& device) override;

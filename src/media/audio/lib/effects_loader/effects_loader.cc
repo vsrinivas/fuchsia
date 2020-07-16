@@ -100,6 +100,8 @@ Effect EffectsLoader::CreateEffectByName(std::string_view name, std::string_view
 
   auto effect_id = FindEffectIdForEffectName(name, effect_infos_);
   if (!effect_id) {
+    FX_LOGS(ERROR) << "Effect " << name << " with name " << instance_name
+                   << " unable to be created: effect id not found.";
     return {};
   }
   return CreateEffect(*effect_id, instance_name, frame_rate, channels_in, channels_out, config);
@@ -112,6 +114,7 @@ Effect EffectsLoader::CreateEffectByName(std::string_view name, uint32_t frame_r
 
   auto effect_id = FindEffectIdForEffectName(name, effect_infos_);
   if (!effect_id) {
+    FX_LOGS(ERROR) << "Effect " << name << " unable to be created: effect id not found.";
     return {};
   }
   return CreateEffect(*effect_id, "", frame_rate, channels_in, channels_out, config);
