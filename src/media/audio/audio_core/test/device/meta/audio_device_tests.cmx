@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.media.AudioTestDevmgr": "fuchsia-pkg://fuchsia.com/audio_test_devmgr#meta/audio_test_devmgr.cmx"
+                "fuchsia.media.AudioTestDevmgr": "fuchsia-pkg://fuchsia.com/audio-device-tests#meta/audio-test-devmgr.cmx"
             },
             "system-services": [
                 "fuchsia.scheduler.ProfileProvider"
@@ -10,7 +10,7 @@
         }
     },
     "program": {
-        "binary": "test/audio_device_tests"
+        "binary": "bin/audio_device_tests"
     },
     "sandbox": {
         "features": [

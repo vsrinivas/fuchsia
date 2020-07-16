@@ -2,39 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
+import("//src/sys/build/components.gni")
 
-devmgr_manifest("devmgr-manifest") {
-}
-
-package("audio_test_devmgr") {
-  testonly = true
+isolated_devmgr_component("audio-test-devmgr") {
+  args = [
+    "--svc_name=fuchsia.media.AudioTestDevmgr",
+    "--load_driver=/boot/driver/virtual_audio_driver.so",
+    "--wait_for=test/virtual_audio",
+  ]
   deps = [
-    ":devmgr-manifest",
-    "//src/lib/isolated_devmgr",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
     "//src/media/audio/drivers/virtual_audio:virtual_audio_driver",
   ]
+}
 
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
+fuchsia_package("audio-test-devmgr-package") {
+  testonly = true
+  package_name = "audio-test-devmgr"
+  deps = [ ":audio-test-devmgr" ]
+}
 
-  binaries = [
-    {
-      name = "isolated_devmgr"
-    },
-  ]
-
-  meta = [
-    {
-      dest = "audio_test_devmgr.cmx"
-      path = rebase_path("meta/audio_test_devmgr.cmx")
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("${root_build_dir}/virtual_audio_driver.so")
-      dest = "virtual_audio_driver.so"
-    },
-  ]
+group("audio_test_devmgr") {
+  testonly = true
+  deps = [ ":audio-test-devmgr-package" ]
 }

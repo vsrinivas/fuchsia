@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("audio_device_tests_bin") {
   name = "audio_device_tests"
@@ -22,13 +22,16 @@ rustc_test("audio_device_tests_bin") {
   ]
 }
 
-test_package("audio_device_tests") {
-  deps = [ ":audio_device_tests_bin" ]
-
-  tests = [
-    {
-      name = "audio_device_tests"
-      environments = basic_envs
-    },
+fuchsia_component("audio-device-tests-component") {
+  testonly = true
+  manifest = "meta/audio_device_tests.cmx"
+  component_name = "audio-device-tests"
+  deps = [
+    ":audio_device_tests_bin",
+    "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr",
   ]
+}
+
+fuchsia_test_package("audio-device-tests") {
+  test_components = [ ":audio-device-tests-component" ]
 }

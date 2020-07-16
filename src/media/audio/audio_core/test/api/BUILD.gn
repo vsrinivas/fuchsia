@@ -122,6 +122,9 @@ fuchsia_test_package("audio-core-api-tests") {
     ":usage-reporter-test",
     ":volume-control-test",
   ]
+  deps = [
+    "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr",
+  ]
 }
 
 # These tests must run on real hardware because they depend on real time.
@@ -133,4 +136,7 @@ fuchsia_test_package("audio-core-api-pipeline-tests") {
   test_specs = {
     environments = hardware_envs
   }
+  deps = [
+    "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr",
+  ]
 }

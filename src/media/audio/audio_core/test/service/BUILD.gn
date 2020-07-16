@@ -2,20 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
 
-test_package("audio_device_service_tests") {
-  deps = [ ":audio_device_service_tests_bin" ]
-
-  tests = [
-    {
-      name = "audio_device_service_tests"
-      environments = basic_envs
-    },
+fuchsia_component("audio-device-service-tests-component") {
+  testonly = true
+  manifest = "meta/audio_device_service_tests.cmx"
+  component_name = "audio-device-service-tests"
+  deps = [
+    ":audio_device_service_tests_bin",
+    "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr",
   ]
 }
 
-executable("audio_device_service_tests_bin") {
+fuchsia_test_package("audio-device-service-tests") {
+  test_components = [ ":audio-device-service-tests-component" ]
+}
+
+test("audio_device_service_tests_bin") {
   testonly = true
   output_name = "audio_device_service_tests"
 

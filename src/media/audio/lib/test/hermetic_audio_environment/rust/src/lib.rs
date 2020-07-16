@@ -84,7 +84,7 @@ fn register_services<'a>(fs: &mut ServiceFs<ServiceObj<'a, ConnectRequest>>) {
 /// connect to services offered by the component.
 fn launch_components(launcher: &LauncherProxy) -> Result<HashMap<ComponentUrl, App>> {
     const TEST_DEV_MGR_URL: &str =
-        "fuchsia-pkg://fuchsia.com/audio_test_devmgr#meta/audio_test_devmgr.cmx";
+        "fuchsia-pkg://fuchsia.com/audio-test-devmgr#meta/audio-test-devmgr.cmx";
     const TEST_DEV_MGR_NAME: &str = "fuchsia.media.AudioTestDevmgr";
     let test_dev_mgr = client::AppBuilder::new(TEST_DEV_MGR_URL).spawn(launcher)?;
 
