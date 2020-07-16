@@ -240,7 +240,7 @@ TEST(ZxTestCase, Port) {
   zx::channel channel[2];
   auto key = 1111ull;
   ASSERT_OK(zx::channel::create(0u, &channel[0], &channel[1]));
-  ASSERT_OK(channel[0].wait_async(port, key, ZX_CHANNEL_READABLE, ZX_WAIT_ASYNC_ONCE));
+  ASSERT_OK(channel[0].wait_async(port, key, ZX_CHANNEL_READABLE, 0));
   ASSERT_OK(channel[1].write(0u, "12345", 5, nullptr, 0u));
 
   zx_port_packet_t packet = {};

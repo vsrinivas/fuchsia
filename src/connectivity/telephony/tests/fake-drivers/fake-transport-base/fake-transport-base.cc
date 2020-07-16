@@ -103,7 +103,7 @@ zx_status_t Device::SetSnoopChannelToDevice(zx::channel channel) {
     result = ZX_ERR_BAD_HANDLE;
   } else {
     snoop_channel_.reset(channel.release());
-    snoop_channel_.wait_async(snoop_channel_port_, 0, ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+    snoop_channel_.wait_async(snoop_channel_port_, 0, ZX_CHANNEL_PEER_CLOSED, 0);
   }
   return result;
 }
@@ -117,9 +117,8 @@ zx_status_t Device::CloseCtrlChannel() {
 }
 
 zx_status_t Device::SetAsyncWait() {
-  zx_status_t status =
-      ctrl_channel_.wait_async(ctrl_channel_port_, kChannelMsg,
-                               ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+  zx_status_t status = ctrl_channel_.wait_async(ctrl_channel_port_, kChannelMsg,
+                                                ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
   return status;
 }
 

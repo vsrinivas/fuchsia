@@ -52,8 +52,7 @@ bool ZirconPlatformSemaphore::WaitAsync(PlatformPort* port, uint64_t* key_out) {
   auto zircon_port = static_cast<ZirconPlatformPort*>(port);
 
   uint64_t key = id();
-  zx_status_t status =
-      event_.wait_async(zircon_port->zx_port(), key, zx_signal(), ZX_WAIT_ASYNC_ONCE);
+  zx_status_t status = event_.wait_async(zircon_port->zx_port(), key, zx_signal(), 0);
   if (status != ZX_OK)
     return DRETF(false, "wait_async failed: %d", status);
 

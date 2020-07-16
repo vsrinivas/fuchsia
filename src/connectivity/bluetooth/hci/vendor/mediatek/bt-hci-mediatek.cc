@@ -278,7 +278,7 @@ zx_status_t BtHciMediatek::OpenChannel(zx::channel* in_channel, zx_handle_t in, 
   }
 
   zx_status_t status = ZX_OK;
-  if ((status = in_channel->wait_async(port_, key, wait_signals, ZX_WAIT_ASYNC_ONCE)) != ZX_OK) {
+  if ((status = in_channel->wait_async(port_, key, wait_signals, 0)) != ZX_OK) {
     zxlogf(ERROR, "%s: Channel object_wait_async failed\n", __FILE__);
     return status;
   }
@@ -1025,7 +1025,7 @@ int BtHciMediatek::Thread() {
       if (rearm) {
         zx_signals_t wait_signals =
             ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_HANDLE_CLOSED | ZX_CHANNEL_READABLE;
-        status = cmd_channel_.wait_async(port_, packet.key, wait_signals, ZX_WAIT_ASYNC_ONCE);
+        status = cmd_channel_.wait_async(port_, packet.key, wait_signals, 0);
         if (status != ZX_OK) {
           zxlogf(ERROR, "%s: Channel object_wait_async failed: %d\n", __FILE__, status);
         }
@@ -1048,7 +1048,7 @@ int BtHciMediatek::Thread() {
       if (rearm) {
         zx_signals_t wait_signals =
             ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_HANDLE_CLOSED | ZX_CHANNEL_READABLE;
-        status = acl_channel_.wait_async(port_, packet.key, wait_signals, ZX_WAIT_ASYNC_ONCE);
+        status = acl_channel_.wait_async(port_, packet.key, wait_signals, 0);
         if (status != ZX_OK) {
           zxlogf(ERROR, "%s: Channel object_wait_async failed: %d\n", __FILE__, status);
         }
@@ -1059,7 +1059,7 @@ int BtHciMediatek::Thread() {
         snoop_channel_.reset();
       } else {
         zx_signals_t wait_signals = ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_HANDLE_CLOSED;
-        status = acl_channel_.wait_async(port_, packet.key, wait_signals, ZX_WAIT_ASYNC_ONCE);
+        status = acl_channel_.wait_async(port_, packet.key, wait_signals, 0);
         if (status != ZX_OK) {
           zxlogf(ERROR, "%s: Channel object_wait_async failed: %d\n", __FILE__, status);
         }

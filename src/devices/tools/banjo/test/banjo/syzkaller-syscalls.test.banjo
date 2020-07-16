@@ -110,7 +110,7 @@ enum zx_rights : zx.rights {
 //
 
 enum zx_object_wait_async_options : uint32 {
-    ZX_WAIT_ASYNC_ONCE = 0;
+    ZX_WAIT_ASYNC_TIMESTAMP = 1;
 };
 
 // TODO(SEC-368): conditional declaration

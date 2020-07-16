@@ -572,7 +572,7 @@ static zx_status_t hci_open_snoop_channel(void* ctx, zx_handle_t in) {
   zx_status_t ret = hci_open_channel(hci, &hci->snoop_channel, in);
   if (ret == ZX_OK) {
     zx_signals_t sigs = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    zx_object_wait_async(hci->snoop_channel, hci->snoop_watch, 0, sigs, ZX_WAIT_ASYNC_ONCE);
+    zx_object_wait_async(hci->snoop_channel, hci->snoop_watch, 0, sigs, 0);
   }
   return ret;
 }

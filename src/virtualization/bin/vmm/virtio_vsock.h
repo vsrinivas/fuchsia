@@ -163,8 +163,8 @@ class VirtioVsock::Connection {
 
   async_dispatcher_t* dispatcher_;
   async::Wait rx_wait_;
-  // We require a separate waiter due to the way zx_object_wait_async works with
-  // ZX_WAIT_ASYNC_ONCE. If the handle was just created, its transmit buffer
+  // We require a separate waiter due to the way zx_object_wait_async works.
+  // If the handle was just created, its transmit buffer
   // would be empty, and therefore __ZX_OBJECT_WRITABLE would be asserted. When
   // invoking zx_object_wait_async, it will see that this signal is asserted and
   // create a port packet immediately and stop listening for further signals.

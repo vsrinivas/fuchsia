@@ -204,7 +204,7 @@ class BasicChannelTest {
 };
 
 // Test IPC round trips using Zircon channels where the client and server
-// both use Zircon ports to wait, using ZX_WAIT_ASYNC_ONCE.
+// both use Zircon ports to wait.
 class ChannelPortTest {
  public:
   explicit ChannelPortTest(MultiProc multiproc) {
@@ -216,8 +216,7 @@ class ChannelPortTest {
   }
 
   static bool ChannelPortRead(const zx::channel& channel, const zx::port& port, uint32_t* msg) {
-    ASSERT_OK(channel.wait_async(port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                 ZX_WAIT_ASYNC_ONCE));
+    ASSERT_OK(channel.wait_async(port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0));
 
     zx_port_packet_t packet;
     ASSERT_OK(port.wait(zx::time::infinite(), &packet));
@@ -360,8 +359,7 @@ class EventPortSignaler {
   // Waits for the event to be signaled.  Returns true if it was signaled
   // by Signal() and false if the peer event object was closed.
   bool Wait() {
-    ASSERT_OK(event_.wait_async(port_, 0, ZX_USER_SIGNAL_0 | ZX_EVENTPAIR_PEER_CLOSED,
-                                ZX_WAIT_ASYNC_ONCE));
+    ASSERT_OK(event_.wait_async(port_, 0, ZX_USER_SIGNAL_0 | ZX_EVENTPAIR_PEER_CLOSED, 0));
     zx_port_packet_t packet;
     ASSERT_OK(port_.wait(zx::time::infinite(), &packet));
     if (packet.signal.observed & ZX_EVENTPAIR_PEER_CLOSED)
@@ -428,8 +426,7 @@ class SocketPortSignaler {
   // Returns true if it was signaled by Signal() and false if it was
   // signaled by SignalExit().
   bool Wait() {
-    ASSERT_OK(socket_.wait_async(port_, 0, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                                 ZX_WAIT_ASYNC_ONCE));
+    ASSERT_OK(socket_.wait_async(port_, 0, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, 0));
     zx_port_packet_t packet;
     ASSERT_OK(port_.wait(zx::time::infinite(), &packet));
     if (packet.signal.observed & ZX_SOCKET_PEER_CLOSED)

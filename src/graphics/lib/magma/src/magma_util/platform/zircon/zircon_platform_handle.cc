@@ -33,9 +33,8 @@ bool ZirconPlatformHandle::WaitAsync(PlatformPort* port, uint64_t* key_out) {
     return DRET_MSG(false, "IdFromHandle failed");
 
   auto zircon_port = static_cast<ZirconPlatformPort*>(port);
-  zx_status_t status =
-      handle_.wait_async(zircon_port->zx_port(), *key_out,
-                         ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+  zx_status_t status = handle_.wait_async(zircon_port->zx_port(), *key_out,
+                                          ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
   if (status != ZX_OK)
     return DRETF(false, "wait_async failed: %d", status);
 

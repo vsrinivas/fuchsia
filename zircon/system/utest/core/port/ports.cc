@@ -79,7 +79,7 @@ TEST(PortTest, AsyncWaitChannelTimedOut) {
   ASSERT_OK(zx::channel::create(0u, &ch[0], &ch[1]));
 
   zx_port_packet_t out = {};
-  ASSERT_OK(ch[1].wait_async(port, kEventKey, ZX_CHANNEL_READABLE, ZX_WAIT_ASYNC_ONCE));
+  ASSERT_OK(ch[1].wait_async(port, kEventKey, ZX_CHANNEL_READABLE, 0));
 
   EXPECT_EQ(port.wait(zx::deadline_after(zx::usec(200)), &out), ZX_ERR_TIMED_OUT);
 }
@@ -94,7 +94,7 @@ TEST(PortTest, AsyncWaitChannel) {
   ASSERT_OK(zx::channel::create(0u, &ch[0], &ch[1]));
 
   zx_port_packet_t out = {};
-  ASSERT_OK(ch[1].wait_async(port, kEventKey, ZX_CHANNEL_READABLE, ZX_WAIT_ASYNC_ONCE));
+  ASSERT_OK(ch[1].wait_async(port, kEventKey, ZX_CHANNEL_READABLE, 0));
 
   EXPECT_EQ(port.wait(zx::deadline_after(zx::usec(200)), &out), ZX_ERR_TIMED_OUT);
 
@@ -114,7 +114,7 @@ TEST(PortTest, AsyncWaitChannel) {
   zx_port_packet_t out1 = {};
   EXPECT_EQ(port.wait(zx::deadline_after(zx::usec(200)), &out1), ZX_ERR_TIMED_OUT);
 
-  EXPECT_OK(ch[1].wait_async(port, kEventKey, ZX_CHANNEL_READABLE, ZX_WAIT_ASYNC_ONCE));
+  EXPECT_OK(ch[1].wait_async(port, kEventKey, ZX_CHANNEL_READABLE, 0));
 }
 
 // What matters here is not so much the return values, but that the system doesn't
@@ -144,10 +144,9 @@ TEST(PortTest, AsyncWaitCloseOrder) {
     EXPECT_OK(zx_channel_create(0u, &handle[ChannelA], &handle[ChannelB]), "%s",
               a.close_list.c_str());
 
-    EXPECT_OK(
-        zx_object_wait_async(handle[ChannelB], handle[Port], kEventKey,
-                             ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE),
-        "%s", a.close_list.c_str());
+    EXPECT_OK(zx_object_wait_async(handle[ChannelB], handle[Port], kEventKey,
+                                   ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0),
+              "%s", a.close_list.c_str());
 
     EXPECT_OK(zx_handle_close(handle[a.first]), "%s", a.close_list.c_str());
 
@@ -167,7 +166,7 @@ TEST(PortTest, EventAsyncSignalWaitSingle) {
   constexpr uint32_t kNumAwaits = 7;
 
   for (uint32_t ix = 0; ix != kNumAwaits; ++ix) {
-    ASSERT_OK(event.wait_async(port, ix, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE));
+    ASSERT_OK(event.wait_async(port, ix, ZX_EVENT_SIGNALED, 0));
   }
 
   EXPECT_OK(event.signal(0u, ZX_EVENT_SIGNALED));
@@ -200,8 +199,7 @@ TEST(PortTest, AsyncWaitEventRepeat) {
   constexpr uint64_t kWaitAsyncRepeats = 24;
 
   for (int ix = 0; ix != kWaitAsyncRepeats; ++ix) {
-    ASSERT_OK(event.wait_async(port, kEventKey, ZX_EVENT_SIGNALED | ZX_USER_SIGNAL_2,
-                               ZX_WAIT_ASYNC_ONCE));
+    ASSERT_OK(event.wait_async(port, kEventKey, ZX_EVENT_SIGNALED | ZX_USER_SIGNAL_2, 0));
 
     uint32_t ub = (ix % 2) ? 0u : ZX_USER_SIGNAL_2;
     // Set, then clear the signal.
@@ -233,7 +231,7 @@ TEST(PortTest, AsyncWaitEventManyAllProcessed) {
   for (size_t i = 0; i < kEventCount; i++) {
     EXPECT_OK(zx::event::create(0u, &event[i]));
 
-    EXPECT_OK(event[i].wait_async(port, key, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE));
+    EXPECT_OK(event[i].wait_async(port, key, ZX_EVENT_SIGNALED, 0));
 
     EXPECT_OK(event[i].signal(0u, ZX_EVENT_SIGNALED));
   }
@@ -263,7 +261,7 @@ TEST(PortTest, AsyncWaitInvalidOption) {
   ASSERT_OK(zx::event::create(0u, &event));
 
   constexpr uint64_t kKey = 0;
-  constexpr uint32_t kInvalidOption = ZX_WAIT_ASYNC_ONCE + 2;
+  constexpr uint32_t kInvalidOption = 20;
   EXPECT_EQ(event.wait_async(port, kKey, ZX_EVENT_SIGNALED, kInvalidOption), ZX_ERR_INVALID_ARGS);
 }
 
@@ -282,8 +280,7 @@ TEST(PortTest, ChannelAsyncWaitOnExistingStateIsNotified) {
   // readable or closed.
   zx::port port;
   ASSERT_OK(zx::port::create(0u, &port));
-  ASSERT_OK(ch[1].wait_async(port, kEventKey, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                             ZX_WAIT_ASYNC_ONCE));
+  ASSERT_OK(ch[1].wait_async(port, kEventKey, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0));
 
   // Wait for a packet to be received on the port, with both the
   // READABLE and PEER_CLOSED signals asserted.
@@ -309,7 +306,7 @@ TEST(PortTest, CancelEventKey) {
   const uint64_t keys[] = {128u, 13u, 7u, 13u};
 
   for (uint32_t ix = 0; ix != std::size(keys); ++ix) {
-    ASSERT_OK(event.wait_async(port, keys[ix], ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE));
+    ASSERT_OK(event.wait_async(port, keys[ix], ZX_EVENT_SIGNALED, 0));
   }
 
   // We cancel before it is signaled so no packets from |13| are seen.
@@ -352,7 +349,7 @@ TEST(PortTest, CancelEventKeyAfter) {
   zx::event ev[std::size(keys)];
   for (uint32_t ix = 0; ix != std::size(keys); ++ix) {
     ASSERT_OK(zx::event::create(0u, &ev[ix]));
-    ASSERT_OK(ev[ix].wait_async(port, keys[ix], ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE));
+    ASSERT_OK(ev[ix].wait_async(port, keys[ix], ZX_EVENT_SIGNALED, 0));
   }
 
   EXPECT_OK(ev[0].signal(0u, ZX_EVENT_SIGNALED));
@@ -410,7 +407,7 @@ TEST(PortTest, ThreadEvents) {
   for (size_t ix = 0; ix != kNumPortWaiterThreads; ++ix) {
     // |count| is one so each thread is going to pick one packet each
     // and exit. See bug ZX-648 for the case this is testing.
-    EXPECT_OK(event.wait_async(port, (500u + ix), ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE));
+    EXPECT_OK(event.wait_async(port, (500u + ix), ZX_EVENT_SIGNALED, 0));
 
     port_waiters[ix] = std::thread(PortWaiter, &port, 1, &return_status[ix]);
   }
@@ -534,7 +531,7 @@ TEST(PortStressTest, WaitSignalCancel) {
     auto count = kStressCount;
 
     while (--count) {
-      *return_status = event->wait_async(*port, key, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE);
+      *return_status = event->wait_async(*port, key, ZX_EVENT_SIGNALED, 0);
       if (*return_status != ZX_OK) {
         break;
       }
@@ -630,7 +627,7 @@ TEST(PortStressTest, SignalCloseWait) {
           *return_status = status;
           return;
         }
-        status = event.wait_async(*port, 0, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE);
+        status = event.wait_async(*port, 0, ZX_EVENT_SIGNALED, 0);
         if (status != ZX_OK) {
           *return_status = status;
           return;
@@ -717,8 +714,7 @@ TEST(PortStressTest, CloseWaitRace) {
   auto WaitAsyncLoop = [](std::atomic<bool>* keep_running, std::atomic<zx_handle_t>* port,
                           zx_handle_t event, zx_status_t* return_status) {
     while (keep_running->load()) {
-      zx_status_t status =
-          zx_object_wait_async(event, port->load(), 0, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE);
+      zx_status_t status = zx_object_wait_async(event, port->load(), 0, ZX_EVENT_SIGNALED, 0);
       if (status != ZX_OK && status != ZX_ERR_BAD_HANDLE) {
         *return_status = status;
         return;

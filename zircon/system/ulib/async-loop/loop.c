@@ -732,8 +732,7 @@ static void async_loop_restart_timer_locked(async_loop_t* loop) {
 
   if (!loop->timer_armed) {
     loop->timer_armed = true;
-    status = zx_object_wait_async(loop->timer, loop->port, KEY_CONTROL, ZX_TIMER_SIGNALED,
-                                  ZX_WAIT_ASYNC_ONCE);
+    status = zx_object_wait_async(loop->timer, loop->port, KEY_CONTROL, ZX_TIMER_SIGNALED, 0);
     ZX_ASSERT_MSG(status == ZX_OK, "zx_object_wait_async: status=%d", status);
   }
 }

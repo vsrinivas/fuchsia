@@ -83,7 +83,7 @@ void verify_battery_change_signal(uint32_t level, uint32_t state) {
   zx_status_t status = zx_port_create(0, &port);
   EXPECT_OK(status);
 
-  status = zx_object_wait_async(dev->event, port, 0, ZX_USER_SIGNAL_0, ZX_WAIT_ASYNC_ONCE);
+  status = zx_object_wait_async(dev->event, port, 0, ZX_USER_SIGNAL_0, 0);
   EXPECT_OK(status);
 
   // fake values to trigger recognition of charging state
@@ -141,7 +141,7 @@ TEST(TestCase, TestSignalOnBatteryDisconnect) {
   zx_status_t status = zx_port_create(0, &port);
   EXPECT_OK(status);
 
-  status = zx_object_wait_async(dev->event, port, 0, ZX_USER_SIGNAL_0, ZX_WAIT_ASYNC_ONCE);
+  status = zx_object_wait_async(dev->event, port, 0, ZX_USER_SIGNAL_0, 0);
   EXPECT_OK(status);
 
   dev->power_info.state = POWER_STATE_ONLINE;

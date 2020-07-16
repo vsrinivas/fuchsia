@@ -912,7 +912,7 @@ TEST(Threads, StartSuspendedAndResumedThread) {
 
 static void port_wait_for_signal(zx_handle_t port, zx_handle_t thread, zx_time_t deadline,
                                  zx_signals_t mask, zx_port_packet_t* packet) {
-  ASSERT_EQ(zx_object_wait_async(thread, port, 0u, mask, ZX_WAIT_ASYNC_ONCE), ZX_OK);
+  ASSERT_EQ(zx_object_wait_async(thread, port, 0u, mask, 0), ZX_OK);
   ASSERT_EQ(zx_port_wait(port, deadline, packet), ZX_OK);
   ASSERT_EQ(packet->type, ZX_PKT_TYPE_SIGNAL_ONE);
 }
@@ -938,8 +938,7 @@ static void TestSuspendWaitAsyncSignalDeliveryWorker() {
 
   // Make sure there are no more packets.
   // RUNNING or SUSPENDED is always asserted.
-  ASSERT_EQ(zx_object_wait_async(thread_h, port, 0u, ZX_THREAD_SUSPENDED, ZX_WAIT_ASYNC_ONCE),
-            ZX_OK);
+  ASSERT_EQ(zx_object_wait_async(thread_h, port, 0u, ZX_THREAD_SUSPENDED, 0), ZX_OK);
   ASSERT_EQ(zx_port_wait(port, 0u, &packet), ZX_ERR_TIMED_OUT);
   ASSERT_EQ(zx_port_cancel(port, thread_h, 0u), ZX_OK);
 

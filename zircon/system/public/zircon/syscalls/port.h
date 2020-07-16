@@ -13,6 +13,7 @@ __BEGIN_CDECLS
 // clang-format off
 
 // zx_object_wait_async() options
+// Do not use ZX_WAIT_ASYNC_ONCE. It is now superfluous and will be removed.
 #define ZX_WAIT_ASYNC_ONCE          ((uint32_t)0u)
 #define ZX_WAIT_ASYNC_TIMESTAMP     ((uint32_t)1u)
 

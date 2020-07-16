@@ -209,7 +209,7 @@ void Device::QmiUpdateOnlineStatus(bool is_online) {
 
 zx_status_t Device::SetAsyncWait() {
   return zx_object_wait_async(qmi_channel_, qmi_channel_port_, CHANNEL_MSG,
-                              ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+                              ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
 }
 
 zx_status_t Device::SetSnoopChannelToDevice(zx_handle_t channel) {
@@ -245,8 +245,7 @@ zx_status_t Device::SetSnoopChannelToDevice(zx_handle_t channel) {
     status = ZX_ERR_BAD_HANDLE;
   } else {
     snoop_channel_ = channel;
-    zx_object_wait_async(snoop_channel_, snoop_channel_port_, 0, ZX_CHANNEL_PEER_CLOSED,
-                         ZX_WAIT_ASYNC_ONCE);
+    zx_object_wait_async(snoop_channel_, snoop_channel_port_, 0, ZX_CHANNEL_PEER_CLOSED, 0);
   }
   return status;
 }

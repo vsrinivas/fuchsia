@@ -106,8 +106,8 @@ TEST_F(UsbQmiTest, RequestImei) {
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->result.is_err(), false);
   ASSERT_EQ(zx::port::create(0, &channel_port), ZX_OK);
-  channel_local.wait_async(channel_port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                           ZX_WAIT_ASYNC_ONCE);
+  channel_local.wait_async(channel_port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
+
   // send QMI message requesting IMEI
   ASSERT_EQ(channel_local.write(0, kQmiImeiReq, sizeof(kQmiImeiReq), nullptr, 0), ZX_OK);
 

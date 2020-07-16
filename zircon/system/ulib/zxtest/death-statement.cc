@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <threads.h>
-
-#include <cstdint>
-#include <string>
-
-#include <fbl/auto_call.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -16,10 +10,16 @@
 #include <lib/zx/task.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
+#include <threads.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
+
+#include <cstdint>
+#include <string>
+
+#include <fbl/auto_call.h>
 #include <zxtest/base/death-statement.h>
 
 namespace zxtest {
@@ -113,7 +113,7 @@ int RoutineThread(void* args) {
   // Register thread termination with the port.
   if (thread->wait_async(routine_args->event_port,
                          static_cast<uint64_t>(PortKeys::kThreadTermination), ZX_THREAD_TERMINATED,
-                         ZX_WAIT_ASYNC_ONCE) != ZX_OK) {
+                         0) != ZX_OK) {
     SEND_ERROR_AND_RETURN(routine_args->event_port, "Failed to register thread events with port");
   }
 
@@ -129,9 +129,9 @@ int RoutineThread(void* args) {
 
   // Register the exception channel with the port so we can process exceptions and
   // unblock/terminate this thread.
-  if (routine_args->exception_channel.wait_async(
-          routine_args->event_port, static_cast<uint64_t>(PortKeys::kException),
-          ZX_CHANNEL_READABLE, ZX_WAIT_ASYNC_ONCE) != ZX_OK) {
+  if (routine_args->exception_channel.wait_async(routine_args->event_port,
+                                                 static_cast<uint64_t>(PortKeys::kException),
+                                                 ZX_CHANNEL_READABLE, 0) != ZX_OK) {
     SEND_ERROR_AND_RETURN(routine_args->event_port,
                           "Failed to register exception channel with port");
   }

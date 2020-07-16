@@ -28,9 +28,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher
                                                   zx_handle_t service_request) {
   fidl::OnUnboundFn<OtStackApp::LowpanSpinelDeviceFidlImpl> on_unbound =
       [](LowpanSpinelDeviceFidlImpl* server, fidl::UnboundReason reason, zx_status_t,
-         zx::channel channel) {
-        server->app_.RemoveFidlRequestHandler(channel.get(), reason);
-      };
+         zx::channel channel) { server->app_.RemoveFidlRequestHandler(channel.get(), reason); };
   fidl::BindServer(dispatcher, zx::channel(service_request), this, std::move(on_unbound));
 }
 
@@ -313,7 +311,7 @@ zx_status_t OtStackApp::SetupOtRadioDev() {
   connected_to_device_ = true;
 
   status = zx_object_wait_async(device_channel_->get(), port_.get(), kPortPktChannelRead,
-                                ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+                                ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "failed to wait for events";
   }
@@ -361,9 +359,8 @@ void OtStackApp::EventThread() {
           loop_.Shutdown();
           return;
         }
-        result =
-            zx_object_wait_async(device_channel_->get(), port_.get(), kPortPktChannelRead,
-                                 ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+        result = zx_object_wait_async(device_channel_->get(), port_.get(), kPortPktChannelRead,
+                                      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
         if (result != ZX_OK) {
           FX_PLOGS(ERROR, result) << "failed to wait for events, terminating event thread";
           return;

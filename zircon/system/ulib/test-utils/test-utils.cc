@@ -326,7 +326,7 @@ void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t sig
     tu_fatal(__func__, status);
   }
   uint64_t key = info.koid;
-  uint32_t options = ZX_WAIT_ASYNC_ONCE;
+  uint32_t options = 0;
   status = zx_object_wait_async(handle, port, key, signals, options);
   if (status < 0)
     tu_fatal(__func__, status);

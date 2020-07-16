@@ -3953,7 +3953,7 @@ zx_status_t Device::StartInterruptPolling() {
   }
 
   status = async_tx_interrupt_timer_.wait_async(interrupt_port_, kAsyncTxInterruptKey,
-                                                ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_ONCE);
+                                                ZX_TIMER_SIGNALED, 0);
   if (status != ZX_OK) {
     errorf("could not wait on async TX timer: %d\n", status);
     return status;
@@ -3965,8 +3965,8 @@ zx_status_t Device::StartInterruptPolling() {
     return status;
   }
 
-  status = tbtt_interrupt_timer_.wait_async(interrupt_port_, kTbttInterruptKey, ZX_TIMER_SIGNALED,
-                                            ZX_WAIT_ASYNC_ONCE);
+  status =
+      tbtt_interrupt_timer_.wait_async(interrupt_port_, kTbttInterruptKey, ZX_TIMER_SIGNALED, 0);
   if (status != ZX_OK) {
     errorf("could not wait on TBTT timer: %d\n", status);
     return status;
@@ -4143,14 +4143,14 @@ zx_status_t Device::InterruptWorker() {
             return status;
           }
           async_tx_interrupt_timer_.wait_async(interrupt_port_, kAsyncTxInterruptKey,
-                                               ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_ONCE);
+                                               ZX_TIMER_SIGNALED, 0);
         } else if (pkt.key == kTbttInterruptKey) {
           status = OnTbttInterruptTimer();
           if (status != ZX_OK) {
             return status;
           }
           tbtt_interrupt_timer_.wait_async(interrupt_port_, kTbttInterruptKey, ZX_TIMER_SIGNALED,
-                                           ZX_WAIT_ASYNC_ONCE);
+                                           0);
         }
         break;
       }

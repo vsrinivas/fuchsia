@@ -4,13 +4,13 @@
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <fbl/auto_call.h>
+
+#include <utility>
 
 #include <dispatcher-pool/dispatcher-event-source.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
-
-#include <utility>
+#include <fbl/auto_call.h>
 
 namespace dispatcher {
 
@@ -145,7 +145,7 @@ zx_status_t EventSource::CancelPendingLocked() {
 zx_status_t EventSource::DoPortWaitLocked() {
   ZX_DEBUG_ASSERT(thread_pool_ != nullptr);
   return thread_pool_->WaitOnPort(handle_, reinterpret_cast<uint64_t>(this), process_signal_mask(),
-                                  ZX_WAIT_ASYNC_ONCE);
+                                  0);
 }
 
 zx_status_t EventSource::DoPortCancelLocked() {

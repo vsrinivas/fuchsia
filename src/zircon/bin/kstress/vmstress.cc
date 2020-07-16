@@ -426,8 +426,7 @@ zx_status_t SingleVmoTestInstance::Stop() {
     for (unsigned i = 0; i < kNumVmoThreads; i++) {
       zx_status_t status = thread_handles_[i].create_exception_channel(0, &channels[i]);
       ZX_ASSERT(status == ZX_OK);
-      status = channels[i].wait_async(port, i, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                      ZX_WAIT_ASYNC_ONCE);
+      status = channels[i].wait_async(port, i, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
       ZX_ASSERT(status == ZX_OK);
     }
   }
@@ -470,7 +469,7 @@ zx_status_t SingleVmoTestInstance::Stop() {
                                          sizeof(exception_state)) == ZX_OK);
 
         ZX_ASSERT(channel.wait_async(port, packet.key, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                     ZX_WAIT_ASYNC_ONCE) == ZX_OK);
+                                     0) == ZX_OK);
       } else {
         running_count--;
       }

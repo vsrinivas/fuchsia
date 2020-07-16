@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "zircon/syscalls/port.h"
-#include <perftest/perftest.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <perftest/perftest.h>
+
+#include "zircon/syscalls/port.h"
 
 namespace {
 
@@ -27,7 +29,7 @@ bool ObjectWaitAsyncTest(perftest::RepeatState* state) {
     ZX_ASSERT(status == ZX_OK);
     state->NextStep();
 
-    status = zx_object_wait_async(event, port, 0, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE);
+    status = zx_object_wait_async(event, port, 0, ZX_EVENT_SIGNALED, 0);
     ZX_ASSERT(status == ZX_OK);
     state->NextStep();
 

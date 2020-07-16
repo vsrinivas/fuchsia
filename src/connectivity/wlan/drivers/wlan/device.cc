@@ -816,7 +816,7 @@ void Device::ProcessChannelPacketLocked(uint64_t signal_count) {
 
 zx_status_t Device::RegisterChannelWaitLocked() {
   zx_signals_t sigs = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-  return channel_.wait_async(port_, ToPortKey(PortKeyType::kService, 0u), sigs, ZX_WAIT_ASYNC_ONCE);
+  return channel_.wait_async(port_, ToPortKey(PortKeyType::kService, 0u), sigs, 0);
 }
 
 zx_status_t Device::QueueDevicePortPacket(DevicePacket id, uint32_t status) {
@@ -919,8 +919,7 @@ zx_status_t Device::TimerSchedulerImpl::Schedule(Timer* timer,
     return ZX_OK;
   } else {
     scheduled_timers_.insert(sys_timer->id());
-    return sys_timer->inner()->wait_async(device_->port_, sys_timer->id(), ZX_TIMER_SIGNALED,
-                                          ZX_WAIT_ASYNC_ONCE);
+    return sys_timer->inner()->wait_async(device_->port_, sys_timer->id(), ZX_TIMER_SIGNALED, 0);
   }
 }
 
