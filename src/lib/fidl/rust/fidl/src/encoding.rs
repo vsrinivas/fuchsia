@@ -404,10 +404,35 @@ impl<'a> Decoder<'a> {
     {
         // Compute offsets for out of line block.
         let offset = self.next_out_of_line;
-        self.next_out_of_line = self.next_out_of_line + round_up_to_align(len, 8);
-        let end_block = self.next_out_of_line;
+        let aligned_len = round_up_to_align(len, 8);
+        self.next_out_of_line = self.next_out_of_line + aligned_len;
         if self.next_out_of_line > self.buf.len() {
             return Err(Error::OutOfRange);
+        }
+
+        // Validate padding bytes at the end of the block.
+        // # Safety:
+        // self.next_out_of_line <= self.buf.len() based on if statement above.
+        let last_u64 = unsafe {
+            let last_u64_ptr = self.buf.get_unchecked(self.next_out_of_line - 8);
+            *std::mem::transmute::<*const u8, *const u64>(last_u64_ptr)
+        };
+        let padding = aligned_len - len;
+        // padding == 0 => mask == 0x0000000000000000
+        // padding == 1 => mask == 0xff00000000000000
+        // padding == 2 => mask == 0xffff000000000000
+        // ...
+        let mask = !(!0u64 >> padding * 8);
+        if last_u64 & mask != 0 {
+            for i in offset + len..self.next_out_of_line {
+                if self.buf[i] != 0 {
+                    return Err(Error::NonZeroPadding {
+                        padding_start: offset + len,
+                        non_zero_pos: i,
+                    });
+                }
+            }
+            panic!("padding bytes detected by mask {:x} but not found", mask);
         }
 
         // Descend into block.
@@ -417,13 +442,6 @@ impl<'a> Decoder<'a> {
         }
         let res = f(self, offset)?;
         self.depth -= 1;
-
-        // Validate padding bytes at the end of the block.
-        for i in offset + len..end_block {
-            if self.buf[i] != 0 {
-                return Err(Error::NonZeroPadding { padding_start: offset + len, non_zero_pos: i });
-            }
-        }
 
         // Return.
         Ok(res)
