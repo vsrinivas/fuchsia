@@ -220,7 +220,7 @@ fn handle_connection(
     peers.connected(peer_id.clone(), channel, initiate);
     if let Some(peer) = peers.get(&peer_id) {
         // Add the controller to the peers
-        controller_pool.peer_connected(peer_id.clone(), peer.read().avdtp());
+        controller_pool.peer_connected(peer_id.clone(), peer.avdtp());
     }
 }
 

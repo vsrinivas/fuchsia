@@ -17,7 +17,6 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::Inspect,
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
-    parking_lot::RwLock,
     std::{collections::hash_map::Entry, collections::HashMap, convert::TryInto, sync::Arc},
 };
 
@@ -27,7 +26,7 @@ use crate::{avrcp_relay::AvrcpRelay, SBC_SEID};
 /// discovery, connections and disconnections.
 pub struct ConnectedPeers {
     /// The set of connected peers.
-    connected: DetachableMap<PeerId, RwLock<Peer>>,
+    connected: DetachableMap<PeerId, Peer>,
     /// ProfileDescriptors from discovering the peer.
     descriptors: HashMap<PeerId, Option<ProfileDescriptor>>,
     /// The set of streams that are made available to peers.
@@ -61,7 +60,7 @@ impl ConnectedPeers {
         }
     }
 
-    pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<RwLock<Peer>>> {
+    pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<Peer>> {
         self.connected.get(id).and_then(|p| p.upgrade())
     }
 
@@ -69,11 +68,9 @@ impl ConnectedPeers {
         self.connected.contains_key(id)
     }
 
-    async fn start_streaming(
-        peer: &DetachableWeak<PeerId, RwLock<Peer>>,
-    ) -> Result<(), anyhow::Error> {
+    async fn start_streaming(peer: &DetachableWeak<PeerId, Peer>) -> Result<(), anyhow::Error> {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
-        let remote_streams = strong.read().collect_capabilities().await?;
+        let remote_streams = strong.collect_capabilities().await?;
 
         // Find the SBC stream, which should exist (it is required)
         // TODO(39321): Prefer AAC when remote peer supports AAC.
@@ -102,7 +99,6 @@ impl ConnectedPeers {
 
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
         let _ = strong
-            .read()
             .stream_start(
                 SBC_SEID.try_into().unwrap(),
                 remote_stream.local_id().clone(),
@@ -117,7 +113,7 @@ impl ConnectedPeers {
             // We have maybe connected to this peer before, and we just need to
             // discover the streams.
             if let Some(peer) = self.get(&id) {
-                peer.write().set_descriptor(desc.clone());
+                peer.set_descriptor(desc.clone());
             }
         }
     }
@@ -134,7 +130,7 @@ impl ConnectedPeers {
         };
         match self.get(&id) {
             Some(peer) => {
-                if let Err(e) = peer.write().receive_channel(socket) {
+                if let Err(e) = peer.receive_channel(socket) {
                     fx_log_warn!("{} failed to connect channel: {}", id, e);
                 }
             }
@@ -175,7 +171,7 @@ impl ConnectedPeers {
                     }
                 }
                 let closed_fut = peer.closed();
-                self.connected.insert(id, RwLock::new(peer));
+                self.connected.insert(id, peer);
 
                 let avrcp_relay = AvrcpRelay::start(id, self.domain.clone()).ok();
 
@@ -303,7 +299,7 @@ mod tests {
             Some(peer) => peer,
         };
 
-        exercise_avdtp(&mut exec, remote, &peer.read());
+        exercise_avdtp(&mut exec, remote, &peer);
     }
 
     #[test]
