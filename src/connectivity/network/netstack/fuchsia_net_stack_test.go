@@ -11,12 +11,9 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 
-	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
-	"fidl/fuchsia/netstack"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -51,8 +48,7 @@ func TestValidateIPAddressMask(t *testing.T) {
 func TestFuchsiaNetStack(t *testing.T) {
 	t.Run("Add and Delete Forwarding Entries", func(t *testing.T) {
 		ns := newNetstack(t)
-		eth := deviceForAddEth(ethernet.Info{}, t)
-		if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth); err != nil {
+		if _, err := addNoopEndpoint(ns, t.Name()); err != nil {
 			t.Fatal(err)
 		}
 		ni := stackImpl{ns: ns}
@@ -183,8 +179,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 
 	t.Run("Enable and Disable PacketFilter", func(t *testing.T) {
 		ns := newNetstack(t)
-		eth := deviceForAddEth(ethernet.Info{}, t)
-		if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth); err != nil {
+		if _, err := addNoopEndpoint(ns, t.Name()); err != nil {
 			t.Fatal(err)
 		}
 		ni := stackImpl{ns: ns}
@@ -229,8 +224,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 
 	t.Run("Enable and Disable IP Forwarding", func(t *testing.T) {
 		ns := newNetstack(t)
-		eth := deviceForAddEth(ethernet.Info{}, t)
-		if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth); err != nil {
+		if _, err := addNoopEndpoint(ns, t.Name()); err != nil {
 			t.Fatal(err)
 		}
 		ni := stackImpl{ns: ns}

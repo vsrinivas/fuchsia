@@ -6,12 +6,12 @@ package netstack
 
 import (
 	"context"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"net"
 	"syscall/zx"
 	"testing"
 
-	"fidl/fuchsia/hardware/ethernet"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+
 	netfidl "fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 
@@ -40,8 +40,7 @@ func TestRouteTableTransactions(t *testing.T) {
 		// Create a basic netstack instance with a single interface. We need at
 		// least one interface in order to add routes.
 		netstackServiceImpl := netstackImpl{ns: newNetstack(t)}
-		eth := deviceForAddEth(ethernet.Info{}, t)
-		ifs, err := netstackServiceImpl.ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: "testdevice"}, &eth)
+		ifs, err := addNoopEndpoint(netstackServiceImpl.ns, t.Name())
 		if err != nil {
 			t.Fatal(err)
 		}

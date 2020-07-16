@@ -7,16 +7,15 @@ package netstack
 import (
 	"context"
 	"fmt"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"testing"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"fidl/fuchsia/cobalt"
-	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/netstack"
 
 	networking_metrics "networking_metrics_golib"
@@ -26,7 +25,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
-	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const (
@@ -129,8 +128,7 @@ func TestSendingOnInterfacesChangedEvent(t *testing.T) {
 			ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 			ndpDisp.start(ctx)
 
-			eth := deviceForAddEth(ethernet.Info{}, t)
-			ifs, err := ns.addEth("/path", netstack.InterfaceConfig{Name: "name"}, &eth)
+			ifs, err := addNoopEndpoint(ns, "TestNameTooLong")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -186,8 +184,7 @@ func TestNDPInvalidateUnknownIPv6Router(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	eth := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth)
+	ifs, err := addNoopEndpoint(ns, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,16 +211,14 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	eth1 := deviceForAddEth(ethernet.Info{}, t)
-	ifs1, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth1)
+	ifs1, err := addNoopEndpoint(ns, t.Name()+"1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := ifs1.controller.Up(); err != nil {
 		t.Fatalf("ifs1.controller.Up(): %s", err)
 	}
-	eth2 := deviceForAddEth(ethernet.Info{}, t)
-	ifs2, err := ns.addEth("/path2", netstack.InterfaceConfig{Name: "name2"}, &eth2)
+	ifs2, err := addNoopEndpoint(ns, t.Name()+"2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -336,8 +331,7 @@ func TestNDPInvalidateUnknownIPv6Prefix(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	eth := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth)
+	ifs, err := addNoopEndpoint(ns, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -364,16 +358,14 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	eth1 := deviceForAddEth(ethernet.Info{}, t)
-	ifs1, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth1)
+	ifs1, err := addNoopEndpoint(ns, t.Name()+"1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := ifs1.controller.Up(); err != nil {
 		t.Fatalf("ifs1.controller.Up(): %s", err)
 	}
-	eth2 := deviceForAddEth(ethernet.Info{}, t)
-	ifs2, err := ns.addEth("/path2", netstack.InterfaceConfig{Name: "name2"}, &eth2)
+	ifs2, err := addNoopEndpoint(ns, t.Name()+"2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -485,17 +477,14 @@ func TestLinkDown(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	eth1 := deviceForAddEth(ethernet.Info{}, t)
-	ifs1, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth1)
+	ifs1, err := addNoopEndpoint(ns, t.Name()+"1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := ifs1.controller.Up(); err != nil {
 		t.Fatalf("ifs1.controller.Up(): %s", err)
 	}
-	eth2 := deviceForAddEth(ethernet.Info{}, t)
-	eth2.StopImpl = func() error { return nil }
-	ifs2, err := ns.addEth("/path2", netstack.InterfaceConfig{Name: "name2"}, &eth2)
+	ifs2, err := addNoopEndpoint(ns, t.Name()+"2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -609,17 +598,14 @@ func TestRecursiveDNSServers(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	eth1 := deviceForAddEth(ethernet.Info{}, t)
-	ifs1, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth1)
+	ifs1, err := addNoopEndpoint(ns, t.Name()+"1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := ifs1.controller.Up(); err != nil {
 		t.Fatalf("ifs1.controller.Up(): %s", err)
 	}
-	eth2 := deviceForAddEth(ethernet.Info{}, t)
-	eth2.StopImpl = func() error { return nil }
-	ifs2, err := ns.addEth("/path2", netstack.InterfaceConfig{Name: "name2"}, &eth2)
+	ifs2, err := addNoopEndpoint(ns, t.Name()+"2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -731,31 +717,30 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
-	eth1 := deviceForAddEth(ethernet.Info{}, t)
-	ifs1, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth1)
+	ifs, err := addNoopEndpoint(ns, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs1.controller.Up(); err != nil {
-		t.Fatalf("ifs1.controller.Up(): %s", err)
+	if err := ifs.controller.Up(); err != nil {
+		t.Fatalf("ifs.controller.Up(): %s", err)
 	}
 
 	addr1 := tcpip.FullAddress{
 		Addr: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
 		Port: 53,
-		NIC:  ifs1.nicid,
+		NIC:  ifs.nicid,
 	}
 	addr2 := tcpip.FullAddress{
 		Addr: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02",
 		Port: 53,
-		NIC:  ifs1.nicid,
+		NIC:  ifs.nicid,
 	}
 	addr3 := tcpip.FullAddress{
 		Addr: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03",
 		Port: 53,
-		NIC:  ifs1.nicid,
+		NIC:  ifs.nicid,
 	}
-	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1.Addr, addr2.Addr, addr3.Addr}, newInfiniteLifetime)
+	ndpDisp.OnRecursiveDNSServerOption(ifs.nicid, []tcpip.Address{addr1.Addr, addr2.Addr, addr3.Addr}, newInfiniteLifetime)
 	waitForEmptyQueue(ndpDisp)
 	servers := ns.dnsConfig.GetServersCache()
 	if !containsFullAddress(servers, addr1) {
@@ -777,9 +762,9 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	}
 
 	// All addresses to expire after middleLifetime.
-	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1.Addr, addr2.Addr, addr3.Addr}, middleLifetime)
+	ndpDisp.OnRecursiveDNSServerOption(ifs.nicid, []tcpip.Address{addr1.Addr, addr2.Addr, addr3.Addr}, middleLifetime)
 	// Update addr2 and addr3 to be valid forever.
-	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr2.Addr, addr3.Addr}, newInfiniteLifetime)
+	ndpDisp.OnRecursiveDNSServerOption(ifs.nicid, []tcpip.Address{addr2.Addr, addr3.Addr}, newInfiniteLifetime)
 	waitForEmptyQueue(ndpDisp)
 	for elapsedTime := time.Duration(0); elapsedTime <= middleLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
@@ -855,7 +840,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func() {
-						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
 						{
@@ -872,8 +857,8 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func() {
-						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
-						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6ManagedAddress)
+						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6ManagedAddress)
 					},
 					want: []cobalt.CobaltEvent{
 						{
@@ -895,7 +880,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func() {
-						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
 						{
@@ -907,7 +892,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 				},
 				{
 					run: func() {
-						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
 						{
@@ -924,8 +909,8 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func() {
-						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
-						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
 						{

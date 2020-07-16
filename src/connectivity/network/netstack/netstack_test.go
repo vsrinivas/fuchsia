@@ -46,7 +46,6 @@ import (
 )
 
 const (
-	testDeviceName       string        = "testdevice"
 	testTopoPath         string        = "/fake/ethernet/device"
 	testV4Address        tcpip.Address = "\xc0\xa8\x2a\x10"
 	testV6Address        tcpip.Address = "\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10"
@@ -81,10 +80,9 @@ func TestMain(m *testing.M) {
 func TestDelRouteErrors(t *testing.T) {
 	ns := newNetstack(t)
 
-	eth := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
+	ifs, err := addNoopEndpoint(ns, t.Name())
 	if err != nil {
-		t.Fatalf("addEth(%q, _): %s", testTopoPath, err)
+		t.Fatal(err)
 	}
 
 	rt := tcpip.Route{
@@ -115,12 +113,9 @@ func TestDelRouteErrors(t *testing.T) {
 // disabled when the underlying link is brought up or down, respectively.
 func TestStackNICEnableDisable(t *testing.T) {
 	ns := newNetstack(t)
-	eth := deviceForAddEth(ethernet.Info{}, t)
-	eth.StopImpl = func() error { return nil }
-	config := netstack.InterfaceConfig{Name: testDeviceName}
-	ifs, err := ns.addEth(testTopoPath, config, &eth)
+	ifs, err := addNoopEndpoint(ns, t.Name())
 	if err != nil {
-		t.Fatalf("ns.addEth(%q, %+v, _): %s", testTopoPath, config, err)
+		t.Fatal(err)
 	}
 
 	// The NIC should initially be disabled in stack.Stack.
@@ -167,12 +162,12 @@ func TestStackNICEnableDisable(t *testing.T) {
 // underlying link is closed.
 func TestStackNICRemove(t *testing.T) {
 	ns := newNetstack(t)
-	eth := deviceForAddEth(ethernet.Info{}, t)
-	eth.StopImpl = func() error { return nil }
-	config := netstack.InterfaceConfig{Name: testDeviceName}
-	ifs, err := ns.addEth(testTopoPath, config, &eth)
+
+	var ep noopEndpoint
+
+	ifs, err := ns.addEndpoint(func(tcpip.NICID) string { return t.Name() }, &ep, &noopController{}, false, 0, false)
 	if err != nil {
-		t.Fatalf("ns.addEth(%q, %+v, _): %s", testTopoPath, config, err)
+		t.Fatal(err)
 	}
 
 	// The NIC should initially be disabled in stack.Stack.
@@ -205,10 +200,6 @@ func TestStackNICRemove(t *testing.T) {
 	}
 
 	// Wait for the controller to stop and free up its resources.
-	ep, ok := ifs.controller.(tcpipstack.LinkEndpoint)
-	if !ok {
-		t.Fatalf("ep (= %T) does not implement tcpipstack.LinkEndpoint", ep)
-	}
 	ep.Wait()
 }
 
@@ -389,13 +380,12 @@ func TestNICName(t *testing.T) {
 		t.Fatalf("got ns.name(0) = %q, want %q", got, want)
 	}
 
-	eth := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
+	ifs, err := addNoopEndpoint(ns, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if name := ifs.ns.name(ifs.nicid); name != testDeviceName {
-		t.Fatalf("ifs.mu.name = %q, want = %q", name, testDeviceName)
+	if got, want := ifs.ns.name(ifs.nicid), t.Name(); got != want {
+		t.Fatalf("got ifs.mu.name = %q, want = %q", got, want)
 	}
 }
 
@@ -403,18 +393,15 @@ func TestNotStartedByDefault(t *testing.T) {
 	ns := newNetstack(t)
 
 	startCalled := false
-	eth := deviceForAddEth(ethernet.Info{}, t)
-	eth.StartImpl = func() (int32, error) {
-		startCalled = true
-		return int32(zx.ErrOk), nil
+	controller := noopController{
+		onUp: func() { startCalled = true },
 	}
-
-	if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth); err != nil {
+	if _, err := ns.addEndpoint(func(tcpip.NICID) string { return t.Name() }, &noopEndpoint{}, &controller, false, 0, false); err != nil {
 		t.Fatal(err)
 	}
 
 	if startCalled {
-		t.Error("expected no calls to ethernet.Device.Start by addEth")
+		t.Error("unexpected call to Controller.Up")
 	}
 }
 
@@ -502,14 +489,12 @@ func TestIpv6LinkLocalAddr(t *testing.T) {
 	}
 	ns := newNetstackWithStackNDPDispatcher(t, &ndpDisp)
 
-	eth := deviceForAddEth(ethernet.Info{
-		Mac: ethernet.MacAddress{
-			Octets: [6]byte{2, 3, 4, 5, 6, 7},
-		},
-	}, t)
-	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
+	ep := noopEndpoint{
+		linkAddress: tcpip.LinkAddress([]byte{2, 3, 4, 5, 6, 7}),
+	}
+	ifs, err := ns.addEndpoint(func(tcpip.NICID) string { return t.Name() }, &ep, &noopController{}, false, 0, false)
 	if err != nil {
-		t.Fatalf("addEth(_, _, _): %s", err)
+		t.Fatal(err)
 	}
 	if err := ifs.controller.Up(); err != nil {
 		t.Fatal("ifs.controller.Up(): ", err)
@@ -553,15 +538,12 @@ func TestIpv6LinkLocalOnLinkRoute(t *testing.T) {
 func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 	ns := newNetstack(t)
 
-	eth := deviceForAddEth(ethernet.Info{
-		Mac: ethernet.MacAddress{
-			Octets: [6]byte{2, 3, 4, 5, 6, 7},
-		},
-	}, t)
-	eth.StopImpl = func() error { return nil }
-	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
+	ep := noopEndpoint{
+		linkAddress: tcpip.LinkAddress([]byte{2, 3, 4, 5, 6, 7}),
+	}
+	ifs, err := ns.addEndpoint(func(tcpip.NICID) string { return t.Name() }, &ep, &noopController{}, false, 0, false)
 	if err != nil {
-		t.Fatalf("addEth(_, _, _): %s", err)
+		t.Fatal(err)
 	}
 
 	linkLocalRoute := ipv6LinkLocalOnLinkRoute(ifs.nicid)
@@ -622,7 +604,7 @@ func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
 		return int32(zx.ErrOk), nil
 	}
 
-	if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth); err != nil {
+	if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: t.Name()}, &eth); err != nil {
 		t.Fatal(err)
 	}
 
@@ -634,17 +616,15 @@ func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
 func TestUniqueFallbackNICNames(t *testing.T) {
 	ns := newNetstack(t)
 
-	d1 := deviceForAddEth(ethernet.Info{}, t)
-	ifs1, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d1)
+	ifs1, err := addNoopEndpoint(ns, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ifs2, err := addNoopEndpoint(ns, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	d2 := deviceForAddEth(ethernet.Info{}, t)
-	ifs2, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d2)
-	if err != nil {
-		t.Fatal(err)
-	}
 	nicInfos := ns.stack.NICInfo()
 
 	nicInfo1, ok := nicInfos[ifs1.nicid]
@@ -676,7 +656,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			d := deviceForAddEth(ethernet.Info{Features: test.features}, t)
 			d.StopImpl = func() error { return nil }
-			ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &d)
+			ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: t.Name()}, &d)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -703,7 +683,9 @@ func TestStaticIPConfiguration(t *testing.T) {
 			}
 			ifs.mu.Unlock()
 
-			ifs.controller.Down()
+			if err := ifs.controller.Down(); err != nil {
+				t.Fatal(err)
+			}
 
 			ifs.mu.Lock()
 			if ifs.mu.dhcp.enabled {
@@ -714,7 +696,9 @@ func TestStaticIPConfiguration(t *testing.T) {
 			}
 			ifs.mu.Unlock()
 
-			ifs.controller.Up()
+			if err := ifs.controller.Up(); err != nil {
+				t.Fatal(err)
+			}
 
 			ifs.mu.Lock()
 			if ifs.mu.dhcp.enabled {
@@ -844,8 +828,7 @@ func TestNetstackImpl_GetInterfaces2(t *testing.T) {
 	ns := newNetstack(t)
 	ni := &netstackImpl{ns: ns}
 
-	d := deviceForAddEth(ethernet.Info{}, t)
-	if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d); err != nil {
+	if _, err := addNoopEndpoint(ns, t.Name()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -879,12 +862,10 @@ func TestListInterfaceAddresses(t *testing.T) {
 	ns := newNetstackWithStackNDPDispatcher(t, &ndpDisp)
 	ni := &stackImpl{ns: ns}
 
-	d := deviceForAddEth(ethernet.Info{
-		Mac: ethernet.MacAddress{
-			Octets: [6]byte{2, 3, 4, 5, 6, 7},
-		},
-	}, t)
-	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
+	ep := noopEndpoint{
+		linkAddress: tcpip.LinkAddress([]byte{2, 3, 4, 5, 6, 7}),
+	}
+	ifState, err := ns.addEndpoint(func(tcpip.NICID) string { return t.Name() }, &ep, &noopController{}, false, 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -907,7 +888,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 
 	waitForDAD("\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x03\x04\xff\xfe\x05\x06\x07")
 
-	// The call to ns.addEth() added addresses to the stack. Make sure we include
+	// The call to ns.addEndpoint() added addresses to the stack. Make sure we include
 	// those in our want list.
 	wantAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
 
@@ -979,18 +960,17 @@ func TestListInterfaceAddresses(t *testing.T) {
 func TestAddAddressesThenChangePrefix(t *testing.T) {
 	ns := newNetstack(t)
 	ni := &stackImpl{ns: ns}
-	d := deviceForAddEth(ethernet.Info{}, t)
-	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
+	ifState, err := addNoopEndpoint(ns, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// The call to ns.addEth() added addresses to the stack. Make sure we include
+	// The call to ns.addEndpoint() added addresses to the stack. Make sure we include
 	// those in our want list.
 	initialAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
 
 	// Add address.
-	addr := tcpip.AddressWithPrefix{"\x01\x01\x01\x01", 8}
+	addr := tcpip.AddressWithPrefix{Address: "\x01\x01\x01\x01", PrefixLen: 8}
 	ifAddr := fidlnet.Subnet{
 		Addr:      fidlconv.ToNetIpAddress(addr.Address),
 		PrefixLen: uint8(addr.PrefixLen),
@@ -1024,7 +1004,6 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 
 func TestAddRouteParameterValidation(t *testing.T) {
 	ns := newNetstack(t)
-	d := deviceForAddEth(ethernet.Info{}, t)
 	addr := tcpip.ProtocolAddress{
 		Protocol: ipv4.ProtocolNumber,
 		AddressWithPrefix: tcpip.AddressWithPrefix{
@@ -1033,9 +1012,9 @@ func TestAddRouteParameterValidation(t *testing.T) {
 		},
 	}
 	subnetLocalAddress := tcpip.Address("\xf0\xf0\xf0\xf1")
-	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
+	ifState, err := addNoopEndpoint(ns, t.Name())
 	if err != nil {
-		t.Fatalf("got ns.addEth(_) = _, %s want = _, nil", err)
+		t.Fatal(err)
 	}
 
 	found, err := ns.addInterfaceAddress(ifState.nicid, addr)
@@ -1101,8 +1080,7 @@ func TestAddRouteParameterValidation(t *testing.T) {
 
 func TestDHCPAcquired(t *testing.T) {
 	ns := newNetstack(t)
-	d := deviceForAddEth(ethernet.Info{}, t)
-	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
+	ifState, err := addNoopEndpoint(ns, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
