@@ -30,6 +30,7 @@ source_set("h264_parser") {
   ]
   public_deps = [
     "//src/lib/fxl",
+    "//src/media/lib/codec_impl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",
   ]

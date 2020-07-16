@@ -42,6 +42,7 @@ void H264Decoder::Reset() {
   curr_pic_ = nullptr;
   curr_nalu_ = nullptr;
   curr_slice_hdr_ = nullptr;
+  DVLOG(4) << "curr_sps_id_ = -1";
   curr_sps_id_ = -1;
   curr_pps_id_ = -1;
 
@@ -83,10 +84,12 @@ bool H264Decoder::ModifyReferencePicLists(const H264SliceHeader* slice_hdr,
   // Fill reference picture lists for B and S/SP slices.
   if (slice_hdr->IsPSlice() || slice_hdr->IsSPSlice()) {
     *ref_pic_list0 = ref_pic_list_p0_;
+    DVLOG(1) << "ModifyReferencePicLists P case";
     return ModifyReferencePicList(slice_hdr, 0, ref_pic_list0);
   } else if (slice_hdr->IsBSlice()) {
     *ref_pic_list0 = ref_pic_list_b0_;
     *ref_pic_list1 = ref_pic_list_b1_;
+    DVLOG(1) << "ModifyReferencePicLists B case";
     return ModifyReferencePicList(slice_hdr, 0, ref_pic_list0) &&
            ModifyReferencePicList(slice_hdr, 1, ref_pic_list1);
   }
@@ -114,6 +117,7 @@ bool H264Decoder::InitNonexistingPicture(scoped_refptr<H264Picture> pic,
 }
 
 bool H264Decoder::InitCurrPicture(const H264SliceHeader* slice_hdr) {
+  DVLOG(4) << "curr_sps_id_: " << curr_sps_id_;
   if (!FillH264PictureFromSliceHeader(parser_.GetSPS(curr_sps_id_), *slice_hdr,
                                       curr_pic_.get())) {
     return false;
@@ -144,6 +148,7 @@ bool H264Decoder::InitCurrPicture(const H264SliceHeader* slice_hdr) {
 }
 
 bool H264Decoder::CalculatePicOrderCounts(scoped_refptr<H264Picture> pic) {
+  DVLOG(4) << "curr_sps_id_: " << curr_sps_id_;
   const H264SPS* sps = parser_.GetSPS(curr_sps_id_);
   if (!sps)
     return false;
@@ -490,6 +495,9 @@ static void ShiftRightAndInsert(H264Picture::Vector* v,
                                 int to,
                                 scoped_refptr<H264Picture> pic) {
   // Security checks, do not disable in Debug mode.
+  //
+  // TODO(fxb/13483): These need to not abort() - instead just failing the
+  // stream.  While we're at it, we should fix the comment just above.
   CHECK(from <= to);
   CHECK(to <= std::numeric_limits<int>::max() - 2);
   // Additional checks. Debug mode ok.
@@ -509,6 +517,7 @@ static void ShiftRightAndInsert(H264Picture::Vector* v,
 bool H264Decoder::ModifyReferencePicList(const H264SliceHeader* slice_hdr,
                                          int list,
                                          H264Picture::Vector* ref_pic_listx) {
+  DVLOG(1) << "ModifyReferencePicList list: " << list;
   bool ref_pic_list_modification_flag_lX;
   int num_ref_idx_lX_active_minus1;
   const H264ModificationOfPicNum* list_mod;
@@ -526,6 +535,9 @@ bool H264Decoder::ModifyReferencePicList(const H264SliceHeader* slice_hdr,
     num_ref_idx_lX_active_minus1 = slice_hdr->num_ref_idx_l1_active_minus1;
     list_mod = slice_hdr->ref_list_l1_modifications;
   }
+  DVLOG(1) << "ref_pic_list_modification_flag_lX: "
+           << ref_pic_list_modification_flag_lX
+           << " num_ref_idx_lX_active_minus1: " << num_ref_idx_lX_active_minus1;
 
   // Resize the list to the size requested in the slice header.
   // Note that per 8.2.4.2 it's possible for num_ref_idx_lX_active_minus1 to
@@ -547,6 +559,8 @@ bool H264Decoder::ModifyReferencePicList(const H264SliceHeader* slice_hdr,
   bool done = false;
   scoped_refptr<H264Picture> pic;
   for (int i = 0; i < H264SliceHeader::kRefListModSize && !done; ++i) {
+    DVLOG(1) << " list_mod->modification_of_pic_nums_idc: "
+             << list_mod->modification_of_pic_nums_idc << " i: " << i;
     switch (list_mod->modification_of_pic_nums_idc) {
       case 0:
       case 1:
@@ -556,19 +570,29 @@ bool H264Decoder::ModifyReferencePicList(const H264SliceHeader* slice_hdr,
           pic_num_lx_no_wrap =
               pic_num_lx_pred -
               (static_cast<int>(list_mod->abs_diff_pic_num_minus1) + 1);
+          DVLOG(1) << "idc 0: pic_num_lx_no_wrap: " << pic_num_lx_no_wrap
+                   << " pic_num_lx_pred: " << pic_num_lx_pred
+                   << " abs_diff_pic_num_minus1: "
+                   << list_mod->abs_diff_pic_num_minus1;
           // Wrap around max_pic_num_ if it becomes < 0 as result
           // of subtraction.
           if (pic_num_lx_no_wrap < 0)
             pic_num_lx_no_wrap += max_pic_num_;
+          DVLOG(1) << "idc 0: pic_num_lx_no_wrap: " << pic_num_lx_no_wrap;
         } else {
           // Add given value to predicted PicNum.
           pic_num_lx_no_wrap =
               pic_num_lx_pred +
               (static_cast<int>(list_mod->abs_diff_pic_num_minus1) + 1);
+          DVLOG(1) << "idc 1: pic_num_lx_no_wrap: " << pic_num_lx_no_wrap
+                   << " pic_num_lx_pred: " << pic_num_lx_pred
+                   << " abs_diff_pic_num_minus1: "
+                   << list_mod->abs_diff_pic_num_minus1;
           // Wrap around max_pic_num_ if it becomes >= max_pic_num_ as result
           // of the addition.
           if (pic_num_lx_no_wrap >= max_pic_num_)
             pic_num_lx_no_wrap -= max_pic_num_;
+          DVLOG(1) << "idc 0: pic_num_lx_no_wrap: " << pic_num_lx_no_wrap;
         }
 
         // For use in next iteration.
@@ -578,6 +602,7 @@ bool H264Decoder::ModifyReferencePicList(const H264SliceHeader* slice_hdr,
           pic_num_lx = pic_num_lx_no_wrap - max_pic_num_;
         else
           pic_num_lx = pic_num_lx_no_wrap;
+        DVLOG(1) << "pic_num_lx: " << pic_num_lx;
 
         DCHECK_LT(num_ref_idx_lX_active_minus1 + 1,
                   H264SliceHeader::kRefListModSize);
@@ -603,6 +628,8 @@ bool H264Decoder::ModifyReferencePicList(const H264SliceHeader* slice_hdr,
         // Modify long term reference picture position.
         DCHECK_LT(num_ref_idx_lX_active_minus1 + 1,
                   H264SliceHeader::kRefListModSize);
+        DVLOG(1) << "idc 2: list_mod->long_term_pic_num: "
+                 << list_mod->long_term_pic_num;
         pic = dpb_.GetLongRefPicByLongTermPicNum(list_mod->long_term_pic_num);
         if (!pic) {
           DVLOG(1) << "Malformed stream, no pic num "
@@ -623,6 +650,7 @@ bool H264Decoder::ModifyReferencePicList(const H264SliceHeader* slice_hdr,
 
       case 3:
         // End of modification list.
+        DVLOG(1) << "idc 3 done - i: " << i;
         done = true;
         break;
 
@@ -650,6 +678,7 @@ bool H264Decoder::OutputPic(scoped_refptr<H264Picture> pic) {
   pic->outputted = true;
 
   VideoColorSpace colorspace_for_frame = container_color_space_;
+  DVLOG(4) << "curr_sps_id_: " << curr_sps_id_;
   const H264SPS* sps = parser_.GetSPS(curr_sps_id_);
   if (sps && sps->GetColorSpace().IsSpecified())
     colorspace_for_frame = sps->GetColorSpace();
@@ -709,11 +738,14 @@ H264Decoder::H264Accelerator::Status H264Decoder::StartNewFrame(
   DCHECK(slice_hdr);
 
   curr_pps_id_ = slice_hdr->pic_parameter_set_id;
+  DVLOG(4) << "curr_pps_id_ = " << curr_pps_id_;
   const H264PPS* pps = parser_.GetPPS(curr_pps_id_);
   if (!pps)
     return H264Accelerator::Status::kFail;
 
   curr_sps_id_ = pps->seq_parameter_set_id;
+  DVLOG(4) << "curr_sps_id_ = " << curr_sps_id_;
+  DVLOG(4) << "curr_sps_id_: " << curr_sps_id_;
   const H264SPS* sps = parser_.GetSPS(curr_sps_id_);
   if (!sps)
     return H264Accelerator::Status::kFail;
@@ -884,6 +916,7 @@ bool H264Decoder::ReferencePictureMarking(scoped_refptr<H264Picture> pic) {
 }
 
 bool H264Decoder::SlidingWindowPictureMarking() {
+  DVLOG(4) << "curr_sps_id_: " << curr_sps_id_;
   const H264SPS* sps = parser_.GetSPS(curr_sps_id_);
   if (!sps)
     return false;
@@ -1032,8 +1065,9 @@ bool H264Decoder::UpdateMaxNumReorderFrames(const H264SPS* sps) {
 }
 
 bool H264Decoder::ProcessSPS(int sps_id, bool* need_new_buffers) {
-  DVLOG(4) << "Processing SPS id:" << sps_id;
+  DVLOG(4) << "Processing SPS id: " << sps_id;
 
+  DVLOG(4) << "sps_id: " << sps_id;
   const H264SPS* sps = parser_.GetSPS(sps_id);
   if (!sps)
     return false;
@@ -1145,6 +1179,7 @@ H264Decoder::H264Accelerator::Status H264Decoder::FinishPrevFrameIfPresent() {
 }
 
 bool H264Decoder::HandleFrameNumGap(int frame_num) {
+  DVLOG(4) << "curr_sps_id_: " << curr_sps_id_;
   const H264SPS* sps = parser_.GetSPS(curr_sps_id_);
   if (!sps)
     return false;
@@ -1185,6 +1220,7 @@ H264Decoder::H264Accelerator::Status H264Decoder::PreprocessCurrentSlice() {
   const H264SliceHeader* slice_hdr = curr_slice_hdr_.get();
   DCHECK(slice_hdr);
 
+  DVLOG(4) << "curr_sps_id_: " << curr_sps_id_;
   if (IsNewPrimaryCodedPicture(curr_pic_.get(), curr_pps_id_,
                                parser_.GetSPS(curr_sps_id_), *slice_hdr)) {
     // New picture, so first finish the previous one before processing it.
@@ -1235,10 +1271,15 @@ H264Decoder::H264Accelerator::Status H264Decoder::ProcessCurrentSlice() {
   if (!pps)
     return H264Accelerator::Status::kFail;
 
-  return accelerator_->SubmitSlice(pps, slice_hdr, ref_pic_list0, ref_pic_list1,
-                                   curr_pic_, slice_hdr->nalu_data,
-                                   slice_hdr->nalu_size,
-                                   parser_.GetCurrentSubsamples());
+  DCHECK(nalu_injection_mode_ != NaluInjectionMode::kUnknown);
+  DCHECK(nalu_injection_mode_ == NaluInjectionMode::kOff ||
+         nalu_injection_mode_ == NaluInjectionMode::kOn);
+  return accelerator_->SubmitSlice(
+      pps, slice_hdr, ref_pic_list0, ref_pic_list1, curr_pic_,
+      slice_hdr->nalu_data, slice_hdr->nalu_size,
+      nalu_injection_mode_ == NaluInjectionMode::kOff
+          ? parser_.GetCurrentSubsamples()
+          : std::vector<SubsampleEntry>());
 }
 
 #define SET_ERROR_AND_RETURN()         \
@@ -1264,6 +1305,9 @@ H264Decoder::H264Accelerator::Status H264Decoder::ProcessCurrentSlice() {
   } while (0)
 
 void H264Decoder::SetStream(int32_t id, const DecoderBuffer& decoder_buffer) {
+  ZX_DEBUG_ASSERT(nalu_injection_mode_ != NaluInjectionMode::kOn);
+  nalu_injection_mode_ = NaluInjectionMode::kOff;
+
   const uint8_t* ptr = decoder_buffer.data();
   const size_t size = decoder_buffer.data_size();
   const DecryptConfig* decrypt_config = decoder_buffer.decrypt_config();
@@ -1293,6 +1337,13 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
     return kDecodeError;
   }
 
+  if (nalu_injection_mode_ == NaluInjectionMode::kUnknown) {
+    nalu_injection_mode_ = NaluInjectionMode::kOff;
+  }
+  ZX_DEBUG_ASSERT(nalu_injection_mode_ != NaluInjectionMode::kUnknown);
+  ZX_DEBUG_ASSERT(!current_stream_has_been_changed_ ||
+                  nalu_injection_mode_ == NaluInjectionMode::kOff);
+
   if (current_stream_has_been_changed_) {
     // Calling H264Accelerator::SetStream() here instead of when the stream is
     // originally set in case the accelerator needs to return kTryAgain.
@@ -1321,14 +1372,25 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
     H264Parser::Result par_res;
 
     if (!curr_nalu_) {
-      curr_nalu_.reset(new H264NALU());
-      par_res = parser_.AdvanceToNextNALU(curr_nalu_.get());
-      if (par_res == H264Parser::kEOStream)
-        return kRanOutOfStreamData;
-      else if (par_res != H264Parser::kOk)
-        SET_ERROR_AND_RETURN();
+      if (nalu_injection_mode_ == NaluInjectionMode::kOff) {
+        curr_nalu_.reset(new H264NALU());
+        par_res = parser_.AdvanceToNextNALU(curr_nalu_.get());
+        if (par_res == H264Parser::kEOStream)
+          return kRanOutOfStreamData;
+        else if (par_res != H264Parser::kOk)
+          SET_ERROR_AND_RETURN();
 
-      DVLOG(4) << "New NALU: " << static_cast<int>(curr_nalu_->nal_unit_type);
+        DVLOG(4) << "New NALU: " << static_cast<int>(curr_nalu_->nal_unit_type);
+      } else {
+        ZX_DEBUG_ASSERT(nalu_injection_mode_ == NaluInjectionMode::kOn);
+        if (preparsed_nalus_.empty()) {
+          return kRanOutOfStreamData;
+        }
+        curr_nalu_ = std::move(preparsed_nalus_.front());
+        preparsed_nalus_.pop_front();
+        DVLOG(4) << "New preparsed NALU: "
+                 << static_cast<int>(curr_nalu_->nal_unit_type);
+      }
     }
 
     switch (curr_nalu_->nal_unit_type) {
@@ -1355,11 +1417,18 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
         // additional key has been provided, for example), then the remaining
         // steps will be executed.
         if (!curr_slice_hdr_) {
-          curr_slice_hdr_.reset(new H264SliceHeader());
-          par_res =
-              parser_.ParseSliceHeader(*curr_nalu_, curr_slice_hdr_.get());
-          if (par_res != H264Parser::kOk)
-            SET_ERROR_AND_RETURN();
+          if (nalu_injection_mode_ == NaluInjectionMode::kOff) {
+            curr_slice_hdr_.reset(new H264SliceHeader());
+            par_res =
+                parser_.ParseSliceHeader(*curr_nalu_, curr_slice_hdr_.get());
+            if (par_res != H264Parser::kOk)
+              SET_ERROR_AND_RETURN();
+          } else {
+            ZX_DEBUG_ASSERT(nalu_injection_mode_ == NaluInjectionMode::kOn);
+            curr_slice_hdr_ =
+                std::move(curr_nalu_->preparsed_header
+                              .get<std::unique_ptr<H264SliceHeader>>());
+          }
           state_ = kTryPreprocessCurrentSlice;
         }
 
@@ -1402,7 +1471,15 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
         int sps_id;
 
         CHECK_ACCELERATOR_RESULT(FinishPrevFrameIfPresent());
-        par_res = parser_.ParseSPS(&sps_id);
+        if (nalu_injection_mode_ == NaluInjectionMode::kOff) {
+          par_res = parser_.ParseSPS(&sps_id);
+        } else {
+          ZX_DEBUG_ASSERT(nalu_injection_mode_ == NaluInjectionMode::kOn);
+          par_res = parser_.AcceptPreparsedSPS(
+              std::move(
+                  curr_nalu_->preparsed_header.get<std::unique_ptr<H264SPS>>()),
+              &sps_id);
+        }
         if (par_res != H264Parser::kOk)
           SET_ERROR_AND_RETURN();
 
@@ -1429,7 +1506,15 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
         int pps_id;
 
         CHECK_ACCELERATOR_RESULT(FinishPrevFrameIfPresent());
-        par_res = parser_.ParsePPS(&pps_id);
+        if (nalu_injection_mode_ == NaluInjectionMode::kOff) {
+          par_res = parser_.ParsePPS(&pps_id);
+        } else {
+          ZX_DEBUG_ASSERT(nalu_injection_mode_ == NaluInjectionMode::kOn);
+          par_res = parser_.AcceptPreparsedPPS(
+              std::move(
+                  curr_nalu_->preparsed_header.get<std::unique_ptr<H264PPS>>()),
+              &pps_id);
+        }
         if (par_res != H264Parser::kOk)
           SET_ERROR_AND_RETURN();
 
@@ -1453,6 +1538,20 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
     DVLOG(4) << "NALU done";
     curr_nalu_.reset();
   }
+}
+
+void H264Decoder::SetStreamId(int32_t id) {
+  ZX_DEBUG_ASSERT(nalu_injection_mode_ != NaluInjectionMode::kOff);
+  nalu_injection_mode_ = NaluInjectionMode::kOn;
+
+  stream_id_ = id;
+}
+
+void H264Decoder::QueuePreparsedNalu(std::unique_ptr<H264NALU> nalu) {
+  ZX_DEBUG_ASSERT(nalu_injection_mode_ != NaluInjectionMode::kOff);
+  nalu_injection_mode_ = NaluInjectionMode::kOn;
+
+  preparsed_nalus_.emplace_back(std::move(nalu));
 }
 
 gfx::Size H264Decoder::GetPicSize() const {

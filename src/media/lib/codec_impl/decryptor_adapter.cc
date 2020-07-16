@@ -511,7 +511,7 @@ void DecryptorAdapter::ProcessInput() {
     if (is_secure()) {
       SecureOutputBuffer secure_output;
       secure_output.vmo = zx::unowned_vmo(output_buffer->vmo());
-      secure_output.data_offset = output_buffer->offset();
+      secure_output.data_offset = output_buffer->vmo_offset();
       secure_output.data_length = output_buffer->size();
       output = secure_output;
     } else if (IsCoreCodecMappedBufferUseful(kOutputPort)) {

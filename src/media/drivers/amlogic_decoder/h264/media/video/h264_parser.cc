@@ -4,6 +4,8 @@
 
 #include "media/video/h264_parser.h"
 
+#include <algorithm>
+#include <iomanip>
 #include <limits>
 #include <memory>
 
@@ -530,7 +532,7 @@ bool H264Parser::ParseNALUs(const uint8_t* stream,
     H264NALU nalu;
     const H264Parser::Result result = parser.AdvanceToNextNALU(&nalu);
     if (result == H264Parser::kOk) {
-      nalus->push_back(nalu);
+      nalus->emplace_back(std::move(nalu));
     } else if (result == media::H264Parser::kEOStream) {
       return true;
     } else {
@@ -1143,6 +1145,32 @@ H264Parser::Result H264Parser::ParseSPS(int* sps_id) {
   return kOk;
 }
 
+H264Parser::Result H264Parser::AcceptPreparsedSPS(std::unique_ptr<H264SPS> sps,
+                                                  int* sps_id) {
+  *sps_id = -1;
+
+  // For now:
+  //   * Don't set up default lists like ParseSPSScalingLists() does.
+  //   * Ignore FillDefaultSeqScalingLists().
+  //   * Don't calculate expected_delta_per_pic_order_cnt_cycle because never
+  //     used.
+
+  if (sps->pic_order_cnt_type == 1) {
+    base::CheckedNumeric<int> offset_acc = 0;
+    for (int i = 0; i < sps->num_ref_frames_in_pic_order_cnt_cycle; ++i) {
+      offset_acc += sps->offset_for_ref_frame[i];
+    }
+    if (!offset_acc.IsValid())
+      return kInvalidStream;
+  }
+
+  // If an SPS with the same id already exists, replace it.
+  *sps_id = sps->seq_parameter_set_id;
+  active_SPSes_[*sps_id] = std::move(sps);
+
+  return kOk;
+}
+
 H264Parser::Result H264Parser::ParsePPS(int* pps_id) {
   // See 7.4.2.2.
   const H264SPS* sps;
@@ -1161,6 +1189,7 @@ H264Parser::Result H264Parser::ParsePPS(int* pps_id) {
     return kInvalidStream;
   }
 
+  DVLOG(4) << "pps->seq_parameter_set_id: " << pps->seq_parameter_set_id;
   sps = GetSPS(pps->seq_parameter_set_id);
   TRUE_OR_RETURN(sps);
 
@@ -1215,6 +1244,29 @@ H264Parser::Result H264Parser::ParsePPS(int* pps_id) {
   *pps_id = pps->pic_parameter_set_id;
   pps->raw_data = std::vector<uint8_t>(previous_nalu_range_.start(0),
                                        previous_nalu_range_.end(0));
+  active_PPSes_[*pps_id] = std::move(pps);
+
+  return kOk;
+}
+
+H264Parser::Result H264Parser::AcceptPreparsedPPS(std::unique_ptr<H264PPS> pps,
+                                                  int* pps_id) {
+  // See 7.4.2.2.
+  const H264SPS* sps;
+
+  *pps_id = -1;
+
+  if (active_SPSes_.find(pps->seq_parameter_set_id) == active_SPSes_.end()) {
+    DVLOG(1) << "Invalid stream, no SPS id: " << pps->seq_parameter_set_id;
+    return kInvalidStream;
+  }
+
+  DVLOG(4) << "pps->seq_parameter_set_id: " << pps->seq_parameter_set_id;
+  sps = GetSPS(pps->seq_parameter_set_id);
+  TRUE_OR_RETURN(sps);
+
+  // If a PPS with the same id already exists, replace it.
+  *pps_id = pps->pic_parameter_set_id;
   active_PPSes_[*pps_id] = std::move(pps);
 
   return kOk;
@@ -1437,8 +1489,16 @@ H264Parser::Result H264Parser::ParseSliceHeader(const H264NALU& nalu,
   shdr->nalu_data = nalu.data;
   shdr->nalu_size = nalu.size;
 
+  DVLOG(1) << "nbl: " << br_.NumBitsLeft() << " size: " << nalu.size;
+
   READ_UE_OR_RETURN(&shdr->first_mb_in_slice);
   READ_UE_OR_RETURN(&shdr->slice_type);
+  if (shdr->slice_type >= 10) {
+    for (uint32_t i = 0; i < std::min(128LL, nalu.size); ++i) {
+      DVLOG(1) << "nalu[" << i << "] == 0x" << std::setw(2) << std::hex
+               << (int)(nalu.data[i]);
+    }
+  }
   TRUE_OR_RETURN(shdr->slice_type < 10);
 
   READ_UE_OR_RETURN(&shdr->pic_parameter_set_id);
@@ -1446,6 +1506,7 @@ H264Parser::Result H264Parser::ParseSliceHeader(const H264NALU& nalu,
   pps = GetPPS(shdr->pic_parameter_set_id);
   TRUE_OR_RETURN(pps);
 
+  DVLOG(4) << "pps->seq_parameter_set_id: " << pps->seq_parameter_set_id;
   sps = GetSPS(pps->seq_parameter_set_id);
   TRUE_OR_RETURN(sps);
 
@@ -1520,8 +1581,15 @@ H264Parser::Result H264Parser::ParseSliceHeader(const H264NALU& nalu,
     return kUnsupportedStream;
   } else {
     res = ParseRefPicListModifications(shdr);
-    if (res != kOk)
+    if (res != kOk) {
+      DVLOG(1) << "br_.NumBitsLeft(): " << br_.NumBitsLeft()
+               << " nalu.size: " << nalu.size;
+      for (uint32_t i = 0; i < std::min(128LL, nalu.size); ++i) {
+        DVLOG(1) << "nalu[" << i << "] == 0x" << std::setw(2) << std::hex
+                 << (int)(nalu.data[i]);
+      }
       return res;
+    }
   }
 
   if ((pps->weighted_pred_flag && (shdr->IsPSlice() || shdr->IsSPSlice())) ||

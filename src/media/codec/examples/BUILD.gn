@@ -683,6 +683,32 @@ package("vp9_decoder_conformance_http") {
   ]
 }
 
+# Running this binary, the --http=<url> command-line parameter needs to be
+# passed, and the binary won't verify the MD5.  Instead it'll stream the URL
+# data in, parse it as h264, decode it, compute MD5, and output the MD5.
+package("h264-decoder-conformance-http") {
+  testonly = true
+
+  deps = [ "//src/media/codec/examples/use_media_decoder:h264_decoder_conformance_test" ]
+
+  meta = [
+    {
+      path = rebase_path(
+              "use_media_decoder/meta/h264_decoder_conformance_http.cmx")
+      dest = "h264_decoder_conformance_http.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "h264_decoder_conformance_http"
+
+      # We share the binary for now, but this could change.
+      source = "$root_out_dir/h264_decoder_conformance_test"
+    },
+  ]
+}
+
 # Put the below group of vp9 conformance tests last in the file.  Otherwise,
 # with the above __http package last in this file, the build complains about
 # duplicate packages, at least when fx set with these:

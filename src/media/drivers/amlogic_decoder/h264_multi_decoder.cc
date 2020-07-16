@@ -9,12 +9,14 @@
 
 #include <cmath>
 #include <iterator>
+#include <limits>
 
 #include <fbl/algorithm.h>
 
 #include "h264_utils.h"
 #include "media/base/decoder_buffer.h"
 #include "media/gpu/h264_decoder.h"
+#include "media/video/h264_level_limits.h"
 #include "parser.h"
 #include "registers.h"
 #include "util.h"
@@ -24,6 +26,26 @@ namespace {
 // See VLD_PADDING_SIZE.
 constexpr uint32_t kPaddingSize = 1024;
 const uint8_t kPadding[kPaddingSize] = {};
+
+// ISO 14496 part 10
+// VUI parameters: Table E-1 "Meaning of sample aspect ratio indicator"
+static const int kTableSarWidth[] = {0,  1,  12, 10, 16,  40, 24, 20, 32,
+                                     80, 18, 15, 64, 160, 4,  3,  2};
+static const int kTableSarHeight[] = {0,  1,  11, 11, 11, 33, 11, 11, 11,
+                                      33, 11, 11, 33, 99, 3,  2,  1};
+static_assert(base::size(kTableSarWidth) == base::size(kTableSarHeight),
+              "sar tables must have the same size");
+
+enum class ChromaFormatIdc : uint32_t {
+  kMonochrome = 0,
+  // Presently only 4:2:0 chroma_format_idc is supported:
+  k420 = 1,
+  k422 = 2,
+  k444 = 3,
+};
+
+static constexpr uint32_t kMacroblockDimension = 16;
+
 }  // namespace
 
 class AmlogicH264Picture : public media::H264Picture {
@@ -57,18 +79,11 @@ class MultiAccelerator : public media::H264Decoder::H264Accelerator {
                              const media::H264Picture::Vector& ref_pic_listb1,
                              scoped_refptr<media::H264Picture> pic) override {
     DLOG("Got MultiAccelerator::SubmitFrameMetadata");
-    // Only allow decoding one frame at a time. The received picture interrupt will set this to
-    // false and trigger PumpDecoder again.
-    if (owner_->currently_decoding())
-      return Status::kTryAgain;
+    ZX_DEBUG_ASSERT(owner_->currently_decoding());
     auto ref_pic = static_cast<AmlogicH264Picture*>(pic.get())->internal_picture.lock();
     if (!ref_pic)
       return Status::kFail;
-    constexpr uint8_t kHeader[] = {0, 0, 1};
-    owner_->SubmitDataToHardware(kHeader, sizeof(kHeader));
-    owner_->SubmitDataToHardware(sps->raw_data.data(), sps->raw_data.size());
-    owner_->SubmitDataToHardware(kHeader, sizeof(kHeader));
-    owner_->SubmitDataToHardware(pps->raw_data.data(), pps->raw_data.size());
+    // struct copy
     current_sps_ = *sps;
     owner_->SubmitFrameMetadata(ref_pic.get(), sps, pps, dpb);
     return Status::kOk;
@@ -79,15 +94,14 @@ class MultiAccelerator : public media::H264Decoder::H264Accelerator {
                      const media::H264Picture::Vector& ref_pic_list1,
                      scoped_refptr<media::H264Picture> pic, const uint8_t* data, size_t size,
                      const std::vector<media::SubsampleEntry>& subsamples) override {
-    if (owner_->currently_decoding())
-      return Status::kTryAgain;
+    ZX_DEBUG_ASSERT(owner_->currently_decoding());
     DLOG("Got MultiAccelerator::SubmitSlice");
-    constexpr uint8_t kHeader[] = {0, 0, 1};
-    owner_->SubmitDataToHardware(kHeader, sizeof(kHeader));
-    owner_->SubmitDataToHardware(data, size);
     H264MultiDecoder::SliceData slice_data;
+    // struct copy
     slice_data.sps = current_sps_;
+    // struct copy
     slice_data.pps = *pps;
+    // struct copy
     slice_data.header = *slice_hdr;
     slice_data.pic = pic;
     slice_data.ref_pic_list0 = ref_pic_list0;
@@ -97,14 +111,11 @@ class MultiAccelerator : public media::H264Decoder::H264Accelerator {
   }
 
   Status SubmitDecode(scoped_refptr<media::H264Picture> pic) override {
-    if (owner_->currently_decoding())
-      return Status::kTryAgain;
+    ZX_DEBUG_ASSERT(owner_->currently_decoding());
     auto ref_pic = static_cast<AmlogicH264Picture*>(pic.get())->internal_picture.lock();
     if (!ref_pic)
       return Status::kFail;
     DLOG("Got MultiAccelerator::SubmitDecode picture %d", ref_pic->index);
-    owner_->SubmitDataToHardware(kPadding, kPaddingSize);
-    owner_->StartFrameDecode();
     return Status::kOk;
   }
 
@@ -121,6 +132,7 @@ class MultiAccelerator : public media::H264Decoder::H264Accelerator {
 
   Status SetStream(base::span<const uint8_t> stream,
                    const media::DecryptConfig* decrypt_config) override {
+    ZX_DEBUG_ASSERT_MSG(false, "unreachable");
     return Status::kOk;
   }
 
@@ -152,6 +164,17 @@ class StreamInfo : public TypedRegisterBase<DosRegisterIo, StreamInfo, uint32_t>
   DEF_FIELD(7, 0, width_in_mbs);
   DEF_FIELD(23, 8, total_mbs);
 
+  // The upper_signficant bits are provided back to HW in some cases, but we don't (yet) know if
+  // these bits really matter for that purpose.
+  //
+  // The amlogic code considers upper_signficant bits when determining whether to allocate buffers,
+  // but this driver doesn't.
+  DEF_FIELD(30, 24, upper_significant);
+
+  // This bit is not provided back to HW, and not considered by amlogic code or this driver for
+  // determining whether to allocate buffers.
+  DEF_FIELD(31, 31, insignificant);
+
   static auto Get() { return AddrType(0x09c1 * 4); }
 };
 
@@ -165,11 +188,25 @@ class SequenceInfo : public TypedRegisterBase<DosRegisterIo, SequenceInfo, uint3
   // relatively lower-confidence vs. other bits - not confirmed
   DEF_BIT(6, fixed_frame_rate_flag);
 
+  // This apparently is reliably 3 for 4:2:2 separate color plane, or not 3.
+  // For non-IDC 4:2:0 frames, this can be 0 instead of the 1 it seems like it should be.
   DEF_FIELD(14, 13, chroma_format_idc);
   DEF_BIT(15, frame_mbs_only_flag);
   DEF_FIELD(23, 16, aspect_ratio_idc);
 
   static auto Get() { return AddrType(0x09c2 * 4); }
+};
+
+// AvScratch6
+class CropInfo : public TypedRegisterBase<DosRegisterIo, CropInfo, uint32_t> {
+ public:
+  // All quantities are the number of pixels to be cropped from each side.
+  DEF_FIELD(7, 0, bottom);
+  DEF_FIELD(15, 8, top);  // Ignored and unconfirmed
+  DEF_FIELD(23, 16, right);
+  DEF_FIELD(31, 24, left);  // Ignored and unconfirmed
+
+  static auto Get() { return AddrType(0x09c6 * 4); }
 };
 
 // AvScratchB
@@ -244,7 +281,7 @@ H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvid
     : VideoDecoder(owner, client, is_secure), frame_data_provider_(provider) {
   media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<MultiAccelerator>(this),
                                                         media::H264PROFILE_HIGH);
-  use_parser_ = is_secure;
+  use_parser_ = true;
 }
 
 H264MultiDecoder::~H264MultiDecoder() {
@@ -371,7 +408,7 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
   // Lmem is used to dump the AMRISC's local memory, which is needed for updating the DPB.
   constexpr uint32_t kLmemBufSize = 4096;
   auto lmem_create_result =
-      InternalBuffer::CreateAligned("H264AuxBuf", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
+      InternalBuffer::CreateAligned("H264Lmem", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
                                     kLmemBufSize, kBufferAlignment, /*is_secure=*/false,
                                     /*is_writable=*/true, /*is_mapping_needed*/ true);
   if (!lmem_create_result.is_ok()) {
@@ -500,17 +537,16 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
 
   // TODO(fxb/13483): Set to 1 when SEI is supported.
   NalSearchCtl::Get().FromValue(0).WriteTo(owner_->dosbus());
-  state_ = DecoderState::kInitialWaitingForInput;
+  state_ = DecoderState::kWaitingForInputOrOutput;
   return ZX_OK;
 }
 
 void H264MultiDecoder::StartFrameDecode() {
-  ZX_DEBUG_ASSERT(state_ == DecoderState::kInitialWaitingForInput ||
-                  state_ == DecoderState::kStoppedWaitingForInput);
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForInputOrOutput);
   currently_decoding_ = true;
 
   // For now, just use the decode size from InitializeHardware.
-  if (state_ == DecoderState::kInitialWaitingForInput) {
+  if (state_ == DecoderState::kWaitingForInputOrOutput) {
     // TODO(fxb/13483): Use real value.
     constexpr uint32_t kBytesToDecode = 100000;
     ViffBitCnt::Get().FromValue(kBytesToDecode * 8).WriteTo(owner_->dosbus());
@@ -523,8 +559,36 @@ void H264MultiDecoder::StartFrameDecode() {
 
 void H264MultiDecoder::ConfigureDpb() {
   ZX_DEBUG_ASSERT(currently_decoding_);
-  ZX_DEBUG_ASSERT(!video_frames_.empty());
-  auto stream_info = StreamInfo::Get().ReadFrom(owner_->dosbus());
+  owner_->watchdog()->Cancel();
+
+  // The HW is told to continue decoding by writing DPB sizes to AvScratch0.  This can happen
+  // immediately if the BufferCollection is already suitable, or after new sysmem allocation if
+  // BufferCollection isn't suitable.
+
+  // StreamInfo (aka AvScratch1)
+  const auto seq_info2_value = StreamInfo::Get().ReadFrom(owner_->dosbus()).reg_value();
+  auto seq_info2_tmp = StreamInfo::Get().FromValue(seq_info2_value);
+  seq_info2_tmp.set_insignificant(0);
+  // For local use in this method.
+  const auto stream_info = StreamInfo::Get().FromValue(seq_info2_tmp.reg_value());
+  // Stash for potentially restoring state in InitializeHardware().
+  seq_info2_ = stream_info.reg_value();
+
+  // SequenceInfo (aka AvScratch2)
+  const auto sequence_info = SequenceInfo::Get().ReadFrom(owner_->dosbus());
+
+  // CropInfo (aka AvScratch6)
+  const auto crop_info = CropInfo::Get().ReadFrom(owner_->dosbus());
+
+  // StreamInfo2 (aka AvScratchB)
+  const auto stream_info2 = StreamInfo2::Get().ReadFrom(owner_->dosbus());
+
+  if (!sequence_info.frame_mbs_only_flag()) {
+    LOG(ERROR, "!sequence_info.frame_mbs_only_flag() - not supported");
+    OnFatalError();
+    return;
+  }
+
   uint32_t mb_width = stream_info.width_in_mbs();
   // The maximum supported image width is 4096 bytes. The value of width_in_mbs should be 256 in
   // that case, but it wraps around since the field is only 8 bits. We need to correct for that
@@ -537,69 +601,175 @@ void H264MultiDecoder::ConfigureDpb() {
     return;
   }
   uint32_t mb_height = stream_info.total_mbs() / mb_width;
-  // Check that the values derived from the stream buffer contents match the input that was parsed
-  // through media::H264Decoder.
-  if (mb_width != mb_width_ || mb_height != mb_height_) {
-    DECODE_ERROR("Non-matching mb_width %d mb_width_ %d mb_height %d mb_height_ %d", mb_width,
-                 mb_width_, mb_height, mb_height_);
+
+  uint32_t coded_width = mb_width * 16;
+  uint32_t coded_height = mb_height * 16;
+  constexpr uint32_t kMaxDimension = 4096;  // for both width and height.
+  if (coded_width > kMaxDimension || coded_height > kMaxDimension) {
+    LOG(ERROR, "Unsupported dimensions %dx%d", coded_width, coded_height);
     OnFatalError();
     return;
   }
-  seq_info2_ = AvScratch1::Get().ReadFrom(owner_->dosbus()).reg_value();
-  for (auto& frame : video_frames_) {
-    AncNCanvasAddr::Get(frame->index)
-        .FromValue((frame->uv_canvas->index() << 16) | (frame->uv_canvas->index() << 8) |
-                   (frame->y_canvas->index()))
-        .WriteTo(owner_->dosbus());
+
+  uint32_t stride = fbl::round_up(coded_width, 32u);
+  if (coded_width <= crop_info.right()) {
+    LOG(ERROR, "coded_width <= crop_info.right()");
+    OnFatalError();
+    return;
   }
-  AvScratch0::Get()
-      .FromValue(static_cast<uint32_t>((next_max_reference_size_ << 24) |
-                                       (video_frames_.size() << 16) | (video_frames_.size() << 8)))
-      .WriteTo(owner_->dosbus());
-}
-
-// This struct contains parameters for the current frame that are dumped from
-// lmem
-struct HardwareRenderParams {
-  uint16_t data[0x400];
-  static constexpr uint32_t kOffsetDelimiterLo = 0x2f;
-  static constexpr uint32_t kOffsetDelimiterHi = 0x30;
-
-  static constexpr uint32_t kNewPictureStructure = 0x7c;
-  static constexpr uint32_t kNalUnitType = 0x80;
-  static constexpr uint32_t kNalRefIdc = 0x81;
-  static constexpr uint32_t kSliceType = 0x82;
-  static constexpr uint32_t kLog2MaxFrameNum = 0x83;
-  static constexpr uint32_t kPicOrderCntType = 0x85;
-  static constexpr uint32_t kLog2MaxPicOrderCntLsb = 0x86;
-  static constexpr uint32_t kMode8x8Flag = 0x8c;
-  static constexpr uint32_t kEntropyCodingModeFlag = 0x8d;
-  static constexpr uint32_t kProfileIdcMmco = 0xe7;
-
-  // offset to dpb_max_buffer_frame.
-  static constexpr uint32_t kDpbStructStart = 0x100 + 24 * 8;
-  static constexpr uint32_t kPicOrderCntLsb = kDpbStructStart + 14;
-  static constexpr uint32_t kDeltaPicOrderCntBottom0 = kDpbStructStart + 19;
-  static constexpr uint32_t kDeltaPicOrderCntBottom1 = kDpbStructStart + 20;
-
-  // Read a pair of entries starting at |offset| as a 32-bit number.
-  uint32_t Read32(uint32_t offset) {
-    // Little endian.
-    return data[offset] | (static_cast<uint32_t>(data[offset + 1]) << 16);
+  uint32_t display_width = coded_width - crop_info.right();
+  if (coded_height <= crop_info.bottom()) {
+    LOG(ERROR, "coded_height <= crop_info.bottom()");
+    OnFatalError();
+    return;
   }
+  uint32_t display_height = coded_height - crop_info.bottom();
 
-  void ReadFromLmem(InternalBuffer* lmem) {
-    lmem->CacheFlushInvalidate(0, sizeof(data));
-    uint16_t* input_params = reinterpret_cast<uint16_t*>(lmem->virt_base());
+  // Compute max_dpb_size.  For a conformant stream, max_num_ref_frames is in the range
+  // 0..max_dpb_frames, but take the max below anyway.  This is mostly adapted from H264Decoder's
+  // DPB sizing code (but we need to know the DPB size before the fake SPS is with H264Decoder).
+  uint32_t max_num_ref_frames = stream_info2.max_reference_size();
+  uint32_t level = stream_info2.level_idc();
+  if (level != 0) {
+    hw_level_idc_ = level;
+  } else {
+    level = hw_level_idc_;
+  }
+  if (level == 0) {
+    LOG(ERROR, "level == 0");
+    OnFatalError();
+    return;
+  }
+  if (level > std::numeric_limits<uint8_t>::max()) {
+    LOG(ERROR, "level > std::numeric_limits<uint8_t>()::max()");
+    OnFatalError();
+    return;
+  }
+  uint32_t max_dpb_mbs = media::H264LevelToMaxDpbMbs(static_cast<uint8_t>(level));
+  if (!max_dpb_mbs) {
+    LOG(ERROR, "!max_dpb_mbs");
+    OnFatalError();
+    return;
+  }
+  // MaxDpbFrames from level limits per spec.
+  uint32_t max_dpb_frames = std::min(max_dpb_mbs / (mb_width * mb_height),
+                                     static_cast<uint32_t>(media::H264DPB::kDPBMaxSize));
+  // Set DPB size to at least the level limit, or what the stream requires.
+  uint32_t max_dpb_size = std::max(max_dpb_frames, max_num_ref_frames);
 
-    // Convert from middle-endian.
-    for (uint32_t i = 0; i < std::size(data); i += 4) {
-      for (uint32_t j = 0; j < 4; j++) {
-        data[i + j] = input_params[i + (3 - j)];
-      }
+  uint32_t min_frame_count =
+      std::min(max_dpb_size, static_cast<uint32_t>(media::H264DPB::kDPBMaxSize)) + 1;
+  static constexpr uint32_t max_frame_count = 24;
+
+  // Now we determine if new buffers are needed, and whether we need to re-config the decoder's
+  // notion of the buffers.
+  bool new_buffers_needed = false;
+  bool config_update_needed = false;
+  if (video_frames_.empty()) {
+    new_buffers_needed = true;
+    config_update_needed = true;
+  }
+  if (!new_buffers_needed && !client_->IsCurrentOutputBufferCollectionUsable(
+                                 min_frame_count, max_frame_count, coded_width, coded_height,
+                                 stride, display_width, display_height)) {
+    new_buffers_needed = true;
+  }
+  if (new_buffers_needed) {
+    config_update_needed = true;
+  }
+  if (!config_update_needed) {
+    if (hw_coded_width_ != coded_width || hw_coded_height_ != coded_height ||
+        hw_stride_ != stride || hw_display_width_ != display_width ||
+        hw_display_height_ != display_height) {
+      config_update_needed = true;
     }
   }
-};
+  ZX_DEBUG_ASSERT(!new_buffers_needed || config_update_needed);
+  // For the moment, force new_buffers_needed if config_update_needed.
+  //
+  // TODO(dustingreen): Don't do this, and make sure we leave still-used downstream frames intact
+  // until they're returned despite switching the frames to new image size within the existing
+  // buffers (in preparation for emitting them again later at the new size).
+  if (config_update_needed) {
+    new_buffers_needed = true;
+  }
+
+  if (!new_buffers_needed && !config_update_needed) {
+    // Tell HW to continue immediately.
+    AvScratch0::Get()
+        .FromValue(static_cast<uint32_t>((next_max_reference_size_ << 24) |
+                                         (video_frames_.size() << 16) |
+                                         (video_frames_.size() << 8)))
+        .WriteTo(owner_->dosbus());
+    owner_->watchdog()->Start();
+    return;
+  }
+
+  if (new_buffers_needed) {
+    // This also excludes separate_colour_plane_flag true.
+    if (sequence_info.chroma_format_idc() != static_cast<uint32_t>(ChromaFormatIdc::k420) &&
+        sequence_info.chroma_format_idc() != static_cast<uint32_t>(ChromaFormatIdc::kMonochrome)) {
+      LOG(ERROR,
+          "sequence_info.chroma_format_idc() not in {k420, kMonochrome} - "
+          "sequence_info.chroma_format_idc(): %u",
+          sequence_info.chroma_format_idc());
+      OnFatalError();
+      return;
+    }
+
+    state_ = DecoderState::kWaitingForConfigChange;
+    // Don't tell core to StopDecoding() - currently_decoding_ remains true.
+    ZX_DEBUG_ASSERT(currently_decoding_);
+    if (!media_decoder_->Flush()) {
+      LOG(ERROR, "!media_decoder_->Flush()");
+      OnFatalError();
+      return;
+    }
+    OutputReadyFrames();
+    ZX_DEBUG_ASSERT(frames_to_output_.empty());
+    video_frames_.clear();
+
+    // TODO(fxb/13483): Reset initial I frame tracking if FW doesn't do that itself.
+
+    // This is doing the same thing as the amlogic code, but it's unlikely to matter.  This has
+    // basically nothing to do with the DPB size, and is just round-tripping a number back to the HW
+    // like the amlogic code does.  The actual DPB size is separate (and also conveyed to the HW).
+    // Since all the DPB management is in SW, it's unlikely that the FW or HW really cares about
+    // this value, but just in case the HW would get annoyed, plumb this value.
+    static constexpr uint32_t kHwMaxReferenceSizeAdjustment = 4;
+    next_max_reference_size_ = stream_info2.max_reference_size() + kHwMaxReferenceSizeAdjustment;
+
+    zx::bti bti;
+    zx_status_t status = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &bti);
+    if (status != ZX_OK) {
+      DECODE_ERROR("bti duplicate failed, status: %d\n", status);
+      return;
+    }
+
+    pending_display_width_ = display_width;
+    pending_display_height_ = display_height;
+    // We handle SAR on the fly in this decoder since we don't get SAR until the slice header shows
+    // up.  Or rather, that's when amlogic code gets SAR from the FW, so stick with that to avoid
+    // reading at a different time than is known to work.
+    static constexpr bool kHasSar = false;
+    static constexpr uint32_t kSarWidth = 1;
+    static constexpr uint32_t kSarHeight = 1;
+    client_->InitializeFrames(std::move(bti), min_frame_count, max_frame_count, coded_width,
+                              coded_height, stride, display_width, display_height, kHasSar,
+                              kSarWidth, kSarHeight);
+    waiting_for_surfaces_ = true;
+    owner_->TryToReschedule();
+    return;
+  }
+
+  if (config_update_needed) {
+    // To be implemented and made reachable later maybe - higher priority would be keeping the same
+    // buffers on seeking a stream though.  Presently the HW frame config update is happening in
+    // InitializedFrames() directly, but we could factor that out and share it with this location.
+    // This path would require not clearing video_frames_.
+    ZX_PANIC("currently unreachable");
+  }
+}
 
 bool H264MultiDecoder::InitializeRefPics(
     const std::vector<std::shared_ptr<media::H264Picture>>& ref_pic_list, uint32_t reg_offset) {
@@ -639,62 +809,625 @@ bool H264MultiDecoder::InitializeRefPics(
 
 void H264MultiDecoder::HandleSliceHeadDone() {
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   owner_->watchdog()->Cancel();
   // Setup reference frames and output buffers before decoding.
-  HardwareRenderParams params;
-  params.ReadFromLmem(&*lmem_);
-  DLOG("NAL unit type: %d\n", params.data[HardwareRenderParams::kNalUnitType]);
-  DLOG("NAL ref_idc: %d\n", params.data[HardwareRenderParams::kNalRefIdc]);
-  DLOG("NAL slice_type: %d\n", params.data[HardwareRenderParams::kSliceType]);
-  DLOG("pic order cnt type: %d\n", params.data[HardwareRenderParams::kPicOrderCntType]);
-  DLOG("log2_max_frame_num: %d\n", params.data[HardwareRenderParams::kLog2MaxFrameNum]);
-  DLOG("log2_max_pic_order_cnt: %d\n", params.data[HardwareRenderParams::kLog2MaxPicOrderCntLsb]);
-  DLOG("entropy coding mode flag: %d\n", params.data[HardwareRenderParams::kEntropyCodingModeFlag]);
-  DLOG("profile idc mmc0: %d\n", params.data[HardwareRenderParams::kProfileIdcMmco]);
-  DLOG("Offset delimiter %d", params.Read32(HardwareRenderParams::kOffsetDelimiterLo));
-  DLOG("Mode 8x8 flags: 0x%x\n", params.data[HardwareRenderParams::kMode8x8Flag]);
-  current_frame_ = current_metadata_frame_;
-  if (slice_data_list_.empty()) {
-    DECODE_ERROR("No slice data for frame");
-    frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
-    return;
+  params_.ReadFromLmem(&*lmem_);
+  DLOG("NAL unit type: %d\n", params_.data[HardwareRenderParams::kNalUnitType]);
+  DLOG("NAL ref_idc: %d\n", params_.data[HardwareRenderParams::kNalRefIdc]);
+  DLOG("NAL slice_type: %d\n", params_.data[HardwareRenderParams::kSliceType]);
+  DLOG("pic order cnt type: %d\n", params_.data[HardwareRenderParams::kPicOrderCntType]);
+  DLOG("log2_max_frame_num: %d\n", params_.data[HardwareRenderParams::kLog2MaxFrameNum]);
+  DLOG("log2_max_pic_order_cnt: %d\n", params_.data[HardwareRenderParams::kLog2MaxPicOrderCntLsb]);
+  DLOG("entropy coding mode flag: %d\n",
+       params_.data[HardwareRenderParams::kEntropyCodingModeFlag]);
+  DLOG("profile idc mmc0: %d\n", (params_.data[HardwareRenderParams::kProfileIdcMmco] >> 8) & 0xff);
+  DLOG("Offset delimiter %d", params_.Read32(HardwareRenderParams::kOffsetDelimiterLo));
+  DLOG("Mode 8x8 flags: 0x%x\n", params_.data[HardwareRenderParams::kMode8x8Flags]);
+
+  // Don't need StreamInfo here - saved anything needed from there in ConfigureDpb().
+  //
+  // SequenceInfo (aka AvScratch2, aka "seq_info")
+  const auto sequence_info = SequenceInfo::Get().ReadFrom(owner_->dosbus());
+  // CropInfo (aka AvScratch6, aka "crop_infor")
+  const auto crop_info = CropInfo::Get().ReadFrom(owner_->dosbus());
+  // StreamInfo2 (aka AvScratchB, aka "param4" aka "reg_val")
+  const auto stream_info2 = StreamInfo2::Get().ReadFrom(owner_->dosbus());
+
+  // At this point, we queue some post-parsing NALUs to H264Decoder.  Specifically, SPS, PPS (TBD),
+  // and slice header.  Then we call H264Decoder::Decode() which processes those queued NALUs to
+  // basically catch the H264Decoder up to roughly where the HW is on the slice the HW just
+  // indicated with an interrupt.
+  //
+  // Probably we could queue fewer SPS and PPS headers, but queuing before every picture works.
+  //
+  // Any "not avaialable from FW" comments below should be read as "not obviously avaialble from
+  // FW, but maybe?".
+  //
+  // TODO(fxb/13483): Test with multi-slice pictures.
+
+  // SPS
+  //
+  // This set of fields is not necessarily the minimum necessary set for this driver to work.  Nor
+  // is this set of fields complete, as not all fields are available from the FW.
+
+  auto sps_nalu = std::make_unique<media::H264NALU>();
+  {  // scope sps
+    ZX_DEBUG_ASSERT(!sps_nalu->data);
+    ZX_DEBUG_ASSERT(!sps_nalu->size);
+    // Just needs to be non-zero for SPS; not available from FW but doesn't matter.
+    sps_nalu->nal_ref_idc = 1;
+    sps_nalu->nal_unit_type = media::H264NALU::kSPS;
+    auto sps = std::make_unique<media::H264SPS>();
+
+    // These are what's known to be available from FW:
+    sps->profile_idc = (params_.data[HardwareRenderParams::kProfileIdcMmco] >> 8) & 0xff;
+    // These aren't available from FW, as far as I know:
+    // constraint_set0_flag
+    // constraint_set1_flag
+    // constraint_set2_flag
+    // constraint_set3_flag
+    // constraint_set4_flag
+    // constraint_set5_flag
+    //
+    // We'd like to have constraint_set3_flag, but the FW doesn't seem able to provide that.  In
+    // H264Decoder::ProcessSPS(), this means we'll assume level == 11 instead of 9, which is
+    // ok, because assuming 11 (vs 9) leads to higher limits not lower.
+    sps->level_idc = params_.data[HardwareRenderParams::kLevelIdcMmco];
+    sps->seq_parameter_set_id = params_.data[HardwareRenderParams::kCurrentSpsId];
+    if (sps->seq_parameter_set_id >= 32) {
+      LOG(ERROR, "sps->seq_parameter_set_id >= 32");
+      OnFatalError();
+      return;
+    }
+    sps->chroma_format_idc = sequence_info.chroma_format_idc();
+    // These aren't available from FW:
+    // separate_colour_plane_flag
+    // bit_depth_luma_minus8
+    // bit_depth_chroma_minus8
+    // qpprime_y_zero_transform_bypass_flag
+    // seq_scaling_matrix_present_flag
+    // scaling_list4x4
+    // scaling_list8x8
+    sps->log2_max_frame_num_minus4 = params_.data[HardwareRenderParams::kLog2MaxFrameNum] - 4;
+    if (sps->log2_max_frame_num_minus4 >= 13) {
+      LOG(ERROR, "sps->log2_max_frame_num_minus4 >= 13");
+      OnFatalError();
+      return;
+    }
+    sps->pic_order_cnt_type = params_.data[HardwareRenderParams::kPicOrderCntType];
+    sps->log2_max_pic_order_cnt_lsb_minus4 =
+        params_.data[HardwareRenderParams::kLog2MaxPicOrderCntLsb] - 4;
+    sps->delta_pic_order_always_zero_flag =
+        params_.data[HardwareRenderParams::kDeltaPicOrderAlwaysZeroFlag];
+    sps->offset_for_non_ref_pic =
+        static_cast<int16_t>(params_.data[HardwareRenderParams::kOffsetForNonRefPic]);
+    sps->offset_for_top_to_bottom_field =
+        static_cast<int16_t>(params_.data[HardwareRenderParams::kOffsetForTopToBottomField]);
+    sps->num_ref_frames_in_pic_order_cnt_cycle =
+        params_.data[HardwareRenderParams::kNumRefFramesInPicOrderCntCycle];
+    ZX_DEBUG_ASSERT(sps->num_ref_frames_in_pic_order_cnt_cycle >= 0);
+    if (static_cast<uint32_t>(sps->num_ref_frames_in_pic_order_cnt_cycle) >
+        HardwareRenderParams::kMaxNumRefFramesInPicOrderCntCycle) {
+      LOG(ERROR,
+          "sps->num_ref_frames_in_pic_order_cnt_cycle > kMaxNumRefFramesInPicOrderCntCycle (128) - "
+          "FW supports up to 128 (not 255) - value: %d",
+          sps->num_ref_frames_in_pic_order_cnt_cycle);
+      OnFatalError();
+      return;
+    }
+    // No point in setting sps->expected_delta_per_pic_order_cnt_cycle because never used.
+    for (uint32_t i = 0; i < HardwareRenderParams::kMaxNumRefFramesInPicOrderCntCycle; ++i) {
+      sps->offset_for_ref_frame[i] =
+          static_cast<int16_t>(params_.data[HardwareRenderParams::kOffsetForRefFrameBase + i]);
+    }
+    sps->max_num_ref_frames = params_.data[HardwareRenderParams::kMaxReferenceFrameNum];
+    ZX_DEBUG_ASSERT(static_cast<uint32_t>(sps->max_num_ref_frames) ==
+                    stream_info2.max_reference_size());
+    sps->gaps_in_frame_num_value_allowed_flag =
+        params_.data[HardwareRenderParams::kFrameNumGapAllowed];
+
+    ZX_DEBUG_ASSERT(hw_coded_width_ / kMacroblockDimension ==
+                    params_.data[HardwareRenderParams::kMbWidth]);
+    ZX_DEBUG_ASSERT(hw_coded_height_ / kMacroblockDimension ==
+                    params_.data[HardwareRenderParams::kMbHeight]);
+    sps->pic_width_in_mbs_minus1 = (hw_coded_width_ / kMacroblockDimension) - 1;
+    // Because frame_mbs_only_flag true, we know this is in units of MBs.
+    sps->pic_height_in_map_units_minus1 = (hw_coded_height_ / kMacroblockDimension) - 1;
+
+    // Also available via SCRATCH2 during FW config request; more convenient to get this way though.
+    sps->frame_mbs_only_flag = params_.data[HardwareRenderParams::kFrameMbsOnlyFlag];
+    if (!sps->frame_mbs_only_flag) {
+      LOG(ERROR, "!sps->frame_mbs_only_flag - not supported");
+      OnFatalError();
+      return;
+    }
+    sps->mb_adaptive_frame_field_flag = !!(params_.data[HardwareRenderParams::kMbffInfo] & 0x2);
+    // ignoring direct_8x8_inference_flag - might be in kMode8x8Flags
+    sps->frame_cropping_flag = (params_.data[HardwareRenderParams::kCroppingLeftRight] ||
+                                params_.data[HardwareRenderParams::kCroppingTopBottom]);
+    sps->frame_crop_left_offset = params_.data[HardwareRenderParams::kCroppingLeftRight] >> 8;
+    sps->frame_crop_right_offset = params_.data[HardwareRenderParams::kCroppingLeftRight] & 0xff;
+    sps->frame_crop_top_offset = params_.data[HardwareRenderParams::kCroppingTopBottom] >> 8;
+    sps->frame_crop_bottom_offset = params_.data[HardwareRenderParams::kCroppingTopBottom] & 0xff;
+    ZX_DEBUG_ASSERT(crop_info.left() == static_cast<uint32_t>(sps->frame_crop_left_offset));
+    ZX_DEBUG_ASSERT(crop_info.right() == static_cast<uint32_t>(sps->frame_crop_right_offset));
+    ZX_DEBUG_ASSERT(crop_info.top() == static_cast<uint32_t>(sps->frame_crop_top_offset));
+    ZX_DEBUG_ASSERT(crop_info.bottom() == static_cast<uint32_t>(sps->frame_crop_bottom_offset));
+
+    // Re. VUI, we only extract sar_width and sar_height, not any other parameters under
+    // vui_parameters_present_flag, for now.  In particular we ignore bitstream_restriction_flag
+    // from FW since the FW doesn't provide max_num_reorder_frames, max_dec_frame_buffering.
+    //
+    // TODO(dustingreen): Try to determine if data[kDpbBufferInfo] has max_num_reorder_frames and
+    // max_dec_frame_buffering.
+    bool aspect_ratio_info_present_flag =
+        !!(params_.data[HardwareRenderParams::kVuiStatus] &
+           HardwareRenderParams::kVuiStatusMaskAspectRatioInfoPresentFlag);
+    // Some of the following could be shared with ParseVUIParameters() - it's not a lot of redundant
+    // code though; we just need to get sar_width and sar_height filled out (or left zero, as
+    // appropriate)
+    ZX_DEBUG_ASSERT(!sps->sar_width);
+    ZX_DEBUG_ASSERT(!sps->sar_height);
+    if (aspect_ratio_info_present_flag) {
+      uint16_t aspect_ratio_idc = params_.data[HardwareRenderParams::kAspectRatioIdc];
+      if (aspect_ratio_idc == media::H264SPS::kExtendedSar) {
+        sps->sar_width = params_.data[HardwareRenderParams::kAspectRatioSarWidth];
+        sps->sar_height = params_.data[HardwareRenderParams::kAspectRatioSarHeight];
+      } else {
+        if (aspect_ratio_idc >= countof(kTableSarWidth)) {
+          LOG(ERROR, "spect_ratio_idc >= countof(kTableSarWidth)");
+          OnFatalError();
+          return;
+        }
+        sps->sar_width = kTableSarWidth[aspect_ratio_idc];
+        sps->sar_height = kTableSarHeight[aspect_ratio_idc];
+      }
+    }
+    sps->vui_parameters_present_flag = aspect_ratio_info_present_flag;
+
+    // We intentionally don't ever set bitstream_restriction_flag since it doesn't appear we can get
+    // the sub-values from the FW:
+    // max_num_reorder_frames
+    // max_dec_frame_buffering
+    //
+    // We'd like to have max_dec_frame_buffering, but it seems the FW only provides
+    // kMaxReferenceFrameNum (aka max_num_ref_frames).
+
+    // We intentionally don't set these because they're not used:
+    // timing_info_present_flag
+    // num_units_in_tick
+    // time_scale
+    // fixed_frame_rate_flag
+
+    // We intentionally don't set these because they're not used:
+    // video_signal_type_present_flag
+    // video_format
+    // video_full_range_flag
+    // colour_description_present_flag
+    // colour_primaries
+    // transfer_characteristics
+    // matrix_coefficients
+
+    // We intentionally don't set these because they're not used:
+    // nal_hrd_parameters_present_flag
+    // cpb_cnt_minus1
+    // bit_rate_scale
+    // cpb_size_scale
+    // bit_rate_value_minus1
+    // cpb_size_value_minus1
+    // cbr_flag
+    // initial_cpb_removal_delay_length_minus_1
+    // cpb_removal_delay_length_minus1
+    // dpb_output_delay_length_minus1
+    // time_offset_length
+    // low_delay_hrd_flag
+
+    // We intentionally don't set chroma_array_type because we don't support
+    // separate_colour_plane_flag true, so chroma_array_type should be 0.
+    ZX_DEBUG_ASSERT(sps->chroma_array_type == 0);
+
+    ZX_DEBUG_ASSERT(sizeof(current_sps_) == sizeof(*sps.get()));
+    if (memcmp(&current_sps_, sps.get(), sizeof(current_sps_))) {
+      // struct copy
+      current_sps_ = *sps;
+      sps_nalu->preparsed_header.emplace<std::unique_ptr<media::H264SPS>>(std::move(sps));
+    } else {
+      sps_nalu.reset();
+    }
+  }  // ~sps
+
+  // PPS
+  //
+  // This set of fields is not necessarily the minimum necessary set for this driver to work.  Nor
+  // is this set of fields complete, as not all fields are available from the FW.
+
+  auto pps_nalu = std::make_unique<media::H264NALU>();
+  {  // scope pps
+    ZX_DEBUG_ASSERT(!pps_nalu->data);
+    ZX_DEBUG_ASSERT(!pps_nalu->size);
+    // Just needs to be on-zero for PPS; not available from FW but doesn't matter.
+    pps_nalu->nal_ref_idc = 1;
+    pps_nalu->nal_unit_type = media::H264NALU::kPPS;
+    auto pps = std::make_unique<media::H264PPS>();
+
+    pps->pic_parameter_set_id = params_.data[HardwareRenderParams::kCurrentPpsId];
+    pps->seq_parameter_set_id = params_.data[HardwareRenderParams::kCurrentSpsId];
+    if (pps->seq_parameter_set_id >= 32) {
+      LOG(ERROR, "pps->seq_parameter_set_id >= 32");
+      OnFatalError();
+      return;
+    }
+    pps->entropy_coding_mode_flag = params_.data[HardwareRenderParams::kEntropyCodingModeFlag];
+    // bottom_field_pic_order_in_frame_present_flag not available from FW
+    pps->num_slice_groups_minus1 = params_.data[HardwareRenderParams::kNumSliceGroupsMinus1];
+    if (pps->num_slice_groups_minus1 > 0) {
+      LOG(ERROR, "pps->num_slice_groups_minus1 > 0 - not supported");
+      OnFatalError();
+      return;
+    }
+    pps->num_ref_idx_l0_default_active_minus1 =
+        params_.data[HardwareRenderParams::kPpsNumRefIdxL0ActiveMinus1];
+    if (pps->num_ref_idx_l0_default_active_minus1 >= 32) {
+      LOG(ERROR, "pps->num_ref_idx_l0_default_active_minus1 >= 32");
+      OnFatalError();
+      return;
+    }
+    pps->num_ref_idx_l1_default_active_minus1 =
+        params_.data[HardwareRenderParams::kPpsNumRefIdxL1ActiveMinus1];
+    if (pps->num_ref_idx_l1_default_active_minus1 >= 32) {
+      LOG(ERROR, "pps->num_ref_idx_l1_default_active_minus1 >= 32");
+      OnFatalError();
+      return;
+    }
+    pps->weighted_pred_flag = params_.data[HardwareRenderParams::kWeightedPredFlag];
+    pps->weighted_bipred_idc = params_.data[HardwareRenderParams::kWeightedBipredIdc];
+
+    // We grab this just for the error checking.
+    pps->pic_init_qp_minus26 =
+        static_cast<int16_t>(params_.data[HardwareRenderParams::kPicInitQpMinus26]);
+    if (pps->pic_init_qp_minus26 < -26 || pps->pic_init_qp_minus26 > 25) {
+      LOG(ERROR, "pps->pic_init_qp_minus26 < -26 || pps->pic_init_qp_minus26 > 25 - value: %d",
+          pps->pic_init_qp_minus26);
+      OnFatalError();
+      return;
+    }
+    // pic_init_qs_minus26 not available from FW
+    // chroma_qp_index_offset not available from FW
+    pps->deblocking_filter_control_present_flag =
+        params_.data[HardwareRenderParams::kDeblockingFilterControlPresentFlag];
+    // constrained_intra_pred_flag not available from FW
+    pps->redundant_pic_cnt_present_flag =
+        params_.data[HardwareRenderParams::kRedundantPicCntPresentFlag];
+    if (pps->redundant_pic_cnt_present_flag) {
+      // Since redundant_pic_cnt isn't available from the FW, we have to assume it might be non-zero
+      // and fail here instead.  It also doesn't appear on first glance that H264Decoder handles
+      // non-zero redundant_pic_cnt.  The kSkipPicCount field _might_ be the redundant_pic_cnt, or
+      // maybe not.
+      LOG(ERROR, "pps->redundant_pic_cnt_present_flag - not supported");
+      OnFatalError();
+      return;
+    }
+    // transform_8x8_mode_flag not available from FW?
+    // pic_scaling_matrix_present_flag not available from FW.
+    // scaling_list4x4 not available from FW.
+    // scaling_list8x8 not available from FW.
+    // second_chroma_qp_index_offset not avaialble from FW.
+    ZX_DEBUG_ASSERT(sizeof(current_pps_) == sizeof(*pps.get()));
+    if (memcmp(&current_pps_, pps.get(), sizeof(current_pps_))) {
+      // struct copy
+      current_pps_ = *pps;
+      pps_nalu->preparsed_header.emplace<std::unique_ptr<media::H264PPS>>(std::move(pps));
+    } else {
+      pps_nalu.reset();
+    }
+  }  // ~pps
+
+  // SliceHeader
+  auto slice_nalu = std::make_unique<media::H264NALU>();
+  {  // scope slice
+    ZX_DEBUG_ASSERT(!slice_nalu->data);
+    ZX_DEBUG_ASSERT(!slice_nalu->size);
+    slice_nalu->nal_ref_idc = params_.data[HardwareRenderParams::kNalRefIdc];
+    slice_nalu->nal_unit_type = params_.data[HardwareRenderParams::kNalUnitType];
+    if (slice_nalu->nal_unit_type == media::H264NALU::kCodedSliceExtension) {
+      LOG(ERROR, "nal_unit_type == kCodedSliceExtension - not supported");
+      OnFatalError();
+      return;
+    }
+    auto slice = std::make_unique<media::H264SliceHeader>();
+    slice->idr_pic_flag = (slice_nalu->nal_unit_type == 5);
+    slice->nal_ref_idc = slice_nalu->nal_ref_idc;
+    ZX_DEBUG_ASSERT(!slice->nalu_data);
+    ZX_DEBUG_ASSERT(!slice->nalu_size);
+    ZX_DEBUG_ASSERT(!slice->header_bit_size);
+    slice->first_mb_in_slice = params_.data[HardwareRenderParams::kFirstMbInSlice];
+    slice->slice_type = params_.data[HardwareRenderParams::kSliceType];
+    slice->pic_parameter_set_id = params_.data[HardwareRenderParams::kCurrentPpsId];
+    ZX_DEBUG_ASSERT(!slice->colour_plane_id);
+    slice->frame_num = params_.data[HardwareRenderParams::kFrameNum];
+    // interlaced not supported
+    if (params_.data[HardwareRenderParams::kPictureStructureMmco] !=
+        HardwareRenderParams::kPictureStructureMmcoFrame) {
+      LOG(ERROR,
+          "data[kPictureStructureMmco] != Frame - not supported - data[kPictureStructureMmco]: %x",
+          params_.data[HardwareRenderParams::kPictureStructureMmco]);
+      OnFatalError();
+      return;
+    }
+    if (params_.data[HardwareRenderParams::kNewPictureStructure] !=
+        HardwareRenderParams::kNewPictureStructureFrame) {
+      LOG(ERROR, "data[kNewPictureStructure] != Frame - not supported");
+      OnFatalError();
+      return;
+    }
+    ZX_DEBUG_ASSERT(!slice->field_pic_flag);
+    ZX_DEBUG_ASSERT(!slice->bottom_field_flag);
+    slice->idr_pic_id = params_.data[HardwareRenderParams::kIdrPicId];
+    slice->pic_order_cnt_lsb = params_.data[HardwareRenderParams::kPicOrderCntLsb];
+    slice->delta_pic_order_cnt_bottom =
+        params_.Read32(HardwareRenderParams::kDeltaPicOrderCntBottom_0);
+    slice->delta_pic_order_cnt0 = params_.Read32(HardwareRenderParams::kDeltaPicOrderCnt0_0);
+    slice->delta_pic_order_cnt1 = params_.Read32(HardwareRenderParams::kDeltaPicOrderCnt1_0);
+    // redundant_pic_cnt not available from FW
+    ZX_DEBUG_ASSERT(!slice->redundant_pic_cnt);
+    // direct_spatial_mv_pred_flag not available from FW
+    ZX_DEBUG_ASSERT(!slice->direct_spatial_mv_pred_flag);
+    // Since num_ref_idx_active_override_flag isn't available from the FW, but the result of
+    // aggregating PPS and SliceHeader is, we just pretend that the SliceHeader always overrides.
+    // For all we know, it does, and there's no real benefit to avoiding the override if PPS already
+    // matches, especially since we're less sure whether kPpsNumRefIdxL0ActiveMinus1 has the PPS's
+    // value in the first place.
+    slice->num_ref_idx_active_override_flag = true;
+    slice->num_ref_idx_l0_active_minus1 =
+        params_.data[HardwareRenderParams::kNumRefIdxL0ActiveMinus1];
+    slice->num_ref_idx_l1_active_minus1 =
+        params_.data[HardwareRenderParams::kNumRefIdxL1ActiveMinus1];
+    // checked above
+    ZX_DEBUG_ASSERT(slice_nalu->nal_unit_type != media::H264NALU::kCodedSliceExtension);
+    // Each cmd is 2 uint16_t in src, and src has room for 33 commands so that the list of commands
+    // can always be terminated by a 3.  In contrast, dst only has room for 32, and when all are
+    // used there's no terminating 3.
+    auto process_reorder_cmd_list = [this](const uint16_t* src_cmd_array,
+                                           bool* ref_pic_list_modification_flag_lx_out,
+                                           media::H264ModificationOfPicNum* dst_cmd_array) -> bool {
+      ZX_DEBUG_ASSERT(src_cmd_array);
+      ZX_DEBUG_ASSERT(ref_pic_list_modification_flag_lx_out);
+      ZX_DEBUG_ASSERT(dst_cmd_array);
+      if (src_cmd_array[0] != 3) {
+        *ref_pic_list_modification_flag_lx_out = true;
+        uint32_t src_index = 0;
+        uint32_t dst_index = 0;
+        uint32_t command;
+        do {
+          command = src_cmd_array[src_index];
+          ZX_DEBUG_ASSERT(dst_index * 2 == src_index);
+          if (dst_index >= media::H264SliceHeader::kRefListModSize) {
+            // 32
+            ZX_DEBUG_ASSERT(dst_index == media::H264SliceHeader::kRefListModSize);
+            // 64
+            ZX_DEBUG_ASSERT(src_index == HardwareRenderParams::kLxReorderCmdCount - 2);
+            if (command == 3) {
+              // this is actually ok, to have 32 commands with no terminating 3
+              break;
+            }
+            LOG(ERROR, "command != 3 && dst_index == kRefListModSize");
+            OnFatalError();
+            return false;
+          }
+          if (command != 0 && command != 1 && command != 2 & command != 3) {
+            LOG(ERROR, "command != 3 && command not in {0, 1, 2, 3} - out of sync with FW?");
+            OnFatalError();
+            return false;
+          }
+          ZX_DEBUG_ASSERT(dst_index <= media::H264SliceHeader::kRefListModSize - 1);
+          ZX_DEBUG_ASSERT(src_index <= HardwareRenderParams::kLxReorderCmdCount - 4);
+          media::H264ModificationOfPicNum& dst = dst_cmd_array[dst_index];
+          ZX_DEBUG_ASSERT(command == src_cmd_array[src_index]);
+          dst.modification_of_pic_nums_idc = src_cmd_array[src_index++];
+          ZX_DEBUG_ASSERT(src_index <= HardwareRenderParams::kLxReorderCmdCount - 3);
+          if (command == 0 || command == 1) {
+            dst.abs_diff_pic_num_minus1 = src_cmd_array[src_index++];
+          } else if (command == 2) {
+            dst.long_term_pic_num = src_cmd_array[src_index++];
+          } else {
+            ZX_DEBUG_ASSERT(command == 3);
+          }
+          ++dst_index;
+        } while (command != 3);
+      } else {
+        ZX_DEBUG_ASSERT(!*ref_pic_list_modification_flag_lx_out);
+      }
+      return true;
+    };
+    if (!slice->IsISlice() && !slice->IsSISlice()) {
+      if (!process_reorder_cmd_list(&params_.data[HardwareRenderParams::kL0ReorderCmdBase],
+                                    &slice->ref_pic_list_modification_flag_l0,
+                                    &slice->ref_list_l0_modifications[0])) {
+        // OnFatalError() already called
+        return;
+      }
+    }
+    if (slice->IsBSlice()) {
+      if (!process_reorder_cmd_list(&params_.data[HardwareRenderParams::kL1ReorderCmdBase],
+                                    &slice->ref_pic_list_modification_flag_l1,
+                                    &slice->ref_list_l1_modifications[0])) {
+        // OnFatalError() already called
+        return;
+      }
+    }
+    // These don't appear to be available from FW:
+    // luma_log2_weight_denom
+    // chroma_log2_weight_denom
+    // luma_weight_l0_flag
+    // chroma_weight_l0_flag
+    // pred_weight_table_l0
+    // luma_weight_l1_flag
+    // chroma_weight_l1_flag
+    // pred_weight_table_l1
+    if (slice->IsISlice()) {
+      slice->no_output_of_prior_pics_flag =
+          !!(params_.data[HardwareRenderParams::kMmcoCmd + 0] & 0x2);
+      slice->long_term_reference_flag = !!(params_.data[HardwareRenderParams::kMmcoCmd + 0] & 0x1);
+    }
+    if (slice_nalu->nal_ref_idc) {
+      uint32_t src_index = 0;
+      uint32_t dst_index = 0;
+      uint16_t* mmco_cmds = &params_.data[HardwareRenderParams::kMmcoCmd];
+      constexpr uint32_t kSrcMmcoCmdCount = 44;
+      // Probably 32 is enough for most streams, but unclear if 32 is really a limit in the h264
+      // spec.
+      constexpr uint32_t kDstMmcoCmdCount = media::H264SliceHeader::kRefListSize;
+      while (true) {
+        if (src_index >= kSrcMmcoCmdCount) {
+          LOG(ERROR, "src_index >= kSrcMmcoCmdCount - unsupported stream");
+          OnFatalError();
+          return;
+        }
+        if (dst_index >= kDstMmcoCmdCount) {
+          LOG(ERROR, "dst_index >= kDstMmcoCmdCount - unsupported stream");
+          OnFatalError();
+          return;
+        }
+        uint16_t mmco = mmco_cmds[src_index++];
+        if (mmco > 6) {
+          LOG(ERROR, "mmco > 6");
+          OnFatalError();
+          return;
+        }
+        media::H264DecRefPicMarking& dst = slice->ref_pic_marking[dst_index];
+        dst.memory_mgmnt_control_operation = mmco;
+        if (mmco == 0) {
+          break;
+        }
+        // We need at least enough room to read mmco == 0 next loop iteration, if not something else
+        // sooner.
+        if (src_index >= kSrcMmcoCmdCount) {
+          LOG(ERROR, "src_index >= kSrcMmcoCmdCount - unsupported stream");
+          OnFatalError();
+          return;
+        }
+        slice->adaptive_ref_pic_marking_mode_flag = true;
+        if (mmco == 1 || mmco == 3) {
+          dst.difference_of_pic_nums_minus1 = mmco_cmds[src_index++];
+        } else if (mmco == 2) {
+          dst.long_term_pic_num = mmco_cmds[src_index++];
+        }
+        // We need at least enough room to read mmco == 0 next loop iteration, if not something else
+        // sooner.
+        if (src_index >= kSrcMmcoCmdCount) {
+          LOG(ERROR, "src_index >= kSrcMmcoCmdCount - unsupported stream");
+          OnFatalError();
+          return;
+        }
+        if (mmco == 3 || mmco == 6) {
+          dst.long_term_frame_idx = mmco_cmds[src_index++];
+        } else if (mmco == 4) {
+          dst.max_long_term_frame_idx_plus1 = mmco_cmds[src_index++];
+        }
+        ++dst_index;
+        // src_index is checked first thing at top of loop
+      }
+      // Must end up 0 terminated, or we already failed above.  This comment is not intending to
+      // imply that a stream with more mmco commands is necessarily invalid (TBD - h264 spec seems
+      // a bit vague on how many there can be).
+      ZX_DEBUG_ASSERT(dst_index < kDstMmcoCmdCount &&
+                      slice->ref_pic_marking[dst_index].memory_mgmnt_control_operation == 0);
+    }
+    // Not available from FW:
+    // cabac_init_idc
+    // slice_qp_delta
+    // sp_for_switch_flag
+    // slice_qs_delta
+    // disable_deblocking_filter_idc
+    // slice_alpha_c0_offset_div2
+    // slice_beta_offset_div2
+
+    // These are set but never read in H264Decoder, so don't need to set them:
+    // dec_ref_pic_marking_bit_size
+    // pic_order_cnt_bit_size
+    slice_nalu->preparsed_header.emplace<std::unique_ptr<media::H264SliceHeader>>(std::move(slice));
+  }  // ~slice
+
+  if (sps_nalu) {
+    media_decoder_->QueuePreparsedNalu(std::move(sps_nalu));
   }
+  if (pps_nalu) {
+    media_decoder_->QueuePreparsedNalu(std::move(pps_nalu));
+  }
+  media_decoder_->QueuePreparsedNalu(std::move(slice_nalu));
+
+  media::AcceleratedVideoDecoder::DecodeResult decode_result;
+  bool decode_done = false;
+  while (!decode_done) {
+    decode_result = media_decoder_->Decode();
+    switch (decode_result) {
+      case media::AcceleratedVideoDecoder::kDecodeError:
+        LOG(ERROR, "kDecodeError");
+        OnFatalError();
+        return;
+      case media::AcceleratedVideoDecoder::kConfigChange:
+        // TODO: verify that the config change is a NOP vs. the previous ConfigureDpb().
+        continue;
+      case media::AcceleratedVideoDecoder::kRanOutOfStreamData:
+        decode_done = true;
+        break;
+      case media::AcceleratedVideoDecoder::kRanOutOfSurfaces:
+        // The pre-check in PumpDecoder() is intended to prevent this from happening.  If this were
+        // to happen, it'd very likely disrupt progress of any concurrent stream, since swapping out
+        // at a slice header isn't implemented so far (unknown whether saving/restoring state at a
+        // slice header is possible).
+        LOG(ERROR, "kRanOutOfSurfaces despite pre-check in PumpDecoder()");
+        OnFatalError();
+        ZX_DEBUG_ASSERT(!IsUnusedReferenceFrameAvailable());
+        return;
+      case media::AcceleratedVideoDecoder::kNeedContextUpdate:
+        LOG(ERROR, "kNeedContextUpdate is impossible");
+        OnFatalError();
+        return;
+      case media::AcceleratedVideoDecoder::kTryAgain:
+        LOG(ERROR, "kTryAgain despite this accelerator never indicating that");
+        OnFatalError();
+        return;
+      default:
+        LOG(ERROR, "unexpected decode_result: %u", decode_result);
+        OnFatalError();
+        return;
+    }
+  }
+  ZX_DEBUG_ASSERT(decode_result == media::AcceleratedVideoDecoder::kRanOutOfStreamData);
+
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
+
+  // Configure the HW and decode the body of the slice.
+  current_frame_ = current_metadata_frame_;
+  // We fed the media_decoder_ with pre-parsed SPS, PPS, SliceHeader, so the decoder will have
+  // indicated exactly 1 slice (or possibly indicated failure above).
+  ZX_DEBUG_ASSERT(slice_data_list_.size() == 1);
   SliceData slice_data = std::move(slice_data_list_.front());
   slice_data_list_.pop_front();
+  ZX_DEBUG_ASSERT(slice_data_list_.empty());
 
   // The following checks are to try to ensure what the hardware's parsing matches what H264Decoder
-  // parsed. They generally should only fail if the streambuffer contents don't match what was
-  // decoded.
+  // processed from sps_nalu, pps_nalu, slice_nalu.
 
   // Slices 5-9 are equivalent for this purpose with slices 0-4 - see 7.4.3
   constexpr uint32_t kSliceTypeMod = 5;
-  if (slice_data.header.slice_type % kSliceTypeMod !=
-      params.data[HardwareRenderParams::kSliceType] % kSliceTypeMod) {
-    DECODE_ERROR("Slice types don't match %d %d", slice_data.header.slice_type,
-                 params.data[HardwareRenderParams::kSliceType]);
-    OnFatalError();
-    return;
-  }
+  ZX_DEBUG_ASSERT(slice_data.header.slice_type % kSliceTypeMod ==
+                  params_.data[HardwareRenderParams::kSliceType] % kSliceTypeMod);
 
-  // Check for interlacing.
+  // Check for interlacing (already rejected above).
   constexpr uint32_t kPictureStructureFrame = 3;
-  if (params.data[HardwareRenderParams::kNewPictureStructure] != kPictureStructureFrame) {
-    DECODE_ERROR("Unexpected picture structure type %d",
-                 params.data[HardwareRenderParams::kNewPictureStructure]);
-    OnFatalError();
-    return;
-  }
+  ZX_DEBUG_ASSERT(params_.data[HardwareRenderParams::kNewPictureStructure] ==
+                  kPictureStructureFrame);
 
   auto poc = poc_.ComputePicOrderCnt(&slice_data.sps, slice_data.header);
   if (!poc) {
-    DECODE_ERROR("No poc");
-    frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
+    LOG(ERROR, "No poc");
+    OnFatalError();
     return;
   }
-
   DLOG("Frame POC %d", poc.value());
-  DLOG("mb_adaptive_frame_field %d field pic pic flag %d\n",
-       slice_data.sps.mb_adaptive_frame_field_flag, slice_data.header.field_pic_flag);
 
   H264CurrentPocIdxReset::Get().FromValue(0).WriteTo(owner_->dosbus());
   // Assume all fields have the same POC, since the chromium code doesn't support interlacing.
@@ -731,7 +1464,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   for (uint32_t i = 0; i < video_frames_.size(); ++i) {
     bool is_long_term = video_frames_[i]->is_long_term_reference;
     if (is_long_term) {
-      // Everything is progressive, so mark as having both bottom and top as long-term refrences.
+      // Everything is progressive, so mark as having both bottom and top as long-term references.
       constexpr uint32_t kTopFieldLongTerm = 1 << 4;
       constexpr uint32_t kBottomFieldLongTerm = 1 << 5;
       video_frames_[i]->info0 |= kTopFieldLongTerm | kBottomFieldLongTerm;
@@ -751,11 +1484,12 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   if (!InitializeRefPics(slice_data.ref_pic_list1, 8))
     return;
 
-  // Wait for the hardware to finish processing its current mbs.
-  if (!SpinWaitForRegister(std::chrono::milliseconds(100), [&] {
+  // Wait for the hardware to finish processing its current mbs.  Normally this should be quick, but
+  // wait a while to avoid potential spurious timeout (none observed at 100ms).
+  if (!SpinWaitForRegister(std::chrono::milliseconds(400), [&] {
         return !H264CoMbRwCtl::Get().ReadFrom(owner_->dosbus()).busy();
       })) {
-    DECODE_ERROR("Failed to wait for rw register nonbusy");
+    LOG(ERROR, "Failed to wait for rw register nonbusy");
     OnFatalError();
     return;
   }
@@ -763,8 +1497,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   constexpr uint32_t kMvRefDataSizePerMb = 96;
   uint32_t mv_size = kMvRefDataSizePerMb;
 
-  if ((params.data[HardwareRenderParams::kMode8x8Flag] & 4) &&
-      (params.data[HardwareRenderParams::kMode8x8Flag] & 2)) {
+  if ((params_.data[HardwareRenderParams::kMode8x8Flags] & 4) &&
+      (params_.data[HardwareRenderParams::kMode8x8Flags] & 2)) {
     // direct 8x8 mode seems to store 1/4 the data, so the offsets need to be less as well.
     mv_size /= 4;
   }
@@ -791,13 +1525,17 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     }
   }
 
-  if (slice_data.header.first_mb_in_slice == 0)
+  // TODO: Maybe we could do what H264Decoder::IsNewPrimaryCodedPicture() does to detect this, but
+  // this seems to work for now, and I'm not aware of any specific cases where it doesn't work.
+  if (slice_data.header.first_mb_in_slice == 0) {
     DpbStatusReg::Get().FromValue(kH264ActionDecodeNewpic).WriteTo(owner_->dosbus());
-  else
+  } else {
     DpbStatusReg::Get().FromValue(kH264ActionDecodeSlice).WriteTo(owner_->dosbus());
+  }
   owner_->watchdog()->Start();
 }
 
+// not currently used
 void H264MultiDecoder::FlushFrames() {
   auto res = media_decoder_->Flush();
   DLOG("Got media decoder res %d", res);
@@ -817,32 +1555,58 @@ void H264MultiDecoder::DumpStatus() {
 void H264MultiDecoder::HandlePicDataDone() {
   ZX_DEBUG_ASSERT(current_frame_);
   owner_->watchdog()->Cancel();
-  // TODO(fxb/13483): Get PTS
   current_frame_ = nullptr;
   current_metadata_frame_ = nullptr;
 
-  OutputReadyFrames();
-  state_ = DecoderState::kInitialWaitingForInput;
-  owner_->core()->StopDecoding();
+  // Bring the decoder into sync that the frame is done decoding.  This way media_decoder_ can
+  // output frames and do post-decode DPB or MMCO updates.  This pushes media_decoder_ from
+  // searching for NAL end (pre-frame-decode) to post-frame-decode and post-any-frames-output.
+  auto aud_nalu = std::make_unique<media::H264NALU>();
+  ZX_DEBUG_ASSERT(!aud_nalu->data);
+  ZX_DEBUG_ASSERT(!aud_nalu->size);
+  aud_nalu->nal_ref_idc = 0;
+  aud_nalu->nal_unit_type = media::H264NALU::kAUD;
+  media_decoder_->QueuePreparsedNalu(std::move(aud_nalu));
+  media::AcceleratedVideoDecoder::DecodeResult decode_result = media_decoder_->Decode();
+  switch (decode_result) {
+    case media::AcceleratedVideoDecoder::kDecodeError:
+      LOG(ERROR, "kDecodeError");
+      OnFatalError();
+      return;
+    case media::AcceleratedVideoDecoder::kConfigChange:
+      LOG(ERROR, "kConfigChange unexpected here");
+      OnFatalError();
+      return;
+    case media::AcceleratedVideoDecoder::kRanOutOfStreamData:
+      // keep going
+      break;
+    case media::AcceleratedVideoDecoder::kRanOutOfSurfaces:
+      LOG(ERROR, "kRanOutOfSurfaces desipte checking in advance of starting frame decode");
+      OnFatalError();
+      return;
+    case media::AcceleratedVideoDecoder::kNeedContextUpdate:
+      LOG(ERROR, "kNeedContextUpdate is impossible");
+      OnFatalError();
+      return;
+    case media::AcceleratedVideoDecoder::kTryAgain:
+      LOG(ERROR, "kTryAgain despite this accelerator never indicating that");
+      OnFatalError();
+      return;
+  }
 
-  // Set currently_decoding_ to false after OutputReadyFrames to avoid running PumpDecoder too
-  // early.
+  OutputReadyFrames();
+
+  // Set currently_decoding_ to false _after_ OutputReadyFrames to avoid running body of PumpDecoder
+  // too early.
+  state_ = DecoderState::kWaitingForInputOrOutput;
+  owner_->core()->StopDecoding();
   currently_decoding_ = false;
 
-  if (!slice_data_list_.empty()) {
-    DECODE_ERROR("Extra unexpected slice data for frame: %ld", slice_data_list_.size());
-    // This shouldn't happen if the client is behaving correctly.
-    OnFatalError();
-    return;
-  }
-  PropagatePotentialEos();
-  if (pending_config_change_) {
-    StartConfigChange();
-  } else {
-    owner_->TryToReschedule();
-    if (state_ == DecoderState::kInitialWaitingForInput) {
-      PumpDecoder();
-    }
+  ZX_DEBUG_ASSERT(slice_data_list_.empty());
+
+  owner_->TryToReschedule();
+  if (state_ == DecoderState::kWaitingForInputOrOutput) {
+    PumpDecoder();
   }
 }
 
@@ -860,6 +1624,7 @@ void H264MultiDecoder::HandleHardwareError() {
   // We need to reset the hardware here or for some malformed hardware streams (e.g.
   // bear_h264[638] = 44) the CPU will hang when trying to isolate VDEC1 power on shutdown.
   ResetHardware();
+  LOG(ERROR, "ResetHardware() done.");
   frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
 }
 
@@ -889,8 +1654,12 @@ void H264MultiDecoder::HandleInterrupt() {
       break;
     }
     case kH264SearchBufempty:
-      DECODE_ERROR("Decoder got kH264SearchBufempty");
-      HandleHardwareError();
+      // This can happen if non-slice NALU(s) show up in a packet without any slice NALU(s).
+      state_ = DecoderState::kWaitingForInputOrOutput;
+      owner_->watchdog()->Cancel();
+      owner_->core()->StopDecoding();
+      currently_decoding_ = false;
+      PumpDecoder();
       break;
     case kH264DecodeTimeout:
       DECODE_ERROR("Decoder got kH264DecodeTimeout");
@@ -905,6 +1674,7 @@ void H264MultiDecoder::PumpOrReschedule() {
     // TryToReschedule will pump the decoder (using SwappedIn) once the decoder is finally
     // rescheduled.
   } else {
+    is_async_pump_pending_ = false;
     PumpDecoder();
   }
 }
@@ -922,9 +1692,11 @@ void H264MultiDecoder::CallErrorHandler() { OnFatalError(); }
 
 void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t coded_width,
                                          uint32_t coded_height, uint32_t stride) {
-  DLOG("H264MultiDecoder::InitializeFrame");
+  DLOG("H264MultiDecoder::InitializedFrames");
+  // not swapped out, not running
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForConfigChange);
   uint32_t frame_count = frames.size();
-  video_frames_.clear();
+  ZX_DEBUG_ASSERT(video_frames_.empty());
   for (uint32_t i = 0; i < frame_count; ++i) {
     auto frame = std::make_shared<VideoFrame>();
     // While we'd like to pass in IO_BUFFER_CONTIG, since we know the VMO was
@@ -951,8 +1723,8 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
     frame->coded_height = coded_height;
     frame->stride = stride;
     frame->uv_plane_offset = stride * coded_height;
-    frame->display_width = display_width_;
-    frame->display_height = display_height_;
+    frame->display_width = pending_display_width_;
+    frame->display_height = pending_display_height_;
     frame->index = i;
 
     // can be nullptr
@@ -971,9 +1743,17 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
       OnFatalError();
       return;
     }
+
+    // FWIW, this is the leading candidate for what StreamInfo::insignificant() bit would control,
+    // but 96 works fine here regardless.  If insignificant() is 1, 24 (maybe), else 96.  Or just
+    // 96 always is fine.  This speculative association could be wrong (and/or obsolete) in the
+    // first place, so just use 96 here.
     constexpr uint32_t kMvRefDataSizePerMb = 96;
+
+    uint32_t mb_width = coded_width / 16;
+    uint32_t mb_height = coded_height / 16;
     uint32_t colocated_buffer_size =
-        fbl::round_up(mb_width_ * mb_height_ * kMvRefDataSizePerMb, ZX_PAGE_SIZE);
+        fbl::round_up(mb_width * mb_height * kMvRefDataSizePerMb, ZX_PAGE_SIZE);
 
     auto create_result =
         InternalBuffer::Create("H264ReferenceMvs", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
@@ -989,17 +1769,36 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
         new ReferenceFrame{false, false, i, std::move(frame), std::move(y_canvas),
                            std::move(uv_canvas), create_result.take_value()}));
   }
+
+  for (auto& frame : video_frames_) {
+    AncNCanvasAddr::Get(frame->index)
+        .FromValue((frame->uv_canvas->index() << 16) | (frame->uv_canvas->index() << 8) |
+                   (frame->y_canvas->index()))
+        .WriteTo(owner_->dosbus());
+  }
+
+  hw_coded_width_ = coded_width;
+  hw_coded_height_ = coded_height;
+  hw_stride_ = stride;
+  // We pretend like these are configured in the HW even though they're not really.
+  hw_display_width_ = pending_display_width_;
+  hw_display_height_ = pending_display_height_;
+
+  ZX_DEBUG_ASSERT(currently_decoding_);
   waiting_for_surfaces_ = false;
-  // Caller should trigger a PumpOrReschedule at this point.
+  state_ = DecoderState::kRunning;
+  // this tells hw to go - currently_decoding_ is still true
+  AvScratch0::Get()
+      .FromValue(static_cast<uint32_t>((next_max_reference_size_ << 24) |
+                                       (video_frames_.size() << 16) | (video_frames_.size() << 8)))
+      .WriteTo(owner_->dosbus());
+  owner_->watchdog()->Start();
 }
 
 void H264MultiDecoder::SubmitFrameMetadata(ReferenceFrame* reference_frame,
                                            const media::H264SPS* sps, const media::H264PPS* pps,
                                            const media::H264DPB& dpb) {
   current_metadata_frame_ = reference_frame;
-  // Unclear why this is, but matches the linux decoder.
-  constexpr uint32_t kReferenceBufMargin = 4;
-  next_max_reference_size_ = sps->max_num_ref_frames + kReferenceBufMargin;
 }
 
 void H264MultiDecoder::SubmitSliceData(SliceData data) {
@@ -1016,7 +1815,18 @@ void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame, uint32_t pts
     reference_frame->frame->has_pts = true;
     reference_frame->frame->pts = it->second;
     id_to_pts_map_.erase(it);
+  } else {
+    LOG(INFO, "NO PTS FOR ID: %u", pts_id);
   }
+#if 0
+  // TODO(fxb/13483): Re-plumb this (not necessarily here).
+  auto sar_size = media_decoder_->GetSarSize();
+  if (sar_size.width() > 0 && sar_size.height() > 0) {
+    has_sar = true;
+    sar_width = sar_size.width();
+    sar_height = sar_size.height();
+  }
+#endif
   frames_to_output_.push_back(reference_frame->index);
   // Don't output a frame that's currently being decoded into, and don't output frames out of order
   // if one's already been queued up.
@@ -1025,8 +1835,16 @@ void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame, uint32_t pts
   }
 }
 
-void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length) {
+void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
+                                            const CodecBuffer* codec_buffer,
+                                            uint32_t buffer_start_offset) {
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
+  zx_paddr_t phys_addr{};
+  ZX_DEBUG_ASSERT(!phys_addr);
+  if (codec_buffer) {
+    ZX_DEBUG_ASSERT(codec_buffer->is_known_contiguous());
+    phys_addr = codec_buffer->physical_base() + buffer_start_offset;
+  }
   if (use_parser_) {
     zx_status_t status =
         owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser, is_secure_);
@@ -1053,10 +1871,13 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length) 
       return;
     }
     owner_->parser()->SyncFromDecoderInstance(owner_->current_instance());
-
-    // TODO call ParseVideoPhyiscal when input buffers are physically contiguous, which will be true
-    // when DRM L1.
-    status = owner_->parser()->ParseVideo(data, length);
+    DLOG("data: %p phys_addr: %p length: %zx buffer_start_offset: %u", data, phys_addr, length,
+         buffer_start_offset);
+    if (phys_addr) {
+      status = owner_->parser()->ParseVideoPhysical(phys_addr, length);
+    } else {
+      status = owner_->parser()->ParseVideo(data, length);
+    }
     if (status != ZX_OK) {
       DECODE_ERROR("Parsing video failed - status: %d", status);
       OnFatalError();
@@ -1079,34 +1900,55 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length) 
     }
   }
 }
-bool H264MultiDecoder::CanBeSwappedIn() {
-  if (fatal_error_)
-    return false;
-  if (waiting_for_surfaces_)
-    return false;
 
-  ZX_DEBUG_ASSERT(!pending_config_change_ || currently_decoding_);
-  // If there aren't any free output frames the decoder will be swapped in, hit kRanOutOfSurfaces,
-  // then be swapped out (if necessary). Similarly, if there isn't enough data for a complete frame
-  // it will be swapped in, will put what data exists in the stream buffer, then hit
-  // kRanOutOfStreamData before trying to decode any of it.
-  // TODO(fxb/13483): Wait for all requirements before swapping in the hardware to avoid unnecessary
-  // changes.
-  return current_decoder_buffer_ || frame_data_provider_->HasMoreInputData();
+bool H264MultiDecoder::CanBeSwappedIn() {
+  ZX_DEBUG_ASSERT(!in_pump_decoder_);
+  ZX_DEBUG_ASSERT(!is_async_pump_pending_);
+  if (fatal_error_) {
+    return false;
+  }
+  if (sent_output_eos_to_client_) {
+    return false;
+  }
+  if (waiting_for_surfaces_) {
+    return false;
+  }
+  if (waiting_for_input_) {
+    return false;
+  }
+  if (!video_frames_.empty() && !IsUnusedReferenceFrameAvailable()) {
+    waiting_for_surfaces_ = true;
+    return false;
+  }
+  if (!frame_data_provider_->HasMoreInputData()) {
+    waiting_for_input_ = true;
+    return false;
+  }
+  return true;
 }
 
 bool H264MultiDecoder::CanBeSwappedOut() const {
-  return state_ == DecoderState::kInitialWaitingForInput ||
-         state_ == DecoderState::kStoppedWaitingForInput;
+  // TODO(fxb/13483): kWaitingForConfigChange ideally would allow swapping out decoder; VP9 doesn't
+  // yet either, so punt for the moment.
+  return !is_async_pump_pending_ && state_ == DecoderState::kWaitingForInputOrOutput;
 }
 
 void H264MultiDecoder::SetSwappedOut() {
-  ZX_DEBUG_ASSERT(state_ == DecoderState::kInitialWaitingForInput);
+  ZX_DEBUG_ASSERT(!is_async_pump_pending_);
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForInputOrOutput);
   ZX_DEBUG_ASSERT(CanBeSwappedOut());
   state_ = DecoderState::kSwappedOut;
 }
 
-void H264MultiDecoder::SwappedIn() { PumpDecoder(); }
+void H264MultiDecoder::SwappedIn() {
+  // Ensure at least one PumpDecoder() before swapping out again.
+  //
+  // Also, don't pump decoder A synchronously here because we may already be in PumpDecoder() of a
+  // different decoder B presently.  This avoids being in PumpDecoder() of more than one decoder
+  // at the same time (on the same stack), and avoids re-entering PumpDecoder() of the same decoder.
+  is_async_pump_pending_ = true;
+  frame_data_provider_->AsyncPumpDecoder();
+}
 
 void H264MultiDecoder::OnSignaledWatchdog() {
   DECODE_ERROR("Hit watchdog");
@@ -1120,138 +1962,129 @@ void H264MultiDecoder::OnFatalError() {
   }
 }
 
-void H264MultiDecoder::ReceivedNewInput() { PumpOrReschedule(); }
+void H264MultiDecoder::ReceivedNewInput() {
+  waiting_for_input_ = false;
+  PumpOrReschedule();
+}
 
 void H264MultiDecoder::QueueInputEos() {
   ZX_DEBUG_ASSERT(!input_eos_queued_);
   input_eos_queued_ = true;
-  PropagatePotentialEos();
-}
-
-void H264MultiDecoder::PropagatePotentialEos() {
-  ZX_DEBUG_ASSERT(!in_pump_decoder_);
-  if (!input_eos_queued_ || sent_output_eos_to_client_)
-    return;
-  if (current_decoder_buffer_ || frame_data_provider_->HasMoreInputData())
-    return;
+  ZX_DEBUG_ASSERT(in_pump_decoder_);
+  ZX_DEBUG_ASSERT(!sent_output_eos_to_client_);
+  ZX_DEBUG_ASSERT(!frame_data_provider_->HasMoreInputData());
+  ZX_DEBUG_ASSERT(!currently_decoding_);
   if (!media_decoder_->Flush()) {
-    DECODE_ERROR("Flush failed");
+    LOG(ERROR, "Flush failed");
+    OnFatalError();
     return;
   }
-  // Wait so we can be sure that OnEos happens after all existing frames are output.
-  // HandlePicDataDone will call this method again once decoding finally finishes.
-  if (currently_decoding_)
-    return;
   sent_output_eos_to_client_ = true;
   client_->OnEos();
 }
 
+void H264MultiDecoder::PropagatePotentialEos() {}
+
 void H264MultiDecoder::RequestStreamReset() {
   fatal_error_ = true;
+  LOG(ERROR, "fatal_error_ = true");
   frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
-  owner_->TryToReschedule();
-}
-
-void H264MultiDecoder::StartConfigChange() {
-  TRACE_DURATION("media", "H264MultiDecoder::StartConfigChange");
-  ZX_DEBUG_ASSERT(pending_config_change_);
-  // We shouldn't try to run this if decoding is currently ongoing, since the interrupt handlers are
-  // using the current set of video_frames_.
-  ZX_DEBUG_ASSERT(!currently_decoding_);
-  ZX_DEBUG_ASSERT(frames_to_output_.empty());
-
-  video_frames_.clear();
-  zx::bti bti;
-  zx_status_t status = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &bti);
-  if (status != ZX_OK) {
-    DECODE_ERROR("bti duplicate failed, status: %d\n", status);
-    return;
-  }
-  display_width_ = media_decoder_->GetVisibleRect().width();
-  display_height_ = media_decoder_->GetVisibleRect().height();
-  mb_width_ = media_decoder_->GetPicSize().width() / 16;
-  mb_height_ = media_decoder_->GetPicSize().height() / 16;
-  uint32_t min_frame_count = media_decoder_->GetRequiredNumOfPictures();
-  uint32_t max_frame_count = 24;
-  uint32_t coded_width = media_decoder_->GetPicSize().width();
-  uint32_t coded_height = media_decoder_->GetPicSize().height();
-  constexpr uint32_t kMaxDimension = 4096;  // for both width and height.
-
-  if (coded_width > kMaxDimension || coded_height > kMaxDimension) {
-    DECODE_ERROR("Unsupported dimensions %dx%d", coded_width, coded_height);
-    RequestStreamReset();
-    return;
-  }
-  uint32_t stride = fbl::round_up(coded_width, 32u);
-  bool has_sar = false;
-  uint32_t sar_width = 1;
-  uint32_t sar_height = 1;
-  auto sar_size = media_decoder_->GetSarSize();
-  if (sar_size.width() > 0 && sar_size.height() > 0) {
-    has_sar = true;
-    sar_width = sar_size.width();
-    sar_height = sar_size.height();
-  }
-  client_->InitializeFrames(std::move(bti), min_frame_count, max_frame_count, coded_width,
-                            coded_height, stride, display_width_, display_height_, has_sar,
-                            sar_width, sar_height);
-  pending_config_change_ = false;
-  waiting_for_surfaces_ = true;
   owner_->TryToReschedule();
 }
 
 void H264MultiDecoder::PumpDecoder() {
   TRACE_DURATION("media", "H264MultiDecoder::PumpDecoder");
-  // Don't try to reenter media_decoder_->Decode().
-  if (in_pump_decoder_)
-    return;
+  ZX_DEBUG_ASSERT(!in_pump_decoder_);
+  in_pump_decoder_ = true;
+  auto set_not_in_pump_decoder = fit::defer([this] { in_pump_decoder_ = false; });
 
-  while (true) {
-    if (waiting_for_surfaces_ || currently_decoding_ || pending_config_change_ ||
-        (state_ == DecoderState::kSwappedOut) || fatal_error_)
-      return;
-    ZX_DEBUG_ASSERT(!in_pump_decoder_);
-    in_pump_decoder_ = true;
-    auto res = media_decoder_->Decode();
-    in_pump_decoder_ = false;
-    DLOG("H264MultiDecoder::PumpDecoder Got result of %d\n", static_cast<int>(res));
-    if (res == media::AcceleratedVideoDecoder::kConfigChange) {
-      pending_config_change_ = true;
-      if (!currently_decoding_) {
-        StartConfigChange();
-      }
-    }
-    if (res == media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
-      current_decoder_buffer_.reset();
-      auto next_decoder_buffer = frame_data_provider_->ReadMoreInputData(this);
-      if (next_decoder_buffer.data.empty()) {
-        DLOG("Not decoding because decoder ran out of inputs, state %d", static_cast<int>(state_));
-        PropagatePotentialEos();
-        owner_->TryToReschedule();
-        return;
-      }
-      current_decoder_buffer_ =
-          std::make_unique<media::DecoderBuffer>(std::move(next_decoder_buffer.data));
-      if (next_decoder_buffer.pts) {
-        id_to_pts_map_[next_pts_id_] = next_decoder_buffer.pts.value();
-      }
-      media_decoder_->SetStream(next_pts_id_++, *current_decoder_buffer_);
-    } else if (res == media::AcceleratedVideoDecoder::kRanOutOfSurfaces) {
-      waiting_for_surfaces_ = true;
-      owner_->TryToReschedule();
-      return;
-    } else if (res == media::AcceleratedVideoDecoder::kDecodeError) {
-      RequestStreamReset();
-      return;
-    } else if (res == media::AcceleratedVideoDecoder::kTryAgain) {
-      owner_->TryToReschedule();
-      return;
-    }
+  if (waiting_for_surfaces_ || waiting_for_input_ || currently_decoding_ ||
+      (state_ == DecoderState::kSwappedOut) || fatal_error_) {
+    owner_->TryToReschedule();
+    return;
   }
+
+  // Don't start the HW decoding a frame until we know we'll be able to fairly quickly get an
+  // empty frame to decode into.
+  if (!video_frames_.empty() && !IsUnusedReferenceFrameAvailable()) {
+    waiting_for_surfaces_ = true;
+    owner_->TryToReschedule();
+    return;
+  }
+
+  // Now we try to get some input data.
+  std::optional<DataInput> current_data_input = frame_data_provider_->ReadMoreInputData();
+  if (!current_data_input) {
+    waiting_for_input_ = true;
+    owner_->TryToReschedule();
+    return;
+  }
+
+  auto& current_input = current_data_input.value();
+  if (current_input.is_eos) {
+    QueueInputEos();
+    owner_->TryToReschedule();
+    return;
+  }
+
+  ZX_DEBUG_ASSERT(!current_input.is_eos);
+  ZX_DEBUG_ASSERT(current_input.data.empty() == !!current_input.codec_buffer);
+  ZX_DEBUG_ASSERT(current_input.length != 0);
+  if (current_input.pts) {
+    id_to_pts_map_[next_pts_id_] = current_input.pts.value();
+  }
+
+  // We'll call QueuePreparsedNalu() and Decode() during slice header done interrupt, but we can
+  // SetStreamId() here since it's convenient to do here and it's ok to set here even if we get
+  // 0-N slice headers in a packet since we have a max of one PTS per packet and it's ok for these
+  // IDs to be sparse.
+  media_decoder_->SetStreamId(next_pts_id_);
+
+  // Make this cycle in a reasonable way for int32_t.  Probably H264Decoder should change to use
+  // uint32_t for this, but it won't come up in practice because 2^31 doesn't overflow for longer
+  // than any plausible stream.  This handling is likely not enough on its own to achieve correct
+  // wrapping behavior overall (yet).
+  if (next_pts_id_ == std::numeric_limits<int32_t>::max()) {
+    next_pts_id_ = 0;
+  } else {
+    ++next_pts_id_;
+  }
+
+  // Now we can submit all the data of this AU/packet plus padding to the HW decoder and start it
+  // decoding.  We know (at least for now), that the packet boundary doesn't split a NALU, and
+  // doesn't split an encoded frame either.  For now, this is similar to VP9 decode on this HW
+  // where a whole VP9 superframe has to be in a physically contiguous packet.
+  //
+  // In future we may need to allow a packet boundary to separate the slices of a multi-slice
+  // frame at NALU boundary.  In future we may need to pay attention to known_end_access_unit
+  // instead of assuming it is true.  We may need to allow split NALUs.  We may need to allow
+  // context switching any time we're not actively decoding which in future could be in the middle
+  // of an AU that splits across multiple packets.  At the moment none of these are supported.
+  constexpr uint8_t kHeader[] = {0, 0, 1};
+  SubmitDataToHardware(kHeader, sizeof(kHeader), nullptr, 0);
+  SubmitDataToHardware(current_input.data.data(), current_input.length, current_input.codec_buffer,
+                       current_input.buffer_start_offset);
+  SubmitDataToHardware(kPadding, kPaddingSize, nullptr, 0);
+
+  // After this, we'll see an interrupt from the HW, either slice header done or out of data.
+  StartFrameDecode();
+
+  // ~current_data_input recycles input packet
+}
+
+bool H264MultiDecoder::IsUnusedReferenceFrameAvailable() {
+  auto frame = GetUnusedReferenceFrame();
+  if (!frame) {
+    return false;
+  }
+  // put back - maybe not ideal, but works for now
+  frame->in_use = false;
+  frame->in_internal_use = false;
+  return true;
 }
 
 std::shared_ptr<H264MultiDecoder::ReferenceFrame> H264MultiDecoder::GetUnusedReferenceFrame() {
-  ZX_DEBUG_ASSERT(!pending_config_change_);
+  ZX_DEBUG_ASSERT(state_ != DecoderState::kWaitingForConfigChange);
   for (auto& frame : video_frames_) {
     ZX_DEBUG_ASSERT(frame->frame->coded_width ==
                     static_cast<uint32_t>(media_decoder_->GetPicSize().width()));

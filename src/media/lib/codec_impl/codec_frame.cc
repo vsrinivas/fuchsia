@@ -9,8 +9,8 @@ CodecFrame::CodecFrame(const CodecBuffer& codec_buffer)
     : buffer_spec_(
           BufferSpec{.buffer_lifetime_ordinal = codec_buffer.lifetime_ordinal(),
                      .buffer_index = codec_buffer.index(),
-                     .vmo_range = CodecVmoRange(codec_buffer.vmo().borrow(), codec_buffer.offset(),
-                                                codec_buffer.size())}),
+                     .vmo_range = CodecVmoRange(codec_buffer.vmo().borrow(),
+                                                codec_buffer.vmo_offset(), codec_buffer.size())}),
       buffer_ptr_(&codec_buffer) {}
 
 CodecFrame::CodecFrame(BufferSpec buffer_spec)

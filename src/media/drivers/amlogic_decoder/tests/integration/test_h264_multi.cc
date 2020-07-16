@@ -12,6 +12,7 @@
 #include "bear_h264_hashes.h"
 #include "h264_multi_decoder.h"
 #include "h264_utils.h"
+#include "lib/async-loop/default.h"
 #include "macros.h"
 #include "pts_manager.h"
 #include "test_frame_allocator.h"
@@ -22,17 +23,25 @@
 
 class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvider {
  public:
+  H264TestFrameDataProvider(AmlogicVideo* video)
+      : video_(video), async_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    ZX_ASSERT(ZX_OK == async_loop_.StartThread("async_loop_"));
+  }
+  void set_decoder(H264MultiDecoder* decoder) { decoder_ = decoder; }
+
   void AppendFrameData(std::vector<std::vector<uint8_t>> frame_data) {
     frame_data_.insert(frame_data_.end(), frame_data.begin(), frame_data.end());
   }
 
   void set_async_reset_handler(fit::closure handler) { async_reset_handler_ = std::move(handler); }
 
-  H264MultiDecoder::DataInput ReadMoreInputData(H264MultiDecoder* decoder) override {
+  std::optional<H264MultiDecoder::DataInput> ReadMoreInputData() override {
     H264MultiDecoder::DataInput result;
-    if (frame_data_.empty())
-      return result;
+    if (frame_data_.empty()) {
+      return std::nullopt;
+    }
     result.data = std::move(frame_data_.front());
+    result.length = result.data.size();
     frame_data_.pop_front();
     uint32_t nal_unit_type = GetNalUnitType(result.data);
     if (nal_unit_type == 1 || nal_unit_type == 5) {
@@ -42,15 +51,24 @@ class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvid
     return result;
   }
   bool HasMoreInputData() override { return !frame_data_.empty(); }
+  void AsyncPumpDecoder() override {
+    async::PostTask(async_loop_.dispatcher(), [this] {
+      std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+      decoder_->PumpOrReschedule();
+    });
+  }
   void AsyncResetStreamAfterCurrentFrame() override {
     EXPECT_TRUE(async_reset_handler_);
     async_reset_handler_();
   }
 
  private:
+  AmlogicVideo* video_ = nullptr;
+  H264MultiDecoder* decoder_ = nullptr;
   std::list<std::vector<uint8_t>> frame_data_;
   uint64_t next_pts_{};
   fit::closure async_reset_handler_;
+  async::Loop async_loop_;
 };
 
 // Set the min logging level so every log will display.
@@ -81,11 +99,12 @@ class TestH264Multi {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
-    H264TestFrameDataProvider frame_data_provider;
+    H264TestFrameDataProvider frame_data_provider(video.get());
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       auto decoder = std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator,
                                                         &frame_data_provider, /*is_secure=*/false);
+      frame_data_provider.set_decoder(decoder.get());
       decoder->set_use_parser(use_parser);
       video->SetDefaultInstance(std::move(decoder),
                                 /*hevc=*/false);
@@ -194,12 +213,13 @@ class TestH264Multi {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
-    H264TestFrameDataProvider frame_data_provider;
+    H264TestFrameDataProvider frame_data_provider(video.get());
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       video->SetDefaultInstance(std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator,
                                                                    &frame_data_provider, false),
                                 /*hevc=*/false);
+      frame_data_provider.set_decoder(static_cast<H264MultiDecoder*>(video->video_decoder()));
       frame_allocator.set_decoder(video->video_decoder());
     }
 
@@ -290,7 +310,7 @@ class TestH264Multi {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
-    H264TestFrameDataProvider frame_data_provider;
+    H264TestFrameDataProvider frame_data_provider(video.get());
 
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
@@ -298,6 +318,7 @@ class TestH264Multi {
           std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider,
                                              /*is_secure=*/false),
           /*hevc=*/false);
+      frame_data_provider.set_decoder(static_cast<H264MultiDecoder*>(video->video_decoder()));
       frame_allocator.set_decoder(video->video_decoder());
     }
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, 1024 * PAGE_SIZE,
@@ -329,11 +350,12 @@ class TestH264Multi {
 
     for (uint32_t i = 0; i < 2; i++) {
       auto client = std::make_unique<TestFrameAllocator>(video.get());
-      auto provider = std::make_unique<H264TestFrameDataProvider>();
+      auto provider = std::make_unique<H264TestFrameDataProvider>(video.get());
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       auto decoder = std::make_unique<H264MultiDecoder>(video.get(), client.get(), provider.get(),
                                                         /*is_secure=*/false);
       decoder_ptrs.push_back(decoder.get());
+      provider->set_decoder(decoder.get());
       client->set_decoder(decoder.get());
       client->set_pump_function([&video, &decoder_ptrs, i]() {
         std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
@@ -442,13 +464,14 @@ class TestH264Multi {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
-    H264TestFrameDataProvider frame_data_provider;
+    H264TestFrameDataProvider frame_data_provider(video.get());
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       video->SetDefaultInstance(
           std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider,
                                              /*is_secure=*/false),
           /*hevc=*/false);
+      frame_data_provider.set_decoder(static_cast<H264MultiDecoder*>(video->video_decoder()));
       frame_allocator.set_decoder(video->video_decoder());
     }
     frame_allocator.set_pump_function([&video]() {
@@ -540,13 +563,14 @@ class TestH264Multi {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
-    H264TestFrameDataProvider frame_data_provider;
+    H264TestFrameDataProvider frame_data_provider(video.get());
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       video->SetDefaultInstance(
           std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider,
                                              /*is_secure=*/false),
           /*hevc=*/false);
+      frame_data_provider.set_decoder(static_cast<H264MultiDecoder*>(video->video_decoder()));
       frame_allocator.set_decoder(video->video_decoder());
     }
     frame_allocator.set_pump_function([&video]() {
@@ -623,13 +647,14 @@ class TestH264Multi {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
-    H264TestFrameDataProvider frame_data_provider;
+    H264TestFrameDataProvider frame_data_provider(video.get());
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       video->SetDefaultInstance(
           std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider,
                                              /*is_secure=*/false),
           /*hevc=*/false);
+      frame_data_provider.set_decoder(static_cast<H264MultiDecoder*>(video->video_decoder()));
       frame_allocator.set_decoder(video->video_decoder());
     }
     frame_allocator.set_pump_function([&video]() {

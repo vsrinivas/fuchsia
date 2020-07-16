@@ -56,23 +56,19 @@ class CodecBuffer {
   // with respect to a CodecBuffer that's also passed alongside.
   uint8_t* base() const;
 
-  // This will ZX_PANIC() if the buffer hasn't been pinned yet, or if the VMOs
-  // of the buffers aren't contiguous.
+  bool is_known_contiguous() const;
+
+  // This will ZX_PANIC() if the buffer hasn't been pinned yet, or if !is_known_contiguous().
   zx_paddr_t physical_base() const;
 
   size_t size() const;
 
+  // The main VMO, not the aux VMO.
   const zx::vmo& vmo() const;
 
-  uint64_t offset() const;
-
-  bool has_aux_buffer() const { return aux_vmo_range_.has_value(); }
-  // The rest of the aux_* functions should not be called if the CodecBuffer does not have an
-  // aux_buffer.
-  uint8_t* aux_base() const;
-  const zx::vmo& aux_vmo() const;
-  uint64_t aux_offset() const;
-  size_t aux_size() const;
+  // The offset within the main VMO where data of this CodecBuffer starts.  The vmo_offset() is not
+  // required to be divisible by ZX_PAGE_SIZE.
+  uint64_t vmo_offset() const;
 
   // The use of weak_ptr<> here is to emphasize that we don't need shared_ptr<>
   // to keep the VideoFrame(s) alive.  We'd use a raw pointer here if it weren't
@@ -91,6 +87,8 @@ class CodecBuffer {
 
   [[nodiscard]] zx_status_t CacheFlush(uint32_t flush_offset, uint32_t length) const;
 
+  bool has_aux_buffer() const { return aux_vmo_range_.has_value(); }
+
  private:
   friend class CodecImpl;
   friend class std::unique_ptr<CodecBuffer>;
@@ -106,14 +104,12 @@ class CodecBuffer {
   };
 
   CodecBuffer(CodecImpl* parent, Info buffer_info, CodecVmoRange vmo_range,
-              std::optional<CodecVmoRange> = std::nullopt);
+              std::optional<CodecVmoRange> aux_vmo_range = std::nullopt);
   ~CodecBuffer();
 
   // Maps a page-aligned portion of the VMO including vmo_usable_start to vmo_usable_start +
   // vmo_usable_size.
   bool Map();
-
-  bool MapAuxBuffer();
 
   // FakeMap() exists because most CodecAdapter(s) expect to have a CodecBuffer::base() and "data"
   // vaddr(s) within the buffer, even when buffers are secure.  IIUC, mapping to secure buffer +

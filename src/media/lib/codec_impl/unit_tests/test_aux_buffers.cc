@@ -61,12 +61,14 @@ sysmem::BufferCollectionConstraints CreateValidInputBufferCollectionConstraints(
   return result;
 }
 
-sysmem::BufferCollectionInfo_2 CreateBufferCollectionInfo(bool vmos_needed = true) {
+sysmem::BufferCollectionInfo_2 CreateBufferCollectionInfo(bool vmos_needed = true,
+                                                          bool is_secure = false) {
   sysmem::BufferCollectionInfo_2 info;
 
   constexpr uint32_t kBufferSize = 5000;
   info.buffer_count = kBufferCount;
   info.settings.buffer_settings.size_bytes = kBufferSize;
+  info.settings.buffer_settings.is_secure = is_secure;
 
   for (uint32_t i = 0; i < kBufferCount; i++) {
     if (vmos_needed) {
@@ -298,8 +300,6 @@ TEST_F(CodecImplAuxBuffers, InputNeedsAuxBuffer) {
   for (size_t i = 0; i < buffers.size(); i++) {
     EXPECT_NE(buffers[i]->base(), nullptr);
     ASSERT_TRUE(buffers[i]->has_aux_buffer());
-    EXPECT_NE(buffers[i]->aux_base(), nullptr);
-    EXPECT_EQ(buffers[i]->size(), buffers[i]->aux_size());
   }
 }
 
@@ -316,7 +316,8 @@ TEST_F(CodecImplAuxBuffers, InputNeedsAuxBufferNoneProvided) {
   ASSERT_FALSE(error_handler_ran_);
   ASSERT_TRUE(collection().is_waiting());
 
-  collection().set_buffer_collection_info(ZX_OK, CreateBufferCollectionInfo());
+  collection().set_buffer_collection_info(
+      ZX_OK, CreateBufferCollectionInfo(/*vmos_needed=*/true, /*is_secure=*/true));
   collection().set_aux_buffer_collection_info(ZX_OK,
                                               CreateBufferCollectionInfo(/*vmos_needed=*/false));
   collection().CompleteBufferCollection();
@@ -350,8 +351,6 @@ TEST_F(CodecImplAuxBuffers, InputAllowsAuxBufferAndProvided) {
   for (size_t i = 0; i < buffers.size(); i++) {
     EXPECT_NE(buffers[i]->base(), nullptr);
     ASSERT_TRUE(buffers[i]->has_aux_buffer());
-    EXPECT_NE(buffers[i]->aux_base(), nullptr);
-    EXPECT_EQ(buffers[i]->size(), buffers[i]->aux_size());
   }
 }
 

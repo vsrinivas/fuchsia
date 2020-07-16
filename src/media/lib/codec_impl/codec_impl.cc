@@ -1792,7 +1792,7 @@ void CodecImpl::SetBufferSettingsCommon(
 
             // If the CoreCodec allows AuxBuffers, then we should attempt to fetch them from sysmem
             // unless there is already an error on the buffer collection.
-            if (pending_buffer_collection_info.AllowsAuxBuffers() &&
+            if (pending_buffer_collection_info.AllowsAuxBuffersForSecure() &&
                 !pending_buffer_collection_info.HasError()) {
               GetAuxBuffers(std::move(pending_buffer_collection_info));
             } else {
@@ -1922,7 +1922,7 @@ void CodecImpl::OnBufferCollectionInfoInternal(
     }
 
     // Additional checks for aux buffers
-    if (pending_buffer_collection_info.AllowsAuxBuffers()) {
+    if (pending_buffer_collection_info.AllowsAuxBuffersForSecure()) {
       ZX_DEBUG_ASSERT(pending_buffer_collection_info.aux_buffer_collection());
       if (pending_buffer_collection_info.aux_buffer_collection().is_error()) {
         FailLocked(
@@ -1931,12 +1931,15 @@ void CodecImpl::OnBufferCollectionInfoInternal(
             port, pending_buffer_collection_info.aux_buffer_collection().error());
         return;
       }
-      if (!pending_buffer_collection_info.HasValidAuxBufferCollection() &&
-          pending_buffer_collection_info.NeedsAuxBuffers()) {
+      bool is_secure = pending_buffer_collection_info.buffer_collection()
+                           .value()
+                           .settings.buffer_settings.is_secure;
+      if (is_secure && pending_buffer_collection_info.NeedsAuxBuffersForSecure() &&
+          !pending_buffer_collection_info.HasValidAuxBufferCollection()) {
         // If we don't have valid buffers, we should fail the allocation if we needed them, or just
         // skip the checks if we didn't.
         FailLocked(
-            "OnBufferCollectionInfoInternal() aux buffers required, but not provided - port: %d",
+            "OnBufferCollectionInfoInternal() aux buffers needed, but not provided - port: %d",
             port);
         return;
       }
@@ -2025,7 +2028,7 @@ void CodecImpl::OnBufferCollectionInfoInternal(
 
   ZX_DEBUG_ASSERT(!fake_map_range_[port]);
   if (port_settings_[port]->is_secure()) {
-    if (IsCoreCodecMappedBufferUseful(port)) {
+    if (IsCoreCodecMappedBufferUseful(port) && !maybe_aux_buffer_collection_info) {
       zx_status_t status =
           FakeMapRange::Create(port_settings_[port]->vmo_usable_size(), &fake_map_range_[port]);
       if (status != ZX_OK) {
@@ -2339,7 +2342,8 @@ bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo
   std::unique_ptr<CodecBuffer> local_buffer = std::unique_ptr<CodecBuffer>(new CodecBuffer(
       this, std::move(buffer_info), std::move(vmo_range), std::move(aux_vmo_range)));
 
-  if (IsCoreCodecMappedBufferUseful(port)) {
+  if (IsCoreCodecMappedBufferUseful(port) || local_buffer->has_aux_buffer()) {
+    // This will be false if has_aux_buffer().
     if (fake_map_range_[port]) {
       // The fake_map_range_[port]->base() is % ZX_PAGE_SIZE == 0, which is the same as a mapping
       // would be.  There are sufficient virtual pages starting at FakeMapRange::base() to permit
@@ -2358,10 +2362,6 @@ bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo
         FailLocked("AddOutputBuffer()/AddInputBuffer() couldn't Map() new buffer - port: %d", port);
         return false;
       }
-    }
-    if (local_buffer->has_aux_buffer() && !local_buffer->MapAuxBuffer()) {
-      FailLocked("Could not map aux buffer - port: %d", port);
-      return false;
     }
   }
 

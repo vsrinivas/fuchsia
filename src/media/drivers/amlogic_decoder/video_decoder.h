@@ -22,6 +22,7 @@
 
 #include "decoder_core.h"
 #include "firmware_blob.h"
+#include "macros.h"
 #include "pts_manager.h"
 #include "registers.h"
 #include "video_frame.h"
@@ -48,7 +49,9 @@ class CanvasEntry {
    public:
     virtual void FreeCanvas(CanvasEntry* canvas) = 0;
   };
-  CanvasEntry(Owner* owner, uint32_t index) : owner_(owner), index_(index) {}
+  CanvasEntry(Owner* owner, uint32_t index) : owner_(owner), index_(index) {
+    ZX_DEBUG_ASSERT(owner_);
+  }
 
   ~CanvasEntry() { owner_->FreeCanvas(this); }
 
@@ -56,8 +59,8 @@ class CanvasEntry {
   uint32_t index() const { return index_; }
 
  private:
-  Owner* owner_;
-  uint32_t index_;
+  Owner* owner_{};
+  uint32_t index_{};
 };
 
 class CodecPacket;

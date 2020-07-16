@@ -1,0 +1,19 @@
+{
+    "program": {
+        "binary": "bin/h264_decoder_conformance_http"
+    },
+    "sandbox": {
+        "dev": [
+            "class/media-codec",
+            "class/sysmem"
+        ],
+        "services": [
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.net.http.Loader",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

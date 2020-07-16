@@ -36,7 +36,7 @@ void PendingBufferCollectionInfo::set_buffer_collection_info(
 
 void PendingBufferCollectionInfo::set_aux_buffer_collection_info(
     zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
-  ZX_DEBUG_ASSERT(AllowsAuxBuffers());
+  ZX_DEBUG_ASSERT(AllowsAuxBuffersForSecure());
   aux_buffer_collection_ = GetInfoResult(status, std::move(info));
 }
 

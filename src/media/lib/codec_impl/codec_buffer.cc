@@ -95,39 +95,23 @@ CodecBuffer::~CodecBuffer() {
       parent_->FailFatalLocked("CodecBuffer::~CodecBuffer() failed unpin() - status: %d", status);
     }
   }
-  if (aux_buffer_base_) {
-    zx_status_t status = Unmap(aux_buffer_base_, aux_size());
-    if (status != ZX_OK) {
-      parent_->FailFatalLocked(
-          "CodecBuffer::~CodecBuffer() failed to unmap() Aux Buffer - status: %d", status);
-    }
-  }
 }
 
 bool CodecBuffer::Map() {
-  ZX_DEBUG_ASSERT(!buffer_info_.is_secure);
-  auto buffer_base = MapVmoRange(port(), vmo_range_);
+  ZX_DEBUG_ASSERT(!buffer_info_.is_secure || has_aux_buffer());
+  const CodecVmoRange& vmo_range = has_aux_buffer() ? *aux_vmo_range_ : vmo_range_;
+  uint8_t* buffer_base = MapVmoRange(port(), vmo_range);
   if (!buffer_base) {
     return false;
   }
   buffer_base_ = buffer_base;
   is_mapped_ = true;
-  return is_mapped_;
-}
-
-bool CodecBuffer::MapAuxBuffer() {
-  ZX_DEBUG_ASSERT(has_aux_buffer());
-  auto aux_buffer_base = MapVmoRange(port(), *aux_vmo_range_);
-  if (!aux_buffer_base) {
-    return false;
-  }
-  aux_buffer_base_ = aux_buffer_base;
   return true;
 }
 
 void CodecBuffer::FakeMap(uint8_t* fake_map_addr) {
   ZX_DEBUG_ASSERT(reinterpret_cast<uintptr_t>(fake_map_addr) % ZX_PAGE_SIZE == 0);
-  buffer_base_ = fake_map_addr + (offset() % ZX_PAGE_SIZE);
+  buffer_base_ = fake_map_addr + (vmo_offset() % ZX_PAGE_SIZE);
   ZX_DEBUG_ASSERT(!is_mapped_);
 }
 
@@ -135,6 +119,8 @@ uint8_t* CodecBuffer::base() const {
   ZX_DEBUG_ASSERT(buffer_base_ && "Shouldn't be using if buffer was not mapped.");
   return buffer_base_;
 }
+
+bool CodecBuffer::is_known_contiguous() const { return is_known_contiguous_; }
 
 zx_paddr_t CodecBuffer::physical_base() const {
   // Must call Pin() first.
@@ -149,27 +135,7 @@ size_t CodecBuffer::size() const { return vmo_range_.size(); }
 
 const zx::vmo& CodecBuffer::vmo() const { return vmo_range_.vmo(); }
 
-uint64_t CodecBuffer::offset() const { return vmo_range_.offset(); }
-
-uint8_t* CodecBuffer::aux_base() const {
-  ZX_DEBUG_ASSERT(aux_buffer_base_ && "Shouldn't be using if aux_buffer was not mapped.");
-  return aux_buffer_base_;
-}
-
-const zx::vmo& CodecBuffer::aux_vmo() const {
-  ZX_DEBUG_ASSERT(has_aux_buffer());
-  return aux_vmo_range_->vmo();
-}
-
-uint64_t CodecBuffer::aux_offset() const {
-  ZX_DEBUG_ASSERT(has_aux_buffer());
-  return aux_vmo_range_->offset();
-}
-
-size_t CodecBuffer::aux_size() const {
-  ZX_DEBUG_ASSERT(has_aux_buffer());
-  return aux_vmo_range_->size();
-}
+uint64_t CodecBuffer::vmo_offset() const { return vmo_range_.offset(); }
 
 void CodecBuffer::SetVideoFrame(std::weak_ptr<VideoFrame> video_frame) const {
   video_frame_ = video_frame;
@@ -199,8 +165,8 @@ zx_status_t CodecBuffer::Pin() {
   // up to ZX_PAGE_SIZE - 1 bytes before vmo_usable_start, and up to ZX_PAGE_SIZE - 1 bytes after
   // vmo_usable_start + vmo_usable_size. The usage of the pin is expected to stay within
   // CodecBuffer::base() to CodecBuffer::base() + vmo_usable_size.
-  uint64_t pin_offset = fbl::round_down(offset(), ZX_PAGE_SIZE);
-  uint64_t pin_size = fbl::round_up(offset() + size(), ZX_PAGE_SIZE) - pin_offset;
+  uint64_t pin_offset = fbl::round_down(vmo_offset(), ZX_PAGE_SIZE);
+  uint64_t pin_size = fbl::round_up(vmo_offset() + size(), ZX_PAGE_SIZE) - pin_offset;
 
   uint32_t options = ZX_BTI_CONTIGUOUS | ZX_BTI_PERM_READ;
   if (port() == kOutputPort) {
@@ -215,7 +181,7 @@ zx_status_t CodecBuffer::Pin() {
   // Include the low-order bits of vmo_usable_start() in contiguous_paddr_base_ so that the paddr
   // at contiguous_paddr_base_ points (physical) at the byte at offset vmo_usable_start() within
   // *vmo.
-  contiguous_paddr_base_ = paddr + (offset() % ZX_PAGE_SIZE);
+  contiguous_paddr_base_ = paddr + (vmo_offset() % ZX_PAGE_SIZE);
   return ZX_OK;
 }
 
@@ -223,11 +189,15 @@ bool CodecBuffer::is_pinned() const { return !!pinned_; }
 
 zx_status_t CodecBuffer::CacheFlush(uint32_t flush_offset, uint32_t length) const {
   ZX_DEBUG_ASSERT(!is_secure());
+  // Aux buffers can only be used when is_secure().  CacheFlush() isn't used when is_secure().  This
+  // is fine for the aux buffers because aux buffers are entirely CPU domain, so they don't need
+  // cache flushes.
+  ZX_DEBUG_ASSERT(!has_aux_buffer());
   zx_status_t status;
   if (is_mapped_) {
     status = zx_cache_flush(base() + flush_offset, length, ZX_CACHE_FLUSH_DATA);
   } else {
-    status = vmo().op_range(ZX_VMO_OP_CACHE_CLEAN, offset() + flush_offset, length, nullptr, 0);
+    status = vmo().op_range(ZX_VMO_OP_CACHE_CLEAN, vmo_offset() + flush_offset, length, nullptr, 0);
   }
   BarrierAfterFlush();
   return status;

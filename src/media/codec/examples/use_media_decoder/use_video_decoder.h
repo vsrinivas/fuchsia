@@ -133,6 +133,12 @@ struct UseVideoDecoderTestParams final {
   static constexpr int64_t kDefaultSkipFrameOrdinal = -1;
   int64_t skip_frame_ordinal = kDefaultSkipFrameOrdinal;
 
+  // 0 means unlimited.  Positive means that many frames get queued then stop queuing frames.
+  uint64_t frame_count = 0;
+
+  // nullopt means no override
+  std::optional<std::string> mime_type;
+
  private:
   // Client code should not exploit knowledge of this value, and should not directly initialize or
   // directly set magic_validated_ to any value.

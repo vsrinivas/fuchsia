@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <list>
 #include <memory>
 #include <vector>
 
@@ -148,6 +149,33 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
 
   // AcceleratedVideoDecoder implementation.
   void SetStream(int32_t id, const DecoderBuffer& decoder) override;
+
+  // If using QueuePreparsedNalu(), before Decode(), call SetStreamId() to
+  // inform the decoder what id to assign to frames that correspond to
+  // (logically "generated from") the queued NALUs.  This takes the place of the
+  // first parameter to SetStream() (as SetStream() is not used when using
+  // QueuePreparsedNalu()).
+  void SetStreamId(int32_t id);
+  // Pre-parsed NALUs are used when the HW can parse, but the HW needs help with
+  // DPB management.  This method must be called before the first call to
+  // Decode(), and SetStream() must not be called.  After this method is called,
+  // the H264Decoder instance is in nalu_injection_mode_, and stays in that mode
+  // until destruction.
+  //
+  // When Decode() is called, any pre-parsed NALUs are processed as if they had
+  // been parsed from the bitstream, and calls to the accelerator will occur as
+  // normal except without any stream data.
+  //
+  // The caller may queue a kAUD and call Decode() when the caller is ready for
+  // SubmitDecode() to be called.  The caller may have already finished the
+  // underlying picture decode and just needs to bring H264Decoder into sync, or
+  // the caller may decode during SubmitDecode().  Either way, after
+  // SubmitDecode() returns some OutputPicture() calls may occur.  As an
+  // alternative to queueing a kAUD, the caller may trigger SubmitDecode() by
+  // instead queuing and Decode()ing a new SPS, new PPS, or a slice of a new
+  // picture.
+  void QueuePreparsedNalu(std::unique_ptr<H264NALU> nalu);
+
   bool Flush() override WARN_UNUSED_RESULT;
   void Reset() override;
   DecodeResult Decode() override WARN_UNUSED_RESULT;
@@ -292,6 +320,9 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
   const uint8_t* current_stream_ = nullptr;
   size_t current_stream_size_ = 0;
 
+  // Populated via calls to QueuePreparsedNalu().
+  std::list<std::unique_ptr<H264NALU>> preparsed_nalus_;
+
   // Decrypting config for the most recent data passed to SetStream().
   std::unique_ptr<DecryptConfig> current_decrypt_config_;
 
@@ -353,6 +384,13 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
   int last_output_poc_;
 
   const std::unique_ptr<H264Accelerator> accelerator_;
+
+  enum class NaluInjectionMode {
+    kUnknown,
+    kOff,
+    kOn,
+  };
+  NaluInjectionMode nalu_injection_mode_ = NaluInjectionMode::kUnknown;
 
   DISALLOW_COPY_AND_ASSIGN(H264Decoder);
 };

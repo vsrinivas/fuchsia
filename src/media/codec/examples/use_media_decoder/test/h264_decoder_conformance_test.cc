@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -35,11 +35,11 @@ namespace {
 
 // The actual contents of these files will vary per test package.  See files
 // under garnet/test_data/media/third_party/webm_vp9_conformance_streams.
-constexpr char kInputFilePath[] = "/pkg/data/vp9.ivf";
-constexpr char kI420Md5FilePath[] = "/pkg/data/vp9.md5";
+constexpr char kInputFilePath[] = "/pkg/data/foo.h264";
+constexpr char kI420Md5FilePath[] = "/pkg/data/foo.md5";
 
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  decoder_conformance_test(argc, argv, use_vp9_decoder, kInputFilePath, kI420Md5FilePath);
+  decoder_conformance_test(argc, argv, use_h264_decoder, kInputFilePath, kI420Md5FilePath);
 }

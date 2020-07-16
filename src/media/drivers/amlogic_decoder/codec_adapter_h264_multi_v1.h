@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_MULTI_H_
-#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_MULTI_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_MULTI_V1_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_MULTI_V1_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -13,20 +13,19 @@
 
 #include <fbl/macros.h>
 
-#include "h264_multi_decoder.h"
+#include "h264_multi_decoder_v1.h"
 #include "video_decoder.h"
-#include "zircon/system/ulib/fit/include/lib/fit/defer.h"
 
 class AmlogicVideo;
 class DeviceCtx;
 struct VideoFrame;
-class CodecAdapterH264Multi : public CodecAdapter,
-                              public VideoDecoder::Client,
-                              public H264MultiDecoder::FrameDataProvider {
+class CodecAdapterH264MultiV1 : public CodecAdapter,
+                                public VideoDecoder::Client,
+                                public H264MultiDecoderV1::FrameDataProvider {
  public:
-  explicit CodecAdapterH264Multi(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
-                                 DeviceCtx* device);
-  ~CodecAdapterH264Multi();
+  explicit CodecAdapterH264MultiV1(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
+                                   DeviceCtx* device);
+  ~CodecAdapterH264MultiV1();
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
   bool IsCoreCodecMappedBufferUseful(CodecPort port) override;
@@ -75,38 +74,38 @@ class CodecAdapterH264Multi : public CodecAdapter,
   bool IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_count, uint32_t max_frame_count,
                                              uint32_t coded_width, uint32_t coded_height,
                                              uint32_t stride, uint32_t display_width,
-                                             uint32_t display_height) override;
+                                             uint32_t display_height) override {
+    return true;
+  }
 
-  // H264MultiDecoder::FrameDataProvider implementation.
-  std::optional<H264MultiDecoder::DataInput> ReadMoreInputData() override;
+  // H264MultiDecoderV1::FrameDataProvider implementation.
+  H264MultiDecoderV1::DataInput ReadMoreInputData() override;
   bool HasMoreInputData() override;
-  void AsyncPumpDecoder() override;
   void AsyncResetStreamAfterCurrentFrame() override;
 
  private:
-  void QueueInputItem(CodecInputItem input_item, bool at_front = false);
+  void QueueInputItem(CodecInputItem input_item);
   CodecInputItem DequeueInputItem();
   std::vector<uint8_t> ParseAndDeliverCodecOobBytes();
   // If parsing something whose format depends on is_avcc_, use this method.
   //
   // The buffer pointer can be nullptr unless the VMO is a secure VMO.
-  std::optional<H264MultiDecoder::DataInput> ParseVideo(const CodecBuffer* buffer,
-                                                        fit::deferred_callback* return_input_packet,
-                                                        const uint8_t* data, uint32_t length);
+  std::optional<H264MultiDecoderV1::DataInput> ParseVideo(const CodecBuffer* buffer,
+                                                          const uint8_t* data, uint32_t length);
   // If parsing something that's known to be in AVCC format, such as a bunch of
   // 0x00 without start codes or emulation prevention bytes, use this method.
   //
   // This does not support secure buffers, as this requires a CPU re-pack which at least for now is
   // only implemented in the REE (rich execution environment), so the re-pack can't happen if the
   // buffer can't be read by the CPU from the REE.
-  std::optional<H264MultiDecoder::DataInput> ParseVideoAvcc(const uint8_t* data, uint32_t length);
+  std::optional<H264MultiDecoderV1::DataInput> ParseVideoAvcc(const uint8_t* data, uint32_t length);
   // If parsing something that's known to be in AnnexB format, such as the
   // end-of-stream marker data, use this method.
   //
   // The buffer pointer can be nullptr unless the VMO is a secure VMO.
-  std::optional<H264MultiDecoder::DataInput> ParseVideoAnnexB(
-      const CodecBuffer* buffer, fit::deferred_callback* return_input_packet, const uint8_t* data,
-      uint32_t length);
+  std::optional<H264MultiDecoderV1::DataInput> ParseVideoAnnexB(const CodecBuffer* buffer,
+                                                                const uint8_t* data,
+                                                                uint32_t length);
 
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);
   CodecPacket* GetFreePacket();
@@ -120,11 +119,11 @@ class CodecAdapterH264Multi : public CodecAdapter,
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
   // Should only be accessed under the video decoder lock.
-  H264MultiDecoder* decoder_ = nullptr;
+  H264MultiDecoderV1* decoder_ = nullptr;
 
   // CodecImpl requires some calls (mainly related to returning input data) to not be on the
   // StreamControl or FIDL threads, so this thread should be used for calls into the
-  // H264MultiDecoder that may trigger PumpDecoder.
+  // H264MultiDecoderV1 that may trigger PumpDecoder.
   async::Loop core_loop_;
 
   bool have_queued_trigger_decoder_ = false;
@@ -134,7 +133,6 @@ class CodecAdapterH264Multi : public CodecAdapter,
   fuchsia::media::FormatDetails initial_input_format_details_;
   fuchsia::media::FormatDetails latest_input_format_details_;
 
-  std::optional<fuchsia::sysmem::BufferCollectionInfo_2> output_buffer_collection_info_;
   std::optional<fuchsia::sysmem::SingleBufferSettings> buffer_settings_[kPortCount];
 
   std::vector<const CodecBuffer*> all_output_buffers_;
@@ -177,8 +175,8 @@ class CodecAdapterH264Multi : public CodecAdapter,
 
   bool is_input_end_of_stream_queued_to_core_ = false;
 
-  CodecAdapterH264Multi() = delete;
-  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterH264Multi);
+  CodecAdapterH264MultiV1() = delete;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterH264MultiV1);
 };
 
-#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_MULTI_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_MULTI_V1_H_

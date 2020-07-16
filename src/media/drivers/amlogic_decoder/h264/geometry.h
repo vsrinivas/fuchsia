@@ -96,7 +96,15 @@ class Rect {
     set_height(size.height());
   }
 
-  std::string ToString() { return std::string(); }
+  std::string ToString() const {
+    const char* format = "x: %d y: %d width: %d height: %d";
+    int chars = snprintf(nullptr, 0, format, x(), y(), width(), height());
+    auto char_array = std::make_unique<char[]>(chars + 1);
+    int chars2 = snprintf(char_array.get(), chars + 1, format, x(), y(),
+                          width(), height());
+    ZX_DEBUG_ASSERT(chars == chars2);
+    return std::string(char_array.get(), chars);
+  }
 
  private:
   gfx::Point origin_;

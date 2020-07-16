@@ -14,6 +14,7 @@ source_set("use_media_decoder_source_set") {
     "in_stream_file.cc",
     "in_stream_http.cc",
     "in_stream_peeker.cc",
+    "test/decoder_conformance_test.cc",
     "test/use_video_decoder_test.cc",
     "use_aac_decoder.cc",
     "use_aac_decoder.h",
@@ -227,6 +228,16 @@ test("vp9_decoder_conformance_test") {
   output_name = "vp9_decoder_conformance_test"
 
   sources = [ "test/vp9_decoder_conformance_test.cc" ]
+
+  deps = [ ":use_media_decoder_source_set" ]
+}
+
+test("h264_decoder_conformance_test") {
+  testonly = true
+
+  output_name = "h264_decoder_conformance_test"
+
+  sources = [ "test/h264_decoder_conformance_test.cc" ]
 
   deps = [ ":use_media_decoder_source_set" ]
 }

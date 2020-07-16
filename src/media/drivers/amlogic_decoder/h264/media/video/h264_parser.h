@@ -30,6 +30,10 @@ namespace media {
 
 struct SubsampleEntry;
 
+struct H264SPS;
+struct H264PPS;
+struct H264SliceHeader;
+
 // For explanations of each struct and its members, see H.264 specification
 // at http://www.itu.int/rec/T-REC-H.264.
 struct MEDIA_EXPORT H264NALU {
@@ -61,11 +65,22 @@ struct MEDIA_EXPORT H264NALU {
 
   // After (without) start code; we don't own the underlying memory
   // and a shallow copy should be made when copying this struct.
+  //
+  // This will remain nullptr if using QueuePreparsedNalu().
   const uint8_t* data;
+  // This field will remain 0 if using QueuePreparsedNalu().
   off_t size;  // From after start code to start code of next NALU (or EOS).
 
   int nal_ref_idc;
   int nal_unit_type;
+
+  using NaluHeaderVariant = fit::variant<fit::monostate,
+                                         std::unique_ptr<H264SPS>,
+                                         std::unique_ptr<H264PPS>,
+                                         std::unique_ptr<H264SliceHeader>>;
+  // If using QueuePreparsedNalu(), this field carries the pre-parsed header.
+  // Only SPS, PPS, and SliceHeader are supported.
+  NaluHeaderVariant preparsed_header;
 };
 
 enum {
@@ -204,6 +219,8 @@ struct MEDIA_EXPORT H264SPS {
 
   int chroma_array_type;
 
+  // If empty(), raw data is not available because AcceptPreParsedSPS() was
+  // used.
   std::vector<uint8_t> raw_data;
 
   // Get corresponding SPS |level_idc| and |constraint_set3_flag| value from
@@ -255,6 +272,8 @@ struct MEDIA_EXPORT H264PPS {
   int scaling_list8x8[6][kH264ScalingList8x8Length];
 
   int second_chroma_qp_index_offset;
+  // If empty(), raw data is not available because AcceptPreParsedPPS() was
+  // used.
   std::vector<uint8_t> raw_data;
 };
 
@@ -450,22 +469,31 @@ class MEDIA_EXPORT H264Parser {
   // again, instead of any NALU-type specific parse functions below.
   Result AdvanceToNextNALU(H264NALU* nalu);
 
-  // NALU-specific parsing functions.
-  // These should be called after AdvanceToNextNALU().
+  // NALU-specific parsing/accepting functions.
+  // These should be called after AdvanceToNextNALU() (for parsing variants),
+  // or after taking the first item of preparsed_nalus_ (for accepting
+  // variants).
 
   // SPSes and PPSes are owned by the parser class and the memory for their
   // structures is managed here, not by the caller, as they are reused
   // across NALUs.
   //
-  // Parse an SPS/PPS NALU and save their data in the parser, returning id
-  // of the parsed structure in |*pps_id|/|*sps_id|.
+  // For accepting variants, the caller passes in a std::unique_ptr<> which
+  // transfers ownership from caller to parser class.
+  //
+  // Parse/accept an SPS/PPS NALU and save their data in the parser, returning
+  // id of the parsed structure in |*pps_id|/|*sps_id|.
   // To get a pointer to a given SPS/PPS structure, use GetSPS()/GetPPS(),
   // passing the returned |*sps_id|/|*pps_id| as parameter.
   // TODO(posciak,fischman): consider replacing returning Result from Parse*()
   // methods with a scoped_ptr and adding an AtEOS() function to check for EOS
   // if Parse*() return NULL.
   Result ParseSPS(int* sps_id);
+  Result AcceptPreparsedSPS(std::unique_ptr<H264SPS> preparsed_sps,
+                            int* sps_id);
   Result ParsePPS(int* pps_id);
+  Result AcceptPreparsedPPS(std::unique_ptr<H264PPS> preparsed_pps,
+                            int* pps_id);
 
   // Parses the SPS ID from the SPSExt, but otherwise does nothing.
   Result ParseSPSExt(int* sps_id);

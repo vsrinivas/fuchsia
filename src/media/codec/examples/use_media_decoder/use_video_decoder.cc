@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include <thread>
+#include <vector>
 
 #include <fbl/algorithm.h>
 #include <src/media/lib/raw_video_writer/raw_video_writer.h>
@@ -117,6 +118,16 @@ enum class Format {
   kVp9,
 };
 
+const uint8_t kSliceNalUnitTypes[] = {1, 2, 3, 4, 5, 19, 20, 21};
+bool IsSliceNalUnitType(uint8_t nal_unit_type) {
+  for (uint8_t type : kSliceNalUnitTypes) {
+    if (type == nal_unit_type) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 // Payload data for bear.h264 is 00 00 00 01 start code before each NAL, with
@@ -138,8 +149,33 @@ uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
   // the start codes don't alias in the middle of NALs, so we just scan
   // for NALs and send them in to the decoder.
   uint64_t input_pts_counter = input_pts_counter_start;
-  auto queue_access_unit = [&codec_client, tvp, stream_lifetime_ordinal, &input_pts_counter](
-                               uint8_t* bytes, size_t byte_count) {
+  uint64_t frame_count = 0;
+  std::vector<uint8_t> accumulator;
+  auto queue_access_unit = [&codec_client, tvp, stream_lifetime_ordinal, test_params,
+                            &input_pts_counter, &frame_count,
+                            &accumulator](uint8_t* bytes, size_t byte_count) -> bool {
+    size_t insert_offset = accumulator.size();
+    size_t new_size = insert_offset + byte_count;
+    if (accumulator.capacity() < new_size) {
+      size_t new_capacity = std::max(accumulator.capacity() * 2, new_size);
+      accumulator.reserve(new_capacity);
+    }
+    accumulator.resize(insert_offset + byte_count);
+    memcpy(accumulator.data() + insert_offset, bytes, byte_count);
+
+    size_t start_code_size_bytes = 0;
+    ZX_ASSERT(is_start_code(bytes, byte_count, &start_code_size_bytes));
+    ZX_ASSERT(start_code_size_bytes < byte_count);
+    uint8_t nal_unit_type = bytes[start_code_size_bytes] & 0x1f;
+    if (!IsSliceNalUnitType(nal_unit_type)) {
+      return true;
+    }
+
+    auto orig_bytes = bytes;
+    bytes = accumulator.data();
+    byte_count = accumulator.size();
+    auto clear_accumulator = fit::defer([&accumulator] { accumulator.clear(); });
+
     size_t bytes_so_far = 0;
     // printf("queuing offset: %ld byte_count: %zu\n", bytes -
     // input_bytes.get(), byte_count);
@@ -170,8 +206,8 @@ uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
       packet->set_valid_length_bytes(bytes_to_copy);
 
       if (bytes_so_far == 0) {
-        uint8_t nal_unit_type = GetNalUnitType(bytes);
-        if (nal_unit_type == 1 || nal_unit_type == 5) {
+        uint8_t nal_unit_type = GetNalUnitType(orig_bytes);
+        if (IsSliceNalUnitType(nal_unit_type)) {
           packet->set_timestamp_ish(input_pts_counter++);
         }
       }
@@ -186,6 +222,10 @@ uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
       }
       codec_client->QueueInputPacket(std::move(packet));
       bytes_so_far += bytes_to_copy;
+    }
+    frame_count++;
+    if (frame_count == test_params->frame_count) {
+      return false;
     }
     return true;
   };
@@ -214,6 +254,13 @@ uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
       break;
     }
     if (!is_start_code(&peek[0], actual_peek_bytes, &start_code_size_bytes)) {
+      for (uint32_t i = 0; i < 64; ++i) {
+        LOGF("peek[%u] == 0x%x", i, peek[i]);
+      }
+      char buf[65] = {};
+      memcpy(&buf[0], &peek[0], 64);
+      buf[64] = 0;
+      LOGF("peek[0..64]: %s", buf);
       if (in_stream->cursor_position() == 0) {
         Exit(
             "Didn't find a start code at the start of the file, and this "
@@ -442,7 +489,7 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
   codec_client.set_is_input_secure(params.is_secure_input);
   codec_client.set_in_lax_mode(params.lax_mode);
 
-  const char* mime_type;
+  std::string mime_type;
   switch (format) {
     case Format::kH264:
       mime_type = "video/h264";
@@ -456,6 +503,9 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
       mime_type = "video/vp9";
       break;
   }
+  if (params.test_params->mime_type) {
+    mime_type = params.test_params->mime_type.value();
+  }
 
   async::PostTask(
       params.fidl_loop->dispatcher(),
@@ -463,7 +513,7 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
         VLOGF("before codec_factory->CreateDecoder() (async)");
         fuchsia::media::FormatDetails input_details;
         input_details.set_format_details_version_ordinal(0);
-        input_details.set_mime_type(mime_type);
+        input_details.set_mime_type(mime_type.c_str());
         fuchsia::mediacodec::CreateDecoder_Params decoder_params;
         decoder_params.set_input_details(std::move(input_details));
         // This is required for timestamp_ish values to transit the

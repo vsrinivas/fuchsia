@@ -46,16 +46,18 @@ class PendingBufferCollectionInfo {
   std::optional<fuchsia::sysmem::BufferCollectionInfo_2> TakeAuxBufferCollectionInfo();
 
   // Observers
-  bool AllowsAuxBuffers() const {
+  bool AllowsAuxBuffersForSecure() const {
     return aux_buffer_requirement_ != AuxBufferRequirement::DISALLOWED;
   }
-  bool NeedsAuxBuffers() const { return aux_buffer_requirement_ == AuxBufferRequirement::REQUIRED; }
+  bool NeedsAuxBuffersForSecure() const {
+    return aux_buffer_requirement_ == AuxBufferRequirement::REQUIRED;
+  }
 
   bool HasError() const {
     return buffer_collection_.is_error() || aux_buffer_collection_.is_error();
   }
   bool IsReady() const {
-    return buffer_collection_ && (!AllowsAuxBuffers() || aux_buffer_collection_);
+    return buffer_collection_ && (!AllowsAuxBuffersForSecure() || aux_buffer_collection_);
   }
 
   bool HasValidAuxBufferCollection() const;

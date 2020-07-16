@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "codec_adapter_h264_multi.h"
+#include "codec_adapter_h264_multi_v1.h"
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/trace/event.h>
 #include <lib/zx/bti.h>
-#include <zircon/assert.h>
 
 #include "device_ctx.h"
 #include "h264_multi_decoder.h"
-#include "lib/fit/defer.h"
 #include "macros.h"
 #include "pts_manager.h"
 #include "vdec1.h"
@@ -34,9 +32,9 @@ constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
 
 }  // namespace
 
-CodecAdapterH264Multi::CodecAdapterH264Multi(std::mutex& lock,
-                                             CodecAdapterEvents* codec_adapter_events,
-                                             DeviceCtx* device)
+CodecAdapterH264MultiV1::CodecAdapterH264MultiV1(std::mutex& lock,
+                                                 CodecAdapterEvents* codec_adapter_events,
+                                                 DeviceCtx* device)
     : CodecAdapter(lock, codec_adapter_events),
       device_(device),
       video_(device_->video()),
@@ -50,15 +48,15 @@ CodecAdapterH264Multi::CodecAdapterH264Multi(std::mutex& lock,
   ZX_ASSERT(status == ZX_OK);
 }
 
-CodecAdapterH264Multi::~CodecAdapterH264Multi() {
+CodecAdapterH264MultiV1::~CodecAdapterH264MultiV1() {
   // nothing else to do here, at least not until we aren't calling PowerOff() in
   // CoreCodecStopStream().
   core_loop_.Shutdown();
 }
 
-bool CodecAdapterH264Multi::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
+bool CodecAdapterH264MultiV1::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
 
-bool CodecAdapterH264Multi::IsCoreCodecMappedBufferUseful(CodecPort port) {
+bool CodecAdapterH264MultiV1::IsCoreCodecMappedBufferUseful(CodecPort port) {
   if (port == kInputPort) {
     // Returning true here essentially means that we may be able to make use of mapped buffers if
     // they're possible.  However if is_secure true, we won't get a mapping and we don't really need
@@ -72,11 +70,11 @@ bool CodecAdapterH264Multi::IsCoreCodecMappedBufferUseful(CodecPort port) {
   }
 }
 
-bool CodecAdapterH264Multi::IsCoreCodecHwBased(CodecPort port) { return true; }
+bool CodecAdapterH264MultiV1::IsCoreCodecHwBased(CodecPort port) { return true; }
 
-zx::unowned_bti CodecAdapterH264Multi::CoreCodecBti() { return zx::unowned_bti(video_->bti()); }
+zx::unowned_bti CodecAdapterH264MultiV1::CoreCodecBti() { return zx::unowned_bti(video_->bti()); }
 
-void CodecAdapterH264Multi::CoreCodecInit(
+void CodecAdapterH264MultiV1::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
   initial_input_format_details_ = fidl::Clone(initial_input_format_details);
   latest_input_format_details_ = fidl::Clone(initial_input_format_details);
@@ -85,7 +83,7 @@ void CodecAdapterH264Multi::CoreCodecInit(
   // currently, but we should do more here and less there.
 }
 
-void CodecAdapterH264Multi::CoreCodecSetSecureMemoryMode(
+void CodecAdapterH264MultiV1::CoreCodecSetSecureMemoryMode(
     CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) {
   // TODO(40198): Ideally a codec list from the main CodecFactory would avoid reporting support for
   // secure output or input when !is_tee_available(), which likely will mean reporting that in list
@@ -101,8 +99,8 @@ void CodecAdapterH264Multi::CoreCodecSetSecureMemoryMode(
   secure_memory_mode_[port] = secure_memory_mode;
 }
 
-void CodecAdapterH264Multi::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
-  TRACE_DURATION("media", "CodecAdapterH264Multi::OnFrameReady", "index", frame->index);
+void CodecAdapterH264MultiV1::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
+  TRACE_DURATION("media", "CodecAdapterH264MultiV1::OnFrameReady", "index", frame->index);
   // The Codec interface requires that emitted frames are cache clean. We invalidate without
   // skipping over stride-width per line, at least partly because stride - width is small (possibly
   // always 0) for this decoder. But we do invalidate the UV section separately in case
@@ -153,7 +151,7 @@ void CodecAdapterH264Multi::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
   events_->onCoreCodecOutputPacket(packet, false, false);
 }
 
-void CodecAdapterH264Multi::OnError() {
+void CodecAdapterH264MultiV1::OnError() {
   LOG(ERROR, "OnError()");
   OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
 }
@@ -161,7 +159,7 @@ void CodecAdapterH264Multi::OnError() {
 // TODO(dustingreen): A lot of the stuff created in this method should be able
 // to get re-used from stream to stream. We'll probably want to factor out
 // create/init from stream init further down.
-void CodecAdapterH264Multi::CoreCodecStartStream() {
+void CodecAdapterH264MultiV1::CoreCodecStartStream() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     is_input_format_details_pending_ = true;
@@ -174,7 +172,7 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
   // The output port is the one we really care about for is_secure of the
   // decoder, since the HW can read from secure or non-secure even when in
   // secure mode, but can only write to secure memory when in secure mode.
-  auto decoder = std::make_unique<H264MultiDecoder>(video_, this, this, IsOutputSecure());
+  auto decoder = std::make_unique<H264MultiDecoderV1>(video_, this, this, IsOutputSecure());
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
@@ -195,7 +193,7 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
   }  // ~lock
 }
 
-void CodecAdapterH264Multi::CoreCodecQueueInputFormatDetails(
+void CodecAdapterH264MultiV1::CoreCodecQueueInputFormatDetails(
     const fuchsia::media::FormatDetails& per_stream_override_format_details) {
   // TODO(dustingreen): Consider letting the client specify profile/level info
   // in the FormatDetails at least optionally, and possibly sizing input
@@ -204,11 +202,11 @@ void CodecAdapterH264Multi::CoreCodecQueueInputFormatDetails(
   QueueInputItem(CodecInputItem::FormatDetails(per_stream_override_format_details));
 }
 
-void CodecAdapterH264Multi::CoreCodecQueueInputPacket(CodecPacket* packet) {
+void CodecAdapterH264MultiV1::CoreCodecQueueInputPacket(CodecPacket* packet) {
   QueueInputItem(CodecInputItem::Packet(packet));
 }
 
-void CodecAdapterH264Multi::CoreCodecQueueInputEndOfStream() {
+void CodecAdapterH264MultiV1::CoreCodecQueueInputEndOfStream() {
   // This queues a marker, but doesn't force the HW to necessarily decode all
   // the way up to the marker, depending on whether the client closes the stream
   // or switches to a different stream first - in those cases it's fine for the
@@ -224,7 +222,7 @@ void CodecAdapterH264Multi::CoreCodecQueueInputEndOfStream() {
 
 // TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
 // creating as much stuff for each stream.
-void CodecAdapterH264Multi::CoreCodecStopStream() {
+void CodecAdapterH264MultiV1::CoreCodecStopStream() {
   std::list<CodecInputItem> leftover_input_items = CoreCodecStopStreamInternal();
   for (auto& input_item : leftover_input_items) {
     if (input_item.is_packet()) {
@@ -235,7 +233,7 @@ void CodecAdapterH264Multi::CoreCodecStopStream() {
 
 // TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
 // creating as much stuff for each stream.
-std::list<CodecInputItem> CodecAdapterH264Multi::CoreCodecStopStreamInternal() {
+std::list<CodecInputItem> CodecAdapterH264MultiV1::CoreCodecStopStreamInternal() {
   std::list<CodecInputItem> leftover_input_items;
   // TODO: start cancellation of input processing before acquiring decoder lock, in case decoder is
   // stuck decoding and is trying to use onCoreCodecResetStreamAfterCurrentFrame().
@@ -254,7 +252,7 @@ std::list<CodecInputItem> CodecAdapterH264Multi::CoreCodecStopStreamInternal() {
   return leftover_input_items;
 }
 
-void CodecAdapterH264Multi::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
+void CodecAdapterH264MultiV1::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
   if (port != kOutputPort) {
     return;
   }
@@ -262,7 +260,7 @@ void CodecAdapterH264Multi::CoreCodecAddBuffer(CodecPort port, const CodecBuffer
   all_output_buffers_.push_back(buffer);
 }
 
-void CodecAdapterH264Multi::CoreCodecConfigureBuffers(
+void CodecAdapterH264MultiV1::CoreCodecConfigureBuffers(
     CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {
   if (port != kOutputPort) {
     return;
@@ -284,7 +282,7 @@ void CodecAdapterH264Multi::CoreCodecConfigureBuffers(
   std::shuffle(free_output_packets_.begin(), free_output_packets_.end(), not_for_security_prng_);
 }
 
-void CodecAdapterH264Multi::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
+void CodecAdapterH264MultiV1::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   if (packet->is_new()) {
     packet->SetIsNew(false);
     return;
@@ -321,7 +319,7 @@ void CodecAdapterH264Multi::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   });
 }
 
-void CodecAdapterH264Multi::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
+void CodecAdapterH264MultiV1::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   std::lock_guard<std::mutex> lock(lock_);
 
   // This adapter should ensure that zero old CodecPacket* or CodecBuffer*
@@ -338,13 +336,12 @@ void CodecAdapterH264Multi::CoreCodecEnsureBuffersNotConfigured(CodecPort port) 
     all_output_buffers_.clear();
     all_output_packets_.clear();
     free_output_packets_.clear();
-    output_buffer_collection_info_.reset();
   }
   buffer_settings_[port].reset();
 }
 
 std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
-CodecAdapterH264Multi::CoreCodecBuildNewOutputConstraints(
+CodecAdapterH264MultiV1::CoreCodecBuildNewOutputConstraints(
     uint64_t stream_lifetime_ordinal, uint64_t new_output_buffer_constraints_version_ordinal,
     bool buffer_constraints_action_required) {
   // This decoder produces NV12.
@@ -411,7 +408,7 @@ CodecAdapterH264Multi::CoreCodecBuildNewOutputConstraints(
 }
 
 fuchsia::sysmem::BufferCollectionConstraints
-CodecAdapterH264Multi::CoreCodecGetBufferCollectionConstraints(
+CodecAdapterH264MultiV1::CoreCodecGetBufferCollectionConstraints(
     CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
   fuchsia::sysmem::BufferCollectionConstraints result;
@@ -569,25 +566,24 @@ CodecAdapterH264Multi::CoreCodecGetBufferCollectionConstraints(
   return result;
 }
 
-void CodecAdapterH264Multi::CoreCodecSetBufferCollectionInfo(
+void CodecAdapterH264MultiV1::CoreCodecSetBufferCollectionInfo(
     CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
   ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   if (port == kOutputPort) {
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
                     fuchsia::sysmem::PixelFormatType::NV12);
-    output_buffer_collection_info_ = fidl::Clone(buffer_collection_info);
   }
   buffer_settings_[port].emplace(buffer_collection_info.settings);
   ZX_DEBUG_ASSERT(IsPortSecure(port) || !IsPortSecureRequired(port));
   ZX_DEBUG_ASSERT(!IsPortSecure(port) || IsPortSecurePermitted(port));
   // TODO(dustingreen): Remove after secure video decode works e2e.
   LOG(DEBUG,
-      "CodecAdapterH264Multi::CoreCodecSetBufferCollectionInfo() - IsPortSecure(): %u port: %u",
+      "CodecAdapterH264MultiV1::CoreCodecSetBufferCollectionInfo() - IsPortSecure(): %u port: %u",
       IsPortSecure(port), port);
 }
 
-fuchsia::media::StreamOutputFormat CodecAdapterH264Multi::CoreCodecGetOutputFormat(
+fuchsia::media::StreamOutputFormat CodecAdapterH264MultiV1::CoreCodecGetOutputFormat(
     uint64_t stream_lifetime_ordinal, uint64_t new_output_format_details_version_ordinal) {
   fuchsia::media::StreamOutputFormat result;
   result.set_stream_lifetime_ordinal(stream_lifetime_ordinal);
@@ -640,14 +636,14 @@ fuchsia::media::StreamOutputFormat CodecAdapterH264Multi::CoreCodecGetOutputForm
   return result;
 }
 
-void CodecAdapterH264Multi::CoreCodecMidStreamOutputBufferReConfigPrepare() {
+void CodecAdapterH264MultiV1::CoreCodecMidStreamOutputBufferReConfigPrepare() {
   // For this adapter, the core codec just needs us to get new frame buffers
   // set up, so nothing to do here.
   //
   // CoreCodecEnsureBuffersNotConfigured() will run soon.
 }
 
-void CodecAdapterH264Multi::CoreCodecMidStreamOutputBufferReConfigFinish() {
+void CodecAdapterH264MultiV1::CoreCodecMidStreamOutputBufferReConfigFinish() {
   // Now that the client has configured output buffers, we need to hand those
   // back to the core codec via InitializedFrames.
 
@@ -681,17 +677,13 @@ void CodecAdapterH264Multi::CoreCodecMidStreamOutputBufferReConfigFinish() {
   });
 }
 
-void CodecAdapterH264Multi::QueueInputItem(CodecInputItem input_item, bool at_front) {
+void CodecAdapterH264MultiV1::QueueInputItem(CodecInputItem input_item) {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     // For now we don't worry about avoiding a trigger if we happen to queue
     // when ProcessInput() has removed the last item but ProcessInput() is still
     // running.
-    if (at_front) {
-      input_queue_.emplace_front(std::move(input_item));
-    } else {
-      input_queue_.emplace_back(std::move(input_item));
-    }
+    input_queue_.emplace_back(std::move(input_item));
     if (!have_queued_trigger_decoder_) {
       have_queued_trigger_decoder_ = true;
       async::PostTask(core_loop_.dispatcher(), [this]() {
@@ -708,7 +700,7 @@ void CodecAdapterH264Multi::QueueInputItem(CodecInputItem input_item, bool at_fr
   }  // ~lock
 }
 
-CodecInputItem CodecAdapterH264Multi::DequeueInputItem() {
+CodecInputItem CodecAdapterH264MultiV1::DequeueInputItem() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     if (is_stream_failed_ || input_queue_.empty()) {
@@ -720,12 +712,12 @@ CodecInputItem CodecAdapterH264Multi::DequeueInputItem() {
   }  // ~lock
 }
 
-std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ReadMoreInputData() {
-  H264MultiDecoder::DataInput result;
+H264MultiDecoderV1::DataInput CodecAdapterH264MultiV1::ReadMoreInputData() {
+  H264MultiDecoderV1::DataInput result;
   while (true) {
     CodecInputItem item = DequeueInputItem();
     if (!item.is_valid()) {
-      return std::nullopt;
+      return result;
     }
 
     if (item.is_format_details()) {
@@ -740,48 +732,47 @@ std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ReadMoreInputD
     }
 
     if (item.is_end_of_stream()) {
-      result.is_eos = true;
+      decoder_->QueueInputEos();
       is_input_end_of_stream_queued_to_core_ = true;
       return result;
     }
 
     ZX_DEBUG_ASSERT(item.is_packet());
+    auto return_input_packet =
+        fit::defer([this, &item] { events_->onCoreCodecInputPacketDone(item.packet()); });
 
     if (is_input_format_details_pending_) {
       is_input_format_details_pending_ = false;
       std::vector<uint8_t> oob_bytes = ParseAndDeliverCodecOobBytes();
       if (!oob_bytes.empty()) {
         result.data = std::move(oob_bytes);
-        // Put packet back for next call to ReadMoreInputData().
-        QueueInputItem(std::move(item), true);
         return result;
       }
     }
 
-    fit::deferred_callback return_input_packet = fit::defer_callback(fit::closure(
-        [this, packet = item.packet()] { events_->onCoreCodecInputPacketDone(packet); }));
-
     uint8_t* data = item.packet()->buffer()->base() + item.packet()->start_offset();
     uint32_t len = item.packet()->valid_length_bytes();
-    auto parsed_input_data = ParseVideo(item.packet()->buffer(), &return_input_packet, data, len);
-    if (!parsed_input_data) {
+    auto parsed_input_data = ParseVideo(nullptr, data, len);
+    if (!parsed_input_data)
       continue;
-    }
-    result = std::move(parsed_input_data.value());
-    if (item.packet()->has_timestamp_ish()) {
+    result = *std::move(parsed_input_data);
+    if (item.packet()->has_timestamp_ish())
       result.pts = item.packet()->timestamp_ish();
-    }
     return result;
-    // ~item
+    // At this point CodecInputItem is holding a packet pointer which may get
+    // re-used in a new CodecInputItem, but that's ok since CodecInputItem is
+    // going away here.
+    //
+    // ~return_input_packet, ~item
   }
 }
 
-bool CodecAdapterH264Multi::HasMoreInputData() {
+bool CodecAdapterH264MultiV1::HasMoreInputData() {
   std::lock_guard<std::mutex> lock(lock_);
   return !input_queue_.empty();
 }
 
-std::vector<uint8_t> CodecAdapterH264Multi::ParseAndDeliverCodecOobBytes() {
+std::vector<uint8_t> CodecAdapterH264MultiV1::ParseAndDeliverCodecOobBytes() {
   // Our latest oob_bytes may contain SPS/PPS info.  If we have any
   // such info, the core codec needs it (possibly converted first).
 
@@ -908,19 +899,17 @@ std::vector<uint8_t> CodecAdapterH264Multi::ParseAndDeliverCodecOobBytes() {
   }
 }
 
-std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ParseVideo(
-    const CodecBuffer* buffer, fit::deferred_callback* return_input_packet, const uint8_t* data,
-    uint32_t length) {
+std::optional<H264MultiDecoderV1::DataInput> CodecAdapterH264MultiV1::ParseVideo(
+    const CodecBuffer* buffer, const uint8_t* data, uint32_t length) {
   if (is_avcc_) {
     ZX_DEBUG_ASSERT(!buffer);
     return ParseVideoAvcc(data, length);
-    // ~return_input_packet
   } else {
-    return ParseVideoAnnexB(buffer, return_input_packet, data, length);
+    return ParseVideoAnnexB(buffer, data, length);
   }
 }
 
-std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ParseVideoAvcc(
+std::optional<H264MultiDecoderV1::DataInput> CodecAdapterH264MultiV1::ParseVideoAvcc(
     const uint8_t* data, uint32_t length) {
   // We don't necessarily know that is_avcc_ is true on entry to this method.
   // We use this method to send the decoder a bunch of 0x00 sometimes, which
@@ -1005,39 +994,24 @@ std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ParseVideoAvcc
   ZX_DEBUG_ASSERT(o == local_length);
   ZX_DEBUG_ASSERT(i == length);
 
-  return ParseVideoAnnexB(nullptr, nullptr, local_data, local_length);
+  return ParseVideoAnnexB(nullptr, local_data, local_length);
 }
 
-std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ParseVideoAnnexB(
-    const CodecBuffer* buffer, fit::deferred_callback* return_input_packet, const uint8_t* data,
-    uint32_t length) {
-  ZX_DEBUG_ASSERT(data);
-  ZX_DEBUG_ASSERT(!!buffer == !!return_input_packet);
-  H264MultiDecoder::DataInput result;
-  result.length = length;
-  if (!buffer) {
-    result.data = std::vector<uint8_t>(data, data + length);
-  } else {
-    ZX_DEBUG_ASSERT(buffer);
-    // Caller is required to ensure that data is within [base()..base()+size()).
-    ZX_DEBUG_ASSERT(data >= buffer->base());
-    ZX_DEBUG_ASSERT(data < buffer->base() + buffer->size());
-    ZX_DEBUG_ASSERT(return_input_packet);
-    result.codec_buffer = buffer;
-    result.buffer_start_offset = data - buffer->base();
-    result.return_input_packet = std::move(*return_input_packet);
-  }
+std::optional<H264MultiDecoderV1::DataInput> CodecAdapterH264MultiV1::ParseVideoAnnexB(
+    const CodecBuffer* buffer, const uint8_t* data, uint32_t length) {
+  H264MultiDecoderV1::DataInput result;
+  result.data = std::vector<uint8_t>(data, data + length);
   return std::move(result);
 }
 
-void CodecAdapterH264Multi::OnEos() { events_->onCoreCodecOutputEndOfStream(false); }
+void CodecAdapterH264MultiV1::OnEos() { events_->onCoreCodecOutputEndOfStream(false); }
 
-zx_status_t CodecAdapterH264Multi::InitializeFrames(::zx::bti bti, uint32_t min_frame_count,
-                                                    uint32_t max_frame_count, uint32_t width,
-                                                    uint32_t height, uint32_t stride,
-                                                    uint32_t display_width, uint32_t display_height,
-                                                    bool has_sar, uint32_t sar_width,
-                                                    uint32_t sar_height) {
+zx_status_t CodecAdapterH264MultiV1::InitializeFrames(::zx::bti bti, uint32_t min_frame_count,
+                                                      uint32_t max_frame_count, uint32_t width,
+                                                      uint32_t height, uint32_t stride,
+                                                      uint32_t display_width,
+                                                      uint32_t display_height, bool has_sar,
+                                                      uint32_t sar_width, uint32_t sar_height) {
   // This is called on a core codec thread, ordered with respect to emitted
   // output frames.  This method needs to block until either:
   //   * Format details have been delivered to the Codec client and the Codec
@@ -1104,128 +1078,7 @@ zx_status_t CodecAdapterH264Multi::InitializeFrames(::zx::bti bti, uint32_t min_
   return ZX_OK;
 }
 
-bool CodecAdapterH264Multi::IsCurrentOutputBufferCollectionUsable(
-    uint32_t min_frame_count, uint32_t max_frame_count, uint32_t coded_width, uint32_t coded_height,
-    uint32_t stride, uint32_t display_width, uint32_t display_height) {
-  DLOG(
-      "min_frame_count: %u max_frame_count: %u coded_width: %u coded_height: %u stride: %u "
-      "display_width: %u display_height: %u",
-      min_frame_count, max_frame_count, coded_width, coded_height, stride, display_width,
-      display_height);
-  ZX_DEBUG_ASSERT(stride >= coded_width);
-  // We don't ask codec_impl about this, because as far as codec_impl is
-  // concerned, the output buffer collection might not be used for video
-  // frames.  We could have common code for video decoders but for now we just
-  // check here.
-  //
-  // TODO(dustingreen): Some potential divisor check failures could be avoided
-  // if the corresponding value were rounded up according to the divisor before
-  // we get here.
-  if (!output_buffer_collection_info_) {
-    LOG(DEBUG, "!output_buffer_collection_info_");
-    return false;
-  }
-  fuchsia::sysmem::BufferCollectionInfo_2& info = output_buffer_collection_info_.value();
-  ZX_DEBUG_ASSERT(info.settings.has_image_format_constraints);
-  if (min_frame_count > info.buffer_count) {
-    LOG(DEBUG, "min_frame_count > info.buffer_count");
-    return false;
-  }
-  if (min_frame_count > min_buffer_count_[kOutputPort]) {
-    LOG(DEBUG, "min_frame_count > min_buffer_count_[kOutputPort]");
-    return false;
-  }
-  if (info.buffer_count > max_frame_count) {
-    // The h264_multi_decoder.cc won't exercise this path since the max is always the same, and we
-    // won't have allocated a collection with more than max_buffer_count.
-    LOG(DEBUG, "info.buffer_count > max_frame_count");
-    return false;
-  }
-  if (stride * coded_height * 3 / 2 > info.settings.buffer_settings.size_bytes) {
-    LOG(DEBUG, "stride * coded_height * 3 / 2 > info.settings.buffer_settings.size_bytes");
-    return false;
-  }
-  if (display_width % info.settings.image_format_constraints.display_width_divisor != 0) {
-    // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(DEBUG,
-        "display_width %% info.settings.image_format_constraints.display_width_divisor != 0");
-    return false;
-  }
-  if (display_height % info.settings.image_format_constraints.display_height_divisor != 0) {
-    // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(DEBUG,
-        "display_height %% info.settings.image_format_constraints.display_height_divisor != 0");
-    return false;
-  }
-  if (coded_width * coded_height >
-      info.settings.image_format_constraints.max_coded_width_times_coded_height) {
-    // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(DEBUG, "coded_width * coded_height > max_coded_width_times_coded_height");
-    return false;
-  }
-
-  if (coded_width < info.settings.image_format_constraints.min_coded_width) {
-    LOG(DEBUG,
-        "coded_width < info.settings.image_format_constraints.min_coded_width -- "
-        "coded_width: %d min_coded_width: %d",
-        coded_width, info.settings.image_format_constraints.min_coded_width);
-    return false;
-  }
-  if (coded_width > info.settings.image_format_constraints.max_coded_width) {
-    LOG(DEBUG, "coded_width > info.settings.image_format_constraints.max_coded_width");
-    return false;
-  }
-  if (coded_width % info.settings.image_format_constraints.coded_width_divisor != 0) {
-    // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(DEBUG, "coded_width %% info.settings.image_format_constraints.coded_width_divisor != 0");
-    return false;
-  }
-  if (coded_height < info.settings.image_format_constraints.min_coded_height) {
-    LOG(DEBUG, "coded_height < info.settings.image_format_constraints.min_coded_height");
-    return false;
-  }
-  if (coded_height > info.settings.image_format_constraints.max_coded_height) {
-    LOG(DEBUG, "coded_height > info.settings.image_format_constraints.max_coded_height");
-    return false;
-  }
-  if (coded_height % info.settings.image_format_constraints.coded_height_divisor != 0) {
-    // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(DEBUG, "coded_height %% info.settings.image_format_constraints.coded_height_divisor != 0");
-    return false;
-  }
-  if (stride < info.settings.image_format_constraints.min_bytes_per_row) {
-    LOG(DEBUG,
-        "stride < info.settings.image_format_constraints.min_bytes_per_row -- stride: %d "
-        "min_bytes_per_row: %d",
-        stride, info.settings.image_format_constraints.min_bytes_per_row);
-    return false;
-  }
-  if (stride > info.settings.image_format_constraints.max_bytes_per_row) {
-    LOG(DEBUG, "stride > info.settings.image_format_constraints.max_bytes_per_row");
-    return false;
-  }
-  if (stride % info.settings.image_format_constraints.bytes_per_row_divisor != 0) {
-    // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(DEBUG, "stride %% info.settings.image_format_constraints.bytes_per_row_divisor != 0");
-    return false;
-  }
-
-  DLOG("returning true");
-  return true;
-}
-
-void CodecAdapterH264Multi::AsyncPumpDecoder() {
-  async::PostTask(core_loop_.dispatcher(), [this] {
-    std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
-    if (!decoder_)
-      return;
-    // Something else may have come along since InitializedFrames and pumped the decoder, but that's
-    // ok.
-    decoder_->PumpOrReschedule();
-  });
-}
-
-void CodecAdapterH264Multi::AsyncResetStreamAfterCurrentFrame() {
+void CodecAdapterH264MultiV1::AsyncResetStreamAfterCurrentFrame() {
   LOG(ERROR, "async reset stream (after current frame) triggered");
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
@@ -1241,7 +1094,7 @@ void CodecAdapterH264Multi::AsyncResetStreamAfterCurrentFrame() {
   events_->onCoreCodecResetStreamAfterCurrentFrame();
 }
 
-void CodecAdapterH264Multi::CoreCodecResetStreamAfterCurrentFrame() {
+void CodecAdapterH264MultiV1::CoreCodecResetStreamAfterCurrentFrame() {
   // Currently this takes ~20-40ms per reset.  We might be able to improve the performance by having
   // a stop that doesn't deallocate followed by a start that doesn't allocate, but since we'll
   // fairly soon only be using this method during watchdog processing, it's not worth optimizing for
@@ -1283,17 +1136,16 @@ void CodecAdapterH264Multi::CoreCodecResetStreamAfterCurrentFrame() {
   LOG(DEBUG, "done re-queueing items.");
 }
 
-void CodecAdapterH264Multi::OnCoreCodecFailStream(fuchsia::media::StreamError error) {
+void CodecAdapterH264MultiV1::OnCoreCodecFailStream(fuchsia::media::StreamError error) {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = true;
   }
-  LOG(INFO, "calling events_->onCoreCodecFailStream()");
   LOG(ERROR, "calling events_->onCoreCodecFailStream()");
   events_->onCoreCodecFailStream(error);
 }
 
-CodecPacket* CodecAdapterH264Multi::GetFreePacket() {
+CodecPacket* CodecAdapterH264MultiV1::GetFreePacket() {
   std::lock_guard<std::mutex> lock(lock_);
   // The h264 decoder won't repeatedly output a buffer multiple times
   // concurrently, so a free buffer (for which the caller needs a packet)
@@ -1304,20 +1156,20 @@ CodecPacket* CodecAdapterH264Multi::GetFreePacket() {
   return all_output_packets_[free_index];
 }
 
-bool CodecAdapterH264Multi::IsPortSecureRequired(CodecPort port) {
+bool CodecAdapterH264MultiV1::IsPortSecureRequired(CodecPort port) {
   return secure_memory_mode_[port] == fuchsia::mediacodec::SecureMemoryMode::ON;
 }
 
-bool CodecAdapterH264Multi::IsPortSecurePermitted(CodecPort port) {
+bool CodecAdapterH264MultiV1::IsPortSecurePermitted(CodecPort port) {
   return secure_memory_mode_[port] != fuchsia::mediacodec::SecureMemoryMode::OFF;
 }
 
-bool CodecAdapterH264Multi::IsPortSecure(CodecPort port) {
+bool CodecAdapterH264MultiV1::IsPortSecure(CodecPort port) {
   ZX_DEBUG_ASSERT(buffer_settings_[port]);
   return buffer_settings_[port]->buffer_settings.is_secure;
 }
 
-bool CodecAdapterH264Multi::IsOutputSecure() {
+bool CodecAdapterH264MultiV1::IsOutputSecure() {
   // We need to know whether output is secure or not before we start accepting input, which means
   // we need to know before output buffers are allocated, which means we can't rely on the result
   // of sysmem BufferCollection allocation is_secure for output.

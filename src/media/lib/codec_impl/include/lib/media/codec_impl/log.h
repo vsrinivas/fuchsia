@@ -5,9 +5,12 @@
 #ifndef SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_LOG_H_
 #define SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_LOG_H_
 
+#include <lib/syslog/global.h>
 #include <lib/syslog/logger.h>
 
 #include <string_view>
+
+#include <ddk/debug.h>
 
 #define VLOG_ENABLED 0
 
@@ -19,20 +22,19 @@
   } while (0)
 #endif
 
-#define LOGF(format, ...)                                                                        \
-  do {                                                                                           \
-    fprintf(stderr, "[%s:%s:%d:%s] " format "\n", "codec_impl",                                  \
-            codec_impl::internal::BaseName(__FILE__).data(), __LINE__, __func__, ##__VA_ARGS__); \
+#define LOGF(format, ...)             \
+  do {                                \
+    LOG(INFO, format, ##__VA_ARGS__); \
   } while (0)
 
 // Temporary solution for logging in driver and non-driver contexts by logging to stderr
 // TODO(41539): Replace with logging interface that accommodates both driver and non-driver contexts
-#define LOG(severity, format, ...)                                                                 \
-  do {                                                                                             \
-    if (FX_LOG_##severity >= FX_LOG_INFO) {                                                        \
-      fprintf(stderr, "[%s:%s:%d:%s] " format "\n", "codec_impl",                                  \
-              codec_impl::internal::BaseName(__FILE__).data(), __LINE__, __func__, ##__VA_ARGS__); \
-    }                                                                                              \
+#define LOG(severity, format, ...)                                                               \
+  do {                                                                                           \
+    static_assert(true || DDK_LOG_##severity);                                                   \
+    static_assert(true || FX_LOG_##severity);                                                    \
+    FX_LOGF(severity, "codec_impl", "[%s:%d:%s] " format "",                                     \
+            codec_impl::internal::BaseName(__FILE__).data(), __LINE__, __func__, ##__VA_ARGS__); \
   } while (0)
 
 namespace codec_impl {
