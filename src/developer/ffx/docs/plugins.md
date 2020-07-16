@@ -8,12 +8,12 @@ First, create a directory to store your plugin.  Next, create a BUILD.gn in that
 
 ## GN Build Rule
 
-You will need to create a GN build target for your plugin.  You"ll need to use to use the "ffx_plugin" build rule template defined [here](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/developer/development-bridge/build/ffx_plugin.gni).
+You will need to create a GN build target for your plugin.  You"ll need to use to use the "ffx_plugin" build rule template defined [here](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/developer/ffx/build/ffx_plugin.gni).
 
 Your BUILD.gn file should look something like this:
 
 ```GN
-import("//src/developer/development-bridge/build/ffx_plugin.gni")
+import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_example") {
   version = "0.1.0"
@@ -66,7 +66,7 @@ The plugin code needs to be a method with the following signature decorated by t
 
 If you want to unit tests your plugin, just follow the standard method for testing [rust code](fuchsia.dev/fuchsia-src/development/languages/rust/testing) on a host. The ffx_plugin GN template will generate a library name "<target_name>_lib_test" for unit tests if the "with_unit_tests" parameter is set to "true".
 
-Lastly, you"ll need to add the plugin as a dependency to FFX to include it in the build.  You"ll need to edit this [file](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/developer/development-bridge/BUILD.gn#23) to add your ffx_plugin target.
+Lastly, you"ll need to add the plugin as a dependency to FFX to include it in the build.  You"ll need to edit this [file](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/developer/ffx/BUILD.gn#23) to add your ffx_plugin target.
 
 And that"s it!  You should now see the output:
 ```sh

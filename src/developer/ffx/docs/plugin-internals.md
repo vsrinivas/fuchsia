@@ -2,7 +2,7 @@
 
 This page is intended for developers who want to understand FFX's plugin system better. FFX is built on top of the [argh](https://docs.rs/argh/0.1.3/argh/) crate. This crate imposes the Google standard for CLI parameters. The structure that argh expects to define the CLI parameters is required at compile time. Therefore, this rules out any runtime plugin systems as Rust structs cannot be edited after compile time.
 
-It also means that any dynamic ability to add plugins must come before compile time. To accomplish this, FFX uses GN build rules to generate the final argh structure from the supplied plugin depenedencies.  You can see that code [here](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/developer/development-bridge/build/ffx.gni#35).
+It also means that any dynamic ability to add plugins must come before compile time. To accomplish this, FFX uses GN build rules to generate the final argh structure from the supplied plugin depenedencies.  You can see that code [here](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/developer/ffx/build/ffx.gni#35).
 
 Internal libraries to FFX require access to top level CLI flags and parameters. For example, the config library needs access to the "--config" flag:
 
@@ -34,13 +34,13 @@ pub async fn ffx_plugin_impl(<Your methods inputs>) -> Result<(), Error> {
 }
 ```
 
-The ffx_plugin template requires enough dependencies to allow for the code generated via the Rust attributes to compile.  Therefore the ffx_plugin template gets the following [dependencies](https://fuchsia.googlesource.com/fuchsia/+/refs/hea%20ds/master/src/developer/development-bridge/build/ffx_plugin.gni#99) for free:
+The ffx_plugin template requires enough dependencies to allow for the code generated via the Rust attributes to compile.  Therefore the ffx_plugin template gets the following [dependencies](https://fuchsia.googlesource.com/fuchsia/+/refs/hea%20ds/master/src/developer/ffx/build/ffx_plugin.gni#99) for free:
 
  + //sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc
  + //src/connectivity/overnet/lib/hoist
- + //src/developer/development-bridge/core:lib
- + //src/developer/development-bridge:command_lib
- + //src/developer/development-bridge/config:lib
+ + //src/developer/ffx/core:lib
+ + //src/developer/ffx:command_lib
+ + //src/developer/ffx/config:lib
  + //src/lib/fidl/rust/fidl
  + //third_party/rust_crates:anyhow
  + "//third_party/rust_crates:argh
