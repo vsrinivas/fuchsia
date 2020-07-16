@@ -74,14 +74,13 @@ class Event {
     return WaitWorker(Deadline::no_slack(deadline), interruptible, 0);
   }
 
-  // All Signal variations return the number of threads woken.
-  int Signal(zx_status_t status = ZX_OK) { return SignalEtc(true, status); }
+  void Signal(zx_status_t status = ZX_OK) { SignalEtc(true, status); }
 
-  int SignalThreadLocked() TA_REQ(thread_lock);
+  void SignalThreadLocked() TA_REQ(thread_lock);
 
-  int SignalNoResched() { return SignalEtc(false); }
+  void SignalNoResched() { SignalEtc(false); }
 
-  int SignalEtc(bool reschedule, zx_status_t wait_result = ZX_OK);
+  void SignalEtc(bool reschedule, zx_status_t wait_result = ZX_OK);
 
   zx_status_t Unsignal() TA_EXCL(thread_lock);
 
@@ -96,7 +95,7 @@ class Event {
 
  private:
   zx_status_t WaitWorker(const Deadline& deadline, Interruptible interruptible, uint signal_mask);
-  int SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thread_lock);
+  void SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thread_lock);
 
   static constexpr uint32_t kMagic = fbl::magic("evnt");
   uint32_t magic_;

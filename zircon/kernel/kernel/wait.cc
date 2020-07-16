@@ -297,11 +297,11 @@ zx_status_t WaitQueue::BlockEtc(const Deadline& deadline, uint signal_mask,
  * @param wait_queue_error  The return value which the new thread will receive
  * from wait_queue_block().
  *
- * @return  The number of threads woken (zero or one)
+ * @return  Whether a thread was woken
  */
-int WaitQueue::WakeOne(bool reschedule, zx_status_t wait_queue_error) {
+bool WaitQueue::WakeOne(bool reschedule, zx_status_t wait_queue_error) {
   Thread* t;
-  int ret = 0;
+  bool woke = false;
 
   // Note(johngro): No one should ever calling wait_queue_wake_one on an
   // instance of an OwnedWaitQueue.  OwnedWaitQueues need to deal with
@@ -328,10 +328,10 @@ int WaitQueue::WakeOne(bool reschedule, zx_status_t wait_queue_error) {
       Scheduler::Reschedule();
     }
 
-    ret = 1;
+    woke = true;
   }
 
-  return ret;
+  return woke;
 }
 
 Thread* WaitQueue::DequeueOne(zx_status_t wait_queue_error) {
@@ -398,9 +398,8 @@ void WaitQueue::MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) {
  *
  * @return  The number of threads woken
  */
-int WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
+void WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
   Thread* t;
-  int ret = 0;
 
   // Note(johngro): See the note in wake_one.  On one should ever be calling
   // this method on an OwnedWaitQueue
@@ -413,7 +412,7 @@ int WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
   }
 
   if (collection_.Count() == 0) {
-    return 0;
+    return;
   }
 
   WaitQueueSublist list;
@@ -423,10 +422,8 @@ int WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
   while ((t = Peek())) {
     Dequeue(t, wait_queue_error);
     list.push_back(t);
-    ret++;
   }
 
-  DEBUG_ASSERT(ret > 0);
   DEBUG_ASSERT(collection_.Count() == 0);
 
   ktrace_ptr(TAG_KWAIT_WAKE, this, 0, 0);
@@ -437,8 +434,6 @@ int WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
   if (reschedule && local_resched) {
     Scheduler::Reschedule();
   }
-
-  return ret;
 }
 
 bool WaitQueue::IsEmpty() const {

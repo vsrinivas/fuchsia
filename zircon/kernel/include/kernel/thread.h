@@ -255,9 +255,11 @@ class WaitQueue {
   // Release one or more threads from the wait queue.
   // reschedule = should the system reschedule if any is released.
   // wait_queue_error = what WaitQueue::Block() should return for the blocking thread.
-  int WakeOne(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock);
+  //
+  // Returns true if a thread was woken, and false otherwise.
+  bool WakeOne(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
-  int WakeAll(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock);
+  void WakeAll(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
   // Whether the wait queue is currently empty.
   bool IsEmpty() const TA_REQ(thread_lock);

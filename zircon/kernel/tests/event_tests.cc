@@ -18,9 +18,7 @@ static bool event_signal_result_before_wait_test() {
   Event event;
 
   zx_status_t signal_result = zx_status_t{42};
-  int wake_count = event.Signal(signal_result);
-
-  ASSERT_EQ(wake_count, 0, "");
+  event.Signal(signal_result);
 
   zx_status_t wake_result = event.Wait();
 
@@ -70,8 +68,7 @@ static bool event_signal_result_after_wait_test() {
     wait_duration *= 2;
   }
 
-  int wake_count = event.Signal(signal_result);
-  ASSERT_EQ(wake_count, 1, "expected to wake 1 thread once waiter has latched");
+  event.Signal(signal_result);
 
   int thread_retcode = 0;
   waiter->Join(&thread_retcode, ZX_TIME_INFINITE);

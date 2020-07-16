@@ -75,16 +75,14 @@ zx_status_t Event::WaitWorker(const Deadline& deadline, Interruptible interrupti
   return ret;
 }
 
-int Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thread_lock) {
+void Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thread_lock) {
   DEBUG_ASSERT(magic_ == kMagic);
   DEBUG_ASSERT(wait_result != kNotSignalled);
-
-  int wake_count = 0;
 
   if (result_ == kNotSignalled) {
     if (flags_ & Event::AUTOUNSIGNAL) {
       /* try to release one thread and leave unsignaled if successful */
-      if ((wake_count = wait_.WakeOne(reschedule, wait_result)) <= 0) {
+      if (!wait_.WakeOne(reschedule, wait_result)) {
         /*
          * if we didn't actually find a thread to wake up, go to
          * signaled state and let the next call to Wait
@@ -95,11 +93,9 @@ int Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(threa
     } else {
       /* release all threads and remain signaled */
       result_ = wait_result;
-      wake_count = wait_.WakeAll(reschedule, wait_result);
+      wait_.WakeAll(reschedule, wait_result);
     }
   }
-
-  return wake_count;
 }
 
 /**
@@ -118,20 +114,18 @@ int Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(threa
  *                    queue.
  * @param wait_result What status a wait call will return to the
  *                    thread or threads that are woken up.
- *
- * @return  Returns the number of threads that have been unblocked.
  */
-int Event::SignalEtc(bool reschedule, zx_status_t wait_result) {
+void Event::SignalEtc(bool reschedule, zx_status_t wait_result) {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-  return SignalInternal(reschedule, wait_result);
+  SignalInternal(reschedule, wait_result);
 }
 
 /* same as above, but the thread lock must already be held */
-int Event::SignalThreadLocked() {
+void Event::SignalThreadLocked() {
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
 
-  return SignalInternal(false, ZX_OK);
+  SignalInternal(false, ZX_OK);
 }
 
 /**
