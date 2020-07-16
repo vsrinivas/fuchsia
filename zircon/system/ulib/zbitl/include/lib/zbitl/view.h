@@ -82,7 +82,8 @@ class View {
 
   ~View() {
     ZX_ASSERT_MSG(error_.is_ok(), "zbitl::View destroyed after error without check");
-    ZX_ASSERT_MSG(error_.value() != kOk, "zbtil::View destroyed after successful iteration without check");
+    ZX_ASSERT_MSG(error_.value() != kOk,
+                  "zbtil::View destroyed after successful iteration without check");
   }
 
   /// The API details of what Storage means are delegated to the StorageTraits
@@ -233,8 +234,7 @@ class View {
     bool operator!=(const iterator& other) const { return !(*this == other); }
 
     iterator& operator++() {  // prefix
-      ZX_ASSERT_MSG(view_, "operator++() on default-constructed zbitl::View::iterator");
-      ZX_ASSERT_MSG(offset_ != kEnd_, "operator++() on zbitl::View::end() iterator");
+      Assert(__func__);
       view_->StartIteration();
       ZX_DEBUG_ASSERT(offset_ >= sizeof(zbi_header_t));
       ZX_DEBUG_ASSERT(offset_ <= view_->limit_);
@@ -280,7 +280,7 @@ class View {
     }
 
     value_type operator*() const {
-      ZX_ASSERT_MSG(view_, "operator*() on zbitl::View::end() iterator");
+      Assert(__func__);
       return {header_, payload_};
     }
 
@@ -323,6 +323,11 @@ class View {
               fitx::result<typename Traits::error_type> storage_error = fitx::ok()) {
       view_->Fail({sv, offset_, std::move(storage_error)});
       *this = view_->end();
+    }
+
+    void Assert(const char* func) const {
+      ZX_ASSERT_MSG(view_, "%s on default-constructed zbitl::View::iterator", func);
+      ZX_ASSERT_MSG(offset_ != kEnd_, "%s on zbitl::View::end() iterator", func);
     }
   };
 
