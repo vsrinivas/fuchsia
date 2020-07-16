@@ -275,7 +275,7 @@ void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
   if (!stopped_thread_koids.empty()) {
     debug_ipc::ResumeRequest request;
     request.process_koid = koid_;
-    request.how = debug_ipc::ResumeRequest::How::kContinue;
+    request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
     request.thread_koids = stopped_thread_koids;
     session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
   }

@@ -95,7 +95,7 @@ TEST_F(ProcessImplTest, OnModules) {
   ASSERT_EQ(1, sink()->resume_count());
   const debug_ipc::ResumeRequest& resume = sink()->resume_request();
   EXPECT_EQ(kProcessKoid, resume.process_koid);
-  EXPECT_EQ(debug_ipc::ResumeRequest::How::kContinue, resume.how);
+  EXPECT_EQ(debug_ipc::ResumeRequest::How::kResolveAndContinue, resume.how);
   EXPECT_EQ(notify.stopped_thread_koids, resume.thread_koids);
 }
 

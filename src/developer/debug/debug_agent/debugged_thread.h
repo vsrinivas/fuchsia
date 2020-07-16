@@ -225,7 +225,7 @@ class DebuggedThread {
 
   // The main thing we're doing. When automatically resuming, this will be
   // what happens.
-  debug_ipc::ResumeRequest::How run_mode_ = debug_ipc::ResumeRequest::How::kContinue;
+  debug_ipc::ResumeRequest::How run_mode_ = debug_ipc::ResumeRequest::How::kResolveAndContinue;
 
   // When run_mode_ == kStepInRange, this defines the range (end non-inclusive).
   uint64_t step_in_range_begin_ = 0;

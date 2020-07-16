@@ -235,7 +235,7 @@ TEST(WriteRegisterTest, JumpPC) {
 
     // We start the process.
     debug_ipc::ResumeRequest resume_request = {};
-    resume_request.how = debug_ipc::ResumeRequest::How::kContinue;
+    resume_request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
     resume_request.process_koid = launch_reply.process_koid;
     debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);

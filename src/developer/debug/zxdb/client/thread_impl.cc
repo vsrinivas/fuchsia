@@ -80,7 +80,7 @@ void ThreadImpl::Continue() {
   request.thread_koids.push_back(koid_);
 
   if (controllers_.empty()) {
-    request.how = debug_ipc::ResumeRequest::How::kContinue;
+    request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
   } else {
     // When there are thread controllers, ask the most recent one for how to continue.
     //

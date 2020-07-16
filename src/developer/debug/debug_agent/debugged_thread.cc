@@ -218,19 +218,20 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     //       keeping the exception until *after* the breakpoint has been told to step over, we
     //       ensure that any installs have already occured and thus the thread won't miss any
     //       breakpoints.
-    thread_handle_->SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
+    thread_handle_->SetSingleStep(debug_ipc::ResumeRequest::MakesStep(run_mode_));
     current_breakpoint_->EndStepOver(this);
     current_breakpoint_ = nullptr;
     ResumeException();
     return;
   }
 
-  if (run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
+  if (!debug_ipc::ResumeRequest::MakesStep(run_mode_)) {
     // This could be due to a race where the user was previously single
-    // stepping and then requested a continue before the single stepping
-    // completed. It could also be a breakpoint that was deleted while
+    // stepping and then requested a continue or forward before the single
+    // stepping completed. It could also be a breakpoint that was deleted while
     // in the process of single-stepping over it. In both cases, the
-    // least confusing thing is to resume automatically.
+    // least confusing thing is to resume automatically (since forwarding the
+    // single step exception to the debugged program makes no sense).
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Single step without breakpoint. Continuing.";
     ResumeForRunMode();
     return;
@@ -357,6 +358,7 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
   ResumeForRunMode();
 }
 
+// TODO(fxbug.dev/48767): handle KForwardAndContinue.
 void DebuggedThread::ResumeException() {
   if (!IsInException()) {
     return;
@@ -638,8 +640,7 @@ void DebuggedThread::ResumeForRunMode() {
   if (client_state_ == ClientState::kPaused)
     return;
 
-  // All non-continue resumptions require single stepping.
-  thread_handle_->SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
+  thread_handle_->SetSingleStep(debug_ipc::ResumeRequest::MakesStep(run_mode_));
   ResumeException();
   ResumeSuspension();
 }

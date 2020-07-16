@@ -152,7 +152,7 @@ void ResumeAllProcesses(RemoteAPI* remote_api, const JobStreamBackend& backend) 
   for (const auto& start_event : backend.process_start_events()) {
     // We continue the process.
     ResumeRequest resume_request;
-    resume_request.how = ResumeRequest::How::kContinue;
+    resume_request.how = ResumeRequest::How::kResolveAndContinue;
     resume_request.process_koid = start_event.koid;
     ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);

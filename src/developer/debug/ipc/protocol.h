@@ -201,12 +201,18 @@ struct QuitAgentReply {};
 
 struct ResumeRequest {
   enum class How : uint32_t {
-    kContinue = 0,     // Continue execution without stopping.
-    kStepInstruction,  // Step one machine instruction.
-    kStepInRange,      // Step until control exits an address range.
+    kResolveAndContinue = 0,  // Marks the exception as handled and continues executions.
+    kForwardAndContinue,      // Marks the exception as second-chance and continues executions.
+    kStepInstruction,         // Step one machine instruction.
+    kStepInRange,             // Step until control exits an address range.
 
     kLast  // Not a real state, used for validation.
   };
+
+  // Whether a give resume mode steps.
+  static bool MakesStep(const How how) {
+    return (how == How::kStepInstruction || how == How::kStepInRange);
+  }
   static const char* HowToString(How);
 
   // If 0, all threads of all debugged processes will be continued.
@@ -217,7 +223,7 @@ struct ResumeRequest {
   // used with a single thread.
   std::vector<uint64_t> thread_koids;
 
-  How how = How::kContinue;
+  How how = How::kResolveAndContinue;
 
   // When how == kStepInRange, these variables define the address range to
   // step in. As long as the instruction pointer is inside

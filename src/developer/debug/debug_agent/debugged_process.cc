@@ -127,7 +127,7 @@ void DebuggedProcess::DetachFromProcess() {
   // 2. Resume threads.
   // Technically a 0'ed request would work, but being explicit is future-proof.
   debug_ipc::ResumeRequest resume_request = {};
-  resume_request.how = debug_ipc::ResumeRequest::How::kContinue;
+  resume_request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
   resume_request.process_koid = koid_;
   OnResume(resume_request);
 

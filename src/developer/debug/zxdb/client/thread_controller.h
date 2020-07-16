@@ -92,7 +92,7 @@ class ThreadController {
     bool synthetic_stop_ = false;
 
     // Valid when synthetic_stop = false.
-    debug_ipc::ResumeRequest::How how = debug_ipc::ResumeRequest::How::kContinue;
+    debug_ipc::ResumeRequest::How how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
 
     // When how == kStepInRange, this defines the address range to step in. As long as the
     // instruction pointer is inside, execution will continue.

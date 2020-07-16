@@ -146,8 +146,10 @@ const char* NotifyIO::TypeToString(Type type) {
 
 const char* ResumeRequest::HowToString(How how) {
   switch (how) {
-    case How::kContinue:
-      return "Continue";
+    case How::kResolveAndContinue:
+      return "Resolve and Continue";
+    case How::kForwardAndContinue:
+      return "Forward and Continue";
     case How::kStepInstruction:
       return "Step Instruction";
     case How::kStepInRange:
