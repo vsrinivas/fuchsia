@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 type ZBITool struct {
@@ -59,7 +60,7 @@ func (z *ZBITool) MakeImageArgsZbi(ctx context.Context, destPath string, imageAr
 		imageArgsFile.Name(),
 	}
 
-	log.Printf("running: %s %q", path, args)
+	logger.Infof(ctx, "running: %s %q", path, args)
 	cmd := exec.CommandContext(ctx, path, args...)
 	if z.stdout != nil {
 		cmd.Stdout = z.stdout

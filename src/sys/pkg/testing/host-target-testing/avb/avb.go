@@ -8,9 +8,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 type AVBTool struct {
@@ -62,7 +63,7 @@ func (a *AVBTool) MakeVBMetaImage(ctx context.Context, destPath string, srcPath 
 		args = append(args, "--prop_from_file", fmt.Sprintf("%s:%s", key, path))
 	}
 
-	log.Printf("running: %s %q", path, args)
+	logger.Infof(ctx, "running: %s %q", path, args)
 	cmd := exec.CommandContext(ctx, path, args...)
 	if a.stdout != nil {
 		cmd.Stdout = a.stdout

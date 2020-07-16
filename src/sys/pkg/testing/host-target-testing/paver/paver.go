@@ -8,10 +8,10 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -130,7 +130,7 @@ func (p *BuildPaver) Pave(ctx context.Context, deviceName string) error {
 }
 
 func (p *BuildPaver) runPave(ctx context.Context, deviceName string, script string, args ...string) error {
-	log.Printf("paving device %q with %s", deviceName, script)
+	logger.Infof(ctx, "paving device %q with %s %v", deviceName, script, args)
 	path, err := exec.LookPath(script)
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func (p *BuildPaver) runPave(ctx context.Context, deviceName string, script stri
 	if deviceName != "" {
 		args = append(args, "-n", deviceName)
 	}
-	log.Printf("running: %s %q", path, args)
+	logger.Infof(ctx, "running: %s %q", path, args)
 	cmd := exec.CommandContext(ctx, path, args...)
 	if p.stdout != nil {
 		cmd.Stdout = p.stdout

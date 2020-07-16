@@ -7,11 +7,11 @@ package pave
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 func PaveDevice(
@@ -20,7 +20,7 @@ func PaveDevice(
 	build artifacts.Build,
 	otaToRecovery bool,
 ) error {
-	log.Printf("Starting to pave device")
+	logger.Infof(ctx, "Starting to pave device")
 	startTime := time.Now()
 
 	mode := device.RebootToRecovery
@@ -32,7 +32,7 @@ func PaveDevice(
 		return fmt.Errorf("device failed to pave: %w", err)
 	}
 
-	log.Printf("Paving successful in %s", time.Now().Sub(startTime))
+	logger.Infof(ctx, "Paving successful in %s", time.Now().Sub(startTime))
 
 	return nil
 }

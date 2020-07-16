@@ -572,10 +572,14 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build, mode RecoveryM
 		return fmt.Errorf("device failed to pave: %w", err)
 	}
 
+	logger.Infof(ctx, "paver completed, waiting for device to boot")
+
 	// Reconnect to the device.
 	if err = c.Reconnect(ctx); err != nil {
 		return fmt.Errorf("device failed to connect after pave: %w", err)
 	}
+
+	logger.Infof(ctx, "device booted")
 
 	return nil
 }

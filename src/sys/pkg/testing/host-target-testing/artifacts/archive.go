@@ -7,13 +7,13 @@ package artifacts
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
 	"golang.org/x/crypto/ssh"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 // Archive allows interacting with the build artifact repository.
@@ -73,7 +73,7 @@ func (a *Archive) download(ctx context.Context, dir string, buildID string, src 
 		return path, nil
 	}
 
-	log.Printf("downloading %s to %s", src, path)
+	logger.Infof(ctx, "downloading %s to %s", src, path)
 
 	if err := os.MkdirAll(buildDir, 0755); err != nil {
 		return "", err

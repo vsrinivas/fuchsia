@@ -6,6 +6,7 @@ package packages
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -21,6 +22,8 @@ import (
 
 // createTestPackage fills the given directory with a new repository.
 func createTestPackage(dir string) (*Repository, string, error) {
+	ctx := context.Background()
+
 	// Initialize a repo.
 	fmt.Printf("Creating repo at %s.\n", dir)
 	pmRepo, err := repo.New(dir)
@@ -62,7 +65,7 @@ func createTestPackage(dir string) (*Repository, string, error) {
 	if err = pmRepo.CommitUpdates(true); err != nil {
 		return nil, "", fmt.Errorf("failed to commit updates to repo. %w", err)
 	}
-	pkgRepo, err := NewRepository(dir)
+	pkgRepo, err := NewRepository(ctx, dir)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to read repo. %w", err)
 	}
@@ -171,6 +174,8 @@ func TestAddResource(t *testing.T) {
 }
 
 func TestPublish(t *testing.T) {
+	ctx := context.Background()
+
 	parentDir := filepath.Join("", "omaha-pkg-test-publish")
 	if err := os.MkdirAll(parentDir, 0755); err != nil {
 		t.Fatalf("Failed to create directory %s, %s", parentDir, err)
@@ -208,7 +213,7 @@ func TestPublish(t *testing.T) {
 		t.Fatalf("Publishing package failed. %s", err)
 	}
 
-	pkgRepo, err = NewRepository(path.Dir(pkgRepo.Dir))
+	pkgRepo, err = NewRepository(ctx, path.Dir(pkgRepo.Dir))
 
 	// Confirm that the package is published and updated.
 	pkg, err = pkgRepo.OpenPackage(fullPkgName)

@@ -7,13 +7,13 @@ package script
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/sl4f"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 // RunScript runs a script on the device and returns the result. It's possible
@@ -38,7 +38,7 @@ func RunScript(
 	ch := make(chan struct{})
 	device.RegisterDisconnectListener(ch)
 
-	log.Printf("running script: %s", script)
+	logger.Debugf(ctx, "running script: %s", script)
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", script)
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout

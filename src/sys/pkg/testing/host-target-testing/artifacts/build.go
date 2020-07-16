@@ -153,7 +153,7 @@ func (b *FuchsiaDirBuild) String() string {
 }
 
 func (b *FuchsiaDirBuild) GetPackageRepository(ctx context.Context) (*packages.Repository, error) {
-	return packages.NewRepository(filepath.Join(b.dir, "amber-files"))
+	return packages.NewRepository(ctx, filepath.Join(b.dir, "amber-files"))
 }
 
 func (b *FuchsiaDirBuild) GetPaverDir(ctx context.Context) (string, error) {

@@ -8,12 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 type Repository struct {
@@ -39,8 +39,8 @@ type custom struct {
 
 // NewRepository parses the repository from the specified directory. It returns
 // an error if the repository does not exist, or it contains malformed metadata.
-func NewRepository(dir string) (*Repository, error) {
-	log.Printf("creating a repository for %q", dir)
+func NewRepository(ctx context.Context, dir string) (*Repository, error) {
+	logger.Infof(ctx, "creating a repository for %q", dir)
 
 	// The repository may have out of date metadata. This updates the repository to
 	// the latest version so TUF won't complain about the data being old.
@@ -87,7 +87,7 @@ func NewRepositoryFromTar(ctx context.Context, dst string, src string) (*Reposit
 		return nil, fmt.Errorf("failed to extract packages: %w", err)
 	}
 
-	return NewRepository(filepath.Join(dst, "amber-files"))
+	return NewRepository(ctx, filepath.Join(dst, "amber-files"))
 }
 
 // Open a package from the p
