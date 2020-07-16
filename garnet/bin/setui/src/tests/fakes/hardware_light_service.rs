@@ -17,10 +17,10 @@ use std::sync::Arc;
 
 /// An implementation of fuchsia.hardware.light for testing use.
 pub struct HardwareLightService {
-    light_info: Arc<Mutex<HashMap<u32, Info>>>,
-    simple_values: Arc<Mutex<HashMap<u32, bool>>>,
-    brightness_values: Arc<Mutex<HashMap<u32, u8>>>,
-    rgb_values: Arc<Mutex<HashMap<u32, Rgb>>>,
+    pub light_info: Arc<Mutex<HashMap<u32, Info>>>,
+    pub simple_values: Arc<Mutex<HashMap<u32, bool>>>,
+    pub brightness_values: Arc<Mutex<HashMap<u32, u8>>>,
+    pub rgb_values: Arc<Mutex<HashMap<u32, Rgb>>>,
 }
 
 /// Allow dead code since this is just a fake for testing.
@@ -111,6 +111,18 @@ impl Service for HardwareLightService {
                             .expect("unknown light")
                             .clone()))
                         .expect("get rgb value"),
+                    LightRequest::SetBrightnessValue { index, value, responder } => {
+                        brightness_values.lock().await.insert(index, value).expect("unknown light");
+                        responder.send(&mut Ok(())).expect("set brightness value")
+                    }
+                    LightRequest::SetSimpleValue { index, value, responder } => {
+                        simple_values.lock().await.insert(index, value).expect("unknown light");
+                        responder.send(&mut Ok(())).expect("set simple value")
+                    }
+                    LightRequest::SetRgbValue { index, value, responder } => {
+                        rgb_values.lock().await.insert(index, value).expect("unknown light");
+                        responder.send(&mut Ok(())).expect("set rgb value")
+                    }
                     _ => {}
                 }
             }

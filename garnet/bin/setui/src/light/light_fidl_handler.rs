@@ -99,7 +99,7 @@ async fn process_request(
     match req {
         LightRequest::SetLightGroupValues { name, state, responder } => {
             fasync::spawn(async move {
-                match context
+                let mut res = context
                     .request(
                         SettingType::Light,
                         SettingRequest::SetLightGroupValue(
@@ -108,16 +108,17 @@ async fn process_request(
                         ),
                     )
                     .await
-                {
-                    Ok(_) => responder.send(&mut (Ok(()))),
-                    Err(e) => responder.send(
-                        &mut (Err(match e {
-                            SwitchboardError::InvalidArgument { .. } => LightError::InvalidName,
-                            _ => LightError::Failed,
-                        })),
-                    ),
-                }
-                .log_fidl_response_error(LightMarker::DEBUG_NAME);
+                    .map(|_| ())
+                    .map_err(|e| {
+                        if matches!(e, SwitchboardError::InvalidArgument { .. }) {
+                            // TODO(fxb/53625): figure out how to return different errors depending
+                            // on the argument that's invalid.
+                            LightError::InvalidName
+                        } else {
+                            LightError::Failed
+                        }
+                    });
+                responder.send(&mut res).log_fidl_response_error(LightMarker::DEBUG_NAME);
             });
         }
         LightRequest::WatchLightGroups { responder } => {
@@ -208,14 +209,14 @@ mod tests {
             name: Some("test".to_string()),
             enabled: Some(true),
             light_type: Some(LightType::Simple),
-            lights: Some(vec![LightState { value: Some(LightValue::Simple(true)) }]),
+            lights: vec![LightState { value: Some(LightValue::Simple(true)) }],
             hardware_index: vec![],
         };
         let light_group_2 = LightGroup {
             name: Some("test2".to_string()),
             enabled: Some(false),
             light_type: Some(LightType::Rgb),
-            lights: Some(vec![LightState { value: Some(LightValue::Brightness(42)) }]),
+            lights: vec![LightState { value: Some(LightValue::Brightness(42)) }],
             hardware_index: vec![],
         };
 

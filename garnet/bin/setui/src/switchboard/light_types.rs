@@ -22,7 +22,7 @@ pub struct LightGroup {
     pub name: Option<String>,
     pub enabled: Option<bool>,
     pub light_type: Option<LightType>,
-    pub lights: Option<Vec<LightState>>,
+    pub lights: Vec<LightState>,
 
     /// Each light in the underlying fuchsia.hardware.light has a unique index, we need to remember
     /// the index of the lights in this light group in order to write values back.
@@ -35,7 +35,7 @@ impl From<LightGroup> for fidl_fuchsia_settings::LightGroup {
             name: src.name,
             enabled: src.enabled,
             type_: src.light_type.map(LightType::into),
-            lights: src.lights.map(|lights| lights.into_iter().map(LightState::into).collect()),
+            lights: Some(src.lights.into_iter().map(LightState::into).collect()),
         }
     }
 }

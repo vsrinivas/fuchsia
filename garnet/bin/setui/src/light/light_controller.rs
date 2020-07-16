@@ -74,8 +74,7 @@ impl LightController {
         let mut current = self.client.read().await;
 
         // TODO(fxb/55713): validate incoming values, not just name.
-        match current.light_groups.entry(name.clone()) {
-            Entry::Occupied(mut entry) => entry.get_mut().lights = Some(state),
+        let mut entry = match current.light_groups.entry(name.clone()) {
             Entry::Vacant(_) => {
                 // Reject sets if the light name is not known.
                 return Err(SwitchboardError::InvalidArgument {
@@ -84,6 +83,50 @@ impl LightController {
                     value: name,
                 });
             }
+            Entry::Occupied(entry) => entry,
+        };
+
+        let group = entry.get_mut();
+
+        if state.len() != group.lights.len() {
+            // If the number of light states provided doesn't match the number of lights,
+            // return an error.
+            return Err(SwitchboardError::InvalidArgument {
+                setting_type: SettingType::Light,
+                argument: "state".to_string(),
+                value: format!("{:?}", state),
+            });
+        }
+
+        for (i, (light, hardware_index)) in
+            state.iter().zip(group.hardware_index.iter()).enumerate()
+        {
+            let (set_result, method_name) = match light.clone().value {
+                // No value provided for this index, just skip it and don't update the
+                // stored value.
+                None => continue,
+                Some(LightValue::Brightness(brightness)) => (
+                    self.light_proxy.set_brightness_value(*hardware_index, brightness),
+                    "set_brightness_value",
+                ),
+                Some(LightValue::Rgb(rgb)) => (
+                    self.light_proxy.set_rgb_value(*hardware_index, &mut rgb.into()),
+                    "set_rgb_value",
+                ),
+                Some(LightValue::Simple(on)) => {
+                    (self.light_proxy.set_simple_value(*hardware_index, on), "set_simple_value")
+                }
+            };
+            set_result.await.map(|_| ()).or_else(|_| {
+                Err(SwitchboardError::ExternalFailure {
+                    setting_type: SettingType::Light,
+                    dependency: "fuchsia.hardware.light".to_string(),
+                    request: format!("{} for light {}", method_name, hardware_index),
+                })
+            })?;
+
+            // Set was successful, save this light value.
+            group.lights[i] = light.clone();
         }
 
         write(&self.client, current, false).await.into_response_result()
@@ -171,7 +214,7 @@ impl LightController {
                 name: Some(info.name),
                 enabled: Some(true),
                 light_type: Some(light_type),
-                lights: Some(vec![LightState { value: Some(value) }]),
+                lights: vec![LightState { value: Some(value) }],
                 hardware_index: vec![index],
             },
         ))
