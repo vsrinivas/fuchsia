@@ -39,6 +39,15 @@ sdk_source_set("cpp") {
   public_configs = [ "//sdk/config" ]
 }
 
+sdk_source_set("backend_legacy") {
+  # Keep internal for now until the API stabilizes.
+  category = "internal"
+
+  sdk_name = "syslog_cpp_backend_legacy"
+
+  include_base = "//sdk"
+}
+
 executable("logging_cpp_unittests") {
   testonly = true
 
