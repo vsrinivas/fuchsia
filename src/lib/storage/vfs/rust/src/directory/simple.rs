@@ -29,7 +29,9 @@ use crate::{
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, OPEN_FLAG_CREATE_IF_ABSENT},
+    fidl_fuchsia_io::{
+        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, OPEN_FLAG_CREATE_IF_ABSENT,
+    },
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     parking_lot::Mutex,
@@ -291,6 +293,18 @@ where
     fn unregister_watcher(self: Arc<Self>, key: usize) {
         let mut this = self.inner.lock();
         this.watchers.remove(key);
+    }
+
+    fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+        Ok(NodeAttributes {
+            mode: 0,
+            id: INO_UNKNOWN,
+            content_size: 0,
+            storage_size: 0,
+            link_count: 1,
+            creation_time: 0,
+            modification_time: 0,
+        })
     }
 }
 

@@ -25,7 +25,7 @@ use crate::{
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN},
+    fidl_fuchsia_io::{NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN},
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     futures::{
@@ -344,5 +344,17 @@ where
         // Failure to send a command may indicate that the directory does not support watchers, or
         // that the executor shutdown is in progress.  In any case the error can be ignored.
         let _ = self.watchers.unbounded_send(WatcherCommand::UnregisterWatcher { key });
+    }
+
+    fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+        Ok(NodeAttributes {
+            mode: 0,
+            id: INO_UNKNOWN,
+            content_size: 0,
+            storage_size: 0,
+            link_count: 1,
+            creation_time: 0,
+            modification_time: 0,
+        })
     }
 }

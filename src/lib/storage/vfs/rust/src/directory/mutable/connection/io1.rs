@@ -170,6 +170,14 @@ impl MutableConnection {
                     responder.send(status.into_raw())
                 })?;
             }
+            DerivedDirectoryRequest::SetAttr { flags, attributes, responder } => {
+                let status = match self.base.directory.set_attrs(flags, attributes) {
+                    Ok(()) => Status::OK,
+                    Err(status) => status,
+                };
+
+                responder.send(status.into_raw())?;
+            }
         }
         Ok(ConnectionState::Alive)
     }
@@ -291,7 +299,11 @@ mod tests {
             registry::token_registry,
         },
         fidl::Channel,
-        fidl_fuchsia_io::{DirectoryProxy, DIRENT_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
+        fidl_fuchsia_io::{
+            DirectoryProxy, NodeAttributes, DIRENT_TYPE_DIRECTORY,
+            NODE_ATTRIBUTE_FLAG_CREATION_TIME, NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+            OPEN_RIGHT_READABLE,
+        },
         fuchsia_async as fasync,
         std::{any::Any, sync::Mutex},
     };
@@ -301,6 +313,7 @@ mod tests {
         Link { id: u32, path: String },
         Unlink { id: u32, path: String },
         Rename { id: u32, src_name: String, dst_dir: Arc<MockDirectory>, dst_name: String },
+        SetAttr { id: u32, flags: u32, attrs: NodeAttributes },
     }
 
     #[derive(Debug)]
@@ -366,6 +379,10 @@ mod tests {
             panic!("Not implemented");
         }
 
+        fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+            panic!("Not implemented");
+        }
+
         fn unregister_watcher(self: Arc<Self>, _key: usize) {
             panic!("Not implemented");
         }
@@ -378,6 +395,10 @@ mod tests {
 
         fn unlink(&self, path: String) -> Result<(), Status> {
             self.env.handle_event(MutableDirectoryAction::Unlink { id: self.id, path })
+        }
+
+        fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
+            self.env.handle_event(MutableDirectoryAction::SetAttr { id: self.id, flags, attrs })
         }
 
         fn get_filesystem(&self) -> Arc<dyn Filesystem> {
@@ -481,6 +502,39 @@ mod tests {
                 dst_dir: dir2,
                 dst_name: "dest".to_owned(),
             },]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_setattr() {
+        let env = TestEnv::new();
+        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let mut attrs = NodeAttributes {
+            mode: 0,
+            id: 0,
+            content_size: 0,
+            storage_size: 0,
+            link_count: 0,
+            creation_time: 30,
+            modification_time: 100,
+        };
+        let status = proxy
+            .set_attr(
+                NODE_ATTRIBUTE_FLAG_CREATION_TIME | NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+                &mut attrs,
+            )
+            .await
+            .unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        let events = env.events.lock().unwrap();
+        assert_eq!(
+            *events,
+            vec![MutableDirectoryAction::SetAttr {
+                id: 0,
+                flags: NODE_ATTRIBUTE_FLAG_CREATION_TIME | NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+                attrs
+            }]
         );
     }
 

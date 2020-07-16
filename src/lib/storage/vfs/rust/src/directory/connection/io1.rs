@@ -139,13 +139,6 @@ pub(in crate::directory) enum BaseDirectoryRequest {
     GetAttr {
         responder: DirectoryGetAttrResponder,
     },
-    SetAttr {
-        #[allow(unused)]
-        flags: u32,
-        #[allow(unused)]
-        attributes: NodeAttributes,
-        responder: DirectorySetAttrResponder,
-    },
     GetFlags {
         responder: DirectoryNodeGetFlagsResponder,
     },
@@ -197,6 +190,11 @@ pub(in crate::directory) enum DerivedDirectoryRequest {
         dst: String,
         responder: DirectoryRenameResponder,
     },
+    SetAttr {
+        flags: u32,
+        attributes: NodeAttributes,
+        responder: DirectorySetAttrResponder,
+    },
 }
 
 pub(in crate::directory) enum DirectoryRequestType {
@@ -217,7 +215,7 @@ impl From<DirectoryRequest> for DirectoryRequestType {
             DirectoryRequest::Sync { responder } => Base(Sync { responder }),
             DirectoryRequest::GetAttr { responder } => Base(GetAttr { responder }),
             DirectoryRequest::SetAttr { flags, attributes, responder } => {
-                Base(SetAttr { flags, attributes, responder })
+                Derived(SetAttr { flags, attributes, responder })
             }
             DirectoryRequest::NodeGetFlags { responder } => Base(GetFlags { responder }),
             DirectoryRequest::NodeSetFlags { flags, responder } => {
@@ -312,22 +310,23 @@ where
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             BaseDirectoryRequest::GetAttr { responder } => {
-                let mut attrs = NodeAttributes {
-                    mode: MODE_TYPE_DIRECTORY | POSIX_DIRECTORY_PROTECTION_ATTRIBUTES,
-                    id: INO_UNKNOWN,
-                    content_size: 0,
-                    storage_size: 0,
-                    link_count: 1,
-                    creation_time: 0,
-                    modification_time: 0,
+                let (mut attrs, status) = match self.directory.get_attrs() {
+                    Ok(attrs) => (attrs, ZX_OK),
+                    Err(status) => (
+                        NodeAttributes {
+                            mode: MODE_TYPE_DIRECTORY | POSIX_DIRECTORY_PROTECTION_ATTRIBUTES,
+                            id: INO_UNKNOWN,
+                            content_size: 0,
+                            storage_size: 0,
+                            link_count: 1,
+                            creation_time: 0,
+                            modification_time: 0,
+                        },
+                        status.into_raw(),
+                    ),
                 };
-                responder.send(ZX_OK, &mut attrs)?;
-            }
-            BaseDirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
-                // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
-                // modified through this call is OPEN_FLAG_APPEND, and it is not supported by a
-                // Simple directory.
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+                attrs.mode = MODE_TYPE_DIRECTORY | POSIX_DIRECTORY_PROTECTION_ATTRIBUTES;
+                responder.send(status, &mut attrs)?;
             }
             BaseDirectoryRequest::GetFlags { responder } => {
                 responder.send(ZX_OK, self.flags)?;

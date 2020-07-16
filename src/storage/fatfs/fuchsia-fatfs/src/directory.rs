@@ -11,9 +11,9 @@ use {
     },
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        self as fio, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
+        self as fio, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
+        INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
     },
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
@@ -263,6 +263,10 @@ impl MutableDirectory for FatDirectory {
         self.borrow_dir(&fs_lock).remove(&name).map_err(fatfs_error_to_status)
     }
 
+    fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {
+        Err(Status::NOT_SUPPORTED)
+    }
+
     fn get_filesystem(&self) -> Arc<dyn Filesystem> {
         self.filesystem.clone()
     }
@@ -410,6 +414,10 @@ impl Directory for FatDirectory {
     }
 
     fn unregister_watcher(self: Arc<Self>, _key: usize) {}
+
+    fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+        Err(Status::NOT_SUPPORTED)
+    }
 }
 
 #[cfg(test)]

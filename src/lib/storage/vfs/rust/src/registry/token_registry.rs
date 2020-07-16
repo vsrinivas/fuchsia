@@ -283,7 +283,7 @@ mod tests {
 
         use {
             fidl::endpoints::ServerEnd,
-            fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN},
+            fidl_fuchsia_io::{NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN},
             fuchsia_async::Channel,
             fuchsia_zircon::Status,
             std::{any::Any, sync::Arc},
@@ -339,6 +339,10 @@ mod tests {
                 panic!("Not implemented!")
             }
 
+            fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+                panic!("Not implemented!")
+            }
+
             fn unregister_watcher(self: Arc<Self>, _key: usize) {
                 panic!("Not implemented!")
             }
@@ -350,6 +354,10 @@ mod tests {
             }
 
             fn unlink(&self, _name: String) -> Result<(), Status> {
+                panic!("Not implemented!")
+            }
+
+            fn set_attrs(&self, _flags: u32, _attributes: NodeAttributes) -> Result<(), Status> {
                 panic!("Not implemented!")
             }
 

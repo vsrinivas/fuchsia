@@ -10,6 +10,7 @@ use {
         },
         filesystem::Filesystem,
     },
+    fidl_fuchsia_io::NodeAttributes,
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},
 };
@@ -124,6 +125,10 @@ impl<T: DirectlyMutable> MutableDirectory for T {
             Ok(None) => Err(Status::NOT_FOUND),
             Err(e) => Err(e),
         }
+    }
+
+    fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {
+        Err(Status::NOT_SUPPORTED)
     }
 
     fn get_filesystem(&self) -> Arc<dyn Filesystem> {

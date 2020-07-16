@@ -12,6 +12,7 @@ use crate::{
 };
 
 use {
+    fidl_fuchsia_io::NodeAttributes,
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
@@ -82,6 +83,10 @@ pub trait Directory: Any + Send + Sync {
     /// Unregister a watcher from this directory. The watcher should no longer
     /// receive events.
     fn unregister_watcher(self: Arc<Self>, key: usize);
+
+    /// Get this directory's attributes.
+    /// The "mode" field will be filled in by the connection.
+    fn get_attrs(&self) -> Result<NodeAttributes, Status>;
 }
 
 /// This trait indicates a directory that can be mutated by adding and removing entries.
@@ -91,6 +96,10 @@ pub trait MutableDirectory: Directory {
     /// Adds a child entry to this directory, even if it already exists.  The target is discarded
     /// if it exists.
     fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>;
+
+    /// Set the attributes of this directory based on the values in `attrs`.
+    /// The attributes to update are specified in flags, see fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_*.
+    fn set_attrs(&self, flags: u32, attributes: NodeAttributes) -> Result<(), Status>;
 
     /// Removes an entry from this directory.
     fn unlink(&self, name: String) -> Result<(), Status>;

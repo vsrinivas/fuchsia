@@ -136,6 +136,9 @@ impl ImmutableConnection {
             DerivedDirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
+            DerivedDirectoryRequest::SetAttr { responder, .. } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
         }
         Ok(ConnectionState::Alive)
     }
