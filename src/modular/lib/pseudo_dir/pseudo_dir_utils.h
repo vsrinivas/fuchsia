@@ -15,8 +15,8 @@ namespace modular {
 
 // Recursively constructs the path |file_path| with contents |file_contents|.
 // |file_path| must be a well-formed path that ends with a file name.
-std::unique_ptr<vfs::PseudoDir> MakeFilePathWithContents(const std::string& file_path,
-                                                         const std::string& file_contents);
+std::unique_ptr<vfs::PseudoDir> MakeFilePathWithContents(std::string_view file_path,
+                                                         std::string file_contents);
 
 };  // namespace modular
 

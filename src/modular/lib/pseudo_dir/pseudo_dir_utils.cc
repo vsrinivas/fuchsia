@@ -8,8 +8,8 @@
 
 namespace modular {
 
-std::unique_ptr<vfs::PseudoDir> MakeFilePathWithContents(const std::string& file_path,
-                                                         const std::string& file_contents) {
+std::unique_ptr<vfs::PseudoDir> MakeFilePathWithContents(std::string_view file_path,
+                                                         std::string file_contents) {
   auto file_path_split =
       fxl::SplitStringCopy(file_path, "/", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
 
@@ -28,16 +28,15 @@ std::unique_ptr<vfs::PseudoDir> MakeFilePathWithContents(const std::string& file
 
   // 2. The last component of |file_path_split| is the file -- have it hang off
   // of the last directory.
-  last_subdir->AddEntry(file_path_split.back(),
-                        std::make_unique<vfs::PseudoFile>(
-                            file_contents.size(),
-                            [file_contents](std::vector<uint8_t>* out, size_t /*unused*/) {
-                              std::copy(file_contents.begin(), file_contents.end(),
-                                        std::back_inserter(*out));
-                              return ZX_OK;
-                            },
-                            vfs::PseudoFile::WriteHandler() /* not used */
-                            ));
+  auto file = std::make_unique<vfs::PseudoFile>(
+      file_contents.size(),
+      [file_contents = std::move(file_contents)](std::vector<uint8_t>* out, size_t /*unused*/) {
+        std::copy(file_contents.begin(), file_contents.end(), std::back_inserter(*out));
+        return ZX_OK;
+      },
+      vfs::PseudoFile::WriteHandler() /* not used */
+  );
+  last_subdir->AddEntry(file_path_split.back(), std::move(file));
 
   return config_dir;
 }
