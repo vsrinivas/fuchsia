@@ -4258,14 +4258,14 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
   zx_status_t status = ZX_OK;
 
   BRCMF_DBG(TRACE, "Enter\n");
-  // TODO(karthikrish) : Move this to CONN level for production code
-  BRCMF_INFO("Link Down Event: State: %s evt: %d flg: 0x%x rsn: %d sts: %d rssi: %d snr: %d\n",
-             brcmf_get_client_connect_state_string(ifp), e->event_code, e->flags, e->reason,
-             e->status, ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
   if (!brcmf_is_client_connected(ifp)) {
     // Client is already disconnected.
     return status;
   }
+  // TODO(karthikrish) : Move this to CONN level for production code
+  BRCMF_INFO("Link Down Event: State: %s evt: %d flg: 0x%x rsn: %d sts: %d rssi: %d snr: %d\n",
+             brcmf_get_client_connect_state_string(ifp), e->event_code, e->flags, e->reason,
+             e->status, ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
   brcmf_bss_connect_done(cfg, ndev, false);
   brcmf_disconnect_done(cfg);
   brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e), e->reason);
