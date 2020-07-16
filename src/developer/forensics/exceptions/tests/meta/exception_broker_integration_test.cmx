@@ -4,7 +4,8 @@
             "injected-services": {
                 "fuchsia.exception.Handler": "fuchsia-pkg://fuchsia.com/exceptions#meta/exceptions.cmx",
                 "fuchsia.exception.ProcessLimbo": "fuchsia-pkg://fuchsia.com/exceptions#meta/exceptions.cmx",
-                "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/fake-crash-reporter#meta/fake_crash_reporter.cmx"
+                "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/fake-crash-reporter#meta/fake_crash_reporter.cmx",
+                "fuchsia.feedback.testing.FakeCrashReporterQuerier": "fuchsia-pkg://fuchsia.com/fake-crash-reporter#meta/fake_crash_reporter.cmx"
             },
             "system-services": [
                 "fuchsia.sys.internal.Introspect"
@@ -18,6 +19,7 @@
         "services": [
             "fuchsia.exception.Handler",
             "fuchsia.exception.ProcessLimbo",
+            "fuchsia.feedback.testing.FakeCrashReporterQuerier",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.internal.Introspect"

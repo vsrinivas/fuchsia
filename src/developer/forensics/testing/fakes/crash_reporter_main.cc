@@ -25,6 +25,12 @@ int main(int argc, const char** argv) {
   ::fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_bindings;
   context->outgoing()->AddPublicService(crash_reporter_bindings.GetHandler(&crash_reporter));
 
+  context->outgoing()->AddPublicService(
+      ::fidl::InterfaceRequestHandler<fuchsia::feedback::testing::FakeCrashReporterQuerier>(
+          [&crash_reporter](
+              ::fidl::InterfaceRequest<fuchsia::feedback::testing::FakeCrashReporterQuerier>
+                  request) { crash_reporter.AddNewQuerier(std::move(request)); }));
+
   loop.Run();
 
   return EXIT_SUCCESS;

@@ -1,13 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <fuchsia/exception/cpp/fidl.h>
+#include <fuchsia/feedback/testing/cpp/fidl.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include <gtest/gtest.h>
 
-#include "fuchsia/exception/cpp/fidl.h"
 #include "src/developer/forensics/exceptions/exception_broker.h"
 #include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -49,21 +51,38 @@ ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
 }
 
 TEST(ExceptionBrokerIntegrationTest, OnExceptionSmokeTest) {
-  ExceptionContext pe;
-  ASSERT_TRUE(GetExceptionContext(&pe));
+  constexpr size_t kNumExceptions = 5;
 
   fuchsia::exception::HandlerSyncPtr exception_handler;
 
   auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
   environment_services->Connect(exception_handler.NewRequest());
 
-  ASSERT_EQ(
-      exception_handler->OnException(std::move(pe.exception), ExceptionContextToExceptionInfo(pe)),
-      ZX_OK);
+  for (size_t i = 0; i < kNumExceptions; ++i) {
+    ExceptionContext pe;
+    ASSERT_TRUE(GetExceptionContext(&pe));
 
-  // Kill the job so that the exception that will be freed here doesn't bubble out of the test
-  // environment.
-  pe.job.kill();
+    ASSERT_EQ(exception_handler->OnException(std::move(pe.exception),
+                                             ExceptionContextToExceptionInfo(pe)),
+              ZX_OK);
+
+    // Kill the job so that the exception that will be freed here doesn't bubble out of the test
+    // environment.
+    pe.job.kill();
+  }
+
+  fuchsia::feedback::testing::FakeCrashReporterQuerierSyncPtr crash_reporter;
+  environment_services->Connect(crash_reporter.NewRequest());
+
+  size_t num_crashreports{0};
+  for (size_t i = 0; i < kNumExceptions; ++i) {
+    ASSERT_EQ(crash_reporter->WatchFile(&num_crashreports), ZX_OK);
+    if (num_crashreports == kNumExceptions) {
+      break;
+    }
+  }
+
+  EXPECT_EQ(num_crashreports, kNumExceptions);
 }
 
 TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
