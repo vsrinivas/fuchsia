@@ -393,6 +393,24 @@ fuchsia_component("rw-tests") {
   ]
 }
 
+test("rw_workers_tests") {
+  sources = [ "rw_workers.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("rw-workers-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/rw-workers-tests.cml"
+  deps = [
+    ":manifests",
+    ":rw_workers_tests",
+  ]
+}
+
 test("sparse_tests") {
   sources = [ "sparse.cc" ]
   deps = [
@@ -431,6 +449,7 @@ fuchsia_test_package("fs-tests") {
     ":rename-tests",
     ":resize-tests",
     ":rw-tests",
+    ":rw-workers-tests",
     ":sparse-tests",
   ]
 }
@@ -502,6 +521,7 @@ action("manifests") {
     "$target_gen_dir/rename-tests.cml",
     "$target_gen_dir/resize-tests.cml",
     "$target_gen_dir/rw-tests.cml",
+    "$target_gen_dir/rw-workers-tests.cml",
     "$target_gen_dir/sparse-tests.cml",
     "$target_gen_dir/sparse-large-tests.cml",
   ]

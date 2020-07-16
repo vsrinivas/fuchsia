@@ -5,335 +5,252 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/zircon-internal/xorshiftrand.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-#include <zircon/compiler.h>
-#include <zircon/listnode.h>
-#include <zircon/types.h>
 
-#include "filesystems.h"
-#include "misc.h"
+#include <random>
 
-#define FAIL -1
-#define BUSY 0
-#define DONE 1
+#include "src/storage/fs_test/fs_test_fixture.h"
 
-#define FBUFSIZE 65536
+namespace fs_test {
+namespace {
 
-static_assert(FBUFSIZE == ((FBUFSIZE / sizeof(uint64_t)) * sizeof(uint64_t)),
-              "FBUFSIZE not multiple of uint64_t");
+enum Status { kFail = -1, kBusy = 0, kDone = 1 };
+
+constexpr int kBufSize = 65536;
+
+static_assert(kBufSize == kBufSize / sizeof(uint64_t) * sizeof(uint64_t),
+              "kBufSize not multiple of uint64_t");
+
+class Worker;
+
+class RwWorkersTest : public FilesystemTest {
+ public:
+  RwWorkersTest();
+
+ protected:
+  Status DoWork();
+
+  std::vector<Worker> workers_;
+  std::vector<thrd_t> threads_;
+};
 
 typedef struct worker worker_t;
-// global environment variables
-typedef struct env {
-  worker_t* all_workers;
 
-  list_node_t threads;
-} env_t;
+class Worker {
+ public:
+  using WorkFn = Status (Worker::*)(void);
 
-typedef struct worker {
-  env_t* env;
+  Worker(const std::string& where, const char* fn, WorkFn work, uint32_t size, uint32_t flags);
 
-  worker_t* next;
-  int (*work)(worker_t* w);
+  Status status() const { return status_; }
+  const std::string name() const { return name_; }
 
-  rand64_t rdata;
-  rand32_t rops;
+  Status Work() {
+    status_ = (this->*work_)();
+    return status_;
+  }
 
-  int fd;
-  int status;
-  uint32_t flags;
-  uint32_t size;
-  uint32_t pos;
+  Status Rw(bool do_read);
+  Status Writer();
+
+ private:
+  Status Verify();
+
+  WorkFn work_;
+  const std::default_random_engine::result_type seed_;
+  std::default_random_engine data_random_;
+  std::default_random_engine io_size_random_;
+
+  fbl::unique_fd fd_;
+  Status status_;
+  const uint32_t size_;
+  const uint32_t flags_;
+  uint32_t pos_;
 
   union {
-    uint8_t u8[FBUFSIZE];
-    uint64_t u64[FBUFSIZE / sizeof(uint64_t)];
-  };
+    uint8_t u8[kBufSize];
+    uint64_t u64[kBufSize / sizeof(uint64_t)];
+  } buffer_;
 
-  char name[256];
-} worker_t;
-#define F_RAND_IOSIZE 1
+  const std::string name_;
+};
 
-bool worker_new(env_t* env, const char* where, const char* fn, int (*work)(worker_t* w),
-                uint32_t size, uint32_t flags);
-int worker_writer(worker_t* w);
-static bool init_environment(env_t* env);
+constexpr uint32_t kUseRandomIoSize = 1;
 
-typedef struct thread_list {
-  list_node_t node;
-  thrd_t t;
-} thread_list_t;
-
-int worker_rw(worker_t* w, bool do_read) {
-  if (w->pos == w->size) {
-    return DONE;
+Status Worker::Rw(bool do_read) {
+  if (pos_ == size_) {
+    return kDone;
   }
 
   // offset into buffer
-  uint32_t off = w->pos % FBUFSIZE;
+  uint32_t off = pos_ % kBufSize;
 
   // fill our content buffer if it's empty
   if (off == 0) {
-    for (unsigned n = 0; n < (FBUFSIZE / sizeof(uint64_t)); n++) {
-      w->u64[n] = rand64(&w->rdata);
+    std::uniform_int_distribution<uint64_t> dist;
+    for (unsigned n = 0; n < (kBufSize / sizeof(uint64_t)); n++) {
+      buffer_.u64[n] = dist(data_random_);
     }
   }
 
   // data in buffer available to write
-  uint32_t xfer = FBUFSIZE - off;
+  uint32_t xfer = kBufSize - off;
 
   // do not exceed our desired size
-  if (xfer > (w->size - w->pos)) {
-    xfer = w->size - w->pos;
+  if (xfer > (size_ - pos_)) {
+    xfer = size_ - pos_;
   }
 
-  if ((w->flags & F_RAND_IOSIZE) && (xfer > 3000)) {
-    xfer = 3000 + (rand32(&w->rops) % (xfer - 3000));
+  if ((flags_ & kUseRandomIoSize) && (xfer > 3000)) {
+    xfer = 3000 + (std::uniform_int_distribution<uint32_t>()(io_size_random_) % (xfer - 3000));
   }
 
   ssize_t r;
   if (do_read) {
-    uint8_t buffer[FBUFSIZE];
-    if ((r = read(w->fd, buffer, xfer)) < 0) {
-      fprintf(stderr, "worker('%s') read failed @%u: %d\n", w->name, w->pos, errno);
-      return FAIL;
+    uint8_t buffer[kBufSize];
+    if ((r = read(fd_.get(), buffer, xfer)) < 0) {
+      std::cerr << "worker('" << name_ << "') read failed @" << pos_ << ": " << strerror(errno)
+                << std::endl;
+      return kFail;
     }
-    if (memcmp(buffer, w->u8 + off, r)) {
-      fprintf(stderr, "worker('%s) verify failed @%u\n", w->name, w->pos);
-      return FAIL;
+    if (memcmp(buffer, buffer_.u8 + off, r)) {
+      std::cerr << "worker('" << name_ << ") verify failed @" << pos_ << std::endl;
+      return kFail;
     }
   } else {
-    if ((r = write(w->fd, w->u8 + off, xfer)) < 0) {
-      fprintf(stderr, "worker('%s') write failed @%u: %d\n", w->name, w->pos, errno);
-      return FAIL;
+    if ((r = write(fd_.get(), buffer_.u8 + off, xfer)) < 0) {
+      std::cerr << "worker('" << name_ << "') write failed @" << pos_ << ": " << strerror(errno)
+                << std::endl;
+      return kFail;
     }
   }
 
   // advance
-  w->pos += r;
-  return BUSY;
+  pos_ += r;
+  return kBusy;
 }
 
-int worker_verify(worker_t* w) {
-  int r = worker_rw(w, true);
-  if (r == DONE) {
-    close(w->fd);
-  }
-  return r;
-}
+Status Worker::Verify() { return Rw(true); }
 
-int worker_writer(worker_t* w) {
-  int r = worker_rw(w, false);
-  if (r == DONE) {
-    if (lseek(w->fd, 0, SEEK_SET) != 0) {
-      fprintf(stderr, "worker('%s') seek failed: %s\n", w->name, strerror(errno));
-      return FAIL;
+Status Worker::Writer() {
+  Status r = Rw(false);
+  if (r == kDone) {
+    if (lseek(fd_.get(), 0, SEEK_SET) != 0) {
+      std::cerr << "worker('" << name_ << "') seek failed: " << strerror(errno) << std::endl;
+      return kFail;
     }
-    // start at 0 and reset our data generator seed
-    srand64(&w->rdata, w->name);
-    w->pos = 0;
-    w->work = worker_verify;
-    return BUSY;
+    // Reset data_random_.
+    data_random_.seed(seed_);
+    pos_ = 0;
+    work_ = &Worker::Verify;
+    return kBusy;
   }
   return r;
 }
 
-bool worker_new(env_t* env, const char* where, const char* fn, int (*work)(worker_t* w),
-                uint32_t size, uint32_t flags) {
-  worker_t* w = static_cast<worker_t*>(calloc(1, sizeof(worker_t)));
-  ASSERT_NE(w, nullptr, "");
-
-  w->env = env;
-
-  snprintf(w->name, sizeof(w->name), "%s%s", where, fn);
-  srand64(&w->rdata, w->name);
-  srand32(&w->rops, w->name);
-  w->size = size;
-  w->work = work;
-  w->flags = flags;
-
-  ASSERT_GT((w->fd = open(w->name, O_RDWR | O_CREAT | O_EXCL, 0644)), 0, "");
-
-  w->next = w->env->all_workers;
-  env->all_workers = w;
-
-  return true;
+Worker::Worker(const std::string& where, const char* fn, WorkFn work, uint32_t size, uint32_t flags)
+    : work_(work),
+      seed_(std::random_device()()),
+      data_random_(seed_),
+      io_size_random_(seed_),
+      size_(size),
+      flags_(flags),
+      name_(where + fn) {
+  fd_ = fbl::unique_fd(open(name_.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
+  EXPECT_TRUE(fd_);
 }
 
-int do_work(env_t* env) {
-  uint32_t busy_count = 0;
-  for (worker_t* w = env->all_workers; w != NULL; w = w->next) {
-    w->env = env;
-    if (w->status == BUSY) {
+Status RwWorkersTest::DoWork() {
+  int busy_count = 0;
+  for (Worker& w : workers_) {
+    if (w.status() == kBusy) {
       busy_count++;
-      if ((w->status = w->work(w)) == FAIL) {
-        EXPECT_EQ(unlink(w->name), 0, "");
-        return FAIL;
+      if (w.Work() == kFail) {
+        EXPECT_EQ(unlink(w.name().c_str()), 0);
+        return kFail;
       }
-      if (w->status == DONE) {
-        fprintf(stderr, "worker('%s') finished\n", w->name);
-        EXPECT_EQ(unlink(w->name), 0, "");
+      if (w.status() == kDone) {
+        std::cerr << "worker('" << w.name() << "') finished" << std::endl;
+        EXPECT_EQ(unlink(w.name().c_str()), 0);
       }
     }
   }
-  return busy_count ? BUSY : DONE;
+  return busy_count ? kBusy : kDone;
 }
 
-bool test_work_single_thread(void) {
-  BEGIN_TEST;
-
-  env_t env;
-  init_environment(&env);
-
-  for (;;) {
-    int r = do_work(&env);
-    assert(r != FAIL);
-    if (r == DONE) {
-      break;
-    }
-  }
-
-  worker_t* w = env.all_workers;
-  worker_t* next;
-  while (w != NULL) {
-    next = w->next;
-    free(w);
-    w = next;
-  }
-  END_TEST;
+TEST_P(RwWorkersTest, SingleThread) {
+  Status r;
+  do {
+    r = DoWork();
+    ASSERT_NE(r, kFail);
+  } while (r != kDone);
 }
 
-#define KB(n) ((n)*1024)
-#define MB(n) ((n)*1024 * 1024)
+constexpr uint32_t KiB(int n) { return n * 1024; }
+constexpr uint32_t MiB(int n) { return n * 1024; }
 
-static struct {
-  int (*work)(worker_t*);
+constexpr struct {
   const char* name;
   uint32_t size;
   uint32_t flags;
-} WORK[] = {
-    {
-        worker_writer,
-        "file0000",
-        KB(512),
-        F_RAND_IOSIZE,
-    },
-    {
-        worker_writer,
-        "file0001",
-        MB(10),
-        F_RAND_IOSIZE,
-    },
-    {
-        worker_writer,
-        "file0002",
-        KB(512),
-        F_RAND_IOSIZE,
-    },
-    {
-        worker_writer,
-        "file0003",
-        KB(512),
-        F_RAND_IOSIZE,
-    },
-    {
-        worker_writer,
-        "file0004",
-        KB(512),
-        0,
-    },
-    {
-        worker_writer,
-        "file0005",
-        MB(20),
-        0,
-    },
-    {
-        worker_writer,
-        "file0006",
-        KB(512),
-        0,
-    },
-    {
-        worker_writer,
-        "file0007",
-        KB(512),
-        0,
-    },
+} kWork[] = {
+    {"file0000", KiB(512), kUseRandomIoSize},
+    {"file0001", MiB(10), kUseRandomIoSize},
+    {"file0002", KiB(512), kUseRandomIoSize},
+    {"file0003", KiB(512), kUseRandomIoSize},
+    {"file0004", KiB(512), 0},
+    {"file0005", MiB(20), 0},
+    {"file0006", KiB(512), 0},
+    {"file0007", KiB(512), 0},
 };
 
-static bool init_environment(env_t* env) {
-  // tests are run repeatedly, so reinitialize each time
-  env->all_workers = NULL;
-
-  list_initialize(&env->threads);
-
-  // assemble the work
-  const char* where = "::";
-  for (unsigned n = 0; n < countof(WORK); n++) {
-    ASSERT_TRUE(worker_new(env, where, WORK[n].name, WORK[n].work, WORK[n].size, WORK[n].flags),
-                "");
+RwWorkersTest::RwWorkersTest() {
+  // Assemble the work.
+  for (const auto& work : kWork) {
+    workers_.push_back(
+        Worker(fs().mount_path(), work.name, &Worker::Writer, work.size, work.flags));
   }
-  return true;
 }
 
-static int do_threaded_work(void* arg) {
-  worker_t* w = static_cast<worker_t*>(arg);
+int DoThreadedWork(void* arg) {
+  Worker* w = static_cast<Worker*>(arg);
 
-  fprintf(stderr, "work thread(%s) started\n", w->name);
-  while ((w->status = w->work(w)) == BUSY) {
+  std::cerr << "work thread(" << w->name() << ") started" << std::endl;
+  while (w->Work() == kBusy) {
     thrd_yield();
   }
 
-  fprintf(stderr, "work thread(%s) %s\n", w->name, w->status == DONE ? "finished" : "failed");
-  EXPECT_EQ(unlink(w->name), 0, "");
+  std::cerr << "work thread(" << w->name() << ") " << (w->status() == kDone ? "finished" : "failed")
+            << std::endl;
+  EXPECT_EQ(unlink(w->name().c_str()), 0);
 
-  zx_status_t status = w->status;
-  free(w);
-  return status;
+  return w->status();
 }
 
-static bool test_work_concurrently(void) {
-  BEGIN_TEST;
+TEST_P(RwWorkersTest, Concurrent) {
+  std::vector<thrd_t> threads;
 
-  env_t env;
-  ASSERT_TRUE(init_environment(&env), "");
-
-  for (worker_t* w = env.all_workers; w != NULL; w = w->next) {
+  for (Worker& w : workers_) {
     // start the workers on separate threads
     thrd_t t;
-    ASSERT_EQ(thrd_create(&t, do_threaded_work, w), thrd_success, "");
-    thread_list_t* thread = static_cast<thread_list_t*>(malloc(sizeof(thread_list_t)));
-    ASSERT_NE(thread, nullptr, "");
-    thread->t = t;
-    list_add_tail(&env.threads, &thread->node);
+    ASSERT_EQ(thrd_create(&t, DoThreadedWork, &w), thrd_success);
+    threads.push_back(t);
   }
 
-  thread_list_t* next;
-  thread_list_t* tmp;
-  list_for_every_entry_safe (&env.threads, next, tmp, thread_list_t, node) {
+  for (thrd_t t : threads) {
     int rc;
-    ASSERT_EQ(thrd_join(next->t, &rc), thrd_success, "");
-    ASSERT_EQ(rc, DONE, "Thread joined, but failed");
-    free(next);
+    ASSERT_EQ(thrd_join(t, &rc), thrd_success);
+    ASSERT_EQ(rc, kDone) << "Thread joined, but failed";
   }
-
-  END_TEST;
 }
 
-const test_disk_t disk = {
-    .block_count = 3 * (1LLU << 16),
-    .block_size = 1LLU << 9,
-    .slice_size = 1LLU << 23,
-};
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, RwWorkersTest, testing::ValuesIn(AllTestFilesystems()),
+                         testing::PrintToStringParamName());
 
-RUN_FOR_ALL_FILESYSTEMS_SIZE(rw_workers_test, disk,
-                             RUN_TEST_MEDIUM(test_work_single_thread)
-                                 RUN_TEST_LARGE(test_work_concurrently))
+}  // namespace
+}  // namespace fs_test
