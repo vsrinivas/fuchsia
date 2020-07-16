@@ -12,6 +12,7 @@ ffx_plugin_suite("ffx_component") {
     "knock:ffx_knock",
     "run:ffx_component_run",
     "select:ffx_select",
+    "//src/sys/run_test_suite/ffx:ffx_test",
   ]
 }
 

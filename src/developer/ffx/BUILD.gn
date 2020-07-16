@@ -25,7 +25,6 @@ if (host_toolchain == current_toolchain) {
       "//src/developer/ffx/plugins/config:ffx_config_plugin",
       "//src/developer/ffx/plugins/daemon:ffx_daemon_suite",
       "//src/developer/ffx/plugins/target:ffx_target_suite",
-      "//src/sys/run_test_suite/ffx:ffx_test",
     ]
 
     deps = [
