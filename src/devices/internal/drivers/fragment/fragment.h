@@ -30,6 +30,7 @@
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/powerimpl.h>
 #include <ddktl/protocol/pwm.h>
+#include <ddktl/protocol/scpi.h>
 #include <ddktl/protocol/sdio.h>
 #include <ddktl/protocol/shareddma.h>
 #include <ddktl/protocol/spi.h>
@@ -93,6 +94,7 @@ class Fragment : public FragmentBase {
         camera_sensor_client_(parent, ZX_PROTOCOL_CAMERA_SENSOR),
         gdc_client_(parent, ZX_PROTOCOL_GDC),
         ge2d_client_(parent, ZX_PROTOCOL_GE2D),
+        scpi_client_(parent, ZX_PROTOCOL_SCPI),
         clamp_rgb_client_(parent, ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL) {}
 
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
@@ -195,6 +197,7 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::CameraSensorProtocolClient, camera_sensor_protocol_t> camera_sensor_client_;
   ProtocolClient<ddk::GdcProtocolClient, gdc_protocol_t> gdc_client_;
   ProtocolClient<ddk::Ge2dProtocolClient, ge2d_protocol_t> ge2d_client_;
+  ProtocolClient<ddk::ScpiProtocolClient, scpi_protocol_t> scpi_client_;
   ProtocolClient<ddk::DisplayClampRgbImplProtocolClient, display_clamp_rgb_impl_protocol_t>
       clamp_rgb_client_;
 };
