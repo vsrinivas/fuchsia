@@ -38,9 +38,10 @@ int main(int argc, const char** argv) {
   status = outgoing.svc_dir()->AddEntry(
       ::llcpp::fuchsia::sysinfo::SysInfo::Name,
       fbl::AdoptRef(new fs::Service([dispatcher, sysinfo](zx::channel svc_request) mutable {
-        zx_status_t status = fidl::Bind(dispatcher, std::move(svc_request), &sysinfo);
+        zx_status_t status =
+            fidl::BindSingleInFlightOnly(dispatcher, std::move(svc_request), &sysinfo);
         if (status != ZX_OK) {
-          printf("sysinfo: fidl::Bind(_) = %s\n", zx_status_get_string(status));
+          printf("sysinfo: fidl::BindSingleInFlightOnly(_) = %s\n", zx_status_get_string(status));
         }
         return status;
       })));

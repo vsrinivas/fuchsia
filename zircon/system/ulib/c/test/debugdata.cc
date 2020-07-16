@@ -60,7 +60,7 @@ struct DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
              zx::channel* client) {
     auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
     auto node = fbl::MakeRefCounted<fs::Service>([dispatcher, this](zx::channel channel) {
-      return fidl::Bind(dispatcher, std::move(channel), this);
+      return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), this);
     });
     dir->AddEntry(::llcpp::fuchsia::debugdata::DebugData::Name, node);
 

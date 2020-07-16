@@ -30,7 +30,7 @@ class EchoCommon : public Echo::Interface {
   explicit EchoCommon(const char* prefix) : prefix_(prefix) {}
 
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    return fidl::Bind(dispatcher, std::move(request), this);
+    return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
   void EchoString(fidl::StringView input, EchoStringCompleter::Sync completer) override {
@@ -74,11 +74,11 @@ class ServerTest : public zxtest::Test {
     EchoService::Handler my_service(&handler);
 
     my_service.add_foo([this, foo_impl](zx::channel request_channel) {
-      return fidl::Bind(loop_.dispatcher(), std::move(request_channel), foo_impl);
+      return fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(request_channel), foo_impl);
     });
 
     my_service.add_bar([this, bar_impl](zx::channel request_channel) {
-      return fidl::Bind(loop_.dispatcher(), std::move(request_channel), bar_impl);
+      return fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(request_channel), bar_impl);
     });
 
     return handler;

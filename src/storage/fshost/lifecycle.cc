@@ -10,8 +10,8 @@ namespace devmgr {
 
 zx_status_t LifecycleServer::Create(async_dispatcher_t* dispatcher, devmgr::FsManager* fs_manager,
                                     zx::channel chan) {
-  zx_status_t status =
-      fidl::Bind(dispatcher, std::move(chan), std::make_unique<LifecycleServer>(fs_manager));
+  zx_status_t status = fidl::BindSingleInFlightOnly(dispatcher, std::move(chan),
+                                                    std::make_unique<LifecycleServer>(fs_manager));
   if (status != ZX_OK) {
     fprintf(stderr, "fshost: failed to bind lifecycle service: %s\n", zx_status_get_string(status));
     return status;

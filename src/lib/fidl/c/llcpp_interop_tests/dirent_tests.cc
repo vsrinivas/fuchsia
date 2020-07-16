@@ -236,7 +236,7 @@ class ServerBase : public gen::DirEntTestInterface::Interface {
     if (status != ZX_OK) {
       return status;
     }
-    return fidl::Bind(loop_.dispatcher(), std::move(chan_), this);
+    return fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(chan_), this);
   }
 
   uint64_t CountNumDirectoriesNumCalls() const { return count_num_directories_num_calls_.load(); }

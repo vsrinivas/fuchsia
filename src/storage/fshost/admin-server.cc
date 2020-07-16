@@ -21,7 +21,8 @@ fbl::RefPtr<fs::Service> AdminServer::Create(devmgr::FsManager* fs_manager,
       return status;
     }
 
-    status = fidl::Bind(dispatcher, std::move(chan), std::make_unique<AdminServer>(fs_manager));
+    status = fidl::BindSingleInFlightOnly(dispatcher, std::move(chan),
+                                          std::make_unique<AdminServer>(fs_manager));
     if (status != ZX_OK) {
       fprintf(stderr, "fshost: failed to bind admin service: %s\n", zx_status_get_string(status));
       return status;

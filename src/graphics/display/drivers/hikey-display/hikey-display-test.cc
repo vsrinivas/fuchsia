@@ -36,7 +36,8 @@ TEST(HikeyDisplay, SysmemRequirements) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   image_t image = {};
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &collection));
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
 
   EXPECT_OK(
       display.DisplayControllerImplSetBufferCollectionConstraints(&image, client_channel.get()));

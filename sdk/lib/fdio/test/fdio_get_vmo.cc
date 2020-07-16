@@ -221,7 +221,8 @@ TEST(GetVMOTest, Remote) {
   create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
-  ASSERT_OK(fidl::Bind(dispatcher, std::move(server), std::make_unique<TestServer>(&context)));
+  ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(server),
+                                         std::make_unique<TestServer>(&context)));
 
   int raw_fd = -1;
   ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
@@ -289,7 +290,8 @@ TEST(GetVMOTest, VMOFile) {
   create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
-  ASSERT_OK(fidl::Bind(dispatcher, std::move(server), std::make_unique<TestServer>(&context)));
+  ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(server),
+                                         std::make_unique<TestServer>(&context)));
 
   int raw_fd = -1;
   ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
@@ -341,7 +343,8 @@ TEST(MmapFileTest, ProtExecWorks) {
   create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
-  ASSERT_OK(fidl::Bind(dispatcher, std::move(server), std::make_unique<TestServer>(&context)));
+  ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(server),
+                                         std::make_unique<TestServer>(&context)));
 
   int raw_fd = -1;
   ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));

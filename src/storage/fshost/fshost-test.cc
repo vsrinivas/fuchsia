@@ -80,7 +80,7 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   ASSERT_OK(zx::channel::create(0, &registry_client, &registry_server));
   auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
   auto fshost_vn = new devmgr::fshost::RegistryVnode(loop.dispatcher(), dir);
-  fidl::Bind(loop.dispatcher(), std::move(registry_server), fshost_vn);
+  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(registry_server), fshost_vn);
 
   // make a new "vfs" "client" that doesn't really point anywhere.
   zx::channel vfs_client, vfs_server;

@@ -15,7 +15,7 @@
 namespace fake_input_report_device {
 
 // Creates a fake device that vends fuchsia.input.report FIDL.
-// This device needs to be fidl::Bind to a thread in order to start
+// This device needs to be fidl::BindSingleInFlightOnly to a thread in order to start
 // receiving requests.
 // If this class is bound on a seperate thread, that thread must be joined before
 // this class is destructed.

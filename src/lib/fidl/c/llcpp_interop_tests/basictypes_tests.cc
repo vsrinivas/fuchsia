@@ -328,7 +328,7 @@ class Server : public gen::TestInterface::Interface {
 
 void SpinUp(zx::channel server, Server* impl, std::unique_ptr<async::Loop>* out_loop) {
   auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
-  zx_status_t status = fidl::Bind(loop->dispatcher(), std::move(server), impl);
+  zx_status_t status = fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(server), impl);
   ASSERT_OK(status);
   ASSERT_OK(loop->StartThread("test_llcpp_basictypes_server"));
   *out_loop = std::move(loop);

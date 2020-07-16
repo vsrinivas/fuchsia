@@ -265,7 +265,7 @@ zx::channel SerialPpp::GetInstance() {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  auto status = fidl::Bind(loop_.dispatcher(), std::move(local), &server_);
+  auto status = fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(local), &server_);
   if (status != ZX_OK) {
     return zx::channel();
   }

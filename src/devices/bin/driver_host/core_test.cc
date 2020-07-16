@@ -23,7 +23,7 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
     loop_.StartThread("driver_host-test-coordinator-loop");
   }
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    return fidl::Bind(dispatcher, std::move(request), this);
+    return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
   void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,

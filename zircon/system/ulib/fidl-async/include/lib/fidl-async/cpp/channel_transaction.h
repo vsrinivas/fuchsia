@@ -17,10 +17,10 @@ namespace internal {
 
 class SimpleBinding;
 
-// A basic implementation of |fidl::Transaction|. Designed to work with |fidl::Bind|, which pauses
-// message dispatching when an asynchronous transaction is in-flight.
-// The channel is owned by |SimpleBinding|.
-// |SimpleBinding| ownership ping-pongs between this transaction and the async dispatcher.
+// A basic implementation of |fidl::Transaction|. Designed to work with
+// |fidl::BindSingleInFlightOnly|, which pauses message dispatching when an asynchronous transaction
+// is in-flight. The channel is owned by |SimpleBinding|. |SimpleBinding| ownership ping-pongs
+// between this transaction and the async dispatcher.
 class ChannelTransaction final : public Transaction {
  public:
   ChannelTransaction(zx_txid_t txid, std::unique_ptr<SimpleBinding> binding)

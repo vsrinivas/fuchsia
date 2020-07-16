@@ -63,7 +63,7 @@ class ResultTest : public ::testing::Test {
     zx::channel server_end;
     ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end), ZX_OK);
     server_ = std::make_unique<ErrorServer>();
-    fidl::Bind(loop_->dispatcher(), std::move(server_end), server_.get());
+    fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end), server_.get());
   }
 
   virtual void TearDown() {
@@ -180,7 +180,7 @@ TEST(MagicNumberTest, ResponseWrite) {
   std::string s = "hi";
 
   FrobinatorImpl server;
-  fidl::Bind(loop.dispatcher(), std::move(h2), &server);
+  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(h2), &server);
 
   fidl::Buffer<test::Frobinator::GrobRequest> request;
   fidl::Buffer<test::Frobinator::GrobResponse> response;
@@ -264,7 +264,7 @@ class HandleTest : public ::testing::Test {
     zx::channel server_end;
     ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end), ZX_OK);
     server_ = std::make_unique<HandleProviderServer>();
-    fidl::Bind(loop_->dispatcher(), std::move(server_end), server_.get());
+    fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end), server_.get());
   }
 
   test::HandleProvider::SyncClient TakeClient() {

@@ -71,7 +71,7 @@ class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
   FakeSysinfo(async_dispatcher_t* dispatcher) {
     zx::channel remote;
     ASSERT_OK(zx::channel::create(0, &remote, &svc_chan_));
-    fidl::Bind(dispatcher, std::move(remote), this);
+    fidl::BindSingleInFlightOnly(dispatcher, std::move(remote), this);
   }
 
   void GetHypervisorResource(GetHypervisorResourceCompleter::Sync completer) {

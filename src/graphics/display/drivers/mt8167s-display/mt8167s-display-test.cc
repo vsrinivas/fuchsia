@@ -272,7 +272,8 @@ TEST(DisplayTest, SetConstraints) {
   image.width = 800;
   image.height = 600;
   image.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &collection));
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
 
   EXPECT_OK(
       display.DisplayControllerImplSetBufferCollectionConstraints(&image, client_channel.get()));

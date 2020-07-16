@@ -126,7 +126,7 @@ class BaseTest : public ::zxtest::Test {
     zx::channel client_channel, server_channel;
     ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
 
-    ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
+    ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &server));
     ASSERT_OK(loop.StartThread("fake-socket-server"));
     ASSERT_OK(fdio_fd_create(client_channel.release(), client_fd.reset_and_get_address()));
   }

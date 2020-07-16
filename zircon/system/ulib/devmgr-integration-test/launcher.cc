@@ -77,7 +77,7 @@ void CreateFakeCppService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
                           std::unique_ptr<llcpp::fuchsia::boot::Arguments::Interface> server) {
   auto node = fbl::MakeRefCounted<fs::Service>(
       [dispatcher, server{std::move(server)}](zx::channel channel) {
-        return fidl::Bind(dispatcher, std::move(channel), server.get());
+        return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), server.get());
       });
   root->AddEntry(name, node);
 }

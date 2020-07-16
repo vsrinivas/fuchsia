@@ -335,7 +335,8 @@ class VcDisplayTest : public zxtest::Test {
     loop_->StartThread();
 
     server_end_ = zx::unowned_channel(server_end);
-    ASSERT_OK(fidl::Bind(loop_->dispatcher(), std::move(server_end), controller_.get()));
+    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end),
+                                           controller_.get()));
   }
   void SendAddDisplay(fhd::Info* display) {
     fhd::Controller::SendOnDisplaysChangedEvent(zx::unowned_channel(server_end_),

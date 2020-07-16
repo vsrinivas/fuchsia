@@ -233,7 +233,7 @@ void HidInstance::GetDeviceReportsReader(zx::channel reader,
     loop_started_ = true;
   }
   readers_.push_back(std::make_unique<DeviceReportsReader>(base_));
-  fidl::Bind(loop_.dispatcher(), std::move(reader), readers_.back().get());
+  fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(reader), readers_.back().get());
   completer.ReplySuccess();
 }
 

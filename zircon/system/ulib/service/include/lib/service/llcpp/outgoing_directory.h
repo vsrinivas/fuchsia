@@ -121,7 +121,8 @@ class OutgoingDirectory final {
   // llcpp::sys::ServiceHandler handler;
   // ::llcpp::lib::example::MyService::Handler my_handler(&handler);
   // my_handler.add_my_member([dispatcher](zx::channel request) {
-  //   fidl::Bind(dispatcher, std::move(request), std::make_unique<FooProtocolImpl>());
+  //   fidl::BindSingleInFlightOnly(dispatcher, std::move(request),
+  //   std::make_unique<FooProtocolImpl>());
   // });
   // outgoing.AddService<::llcpp::lib::example::MyService>(std::move(handler), "my-instance");
   // ```

@@ -63,7 +63,7 @@ zx_status_t SysmemSecureMemServer::BindAsync(zx::channel sysmem_secure_mem_serve
   secure_mem_server_done_ = std::move(secure_mem_server_done);
   PostToLoop([this, sysmem_secure_mem_server = std::move(sysmem_secure_mem_server)]() mutable {
     ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
-    zx_status_t status = fidl::Bind<SysmemSecureMemServer>(
+    zx_status_t status = fidl::BindSingleInFlightOnly<SysmemSecureMemServer>(
         loop_.dispatcher(), std::move(sysmem_secure_mem_server), this,
         [this](SysmemSecureMemServer* sysmem_secure_mem_server) {
           // This can get called from the ddk_dispatcher_thread_ if
@@ -76,7 +76,7 @@ zx_status_t SysmemSecureMemServer::BindAsync(zx::channel sysmem_secure_mem_serve
           EnsureLoopDone(false);
         });
     if (status != ZX_OK) {
-      LOG(ERROR, "fidl::Bind() failed - status: %d", status);
+      LOG(ERROR, "fidl::BindSingleInFlightOnly() failed - status: %d", status);
       ZX_DEBUG_ASSERT(secure_mem_server_done_);
       EnsureLoopDone(false);
     }

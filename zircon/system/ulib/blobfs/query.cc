@@ -19,7 +19,7 @@ constexpr const char kFsName[] = "blobfs";
 
 QueryService::QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runner* runner)
     : fs::Service([dispatcher, this](zx::channel server_end) {
-        return fidl::Bind(dispatcher, std::move(server_end), this);
+        return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
       }),
       blobfs_(blobfs),
       runner_(runner) {}

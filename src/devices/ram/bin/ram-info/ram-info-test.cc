@@ -66,7 +66,7 @@ class RamInfoTest : public zxtest::Test {
   void SetUp() override {
     zx::channel server;
     ASSERT_OK(zx::channel::create(0, &client_, &server));
-    ASSERT_OK(fidl::Bind(loop_.dispatcher(), std::move(server), &fake_device_));
+    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), &fake_device_));
     loop_.StartThread("ram-info-test-loop");
   }
 

@@ -108,9 +108,11 @@ int main(int argc, char** argv) {
   outgoing.svc_dir()->AddEntry(
       llcpp::fuchsia::device::NameProvider::Name,
       fbl::AdoptRef(new fs::Service([dispatcher, server](zx::channel svc_request) mutable {
-        zx_status_t status = fidl::Bind(dispatcher, std::move(svc_request), &server);
+        zx_status_t status =
+            fidl::BindSingleInFlightOnly(dispatcher, std::move(svc_request), &server);
         if (status != ZX_OK) {
-          printf("device-name-provider: fidl::Bind(_) = %s\n", zx_status_get_string(status));
+          printf("device-name-provider: fidl::BindSingleInFlightOnly(_) = %s\n",
+                 zx_status_get_string(status));
         }
         return status;
       })));

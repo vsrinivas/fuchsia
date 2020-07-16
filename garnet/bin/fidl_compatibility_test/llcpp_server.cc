@@ -354,7 +354,8 @@ int main(int argc, const char** argv) {
       std::make_unique<vfs::Service>([&](zx::channel request, async_dispatcher_t* dispatcher) {
         auto conn = std::make_unique<llcpp::fidl::test::compatibility::EchoConnection>(
             zx::unowned_channel(request));
-        ZX_ASSERT(::fidl::Bind(dispatcher, std::move(request), conn.get()) == ZX_OK);
+        ZX_ASSERT(::fidl::BindSingleInFlightOnly(dispatcher, std::move(request), conn.get()) ==
+                  ZX_OK);
         connections.push_back(std::move(conn));
       }),
       kEchoInterfaceName);

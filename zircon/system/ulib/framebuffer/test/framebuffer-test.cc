@@ -306,7 +306,8 @@ void TestDisplayStride(bool ram_domain) {
 
   loop.StartThread();
 
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &controller));
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &controller));
 
   const char* error;
   zx_status_t status = fb_bind_with_channel(true, &error, std::move(client_channel));

@@ -163,7 +163,7 @@ void AnalyzeCrash(async::Loop* loop, const zx::job& parent_job, const zx::job& j
 class StubExceptionHandler final : public llcpp::fuchsia::exception::Handler::Interface {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    return fidl::Bind(dispatcher, std::move(request), this);
+    return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
   // fuchsia.exception.Handler

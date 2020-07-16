@@ -123,7 +123,8 @@ class FileV2 : public zxtest::Test {
       return status;
     }
 
-    status = fidl::Bind(loop_->dispatcher(), std::move(server_end), server_.get());
+    status =
+        fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end), server_.get());
     if (status != ZX_OK) {
       return status;
     }

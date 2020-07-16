@@ -41,7 +41,7 @@ TEST(DebugDataTest, PublishData) {
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
   debugdata::DebugData svc(fbl::unique_fd{open("/", O_RDONLY)});
-  fidl::Bind(loop.dispatcher(), std::move(server), &svc);
+  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server), &svc);
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
@@ -96,7 +96,7 @@ TEST(DebugDataTest, LoadConfig) {
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
   debugdata::DebugData svc(fbl::unique_fd{fdio_ns_opendir(ns)});
-  fidl::Bind(svc_loop.dispatcher(), std::move(server), &svc);
+  fidl::BindSingleInFlightOnly(svc_loop.dispatcher(), std::move(server), &svc);
   ASSERT_OK(svc_loop.StartThread());
 
   const auto path = (directory / filename).string();

@@ -118,7 +118,7 @@ class TestScheduleWorkDriver : public DeviceType, public TestDevice::Interface {
     Connection(TestScheduleWorkDriver* parent) : parent_(parent) {}
 
     zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-      return fidl::Bind(dispatcher, std::move(request), this);
+      return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
     }
 
     void ScheduleWork(uint32_t batch_size, uint32_t num_work_items,

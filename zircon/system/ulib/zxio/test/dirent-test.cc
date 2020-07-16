@@ -138,7 +138,8 @@ class DirentTest : public zxtest::Test {
     server_ = std::make_unique<TestServer>();
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(loop_->StartThread("fake-filesystem"));
-    ASSERT_OK(fidl::Bind(loop_->dispatcher(), std::move(control_server_end_), server_.get()));
+    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(control_server_end_),
+                                           server_.get()));
   }
 
   void TearDown() final {

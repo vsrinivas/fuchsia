@@ -1847,7 +1847,8 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   const auto system_state_manager_register = [this](zx::channel request) {
-    auto status = fidl::Bind<llcpp::fuchsia::device::manager::SystemStateTransition::Interface>(
+    auto status = fidl::BindSingleInFlightOnly<
+        llcpp::fuchsia::device::manager::SystemStateTransition::Interface>(
         dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
@@ -1866,8 +1867,9 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   const auto bind_debugger = [this](zx::channel request) {
-    auto status = fidl::Bind<llcpp::fuchsia::device::manager::BindDebugger::Interface>(
-        dispatcher_, std::move(request), this);
+    auto status =
+        fidl::BindSingleInFlightOnly<llcpp::fuchsia::device::manager::BindDebugger::Interface>(
+            dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
            llcpp::fuchsia::device::manager::BindDebugger::Name, zx_status_get_string(status));

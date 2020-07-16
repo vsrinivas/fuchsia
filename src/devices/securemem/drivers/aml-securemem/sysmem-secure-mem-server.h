@@ -16,7 +16,7 @@
 
 #include "secmem-session.h"
 
-// This is used with fidl::Bind() to dispatch fuchsia::sysmem::Tee requests.
+// This is used with fidl::BindSingleInFlightOnly() to dispatch fuchsia::sysmem::Tee requests.
 class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interface {
  public:
   using SecureMemServerDone = fit::callback<void(bool is_success)>;

@@ -24,7 +24,7 @@ class EchoCommon : public Echo::Interface {
   explicit EchoCommon(const char* prefix) : prefix_(prefix) {}
 
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    return fidl::Bind(dispatcher, std::move(request), this);
+    return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
   void EchoString(fidl::StringView input, EchoStringCompleter::Sync completer) override {

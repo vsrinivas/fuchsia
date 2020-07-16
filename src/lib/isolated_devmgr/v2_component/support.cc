@@ -41,7 +41,7 @@ int main(void) {
   context->outgoing()->AddPublicService(
       std::make_unique<vfs::Service>(
           [&boot_arguments](zx::channel request, async_dispatcher_t* dispatcher) {
-            fidl::Bind(dispatcher, std::move(request), &boot_arguments);
+            fidl::BindSingleInFlightOnly(dispatcher, std::move(request), &boot_arguments);
           }),
       llcpp::fuchsia::boot::Arguments::Name);
 

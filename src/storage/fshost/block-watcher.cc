@@ -160,7 +160,8 @@ fbl::RefPtr<fs::Service> BlockWatcherServer::Create(devmgr::FsManager* fs_manage
       return status;
     }
 
-    status = fidl::Bind(dispatcher, std::move(chan), std::make_unique<BlockWatcherServer>());
+    status = fidl::BindSingleInFlightOnly(dispatcher, std::move(chan),
+                                          std::make_unique<BlockWatcherServer>());
     if (status != ZX_OK) {
       fprintf(stderr, "fshost: failed to bind admin service: %s\n", zx_status_get_string(status));
       return status;

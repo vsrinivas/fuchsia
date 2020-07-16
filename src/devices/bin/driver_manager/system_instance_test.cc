@@ -96,7 +96,7 @@ class SystemInstanceTest : public zxtest::Test {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     boot_args_server_.reset(new FakeBootArgsServer());
-    fidl::Bind(loop_.dispatcher(), std::move(server), boot_args_server_.get());
+    fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), boot_args_server_.get());
     boot_args_client_ = fboot::Arguments::SyncClient(std::move(client));
 
     under_test_.reset(new SystemInstanceForTest());

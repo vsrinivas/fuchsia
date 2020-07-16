@@ -13,7 +13,7 @@ namespace netsvc {
 
 PayloadStreamer::PayloadStreamer(zx::channel chan, ReadCallback callback)
     : read_(std::move(callback)) {
-  fidl::Bind(async_get_default_dispatcher(), std::move(chan), this);
+  fidl::BindSingleInFlightOnly(async_get_default_dispatcher(), std::move(chan), this);
 }
 
 void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer) {

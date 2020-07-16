@@ -37,7 +37,7 @@ TEST(BindTestCase, UniquePtrDestroyOnClientClose) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(remote), std::move(server)));
+  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(remote), std::move(server)));
   loop.RunUntilIdle();
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
@@ -56,7 +56,7 @@ TEST(BindTestCase, UniquePtrDestroyOnServerClose) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(remote), std::move(server)));
+  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(remote), std::move(server)));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
   auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
@@ -76,7 +76,8 @@ TEST(BindTestCase, CallbackDestroyOnClientClose) {
 
   fidl::OnChannelClosedFn<Server> cb = [](Server* server) { delete server; };
 
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(remote), server.release(), std::move(cb)));
+  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(remote), server.release(),
+                                         std::move(cb)));
   loop.RunUntilIdle();
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
@@ -97,7 +98,8 @@ TEST(BindTestCase, CallbackDestroyOnServerClose) {
 
   fidl::OnChannelClosedFn<Server> cb = [](Server* server) { delete server; };
 
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(remote), server.release(), std::move(cb)));
+  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(remote), server.release(),
+                                         std::move(cb)));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
   auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});

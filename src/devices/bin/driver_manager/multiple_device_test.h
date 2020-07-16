@@ -28,7 +28,7 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
       return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
     }
 
-    status = fidl::Bind(dispatcher, std::move(server), this);
+    status = fidl::BindSingleInFlightOnly(dispatcher, std::move(server), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to create client for mock fshost admin, failed to bind: %s",
            zx_status_get_string(status));

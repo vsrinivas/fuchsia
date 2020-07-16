@@ -108,7 +108,7 @@ TEST(AtExit, ExitInAccept) {
 
   Server server(server_handle, std::move(server_socket));
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
+  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &server));
   ASSERT_OK(loop.StartThread("fake-socket-server"));
 
   const char* root_dir = getenv("TEST_ROOT_DIR");

@@ -356,8 +356,8 @@ class ClientProxy : public ClientParent {
   mtx_t mtx_;
   Controller* controller_;
   bool is_vc_;
-  // server_channel_ will be passed to handler_ which will in turn pass it to fidl::Bind who will
-  // own the channel.
+  // server_channel_ will be passed to handler_ which will in turn pass it to
+  // fidl::BindSingleInFlightOnly who will own the channel.
   zx::unowned_channel server_channel_;
   Client handler_;
   bool enable_vsync_ __TA_GUARDED(&mtx_) = false;

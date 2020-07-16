@@ -24,7 +24,8 @@ class Server : public test::TransitionMethods::Interface {
   }
 
   void Bind(zx::channel server, async::Loop* loop) {
-    zx_status_t bind_status = fidl::Bind(loop->dispatcher(), std::move(server), this);
+    zx_status_t bind_status =
+        fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(server), this);
     EXPECT_EQ(bind_status, ZX_OK);
   }
 };

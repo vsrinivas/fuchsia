@@ -81,7 +81,8 @@ TEST(VimDisplay, ImportVmo) {
   image.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
   image.width = 4;
   image.height = 4;
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &collection));
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
 
   loop.StartThread();
 

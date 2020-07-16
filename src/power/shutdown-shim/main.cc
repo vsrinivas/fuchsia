@@ -368,8 +368,8 @@ void StateControlAdminServer::SuspendToRam(
 
 fbl::RefPtr<fs::Service> StateControlAdminServer::Create(async_dispatcher* dispatcher) {
   return fbl::MakeRefCounted<fs::Service>([dispatcher](zx::channel chan) mutable {
-    zx_status_t status =
-        fidl::Bind(dispatcher, std::move(chan), std::make_unique<StateControlAdminServer>());
+    zx_status_t status = fidl::BindSingleInFlightOnly(dispatcher, std::move(chan),
+                                                      std::make_unique<StateControlAdminServer>());
     if (status != ZX_OK) {
       fprintf(stderr, "[shutdown-shim] failed to bind statecontrol.Admin service: %s\n",
               zx_status_get_string(status));

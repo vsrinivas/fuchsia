@@ -11,7 +11,7 @@ namespace disk_pave {
 
 PayloadStreamer::PayloadStreamer(zx::channel chan, fbl::unique_fd payload)
     : payload_(std::move(payload)) {
-  fidl::Bind(async_get_default_dispatcher(), std::move(chan), this);
+  fidl::BindSingleInFlightOnly(async_get_default_dispatcher(), std::move(chan), this);
 }
 
 PayloadStreamer::~PayloadStreamer() {

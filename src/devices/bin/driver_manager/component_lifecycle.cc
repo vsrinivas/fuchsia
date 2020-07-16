@@ -16,8 +16,8 @@ namespace devmgr {
 
 zx_status_t ComponentLifecycleServer::Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
                                              zx::channel chan) {
-  zx_status_t status = fidl::Bind(dispatcher, std::move(chan),
-                                  std::make_unique<ComponentLifecycleServer>(dev_coord));
+  zx_status_t status = fidl::BindSingleInFlightOnly(
+      dispatcher, std::move(chan), std::make_unique<ComponentLifecycleServer>(dev_coord));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to bind component lifecycle service:%s", zx_status_get_string(status));
     return status;

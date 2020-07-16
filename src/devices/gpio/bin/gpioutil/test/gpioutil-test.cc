@@ -21,10 +21,11 @@ class FakeGpio : public Gpio::Interface {
   explicit FakeGpio() {}
 
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    return fidl::Bind(dispatcher, std::move(request), this);
+    return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
-  void ConfigIn(::llcpp::fuchsia::hardware::gpio::GpioFlags flags, ConfigInCompleter::Sync completer) {
+  void ConfigIn(::llcpp::fuchsia::hardware::gpio::GpioFlags flags,
+                ConfigInCompleter::Sync completer) {
     if (flags != ::llcpp::fuchsia::hardware::gpio::GpioFlags::NO_PULL) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;

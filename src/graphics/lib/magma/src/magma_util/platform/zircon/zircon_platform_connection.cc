@@ -18,11 +18,12 @@ bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
   server_endpoint_unowned_ = server_endpoint.get();
 
   llcpp::fuchsia::gpu::magma::Primary::Interface* interface = this;
-  zx_status_t status = fidl::Bind(async_loop()->dispatcher(), std::move(server_endpoint), interface,
-                                  std::move(channel_closed_callback));
+  zx_status_t status =
+      fidl::BindSingleInFlightOnly(async_loop()->dispatcher(), std::move(server_endpoint),
+                                   interface, std::move(channel_closed_callback));
 
   if (status != ZX_OK)
-    return DRETF(false, "fidl::Bind failed: %d", status);
+    return DRETF(false, "fidl::BindSingleInFlightOnly failed: %d", status);
 
   return true;
 }
@@ -311,7 +312,7 @@ std::shared_ptr<PlatformConnection> PlatformConnection::Create(
       std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)), std::move(thread_profile));
 
   if (!connection->Bind(std::move(server_endpoint)))
-    return DRETP(nullptr, "fidl::Bind failed: %d", status);
+    return DRETP(nullptr, "fidl::BindSingleInFlightOnly failed: %d", status);
 
   if (!connection->BeginShutdownWait())
     return DRETP(nullptr, "Failed to begin shutdown wait");

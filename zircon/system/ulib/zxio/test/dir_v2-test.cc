@@ -107,7 +107,8 @@ class DirV2 : public zxtest::Test {
     if (status != ZX_OK) {
       return nullptr;
     }
-    EXPECT_OK(fidl::Bind(loop_->dispatcher(), std::move(control_server_end_), server_.get()));
+    EXPECT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(control_server_end_),
+                                           server_.get()));
     if (status != ZX_OK) {
       return nullptr;
     }
@@ -180,8 +181,9 @@ TEST_F(DirV2, Enumerate) {
         uint64_t count_ = 0;
         sync_completion_t* completion_;
       };
-      EXPECT_OK(fidl::Bind(async_get_default_dispatcher(), std::move(iterator),
-                           std::make_unique<IteratorServer>(&iterator_teardown_completion_)));
+      EXPECT_OK(fidl::BindSingleInFlightOnly(
+          async_get_default_dispatcher(), std::move(iterator),
+          std::make_unique<IteratorServer>(&iterator_teardown_completion_)));
     }
 
     sync_completion_t iterator_teardown_completion_;

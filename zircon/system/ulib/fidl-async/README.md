@@ -1,12 +1,15 @@
 # Fidl-async library
 
-The fidl-async library provides facilities to create LLCPP-based FIDL servers, and to bind a
-channel to a server implementation using a specified dispatcher. The two available implementations
-(Bind and AsyncBind) are described below.
+The fidl-async library provides facilities to create C and LLCPP-based FIDL servers,
+and to bind a channel to a server implementation using a specified dispatcher.
 
-## Bind
+## BindSingleInFlightOnly
 
-See `fidl::Bind()` functions at
+Note: this function is deprecated and preserved for backwards compatibility only.
+Refer to [`fidl::BindServer`](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h)
+for a more complete implementation.
+
+See `fidl::BindSingleInFlightOnly()` functions at
 [bind.h](/zircon/system/ulib/fidl-async/include/lib/fidl-async/cpp/bind.h).
 
 For a given channel, this implementation supports one FIDL transaction at the time, i.e. if a
@@ -26,20 +29,3 @@ a reply, one may call the `ToAsync()` method on a `Sync` completer (see
 [tutorial-llcpp.md](/docs/development/languages/fidl/tutorial/tutorial-llcpp.md)). This does not
 change the one-at-the-time behavior described above, but it allows for delayed responses to FIDL
 requests.
-
-## AsyncBind
-
-See `fidl::AyncBind()` functions at
-[async_bind.h](/zircon/system/ulib/fidl-async/include/lib/fidl-async/cpp/async_bind.h).
-
-This implementation allows for multiple in-flight transactions and supports multi-threaded
-dispatchers. Using the `ToAsync()` on completers as described above for `Bind()` will not stop this
-implementation from receiving other messages on the bound channel. This is useful to implement
-fully asynchronous servers and in particular allows for FIDL
-[hanging-get](/docs/development/api/fidl.md#delay-responses-using-hanging-gets) patterns to be
-implemented such that a "Watch" method does not block every other transaction in the channel.
-
-The implementation also supports synchronous multi-threaded servers via the `ResumeDispatch()` call
-on the `Sync` completer. `ResumeDispatch()` enables another thread (on a multi-threaded dispatcher)
-to handle the next message on a bound channel in parallel. More complex use-cases combining
-synchronous and asynchronous behavior are also supported.

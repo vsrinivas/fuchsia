@@ -462,8 +462,8 @@ class {{ .Name }} final {
   // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
   static bool Dispatch{{ template "SyncServerDispatchMethodSignature" }};
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
+  // Only used with |fidl::BindServer| to reduce template expansion.
   // Do not call this method manually. Use |Dispatch| instead.
   static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);

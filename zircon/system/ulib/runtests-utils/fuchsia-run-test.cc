@@ -463,7 +463,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
     proxy_dir = fbl::MakeRefCounted<ServiceProxyDir>(std::move(svc_handle));
     auto node = fbl::MakeRefCounted<fs::Service>(
         [dispatcher = loop.dispatcher(), debug_data = debug_data.get()](zx::channel channel) {
-          return fidl::Bind(dispatcher, std::move(channel), debug_data);
+          return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), debug_data);
         });
     proxy_dir->AddEntry(::llcpp::fuchsia::debugdata::DebugData::Name, node);
 

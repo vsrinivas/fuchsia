@@ -75,7 +75,8 @@ class Remote : public zxtest::Test {
     if (status != ZX_OK) {
       return nullptr;
     }
-    EXPECT_OK(fidl::Bind(loop_->dispatcher(), std::move(control_server_end_), server_.get()));
+    EXPECT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(control_server_end_),
+                                           server_.get()));
     if (status != ZX_OK) {
       return nullptr;
     }

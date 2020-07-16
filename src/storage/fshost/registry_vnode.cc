@@ -5,9 +5,8 @@
 #include "registry_vnode.h"
 
 #include <fuchsia/fshost/llcpp/fidl.h>
-#include <lib/fidl-async/cpp/bind.h>
-
 #include <inttypes.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/memfs/cpp/vnode.h>
 
 #include <fs/service.h>
@@ -19,8 +18,9 @@ namespace fshost {
 
 RegistryVnode::RegistryVnode(async_dispatcher_t* dispatcher, fbl::RefPtr<fs::PseudoDir> filesystems)
     : fs::Service([dispatcher, this](zx::channel server_end) {
-      return fidl::Bind(dispatcher, std::move(server_end), this);
-    }), filesystems_(std::move(filesystems)),
+        return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
+      }),
+      filesystems_(std::move(filesystems)),
       filesystem_counter_(0),
       dispatcher_(dispatcher) {}
 

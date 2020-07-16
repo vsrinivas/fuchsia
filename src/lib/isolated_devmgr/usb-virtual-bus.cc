@@ -91,7 +91,7 @@ class EventWatcher : public ::llcpp::fuchsia::hardware::usb::peripheral::Events:
  public:
   explicit EventWatcher(async::Loop* loop, zx::channel svc, size_t functions)
       : loop_(loop), functions_(functions) {
-    fidl::Bind(loop->dispatcher(), std::move(svc), this);
+    fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(svc), this);
   }
 
   void FunctionRegistered(FunctionRegisteredCompleter::Sync completer);

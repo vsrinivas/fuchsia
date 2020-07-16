@@ -19,7 +19,8 @@ class SdioTest : public zxtest::Test, public ::llcpp::fuchsia::hardware::sdio::D
   SdioTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel server;
     ASSERT_OK(zx::channel::create(0, &client_, &server));
-    ASSERT_OK(fidl::Bind<Device::Interface>(loop_.dispatcher(), std::move(server), this));
+    ASSERT_OK(fidl::BindSingleInFlightOnly<Device::Interface>(loop_.dispatcher(), std::move(server),
+                                                              this));
     loop_.StartThread("sdio-test-loop");
   }
 

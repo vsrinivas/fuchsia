@@ -261,9 +261,9 @@ class super final {
   static bool Dispatch(Interface* impl, fidl_msg_t* msg,
                        ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
-  // with |fidl::Bind| to reduce template expansion. Do not call this method
-  // manually. Use |Dispatch| instead.
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
+  // Only used with |fidl::BindServer| to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
   static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
                                  ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
@@ -496,9 +496,9 @@ class sub final {
   static bool Dispatch(Interface* impl, fidl_msg_t* msg,
                        ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
-  // with |fidl::Bind| to reduce template expansion. Do not call this method
-  // manually. Use |Dispatch| instead.
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
+  // Only used with |fidl::BindServer| to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
   static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
                                  ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);

@@ -25,7 +25,7 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
   FakePayloadStream() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel server;
     ASSERT_OK(zx::channel::create(0, &client_, &server));
-    fidl::Bind(loop_.dispatcher(), std::move(server), this);
+    fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), this);
     loop_.StartThread("payload-stream-test-loop");
   }
 

@@ -81,13 +81,13 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     dispatcher_ = dispatcher;
-    return fidl::Bind<::llcpp::fuchsia::paver::Paver::Interface>(dispatcher, std::move(request),
-                                                                 this);
+    return fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::Paver::Interface>(
+        dispatcher, std::move(request), this);
   }
 
   void FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync _completer) override {
-    fidl::Bind<::llcpp::fuchsia::paver::DynamicDataSink::Interface>(dispatcher_,
-                                                                    std::move(data_sink), this);
+    fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::DynamicDataSink::Interface>(
+        dispatcher_, std::move(data_sink), this);
   }
 
   void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
@@ -101,7 +101,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     if (std::string(path.data(), path.size()) != expected_block_device_) {
       return;
     }
-    fidl::Bind<::llcpp::fuchsia::paver::DynamicDataSink::Interface>(
+    fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::DynamicDataSink::Interface>(
         dispatcher_, std::move(dynamic_data_sink), this);
   }
 
@@ -109,8 +109,8 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
                        FindBootManagerCompleter::Sync _completer) override {
     AppendCommand(Command::kInitializeAbr);
     if (abr_supported_) {
-      fidl::Bind<::llcpp::fuchsia::paver::BootManager::Interface>(dispatcher_,
-                                                                  std::move(boot_manager), this);
+      fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::BootManager::Interface>(
+          dispatcher_, std::move(boot_manager), this);
     }
   }
 

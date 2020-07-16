@@ -62,7 +62,8 @@ class VirtioGpuTest : public zxtest::Test {
     zx::channel server_channel;
     ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel_));
 
-    ASSERT_OK(fidl::Bind(loop_.dispatcher(), std::move(server_channel), &collection_));
+    ASSERT_OK(
+        fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server_channel), &collection_));
 
     loop_.StartThread();
   }

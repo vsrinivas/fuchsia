@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef USB_PERIPHERAL_UTILS_EVENT_WATCHER_H_
-#define USB_PERIPHERAL_UTILS_EVENT_WATCHER_H_
+#ifndef LIB_USB_PERIPHERAL_UTILS_EVENT_WATCHER_H_
+#define LIB_USB_PERIPHERAL_UTILS_EVENT_WATCHER_H_
 
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -12,11 +12,12 @@
 
 namespace usb_peripheral_utils {
 
-class __EXPORT EventWatcher : public ::llcpp::fuchsia::hardware::usb::peripheral::Events::Interface {
+class __EXPORT EventWatcher
+    : public ::llcpp::fuchsia::hardware::usb::peripheral::Events::Interface {
  public:
   explicit EventWatcher(async::Loop* loop, zx::channel svc, size_t functions)
       : loop_(loop), functions_(functions) {
-    fidl::Bind(loop->dispatcher(), std::move(svc), this);
+    fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(svc), this);
   }
 
   void FunctionRegistered(FunctionRegisteredCompleter::Sync completer);
@@ -35,4 +36,4 @@ class __EXPORT EventWatcher : public ::llcpp::fuchsia::hardware::usb::peripheral
 
 }  // namespace usb_peripheral_utils
 
-#endif  // USB_PERIPHERAL_UTILS_EVENT_WATCHER_H_
+#endif  // LIB_USB_PERIPHERAL_UTILS_EVENT_WATCHER_H_

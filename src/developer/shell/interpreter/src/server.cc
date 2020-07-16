@@ -656,8 +656,8 @@ bool Server::Listen() {
 }
 
 zx_status_t Server::IncomingConnection(zx_handle_t service_request) {
-  return fidl::Bind(loop()->dispatcher(), zx::channel(service_request),
-                    AddConnection(service_request));
+  return fidl::BindSingleInFlightOnly(loop()->dispatcher(), zx::channel(service_request),
+                                      AddConnection(service_request));
 }
 
 }  // namespace server

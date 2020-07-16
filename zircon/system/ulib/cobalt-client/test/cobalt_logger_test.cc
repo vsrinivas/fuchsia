@@ -188,7 +188,7 @@ struct CreateLoggerValidationArgs {
 
 void BindLoggerFactoryService(FakeLoggerFactoryService* bindee, zx::channel channel,
                               async_dispatcher_t* dispatcher) {
-  fidl::Bind(dispatcher, std::move(channel), bindee);
+  fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), bindee);
 }
 
 void BindLoggerToLoggerFactoryService(FakeLoggerFactoryService* binder, FakeLoggerService* bindee,
@@ -199,7 +199,7 @@ void BindLoggerToLoggerFactoryService(FakeLoggerFactoryService* binder, FakeLogg
         fbl::AutoLock lock(&checker->result_lock_);
         checker->is_id_ok = (checker->project_id == project_id);
         checker->is_channel_ok = channel.is_valid();
-        fidl::Bind(dispatcher, std::move(channel), bindee);
+        fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), bindee);
 
         return checker->return_status;
       });

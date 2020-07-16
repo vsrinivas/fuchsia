@@ -507,8 +507,8 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
   zx::channel dev_local, dev_remote;
   ASSERT_OK(zx::channel::create(0, &dev_local, &dev_remote));
   ASSERT_OK(zx::channel::create(0, &mock_power_manager_client, &mock_power_manager_server));
-  ASSERT_OK(fidl::Bind(coordinator_loop()->dispatcher(), std::move(mock_power_manager_server),
-                       &mock_power_manager));
+  ASSERT_OK(fidl::BindSingleInFlightOnly(
+      coordinator_loop()->dispatcher(), std::move(mock_power_manager_server), &mock_power_manager));
   ASSERT_OK(coordinator()->RegisterWithPowerManager(std::move(mock_power_manager_client),
                                                     std::move(system_state_transition_client),
                                                     std::move(dev_local)));

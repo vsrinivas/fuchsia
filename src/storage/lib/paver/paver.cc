@@ -757,7 +757,7 @@ void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, z
     return;
   }
   auto data_sink = std::make_unique<DataSink>(std::move(devfs_root), std::move(partitioner));
-  fidl::Bind(dispatcher, std::move(server), std::move(data_sink));
+  fidl::BindSingleInFlightOnly(dispatcher, std::move(server), std::move(data_sink));
 }
 
 void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
@@ -772,7 +772,7 @@ void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_
     return;
   }
   auto data_sink = std::make_unique<DynamicDataSink>(std::move(devfs_root), std::move(partitioner));
-  fidl::Bind(dispatcher, std::move(server), std::move(data_sink));
+  fidl::BindSingleInFlightOnly(dispatcher, std::move(server), std::move(data_sink));
 }
 
 void DynamicDataSink::InitializePartitionTables(
@@ -821,7 +821,7 @@ void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root
   auto& abr_client = status.value();
 
   auto boot_manager = std::make_unique<BootManager>(std::move(abr_client));
-  fidl::Bind(dispatcher, std::move(server), std::move(boot_manager));
+  fidl::BindSingleInFlightOnly(dispatcher, std::move(server), std::move(boot_manager));
 }
 
 void BootManager::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {

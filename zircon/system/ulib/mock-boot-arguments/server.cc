@@ -29,7 +29,7 @@ void Server::CreateClient(async_dispatcher* dispatcher,
     return;
   }
 
-  status = fidl::Bind(dispatcher, std::move(remote), this);
+  status = fidl::BindSingleInFlightOnly(dispatcher, std::move(remote), this);
   if (status != ZX_OK) {
     printf(
         "mock_boot_arguments: failed to create client for mock boot arguments, failed to bind: "

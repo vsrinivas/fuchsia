@@ -136,7 +136,7 @@ TEST(LoaderServiceTest, Create) {
 
       // Wire object up to a new TestFile instance
       auto file = std::make_unique<TestFile>(last_get_buffer_flags_ptr_);
-      ASSERT_OK(fidl::Bind(dispatcher_, std::move(object), std::move(file)));
+      ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher_, std::move(object), std::move(file)));
     }
 
     async_dispatcher_t* dispatcher_;
@@ -151,7 +151,8 @@ TEST(LoaderServiceTest, Create) {
   auto directory =
       std::make_unique<TestDirectory>(fs_loop.dispatcher(), &last_open_flags, &open_count,
                                       &last_get_buffer_flags, last_opened_path);
-  ASSERT_OK(fidl::Bind(fs_loop.dispatcher(), std::move(server), std::move(directory)));
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(fs_loop.dispatcher(), std::move(server), std::move(directory)));
 
   // Install channel to that filesystem as an FD
   int raw_fd;
