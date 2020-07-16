@@ -14,8 +14,8 @@ executable("msd_img_rgx_integration_tests_executable") {
   sources = [ "test_shutdown.cc" ]
 
   public_deps = [
-    "$zircon_build_root/public/lib/fdio",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+    "//sdk/lib/fdio",
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/src/magma_util:macros",
@@ -40,8 +40,8 @@ executable("msd_img_rgx_no_hardware_integration_tests_executable") {
   include_dirs = [ "//src/graphics/drivers/msd-img-rgx/no_hardware" ]
 
   public_deps = [
-    "$zircon_build_root/public/lib/fdio",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+    "//sdk/lib/fdio",
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/src/magma_util:macros",

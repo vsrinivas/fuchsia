@@ -10,7 +10,7 @@ executable("bin") {
 
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 }
 
