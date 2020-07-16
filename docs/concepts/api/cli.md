@@ -137,7 +137,7 @@ those in common use for the subject matter, or the names of whole subsystems.
 If a name does not appear in documentation, it is likely not well-known. If
 it does not appear in any implementation, it is definitely not well-known.
 
-Only use lower-case characters in the US-ASCII character set and hyphens.
+Only use lower-case letters (`a-z`) in the US-ASCII character set and hyphens.
 A single hyphen (`-`) is used to separate words in a name. A Platform
 required extension is an exception (such as `.exe`).
 
