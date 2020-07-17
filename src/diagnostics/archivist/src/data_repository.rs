@@ -279,32 +279,53 @@ impl DiagnosticsDataRepository {
 
     /// Return all of the DirectoryProxies that contain Inspect hierarchies
     /// which contain data that should be selected from.
-    pub fn fetch_inspect_data(&self) -> Vec<UnpopulatedInspectDataContainer> {
+    pub fn fetch_inspect_data(
+        &self,
+        component_selectors: &Option<Vec<Arc<Selector>>>,
+    ) -> Vec<UnpopulatedInspectDataContainer> {
         return self
             .data_directories
             .iter()
             .filter_map(|(_, diagnostics_artifacts_container_opt)| {
-                match diagnostics_artifacts_container_opt {
-                    Some(diagnostics_artifacts_container) => match &diagnostics_artifacts_container
-                        .inspect_artifacts_container
-                    {
-                        Some(inspect_artifacts) => io_util::clone_directory(
-                            &inspect_artifacts.component_diagnostics_proxy,
-                            CLONE_FLAG_SAME_RIGHTS,
+                let (diagnostics_artifacts_container, inspect_artifacts) =
+                    match &diagnostics_artifacts_container_opt {
+                        Some(diagnostics_artifacts_container) => {
+                            match &diagnostics_artifacts_container.inspect_artifacts_container {
+                                Some(inspect_artifacts) => {
+                                    (diagnostics_artifacts_container, inspect_artifacts)
+                                }
+                                None => return None,
+                            }
+                        }
+                        None => return None,
+                    };
+
+                if !match component_selectors {
+                    Some(component_selectors) => component_selectors.iter().any(|s| {
+                        selectors::match_component_moniker_against_selector(
+                            &diagnostics_artifacts_container.relative_moniker,
+                            s,
                         )
                         .ok()
-                        .map(|directory| UnpopulatedInspectDataContainer {
-                            relative_moniker: diagnostics_artifacts_container
-                                .relative_moniker
-                                .clone(),
-                            component_url: diagnostics_artifacts_container.component_url.clone(),
-                            component_diagnostics_proxy: directory,
-                            inspect_matcher: inspect_artifacts.inspect_matcher.clone(),
-                        }),
-                        None => None,
-                    },
-                    None => None,
+                        .unwrap_or(false)
+                    }),
+                    None => true,
+                } {
+                    return None;
                 }
+
+                // This artifact contains inspect and matches a passed selector.
+                io_util::clone_directory(
+                    &inspect_artifacts.component_diagnostics_proxy,
+                    CLONE_FLAG_SAME_RIGHTS,
+                )
+                .ok()
+                .map(|directory| UnpopulatedInspectDataContainer {
+                    relative_moniker: diagnostics_artifacts_container.relative_moniker.clone(),
+                    component_url: diagnostics_artifacts_container.component_url.clone(),
+                    component_diagnostics_proxy: directory,
+                    inspect_matcher: inspect_artifacts.inspect_matcher.clone(),
+                })
             })
             .collect();
     }
@@ -522,5 +543,69 @@ mod tests {
         assert!(data_repo
             .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy, zx::Time::from_nanos(0))
             .is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn data_repo_filters_inspect_by_selectors() {
+        let mut data_repo = DiagnosticsDataRepository::new(None);
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let instance_id = "1234".to_string();
+
+        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+            instance_id,
+            realm_path: realm_path.clone(),
+            component_name: "foo.cmx".into(),
+        });
+
+        data_repo
+            .add_new_component(component_id.clone(), TEST_URL, zx::Time::from_nanos(0), None)
+            .expect("insertion will succeed.");
+
+        data_repo
+            .add_inspect_artifacts(
+                component_id.clone(),
+                TEST_URL,
+                io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
+                    .expect("open root"),
+                zx::Time::from_nanos(0),
+            )
+            .expect("add inspect artifacts");
+
+        let component_id2 = ComponentIdentifier::Legacy(LegacyIdentifier {
+            instance_id: "12345".to_string(),
+            realm_path,
+            component_name: "foo2.cmx".into(),
+        });
+
+        data_repo
+            .add_new_component(component_id2.clone(), TEST_URL, zx::Time::from_nanos(0), None)
+            .expect("insertion will succeed.");
+
+        data_repo
+            .add_inspect_artifacts(
+                component_id2.clone(),
+                TEST_URL,
+                io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
+                    .expect("open root"),
+                zx::Time::from_nanos(0),
+            )
+            .expect("add inspect artifacts");
+
+        assert_eq!(2, data_repo.fetch_inspect_data(&None).len());
+
+        let selectors = Some(vec![Arc::new(
+            selectors::parse_selector("a/b/foo.cmx:root").expect("parse selector"),
+        )]);
+        assert_eq!(1, data_repo.fetch_inspect_data(&selectors).len());
+
+        let selectors = Some(vec![Arc::new(
+            selectors::parse_selector("a/b/f*.cmx:root").expect("parse selector"),
+        )]);
+        assert_eq!(2, data_repo.fetch_inspect_data(&selectors).len());
+
+        let selectors = Some(vec![Arc::new(
+            selectors::parse_selector("foo.cmx:root").expect("parse selector"),
+        )]);
+        assert_eq!(0, data_repo.fetch_inspect_data(&selectors).len());
     }
 }

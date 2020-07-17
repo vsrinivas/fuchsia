@@ -442,7 +442,8 @@ impl DiagnosticsServer for ReaderServer {
 
         // We must fetch the repositories in a closure to prevent the
         // repository mutex-guard from leaking into futures.
-        let inspect_repo_data = self.inspect_repo.read().fetch_inspect_data();
+        let inspect_repo_data =
+            self.inspect_repo.read().fetch_inspect_data(&self.configured_selectors);
 
         let inspect_repo_length = inspect_repo_data.len();
         let mut inspect_repo_iter = inspect_repo_data.into_iter();
