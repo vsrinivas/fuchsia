@@ -53,6 +53,11 @@ while (($#)); do
   shift
 done
 
+if fx-is-bringup; then
+  fx-error "$0 is not supported in the bringup build configuration, as there are no package features in bringup."
+  exit 1
+fi
+
 fx-command-exec pave "${pave_args[@]}"&
 pave_pid=$!
 fx-command-exec serve-updates "${serve_args[@]}" &

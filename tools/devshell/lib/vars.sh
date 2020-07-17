@@ -46,6 +46,10 @@ function fx-gn {
   PATH="${PREBUILT_PYTHON3_DIR}/bin:${PATH}" "${PREBUILT_GN}" "$@"
 }
 
+function fx-is-bringup {
+  grep '^[^#]*import("//products/bringup.gni")' "${FUCHSIA_BUILD_DIR}/args.gn" >/dev/null 2>&1
+}
+
 function fx-gen {
   # If a user executes gen from a symlinked directory that is not a
   # subdirectory $FUCHSIA_DIR then dotgn search may fail, so execute

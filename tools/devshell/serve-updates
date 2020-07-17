@@ -46,6 +46,11 @@ while (($#)); do
   shift
 done
 
+if fx-is-bringup; then
+  fx-error "$0 is not supported in the bringup build configuration, as there are no package features in bringup."
+  exit 1
+fi
+
 if [[ "${verbose}" != true ]]; then
   serve_flags+=("-q")
 fi
