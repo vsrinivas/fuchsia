@@ -655,6 +655,15 @@ zx_status_t AmlSdEmmc::FinishReq(sdmmc_req_t* req) {
 }
 
 zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
+  {
+    fbl::AutoLock lock(&mtx_);
+    if (dead_) {
+      return ZX_ERR_CANCELED;
+    }
+
+    pending_txn_ = true;
+  }
+
   // Wait for the bus to become idle before issuing the next request. This could be necessary if the
   // card is driving CMD low after a voltage switch.
   WaitForBus();
@@ -673,6 +682,11 @@ zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
     status = SetupDataDescs(req, desc, &last_desc);
     if (status != ZX_OK) {
       AML_SD_EMMC_ERROR("AmlSdEmmc::SdmmcRequest: Failed to setup data descriptors");
+
+      fbl::AutoLock lock(&mtx_);
+      pending_txn_ = false;
+      txn_finished_.Signal();
+
       return status;
     }
   }
@@ -703,6 +717,11 @@ zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
   zx_status_t res = WaitForInterrupt(req);
   FinishReq(req);
   req->status = res;
+
+  fbl::AutoLock lock(&mtx_);
+  pending_txn_ = false;
+  txn_finished_.Signal();
+
   return res;
 }
 
@@ -927,13 +946,22 @@ zx_status_t AmlSdEmmc::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_
 }
 
 zx_status_t AmlSdEmmc::Init() {
+  // The core clock must be enabled before attempting to access the start register.
+  ConfigureDefaultRegs();
+
+  AmlSdEmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_);
+  zx_status_t status = bti_.release_quarantine();
+  if (status != ZX_OK) {
+    AML_SD_EMMC_ERROR("AmlSdEmmc::Init: Failed to release quarantined pages");
+    return status;
+  }
+
   dev_info_.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_SDR104 |
                    SDMMC_HOST_CAP_SDR50 | SDMMC_HOST_CAP_DDR50;
   if (board_config_.supports_dma) {
     dev_info_.caps |= SDMMC_HOST_CAP_DMA;
-    zx_status_t status =
-        descs_buffer_.Init(bti_.get(), AML_DMA_DESC_MAX_COUNT * sizeof(aml_sd_emmc_desc_t),
-                           IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    status = descs_buffer_.Init(bti_.get(), AML_DMA_DESC_MAX_COUNT * sizeof(aml_sd_emmc_desc_t),
+                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
       AML_SD_EMMC_ERROR("AmlSdEmmc::Init: Failed to allocate dma descriptors");
       return status;
@@ -1052,9 +1080,32 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
+void AmlSdEmmc::ShutDown() {
+  // If there's a pending request, wait for it to complete (and any pages to be unpinned) before
+  // proceeding with suspend/unbind.
+  {
+    fbl::AutoLock lock(&mtx_);
+    dead_ = true;
+
+    if (pending_txn_) {
+      AML_SD_EMMC_ERROR("A request was pending after suspend/release");
+    }
+
+    while (pending_txn_) {
+      txn_finished_.Wait(&mtx_);
+    }
+  }
+}
+
 void AmlSdEmmc::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
+void AmlSdEmmc::DdkSuspend(ddk::SuspendTxn txn) {
+  ShutDown();
+  txn.Reply(ZX_OK, txn.requested_state());
+}
+
 void AmlSdEmmc::DdkRelease() {
+  ShutDown();
   irq_.destroy();
   delete this;
 }

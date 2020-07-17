@@ -6,6 +6,7 @@
 #define SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_H_
 
 #include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 
@@ -15,13 +16,14 @@
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/auto_lock.h>
+#include <fbl/condition_variable.h>
 #include <fbl/span.h>
 #include <soc/aml-common/aml-sd-emmc.h>
 
 namespace sdmmc {
 
 class AmlSdEmmc;
-using AmlSdEmmcType = ddk::Device<AmlSdEmmc, ddk::UnbindableNew>;
+using AmlSdEmmcType = ddk::Device<AmlSdEmmc, ddk::Suspendable, ddk::UnbindableNew>;
 
 class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk::base_protocol> {
  public:
@@ -34,13 +36,16 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
         pinned_mmio_(std::move(pinned_mmio)),
         reset_gpio_(gpio),
         irq_(std::move(irq)),
-        board_config_(config) {}
+        board_config_(config),
+        dead_(false),
+        pending_txn_(false) {}
 
   virtual ~AmlSdEmmc() {}
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation
   void DdkRelease();
+  void DdkSuspend(ddk::SuspendTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
 
   // Sdmmc Protocol implementation
@@ -69,7 +74,6 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   virtual void WaitForBus() const;
 
   ddk::MmioBuffer mmio_;
-  fbl::Mutex mtx_;
 
  private:
   enum {
@@ -116,6 +120,8 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   void ClearStatus();
   zx_status_t WaitForInterrupt(sdmmc_req_t* req);
 
+  void ShutDown();
+
   zx::bti bti_;
 
   ddk::MmioPinnedBuffer pinned_mmio_;
@@ -126,6 +132,11 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   sdmmc_host_info_t dev_info_;
   ddk::IoBuffer descs_buffer_;
   uint32_t max_freq_, min_freq_;
+
+  fbl::Mutex mtx_;
+  fbl::ConditionVariable txn_finished_ TA_GUARDED(mtx_);
+  std::atomic<bool> dead_ TA_GUARDED(mtx_);
+  std::atomic<bool> pending_txn_ TA_GUARDED(mtx_);
 };
 
 }  // namespace sdmmc

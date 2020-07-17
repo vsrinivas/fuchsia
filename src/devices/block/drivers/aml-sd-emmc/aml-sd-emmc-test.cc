@@ -4,6 +4,7 @@
 
 #include "aml-sd-emmc.h"
 
+#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <threads.h>
 
@@ -19,8 +20,8 @@ namespace sdmmc {
 
 class TestAmlSdEmmc : public AmlSdEmmc {
  public:
-  explicit TestAmlSdEmmc(const mmio_buffer_t& mmio)
-      : AmlSdEmmc(fake_ddk::kFakeParent, zx::bti(ZX_HANDLE_INVALID), ddk::MmioBuffer(mmio),
+  TestAmlSdEmmc(const mmio_buffer_t& mmio, zx::bti bti)
+      : AmlSdEmmc(fake_ddk::kFakeParent, std::move(bti), ddk::MmioBuffer(mmio),
                   ddk::MmioPinnedBuffer({&mmio, ZX_HANDLE_INVALID, 0x100}),
                   aml_sd_emmc_config_t{
                       .supports_dma = false,
@@ -102,7 +103,11 @@ class AmlSdEmmcTest : public zxtest::Test {
     };
 
     mmio_ = ddk::MmioBuffer(mmio_buffer);
-    dut_ = new TestAmlSdEmmc(mmio_buffer);
+
+    zx::bti bti;
+    ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
+
+    dut_ = new TestAmlSdEmmc(mmio_buffer, std::move(bti));
 
     dut_->set_board_config({
         .supports_dma = false,
@@ -157,7 +162,10 @@ TEST_F(AmlSdEmmcTest, TuningV3) {
       .prefs = 0,
   });
 
+  ASSERT_OK(dut_->Init());
+
   AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  AmlSdEmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdEmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
 
   auto adjust = AmlSdEmmcAdjust::Get().FromValue(0);
   auto adjust_v2 = AmlSdEmmcAdjustV2::Get().FromValue(0);
@@ -165,7 +173,6 @@ TEST_F(AmlSdEmmcTest, TuningV3) {
   adjust.set_adj_fixed(0).set_adj_delay(0x3f).WriteTo(&mmio_);
   adjust_v2.set_adj_fixed(0).set_adj_delay(0x3f).WriteTo(&mmio_);
 
-  ASSERT_OK(dut_->Init());
   EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
 
   adjust.ReadFrom(&mmio_);
@@ -184,7 +191,10 @@ TEST_F(AmlSdEmmcTest, TuningV2) {
       .prefs = 0,
   });
 
+  ASSERT_OK(dut_->Init());
+
   AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  AmlSdEmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdEmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
 
   auto adjust = AmlSdEmmcAdjust::Get().FromValue(0);
   auto adjust_v2 = AmlSdEmmcAdjustV2::Get().FromValue(0);
@@ -192,7 +202,6 @@ TEST_F(AmlSdEmmcTest, TuningV2) {
   adjust.set_adj_fixed(0).set_adj_delay(0x3f).WriteTo(&mmio_);
   adjust_v2.set_adj_fixed(0).set_adj_delay(0x3f).WriteTo(&mmio_);
 
-  ASSERT_OK(dut_->Init());
   EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
 
   adjust.ReadFrom(&mmio_);
@@ -203,12 +212,15 @@ TEST_F(AmlSdEmmcTest, TuningV2) {
 }
 
 TEST_F(AmlSdEmmcTest, TuningAllPass) {
+  ASSERT_OK(dut_->Init());
+
+  AmlSdEmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdEmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
   auto clock = AmlSdEmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(10).WriteTo(&mmio_);
   auto adjust = AmlSdEmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
   auto delay1 = AmlSdEmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
   auto delay2 = AmlSdEmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
 
-  ASSERT_OK(dut_->Init());
   EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
 
   clock.ReadFrom(&mmio_);
@@ -243,10 +255,13 @@ TEST_F(AmlSdEmmcTest, AdjDelayTuningNoWindowWrap) {
   });
   // clang-format on
 
+  ASSERT_OK(dut_->Init());
+
+  AmlSdEmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdEmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
   auto clock = AmlSdEmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(10).WriteTo(&mmio_);
   auto adjust = AmlSdEmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
 
-  ASSERT_OK(dut_->Init());
   EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
 
   clock.ReadFrom(&mmio_);
@@ -269,10 +284,13 @@ TEST_F(AmlSdEmmcTest, AdjDelayTuningWindowWrap) {
   });
   // clang-format on
 
+  ASSERT_OK(dut_->Init());
+
+  AmlSdEmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdEmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
   auto clock = AmlSdEmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(10).WriteTo(&mmio_);
   auto adjust = AmlSdEmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
 
-  ASSERT_OK(dut_->Init());
   EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
 
   clock.ReadFrom(&mmio_);
@@ -291,9 +309,11 @@ TEST_F(AmlSdEmmcTest, AdjDelayTuningAllFail) {
   });
   // clang-format on
 
-  AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
-
   ASSERT_OK(dut_->Init());
+
+  AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  AmlSdEmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdEmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
   EXPECT_NOT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
 }
 
@@ -316,11 +336,13 @@ TEST_F(AmlSdEmmcTest, DelayLineTuningNoWindowWrap) {
   });
   // clang-format on
 
+  ASSERT_OK(dut_->Init());
+
   AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  AmlSdEmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdEmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
   auto delay1 = AmlSdEmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
   auto delay2 = AmlSdEmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
 
-  ASSERT_OK(dut_->Init());
   EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
 
   delay1.ReadFrom(&mmio_);
@@ -356,11 +378,13 @@ TEST_F(AmlSdEmmcTest, DelayLineTuningWindowWrap) {
   });
   // clang-format on
 
+  ASSERT_OK(dut_->Init());
+
   AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  AmlSdEmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdEmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
   auto delay1 = AmlSdEmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
   auto delay2 = AmlSdEmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
 
-  ASSERT_OK(dut_->Init());
   EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
 
   delay1.ReadFrom(&mmio_);
@@ -400,6 +424,8 @@ TEST_F(AmlSdEmmcTest, DelayLineTuningAllFail) {
 
 TEST_F(AmlSdEmmcTest, SetBusFreq) {
   ASSERT_OK(dut_->Init());
+
+  AmlSdEmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdEmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
 
   auto clock = AmlSdEmmcClock::Get().FromValue(0).WriteTo(&mmio_);
 
@@ -448,6 +474,19 @@ TEST_F(AmlSdEmmcTest, TxCrcError) {
   auto start = AmlSdEmmcStart::Get().FromValue(0);
   // The desc busy bit should now have been cleared because of the error
   EXPECT_EQ(0, start.ReadFrom(&mmio_).desc_busy());
+}
+
+TEST_F(AmlSdEmmcTest, RequestsFailAfterSuspend) {
+  ASSERT_OK(dut_->Init());
+
+  sdmmc_req_t request;
+  memset(&request, 0, sizeof(request));
+  EXPECT_OK(dut_->SdmmcRequest(&request));
+
+  ddk::SuspendTxn txn(fake_ddk::kFakeDevice, 0, false, 0);
+  dut_->DdkSuspend(std::move(txn));
+
+  EXPECT_NOT_OK(dut_->SdmmcRequest(&request));
 }
 
 }  // namespace sdmmc
