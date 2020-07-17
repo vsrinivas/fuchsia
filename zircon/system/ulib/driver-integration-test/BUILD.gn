@@ -61,3 +61,8 @@ zx_library("driver-integration-test-static") {
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:driver-integration-test" ]
+}
