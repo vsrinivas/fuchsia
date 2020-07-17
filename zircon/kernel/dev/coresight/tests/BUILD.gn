@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+
+if (is_host) {
+  test("tests") {
+    output_name = "coresight_tests"
+    sources = [ "rom_table_tests.cc" ]
+    deps = [
+      "//zircon/public/lib/coresight",
+      "//zircon/public/lib/hwreg-mock",
+      "//zircon/public/lib/zxtest",
+    ]
+  }
+}

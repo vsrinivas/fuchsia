@@ -75,6 +75,7 @@ group("ulib") {
 group("ulib-host") {
   testonly = true
   deps = [
+    "$zx/kernel/dev/coresight",
     "$zx/kernel/lib/arch",
     "$zx/kernel/lib/arch/host",
     "$zx/kernel/lib/heap/cmpctmalloc",
