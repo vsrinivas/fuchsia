@@ -24,7 +24,7 @@
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-tdm-audio.h>
 
-#include "tas27xx.h"
+#include "../codecs/tas27xx/tas27xx.h"
 
 namespace audio {
 namespace astro {

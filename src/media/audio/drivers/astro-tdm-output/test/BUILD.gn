@@ -10,8 +10,8 @@ executable("astro-audio-out-test-bin") {
   defines = [ "_ALL_SOURCE" ]
   testonly = true
   sources = [
+    "../../codecs/tas27xx/tas27xx.cc",
     "../audio-stream-out.cc",
-    "../tas27xx.cc",
     "test.cc",
   ]
   deps = [

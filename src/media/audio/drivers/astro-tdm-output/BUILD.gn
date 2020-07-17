@@ -11,8 +11,8 @@ driver_module("astro-tdm-output") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
+    "../codecs/tas27xx/tas27xx.cc",
     "audio-stream-out.cc",
-    "tas27xx.cc",
   ]
 
   deps = [
