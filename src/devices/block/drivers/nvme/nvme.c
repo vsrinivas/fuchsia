@@ -570,6 +570,18 @@ static void nvme_query(void* ctx, block_info_t* info_out, size_t* block_op_size_
   *block_op_size_out = sizeof(nvme_txn_t);
 }
 
+static zx_status_t nvme_init_internal(nvme_device_t* nvme);
+
+static void nvme_init(void* ctx) {
+  nvme_device_t* nvme = ctx;
+  if (nvme_init_internal(nvme) != ZX_OK) {
+    zxlogf(ERROR, "nvme: init failed");
+    device_init_reply(nvme->zxdev, ZX_ERR_INTERNAL, NULL);
+  } else {
+    device_init_reply(nvme->zxdev, ZX_OK, NULL);
+  }
+}
+
 static zx_off_t nvme_get_size(void* ctx) {
   nvme_device_t* nvme = ctx;
   return nvme->info.block_count * nvme->info.block_size;
@@ -626,8 +638,8 @@ static void nvme_release(void* ctx) {
 static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
 
+    .init = nvme_init,
     .get_size = nvme_get_size,
-
     .suspend = nvme_suspend,
     .resume = nvme_resume,
     .release = nvme_release,
@@ -676,7 +688,7 @@ static void infostring(const char* prefix, uint8_t* str, size_t len) {
 
 #define WAIT_MS 5000
 
-static zx_status_t nvme_init(nvme_device_t* nvme) {
+static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   uint32_t n = rd32(VS);
   uint64_t cap = rd64(CAP);
 
@@ -974,7 +986,6 @@ static zx_status_t nvme_init(nvme_device_t* nvme) {
   zxlogf(INFO, "nvme: max transfer per r/w op: %u blocks (%u bytes)", nvme->max_xfer,
          nvme->max_xfer * nvme->info.block_size);
 
-  device_make_visible(nvme->zxdev, NULL);
   return ZX_OK;
 }
 
@@ -1037,19 +1048,12 @@ irq_configured:
       .name = "nvme",
       .ctx = nvme,
       .ops = &device_ops,
-      .flags = DEVICE_ADD_INVISIBLE,
       .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
       .proto_ops = &block_ops,
   };
 
   if (device_add(dev, &args, &nvme->zxdev)) {
     goto fail;
-  }
-
-  if (nvme_init(nvme) != ZX_OK) {
-    zxlogf(ERROR, "nvme: init failed");
-    device_async_remove(nvme->zxdev);
-    return ZX_ERR_INTERNAL;
   }
 
   return ZX_OK;
