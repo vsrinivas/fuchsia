@@ -14,6 +14,7 @@ impl Facade for WeaveFacade {
         Ok(match method.parse()? {
             WeaveMethod::GetPairingCode => to_value(self.get_pairing_code().await?),
             WeaveMethod::GetQrCode => to_value(self.get_qr_code().await?),
+            WeaveMethod::GetPairingState => to_value(self.get_pairing_state().await?),
         }?)
     }
 }
