@@ -58,6 +58,8 @@ zx_status_t GeneratedSource::GetFormat(Format* out_format) {
   out_format->frame_rate = frame_rate_;
   out_format->channels = static_cast<uint16_t>(channels_);
   out_format->sample_format = sample_format_;
+  // Bitmask filtering is done in GetFramesInternal() below, no need to ask the HW.
+  out_format->channels_to_use_bitmask = AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED;
 
   return ZX_OK;
 }

@@ -51,7 +51,7 @@ zx_status_t AudioOutput::PlayPrepare(AudioSource& source) {
   if (source.finished())
     return ZX_OK;
 
-  AudioSource::Format format;
+  AudioSource::Format format = {};
   res = source.GetFormat(&format);
   if (res != ZX_OK) {
     printf("Failed to get source's format (res %d)\n", res);
