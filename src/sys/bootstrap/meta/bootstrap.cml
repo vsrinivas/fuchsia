@@ -3,6 +3,7 @@
         {
             name: "driver_manager",
             url: "fuchsia-boot:///#meta/driver_manager.cm",
+            environment: "#ddk-env",
         },
         {
             name: "fshost",
@@ -293,9 +294,7 @@
             to: [ "#driver_manager" ],
         },
         {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-            ],
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
                 "#driver_manager",
@@ -401,6 +400,13 @@
 
             // 20 minutes
             __stop_timeout_ms: 1200000,
+        },
+        {
+            name: "ddk-env",
+            extends: "realm",
+
+            // 1 minute
+            __stop_timeout_ms: 60000,
         },
     ],
 }
