@@ -40,18 +40,6 @@ declare_args() {
   # package.
   update_kernels = []
 
-  # (deprecated) Prebuilt bootloader image to be included into update (OTA)
-  # package and paving process.
-  #
-  # See `firmware_prebuilts` instead.
-  bootloader_prebuilt = ""
-
-  # (deprecated)  HW revision of the bootloader to be included into OTA package
-  # and paving process.
-  #
-  # See `firmware_prebuilts_path_suffix` instead.
-  bootloader_hw_revision = ""
-
   # List of prebuilt firmware blobs to include in update packages.
   #
   # Each entry in the list is a scope defining `path` and `type`. A build can

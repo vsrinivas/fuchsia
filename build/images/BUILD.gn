@@ -1265,39 +1265,6 @@ if (target_cpu != "arm64" && !use_vboot) {
       },
     ]
   }
-} else {
-  if (bootloader_prebuilt != "") {
-    copy("bootloader_image") {
-      testonly = true
-      sources = [ rebase_path("$bootloader_prebuilt$bootloader_hw_revision",
-                              root_build_dir) ]
-      outputs = [ "$root_out_dir/bootloader.img" ]
-
-      metadata = {
-        images = [
-          {
-            archive = true
-            bootserver_pave = [ "--bootloader" ]
-            bootserver_pave_zedboot = [ "--bootloader" ]
-            name = "efi"
-            path = "bootloader.img"
-            type = "blk"
-          },
-        ]
-        image_paths = [ "IMAGE_BOOTLOADER_RAW=bootloader.img" ]
-      }
-    }
-
-    default_image_deps += [ ":bootloader_image" ]
-
-    update_manifest += [
-      {
-        target = "bootloader"
-        deps = [ ":bootloader_image" ]
-        sources = [ "$root_out_dir/bootloader.img" ]
-      },
-    ]
-  }
 }
 
 foreach(firmware, firmware_prebuilts) {
