@@ -32,7 +32,7 @@ class BaseStream {
     uint32_t generation;
   };
   virtual TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const = 0;
-  virtual AudioClock reference_clock() const = 0;
+  virtual AudioClock& reference_clock() = 0;
 
   const Format& format() const { return format_; }
 

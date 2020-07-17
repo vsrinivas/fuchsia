@@ -63,8 +63,7 @@ class ThrottleOutput : public AudioOutput {
   std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time ref_time) override {
     // Compute the next callback time; check whether trimming is falling behind.
     last_sched_time_mono_ = last_sched_time_mono_ + TRIM_PERIOD;
-    auto mono_time =
-        clock::MonotonicTimeFromReferenceTime(reference_clock().get(), ref_time).take_value();
+    auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(ref_time).take_value();
     if (mono_time > last_sched_time_mono_) {
       // TODO(mpuryear): Trimming is falling behind. We should tell someone.
       last_sched_time_mono_ = mono_time + TRIM_PERIOD;

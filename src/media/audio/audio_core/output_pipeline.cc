@@ -36,23 +36,23 @@ OutputPipelineImpl::OutputPipelineImpl(const PipelineConfig& config,
                                        const VolumeCurve& volume_curve,
                                        uint32_t max_block_size_frames,
                                        TimelineFunction ref_clock_to_fractional_frame,
-                                       AudioClock ref_clock, Mixer::Resampler sampler)
+                                       AudioClock& clock, Mixer::Resampler sampler)
     : OutputPipelineImpl(State(config, volume_curve, max_block_size_frames,
-                               ref_clock_to_fractional_frame, ref_clock, sampler)) {}
+                               ref_clock_to_fractional_frame, clock, sampler)) {}
 
 OutputPipelineImpl::OutputPipelineImpl(State state)
     : OutputPipeline(state.stream->format()), state_(std::move(state)) {}
 
 OutputPipelineImpl::State::State(const PipelineConfig& config, const VolumeCurve& volume_curve,
                                  uint32_t max_block_size_frames,
-                                 TimelineFunction ref_clock_to_fractional_frame,
-                                 AudioClock ref_clock, Mixer::Resampler sampler) {
-  reference_clock = ref_clock;
+                                 TimelineFunction ref_clock_to_fractional_frame, AudioClock& clock,
+                                 Mixer::Resampler sampler)
+    : audio_clock(clock) {
   uint32_t usage_mask = 0;
   stream =
       CreateMixStage(config.root(), volume_curve, max_block_size_frames,
                      fbl::MakeRefCounted<VersionedTimelineFunction>(ref_clock_to_fractional_frame),
-                     ref_clock, &usage_mask, sampler);
+                     clock, &usage_mask, sampler);
 }
 
 std::shared_ptr<Mixer> OutputPipelineImpl::AddInput(std::shared_ptr<ReadableStream> stream,
@@ -88,12 +88,12 @@ fit::result<void, fuchsia::media::audio::UpdateEffectError> OutputPipelineImpl::
 std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve,
     uint32_t max_block_size_frames,
-    fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, AudioClock ref_clock,
+    fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, AudioClock& audio_clock,
     uint32_t* usage_mask, Mixer::Resampler sampler) {
   auto output_format = FormatForMixGroup(spec);
 
   auto stage = std::make_shared<MixStage>(output_format, max_block_size_frames,
-                                          ref_clock_to_fractional_frame, ref_clock);
+                                          ref_clock_to_fractional_frame, audio_clock);
   for (const auto& usage : spec.input_streams) {
     auto mask = 1 << static_cast<uint32_t>(usage);
     FX_DCHECK((*usage_mask & mask) == 0);
@@ -116,7 +116,7 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     FX_DCHECK(!loopback) << "Only a single loopback point is allowed.";
     const uint32_t ring_size = output_format.frames_per_second();
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-        root->format(), ref_clock_to_fractional_frame, ref_clock, ring_size);
+        root->format(), ref_clock_to_fractional_frame, audio_clock, ring_size);
     loopback = std::move(endpoints.reader);
     root = std::make_shared<TapStage>(std::move(root), std::move(endpoints.writer));
   }
@@ -132,8 +132,8 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
         // we align frames between intermediate mix stages to integral frame numbers.
         timeline_function.subject_time(), timeline_function.reference_time(),
         TimelineRate(frac_fps, zx::sec(1).to_nsecs())));
-    auto substage = CreateMixStage(input, volume_curve, max_block_size_frames, function, ref_clock,
-                                   usage_mask, sampler);
+    auto substage = CreateMixStage(input, volume_curve, max_block_size_frames, function,
+                                   audio_clock, usage_mask, sampler);
     stage->AddInput(substage, sampler);
   }
   return root;

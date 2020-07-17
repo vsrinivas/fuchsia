@@ -52,13 +52,9 @@ AudioDriverV1::AudioDriverV1(AudioDevice* owner, DriverTimeoutHandler timeout_ha
   // We create the clock as a clone of MONOTONIC, but once the driver provides details (such as the
   // clock domain), this may become a recovered clock, based on DMA progress across the ring buffer.
   // TODO(mpuryear): Clocks should be per-domain not per-driver; default is the MONO domain's clock.
-  ref_clock_ = audio::clock::AdjustableCloneOfMonotonic();
-  FX_DCHECK(ref_clock_.is_valid()) << "AdjustableCloneOfMonotonic failed";
-
-  // This utility function also strips off the WRITE right.
-  auto status = audio::clock::DuplicateClock(ref_clock_, &read_only_clock_);
-  FX_DCHECK(status == ZX_OK);
-  FX_DCHECK(read_only_clock_.is_valid()) << "DuplicateClock failed";
+  audio_clock_ = AudioClock::CreateAsDeviceStatic(audio::clock::AdjustableCloneOfMonotonic(),
+                                                  AudioClock::kMonotonicDomain);
+  FX_DCHECK(audio_clock_.is_valid()) << "AdjustableCloneOfMonotonic failed";
 }
 
 zx_status_t AudioDriverV1::Init(zx::channel stream_channel) {

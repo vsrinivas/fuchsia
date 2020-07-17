@@ -109,7 +109,7 @@ class AudioDriver {
   virtual const TimelineFunction& ptscts_ref_clock_to_fractional_frames() const = 0;
   virtual const TimelineFunction& safe_read_or_write_ref_clock_to_frames() const = 0;
 
-  virtual AudioClock reference_clock() const = 0;
+  virtual AudioClock& reference_clock() = 0;
 };
 
 // TODO(41922): Remove AudioDriverV1 once the transition to V2 is completed.
@@ -167,7 +167,7 @@ class AudioDriverV1 : public AudioDriver {
   zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                                fuchsia::media::AudioSampleFormat* sample_format_inout) override;
 
-  AudioClock reference_clock() const override { return audio_clock_; }
+  AudioClock& reference_clock() override { return audio_clock_; }
 
  private:
   friend class AudioDevice;
@@ -343,9 +343,7 @@ class AudioDriverV1 : public AudioDriver {
 
   // fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC is not defined for AudioDriverV1 types.
   uint32_t clock_domain_ = 0;
-  zx::clock ref_clock_;
-  zx::clock read_only_clock_;
-  AudioClock audio_clock_ = AudioClock::MakeReadonly(read_only_clock_);
+  AudioClock audio_clock_;
 };
 
 class AudioDriverV2 : public AudioDriver {
@@ -402,7 +400,7 @@ class AudioDriverV2 : public AudioDriver {
   zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                                fuchsia::media::AudioSampleFormat* sample_format_inout) override;
 
-  AudioClock reference_clock() const override { return audio_clock_; }
+  AudioClock& reference_clock() override { return audio_clock_; }
 
  private:
   static constexpr uint32_t kDriverInfoHasUniqueId = (1u << 0);
@@ -537,9 +535,7 @@ class AudioDriverV2 : public AudioDriver {
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_fidl_;
 
   uint32_t clock_domain_ = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
-  zx::clock ref_clock_;
-  zx::clock read_only_clock_;
-  AudioClock audio_clock_ = AudioClock::MakeReadonly(read_only_clock_);
+  AudioClock audio_clock_;
 };
 
 }  // namespace media::audio

@@ -109,7 +109,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   virtual fit::promise<void> Shutdown();
 
   // audio clock from AudioDriver
-  AudioClock reference_clock() const;
+  AudioClock& reference_clock();
 
  protected:
   AudioDevice(Type type, ThreadingModel* threading_model, DeviceRegistry* registry,

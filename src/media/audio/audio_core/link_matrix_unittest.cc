@@ -291,8 +291,7 @@ TEST_F(LinkMatrixTest, InitializationHooks) {
 
   auto source = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
   auto dest = std::make_shared<MockObject>(AudioObject::Type::Output);
-  auto clock_mono = clock::CloneOfMonotonic();
-  auto ref_clock = AudioClock::MakeReadonly(clock_mono);
+  auto audio_clock = AudioClock::CreateAsCustom(clock::CloneOfMonotonic());
 
   auto stream = std::make_shared<PacketQueue>(
       Format::Create({
@@ -301,7 +300,7 @@ TEST_F(LinkMatrixTest, InitializationHooks) {
                          .frames_per_second = 48000,
                      })
           .take_value(),
-      ref_clock);
+      audio_clock);
   source->set_stream(stream);
 
   under_test.LinkObjects(source, dest, std::make_shared<FakeLoudnessTransform>());
@@ -319,8 +318,7 @@ TEST_F(LinkMatrixTest, LinkHandleHasStream) {
 
   auto source = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
   auto dest = std::make_shared<MockObject>(AudioObject::Type::Output);
-  auto clock_mono = clock::CloneOfMonotonic();
-  auto ref_clock = AudioClock::MakeReadonly(clock_mono);
+  auto audio_clock = AudioClock::CreateAsCustom(clock::CloneOfMonotonic());
 
   auto stream = std::make_shared<PacketQueue>(
       Format::Create({
@@ -329,7 +327,7 @@ TEST_F(LinkMatrixTest, LinkHandleHasStream) {
                          .frames_per_second = 48000,
                      })
           .take_value(),
-      ref_clock);
+      audio_clock);
   source->set_stream(stream);
 
   under_test.LinkObjects(source, dest, std::make_shared<FakeLoudnessTransform>());

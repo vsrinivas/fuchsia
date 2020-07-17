@@ -268,7 +268,7 @@ void AudioDeviceManager::GetDeviceGain(uint64_t device_token, GetDeviceGainCallb
   FX_DCHECK(dev->device_settings() != nullptr);
   auto info = dev->device_settings()->GetGainInfo();
   cbk(device_token, info);
-}  // namespace media::audio
+}
 
 void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
                                        fuchsia::media::AudioGainInfo gain_info,

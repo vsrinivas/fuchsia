@@ -40,9 +40,9 @@ FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, std::option
       format_(format),
       usage_(usage),
       packet_factory_(dispatcher, *format, 2 * PAGE_SIZE),
-      link_matrix_(*link_matrix),
-      clock_mono_(clock::CloneOfMonotonic()),
-      ref_clock_(AudioClock::MakeReadonly(clock_mono_)) {}
+      link_matrix_(*link_matrix) {
+  ref_clock_ = AudioClock::CreateAsCustom(clock::CloneOfMonotonic());
+}
 
 void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration,
                                            fit::closure callback) {

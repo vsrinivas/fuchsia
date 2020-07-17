@@ -12,6 +12,7 @@
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
+#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/throttle_output.h"
@@ -249,27 +250,29 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
 
 TEST_F(AudioRendererTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(renderer_->reference_clock().get().is_valid());
+  ASSERT_TRUE(renderer_->reference_clock().is_valid());
 
   clock::testing::VerifyAdvances(fidl_clock);
-  clock::testing::VerifyAdvances(renderer_->reference_clock().get());
+  audio_clock_helper::VerifyAdvances(renderer_->reference_clock());
 }
 
 TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(renderer_->reference_clock().get().is_valid());
+  ASSERT_TRUE(renderer_->reference_clock().is_valid());
 
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
-  clock::testing::VerifyCannotBeRateAdjusted(renderer_->reference_clock().get());
+
+  // Within audio_core, the default clock is rate-adjustable.
+  audio_clock_helper::VerifyCanBeRateAdjusted(renderer_->reference_clock());
 }
 
 TEST_F(AudioRendererTest, DefaultClockIsClockMonotonic) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(renderer_->reference_clock().get().is_valid());
+  ASSERT_TRUE(renderer_->reference_clock().is_valid());
 
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
-  clock::testing::VerifyIsSystemMonotonic(renderer_->reference_clock().get());
-}  // namespace
+  audio_clock_helper::VerifyIsSystemMonotonic(renderer_->reference_clock());
+}
 
 }  // namespace
 }  // namespace media::audio

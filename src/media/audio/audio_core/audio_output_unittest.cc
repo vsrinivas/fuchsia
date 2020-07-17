@@ -18,7 +18,9 @@ namespace {
 // An OutputPipeline that always returns std::nullopt from |ReadLock|.
 class TestOutputPipeline : public OutputPipeline {
  public:
-  TestOutputPipeline(const Format& format) : OutputPipeline(format) {}
+  TestOutputPipeline(const Format& format) : OutputPipeline(format) {
+    audio_clock_ = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
+  }
 
   void Enqueue(ReadableStream::Buffer buffer) { buffers_.push_back(std::move(buffer)); }
 
@@ -39,7 +41,7 @@ class TestOutputPipeline : public OutputPipeline {
         .generation = kInvalidGenerationId,
     };
   }
-  AudioClock reference_clock() const override { return audio_clock_; }
+  AudioClock& reference_clock() override { return audio_clock_; }
 
   // |media::audio::OutputPipeline|
   std::shared_ptr<ReadableStream> loopback() const override { return nullptr; }
@@ -56,8 +58,8 @@ class TestOutputPipeline : public OutputPipeline {
 
  private:
   std::deque<ReadableStream::Buffer> buffers_;
-  zx::clock clock_mono_ = clock::AdjustableCloneOfMonotonic();
-  AudioClock audio_clock_ = AudioClock::MakeAdjustable(clock_mono_);
+
+  AudioClock audio_clock_;
 };
 
 class TestAudioOutput : public AudioOutput {
@@ -79,7 +81,7 @@ class TestAudioOutput : public AudioOutput {
   }
   std::unique_ptr<OutputPipeline> CreateOutputPipeline(
       const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
-      TimelineFunction device_reference_clock_to_fractional_frame, AudioClock ref_clock) override {
+      TimelineFunction device_reference_clock_to_fractional_frame, AudioClock& ref_clock) override {
     if (output_pipeline_) {
       return std::move(output_pipeline_);
     }

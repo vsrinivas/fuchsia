@@ -31,6 +31,10 @@ const Format kDefaultFormat =
 
 class EffectsStageTest : public testing::ThreadingModelFixture {
  protected:
+  void SetUp() override {
+    audio_clock_ = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
+  }
+
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
   // is the number of |T| sized elements to skip at the beginning of |ptr|.
   //
@@ -44,8 +48,7 @@ class EffectsStageTest : public testing::ThreadingModelFixture {
   testing::TestEffectsModule test_effects_ = testing::TestEffectsModule::Open();
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
 
-  zx::clock clock_mono_ = clock::CloneOfMonotonic();
-  AudioClock audio_clock_ = AudioClock::MakeReadonly(clock_mono_);
+  AudioClock audio_clock_;
 };
 
 TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {

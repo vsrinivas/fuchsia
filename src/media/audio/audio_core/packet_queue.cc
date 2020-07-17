@@ -35,14 +35,14 @@ static constexpr uint16_t kUnderflowErrorInterval = 100;
 
 }  // namespace
 
-PacketQueue::PacketQueue(Format format, AudioClock ref_clock)
-    : PacketQueue(format, nullptr, ref_clock) {}
+PacketQueue::PacketQueue(Format format, AudioClock& audio_clock)
+    : PacketQueue(format, nullptr, audio_clock) {}
 
 PacketQueue::PacketQueue(Format format, fbl::RefPtr<VersionedTimelineFunction> timeline_function,
-                         AudioClock ref_clock)
+                         AudioClock& audio_clock)
     : ReadableStream(std::move(format)),
       timeline_function_(std::move(timeline_function)),
-      audio_clock_(ref_clock) {}
+      audio_clock_(audio_clock) {}
 
 PacketQueue::~PacketQueue() {
   pending_flush_packet_queue_.clear();

@@ -29,7 +29,7 @@ class FakeStream : public ReadableStream {
   std::optional<Buffer> ReadLock(zx::time dest_ref_time, int64_t frame, uint32_t frame_count);
   void Trim(zx::time dest_ref_time) {}
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const;
-  AudioClock reference_clock() const { return audio_clock_; }
+  AudioClock& reference_clock() { return audio_clock_; }
 
  private:
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
@@ -38,7 +38,7 @@ class FakeStream : public ReadableStream {
   StreamUsageMask usage_mask_;
   float gain_db_ = Gain::kUnityGainDb;
   std::unique_ptr<uint8_t[]> buffer_;
-  zx::clock clock_mono_;
+
   AudioClock audio_clock_;
 };
 

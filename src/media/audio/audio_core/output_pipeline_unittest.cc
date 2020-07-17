@@ -9,6 +9,7 @@
 #include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/process_config.h"
+#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -39,6 +40,12 @@ const TimelineFunction kDefaultTransform = TimelineFunction(
 
 class OutputPipelineTest : public testing::ThreadingModelFixture {
  protected:
+  void SetUp() override {
+    client_clock_ = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
+    device_clock_ = AudioClock::CreateAsDeviceStatic(clock::AdjustableCloneOfMonotonic(),
+                                                     AudioClock::kMonotonicDomain);
+  }
+
   std::shared_ptr<OutputPipeline> CreateOutputPipeline(
       VolumeCurve volume_curve =
           VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume)) {
@@ -92,7 +99,7 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
 
     auto pipeline_config = PipelineConfig(root);
     return std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                kDefaultTransform, audio_clock_);
+                                                kDefaultTransform, device_clock_);
   }
 
   void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
@@ -104,8 +111,8 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
 
   void TestDifferentMixRates(bool use_clock_offset);
 
-  zx::clock clock_mono_ = clock::AdjustableCloneOfMonotonic();
-  AudioClock audio_clock_ = AudioClock::MakeAdjustable(clock_mono_);
+  AudioClock client_clock_;
+  AudioClock device_clock_;
 };
 
 TEST_F(OutputPipelineTest, Trim) {
@@ -115,13 +122,14 @@ TEST_F(OutputPipelineTest, Trim) {
       clock::testing::CreateCustomClock({.mono_offset = zx::sec(kNumSecondsOffset)});
   ASSERT_TRUE(custom_clock_result.is_ok());
   auto custom_clock = custom_clock_result.take_value();
-  auto audio_clock = AudioClock::MakeAdjustable(custom_clock);
+  auto custom_audio_clock = AudioClock::CreateAsCustom(std::move(custom_clock));
 
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(kDefaultTransform);
-  auto stream1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock);
-  auto stream2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
-  auto stream3 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
-  auto stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
+  auto stream1 =
+      std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, custom_audio_clock);
+  auto stream2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+  auto stream3 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+  auto stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
 
   // Add some streams so that one is routed to each mix stage in our pipeline.
   auto pipeline = CreateOutputPipeline();
@@ -225,7 +233,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, audio_clock_);
+                                                       kDefaultTransform, device_clock_);
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
@@ -297,7 +305,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, audio_clock_);
+                                                       kDefaultTransform, device_clock_);
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
@@ -362,7 +370,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, audio_clock_);
+                                                       kDefaultTransform, device_clock_);
 
   pipeline->UpdateEffect(kInstanceName, kConfig);
 
@@ -437,7 +445,7 @@ TEST_F(OutputPipelineTest, ReportMinLeadTime) {
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline =
       std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128, kDefaultTransform,
-                                           audio_clock_, Mixer::Resampler::SampleAndHold);
+                                           device_clock_, Mixer::Resampler::SampleAndHold);
 
   // Add 2 streams, one with a MEDIA usage and one with COMMUNICATION usage. These should receive
   // different lead times since they have different effects (with different latencies) applied.
@@ -499,7 +507,7 @@ void OutputPipelineTest::TestDifferentMixRates(bool use_clock_offset) {
   const Mixer::Resampler resampler = Mixer::Resampler::SampleAndHold;
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(kDefaultTransform);
   std::shared_ptr<PacketQueue> stream;
-  zx::clock custom_clock;
+  AudioClock custom_audio_clock;
 
   if (use_clock_offset) {
     constexpr int kNumSecondsOffset = 7;
@@ -508,18 +516,18 @@ void OutputPipelineTest::TestDifferentMixRates(bool use_clock_offset) {
     auto custom_clock_result =
         clock::testing::CreateCustomClock({.mono_offset = zx::sec(kNumSecondsOffset)});
     ASSERT_TRUE(custom_clock_result.is_ok());
-    custom_clock = custom_clock_result.take_value();
-    auto audio_clock = AudioClock::MakeAdjustable(custom_clock);
+    zx::clock custom_clock = custom_clock_result.take_value();
+    custom_audio_clock = AudioClock::CreateAsCustom(std::move(custom_clock));
 
-    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock);
+    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, custom_audio_clock);
   } else {
-    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
+    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
   }
 
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 480,
-                                                       kDefaultTransform, audio_clock_, resampler);
+                                                       kDefaultTransform, device_clock_, resampler);
 
   pipeline->AddInput(stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), resampler);
 
@@ -612,7 +620,7 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, audio_clock_);
+                                                       kDefaultTransform, device_clock_);
 
   // Verify the pipeline format includes the rechannel effect.
   EXPECT_EQ(4u, pipeline->format().channels());
@@ -667,32 +675,29 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
 
-  zx::clock readonly_clock, writable_clock = clock::testing::CreateForSamenessTest();
-  ASSERT_EQ(audio::clock::DuplicateClock(writable_clock, &readonly_clock), ZX_OK);
+  zx::clock writable_clock = clock::CloneOfMonotonic();
+  auto result = audio::clock::DuplicateClock(writable_clock);
+  ASSERT_TRUE(result.is_ok());
+  zx::clock readonly_clock = result.take_value();
+  ASSERT_TRUE(readonly_clock.is_valid());
   clock::testing::VerifyReadOnlyRights(readonly_clock);
 
-  auto ref_clock = AudioClock::MakeReadonly(readonly_clock);
+  auto ref_clock =
+      AudioClock::CreateAsDeviceStatic(std::move(readonly_clock), AudioClock::kMonotonicDomain);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, ref_clock);
 
-  ASSERT_TRUE(ref_clock.is_valid());
-  clock::testing::VerifyReadOnlyRights(ref_clock.get());
-  clock::testing::VerifyAdvances(ref_clock.get());
-  clock::testing::VerifyCannotBeRateAdjusted(ref_clock.get());
-  clock::testing::VerifySame(readonly_clock, ref_clock.get());
-
   ASSERT_TRUE(pipeline->reference_clock().is_valid());
-  clock::testing::VerifyReadOnlyRights(pipeline->reference_clock().get());
-  clock::testing::VerifyAdvances(pipeline->reference_clock().get());
-  clock::testing::VerifyCannotBeRateAdjusted(pipeline->reference_clock().get());
-  clock::testing::VerifySame(readonly_clock, pipeline->reference_clock().get());
+  audio_clock_helper::VerifyReadOnlyRights(pipeline->reference_clock());
+  audio_clock_helper::VerifyAdvances(pipeline->reference_clock());
+  audio_clock_helper::VerifyCannotBeRateAdjusted(pipeline->reference_clock());
 
-  auto loopback_clock = pipeline->loopback()->reference_clock();
+  auto& loopback_clock = pipeline->loopback()->reference_clock();
   ASSERT_TRUE(loopback_clock.is_valid());
-  clock::testing::VerifyReadOnlyRights(loopback_clock.get());
-  clock::testing::VerifyAdvances(loopback_clock.get());
-  clock::testing::VerifyCannotBeRateAdjusted(loopback_clock.get());
-  clock::testing::VerifySame(readonly_clock, loopback_clock.get());
+  audio_clock_helper::VerifyReadOnlyRights(loopback_clock);
+  audio_clock_helper::VerifyAdvances(loopback_clock);
+  audio_clock_helper::VerifyCannotBeRateAdjusted(loopback_clock);
+  ASSERT_TRUE(pipeline->reference_clock() == loopback_clock);
 }
 
 }  // namespace

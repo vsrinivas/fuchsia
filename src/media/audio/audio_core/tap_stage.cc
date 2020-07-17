@@ -12,8 +12,7 @@ namespace media::audio {
 TapStage::TapStage(std::shared_ptr<ReadableStream> source, std::shared_ptr<WritableStream> tap)
     : ReadableStream(source->format()), source_(std::move(source)), tap_(std::move(tap)) {
   FX_DCHECK(source_->format() == tap_->format());
-  FX_DCHECK(source_->reference_clock().get().get_handle() ==
-            tap_->reference_clock().get().get_handle());
+  FX_DCHECK(source_->reference_clock() == tap_->reference_clock());
 }
 
 std::optional<ReadableStream::Buffer> TapStage::ReadLock(zx::time dest_ref_time, int64_t frame,
@@ -55,8 +54,7 @@ void TapStage::SetMinLeadTime(zx::duration min_lead_time) {
 }
 
 const TimelineFunction& TapStage::SourceFracFrameToTapFrame() {
-  FX_DCHECK(source_->reference_clock().get().get_handle() ==
-            tap_->reference_clock().get().get_handle());
+  FX_DCHECK(source_->reference_clock() == tap_->reference_clock());
 
   auto source_snapshot = source_->ReferenceClockToFractionalFrames();
   auto tap_snapshot = tap_->ReferenceClockToFractionalFrames();

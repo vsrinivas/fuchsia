@@ -13,6 +13,7 @@
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
+#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
@@ -180,26 +181,28 @@ TEST_F(AudioCapturerTest, CanReleasePacketWithoutDroppingConnection) {
 
 TEST_F(AudioCapturerTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(capturer_->reference_clock().get().is_valid());
+  ASSERT_TRUE(capturer_->reference_clock().is_valid());
 
   clock::testing::VerifyAdvances(fidl_clock);
-  clock::testing::VerifyAdvances(capturer_->reference_clock().get());
+  audio_clock_helper::VerifyAdvances(capturer_->reference_clock());
 }
 
-TEST_F(AudioCapturerTest, ReferenceClockIsReadOnly) {
+TEST_F(AudioCapturerTest, DefaultReferenceClockIsReadOnly) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(capturer_->reference_clock().get().is_valid());
+  ASSERT_TRUE(capturer_->reference_clock().is_valid());
 
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
-  clock::testing::VerifyCannotBeRateAdjusted(capturer_->reference_clock().get());
+
+  // Within audio_core, the default clock is rate-adjustable.
+  audio_clock_helper::VerifyCanBeRateAdjusted(capturer_->reference_clock());
 }
 
 TEST_F(AudioCapturerTest, DefaultClockIsClockMonotonic) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(capturer_->reference_clock().get().is_valid());
+  ASSERT_TRUE(capturer_->reference_clock().is_valid());
 
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
-  clock::testing::VerifyIsSystemMonotonic(capturer_->reference_clock().get());
+  audio_clock_helper::VerifyIsSystemMonotonic(capturer_->reference_clock());
 }
 
 }  // namespace

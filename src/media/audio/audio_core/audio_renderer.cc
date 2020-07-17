@@ -71,13 +71,7 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
   }
 
   zx_status_t status;
-  if (!ref_clock.is_valid()) {
-    status = audio::clock::DuplicateClock(optimal_clock(), &ref_clock);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Could not duplicate the optimal clock";
-      return;
-    }
-  } else {
+  if (ref_clock.is_valid()) {
     // TODO(mpuryear): Client may rate-adjust the clock at any time; we should only use SincSampler
     //
     // If ref_clock doesn't have DUPLICATE or READ or TRANSFER rights, return (i.e. shutdown).
@@ -86,9 +80,10 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
       FX_PLOGS(WARNING, status) << "Could not set rights on client-submitted reference clock";
       return;
     }
+    SetClock(AudioClock::CreateAsCustom(std::move(ref_clock)));
+  } else {
+    SetOptimalReferenceClock();
   }
-
-  set_reference_clock(std::move(ref_clock));
 
   cleanup.cancel();
 }

@@ -26,7 +26,7 @@ class TapStage : public ReadableStream {
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
     return source_->ReferenceClockToFractionalFrames();
   }
-  AudioClock reference_clock() const override { return source_->reference_clock(); }
+  AudioClock& reference_clock() override { return source_->reference_clock(); }
 
   void SetMinLeadTime(zx::duration min_lead_time) override;
 

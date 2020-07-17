@@ -2,10 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+
 source_set("testing") {
   testonly = true
 
   sources = [
+    "audio_clock_helper.cc",
+    "audio_clock_helper.h",
     "fake_audio_device.h",
     "fake_audio_driver.h",
     "fake_audio_driver_v1.cc",
@@ -23,7 +26,10 @@ source_set("testing") {
     "threading_model_fixture.h",
   ]
 
-  public_deps = [ "//zircon/system/ulib/fzl" ]
+  public_deps = [
+    "//zircon/system/ulib/fzl",
+  ]
+
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.hardware.audio",

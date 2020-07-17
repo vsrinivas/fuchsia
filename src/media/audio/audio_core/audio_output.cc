@@ -52,8 +52,7 @@ void AudioOutput::Process() {
     // Clear the flag. If the implementation does not set it during the cycle by calling
     // SetNextSchedTimeMono, we consider it an error and shut down.
     ClearNextSchedTime();
-    auto ref_now =
-        clock::ReferenceTimeFromMonotonicTime(reference_clock().get(), mono_now).take_value();
+    auto ref_now = reference_clock().ReferenceTimeFromMonotonicTime(mono_now).take_value();
 
     uint32_t frames_remaining;
     do {
@@ -163,7 +162,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioOutput::Initializ
 
 std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
     const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
-    TimelineFunction device_reference_clock_to_fractional_frame, AudioClock ref_clock) {
+    TimelineFunction device_reference_clock_to_fractional_frame, AudioClock& ref_clock) {
   auto pipeline =
       std::make_unique<OutputPipelineImpl>(config, volume_curve, max_block_size_frames,
                                            device_reference_clock_to_fractional_frame, ref_clock);

@@ -10,13 +10,6 @@
 
 namespace media::audio::clock {
 
-zx_status_t DuplicateClock(const zx::clock& original_clock, zx::clock* dupe_clock) {
-  FX_DCHECK(dupe_clock) << "Null ptr passed to DuplicateClock";
-
-  constexpr auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
-  return original_clock.duplicate(rights, dupe_clock);
-}
-
 zx_status_t GetAndDisplayClockDetails(const zx::clock& ref_clock) {
   if (!ref_clock.is_valid()) {
     FX_LOGS(INFO) << "Clock is invalid";
@@ -57,6 +50,18 @@ void DisplayClockDetails(const zx_clock_details_v1_t& clock_details) {
   FX_LOGS(INFO) << "      reference_ticks:\t\t"
                 << clock_details.mono_to_synthetic.rate.reference_ticks;
   FX_LOGS(INFO) << "******************************************";
+}
+
+fit::result<zx::clock, zx_status_t> DuplicateClock(const zx::clock& original_clock) {
+  constexpr auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
+
+  zx::clock dupe_clock;
+  auto status = original_clock.duplicate(rights, &dupe_clock);
+  if (status != ZX_OK) {
+    return fit::error(status);
+  }
+
+  return fit::ok(std::move(dupe_clock));
 }
 
 fit::result<ClockSnapshot, zx_status_t> SnapshotClock(const zx::clock& ref_clock) {

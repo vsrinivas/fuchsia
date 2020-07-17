@@ -180,8 +180,11 @@ TEST_F(UltrasoundTest, RendererDoesNotSupportSetReferenceClock) {
   renderer->renderer().set_error_handler(
       [&renderer_error](auto status) { renderer_error = {status}; });
 
-  zx::clock clock_to_set;
-  ASSERT_EQ(ZX_OK, clock::DuplicateClock(renderer->reference_clock(), &clock_to_set));
+  auto result = clock::DuplicateClock(renderer->reference_clock());
+  ASSERT_TRUE(result.is_ok());
+  zx::clock clock_to_set = result.take_value();
+  ASSERT_TRUE(clock_to_set.is_valid());
+
   renderer->renderer()->SetReferenceClock(std::move(clock_to_set));
 
   // Now expect we get disconnected with ZX_ERR_NOT_SUPPORTED.
@@ -279,10 +282,11 @@ TEST_F(UltrasoundTest, CapturerDoesNotSupportSetReferenceClock) {
   capturer->capturer().set_error_handler(
       [&capturer_error](auto status) { capturer_error = {status}; });
 
-  // Call SetPcmStreamType. We use the current stream type here to ensure we're definitely
-  // requesting a supported stream type.
-  zx::clock clock_to_set;
-  ASSERT_EQ(ZX_OK, clock::DuplicateClock(capturer->reference_clock(), &clock_to_set));
+  auto result = clock::DuplicateClock(capturer->reference_clock());
+  ASSERT_TRUE(result.is_ok());
+  zx::clock clock_to_set = result.take_value();
+  ASSERT_TRUE(clock_to_set.is_valid());
+
   capturer->capturer()->SetReferenceClock(std::move(clock_to_set));
 
   // Now expect we get disconnected with ZX_ERR_NOT_SUPPORTED.

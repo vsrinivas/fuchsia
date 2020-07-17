@@ -12,17 +12,16 @@
 
 namespace media::audio::clock {
 
+zx_status_t GetAndDisplayClockDetails(const zx::clock& ref_clock);
+void DisplayClockDetails(const zx_clock_details_v1_t& clock_details);
+
 constexpr uint32_t kInvalidClockGeneration = 0xFFFFFFFF;
 struct ClockSnapshot {
   TimelineFunction reference_to_monotonic;
   uint32_t generation = kInvalidClockGeneration;
 };
 
-zx_status_t DuplicateClock(const zx::clock& original_clock, zx::clock* dupe_optimal_clock);
-
-zx_status_t GetAndDisplayClockDetails(const zx::clock& ref_clock);
-void DisplayClockDetails(const zx_clock_details_v1_t& clock_details);
-
+fit::result<zx::clock, zx_status_t> DuplicateClock(const zx::clock& original_clock);
 fit::result<ClockSnapshot, zx_status_t> SnapshotClock(const zx::clock& ref_clock);
 
 fit::result<zx::time, zx_status_t> ReferenceTimeFromMonotonicTime(const zx::clock& ref_clock,

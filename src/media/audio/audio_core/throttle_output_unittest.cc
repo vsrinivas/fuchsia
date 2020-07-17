@@ -33,8 +33,8 @@ class ThrottleOutputTest : public testing::ThreadingModelFixture {
 TEST_F(ThrottleOutputTest, NextTrimTime) {
   // After a mix job in the past, the next Trim will be TRIM_PERIOD beyond the most recent one.
   auto last_trim_mono_time = throttle_output_->last_sched_time_mono();
-  auto past_ref_time = clock::ReferenceTimeFromMonotonicTime(
-      throttle_output_->reference_clock().get(), last_trim_mono_time - zx::min(1));
+  auto past_ref_time = throttle_output_->reference_clock().ReferenceTimeFromMonotonicTime(
+      last_trim_mono_time - zx::min(1));
 
   throttle_output_->StartMixJob(past_ref_time.take_value());
   auto next_trim_mono_time = throttle_output_->last_sched_time_mono();
@@ -42,8 +42,8 @@ TEST_F(ThrottleOutputTest, NextTrimTime) {
 
   // If we start a mix job in the future, our next Trim time will be TRIM_PERIOD beyond that.
   auto future_ref_time = throttle_output_->reference_clock().Read() + zx::min(5);
-  auto future_mono_time = clock::MonotonicTimeFromReferenceTime(
-      throttle_output_->reference_clock().get(), future_ref_time);
+  auto future_mono_time =
+      throttle_output_->reference_clock().MonotonicTimeFromReferenceTime(future_ref_time);
 
   throttle_output_->StartMixJob(future_ref_time);
   next_trim_mono_time = throttle_output_->last_sched_time_mono();

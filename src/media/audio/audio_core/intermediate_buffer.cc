@@ -13,7 +13,7 @@ namespace media::audio {
 IntermediateBuffer::IntermediateBuffer(
     const Format& format, uint32_t size_in_frames,
     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-    AudioClock ref_clock)
+    AudioClock& ref_clock)
     : WritableStream(format),
       frame_count_(size_in_frames),
       reference_clock_to_fractional_frames_(reference_clock_to_fractional_frames),

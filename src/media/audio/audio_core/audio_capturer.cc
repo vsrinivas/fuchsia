@@ -91,24 +91,19 @@ void AudioCapturer::SetReferenceClock(zx::clock ref_clock) {
   }
 
   zx_status_t status;
-  if (!ref_clock.is_valid()) {
-    status = audio::clock::DuplicateClock(optimal_clock(), &ref_clock);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Could not duplicate the optimal clock";
-      return;
-    }
-  } else {
-    // TODO(mpuryear): Client may rate-adjust the clock at any time; we should only use SincSampler
-    //
+  if (ref_clock.is_valid()) {
     // If ref_clock doesn't have DUPLICATE or READ or TRANSFER rights, return (i.e. shutdown).
     status = ref_clock.replace(kRequiredClockRights, &ref_clock);
     if (status != ZX_OK) {
       FX_PLOGS(WARNING, status) << "Could not set rights on client-submitted reference clock";
       return;
     }
+    SetClock(AudioClock::CreateAsCustom(std::move(ref_clock)));
+  } else {
+    // Optimal clock is writable: to achieve "no-SRC", we fine-tune it to match the device clock.
+    // TODO(mpuryear): Client may rate-adjust the clock at any time; we should only use SincSampler
+    SetOptimalReferenceClock();
   }
-
-  set_reference_clock(std::move(ref_clock));
 
   cleanup.cancel();
 }

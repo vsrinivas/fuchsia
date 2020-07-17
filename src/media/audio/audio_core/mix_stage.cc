@@ -7,6 +7,7 @@
 #include <lib/fit/defer.h>
 #include <lib/trace/event.h>
 #include <lib/zx/clock.h>
+#include <zircon/status.h>
 
 #include <limits>
 #include <memory>
@@ -37,16 +38,16 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
 }  // namespace
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
-                   TimelineFunction reference_clock_to_fractional_frame, AudioClock ref_clock)
+                   TimelineFunction reference_clock_to_fractional_frame, AudioClock& audio_clock)
     : MixStage(output_format, block_size,
                fbl::MakeRefCounted<VersionedTimelineFunction>(reference_clock_to_fractional_frame),
-               ref_clock) {}
+               audio_clock) {}
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
-                   AudioClock ref_clock)
+                   AudioClock& audio_clock)
     : MixStage(std::make_shared<IntermediateBuffer>(
-          output_format, block_size, reference_clock_to_fractional_frame, ref_clock)) {}
+          output_format, block_size, reference_clock_to_fractional_frame, audio_clock)) {}
 
 MixStage::MixStage(std::shared_ptr<WritableStream> output_stream)
     : ReadableStream(output_stream->format()),
@@ -156,11 +157,22 @@ void MixStage::ForEachSource(TaskType task_type, zx::time dest_ref_time) {
     std::lock_guard<std::mutex> lock(stream_lock_);
     for (const auto& holder : streams_) {
       if (holder.stream && holder.mixer) {
-        auto source_ref_time =
-            audio::clock::ReferenceTimeFromReferenceTime(reference_clock().get(), dest_ref_time,
-                                                         holder.stream->reference_clock().get())
-                .take_value();
-        streams.emplace_back(MixerInput(holder.stream, holder.mixer, source_ref_time));
+        auto mono_result = reference_clock().MonotonicTimeFromReferenceTime(dest_ref_time);
+        if (mono_result.is_error()) {
+          FX_LOGS_FIRST_N(ERROR, 200) << "Error converting dest ref time to monotonic time";
+          // Our destination clock isn't working. We won't be able to mix any of these streams.
+          break;
+        }
+        auto mono_time = mono_result.take_value();
+
+        auto source_ref_result =
+            holder.stream->reference_clock().ReferenceTimeFromMonotonicTime(mono_time);
+        if (source_ref_result.is_error()) {
+          FX_LOGS_FIRST_N(ERROR, 200) << "Error converting monotonic time to source ref time";
+          // Our source clock isn't working. We won't be able to mix this one stream.
+          continue;
+        }
+        auto source_ref_time = source_ref_result.take_value();
 
         // Ensure the mappings from source-frame to source-ref-time and monotonic-time are
         // up-to-date.
@@ -168,10 +180,12 @@ void MixStage::ForEachSource(TaskType task_type, zx::time dest_ref_time) {
         // TODO(55851) We need to do this here because when source is a renderers PacketQueue, the
         // clock in the AudioRenderer can be free'd while we're in the process of mixing, so it's
         // not safe to reference source->reference_clock outside of this lock (which
-        // UpdateSourdTrans does).
+        // UpdateSourceTrans does).
         if (task_type == TaskType::Mix) {
-          UpdateSourceTrans(*holder.stream, &holder.mixer->bookkeeping());
+          ReconcileClocksAndSetStepSize(holder);
         }
+
+        streams.emplace_back(MixerInput(holder.stream, holder.mixer, source_ref_time));
       }
     }
   }
@@ -187,9 +201,9 @@ void MixStage::ForEachSource(TaskType task_type, zx::time dest_ref_time) {
 
 void MixStage::MixStream(const MixStage::MixerInput& input) {
   TRACE_DURATION("audio", "MixStage::MixStream");
+  cur_mix_job_.frames_produced = 0;
   Mixer* mixer = input.mixer();
   zx::time source_ref_time = input.ref_time();
-  SetupMix(mixer);
 
   // If the renderer is currently paused, subject_delta (not just step_size) is zero. This packet
   // may be relevant eventually, but currently it contributes nothing.
@@ -247,24 +261,11 @@ void MixStage::MixStream(const MixStage::MixerInput& input) {
     if (!fully_consumed) {
       break;
     }
-    // FX_LOGS(WARNING) << "src_ff_for_first_mix_job_frame:" << std::hex
-    //                  << frac_source_for_first_mix_job_frame.raw_value();
+
     frac_source_for_first_mix_job_frame = stream_buffer->end();
   }
 
-  // Note: there is no point in doing this for Trim tasks, but it doesn't hurt anything, and it's
-  // easier than adding another function to ForEachSource to run after each renderer is processed,
-  // just to set this flag.
   cur_mix_job_.accumulate = true;
-}
-
-void MixStage::SetupMix(Mixer* mixer) {
-  TRACE_DURATION("audio", "MixStage::SetupMix");
-  // If we need to recompose our transformation from destination frame space to source fractional
-  // frames, do so now.
-  FX_DCHECK(mixer);
-  UpdateDestTrans(cur_mix_job_, &mixer->bookkeeping());
-  cur_mix_job_.frames_produced = 0;
 }
 
 bool MixStage::ProcessMix(const MixStage::MixerInput& input,
@@ -277,8 +278,14 @@ bool MixStage::ProcessMix(const MixStage::MixerInput& input,
   FX_DCHECK(mixer);
 
   // We had better have a valid job, or why are we here?
-  FX_DCHECK(cur_mix_job_.buf_frames);
-  FX_DCHECK(cur_mix_job_.frames_produced <= cur_mix_job_.buf_frames);
+  if (cur_mix_job_.buf_frames == 0) {
+    return false;
+  }
+
+  // Have we produced enough? If so, hold this packet and move to next renderer.
+  if (cur_mix_job_.frames_produced >= cur_mix_job_.buf_frames) {
+    return false;
+  }
 
   auto& info = mixer->bookkeeping();
 
@@ -286,11 +293,6 @@ bool MixStage::ProcessMix(const MixStage::MixerInput& input,
   // may be relevant eventually, but currently it contributes nothing. Tell ForEachSource we are
   // done, but hold the packet for now.
   if (!info.dest_frames_to_frac_source_frames.subject_delta()) {
-    return false;
-  }
-
-  // Have we produced enough? If so, hold this packet and move to next renderer.
-  if (cur_mix_job_.frames_produced >= cur_mix_job_.buf_frames) {
     return false;
   }
 
@@ -467,7 +469,58 @@ bool MixStage::ProcessMix(const MixStage::MixerInput& input,
   return consumed_source;
 }
 
-void MixStage::UpdateSourceTrans(const ReadableStream& stream, Mixer::Bookkeeping* bk) {
+// We compose the effects of clock reconciliation into our sample-rate-conversion step size, but
+// only for streams that use neither the 'optimal' clock, nor the clock we designate as driving our
+// hardware-rate-adjustments. We apply this micro-SRC via an intermediate "slew away the error"
+// rate-correction factor driven by a PID control. Why use a PID? Sources do not merely chase the
+// other clock's rate -- they chase its position. Note that even if we don't adjust our rate, we
+// still want a composed transformation for offsets.
+void MixStage::ReconcileClocksAndSetStepSize(StreamHolder holder) {
+  TRACE_DURATION("audio", "MixStage::ReconcileClocksAndSetStepSize");
+
+  // UpdateSourceTrans
+  //
+  // Ensure the mappings from source-frame to source-ref-time and monotonic-time are up-to-date.
+  UpdateSourceTrans(*holder.stream, &holder.mixer->bookkeeping());
+
+  // UpdateDestTrans
+  //
+  // Ensure the mappings from dest-frame to monotonic-time is up-to-date.
+  UpdateDestTrans(cur_mix_job_, &holder.mixer->bookkeeping());
+  // Much of the below is currently included in UpdateDestTrans; this will be split out.
+
+  // ComposeDestToSource
+  //
+  // Compose our transformation from destination frames to source fractional frames.
+
+  // SynchronizeClocks
+  //
+  // Sanity-check: between upstream (source) and downstream (dest) clocks, we have one device clock
+  //    and one client clock. (Don't forget about capture mix, where usual roles are reversed.)
+  //    We might instead have two device clocks (Linearize or Mix stages); should be same clock.
+  // If client clock and device clock differ, we will reconcile them:
+  //    For start dest frame, measure [predicted - actual] error (in frac_src) since last mix.
+  //    If mix is continuous since then, report the latest error to the AudioClock
+  //    AudioClock feeds errors to its internal PID, producing a running correction factor....
+  //    ... If clock is hardware-controlling, apply correction factor to the hardware.
+  //    ... If clock is optimal, apply correction factor directly to the client clock.
+  //    ... Otherwise, expose this error correction factor directly to MixStage
+
+  // ComputeFrameRateConversionRatio
+  //
+  // If optimal or hardware-controlling clock, just compose formats/rates.
+  //    Any position error is being handled by applying error correction respectively to the client
+  //    clock or to the clock hardware, so we need not handle this in the SRC.
+  // If custom clock, include the correction factor along with the formats/rates.
+  // In none of these cases do we directly include the reference-clock-to-monotonic factors.
+  //    The adjustments mentioned above account for the clock discrepancies.
+
+  // SetStepSize
+  //
+  // Convert the TimelineRate into step_size, denominator and rate_modulo -- as usual.
+}
+
+void MixStage::UpdateSourceTrans(ReadableStream& stream, Mixer::Bookkeeping* bk) {
   TRACE_DURATION("audio", "MixStage::UpdateSourceTrans");
 
   auto snapshot = stream.ReferenceClockToFractionalFrames();

@@ -39,8 +39,7 @@ BaseRenderer::BaseRenderer(
 
   // For now, optimal clock is set as a clone of MONOTONIC. Ultimately this will be the clock of the
   // device where the renderer is initially routed.
-  CreateOptimalReferenceClock();
-  EstablishDefaultReferenceClock();
+  SetOptimalReferenceClock();
 
   audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     TRACE_DURATION("audio", "BaseRenderer::audio_renderer_binding_.error_handler", "zx_status",
@@ -639,24 +638,15 @@ void BaseRenderer::ReportNewMinLeadTime() {
   }
 }
 
-// Eventually, we'll set the optimal clock according to the dest where it is initially routed.
-// For now, we just clone CLOCK_MONOTONIC.
-void BaseRenderer::CreateOptimalReferenceClock() {
-  TRACE_DURATION("audio", "BaseRenderer::CreateOptimalReferenceClock");
-
-  optimal_clock_ = audio::clock::AdjustableCloneOfMonotonic();
-  FX_DCHECK(optimal_clock_.is_valid()) << "Optimal clock is not valid";
-}
-
 // For now, we supply the optimal clock as the default: we know it is a clone of MONOTONIC.
 // When we switch optimal clock to device clock, the default must still be a clone of MONOTONIC.
 // In long-term, use the optimal clock by default.
-void BaseRenderer::EstablishDefaultReferenceClock() {
-  TRACE_DURATION("audio", "BaseRenderer::EstablishDefaultReferenceClock");
+void BaseRenderer::SetOptimalReferenceClock() {
+  TRACE_DURATION("audio", "BaseRenderer::SetOptimalReferenceClock");
 
-  auto status = audio::clock::DuplicateClock(optimal_clock(), &reference_clock_);
-  FX_DCHECK(status == ZX_OK) << "Could not duplicate the optimal clock";
-  FX_DCHECK(reference_clock_.is_valid()) << "Default reference clock is not valid";
+  SetClock(AudioClock::CreateAsOptimal(audio::clock::AdjustableCloneOfMonotonic()));
+
+  FX_DCHECK(reference_clock().is_valid()) << "Default reference clock is not valid";
 }
 
 // Regardless of the source of the reference clock, we can duplicate and return it here.
@@ -667,14 +657,13 @@ void BaseRenderer::GetReferenceClock(GetReferenceClockCallback callback) {
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
-  zx::clock dupe_clock_for_client;
-  auto status = audio::clock::DuplicateClock(reference_clock().get(), &dupe_clock_for_client);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Could not duplicate the current reference clock handle";
+  auto result = reference_clock().DuplicateClock();
+  if (result.is_error()) {
+    FX_PLOGS(ERROR, result.error()) << "Could not duplicate the reference clock handle";
     return;
   }
 
-  callback(std::move(dupe_clock_for_client));
+  callback(result.take_value());
 
   cleanup.cancel();
 }

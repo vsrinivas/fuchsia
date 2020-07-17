@@ -45,15 +45,17 @@ class TapStageTest : public testing::ThreadingModelFixture {
                       zx::sec(1).to_nsecs());
     auto source_timeline_function =
         fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(rate));
-    ref_clock_ = AudioClock::MakeAdjustable(clock_mono_);
+
+    audio_clock_ = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
+
     packet_queue_ =
-        std::make_shared<PacketQueue>(kDefaultFormat, source_timeline_function, ref_clock_);
+        std::make_shared<PacketQueue>(kDefaultFormat, source_timeline_function, audio_clock_);
     ASSERT_TRUE(packet_queue_);
 
     auto tap_timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(
         TimelineFunction(FractionalFrames<int64_t>(tap_frame_offset_).raw_value(), 0, rate));
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(kDefaultFormat, tap_timeline_function,
-                                                            ref_clock_, kRingBufferFrameCount);
+                                                            audio_clock_, kRingBufferFrameCount);
     ring_buffer_ = std::move(endpoints.reader);
 
     ASSERT_TRUE(ring_buffer_);
@@ -61,8 +63,6 @@ class TapStageTest : public testing::ThreadingModelFixture {
     tap_ = std::make_shared<TapStage>(packet_queue_, std::move(endpoints.writer));
     ClearRingBuffer();
   }
-  zx::clock clock_mono_ = clock::AdjustableCloneOfMonotonic();
-  AudioClock ref_clock_;
 
   template <typename T, size_t N>
   std::array<T, N>& as_array(void* ptr, size_t offset = 0) {
@@ -92,6 +92,8 @@ class TapStageTest : public testing::ThreadingModelFixture {
     EXPECT_THAT(arr, Each(FloatEq(expected_sample)));
     buffer->set_is_fully_consumed(release);
   }
+
+  AudioClock audio_clock_;
 
   uint32_t tap_frame_offset_;
   testing::PacketFactory packet_factory_{dispatcher(), kDefaultFormat, 4 * PAGE_SIZE};

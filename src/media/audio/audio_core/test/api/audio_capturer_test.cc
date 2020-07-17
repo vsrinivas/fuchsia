@@ -313,8 +313,13 @@ TEST_F(AudioCapturerClockTest, SetRefClock_Optimal) {
 
 TEST_F(AudioCapturerClockTest, SetRefClock_Custom) {
   // Set a recognizable custom reference clock -- should be what we receive from GetReferenceClock.
-  zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
+  zx::clock dupe_clock, retained_clock, orig_clock = clock::AdjustableCloneOfMonotonic();
+  zx::clock::update_args args;
+  args.reset().set_rate_adjust(-100);
+  ASSERT_EQ(orig_clock.update(args), ZX_OK) << "clock.update with rate_adjust failed";
+
   ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);
+  ASSERT_EQ(orig_clock.duplicate(kClockRights, &retained_clock), ZX_OK);
 
   audio_capturer_->SetReferenceClock(std::move(dupe_clock));
   zx::clock received_clock = GetAndValidateReferenceClock();
@@ -325,8 +330,6 @@ TEST_F(AudioCapturerClockTest, SetRefClock_Custom) {
   clock::testing::VerifyAdvances(received_clock);
   clock::testing::VerifyCannotBeRateAdjusted(received_clock);
 
-  clock::testing::VerifySame(orig_clock, received_clock);
-
   // We can still rate-adjust our custom clock.
   clock::testing::VerifyCanBeRateAdjusted(orig_clock);
   clock::testing::VerifyAdvances(orig_clock);
@@ -336,13 +339,18 @@ TEST_F(AudioCapturerClockTest, SetRefClock_Custom) {
 // The reference clock should remain the unique recognizable reference clock from before the call.
 TEST_F(AudioCapturerClockTest, SetRefClock_CustomNoTransferNoChange) {
   // First create a unique custom clock that we will recognize...
-  zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
+  zx::clock dupe_clock, retained_clock, orig_clock = clock::AdjustableCloneOfMonotonic();
   ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);
+  ASSERT_EQ(orig_clock.duplicate(kClockRights, &retained_clock), ZX_OK);
+
+  zx::clock::update_args args;
+  args.reset().set_rate_adjust(-100);
+  ASSERT_EQ(orig_clock.update(args), ZX_OK) << "clock.update with rate_adjust failed";
 
   // ... and set it on this capturer.
   audio_capturer_->SetReferenceClock(std::move(dupe_clock));
   zx::clock received_clock = GetAndValidateReferenceClock();
-  clock::testing::VerifySame(orig_clock, received_clock);
+  clock::testing::VerifyIsNotSystemMonotonic(received_clock);
 
   //
   // Now create another clock without transfer rights...
@@ -350,7 +358,7 @@ TEST_F(AudioCapturerClockTest, SetRefClock_CustomNoTransferNoChange) {
   ASSERT_TRUE(no_transfer_clock.is_valid());
   ASSERT_EQ(no_transfer_clock.replace(kClockRights & ~ZX_RIGHT_TRANSFER, &no_transfer_clock),
             ZX_OK);
-  clock::testing::VerifyNotSame(received_clock, no_transfer_clock);
+  clock::testing::VerifyIsSystemMonotonic(no_transfer_clock);
 
   // ... and try to set it as our reference clock...
   audio_capturer_->SetReferenceClock(std::move(no_transfer_clock));
@@ -358,33 +366,30 @@ TEST_F(AudioCapturerClockTest, SetRefClock_CustomNoTransferNoChange) {
 
   // ... but this should not result in any change.
   clock::testing::VerifyReadOnlyRights(received_clock2);
-  clock::testing::VerifySame(received_clock, received_clock2);
+  clock::testing::VerifyIsNotSystemMonotonic(received_clock2);
 }
 
 // inadequate ZX_RIGHTS -- no DUPLICATE should cause GetReferenceClock to fail.
 TEST_F(AudioCapturerClockTest, SetRefClock_CustomNoDuplicateShouldDisconnect) {
-  zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
+  zx::clock dupe_clock, orig_clock = clock::CloneOfMonotonic();
   ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_DUPLICATE, &dupe_clock), ZX_OK);
 
   audio_capturer_->SetReferenceClock(std::move(dupe_clock));
-
   ExpectDisconnect(audio_capturer_);
 }
 
 // inadequate ZX_RIGHTS -- no READ should cause GetReferenceClock to fail.
 TEST_F(AudioCapturerClockTest, SetRefClock_CustomNoReadShouldDisconnect) {
-  zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
+  zx::clock dupe_clock, orig_clock = clock::CloneOfMonotonic();
   ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_READ, &dupe_clock), ZX_OK);
 
   audio_capturer_->SetReferenceClock(std::move(dupe_clock));
-
   ExpectDisconnect(audio_capturer_);
 }
 
 // If client-submitted clock has ZX_RIGHT_WRITE, this should be removed upon GetReferenceClock
 TEST_F(AudioCapturerClockTest, GetRefClock_RemovesWriteRight) {
-  auto orig_clock = clock::AdjustableCloneOfMonotonic();
-  audio_capturer_->SetReferenceClock(std::move(orig_clock));
+  audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
 
   zx::clock received_clock = GetAndValidateReferenceClock();
   clock::testing::VerifyReadOnlyRights(received_clock);

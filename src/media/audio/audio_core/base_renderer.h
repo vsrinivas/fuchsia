@@ -17,6 +17,7 @@
 #include <unordered_map>
 
 #include "src/media/audio/audio_core/audio_clock.h"
+#include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
@@ -59,7 +60,7 @@ class BaseRenderer : public AudioObject,
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
 
-  AudioClock reference_clock() const { return audio_clock_; }
+  AudioClock& reference_clock() { return audio_clock_; }
 
  protected:
   BaseRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
@@ -89,11 +90,12 @@ class BaseRenderer : public AudioObject,
   // Minimum Lead Time state
   zx::duration min_lead_time_;
 
-  const zx::clock& optimal_clock() { return optimal_clock_; }
-  void set_optimal_clock(zx::clock optimal_clock) { optimal_clock_ = std::move(optimal_clock); }
-  void set_reference_clock(zx::clock ref_clock) { reference_clock_ = std::move(ref_clock); }
-
   fidl::Binding<fuchsia::media::AudioRenderer>& binding() { return audio_renderer_binding_; }
+
+  void SetOptimalReferenceClock();
+
+  // If custom, audio_core treats this as not-rate-adjustable. If optimal, it will be tuned.
+  void SetClock(AudioClock audio_clock) { audio_clock_ = std::move(audio_clock); }
 
  private:
   // Recompute the minimum clock lead time based on the current set of outputs
@@ -109,9 +111,6 @@ class BaseRenderer : public AudioObject,
 
   std::unordered_map<uint32_t, fbl::RefPtr<RefCountedVmoMapper>> payload_buffers_;
   bool config_validated_ = false;
-
-  void CreateOptimalReferenceClock();
-  void EstablishDefaultReferenceClock();
 
   // PTS interpolation state.
   FractionalFrames<int64_t> next_frac_frame_pts_{0};
@@ -137,14 +136,7 @@ class BaseRenderer : public AudioObject,
   Packet::Allocator packet_allocator_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
-
-  // This clock is created and tuned by audio_core
-  zx::clock optimal_clock_;
-
-  // Whether default, optimal or custom clock, audio_core will treat this as not-rate-adjustable
-  // (although if set to the optimal_clock_, tuning of that clock will be reflected here)
-  zx::clock reference_clock_;
-  AudioClock audio_clock_ = AudioClock::MakeReadonly(reference_clock_);
+  AudioClock audio_clock_;
 };
 
 }  // namespace media::audio

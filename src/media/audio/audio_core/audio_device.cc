@@ -52,7 +52,7 @@ fit::result<audio_stream_unique_id_t> AudioDevice::UniqueIdFromString(const std:
 }
 
 // Simple accessor here (not in .h) because of forward-declaration issues with AudioDriver
-AudioClock AudioDevice::reference_clock() const {
+AudioClock& AudioDevice::reference_clock() {
   FX_DCHECK(driver_);
   return driver_->reference_clock();
 }

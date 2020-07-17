@@ -67,50 +67,6 @@ void VerifyCanBeRateAdjusted(const zx::clock& clock) {
   EXPECT_EQ(clock_details.mono_to_synthetic.rate.synthetic_ticks, 999'900u);
 }
 
-// Create a "marked" clock, to verify that another object points to the same clock
-// This clock is also guaranteed to differ from CLOCK_MONOTONIC.
-constexpr uint64_t kErrorBoundMarker = 0x123456789ABCDEF0;
-zx::clock CreateForSamenessTest() {
-  zx::clock marked_clock;
-  EXPECT_EQ(
-      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &marked_clock),
-      ZX_OK);
-
-  // Use this to validate that we receive the same custom clock that we set
-  zx::clock::update_args args;
-  args.reset().set_value(zx::time(0)).set_error_bound(kErrorBoundMarker);
-  EXPECT_EQ(marked_clock.update(args), ZX_OK);
-
-  return marked_clock;
-}
-
-// Validate that clock2 points to the same underlying clock1
-void VerifySame(const zx::clock& clock1, const zx::clock& clock2) {
-  zx_clock_details_v1_t clock1_details, clock2_details;
-  EXPECT_EQ(clock1.get_details(&clock1_details), ZX_OK);
-  EXPECT_EQ(clock2.get_details(&clock2_details), ZX_OK);
-
-  EXPECT_EQ(clock1_details.options, clock2_details.options);
-  EXPECT_EQ(clock1_details.error_bound, kErrorBoundMarker);
-  EXPECT_EQ(clock2_details.error_bound, kErrorBoundMarker);
-  EXPECT_EQ(clock1_details.last_error_bounds_update_ticks,
-            clock2_details.last_error_bounds_update_ticks);
-}
-
-// Validate that clock2 does NOT point to the same underlying clock1
-void VerifyNotSame(const zx::clock& clock1, const zx::clock& clock2) {
-  zx_clock_details_v1_t clock1_details, clock2_details;
-  EXPECT_EQ(clock1.get_details(&clock1_details), ZX_OK);
-  EXPECT_EQ(clock2.get_details(&clock2_details), ZX_OK);
-
-  // If any of these inequalities are true, then succeed
-  EXPECT_FALSE((clock1_details.options == clock2_details.options) &&
-               (clock1_details.error_bound == clock2_details.error_bound) &&
-               (clock1_details.last_error_bounds_update_ticks ==
-                clock2_details.last_error_bounds_update_ticks))
-      << "Clocks are unexpectedly identical";
-}
-
 // Validate that given clock is identical to CLOCK_MONOTONIC
 void VerifyIsSystemMonotonic(const zx::clock& clock) {
   zx_clock_details_v1_t clock_details;

@@ -15,21 +15,24 @@ namespace media::audio::clock {
 namespace {
 
 TEST(ClockUtilsTest, DuplicateBadClock) {
-  zx::clock uninitialized_clock, duplicate_clock;
+  zx::clock uninitialized_clock;
 
-  auto status = DuplicateClock(uninitialized_clock, &duplicate_clock);
-  EXPECT_NE(status, ZX_OK);
+  auto bad_result = DuplicateClock(uninitialized_clock);
+  EXPECT_TRUE(bad_result.is_error());
 }
 
 // Immediately after duplication, the dupe clock has the same parameters
 TEST(ClockUtilsTest, DuplicateClockIsIdentical) {
-  zx::clock ref_clock, dupe_clock;
+  zx::clock ref_clock;
 
   auto status =
       zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &ref_clock);
-  EXPECT_EQ(status, ZX_OK);
+  ASSERT_EQ(status, ZX_OK);
 
-  EXPECT_EQ(DuplicateClock(ref_clock, &dupe_clock), ZX_OK);
+  auto result = DuplicateClock(ref_clock);
+  EXPECT_TRUE(result.is_ok());
+  zx::clock dupe_clock = result.take_value();
+  EXPECT_TRUE(dupe_clock.is_valid());
 
   zx::clock::update_args args;
   args.reset().set_value(zx::time(123)).set_rate_adjust(-456);
@@ -57,34 +60,38 @@ TEST(ClockUtilsTest, DuplicateClockIsIdentical) {
 
 // The duplicate clock can be read
 TEST(ClockUtilsTest, DuplicateClockCanBeRead) {
-  zx::clock ref_clock, dupe_clock;
-  zx_time_t now, now2;
-
-  ref_clock = audio::clock::CloneOfMonotonic();
+  zx::clock ref_clock = audio::clock::CloneOfMonotonic();
   EXPECT_TRUE(ref_clock.is_valid());
 
+  zx_time_t now;
   EXPECT_EQ(ref_clock.read(&now), ZX_OK);
 
-  EXPECT_EQ(DuplicateClock(ref_clock, &dupe_clock), ZX_OK);
+  auto result = DuplicateClock(ref_clock);
+  EXPECT_TRUE(result.is_ok());
+  zx::clock dupe_clock = result.take_value();
+  EXPECT_TRUE(dupe_clock.is_valid());
 
+  zx_time_t now2;
   EXPECT_EQ(dupe_clock.read(&now2), ZX_OK);
   EXPECT_GT(now2, now);
 }
 
 // The duplicate clock should not be adjustable.
 TEST(ClockUtilsTest, DuplicateClockCannotBeAdjusted) {
-  zx::clock ref_clock, dupe_clock;
-  zx_time_t now;
-
+  zx::clock ref_clock;
   auto status =
       zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &ref_clock);
   EXPECT_EQ(status, ZX_OK);
 
   // ref clock is not yet started
+  zx_time_t now;
   EXPECT_EQ(ref_clock.read(&now), ZX_OK);
   EXPECT_EQ(now, 0);
 
-  EXPECT_EQ(DuplicateClock(ref_clock, &dupe_clock), ZX_OK);
+  auto result = DuplicateClock(ref_clock);
+  EXPECT_TRUE(result.is_ok());
+  zx::clock dupe_clock = result.take_value();
+  EXPECT_TRUE(dupe_clock.is_valid());
 
   zx::clock::update_args args;
   args.reset().set_value(zx::clock::get_monotonic());
@@ -104,18 +111,20 @@ TEST(ClockUtilsTest, DuplicateClockCannotBeAdjusted) {
 
 // A duplicate clock can itself be further duplicated
 TEST(ClockUtilsTest, DuplicateClockCanBeDuplicated) {
-  zx::clock ref_clock, dupe_clock, dupe_of_dupe_clock;
-  zx_time_t now;
-
-  ref_clock = audio::clock::CloneOfMonotonic();
+  zx::clock ref_clock = audio::clock::CloneOfMonotonic();
   EXPECT_TRUE(ref_clock.is_valid());
 
-  EXPECT_EQ(DuplicateClock(ref_clock, &dupe_clock), ZX_OK);
-  EXPECT_EQ(DuplicateClock(dupe_clock, &dupe_of_dupe_clock), ZX_OK);
-
+  auto result = DuplicateClock(ref_clock);
+  EXPECT_TRUE(result.is_ok());
+  zx::clock dupe_clock = result.take_value();
   EXPECT_TRUE(dupe_clock.is_valid());
+
+  result = DuplicateClock(dupe_clock);
+  EXPECT_TRUE(result.is_ok());
+  zx::clock dupe_of_dupe_clock = result.take_value();
   EXPECT_TRUE(dupe_of_dupe_clock.is_valid());
 
+  zx_time_t now;
   EXPECT_EQ(dupe_of_dupe_clock.read(&now), ZX_OK);
   EXPECT_GT(now, 0);
 }

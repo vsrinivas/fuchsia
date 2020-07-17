@@ -24,7 +24,8 @@ class PacketQueueTest : public gtest::TestLoopFixture {
     // (ex: frame 1 will be consumed after 1ms).
     auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
         TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
-    ref_clock_ = AudioClock::MakeAdjustable(clock_mono_);
+
+    audio_clock_ = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
 
     return std::make_unique<PacketQueue>(
         Format::Create({
@@ -33,7 +34,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
                            .frames_per_second = 48000,
                        })
             .take_value(),
-        std::move(one_frame_per_ms), ref_clock_);
+        std::move(one_frame_per_ms), audio_clock_);
   }
 
   fbl::RefPtr<Packet> CreatePacket(uint32_t payload_buffer_id, int64_t start = 0,
@@ -68,8 +69,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
   std::unordered_map<uint32_t, fbl::RefPtr<RefCountedVmoMapper>> payload_buffers_;
   std::vector<int64_t> released_packets_;
 
-  zx::clock clock_mono_ = clock::AdjustableCloneOfMonotonic();
-  AudioClock ref_clock_;
+  AudioClock audio_clock_;
 };
 
 TEST_F(PacketQueueTest, PushPacket) {

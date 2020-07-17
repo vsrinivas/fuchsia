@@ -38,7 +38,7 @@ class EffectsStage : public ReadableStream {
                                                  uint32_t frame_count) override;
   void Trim(zx::time dest_ref_time) override { source_->Trim(dest_ref_time); }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
-  AudioClock reference_clock() const override { return source_->reference_clock(); }
+  AudioClock& reference_clock() override { return source_->reference_clock(); }
 
   void SetMinLeadTime(zx::duration lead_time) override;
   void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,

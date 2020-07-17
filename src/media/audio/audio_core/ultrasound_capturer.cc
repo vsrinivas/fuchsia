@@ -26,11 +26,11 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> UltrasoundCapturer::InitializeS
     return fit::error(ZX_ERR_BAD_STATE);
   }
 
-  zx::clock reference_clock_out;
-  zx_status_t status = clock::DuplicateClock(reference_clock().get(), &reference_clock_out);
-  if (status != ZX_OK) {
-    return fit::error(status);
+  auto result = reference_clock().DuplicateClock();
+  if (result.is_error()) {
+    return fit::error(result.error());
   }
+  zx::clock reference_clock_out = result.take_value();
 
   // Ultrasound renderers require FLOAT samples.
   auto stream_type = format->stream_type();

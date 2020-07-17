@@ -25,8 +25,8 @@ class IntermediateBufferTest : public ::testing::Test {};
 TEST_F(IntermediateBufferTest, WriteLock) {
   auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
       TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
-  auto clock_mono = clock::CloneOfMonotonic();
-  AudioClock ref_clock = AudioClock::MakeReadonly(clock_mono);
+
+  auto ref_clock = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
 
   auto intermediate_buffer =
       std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms, ref_clock);
@@ -55,9 +55,8 @@ TEST_F(IntermediateBufferTest, WriteLock) {
 TEST_F(IntermediateBufferTest, ClampLengthToBufferSize) {
   auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
       TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
-  auto clock_mono = clock::CloneOfMonotonic();
-  AudioClock ref_clock = AudioClock::MakeReadonly(clock_mono);
 
+  auto ref_clock = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
   auto intermediate_buffer =
       std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms, ref_clock);
   ASSERT_TRUE(intermediate_buffer);
