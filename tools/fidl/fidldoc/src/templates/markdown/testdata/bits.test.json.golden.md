@@ -18,6 +18,9 @@
 ### MyBits {#MyBits}
 Type: <code>uint32</code>
 
+*Defined in [fidl.test.json/bits.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bits.test.fidl#3)*
+
+
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
@@ -32,6 +35,9 @@ Type: <code>uint32</code>
 
 ### StrictBits {#StrictBits}
 Type: <code>uint64</code>
+
+*Defined in [fidl.test.json/bits.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bits.test.fidl#8)*
+
 
 
 <table>

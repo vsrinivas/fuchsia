@@ -121,6 +121,9 @@ Type: <code>uint32</code>
 ### ExampleBits {#ExampleBits}
 Type: <code>uint32</code>
 
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#7)*
+
+
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>

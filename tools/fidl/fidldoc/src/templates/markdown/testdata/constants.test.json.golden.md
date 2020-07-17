@@ -94,6 +94,9 @@ Type: <code>uint32</code>
 ### BitsType {#BitsType}
 Type: <code>uint32</code>
 
+*Defined in [values/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#22)*
+
+
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
@@ -112,6 +115,9 @@ Type: <code>uint32</code>
 
 ### Bits {#Bits}
 Type: <code>uint32</code>
+
+*Defined in [values/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#37)*
+
 
 
 <table>

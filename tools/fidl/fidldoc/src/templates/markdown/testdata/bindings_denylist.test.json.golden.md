@@ -93,6 +93,9 @@ Type: <code>uint32</code>
 ### OnlySyzkaller {#OnlySyzkaller}
 Type: <code>uint32</code>
 
+*Defined in [test.name/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#13)*
+
+
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>

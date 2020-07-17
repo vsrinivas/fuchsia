@@ -38,6 +38,9 @@ Type: <code>int32</code>
 ### BitsType {#BitsType}
 Type: <code>uint32</code>
 
+*Defined in [test.name/consts.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#23)*
+
+
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>

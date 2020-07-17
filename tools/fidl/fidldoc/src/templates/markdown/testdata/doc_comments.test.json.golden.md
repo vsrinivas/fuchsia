@@ -140,6 +140,11 @@ Type: <code>uint32</code>
 ### MyBits {#MyBits}
 Type: <code>uint32</code>
 
+*Defined in [test.name/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#10)*
+
+<p>bits comment #1</p>
+<p>bits comment #2</p>
+
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
