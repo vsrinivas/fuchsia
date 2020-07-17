@@ -27,3 +27,13 @@ library only requires:
 There are no guarantees on the API stability of this library. It's expected that
 all firmware will have some minimal porting work to do when importing or
 uprevving this library, which may include adapting to API changes.
+
+## Porting
+
+1. Unpack the firmware SDK into your source tree.
+
+1. Add source files in `pkg/libzbi/` to the build.
+
+1. Find additional header dependencies in `arch/<arch>/sysroot/include`. This
+   directory can be added to the include search path directly, or you can copy
+   the required headers out and update the libzbi `#include` paths.

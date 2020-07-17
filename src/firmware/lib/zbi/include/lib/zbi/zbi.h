@@ -130,7 +130,7 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, voi
 //     type - The new entry's type.
 //     extra - The new entry's type-specific data.
 //     flags - The new entry's flags.
-//     payload_length - The length of the new entry’s payload.
+//     payload_length - The length of the new entry's payload.
 //     payload - Set to the address of the entry's payload.
 //
 // Returns:
@@ -158,7 +158,7 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
 //     extra - The new entry's type-specific data.
 //     flags - The new entry's flags.
 //     payload - The payload, copied into the new entry.
-//     payload_length - The length of the new entry’s payload.
+//     payload_length - The length of the new entry's payload.
 //
 // Returns:
 //     ZBI_RESULT_OK - On success.

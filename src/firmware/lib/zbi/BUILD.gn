@@ -4,9 +4,24 @@
 
 import("//build/unification/zx_library.gni")
 
-zx_library("zbi") {
+# Common variables for our SDK and in-tree targets.
+common_vars = {
   sdk = "source"
   sdk_headers = [ "lib/zbi/zbi.h" ]
   sources = [ "zbi.c" ]
+}
+
+# SDK library.
+zx_library("zbi") {
+  forward_variables_from(common_vars, "*")
+  sdk_publishable = true
+}
+
+# In-tree library.
+# This is necessary because in-tree targets use //zircon/system/public
+# as the sysroot dependency, which is not available to sdk_publishable
+# targets.
+zx_library("in_tree") {
+  forward_variables_from(common_vars, "*")
   deps = [ "//zircon/system/public" ]
 }
