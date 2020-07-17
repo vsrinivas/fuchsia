@@ -744,6 +744,10 @@ Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> devi
       vmex_resource_(std::move(vmex_resource)) {}
 
 std::unique_ptr<BlockDevice> Blobfs::Reset() {
+  // XXX This function relies on very subtle orderings and assumptions about the state of the
+  // filesystem. Proceed with caution whenever making changes to Blobfs::Reset(), and consult the
+  // blame history for the graveyard of bugs past.
+  // TODO(56464): simplify the teardown path.
   if (!block_device_) {
     return nullptr;
   }
@@ -763,9 +767,6 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   // the end of |Blobfs::Reset()|.
   zstd_seekable_blob_collection_ = nullptr;
 
-  // Reset |pager_| which owns a VMO that is attached to the block FIFO.
-  pager_ = nullptr;
-
   // Write the clean bit.
   if (writability_ == Writability::Writable) {
     // TODO(fxb/42174): If blobfs initialization failed, it is possible that the
@@ -783,6 +784,9 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   }
   // Waits for all pending writeback operations to complete or fail.
   journal_.reset();
+
+  // Reset |pager_| which owns a VMO that is attached to the block FIFO.
+  pager_ = nullptr;
 
   // Flushes the underlying block device.
   fs::WriteTxn sync_txn(this);
