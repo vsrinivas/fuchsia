@@ -268,10 +268,31 @@ impl<'a> Encoder<'a> {
     }
 
     /// Append bytes to the very end (out-of-line) of the buffer.
-    pub fn append_bytes(&mut self, bytes: &[u8]) {
-        self.buf.extend_from_slice(bytes);
-        let new_len = round_up_to_align(self.buf.len(), 8);
-        self.buf.resize(new_len, 0);
+    pub fn append_out_of_line_bytes(&mut self, bytes: &[u8]) {
+        if bytes.len() == 0 {
+            return;
+        }
+
+        let start = self.buf.len();
+        let end = self.buf.len() + round_up_to_align(bytes.len(), 8);
+
+        // # Safety:
+        // - self.buf is initially uninitialized when resized, but it is then initialized by a
+        // later copy so it leaves this block initialized.
+        // - There is enough room for the 8 byte padding filler because end's alignment is
+        // rounded up to 8 bytes and bytes.len() != 0.
+        unsafe {
+            resize_vec_no_zeroing(self.buf, end);
+
+            let padding_ptr = self.buf.get_unchecked_mut(end - 8);
+            *std::mem::transmute::<*mut u8, *mut u64>(padding_ptr) = 0;
+
+            std::ptr::copy_nonoverlapping(
+                bytes.as_ptr(),
+                self.buf.as_mut_ptr().offset(start as isize),
+                bytes.len(),
+            );
+        }
     }
 
     /// Append handles to the buffer.
@@ -802,7 +823,7 @@ macro_rules! impl_slice_encoding_base {
         }
 
         impl Encodable for Option<&[$prim_ty]> {
-            fn encode(
+            unsafe fn unsafe_encode(
                 &mut self,
                 encoder: &mut Encoder<'_>,
                 offset: usize,
@@ -810,7 +831,7 @@ macro_rules! impl_slice_encoding_base {
             ) -> Result<()> {
                 match self {
                     None => encode_absent_vector(encoder, offset, recursion_depth),
-                    Some(slice) => slice.encode(encoder, offset, recursion_depth),
+                    Some(slice) => slice.unsafe_encode(encoder, offset, recursion_depth),
                 }
             }
         }
@@ -823,7 +844,7 @@ macro_rules! impl_slice_encoding_by_iter {
         impl_slice_encoding_base!($prim_ty);
 
         impl Encodable for &[$prim_ty] {
-            fn encode(
+            unsafe fn unsafe_encode(
                 &mut self,
                 encoder: &mut Encoder<'_>,
                 offset: usize,
@@ -860,7 +881,7 @@ macro_rules! impl_slice_encoding_by_copy {
                 }
                 // Encode by simple copy. See Layout::slice_as_bytes for more info.
                 let bytes = zerocopy::AsBytes::as_bytes(*self);
-                encoder.append_bytes(bytes);
+                encoder.append_out_of_line_bytes(bytes);
                 Ok(())
             }
         }
@@ -1044,7 +1065,7 @@ impl_codable_for_fixed_array!(64,);
 impl_codable_for_fixed_array!(256,);
 
 /// Encode an optional vector-like component.
-pub fn encode_vector<T: Encodable>(
+pub unsafe fn encode_vector<T: Encodable>(
     encoder: &mut Encoder<'_>,
     offset: usize,
     recursion_depth: usize,
@@ -1054,8 +1075,8 @@ pub fn encode_vector<T: Encodable>(
         None => encode_absent_vector(encoder, offset, recursion_depth),
         Some(slice) => {
             // Two u64: (len, present)
-            (slice.len() as u64).encode(encoder, offset, recursion_depth)?;
-            ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+            (slice.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
+            ALLOC_PRESENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
             // write_out_of_line must not be called with a zero-sized out-of-line block.
             if slice.len() == 0 {
                 return Ok(());
@@ -1073,17 +1094,17 @@ pub fn encode_vector<T: Encodable>(
 }
 
 /// Encode an missing vector-like component.
-pub fn encode_absent_vector(
+pub unsafe fn encode_absent_vector(
     encoder: &mut Encoder<'_>,
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
-    0u64.encode(encoder, offset, recursion_depth)?;
-    ALLOC_ABSENT_U64.encode(encoder, offset + 8, recursion_depth)
+    0u64.unsafe_encode(encoder, offset, recursion_depth)?;
+    ALLOC_ABSENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)
 }
 
 /// Like `encode_vector`, but optimized for `&[u8]`.
-fn encode_vector_from_bytes(
+unsafe fn encode_vector_from_bytes(
     encoder: &mut Encoder<'_>,
     offset: usize,
     recursion_depth: usize,
@@ -1093,17 +1114,17 @@ fn encode_vector_from_bytes(
         None => encode_absent_vector(encoder, offset, recursion_depth),
         Some(slice) => {
             // Two u64: (len, present)
-            (slice.len() as u64).encode(encoder, offset, recursion_depth)?;
-            ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+            (slice.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
+            ALLOC_PRESENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
             Encoder::check_recursion_depth(recursion_depth + 1)?;
-            encoder.append_bytes(slice);
+            encoder.append_out_of_line_bytes(slice);
             Ok(())
         }
     }
 }
 
 /// Like `encode_vector`, but encodes from an iterator.
-pub fn encode_vector_from_iter<Iter, T>(
+pub unsafe fn encode_vector_from_iter<Iter, T>(
     encoder: &mut Encoder<'_>,
     offset: usize,
     recursion_depth: usize,
@@ -1117,8 +1138,8 @@ where
         None => encode_absent_vector(encoder, offset, recursion_depth),
         Some(iter) => {
             // Two u64: (len, present)
-            (iter.len() as u64).encode(encoder, offset, recursion_depth)?;
-            ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+            (iter.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
+            ALLOC_PRESENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
             if iter.len() == 0 {
                 return Ok(());
             }
@@ -1204,7 +1225,7 @@ fn decode_vector<T: Decodable>(
 impl_layout!(&str, align: 8, size: 16);
 
 impl Encodable for &str {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
@@ -1217,7 +1238,7 @@ impl Encodable for &str {
 impl_layout!(String, align: 8, size: 16);
 
 impl Encodable for String {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
@@ -1244,7 +1265,7 @@ impl Decodable for String {
 impl_layout!(Option<&str>, align: 8, size: 16);
 
 impl Encodable for Option<&str> {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
@@ -1262,7 +1283,7 @@ impl Encodable for Option<&str> {
 impl_layout!(Option<String>, align: 8, size: 16);
 
 impl Encodable for Option<String> {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
@@ -1298,7 +1319,7 @@ impl Decodable for Option<String> {
 impl_layout_forall_T!(&mut dyn ExactSizeIterator<Item = T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
@@ -1311,7 +1332,7 @@ impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
 impl_layout_forall_T!(Vec<T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Vec<T> {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
@@ -1338,7 +1359,7 @@ impl<T: Decodable> Decodable for Vec<T> {
 impl_layout_forall_T!(Option<&mut dyn ExactSizeIterator<Item = T>>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
@@ -1351,7 +1372,7 @@ impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
 impl_layout_forall_T!(Option<Vec<T>>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Option<Vec<T>> {
-    fn encode(
+    unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
         offset: usize,
@@ -2577,7 +2598,7 @@ macro_rules! fidl_xunion {
                                 &mut $crate::encoding::ALLOC_PRESENT_U64, encoder, offset + 16, recursion_depth
                             )?;
                             $crate::encoding::Encoder::check_recursion_depth(recursion_depth + 1)?;
-                            encoder.append_bytes(bytes);
+                            encoder.append_out_of_line_bytes(bytes);
                             encoder.append_handles(handles);
                             Ok(())
                         },
