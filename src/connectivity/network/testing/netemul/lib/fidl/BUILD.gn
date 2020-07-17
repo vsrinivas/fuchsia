@@ -15,12 +15,6 @@ fidl("internal") {
 }
 
 fidl("network") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "string-bounds-not-specified",
-    "vector-bounds-not-specified",
-  ]
-
   name = "fuchsia.netemul.network"
   sources = [ "network.fidl" ]
 
@@ -32,12 +26,6 @@ fidl("network") {
 }
 
 fidl("environment") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "string-bounds-not-specified",
-    "vector-bounds-not-specified",
-  ]
-
   name = "fuchsia.netemul.environment"
   sources = [ "environment.fidl" ]
 
@@ -49,14 +37,6 @@ fidl("environment") {
 }
 
 fidl("sync") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "invalid-case-for-decl-member",
-    "invalid-copyright-for-platform-source-library",
-    "string-bounds-not-specified",
-    "vector-bounds-not-specified",
-  ]
-
   name = "fuchsia.netemul.sync"
   sources = [ "sync.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]

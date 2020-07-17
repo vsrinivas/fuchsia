@@ -117,7 +117,7 @@ impl KnownServices {
         netemul_environment::LaunchService {
             name: name.to_string(),
             url: url.to_string(),
-            arguments: Some(args.into_iter().map(Into::into).collect()),
+            arguments: args.into_iter().map(Into::into).collect(),
         }
     }
 }

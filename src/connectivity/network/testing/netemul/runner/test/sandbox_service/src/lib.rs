@@ -31,7 +31,7 @@ mod tests {
         let services = vec![LaunchService {
             name: String::from("fuchsia.netstack.Netstack"),
             url: String::from("fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"),
-            arguments: None,
+            arguments: Vec::new(),
         }];
         sandbox.create_environment(
             env_server_end,

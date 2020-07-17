@@ -3,26 +3,27 @@
 // found in the LICENSE file.
 
 library fuchsia.netemul.environment;
-using fuchsia.sys;
-using fuchsia.netemul.network;
+
 using fuchsia.logger;
+using fuchsia.netemul.network;
+using fuchsia.sys;
 using zx;
 
 /// A single service to be launched in managed environment.
 struct LaunchService {
     /// Service name.
-    string name;
+    string:MAX name;
     /// Service launch url (fuchsia component url).
-    string url;
+    string:MAX url;
     /// Service launch arguments
-    vector<string>? arguments;
+    vector<string:MAX>:MAX arguments;
 };
 
 /// A single virtual device to make available for child processes.
 /// Virtual devices are mounted on /vdev.
 struct VirtualDevice {
     /// Relative path to /vdev.
-    string path;
+    string:MAX path;
     /// Virtual device server.
     fuchsia.netemul.network.DeviceProxy device;
 };
@@ -49,15 +50,15 @@ table LoggerOptions {
 table EnvironmentOptions {
     /// Environment name, for debugging purposes.
     /// If none provided, a random name will be generated.
-    1: string name;
+    1: string:MAX name;
     /// Services to register on environment.
     /// If none provided, no additional services will be registered.
     /// However, a ManagedEnvironment may still register some default
     /// services.
-    2: vector<LaunchService> services;
+    2: vector<LaunchService>:MAX services;
     /// Devices to make available.
     /// If none provided, no devices will be made available.
-    3: vector<VirtualDevice> devices;
+    3: vector<VirtualDevice>:MAX devices;
     /// Whether to inherit service launch options from parent environment.
     /// If none provided, assume false.
     4: bool inherit_parent_launch_services;
@@ -76,9 +77,9 @@ protocol ManagedEnvironment {
     /// Creates a nested managed environment.
     CreateChildEnvironment(request<ManagedEnvironment> child_env, EnvironmentOptions options);
     /// Connects to a service named `name` provided by this environment.
-    ConnectToService(string name, zx.handle:CHANNEL req);
+    ConnectToService(string:MAX name, zx.handle:CHANNEL req);
     /// Exposes new virtual device `device` for all components within this environment
     AddDevice(VirtualDevice device);
     /// Removes virtual device mounted at `path` (relative to /vdev)
-    RemoveDevice(string path);
+    RemoveDevice(string:MAX path);
 };

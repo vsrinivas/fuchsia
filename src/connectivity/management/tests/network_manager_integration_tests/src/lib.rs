@@ -57,21 +57,21 @@ macro_rules! test_suite {
 
 fn generate_launch_services() -> Vec<LaunchService> {
     let names_and_urls = vec![
-        ("fuchsia.net.stack.Stack", component_url!("netstack"), None),
-        ("fuchsia.net.NameLookup", component_url!("netstack"), None),
-        ("fuchsia.netstack.Netstack", component_url!("netstack"), None),
-        ("fuchsia.net.name.LookupAdmin", component_url!("netstack"), None),
-        ("fuchsia.posix.socket.Provider", component_url!("netstack"), None),
-        ("fuchsia.net.filter.Filter", component_url!("netstack"), None),
+        ("fuchsia.net.stack.Stack", component_url!("netstack"), Vec::new()),
+        ("fuchsia.net.NameLookup", component_url!("netstack"), Vec::new()),
+        ("fuchsia.netstack.Netstack", component_url!("netstack"), Vec::new()),
+        ("fuchsia.net.name.LookupAdmin", component_url!("netstack"), Vec::new()),
+        ("fuchsia.posix.socket.Provider", component_url!("netstack"), Vec::new()),
+        ("fuchsia.net.filter.Filter", component_url!("netstack"), Vec::new()),
         (
             "fuchsia.router.config.RouterAdmin",
             component_url!("network-manager"),
-            Some(vec!["--devicepath".to_string(), "vdev".to_string()]),
+            vec!["--devicepath", "vdev"],
         ),
         (
             "fuchsia.router.config.RouterState",
             component_url!("network-manager"),
-            Some(vec!["--devicepath".to_string(), "vdev".to_string()]),
+            vec!["--devicepath", "vdev"],
         ),
     ];
     names_and_urls
@@ -79,7 +79,7 @@ fn generate_launch_services() -> Vec<LaunchService> {
         .map(|(name, url, args)| LaunchService {
             name: name.to_string(),
             url: url.to_string(),
-            arguments: args,
+            arguments: args.into_iter().map(str::to_string).collect(),
         })
         .collect()
 }
@@ -101,9 +101,9 @@ fn get_endpoint_manager(
     Ok(client)
 }
 
-async fn create_endpoint<'a>(
+async fn create_endpoint(
     name: &'static str,
-    endpoint_manager: &'a EndpointManagerProxy,
+    endpoint_manager: &EndpointManagerProxy,
 ) -> std::result::Result<EndpointProxy, anyhow::Error> {
     let (status, endpoint) = endpoint_manager
         .create_endpoint(

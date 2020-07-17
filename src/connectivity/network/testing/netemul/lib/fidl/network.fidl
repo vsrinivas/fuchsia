@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 library fuchsia.netemul.network;
+
 using fuchsia.hardware.ethernet;
 using fuchsia.hardware.network;
 using fuchsia.net;
-
 using zx;
 
 /// Provides emulated latency configuration.
@@ -46,11 +46,11 @@ table NetworkConfig {
 /// Manages virtual networks.
 protocol NetworkManager {
     /// Lists emulated networks by name.
-    ListNetworks() -> (vector<string> nets);
+    ListNetworks() -> (vector<string:MAX>:MAX nets);
     /// Creates a new network with given name and config.
-    CreateNetwork(string name, NetworkConfig config) -> (zx.status status, Network? net);
+    CreateNetwork(string:MAX name, NetworkConfig config) -> (zx.status status, Network? net);
     /// Gets a handle to a network.
-    GetNetwork(string name) -> (Network? net);
+    GetNetwork(string:MAX name) -> (Network? net);
 };
 
 /// Backing of an emulated endpoint.
@@ -76,11 +76,11 @@ struct EndpointConfig {
 /// Manages virtual endpoints.
 protocol EndpointManager {
     /// Lists endpoints by name.
-    ListEndpoints() -> (vector<string> endp);
+    ListEndpoints() -> (vector<string:MAX>:MAX endp);
     /// Creates endpoint with given name and config.
-    CreateEndpoint(string name, EndpointConfig config) -> (zx.status status, Endpoint? endpoint);
+    CreateEndpoint(string:MAX name, EndpointConfig config) -> (zx.status status, Endpoint? endpoint);
     /// Gets a handle to an endpoint.
-    GetEndpoint(string name) -> (Endpoint? endpoint);
+    GetEndpoint(string:MAX name) -> (Endpoint? endpoint);
 };
 
 /// Fake endpoint can be added to a network to snoop or inject packets.
@@ -103,13 +103,13 @@ protocol Network {
     /// Gets network configuration.
     GetConfig() -> (NetworkConfig config);
     /// Gets network name.
-    GetName() -> (string name);
+    GetName() -> (string:MAX name);
     /// Updates network configuration.
     SetConfig(NetworkConfig config) -> (zx.status status);
     /// Attaches endpoint with given name to network.
-    AttachEndpoint(string name) -> (zx.status status);
+    AttachEndpoint(string:MAX name) -> (zx.status status);
     /// Removes endpoint with given name from network.
-    RemoveEndpoint(string name) -> (zx.status status);
+    RemoveEndpoint(string:MAX name) -> (zx.status status);
     /// Injects a fake endpoint.
     CreateFakeEndpoint(request<FakeEndpoint> ep);
 };
@@ -137,7 +137,7 @@ protocol Endpoint {
     // Gets endpoint configuration.
     GetConfig() -> (EndpointConfig config);
     /// Gets endpoint name.
-    GetName() -> (string name);
+    GetName() -> (string:MAX name);
     /// Sends link up or down signal
     SetLinkUp(bool up) -> ();
     /// Opens a channel with the underlying device protocol.
@@ -150,17 +150,17 @@ protocol Endpoint {
 /// Convenience struct for creating entire network setups.
 struct NetworkSetup {
     /// Network name, must be unique in network context.
-    string name;
+    string:MAX name;
     /// NetworkConfig to use when creating network.
     NetworkConfig config;
     /// Collection of endpoints to create and attach to network.
-    vector<EndpointSetup> endpoints;
+    vector<EndpointSetup>:MAX endpoints;
 };
 
 /// Convenience struct for creating endpoints along with network setup.
 struct EndpointSetup {
     /// Endpoint name, must be unique in network context.
-    string name;
+    string:MAX name;
     /// Optional endpoint config, if not provided defaults will be used.
     /// Default values are: mtu = 1500, backing = ETHERTAP, mac = randomized.
     EndpointConfig? config;
@@ -182,5 +182,5 @@ protocol NetworkContext {
     /// `status` is `ZX_OK` for success
     /// `setup_handle` is a resource that references and maintains the lifecycle of
     ///                the created networks and endpoints.
-    Setup(vector<NetworkSetup> networks) -> (zx.status status, SetupHandle? setup_handle);
+    Setup(vector<NetworkSetup>:MAX networks) -> (zx.status status, SetupHandle? setup_handle);
 };

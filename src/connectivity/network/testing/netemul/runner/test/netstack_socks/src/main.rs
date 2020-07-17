@@ -82,12 +82,12 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
             LaunchService {
                 name: String::from(NetstackMarker::NAME),
                 url: String::from(NETSTACK_URL),
-                arguments: None,
+                arguments: Vec::new(),
             },
             LaunchService {
                 name: String::from(ProviderMarker::NAME),
                 url: String::from(NETSTACK_URL),
-                arguments: None,
+                arguments: Vec::new(),
             },
         ]),
         // pass the endpoint's proxy to create a virtual device

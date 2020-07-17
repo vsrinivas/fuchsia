@@ -180,9 +180,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         [this, svc = std::move(copy)]() {
           fuchsia::sys::LaunchInfo linfo;
           linfo.url = svc.url;
-          if (svc.arguments.has_value()) {
-            linfo.arguments = svc.arguments.value();
-          }
+          linfo.arguments = svc.arguments;
 
           if (!launcher_->MakeServiceLaunchInfo(&linfo)) {
             // NOTE: we can just log an return code of MakeServiceLaunchInfo here, since those are

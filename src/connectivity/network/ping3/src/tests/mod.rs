@@ -53,12 +53,12 @@ async fn create_environments<'a>(
                     netemul_environment::LaunchService {
                         name: fnet_stack::StackMarker::SERVICE_NAME.to_string(),
                         url: NETSTACK_URL.to_string(),
-                        arguments: None,
+                        arguments: Vec::new(),
                     },
                     netemul_environment::LaunchService {
                         name: fnet_icmp::ProviderMarker::SERVICE_NAME.to_string(),
                         url: NETSTACK_URL.to_string(),
-                        arguments: None,
+                        arguments: Vec::new(),
                     },
                 ],
             )
