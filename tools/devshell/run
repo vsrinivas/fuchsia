@@ -6,11 +6,11 @@
 #### CATEGORY=Software delivery
 ### build Fuchsia and push to device
 
-## usage: fx run [--no-build|[NINJA OPTION,...]] [--no-pkg-check] [--no-kill] [--no-restart-session] [TARGET,...]
+## usage: fx run [--no-build|[NINJA OPTION,...]] [--no-pkg-check] [--no-kill] [--no-restart-session] TARGET [ARG,...]
 ##
 ## Build ALL targets.
-## Execute 'fx shell killall TARGET' for each target.
-## Execute 'fx shell run TARGET' for each target.
+## Execute 'fx shell killall TARGET'.
+## Execute 'fx shell run TARGET [ARGS].
 ##
 ##   --no-build               do not execute a build
 ##   --no-pkg-check           do not check for a package server
@@ -28,6 +28,8 @@
 ##   $ fx set core.x64 --with //exmaples/rolldice
 ##   $ fx serve
 ##   $ fx run rolldice.cmx
+## ARG is passed to target without interpretation. All arguments after TARGET
+## are passed to TARGET.
 
 set -e
 
@@ -65,7 +67,9 @@ function main {
         ninja_args+=("$1")
         ;;
       *)
-        targets+=("$1")
+        target+=("$1")
+        shift
+        break
     esac
     shift
   done
@@ -74,7 +78,9 @@ function main {
     fx-command-run build "${ninja_args[@]}"
   fi
 
-  check-for-amber-server || return 1
+  if $pkg_check; then
+    check-for-amber-server || return 1
+  fi
 
   if $restart_session; then
     if ! fx-command-run shell sessionctl restart_session; then
@@ -83,21 +89,19 @@ function main {
   fi
 
   local r=0
-  for entry in "${targets[@]}"; do
-    # As running components are typically named after their cmx, the
-    # basename here avoids the case where a user has provided a full
-    # URL such as `fx run
-    # fuchsia-pkg://fuchsia.com/rolldice#meta/rolldice.cmx`. This
-    # strategy could be improved if implemented in a more featureful
-    # environment.
-    if $kill_components; then
-      echo >&2 Stopping "${entry} with killall $(basename "${entry}") ..."
-      fx-command-run shell killall "$(basename "${entry}")" || true
-    fi
-    echo >&2 Running "${entry} with run "${entry}" ..."
-    fx-command-run shell run "${entry}"
-    ((r += $?))
-  done
+  # As running components are typically named after their cmx, the
+  # basename here avoids the case where a user has provided a full
+  # URL such as `fx run
+  # fuchsia-pkg://fuchsia.com/rolldice#meta/rolldice.cmx`. This
+  # strategy could be improved if implemented in a more featureful
+  # environment.
+  if $kill_components; then
+    echo >&2 Stopping "${target} with killall $(basename "${target}") ..."
+    fx-command-run shell killall "$(basename "${target}")" || true
+  fi
+  echo >&2 Running "${target} with run "${target}" ..."
+  fx-command-run shell run "${target}" "$@"
+  ((r += $?))
   return r
 }
 
