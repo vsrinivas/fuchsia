@@ -20,7 +20,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <runtests-utils/runtests-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace runtests {
 // Root directory of memfs installed for duration of test.
@@ -39,6 +39,7 @@ class PackagedScriptFile {
   PackagedScriptFile(const fbl::StringPiece path);
   ~PackagedScriptFile();
   fbl::StringPiece path() const;
+
  private:
   fbl::String path_;
 };
@@ -48,6 +49,7 @@ class ScopedStubFile {
  public:
   ScopedStubFile(const fbl::StringPiece path);
   ~ScopedStubFile();
+
  private:
   const fbl::StringPiece path_;
 };
@@ -125,9 +127,7 @@ class TestStopwatch : public Stopwatch {
  public:
   void Start() override { start_called_ = true; }
   int64_t DurationInMsecs() override {
-    BEGIN_HELPER;
     EXPECT_TRUE(start_called_);
-    END_HELPER;
     return 14u;
   }
 

@@ -13,7 +13,7 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <runtests-utils/log-exporter.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace runtests {
 namespace {
@@ -149,8 +149,7 @@ zx_status_t SendLogMessages(const zx::channel& listener, const fbl::Vector<LogMe
   return SendLogMessagesHelper(listener, fuchsia_logger_LogListenerLogManyOrdinal, log_msgs);
 }
 
-bool TestLog() {
-  BEGIN_TEST;
+TEST(LogListenerTests, TestLog) {
   zx::channel listener, listener_request;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &listener, &listener_request));
 
@@ -187,11 +186,9 @@ bool TestLog() {
 [00093.892493][1024][1034][tag123, tag2] INFO: my message
 )",
                 buf);
-  END_TEST;
 }
 
-bool TestLogMany() {
-  BEGIN_TEST;
+TEST(LogListenerTests, TestLogMany) {
   zx::channel listener, listener_request;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &listener, &listener_request));
 
@@ -231,11 +228,9 @@ bool TestLogMany() {
 [00093.892493][1024][1034][tag1] INFO: my message
 )",
                 buf);
-  END_TEST;
 }
 
-bool TestDroppedLogs() {
-  BEGIN_TEST;
+TEST(LogListenerTests, TestDroppedLogs) {
   zx::channel listener, listener_request;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &listener, &listener_request));
 
@@ -276,12 +271,9 @@ bool TestDroppedLogs() {
 [00093.892493][1024][1034][] WARNING: Dropped logs count:2
 )",
                 buf);
-
-  END_TEST;
 }
 
-bool TestBadOutputFile() {
-  BEGIN_TEST;
+TEST(LogListenerTests, TestBadOutputFile) {
   zx::channel listener, listener_request;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &listener, &listener_request));
 
@@ -299,16 +291,7 @@ bool TestBadOutputFile() {
 
   ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
   ASSERT_STR_EQ("", buf);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(LogListenerTests)
-RUN_TEST(TestLog)
-RUN_TEST(TestLogMany)
-RUN_TEST(TestDroppedLogs)
-RUN_TEST(TestBadOutputFile)
-END_TEST_CASE(LogListenerTests)
 
 }  // namespace
 }  // namespace runtests

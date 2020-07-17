@@ -19,7 +19,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <runtests-utils/runtests-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace runtests {
 
@@ -151,9 +151,7 @@ namespace {
 // This ensures that ScopedTestDir, ScopedTestFile, and ScopedStubFile, which we
 // make heavy use of in these tests, are indeed scoped and tear down without
 // error.
-bool ScopedDirsAndFilesAreIndeedScoped() {
-  BEGIN_TEST;
-
+TEST(TestHelpers, ScopedDirsAndFilesAreIndeedScoped) {
   // Entering a test case, test_dir.path() should be empty.
   EXPECT_EQ(0, NumEntriesInDir(kMemFsRoot));
 
@@ -187,13 +185,7 @@ bool ScopedDirsAndFilesAreIndeedScoped() {
   }
 
   EXPECT_EQ(0, NumEntriesInDir(kMemFsRoot));
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(TestHelpers)
-RUN_TEST(ScopedDirsAndFilesAreIndeedScoped)
-END_TEST_CASE(TestHelpers)
 
 }  // namespace
 }  // namespace runtests

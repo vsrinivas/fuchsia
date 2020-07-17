@@ -33,11 +33,11 @@ test("runtests-utils") {
   ]
   deps = [
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/runtests-utils",
-    "//zircon/system/ulib/unittest",
   ]
   data_deps = [
     ":packaged-profile-helper",

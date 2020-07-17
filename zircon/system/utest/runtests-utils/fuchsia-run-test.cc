@@ -19,54 +19,44 @@
 #include <fbl/vector.h>
 #include <runtests-utils/fuchsia-run-test.h>
 #include <runtests-utils/runtests-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "runtests-utils-test-utils.h"
 
 namespace runtests {
 namespace {
 
-bool SetUpForTestComponentCMX() {
-  BEGIN_TEST;
+TEST(SetUpForTestComponent, SetUpForTestComponentCMX) {
   fbl::String component_executor;
   EXPECT_TRUE(SetUpForTestComponent("fuchsia-pkg://fuchsia.com/foo-tests#meta/bar.cmx",
                                     &component_executor));
   EXPECT_GT(component_executor.length(), 0);
-  END_TEST;
 }
 
-bool SetUpForTestComponentCM() {
-  BEGIN_TEST;
+TEST(SetUpForTestComponent, SetUpForTestComponentCM) {
   fbl::String component_executor;
   EXPECT_TRUE(SetUpForTestComponent("fuchsia-pkg://fuchsia.com/foo-tests#meta/bar.cm",
                                     &component_executor));
   EXPECT_GT(component_executor.length(), 0);
-  END_TEST;
 }
 
-bool SetUpForTestComponentBadURI() {
-  BEGIN_TEST;
+TEST(SetUpForTestComponent, SetUpForTestComponentBadURI) {
   fbl::String component_executor;
   EXPECT_FALSE(SetUpForTestComponent("fuchsia-pkg://fuchsia.com/foo-tests#meta/bar.xyz",
                                      &component_executor));
   EXPECT_EQ(component_executor.length(), 0);
-  END_TEST;
 }
 
-bool SetUpForTestComponentPkgFS() {
-  BEGIN_TEST;
+TEST(SetUpForTestComponent, SetUpForTestComponentPkgFS) {
   fbl::String component_executor;
   EXPECT_FALSE(SetUpForTestComponent("/pkgfs/packages/foo-tests/bar", &component_executor));
   EXPECT_EQ(component_executor.length(), 0);
-  END_TEST;
 }
 
-bool SetUpForTestComponentPath() {
-  BEGIN_TEST;
+TEST(SetUpForTestComponent, SetUpForTestComponentPath) {
   fbl::String component_executor;
   EXPECT_TRUE(SetUpForTestComponent("/boot/test/foo", &component_executor));
   EXPECT_EQ(component_executor.length(), 0);
-  END_TEST;
 }
 
 static fbl::String PublishDataHelperDir() {
@@ -81,9 +71,7 @@ static fbl::String ProfileHelperDir() { return JoinPath(packaged_script_dir(), "
 
 static fbl::String ProfileHelperBin() { return JoinPath(ProfileHelperDir(), "profile-helper"); }
 
-bool RunTestDontPublishData() {
-  BEGIN_TEST;
-
+TEST(RunTests, RunTestDontPublishData) {
   ScopedTestDir test_dir;
   fbl::String test_name = PublishDataHelperBin();
 
@@ -93,13 +81,9 @@ bool RunTestDontPublishData() {
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
   EXPECT_EQ(0, result->data_sinks.size());
-
-  END_TEST;
 }
 
-bool RunTestsPublishData() {
-  BEGIN_TEST;
-
+TEST(RunTests, RunTestsPublishData) {
   ScopedTestDir test_dir;
   fbl::String test_name = PublishDataHelperBin();
   int num_failed = 0;
@@ -112,13 +96,9 @@ bool RunTestsPublishData() {
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
   EXPECT_LE(1, results[0]->data_sinks.size());
-
-  END_TEST;
 }
 
-bool RunDuplicateTestsPublishData() {
-  BEGIN_TEST;
-
+TEST(RunTests, RunDuplicateTestsPublishData) {
   ScopedTestDir test_dir;
   fbl::String test_name = PublishDataHelperBin();
   int num_failed = 0;
@@ -133,13 +113,9 @@ bool RunDuplicateTestsPublishData() {
   EXPECT_STR_EQ(test_name.c_str(), results[0]->name.c_str());
   EXPECT_STR_EQ(fbl::String::Concat({test_name, " (2)"}).c_str(), results[1]->name.c_str());
   EXPECT_STR_EQ(fbl::String::Concat({test_name, " (3)"}).c_str(), results[2]->name.c_str());
-
-  END_TEST;
 }
 
-bool RunAllTestsPublishData() {
-  BEGIN_TEST;
-
+TEST(RunTests, RunAllTestsPublishData) {
   ScopedTestDir test_dir;
   fbl::String test_containing_dir = PublishDataHelperDir();
   fbl::String test_name = PublishDataHelperBin();
@@ -149,7 +125,8 @@ bool RunAllTestsPublishData() {
 
   const char* const argv[] = {"./runtests", "--all", "--output", output_dir.c_str()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(4, argv, {test_containing_dir.c_str()}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_SUCCESS,
+            DiscoverAndRunTests(4, argv, {test_containing_dir.c_str()}, &stopwatch, ""));
 
   // Prepare the expected output.
   fbl::String test_output_rel_path;
@@ -189,14 +166,10 @@ bool RunAllTestsPublishData() {
   fclose(output_file);
 
   EXPECT_TRUE(std::regex_search(buf, expected_output_regex));
-  EXPECT_NONNULL(strstr(buf, expected_data_sink_buf.c_str()));
-
-  END_TEST;
+  EXPECT_NOT_NULL(strstr(buf, expected_data_sink_buf.c_str()));
 }
 
-bool RunProfileMergeData() {
-  BEGIN_TEST;
-
+TEST(RunTests, RunProfileMergeData) {
   ScopedTestDir test_dir;
   fbl::String test_name = ProfileHelperBin();
   int num_failed = 0;
@@ -226,13 +199,9 @@ bool RunProfileMergeData() {
   // Check that the data was merged (i.e. they're the same).
   EXPECT_TRUE(results[0]->data_sinks["llvm-profile"][0].file ==
               results[1]->data_sinks["llvm-profile"][0].file);
-
-  END_TEST;
 }
 
-bool RunTestRootDir() {
-  BEGIN_TEST;
-
+TEST(RunTests, RunTestRootDir) {
   PackagedScriptFile test_script("test-root-dir.sh");
   fbl::String test_name = test_script.path();
   const char* argv[] = {test_name.c_str(), nullptr};
@@ -263,26 +232,7 @@ bool RunTestRootDir() {
     EXPECT_EQ(SUCCESS, result->launch_status);
     EXPECT_EQ(0, result->return_code);
   }
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(SetUpForTestComponent)
-RUN_TEST(SetUpForTestComponentCMX)
-RUN_TEST(SetUpForTestComponentCM)
-RUN_TEST(SetUpForTestComponentBadURI)
-RUN_TEST(SetUpForTestComponentPkgFS)
-RUN_TEST(SetUpForTestComponentPath)
-END_TEST_CASE(SetUpForTestComponent)
-
-BEGIN_TEST_CASE(RunTests)
-RUN_TEST(RunTestDontPublishData)
-RUN_TEST_MEDIUM(RunTestsPublishData)
-RUN_TEST_MEDIUM(RunDuplicateTestsPublishData)
-RUN_TEST_MEDIUM(RunAllTestsPublishData)
-RUN_TEST_MEDIUM(RunProfileMergeData)
-RUN_TEST_MEDIUM(RunTestRootDir)
-END_TEST_CASE(RunTests)
 
 }  // namespace
 }  // namespace runtests
