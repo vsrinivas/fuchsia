@@ -301,11 +301,32 @@ def FormatTable(heading_row, rows, out_fh):
 def ComparePerf(args, out_fh):
     results_maps = [
         StatsFromMultiBootDataset(MultiBootDataset(dir_path))
-        for dir_path in [args.results_dir_before, args.results_dir_after]]
+        for dir_path in args.results_dir]
 
     # Set of all test case names, including those added or removed.
-    labels = set(results_maps[0].iterkeys())
-    labels.update(results_maps[1].iterkeys())
+    labels = set()
+    for results_map in results_maps:
+        labels.update(results_map.iterkeys())
+
+    if len(results_maps) != 2:
+        # Display the dataset(s) without doing any comparison.
+        heading_row = ['Test case']
+        if len(results_maps) == 1:
+            heading_row.extend(['Mean'])
+        else:
+            heading_row.extend(['Mean %d' % (idx + 1)
+                                for idx in xrange(len(results_maps))])
+        rows = []
+        for label in sorted(labels):
+            row = [label]
+            for results_map in results_maps:
+                if label in results_map:
+                    row.append(results_map[label].FormatConfidenceInterval())
+                else:
+                    row.append('-')
+            rows.append(row)
+        FormatTable(heading_row, rows, out_fh)
+        return
 
     counts = {
         'added': 0,
@@ -490,9 +511,12 @@ def Main(argv, out_fh, run_cmd=subprocess.check_call):
 
     subparser = subparsers.add_parser(
         'compare_perf',
-        help='Compare two sets of perf test results')
-    subparser.add_argument('results_dir_before')
-    subparser.add_argument('results_dir_after')
+        help='Display sets of perf test results. '
+        ' If given two datasets, this will compare the two, showing whether'
+        ' tests had regressions or improvements. '
+        ' Otherwise (if given 1 or >2 datasets), the data is shown with no'
+        ' comparisons.')
+    subparser.add_argument('results_dir', nargs='+')
     subparser.set_defaults(func=lambda args: ComparePerf(args, out_fh))
 
     subparser = subparsers.add_parser(

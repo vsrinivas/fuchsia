@@ -391,6 +391,22 @@ class PerfCompareTest(TempDirTestCase):
         output = self.ComparePerf(before_dir, after_dir)
         GOLDEN.AssertCaseEq('removing_test', output)
 
+    def test_display_single_dataset(self):
+        dataset_dir = self.ExampleDataDir()
+        stdout = StringIO.StringIO()
+        perfcompare.Main(['compare_perf', dataset_dir], stdout)
+        output = stdout.getvalue()
+        GOLDEN.AssertCaseEq('display_single_dataset', output)
+
+    def test_display_three_datasets(self):
+        dataset_dirs = [self.ExampleDataDir(mean=1000),
+                        self.ExampleDataDir(mean=2000, drop_one=True),
+                        self.ExampleDataDir(mean=3000)]
+        stdout = StringIO.StringIO()
+        perfcompare.Main(['compare_perf'] + dataset_dirs, stdout)
+        output = stdout.getvalue()
+        GOLDEN.AssertCaseEq('display_three_datasets', output)
+
     def test_factor_range_formatting(self):
         # Construct an interval pair of the same type used in the
         # software-under-test, checking that the interval is well-formed.

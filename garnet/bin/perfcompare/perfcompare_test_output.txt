@@ -128,6 +128,20 @@ fuchsia.example: ClockGetTimeExample  slower            1.031-1.104    1492 +/- 
 fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78 ns  1975 +/- 78 ns
 
 
+### display_single_dataset
+Test case                             Mean
+------------------------------------  --------------
+fuchsia.example: ClockGetTimeExample  992 +/- 26 ns
+fuchsia.example: SecondExample        1975 +/- 78 ns
+
+
+### display_three_datasets
+Test case                             Mean 1          Mean 2          Mean 3
+------------------------------------  --------------  --------------  --------------
+fuchsia.example: ClockGetTimeExample  992 +/- 26 ns   1992 +/- 26 ns  2992 +/- 26 ns
+fuchsia.example: SecondExample        1975 +/- 78 ns  -               1975 +/- 78 ns
+
+
 ### removing_test
 Summary counts:
   2 test cases in total
