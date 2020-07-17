@@ -223,7 +223,7 @@ Here's a highly-edited version showing just the PCI ethernet driver parts:
             ...
 6.             [00:02:00] pid=1416 /boot/driver/bus-pci.so
 7.                <00:02:00> pid=2052 /boot/driver/bus-pci.proxy.so
-8.                   [intel-ethernet] pid=2052 /boot/driver/intel-ethernet.so
+8.                   [e1000] pid=2052 /boot/driver/e1000.so
 9.                      [ethernet] pid=2052 /boot/driver/ethernet.so
 ```
 
@@ -254,7 +254,7 @@ driver (pid `1416`).
 > process &mdash; the new devhost and the base PCI driver now live in two
 > different processes.
 
-The new devhost `2052` then finds a matching child (the `intel-ethernet.so`
+The new devhost `2052` then finds a matching child (the `e1000.so`
 DSO on line 8; it's considered a match because it has `ZX_PROTOCOL_PCI` and the correct
 VID and DID).
 That DSO publishes a `ZX_PROTOCOL_ETHERNET_IMPL`, which binds to a matching

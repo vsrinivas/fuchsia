@@ -66,7 +66,7 @@ impl Config {
     // At the time of writing, typical topological paths appear similar to:
     //
     // PCI:
-    // "/dev/sys/pci/02:00.0/intel-ethernet/ethernet"
+    // "/dev/sys/pci/02:00.0/e1000/ethernet"
     //
     // USB:
     // "/dev/sys/pci/00:14.0/xhci/usb/007/ifc-000/<snip>/wlan/wlan-ethernet/ethernet"

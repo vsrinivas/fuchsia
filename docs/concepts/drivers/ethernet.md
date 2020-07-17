@@ -52,6 +52,9 @@ The top half manages the ethernet interface to the system.
 
 # Intel PCI-based ethernet
 
+> NOTE: this driver has been removed from the tree in favor of a port of the FreeBSD driver,
+> but the discussion here is still relevant for understanding device drivers in Fuchsia.
+
 The Intel ethernet driver can be found in `//src/connectivity/ethernet/drivers/intel-ethernet`,
 and consists of the following files:
 

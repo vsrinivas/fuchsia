@@ -52,7 +52,7 @@ $ dm dump
                      [framebuffer] pid=2015 /boot/driver/framebuffer.so
             [00:02:00] pid=1416 /boot/driver/bus-pci.so
                <00:02:00> pid=2052 /boot/driver/bus-pci.proxy.so
-                  [intel-ethernet] pid=2052 /boot/driver/intel-ethernet.so
+                  [e1000] pid=4628 /boot/driver/e1000.so
                      [ethernet] pid=2052 /boot/driver/ethernet.so
             [00:1f:00] pid=1416 /boot/driver/bus-pci.so
             [00:1f:02] pid=1416 /boot/driver/bus-pci.so
@@ -69,12 +69,12 @@ which driver implements that device.
 
 Above, for example, the pid 1416 devhost contains the pci bus driver, which has
 created devices for each PCI device in the system.  PCI device 00:02:00 happens
-to be an intel ethernet interface, which we have a driver for (intel-ethernet.so).
+to be an intel ethernet interface, which we have a driver for (e1000.so).
 A new devhost (pid 2052) is created, set up with a proxy device for PCI 00:02:00,
 and the intel ethernet driver is loaded and bound to it.
 
 Proxy devices are invisible within the Device filesystem, so this ethernet device
-appears as `/dev/sys/pci/00:02:00/intel-ethernet`.
+appears as `/dev/sys/pci/00:02:00/e1000`.
 
 
 ## Protocols, Interfaces, and Classes
@@ -105,8 +105,8 @@ be achieved otherwise.
 
 Classes represent a promise that a device implements an Interface or Protocol.
 Devices exist in the Device Filesystem under a topological path, like
-`/sys/pci/00:02:00/intel-ethernet`.  If they are a specific class, they also appear
-as an alias under `/dev/class/CLASSNAME/...`.  The `intel-ethernet` driver implements
+`/sys/pci/00:02:00/e1000`.  If they are a specific class, they also appear
+as an alias under `/dev/class/CLASSNAME/...`.  The `e1000` driver implements
 the Ethermac interface, so it also shows up at `/dev/class/ethermac/000`.  The names
 within class directories are unique but not meaningful, and are assigned on demand.
 
