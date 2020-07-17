@@ -211,13 +211,13 @@ void Thread::Trampoline() {
  * This function creates a new thread.  The thread is initially suspended, so you
  * need to call thread_resume() to execute it.
  *
- * @param  t               If not NULL, use the supplied Thread
+ * @param  t               If not nullptr, use the supplied Thread
  * @param  name            Name of thread
  * @param  entry           Entry point of thread
  * @param  arg             Arbitrary argument passed to entry(). It can be null.
  *                         in which case |user_thread| will be used.
  * @param  priority        Execution priority for the thread.
- * @param  alt_trampoline  If not NULL, an alternate trampoline for the thread
+ * @param  alt_trampoline  If not nullptr, an alternate trampoline for the thread
  *                         to start on.
  *
  * Thread priority is an integer from 0 (lowest) to 31 (highest).  Some standard
@@ -233,7 +233,7 @@ void Thread::Trampoline() {
  *
  * Stack size is set to DEFAULT_STACK_SIZE
  *
- * @return  Pointer to thread object, or NULL on failure.
+ * @return  Pointer to thread object, or nullptr on failure.
  */
 Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entry, void* arg,
                           int priority, thread_trampoline_routine alt_trampoline) {
@@ -242,7 +242,7 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   if (!t) {
     t = static_cast<Thread*>(malloc(sizeof(Thread)));
     if (!t) {
-      return NULL;
+      return nullptr;
     }
     flags |= THREAD_FLAG_FREE_STRUCT;
   }
@@ -284,7 +284,7 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
 }
 
 Thread* Thread::Create(const char* name, thread_start_routine entry, void* arg, int priority) {
-  return Thread::CreateEtc(NULL, name, entry, arg, priority, NULL);
+  return Thread::CreateEtc(nullptr, name, entry, arg, priority, nullptr);
 }
 
 static void free_thread_resources(Thread* t) {
@@ -488,7 +488,7 @@ zx_status_t Thread::Detach() {
   if (state_ == THREAD_DEATH) {
     flags_ &= ~THREAD_FLAG_DETACHED;  // makes sure Join continues
     guard.Release();
-    return Join(NULL, 0);
+    return Join(nullptr, 0);
   } else {
     flags_ |= THREAD_FLAG_DETACHED;
     return ZX_OK;
@@ -1299,7 +1299,7 @@ void Thread::Current::BecomeIdle() {
   // We're now properly in the idle routine. Reenable interrupts and drop
   // into the idle routine, never return.
   arch_enable_ints();
-  arch_idle_thread_routine(NULL);
+  arch_idle_thread_routine(nullptr);
 
   __UNREACHABLE;
 }
@@ -1346,8 +1346,8 @@ Thread* Thread::CreateIdleThread(cpu_num_t cpu_num) {
   snprintf(name, sizeof(name), "idle %u", cpu_num);
 
   Thread* t = Thread::CreateEtc(&percpu::Get(cpu_num).idle_thread, name, arch_idle_thread_routine,
-                                NULL, IDLE_PRIORITY, NULL);
-  if (t == NULL) {
+                                nullptr, IDLE_PRIORITY, nullptr);
+  if (t == nullptr) {
     return t;
   }
   t->flags_ |= THREAD_FLAG_IDLE | THREAD_FLAG_DETACHED;
@@ -1471,12 +1471,12 @@ void dump_all_threads(bool full) {
   dump_all_threads_locked(full);
 }
 
-void dump_thread_user_tid(uint64_t tid, bool full) {
+void dump_thread_user_tid(zx_koid_t tid, bool full) {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   dump_thread_user_tid_locked(tid, full);
 }
 
-void dump_thread_user_tid_locked(uint64_t tid, bool full) {
+void dump_thread_user_tid_locked(zx_koid_t tid, bool full) {
   for (Thread& t : thread_list.Get()) {
     if (t.user_tid() != tid) {
       continue;
@@ -1491,7 +1491,7 @@ void dump_thread_user_tid_locked(uint64_t tid, bool full) {
   }
 }
 
-Thread* thread_id_to_thread_slow(uint64_t tid) {
+Thread* thread_id_to_thread_slow(zx_koid_t tid) {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   for (Thread& t : thread_list.Get()) {
     if (t.user_tid() == tid) {
@@ -1542,7 +1542,7 @@ static size_t thread_get_backtrace(Thread* t, void* fp, thread_backtrace_t* tb) 
   }
 
   void* pc;
-  if (t == NULL) {
+  if (t == nullptr) {
     return 0;
   }
   size_t n = 0;
@@ -1628,7 +1628,7 @@ void Thread::Current::PrintBacktraceAtFrame(void* caller_frame) {
 // Print the backtrace of a passed in thread, if possible.
 zx_status_t Thread::PrintBacktrace() {
   // get the starting point if it's in a usable state
-  void* fp = NULL;
+  void* fp = nullptr;
   switch (state_) {
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:

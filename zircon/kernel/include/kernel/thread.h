@@ -388,8 +388,8 @@ void dump_thread(Thread* t, bool full) TA_EXCL(thread_lock);
 void arch_dump_thread(Thread* t);
 void dump_all_threads_locked(bool full) TA_REQ(thread_lock);
 void dump_all_threads(bool full) TA_EXCL(thread_lock);
-void dump_thread_user_tid(uint64_t tid, bool full) TA_EXCL(thread_lock);
-void dump_thread_user_tid_locked(uint64_t tid, bool full) TA_REQ(thread_lock);
+void dump_thread_user_tid(zx_koid_t tid, bool full) TA_EXCL(thread_lock);
+void dump_thread_user_tid_locked(zx_koid_t tid, bool full) TA_REQ(thread_lock);
 
 static inline void dump_thread_during_panic(Thread* t, bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
   // Skip grabbing the lock if we are panic'ing
@@ -401,7 +401,7 @@ static inline void dump_all_threads_during_panic(bool full) TA_NO_THREAD_SAFETY_
   dump_all_threads_locked(full);
 }
 
-static inline void dump_thread_user_tid_during_panic(uint64_t tid,
+static inline void dump_thread_user_tid_during_panic(zx_koid_t tid,
                                                      bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
   // Skip grabbing the lock if we are panic'ing
   dump_thread_user_tid_locked(tid, full);
@@ -684,8 +684,6 @@ struct Thread {
   // Call |migrate_fn| for each thread that was last run on the current CPU.
   static void CallMigrateFnForCpuLocked(cpu_num_t cpu) TA_REQ(thread_lock);
 
-  static Thread* IdToThreadSlow(uint64_t tid);
-
   void OwnerName(char out_name[ZX_MAX_NAME_LEN]);
   // Return the number of nanoseconds a thread has been running for.
   zx_duration_t Runtime() const;
@@ -765,12 +763,12 @@ struct Thread {
     static void Dump(bool full) TA_EXCL(thread_lock);
     static void DumpAllThreadsLocked(bool full) TA_REQ(thread_lock);
     static void DumpAllThreads(bool full) TA_EXCL(thread_lock);
-    static void DumpUserTid(uint64_t tid, bool full) TA_EXCL(thread_lock);
-    static void DumpUserTidLocked(uint64_t tid, bool full) TA_REQ(thread_lock);
+    static void DumpUserTid(zx_koid_t tid, bool full) TA_EXCL(thread_lock);
+    static void DumpUserTidLocked(zx_koid_t tid, bool full) TA_REQ(thread_lock);
     static void DumpAllDuringPanic(bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
       dump_all_threads_during_panic(full);
     }
-    static void DumpUserTidDuringPanic(uint64_t tid, bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
+    static void DumpUserTidDuringPanic(zx_koid_t tid, bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
       dump_thread_user_tid_during_panic(tid, full);
     }
   };
@@ -1082,7 +1080,7 @@ extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe);
 // find a thread based on the thread id
 // NOTE: used only for debugging, its a slow linear search through the
 // global thread list
-Thread* thread_id_to_thread_slow(uint64_t tid) TA_EXCL(thread_lock);
+Thread* thread_id_to_thread_slow(zx_koid_t tid) TA_EXCL(thread_lock);
 
 static inline bool thread_lock_held() { return thread_lock.IsHeld(); }
 
