@@ -70,6 +70,8 @@ static inline void bootbyte_set_normal(void) { rtc_write(RTC_BOOT_BYTE, RTC_BOOT
 
 static inline void bootbyte_set_recovery(void) { rtc_write(RTC_BOOT_BYTE, RTC_BOOT_RECOVERY); }
 
+static inline void bootbyte_set_bootloader(void) { rtc_write(RTC_BOOT_BYTE, RTC_BOOT_BOOTLOADER); }
+
 static inline int bootbyte_decrement(void) {
   uint8_t boot_byte = rtc_read(RTC_BOOT_BYTE);
   unsigned reboot_count = (boot_byte & RTC_BOOT_COUNT_MASK) >> RTC_BOOT_COUNT_SHIFT;
@@ -95,6 +97,8 @@ static inline void bootbyte_clear(void) {}
 static inline void bootbyte_set_normal(void) {}
 
 static inline void bootbyte_set_recovery(void) {}
+
+static inline void bootbyte_set_bootloader(void) {}
 
 static inline int bootbyte_decrement(void) { return 0; }
 #else

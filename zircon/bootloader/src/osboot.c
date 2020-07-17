@@ -10,6 +10,7 @@
 #include <inet6.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <netifc.h>
 #include <stdio.h>
 #include <string.h>
 #include <utf_conversion.h>
@@ -208,6 +209,13 @@ void do_select_fb(void) {
       return;
     }
     set_gfx_mode(cur_mode);
+  }
+}
+
+void do_fastboot(void) {
+  printf("entering fastboot mode\n");
+  while (true) {
+    netifc_poll();
   }
 }
 
@@ -590,12 +598,21 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     goto fail;
   }
 
-  char valid_keys[8];
+  // Valid keys in the bootloader:
+  // n - netboot mode
+  // f - fastboot mode
+  // m - boot local ramdisk
+  // 1 - boot A
+  // 2 - boot B
+  // z/r - boot R
+  // b - boot menu
+  char valid_keys[9];
   memset(valid_keys, 0, sizeof(valid_keys));
   size_t key_idx = 0;
 
   if (have_network) {
     valid_keys[key_idx++] = 'n';
+    valid_keys[key_idx++] = 'f';
   }
   if (kernel != NULL) {
     valid_keys[key_idx++] = 'm';
@@ -647,13 +664,12 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
   if (bootbyte == RTC_BOOT_RECOVERY) {
     swap_to_head('z', valid_keys, key_idx);
+  } else if (bootbyte == RTC_BOOT_BOOTLOADER) {
+    swap_to_head('f', valid_keys, key_idx);
   } else if (bootbyte == RTC_BOOT_NORMAL) {
     // TODO(47049) Commented out to use the ABR choice. Refactor to use a simple boot selection
     // code.
     // swap_to_head('m', valid_keys, key_idx);
-  } else if (bootbyte == RTC_BOOT_BOOTLOADER) {
-    // swap_to_head('b', valid_keys, key_idx);
-    printf("ERROR: booting to bootloader is not supported!\n");
   } else if (!memcmp(defboot, "local", 5)) {
     swap_to_head('m', valid_keys, key_idx);
   } else if (!memcmp(defboot, "zedboot", 7)) {
@@ -676,8 +692,9 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
   gBS->SetWatchdogTimer(0, 0x10000, 0, NULL);
 
   int timeout_s = cmdline_get_uint32("bootloader.timeout", DEFAULT_TIMEOUT);
+
   while (true) {
-    printf("\nPress (b) for the boot menu");
+    printf("\nPress (b) for the boot menu, (f) for fastboot");
     if (have_network) {
       printf(", ");
       if (!kernel)
@@ -704,6 +721,9 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         break;
       case 'n':
         do_netboot();
+        break;
+      case 'f':
+        do_fastboot();
         break;
       case '1':
       case 'm':

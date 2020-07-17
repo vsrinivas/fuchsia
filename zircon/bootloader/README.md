@@ -18,6 +18,45 @@ Gigaboot itself.
 * `bootloader.default`: Sets the default boot choice in the boot menu; default is the first in the
   list.  Possible values are `network`, `local` or `zedboot`.
 
+## Fastboot support
+
+Gigaboot supports fastboot over UDP. You can enter fastboot mode by pressing `f`
+during boot, or by invoking `dm reboot-bootloader` from Fuchsia.
+
+### Protocol Information
+
+Gigaboot implements the fastboot over UDP protocol described
+[here](https://android.googlesource.com/platform/system/core/+/master/fastboot/README.md).
+
+### Supported Commands
+
+| Command | Description |
+| ------- | ----------- |
+| `reboot` |  Reboots the device into the current active partition, as determined by ABR. |
+| `reboot-recovery` | Reboots the device into R. |
+| `reboot-bootloader` | Reboots the device into Fastboot mode. |
+| `flash [partition] [image]` | Flashes the given image onto the given partition. |
+| `erase [partition]` | Erases a partition by writing 0xff to it. |
+| `getvar [varname]`  | Gets the value of the given variable. |
+| `set_active [a|b]` | Marks one of the (a\|b) slots active. |
+
+The partitions available for flashing/erasing are listed
+[here](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/system/public/zircon/hw/gpt.h).
+
+### Supported Variables
+
+| Variable | Description |
+| -------- | ----------- |
+| `all` | A meta-variable that lists all variables stored in the bootloader. |
+| `max-download-size` | The maximum image size that can be sent over |
+| `slot-count` | The number of slots that can be set active on the device. |
+| `bootloader-min-versions` | The minimum required version of the bootloader. |
+| `current-slot` | The slot currently marked active by ABR. |
+| `slot-retry-count:[a|b]` | The number of boot attempts on the given slot. |
+| `slot-successful:[a|b]` | True if the given slot has booted successfully. |
+| `slot-unbootable:[a|b]` | True if the given slot is not bootable. |
+| `version` | The fastboot protocol version. |
+
 ## Chaining with iPXE
 
 Here is an example iPXE script showing how to chain Gigaboot.  In this example, the files are loaded

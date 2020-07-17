@@ -10,6 +10,7 @@ source_set("src") {
     "cmdline.c",
     "device_id.c",
     "diskio.c",
+    "fastboot.c",
     "framebuffer.c",
     "inet6.c",
     "misc.c",

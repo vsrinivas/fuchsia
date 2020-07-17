@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fastboot.h>
 #include <inet6.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -198,8 +199,6 @@ static int ip6_setup(ip6_pkt* p, const ip6_addr* daddr, size_t length, uint8_t t
   return 0;
 }
 
-#define UDP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN - UDP_HDR_LEN)
-
 int udp6_send(const void* data, size_t dlen, const ip6_addr* daddr, uint16_t dport,
               uint16_t sport) {
   size_t length = dlen + UDP_HDR_LEN;
@@ -295,8 +294,12 @@ void udp6_recv(ip6_hdr* ip, void* _data, size_t len) {
     case NB_TFTP_OUTGOING_PORT:
       tftp_recv((uint8_t*)_data + UDP_HDR_LEN, len, (void*)ip->dst, dport, (void*)ip->src, sport);
       break;
+    case FB_SERVER_PORT:
+      fb_recv((uint8_t*)_data + UDP_HDR_LEN, len, (void*)ip->src, sport, dport);
+      break;
     default:
       // Ignore
+      printf("ignoring dport %d", dport);
       return;
   }
 }
@@ -381,6 +384,7 @@ void eth_recv(void* _data, size_t len) {
   // require that we are the destination
   if (memcmp(&ll_ip6_addr, ip->dst, IP6_ADDR_LEN) && memcmp(&snm_ip6_addr, ip->dst, IP6_ADDR_LEN) &&
       memcmp(&ip6_ll_all_nodes, ip->dst, IP6_ADDR_LEN)) {
+    printf("we are not dest\n");
     return;
   }
 

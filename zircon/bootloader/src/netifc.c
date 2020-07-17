@@ -345,6 +345,7 @@ void netifc_poll(void) {
     // Only check for completion if we have operations in progress.
     // Otherwise, the result of GetStatus is unreliable. See ZX-759.
     if ((r = snp->GetStatus(snp, &irq, &txdone))) {
+      printf("no ops in progress \n");
       return;
     }
     if (txdone) {

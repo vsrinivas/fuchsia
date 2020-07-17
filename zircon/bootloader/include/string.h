@@ -17,5 +17,8 @@ char* strcpy(char* dst, const char* src);
 char* strncpy(char* dst, const char* src, size_t len);
 int strcmp(const char* s1, const char* s2);
 int strncmp(const char* s1, const char* s2, size_t len);
+size_t strspn(const char* s, const char* accept);
+char* strpbrk(const char* cs, const char* ct);
+char* strtok(char* s, const char* ct);
 
 #endif  // ZIRCON_BOOTLOADER_INCLUDE_STRING_H_

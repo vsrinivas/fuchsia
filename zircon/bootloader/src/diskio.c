@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <diskio.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/hw/gpt.h>
@@ -69,17 +70,6 @@ static void print_path(efi_boot_services* bs, efi_device_path_protocol* path) {
   bs->FreePool(txt);
 }
 
-typedef struct {
-  efi_disk_io_protocol* io;
-  efi_handle h;
-  efi_boot_services* bs;
-  efi_handle img;
-  uint64_t first;
-  uint64_t last;
-  uint32_t blksz;
-  uint32_t id;
-} disk_t;
-
 static efi_status disk_read(disk_t* disk, size_t offset, void* data, size_t length) {
   if (disk->first > disk->last) {
     return EFI_VOLUME_CORRUPTED;
@@ -97,7 +87,7 @@ static efi_status disk_read(disk_t* disk, size_t offset, void* data, size_t leng
   return disk->io->ReadDisk(disk->io, disk->id, (disk->first * disk->blksz) + offset, length, data);
 }
 
-static efi_status disk_write(disk_t* disk, size_t offset, void* data, size_t length) {
+efi_status disk_write(disk_t* disk, size_t offset, void* data, size_t length) {
   if (disk->first > disk->last) {
     return EFI_VOLUME_CORRUPTED;
   }
@@ -115,9 +105,7 @@ static void disk_close(disk_t* disk) {
   disk->bs->CloseProtocol(disk->h, &DiskIoProtocol, disk->img, NULL);
 }
 
-// Find the disk device that was used to load the boot loader.
-// Returns 0 on success and fills in the disk pointer, -1 otherwise.
-static int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* disk) {
+int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* disk) {
   bool found = false;
   efi_boot_services* bs = sys->BootServices;
   efi_handle* list;
@@ -217,10 +205,8 @@ fail_open_devpath:
   return found ? 0 : -1;
 }
 
-// Given a disk structure, find the kernel on that disk by reading the partition table
-// and looking for the partition with the supplied guid_name.
-static int disk_find_partition(disk_t* disk, bool verbose, const uint8_t* guid_value,
-                               const char* guid_name) {
+int disk_find_partition(disk_t* disk, bool verbose, const uint8_t* guid_value,
+                        const char* guid_name) {
   gpt_header_t gpt;
   efi_status status = disk_read(disk, disk->blksz, &gpt, sizeof(gpt));
   if (status != EFI_SUCCESS) {
@@ -401,4 +387,32 @@ efi_status write_partition(efi_handle img, efi_system_table* sys, const uint8_t*
   efi_status status = disk_write(&disk, offset, (void*)data, size);
   disk_close(&disk);
   return status;
+}
+
+int guid_value_from_name(char *guid_name, uint8_t *value) {
+  if (!strncmp(guid_name, GUID_ZIRCON_A_NAME, GPT_NAME_LEN)) {
+    uint8_t guid_value[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
+    memcpy(value, guid_value, GPT_GUID_LEN);
+  } else if (!strncmp(guid_name, GUID_ZIRCON_B_NAME, GPT_NAME_LEN)) {
+    uint8_t guid_value[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
+    memcpy(value, guid_value, GPT_GUID_LEN);
+  } else if (!strncmp(guid_name, GUID_ZIRCON_R_NAME, GPT_NAME_LEN)) {
+    uint8_t guid_value[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+    memcpy(value, guid_value, GPT_GUID_LEN);
+  } else if (!strncmp(guid_name, GUID_VBMETA_A_NAME, GPT_NAME_LEN)) {
+    uint8_t guid_value[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
+    memcpy(value, guid_value, GPT_GUID_LEN);
+  } else if (!strncmp(guid_name, GUID_VBMETA_B_NAME, GPT_NAME_LEN)) {
+    uint8_t guid_value[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
+    memcpy(value, guid_value, GPT_GUID_LEN);
+  } else if (!strncmp(guid_name, GUID_VBMETA_R_NAME, GPT_NAME_LEN)) {
+    uint8_t guid_value[GPT_GUID_LEN] = GUID_VBMETA_R_VALUE;
+    memcpy(value, guid_value, GPT_GUID_LEN);
+  } else if (!strncmp(guid_name, GUID_EFI_NAME, GPT_NAME_LEN)) {
+    uint8_t guid_value[GPT_GUID_LEN] = GUID_EFI_VALUE;
+    memcpy(value, guid_value, GPT_GUID_LEN);
+  } else {
+    return -1;
+  }
+  return 0;
 }

@@ -89,3 +89,52 @@ int strncmp(const char* s1, const char* s2, size_t len) {
   }
   return 0;
 }
+
+char* strpbrk(char const* cs, char const* ct) {
+  for (const char* sc1 = cs; *sc1 != '\0'; ++sc1) {
+    for (const char* sc2 = ct; *sc2 != '\0'; ++sc2) {
+      if (*sc1 == *sc2)
+        return (char*)sc1;
+    }
+  }
+
+  return NULL;
+}
+
+size_t strspn(char const* s, char const* accept) {
+  size_t count = 0;
+
+  for (const char *p = s; *p != '\0'; ++p) {
+    const char *a;
+    for (a = accept; *a != '\0'; ++a) {
+      if (*p == *a)
+        break;
+    }
+    if (*a == '\0')
+      return count;
+    ++count;
+  }
+
+  return count;
+}
+
+static char* ___strtok = NULL;
+
+char* strtok(char* s, char const* ct) {
+  char *sbegin, *send;
+
+  sbegin = s ? s : ___strtok;
+  if (!sbegin) {
+    return NULL;
+  }
+  sbegin += strspn(sbegin, ct);
+  if (*sbegin == '\0') {
+    ___strtok = NULL;
+    return NULL;
+  }
+  send = strpbrk(sbegin, ct);
+  if (send && *send != '\0')
+    *send++ = '\0';
+  ___strtok = send;
+  return sbegin;
+}

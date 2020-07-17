@@ -17,7 +17,7 @@ typedef struct ndp_n_hdr_t ndp_n_hdr;
 
 #define ETH_ADDR_LEN 6
 #define ETH_HDR_LEN 14
-#define ETH_MTU 1514
+#define ETH_MTU 1502
 
 #define IP6_ADDR_LEN 16
 #define IP6_HDR_LEN 40
@@ -25,6 +25,7 @@ typedef struct ndp_n_hdr_t ndp_n_hdr;
 #define IP6_MIN_MTU 1280
 
 #define UDP_HDR_LEN 8
+#define UDP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN - UDP_HDR_LEN)
 
 struct mac_addr_t {
   uint8_t x[ETH_ADDR_LEN];
