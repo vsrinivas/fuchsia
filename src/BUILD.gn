@@ -73,6 +73,7 @@ group("tests") {
     "tests",
     "ui:tests",
     "virtualization:tests",
+    "//zircon/kernel/lib/devicetree/tests",
   ]
 }
 

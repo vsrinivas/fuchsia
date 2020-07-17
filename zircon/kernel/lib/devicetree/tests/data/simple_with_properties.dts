@@ -1,0 +1,34 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/dts-v1/;
+
+/*
+       A
+      / \
+     B   D
+    /     \
+   C       E
+*/
+
+/ {
+        A {
+                a1;
+                a2 = "root";
+                B {
+                    b1 = <0x1>;
+                    b2 = <0x10>;
+                    b3 = <0x100>;
+                };
+        };
+        C {
+                c1 = "hello";
+                c2 = "world";
+                D {
+                        d1 = <0x0 0x1000>;
+                        d2 = <0x0 0x10000>;
+                        d3 = <0x0 0x100000>;
+                };
+        };
+};
