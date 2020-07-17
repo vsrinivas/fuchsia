@@ -138,6 +138,9 @@ test("driver_manager_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
+
+  # TODO(fxb/56375): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("driver_manager_tests") {
