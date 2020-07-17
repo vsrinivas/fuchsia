@@ -94,6 +94,7 @@ TEST_F(AudioCapturerTest, CanShutdownWithUnusedBuffer) {
   RunLoopUntilIdle();
 }
 
+// The capturer is routed after AddPayloadBuffer is called.
 TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
   EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 0u);
 
@@ -127,6 +128,7 @@ TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
   }});
   context().route_graph().AddDevice(input.get());
   RunLoopUntilIdle();
+  EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 0u);
 
   fidl_capturer_->AddPayloadBuffer(0, std::move(duplicate));
 

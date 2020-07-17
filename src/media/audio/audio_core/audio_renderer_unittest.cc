@@ -165,6 +165,7 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
   }
 }
 
+// The renderer should be routed once the format is set.
 TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
   EXPECT_EQ(context().link_matrix().DestLinkCount(*renderer_), 0u);
 
@@ -181,7 +182,13 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
   auto* renderer_raw = renderer_.get();
   context().route_graph().AddRenderer(std::move(renderer_));
   fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+  RunLoopUntilIdle();
+  EXPECT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 0u);
+
   fidl_renderer_->SetPcmStreamType(stream_type_);
+  RunLoopUntilIdle();
+  EXPECT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
+
   fidl_renderer_->AddPayloadBuffer(0, std::move(duplicate));
 
   RunLoopUntilIdle();

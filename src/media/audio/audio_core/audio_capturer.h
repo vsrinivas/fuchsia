@@ -73,6 +73,8 @@ class AudioCapturer : public BaseCapturer,
   bool mute_;
   std::atomic<float> stream_gain_db_;
   fuchsia::media::AudioCaptureUsage usage_ = fuchsia::media::AudioCaptureUsage::FOREGROUND;
+
+  bool reference_clock_is_set_ = false;
 };
 
 }  // namespace media::audio

@@ -830,6 +830,38 @@ TEST_F(AudioRendererClockTest, SetRefClock_NoReadShouldDisconnect) {
   ExpectDisconnect(audio_renderer_);
 }
 
+// Regardless of the type of clock, calling SetReferenceClock a second time should fail.
+TEST_F(AudioRendererClockTest, SetRefClock_CustomThenOptimalShouldDisconnect) {
+  audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
+
+  audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
+  ExpectDisconnect(audio_renderer_);
+}
+
+// Regardless of the type of clock, calling SetReferenceClock a second time should fail.
+TEST_F(AudioRendererClockTest, SetRefClock_SecondCustomShouldDisconnect) {
+  audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
+
+  audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
+  ExpectDisconnect(audio_renderer_);
+}
+
+// Regardless of the type of clock, calling SetReferenceClock a second time should fail.
+TEST_F(AudioRendererClockTest, SetRefClock_SecondOptimalShouldDisconnect) {
+  audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
+
+  audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
+  ExpectDisconnect(audio_renderer_);
+}
+
+// Regardless of the type of clock, calling SetReferenceClock a second time should fail.
+TEST_F(AudioRendererClockTest, SetRefClock_OptimalThenCustomShouldDisconnect) {
+  audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
+
+  audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
+  ExpectDisconnect(audio_renderer_);
+}
+
 // If client-submitted clock has ZX_RIGHT_WRITE, this should be removed upon GetReferenceClock
 TEST_F(AudioRendererClockTest, GetRefClock_RemovesWriteRight) {
   audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
@@ -838,23 +870,25 @@ TEST_F(AudioRendererClockTest, GetRefClock_RemovesWriteRight) {
   clock::testing::VerifyReadOnlyRights(received_clock);
 }
 
-// Setting the reference clock at any time before packet submittal should succeed
-TEST_F(AudioRendererClockTest, SetRefClock_NoPacket) {
+// Setting the reference clock at any time before SetPcmStreamType should pass
+TEST_F(AudioRendererClockTest, SetRefClock_AfterAddBuffer) {
   CreateAndAddPayloadBuffer(0);
-  audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
-  GetAndValidateReferenceClock();
 
-  audio_renderer_->SetPcmStreamType(kTestStreamType);
-  audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
-  GetAndValidateReferenceClock();
-
-  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
-                        AddCallback("Play"));
-  ExpectCallback();
-
-  // We are now playing, but there are no active packets.
   audio_renderer_->SetReferenceClock(clock::CloneOfMonotonic());
-  GetAndValidateReferenceClock();
+  auto ref_clock = GetAndValidateReferenceClock();
+
+  clock::testing::VerifyReadOnlyRights(ref_clock);
+  clock::testing::VerifyIsSystemMonotonic(ref_clock);
+  clock::testing::VerifyAdvances(ref_clock);
+  clock::testing::VerifyCannotBeRateAdjusted(ref_clock);
+}
+
+// Setting the reference clock at any time afterSetPcmStreamType should fail
+TEST_F(AudioRendererClockTest, SetRefClock_AfterSetFormatShouldDisconnect) {
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  audio_renderer_->SetReferenceClock(clock::CloneOfMonotonic());
+  ExpectDisconnect(audio_renderer_);
 }
 
 // Setting the reference clock should fail, if at least one render packet is active
@@ -875,8 +909,9 @@ TEST_F(AudioRendererClockTest, SetRefClock_PacketActiveShouldDisconnect) {
   ExpectDisconnect(audio_renderer_);
 }
 
-// Setting the reference clock should succeed, after all active render packets have returned
-TEST_F(AudioRendererClockTest, SetRefClock_AfterPacket) {
+// Setting the reference clock any time after calling SendPacket should fail, even if packets are no
+// longer outstanding
+TEST_F(AudioRendererClockTest, SetRefClock_AfterPacketShouldDisconnect) {
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
   AssertConnectedAndDiscardAllPackets();
@@ -885,14 +920,42 @@ TEST_F(AudioRendererClockTest, SetRefClock_AfterPacket) {
   packet.payload_buffer_id = 0;
   packet.payload_offset = 0;
   packet.payload_size = kValidPayloadSize;
-  audio_renderer_->SendPacket(std::move(packet), AddCallback("SendPacket"));
-  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+  audio_renderer_->SendPacketNoReply(std::move(packet));
+  audio_renderer_->DiscardAllPackets(AddCallback("DiscardAllPackets"));
 
-  // Wait for the packet completion; now there are no active packets.
+  // Wait for the Discard completion; now there are no active packets.
   ExpectCallback();
 
   audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
-  GetAndValidateReferenceClock();
+  ExpectDisconnect(audio_renderer_);
+}
+
+// Setting the reference clock at any time after Play should fail
+TEST_F(AudioRendererClockTest, SetRefClock_DuringPlayShouldDisconnect) {
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+                        AddCallback("Play"));
+  ExpectCallback();
+
+  // We are now playing, but there are no active packets.
+  audio_renderer_->SetReferenceClock(clock::CloneOfMonotonic());
+  ExpectDisconnect(audio_renderer_);
+}
+
+// Setting the reference clock at any time after Play should fail
+TEST_F(AudioRendererClockTest, SetRefClock_AfterPlayShouldDisconnect) {
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+  // We are now playing, but there are no active packets.
+
+  audio_renderer_->Pause(AddCallback("Pause"));
+  // Even though we are paused with no packets, SetReferenceClock is still not allowed.
+  ExpectCallback();
+
+  audio_renderer_->SetReferenceClock(clock::CloneOfMonotonic());
+  ExpectDisconnect(audio_renderer_);
 }
 
 }  // namespace media::audio::test

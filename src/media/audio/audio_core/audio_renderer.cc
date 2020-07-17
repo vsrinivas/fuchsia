@@ -64,9 +64,10 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
 
   auto cleanup = fit::defer([this]() { context().route_graph().RemoveRenderer(*this); });
 
-  // We cannot change the clock while packets are in flight.
-  if (IsOperating()) {
-    FX_LOGS(WARNING) << "Attempted to set reference clock while in operational mode.";
+  // We cannot change the reference clock, once it is set. Also, calling `SetPcmStreamType` will
+  // automatically sets the default reference clock, if one has not been explicitly set.
+  if (reference_clock_is_set_) {
+    FX_LOGS(WARNING) << "Attempted to change reference clock after setting it.";
     return;
   }
 
@@ -84,6 +85,8 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
   } else {
     SetOptimalReferenceClock();
   }
+
+  reference_clock_is_set_ = true;
 
   cleanup.cancel();
 }
@@ -111,6 +114,10 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
 
   context().route_graph().SetRendererRoutingProfile(
       *this, {.routable = true, .usage = StreamUsage::WithRenderUsage(usage_)});
+
+  // Once we route the renderer, we accept the default reference clock if one hasn't yet been set.
+  reference_clock_is_set_ = true;
+
   context().volume_manager().NotifyStreamChanged(this);
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will

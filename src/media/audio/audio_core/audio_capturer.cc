@@ -67,6 +67,11 @@ void AudioCapturer::SetRoutingProfile(bool routable) {
   auto profile =
       RoutingProfile{.routable = routable, .usage = StreamUsage::WithCaptureUsage(capture_usage())};
   context().route_graph().SetCapturerRoutingProfile(*this, std::move(profile));
+
+  // Once we route the capturer, we accept the default reference clock if one hasn't yet been set.
+  if (routable) {
+    reference_clock_is_set_ = true;
+  }
 }
 
 void AudioCapturer::OnLinkAdded() {
@@ -85,8 +90,10 @@ void AudioCapturer::SetReferenceClock(zx::clock ref_clock) {
 
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 
-  if (IsOperating()) {
-    FX_LOGS(WARNING) << "Cannot set reference clock while operating!";
+  // We cannot change the reference clock, once set. Also, once the capturer is routed to a device
+  // (which occurs upon AddPayloadBuffer), we set the default clock if one has not yet been set.
+  if (reference_clock_is_set_) {
+    FX_LOGS(WARNING) << "Cannot change reference clock once it is set!";
     return;
   }
 
@@ -104,6 +111,8 @@ void AudioCapturer::SetReferenceClock(zx::clock ref_clock) {
     // TODO(mpuryear): Client may rate-adjust the clock at any time; we should only use SincSampler
     SetOptimalReferenceClock();
   }
+
+  reference_clock_is_set_ = true;
 
   cleanup.cancel();
 }

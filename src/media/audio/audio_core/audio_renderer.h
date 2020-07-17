@@ -66,6 +66,8 @@ class AudioRenderer : public BaseRenderer,
 
   fuchsia::media::AudioRenderUsage usage_ = fuchsia::media::AudioRenderUsage::MEDIA;
 
+  bool reference_clock_is_set_ = false;
+
   class GainControlBinding : public fuchsia::media::audio::GainControl {
    public:
     static std::unique_ptr<GainControlBinding> Create(AudioRenderer* owner) {

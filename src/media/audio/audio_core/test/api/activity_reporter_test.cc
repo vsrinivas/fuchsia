@@ -46,7 +46,7 @@ TEST_F(ActivityReporterTest, AddAndRemove) {
   };
 
   // First call should return immediately, others should wait for updates.
-  add_callback("WatchRenderActivity InitalCall");
+  add_callback("WatchRenderActivity InitialCall");
   ExpectCallback();
   EXPECT_EQ(active_usages, std::vector<AudioRenderUsage>{});
 
