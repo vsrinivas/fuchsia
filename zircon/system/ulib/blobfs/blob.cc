@@ -9,6 +9,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/status.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/device/vfs.h>
@@ -53,9 +54,10 @@ using digest::Digest;
 using digest::MerkleTreeCreator;
 
 bool SupportsPaging(const Inode& inode) {
-  CompressionAlgorithm algorithm = AlgorithmForInode(inode);
-  if (algorithm == CompressionAlgorithm::UNCOMPRESSED ||
-      algorithm == CompressionAlgorithm::CHUNKED) {
+  zx::status<CompressionAlgorithm> status = AlgorithmForInode(inode);
+  if (status.is_ok() &&
+      (status.value() == CompressionAlgorithm::UNCOMPRESSED ||
+       status.value() == CompressionAlgorithm::CHUNKED)) {
     return true;
   }
   return false;

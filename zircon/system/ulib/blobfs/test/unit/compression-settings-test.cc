@@ -27,7 +27,13 @@ TEST(CompressionSettingsTest, AlgorithmForInodeConvertLZ4) {
 TEST(CompressionSettingsTest, AlgorithmForInodeConvertUncompressed) {
   Inode inode;
   inode.header.flags &= ~kBlobFlagMaskAnyCompression;
-  ASSERT_EQ(AlgorithmForInode(inode), CompressionAlgorithm::UNCOMPRESSED);
+  ASSERT_EQ(AlgorithmForInode(inode).value(), CompressionAlgorithm::UNCOMPRESSED);
+}
+
+TEST(CompressionSettingsTest, AlgorithmForInodeMultipleFlagsSet) {
+  Inode inode;
+  inode.header.flags = kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed;
+  ASSERT_FALSE(AlgorithmForInode(inode).is_ok());
 }
 
 // Simple basic conversion test.

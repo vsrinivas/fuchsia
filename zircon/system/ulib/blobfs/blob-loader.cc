@@ -262,7 +262,13 @@ zx_status_t BlobLoader::InitForDecompression(
     uint32_t node_index, const Inode& inode, const BlobVerifier& verifier,
     std::unique_ptr<SeekableDecompressor>* decompressor_out,
     ZSTDSeekableBlobCollection** zstd_seekable_blob_collection_out) {
-  CompressionAlgorithm algorithm = AlgorithmForInode(inode);
+  zx::status<CompressionAlgorithm> algorithm_status = AlgorithmForInode(inode);
+  if (algorithm_status.is_error()) {
+    FS_TRACE_ERROR("blobfs: Cannot decode blob due to multiple compression flags.\n");
+    return algorithm_status.status_value();
+  }
+  CompressionAlgorithm algorithm = algorithm_status.value();
+
   switch (algorithm) {
     case CompressionAlgorithm::UNCOMPRESSED:
       return ZX_OK;

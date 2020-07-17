@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <stdint.h>
+#include <lib/zx/status.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
@@ -27,24 +29,28 @@ const char* CompressionAlgorithmToString(CompressionAlgorithm algorithm) {
   }
 }
 
-CompressionAlgorithm AlgorithmForInode(const Inode& inode) {
-  uint16_t flags = inode.header.flags & kBlobFlagMaskAnyCompression;
-  if (flags & kBlobFlagLZ4Compressed) {
-    return CompressionAlgorithm::LZ4;
-  } else if (flags & kBlobFlagZSTDCompressed) {
-    return CompressionAlgorithm::ZSTD;
-  } else if (flags & kBlobFlagZSTDSeekableCompressed) {
-    return CompressionAlgorithm::ZSTD_SEEKABLE;
-  } else if (flags & kBlobFlagChunkCompressed) {
-    return CompressionAlgorithm::CHUNKED;
-  } else if (!flags) {
-    return CompressionAlgorithm::UNCOMPRESSED;
-  }
+zx::status<CompressionAlgorithm> AlgorithmForInode(const Inode& inode) {
   static_assert(
       kBlobFlagMaskAnyCompression == (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed |
                                       kBlobFlagChunkCompressed | kBlobFlagZSTDSeekableCompressed),
       "Missing algorithm case");
-  ZX_ASSERT(false);
+
+  switch (inode.header.flags & kBlobFlagMaskAnyCompression) {
+    case 0:
+      return zx::ok(CompressionAlgorithm::UNCOMPRESSED);
+    case kBlobFlagLZ4Compressed:
+      return zx::ok(CompressionAlgorithm::LZ4);
+    case kBlobFlagZSTDCompressed:
+      return zx::ok(CompressionAlgorithm::ZSTD);
+    case kBlobFlagZSTDSeekableCompressed:
+      return zx::ok(CompressionAlgorithm::ZSTD_SEEKABLE);
+    case kBlobFlagChunkCompressed:
+      return zx::ok(CompressionAlgorithm::CHUNKED);
+    default:
+      // Multiple flags are set, or these conversion methods have not been
+      // updated to be in sync with kBlobFlagMaskAnyCompression.
+      return zx::error(ZX_ERR_INVALID_ARGS);
+  }
 }
 
 uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm) {

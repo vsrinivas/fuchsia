@@ -6,6 +6,7 @@
 #define BLOBFS_COMPRESSION_SETTINGS_H_
 
 #include <stdint.h>
+#include <lib/zx/status.h>
 
 #include <optional>
 
@@ -25,7 +26,7 @@ enum class CompressionAlgorithm {
 const char* CompressionAlgorithmToString(CompressionAlgorithm);
 
 // Returns the compression algorithm used in |inode|.
-CompressionAlgorithm AlgorithmForInode(const Inode& inode);
+zx::status<CompressionAlgorithm> AlgorithmForInode(const Inode& inode);
 
 // Return an Inode header flagset with the flags associated with |algorithm|
 // set, and all other flags are unset.
