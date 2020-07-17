@@ -21,6 +21,7 @@ group("tests") {
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/root_presenter",
     "//src/ui/scenic",
+    "//src/ui/tests/e2e_input_tests/touch/cpp-gfx-client",
     "//src/ui/tests/e2e_input_tests/touch/one-flutter",
   ]
 }

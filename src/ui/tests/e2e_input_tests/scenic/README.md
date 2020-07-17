@@ -14,11 +14,5 @@ fx shell killall scenic.cmx
 Then you may run these tests in serial, like so:
 
 ```shell
-fx run-test e2e_input_tests
-```
-
-or individually, like so:
-
-```shell
-fx run-test e2e_input_tests -t minimal_input_test
+fx test e2e_input_tests
 ```

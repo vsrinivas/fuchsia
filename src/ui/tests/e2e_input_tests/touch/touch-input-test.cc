@@ -124,6 +124,12 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
     WaitForEnclosingEnvToStart(test_env_.get());
 
     FX_VLOGS(1) << "Created test environment.";
+
+    // Post a "just in case" quit task, if the test hangs.
+    async::PostDelayedTask(
+        dispatcher(),
+        [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
+        kTimeout);
   }
 
   ~TouchInputTest() override {
@@ -155,7 +161,6 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
   }
 
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
-  // TODO(48007): Switch to driver-based injection.
   // Returns the timestamp on the first injected InputReport.
   zx_time_t InjectInput() {
     using fuchsia::ui::input::InputReport;
@@ -350,11 +355,124 @@ TEST_F(TouchInputTest, FlutterTap) {
                               /* out */ nullptr);
   }
 
-  // Post a "just in case" quit task, if the test hangs.
-  async::PostDelayedTask(
-      dispatcher(),
-      [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
-      kTimeout);
+  RunLoop();  // Go!
+}
+
+TEST_F(TouchInputTest, CppGfxClientTap) {
+  const std::string kCppGfxClient =
+      "fuchsia-pkg://fuchsia.com/cpp-gfx-client#meta/cpp-gfx-client.cmx";
+  uint32_t display_width = 0;
+  uint32_t display_height = 0;
+
+  // Get the display dimensions
+  auto scenic = test_env()->ConnectToService<fuchsia::ui::scenic::Scenic>();
+  scenic->GetDisplayInfo(
+      [&display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
+        display_width = display_info.width_in_px;
+        display_height = display_info.height_in_px;
+        FX_LOGS(INFO) << "Got display_width = " << display_width
+                      << " and display_height = " << display_height;
+      });
+  RunLoopUntil(
+      [&display_width, &display_height] { return display_width != 0 && display_height != 0; });
+
+  zx_time_t input_injection_time = 0;
+
+  // Define test expectations for when CppGfxClient calls back with "Respond()".
+  SetRespondCallback([this, display_width, display_height,
+                      &input_injection_time](fuchsia::test::ui::PointerData pointer_data) {
+    // The /config/data/display_rotation (90) specifies how many degrees to rotate the
+    // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
+    // the user observes the child view to rotate *clockwise* by that amount (90).
+    //
+    // Hence, a tap in the center of the display's top-right quadrant is observed by the child
+    // view as a tap in the center of its top-left quadrant.
+    float expected_x = display_height / 4.f;
+    float expected_y = display_width / 4.f;
+
+    FX_LOGS(INFO) << "CppGfxClient received tap at (" << pointer_data.local_x() << ", "
+                  << pointer_data.local_y() << ").";
+    FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
+                  << ").";
+
+    zx_duration_t elapsed_time =
+        zx_time_sub_time(pointer_data.time_received(), input_injection_time);
+    EXPECT_TRUE(elapsed_time > 0 && elapsed_time != ZX_TIME_INFINITE);
+    FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time;
+    FX_LOGS(INFO) << "CppGfxClient Received Time (ns): " << pointer_data.time_received();
+    FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time;
+
+    // Allow for minor rounding differences in coordinates.
+    EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
+    EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
+
+    FX_LOGS(INFO) << "*** PASS ***";
+    QuitLoop();
+  });
+
+  // Define when to set size for CppGfxClient's view, and when to inject input against
+  // CppGfxClient's view.
+  scenic::Session::EventHandler handler = [this, &input_injection_time](
+                                              std::vector<fuchsia::ui::scenic::Event> events) {
+    for (const auto& event : events) {
+      if (IsViewPropertiesChangedEvent(event)) {
+        auto properties = event.gfx().view_properties_changed().properties;
+        FX_VLOGS(1) << "Test received its view properties; transfer to child view: " << properties;
+        FX_CHECK(view_holder()) << "Expect that view holder is already set up.";
+        view_holder()->SetViewProperties(properties);
+        session()->Present(zx_clock_get_monotonic(), [](auto info) {});
+
+      } else if (IsViewStateChangedEvent(event)) {
+        bool hittable = event.gfx().view_state_changed().state.is_rendering;
+        FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
+        if (hittable) {
+          input_injection_time = InjectInput();
+        }
+
+      } else if (IsViewDisconnectedEvent(event)) {
+        // Save time, terminate the test immediately if we know that CppGfxClient's view is borked.
+        FX_CHECK(injection_count() > 0) << "Expected to have completed input injection, but "
+                                           "CppGfxClient's view terminated early.";
+      }
+    }
+  };
+
+  auto tokens_rt = scenic::ViewTokenPair::New();  // Root Presenter -> Test
+  auto tokens_tf = scenic::ViewTokenPair::New();  // Test -> CppGfxClient
+
+  // Instruct Root Presenter to present test's View.
+  auto root_presenter = test_env()->ConnectToService<fuchsia::ui::policy::Presenter>();
+  root_presenter->PresentOrReplaceView(std::move(tokens_rt.view_holder_token),
+                                       /* presentation */ nullptr);
+
+  // Set up test's View, to harvest CppGfxClient view's view_state.is_rendering signal.
+  auto session_pair = scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get());
+  MakeSession(std::move(session_pair.first), std::move(session_pair.second));
+  session()->set_event_handler(std::move(handler));
+
+  scenic::View view(session(), std::move(tokens_rt.view_token), "test's view");
+  MakeViewHolder(std::move(tokens_tf.view_holder_token), "test's viewholder for CppGfxClient");
+  view.AddChild(*view_holder());
+  // Request to make test's view; this will trigger dispatch of view properties.
+  session()->Present(zx_clock_get_monotonic(), [](auto info) {
+    FX_LOGS(INFO) << "test's view and view holder created by Scenic.";
+  });
+
+  // Start CppGfxClient app inside the test environment.
+  // Note well. We launch the CppGfxClient component directly, and ask for its ViewProvider service
+  // directly, to closely model production setup.
+  fuchsia::sys::ComponentControllerPtr cpp_gfx_client_component;
+  {
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = kCppGfxClient;
+    // Create a point-to-point offer-use connection between parent and child.
+    auto child_services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+    cpp_gfx_client_component = test_env()->CreateComponent(std::move(launch_info));
+
+    auto view_provider = child_services->Connect<fuchsia::ui::app::ViewProvider>();
+    view_provider->CreateView(std::move(tokens_tf.view_token.value), /* in */ nullptr,
+                              /* out */ nullptr);
+  }
 
   RunLoop();  // Go!
 }
