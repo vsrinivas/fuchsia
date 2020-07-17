@@ -49,6 +49,11 @@ void EnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprVa
 // non-concrete (const, forward definition, etc.) so the caller doesn't have to check.
 //
 // The returned type may not necessarily be concrete (need to preserve, const, etc.).
+//
+// This function currently assumes that the caller wants to do something with the type so the
+// pointed-to type can not be "void". This means that "void*" will issue an error. If this
+// capability is needed in the future, probably we want to add an enum parameter to control whether
+// this is OK (forcing all callers to check for null is probably not a good idea).
 Err GetPointedToType(const fxl::RefPtr<EvalContext>& eval_context, const Type* input,
                      fxl::RefPtr<Type>* pointed_to);
 

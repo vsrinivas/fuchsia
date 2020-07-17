@@ -157,7 +157,7 @@ Err GetPointedToType(const fxl::RefPtr<EvalContext>& eval_context, const Type* i
 
   *pointed_to = fxl::RefPtr<Type>(const_cast<Type*>(mod_type->modified().Get()->AsType()));
   if (!*pointed_to)
-    return Err("Missing pointer type info, please file a bug with a repro.");
+    return Err("Can not dereference a pointer to 'void'.");
   return Err();
 }
 

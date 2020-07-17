@@ -24,6 +24,9 @@ struct BuiltinTypeInfo {
 const BuiltinTypeInfo kCBuiltinInfo[] = {
     // clang-format off
 
+    // This void type is a bit weird because the way that "void" is represented in DWARF is just by
+    // an absence of a type. But we can't really return that here. So we return it as a base type of
+    // "no base type".
     { "void",     BaseType::kBaseTypeNone,         0 },
     { "bool",     BaseType::kBaseTypeBoolean,      1 },
 

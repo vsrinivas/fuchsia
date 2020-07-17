@@ -42,6 +42,14 @@ class FormatTest : public TestWithLoop {
 
 }  // namespace
 
+TEST_F(FormatTest, Void) {
+  FormatOptions opts;
+
+  // "None" base type is used in some cases as an encoding for void.
+  ExprValue val_void(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeNone, 0, "myvoid"), {});
+  EXPECT_EQ(" = myvoid, void\n", GetDebugTreeForValue(eval_context(), val_void, opts));
+}
+
 TEST_F(FormatTest, Signed) {
   FormatOptions opts;
 

@@ -14,6 +14,9 @@ namespace zxdb {
 
 // Looks up the given type name. If it is a known builtin type name, a symbol defining that type
 // will be returned. Otherwise an empty refptr will be returned.
+//
+// "void" is a special case: it will be represetned as a kBaseTypeNone variant of a base type
+// (normally DWARF would represent void as the absence of a type, but that's not possible here.
 fxl::RefPtr<BaseType> GetBuiltinType(ExprLanguage lang, std::string_view name);
 
 fxl::RefPtr<BaseType> GetBuiltinFloatType(ExprLanguage lang);

@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/member_ptr.h"
@@ -568,9 +569,17 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
                           static_cast<unsigned>(modified_type->tag())));
         break;
     }
-  } else if (IsNumericBaseType(node->value().GetBaseType())) {
-    // Numeric types.
-    FormatNumericNode(node, options);
+  } else if (const BaseType* base_type = type->AsBaseType()) {
+    if (IsNumericBaseType(node->value().GetBaseType())) {
+      // Numeric types.
+      FormatNumericNode(node, options);
+    } else if (base_type->base_type() == BaseType::kBaseTypeNone) {
+      // Special encoding for "void".
+      node->set_description("void");
+      node->set_description_kind(FormatNode::kOther);
+    } else {
+      node->set_err(Err("Unsupported base type %d.", base_type->base_type()));
+    }
   } else if (const MemberPtr* member_ptr = type->AsMemberPtr()) {
     // Pointers to class/struct members.
     FormatMemberPtr(node, member_ptr, options, context);
@@ -588,7 +597,7 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
     // Unspecified (nullptr_t).
     FormatUnspecified(node);
   } else {
-    node->set_err(Err("Unsupported type for new formatting system."));
+    node->set_err(Err("Unsupported type: " + DwarfTagToString(type->tag())));
   }
 }
 

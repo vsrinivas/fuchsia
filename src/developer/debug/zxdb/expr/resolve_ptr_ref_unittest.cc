@@ -177,6 +177,7 @@ TEST_F(ResolvePtrRefTest, GetPointedToType_NotPointer) {
   EXPECT_EQ("Attempting to dereference 'int32_t' which is not a pointer.", err.msg());
 }
 
+// A pointer to nothing is used as an encoding for void*.
 TEST_F(ResolvePtrRefTest, GetPointedToType_NoPointedToType) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
@@ -186,7 +187,7 @@ TEST_F(ResolvePtrRefTest, GetPointedToType_NoPointedToType) {
   fxl::RefPtr<Type> pointed_to;
   Err err = GetPointedToType(eval_context, ptr_type.get(), &pointed_to);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Missing pointer type info, please file a bug with a repro.", err.msg());
+  EXPECT_EQ("Can not dereference a pointer to 'void'.", err.msg());
 }
 
 TEST_F(ResolvePtrRefTest, GetPointedToType_Good) {
