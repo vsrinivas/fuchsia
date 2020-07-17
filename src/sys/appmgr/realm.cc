@@ -124,7 +124,7 @@ zx::process CreateProcess(const zx::job& job, zx::vmo executable, const std::str
   }
   environ.push_back(nullptr);
 
-  uint32_t flags = 0u;
+  uint32_t flags = FDIO_SPAWN_CLONE_UTC_CLOCK;
 
   std::vector<fdio_spawn_action_t> actions;
 

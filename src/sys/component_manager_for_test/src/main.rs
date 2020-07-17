@@ -56,7 +56,7 @@ async fn main() -> Result<(), Error> {
     info!("Component manager for test is starting up...");
 
     // Create an ELF runner for the root component.
-    let runner = Arc::new(ElfRunner::new(&args));
+    let runner = Arc::new(ElfRunner::new(&args, None));
 
     // Set up environment.
     let builtin_environment = BuiltinEnvironmentBuilder::new()

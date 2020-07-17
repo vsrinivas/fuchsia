@@ -15,6 +15,7 @@ group("tests") {
     ":shutdown_integration_test",
     "base_resolver_test",
     "collections:collections_integration_test",
+    "component-time:tests",
     "destruction:destruction_integration_test",
     "elf_runner:tests",
     "events:events_integration_test",

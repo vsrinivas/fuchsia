@@ -20,8 +20,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_async::EHandle,
     fuchsia_component::client,
-    fuchsia_runtime::{job_default, HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Process, Task},
+    fuchsia_runtime::{duplicate_utc_clock_handle, job_default, HandleInfo, HandleType},
+    fuchsia_zircon::{self as zx, AsHandleRef, Clock, HandleBased, Job, Process, Task},
     futures::future::{AbortHandle, Abortable, BoxFuture, FutureExt},
     log::{error, warn},
     std::convert::TryFrom,
@@ -98,6 +98,8 @@ pub enum ElfRunnerError {
         #[from]
         err: RunnerError,
     },
+    #[error("failed to duplicate UTC clock for component with url \"{}\": {}", url, status)]
+    DuplicateUtcClockError { url: String, status: zx::Status },
 }
 
 impl ElfRunnerError {
@@ -163,11 +165,12 @@ impl ElfRunnerError {
 /// Runs components with ELF binaries.
 pub struct ElfRunner {
     launcher_connector: ProcessLauncherConnector,
+    utc_clock: Option<Arc<Clock>>,
 }
 
 impl ElfRunner {
-    pub fn new(args: &Arguments) -> ElfRunner {
-        ElfRunner { launcher_connector: ProcessLauncherConnector::new(args) }
+    pub fn new(args: &Arguments, utc_clock: Option<Arc<Clock>>) -> ElfRunner {
+        ElfRunner { launcher_connector: ProcessLauncherConnector::new(args), utc_clock }
     }
 
     async fn create_runtime_directory<'a>(
@@ -264,6 +267,26 @@ impl ElfRunner {
                 id: HandleInfo::new(HandleType::Lifecycle, 0).as_raw(),
             })
         };
+
+        if cfg!(feature = "propagate_utc_clock") {
+            let clock_rights = zx::Rights::READ | zx::Rights::DUPLICATE | zx::Rights::TRANSFER;
+            let utc_clock = if let Some(utc_clock) = &self.utc_clock {
+                utc_clock.duplicate_handle(clock_rights)
+            } else {
+                duplicate_utc_clock_handle(clock_rights)
+            }
+            .map_err(|s| {
+                RunnerError::component_launch_error(
+                    "failed to duplicate UTC clock",
+                    ElfRunnerError::DuplicateUtcClockError { url: resolved_url.clone(), status: s },
+                )
+            })?;
+
+            handle_infos.push(fproc::HandleInfo {
+                handle: utc_clock.into_handle(),
+                id: HandleInfo::new(HandleType::ClockUtc, 0).as_raw(),
+            });
+        }
 
         // Load the component
         let launch_info =
@@ -830,7 +853,7 @@ mod tests {
             ..Default::default()
         };
         let config = Arc::new(RuntimeConfig::default());
-        let runner = Arc::new(ElfRunner::new(&args));
+        let runner = Arc::new(ElfRunner::new(&args, None));
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&config),
             AbsoluteMoniker::root(),
@@ -878,7 +901,7 @@ mod tests {
             ..Default::default()
         };
         let config = Arc::new(RuntimeConfig::default());
-        let runner = Arc::new(ElfRunner::new(&args));
+        let runner = Arc::new(ElfRunner::new(&args, None));
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&config),
             AbsoluteMoniker::root(),
@@ -1128,7 +1151,7 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let runner = Arc::new(ElfRunner::new(&args));
+        let runner = Arc::new(ElfRunner::new(&args, None));
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&config),
             AbsoluteMoniker::root(),
@@ -1162,7 +1185,7 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let runner = Arc::new(ElfRunner::new(&args));
+        let runner = Arc::new(ElfRunner::new(&args, None));
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&config),
             AbsoluteMoniker::from(vec!["foo:0"]),
@@ -1192,7 +1215,7 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let runner = Arc::new(ElfRunner::new(&args));
+        let runner = Arc::new(ElfRunner::new(&args, None));
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&config),
             AbsoluteMoniker::root(),

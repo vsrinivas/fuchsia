@@ -37,7 +37,7 @@ async fn main() -> Result<(), Error> {
     };
 
     // Create an ELF runner for the root component.
-    let runner = Arc::new(ElfRunner::new(&args));
+    let runner = Arc::new(ElfRunner::new(&args, None));
 
     // Set up environment.
     let builtin_environment = BuiltinEnvironmentBuilder::new()

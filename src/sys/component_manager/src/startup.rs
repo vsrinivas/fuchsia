@@ -98,7 +98,8 @@ impl Arguments {
              --use-builtin-process-launcher   Provide and use a built-in implementation of\n\
              fuchsia.process.Launcher\n
              --maintain-utc-clock             Create and vend a UTC kernel clock through a\n\
-             built-in implementation of fuchsia.time.Maintenance\n",
+             built-in implementation of fuchsia.time.Maintenance.\n\
+             Should only be used with the root component_manager.\n",
             std::env::args().next().unwrap_or("component_manager".to_string())
         )
     }

@@ -94,7 +94,7 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
     }
   }
 
-  uint32_t spawn_flags = FDIO_SPAWN_CLONE_JOB;
+  uint32_t spawn_flags = FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_UTC_CLOCK;
 
   // Set up the environ for the new process
   fbl::Vector<const char*> env;

@@ -101,6 +101,9 @@ async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error>
     };
 
     // Create a UTC clock if required.
+    // Not every instance of component_manager running on the system maintains a
+    // UTC clock. Only the root component_manager should have the --maintain-utc-clock
+    // flag set.
     let utc_clock = if args.maintain_utc_clock {
         Some(Arc::new(create_and_start_utc_clock().await.context("failed to create UTC clock")?))
     } else {
@@ -108,7 +111,7 @@ async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error>
     };
 
     // Create an ELF runner for the root component.
-    let runner = Arc::new(ElfRunner::new(&args));
+    let runner = Arc::new(ElfRunner::new(&args, utc_clock.clone()));
 
     let mut builtin_environment_builder = BuiltinEnvironmentBuilder::new()
         .set_args(args)

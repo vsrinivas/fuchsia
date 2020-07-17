@@ -15,9 +15,12 @@
 use {
     fuchsia_zircon::{
         sys::{zx_handle_t, ZX_HANDLE_INVALID}, // handle type (primitive, non-owning)
+        Clock,
         Handle,
         Job,
         Process,
+        Rights,
+        Status,
         Thread,
         Unowned,
         Vmar,
@@ -34,6 +37,7 @@ extern "C" {
     pub fn zx_process_self() -> zx_handle_t;
     pub fn zx_vmar_root_self() -> zx_handle_t;
     pub fn zx_job_default() -> zx_handle_t;
+    pub fn zx_utc_reference_get() -> zx_handle_t;
 }
 
 /// Handle types as defined by the processargs protocol.
@@ -293,6 +297,15 @@ pub fn job_default() -> Unowned<'static, Job> {
         let handle = zx_job_default();
         Unowned::from_raw_handle(handle)
     }
+}
+
+/// Duplicate the UTC `Clock` registered with the runtime.
+pub fn duplicate_utc_clock_handle(rights: Rights) -> Result<Clock, Status> {
+    let handle: Unowned<'static, Clock> = unsafe {
+        let handle = zx_utc_reference_get();
+        Unowned::from_raw_handle(handle)
+    };
+    handle.duplicate(rights)
 }
 
 #[cfg(test)]

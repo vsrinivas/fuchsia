@@ -106,7 +106,7 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
     });
   }
 
-  uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC;
+  uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
   if (clone_stdio) {
     flags |= FDIO_SPAWN_CLONE_STDIO;
   }
@@ -289,7 +289,7 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
     });
   }
 
-  uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC;
+  uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
   if (clone_stdio) {
     flags |= FDIO_SPAWN_CLONE_STDIO;
   }

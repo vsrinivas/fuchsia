@@ -85,14 +85,14 @@ async fn main() -> Result<(), Error> {
     };
 
     // Create an ELF runner for the root component.
-    let runner = Arc::new(ElfRunner::new(&args));
-
+    let runner = Arc::new(ElfRunner::new(&args, None));
     let builtin_environment = BuiltinEnvironmentBuilder::new()
         .set_args(args)
         .add_runner("elf".into(), runner)
         .add_available_resolvers_from_namespace()?
         .build()
         .await?;
+
     let hub_proxy = builtin_environment.bind_service_fs_for_hub().await?;
 
     let root_moniker = AbsoluteMoniker::root();

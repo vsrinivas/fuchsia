@@ -223,11 +223,13 @@ void Service::Launch(int conn, const std::string& peer_name) {
       {.action = FDIO_SPAWN_ACTION_CLONE_FD,
        .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
   };
+  constexpr uint32_t kSpawnFlags =
+      FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
   zx::process process;
   std::string error;
-  zx_status_t status = chrealm::SpawnBinaryInRealmAsync(
-      "/hub", kSshdArgv, child_job.get(), FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC, actions,
-      process.reset_and_get_address(), &error);
+  zx_status_t status =
+      chrealm::SpawnBinaryInRealmAsync("/hub", kSshdArgv, child_job.get(), kSpawnFlags, actions,
+                                       process.reset_and_get_address(), &error);
   if (status < 0) {
     shutdown(conn, SHUT_RDWR);
     close(conn);

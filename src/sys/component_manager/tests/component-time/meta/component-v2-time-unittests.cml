@@ -1,0 +1,20 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    program: {
+        binary: "bin/component_time_test",
+    },
+    use: [
+        // Use test runner which will expose `fuchsia.test.Suite` on test's behalf.
+        { runner: "rust_test_runner" },
+    ],
+    expose: [
+        // The Fuchsia Test Framework expects this service to be exposed from the
+        // test component. The Rust test adapter provides this service.
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

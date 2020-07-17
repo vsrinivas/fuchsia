@@ -456,10 +456,13 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
       .ns = {.prefix = "/sysmem", .handle = fs_handle.release()},
   });
 
+  uint32_t spawn_flags =
+      FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
+
   char errmsg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_handle_t proc = ZX_HANDLE_INVALID;
-  status = fdio_spawn_etc(svc_job_copy.get(), FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC,
-                          argv[0], argv, NULL, actions.size(), actions.data(), &proc, errmsg);
+  status = fdio_spawn_etc(svc_job_copy.get(), spawn_flags, argv[0], argv, NULL, actions.size(),
+                          actions.data(), &proc, errmsg);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to launch %s (%s): %s", argv[0], name, errmsg);
     return status;
