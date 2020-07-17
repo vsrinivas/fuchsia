@@ -353,9 +353,8 @@ codec_encode(struct nodelist *nlist, zx_handle_t *vmo)
 	header.cmd_offset = header.symtab_offset + total_symtab_size;
 	header.string_offset = header.cmd_offset + funcblocksize;
 
-	const size_t total_size = header.string_offset + funcstringsize;
-	header.total_size = num_writable_vars + num_readonly_vars;
-	char buffer[total_size];
+	char buffer[header.string_offset + funcstringsize];
+	header.total_size = sizeof(buffer);
 
 	// Output the symbol tables
 	memcpy(buffer, &header, sizeof(header));
@@ -370,21 +369,20 @@ codec_encode(struct nodelist *nlist, zx_handle_t *vmo)
 	encodenodelist(nlist);
 
 	// And VMO-ify the whole thing
-	zx_status_t status = zx_vmo_create(total_size, 0, vmo);
+	zx_status_t status = zx_vmo_create(sizeof(buffer), 0, vmo);
 	if (status != ZX_OK)
 		return status;
-	return zx_vmo_write(*vmo, buffer, 0, total_size);
+	return zx_vmo_write(*vmo, buffer, 0, sizeof(buffer));
 }
 
 struct nodelist *codec_decode(char *buffer, size_t length)
 {
-	if (length < sizeof(size_t)) {
+	struct state_header header;
+	if (length < sizeof(header)) {
 		return NULL;
 	}
-
-	struct state_header header;
 	memcpy(&header, buffer, sizeof(header));
-	if (length != header.total_size) {
+	if (length < header.total_size) {
 		return NULL;
 	}
 
@@ -395,4 +393,8 @@ struct nodelist *codec_decode(char *buffer, size_t length)
 	// The decodenodelist API is very... unique. It needs the
 	// argument to point to something non-NULL, even though the
 	// argument is otherwise ignored and used as an output parameter.
+	struct nodelist *nlist = &dummy;
+	decodenodelist(&nlist);
+	return nlist;
+}
 
