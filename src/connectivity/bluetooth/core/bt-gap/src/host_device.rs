@@ -7,7 +7,6 @@ use {
     fidl_fuchsia_bluetooth::{self as fbt, DeviceClass},
     fidl_fuchsia_bluetooth_control::{self as control, PairingOptions},
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
-    fidl_fuchsia_mem::Buffer,
     fuchsia_bluetooth::{
         inspect::Inspectable,
         types::{BondingData, HostData, HostInfo, Peer, PeerId},
@@ -157,10 +156,6 @@ impl HostDevice {
 
     pub fn enable_background_scan(&self, enable: bool) -> types::Result<()> {
         self.host.enable_background_scan(enable).map_err(Error::from)
-    }
-
-    pub fn get_inspect_vmo(&self) -> impl Future<Output = types::Result<Buffer>> {
-        self.host.get_inspect_vmo().map_err(Error::from)
     }
 }
 

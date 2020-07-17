@@ -42,6 +42,7 @@ pub async fn expect_hierarchies(
 
 #[derive(Default, Clone)]
 pub struct InspectState {
+    pub moniker: Vec<String>,
     pub hierarchies: Vec<NodeHierarchy>,
 }
 
@@ -49,11 +50,13 @@ pub type InspectHarness = ExpectationHarness<InspectState, ControlProxy>;
 
 pub async fn handle_inspect_updates(harness: InspectHarness) -> Result<(), Error> {
     loop {
-        let fetcher = ArchiveReader::new()
-            .add_selector(ComponentSelector::new(vec!["bt-gap.cmx".to_string()]));
-        harness.write_state().hierarchies =
-            fetcher.get().await?.into_iter().flat_map(|result| result.payload).collect();
-        harness.notify_state_changed();
+        if harness.read().moniker.len() > 0 {
+            let fetcher = ArchiveReader::new()
+                .add_selector(ComponentSelector::new(harness.read().moniker.clone()));
+            harness.write_state().hierarchies =
+                fetcher.get().await?.into_iter().flat_map(|result| result.payload).collect();
+            harness.notify_state_changed();
+        }
         fuchsia_async::Timer::new(RETRY_TIMEOUT_SECONDS.seconds().after_now()).await;
     }
 }

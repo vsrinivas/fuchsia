@@ -48,7 +48,7 @@ use crate::{
         PairingDelegate,
     },
     store::stash::Stash,
-    types::{self, HostInspectVmo},
+    types,
     watch_peers::PeerWatcher,
 };
 
@@ -151,10 +151,6 @@ struct HostDispatcherState {
 
     pairing_delegate: Option<PairingDelegate>,
     pairing_dispatcher: Option<PairingDispatcherHandle>,
-
-    // Sender end of a futures::mpsc channel to send host Inspect VMOs to the main loop.
-    // When a new host adapter is recognized, we request its Inspect VMO and send it on this channel.
-    host_vmo_sender: mpsc::Sender<HostInspectVmo>,
 
     pub event_listeners: Vec<Weak<ControlControlHandle>>,
 
@@ -372,7 +368,6 @@ impl HostDispatcher {
         stash: Stash,
         inspect: inspect::Node,
         gas_channel_sender: mpsc::Sender<LocalServiceDelegateRequest>,
-        host_vmo_sender: mpsc::Sender<HostInspectVmo>,
         watch_peers_publisher: hanging_get::Publisher<HashMap<PeerId, Peer>>,
         watch_peers_registrar: hanging_get::SubscriptionRegistrar<PeerWatcher>,
         watch_hosts_publisher: hanging_get::Publisher<Vec<HostInfo>>,
@@ -388,7 +383,6 @@ impl HostDispatcher {
             config_settings: build_config::load_default(),
             peers: HashMap::new(),
             gas_channel_sender,
-            host_vmo_sender,
             stash,
             discovery: None,
             discoverable: None,
@@ -788,20 +782,6 @@ impl HostDispatcher {
         let id: HostId = host_device.read().get_info().id.into();
         self.state.write().add_host(id.clone(), host_device.clone());
 
-        // Forward host inspect VMO to channel.
-        let fut = host_device.read().get_inspect_vmo();
-        let inspect_buf = fut.await;
-        match inspect_buf {
-            Ok(buffer) => {
-                self.state
-                    .write()
-                    .host_vmo_sender
-                    .try_send(HostInspectVmo { name: id.to_string(), buffer })
-                    .map_err(|_| format_err!("failed to send host inspect vmo on channel"))?;
-            }
-            _ => fx_log_err!("failed to get host inspect vmo"),
-        }
-
         self.notify_host_watchers().await;
 
         // Start listening to Host interface events.
@@ -1079,7 +1059,6 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let system_inspect = inspector.root().create_child("system");
         let (gas_channel_sender, _generic_access_req_stream) = mpsc::channel(0);
-        let (host_vmo_sender, _host_vmo_receiver) = mpsc::channel(0);
         let watch_peers_broker = hanging_get::HangingGetBroker::new(
             HashMap::new(),
             |_, _| true,
@@ -1096,7 +1075,6 @@ mod tests {
             stash,
             system_inspect,
             gas_channel_sender,
-            host_vmo_sender,
             watch_peers_broker.new_publisher(),
             watch_peers_broker.new_registrar(),
             watch_hosts_broker.new_publisher(),
@@ -1142,7 +1120,6 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let system_inspect = inspector.root().create_child("system");
         let (gas_channel_sender, _generic_access_req_stream) = mpsc::channel(0);
-        let (host_vmo_sender, _host_vmo_receiver) = mpsc::channel(0);
 
         let watch_peers_broker = hanging_get::HangingGetBroker::new(
             HashMap::new(),
@@ -1161,7 +1138,6 @@ mod tests {
             stash,
             system_inspect,
             gas_channel_sender,
-            host_vmo_sender,
             watch_peers_broker.new_publisher(),
             watch_peers_broker.new_registrar(),
             watch_hosts_broker.new_publisher(),
@@ -1190,14 +1166,12 @@ pub(crate) mod test {
         watch_hosts_registrar: hanging_get::SubscriptionRegistrar<sys::HostWatcherWatchResponder>,
     ) -> Result<HostDispatcher, Error> {
         let (gas_channel_sender, _ignored_gas_task_req_stream) = mpsc::channel(0);
-        let (host_vmo_sender, _host_vmo_receiver) = mpsc::channel(0);
         Ok(HostDispatcher::new(
             "test".to_string(),
             Appearance::Display,
             Stash::stub()?,
             placeholder_node(),
             gas_channel_sender,
-            host_vmo_sender,
             watch_peers_publisher,
             watch_peers_registrar,
             watch_hosts_publisher,
