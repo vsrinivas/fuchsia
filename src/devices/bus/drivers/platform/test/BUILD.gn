@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("platform-bus") {
   output_name = "platform-bus-test"
@@ -30,23 +30,6 @@ simple_drivers = [
   "parent",
   "composite",
 ]
-
-group("test") {
-  testonly = false
-  deps = [
-    ":test-audio-codec",
-    ":test-board",
-    ":test-clock",
-    ":test-gpio",
-    ":test-i2c",
-    ":test-power",
-    ":test-pwm",
-    ":test-spi",
-  ]
-  foreach(driver, simple_drivers) {
-    deps += [ ":test-$driver" ]
-  }
-}
 
 driver_module("test-board") {
   defines = [ "_ALL_SOURCE" ]
@@ -240,13 +223,28 @@ foreach(driver, simple_drivers) {
   }
 }
 
-unittest_package("platform-bus-package") {
-  package_name = "platform-bus"
-  deps = [ ":platform-bus" ]
-
-  tests = [
-    {
-      name = "platform-bus-test"
-    },
+isolated_devmgr_unittest_package("platform-bus-test") {
+  executable_path = "test/platform-bus-test"
+  deps = [
+    ":platform-bus",
+    ":test-audio-codec",
+    ":test-board",
+    ":test-clock",
+    ":test-gpio",
+    ":test-i2c",
+    ":test-power",
+    ":test-pwm",
+    ":test-spi",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/clock/drivers/clock",
+    "//src/devices/gpio/drivers/gpio",
+    "//src/devices/i2c/drivers/i2c",
+    "//src/devices/internal/drivers/fragment",
+    "//src/devices/power/drivers/power",
+    "//src/devices/pwm/drivers/pwm",
+    "//src/devices/spi/drivers/spi",
   ]
+  foreach(driver, simple_drivers) {
+    deps += [ ":test-$driver" ]
+  }
 }

@@ -67,3 +67,8 @@ driver_module("platform-bus.proxy") {
     "//zircon/public/lib/zx",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:platform-bus-test" ]
+}

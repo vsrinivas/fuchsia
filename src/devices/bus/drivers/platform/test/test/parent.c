@@ -29,7 +29,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   pdev_protocol_t pdev;
   zx_status_t status;
 
-  zxlogf(ERROR, "test_bind: %s ", DRIVER_NAME);
+  zxlogf(INFO, "test_bind: %s ", DRIVER_NAME);
 
   status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {

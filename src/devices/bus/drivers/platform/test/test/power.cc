@@ -111,7 +111,7 @@ zx_status_t TestPowerDevice::PowerImplEnablePowerDomain(uint32_t index) {
     return ZX_ERR_INVALID_ARGS;
   }
   enabled_[index] = true;
-  zxlogf(ERROR, "%s: Enabling power domain for index:%d", __func__, index);
+  zxlogf(INFO, "%s: Enabling power domain for index:%d", __func__, index);
   return ZX_OK;
 }
 

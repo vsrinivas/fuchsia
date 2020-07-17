@@ -36,19 +36,45 @@ zbi_platform_id_t kPlatformId = []() {
   return plat_id;
 }();
 
+#define BOARD_REVISION_TEST 42
+
+const zbi_board_info_t kBoardInfo = []() {
+  zbi_board_info_t board_info = {};
+  board_info.revision = BOARD_REVISION_TEST;
+  return board_info;
+}();
+
 zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
-  if (type != ZBI_TYPE_PLATFORM_ID) {
-    return ZX_OK;
-  }
   zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
-  if (status != ZX_OK) {
-    return status;
+  switch (type) {
+    case ZBI_TYPE_PLATFORM_ID: {
+      zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
+      if (status != ZX_OK) {
+        return status;
+      }
+      status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
+      if (status != ZX_OK) {
+        return status;
+      }
+      break;
+    }
+    case ZBI_TYPE_DRV_BOARD_INFO: {
+      zbi_board_info_t board_info = kBoardInfo;
+      zx_status_t status = zx::vmo::create(sizeof(kBoardInfo), 0, &vmo);
+      if (status != ZX_OK) {
+        return status;
+      }
+      status = vmo.write(&board_info, 0, sizeof(board_info));
+      if (status != ZX_OK) {
+        return status;
+      }
+      *length = sizeof(board_info);
+      break;
+    }
+    default:
+      break;
   }
-  status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
-  if (status != ZX_OK) {
-    return status;
-  }
+
   *out = std::move(vmo);
   return ZX_OK;
 }
@@ -58,6 +84,7 @@ TEST(PbusTest, Enumeration) {
   args.sys_device_driver = "/boot/driver/platform-bus.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.get_boot_item = GetBootItem;
+  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -130,6 +157,7 @@ TEST(PbusTest, BoardInfo) {
   args.sys_device_driver = "/boot/driver/platform-bus.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.get_boot_item = GetBootItem;
+  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));

@@ -51,7 +51,7 @@ class TestSpiDevice : public DeviceType,
     // devmgr is now in charge of dev.
     __UNUSED auto ptr = dev.release();
 
-    zxlogf(ERROR, "%s: returning ZX_OK", __func__);
+    zxlogf(INFO, "%s: returning ZX_OK", __func__);
     return ZX_OK;
   }
 

@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  deps = [ "pci:tests" ]
+  deps = [
+    "pci:tests",
+    "platform:tests",
+  ]
 }
