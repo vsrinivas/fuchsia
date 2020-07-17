@@ -61,7 +61,7 @@ TEST_P(AttrTest, Utimes) {
   EXPECT_EQ(zx_clock_get(ZX_CLOCK_UTC, &now), ZX_OK);
   EXPECT_NE(now, 0u) << "zx_clock_get only returns zero on error";
 
-  const std::string file = GetPath("::file.txt");
+  const std::string file = GetPath("file.txt");
   int fd1 = open(file.c_str(), O_CREAT | O_RDWR, 0644);
   EXPECT_GT(fd1, 0);
 
