@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/fidlutils/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fidl-utils/bind.h>
-#include <unittest/unittest.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 
 #include <type_traits>
+
+#include <fidl/test/fidlutils/c/fidl.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 class BaseClass {
@@ -32,17 +33,13 @@ class BaseClass {
   zx_status_t OverloadedFnWithoutReply(uint64_t, fidl_txn_t*) { return ZX_ERR_INTERNAL; }
 
   virtual zx_status_t VirtualFnWithReply(uint64_t magic_number, fidl_txn_t*) {
-    BEGIN_HELPER;
     EXPECT_EQ(magic_number, MAGIC_NUMBER);
     return ZX_OK;
-    END_HELPER;
   }
 
   virtual zx_status_t VirtualFnWithoutReply(uint64_t magic_number) {
-    BEGIN_HELPER;
     EXPECT_EQ(magic_number, MAGIC_NUMBER);
     return ZX_OK;
-    END_HELPER;
   }
 
   constexpr static uint64_t MAGIC_NUMBER = 42;
@@ -51,17 +48,13 @@ class BaseClass {
 class DerivedClass : BaseClass {
  public:
   virtual zx_status_t VirtualFnWithReply(uint64_t magic_number, fidl_txn_t*) override {
-    BEGIN_HELPER;
     EXPECT_EQ(magic_number, MAGIC_NUMBER);
     return ZX_OK;
-    END_HELPER;
   }
 
   virtual zx_status_t VirtualFnWithoutReply(uint64_t magic_number) override {
-    BEGIN_HELPER;
     EXPECT_EQ(magic_number, MAGIC_NUMBER);
     return ZX_OK;
-    END_HELPER;
   }
 
   constexpr static uint64_t MAGIC_NUMBER = 183;
@@ -80,9 +73,7 @@ static_assert(
                  zx_status_t (*)(void*, uint64_t)>::value,
     "Unexpected signature for C binding of BindingTestsProtocol::FunctionWithoutReply");
 
-bool SimpleBindMemberTest() {
-  BEGIN_TEST;
-
+TEST(BindingTests, SimpleBindMemberTest) {
   BaseClass base;
   void* base_ctx = &base;
   fidl_txn_t dummy_txn;
@@ -94,13 +85,9 @@ bool SimpleBindMemberTest() {
 
   EXPECT_EQ(ops.FunctionWithReply(base_ctx, BaseClass::MAGIC_NUMBER, &dummy_txn), ZX_OK);
   EXPECT_EQ(ops.FunctionWithoutReply(base_ctx, BaseClass::MAGIC_NUMBER), ZX_OK);
-
-  END_TEST;
 }
 
-bool ConstBindMemberTest() {
-  BEGIN_TEST;
-
+TEST(BindingTests, ConstBindMemberTest) {
   BaseClass base;
   void* base_ctx = &base;
   fidl_txn_t dummy_txn;
@@ -112,13 +99,9 @@ bool ConstBindMemberTest() {
 
   EXPECT_EQ(ops.FunctionWithReply(base_ctx, BaseClass::MAGIC_NUMBER, &dummy_txn), ZX_OK);
   EXPECT_EQ(ops.FunctionWithoutReply(base_ctx, BaseClass::MAGIC_NUMBER), ZX_OK);
-
-  END_TEST;
 }
 
-bool VolatileBindMemberTest() {
-  BEGIN_TEST;
-
+TEST(BindingTests, VolatileBindMemberTest) {
   BaseClass base;
   void* base_ctx = &base;
   fidl_txn_t dummy_txn;
@@ -130,13 +113,9 @@ bool VolatileBindMemberTest() {
 
   EXPECT_EQ(ops.FunctionWithReply(base_ctx, BaseClass::MAGIC_NUMBER, &dummy_txn), ZX_OK);
   EXPECT_EQ(ops.FunctionWithoutReply(base_ctx, BaseClass::MAGIC_NUMBER), ZX_OK);
-
-  END_TEST;
 }
 
-bool OverloadedBindMemberTest() {
-  BEGIN_TEST;
-
+TEST(BindingTests, OverloadedBindMemberTest) {
   BaseClass base;
   void* base_ctx = &base;
   fidl_txn_t dummy_txn;
@@ -150,13 +129,9 @@ bool OverloadedBindMemberTest() {
 
   EXPECT_EQ(ops.FunctionWithReply(base_ctx, BaseClass::MAGIC_NUMBER, &dummy_txn), ZX_OK);
   EXPECT_EQ(ops.FunctionWithoutReply(base_ctx, BaseClass::MAGIC_NUMBER), ZX_OK);
-
-  END_TEST;
 }
 
-bool VirtualBindMemberTest() {
-  BEGIN_TEST;
-
+TEST(BindingTests, VirtualBindMemberTest) {
   BaseClass base;
   DerivedClass derived;
   void* base_ctx = &base;
@@ -178,16 +153,6 @@ bool VirtualBindMemberTest() {
   EXPECT_EQ(derived_ops.FunctionWithReply(derived_ctx, DerivedClass::MAGIC_NUMBER, &dummy_txn),
             ZX_OK);
   EXPECT_EQ(derived_ops.FunctionWithoutReply(derived_ctx, DerivedClass::MAGIC_NUMBER), ZX_OK);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(binding_tests)
-RUN_TEST(SimpleBindMemberTest)
-RUN_TEST(ConstBindMemberTest)
-RUN_TEST(VolatileBindMemberTest)
-RUN_TEST(OverloadedBindMemberTest)
-RUN_TEST(VirtualBindMemberTest)
-END_TEST_CASE(binding_tests)
