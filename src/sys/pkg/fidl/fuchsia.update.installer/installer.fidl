@@ -4,7 +4,9 @@
 
 library fuchsia.update.installer;
 
-using zx;
+using fuchsia.pkg;
+
+using AttemptId = string:36; // 36 == strlen("01234567-89ab-cdef-0123-456789abcdef")
 
 /// Updates the system.
 ///
@@ -25,99 +27,118 @@ protocol Installer {
     ///
     /// + request `attempt_id` UUID identifying the requested update attempt.
     /// - response `info` the status of the last update attempt, if available.
-    GetUpdateResult(string attempt_id) -> (UpdateResult info);
+    GetUpdateResult(AttemptId attempt_id) -> (UpdateResult info);
 
     /// Start an update if one is not running, or attach to a pending update
-    /// attempt. Attach the provided monitor to the update attempt.
+    /// attempt if one is running and
+    /// [`Options.allow_attach_to_existing_attempt`] is true. If an update
+    /// attempt is started or attached to, provide status updates through
+    /// `monitor`.
     ///
     /// + request `url` The fuchsia-pkg URL of the update package to update to.
-    /// + request `options` Configuration options for this update attempt. Ignored or merged
-    ///     with the existing `options` if an update attempt is already in progress.
+    /// + request `options` Configuration options for this update attempt.
+    ///     Ignored or merged with the existing `options` if an update attempt
+    ///     is already in progress.
     /// + request `monitor` A protocol on which to receive progress updates.
-    /// + request `monitor_options` Configuration options to control the behavior of the
-    ///     given [`Monitor`].
+    /// + request `reboot_controller` An optional protocol to control the timing
+    ///     of the reboot into the update system. If not provided, the update
+    ///     attempt will initiate the reboot as soon as it is ready.
     ///
     /// - response `attempt_id` UUID identifying this update attempt. For
     ///     updates that require a reboot, components may use this identifier to
     ///     disambiguate the completion of this update attempt from new update
     ///     attempts that start post-reboot.
     StartUpdate(
-        string url,
+        fuchsia.pkg.PackageUrl url,
         Options options,
-        request<Monitor> monitor,
-        MonitorOptions monitor_options) -> (string attempt_id);
+        Monitor monitor,
+        request<RebootController>? reboot_controller
+        ) -> (AttemptId attempt_id) error UpdateNotStartedReason;
 
-    /// Attempt to monitor a specific update attempt, if it exists. This API
+    /// Attempt to monitor a specific update attempt, if it exists. This request
     /// will not start an update if one is not already running.
     ///
     /// + request `attempt_id` UUID identifying the requested update attempt. If
     ///     not given, monitor any active update attempt.
     /// + request `monitor` A protocol on which to receive progress updates.
-    /// + request `monitor_options` Configuration options to control the behavior of the
-    ///     given [`Monitor`].
     ///
     /// - response `attached` Whether or not the provided monitor was attached
     ///     to an in-progress update attempt. If false, monitor will be closed
     ///     by the server.
     MonitorUpdate(
-        string? attempt_id,
-        request<Monitor> monitor,
-        MonitorOptions monitor_options) -> (bool attached);
+        AttemptId? attempt_id,
+        Monitor monitor
+        ) -> (bool attached);
+};
 
-    /// Monitor all update attempts as they start, as well as an in-progress
-    /// attempt, if there is one.
+/// Controls the timing of the reboot into the updated system.
+///
+/// If the client end of a [`RebootController`] is closed without calling
+/// [`RebootController.Detach()`], the update attempt will fall back to the
+/// default behavior of rebooting as soon as it is ready.
+protocol RebootController {
+    /// Informs the update attempt that it may reboot when ready, unblocking a
+    /// pending reboot if it is already ready to reboot.
     ///
-    /// + request `attempts_monitor` A protocol on which to receive [`Monitor`]
-    ///     instances as update attempts start.
-    /// + request `monitor_options` Configuration options to control the behavior of the
-    ///     given [`Monitor`].
-    MonitorAllUpdates(
-        request<AttemptsMonitor> attempts_monitor,
-        MonitorOptions monitor_options);
+    /// If a controller is dropped without sending this request or
+    /// [`RebootController.Detach`], the update attempt reclaims control of the
+    /// timing of the reboot, behaving as if the update attempt was not given a
+    /// [`RebootController`] at all.
+    Unblock();
+
+    /// Informs the update attempt that it should wait to reboot indefinitely,
+    /// even if this [`RebootController`] connection is dropped.
+    Detach();
 };
 
 /// Metadata about a prior update attempt.
 table UpdateResult {
-    /// UUID for this specific update attempt. Always present.
-    1: string attempt_id;
+    /// Unique identifier for this specific update attempt. Always present.
+    1: AttemptId attempt_id;
 
-    // TODO stabilize the concept of what defines a system version. If it is a
-    // single blob ID, of what package? Or should it be a fuchsia-pkg URL?
-    /// Source version of this update attempt. Always present.
-    2: string source_version;
-
-    /// Target version of this update attempt, if known.
-    3: string target_version;
+    /// fuchsia-pkg:// url for the update package associated with this update
+    /// attempt. Always present.
+    2: fuchsia.pkg.PackageUrl url;
 
     /// Configuration options for this update attempt. Always present.
-    4: Options options;
+    3: Options options;
 
-    /// Terminal state of this update attempt. Always present.
-    5: State state;
-
-    /// When this update attempt started. Always present.
-    6: zx.time when;
+    /// Terminal state of this update attempt. Always present if the update
+    /// failed. None if the update succeeded.
+    4: State state;
 };
 
 /// Configuration options for an update attempt.
 table Options {
     /// What initiated this update attempt. Required.
     1: Initiator initiator;
+
+    /// If an update is already in progress, it's acceptable to instead attach a
+    /// Monitor to that in-progress update instead of failing this request to
+    /// install the update.  Setting this option to true may convert situations
+    /// that would have resulted in the ALREADY_IN_PROGRESS to be treated as
+    /// non-error cases. A controller, if provided, will be ignored if the
+    /// running update attempt already has a controller.
+    2: bool allow_attach_to_existing_attempt;
+
+    /// Determines if the installer should update the recovery partition if an
+    /// update is available.  Defaults to true.
+    3: bool should_write_recovery;
 };
 
-/// Configuration options for the [`Monitor`] protocol.
-table MonitorOptions {
-    /// True if events should be sent over the [`Monitor`] protocol. Assumed to
-    /// be false if absent.
-    1: bool should_notify;
-};
-
-/// Who or what initiated the update check.
+/// Who or what initiated the update installation.
 enum Initiator {
-    /// The update check was initiated by an interactive user, or the user is
-    /// otherwise blocked and waiting for the result of this update check.
+    /// The install was initiated by an interactive user, or the user is
+    /// otherwise blocked and waiting for the result of this update.
     USER = 0;
 
-    /// The update check was initiated by a service, in the background.
+    /// The install was initiated by a service, in the background.
     SERVICE = 1;
+};
+
+/// The set of values that are returned by an request to start an update.
+enum UpdateNotStartedReason {
+    /// There was already another update attempt in progress when this request was
+    /// made.  A new update attempt will not be started.
+    ALREADY_IN_PROGRESS = 1;
 };

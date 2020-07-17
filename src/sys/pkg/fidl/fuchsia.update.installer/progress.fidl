@@ -4,103 +4,200 @@
 
 library fuchsia.update.installer;
 
-/// Monitors update attempts as they start.
-protocol AttemptsMonitor {
-    /// Emitted when a new update attempt has started.
-    ///
-    /// + request `attempt_id` UUID identifying this update attempt.
-    /// + request `monitor` A protocol on which to receive progress updates.
-    -> OnStart(string attempt_id, Monitor monitor);
-};
-
-/// Monitors an update attempt.
+/// Monitors a single update installation attempt.
 ///
-/// When a Monitor is attached to an update attempt with
-/// [`MonitorOptions.should_notify`] set to true, the server will emit events on
-/// the protocol that the client must consume. Clients that attach to an attempt
-/// will be sent any events they may have missed (by attaching to an update
-/// attempt after it has started, for example).
+/// Clients interested in receiving progress information for an update attempt
+/// should implement this protocol and provide the client end to
+/// [`Installer.StartUpdate`] or [`Installer.MonitorUpdate`].
 protocol Monitor {
-    /// Emitted when transitioning from one state to another.
+    /// Receives a status update for this installation attempt.
     ///
-    /// - response `state` The new state.
-    -> OnStateEnter(State state);
-
-    /// Retrieve the latest progress of this update attempt, blocking until
-    /// newer progress is available if this client has already seen the
-    /// currently available progress. If this update attempt has completed (or
-    /// failed), this API immediately returns the final progress.
+    /// This request will be called for all state changes, skipping none.
+    /// However, message delivery is throttled by the rate at which the
+    /// implementation acknowledges the messages.
     ///
-    /// - response `progress` The latest progress of this update attempt.
-    GetNextProgress() -> (Progress progress);
+    /// The throttled delivery doesn't impact the underlying state of the
+    /// [`Installer`].  It does not wait for any acknowledgements before it
+    /// moves on to the next state in its state machine.  The [`Installer`] will
+    /// simply queue up the states for the [`Monitor`] implementor to receive.
+    ///
+    /// During states with data that changes as the updage progress, the
+    /// [`Installer`] may, at its discretion, collapse redundant information
+    /// like the fraction completed, in the event that the [`Monitor`]
+    /// implementation is not responding to the `OnState()` requests in a timely
+    /// manner.
+    ///
+    /// + request `state` The new state of the update installation attempt.
+    /// - response        The implementation is ready to receive the next
+    ///                   [`State`] from the [`Installer`].
+    OnState(State state) -> ();
 };
 
-/// States that an update attempt may transition through. An update attempt
-/// always starts in [`State.PREPARE`]. See each state for more details.
-enum State {
-    /// Fetching required metadata to begin the update. This state will also
-    /// compute and expose an estimate of the required download size.
+/// The set of states that a [`Monitor`] can receive during an update
+/// installation attempt.
+///
+/// An installation attempt ends when it enters a terminal state, denoted below
+/// as the states on the right-hand side of the diagram with no arrows leading
+/// out of them.
+///
+/// # State Machine Diagram
+///
+/// ```
+///     +---------+     +----------------+
+///     | prepare |---->|  fail_prepare  |
+///     +---------+     +----------------+
+///          |
+///          v
+///     +---------+     +----------------+
+///     |  fetch  |---->|   fail_fetch   |
+///     +---------+     +----------------+
+///          |
+///          v
+///     +---------+     +----------------+
+///     |  stage  |---->|   fail_stage   |
+///     +---------+     +----------------+
+///          |
+///          |          +----------------+
+///          +--------->|     reboot     |
+///          |          +----------------+
+///          |
+///          |          +----------------+
+///          +--------->| wait_to_reboot |
+///          |          +----------------+
+///          |
+///          |          +----------------+
+///          +--------->|    complete    |
+///                     +----------------+
+/// ```
+union State {
+    /// Fetching required metadata to begin the update and verifying system
+    /// state.
     ///
-    /// ## Next States
-    /// * [`State.DOWNLOAD`] on success.
-    /// * [`State.FAIL`] on error.
-    PREPARE = 0;
+    /// Next States:
+    /// * `fetch` system is ready to install the update.
+    /// * `fail_prepare` on error.
+    1: PrepareData prepare;
 
-    /// Downloading packages and kernel images.
+    /// Fetching packages and kernel images.
     ///
-    /// ## Next States
-    /// * [`State.STAGE`] on success.
-    /// * [`State.FAIL`] on error.
-    DOWNLOAD = 1;
+    /// Next States:
+    /// * `stage` required assets are ready to be staged for next boot.
+    /// * `fail_fetch` on error.
+    2: FetchData fetch;
 
     /// Writing kernel images and preparing to switch over to the new system.
     ///
-    /// ## Next States
-    /// * [`State.REBOOT`] if a reboot is required to complete the update.
-    /// * [`State.FINALIZE`] if a reboot is not required to complete the update.
-    /// * [`State.FAIL`] on error.
-    STAGE = 2;
+    /// Next States:
+    /// * `reboot` if the installer was instructed to initiate the reboot.
+    /// * `wait_to_reboot` if the installer was instructed to let the initiator
+    ///   perform the reboot.
+    /// * `complete` if no reboot was necessary to complete the update.
+    /// * `fail_stage` on error.
+    3: StageData stage;
 
-    /// Waiting to reboot.
+    /// The installer has initiated a system reboot into the updated OS.
     ///
-    /// ## Next States
-    /// * [`State.FINALIZE`] if a reboot is not required to complete the update.
-    /// * [`State.FAIL`] on error.
-    REBOOT = 3;
+    /// **This is a terminal state**
+    ///
+    4: RebootData reboot;
 
-    /// Running final tasks post-reboot.
+    /// The system is configured to boot the updated OS on next boot, and the
+    /// installer is waiting for the initiator to reboot the system.
     ///
-    /// ## Next States
-    /// * [`State.COMPLETE`] on success.
-    /// * [`State.FAIL`] on error.
-    FINALIZE = 4;
+    /// **This is a terminal state**
+    ///
+    5: WaitToRebootData wait_to_reboot;
 
-    /// Terminal states. An update attempt will eventually end up in one of
-    /// these and will not transition out of them.
+    /// The update is complete and no reboot was required.
     ///
-    /// ## Next States
-    /// none
-    COMPLETE = 5;
-    FAIL = 6;
+    /// **This is a terminal state**
+    ///
+    6: CompleteData complete;
+
+    /// An error occured while preparing the install.
+    ///
+    /// **This is a terminal state**
+    ///
+    7: FailPrepareData fail_prepare;
+
+    /// An error occured while fetching the required artifacts.
+    ///
+    /// **This is a terminal state**
+    ///
+    8: FailFetchData fail_fetch;
+
+    /// An error occured while staging the new OS.
+    ///
+    /// **This is a terminal state**
+    ///
+    9: FailStageData fail_stage;
 };
 
-/// Fixed precision decimal representing 100%.
-const uint8 PERCENT_MAX = 100;
+/// Data associated with [`State.prepare`].
+table PrepareData {
+};
 
-/// State of an update attempt.
-table Progress {
-    /// The current state of the update. Always present.
-    1: State state;
+/// Data associated with [`State.fetch`].
+table FetchData {
+    1: UpdateInfo info;
+    2: InstallationProgress progress;
+};
 
-    /// When not present, progress is not yet known. When present, must be less
-    /// than or equal to [`PERCENT_MAX`].
-    2: uint8 percent_complete;
+/// Data associated with [`State.stage`].
+table StageData {
+    1: UpdateInfo info;
+    2: InstallationProgress progress;
+};
 
-    /// The number of bytes that must be downloaded to apply this update.
-    /// Populated during [`State.PREPARE`].
-    3: uint64 download_size;
+/// Data associated with [`State.reboot`].
+table RebootData {
+    1: UpdateInfo info;
+    2: InstallationProgress progress;
+};
 
-    /// The number of bytes downloaded during this update attempt. Less than or
-    /// equal to [`download_size`].
-    4: uint64 bytes_downloaded;
+/// Data associated with [`State.wait_to_reboot`].
+table WaitToRebootData {
+    1: UpdateInfo info;
+    2: InstallationProgress progress;
+};
+
+/// Data associated with [`State.complete`].
+table CompleteData {
+    1: UpdateInfo info;
+    2: InstallationProgress progress;
+};
+
+/// Data associated with [`State.fail_prepare`].
+table FailPrepareData {
+};
+
+/// Data associated with [`State.fail_fetch`].
+table FailFetchData {
+    1: UpdateInfo info;
+    2: InstallationProgress progress;
+};
+
+/// Data associated with [`State.fail_stage`].
+table FailStageData {
+    1: UpdateInfo info;
+    2: InstallationProgress progress;
+};
+
+/// Metadata for an update.  Once a field is populated during an installation
+/// attempt, the value will not change.
+table UpdateInfo {
+    /// The total number of bytes that may be downloaded to apply this update.
+    /// Optional, the installer may not be able to provide this value.
+    1: uint64 download_size;
+};
+
+/// Current progress for an installation attempt.
+table InstallationProgress {
+    /// The fraction [0-1.0f] of the installation that has been completed.
+    1: float32 fraction_completed;
+
+    /// The number of bytes downloaded during this installation attempt. Less
+    /// than or equal to [`UpdateInfo.download_size`] and only present if that
+    /// field is also present.
+    2: uint64 bytes_downloaded;
 };

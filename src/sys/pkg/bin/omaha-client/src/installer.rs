@@ -5,12 +5,12 @@
 //! This is the Fuchsia Installer implementation that talks to fuchsia.update.installer FIDL API.
 
 use crate::install_plan::FuchsiaInstallPlan;
-use anyhow::anyhow;
-use fidl::endpoints::create_proxy;
+use anyhow::Context;
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
+use fidl_fuchsia_pkg::PackageUrl;
 use fidl_fuchsia_update_installer::{
-    Initiator, InstallerMarker, InstallerProxy, MonitorEvent, MonitorMarker, MonitorOptions,
-    Options, State,
+    Initiator, InstallerMarker, InstallerProxy, MonitorMarker, MonitorRequest, Options,
+    RebootControllerMarker, RebootControllerProxy, State, UpdateNotStartedReason,
 };
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
@@ -25,31 +25,23 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum FuchsiaInstallError {
-    #[error("generic error: {}", _0)]
-    Failure(anyhow::Error),
+    #[error("generic error: {0}")]
+    Failure(#[from] anyhow::Error),
 
-    #[error("FIDL error: {}", _0)]
-    FIDL(fidl::Error),
+    #[error("FIDL error: {0}")]
+    FIDL(#[from] fidl::Error),
 
-    #[error("System update installer failed")]
+    #[error("an installation was already in progress")]
+    InstallInProgress,
+
+    #[error("system update installer failed")]
     Installer,
-}
-
-impl From<anyhow::Error> for FuchsiaInstallError {
-    fn from(e: anyhow::Error) -> FuchsiaInstallError {
-        FuchsiaInstallError::Failure(e)
-    }
-}
-
-impl From<fidl::Error> for FuchsiaInstallError {
-    fn from(e: fidl::Error) -> FuchsiaInstallError {
-        FuchsiaInstallError::FIDL(e)
-    }
 }
 
 #[derive(Debug)]
 pub struct FuchsiaInstaller {
     proxy: InstallerProxy,
+    reboot_controller: Option<RebootControllerProxy>,
 }
 
 impl FuchsiaInstaller {
@@ -57,14 +49,14 @@ impl FuchsiaInstaller {
     #[allow(dead_code)]
     pub fn new() -> Result<Self, anyhow::Error> {
         let proxy = fuchsia_component::client::connect_to_service::<InstallerMarker>()?;
-        Ok(FuchsiaInstaller { proxy })
+        Ok(FuchsiaInstaller { proxy, reboot_controller: None })
     }
 
     #[cfg(test)]
     fn new_mock() -> (Self, fidl_fuchsia_update_installer::InstallerRequestStream) {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<InstallerMarker>().unwrap();
-        (FuchsiaInstaller { proxy }, stream)
+        (FuchsiaInstaller { proxy, reboot_controller: None }, stream)
     }
 }
 
@@ -77,37 +69,52 @@ impl Installer for FuchsiaInstaller {
         install_plan: &FuchsiaInstallPlan,
         _observer: Option<&dyn ProgressObserver>,
     ) -> BoxFuture<'_, Result<(), FuchsiaInstallError>> {
-        let url = install_plan.url.to_string();
+        let mut url = PackageUrl { url: install_plan.url.to_string() };
         let options = Options {
             initiator: Some(match install_plan.install_source {
                 InstallSource::ScheduledTask => Initiator::Service,
                 InstallSource::OnDemand => Initiator::User,
             }),
+            should_write_recovery: None,
+            allow_attach_to_existing_attempt: None,
         };
 
         async move {
-            let (monitor_proxy, server_end) = create_proxy::<MonitorMarker>()?;
-            let monitor_options = MonitorOptions { should_notify: Some(true) };
-            let attempt_id =
-                self.proxy.start_update(&url, options, server_end, monitor_options).await?;
+            let (monitor_client_end, mut monitor) =
+                fidl::endpoints::create_request_stream::<MonitorMarker>()?;
+            let (reboot_controller, reboot_controller_server_end) =
+                fidl::endpoints::create_proxy::<RebootControllerMarker>()?;
+            self.reboot_controller = Some(reboot_controller);
+            let attempt_id = self
+                .proxy
+                .start_update(
+                    &mut url,
+                    options,
+                    monitor_client_end,
+                    Some(reboot_controller_server_end),
+                )
+                .await?
+                .map_err(|reason| match reason {
+                    UpdateNotStartedReason::AlreadyInProgress => {
+                        FuchsiaInstallError::InstallInProgress
+                    }
+                })?;
             info!("Update started with attempt id: {}", attempt_id);
 
-            let mut stream = monitor_proxy.take_event_stream();
-            while let Some(event) = stream.try_next().await? {
-                match event {
-                    MonitorEvent::OnStateEnter { state } => {
-                        // TODO: report progress to ProgressObserver
-                        info!("Installer entered state: {}", state_to_string(state));
-                        match state {
-                            State::Complete => {
-                                return Ok(());
-                            }
-                            State::Fail => {
-                                return Err(FuchsiaInstallError::Installer);
-                            }
-                            _ => {}
-                        }
+            while let Some(request) = monitor.try_next().await? {
+                let MonitorRequest::OnState { state, responder } = request;
+                let _ = responder.send();
+
+                // TODO: report progress to ProgressObserver
+                info!("Installer entered state: {}", state_to_string(&state));
+                match state {
+                    State::Complete(_) | State::WaitToReboot(_) | State::Reboot(_) => {
+                        return Ok(());
                     }
+                    State::FailPrepare(_) | State::FailFetch(_) | State::FailStage(_) => {
+                        return Err(FuchsiaInstallError::Installer);
+                    }
+                    _ => {}
                 }
             }
 
@@ -118,33 +125,45 @@ impl Installer for FuchsiaInstaller {
 
     fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
         async move {
-            connect_to_service::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()?
-                .reboot(RebootReason::SystemUpdate)
-                .await?
-                .map_err(|e| anyhow!("Reboot error: {}", zx::Status::from_raw(e)))
+            match self.reboot_controller.take() {
+                Some(reboot_controller) => {
+                    reboot_controller.unblock().context("notify installer it can reboot when ready")
+                }
+                None => {
+                    // FIXME Need the direct reboot path anymore?
+                    connect_to_service::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()?
+                        .reboot(RebootReason::SystemUpdate)
+                        .await?
+                        .map_err(zx::Status::from_raw)
+                        .context("reboot error")
+                }
+            }
         }
         .boxed()
     }
 }
 
 /// Convert fuchsia.update.installer/State to string for ProgressObserver.
-fn state_to_string(state: State) -> &'static str {
+fn state_to_string(state: &State) -> &'static str {
     match state {
-        State::Prepare => "Prepare",
-        State::Download => "Download",
-        State::Stage => "Stage",
-        State::Reboot => "Reboot",
-        State::Finalize => "Finalize",
-        State::Complete => "Complete",
-        State::Fail => "Fail",
+        State::Prepare(_) => "Prepare",
+        State::Fetch(_) => "Fetch",
+        State::Stage(_) => "Stage",
+        State::Reboot(_) => "Reboot",
+        State::WaitToReboot(_) => "WaitToReboot",
+        State::Complete(_) => "Complete",
+        State::FailPrepare(_) => "FailPrepare",
+        State::FailFetch(_) => "FailFetch",
+        State::FailStage(_) => "FailStage",
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_update_installer::InstallerRequest;
+    use fidl_fuchsia_update_installer::{InstallationProgress, InstallerRequest, UpdateInfo};
     use fuchsia_async as fasync;
+    use matches::assert_matches;
 
     const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
 
@@ -156,23 +175,39 @@ mod tests {
             install_source: InstallSource::OnDemand,
         };
         let installer_fut = async move {
-            installer.perform_install(&plan, None).await.unwrap();
+            let () = installer.perform_install(&plan, None).await.unwrap();
         };
         let stream_fut = async move {
             match stream.next().await.unwrap() {
                 Ok(InstallerRequest::StartUpdate {
                     url,
-                    options: Options { initiator },
+                    options:
+                        Options { initiator, should_write_recovery, allow_attach_to_existing_attempt },
                     monitor,
-                    monitor_options: MonitorOptions { should_notify },
+                    reboot_controller,
                     responder,
                 }) => {
-                    assert_eq!(url, TEST_URL);
+                    assert_eq!(url.url, TEST_URL);
                     assert_eq!(initiator, Some(Initiator::User));
-                    assert_eq!(should_notify, Some(true));
-                    responder.send("00000000-0000-0000-0000-000000000001").unwrap();
-                    let (_stream, handle) = monitor.into_stream_and_control_handle().unwrap();
-                    handle.send_on_state_enter(State::Complete).unwrap();
+                    assert_matches!(reboot_controller, Some(_));
+                    assert_eq!(should_write_recovery, None);
+                    assert_eq!(allow_attach_to_existing_attempt, None);
+                    responder
+                        .send(&mut Ok("00000000-0000-0000-0000-000000000001".to_owned()))
+                        .unwrap();
+                    let monitor = monitor.into_proxy().unwrap();
+                    let () = monitor
+                        .on_state(&mut State::WaitToReboot(
+                            fidl_fuchsia_update_installer::WaitToRebootData {
+                                info: Some(UpdateInfo { download_size: None }),
+                                progress: Some(InstallationProgress {
+                                    fraction_completed: Some(1.0),
+                                    bytes_downloaded: None,
+                                }),
+                            },
+                        ))
+                        .await
+                        .unwrap();
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
@@ -196,9 +231,17 @@ mod tests {
         let stream_fut = async move {
             match stream.next().await.unwrap() {
                 Ok(InstallerRequest::StartUpdate { monitor, responder, .. }) => {
-                    responder.send("00000000-0000-0000-0000-000000000002").unwrap();
-                    let (_stream, handle) = monitor.into_stream_and_control_handle().unwrap();
-                    handle.send_on_state_enter(State::Fail).unwrap();
+                    responder
+                        .send(&mut Ok("00000000-0000-0000-0000-000000000002".to_owned()))
+                        .unwrap();
+
+                    let monitor = monitor.into_proxy().unwrap();
+                    let () = monitor
+                        .on_state(&mut State::FailPrepare(
+                            fidl_fuchsia_update_installer::FailPrepareData {},
+                        ))
+                        .await
+                        .unwrap();
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
@@ -246,10 +289,27 @@ mod tests {
         let stream_fut = async move {
             match stream.next().await.unwrap() {
                 Ok(InstallerRequest::StartUpdate { monitor, responder, .. }) => {
-                    responder.send("00000000-0000-0000-0000-000000000003").unwrap();
-                    let (_stream, handle) = monitor.into_stream_and_control_handle().unwrap();
-                    handle.send_on_state_enter(State::Prepare).unwrap();
-                    handle.send_on_state_enter(State::Download).unwrap();
+                    responder
+                        .send(&mut Ok("00000000-0000-0000-0000-000000000003".to_owned()))
+                        .unwrap();
+
+                    let monitor = monitor.into_proxy().unwrap();
+                    let () = monitor
+                        .on_state(&mut State::Prepare(
+                            fidl_fuchsia_update_installer::PrepareData {},
+                        ))
+                        .await
+                        .unwrap();
+                    let () = monitor
+                        .on_state(&mut State::Fetch(fidl_fuchsia_update_installer::FetchData {
+                            info: Some(UpdateInfo { download_size: None }),
+                            progress: Some(InstallationProgress {
+                                fraction_completed: Some(0.0),
+                                bytes_downloaded: None,
+                            }),
+                        }))
+                        .await
+                        .unwrap();
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
