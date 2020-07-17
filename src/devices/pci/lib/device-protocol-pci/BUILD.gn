@@ -20,3 +20,8 @@ zx_library("device-protocol-pci") {
     "//zircon/public/lib/zx",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:device-protocol-pci-test" ]
+}

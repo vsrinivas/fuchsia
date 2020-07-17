@@ -3,22 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//src/sys/build/components.gni")
 
 test("device-protocol-pci") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [ "pci-test.cc" ]
 
   deps = [
@@ -29,4 +16,9 @@ test("device-protocol-pci") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+}
+
+fuchsia_unittest_package("device-protocol-pci-test") {
+  executable_path = "test/device-protocol-pci"
+  deps = [ ":device-protocol-pci" ]
 }

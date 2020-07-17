@@ -13,7 +13,6 @@ group("tests") {
     "//src/devices/bus/drivers/platform/test:platform-bus-package",
     "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-package",
     "//src/devices/nand/drivers/broker/test:nand-broker-package",
-    "//src/devices/pci/lib/test:pci-roothost-package",
     "//src/devices/rtc/lib/rtc/test:rtc-lib-package",
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-test-package",
