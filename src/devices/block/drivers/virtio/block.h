@@ -102,9 +102,12 @@ class BlockDevice : public Device,
 
   size_t alloc_blk_req() {
     size_t i = 0;
-    if (blk_req_bitmap_ != 0)
+    if (blk_req_bitmap_ != 0) {
       i = sizeof(blk_req_bitmap_) * CHAR_BIT - __builtin_clz(blk_req_bitmap_);
-    blk_req_bitmap_ |= (1 << i);
+    }
+    if (i < blk_req_count) {
+      blk_req_bitmap_ |= (1 << i);
+    }
     return i;
   }
 
