@@ -15,6 +15,18 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+executable("bcmdhd_crossdriver_test") {
+  output_name = "bcmdhd_crossdriver_test"
+  testonly = true
+  sources = [ "bcmdhd_crossdriver_test.cc" ]
+  deps = [
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/bcmdhd/crossdriver:bcmdhd_crossdriver",
+    "//third_party/googletest:gmock",
+  ]
+}
+
 executable("channel_conversion_test") {
   output_name = "channel_conversion_test"
   testonly = true
@@ -166,6 +178,7 @@ unittest_package("brcmfmac_test") {
   tests = []
   foreach(test_name,
           [
+            "bcmdhd_crossdriver_test",
             "channel_conversion_test",
             "cfg80211_test",
             "debug_test",
