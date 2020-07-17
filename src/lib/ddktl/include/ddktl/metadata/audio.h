@@ -9,7 +9,7 @@ namespace metadata {
 
 enum class Codec : uint32_t {
   None,
-  Tas2770,
+  Tas27xx,
   Tas5782,
   Tas5805,
   Tas5720x3,

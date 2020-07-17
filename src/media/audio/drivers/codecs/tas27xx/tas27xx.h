@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,18 +6,17 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS27XX_TAS27XX_H_
 
 #include <lib/device-protocol/i2c-channel.h>
-#include <lib/zx/interrupt.h>
+#include <lib/simple-codec/simple-codec-server.h>
 #include <threads.h>
 
-#include <atomic>
 #include <memory>
 
 #include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddktl/device.h>
 #include <ddktl/protocol/gpio.h>
 
 namespace audio {
-namespace astro {
-
 static constexpr uint8_t SW_RESET = 0x01;  // sw reset
 static constexpr uint8_t PWR_CTL = 0x02;   // power control
 static constexpr uint8_t PB_CFG2 = 0x05;   // pcm gain register
@@ -61,61 +60,68 @@ static constexpr uint8_t INT_MASK0_TDM_CLOCK_ERROR = (1 << 2);
 static constexpr uint8_t INT_MASK0_OVER_CURRENT_ERROR = (1 << 1);
 static constexpr uint8_t INT_MASK0_OVER_TEMP_ERROR = (1 << 0);
 
-class Tas27xx : public std::unique_ptr<Tas27xx> {
+class Tas27xx : public SimpleCodecServer {
  public:
-  static std::unique_ptr<Tas27xx> Create(ddk::I2cChannel&& i2c, ddk::GpioProtocolClient&& ena_gpio,
-                                         ddk::GpioProtocolClient&& fault_gpio, bool vsense = false,
-                                         bool isense = false);
-  bool ValidGain(float gain);
-  virtual zx_status_t SetGain(float gain);  // virtual for unit testing.
-
-  zx_status_t GetGain(float* gain);
-  float GetMinGain() const { return kMinGain; }
-  float GetMaxGain() const { return kMaxGain; }
-  float GetGainStep() const { return kGainStep; }
-
-  virtual zx_status_t SetRate(uint32_t rate);
-  virtual zx_status_t Init(uint32_t rate);
-  zx_status_t HardwareShutdown();
-  zx_status_t SWReset();
-  zx_status_t Stop();
-  zx_status_t Start();
-  zx_status_t Mute(bool mute);
-  zx_status_t GetTemperature(float* temperature);
-  zx_status_t GetVbat(float* voltage);
-
- protected:
-  Tas27xx(ddk::I2cChannel&& i2c, ddk::GpioProtocolClient&& ena_gpio,
-          ddk::GpioProtocolClient&& fault_gpio, bool vsense, bool isense)
-      : i2c_(i2c),
-        ena_gpio_(ena_gpio),
+  explicit Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient fault_gpio,
+                   ddk::GpioProtocolClient ena_gpio, bool vsense, bool isense)
+      : SimpleCodecServer(device),
+        i2c_(i2c),
         fault_gpio_(fault_gpio),
+        ena_gpio_(ena_gpio),
         ena_vsens_(vsense),
         ena_isens_(isense) {}
-
   virtual ~Tas27xx() = default;
-  int Thread();
+
+  // Implementation for SimpleCodecServer.
+  zx_status_t Shutdown() override;
+
+ protected:
+  zx_status_t Reinitialize();
+
+  // Implementation for SimpleCodecServer.
+  zx::status<DriverIds> Initialize() override;
+  zx_status_t Reset() override;
+  Info GetInfo() override;
+  zx_status_t Stop() override;
+  zx_status_t Start() override;
+  bool IsBridgeable() override;
+  void SetBridgedMode(bool enable_bridged_mode) override;
+  std::vector<DaiSupportedFormats> GetDaiFormats() override;
+  zx_status_t SetDaiFormat(const DaiFormat& format) override;
+  GainFormat GetGainFormat() override;
+  GainState GetGainState() override;
+  void SetGainState(GainState state) override;
+  PlugState GetPlugState() override;
+
+  std::atomic<bool> initialized_ = false;
   std::atomic<bool> running_ = false;
   zx::interrupt irq_;
   ddk::I2cChannel i2c_;
-  ddk::GpioProtocolClient ena_gpio_;
-  ddk::GpioProtocolClient fault_gpio_;
+  const ddk::GpioProtocolClient fault_gpio_;
+  const ddk::GpioProtocolClient ena_gpio_;
   bool ena_vsens_ = false;
   bool ena_isens_ = false;
 
  private:
-  friend class std::default_delete<Tas27xx>;
   static constexpr float kMaxGain = 0;
   static constexpr float kMinGain = -100.0;
   static constexpr float kGainStep = 0.5;
 
   zx_status_t WriteReg(uint8_t reg, uint8_t value);
   zx_status_t ReadReg(uint8_t reg, uint8_t* value);
+  int Thread();
   void DelayMs(uint32_t ms) { zx_nanosleep(zx_deadline_after(ZX_MSEC(ms))); }
+  zx_status_t SetRate(uint32_t rate);
+  bool ValidGain(float gain);
+  void HardwareShutdown();
+  zx_status_t UpdatePowerControl();
+  zx_status_t GetTemperature(float* temperature);
+  zx_status_t GetVbat(float* voltage);
 
+  bool started_ = false;
+  GainState gain_state_ = {};
   thrd_t thread_;
 };
-}  // namespace astro
 }  // namespace audio
 
 #endif  // SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS27XX_TAS27XX_H_

@@ -8,6 +8,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
+#include <lib/simple-codec/simple-codec-client.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
@@ -23,8 +24,6 @@
 #include <ddktl/protocol/gpio.h>
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-tdm-audio.h>
-
-#include "../codecs/tas27xx/tas27xx.h"
 
 namespace audio {
 namespace astro {
@@ -44,25 +43,26 @@ class AstroAudioStreamOut : public SimpleAudioStream {
   zx_status_t SetGain(const audio_proto::SetGainReq& req) __TA_REQUIRES(domain_token()) override;
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
 
-  zx_status_t InitCodec();  // protected for unit test.
+  // Protected for unit test.
+  zx_status_t InitCodec();
+  zx_status_t InitHW();
 
-  std::unique_ptr<Tas27xx> codec_;           // protected for unit test.
-  std::unique_ptr<AmlTdmDevice> aml_audio_;  // protected for unit test.
-  metadata::Tdm tdm_config_ = {};            // protected for unit test.
+  SimpleCodecClient codec_;
+  std::unique_ptr<AmlTdmDevice> aml_audio_;
+  metadata::Tdm tdm_config_ = {};
 
  private:
   friend class fbl::RefPtr<AstroAudioStreamOut>;
 
   static constexpr uint8_t kFifoDepth = 0x20;
 
-  zx_status_t InitHW();
   zx_status_t AddFormats() __TA_REQUIRES(domain_token());
   zx_status_t InitBuffer(size_t size);
   virtual zx_status_t InitPDev();  // virtual for unit testing.
   void ProcessRingNotification();
 
   uint32_t us_per_notification_ = 0;
-  uint32_t frames_per_second_ = 0;
+  DaiFormat dai_format_ = {};
 
   async::TaskClosureMethod<AstroAudioStreamOut, &AstroAudioStreamOut::ProcessRingNotification>
       notify_timer_ __TA_GUARDED(domain_token()){this};

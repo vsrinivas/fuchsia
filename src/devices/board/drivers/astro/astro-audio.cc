@@ -21,6 +21,9 @@
 
 namespace astro {
 
+constexpr uint32_t kCodecVid = PDEV_VID_TI;
+constexpr uint32_t kCodecDid = PDEV_DID_TI_TAS2770;
+
 static const pbus_mmio_t audio_mmios[] = {
     {.base = S905D2_EE_AUDIO_BASE, .length = S905D2_EE_AUDIO_LENGTH},
 };
@@ -52,6 +55,12 @@ static const zx_bind_inst_t enable_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_AUDIO_EN),
 };
 
+static const zx_bind_inst_t codec_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, kCodecVid),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, kCodecDid),
+};
+
 static const device_fragment_part_t i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
@@ -66,11 +75,18 @@ static const device_fragment_part_t enable_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(enable_gpio_match), enable_gpio_match},
 };
+static const device_fragment_part_t codec_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(codec_match), codec_match},
+};
 
 #ifdef ENABLE_BT_PCM
 static const device_fragment_t tdm_pcm_fragments[] = {};
 #endif
 static const device_fragment_t tdm_i2s_fragments[] = {
+    {countof(codec_fragment), codec_fragment},
+};
+static const device_fragment_t codec_fragments[] = {
     {countof(i2c_fragment), i2c_fragment},
     {countof(fault_gpio_fragment), fault_gpio_fragment},
     {countof(enable_gpio_fragment), enable_gpio_fragment},
@@ -187,9 +203,24 @@ zx_status_t Astro::AudioInit() {
 #endif
   // Add I2S TDM.
   {
+    zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, kCodecVid},
+                                {BIND_PLATFORM_DEV_DID, 0, kCodecDid}};
+
+    composite_device_desc_t comp_desc = {};
+    comp_desc.props = props;
+    comp_desc.props_count = countof(props);
+    comp_desc.coresident_device_index = UINT32_MAX;
+    comp_desc.fragments = codec_fragments;
+    comp_desc.fragments_count = countof(codec_fragments);
+    status = DdkAddComposite("audio-codec-tas27xx", &comp_desc);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
+      return status;
+    }
+
     metadata::Tdm metadata = {};
     metadata.type = metadata::TdmType::I2s;
-    metadata.codec = metadata::Codec::Tas2770;
+    metadata.codec = metadata::Codec::Tas27xx;
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,

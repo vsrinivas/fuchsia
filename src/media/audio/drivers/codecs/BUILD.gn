@@ -7,6 +7,7 @@ group("tests") {
 
   deps = [
     "max98373:tests",
+    "tas27xx:tests",
     "tas5782:tests",
     "tas5805:tests",
   ]

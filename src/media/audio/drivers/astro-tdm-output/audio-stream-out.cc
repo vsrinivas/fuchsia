@@ -21,9 +21,7 @@ namespace astro {
 
 enum {
   FRAGMENT_PDEV,
-  FRAGMENT_I2C,
-  FRAGMENT_FAULT_GPIO,
-  FRAGMENT_ENABLE_GPIO,
+  FRAGMENT_CODEC,
   FRAGMENT_COUNT,
 };
 
@@ -36,7 +34,15 @@ constexpr size_t kRingBufferSize =
     fbl::round_up<size_t, size_t>(kMaxSampleRate * kBytesPerSample * kNumberOfChannels, PAGE_SIZE);
 
 AstroAudioStreamOut::AstroAudioStreamOut(zx_device_t* parent) : SimpleAudioStream(parent, false) {
-  frames_per_second_ = kMinSampleRate;
+  dai_format_.number_of_channels = kNumberOfChannels;
+  for (size_t i = 0; i < kNumberOfChannels; ++i) {
+    dai_format_.channels_to_use.push_back(1 << i);  // Use all channels.
+  }
+  dai_format_.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
+  dai_format_.justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+  dai_format_.frame_rate = kMinSampleRate;
+  dai_format_.bits_per_sample = 16;
+  dai_format_.bits_per_channel = 32;
 }
 
 zx_status_t AstroAudioStreamOut::InitHW() {
@@ -83,7 +89,7 @@ zx_status_t AstroAudioStreamOut::InitHW() {
   // mclk rate for 96kHz = 768MHz/5 = 153.6MHz
   // mclk rate for 48kHz = 768MHz/10 = 76.8MHz
   // Note: absmax mclk frequency is 500MHz per AmLogic
-  uint32_t mdiv = (frames_per_second_ == 96000) ? 5 : 10;
+  uint32_t mdiv = (dai_format_.frame_rate == 96000) ? 5 : 10;
   status = aml_audio_->SetMclkDiv(mdiv - 1);  // register val is div - 1;
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure MCLK %d", __FILE__, status);
@@ -168,38 +174,18 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  switch (tdm_config_.type) {
-    case metadata::TdmType::I2s: {
-      ddk::GpioProtocolClient audio_fault = fragments[FRAGMENT_FAULT_GPIO];
-      ddk::GpioProtocolClient audio_en = fragments[FRAGMENT_ENABLE_GPIO];
-
-      if (!audio_fault.is_valid() || !audio_en.is_valid()) {
-        zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
-        return ZX_ERR_NO_RESOURCES;
-      }
-
-      ddk::I2cChannel i2c = fragments[FRAGMENT_I2C];
-      if (!i2c.is_valid()) {
-        zxlogf(ERROR, "%s failed to allocate i2c", __func__);
-        return ZX_ERR_NO_RESOURCES;
-      }
-
-      codec_ =
-          Tas27xx::Create(std::move(i2c), std::move(audio_en), std::move(audio_fault), true, true);
-      if (!codec_) {
-        zxlogf(ERROR, "%s could not get tas27xx", __func__);
-        return ZX_ERR_NO_RESOURCES;
-      }
-    } break;
-    case metadata::TdmType::Pcm:
-      // No codec for PCM.
-      break;
-  }
-
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not obtain bti - %d", __func__, status);
     return status;
+  }
+
+  if (tdm_config_.codec != metadata::Codec::None) {
+    status = codec_.SetProtocol(fragments[FRAGMENT_CODEC]);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s could set protocol - %d", __func__, status);
+      return status;
+    }
   }
 
   std::optional<ddk::MmioBuffer> mmio;
@@ -246,13 +232,38 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
   }
 
   if (tdm_config_.codec != metadata::Codec::None) {
-    status = codec_->Init(frames_per_second_);
+    auto info = codec_.GetInfo();
+    if (info.is_error())
+      return info.error_value();
+
+    // Reset and initialize codec after we have configured I2S.
+    status = codec_.Reset();
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s could not initialize tas27xx - %d\n", __func__, status);
+      return status;
+    }
+
+    auto supported_formats = codec_.GetDaiFormats();
+    if (supported_formats.is_error()) {
+      return supported_formats.error_value();
+    }
+
+    if (!codec_.IsDaiFormatSupported(dai_format_, supported_formats.value())) {
+      zxlogf(ERROR, "%s codec does not support DAI format\n", __FILE__);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    status = codec_.SetDaiFormat(dai_format_);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    codec_.Start();
+    if (status != ZX_OK) {
       return status;
     }
   }
 
+  zxlogf(INFO, "audio: astro audio output initialized");
   return ZX_OK;
 }
 
@@ -271,21 +282,25 @@ zx_status_t AstroAudioStreamOut::Init() {
 
   // Set our gain capabilities.
   if (tdm_config_.codec != metadata::Codec::None) {
-    float gain;
-    status = codec_->GetGain(&gain);
-    if (status != ZX_OK) {
-      return status;
+    auto gain = codec_.GetGainState();
+    if (gain.is_error()) {
+      return gain.error_value();
     }
 
-    cur_gain_state_.cur_gain = gain;
-    cur_gain_state_.cur_mute = false;
-    cur_gain_state_.cur_agc = false;
+    cur_gain_state_.cur_gain = gain->gain_db;
+    cur_gain_state_.cur_mute = gain->muted;
+    cur_gain_state_.cur_agc = gain->agc_enable;
 
-    cur_gain_state_.min_gain = codec_->GetMinGain();
-    cur_gain_state_.max_gain = codec_->GetMaxGain();
-    cur_gain_state_.gain_step = codec_->GetGainStep();
-    cur_gain_state_.can_mute = false;
-    cur_gain_state_.can_agc = false;
+    auto format = codec_.GetGainFormat();
+    if (format.is_error()) {
+      return format.error_value();
+    }
+
+    cur_gain_state_.min_gain = format->min_gain_db;
+    cur_gain_state_.max_gain = format->max_gain_db;
+    cur_gain_state_.gain_step = format->gain_step_db;
+    cur_gain_state_.can_mute = format->can_mute;
+    cur_gain_state_.can_agc = format->can_agc;
   } else {
     cur_gain_state_.cur_gain = 1.f;
     cur_gain_state_.cur_mute = false;
@@ -364,49 +379,70 @@ zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq
       break;
   }
 
-  if (req.frames_per_second != frames_per_second_) {
-    // Put codec in safe state for rate change
-    zx_status_t status = codec_->Stop();
-    if (status != ZX_OK) {
-      return status;
+  if (req.frames_per_second != dai_format_.frame_rate) {
+    if (tdm_config_.codec != metadata::Codec::None) {
+      // Put codec in safe state for rate change
+      auto status = codec_.Stop();
+      if (status != ZX_OK) {
+        return status;
+      }
     }
 
-    uint32_t last_rate = frames_per_second_;
-    frames_per_second_ = req.frames_per_second;
-    status = InitHW();
+    uint32_t last_rate = dai_format_.frame_rate;
+    dai_format_.frame_rate = req.frames_per_second;
+    auto status = InitHW();
     if (status != ZX_OK) {
-      frames_per_second_ = last_rate;
+      dai_format_.frame_rate = last_rate;
       return status;
     }
-    // Note: autorate is enabled in the coded, so changine codec rate
-    // is not required.
+    if (tdm_config_.codec != metadata::Codec::None) {
+      auto status = codec_.SetDaiFormat(dai_format_);
+      if (status != ZX_OK) {
+        dai_format_.frame_rate = last_rate;
+        return status;
+      }
 
-    // Restart codec
-    return codec_->Start();
+      // Restart codec
+      return codec_.Start();
+    }
   }
 
   return ZX_OK;
 }
 
 void AstroAudioStreamOut::ShutdownHook() {
-  // safe the codec so it won't throw clock errors when tdm bus shuts down
-  codec_->HardwareShutdown();
+  if (tdm_config_.codec != metadata::Codec::None) {
+    // safe the codec so it won't throw clock errors when tdm bus shuts down
+    codec_.Stop();
+  }
   aml_audio_->Shutdown();
   pinned_ring_buffer_.Unpin();
 }
 
 zx_status_t AstroAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
-  zx_status_t status = codec_->SetGain(req.gain);
-  if (status != ZX_OK) {
-    return status;
-  }
-  float gain;
-  status = codec_->GetGain(&gain);
-  if (status == ZX_OK) {
-    cur_gain_state_.cur_gain = gain;
-  }
+  if (tdm_config_.codec != metadata::Codec::None) {
+    // Modify parts of the gain state we have received in the request.
+    GainState gain({.gain_db = req.gain,
+                    .muted = cur_gain_state_.cur_mute,
+                    .agc_enable = cur_gain_state_.cur_agc});
+    if (req.flags & AUDIO_SGF_MUTE_VALID) {
+      gain.muted = req.flags & AUDIO_SGF_MUTE;
+    }
+    if (req.flags & AUDIO_SGF_AGC_VALID) {
+      gain.agc_enable = req.flags & AUDIO_SGF_AGC;
+    };
+    codec_.SetGainState(gain);
 
-  return status;
+    // Update our gain state, with what is actually set in the codec.
+    auto updated_gain = codec_.GetGainState();
+    if (updated_gain.is_error()) {
+      return updated_gain.error_value();
+    }
+    cur_gain_state_.cur_gain = updated_gain->gain_db;
+    cur_gain_state_.cur_mute = updated_gain->muted;
+    cur_gain_state_.cur_agc = updated_gain->agc_enable;
+  }
+  return ZX_OK;
 }
 
 zx_status_t AstroAudioStreamOut::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
@@ -437,17 +473,27 @@ zx_status_t AstroAudioStreamOut::Start(uint64_t* out_start_time) {
   if (notifs) {
     us_per_notification_ =
         static_cast<uint32_t>(1000 * pinned_ring_buffer_.region(0).size /
-                              (frame_size_ * frames_per_second_ / 1000 * notifs));
+                              (frame_size_ * dai_format_.frame_rate / 1000 * notifs));
     notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
   } else {
     us_per_notification_ = 0;
   }
-  codec_->Mute(false);
+  if (tdm_config_.codec != metadata::Codec::None) {
+    // Restore mute to cur_gain_state_.cur_mute (we set it to true in Stop below).
+    codec_.SetGainState({.gain_db = cur_gain_state_.cur_gain,
+                         .muted = cur_gain_state_.cur_mute,
+                         .agc_enable = cur_gain_state_.cur_agc});
+  }
   return ZX_OK;
 }
 
 zx_status_t AstroAudioStreamOut::Stop() {
-  codec_->Mute(true);
+  if (tdm_config_.codec != metadata::Codec::None) {
+    // Set mute to true.
+    codec_.SetGainState({.gain_db = cur_gain_state_.cur_gain,
+                         .muted = true,
+                         .agc_enable = cur_gain_state_.cur_agc});
+  }
   notify_timer_.Cancel();
   us_per_notification_ = 0;
   aml_audio_->Stop();

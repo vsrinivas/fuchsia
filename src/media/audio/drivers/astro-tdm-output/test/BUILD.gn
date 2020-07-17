@@ -10,7 +10,6 @@ executable("astro-audio-out-test-bin") {
   defines = [ "_ALL_SOURCE" ]
   testonly = true
   sources = [
-    "../../codecs/tas27xx/tas27xx.cc",
     "../audio-stream-out.cc",
     "test.cc",
   ]
@@ -29,8 +28,8 @@ executable("astro-audio-out-test-bin") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-audio-stream",
+    "//src/media/audio/lib/simple-codec",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
