@@ -55,7 +55,7 @@ curly braces.
 "dart.checkForSdkUpdates": false,
 ```
 
-* Configure VS Code to use the bundled Dark SDK
+* Configure VS Code to use the bundled Dart SDK
 
 
 ```json
