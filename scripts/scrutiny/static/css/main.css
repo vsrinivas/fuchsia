@@ -17,6 +17,10 @@ a:visited {
     text-decoration: none;
 }
 
+pre {
+  text-align: left;
+}
+
 .header-text {
   color: #e8eaee;
   font-size: 1.5em;
@@ -99,13 +103,32 @@ a:visited {
   width:100%;
 }
 
+.search-header-text {
+  color: #e8eaee;
+  font-weight: bold;
+  font-size: 1em;
+  padding-right: 1em;
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  flex-flow: column wrap;
+  justify-content: center;
+  padding: 0;
+  list-style: none;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  margin-left: 50px;
+  margin-right: 50px;
+}
+
 .dashboard {
   display: flex;
   flex-flow: row wrap;
   justify-content: center;
   padding: 0;
   list-style: none;
-
   margin-top: 20px;
   margin-bottom: 20px;
   margin-left: 50px;
@@ -143,6 +166,17 @@ a:visited {
   width: 25%;
 }
 
+.tile-header-search {
+  padding: 10px;
+  text-align: left;
+}
+
+.tile-content {
+  overflow: hidden;
+  white-space: normal;
+  width: 100%;
+}
+
 .menu {
   list-style-type: none;
   list-style-position: inside;
@@ -150,6 +184,10 @@ a:visited {
   padding: 0;
   margin-top: 10px;
   margin-bottom: 10px;
+}
+
+.menu li {
+    margin-bottom: 30px;
 }
 
 .menu-button {
