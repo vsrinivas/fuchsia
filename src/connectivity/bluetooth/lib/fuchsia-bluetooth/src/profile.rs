@@ -365,6 +365,83 @@ impl TryFrom<&ServiceDefinition> for fidl_bredr::ServiceDefinition {
     }
 }
 
+/// Authentication and permission requirements for an advertised service.
+/// Corresponds directly to the FIDL `SecurityRequirements` definition - with the extra properties
+/// of Clone and PartialEq.
+/// See [fuchsia.bluetooth.bredr.SecurityRequirements] for more documentation.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SecurityRequirements {
+    authentication_required: Option<bool>,
+    secure_connections_required: Option<bool>,
+}
+
+impl From<&fidl_bredr::SecurityRequirements> for SecurityRequirements {
+    fn from(src: &fidl_bredr::SecurityRequirements) -> SecurityRequirements {
+        SecurityRequirements {
+            authentication_required: src.authentication_required,
+            secure_connections_required: src.secure_connections_required,
+        }
+    }
+}
+
+impl From<&SecurityRequirements> for fidl_bredr::SecurityRequirements {
+    fn from(src: &SecurityRequirements) -> fidl_bredr::SecurityRequirements {
+        fidl_bredr::SecurityRequirements {
+            authentication_required: src.authentication_required,
+            secure_connections_required: src.secure_connections_required,
+        }
+    }
+}
+
+/// Minimum SDU size the service is capable of accepting.
+/// See [fuchsia.bluetooth.bredr.ChannelParameters] for more documentation.
+const MIN_RX_SDU_SIZE: u16 = 48;
+
+/// Preferred L2CAP channel parameters for an advertised service.
+/// Corresponds directly to the FIDL `ChannelParameters` definition - with the extra properties
+/// of Clone and PartialEq.
+/// The invariants of the FIDL definition are enforced - the max SDU size must be >= 48.
+/// See [fuchsia.bluetooth.bredr.ChannelParameters] for more documentation.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChannelParameters {
+    channel_mode: Option<fidl_bredr::ChannelMode>,
+    max_rx_sdu_size: Option<u16>,
+}
+
+impl TryFrom<&fidl_bredr::ChannelParameters> for ChannelParameters {
+    type Error = Error;
+
+    fn try_from(src: &fidl_bredr::ChannelParameters) -> Result<ChannelParameters, Self::Error> {
+        if let Some(size) = src.max_rx_sdu_size {
+            if size < MIN_RX_SDU_SIZE {
+                return Err(format_err!("Min RX SDU size too small: {:?}", size));
+            }
+        }
+
+        Ok(ChannelParameters {
+            channel_mode: src.channel_mode,
+            max_rx_sdu_size: src.max_rx_sdu_size,
+        })
+    }
+}
+
+impl TryFrom<&ChannelParameters> for fidl_bredr::ChannelParameters {
+    type Error = Error;
+
+    fn try_from(src: &ChannelParameters) -> Result<fidl_bredr::ChannelParameters, Self::Error> {
+        if let Some(size) = src.max_rx_sdu_size {
+            if size < MIN_RX_SDU_SIZE {
+                return Err(format_err!("Min RX SDU size too small: {:?}", size));
+            }
+        }
+
+        Ok(fidl_bredr::ChannelParameters {
+            channel_mode: src.channel_mode,
+            max_rx_sdu_size: src.max_rx_sdu_size,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -595,5 +672,60 @@ mod tests {
         };
         let fidl_to_local = ServiceDefinition::try_from(&empty_uuids_fidl);
         assert!(fidl_to_local.is_err());
+    }
+
+    #[test]
+    fn test_channel_parameters_conversions() {
+        let channel_mode = Some(fidl_bredr::ChannelMode::EnhancedRetransmission);
+        let max_rx_sdu_size = Some(MIN_RX_SDU_SIZE);
+
+        let local = ChannelParameters { channel_mode, max_rx_sdu_size };
+        let fidl = fidl_bredr::ChannelParameters { channel_mode, max_rx_sdu_size };
+
+        let local_to_fidl =
+            fidl_bredr::ChannelParameters::try_from(&local).expect("conversion should work");
+        assert_eq!(local_to_fidl, fidl);
+
+        let fidl_to_local = ChannelParameters::try_from(&fidl).expect("conversion should work");
+        assert_eq!(fidl_to_local, local);
+
+        // Empty FIDL parameters is OK.
+        let fidl = fidl_bredr::ChannelParameters::new_empty();
+        let expected = ChannelParameters { channel_mode: None, max_rx_sdu_size: None };
+
+        let fidl_to_local = ChannelParameters::try_from(&fidl).expect("conversion should work");
+        assert_eq!(fidl_to_local, expected);
+    }
+
+    #[test]
+    fn test_invalid_channel_parameters_fails_gracefully() {
+        let too_small_sdu = Some(MIN_RX_SDU_SIZE - 1);
+        let local = ChannelParameters { channel_mode: None, max_rx_sdu_size: too_small_sdu };
+        let fidl =
+            fidl_bredr::ChannelParameters { channel_mode: None, max_rx_sdu_size: too_small_sdu };
+
+        let local_to_fidl = fidl_bredr::ChannelParameters::try_from(&local);
+        assert!(local_to_fidl.is_err());
+
+        let fidl_to_local = ChannelParameters::try_from(&fidl);
+        assert!(fidl_to_local.is_err());
+    }
+
+    #[test]
+    fn test_security_requirements_conversions() {
+        let authentication_required = Some(false);
+        let secure_connections_required = Some(true);
+
+        let local = SecurityRequirements { authentication_required, secure_connections_required };
+        let fidl = fidl_bredr::SecurityRequirements {
+            authentication_required,
+            secure_connections_required,
+        };
+
+        let local_to_fidl = fidl_bredr::SecurityRequirements::from(&local);
+        assert_eq!(local_to_fidl, fidl);
+
+        let fidl_to_local = SecurityRequirements::from(&fidl);
+        assert_eq!(fidl_to_local, local);
     }
 }
