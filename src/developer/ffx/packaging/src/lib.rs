@@ -66,7 +66,7 @@ fn cmd_package_build(
     }
 
     let meta_hash = build_package(repo, contents, meta_files)?;
-    write!(w, "{}", meta_hash)?;
+    writeln!(w, "{}", meta_hash)?;
     Ok(())
 }
 
@@ -135,7 +135,7 @@ mod test {
 
         assert_eq!(
             stdout.get_ref().as_slice(),
-            "a5cad0a8391e1df27704c569e203461872724e648bdc4a887ac8736a7120daef".as_bytes()
+            "a5cad0a8391e1df27704c569e203461872724e648bdc4a887ac8736a7120daef\n".as_bytes()
         );
         for blob_dirent in tmp_path.join("blobs").read_dir()? {
             let blob_dirent = blob_dirent?;
