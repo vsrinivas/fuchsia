@@ -11,8 +11,11 @@ zx_library("coresight") {
   sources = [ "rom_table.cc" ]
   deps = []
   public_deps = [
-    # Various headers include <hwreg/bitfields.h> and <hwreg/mmio.h>.
+    # <hwreg/bitfields.h> and <hwreg/mmio.h>.
     "$zx/system/ulib/hwreg:headers",
+
+    # <lib/fitx/result.h>.
+    "$zx/system/ulib/zxc:headers",
   ]
   include_dirs = [ "include/dev/coresight" ]
 

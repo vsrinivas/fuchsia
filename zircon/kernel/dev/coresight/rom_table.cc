@@ -21,21 +21,22 @@ bool ROMTable::IsTable(ComponentIDRegister::Class classid, uint16_t architect,
   return false;
 }
 
-uint32_t ROMTable::EntryIndexUpperBound(ComponentIDRegister::Class classid, uint8_t format) const {
+fitx::result<std::string_view, uint32_t> ROMTable::EntryIndexUpperBound(
+    ComponentIDRegister::Class classid, uint8_t format) const {
   if (classid == ComponentIDRegister::Class::k0x1ROMTable) {
-    return k0x1EntryUpperBound;
+    return fitx::ok(k0x1EntryUpperBound);
   } else if (classid == ComponentIDRegister::Class::kCoreSight) {
     switch (format) {
       case 0x0:
-        return k0x9NarrowEntryUpperBound;
+        return fitx::ok(k0x9NarrowEntryUpperBound);
       case 0x1:
-        return k0x9WideEntryUpperBound;
+        return fitx::ok(k0x9WideEntryUpperBound);
       default:
-        ZX_ASSERT_MSG(false, "unknown DEVID.FORMAT value: %#x", format);
+        printf("bad format value: %#x", format);
+        return fitx::error("bad format value");
     }
   }
-  ZX_ASSERT_MSG(false, "a ROM table cannot have a class of %#hhx (%s)", classid,
-                ToString(classid).data());
+  return fitx::error("not a ROM table");
 }
 
 }  // namespace coresight

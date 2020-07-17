@@ -7,8 +7,10 @@
 #ifndef ZIRCON_KERNEL_DEV_CORESIGHT_INCLUDE_DEV_CORESIGHT_ROM_TABLE_H_
 #define ZIRCON_KERNEL_DEV_CORESIGHT_INCLUDE_DEV_CORESIGHT_ROM_TABLE_H_
 
+#include <lib/fitx/result.h>
 #include <zircon/assert.h>
 
+#include <string_view>
 #include <utility>
 
 #include <dev/coresight/component.h>
@@ -91,8 +93,8 @@ class ROMTable {
   // calling a ComponentCallback on each CoreSight component found, the
   // callback having a signature of uintptr_t -> void.
   template <typename IoProvider, typename ComponentCallback>
-  void Walk(IoProvider io, ComponentCallback&& callback) {
-    WalkFrom(io, callback, 0);
+  fitx::result<std::string_view> Walk(IoProvider io, ComponentCallback&& callback) {
+    return WalkFrom(io, callback, 0);
   }
 
  private:
@@ -115,18 +117,29 @@ class ROMTable {
   };
 
   template <typename IoProvider, typename ComponentCallback>
-  void WalkFrom(IoProvider io, ComponentCallback&& callback, uint32_t offset) {
+  fitx::result<std::string_view> WalkFrom(IoProvider io, ComponentCallback&& callback,
+                                          uint32_t offset) {
     const ComponentIDRegister::Class classid =
         ComponentIDRegister::GetAt(offset).ReadFrom(&io).classid();
     const DeviceArchRegister arch_reg = DeviceArchRegister::GetAt(offset).ReadFrom(&io);
     const auto architect = static_cast<const uint16_t>(arch_reg.architect());
     const auto archid = static_cast<const uint16_t>(arch_reg.archid());
+
     if (IsTable(classid, architect, archid)) {
       const auto format = static_cast<const uint8_t>(
           Class0x9DeviceIDRegister::GetAt(offset).ReadFrom(&io).format());
 
-      for (uint32_t i = 0; i < EntryIndexUpperBound(classid, format); ++i) {
-        EntryContents contents = ReadEntryAt(io, offset, i, classid, format);
+      fitx::result<std::string_view, uint32_t> upper_bound = EntryIndexUpperBound(classid, format);
+      if (upper_bound.is_error()) {
+        return fitx::error(upper_bound.error_value());
+      }
+
+      for (uint32_t i = 0; i < upper_bound.value(); ++i) {
+        auto result = ReadEntryAt(io, offset, i, classid, format);
+        if (result.is_error()) {
+          return fitx::error(result.error_value());
+        }
+        EntryContents contents = result.value();
         if (contents.value == 0) {
           break;  // Terminal entry if identically zero.
         } else if (!contents.present) {
@@ -135,64 +148,74 @@ class ROMTable {
         // [CS] D5.4
         // the offset provided by the ROM table entry requires a shift of 12 bits.
         uint32_t new_offset = offset + (contents.offset << 12);
-        ZX_ASSERT_MSG(
-            new_offset + kMinimumComponentSize <= span_size_,
-            "referenced component does not fit within the view: (view size, offset) = (%u, %u)",
-            span_size_, new_offset);
-        WalkFrom(io, callback, new_offset);
+        if (new_offset + kMinimumComponentSize > span_size_) {
+          printf("does not fit: (view size, offset) = (%u, %u)\n", span_size_, new_offset);
+          return fitx::error("does not fit");
+        }
+        if (auto result = WalkFrom(io, callback, new_offset); result.is_error()) {
+          return result;
+        }
       }
-      return;
+      return fitx::ok();
+    } else if (offset == 0 || classid != ComponentIDRegister::Class::kCoreSight) {
+      printf(
+          "expected ROM table or component at offset %u: "
+          "(class, architect, archid) = (%hhx (%s), %#x, %#x)",
+          offset, classid, ToString(classid).data(), architect, archid);
+      return fitx::error("unexpected component found");
     }
-    ZX_ASSERT_MSG(offset > 0 && classid == ComponentIDRegister::Class::kCoreSight,
-                  "expected ROM table or component at offset %u: "
-                  "(class, architect, archid) = (%#hhx (%s), %#x, %#x)",
-                  offset, classid, ToString(classid).data(), architect, archid);
     std::forward<ComponentCallback>(callback)(base_ + offset);
+    return fitx::ok();
   }
 
   bool IsTable(ComponentIDRegister::Class classid, uint16_t architect, uint16_t archid) const;
 
-  uint32_t EntryIndexUpperBound(ComponentIDRegister::Class classid, uint8_t format) const;
+  fitx::result<std::string_view, uint32_t> EntryIndexUpperBound(ComponentIDRegister::Class classid,
+                                                                uint8_t format) const;
 
   template <typename IoProvider>
-  EntryContents ReadEntryAt(IoProvider io, uint32_t offset, uint32_t N,
-                            ComponentIDRegister::Class classid, uint8_t format) {
+  fitx::result<std::string_view, EntryContents> ReadEntryAt(IoProvider io, uint32_t offset,
+                                                            uint32_t N,
+                                                            ComponentIDRegister::Class classid,
+                                                            uint8_t format) {
     if (classid == ComponentIDRegister::Class::k0x1ROMTable) {
       auto entry = Class0x1Entry::GetAt(offset, N).ReadFrom(&io);
-      return {
+      return fitx::ok(EntryContents{
           .value = entry.reg_value(),
           .offset = static_cast<uint32_t>(entry.offset()),
           .present = static_cast<bool>(entry.present()),
-      };
+      });
     } else if (classid == ComponentIDRegister::Class::kCoreSight) {
       // [CS] D7.5.17: only a value of 0b11 for present() signifies presence.
       switch (format) {
         case kDevidFormatNarrow: {
           auto entry = Class0x9NarrowEntry::GetAt(offset, N).ReadFrom(&io);
-          return {
+          return fitx::ok(EntryContents{
               .value = entry.reg_value(),
               .offset = static_cast<uint32_t>(entry.offset()),
               .present = static_cast<bool>(entry.present() & 0b11),
-          };
+          });
         }
         case kDevidFormatWide: {
           auto entry = Class0x9WideEntry::GetAt(offset, N).ReadFrom(&io);
           uint64_t u32_offset = entry.offset() & 0xffffffff;
-          ZX_ASSERT_MSG(
-              entry.offset() == u32_offset,
-              "a simplifying assumption is made that a ROM table entry's offset only contains 32 "
-              "bits of information. If this is no longer true, please file a bug.");
-          return {
+          if (entry.offset() != u32_offset) {
+            return fitx::error(
+                "a simplifying assumption is made that a ROM table entry's offset only contains 32 "
+                "bits of information. If this is no longer true, please file a bug.");
+          }
+          return fitx::ok(EntryContents{
               .value = entry.reg_value(),
               .offset = static_cast<uint32_t>(u32_offset),
               .present = static_cast<bool>(entry.present() & 0b11),
-          };
+          });
         }
         default:
-          ZX_PANIC("unknown DEVID.FORMAT value: %#x", format);
+          printf("bad format value: %#x", format);
+          return fitx::error("bad format value");
       }
     }
-    ZX_PANIC("a ROM table cannot have a class of %#hhx (%s)", classid, ToString(classid).data());
+    return fitx::error("not a ROM table");
   }
 
   uintptr_t base_;

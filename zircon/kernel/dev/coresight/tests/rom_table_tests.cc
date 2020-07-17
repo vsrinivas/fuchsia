@@ -8,6 +8,9 @@
 #include <hwreg/mock.h>
 #include <zxtest/zxtest.h>
 
+#define EXPECT_IS_OK(result) \
+  EXPECT_TRUE(result.is_ok(), "unexpected error: %s", result.error_value().data())
+
 namespace {
 
 constexpr uint32_t kClass0x1ComponentIDReg = 0x00000010;
@@ -55,9 +58,10 @@ TEST_F(ROMTableTest, Empty0x1Table) {
       .ExpectRead(kEmptyROMEntryReg, 0u);
 
   coresight::ROMTable table(base_addr(), end_offset);
-  table.Walk(io(), [base_addr = base_addr()](uintptr_t component) {
+  auto result = table.Walk(io(), [base_addr = base_addr()](uintptr_t component) {
     EXPECT_TRUE(false, "unexpected component found at offset %zu", component - base_addr);
   });
+  EXPECT_IS_OK(result);
 }
 
 TEST_F(ROMTableTest, Empty0x9Table) {
@@ -72,9 +76,10 @@ TEST_F(ROMTableTest, Empty0x9Table) {
       .ExpectRead(kEmptyROMEntryReg, 0u);
 
   coresight::ROMTable table(base_addr(), end_offset);
-  table.Walk(io(), [base_addr = base_addr()](uintptr_t component) {
+  auto result = table.Walk(io(), [base_addr = base_addr()](uintptr_t component) {
     EXPECT_TRUE(false, "unexpected component found at offset %zu", component - base_addr);
   });
+  EXPECT_IS_OK(result);
 }
 
 TEST_F(ROMTableTest, DepthOneReferences) {
@@ -102,7 +107,7 @@ TEST_F(ROMTableTest, DepthOneReferences) {
 
   const uint32_t end_offset = 0x3000 + coresight::kMinimumComponentSize;
   coresight::ROMTable table(base_addr(), end_offset);
-  table.Walk(io(), [&, ind = size_t{0}](uintptr_t component) mutable {
+  auto result = table.Walk(io(), [&, ind = size_t{0}](uintptr_t component) mutable {
     uint32_t offset = component - base_addr();
     switch (ind++) {
       case 0:
@@ -115,6 +120,7 @@ TEST_F(ROMTableTest, DepthOneReferences) {
         EXPECT_TRUE(false, "unexpected component found at offset %u", offset);
     }
   });
+  EXPECT_IS_OK(result);
 }
 
 TEST_F(ROMTableTest, DepthTwoReferences) {
@@ -168,7 +174,7 @@ TEST_F(ROMTableTest, DepthTwoReferences) {
 
   const uint32_t end_offset = 0x6000 + coresight::kMinimumComponentSize;
   coresight::ROMTable table(base_addr(), end_offset);
-  table.Walk(io(), [&, ind = size_t{0}](uintptr_t component) mutable {
+  auto result = table.Walk(io(), [&, ind = size_t{0}](uintptr_t component) mutable {
     uint32_t offset = component - base_addr();
     switch (ind++) {
       case 0:
@@ -187,6 +193,7 @@ TEST_F(ROMTableTest, DepthTwoReferences) {
         EXPECT_TRUE(false, "unexpected component found at offset %u", offset);
     }
   });
+  EXPECT_IS_OK(result);
 }
 
 TEST_F(ROMTableTest, NegativeOffset) {
@@ -218,7 +225,7 @@ TEST_F(ROMTableTest, NegativeOffset) {
 
   const uint32_t end_offset = 0xa000 + coresight::kMinimumComponentSize;
   coresight::ROMTable table(base_addr(), end_offset);
-  table.Walk(io(), [&, ind = size_t{0}](uintptr_t component) mutable {
+  auto result = table.Walk(io(), [&, ind = size_t{0}](uintptr_t component) mutable {
     uint32_t offset = component - base_addr();
     switch (ind++) {
       case 0:
@@ -228,6 +235,7 @@ TEST_F(ROMTableTest, NegativeOffset) {
         EXPECT_TRUE(false, "unexpected component found at offset %u", offset);
     }
   });
+  EXPECT_IS_OK(result);
 }
 
 }  // namespace
