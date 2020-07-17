@@ -17,6 +17,8 @@ TEST(LauncherTest, DriverSearchPath) {
   devmgr_launcher::Args args;
   args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
   args.driver_search_paths.push_back("/boot/driver");
+  args.driver_search_paths.push_back("/boot/driver/test");
+  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -29,6 +31,8 @@ TEST(LauncherTest, LoadDrivers) {
   devmgr_launcher::Args args;
   args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
   args.load_drivers.push_back("/boot/driver/test.so");
+  args.load_drivers.push_back(IsolatedDevmgr::kSysdevDriver);
+  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -37,14 +41,16 @@ TEST(LauncherTest, LoadDrivers) {
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &fd));
 }
 
-TEST(LauncherTest, DISABLED_Namespace) {
+TEST(LauncherTest, Namespace) {
   devmgr_launcher::Args args;
-  args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+  args.sys_device_driver = "/test_drivers/test/sysdev.so";
   args.driver_search_paths.push_back("/test_drivers");
+  args.driver_search_paths.push_back("/test_drivers/test");
+  args.path_prefix = "/pkg/";
 
   zx::channel bootfs_client, bootfs_server;
   ASSERT_OK(zx::channel::create(0, &bootfs_client, &bootfs_server));
-  ASSERT_OK(fdio_open("/boot/driver", ZX_FS_RIGHT_READABLE |
+  ASSERT_OK(fdio_open("/pkg/driver", ZX_FS_RIGHT_READABLE |
                       ZX_FS_RIGHT_EXECUTABLE, bootfs_server.release()));
 
   args.flat_namespace.push_back(std::make_pair("/test_drivers", std::move(bootfs_client)));
@@ -59,7 +65,8 @@ TEST(LauncherTest, DISABLED_Namespace) {
 TEST(LauncherTest, OutgoingServices) {
   devmgr_launcher::Args args;
   args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
-  args.driver_search_paths.push_back("/boot/driver");
+  args.driver_search_paths.push_back("/boot/driver/test");
+  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));

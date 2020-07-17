@@ -87,7 +87,6 @@ common_test_contents = [
   "//zircon/system/ulib/c/test:default-stack-size-phdr",
   "//zircon/system/ulib/c/test:posix-clocks",
   "//zircon/system/ulib/c/test/sanitizer:sanitizer-utils",
-  "//zircon/system/ulib/devmgr-integration-test/test:devmgr-integration",
   "//zircon/system/ulib/disk_inspector/test:disk_inspector_unit",
   "//zircon/system/ulib/driver-integration-test/test:driver-integration",
   "//zircon/system/ulib/elf-search/test:elf-search",

@@ -13,21 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-
-group("test") {
-  testonly = true
-  deps = [ ":devmgr-integration" ]
-}
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("devmgr-integration") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "launcher_test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
@@ -35,5 +23,14 @@ test("devmgr-integration") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
+  ]
+}
+
+isolated_devmgr_unittest_package("devmgr-integration-test") {
+  executable_path = "test/devmgr-integration"
+  deps = [
+    ":devmgr-integration",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
   ]
 }

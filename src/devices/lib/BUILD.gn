@@ -16,5 +16,6 @@ group("tests") {
     "dev-operation:tests",
     "dma-buffer:tests",
     "driver:tests",
+    "//zircon/system/ulib/devmgr-integration-test:tests",
   ]
 }
