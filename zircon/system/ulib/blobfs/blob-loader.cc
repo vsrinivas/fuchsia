@@ -393,19 +393,13 @@ zx_status_t BlobLoader::LoadData(uint32_t node_index, const Inode& inode,
 
 zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& inode,
                                               const fzl::OwnedVmoMapper& vmo) const {
-  CompressionAlgorithm algorithm;
-  if (inode.header.flags & kBlobFlagLZ4Compressed) {
-    algorithm = CompressionAlgorithm::LZ4;
-  } else if (inode.header.flags & kBlobFlagZSTDCompressed) {
-    algorithm = CompressionAlgorithm::ZSTD;
-  } else if (inode.header.flags & kBlobFlagZSTDSeekableCompressed) {
-    algorithm = CompressionAlgorithm::ZSTD_SEEKABLE;
-  } else if (inode.header.flags & kBlobFlagChunkCompressed) {
-    algorithm = CompressionAlgorithm::CHUNKED;
-  } else {
+  zx::status<CompressionAlgorithm> algorithm_or = AlgorithmForInode(inode);
+  if (algorithm_or.is_error()) {
     FS_TRACE_ERROR("Blob has no known compression format\n");
-    return ZX_ERR_NOT_SUPPORTED;
+    return algorithm_or.status_value();
   }
+  CompressionAlgorithm algorithm = algorithm_or.value();
+  ZX_DEBUG_ASSERT(algorithm != CompressionAlgorithm::UNCOMPRESSED);
 
   const uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   const uint32_t num_data_blocks = inode.block_count - num_merkle_blocks;
