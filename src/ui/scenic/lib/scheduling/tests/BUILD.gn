@@ -21,6 +21,7 @@ executable("unittests") {
     "frame_scheduler_test.h",
     "frame_stats_unittest.cc",
     "frame_timings_unittest.cc",
+    "present1_helper_unittest.cc",
     "present2_info_unittest.cc",
   ]
   deps = [

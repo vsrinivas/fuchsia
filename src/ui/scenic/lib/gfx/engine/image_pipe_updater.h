@@ -12,6 +12,7 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/present1_helper.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -46,6 +47,7 @@ class ImagePipeUpdater : public scheduling::SessionUpdater,
   // Called by ImagePipe::PresentImage(). Stashes the arguments without applying them; they will
   // later be applied by ApplyScheduledUpdates(). This method can also be used to clean up after an
   // ImagePipe when it is being closed/cleaned-up; in this case, pass in a null ImagePipe.
+  // Returns an error string if there was an error, std::nullopt otherwise.
   // Virtual for testing.
   virtual scheduling::PresentId ScheduleImagePipeUpdate(
       zx::time presentation_time, fxl::WeakPtr<ImagePipeBase> image_pipe,
@@ -57,12 +59,9 @@ class ImagePipeUpdater : public scheduling::SessionUpdater,
       uint64_t trace_id) override;
   // |scheduling::SessionUpdater|
   void OnFramePresented(
-      const std::unordered_map<scheduling::SessionId,
-                               std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
+      const std::unordered_map<scheduling::SessionId, std::map<scheduling::PresentId, zx::time>>&
           latched_times,
-      scheduling::PresentTimestamps present_times) override {
-    // TODO(47308): Implement and stop pushing callbacks into FrameScheduler.
-  }
+      scheduling::PresentTimestamps present_times) override;
 
   // For tests.
   scheduling::SessionId GetSchedulingId() { return scheduling_id_; }
@@ -72,6 +71,9 @@ class ImagePipeUpdater : public scheduling::SessionUpdater,
 
   // Constructor for test.
   ImagePipeUpdater();
+
+  // Handles Present1 callback semantics. Called in ScheduleImagePipeUpdate and OnFramePresented.
+  scheduling::Present1Helper present1_helper_;
 
   // Map of fence listeners per present call. Listeners are removed when they are either signalled,
   // or when an UpdateSessions call for the corresponding SchedulingIdPair or a subsequent one is

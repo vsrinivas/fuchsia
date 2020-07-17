@@ -32,16 +32,19 @@ scheduling::PresentId ImagePipeUpdater::ScheduleImagePipeUpdate(
   TRACE_DURATION("gfx", "ImagePipeUpdater::ScheduleImagePipeUpdate", "scheduling_id",
                  scheduling_id_);
 
-  scheduling::PresentId present_id = 0;
+  scheduling::PresentId present_id = scheduling::kInvalidPresentId;
 
   // This gets reset to the same value on every frame. Should probably only be set once (per pipe).
   // TODO(45362): Optimize this for either one or several image pipes.
   image_pipes_[scheduling_id_] = std::move(image_pipe);
 
   if (auto scheduler = frame_scheduler_.lock()) {
-    present_id =
-        scheduler->RegisterPresent(scheduling_id_, std::move(callback), std::move(release_fences));
+    // TODO(47308): Delete callback argument from signature entirely.
+    present_id = scheduler->RegisterPresent(
+        scheduling_id_, /*callback*/ [](auto...) {}, std::move(release_fences));
     scheduling::SchedulingIdPair id_pair{scheduling_id_, present_id};
+
+    present1_helper_.RegisterPresent(present_id, std::move(callback));
 
     auto [it, success] = fence_listeners_.emplace(id_pair, std::move(acquire_fences));
     FX_DCHECK(success);
@@ -98,6 +101,16 @@ ImagePipeUpdater::UpdateResults ImagePipeUpdater::UpdateSessions(
   }
 
   return results;
+}
+
+void ImagePipeUpdater::OnFramePresented(
+    const std::unordered_map<scheduling::SessionId, std::map<scheduling::PresentId, zx::time>>&
+        latched_times,
+    scheduling::PresentTimestamps present_times) {
+  const auto it = latched_times.find(scheduling_id_);
+  if (it != latched_times.end()) {
+    present1_helper_.OnPresented(/*latched_times*/ it->second, present_times);
+  }
 }
 
 }  // namespace gfx
