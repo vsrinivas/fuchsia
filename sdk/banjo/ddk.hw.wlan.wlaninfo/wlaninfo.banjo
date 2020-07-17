@@ -64,6 +64,15 @@ enum WlanInfoDriverFeature : uint32 {
     /// Driver responds to probe requests in hardware.
     probe_resp_offload = 0x00000020;
 
+    /// Driver supports running the SAE handshake in SME.
+    sae_sme_auth = 0x00000040;
+
+    /// Driver implements the SAE handshake.
+    sae_driver_auth = 0x00000080;
+
+    /// Driver supports management frame protection and IGTK installation.
+    mfp = 0x00000100;
+
     /// Temporary feature flag for incrementally transitioning drivers to use SME
     /// channel on iface creation.
     temp_direct_sme_channel = 0x40000000;

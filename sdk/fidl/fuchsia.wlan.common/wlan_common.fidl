@@ -64,6 +64,10 @@ enum DriverFeature {
     TX_STATUS_REPORT = 3;
     DFS = 4;
     PROBE_RESP_OFFLOAD = 5;
+    SAE_SME_AUTH = 6;
+    SAE_DRIVER_AUTH = 7;
+    /// Indicates support for management frame protection and IGTK.
+    MFP = 8;
     /// Temporary feature flag for incrementally transitioning drivers to use
     /// SME channel on iface creation.
     TEMP_DIRECT_SME_CHANNEL = 3141592;
