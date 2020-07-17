@@ -30,6 +30,13 @@ namespace archid {
 constexpr uint16_t kROMTable = 0x0af7;
 
 }  // namespace archid
+
+namespace partid {
+
+constexpr uint16_t kTimestampGenerator = 0x0101;
+
+}  // namespace partid
+
 }  // namespace arm
 
 // [CS] B2.2.1
@@ -60,7 +67,44 @@ struct ComponentIDRegister : public hwreg::RegisterBase<ComponentIDRegister, uin
   static auto Get() { return GetAt(0u); }
 };
 
-// [CS] B2.3.3
+// [CS] B.2.2
+struct PeripheralID0Register : public hwreg::RegisterBase<PeripheralID0Register, uint32_t> {
+  DEF_RSVDZ_FIELD(31, 8);
+  DEF_FIELD(7, 0, part0);
+
+  static auto GetAt(uint32_t offset) {
+    return hwreg::RegisterAddr<PeripheralID0Register>(offset + 0xfe0);
+  }
+  static auto Get() { return GetAt(0); }
+};
+
+struct PeripheralID1Register : public hwreg::RegisterBase<PeripheralID1Register, uint32_t> {
+  DEF_RSVDZ_FIELD(31, 8);
+  DEF_FIELD(7, 4, des0);
+  DEF_FIELD(3, 0, part1);
+
+  static auto GetAt(uint32_t offset) {
+    return hwreg::RegisterAddr<PeripheralID1Register>(offset + 0xfe4);
+  }
+  static auto Get() { return GetAt(0); }
+};
+
+// [CS] B2.2.2
+// This number is an ID chosen by the designer.
+template <typename IoProvider>
+inline uint16_t GetPartIDAt(IoProvider io, uint32_t offset) {
+  const auto part0 =
+      static_cast<uint16_t>(PeripheralID0Register::GetAt(offset).ReadFrom(&io).part0());
+  const auto part1 =
+      static_cast<uint16_t>(PeripheralID1Register::GetAt(offset).ReadFrom(&io).part1());
+  return static_cast<uint16_t>((part1 << 8) | part0);
+}
+template <typename IoProvider>
+inline uint16_t GetPartID(IoProvider io) {
+  return GetPartIDAt(io, 0);
+}
+
+// B2.3.3
 // Used to determine whether two components have an affinity with one another
 // (e.g., if both correspond to the same CPU).
 //

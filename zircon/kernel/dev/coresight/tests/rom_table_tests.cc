@@ -15,6 +15,12 @@ namespace {
 
 constexpr uint32_t kClass0x1ComponentIDReg = 0x00000010;
 constexpr uint32_t kClass0x9ComponentIDReg = 0x00000090;
+constexpr uint32_t kTimestampGeneratorComponentIDReg = 0x000000f0;
+
+constexpr uint32_t kEmptyPeriphID0Reg = 0x00000000;
+constexpr uint32_t kEmptyPeriphID1Reg = 0x00000000;
+constexpr uint32_t kTimestampGeneratorPeriphID0Reg = 0x00000001;
+constexpr uint32_t kTimestampGeneratorPeriphID1Reg = 0x00000001;
 
 constexpr uint32_t kDevIDReg = 0x00000000;
 
@@ -82,6 +88,39 @@ TEST_F(ROMTableTest, Empty0x9Table) {
   EXPECT_IS_OK(result);
 }
 
+TEST_F(ROMTableTest, TimestampGeneratorIsVisited) {
+  // clang-format off
+  mock()
+      // Visit: Table (class 0x1)
+      .ExpectRead(kClass0x1ComponentIDReg, 0x0000 + 0xff4)
+      .ExpectRead(kEmptyDevArchReg, 0x0000 + 0xfbc)
+      .ExpectRead(kDevIDReg, 0x0000 + 0xfcc)
+      // Read: Entry0 of Table -> Component0
+      .ExpectRead(kOffset0x1000Class0x1ROMEntryReg, 0x0000)
+          // Visit: Component0
+          .ExpectRead(kTimestampGeneratorComponentIDReg, 0x1000 + 0xff4)
+          .ExpectRead(kEmptyDevArchReg, 0x1000 + 0xfbc)
+          .ExpectRead(kTimestampGeneratorPeriphID0Reg, 0x1000 + 0xfe0)
+          .ExpectRead(kTimestampGeneratorPeriphID1Reg, 0x1000 + 0xfe4)
+      // Read: Entry1 of Table (empty and last).
+      .ExpectRead(kEmptyROMEntryReg, 0x0000 + 1*sizeof(uint32_t));
+  // clang-format on
+
+  const uint32_t end_offset = 0x1000 + coresight::kMinimumComponentSize;
+  coresight::ROMTable table(base_addr(), end_offset);
+  auto result = table.Walk(io(), [&, ind = size_t{0}](uintptr_t component) mutable {
+    uint32_t offset = component - base_addr();
+    switch (ind++) {
+      case 0:
+        EXPECT_EQ(0x1000, offset);
+        break;
+      default:
+        EXPECT_TRUE(false, "unexpected component found at offset %u", offset);
+    }
+  });
+  EXPECT_IS_OK(result);
+}
+
 TEST_F(ROMTableTest, DepthOneReferences) {
   // clang-format off
   mock()
@@ -94,6 +133,8 @@ TEST_F(ROMTableTest, DepthOneReferences) {
           // Visit: Component0
           .ExpectRead(kClass0x9ComponentIDReg, 0x1000 + 0xff4)
           .ExpectRead(kEmptyDevArchReg, 0x1000 + 0xfbc)
+          .ExpectRead(kEmptyPeriphID0Reg, 0x1000 + 0xfe0)
+          .ExpectRead(kEmptyPeriphID1Reg, 0x1000 + 0xfe4)
       // Read: Entry1 of Table (not present)
       .ExpectRead(kOffset0x2000NotPresentClass0x1ROMEntryReg, 0x0000 + 1*sizeof(uint32_t))
       // Read: Entry2 of Table -> Component2
@@ -101,6 +142,8 @@ TEST_F(ROMTableTest, DepthOneReferences) {
           // Visit: Component2
           .ExpectRead(kClass0x9ComponentIDReg, 0x3000 + 0xff4)
           .ExpectRead(kEmptyDevArchReg, 0x3000 + 0xfbc)
+          .ExpectRead(kEmptyPeriphID0Reg, 0x3000 + 0xfe0)
+          .ExpectRead(kEmptyPeriphID1Reg, 0x3000 + 0xfe4)
       // Read: Entry3 of Table (empty and last).
       .ExpectRead(kEmptyROMEntryReg, 0x0000 + 3*sizeof(uint32_t));
   // clang-format on
@@ -141,6 +184,8 @@ TEST_F(ROMTableTest, DepthTwoReferences) {
               // Visit: Component00
               .ExpectRead(kClass0x9ComponentIDReg, 0x1000 + 0x1000 + 0xff4)
               .ExpectRead(kEmptyDevArchReg, 0x1000 + 0x1000 + 0xfbc)
+              .ExpectRead(kEmptyPeriphID0Reg, 0x1000 + 0x1000 + 0xfe0)
+              .ExpectRead(kEmptyPeriphID1Reg, 0x1000 + 0x1000 + 0xfe4)
           // Read: Entry1 of Subtable0 (not present)
           .ExpectRead(kOffset0x2000NotPresentClass0x1ROMEntryReg, 0x1000 + 1*sizeof(uint32_t))
           // Read: Entry2 of Subtable0 -> Component02
@@ -148,6 +193,8 @@ TEST_F(ROMTableTest, DepthTwoReferences) {
               // Visit: Component02
               .ExpectRead(kClass0x9ComponentIDReg, 0x1000 + 0x3000 + 0xff4)
               .ExpectRead(kEmptyDevArchReg, 0x1000 + 0x3000 + 0xfbc)
+              .ExpectRead(kEmptyPeriphID0Reg, 0x1000 + 0x3000 + 0xfe0)
+              .ExpectRead(kEmptyPeriphID1Reg, 0x1000 + 0x3000 + 0xfe4)
           // Read: Entry3 of Subtable0 (empty and last).
           .ExpectRead(kEmptyROMEntryReg, 0x1000 + 3*sizeof(uint32_t))
       // Read: Entry1 of Table -> Component1
@@ -155,6 +202,8 @@ TEST_F(ROMTableTest, DepthTwoReferences) {
           // Visit: Component1
           .ExpectRead(kClass0x9ComponentIDReg, 0x5000 + 0xff4)
           .ExpectRead(kEmptyDevArchReg, 0x5000 + 0xfbc)
+          .ExpectRead(kEmptyPeriphID0Reg, 0x5000 + 0xfe0)
+          .ExpectRead(kEmptyPeriphID1Reg, 0x5000 + 0xfe4)
       // Read: Entry2 of Table -> Subtable2
       .ExpectRead(kOffset0x4000Class0x1ROMEntryReg, 0x0000 + 2*sizeof(uint32_t))
           // Visit: Subtable2 (class 0x9)
@@ -166,6 +215,8 @@ TEST_F(ROMTableTest, DepthTwoReferences) {
               // Visit: Component2
               .ExpectRead(kClass0x9ComponentIDReg, 0x4000 + 0x2000 + 0xff4)
               .ExpectRead(kEmptyDevArchReg, 0x4000 + 0x2000 + 0xfbc)
+              .ExpectRead(kEmptyPeriphID0Reg, 0x4000 + 0x2000 + 0xfe0)
+              .ExpectRead(kEmptyPeriphID1Reg, 0x4000 + 0x2000 + 0xfe4)
           // Read: Entry1 of Subtable2 (empty and last)
           .ExpectRead(kEmptyROMEntryReg, 0x4000 + 1*sizeof(uint32_t))
       // Read: Entry3 of Table (empty and last).
@@ -217,6 +268,8 @@ TEST_F(ROMTableTest, NegativeOffset) {
               // Visit: Component00
               .ExpectRead(kClass0x9ComponentIDReg, 0x9000 + 0xff4)
               .ExpectRead(kEmptyDevArchReg, 0x9000 + 0xfbc)
+              .ExpectRead(kEmptyPeriphID0Reg, 0x9000 + 0xfe0)
+              .ExpectRead(kEmptyPeriphID1Reg, 0x9000 + 0xfe4)
           // Read: Entry1 of Subtable0 (empty and last).
           .ExpectRead(kEmptyROMEntryReg, 0xa000 + 1*sizeof(uint32_t))
       // Read: Entry1 of Table (empty and last).
