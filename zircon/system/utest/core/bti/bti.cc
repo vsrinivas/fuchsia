@@ -366,4 +366,56 @@ TEST(Bti, DecommitRace) {
   thread.join();
 }
 
+// TODO(fxb/56205): Re-enable this test when enforcement of the "no pinning
+// while there are quarantined pages" rule has been turned on in the kernel.
+#if 0
+TEST(Bti, QuarantineDisallowsPin) {
+  zx::iommu iommu;
+  zx::bti bti;
+  zx_iommu_desc_dummy_t desc;
+
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                            iommu.reset_and_get_address()),
+            ZX_OK);
+  ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+  // Create and pin a VMO, then allow the pinned VMO to leak while still pinned.
+  // Its pages will be added to the quarantine list for the BTI.
+  constexpr uint64_t kPageCount = 4;
+  constexpr uint64_t kVmoSize = ZX_PAGE_SIZE * kPageCount;
+  zx_paddr_t paddrs[kPageCount];
+  {
+    zx::vmo vmo;
+    zx::pmt pmt;
+    EXPECT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+    EXPECT_OK(bti.pin(ZX_BTI_PERM_READ, vmo, 0, kVmoSize, paddrs, kPageCount, &pmt));
+  }
+
+  // Now that our BTI has a non-empty quarantine list, new pin operations should
+  // fail with ZX_ERR_BAD_STATE.
+  {
+    zx::vmo vmo;
+    zx::pmt pmt;
+    EXPECT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+    EXPECT_STATUS(ZX_ERR_BAD_STATE,
+                  bti.pin(ZX_BTI_PERM_READ, vmo, 0, kVmoSize, paddrs, kPageCount, &pmt));
+  }
+
+  // Release the quarantine on our BTI, sending the quarantined pages back to
+  // the page pool
+  EXPECT_OK(bti.release_quarantine());
+
+  // Try to pin some pages again.  Now that the quarantine list is clear, this
+  // should be allowed again.  Don't forget to unpin the pages we had pinned.
+  {
+    zx::vmo vmo;
+    zx::pmt pmt;
+    EXPECT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+    EXPECT_OK(bti.pin(ZX_BTI_PERM_READ, vmo, 0, kVmoSize, paddrs, kPageCount, &pmt));
+    EXPECT_OK(pmt.unpin());
+  }
+}
+#endif
+
 }  // namespace
