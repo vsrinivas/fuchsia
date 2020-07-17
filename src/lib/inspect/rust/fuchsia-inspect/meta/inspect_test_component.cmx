@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "bin/inspect_test_component"
+        "binary": "bin/inspect_test_component_bin"
     }
 }

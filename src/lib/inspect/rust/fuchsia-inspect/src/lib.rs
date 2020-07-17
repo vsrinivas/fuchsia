@@ -1165,7 +1165,7 @@ mod tests {
 
     const TEST_COMPONENT_CMX: &str = "inspect_test_component.cmx";
     const TEST_COMPONENT_URL: &str =
-        "fuchsia-pkg://fuchsia.com/fuchsia_inspect_tests#meta/inspect_test_component.cmx";
+        "fuchsia-pkg://fuchsia.com/fuchsia-inspect-tests#meta/inspect_test_component.cmx";
 
     #[test]
     fn inspector_new() {

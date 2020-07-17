@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/fuchsia_inspect_lib_test"
+        "binary": "bin/fuchsia_inspect_lib_test"
     },
     "sandbox": {
         "features": [
