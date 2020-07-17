@@ -38,10 +38,12 @@
 #include <gtest/gtest.h>
 #include <test/appmgr/integration/cpp/fidl.h>
 
+#include "fuchsia/testing/appmgr/cpp/fidl.h"
 #include "lib/vfs/cpp/service.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/integration_tests/util/data_file_reader_writer_util.h"
@@ -565,6 +567,187 @@ TEST_F(RealmIntrospectTest, ComponentUrlForNewProcess) {
   std::vector<std::string> expected = {"app", "sys", current_realm_name()};
   EXPECT_EQ(response.realm_path(), expected);
   EXPECT_EQ(response.instance_id(), std::to_string(GetCurrentProcessKoid()));
+}
+
+class RealmCrashIntrospectTest : public RealmTest {
+ public:
+  using CrashIntrospect_FindComponentByProcessKoid_Result =
+      fuchsia::sys::internal::CrashIntrospect_FindComponentByProcessKoid_Result;
+
+  void SetUp() override {
+    RealmTest::SetUp();
+    real_services()->Connect(introspect_.NewRequest());
+    ASSERT_TRUE(files::ReadFileToString("hub/name", &current_realm_name_));
+  }
+
+  CrashIntrospect_FindComponentByProcessKoid_Result FindComponent(zx_koid_t process_koid) {
+    CrashIntrospect_FindComponentByProcessKoid_Result result;
+    auto status = introspect_->FindComponentByProcessKoid(process_koid, &result);
+    FX_CHECK(ZX_OK == status) << "status: " << status;
+    return result;
+  }
+  static zx_koid_t GetKoid(const zx::object_base& obj) { return fsl::GetKoid(obj.get()); }
+
+  static zx_koid_t GetCurrentProcessKoid() {
+    auto koid = GetKoid(*zx::process::self());
+    ZX_DEBUG_ASSERT(koid != ZX_KOID_INVALID);
+    return koid;
+  }
+
+  const std::string& current_realm_name() const { return current_realm_name_; }
+
+ private:
+  fuchsia::sys::internal::CrashIntrospectSyncPtr introspect_;
+  std::string current_realm_name_;
+};
+
+// This tests that the service is not available in environment which do not explicitly include it
+// from parent environment.
+// This test's cmx includes this service that so we are able to indirectly test that inheriting this
+// service works.
+TEST_F(RealmCrashIntrospectTest, CrashServiceNotAvailableInAllEnvironments) {
+  auto env_services = CreateServices();
+  auto enclosing_environment = CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
+
+  fuchsia::sys::internal::CrashIntrospectPtr introspect;
+  enclosing_environment->ConnectToService(introspect.NewRequest());
+  bool done = false;
+  introspect.set_error_handler([&](zx_status_t status) {
+    done = true;
+    ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
+  });
+  RunLoopUntil([&]() { return done; });
+}
+
+// pass job's koid so that we can test ZX_ERR_NOT_FOUND.
+TEST_F(RealmCrashIntrospectTest, InvalidProcessId) {
+  auto job = zx::job::default_job();
+  auto koid = GetKoid(*job);
+  auto result = FindComponent(koid);
+  ASSERT_TRUE(result.is_err());
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, result.err());
+}
+
+TEST_F(RealmCrashIntrospectTest, ComponentUrlForNewCrashingProcess) {
+  const char* command_argv[] = {"/pkg/bin/crashing_process", nullptr};
+
+  auto job = zx::job::default_job();
+
+  zx::process process;
+
+  ASSERT_EQ(ZX_OK, fdio_spawn(job->get(), FDIO_SPAWN_CLONE_ALL,
+                              command_argv[0],  // path
+                              command_argv, process.reset_and_get_address()));
+  auto koid = GetKoid(process);
+  // TODO(fxb/51382): Remove these logs. Added for debugging incase process never crashes.
+  FX_LOGS(INFO) << "Waiting for process to die.";
+  process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr);
+  FX_LOGS(INFO) << "Process died.";
+  auto result = FindComponent(koid);
+  ASSERT_FALSE(result.is_err()) << zx_status_get_string(result.err());
+  auto& response = result.response().component_info;
+
+  EXPECT_EQ(GetUnhashedUrl(response.component_url()),
+            "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/"
+            "appmgr_realm_integration_tests.cmx");
+  std::vector<std::string> expected = {"app", "sys", current_realm_name()};
+  EXPECT_EQ(response.realm_path(), expected);
+  EXPECT_EQ(response.instance_id(), std::to_string(GetCurrentProcessKoid()));
+
+  // we should only be able to retrieve it once.
+  result = FindComponent(koid);
+  ASSERT_TRUE(result.is_err());
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, result.err());
+}
+
+TEST_F(RealmCrashIntrospectTest, ComponentUrlForNewComponentInCurrentEnv) {
+  zx::channel request;
+  auto component_svc = sys::ServiceDirectory::CreateWithRequest(&request);
+  auto launch_info = CreateLaunchInfo(
+      "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/crashing_component.cmx",
+      std::move(request));
+  fuchsia::sys::ComponentControllerPtr controller;
+  launcher_ptr()->CreateComponent(std::move(launch_info), controller.NewRequest());
+  bool component_started = false;
+  controller.events().OnDirectoryReady = [&] { component_started = true; };
+
+  RunLoopUntil([&] { return component_started; });
+
+  files::Glob glob("/hub/c/crashing_component.cmx/*/process-id");
+  ASSERT_EQ(1u, glob.size());
+
+  std::string process_koid;
+  ASSERT_TRUE(files::ReadFileToString(*glob.begin(), &process_koid));
+
+  bool component_died = false;
+  controller.events().OnTerminated = [&](int64_t err, TerminationReason r) {
+    component_died = true;
+  };
+  fuchsia::testing::appmgr::CrashInducerPtr crash_srv;
+  component_svc->Connect(crash_srv.NewRequest());
+  crash_srv->Crash();
+  // TODO(fxb/51382): Remove these logs. Added for debugging incase process never crashes.
+  FX_LOGS(INFO) << "Waiting for component to die.";
+  RunLoopUntil([&] { return component_died; });
+  FX_LOGS(INFO) << "Component died.";
+
+  auto result = FindComponent(std::stoi(process_koid));
+  ASSERT_FALSE(result.is_err()) << zx_status_get_string(result.err());
+  auto& response = result.response().component_info;
+
+  EXPECT_EQ(response.component_url(),
+            "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/crashing_component.cmx");
+  std::vector<std::string> expected = {"app", "sys", current_realm_name()};
+  EXPECT_EQ(response.realm_path(), expected);
+  EXPECT_EQ(response.instance_id(), process_koid);
+}
+
+TEST_F(RealmCrashIntrospectTest, ComponentUrlForNewComponentInEnclosingEnv) {
+  auto env_services = CreateServices();
+  std::string realm_label = "RealmCrashIntrospectTest";
+  auto enclosing_environment = CreateNewEnclosingEnvironment(realm_label, std::move(env_services));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
+  zx::channel request;
+  auto component_svc = sys::ServiceDirectory::CreateWithRequest(&request);
+  auto controller =
+      RunComponent(enclosing_environment.get(),
+                   "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/crashing_component.cmx",
+                   std::move(request));
+
+  bool component_started = false;
+  controller.events().OnDirectoryReady = [&] { component_started = true; };
+  RunLoopUntil([&] { return component_started; });
+
+  files::Glob glob(std::string("/hub/r/") + realm_label +
+                   "/*/c/crashing_component.cmx/*/process-id");
+  ASSERT_EQ(1u, glob.size());
+
+  std::string process_koid;
+  ASSERT_TRUE(files::ReadFileToString(*glob.begin(), &process_koid));
+
+  bool component_died = false;
+  controller.events().OnTerminated = [&](int64_t err, TerminationReason r) {
+    component_died = true;
+  };
+  fuchsia::testing::appmgr::CrashInducerPtr crash_srv;
+  component_svc->Connect(crash_srv.NewRequest());
+  crash_srv->Crash();
+  // TODO(fxb/51382): Remove these logs. Added for debugging incase process never crashes.
+  FX_LOGS(INFO) << "Waiting for component to die.";
+  RunLoopUntil([&] { return component_died; });
+  FX_LOGS(INFO) << "Component died.";
+
+  auto result = FindComponent(std::stoi(process_koid));
+  ASSERT_FALSE(result.is_err()) << zx_status_get_string(result.err());
+  auto& response = result.response().component_info;
+
+  EXPECT_EQ(response.component_url(),
+            "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/crashing_component.cmx");
+  std::vector<std::string> expected = {"app", "sys", current_realm_name(), std::move(realm_label)};
+  EXPECT_EQ(response.realm_path(), expected);
+  EXPECT_EQ(response.instance_id(), process_koid);
+  EXPECT_EQ(response.component_name(), "crashing_component.cmx");
 }
 
 class EnvironmentOptionsTest : public RealmTest,

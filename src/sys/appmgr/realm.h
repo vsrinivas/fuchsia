@@ -35,6 +35,7 @@
 #include "src/sys/appmgr/component_event_provider_impl.h"
 #include "src/sys/appmgr/component_id_index.h"
 #include "src/sys/appmgr/cpu_watcher.h"
+#include "src/sys/appmgr/crash_introspector.h"
 #include "src/sys/appmgr/environment_controller_impl.h"
 #include "src/sys/appmgr/hub/hub_info.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
@@ -271,6 +272,12 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   // Called by `FindComponent`. This function returns realm path in reverse order.
   zx::status<fuchsia::sys::internal::SourceIdentity> FindComponentInternal(zx_koid_t process_koid);
 
+  // Registers a job for crash introspection.
+  // This internally adds realm label to passed |component_info| and calls either it's own parent
+  // or directly calls introspector if this is a root realm.
+  void RegisterJobForCrashIntrospection(const zx::job& job,
+                                        fuchsia::sys::internal::SourceIdentity component_info);
+
   fxl::WeakPtr<Realm> const parent_;
   fuchsia::sys::LoaderPtr loader_;
   std::string label_;
@@ -325,6 +332,9 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   // Implement introspect service. Only initialized in root realm.
   std::unique_ptr<IntrospectImpl> introspector_;
+
+  // Implement crash introspect service. Only initialized in root realm.
+  std::unique_ptr<CrashIntrospector> crash_introspector_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Realm);
 };

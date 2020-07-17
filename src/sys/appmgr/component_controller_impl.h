@@ -182,6 +182,8 @@ class ComponentControllerImpl : public ComponentControllerBase {
   // |fuchsia::sys::ComponentController| implementation:
   void Kill() override;
 
+  const zx::job& job() const { return job_; }
+
  private:
   void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal* signal);

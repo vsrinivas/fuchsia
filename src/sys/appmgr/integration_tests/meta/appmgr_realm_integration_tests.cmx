@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
+                "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.sys.internal.Introspect"
             ]
         }
@@ -15,9 +16,11 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.log.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
+            "fuchsia.sys.internal.CrashIntrospect",
             "fuchsia.sys.internal.Introspect"
         ]
     }

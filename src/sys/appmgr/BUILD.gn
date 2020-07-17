@@ -23,6 +23,8 @@ source_set("lib") {
     "constants.h",
     "cpu_watcher.cc",
     "cpu_watcher.h",
+    "crash_introspector.cc",
+    "crash_introspector.h",
     "debug_info_retriever.cc",
     "debug_info_retriever.h",
     "dynamic_library_loader.cc",

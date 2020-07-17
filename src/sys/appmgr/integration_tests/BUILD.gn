@@ -41,6 +41,7 @@ executable("realm_tests") {
 
   deps = [
     "fidl:test.component.mockrunner",
+    "fidl/fuchsia.testing.appmgr",
     "mock_runner:appmgr_mock_runner",
     "util:data_file_reader_writer",
     "util:data_file_reader_writer_util",
@@ -108,13 +109,36 @@ executable("echo_server") {
   ]
 }
 
+executable("crashing_process") {
+  testonly = true
+
+  output_name = "crashing_process"
+
+  sources = [ "crashing_process.cc" ]
+}
+
 config_data("sysmgr_config") {
   for_pkg = "appmgr_integration_tests"
   sources = [ rebase_path("//src/sys/sysmgr/config/services.config") ]
 }
 
+executable("crashing_component") {
+  testonly = true
+  output_name = "crashing_component"
+  sources = [ "crashing_component.cc" ]
+  deps = [
+    "fidl/fuchsia.testing.appmgr",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
 test_package("appmgr_integration_tests") {
   deps = [
+    ":crashing_component",
+    ":crashing_process",
     ":echo_server",
     ":hub_tests",
     ":realm_tests",
@@ -129,6 +153,12 @@ test_package("appmgr_integration_tests") {
     {
       name = "echo_server_for_test"
     },
+    {
+      name = "crashing_process"
+    },
+    {
+      name = "crashing_component"
+    },
   ]
 
   meta = [
@@ -139,6 +169,10 @@ test_package("appmgr_integration_tests") {
     {
       path = rebase_path("meta/echo_server.cmx")
       dest = "echo_server.cmx"
+    },
+    {
+      path = rebase_path("meta/crashing_component.cmx")
+      dest = "crashing_component.cmx"
     },
   ]
 

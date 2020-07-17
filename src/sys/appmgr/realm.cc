@@ -46,6 +46,7 @@
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/pkg_url/url_resolver.h"
 #include "src/sys/appmgr/constants.h"
+#include "src/sys/appmgr/crash_introspector.h"
 #include "src/sys/appmgr/dynamic_library_loader.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
 #include "src/sys/appmgr/introspector.h"
@@ -384,6 +385,15 @@ Realm::Realm(RealmArgs args, zx::job job)
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
           introspector_->AddBinding(
               fidl::InterfaceRequest<fuchsia::sys::internal::Introspect>(std::move(channel)));
+          return ZX_OK;
+        })));
+
+    crash_introspector_ = std::make_unique<CrashIntrospector>();
+    default_namespace_->services()->AddService(
+        fuchsia::sys::internal::CrashIntrospect::Name_,
+        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+          crash_introspector_->AddBinding(
+              fidl::InterfaceRequest<fuchsia::sys::internal::CrashIntrospect>(std::move(channel)));
           return ZX_OK;
         })));
   }
@@ -1054,6 +1064,11 @@ void Realm::CreateElfBinaryComponentFromPackage(
     if (callback != nullptr) {
       callback(application);
     }
+    fuchsia::sys::internal::SourceIdentity component_info;
+    component_info.set_component_name(application->label());
+    component_info.set_component_url(application->url());
+    component_info.set_instance_id(application->hub_instance_id());
+    RegisterJobForCrashIntrospection(application->job(), std::move(component_info));
     NotifyComponentStarted(application->url(), application->label(),
                            application->hub_instance_id());
     applications_.emplace(key, std::move(application));
@@ -1316,6 +1331,20 @@ zx::status<fuchsia::sys::internal::SourceIdentity> Realm::FindComponentInternal(
     }
   }
   return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+void Realm::RegisterJobForCrashIntrospection(
+    const zx::job& job, fuchsia::sys::internal::SourceIdentity component_info) {
+  component_info.mutable_realm_path()->push_back(label_);
+  if (likely(parent_)) {
+    parent_->RegisterJobForCrashIntrospection(job, std::move(component_info));
+  } else if (crash_introspector_) {
+    auto* path = component_info.mutable_realm_path();
+    std::reverse(path->begin(), path->end());
+    crash_introspector_->RegisterJob(job, std::move(component_info));
+  } else {
+    FX_LOGS(ERROR) << "Cannot find parent or crash introspector for realm: " << label_;
+  }
 }
 
 void Realm::ShutdownNamespace(ShutdownNamespaceCallback callback) {

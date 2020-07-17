@@ -11,5 +11,8 @@ fidl("fuchsia.testing.appmgr") {
     "string-bounds-not-specified",
   ]
 
-  sources = [ "test_service.fidl" ]
+  sources = [
+    "crash_inducer.fidl",
+    "test_service.fidl",
+  ]
 }
