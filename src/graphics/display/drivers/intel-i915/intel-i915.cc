@@ -1796,7 +1796,9 @@ zx_status_t Controller::MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* 
       return status;
     }
   }
-  *addr_out = mapped_bars_[pci_bar].mmio.vaddr;
+
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  *addr_out = (void*)mapped_bars_[pci_bar].mmio.vaddr;
   *size_out = mapped_bars_[pci_bar].mmio.size;
   mapped_bars_[pci_bar].count++;
   return ZX_OK;
@@ -2008,7 +2010,8 @@ void Controller::DdkSuspend(ddk::SuspendTxn txn) {
     // Try to map the framebuffer and clear it. If not, oh well.
     mmio_buffer_t mmio;
     if (pci_map_bar_buffer(&pci_, 2, ZX_CACHE_POLICY_WRITE_COMBINING, &mmio) == ZX_OK) {
-      memset(mmio.vaddr, 0, fb_size);
+      // TODO(fxb/56253): Add MMIO_PTR to cast.
+      memset((void*)mmio.vaddr, 0, fb_size);
       mmio_buffer_release(&mmio);
     }
 

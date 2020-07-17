@@ -30,7 +30,7 @@
 #include "hikey960-hw.h"
 
 static zx_status_t hikey960_enable_ldo3(hikey960_t* hikey) {
-  writel(LDO3_ENABLE_BIT, hikey->pmu_ssio.vaddr + LDO3_ENABLE_REG);
+  MmioWrite32(LDO3_ENABLE_BIT, hikey->pmu_ssio.vaddr + LDO3_ENABLE_REG);
   return ZX_OK;
 }
 

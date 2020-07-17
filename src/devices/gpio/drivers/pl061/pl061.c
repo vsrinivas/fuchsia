@@ -25,7 +25,8 @@
 static zx_status_t pl061_gpio_config_in(void* ctx, uint32_t index, uint32_t flags) {
   pl061_gpios_t* gpios = ctx;
   index -= gpios->gpio_start;
-  volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile uint8_t* regs = (void*)gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
   uint8_t bit = 1 << (index % GPIOS_PER_PAGE);
 
   mtx_lock(&gpios->lock);
@@ -71,7 +72,8 @@ static zx_status_t pl061_gpio_config_in(void* ctx, uint32_t index, uint32_t flag
 static zx_status_t pl061_gpio_config_out(void* ctx, uint32_t index, uint8_t initial_value) {
   pl061_gpios_t* gpios = ctx;
   index -= gpios->gpio_start;
-  volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile uint8_t* regs = (void*)gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
   uint8_t bit = 1 << (index % GPIOS_PER_PAGE);
 
   mtx_lock(&gpios->lock);
@@ -94,7 +96,8 @@ static zx_status_t pl061_gpio_set_alt_function(void* ctx, uint32_t index, uint64
 static zx_status_t pl061_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
   pl061_gpios_t* gpios = ctx;
   index -= gpios->gpio_start;
-  volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile uint8_t* regs = (void*)gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
   uint8_t bit = 1 << (index % GPIOS_PER_PAGE);
 
   *out_value = !!(readb(regs + GPIODATA(bit)) & bit);
@@ -104,7 +107,8 @@ static zx_status_t pl061_gpio_read(void* ctx, uint32_t index, uint8_t* out_value
 static zx_status_t pl061_gpio_write(void* ctx, uint32_t index, uint8_t value) {
   pl061_gpios_t* gpios = ctx;
   index -= gpios->gpio_start;
-  volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile uint8_t* regs = (void*)gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
   uint8_t bit = 1 << (index % GPIOS_PER_PAGE);
 
   writeb((value ? bit : 0), regs + GPIODATA(bit));

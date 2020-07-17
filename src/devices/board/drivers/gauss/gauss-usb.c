@@ -70,37 +70,37 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus) {
     return status;
   }
 
-  volatile void* regs = bus->usb_phy.vaddr;
+  MMIO_PTR volatile void* regs = bus->usb_phy.vaddr;
 
   // amlogic_new_usb2_init
   for (int i = 0; i < 4; i++) {
-    volatile void* addr = regs + (i * PHY_REGISTER_SIZE) + U2P_R0_OFFSET;
-    uint32_t temp = readl(addr);
+    MMIO_PTR volatile void* addr = regs + (i * PHY_REGISTER_SIZE) + U2P_R0_OFFSET;
+    uint32_t temp = MmioRead32(addr);
     temp |= U2P_R0_POR;
     temp |= U2P_R0_DMPULLDOWN;
     temp |= U2P_R0_DPPULLDOWN;
     if (i == 1) {
       temp |= U2P_R0_IDPULLUP;
     }
-    writel(temp, addr);
+    MmioWrite32(temp, addr);
     zx_nanosleep(zx_deadline_after(ZX_USEC(500)));
-    temp = readl(addr);
+    temp = MmioRead32(addr);
     temp &= ~U2P_R0_POR;
-    writel(temp, addr);
+    MmioWrite32(temp, addr);
   }
 
   // amlogic_new_usb3_init
-  volatile void* addr = regs + (4 * PHY_REGISTER_SIZE);
+  MMIO_PTR volatile void* addr = regs + (4 * PHY_REGISTER_SIZE);
 
-  uint32_t temp = readl(addr + USB_R1_OFFSET);
+  uint32_t temp = MmioRead32(addr + USB_R1_OFFSET);
   temp = SET_BITS(temp, USB_R1_U3H_FLADJ_30MHZ_REG_START, USB_R1_U3H_FLADJ_30MHZ_REG_BITS, 0x20);
-  writel(temp, addr + USB_R1_OFFSET);
+  MmioWrite32(temp, addr + USB_R1_OFFSET);
 
-  temp = readl(addr + USB_R5_OFFSET);
+  temp = MmioRead32(addr + USB_R5_OFFSET);
   temp |= USB_R5_IDDIG_EN0;
   temp |= USB_R5_IDDIG_EN1;
   temp = SET_BITS(temp, USB_R5_IDDIG_TH_START, USB_R5_IDDIG_TH_BITS, 255);
-  writel(temp, addr + USB_R5_OFFSET);
+  MmioWrite32(temp, addr + USB_R5_OFFSET);
 
   if ((status = pbus_device_add(&bus->pbus, &xhci_dev)) != ZX_OK) {
     zxlogf(ERROR, "a113_usb_init could not add xhci_dev: %d", status);

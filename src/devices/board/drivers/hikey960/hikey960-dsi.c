@@ -12,25 +12,25 @@
 #include "hikey960.h"
 
 zx_status_t hikey960_dsi_init(hikey960_t* hikey) {
-  volatile void* peri_crg = hikey->peri_crg.vaddr;
+  MMIO_PTR volatile void* peri_crg = hikey->peri_crg.vaddr;
   uint32_t temp;
 
-  writel(0x30000000, peri_crg + PERRSTDIS3);
+  MmioWrite32(0x30000000, peri_crg + PERRSTDIS3);
 
-  temp = readl(peri_crg + TXDPHY0_REF_OFFSET);
+  temp = MmioRead32(peri_crg + TXDPHY0_REF_OFFSET);
   temp |= (1 << TXDPHY0_REF_BIT);
-  writel(temp, peri_crg + TXDPHY0_REF_OFFSET);
-  readl(peri_crg + TXDPHY0_REF_OFFSET + CLKGATE_SEPARATED_STATUS);
+  MmioWrite32(temp, peri_crg + TXDPHY0_REF_OFFSET);
+  MmioRead32(peri_crg + TXDPHY0_REF_OFFSET + CLKGATE_SEPARATED_STATUS);
 
-  temp = readl(peri_crg + TXDPHY0_CFG_OFFSET);
+  temp = MmioRead32(peri_crg + TXDPHY0_CFG_OFFSET);
   temp |= (1 << TXDPHY0_CFG_BIT);
-  writel(temp, peri_crg + TXDPHY0_CFG_OFFSET);
-  readl(peri_crg + TXDPHY0_CFG_OFFSET + CLKGATE_SEPARATED_STATUS);
+  MmioWrite32(temp, peri_crg + TXDPHY0_CFG_OFFSET);
+  MmioRead32(peri_crg + TXDPHY0_CFG_OFFSET + CLKGATE_SEPARATED_STATUS);
 
-  temp = readl(peri_crg + PCLK_GATE_DSI0_OFFSET);
+  temp = MmioRead32(peri_crg + PCLK_GATE_DSI0_OFFSET);
   temp |= (1 << PCLK_GATE_DSI0_BIT);
-  writel(temp, peri_crg + PCLK_GATE_DSI0_OFFSET);
-  readl(peri_crg + PCLK_GATE_DSI0_OFFSET + CLKGATE_SEPARATED_STATUS);
+  MmioWrite32(temp, peri_crg + PCLK_GATE_DSI0_OFFSET);
+  MmioRead32(peri_crg + PCLK_GATE_DSI0_OFFSET + CLKGATE_SEPARATED_STATUS);
 
   return ZX_OK;
 }

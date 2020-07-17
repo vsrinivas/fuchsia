@@ -94,7 +94,8 @@ static zx_status_t bochs_vbe_bind(void* ctx, zx_device_t* dev) {
     return status;
   }
 
-  set_hw_mode(mmio.vaddr, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_FORMAT);
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  set_hw_mode((void*)mmio.vaddr, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_FORMAT);
 
   mmio_buffer_release(&mmio);
 

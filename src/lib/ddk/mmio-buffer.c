@@ -32,7 +32,7 @@ zx_status_t mmio_buffer_init(mmio_buffer_t* buffer, zx_off_t offset, size_t size
   }
 
   buffer->vmo = vmo;
-  buffer->vaddr = (void*)(vaddr + page_offset);
+  buffer->vaddr = (MMIO_PTR void*)(vaddr + page_offset);
   buffer->offset = offset;
   buffer->size = size;
 

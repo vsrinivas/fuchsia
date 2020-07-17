@@ -190,11 +190,12 @@ class MmioBuffer {
   }
 
   void Info() const {
-    zxlogf(INFO, "vaddr = %p", mmio_.vaddr);
-    zxlogf(INFO, "size = %lu", mmio_.size);
+    zxlogf(INFO, "vaddr = %p", get());
+    zxlogf(INFO, "size = %lu", get_size());
   }
 
-  void* get() const { return mmio_.vaddr; }
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  void* get() const { return (void*)(mmio_.vaddr); }
   zx_off_t get_offset() const { return mmio_.offset; }
   size_t get_size() const { return mmio_.size; }
   zx::unowned_vmo get_vmo() const { return zx::unowned_vmo(mmio_.vmo); }
@@ -420,7 +421,7 @@ class MmioView : public MmioBuffer {
            const void* ctx = nullptr)
       : MmioBuffer(
             mmio_buffer_t{
-                .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
+                .vaddr = static_cast<MMIO_PTR uint8_t*>(mmio.vaddr) + offset,
                 .offset = mmio.offset + offset,
                 .size = mmio.size - offset,
                 .vmo = mmio.vmo,
@@ -433,7 +434,7 @@ class MmioView : public MmioBuffer {
            const MmioBufferOps* ops = &kDefaultOps, const void* ctx = nullptr)
       : MmioBuffer(
             mmio_buffer_t{
-                .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
+                .vaddr = static_cast<MMIO_PTR uint8_t*>(mmio.vaddr) + offset,
                 .offset = mmio.offset + offset,
                 .size = size,
                 .vmo = mmio.vmo,

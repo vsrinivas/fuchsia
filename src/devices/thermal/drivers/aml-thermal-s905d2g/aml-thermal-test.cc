@@ -622,7 +622,7 @@ class AmlCpuFrequencyTest : public zxtest::Test {
       return;
     }
 
-    mock_hiu_internal_mmio_ = {.vaddr = hiu_internal_mmio_.get(),
+    mock_hiu_internal_mmio_ = {.vaddr = FakeMmioPtr(hiu_internal_mmio_.get()),
                                .offset = 0,
                                .size = kRegSize * sizeof(uint32_t),
                                .vmo = ZX_HANDLE_INVALID};
@@ -934,10 +934,11 @@ class AmlThermalTest : public zxtest::Test {
       return;
     }
 
-    cpufreq_scaling_mock_hiu_internal_mmio_ = {.vaddr = cpufreq_scaling_hiu_internal_mmio_.get(),
-                                               .offset = 0,
-                                               .size = kRegSize * sizeof(uint32_t),
-                                               .vmo = ZX_HANDLE_INVALID};
+    cpufreq_scaling_mock_hiu_internal_mmio_ = {
+        .vaddr = FakeMmioPtr(cpufreq_scaling_hiu_internal_mmio_.get()),
+        .offset = 0,
+        .size = kRegSize * sizeof(uint32_t),
+        .vmo = ZX_HANDLE_INVALID};
     InitHiuInternalMmio();
   }
 

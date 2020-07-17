@@ -11,6 +11,7 @@
 #include <type_traits>
 
 #include <ddk/driver.h>
+#include <mmio-ptr/fake.h>
 
 #include "interrupts.h"
 #include "zxtest/zxtest.h"
@@ -72,7 +73,7 @@ TEST(IntelI915Display, BacklightValue) {
 
   constexpr uint32_t kMinimumRegCount = 0xd0000 / sizeof(uint32_t);
   std::vector<uint32_t> regs(kMinimumRegCount);
-  mmio_buffer_t buffer{.vaddr = regs.data(),
+  mmio_buffer_t buffer{.vaddr = FakeMmioPtr(regs.data()),
                        .offset = 0,
                        .size = regs.size() * sizeof(uint32_t),
                        .vmo = ZX_HANDLE_INVALID};

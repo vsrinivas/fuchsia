@@ -5,6 +5,7 @@
 #include <array>
 
 #include <gtest/gtest.h>
+#include <mmio-ptr/fake.h>
 
 #include "src/graphics/drivers/msd-img-rgx/mtk/mt8167s-gpu.h"
 
@@ -32,17 +33,17 @@ clock_protocol_ops_t fake_clock_ops = {
 class Mt8167GpuTest : public Mt8167sGpu {
  public:
   Mt8167GpuTest() : Mt8167sGpu(nullptr) {
-    mmio_buffer_t power_buffer = {.vaddr = mock_power_gpu_registers_,
+    mmio_buffer_t power_buffer = {.vaddr = FakeMmioPtr(mock_power_gpu_registers_),
                                   .offset = 0,
                                   .size = sizeof(mock_power_gpu_registers_),
                                   .vmo = ZX_HANDLE_INVALID};
     power_gpu_buffer_ = ddk::MmioBuffer(power_buffer);
-    mmio_buffer_t clock_buffer = {.vaddr = mock_clock_gpu_registers_,
+    mmio_buffer_t clock_buffer = {.vaddr = FakeMmioPtr(mock_clock_gpu_registers_),
                                   .offset = 0,
                                   .size = sizeof(mock_clock_gpu_registers_),
                                   .vmo = ZX_HANDLE_INVALID};
     clock_gpu_buffer_ = ddk::MmioBuffer(clock_buffer);
-    mmio_buffer_t top_buffer = {.vaddr = mock_top_gpu_registers_,
+    mmio_buffer_t top_buffer = {.vaddr = FakeMmioPtr(mock_top_gpu_registers_),
                                 .offset = 0,
                                 .size = sizeof(mock_top_gpu_registers_),
                                 .vmo = ZX_HANDLE_INVALID};

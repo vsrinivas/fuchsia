@@ -671,10 +671,10 @@ static void infostring(const char* prefix, uint8_t* str, size_t len) {
 }
 
 // Convenience accessors for BAR0 registers
-#define rd32(r) readl(nvme->mmio.vaddr + NVME_REG_##r)
-#define rd64(r) readll(nvme->mmio.vaddr + NVME_REG_##r)
-#define wr32(v, r) writel(v, nvme->mmio.vaddr + NVME_REG_##r)
-#define wr64(v, r) writell(v, nvme->mmio.vaddr + NVME_REG_##r)
+#define rd32(r) MmioRead32(nvme->mmio.vaddr + NVME_REG_##r)
+#define rd64(r) MmioRead64(nvme->mmio.vaddr + NVME_REG_##r)
+#define wr32(v, r) MmioWrite32(v, nvme->mmio.vaddr + NVME_REG_##r)
+#define wr64(v, r) MmioWrite64(v, nvme->mmio.vaddr + NVME_REG_##r)
 
 // dedicated pages from the page pool
 #define IDX_ADMIN_SQ 0
@@ -693,16 +693,15 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   uint64_t cap = rd64(CAP);
 
   zxlogf(INFO, "nvme: version %d.%d.%d", n >> 16, (n >> 8) & 0xFF, n & 0xFF);
-  zxlogf(INFO, "nvme: page size: (MPSMIN): %u (MPSMAX): %u",
-         (unsigned)(1 << NVME_CAP_MPSMIN(cap)), (unsigned)(1 << NVME_CAP_MPSMAX(cap)));
+  zxlogf(INFO, "nvme: page size: (MPSMIN): %u (MPSMAX): %u", (unsigned)(1 << NVME_CAP_MPSMIN(cap)),
+         (unsigned)(1 << NVME_CAP_MPSMAX(cap)));
   zxlogf(INFO, "nvme: doorbell stride: %u", (unsigned)(1 << NVME_CAP_DSTRD(cap)));
   zxlogf(INFO, "nvme: timeout: %u ms", (unsigned)(1 << NVME_CAP_TO(cap)));
   zxlogf(INFO, "nvme: boot partition support (BPS): %c", NVME_CAP_BPS(cap) ? 'Y' : 'N');
   zxlogf(INFO, "nvme: supports NVM command set (CSS:NVM): %c", NVME_CAP_CSS_NVM(cap) ? 'Y' : 'N');
   zxlogf(INFO, "nvme: subsystem reset supported (NSSRS): %c", NVME_CAP_NSSRS(cap) ? 'Y' : 'N');
   zxlogf(INFO, "nvme: weighted-round-robin (AMS:WRR): %c", NVME_CAP_AMS_WRR(cap) ? 'Y' : 'N');
-  zxlogf(INFO, "nvme: vendor-specific arbitration (AMS:VS): %c",
-         NVME_CAP_AMS_VS(cap) ? 'Y' : 'N');
+  zxlogf(INFO, "nvme: vendor-specific arbitration (AMS:VS): %c", NVME_CAP_AMS_VS(cap) ? 'Y' : 'N');
   zxlogf(INFO, "nvme: contiquous queues required (CQR): %c", NVME_CAP_CQR(cap) ? 'Y' : 'N');
   zxlogf(INFO, "nvme: maximum queue entries supported (MQES): %u",
          ((unsigned)NVME_CAP_MQES(cap)) + 1);
@@ -765,8 +764,10 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   zxlogf(INFO, "nvme: controller ready. (after %u ms)", WAIT_MS - ms_remain);
 
   // registers and buffers for admin queues
-  nvme->io_admin_sq_tail_db = nvme->mmio.vaddr + NVME_REG_SQnTDBL(0, cap);
-  nvme->io_admin_cq_head_db = nvme->mmio.vaddr + NVME_REG_CQnHDBL(0, cap);
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  nvme->io_admin_sq_tail_db = (void*)nvme->mmio.vaddr + NVME_REG_SQnTDBL(0, cap);
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  nvme->io_admin_cq_head_db = (void*)nvme->mmio.vaddr + NVME_REG_CQnHDBL(0, cap);
 
   nvme->admin_sq = nvme->iob.virt + PAGE_SIZE * IDX_ADMIN_SQ;
   nvme->admin_sq_head = 0;
@@ -777,8 +778,10 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   nvme->admin_cq_toggle = 1;
 
   // registers and buffers for IO queues
-  nvme->io_sq_tail_db = nvme->mmio.vaddr + NVME_REG_SQnTDBL(1, cap);
-  nvme->io_cq_head_db = nvme->mmio.vaddr + NVME_REG_CQnHDBL(1, cap);
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  nvme->io_sq_tail_db = (void*)nvme->mmio.vaddr + NVME_REG_SQnTDBL(1, cap);
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  nvme->io_cq_head_db = (void*)nvme->mmio.vaddr + NVME_REG_CQnHDBL(1, cap);
 
   nvme->io_sq = nvme->iob.virt + PAGE_SIZE * IDX_IO_SQ;
   nvme->io_sq_head = 0;

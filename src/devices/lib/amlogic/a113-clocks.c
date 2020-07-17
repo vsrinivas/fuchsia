@@ -34,7 +34,8 @@ zx_status_t a113_clk_init(a113_clk_dev_t **device) {
     zxlogf(ERROR, "a113_clk_init: mmio_buffer_init_physical failed %d", status);
     goto init_fail;
   }
-  (*device)->regs_vaddr = (*device)->mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  (*device)->regs_vaddr = (void*)(*device)->mmio.vaddr;
 
   return ZX_OK;
 

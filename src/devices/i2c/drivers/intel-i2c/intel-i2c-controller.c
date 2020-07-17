@@ -804,7 +804,8 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
     zxlogf(ERROR, "i2c: failed to mape pci bar 0: %d", status);
     goto fail;
   }
-  device->regs = device->mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  device->regs = (void*)device->mmio.vaddr;
 
   // set msi irq mode
   status = pci_set_irq_mode(&pci, ZX_PCIE_IRQ_MODE_LEGACY, 1);

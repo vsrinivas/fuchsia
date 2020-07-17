@@ -497,7 +497,8 @@ static void ufshc_memory_configure(ufshc_dev_t* dev) {
 
 static zx_status_t ufshc_configure_descs(ufshc_dev_t* dev) {
   ufs_hba_t* hba = &dev->ufs_hba;
-  volatile void* ufshc_regs = dev->ufshc_mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile void* ufshc_regs = (void*)dev->ufshc_mmio.vaddr;
   zx_paddr_t tfr_desc_phys = io_buffer_phys(&hba->utrl_dma_buf);
   zx_paddr_t req_desc_phys = io_buffer_phys(&hba->utmrl_dma_buf);
   zx_status_t status;
@@ -526,7 +527,8 @@ static zx_status_t ufshc_configure_descs(ufshc_dev_t* dev) {
 static zx_status_t ufshc_drv_init(ufshc_dev_t* dev) {
   zx_status_t status;
   ufs_hba_t* hba = &dev->ufs_hba;
-  volatile void* regs = dev->ufshc_mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
 
   // Allocate memory for host memory space
   status = ufshc_memory_alloc(dev);
@@ -696,7 +698,8 @@ static zx_status_t ufshc_query_dev_desc(ufshc_dev_t* dev, uint8_t opcode, uint8_
   ufs_utp_resp_upiu_t* resp_upiu;
   zx_status_t status;
   ufs_hba_t* hba = &dev->ufs_hba;
-  volatile void* regs = dev->ufshc_mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
   uint8_t* tmp_buf;
 
   status = ufs_get_query_func(opcode, &query_func);
@@ -841,7 +844,8 @@ static zx_status_t ufshc_send_nop_out_cmd(ufs_hba_t* hba, volatile void* regs) {
 
 static zx_status_t ufshc_do_flag_opn(ufshc_dev_t* dev, uint8_t opcode, uint8_t flag,
                                      uint8_t* flag_res) {
-  volatile void* regs = dev->ufshc_mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
   ufs_hba_t* hba = &dev->ufs_hba;
   uint8_t ret_val[4];
   uint8_t free_slot;
@@ -906,7 +910,8 @@ static zx_status_t ufshc_complete_dev_init(ufshc_dev_t* dev) {
 
 static zx_status_t ufshc_device_init(ufshc_dev_t* dev) {
   ufs_hba_t* hba = &dev->ufs_hba;
-  volatile void* regs = dev->ufshc_mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
   zx_status_t status;
 
   status = ufshc_send_nop_out_cmd(hba, regs);
@@ -921,7 +926,8 @@ static void ufshc_config_init(ufs_hba_t* ufs_hba) { ufs_hba->timeout = ZX_SEC(5)
 
 static zx_status_t ufshc_enable(ufshc_dev_t* dev) {
   int32_t retry = 3;
-  volatile void* regs = dev->ufshc_mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
   zx_status_t status = ZX_OK;
 
   do {
@@ -953,7 +959,8 @@ static inline void ufshc_get_ufs_version(ufs_hba_t* hba, volatile void* regs) {
 }
 
 static zx_status_t ufshc_host_init(ufshc_dev_t* dev) {
-  volatile void* regs = dev->ufshc_mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
   ufs_hba_t* hba = &dev->ufs_hba;
   zx_status_t status;
 
@@ -991,7 +998,8 @@ static void ufshc_release(ufshc_dev_t* dev) {
 static zx_status_t ufs_send_scsi_cmd(ufshc_dev_t* dev, uint8_t lun, uint8_t opcode, uint64_t lba,
                                      enum dma_direction dirn, uint32_t size) {
   ufs_hba_t* hba = &dev->ufs_hba;
-  volatile void* regs = dev->ufshc_mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
   zx_status_t status;
   uint8_t free_slot;
 

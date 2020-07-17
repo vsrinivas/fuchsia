@@ -4,6 +4,7 @@
 
 #include "mt8167.h"
 
+#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 #include "soc/mt8167/mt8167-clk-regs.h"
@@ -85,9 +86,11 @@ void Mt8167Test::TestInitMmPll() {
 
   uint32_t clock_reg_array[kClkRegCount] = {};
   uint32_t pll_reg_array[kPllRegCount] = {};
-  ddk::MmioBuffer clock_mmio(mmio_buffer_t{
-      .vaddr = clock_reg_array, .offset = 0, .size = ZX_PAGE_SIZE, .vmo = ZX_HANDLE_INVALID});
-  ddk::MmioBuffer pll_mmio(mmio_buffer_t{.vaddr = pll_reg_array,
+  ddk::MmioBuffer clock_mmio(mmio_buffer_t{.vaddr = FakeMmioPtr(clock_reg_array),
+                                           .offset = 0,
+                                           .size = ZX_PAGE_SIZE,
+                                           .vmo = ZX_HANDLE_INVALID});
+  ddk::MmioBuffer pll_mmio(mmio_buffer_t{.vaddr = FakeMmioPtr(pll_reg_array),
                                          .offset = 0,
                                          .size = MT8167_AP_MIXED_SYS_SIZE,
                                          .vmo = ZX_HANDLE_INVALID});
@@ -110,8 +113,8 @@ TEST(Mt8167Test, InitSoc) {
   Mt8167Test dut;
   constexpr size_t kRegCount = (MT8167_SOC_INT_POL + 256) / 4;
   uint32_t regs[kRegCount] = {};
-  ddk::MmioBuffer mmio(
-      mmio_buffer_t{.vaddr = regs, .offset = 0, .size = kRegCount * 4, .vmo = ZX_HANDLE_INVALID});
+  ddk::MmioBuffer mmio(mmio_buffer_t{
+      .vaddr = FakeMmioPtr(regs), .offset = 0, .size = kRegCount * 4, .vmo = ZX_HANDLE_INVALID});
   dut.UpdateRegisters(std::move(mmio));
   EXPECT_EQ(0x0f0f'0f0f, regs[MT8167_SOC_INT_POL / 4]);
   EXPECT_EQ(0x803d'0f0f, regs[MT8167_SOC_INT_POL / 4 + 1]);

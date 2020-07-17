@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <hw/sdmmc.h>
+#include <mmio-ptr/fake.h>
 #include <soc/aml-s912/s912-hw.h>
 #include <zxtest/zxtest.h>
 
@@ -30,17 +31,14 @@ class TestAmlSdEmmc : public AmlSdEmmc {
                       .version_3 = true,
                       .prefs = 0,
                   },
-                  zx::interrupt(ZX_HANDLE_INVALID), ddk::GpioProtocolClient()) {
-  }
+                  zx::interrupt(ZX_HANDLE_INVALID), ddk::GpioProtocolClient()) {}
 
   zx_status_t TestDdkAdd() {
     // call parent's bind
     return Bind();
   }
 
-  void DdkRelease() {
-    AmlSdEmmc::DdkRelease();
-  }
+  void DdkRelease() { AmlSdEmmc::DdkRelease(); }
 
   zx_status_t WaitForInterruptImpl() override {
     if (request_index_ < request_results_.size() && request_results_[request_index_] == 0) {
@@ -66,18 +64,14 @@ class TestAmlSdEmmc : public AmlSdEmmc {
     return ZX_OK;
   }
 
-  void WaitForBus() const override {
-    /* Do nothing, bus is always ready in tests */
-  }
+  void WaitForBus() const override { /* Do nothing, bus is always ready in tests */ }
 
   void SetRequestResults(const std::vector<uint8_t>& request_results) {
     request_results_ = request_results;
     request_index_ = 0;
   }
 
-  void SetRequestInterruptStatus(uint32_t status) {
-    interrupt_status_ = status;
-  }
+  void SetRequestInterruptStatus(uint32_t status) { interrupt_status_ = status; }
 
  private:
   std::vector<uint8_t> request_results_;
@@ -89,14 +83,14 @@ class TestAmlSdEmmc : public AmlSdEmmc {
 
 class AmlSdEmmcTest : public zxtest::Test {
  public:
-  AmlSdEmmcTest() : mmio_({&mmio_, 0, 0, ZX_HANDLE_INVALID}) {}
+  AmlSdEmmcTest() : mmio_({FakeMmioPtr(&mmio_), 0, 0, ZX_HANDLE_INVALID}) {}
 
   void SetUp() override {
     registers_.reset(new uint8_t[S912_SD_EMMC_B_LENGTH]);
     memset(registers_.get(), 0, S912_SD_EMMC_B_LENGTH);
 
     mmio_buffer_t mmio_buffer = {
-        .vaddr = registers_.get(),
+        .vaddr = FakeMmioPtr(registers_.get()),
         .offset = 0,
         .size = S912_SD_EMMC_B_LENGTH,
         .vmo = ZX_HANDLE_INVALID,

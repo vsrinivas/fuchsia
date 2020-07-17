@@ -4,6 +4,7 @@
 
 #include "vs680-clk.h"
 
+#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 #include "vs680-clk-reg.h"
@@ -22,9 +23,12 @@ class Vs680ClkTest : public zxtest::Test {
  public:
   Vs680ClkTest()
       : dut_(nullptr,
-             ddk::MmioBuffer({chip_ctrl_regs_, 0, sizeof(chip_ctrl_regs_), ZX_HANDLE_INVALID}),
-             ddk::MmioBuffer({cpu_pll_regs_, 0, sizeof(cpu_pll_regs_), ZX_HANDLE_INVALID}),
-             ddk::MmioBuffer({avio_regs_, 0, sizeof(avio_regs_), ZX_HANDLE_INVALID}), zx::sec(0)) {}
+             ddk::MmioBuffer(
+                 {FakeMmioPtr(chip_ctrl_regs_), 0, sizeof(chip_ctrl_regs_), ZX_HANDLE_INVALID}),
+             ddk::MmioBuffer(
+                 {FakeMmioPtr(cpu_pll_regs_), 0, sizeof(cpu_pll_regs_), ZX_HANDLE_INVALID}),
+             ddk::MmioBuffer({FakeMmioPtr(avio_regs_), 0, sizeof(avio_regs_), ZX_HANDLE_INVALID}),
+             zx::sec(0)) {}
 
   void SetUp() {
     memset(chip_ctrl_regs_, 0, sizeof(chip_ctrl_regs_));

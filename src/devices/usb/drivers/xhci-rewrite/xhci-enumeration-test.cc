@@ -28,6 +28,7 @@
 #include <thread>
 
 #include <fake-dma-buffer/fake-dma-buffer.h>
+#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 #include "usb-xhci.h"
@@ -313,7 +314,8 @@ void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
 int UsbXhci::InitThread(std::unique_ptr<dma_buffer::BufferFactory> factory) {
   interrupters_.reset(new Interrupter[1]);
   mmio_buffer_t invalid_mmio = {
-      .vaddr = this,  // Add a dummy vaddr to pass the check in the MmioBuffer constructor.
+      // Add a dummy vaddr to pass the check in the MmioBuffer constructor.
+      .vaddr = FakeMmioPtr(this),
       .offset = 0,
       .size = 0,
       .vmo = ZX_HANDLE_INVALID,

@@ -7,11 +7,13 @@
 
 #include <zircon/types.h>
 
+#include <mmio-ptr/mmio-ptr.h>
+
 __BEGIN_CDECLS
 
 typedef struct {
   // |vaddr| points to the content starting at |offset| in |vmo|.
-  void* vaddr;
+  MMIO_PTR void* vaddr;
   zx_off_t offset;
   size_t size;
   zx_handle_t vmo;

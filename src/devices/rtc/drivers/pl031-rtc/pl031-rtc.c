@@ -113,7 +113,8 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "pl031_rtc: bind failed to pdev_map_mmio.");
     goto error_return;
   }
-  pl031->regs = pl031->mmio.vaddr;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  pl031->regs = (void*)pl031->mmio.vaddr;
 
   pl031->parent = parent;
 

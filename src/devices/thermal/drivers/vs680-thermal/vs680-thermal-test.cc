@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <mmio-ptr/fake.h>
 #include <mock/ddktl/protocol/clock.h>
 #include <mock/ddktl/protocol/power.h>
 #include <zxtest/zxtest.h>
@@ -28,7 +29,7 @@ class Vs680ThermalTest : public zxtest::Test {
   Vs680ThermalTest() {}
 
   void SetUp() override {
-    ddk::MmioBuffer mmio({registers_, 0, sizeof(registers_), ZX_HANDLE_INVALID});
+    ddk::MmioBuffer mmio({FakeMmioPtr(registers_), 0, sizeof(registers_), ZX_HANDLE_INVALID});
 
     ASSERT_OK(zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &interrupt_));
     zx::interrupt dut_interrupt;

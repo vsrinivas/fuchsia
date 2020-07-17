@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <mmio-ptr/fake.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-hw.h>
 
@@ -66,7 +67,7 @@ class MtkThermalTest : public MtkThermal {
   static bool Create(const fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info, zx::port port,
                      std::unique_ptr<MtkThermalTest>* test) {
     mmio_buffer_t dummy_mmio;
-    dummy_mmio.vaddr = &dummy_mmio;
+    dummy_mmio.vaddr = FakeMmioPtr(&dummy_mmio);
     dummy_mmio.size = sizeof(dummy_mmio);
 
     TempCalibration0 cal0_fuse;

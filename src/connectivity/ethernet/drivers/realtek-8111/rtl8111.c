@@ -21,12 +21,12 @@
 #include <ddk/protocol/pci.h>
 #include <hw/reg.h>
 
-#define WRITE32(a, v) writel(v, edev->mmio.vaddr + (a))
-#define READ32(a) readl(edev->mmio.vaddr + (a))
-#define WRITE16(a, v) writew(v, edev->mmio.vaddr + (a))
-#define READ16(a) readw(edev->mmio.vaddr + (a))
-#define WRITE8(a, v) writeb(v, edev->mmio.vaddr + (a))
-#define READ8(a) readb(edev->mmio.vaddr + (a))
+#define WRITE32(a, v) MmioWrite32(v, edev->mmio.vaddr + (a))
+#define READ32(a) MmioRead32(edev->mmio.vaddr + (a))
+#define WRITE16(a, v) MmioWrite16(v, edev->mmio.vaddr + (a))
+#define READ16(a) MmioRead16(edev->mmio.vaddr + (a))
+#define WRITE8(a, v) MmioWrite8(v, edev->mmio.vaddr + (a))
+#define READ8(a) MmioRead8(edev->mmio.vaddr + (a))
 
 #define HI32(val) (((val) >> 32) & 0xffffffff)
 #define LO32(val) ((val)&0xffffffff)

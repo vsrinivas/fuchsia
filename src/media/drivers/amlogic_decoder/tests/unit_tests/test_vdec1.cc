@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <gtest/gtest.h>
+#include <mmio-ptr/fake.h>
 
 #include "amlogic-video.h"
 #include "tests/test_support.h"
@@ -50,26 +51,28 @@ TEST(Vdec1UnitTest, PowerOn) {
 
   auto dosbus_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
   memset(dosbus_memory.get(), 0, kDosbusMemorySize);
-  mmio_buffer_t dosbus_mmio = {
-      .vaddr = dosbus_memory.get(), .size = kDosbusMemorySize, .vmo = ZX_HANDLE_INVALID};
+  mmio_buffer_t dosbus_mmio = {.vaddr = FakeMmioPtr(dosbus_memory.get()),
+                               .size = kDosbusMemorySize,
+                               .vmo = ZX_HANDLE_INVALID};
   DosRegisterIo dosbus(dosbus_mmio);
 
   auto aobus_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kAobusMemorySize]);
   memset(aobus_memory.get(), 0, kAobusMemorySize);
   mmio_buffer_t aobus_mmio = {
-      .vaddr = aobus_memory.get(), .size = kAobusMemorySize, .vmo = ZX_HANDLE_INVALID};
+      .vaddr = FakeMmioPtr(aobus_memory.get()), .size = kAobusMemorySize, .vmo = ZX_HANDLE_INVALID};
   AoRegisterIo aobus(aobus_mmio);
 
   auto dmc_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kDmcMemorySize]);
   memset(dmc_memory.get(), 0, kDmcMemorySize);
   mmio_buffer_t dmc_mmio = {
-      .vaddr = dmc_memory.get(), .size = kDmcMemorySize, .vmo = ZX_HANDLE_INVALID};
+      .vaddr = FakeMmioPtr(dmc_memory.get()), .size = kDmcMemorySize, .vmo = ZX_HANDLE_INVALID};
   DmcRegisterIo dmc(dmc_mmio);
 
   auto hiubus_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kHiuBusMemorySize]);
   memset(hiubus_memory.get(), 0, kHiuBusMemorySize);
-  mmio_buffer_t hiubus_mmio = {
-      .vaddr = hiubus_memory.get(), .size = kHiuBusMemorySize, .vmo = ZX_HANDLE_INVALID};
+  mmio_buffer_t hiubus_mmio = {.vaddr = FakeMmioPtr(hiubus_memory.get()),
+                               .size = kHiuBusMemorySize,
+                               .vmo = ZX_HANDLE_INVALID};
   HiuRegisterIo hiubus(hiubus_mmio);
 
   auto mmio = std::unique_ptr<MmioRegisters>(

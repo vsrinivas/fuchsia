@@ -60,7 +60,8 @@ static zx_status_t pci_sdhci_get_mmio(void* ctx, zx_handle_t* out, zx_off_t* out
       printf("pci-sdhci: error %d mapping register window\n", status);
       return status;
     }
-    dev->regs = dev->mmio.vaddr;
+    // TODO(fxb/56253): Add MMIO_PTR to cast.
+    dev->regs = (void*)dev->mmio.vaddr;
   }
   *out_offset = dev->mmio.offset;
   return zx_handle_duplicate(dev->mmio.vmo, ZX_RIGHT_SAME_RIGHTS, out);

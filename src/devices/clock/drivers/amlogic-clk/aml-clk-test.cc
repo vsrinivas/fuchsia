@@ -5,6 +5,7 @@
 #include "aml-clk.h"
 
 #include <ddk/platform-defs.h>
+#include <mmio-ptr/fake.h>
 #include <soc/aml-meson/aml-clk-common.h>
 #include <soc/aml-meson/axg-clk.h>
 #include <soc/aml-meson/g12a-clk.h>
@@ -36,7 +37,7 @@ class AmlClockTest : public AmlClock {
 std::tuple<std::unique_ptr<uint8_t[]>, mmio_buffer_t> MakeDosbusMmio() {
   auto value = std::make_unique<uint8_t[]>(S912_DOS_LENGTH);
   mmio_buffer_t buffer;
-  buffer.vaddr = value.get();
+  buffer.vaddr = FakeMmioPtr(value.get());
   buffer.offset = 0;
   buffer.size = S912_DOS_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
@@ -48,7 +49,7 @@ TEST(ClkTestAml, AxgEnableDisableAll) {
   auto expected = std::make_unique<uint8_t[]>(S912_HIU_LENGTH);
 
   mmio_buffer_t buffer;
-  buffer.vaddr = actual.get();
+  buffer.vaddr = FakeMmioPtr(actual.get());
   buffer.offset = 0;
   buffer.size = S912_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
@@ -103,7 +104,7 @@ TEST(ClkTestAml, G12aEnableDisableAll) {
   auto expected = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
 
   mmio_buffer_t buffer;
-  buffer.vaddr = actual.get();
+  buffer.vaddr = FakeMmioPtr(actual.get());
   buffer.offset = 0;
   buffer.size = S905D2_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
@@ -157,7 +158,7 @@ TEST(ClkTestAml, Sm1EnableDisableAll) {
   auto expected = std::make_unique<uint8_t[]>(S905D3_HIU_LENGTH);
 
   mmio_buffer_t buffer;
-  buffer.vaddr = actual.get();
+  buffer.vaddr = FakeMmioPtr(actual.get());
   buffer.offset = 0;
   buffer.size = S905D3_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
@@ -210,7 +211,7 @@ TEST(ClkTestAml, G12aEnableDos) {
   auto actual = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
 
   mmio_buffer_t buffer;
-  buffer.vaddr = actual.get();
+  buffer.vaddr = FakeMmioPtr(actual.get());
   buffer.offset = 0;
   buffer.size = S905D2_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
@@ -228,7 +229,7 @@ TEST(ClkTestAml, G12aEnableDos) {
 static void TestPlls(const uint32_t did) {
   auto ignored = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
   mmio_buffer_t buffer;
-  buffer.vaddr = ignored.get();
+  buffer.vaddr = FakeMmioPtr(ignored.get());
   buffer.offset = 0;
   buffer.size = S905D2_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
@@ -262,7 +263,7 @@ TEST(ClkTestAml, G12bSetRate) { TestPlls(PDEV_DID_AMLOGIC_G12B_CLK); }
 TEST(ClkTestAml, Sm1MuxRo) {
   auto regs = std::make_unique<uint8_t[]>(S905D3_HIU_LENGTH);
   mmio_buffer_t buffer;
-  buffer.vaddr = regs.get();
+  buffer.vaddr = FakeMmioPtr(regs.get());
   buffer.offset = 0;
   buffer.size = S905D3_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
@@ -301,7 +302,7 @@ TEST(ClkTestAml, Sm1Mux) {
 
   auto regs = std::make_unique<uint8_t[]>(S905D3_HIU_LENGTH);
   mmio_buffer_t buffer;
-  buffer.vaddr = regs.get();
+  buffer.vaddr = FakeMmioPtr(regs.get());
   buffer.offset = 0;
   buffer.size = S905D3_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;

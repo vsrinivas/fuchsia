@@ -6,6 +6,7 @@
 
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
+#include <mmio-ptr/fake.h>
 
 #include "amlogic-video.h"
 #include "tests/test_basic_client.h"
@@ -112,8 +113,9 @@ class Vp9UnitTest {
 
     auto dosbus_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memset(dosbus_memory.get(), 0, kDosbusMemorySize);
-    mmio_buffer_t dosbus_mmio = {
-        .vaddr = dosbus_memory.get(), .size = kDosbusMemorySize, .vmo = ZX_HANDLE_INVALID};
+    mmio_buffer_t dosbus_mmio = {.vaddr = FakeMmioPtr(dosbus_memory.get()),
+                                 .size = kDosbusMemorySize,
+                                 .vmo = ZX_HANDLE_INVALID};
     DosRegisterIo dosbus(dosbus_mmio);
     FakeOwner fake_owner(&dosbus, video.get());
     TestBasicClient client;
@@ -133,8 +135,9 @@ class Vp9UnitTest {
     auto dosbus_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memset(zeroed_memory.get(), 0, kDosbusMemorySize);
     memset(dosbus_memory.get(), 0, kDosbusMemorySize);
-    mmio_buffer_t dosbus_mmio = {
-        .vaddr = dosbus_memory.get(), .size = kDosbusMemorySize, .vmo = ZX_HANDLE_INVALID};
+    mmio_buffer_t dosbus_mmio = {.vaddr = FakeMmioPtr(dosbus_memory.get()),
+                                 .size = kDosbusMemorySize,
+                                 .vmo = ZX_HANDLE_INVALID};
     DosRegisterIo dosbus(dosbus_mmio);
     FakeOwner fake_owner(&dosbus, video.get());
     TestBasicClient client;

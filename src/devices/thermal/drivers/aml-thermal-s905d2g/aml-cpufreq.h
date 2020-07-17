@@ -41,7 +41,8 @@ class AmlCpuFrequency {
         big_little_(thermal_config.big_little) {
     // HIU Init.
     hiu_.mmio = std::move(hiu_internal_mmio);
-    hiu_.regs_vaddr = static_cast<uint8_t*>(hiu_.mmio.vaddr);
+    // TODO(fxb/56253): Add MMIO_PTR to cast.
+    hiu_.regs_vaddr = (uint8_t*)(hiu_.mmio.vaddr);
   }
   ~AmlCpuFrequency() = default;
   zx_status_t SetFrequency(fuchsia_hardware_thermal_PowerDomain power_domain, uint32_t rate);

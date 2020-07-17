@@ -13,6 +13,7 @@
 #include <optional>
 #include <vector>
 
+#include <mmio-ptr/fake.h>
 #include <mock/ddktl/protocol/sdhci.h>
 #include <zxtest/zxtest.h>
 
@@ -129,7 +130,7 @@ class SdhciTest : public zxtest::Test {
       : registers_(new uint8_t[kRegisterSetSize]),
         mmio_(
             {
-                .vaddr = registers_.get(),
+                .vaddr = FakeMmioPtr(registers_.get()),
                 .offset = 0,
                 .size = kRegisterSetSize,
                 .vmo = ZX_HANDLE_INVALID,

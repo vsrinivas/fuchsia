@@ -20,32 +20,32 @@
 #define MMIO_IOCFG_PMX9_OFFSET 0x800
 
 zx_status_t hikey960_i2c1_init(hikey960_t* hikey) {
-  volatile void* iomcu = hikey->iomcu.vaddr + I2C1_ENABLE_REG_OFFSET;
+  MMIO_PTR volatile void* iomcu = hikey->iomcu.vaddr + I2C1_ENABLE_REG_OFFSET;
   uint32_t temp;
 
-  temp = readl(iomcu + CLKGATE_SEPARATED_ENABLE);
+  temp = MmioRead32(iomcu + CLKGATE_SEPARATED_ENABLE);
   temp |= (1 << I2C1_ENABLE_REG_BIT);
-  writel(temp, iomcu + CLKGATE_SEPARATED_ENABLE);
-  readl(iomcu + CLKGATE_SEPARATED_STATUS);  // need to read back status to ensure enable occurs
+  MmioWrite32(temp, iomcu + CLKGATE_SEPARATED_ENABLE);
+  MmioRead32(iomcu + CLKGATE_SEPARATED_STATUS);  // need to read back status to ensure enable occurs
 
   return ZX_OK;
 }
 
 zx_status_t hikey960_i2c_pinmux(hikey960_t* hikey) {
   // setup i2c0 and i2c1 pin control first
-  volatile void* iomg_pmx4 = hikey->iomg_pmx4.vaddr;
-  volatile void* iocfg_pmx9 = iomg_pmx4 + MMIO_IOCFG_PMX9_OFFSET;
+  MMIO_PTR volatile void* iomg_pmx4 = hikey->iomg_pmx4.vaddr;
+  MMIO_PTR volatile void* iocfg_pmx9 = iomg_pmx4 + MMIO_IOCFG_PMX9_OFFSET;
 
-  writel(MUX_M1, iomg_pmx4 + I2C0_SCL_MUX_OFFSET);  // I2C0_SCL
-  writel(MUX_M1, iomg_pmx4 + I2C0_SDA_MUX_OFFSET);  // I2C0_SDA
-  writel(MUX_M1, iomg_pmx4 + I2C1_SCL_MUX_OFFSET);  // I2C1_SCL
-  writel(MUX_M1, iomg_pmx4 + I2C1_SDA_MUX_OFFSET);  // I2C1_SDA
+  MmioWrite32(MUX_M1, iomg_pmx4 + I2C0_SCL_MUX_OFFSET);  // I2C0_SCL
+  MmioWrite32(MUX_M1, iomg_pmx4 + I2C0_SDA_MUX_OFFSET);  // I2C0_SDA
+  MmioWrite32(MUX_M1, iomg_pmx4 + I2C1_SCL_MUX_OFFSET);  // I2C1_SCL
+  MmioWrite32(MUX_M1, iomg_pmx4 + I2C1_SDA_MUX_OFFSET);  // I2C1_SDA
 
   // configure the pins (pu/pd, drive strength)
-  writel(DRIVE7_02MA | PULL_UP, iocfg_pmx9 + I2C0_SCL_CFG_OFFSET);
-  writel(DRIVE7_02MA | PULL_UP, iocfg_pmx9 + I2C0_SDA_CFG_OFFSET);
-  writel(DRIVE7_02MA | PULL_UP, iocfg_pmx9 + I2C1_SCL_CFG_OFFSET);
-  writel(DRIVE7_02MA | PULL_UP, iocfg_pmx9 + I2C1_SDA_CFG_OFFSET);
+  MmioWrite32(DRIVE7_02MA | PULL_UP, iocfg_pmx9 + I2C0_SCL_CFG_OFFSET);
+  MmioWrite32(DRIVE7_02MA | PULL_UP, iocfg_pmx9 + I2C0_SDA_CFG_OFFSET);
+  MmioWrite32(DRIVE7_02MA | PULL_UP, iocfg_pmx9 + I2C1_SCL_CFG_OFFSET);
+  MmioWrite32(DRIVE7_02MA | PULL_UP, iocfg_pmx9 + I2C1_SDA_CFG_OFFSET);
 
   return ZX_OK;
 }

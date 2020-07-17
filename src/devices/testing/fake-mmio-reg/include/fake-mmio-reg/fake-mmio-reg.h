@@ -9,6 +9,7 @@
 #include <lib/mmio/mmio.h>
 
 #include <fbl/vector.h>
+#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 namespace ddk_fake {
@@ -74,7 +75,7 @@ class FakeMmioRegRegion {
   ddk::MmioBuffer GetMmioBuffer() {
     return ddk::MmioBuffer(
         mmio_buffer_t{
-            .vaddr = this,
+            .vaddr = FakeMmioPtr(this),
             .offset = 0,
             .size = reg_size_ * reg_count_,
             .vmo = ZX_HANDLE_INVALID,
