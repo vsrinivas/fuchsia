@@ -65,7 +65,6 @@ class StoriesShareSessionRunnersTest : public modular_testing::TestHarnessFixtur
         .sandbox_services =
             {
                 fuchsia::modular::ComponentContext::Name_,
-                fuchsia::modular::AgentContext::Name_,
                 fuchsia::intl::PropertyProvider::Name_,
             },
     });
@@ -82,7 +81,6 @@ class StoriesShareSessionRunnersTest : public modular_testing::TestHarnessFixtur
              {
 
                  fuchsia::modular::ComponentContext::Name_,
-                 fuchsia::modular::AgentContext::Name_,
                  fuchsia::intl::PropertyProvider::Name_,
              },
          .launch_handler =

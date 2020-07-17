@@ -45,7 +45,6 @@ constexpr char kSessionAgentFakeInterceptionCmx[] = R"(
   "sandbox": {
     "services": [
       "fuchsia.modular.PuppetMaster",
-      "fuchsia.modular.AgentContext",
       "fuchsia.modular.ComponentContext"
     ]
   }
@@ -121,10 +120,6 @@ void TestHarnessImpl::ConnectToModularService(fuchsia::modular::testing::Modular
 
     case fuchsia::modular::testing::ModularService::Tag::kComponentContext: {
       BufferSessionAgentService(std::move(service.component_context()));
-    } break;
-
-    case fuchsia::modular::testing::ModularService::Tag::kAgentContext: {
-      BufferSessionAgentService(std::move(service.agent_context()));
     } break;
 
     case fuchsia::modular::testing::ModularService::Tag::Invalid:

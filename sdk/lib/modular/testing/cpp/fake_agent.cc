@@ -19,7 +19,7 @@ std::unique_ptr<FakeAgent> FakeAgent::CreateWithDefaultOptions() {
 
 // static
 std::vector<std::string> FakeAgent::GetDefaultSandboxServices() {
-  return {fuchsia::modular::ComponentContext::Name_, fuchsia::modular::AgentContext::Name_};
+  return {fuchsia::modular::ComponentContext::Name_};
 }
 
 // |modular_testing::FakeComponent|
@@ -27,8 +27,6 @@ void FakeAgent::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   FakeComponent::OnCreate(std::move(startup_info));
 
   component_context()->svc()->Connect(modular_component_context_.NewRequest());
-  component_context()->svc()->Connect(agent_context_.NewRequest());
-
   agent_ = std::make_unique<modular::Agent>(component_context()->outgoing(),
                                             /* on_terminate */
                                             [this] {

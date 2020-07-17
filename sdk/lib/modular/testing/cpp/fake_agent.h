@@ -61,9 +61,6 @@ class FakeAgent : public FakeComponent {
     return modular_component_context_.get();
   }
 
-  // Returns the agent's |fuchsia::modular::AgentContext|.
-  fuchsia::modular::AgentContext* agent_context() { return agent_context_.get(); }
-
   // Adds a service to the service namespace which is exposed to clients
   // connecting to the agent.
   template <typename Interface>
@@ -85,10 +82,7 @@ class FakeAgent : public FakeComponent {
   void FlushAddAgentServiceIfRunning();
 
   fuchsia::modular::ComponentContextPtr modular_component_context_;
-  fuchsia::modular::AgentContextPtr agent_context_;
-
   std::vector<fit::closure> buffered_add_agent_service_calls_;
-
   std::unique_ptr<modular::Agent> agent_;
 };
 

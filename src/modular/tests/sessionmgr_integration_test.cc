@@ -240,7 +240,6 @@ TEST_F(SessionmgrIntegrationTest, RestartSessionAgentOnCrash) {
       .sandbox_services =
           {
               fuchsia::modular::ComponentContext::Name_,
-              fuchsia::modular::AgentContext::Name_,
           },
       .launch_handler =
           [&](fuchsia::sys::StartupInfo startup_info,

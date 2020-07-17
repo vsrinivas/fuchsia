@@ -7,9 +7,7 @@ library fuchsia.modular;
 using fuchsia.sys;
 using zx;
 
-/// Provided to all component instances in their respective initialization
-/// information by the framework. For example, a Module gets it from its
-/// ModuleContext and an Agent gets it from its AgentContext.
+/// Provided to all component instances in their incoming namespace.
 [Discoverable]
 protocol ComponentContext {
     /// DEPRECATED: use the component's incoming namespace (for C++, see sys.ComponentContext)

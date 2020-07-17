@@ -31,8 +31,7 @@ using fuchsia.sys;
 /// may exit itself, or is killed by framework after a timeout.
 ///
 /// For more info see:
-/// - fuchsia.modular.AgentContext and fuchsia.modular.ComponentContext for
-///   capabilities an agent has.
+/// - fuchsia.modular.ComponentContext for capabilities an agent has.
 /// - fuchsia.modular.Lifecycle for how Components get lifecycle events.
 [Discoverable] // Created by each agent.
 protocol Agent {

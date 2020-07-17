@@ -38,11 +38,10 @@ struct AgentContextInfo {
 // and instantiates one for every instance of an agent running. All requests for
 // this agent (identified for now by the agent's URL) are routed to this
 // class. This class manages all AgentControllers associated with this agent.
-class AgentContextImpl : fuchsia::modular::AgentContext, fuchsia::modular::AgentController {
+class AgentContextImpl : fuchsia::modular::AgentController {
  public:
   // Starts the agent specified in |agent_config| and provides it:
-  //  1) AgentContext service
-  //  2) A set of services from |info.agent_services_factory| for this agent's url.
+  //  1) A set of services from |info.agent_services_factory| for this agent's url.
   //
   // Enumerates the services exposed in the agent's outgoing directory and makes those available
   // to clients through ConnectToService().
@@ -108,10 +107,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext, fuchsia::modular::Agent
   component::Services& services() { return app_client_->services(); }
 
  private:
-  // |fuchsia::modular::AgentContext|
-  void GetComponentContext(
-      fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) override;
-
   // Adds an operation on |operation_queue_| that disconnects from agent protocols
   // and moves the state to TERMINATED.
   //
@@ -132,7 +127,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext, fuchsia::modular::Agent
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client_;
 
   fuchsia::modular::AgentPtr agent_;
-  fidl::BindingSet<fuchsia::modular::AgentContext> agent_context_bindings_;
   fidl::BindingSet<fuchsia::modular::AgentController> agent_controller_bindings_;
 
   // The names of services published by the agent in its outgoing directory.

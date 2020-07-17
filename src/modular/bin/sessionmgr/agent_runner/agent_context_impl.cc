@@ -147,7 +147,6 @@ class AgentContextImpl::StopCall : public Operation<> {
   void Stop(FlowToken flow) {
     agent_context_impl_->state_ = State::TERMINATED;
     agent_context_impl_->agent_.Unbind();
-    agent_context_impl_->agent_context_bindings_.CloseAll();
     agent_context_impl_->agent_controller_bindings_.CloseAll();
     agent_context_impl_->app_client_.reset();
   }
@@ -173,7 +172,6 @@ class AgentContextImpl::OnAppErrorCall : public Operation<> {
 
     agent_context_impl_->state_ = State::TERMINATED;
     agent_context_impl_->agent_.Unbind();
-    agent_context_impl_->agent_context_bindings_.CloseAll();
     agent_context_impl_->app_client_.reset();
 
     if (agent_context_impl_->on_crash_) {
@@ -210,12 +208,6 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
         component_context_impl_.Connect(std::move(request));
       });
   service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
-
-  service_provider_impl_.AddService<fuchsia::modular::AgentContext>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::AgentContext> request) {
-        agent_context_bindings_.AddBinding(this, std::move(request));
-      });
-  service_list->names.push_back(fuchsia::modular::AgentContext::Name_);
 
   if (info.sessionmgr_context != nullptr) {
     service_provider_impl_.AddService<fuchsia::intl::PropertyProvider>(
@@ -316,11 +308,6 @@ void AgentContextImpl::NewAgentConnection(
         // the agent will stop.
         agent_controller_bindings_.AddBinding(this, std::move(agent_controller_request));
       }));
-}
-
-void AgentContextImpl::GetComponentContext(
-    fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
-  component_context_impl_.Connect(std::move(request));
 }
 
 void AgentContextImpl::StopForTeardown(fit::function<void()> callback) {

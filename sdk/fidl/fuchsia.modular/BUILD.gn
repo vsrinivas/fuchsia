@@ -9,7 +9,6 @@ fidl("fuchsia.modular") {
 
   sources = [
     "agent.fidl",
-    "agent_context.fidl",
     "agent_controller.fidl",
     "annotation.fidl",
     "component_context.fidl",
