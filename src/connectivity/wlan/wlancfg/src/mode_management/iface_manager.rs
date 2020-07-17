@@ -13,7 +13,7 @@ use {
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme, fuchsia_async,
+    fidl_fuchsia_wlan_device, fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme, fuchsia_async,
     futures::{
         channel::{mpsc, oneshot},
         lock::Mutex,
@@ -59,6 +59,13 @@ pub(crate) trait IfaceManagerApi {
 
     /// Returns an indication of whether or not any client interfaces are unconfigured.
     fn has_idle_client(&self) -> bool;
+
+    /// Queries the properties of the provided interface ID and internally accounts for the newly
+    /// added client or AP.
+    async fn handle_added_iface(&mut self, iface_id: u16);
+
+    /// Removes all internal references of the provided interface ID.
+    async fn handle_removed_iface(&mut self, iface_id: u16);
 
     /// Selects a client iface and issues a scan request.  On success, the `ScanTransactionProxy`
     /// is returned to the caller so that the scan results can be monitored.
@@ -131,21 +138,30 @@ impl IfaceManager {
     ///
     /// If it is not, a new ClientIfaceContainer is created from the returned iface ID and returned
     /// to the caller.
-    async fn get_client(&mut self) -> Result<ClientIfaceContainer, Error> {
-        // If there are any unconfigured client ifaces, use the first available unconfigured iface.
-        if let Some(removal_index) =
-            self.clients.iter().position(|client_container| client_container.config.is_none())
-        {
-            return Ok(self.clients.remove(removal_index));
-        }
+    async fn get_client(&mut self, iface_id: Option<u16>) -> Result<ClientIfaceContainer, Error> {
+        let iface_id = match iface_id {
+            Some(iface_id) => iface_id,
+            None => {
+                // If no iface_id is specified and if there there are any unconfigured client
+                // ifaces, use the first available unconfigured iface.
+                if let Some(removal_index) = self
+                    .clients
+                    .iter()
+                    .position(|client_container| client_container.config.is_none())
+                {
+                    return Ok(self.clients.remove(removal_index));
+                }
 
-        // If all of the known client ifaces are configured, ask the PhyManager for a client iface.
-        let iface_id = match self.phy_manager.lock().await.get_client() {
-            None => return Err(format_err!("no client ifaces available")),
-            Some(id) => id,
+                // If all of the known client ifaces are configured, ask the PhyManager for a
+                // client iface.
+                match self.phy_manager.lock().await.get_client() {
+                    None => return Err(format_err!("no client ifaces available")),
+                    Some(id) => id,
+                }
+            }
         };
 
-        // See if the iface ID that the PhyManager has provided is among the configured clients.
+        // See if the selected iface ID is among the configured clients.
         if let Some(removal_index) =
             self.clients.iter().position(|client_container| client_container.iface_id == iface_id)
         {
@@ -189,14 +205,19 @@ impl IfaceManager {
     ///
     /// If the indicated AP interface has not been used before, spawn a new AP state machine for
     /// the interface and return the new interface.
-    async fn get_ap(&mut self) -> Result<ApIfaceContainer, Error> {
-        // Ask the PhyManager for an AP iface ID.
-        let mut phy_manager = self.phy_manager.lock().await;
-        let iface_id = match phy_manager.create_or_get_ap_iface().await {
-            Ok(Some(iface_id)) => iface_id,
-            Ok(None) => return Err(format_err!("no available PHYs can support AP ifaces")),
-            phy_manager_error => {
-                return Err(format_err!("could not get AP {:?}", phy_manager_error));
+    async fn get_ap(&mut self, iface_id: Option<u16>) -> Result<ApIfaceContainer, Error> {
+        let iface_id = match iface_id {
+            Some(iface_id) => iface_id,
+            None => {
+                // If no iface ID is specified, ask the PhyManager for an AP iface ID.
+                let mut phy_manager = self.phy_manager.lock().await;
+                match phy_manager.create_or_get_ap_iface().await {
+                    Ok(Some(iface_id)) => iface_id,
+                    Ok(None) => return Err(format_err!("no available PHYs can support AP ifaces")),
+                    phy_manager_error => {
+                        return Err(format_err!("could not get AP {:?}", phy_manager_error));
+                    }
+                }
             }
         };
 
@@ -285,7 +306,7 @@ impl IfaceManagerApi for IfaceManager {
         connect_req: client_fsm::ConnectRequest,
     ) -> Result<oneshot::Receiver<()>, Error> {
         // Get a ClientIfaceContainer.  Ensure that the Client is populated.
-        let mut client_iface = self.get_client().await?;
+        let mut client_iface = self.get_client(None).await?;
 
         // Create necessary components to make a connect request.
         let (responder, receiver) = oneshot::channel();
@@ -326,12 +347,48 @@ impl IfaceManagerApi for IfaceManager {
         false
     }
 
+    async fn handle_added_iface(&mut self, iface_id: u16) {
+        let iface_info = if let Ok((status, Some(iface_info))) =
+            self.dev_svc_proxy.query_iface(iface_id).await
+        {
+            if fuchsia_zircon::ok(status).is_err() {
+                return;
+            }
+            iface_info
+        } else {
+            return;
+        };
+
+        match iface_info.role {
+            fidl_fuchsia_wlan_device::MacRole::Client => {
+                if let Ok(client_iface) = self.get_client(Some(iface_id)).await {
+                    self.clients.push(client_iface);
+                }
+            }
+            fidl_fuchsia_wlan_device::MacRole::Ap => {
+                if let Ok(ap_iface) = self.get_ap(Some(iface_id)).await {
+                    self.aps.push(ap_iface);
+                }
+            }
+            fidl_fuchsia_wlan_device::MacRole::Mesh => {
+                // Mesh roles are not currently supported.
+            }
+        }
+    }
+
+    async fn handle_removed_iface(&mut self, iface_id: u16) {
+        self.phy_manager.lock().await.on_iface_removed(iface_id);
+
+        self.clients.retain(|client_container| client_container.iface_id != iface_id);
+        self.aps.retain(|ap_container| ap_container.iface_id != iface_id);
+    }
+
     async fn scan(
         &mut self,
         timeout: u8,
         scan_type: fidl_fuchsia_wlan_common::ScanType,
     ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
-        let client_iface = self.get_client().await?;
+        let client_iface = self.get_client(None).await?;
 
         let (local, remote) = fidl::endpoints::create_proxy()?;
         let mut request =
@@ -414,13 +471,6 @@ impl IfaceManagerApi for IfaceManager {
                 ));
             }
         }
-        drop(phy_manager);
-
-        // Attempt to create a client state machine if a client interface is available.
-        match self.get_client().await {
-            Ok(iface) => self.clients.push(iface),
-            Err(_) => {}
-        }
         Ok(())
     }
 
@@ -428,7 +478,7 @@ impl IfaceManagerApi for IfaceManager {
         &mut self,
         config: ap_fsm::ApConfig,
     ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
-        let mut ap_iface_container = self.get_ap().await?;
+        let mut ap_iface_container = self.get_ap(None).await?;
 
         let (sender, receiver) = oneshot::channel();
         ap_iface_container.config = Some(config.clone());
@@ -1764,5 +1814,369 @@ mod tests {
         let fut = iface_manager.stop_all_aps();
         pin_mut!(fut);
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+    }
+
+    #[test]
+    fn test_remove_client_iface() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+
+        // Create an IfaceManager with a client and an AP.
+        let test_values = test_setup(&mut exec, "test_remove_client_iface");
+        let (mut iface_manager, _next_sme_req) =
+            create_iface_manager_with_client(&test_values, true);
+
+        let ap_iface = ApIfaceContainer {
+            iface_id: TEST_AP_IFACE_ID,
+            config: None,
+            ap_state_machine: Box::new(FakeAp {
+                start_succeeds: true,
+                stop_succeeds: true,
+                exit_succeeds: true,
+            }),
+        };
+        iface_manager.aps.push(ap_iface);
+
+        // Notify the IfaceManager that the client interface has been removed.
+        {
+            let fut = iface_manager.handle_removed_iface(TEST_CLIENT_IFACE_ID);
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        assert!(iface_manager.clients.is_empty());
+        assert!(!iface_manager.aps.is_empty());
+    }
+
+    #[test]
+    fn test_remove_ap_iface() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+
+        // Create an IfaceManager with a client and an AP.
+        let test_values = test_setup(&mut exec, "test_remove_ap_iface");
+        let (mut iface_manager, _next_sme_req) =
+            create_iface_manager_with_client(&test_values, true);
+
+        let ap_iface = ApIfaceContainer {
+            iface_id: TEST_AP_IFACE_ID,
+            config: None,
+            ap_state_machine: Box::new(FakeAp {
+                start_succeeds: true,
+                stop_succeeds: true,
+                exit_succeeds: true,
+            }),
+        };
+        iface_manager.aps.push(ap_iface);
+
+        // Notify the IfaceManager that the AP interface has been removed.
+        {
+            let fut = iface_manager.handle_removed_iface(TEST_AP_IFACE_ID);
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        assert!(!iface_manager.clients.is_empty());
+        assert!(iface_manager.aps.is_empty());
+    }
+
+    #[test]
+    fn test_remove_nonexistent_iface() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+
+        // Create an IfaceManager with a client and an AP.
+        let test_values = test_setup(&mut exec, "test_remove_nonexistent_iface");
+        let (mut iface_manager, _next_sme_req) =
+            create_iface_manager_with_client(&test_values, true);
+
+        let ap_iface = ApIfaceContainer {
+            iface_id: TEST_AP_IFACE_ID,
+            config: None,
+            ap_state_machine: Box::new(FakeAp {
+                start_succeeds: true,
+                stop_succeeds: true,
+                exit_succeeds: true,
+            }),
+        };
+        iface_manager.aps.push(ap_iface);
+
+        // Notify the IfaceManager that an interface that has not been accounted for has been
+        // removed.
+        {
+            let fut = iface_manager.handle_removed_iface(1234);
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        assert!(!iface_manager.clients.is_empty());
+        assert!(!iface_manager.aps.is_empty());
+    }
+
+    fn poll_device_service_req(
+        exec: &mut fuchsia_async::Executor,
+        next_req: &mut StreamFuture<fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream>,
+    ) -> Poll<fidl_fuchsia_wlan_device_service::DeviceServiceRequest> {
+        exec.run_until_stalled(next_req).map(|(req, stream)| {
+            *next_req = stream.into_future();
+            req.expect("did not expect the SME request stream to end")
+                .expect("error polling SME request stream")
+        })
+    }
+
+    #[test]
+    fn test_add_client_iface() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "test_add_client_iface");
+
+        // Create an empty PhyManager and IfaceManager.
+        let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
+        let mut iface_manager = IfaceManager::new(
+            Arc::new(Mutex::new(phy_manager)),
+            test_values.client_update_sender,
+            test_values.ap_update_sender,
+            test_values.device_service_proxy,
+            test_values.saved_networks,
+            test_values.client_event_sender,
+        );
+
+        {
+            // Notify the IfaceManager of a new interface.
+            let fut = iface_manager.handle_added_iface(TEST_CLIENT_IFACE_ID);
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+            // Expect and interface query and notify that this is a client interface.
+            let mut device_service_fut = test_values.device_service_stream.into_future();
+            assert_variant!(
+                poll_device_service_req(&mut exec, &mut device_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                    iface_id: TEST_CLIENT_IFACE_ID, responder
+                }) => {
+                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                        role: fidl_fuchsia_wlan_device::MacRole::Client,
+                        id: TEST_CLIENT_IFACE_ID,
+                        phy_id: 0,
+                        phy_assigned_id: 0,
+                        mac_addr: [0; 6]
+                    };
+                    responder
+                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .expect("Sending iface response");
+                }
+            );
+
+            // Expect that we have requested a client SME proxy.
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+            let responder = assert_variant!(
+                poll_device_service_req(&mut exec, &mut device_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                }) => responder
+            );
+
+            // Send back a positive acknowledgement.
+            assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+
+            // Run the future to completion.
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        // Ensure that the client interface has been added.
+        assert!(iface_manager.aps.is_empty());
+        assert_eq!(iface_manager.clients[0].iface_id, TEST_CLIENT_IFACE_ID);
+    }
+
+    #[test]
+    fn test_add_ap_iface() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "test_add_ap_iface");
+
+        // Create an empty PhyManager and IfaceManager.
+        let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
+        let mut iface_manager = IfaceManager::new(
+            Arc::new(Mutex::new(phy_manager)),
+            test_values.client_update_sender,
+            test_values.ap_update_sender,
+            test_values.device_service_proxy,
+            test_values.saved_networks,
+            test_values.client_event_sender,
+        );
+
+        {
+            // Notify the IfaceManager of a new interface.
+            let fut = iface_manager.handle_added_iface(TEST_AP_IFACE_ID);
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+            // Expect that the interface properties are queried and notify that it is an AP iface.
+            let mut device_service_fut = test_values.device_service_stream.into_future();
+            assert_variant!(
+                poll_device_service_req(&mut exec, &mut device_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                    iface_id: TEST_AP_IFACE_ID, responder
+                }) => {
+                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                        role: fidl_fuchsia_wlan_device::MacRole::Ap,
+                        id: TEST_AP_IFACE_ID,
+                        phy_id: 0,
+                        phy_assigned_id: 0,
+                        mac_addr: [0; 6]
+                    };
+                    responder
+                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .expect("Sending iface response");
+                }
+            );
+
+            // Run the future so that an AP SME proxy is requested.
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+            let responder = assert_variant!(
+                poll_device_service_req(&mut exec, &mut device_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetApSme {
+                    iface_id: TEST_AP_IFACE_ID, sme: _, responder
+                }) => responder
+            );
+
+            // Send back a positive acknowledgement.
+            assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+
+            // Run the future to completion.
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        // Ensure that the AP interface has been added.
+        assert!(iface_manager.clients.is_empty());
+        assert_eq!(iface_manager.aps[0].iface_id, TEST_AP_IFACE_ID);
+    }
+
+    #[test]
+    fn test_add_nonexistent_iface() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "test_add_nonexistent_iface");
+
+        // Create an empty PhyManager and IfaceManager.
+        let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
+        let mut iface_manager = IfaceManager::new(
+            Arc::new(Mutex::new(phy_manager)),
+            test_values.client_update_sender,
+            test_values.ap_update_sender,
+            test_values.device_service_proxy,
+            test_values.saved_networks,
+            test_values.client_event_sender,
+        );
+
+        {
+            // Notify the IfaceManager of a new interface.
+            let fut = iface_manager.handle_added_iface(TEST_AP_IFACE_ID);
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+            // Expect an iface query and send back an error
+            let mut device_service_fut = test_values.device_service_stream.into_future();
+            assert_variant!(
+                poll_device_service_req(&mut exec, &mut device_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                    iface_id: TEST_AP_IFACE_ID, responder
+                }) => {
+                    responder
+                        .send(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND, None)
+                        .expect("Sending iface response");
+                }
+            );
+
+            // Run the future to completion.
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        // Ensure that no interfaces have been added.
+        assert!(iface_manager.clients.is_empty());
+        assert!(iface_manager.aps.is_empty());
+    }
+
+    #[test]
+    fn test_add_existing_client_iface() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+
+        // Create a configured ClientIfaceContainer.
+        let test_values = test_setup(&mut exec, "test_add_existing_client_iface");
+        let (mut iface_manager, _next_sme_req) =
+            create_iface_manager_with_client(&test_values, true);
+
+        // Notify the IfaceManager of a new interface.
+        {
+            let fut = iface_manager.handle_added_iface(TEST_CLIENT_IFACE_ID);
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+            // Expect an interface query and notify that it is a client.
+            let mut device_service_fut = test_values.device_service_stream.into_future();
+            assert_variant!(
+                poll_device_service_req(&mut exec, &mut device_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                    iface_id: TEST_CLIENT_IFACE_ID, responder
+                }) => {
+                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                        role: fidl_fuchsia_wlan_device::MacRole::Client,
+                        id: TEST_CLIENT_IFACE_ID,
+                        phy_id: 0,
+                        phy_assigned_id: 0,
+                        mac_addr: [0; 6]
+                    };
+                    responder
+                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .expect("Sending iface response");
+                }
+            );
+
+            // The future should then run to completion as it finds the existing interface.
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        // Verify that nothing new has been appended to the clients vector or the aps vector.
+        assert_eq!(iface_manager.clients.len(), 1);
+        assert_eq!(iface_manager.aps.len(), 0);
+    }
+
+    #[test]
+    fn test_add_existing_ap_iface() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+
+        // Create a configured ClientIfaceContainer.
+        let test_values = test_setup(&mut exec, "test_add_existing_ap_iface");
+        let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
+        let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
+
+        // Notify the IfaceManager of a new interface.
+        {
+            let fut = iface_manager.handle_added_iface(TEST_AP_IFACE_ID);
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+            // Expect an interface query and notify that it is a client.
+            let mut device_service_fut = test_values.device_service_stream.into_future();
+            assert_variant!(
+                poll_device_service_req(&mut exec, &mut device_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                    iface_id: TEST_AP_IFACE_ID, responder
+                }) => {
+                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                        role: fidl_fuchsia_wlan_device::MacRole::Ap,
+                        id: TEST_AP_IFACE_ID,
+                        phy_id: 0,
+                        phy_assigned_id: 0,
+                        mac_addr: [0; 6]
+                    };
+                    responder
+                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .expect("Sending iface response");
+                }
+            );
+
+            // The future should then run to completion as it finds the existing interface.
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        // Verify that nothing new has been appended to the clients vector or the aps vector.
+        assert_eq!(iface_manager.clients.len(), 0);
+        assert_eq!(iface_manager.aps.len(), 1);
     }
 }

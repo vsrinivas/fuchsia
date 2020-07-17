@@ -581,6 +581,10 @@ mod tests {
             !self.disconnected_ifaces.is_empty()
         }
 
+        async fn handle_added_iface(&mut self, _iface_id: u16) {}
+
+        async fn handle_removed_iface(&mut self, _iface_id: u16) {}
+
         async fn scan(
             &mut self,
             timeout: u8,
@@ -1803,6 +1807,10 @@ mod tests {
         fn has_idle_client(&self) -> bool {
             true
         }
+
+        async fn handle_added_iface(&mut self, _iface_id: u16) {}
+
+        async fn handle_removed_iface(&mut self, _iface_id: u16) {}
 
         async fn scan(
             &mut self,

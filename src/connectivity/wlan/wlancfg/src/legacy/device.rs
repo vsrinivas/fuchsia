@@ -36,6 +36,8 @@ pub(crate) async fn handle_event(listener: &Listener, evt: DeviceWatcherEvent) {
             phy_manager.remove_phy(phy_id);
         }
         DeviceWatcherEvent::OnIfaceAdded { iface_id } => {
+            // TODO(56539): When the legacy shim is removed, adding the interface to the PhyManager
+            // should be handled inside of iface_manager.handle_added_iface.
             let mut phy_manager = listener.phy_manager.lock().await;
             match phy_manager.on_iface_added(iface_id).await {
                 Ok(()) => match on_iface_added_legacy(listener, iface_id).await {
@@ -49,16 +51,12 @@ pub(crate) async fn handle_event(listener: &Listener, evt: DeviceWatcherEvent) {
             // resource as part of the connect operation.
             drop(phy_manager);
 
-            // TODO(49988): Develop a new means of automatically connecting to networks.
-            // For now, when a new interface is discovered, make a call to start client
-            // connections.  This will ensure that there is a client state machine available to
-            // provide the legacy, autoconnect behavior.
             let mut iface_manager = listener.iface_manager.lock().await;
-            let _ = iface_manager.start_client_connections().await;
+            let _ = iface_manager.handle_added_iface(iface_id).await;
         }
         DeviceWatcherEvent::OnIfaceRemoved { iface_id } => {
-            let mut phy_manager = listener.phy_manager.lock().await;
-            phy_manager.on_iface_removed(iface_id);
+            let mut iface_manager = listener.iface_manager.lock().await;
+            iface_manager.handle_removed_iface(iface_id).await;
 
             listener.legacy_shim.remove_if_matching(iface_id);
             info!("iface removed: {}", iface_id);

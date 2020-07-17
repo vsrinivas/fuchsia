@@ -405,6 +405,10 @@ mod tests {
             true
         }
 
+        async fn handle_added_iface(&mut self, _iface_id: u16) {}
+
+        async fn handle_removed_iface(&mut self, _iface_id: u16) {}
+
         async fn scan(
             &mut self,
             _timeout: u8,

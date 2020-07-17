@@ -770,6 +770,14 @@ mod tests {
             unimplemented!();
         }
 
+        async fn handle_added_iface(&mut self, _iface_id: u16) {
+            unimplemented!();
+        }
+
+        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+            unimplemented!();
+        }
+
         async fn scan(
             &mut self,
             _timeout: u8,
