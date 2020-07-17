@@ -238,7 +238,7 @@ ELF = dict(gen_elf())
 def get_elf_accessor(file):
     # If it looks like an ELF file, whip out the decoder ring.
     if file[:len(ELFMAG)] == ELFMAG:
-        return ELF[ord(file[EI_CLASS:EI_CLASS+1]), ord(file[EI_DATA:EI_DATA+1])]
+        return ELF.get((ord(file[EI_CLASS:EI_CLASS+1]), ord(file[EI_DATA:EI_DATA+1])), None)
     return None
 
 
