@@ -638,6 +638,14 @@ void Device::StartCaptureFrames(::fuchsia::wlan::mlme::StartCaptureFramesRequest
 
 void Device::StopCaptureFrames() { wlanif_impl_stop_capture_frames(&wlanif_impl_); }
 
+void Device::SaeHandshakeResp(::fuchsia::wlan::mlme::SaeHandshakeResponse resp) {
+  // TODO(fxb/40006): Implement.
+}
+
+void Device::SaeFrameTx(::fuchsia::wlan::mlme::SaeFrame frame) {
+  // TODO(fxb/40006): Implement.
+}
+
 void Device::OnScanResult(const wlanif_scan_result_t* result) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {

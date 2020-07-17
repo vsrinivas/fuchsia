@@ -765,6 +765,14 @@ protocol MLME {
 
     -> OnPmkAvailable(PmkInfo info);
 
+    // === Messages for managing SAE authentication inside SME ===
+    // MLME notification that SME will handle authentication.
+    -> OnSaeHandshakeInd(SaeHandshakeIndication ind);
+    // SME notification that authentication is completed.
+    SaeHandshakeResp(SaeHandshakeResponse resp);
+    SaeFrameTx(SaeFrame frame);
+    -> OnSaeFrameRx(SaeFrame frame);
+
     // For SoftMAC drivers only. Let SME inform MLME about the capability negotiation outcome.
     // TODO(43063): If we are able to intersect the capabilities with beacon before associating,
     // remove this function and the capabilities from AssociateConfirm and use AssociateRequest.

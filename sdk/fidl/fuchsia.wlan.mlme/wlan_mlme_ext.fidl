@@ -145,3 +145,19 @@ struct PmkInfo {
     bytes pmk;
     bytes pmkid;
 };
+
+struct SaeHandshakeIndication {
+    array<uint8>:6 peer_sta_address;
+};
+
+struct SaeHandshakeResponse {
+    array<uint8>:6 peer_sta_address;
+    AuthenticateResultCodes result_code;
+};
+
+struct SaeFrame {
+    array<uint8>:6 peer_sta_address;
+    AuthenticateResultCodes result_code;
+    uint16 seq_num;
+    bytes sae_fields;
+};
