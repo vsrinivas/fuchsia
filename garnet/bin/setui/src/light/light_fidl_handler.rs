@@ -206,16 +206,16 @@ mod tests {
     #[test]
     fn test_response_to_vector() {
         let light_group_1 = LightGroup {
-            name: Some("test".to_string()),
-            enabled: Some(true),
-            light_type: Some(LightType::Simple),
+            name: "test".to_string(),
+            enabled: true,
+            light_type: LightType::Simple,
             lights: vec![LightState { value: Some(LightValue::Simple(true)) }],
             hardware_index: vec![],
         };
         let light_group_2 = LightGroup {
-            name: Some("test2".to_string()),
-            enabled: Some(false),
-            light_type: Some(LightType::Rgb),
+            name: "test2".to_string(),
+            enabled: false,
+            light_type: LightType::Rgb,
             lights: vec![LightState { value: Some(LightValue::Brightness(42)) }],
             hardware_index: vec![],
         };

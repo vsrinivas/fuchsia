@@ -32,9 +32,9 @@ fn get_test_light_info() -> LightInfo {
     light_groups.insert(
         LIGHT_NAME_1.to_string(),
         LightGroup {
-            name: Some(LIGHT_NAME_1.to_string()),
-            enabled: Some(true),
-            light_type: Some(LightType::Brightness),
+            name: LIGHT_NAME_1.to_string(),
+            enabled: true,
+            light_type: LightType::Brightness,
             lights: vec![LightState { value: Some(LightValue::Brightness(42)) }],
             hardware_index: vec![0],
         },
@@ -42,9 +42,9 @@ fn get_test_light_info() -> LightInfo {
     light_groups.insert(
         LIGHT_NAME_2.to_string(),
         LightGroup {
-            name: Some(LIGHT_NAME_2.to_string()),
-            enabled: Some(true),
-            light_type: Some(LightType::Simple),
+            name: LIGHT_NAME_2.to_string(),
+            enabled: true,
+            light_type: LightType::Simple,
             lights: vec![LightState { value: Some(LightValue::Simple(true)) }],
             hardware_index: vec![1],
         },
@@ -68,7 +68,7 @@ async fn populate_single_test_lights(
             .insert_light(
                 group.hardware_index[0],
                 name,
-                group.light_type.unwrap(),
+                group.light_type,
                 group.lights[0].value.clone().unwrap(),
             )
             .await;
@@ -92,7 +92,7 @@ async fn populate_multiple_test_lights(
                 .insert_light(
                     group.hardware_index[i],
                     format!("{}_{}", name, i),
-                    group.light_type.clone().unwrap(),
+                    group.light_type.clone(),
                     group.lights[i].value.clone().unwrap(),
                 )
                 .await;
@@ -146,7 +146,7 @@ async fn create_test_light_env_with_service(
 async fn set_light_value(service: &LightProxy, light_group: LightGroup) {
     service
         .set_light_group_values(
-            light_group.name.unwrap().as_str(),
+            light_group.name.as_str(),
             &mut light_group.lights.into_iter().map(LightState::into),
         )
         .await
@@ -264,9 +264,9 @@ async fn test_light_set_none() {
     const LIGHT_2_CHANGED_VAL: u8 = 11;
     // For this test, create a light group with two lights to test setting one light at a time.
     let original_light_group = LightGroup {
-        name: Some(TEST_LIGHT_NAME.to_string()),
-        enabled: Some(true),
-        light_type: Some(LightType::Brightness),
+        name: TEST_LIGHT_NAME.to_string(),
+        enabled: true,
+        light_type: LightType::Brightness,
         lights: vec![
             LightState { value: Some(LightValue::Brightness(LIGHT_1_VAL)) },
             LightState { value: Some(LightValue::Brightness(LIGHT_2_START_VAL)) },

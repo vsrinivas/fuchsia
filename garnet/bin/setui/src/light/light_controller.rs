@@ -217,9 +217,11 @@ impl LightController {
         Ok((
             info.name.clone(),
             LightGroup {
-                name: Some(info.name),
-                enabled: Some(true),
-                light_type: Some(light_type),
+                name: info.name,
+                // TODO(fxb/53313): actually set this value once we can read configs and determine
+                // the expected behavior for it.
+                enabled: true,
+                light_type,
                 lights: vec![LightState { value: Some(value) }],
                 hardware_index: vec![index],
             },

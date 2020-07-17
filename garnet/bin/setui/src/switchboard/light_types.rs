@@ -19,9 +19,9 @@ impl LightInfo {
 /// Internal representation of a light group.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct LightGroup {
-    pub name: Option<String>,
-    pub enabled: Option<bool>,
-    pub light_type: Option<LightType>,
+    pub name: String,
+    pub enabled: bool,
+    pub light_type: LightType,
     pub lights: Vec<LightState>,
 
     /// Each light in the underlying fuchsia.hardware.light has a unique index, we need to remember
@@ -32,9 +32,9 @@ pub struct LightGroup {
 impl From<LightGroup> for fidl_fuchsia_settings::LightGroup {
     fn from(src: LightGroup) -> Self {
         fidl_fuchsia_settings::LightGroup {
-            name: src.name,
-            enabled: src.enabled,
-            type_: src.light_type.map(LightType::into),
+            name: Some(src.name),
+            enabled: Some(src.enabled),
+            type_: Some(src.light_type.into()),
             lights: Some(src.lights.into_iter().map(LightState::into).collect()),
         }
     }
