@@ -4966,5 +4966,6 @@ void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg) {
   brcmf_btcoex_detach(cfg);
   BRCMF_DBG(TEMP, "* * Would have called wiphy_unregister(cfg->wiphy);");
   wl_deinit_priv(cfg);
+  brcmf_clear_assoc_ies(cfg);
   free(cfg);
 }
