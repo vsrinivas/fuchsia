@@ -6,6 +6,7 @@ package netstack
 
 import (
 	"context"
+	"errors"
 	"net"
 	"sort"
 	"syscall/zx"
@@ -376,10 +377,17 @@ func (ni *netstackImpl) GetDhcpClient(ctx fidl.Context, id uint32, request dhcp.
 	return result, nil
 }
 
-func (ns *netstackImpl) AddEthernetDevice(_ fidl.Context, topopath string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceWithCtxInterface) (uint32, error) {
-	ifs, err := ns.ns.addEth(topopath, interfaceConfig, &device)
-	if err != nil {
-		return 0, err
+func (ns *netstackImpl) AddEthernetDevice(_ fidl.Context, topopath string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceWithCtxInterface) (netstack.NetstackAddEthernetDeviceResult, error) {
+	var result netstack.NetstackAddEthernetDeviceResult
+	if ifs, err := ns.ns.addEth(topopath, interfaceConfig, &device); err != nil {
+		var tcpipErr TcpIpError
+		if errors.As(err, &tcpipErr) {
+			result.SetErr(int32(tcpipErr.ToZxStatus()))
+		} else {
+			result.SetErr(int32(zx.ErrInternal))
+		}
+	} else {
+		result.SetResponse(netstack.NetstackAddEthernetDeviceResponse{Nicid: uint32(ifs.nicid)})
 	}
-	return uint32(ifs.nicid), err
+	return result, nil
 }

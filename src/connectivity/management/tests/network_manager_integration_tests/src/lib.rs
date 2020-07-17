@@ -184,7 +184,9 @@ async fn add_ethernet_device(
             device,
         )
         .await
-        .context("failed to add ethernet device")?;
+        .context("failed to add ethernet device")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("add_ethernet_device failed")?;
 
     // Check that the newly added ethernet interface is present before continuing with the
     // actual tests.

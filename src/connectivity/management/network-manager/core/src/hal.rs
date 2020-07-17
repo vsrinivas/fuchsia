@@ -1031,7 +1031,14 @@ impl NetCfg {
                 ),
             )
             .await
-            .map_err(|_| error::NetworkManager::Hal(error::Hal::OperationFailed))?;
+            .map_err(|e| {
+                error!("add_ethernet_device FIDL error {:?}", e);
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })?
+            .map_err(|e| {
+                error!("add_ethernet_device error {:?}", zx::Status::from_raw(e));
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })?;
         info!("added port with id {:?}", nic_id);
 
         Ok(StackPortId::from(u64::from(nic_id)).into())

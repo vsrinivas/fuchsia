@@ -255,7 +255,8 @@ void FakeNetstack::AddEthernetDevice(
     fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> eth_device,
     AddEthernetDeviceCallback callback) {
   auto deferred = fit::defer([this, callback = std::move(callback)]() {
-    callback(nic_counter_);
+    callback(fuchsia::netstack::Netstack_AddEthernetDevice_Result::WithResponse(
+        fuchsia::netstack::Netstack_AddEthernetDevice_Response{nic_counter_}));
     nic_counter_++;
   });
 

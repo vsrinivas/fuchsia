@@ -102,7 +102,9 @@ async fn add_ethernet_device() -> Result {
                 .context("add_ethernet_device requires an Ethernet endpoint")?,
         )
         .await
-        .context("failed to add ethernet device")?;
+        .context("add_ethernet_device FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("add_ethernet_device failed")?;
     let interface = netstack
         .get_interfaces2()
         .await
@@ -113,6 +115,85 @@ async fn add_ethernet_device() -> Result {
     assert_eq!(interface.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK, 0);
     assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
     Ok::<(), anyhow::Error>(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_no_duplicate_interface_names() -> Result {
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let (env, stack) = sandbox
+        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(
+            "no_duplicate_interface_names",
+        )
+        .context("failed to create environment")?;
+    let netstack = env
+        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .context("failed to connect to netstack")?;
+    // Create one endpoint of each type so we can use all the APIs that add an
+    // interface. Note that fuchsia.net.stack/Stack.AddEthernetInterface does
+    // not support setting the interface name.
+    let eth_ep = sandbox
+        .create_endpoint::<netemul::Ethernet, _>("eth-ep")
+        .await
+        .context("failed to create ethernet endpoint")?;
+    let netdev_ep = sandbox
+        .create_endpoint::<netemul::NetworkDevice, _>("netdev-ep")
+        .await
+        .context("failed to create netdevice endpoint")?;
+
+    const IFNAME: &'static str = "testif";
+    const TOPOPATH: &'static str = "/fake/topopath";
+    const FILEPATH: &'static str = "/fake/filepath";
+    // Add the first ep to the stack so it takes over the name.
+    let _nicid = netstack
+        .add_ethernet_device(
+            TOPOPATH,
+            &mut fidl_fuchsia_netstack::InterfaceConfig {
+                name: IFNAME.to_string(),
+                filepath: FILEPATH.to_string(),
+                metric: 0,
+            },
+            eth_ep.get_ethernet().await.context("failed to connect to ethernet device")?,
+        )
+        .await
+        .context("add_ethernet_device FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("add_ethernet_device error")?;
+
+    // Now try to add again with the same parameters and expect an error.
+    let result = netstack
+        .add_ethernet_device(
+            TOPOPATH,
+            &mut fidl_fuchsia_netstack::InterfaceConfig {
+                name: IFNAME.to_string(),
+                filepath: FILEPATH.to_string(),
+                metric: 0,
+            },
+            eth_ep.get_ethernet().await.context("failed to connect to ethernet device")?,
+        )
+        .await
+        .context("add_ethernet_device FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw);
+    assert_eq!(result, Err(fuchsia_zircon::Status::ALREADY_EXISTS));
+
+    // Same for netdevice.
+    let (network_device, mac) =
+        netdev_ep.get_netdevice().await.context("failed to connect to netdevice protocols")?;
+    let result = stack
+        .add_interface(
+            fidl_fuchsia_net_stack::InterfaceConfig {
+                name: Some(IFNAME.to_string()),
+                topopath: None,
+                metric: None,
+            },
+            &mut fidl_fuchsia_net_stack::DeviceDefinition::Ethernet(
+                fidl_fuchsia_net_stack::EthernetDeviceDefinition { network_device, mac },
+            ),
+        )
+        .await
+        .context("add_interface FIDL error")?;
+    assert_eq!(result, Err(fidl_fuchsia_net_stack::Error::AlreadyExists));
+
+    Ok(())
 }
 
 #[variants_test]

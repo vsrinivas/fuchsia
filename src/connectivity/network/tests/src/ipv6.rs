@@ -172,7 +172,9 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
                 .context("add_ethernet_device requires an Ethernet endpoint")?,
         )
         .await
-        .context("failed to add ethernet device")?;
+        .context("add_ethernet_device FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("add_ethernet_device error")?;
     let interface = netstack
         .get_interfaces2()
         .await

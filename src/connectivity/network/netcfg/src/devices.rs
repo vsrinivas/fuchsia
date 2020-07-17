@@ -132,7 +132,9 @@ impl Device for EthernetDevice {
                 fidl::endpoints::ClientEnd::<feth::DeviceMarker>::new(client),
             )
             .await
-            .context("adding ethdev interface")?;
+            .context("add_ethernet_device FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("add_ethernet_device error")?;
 
         Ok(interface_id.into())
     }

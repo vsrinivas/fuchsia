@@ -451,8 +451,8 @@ impl<'a> TestFakeEndpoint<'a> {
 impl<'a> TestEndpoint<'a> {
     /// Gets access to this device's virtual Ethernet device.
     ///
-    /// Note that an error is returned if the Endpoint is a
-    /// [`netemul_network::DeviceConnection::NetworkDevice`].
+    /// Note that an error is returned if the Endpoint is not a
+    /// [`netemul_network::DeviceConnection::Ethernet`].
     pub async fn get_ethernet(&self) -> Result<fidl::endpoints::ClientEnd<hw_eth::DeviceMarker>> {
         match self
             .get_device()
@@ -466,6 +466,47 @@ impl<'a> TestEndpoint<'a> {
         }
     }
 
+    /// Gets access to this device's virtual Network device.
+    ///
+    /// Note that an error is returned if the Endpoint is not a
+    /// [`netemul_network::DeviceConnection::NetworkDevice`].
+    pub async fn get_netdevice(
+        &self,
+    ) -> Result<(
+        fidl::endpoints::ClientEnd<hw_net::DeviceMarker>,
+        fidl::endpoints::ClientEnd<hw_net::MacAddressingMarker>,
+    )> {
+        match self
+            .get_device()
+            .await
+            .with_context(|| format!("failed to get device connection for {}", self.name))?
+        {
+            netemul_network::DeviceConnection::NetworkDevice(n) => {
+                Self::connect_netdevice_protocols(n)
+            }
+            netemul_network::DeviceConnection::Ethernet(_) => {
+                Err(anyhow::anyhow!("Endpoint {} is not a Network Device", self.name))
+            }
+        }
+    }
+
+    /// Helper function to retrieve the protocols from a netdevice client end.
+    fn connect_netdevice_protocols(
+        netdevice: fidl::endpoints::ClientEnd<hw_net::DeviceInstanceMarker>,
+    ) -> Result<(
+        fidl::endpoints::ClientEnd<hw_net::DeviceMarker>,
+        fidl::endpoints::ClientEnd<hw_net::MacAddressingMarker>,
+    )> {
+        let netdevice: hw_net::DeviceInstanceProxy = netdevice.into_proxy()?;
+        let (device, device_server_end) =
+            fidl::endpoints::create_endpoints::<hw_net::DeviceMarker>()?;
+        let (mac, mac_server_end) =
+            fidl::endpoints::create_endpoints::<hw_net::MacAddressingMarker>()?;
+        let () = netdevice.get_device(device_server_end)?;
+        let () = netdevice.get_mac_addressing(mac_server_end)?;
+        Ok((device, mac))
+    }
+
     /// Adds this endpoint to `stack`, returning the interface identifier.
     pub async fn add_to_stack(&self, stack: &net_stack::StackProxy) -> Result<u64> {
         Ok(match self.get_device().await.context("get_device failed")? {
@@ -473,13 +514,7 @@ impl<'a> TestEndpoint<'a> {
                 stack.add_ethernet_interface(&self.name, eth).await.squash_result()?
             }
             netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
-                let netdevice: hw_net::DeviceInstanceProxy = netdevice.into_proxy()?;
-                let (device, device_server_end) =
-                    fidl::endpoints::create_endpoints::<hw_net::DeviceMarker>()?;
-                let (mac, mac_server_end) =
-                    fidl::endpoints::create_endpoints::<hw_net::MacAddressingMarker>()?;
-                let () = netdevice.get_device(device_server_end)?;
-                let () = netdevice.get_mac_addressing(mac_server_end)?;
+                let (device, mac) = Self::connect_netdevice_protocols(netdevice)?;
                 stack
                     .add_interface(
                         net_stack::InterfaceConfig { name: None, topopath: None, metric: None },

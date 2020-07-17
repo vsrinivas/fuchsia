@@ -6,6 +6,7 @@ package netstack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"syscall/zx/fidl"
@@ -141,8 +142,12 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 
 	ifs, err := ns.addEndpoint(makeEndpointName(namePrefix, config.GetNameWithDefault("")), ep, controller, true /* doFilter */, routes.Metric(config.GetMetricWithDefault(0)), false /* enabled */)
 	if err != nil {
-		_ = syslog.Errorf("ns.addEndpoint failed: %s", err)
-		return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
+		var tcpipError TcpIpError
+		if errors.As(err, &tcpipError) {
+			return stack.StackAddInterfaceResultWithErr(tcpipError.ToStackError())
+		} else {
+			return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
+		}
 	}
 	return stack.StackAddInterfaceResultWithResponse(stack.StackAddInterfaceResponse{Id: uint64(ifs.nicid)})
 }
@@ -366,16 +371,18 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) stack.StackDelForwardi
 
 func (ni *stackImpl) AddEthernetInterface(_ fidl.Context, topologicalPath string, device ethernet.DeviceWithCtxInterface) (stack.StackAddEthernetInterfaceResult, error) {
 	var result stack.StackAddEthernetInterfaceResult
-
-	ifs, err := ni.ns.addEth(topologicalPath, netstack.InterfaceConfig{}, &device)
-	if err != nil {
-		result.SetErr(stack.ErrorInternal)
-		return result, nil
+	if ifs, err := ni.ns.addEth(topologicalPath, netstack.InterfaceConfig{}, &device); err != nil {
+		var tcpipErr TcpIpError
+		if errors.As(err, &tcpipErr) {
+			result.SetErr(tcpipErr.ToStackError())
+		} else {
+			result.SetErr(stack.ErrorInternal)
+		}
+	} else {
+		result.SetResponse(stack.StackAddEthernetInterfaceResponse{
+			Id: uint64(ifs.nicid),
+		})
 	}
-
-	result.SetResponse(stack.StackAddEthernetInterfaceResponse{
-		Id: uint64(ifs.nicid),
-	})
 	return result, nil
 }
 

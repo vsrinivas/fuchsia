@@ -66,7 +66,9 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(e) => netstack
             .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, e)
             .await
-            .with_context(|| format!("can't add ethernet device {:?}", cfg))?,
+            .with_context(|| format!("add_ethernet_device FIDL error ({:?})", cfg))?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .with_context(|| format!("add_ethernet_device error ({:?})", cfg))?,
         fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(device) => todo!(
             "(48860) Support NetworkDevice configuration. Got unexpected NetworkDevice {:?}",
             device

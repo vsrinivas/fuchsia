@@ -56,7 +56,8 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::Netstack 
                          AddEthernetDeviceCallback callback) override {
     eth_device_ = device.Bind();
     eth_device_added_ = true;
-    callback(kFakeInterfaceId);
+    callback(fuchsia::netstack::Netstack_AddEthernetDevice_Result::WithResponse(
+        fuchsia::netstack::Netstack_AddEthernetDevice_Response{kFakeInterfaceId}));
   }
 
   void StartRouteTableTransaction(

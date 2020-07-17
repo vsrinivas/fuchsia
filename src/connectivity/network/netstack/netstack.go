@@ -966,14 +966,14 @@ func (ns *Netstack) addEndpoint(
 
 	name := nameFn(ifs.nicid)
 	if err := ns.stack.CreateNICWithOptions(ifs.nicid, ep, stack.NICOptions{Name: name, Context: ifs, Disabled: !enabled}); err != nil {
-		return nil, fmt.Errorf("NIC %s: could not create NIC: %s", name, err)
+		return nil, fmt.Errorf("NIC %s: could not create NIC: %w", name, WrapTcpIpError(err))
 	}
 
 	syslog.Infof("NIC %s added", name)
 
 	if ep.Capabilities()&stack.CapabilityResolutionRequired > 0 {
 		if err := ns.stack.AddAddress(ifs.nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
-			return nil, fmt.Errorf("NIC %s: adding arp address failed: %s", name, err)
+			return nil, fmt.Errorf("NIC %s: adding arp address failed: %w", name, WrapTcpIpError(err))
 		}
 	}
 
@@ -1012,7 +1012,7 @@ func (ns *Netstack) addEndpoint(
 			})
 
 			if err := ns.stack.AddAddress(ifs.nicid, ipv6.ProtocolNumber, lladdr); err != nil && err != tcpip.ErrDuplicateAddress {
-				return fmt.Errorf("NIC %s: adding link-local IPv6 %s failed: %s", name, lladdr, err)
+				return fmt.Errorf("NIC %s: adding link-local IPv6 %s failed: %w", name, lladdr, WrapTcpIpError(err))
 			}
 
 			syslog.Infof("NIC %s: link-local IPv6: %s", name, lladdr)

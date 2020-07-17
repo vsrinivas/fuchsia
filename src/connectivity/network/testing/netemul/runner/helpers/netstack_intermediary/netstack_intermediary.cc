@@ -111,7 +111,8 @@ void NetstackIntermediary::AddEthernetDevice(
             eth_client->SetPeerClosedCallback(
                 [] { FX_LOGS(INFO) << "EthernetClient peer closed."; });
 
-            callback(1);
+            callback(fuchsia::netstack::Netstack_AddEthernetDevice_Result::WithResponse(
+                fuchsia::netstack::Netstack_AddEthernetDevice_Response{1}));
           })
           .or_else([]() mutable { FX_CHECK(false) << "Failed to add ethernet device."; })
           .wrap_with(scope_));

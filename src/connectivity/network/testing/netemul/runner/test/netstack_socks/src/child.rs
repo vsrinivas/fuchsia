@@ -127,7 +127,9 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
         DeviceConnection::Ethernet(eth) => netstack
             .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth)
             .await
-            .context("can't add ethernet device")?,
+            .context("add_ethernet_device FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("add_ethernet_device error")?,
         DeviceConnection::NetworkDevice(netdevice) => {
             todo!("(48860) Support and test NetworkDevice connections. Got unexpected NetworkDevice {:?}", netdevice);
         }

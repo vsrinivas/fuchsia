@@ -154,7 +154,8 @@ protocol Netstack {
     /// error if the creation fails.
     BridgeInterfaces(vector<uint32>:MAX nicids) -> (NetErr result, uint32 nicid);
 
-    AddEthernetDevice(string:MAX topological_path, InterfaceConfig interface_config, fuchsia.hardware.ethernet.Device device) -> (uint32 nicid);
+    /// Adds a new interface backed by the given ethernet device.
+    AddEthernetDevice(string:MAX topological_path, InterfaceConfig interface_config, fuchsia.hardware.ethernet.Device device) -> (uint32 nicid) error zx.status;
 
     // TODO(stijlist): re-home this protocol. GetDhcpClient should be a member
     // of the protocol that eventually owns network interface management

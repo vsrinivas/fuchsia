@@ -14,6 +14,7 @@
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/fifo.h>
 #include <zircon/device/ethernet.h>
+#include <zircon/status.h>
 
 #include <memory>
 #include <queue>
@@ -243,10 +244,17 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
                                            fuchsia::netstack::InterfaceConfig config) {
     fit::bridge<uint32_t> bridge;
 
-    netstack_->AddEthernetDevice(interface_path, std::move(config), device_binding_.NewBinding(),
-                                 [completer = std::move(bridge.completer)](uint32_t id) mutable {
-                                   completer.complete_ok(id);
-                                 });
+    netstack_->AddEthernetDevice(
+        interface_path, std::move(config), device_binding_.NewBinding(),
+        [completer = std::move(bridge.completer)](
+            fuchsia::netstack::Netstack_AddEthernetDevice_Result result) mutable {
+          if (result.is_err()) {
+            FX_LOGS(WARNING) << "Failed to add to Netstack: " << zx_status_get_string(result.err());
+            completer.complete_error();
+          } else {
+            completer.complete_ok(result.response().ResultValue_());
+          }
+        });
 
     return bridge.consumer.promise();
   }
