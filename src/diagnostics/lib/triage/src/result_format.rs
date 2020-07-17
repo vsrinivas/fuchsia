@@ -13,7 +13,14 @@ impl<'a> ActionResultFormatter<'a> {
         ActionResultFormatter { action_results }
     }
 
-    pub fn to_warnings(&self) -> String {
+    pub fn to_text(&self) -> String {
+        match self.to_gauges() {
+            Some(gauges) => format!("{}\n{}", gauges, self.to_warnings()),
+            None => self.to_warnings(),
+        }
+    }
+
+    fn to_warnings(&self) -> String {
         if self.action_results.iter().all(|results| results.get_warnings().is_empty()) {
             return String::from("No actions were triggered. All targets OK.");
         }
@@ -51,7 +58,7 @@ impl<'a> ActionResultFormatter<'a> {
         output
     }
 
-    pub fn to_gauges(&self) -> Option<String> {
+    fn to_gauges(&self) -> Option<String> {
         if self.action_results.iter().all(|results| results.get_gauges().is_empty()) {
             return None;
         }
@@ -83,19 +90,16 @@ mod test {
     use super::*;
 
     #[test]
-    fn action_result_formatter_to_warnings_when_no_actions_triggered() {
+    fn action_result_formatter_to_text_when_no_actions_triggered() {
         let action_results_1 = ActionResults::new("inspect1");
         let action_results_2 = ActionResults::new("inspect2");
         let formatter = ActionResultFormatter::new(vec![&action_results_1, &action_results_2]);
 
-        assert_eq!(
-            String::from("No actions were triggered. All targets OK."),
-            formatter.to_warnings()
-        );
+        assert_eq!(String::from("No actions were triggered. All targets OK."), formatter.to_text());
     }
 
     #[test]
-    fn action_result_formatter_to_warnings_when_actions_triggered() {
+    fn action_result_formatter_to_text_when_actions_triggered() {
         let warnings = String::from(
             "Warnings for target inspect1\n\
         ----------------------------\n\
@@ -125,6 +129,29 @@ mod test {
             &action_results_3,
         ]);
 
-        assert_eq!(warnings, formatter.to_warnings());
+        assert_eq!(warnings, formatter.to_text());
+    }
+
+    #[test]
+    fn action_result_formatter_to_text_with_gauges() {
+        let warnings = String::from(
+            "Gauges\n\
+            ------\n\
+            g1\n\n\
+            Warnings for target inspect1\n\
+        ----------------------------\n\
+        w1\n\
+        w2\n\
+        ",
+        );
+
+        let mut action_results = ActionResults::new("inspect1");
+        action_results.add_warning(String::from("w1"));
+        action_results.add_warning(String::from("w2"));
+        action_results.add_gauge(String::from("g1"));
+
+        let formatter = ActionResultFormatter::new(vec![&action_results]);
+
+        assert_eq!(warnings, formatter.to_text());
     }
 }

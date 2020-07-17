@@ -67,7 +67,7 @@ impl TriageManager {
 
         let results = analyze(&targets, &context)?;
         let results_formatter = ActionResultFormatter::new(results.iter().collect());
-        Ok(results_formatter.to_warnings())
+        Ok(results_formatter.to_text())
     }
 
     fn insert(&mut self, value: Value) -> Handle {

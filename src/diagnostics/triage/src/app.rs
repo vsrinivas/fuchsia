@@ -62,10 +62,7 @@ impl RunResult {
     pub fn write_report(&self, dest: &mut dyn std::io::Write) -> Result<(), Error> {
         let results_formatter = ActionResultFormatter::new(self.action_results.iter().collect());
         let output = match self.output_format {
-            OutputFormat::Text => match results_formatter.to_gauges() {
-                Some(gauges) => format!("{}\n{}", gauges, results_formatter.to_warnings()),
-                None => results_formatter.to_warnings(),
-            },
+            OutputFormat::Text => results_formatter.to_text(),
         };
         dest.write_fmt(format_args!("{}\n", output)).context("failed to write to destination")?;
         Ok(())

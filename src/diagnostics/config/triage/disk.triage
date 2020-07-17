@@ -22,6 +22,11 @@
             trigger: "disk98_old",
             print: "Disk is >98% full",
         },
+        disk: {
+            type: "Gauge",
+            value: "ratio",
+            format: "percentage",
+        },
     },
     test: {
         is_full_old: {
