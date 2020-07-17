@@ -1843,6 +1843,20 @@ TEST(NetStreamTest, ReadBeforeConnect) {
       << strerror(errno);
   ASSERT_EQ(
       connect(precursor_client.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), 0);
+
+  // Observe the precursor client connection on the server side. This ensures that the TCP stack's
+  // server accept queue is updated with the precursor client connection before any subsequent
+  // client connect requests. The precursor client connect call returns after handshake completion,
+  // but not necessarily after the server side has processed the ACK from the client and updated its
+  // accept queue.
+  struct pollfd pfd = {
+      .fd = listener.get(),
+      .events = POLLIN,
+  };
+  int n = poll(&pfd, 1, kTimeout);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
+  ASSERT_EQ(pfd.revents, POLLIN);
 #endif
 
   // The test client connection would get established _only_ after both
