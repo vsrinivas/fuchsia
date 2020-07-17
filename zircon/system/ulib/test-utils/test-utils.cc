@@ -29,7 +29,6 @@
 #include <fbl/unique_fd.h>
 #include <runtime/thread.h>
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
 
 #define TU_FAIL_ERRCODE 10
 
@@ -38,14 +37,14 @@ namespace fio = ::llcpp::fuchsia::io;
 
 void tu_fatal(const char* what, zx_status_t status) {
   const char* reason = zx_status_get_string(status);
-  unittest_printf_critical("\nFATAL: %s failed, rc %d (%s)\n", what, status, reason);
+  printf("\nFATAL: %s failed, rc %d (%s)\n", what, status, reason);
 
   // Request a backtrace to assist debugging.
-  unittest_printf_critical("FATAL: backtrace follows:\n");
-  unittest_printf_critical("       (using sw breakpoint request to crashlogger)\n");
+  printf("FATAL: backtrace follows:\n");
+  printf("       (using sw breakpoint request to crashlogger)\n");
   backtrace_request();
 
-  unittest_printf_critical("FATAL: exiting process\n");
+  printf("FATAL: exiting process\n");
   exit(TU_FAIL_ERRCODE);
 }
 
@@ -63,7 +62,7 @@ bool tu_channel_wait_readable(zx_handle_t channel) {
   if (result != ZX_OK)
     tu_fatal(__func__, result);
   if ((pending & ZX_CHANNEL_READABLE) == 0) {
-    unittest_printf("%s: peer closed\n", __func__);
+    printf("%s: peer closed\n", __func__);
     return false;
   }
   return true;
@@ -264,7 +263,7 @@ void tu_process_wait_signaled(zx_handle_t process) {
   if (result != ZX_OK)
     tu_fatal(__func__, result);
   if ((pending & ZX_PROCESS_TERMINATED) == 0) {
-    unittest_printf_critical("%s: unexpected return from zx_object_wait_one\n", __func__);
+    printf("%s: unexpected return from zx_object_wait_one\n", __func__);
     exit(TU_FAIL_ERRCODE);
   }
 }
@@ -275,7 +274,7 @@ int tu_process_get_return_code(zx_handle_t process) {
   if ((status = zx_object_get_info(process, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL)) < 0)
     tu_fatal("get process info", status);
   if (!info.exited) {
-    unittest_printf_critical("attempt to read return code of non-exited process");
+    printf("attempt to read return code of non-exited process");
     exit(TU_FAIL_ERRCODE);
   }
   return static_cast<int>(info.return_code);

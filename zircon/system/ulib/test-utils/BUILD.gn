@@ -29,6 +29,5 @@ zx_library("test-utils") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/backtrace-request",
-    "//zircon/system/ulib/unittest",
   ]
 }
