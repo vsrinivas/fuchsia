@@ -1,5 +1,7 @@
 {
     "vendor-id" : 9050,
     "product-id" : 65279,
-    "firmware-revision" : "prerelease"
+    "firmware-revision" : "prerelease",
+    "enable-woble" : false,
+    "ble-device-name-prefix" : "Fuchsia"
 }
