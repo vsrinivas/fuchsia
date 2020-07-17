@@ -465,6 +465,26 @@ fuchsia_component("unlink-tests") {
   ]
 }
 
+test("watcher_tests") {
+  sources = [ "watcher.cc" ]
+  deps = [
+    ":fs_test",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fdio-caller",
+  ]
+}
+
+fuchsia_component("watcher-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/watcher-tests.cml"
+  deps = [
+    ":manifests",
+    ":watcher_tests",
+  ]
+}
+
 fuchsia_test_package("fs-tests") {
   test_components = [
     ":access-tests",
@@ -489,6 +509,7 @@ fuchsia_test_package("fs-tests") {
     ":sparse-tests",
     ":sync-tests",
     ":unlink-tests",
+    ":watcher-tests",
   ]
 }
 
@@ -564,6 +585,7 @@ action("manifests") {
     "$target_gen_dir/sparse-large-tests.cml",
     "$target_gen_dir/sync-tests.cml",
     "$target_gen_dir/unlink-tests.cml",
+    "$target_gen_dir/watcher-tests.cml",
   ]
   args = rebase_path(sources, root_build_dir) +
          rebase_path(outputs, root_build_dir)

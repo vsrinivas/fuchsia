@@ -20,8 +20,8 @@
 
 #include <fbl/unique_fd.h>
 
-#include "misc.h"
 #include "src/storage/fs_test/fs_test_fixture.h"
+#include "src/storage/fs_test/misc.h"
 
 namespace fs_test {
 namespace {

@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "fs_test.h"
+#include "src/storage/fs_test/fs_test.h"
 
 namespace fs_test {
 

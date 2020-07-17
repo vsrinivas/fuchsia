@@ -97,7 +97,6 @@ class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
         .supports_mmap = false,
         .supports_resize = true,
         .max_file_size = minfs::kMinfsMaxFileSize,
-
     };
     return traits;
   }
