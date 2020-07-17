@@ -52,7 +52,7 @@ DDK_PROTOCOL_DEF(MISC_PARENT,             29,   "misc-parent", PF_NOPUB)
 DDK_PROTOCOL_DEF(ACPI,                    30,   "acpi", 0)
 DDK_PROTOCOL_DEF(PCI,                     31,   "pci", 0)
 DDK_PROTOCOL_DEF(PCIROOT,                 32,   "pci-root", PF_NOPUB)
-DDK_PROTOCOL_DEF(TPM,                     33,   "tpm", 0)
+// Protocol 33 was the TPM protocol, but it was removed since there are no users
 DDK_PROTOCOL_DEF(USB,                     34,   "usb", PF_NOPUB)
 DDK_PROTOCOL_DEF(USB_BUS,                 35,   "usb-bus", PF_NOPUB)
 DDK_PROTOCOL_DEF(USB_COMPOSITE,           36,   "usb-composite", PF_NOPUB)
