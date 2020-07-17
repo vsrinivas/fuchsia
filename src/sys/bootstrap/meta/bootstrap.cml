@@ -55,6 +55,7 @@
                 "/svc/fuchsia.boot.ReadOnlyLog",
                 "/svc/fuchsia.boot.RootJob",
                 "/svc/fuchsia.boot.RootJobForInspect",
+                "/svc/fuchsia.sys.Loader",
             ],
             from: "parent",
             to: [ "#driver_manager" ],

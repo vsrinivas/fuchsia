@@ -138,6 +138,7 @@
                 "/svc/fuchsia.process.Resolver",
                 "/svc/fuchsia.sys.Environment",
                 "/svc/fuchsia.sys.Launcher",
+                "/svc/fuchsia.sys.Loader",
                 "/svc/fuchsia.tracing.controller.Controller",
                 "/svc/fuchsia.tracing.provider.Registry",
                 "/svc/fuchsia.wlan.service.Wlan",

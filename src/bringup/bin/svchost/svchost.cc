@@ -175,6 +175,7 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.net.stack.Log",
     "fuchsia.sys.Environment",
     "fuchsia.sys.Launcher",
+    "fuchsia.sys.Loader",
     "fuchsia.wlan.service.Wlan",
     // We should host the tracing.provider service ourselves instead of
     // routing the request to appmgr.
