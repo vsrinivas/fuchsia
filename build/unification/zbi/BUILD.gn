@@ -21,9 +21,7 @@ group("tests") {
     "//src/bringup/bin/bootsvc/test:bootsvc-integration-tests",
     "//src/bringup/bin/bootsvc/test:bootsvc-root-job-test",
     "//src/zircon/tests/mexec:zbi-child-image",
-
-    # TODO(53744): Test is disabled because it sometimes hangs.
-    # "//src/zircon/tests/mexec:zbi-parent-image",
+    "//src/zircon/tests/mexec:zbi-parent-image",
     "//zircon/system/utest/core:core-tests",
   ]
 
