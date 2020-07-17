@@ -155,19 +155,31 @@ function fx-build-dir-write {
   mv -f "${tempfile}" "${FUCHSIA_DIR}/.fx-build-dir"
 }
 
+function get-device-pair {
+  # Uses a file outside the build dir so that it is not removed by `gn clean`
+  local pairfile="${FUCHSIA_BUILD_DIR}.device"
+  # If .device file exists, use that
+  if [[ -f "${pairfile}" ]]; then
+    echo "$(<"${pairfile}")"
+    return 0
+  fi
+  return 1
+}
+
 function get-device-raw {
   fx-config-read
   local device=""
   # If DEVICE_NAME was passed in fx -d, use it
   if [[ "${FUCHSIA_DEVICE_NAME+isset}" == "isset" ]]; then
+    if is-remote-workflow-device; then
+      fx-warn "The -d flag does not work on this end of the remote workflow"
+      fx-warn "in order to adjust target devices in teh remote workflow, use"
+      fx-warn "-d or fx set-device on the local side of the configuration"
+      fx-warn "and restart serve-remote"
+    fi
     device="${FUCHSIA_DEVICE_NAME}"
   else
-    # Uses a file outside the build dir so that it is not removed by `gn clean`
-    local pairfile="${FUCHSIA_BUILD_DIR}.device"
-    # If .device file exists, use that
-    if [[ -f "${pairfile}" ]]; then
-      device="$(<"${pairfile}")"
-    fi
+    device=$(get-device-pair)
   fi
   if ! is-valid-device "${device}"; then
     fx-error "Invalid device name or address: '${device}'. Some valid examples are:
@@ -185,6 +197,14 @@ function is-valid-device {
       && ! _looks_like_hostname "${device}"; then
     return 1
   fi
+}
+
+# Shared among a few subcommands to configure and identify a remote forward
+# target for a device.
+export _FX_REMOTE_WORKFLOW_DEVICE_ADDR='[::1]:8022'
+
+function is-remote-workflow-device {
+  [[ $(get-device-pair) == "${_FX_REMOTE_WORKFLOW_DEVICE_ADDR}" ]]
 }
 
 # fx-export-device-address is "public API" to commands that wish to

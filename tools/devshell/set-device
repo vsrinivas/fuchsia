@@ -50,6 +50,12 @@ function select_device() {
   done
 }
 
+if is-remote-workflow-device; then
+  fx-warn "Local configuration indicates a remote-workflow setup"
+  fx-warn "  'fx set-device' does not work correctly at this end of a remote setup"
+  fx-warn "Execute set-device on the local machine in order to change targets in the remote flow"
+fi
+
 device="$1"
 if [[ -z "$device" ]]; then
   devices="$(fx-device-finder list -mdns -netboot -ipv4="${FX_ENABLE_IPV4}" -full | cut -d ' ' -f 2)"
