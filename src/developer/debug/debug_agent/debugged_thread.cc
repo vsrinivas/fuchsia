@@ -352,17 +352,23 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
   ResumeForRunMode();
 }
 
-// TODO(fxbug.dev/48767): handle KForwardAndContinue.
 void DebuggedThread::ResumeException() {
   if (!IsInException()) {
     return;
   }
-  // We need to mark that this token is correctly handled before closing it.
-  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming exception handle.";
-  zx_status_t status = exception_handle_->SetState(ZX_EXCEPTION_STATE_HANDLED);
-  if (status != ZX_OK) {
-    DEBUG_LOG(Thread) << ThreadPreamble(this)
-                      << "Failed to set exception as handled: " << zx_status_get_string(status);
+
+  if (run_mode_ == debug_ipc::ResumeRequest::How::kForwardAndContinue) {
+    zx_status_t status = exception_handle_->SetStrategy(ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+    if (status != ZX_OK) {
+      DEBUG_LOG(Thread) << ThreadPreamble(this) << "Failed to set exception as second-chance: "
+                        << zx_status_get_string(status);
+    }
+  } else {
+    zx_status_t status = exception_handle_->SetState(ZX_EXCEPTION_STATE_HANDLED);
+    if (status != ZX_OK) {
+      DEBUG_LOG(Thread) << ThreadPreamble(this)
+                        << "Failed to set exception as handled: " << zx_status_get_string(status);
+    }
   }
   exception_handle_ = nullptr;
 }
@@ -376,9 +382,9 @@ void DebuggedThread::ResumeSuspension() {
 
 bool DebuggedThread::Suspend(bool synchronous) {
   if (local_suspend_token_) {
-    // The thread could have an asynchronous suspend pending from before, but it might not actually
-    // be suspended yet. If somebody requests a synchronous suspend, make sure we honor that the
-    // thread is suspended before returning.
+    // The thread could have an asynchronous suspend pending from before, but it might not
+    // actually be suspended yet. If somebody requests a synchronous suspend, make sure we honor
+    // that the thread is suspended before returning.
     if (synchronous)
       WaitForSuspension(DefaultSuspendDeadline());
     return false;
@@ -398,8 +404,8 @@ std::unique_ptr<DebuggedThread::SuspendToken> DebuggedThread::RefCountedSuspend(
 }
 
 zx::time DebuggedThread::DefaultSuspendDeadline() {
-  // Various events and environments can cause suspensions to take a long time, so this needs to be
-  // a relatively long time. We don't generally expect error cases that take infinitely long so
+  // Various events and environments can cause suspensions to take a long time, so this needs to
+  // be a relatively long time. We don't generally expect error cases that take infinitely long so
   // there isn't much downside of a long timeout.
   return zx::deadline_after(zx::msec(100));
 }
@@ -417,13 +423,13 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
   //   volatile bool done = false;
   //   while (!done) {}
   // and step over it with "next". This will cause an infinite flood of single-step exceptions as
-  // fast as the debugger can process them. Pausing after doing the "next" will trigger a suspension
-  // and is more likely to race with an exception.
+  // fast as the debugger can process them. Pausing after doing the "next" will trigger a
+  // suspension and is more likely to race with an exception.
 
   // If an exception happens before the suspend does, we'll never get the suspend signal and will
-  // end up waiting for the entire timeout just to be able to tell the difference between suspended
-  // and exception. To avoid waiting for a long timeout to tell the difference, wait for short
-  // timeouts multiple times.
+  // end up waiting for the entire timeout just to be able to tell the difference between
+  // suspended and exception. To avoid waiting for a long timeout to tell the difference, wait for
+  // short timeouts multiple times.
   auto poll_time = zx::msec(10);
   zx_status_t status = ZX_OK;
   do {
@@ -461,8 +467,8 @@ debug_ipc::ThreadRecord DebuggedThread::GetThreadRecord(
       regs = thread_handle_->GetGeneralRegisters();  // Note this could still fail.
 
     if (regs) {
-      // Minimal stacks are 2 (current frame and calling one). Full stacks max out at 256 to prevent
-      // edge cases, especially around corrupted stacks.
+      // Minimal stacks are 2 (current frame and calling one). Full stacks max out at 256 to
+      // prevent edge cases, especially around corrupted stacks.
       uint32_t max_stack_depth =
           stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2 : 256;
 
@@ -489,8 +495,8 @@ std::vector<debug_ipc::Register> DebuggedThread::WriteRegisters(
   // Specifically, if we're currently on a breakpoint, we have to now know the fact that we're no
   // longer in a breakpoint.
   //
-  // This is necessary to avoid the single-stepping logic that the thread does when resuming from a
-  // breakpoint.
+  // This is necessary to avoid the single-stepping logic that the thread does when resuming from
+  // a breakpoint.
   bool rip_change = false;
   debug_ipc::RegisterID rip_id =
       GetSpecialRegisterID(arch::GetCurrentArch(), debug_ipc::SpecialRegisterType::kIP);
@@ -638,8 +644,8 @@ void DebuggedThread::ResumeForRunMode() {
   }
 
   // We're not handling the special "step over a breakpoint case". This is the normal resume case.
-  // This could've been triggered by an internal resume (eg. triggered by a breakpoint), so we need
-  // to check if the client actually wants this thread to resume.
+  // This could've been triggered by an internal resume (eg. triggered by a breakpoint), so we
+  // need to check if the client actually wants this thread to resume.
   if (client_state_ == ClientState::kPaused)
     return;
 

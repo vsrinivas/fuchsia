@@ -7,6 +7,7 @@
 
 #include <zircon/syscalls/exception.h>
 
+#include <functional>
 #include <utility>
 
 #include "sdk/lib/syslog/cpp/macros.h"
@@ -20,10 +21,20 @@ namespace debug_agent {
 // implementation in tests in overrides of this class.
 class MockExceptionHandle : public ExceptionHandle {
  public:
+  // std::function and not fit::, as it is more convenient for test logic to
+  // have MockExceptionHandle as copyable.
+  using SetCallback = std::function<void(uint32_t)>;
+
   MockExceptionHandle() = default;
+
   explicit MockExceptionHandle(uint64_t thread_koid,
                                debug_ipc::ExceptionType type = debug_ipc::ExceptionType::kGeneral)
       : thread_koid_(thread_koid), type_(type) {}
+
+  MockExceptionHandle(SetCallback on_state_change, SetCallback on_strategy_change)
+      : on_state_change_(std::move(on_state_change)),
+        on_strategy_change_(std::move(on_strategy_change)) {}
+
   ~MockExceptionHandle() = default;
 
   std::unique_ptr<ThreadHandle> GetThreadHandle() const override {
@@ -36,6 +47,7 @@ class MockExceptionHandle : public ExceptionHandle {
 
   zx_status_t SetState(uint32_t state) override {
     state_ = state;
+    on_state_change_(state);
     return ZX_OK;
   }
 
@@ -43,6 +55,7 @@ class MockExceptionHandle : public ExceptionHandle {
 
   zx_status_t SetStrategy(uint32_t strategy) override {
     strategy_ = strategy;
+    on_strategy_change_(strategy);
     return ZX_OK;
   }
 
@@ -51,6 +64,8 @@ class MockExceptionHandle : public ExceptionHandle {
   debug_ipc::ExceptionType type_ = debug_ipc::ExceptionType::kGeneral;
   uint32_t state_ = ZX_EXCEPTION_STATE_TRY_NEXT;
   uint32_t strategy_ = ZX_EXCEPTION_STRATEGY_FIRST_CHANCE;
+  SetCallback on_state_change_ = [](uint32_t) {};
+  SetCallback on_strategy_change_ = [](uint32_t) {};
 };
 
 }  // namespace debug_agent

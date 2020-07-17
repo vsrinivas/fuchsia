@@ -12,6 +12,7 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
+#include "src/developer/debug/debug_agent/mock_exception_handle.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_handle.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
@@ -211,6 +212,75 @@ TEST(DebuggedThread, RefCountedSuspension) {
   token1.reset();
   ASSERT_FALSE(debugged_thread->IsSuspended());
   ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 0);
+
+  // Tell the other thread we're done.
+  ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_1), ZX_OK);
+  other_thread.join();
+}
+
+TEST(DebuggedThread, Resume) {
+  auto object_provider = std::make_shared<ObjectProvider>();
+
+  constexpr zx_koid_t kProcessKoid = 0x8723456;
+  MockProcess process(nullptr, kProcessKoid, "", object_provider);
+
+  // Create the event for coordination.
+  zx::event event;
+  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
+
+  std::unique_ptr<DebuggedThread> debugged_thread;
+
+  std::thread other_thread([&]() mutable {
+    // Create a debugged thread for this other thread.
+    zx::thread current_thread;
+    zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
+    zx_koid_t current_thread_koid = object_provider->KoidForObject(current_thread);
+
+    DebuggedThread::CreateInfo create_info = {};
+    create_info.process = &process;
+    create_info.koid = current_thread_koid;
+    // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
+    // with that in a way that will make the DebuggedThread happy.
+    create_info.handle = std::make_unique<ZirconThreadHandle>(std::move(current_thread));
+    debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
+
+    // Let the test know it can continue.
+    ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
+
+    // Wait until the test tells us we're ready.
+    ASSERT_EQ(event.wait_one(ZX_USER_SIGNAL_1, zx::time::infinite(), nullptr), ZX_OK);
+  });
+
+  // Wait until the test is ready.
+  ASSERT_EQ(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr), ZX_OK);
+
+  EXPECT_FALSE(debugged_thread->IsInException());
+
+  uint32_t exception_state = 0u;
+  uint32_t exception_strategy = 0u;
+  auto exception = std::make_unique<MockExceptionHandle>(
+      [&exception_state](uint32_t new_state) { exception_state = new_state; },
+      [&exception_strategy](uint32_t new_strategy) { exception_strategy = new_strategy; });
+  debugged_thread->set_exception_handle(std::move(exception));
+  EXPECT_TRUE(debugged_thread->IsInException());
+  debugged_thread->Resume(
+      debug_ipc::ResumeRequest{.how = debug_ipc::ResumeRequest::How::kResolveAndContinue});
+  EXPECT_FALSE(debugged_thread->IsInException());
+  EXPECT_EQ(exception_state, ZX_EXCEPTION_STATE_HANDLED);
+  EXPECT_EQ(exception_strategy, 0u);
+
+  exception_state = 0u;
+  exception_strategy = 0u;
+  exception = std::make_unique<MockExceptionHandle>(
+      [&exception_state](uint32_t new_state) { exception_state = new_state; },
+      [&exception_strategy](uint32_t new_strategy) { exception_strategy = new_strategy; });
+  debugged_thread->set_exception_handle(std::move(exception));
+  EXPECT_TRUE(debugged_thread->IsInException());
+  debugged_thread->Resume(
+      debug_ipc::ResumeRequest{.how = debug_ipc::ResumeRequest::How::kForwardAndContinue});
+  EXPECT_FALSE(debugged_thread->IsInException());
+  EXPECT_EQ(exception_state, 0u);
+  EXPECT_EQ(exception_strategy, ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
 
   // Tell the other thread we're done.
   ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_1), ZX_OK);
