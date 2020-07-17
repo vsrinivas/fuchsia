@@ -257,6 +257,17 @@ static struct iwl_mvm_sta* alloc_ap_mvm_sta(const uint8_t bssid[]) {
   return mvm_sta;
 }
 
+static void free_ap_mvm_sta(struct iwl_mvm_sta* mvm_sta) {
+  if (!mvm_sta) {
+    return;
+  }
+
+  for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
+    free(mvm_sta->txq[i]);
+  }
+  free(mvm_sta);
+}
+
 static zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config_t* config) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
@@ -300,7 +311,7 @@ unlock:
   mtx_unlock(&mvmvif->mvm->mutex);
 
 exit:
-
+  free_ap_mvm_sta(mvm_sta);
   return ret;
 }
 
