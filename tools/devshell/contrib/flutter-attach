@@ -42,13 +42,23 @@ done
 
 PREBUILT_DART="${PREBUILT_DART_DIR}/bin/dart"
 if [[ ! -x "$PREBUILT_DART" ]]; then
-  echo >&2 "No prebuilt dart found in ${PREBUILT_DART_DIR}"
+  fx-error "No prebuilt dart found in ${PREBUILT_DART_DIR}."
   exit 1
 fi
 
-DEV_FINDER="${HOST_OUT_DIR}/dev_finder"
+DEV_FINDER="${FUCHSIA_BUILD_DIR}/host-tools/device-finder"
+if [[ ! -x "$DEV_FINDER" ]]; then
+  fx-error "Cannot find Fuchsia device finder in ${DEV_FINDER}."
+  fx-error "Run 'fx build' to build host tools."
+  exit 1
+fi
 
 FUCHSIA_ATTACH_BIN="${FUCHSIA_BUILD_DIR}/host_x64/dart-tools/fuchsia_attach"
+if [[ ! -x "$FUCHSIA_ATTACH_BIN" ]]; then
+  fx-error "No fuchsia_attach tool in ${FUCHSIA_ATTACH_BIN}."
+  fx-error "Make sure it is in your 'fx set' config and run 'fx build' to build it."
+  exit 1
+fi
 
 # The flutter tool expects the working directory is the fuchsia root.
 cd "${FUCHSIA_DIR}"
