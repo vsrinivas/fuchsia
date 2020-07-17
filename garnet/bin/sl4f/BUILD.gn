@@ -152,13 +152,23 @@ package("sl4f") {
       path = "meta/sl4f.cmx"
       dest = "sl4f.cmx"
     },
+    {
+      path = "proxy/meta/data_proxy.cmx"
+      dest = "data_proxy.cmx"
+    },
   ]
 
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "proxy:bin",
+  ]
 
   binaries = [
     {
       name = "sl4f"
+    },
+    {
+      name = "data_proxy"
     },
   ]
 }
@@ -239,6 +249,7 @@ group("tests") {
   deps = [
     ":service-tests",
     ":sl4f-tests",
+    "proxy:data-proxy-test",
   ]
 }
 
