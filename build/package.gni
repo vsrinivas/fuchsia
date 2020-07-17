@@ -249,8 +249,8 @@ template("package") {
           pkg.meta == [],
           "$pkg_desc __deprecated_system_image (likely from driver_package) incompatible with meta")
 
-      # Only appmgr can contribute binaries to /system/bin.
-      assert(pkg.binaries == [] || pkg.package_name == "appmgr",
+      # No package should contribute to /system/bin.
+      assert(pkg.binaries == [],
              "no new packages are allowed to add binaries to /system/bin")
 
       assert(pkg.tests == [], "tests are not allowed in /system")
