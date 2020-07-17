@@ -15,7 +15,7 @@ use {
     anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
         lock::Mutex,
@@ -71,33 +71,10 @@ const MAX_CONCURRENT_LISTENERS: usize = 1000;
 type ClientRequests = fidl::endpoints::ServerEnd<fidl_policy::ClientControllerMarker>;
 type SavedNetworksPtr = Arc<SavedNetworksManager>;
 
-pub(crate) fn spawn_provider_server(
-    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    update_sender: listener::ClientListenerMessageSender,
-    saved_networks: SavedNetworksPtr,
-    network_selector: Arc<network_selection::NetworkSelector>,
-    requests: fidl_policy::ClientProviderRequestStream,
-) {
-    fasync::spawn(serve_provider_requests(
-        iface_manager,
-        update_sender,
-        saved_networks,
-        network_selector,
-        requests,
-    ));
-}
-
-pub fn spawn_listener_server(
-    update_sender: listener::ClientListenerMessageSender,
-    requests: fidl_policy::ClientListenerRequestStream,
-) {
-    fasync::spawn(serve_listener_requests(update_sender, requests));
-}
-
 /// Serves the ClientProvider protocol.
 /// Only one ClientController can be active. Additional requests to register ClientControllers
 /// will result in their channel being immediately closed.
-async fn serve_provider_requests(
+pub(crate) async fn serve_provider_requests(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
@@ -160,7 +137,7 @@ async fn serve_provider_requests(
 }
 
 /// Serves the ClientListener protocol.
-async fn serve_listener_requests(
+pub async fn serve_listener_requests(
     update_sender: listener::ClientListenerMessageSender,
     requests: fidl_policy::ClientListenerRequestStream,
 ) {
@@ -169,7 +146,7 @@ async fn serve_listener_requests(
             handle_listener_request(update_sender.clone(), req)
         })
         .unwrap_or_else(|e| error!("error serving Client Listener API: {}", e));
-    let _ignored = serve_fut.await;
+    serve_fut.await;
 }
 
 /// Handle inbound requests to acquire a new ClientController.
@@ -532,7 +509,7 @@ mod tests {
         },
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream},
-        fidl_fuchsia_stash as fidl_stash,
+        fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
         futures::{channel::mpsc, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},

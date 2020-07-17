@@ -133,15 +133,17 @@ async fn serve_fidl(
             fasync::spawn(fut)
         })
         .add_fidl_service(move |reqs| {
-            client::spawn_provider_server(
+            fasync::spawn(client::serve_provider_requests(
                 iface_manager.clone(),
                 client_sender1.clone(),
                 Arc::clone(&saved_networks_clone),
                 Arc::clone(&network_selector),
                 reqs,
-            )
+            ))
         })
-        .add_fidl_service(move |reqs| client::spawn_listener_server(client_sender2.clone(), reqs))
+        .add_fidl_service(move |reqs| {
+            fasync::spawn(client::serve_listener_requests(client_sender2.clone(), reqs))
+        })
         .add_fidl_service(move |reqs| fasync::spawn(ap.clone().serve_provider_requests(reqs)))
         .add_fidl_service(move |reqs| {
             fasync::spawn(second_ap.clone().serve_listener_requests(reqs))
