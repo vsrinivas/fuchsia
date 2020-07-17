@@ -383,7 +383,9 @@ impl Directory for FatDirectory {
                 // TODO handle errors.
                 let entry = entry.unwrap();
                 let name = entry.file_name();
-                if &last_name == "." || &last_name < &name {
+                if &name == ".." {
+                    None
+                } else if &last_name == "." || &last_name < &name {
                     let entry_type =
                         if entry.is_dir() { DIRENT_TYPE_DIRECTORY } else { DIRENT_TYPE_FILE };
                     Some((name, EntryInfo::new(INO_UNKNOWN, entry_type)))
