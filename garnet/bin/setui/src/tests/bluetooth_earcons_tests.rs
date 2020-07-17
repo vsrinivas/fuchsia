@@ -24,7 +24,7 @@ use {
 
 const ENV_NAME: &str = "bluetooth_earcons_test_environment";
 
-/// Used to store fake services for mocking dependencies and checking outputs.
+/// Used to store fake services for mocking dependencies and checking input/outputs.
 /// To add a new fake to these tests, add here, in create_services, and then use
 /// in your test.
 #[allow(dead_code)]
