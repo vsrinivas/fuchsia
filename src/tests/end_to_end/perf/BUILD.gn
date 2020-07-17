@@ -43,6 +43,25 @@ foreach(target_name, test_list) {
   }
 }
 
+flutter_test_list = [
+  # TODO(55832): Add more benchmarks.
+  "clockface_flutter_benchmarks_test",
+]
+foreach(target_name, flutter_test_list) {
+  dart_test(target_name) {
+    sources = [ "flutter/$target_name.dart" ]
+
+    deps = [
+      "//sdk/testing/sl4f/client",
+      "//third_party/dart-pkg/pub/test",
+    ]
+
+    non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+
+    environments = [ nuc_env ]
+  }
+}
+
 # Split fidl_microbenchmarks_test into shards so that each shard fits
 # within the default time limit.
 shards = [
@@ -131,6 +150,9 @@ group("package_deps") {
     "//third_party/sbase:mkdir",
     "//third_party/sbase:rm",
     "//third_party/sbase:touch",
+
+    # These are used by the flutter benchmarks.
+    "//src/experiences/benchmarks/bin/clockface_flutter:clockface-flutter",
   ]
 }
 
@@ -138,7 +160,12 @@ group("test") {
   testonly = true
 
   deps = []
+
   foreach(target_name, test_list) {
+    deps += [ ":$target_name($host_toolchain)" ]
+  }
+
+  foreach(target_name, flutter_test_list) {
     deps += [ ":$target_name($host_toolchain)" ]
   }
 }
