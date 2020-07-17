@@ -60,8 +60,12 @@ impl ConnectedPeers {
         }
     }
 
+    pub(crate) fn get_weak(&self, id: &PeerId) -> Option<DetachableWeak<PeerId, Peer>> {
+        self.connected.get(id)
+    }
+
     pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<Peer>> {
-        self.connected.get(id).and_then(|p| p.upgrade())
+        self.get_weak(id).and_then(|p| p.upgrade())
     }
 
     pub fn is_connected(&self, id: &PeerId) -> bool {

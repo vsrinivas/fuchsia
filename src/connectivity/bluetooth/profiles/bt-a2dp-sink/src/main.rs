@@ -8,11 +8,9 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
-    bt_a2dp::{codec::MediaCodecConfig, media_types::*, stream},
+    bt_a2dp::{codec::MediaCodecConfig, media_types::*, peer::ControllerPool, stream},
     bt_a2dp_metrics as metrics,
-    bt_avdtp::{
-        self as avdtp, AvdtpControllerPool, ServiceCapability, ServiceCategory, StreamEndpoint,
-    },
+    bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint},
     fidl::encoding::Decodable,
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_bredr::*,
@@ -167,7 +165,7 @@ async fn build_local_streams(cobalt_sender: CobaltSender) -> Result<stream::Stre
 async fn connect_after_timeout(
     peer_id: PeerId,
     peers: Arc<Mutex<ConnectedPeers>>,
-    controller_pool: Arc<Mutex<AvdtpControllerPool>>,
+    controller_pool: Arc<Mutex<ControllerPool>>,
     profile_svc: ProfileProxy,
     channel_mode: ChannelMode,
 ) {
@@ -214,13 +212,13 @@ fn handle_connection(
     channel: Channel,
     initiate: bool,
     peers: &mut ConnectedPeers,
-    controller_pool: &mut AvdtpControllerPool,
+    controller_pool: &mut ControllerPool,
 ) {
     fx_log_info!("Connection from {}: {:?}!", peer_id, channel);
     peers.connected(peer_id.clone(), channel, initiate);
-    if let Some(peer) = peers.get(&peer_id) {
+    if let Some(peer) = peers.get_weak(&peer_id) {
         // Add the controller to the peers
-        controller_pool.peer_connected(peer_id.clone(), peer.avdtp());
+        controller_pool.peer_connected(peer_id.clone(), peer);
     }
 }
 
@@ -230,7 +228,7 @@ fn handle_services_found(
     peer_id: &PeerId,
     attributes: &[Attribute],
     peers: Arc<Mutex<ConnectedPeers>>,
-    controller_pool: Arc<Mutex<AvdtpControllerPool>>,
+    controller_pool: Arc<Mutex<ControllerPool>>,
     profile_svc: ProfileProxy,
     channel_mode: ChannelMode,
 ) {
@@ -293,7 +291,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     let signaling_channel_mode = channel_mode_from_arg(opts.channel_mode)?;
-    let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
+    let controller_pool = Arc::new(Mutex::new(ControllerPool::new()));
 
     let inspect = inspect::Inspector::new();
     let mut fs = ServiceFs::new();
@@ -381,7 +379,7 @@ async fn main() -> Result<(), Error> {
 
 async fn handle_profile_events(
     peers: Arc<Mutex<ConnectedPeers>>,
-    controller_pool: Arc<Mutex<AvdtpControllerPool>>,
+    controller_pool: Arc<Mutex<ControllerPool>>,
     profile_svc: ProfileProxy,
     channel_mode: ChannelMode,
     mut connect_requests: ConnectionReceiverRequestStream,
@@ -440,7 +438,7 @@ mod tests {
         Arc<Mutex<ConnectedPeers>>,
         ProfileProxy,
         ProfileRequestStream,
-        Arc<Mutex<AvdtpControllerPool>>,
+        Arc<Mutex<ControllerPool>>,
     ) {
         let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
         let (proxy, stream) =
@@ -455,7 +453,7 @@ mod tests {
             None,
         )));
 
-        let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
+        let controller_pool = Arc::new(Mutex::new(ControllerPool::new()));
 
         (exec, peers, proxy, stream, controller_pool)
     }

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Describing and enxapsulating A2DP media codecs
+/// Describing and encapsulating A2DP media codecs
 pub mod media_types;
 
-/// Codec configuration and integraion with Fuchsia media
+/// Codec configuration and integration with Fuchsia media
 pub mod codec;
 
 /// Task Abstractions

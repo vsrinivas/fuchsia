@@ -30,7 +30,11 @@ use {
     },
 };
 
+/// For sending out-of-band commands over the A2DP peer.
+mod controller;
+
 use crate::stream::{Stream, Streams};
+pub use controller::ControllerPool;
 
 /// A Peer represents an A2DP peer which can be connected to this device.
 /// A2DP peers are specific to a Bluetooth peer and only one should exist for each unique PeerId.
@@ -98,6 +102,11 @@ impl Peer {
     pub fn avdtp(&self) -> Arc<avdtp::Peer> {
         let lock = self.inner.lock();
         lock.peer.clone()
+    }
+
+    /// Returns the stream endpoints discovered by this peer.
+    pub fn remote_endpoints(&self) -> Option<Vec<avdtp::StreamEndpoint>> {
+        self.inner.lock().remote_endpoints()
     }
 
     /// Perform Discovery and Collect Capabilities to enumerate the endpoints and capabilities of
@@ -208,6 +217,30 @@ impl Peer {
         }
     }
 
+    /// Suspend a media transport stream that connects a local stream `local_id` to the
+    /// remote stream `remote_id`.
+    /// It's possible that the stream is not active - a suspend will be attempted, but an
+    /// error from the command will be returned.
+    /// Returns the result of the suspend command.
+    pub fn stream_suspend(
+        &self,
+        local_id: StreamEndpointId,
+        remote_id: StreamEndpointId,
+    ) -> impl Future<Output = avdtp::Result<()>> {
+        let peer = Arc::downgrade(&self.inner);
+        let avdtp = self.avdtp();
+        async move {
+            trace!("Suspending stream {} to remote {}", local_id, remote_id);
+            {
+                let strong_peer = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
+                let mut strong_peer = strong_peer.lock();
+                strong_peer.suspend_local_stream(&local_id)?;
+            }
+            let to_suspend = &[remote_id];
+            avdtp.suspend(to_suspend).await
+        }
+    }
+
     /// Start an asynchronous task to handle any requests from the AVDTP peer.
     /// This task completes when the remote end closes the signaling connection.
     fn start_requests_task(&self) {
@@ -278,7 +311,7 @@ fn a2dp_version_check(profile: ProfileDescriptor) -> bool {
     (profile.major_version == 1 && profile.minor_version >= 3) || profile.major_version > 1
 }
 
-/// Peer handles the communicaton with the AVDTP layer, and provides responses as appropriate
+/// Peer handles the communication with the AVDTP layer, and provides responses as appropriate
 /// based on the current state of local streams available.
 /// Each peer has its own set of local stream endpoints, and tracks a set of remote peer endpoints.
 struct PeerInner {
@@ -366,6 +399,12 @@ impl PeerInner {
         let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
         info!("Starting stream: {:?}", stream);
         stream.start().map_err(|c| avdtp::Error::RequestInvalid(c))
+    }
+
+    fn suspend_local_stream(&mut self, local_id: &StreamEndpointId) -> avdtp::Result<()> {
+        let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
+        info!("Suspending stream: {:?}", stream);
+        stream.suspend().map_err(|c| avdtp::Error::RequestInvalid(c))
     }
 
     /// Provide a new established L2CAP channel to this remote peer.

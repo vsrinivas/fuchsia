@@ -8,8 +8,8 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
-    bt_a2dp::{codec::MediaCodecConfig, media_types::*, peer::Peer, stream},
-    bt_avdtp::{self as avdtp, AvdtpControllerPool, ServiceCapability, ServiceCategory},
+    bt_a2dp::{codec::MediaCodecConfig, media_types::*, peer::ControllerPool, peer::Peer, stream},
+    bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory},
     fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_bluetooth_component::LifecycleState,
@@ -24,7 +24,6 @@ use {
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{self, select, StreamExt, TryStreamExt},
-    parking_lot::Mutex,
     std::{
         convert::{TryFrom, TryInto},
         sync::Arc,
@@ -167,17 +166,25 @@ struct Peers {
     peers: DetachableMap<PeerId, Peer>,
     streams: stream::Streams,
     profile: ProfileProxy,
-    // The L2CAP channel mode preference for the AVDTP signaling channel.
+    /// The L2CAP channel mode preference for the AVDTP signaling channel.
     channel_mode: ChannelMode,
+    /// The controller used for sending out-of-band commands.
+    controller: Arc<ControllerPool>,
 }
 
 const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(2);
 
 impl Peers {
-    fn new(streams: stream::Streams, profile: ProfileProxy, channel_mode: ChannelMode) -> Self {
-        Peers { peers: DetachableMap::new(), profile, streams, channel_mode }
+    fn new(
+        streams: stream::Streams,
+        profile: ProfileProxy,
+        channel_mode: ChannelMode,
+        controller: Arc<ControllerPool>,
+    ) -> Self {
+        Peers { peers: DetachableMap::new(), profile, streams, channel_mode, controller }
     }
 
+    #[cfg(test)]
     pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<Peer>> {
         self.peers.get(id).and_then(|p| p.upgrade())
     }
@@ -191,6 +198,7 @@ impl Peers {
         desc: Option<ProfileDescriptor>,
         streams: stream::Streams,
         profile: ProfileProxy,
+        controller_pool: Arc<ControllerPool>,
     ) -> Result<(), Error> {
         let id = entry.key();
         let socket = channel.socket.ok_or(format_err!("No socket in control connection"))?;
@@ -212,6 +220,9 @@ impl Peers {
             }
         };
 
+        // Alert the ControllerPool of a new peer.
+        controller_pool.peer_connected(id.clone(), detached_peer.clone());
+
         if start_streaming_flag {
             Peers::spawn_streaming(entry.clone());
         }
@@ -231,6 +242,7 @@ impl Peers {
         let profile = self.profile.clone();
         let streams = self.streams.as_new();
         let channel_mode = self.channel_mode.clone();
+        let controller_pool = self.controller.clone();
         fasync::spawn_local(async move {
             fx_log_info!("Waiting {:?} to connect to discovered peer {}", INITIATOR_DELAY, id);
             fasync::Timer::new(INITIATOR_DELAY.after_now()).await;
@@ -265,9 +277,14 @@ impl Peers {
                 }
                 Ok(Ok(channel)) => channel,
             };
-            if let Err(e) =
-                Peers::add_control_connection(entry, channel, Some(desc), streams, profile)
-            {
+            if let Err(e) = Peers::add_control_connection(
+                entry,
+                channel,
+                Some(desc),
+                streams,
+                profile,
+                controller_pool,
+            ) {
                 fx_log_warn!("Error adding control connection for {}: {:?}", id, e);
             }
         });
@@ -292,6 +309,7 @@ impl Peers {
             None,
             self.streams.as_new(),
             self.profile.clone(),
+            self.controller.clone(),
         )
     }
 
@@ -477,7 +495,7 @@ async fn main() -> Result<(), Error> {
         fx_log_err!("Can't encode SBC Audio: {:?}", e);
         return Ok(());
     }
-    let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
+    let controller_pool = Arc::new(ControllerPool::new());
 
     let mut fs = ServiceFs::new();
 
@@ -485,7 +503,7 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(lifecycle.fidl_service());
 
     let pool_clone = controller_pool.clone();
-    fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connected(s));
+    fs.dir("svc").add_fidl_service(move |s| pool_clone.connected(s));
     if let Err(e) = fs.take_and_serve_directory_handle() {
         fx_log_warn!("Unable to serve Inspect service directory: {}", e);
     }
@@ -525,16 +543,15 @@ async fn main() -> Result<(), Error> {
     profile_svc.search(ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
 
     let streams = build_local_streams(opts.source)?;
-    let peers = Peers::new(streams, profile_svc, signaling_channel_mode);
+    let peers = Peers::new(streams, profile_svc, signaling_channel_mode, controller_pool);
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
-    handle_profile_events(peers, controller_pool, connect_requests, results_requests).await
+    handle_profile_events(peers, connect_requests, results_requests).await
 }
 
 async fn handle_profile_events(
     mut peers: Peers,
-    controller_pool: Arc<Mutex<AvdtpControllerPool>>,
     mut connect_requests: ConnectionReceiverRequestStream,
     mut results_requests: SearchResultsRequestStream,
 ) -> Result<(), Error> {
@@ -551,9 +568,6 @@ async fn handle_profile_events(
                 if let Err(e) = peers.connected(peer_id, channel) {
                     fx_log_info!("Error connecting peer {}: {:?}", peer_id, e);
                     continue;
-                }
-                if let Some(peer) = peers.get(&peer_id) {
-                    controller_pool.lock().peer_connected(peer_id, peer.avdtp());
                 }
             },
             results_request = results_requests.try_next() => {
@@ -602,12 +616,12 @@ mod tests {
         let (_connect_proxy, connect_stream) =
             create_proxy_and_stream::<ConnectionReceiverMarker>()
                 .expect("ConnectionReceiver proxy should be created");
+        let controller = Arc::new(ControllerPool::new());
 
-        let peers = Peers::new(stream::Streams::new(), profile_proxy, ChannelMode::Basic);
-        let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
+        let peers =
+            Peers::new(stream::Streams::new(), profile_proxy, ChannelMode::Basic, controller);
 
-        let handler_fut =
-            handle_profile_events(peers, controller_pool, connect_stream, results_stream);
+        let handler_fut = handle_profile_events(peers, connect_stream, results_stream);
         pin_mut!(handler_fut);
 
         let res = exec.run_until_stalled(&mut handler_fut);
@@ -639,9 +653,10 @@ mod tests {
         let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
         let (proxy, stream) =
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
+        let controller = Arc::new(ControllerPool::new());
         let id = PeerId(1);
 
-        let peers = Peers::new(stream::Streams::new(), proxy, ChannelMode::Basic);
+        let peers = Peers::new(stream::Streams::new(), proxy, ChannelMode::Basic, controller);
 
         (exec, id, peers, stream)
     }
