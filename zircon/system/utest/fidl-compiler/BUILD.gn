@@ -192,7 +192,6 @@ if (current_toolchain == default_toolchain) {
       "json_generator_tests.cc",
       "lint_findings_tests.cc",
       "lint_tests.cc",
-      "main.cc",
       "ordinals_tests.cc",
       "parsing_tests.cc",
       "protocol_tests.cc",
@@ -221,7 +220,6 @@ if (current_toolchain == default_toolchain) {
       ":goldens",
       "//third_party/boringssl",
       "//zircon/public/lib/zxtest",
-      "//zircon/system/ulib/unittest:unittest-static",
       "//zircon/tools/fidl:compiler",
     ]
   }

@@ -5,16 +5,14 @@
 #include <sstream>
 
 #include <fidl/utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-bool GoodTopLevel() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodTopLevel) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -30,13 +28,9 @@ protocol FoObaR {};
 service FOoBAR {};
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodStructMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodStructMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -47,13 +41,9 @@ struct Example {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodTableMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodTableMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -64,13 +54,9 @@ table Example {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodUnionMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodUnionMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -81,13 +67,9 @@ union Example {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodEnumMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodEnumMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -98,13 +80,9 @@ enum Example {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodBitsMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodBitsMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -115,13 +93,9 @@ bits Example {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodProtocolMethods() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodProtocolMethods) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -132,13 +106,9 @@ protocol Example {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodMethodParameters() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodMethodParameters) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -151,13 +121,9 @@ protocol Example {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodMethodResults() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodMethodResults) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -170,13 +136,9 @@ protocol Example {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodServiceMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodServiceMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -188,13 +150,9 @@ service Example {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodUpperAcronym() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodUpperAcronym) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -202,26 +160,18 @@ struct HTTPServer {};
 struct httpserver {};
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodCurrentLibrary() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodCurrentLibrary) {
   TestLibrary library(R"FIDL(
 library example;
 
 struct example {};
 )FIDL");
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool GoodDependentLibrary() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, GoodDependentLibrary) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("foobar.fidl", R"FIDL(
 library foobar;
@@ -249,13 +199,9 @@ service FOoBAR {};
 )FIDL");
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_TRUE(library.Compile());
-
-  END_TEST;
 }
 
-bool BadTopLevel() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadTopLevel) {
   const auto lower = {
       "using fooBar = bool;",          // these comments prevent clang-format
       "const bool fooBar = true;",     // from packing multiple items per line
@@ -292,18 +238,14 @@ bool BadTopLevel() {
       const auto& errors = library.errors();
       ASSERT_EQ(errors.size(), 1);                             // << fidl;
       ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical);  // << fidl;
-      ASSERT_STR_STR(errors[0]->msg.c_str(), "fooBar");        // << fidl;
-      ASSERT_STR_STR(errors[0]->msg.c_str(), "FooBar");        // << fidl;
-      ASSERT_STR_STR(errors[0]->msg.c_str(), "foo_bar");       // << fidl;
+      ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");         // << fidl;
+      ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");         // << fidl;
+      ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");        // << fidl;
     }
   }
-
-  END_TEST;
 }
 
-bool BadStructMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadStructMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -316,16 +258,12 @@ struct Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateStructMemberNameCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "foo_bar");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
 }
 
-bool BadTableMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadTableMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -338,16 +276,12 @@ table Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateTableFieldNameCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "foo_bar");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
 }
 
-bool BadUnionMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadUnionMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -360,16 +294,12 @@ union Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateUnionMemberNameCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "foo_bar");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
 }
 
-bool BadEnumMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadEnumMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -382,16 +312,12 @@ enum Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberNameCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "foo_bar");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
 }
 
-bool BadBitsMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadBitsMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -404,16 +330,12 @@ bits Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberNameCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "foo_bar");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
 }
 
-bool BadProtocolMethods() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadProtocolMethods) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -426,16 +348,12 @@ protocol Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodNameCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "foo_bar");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
 }
 
-bool BadMethodParameters() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadMethodParameters) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -447,16 +365,12 @@ protocol Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodParameterNameCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "foo_bar");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
 }
 
-bool BadMethodResults() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadMethodResults) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -468,15 +382,12 @@ protocol Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodParameterNameCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "foo_bar");
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
 }
 
-bool BadServiceMembers() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadServiceMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -490,16 +401,12 @@ service Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateServiceMemberNameCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "fooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "FooBar");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "foo_bar");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");
 }
 
-bool BadUpperAcronym() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadUpperAcronym) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -510,16 +417,12 @@ struct HttpServer {};
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "HTTPServer");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "HttpServer");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "http_server");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "HTTPServer");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "HttpServer");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "http_server");
 }
 
-bool BadDependentLibrary() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadDependentLibrary) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("foobar.fidl", R"FIDL(
 library foobar;
@@ -541,15 +444,11 @@ using FOOBAR = foobar.Something;
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImportCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "FOOBAR");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "foobar");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "FOOBAR");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "foobar");
 }
 
-bool BadVariousCollisions() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadVariousCollisions) {
   const auto base_names = {
       "a", "a1", "x_single_start", "single_end_x", "x_single_both_x", "single_x_middle",
   };
@@ -574,25 +473,21 @@ bool BadVariousCollisions() {
         const auto& errors = library.errors();
         ASSERT_EQ(errors.size(), 1);  // << fidl;
         if (name1 == name2) {
-          ASSERT_ERR(errors[0], fidl::ErrNameCollision);          // << fidl;
-          ASSERT_STR_STR(errors[0]->msg.c_str(), name1.c_str());  // << fidl;
+          ASSERT_ERR(errors[0], fidl::ErrNameCollision);         // << fidl;
+          ASSERT_SUBSTR(errors[0]->msg.c_str(), name1.c_str());  // << fidl;
         } else {
           ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical);  // << fidl;
-          ASSERT_STR_STR(errors[0]->msg.c_str(), name1.c_str());   // << fidl;
-          ASSERT_STR_STR(errors[0]->msg.c_str(), name2.c_str());   // << fidl;
-          ASSERT_STR_STR(errors[0]->msg.c_str(),
-                         fidl::utils::canonicalize(name1).c_str());  // << fidl;
+          ASSERT_SUBSTR(errors[0]->msg.c_str(), name1.c_str());    // << fidl;
+          ASSERT_SUBSTR(errors[0]->msg.c_str(), name2.c_str());    // << fidl;
+          ASSERT_SUBSTR(errors[0]->msg.c_str(),
+                        fidl::utils::canonicalize(name1).c_str());  // << fidl;
         }
       }
     }
   }
-
-  END_TEST;
 }
 
-bool BadConsecutiveUnderscores() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadConsecutiveUnderscores) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -603,15 +498,11 @@ struct it__is___the____same {};
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "it_is_the_same");
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "it__is___the____same");
-
-  END_TEST;
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "it_is_the_same");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "it__is___the____same");
 }
 
-bool BadInconsistentTypeSpelling() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadInconsistentTypeSpelling) {
   const auto decl_templates = {
       "using %s = bool;",          //
       "struct %s {};",             //
@@ -641,18 +532,14 @@ bool BadInconsistentTypeSpelling() {
       // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
       ASSERT_FALSE(library.Compile());  // << fidl;
       const auto& errors = library.errors();
-      ASSERT_EQ(errors.size(), 1);                       // << fidl;
-      ASSERT_ERR(errors[0], fidl::ErrUnknownType);       // << fidl;
-      ASSERT_STR_STR(errors[0]->msg.c_str(), use_name);  // << fidl;
+      ASSERT_EQ(errors.size(), 1);                      // << fidl;
+      ASSERT_ERR(errors[0], fidl::ErrUnknownType);      // << fidl;
+      ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name);  // << fidl;
     }
   }
-
-  END_TEST;
 }
 
-bool BadInconsistentConstSpelling() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadInconsistentConstSpelling) {
   const auto names = {
       std::make_pair("foo_bar", "FOO_BAR"),
       std::make_pair("FOO_BAR", "foo_bar"),
@@ -671,15 +558,11 @@ bool BadInconsistentConstSpelling() {
     const auto& errors = library.errors();
     ASSERT_EQ(errors.size(), 1);                           // << fidl;
     ASSERT_ERR(errors[0], fidl::ErrFailedConstantLookup);  // << fidl;
-    ASSERT_STR_STR(errors[0]->msg.c_str(), use_name);      // << fidl;
+    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name);       // << fidl;
   }
-
-  END_TEST;
 }
 
-bool BadInconsistentEnumMemberSpelling() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadInconsistentEnumMemberSpelling) {
   const auto names = {
       std::make_pair("foo_bar", "FOO_BAR"),
       std::make_pair("FOO_BAR", "foo_bar"),
@@ -698,16 +581,12 @@ bool BadInconsistentEnumMemberSpelling() {
     const auto& errors = library.errors();
     ASSERT_EQ(errors.size(), 2);                                 // << fidl;
     ASSERT_ERR(errors[0], fidl::ErrUnknownEnumMember);           // << fidl;
-    ASSERT_STR_STR(errors[0]->msg.c_str(), use_name);            // << fidl;
+    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name);             // << fidl;
     ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);  // << fidl;
   }
-
-  END_TEST;
 }
 
-bool BadInconsistentBitsMemberSpelling() {
-  BEGIN_TEST;
-
+TEST(CanonicalNamesTests, BadInconsistentBitsMemberSpelling) {
   const auto names = {
       std::make_pair("foo_bar", "FOO_BAR"),
       std::make_pair("FOO_BAR", "foo_bar"),
@@ -726,48 +605,9 @@ bool BadInconsistentBitsMemberSpelling() {
     const auto& errors = library.errors();
     ASSERT_EQ(errors.size(), 2);                                 // << fidl;
     ASSERT_ERR(errors[0], fidl::ErrUnknownBitsMember);           // << fidl;
-    ASSERT_STR_STR(errors[0]->msg.c_str(), use_name);            // << fidl;
+    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name);             // << fidl;
     ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);  // << fidl;
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(canonical_names_tests)
-
-RUN_TEST(GoodTopLevel)
-RUN_TEST(GoodStructMembers)
-RUN_TEST(GoodTableMembers)
-RUN_TEST(GoodUnionMembers)
-RUN_TEST(GoodEnumMembers)
-RUN_TEST(GoodBitsMembers)
-RUN_TEST(GoodProtocolMethods)
-RUN_TEST(GoodMethodParameters)
-RUN_TEST(GoodMethodResults)
-RUN_TEST(GoodServiceMembers)
-RUN_TEST(GoodUpperAcronym)
-RUN_TEST(GoodCurrentLibrary)
-RUN_TEST(GoodDependentLibrary)
-
-RUN_TEST(BadTopLevel)
-RUN_TEST(BadStructMembers)
-RUN_TEST(BadTableMembers)
-RUN_TEST(BadUnionMembers)
-RUN_TEST(BadEnumMembers)
-RUN_TEST(BadBitsMembers)
-RUN_TEST(BadProtocolMethods)
-RUN_TEST(BadMethodParameters)
-RUN_TEST(BadMethodResults)
-RUN_TEST(BadServiceMembers)
-RUN_TEST(BadUpperAcronym)
-RUN_TEST(BadDependentLibrary)
-RUN_TEST(BadVariousCollisions)
-RUN_TEST(BadConsecutiveUnderscores)
-RUN_TEST(BadInconsistentTypeSpelling)
-RUN_TEST(BadInconsistentConstSpelling)
-RUN_TEST(BadInconsistentEnumMemberSpelling)
-RUN_TEST(BadInconsistentBitsMemberSpelling)
-
-END_TEST_CASE(canonical_names_tests)

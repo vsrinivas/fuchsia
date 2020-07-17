@@ -12,7 +12,7 @@
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "goldens.h"
 #include "test_library.h"
@@ -125,7 +125,7 @@ struct TestResult {
 };
 
 TestResult check_goldens(Generator generator) {
-  auto test_result = TestResult { .num_goldens = 0, .failed = false };
+  auto test_result = TestResult{.num_goldens = 0, .failed = false};
   std::cout << std::endl;
 
   auto goldens = [generator]() {
