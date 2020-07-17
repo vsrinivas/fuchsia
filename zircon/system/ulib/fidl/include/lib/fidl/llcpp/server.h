@@ -20,6 +20,9 @@ template <typename Interface>
 fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
     OnUnboundFn<Interface> on_unbound);
+template <typename Interface>
+fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, std::unique_ptr<Interface> impl);
 
 namespace internal {
 
@@ -166,8 +169,10 @@ fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServe
 // As above, but will invoke |on_unbound| on |impl| when the channel is being unbound, either due to
 // error or an explicit |Close| or |Unbind|.
 //
-// NOTE: It is only safe to invoke |on_unbound| from a |dispatcher| thread. As such, if the user
-// shuts down the |dispatcher| prior to it being invoked, it will be discarded.
+// NOTE: |on_unbound| will generally be executed from a |dispatcher| thread. However, on
+// |dispatcher| shutdown, any active bindings will be unbound, thus it may also be executed on the
+// thread invoking shutdown. The user must ensure that shutdown is never invoked while holding locks
+// which |on_unbound| may also take.
 template <typename Interface>
 fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
@@ -179,6 +184,21 @@ fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServe
         fn(static_cast<Interface*>(impl), reason, status, std::move(channel));
       });
 }
+
+// Similar to the first variant, however, the user gives the binding ownership of the server
+// implementation. In order to destroy the implmentation on unbind, the unique_ptr is passed to a
+// hook which will be automatically invoked during unbinding.
+//
+// NOTE: The same restriction on |on_unbound| in the previous variant applies to ~Interface().
+template <typename Interface>
+fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, std::unique_ptr<Interface> impl) {
+  Interface* impl_raw = impl.get();
+  return internal::TypeErasedBindServer<typename Interface::_Outer>(
+      dispatcher, std::move(channel), impl_raw, &Interface::_Outer::TypeErasedDispatch,
+      [intf = std::move(impl)](void*, UnboundReason, zx_status_t, zx::channel) {});
+}
+
 
 namespace internal {
 

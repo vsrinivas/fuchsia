@@ -44,8 +44,8 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
   fidl::Client<Example> client(std::move(local), loop.dispatcher());
 
   constexpr char data[] = "TwoWay() sync managed";
-  auto server = std::make_unique<Server>(data, sizeof(data));
-  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote), server.get());
+  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
+                                         std::make_unique<Server>(data, sizeof(data)));
   ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
@@ -91,8 +91,8 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
   fidl::Client<Example> client(std::move(local), loop.dispatcher());
 
   constexpr char data[] = "TwoWay() sync caller-allocated";
-  auto server = std::make_unique<Server>(data, sizeof(data));
-  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote), server.get());
+  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
+                                         std::make_unique<Server>(data, sizeof(data)));
   ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
@@ -123,8 +123,8 @@ TEST(GenAPITestCase, EventManaged) {
   };
   fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(handlers));
 
-  auto server = std::make_unique<Server>(data, sizeof(data));
-  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote), server.get());
+  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
+                                         std::make_unique<Server>(data, sizeof(data)));
   ASSERT_TRUE(server_binding.is_ok());
 
   // Wait for the event from the server.
@@ -153,8 +153,8 @@ TEST(GenAPITestCase, EventInPlace) {
   };
   fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(handlers));
 
-  auto server = std::make_unique<Server>(data, sizeof(data));
-  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote), server.get());
+  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
+                                         std::make_unique<Server>(data, sizeof(data)));
   ASSERT_TRUE(server_binding.is_ok());
 
   // Wait for the event from the server.
@@ -182,8 +182,8 @@ TEST(GenAPITestCase, EventNotHandled) {
   fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
   constexpr char data[] = "OnEvent() unhandled";
-  auto server = std::make_unique<Server>(data, sizeof(data));
-  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote), server.get());
+  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
+                                         std::make_unique<Server>(data, sizeof(data)));
   ASSERT_TRUE(server_binding.is_ok());
 
   // Wait for the event from the server.
