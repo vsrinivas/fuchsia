@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:logging/logging.dart';
@@ -39,12 +40,42 @@ Future<ProcessResult> createArchive(
       workingDirectory: workingDirectory);
 }
 
+Future<List> setupServe(Logger log, String pmPath, String repoPath,
+    String componentName, List<String> extraServeArgs) async {
+  log.info('Initializing repo: $repoPath');
+  final initializeRepoResponse = await initializeRepo(pmPath, repoPath);
+  expect(initializeRepoResponse.exitCode, 0);
+
+  final manifestPath = Platform.script
+      .resolve('runtime_deps/package_manifest.json')
+      .toFilePath();
+  log.info('Creating archive from package_manifest');
+  final createArchiveResponse = await createArchive(pmPath, manifestPath);
+  expect(createArchiveResponse.exitCode, 0);
+
+  final archivePath =
+      Platform.script.resolve('runtime_deps/$componentName').toFilePath();
+  log.info('Publishing package from archive: $archivePath to repo: $repoPath');
+  final publishPackageResponse =
+      await publishPackage(pmPath, repoPath, archivePath);
+  expect(publishPackageResponse.exitCode, 0);
+
+  int port;
+  Process serveProcess = await getUnusedPort<Process>((unusedPort) {
+    port = unusedPort;
+    List<String> arguments = ['serve', '-repo=$repoPath', '-l', ':$unusedPort'];
+    log.info('Serve is starting on port: $unusedPort');
+    return Process.start(pmPath, arguments + extraServeArgs);
+  });
+
+  return [serveProcess, port];
+}
+
 void main() {
   final log = Logger('package_manager_test');
   final pmPath = Platform.script.resolve('runtime_deps/pm').toFilePath();
 
   sl4f.Sl4f sl4fDriver;
-  Process serveProcess;
 
   setUpAll(() async {
     Logger.root
@@ -59,6 +90,7 @@ void main() {
     sl4fDriver.close();
   });
   group('Package Manager', () {
+    Process serveProcess;
     Directory tempDir;
     Optional<String> originalRewriteRule;
     Set<String> originalRepos;
@@ -86,44 +118,18 @@ void main() {
         'validates that the deployed package is visible from the server',
         () async {
       // Covers these commands (success cases only):
+      //
+      // Newly covered:
       // amberctl add_src -n <path> -f http://<host>:<port>/config.json
       // amberctl enable_src -n devhost
       // amberctl rm_src -n <name>
       // pkgctl repo
       // pm serve -repo=<path> -l :<port>
       final repoPath = tempDir.path;
-      log.info('Initializing repo: $repoPath');
-      final initializeRepoResponse = await initializeRepo(pmPath, repoPath);
-      expect(initializeRepoResponse.exitCode, 0);
-
-      final manifestPath = Platform.script
-          .resolve('runtime_deps/package_manifest.json')
-          .toFilePath();
-      log.info('Creating archive from package_manifest');
-      final createArchiveResponse = await createArchive(pmPath, manifestPath);
-      expect(createArchiveResponse.exitCode, 0);
-
-      final archivePath = Platform.script
-          .resolve('runtime_deps/component_hello_world-0.far')
-          .toFilePath();
-      log.info(
-          'Publishing package from archive: $archivePath to repo: $repoPath');
-      final publishPackageResponse =
-          await publishPackage(pmPath, repoPath, archivePath);
-      expect(publishPackageResponse.exitCode, 0);
-
-      int port;
-      serveProcess = await getUnusedPort<Process>((unusedPort) {
-        port = unusedPort;
-        List<String> arguments = [
-          'serve',
-          '-repo=$repoPath',
-          '-l',
-          ':$unusedPort'
-        ];
-        log.info('Serve is starting on port: $unusedPort');
-        return Process.start(pmPath, arguments);
-      });
+      final processInfo = await setupServe(
+          log, pmPath, repoPath, 'component_hello_world-0.far', []);
+      serveProcess = processInfo[0];
+      int port = processInfo[1];
 
       log.info('Getting the available packages');
       final curlResponse =
@@ -196,6 +202,67 @@ void main() {
 
       ruleListResponseOutput = ruleListResponse.stdout.toString();
       expect(ruleListResponseOutput, originalRuleList);
+
+      log.info(
+          'Killing serve process and ensuring the output contains `[pm serve]`.');
+      final killStatus = serveProcess.kill();
+      expect(killStatus, isTrue);
+
+      var serveOutputBuilder = StringBuffer();
+      await serveProcess.stdout.transform(utf8.decoder).listen((data) {
+        serveOutputBuilder.write(data);
+      }).asFuture();
+      final serveOutput = serveOutputBuilder.toString();
+      // Ensuring that `[pm serve]` appears in the output because the `-q` flag
+      // wasn't used in the serve command.
+      expect(serveOutput.contains('[pm serve]'), isTrue);
+    });
+    test(
+        'Test that creates a repository, deploys a package, and '
+        'validates that the deployed package is visible from the server. '
+        'Then make sure `pm serve` output is quiet.', () async {
+      // Covers these commands (success cases only):
+      //
+      // Newly covered:
+      // pm serve -repo=<path> -l :<port> -q
+      //
+      // Previously covered:
+      // amberctl add_src -n <path> -f http://<host>:<port>/config.json
+      final repoPath = tempDir.path;
+      final processInfo = await setupServe(
+          log, pmPath, repoPath, 'component_hello_world-0.far', ['-q']);
+      serveProcess = processInfo[0];
+      int port = processInfo[1];
+
+      log.info('Getting the available packages');
+      final curlResponse =
+          await Process.run('curl', ['http://localhost:$port/targets.json']);
+
+      expect(curlResponse.exitCode, 0);
+      final curlOutput = curlResponse.stdout.toString();
+      expect(curlOutput.contains('component_hello_world/0'), isTrue);
+
+      log.info('Getting Host Address');
+      final hostAddress = await formattedHostAddress(sl4fDriver);
+
+      log.info(
+          'Adding the new repository as an update source with http://$hostAddress:$port');
+      final addRepoCfgResponse = await sl4fDriver.ssh.run(
+          'amberctl add_src -n $repoPath -f http://$hostAddress:$port/config.json');
+      expect(addRepoCfgResponse.exitCode, 0);
+
+      log.info(
+          'Killing serve process and ensuring the output does not contain `[pm serve]`.');
+      final killStatus = serveProcess.kill();
+      expect(killStatus, isTrue);
+
+      var serveOutputBuilder = StringBuffer();
+      await serveProcess.stdout.transform(utf8.decoder).listen((data) {
+        serveOutputBuilder.write(data);
+      }).asFuture();
+      final serveOutput = serveOutputBuilder.toString();
+      // The `-q` flag was given to `pm serve`, so there should be no serve output.
+      expect(serveOutput.contains('[pm serve]'), isFalse);
     });
   }, timeout: _timeout);
 }
