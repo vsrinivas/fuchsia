@@ -17,10 +17,10 @@ bool IsDebug(ExceptionType type) {
     case ExceptionType::kThreadExiting:
     case ExceptionType::kProcessStarting:
 
-    case ExceptionType::kHardware:
+    case ExceptionType::kHardwareBreakpoint:
     case ExceptionType::kWatchpoint:
     case ExceptionType::kSingleStep:
-    case ExceptionType::kSoftware:
+    case ExceptionType::kSoftwareBreakpoint:
     case ExceptionType::kSynthetic:
       return true;
     default:
@@ -55,14 +55,14 @@ const char* ExceptionTypeToString(ExceptionType type) {
       return "Thread Exiting";
     case ExceptionType::kProcessStarting:
       return "Process Starting";
-    case ExceptionType::kHardware:
-      return "Hardware";
+    case ExceptionType::kHardwareBreakpoint:
+      return "Hardware Breakpoint";
     case ExceptionType::kWatchpoint:
       return "Watchpoint";
     case ExceptionType::kSingleStep:
       return "Single Step";
-    case ExceptionType::kSoftware:
-      return "Software";
+    case ExceptionType::kSoftwareBreakpoint:
+      return "Software Breakpoint";
     case ExceptionType::kSynthetic:
       return "Synthetic";
     case ExceptionType::kUnknown:

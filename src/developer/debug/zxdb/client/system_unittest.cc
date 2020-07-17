@@ -121,7 +121,7 @@ TEST_F(SystemTest, GlobalContinue) {
 
   // Notify of thread stop on thread 1.
   debug_ipc::NotifyException break_notification;
-  break_notification.type = debug_ipc::ExceptionType::kSoftware;
+  break_notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   break_notification.thread.process_koid = kProcessKoid;
   break_notification.thread.thread_koid = kThread1Koid;
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;

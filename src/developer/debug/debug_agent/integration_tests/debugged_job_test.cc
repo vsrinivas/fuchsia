@@ -383,7 +383,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   // We should've received a breakpoint event.
   ASSERT_EQ(backend.exceptions().size(), 1u);
   const auto& exception = backend.exceptions().back();
-  EXPECT_EQ(exception.type, ExceptionType::kSoftware);
+  EXPECT_EQ(exception.type, ExceptionType::kSoftwareBreakpoint);
   EXPECT_EQ(exception.thread.process_koid, process_koid);
   ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
   const auto& breakpoint_stat = exception.hit_breakpoints.back();

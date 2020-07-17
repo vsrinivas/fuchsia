@@ -55,9 +55,9 @@ constexpr uint32_t kMaxMessageSize = 16777216;
 bool FilterConditionalBreakpoints(StopInfo* info) {
   bool skip = false;
 
-  if (info->exception_type == debug_ipc::ExceptionType::kHardware ||
+  if (info->exception_type == debug_ipc::ExceptionType::kHardwareBreakpoint ||
       info->exception_type == debug_ipc::ExceptionType::kWatchpoint ||
-      info->exception_type == debug_ipc::ExceptionType::kSoftware) {
+      info->exception_type == debug_ipc::ExceptionType::kSoftwareBreakpoint) {
     // It's possible that hit_breakpoints is empty even when exception_type is kSoftware,
     // e.g. the process explicitly called "int 3" on x64. In this case, we should still pause.
     if (!info->hit_breakpoints.empty()) {

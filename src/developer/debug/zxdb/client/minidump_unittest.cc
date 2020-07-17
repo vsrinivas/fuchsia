@@ -294,7 +294,7 @@ TEST_F(MinidumpTest, Registers) {
 TEST_F(MinidumpTest, Modules) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump_new_cvrecord.dmp"));
 
-  EXPECT_EQ(debug_ipc::ExceptionType::kSoftware, last_hit());
+  EXPECT_EQ(debug_ipc::ExceptionType::kSoftwareBreakpoint, last_hit());
 
   Err err;
   debug_ipc::ModulesRequest request;

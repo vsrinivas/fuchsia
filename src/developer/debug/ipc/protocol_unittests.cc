@@ -894,7 +894,7 @@ TEST(Protocol, NotifyException) {
   initial.thread.name = "foo";
   initial.thread.stack_amount = ThreadRecord::StackAmount::kMinimal;
   initial.thread.frames.emplace_back(0x7647342634, 0x9861238251);
-  initial.type = ExceptionType::kHardware;
+  initial.type = ExceptionType::kHardwareBreakpoint;
 
   initial.exception.arch.x64.vector = 22;
   initial.exception.arch.x64.err_code = 5;

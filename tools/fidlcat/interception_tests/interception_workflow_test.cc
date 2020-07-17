@@ -239,7 +239,7 @@ void InterceptionWorkflowTest::SimulateSyscall(std::unique_ptr<SystemCallTest> s
 // Fill a NotifyException object with all the information we need to simulate a breakpoint.
 std::vector<std::unique_ptr<zxdb::Frame>> InterceptionWorkflowTest::FillBreakpoint(
     debug_ipc::NotifyException* notification, uint64_t process_koid, uint64_t thread_koid) {
-  notification->type = debug_ipc::ExceptionType::kSoftware;
+  notification->type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   notification->thread.process_koid = process_koid;
   notification->thread.thread_koid = thread_koid;
   notification->thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -292,7 +292,7 @@ void InterceptionWorkflowTest::TriggerCallerBreakpoint(uint64_t process_koid,
                                                        uint64_t thread_koid) {
   // Trigger next breakpoint, when the syscall has completed.
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::ExceptionType::kSoftware;
+  notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   notification.thread.process_koid = process_koid;
   notification.thread.thread_koid = thread_koid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;

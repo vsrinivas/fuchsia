@@ -32,14 +32,14 @@ enum class ExceptionType : uint32_t {
   // Indicates the process was killed due to misusing a syscall, e.g. passing a bad handle.
   kPolicyError,
 
-  // Synthetic exeptions used by zircon to communicated with the debugger. The debug agent
-  // generally shouldn't pass these on, but we should recognize them at least.
+  // Synthetic exeptions used by zircon to communicated with the debugger. The debug agent generally
+  // shouldn't pass these on, but we should recognize them at least.
   kThreadStarting,
   kThreadExiting,
   kProcessStarting,
 
   // Hardware breakpoints are issues by the CPU via debug registers.
-  kHardware,
+  kHardwareBreakpoint,
 
   // HW exceptions triggered on memory read/write.
   kWatchpoint,
@@ -47,14 +47,13 @@ enum class ExceptionType : uint32_t {
   // Single-step completion issued by the CPU.
   kSingleStep,
 
-  // Software breakpoint. This will be issued when a breakpoint is hit and
-  // when the debugged program manually issues a breakpoint instruction.
-  kSoftware,
+  // Software breakpoint. This will be issued when a breakpoint is hit and when the debugged program
+  // manually issues a breakpoint instruction.
+  kSoftwareBreakpoint,
 
-  // Indicates this exception is not a real CPU exception but was generated
-  // internally for the purposes of sending a stop notification. The frontend
-  // uses this value when the thread didn't actually do anything, but the
-  // should be updated as if it hit an exception.
+  // Indicates this exception is not a real CPU exception but was generated internally for the
+  // purposes of sending a stop notification. The frontend uses this value when the thread didn't
+  // actually do anything, but the should be updated as if it hit an exception.
   kSynthetic,
 
   // For exception codes the debugger doesn't recognize.

@@ -157,7 +157,7 @@ TEST_F(FrameImplRegisterTest, UpdateRegister) {
 
   // Notify of thread stop.
   debug_ipc::NotifyException break_notification;
-  break_notification.type = debug_ipc::ExceptionType::kSoftware;
+  break_notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   break_notification.thread.process_koid = kProcessKoid;
   break_notification.thread.thread_koid = kThreadKoid;
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -202,7 +202,7 @@ TEST_F(FrameImplRegisterTest, AlwaysRequest) {
 
   // Notify of thread stop.
   debug_ipc::NotifyException break_notification;
-  break_notification.type = debug_ipc::ExceptionType::kSoftware;
+  break_notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   break_notification.thread.process_koid = kProcessKoid;
   break_notification.thread.thread_koid = kThreadKoid;
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;

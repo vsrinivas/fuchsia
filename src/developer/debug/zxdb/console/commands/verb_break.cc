@@ -195,9 +195,9 @@ Examples
   frame 3 break 23
       Break at line 23 of the file referenced by frame 3.
 
-  break --type h 23
+  break --type execute 23
       Break at line 23 of the file referenced by the current frame and use a
-      hardware breakpoint.
+      hardware execution breakpoint.
 )";
 
 void OutputCreatedMessage(ConsoleContext* context, Breakpoint* breakpoint) {
@@ -264,8 +264,7 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
   // Hit mult.
   if (cmd.HasSwitch(kMultSwitch)) {
     int hit_mult;
-    if (Err err = StringToInt(cmd.GetSwitchValue(kMultSwitch), &hit_mult);
-        err.has_error())
+    if (Err err = StringToInt(cmd.GetSwitchValue(kMultSwitch), &hit_mult); err.has_error())
       return err;
     // TODO(dangyi): Unify validation logics with settings.
     if (hit_mult <= 0)

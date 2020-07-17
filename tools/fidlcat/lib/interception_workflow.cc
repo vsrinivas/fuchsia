@@ -24,7 +24,7 @@ namespace fidlcat {
 void InterceptingThreadObserver::OnThreadStopped(zxdb::Thread* thread, const zxdb::StopInfo& info) {
   FX_CHECK(thread) << "Internal error: Stopped in a breakpoint without a thread?";
 
-  if (info.exception_type != debug_ipc::ExceptionType::kSoftware) {
+  if (info.exception_type != debug_ipc::ExceptionType::kSoftwareBreakpoint) {
     FX_CHECK(info.hit_breakpoints.empty());
     if (threads_in_error_.find(thread->GetKoid()) == threads_in_error_.end()) {
       threads_in_error_.emplace(thread->GetKoid());

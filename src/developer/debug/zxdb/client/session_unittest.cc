@@ -214,7 +214,7 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   sink()->ResetResumeState();
   thread_observer.ResetStopState();
   debug_ipc::NotifyException notify;
-  notify.type = debug_ipc::ExceptionType::kSoftware;
+  notify.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   notify.thread.process_koid = kProcessKoid;
   notify.thread.thread_koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -260,7 +260,7 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
   fxl::WeakPtr<Breakpoint> weak_bp = bp->GetWeakPtr();
 
   debug_ipc::NotifyException notify;
-  notify.type = debug_ipc::ExceptionType::kSoftware;
+  notify.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   notify.thread.process_koid = kProcessKoid;
   notify.thread.thread_koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -298,7 +298,7 @@ TEST_F(SessionTest, HitMultBreakpoint) {
   bp->SetSettings(settings);
 
   debug_ipc::NotifyException notify;
-  notify.type = debug_ipc::ExceptionType::kSoftware;
+  notify.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   notify.thread.process_koid = kProcessKoid;
   notify.thread.thread_koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;

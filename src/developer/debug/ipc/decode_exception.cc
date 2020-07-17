@@ -18,8 +18,8 @@ namespace {
 // clang-format off
 ExceptionType DecodeZircon(uint32_t code) {
   switch (code) {
-    case ZX_EXCP_SW_BREAKPOINT: return ExceptionType::kSoftware;
-    case ZX_EXCP_HW_BREAKPOINT: return ExceptionType::kHardware;
+    case ZX_EXCP_SW_BREAKPOINT: return ExceptionType::kSoftwareBreakpoint;
+    case ZX_EXCP_HW_BREAKPOINT: return ExceptionType::kHardwareBreakpoint;
     case ZX_EXCP_GENERAL: return ExceptionType::kGeneral;
     case ZX_EXCP_FATAL_PAGE_FAULT: return ExceptionType::kPageFault;
     case ZX_EXCP_UNDEFINED_INSTRUCTION: return ExceptionType::kUndefinedInstruction;
@@ -54,7 +54,7 @@ ExceptionType DecodeHardwareRegister(uint64_t dr7, int slot) {
   }
   // clang-format on
 
-  return is_watchpoint ? ExceptionType::kWatchpoint : ExceptionType::kHardware;
+  return is_watchpoint ? ExceptionType::kWatchpoint : ExceptionType::kHardwareBreakpoint;
 }
 
 }  // namespace
@@ -63,7 +63,7 @@ ExceptionType DecodeException(uint32_t code, const X64ExceptionInfo& info) {
   // All zircon exceptions don't need further analysis, except hardware which can represent a single
   // step, a hw breakpoint or a watchpoint.
   ExceptionType type = DecodeZircon(code);
-  if (type != ExceptionType::kHardware)
+  if (type != ExceptionType::kHardwareBreakpoint)
     return type;
 
   std::optional<X64ExceptionInfo::DebugRegs> regs;
@@ -115,10 +115,10 @@ ExceptionType DecodeESR(uint32_t esr) {
   switch (ec) {
     case 0b111000: /* BRK from arm32 */
     case 0b111100: /* BRK from arm64 */
-      return ExceptionType::kSoftware;
+      return ExceptionType::kSoftwareBreakpoint;
     case 0b110000: /* HW breakpoint from a lower level */
     case 0b110001: /* HW breakpoint from same level */
-      return ExceptionType::kHardware;
+      return ExceptionType::kHardwareBreakpoint;
     case 0b110010: /* software step from lower level */
     case 0b110011: /* software step from same level */
       return ExceptionType::kSingleStep;
@@ -137,7 +137,7 @@ ExceptionType DecodeESR(uint32_t esr) {
 ExceptionType DecodeException(uint32_t code, const Arm64ExceptionInfo& info) {
   // HW exceptions have to be analysed further.
   ExceptionType type = DecodeZircon(code);
-  if (type != ExceptionType::kHardware)
+  if (type != ExceptionType::kHardwareBreakpoint)
     return type;
 
   uint32_t esr;

@@ -38,8 +38,9 @@ namespace {
 // when stepping.
 bool ShouldDisplayFullExceptionInfo(const StopInfo& info) {
   if (info.exception_type == debug_ipc::ExceptionType::kNone ||
-      info.exception_type == debug_ipc::ExceptionType::kHardware ||
-      info.exception_type == debug_ipc::ExceptionType::kSoftware ||
+      info.exception_type == debug_ipc::ExceptionType::kHardwareBreakpoint ||
+      info.exception_type == debug_ipc::ExceptionType::kSoftwareBreakpoint ||
+      info.exception_type == debug_ipc::ExceptionType::kWatchpoint ||
       info.exception_type == debug_ipc::ExceptionType::kSingleStep ||
       info.exception_type == debug_ipc::ExceptionType::kSynthetic)
     return false;

@@ -167,9 +167,9 @@ void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_hand
   switch (exception.type) {
     case debug_ipc::ExceptionType::kSingleStep:
       return HandleSingleStep(&exception, *regs);
-    case debug_ipc::ExceptionType::kSoftware:
+    case debug_ipc::ExceptionType::kSoftwareBreakpoint:
       return HandleSoftwareBreakpoint(&exception, *regs);
-    case debug_ipc::ExceptionType::kHardware:
+    case debug_ipc::ExceptionType::kHardwareBreakpoint:
       return HandleHardwareBreakpoint(&exception, *regs);
     case debug_ipc::ExceptionType::kWatchpoint:
       return HandleWatchpoint(&exception, *regs);

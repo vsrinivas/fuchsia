@@ -87,7 +87,7 @@ TEST_F(ThreadImplTest, Frames) {
 
   // Notify of thread stop.
   debug_ipc::NotifyException break_notification;
-  break_notification.type = debug_ipc::ExceptionType::kSoftware;
+  break_notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   break_notification.thread.process_koid = kProcessKoid;
   break_notification.thread.thread_koid = kThreadKoid;
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -148,7 +148,7 @@ TEST_F(ThreadImplTest, ControllersWithGeneralException) {
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack1 = 0x7890;
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::ExceptionType::kSoftware;
+  notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   notification.thread.process_koid = kProcessKoid;
   notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -187,7 +187,7 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack1 = 0x7890;
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::ExceptionType::kSoftware;
+  notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   notification.thread.process_koid = kProcessKoid;
   notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -231,7 +231,7 @@ TEST_F(ThreadImplTest, StopNoStack) {
   std::vector<std::unique_ptr<Frame>> frames;
   frames.push_back(std::make_unique<MockFrame>(
       &session(), thread, Location(Location::State::kAddress, 0x7890), 0x1234));
-  InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::ExceptionType::kSoftware,
+  InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::ExceptionType::kSoftwareBreakpoint,
                            std::move(frames), false);
   thread->ContinueWith(std::make_unique<StepThreadController>(StepMode::kInstruction),
                        [](const Err& err) {});
@@ -241,8 +241,8 @@ TEST_F(ThreadImplTest, StopNoStack) {
 
   // Notify on thread stop with no stack.
   thread_observer.set_got_stopped(false);
-  InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::ExceptionType::kSoftware, {},
-                           false);
+  InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::ExceptionType::kSoftwareBreakpoint,
+                           {}, false);
   thread_observer.set_got_stopped(false);
 
   // The thread controllers should be gone.
@@ -259,7 +259,7 @@ TEST_F(ThreadImplTest, JumpTo) {
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack = 0x7890;
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::ExceptionType::kSoftware;
+  notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   notification.thread.process_koid = kProcessKoid;
   notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;

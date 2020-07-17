@@ -224,7 +224,7 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
     ASSERT_EQ(thread_excp.size(), 1u);
     auto& brk_notify = thread_excp.front();
     EXPECT_EQ(brk_notify.thread.thread_koid, thread_koid);
-    EXPECT_EQ(brk_notify.type, debug_ipc::ExceptionType::kSoftware);
+    EXPECT_EQ(brk_notify.type, debug_ipc::ExceptionType::kSoftwareBreakpoint);
 
     ASSERT_EQ(brk_notify.hit_breakpoints.size(), 1u);
     auto& hit_brk = brk_notify.hit_breakpoints.front();

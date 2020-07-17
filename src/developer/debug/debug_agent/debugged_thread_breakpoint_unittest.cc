@@ -245,15 +245,15 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
       ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
 
   // Trigger the exception.
-  thread.OnException(std::make_unique<MockExceptionHandle>(thread_object->koid,
-                                                           debug_ipc::ExceptionType::kSoftware));
+  thread.OnException(std::make_unique<MockExceptionHandle>(
+      thread_object->koid, debug_ipc::ExceptionType::kSoftwareBreakpoint));
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
   {
     auto& exception = context.backend->exceptions()[0];
 
-    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftware)
+    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftwareBreakpoint)
         << debug_ipc::ExceptionTypeToString(exception.type);
     EXPECT_EQ(exception.hit_breakpoints.size(), 0u);
 
@@ -278,15 +278,15 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   process.AppendSofwareBreakpoint(breakpoint.get(), kBreakpointAddress);
 
   // Throw the same breakpoint exception.
-  thread.OnException(std::make_unique<MockExceptionHandle>(thread_object->koid,
-                                                           debug_ipc::ExceptionType::kSoftware));
+  thread.OnException(std::make_unique<MockExceptionHandle>(
+      thread_object->koid, debug_ipc::ExceptionType::kSoftwareBreakpoint));
 
   // We should've received an exception notification with hit breakpoints.
   ASSERT_EQ(context.backend->exceptions().size(), 2u);
   {
     auto& exception = context.backend->exceptions()[1];
 
-    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftware)
+    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftwareBreakpoint)
         << debug_ipc::ExceptionTypeToString(exception.type);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
     EXPECT_EQ(exception.hit_breakpoints[0].id, breakpoint->stats().id);
@@ -343,15 +343,15 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   process.AppendHardwareBreakpoint(breakpoint.get(), kAddress);
 
   // Trigger the exception.
-  thread.OnException(std::make_unique<MockExceptionHandle>(thread_object->koid,
-                                                           debug_ipc::ExceptionType::kHardware));
+  thread.OnException(std::make_unique<MockExceptionHandle>(
+      thread_object->koid, debug_ipc::ExceptionType::kHardwareBreakpoint));
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
   {
     auto& exception = context.backend->exceptions()[0];
 
-    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kHardware)
+    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kHardwareBreakpoint)
         << debug_ipc::ExceptionTypeToString(exception.type);
     EXPECT_EQ(exception.hit_breakpoints.size(), 1u);
     EXPECT_EQ(exception.hit_breakpoints[0].id, breakpoint->stats().id);

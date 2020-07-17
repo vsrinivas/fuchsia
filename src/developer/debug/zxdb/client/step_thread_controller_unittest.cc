@@ -71,7 +71,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Issue a software exception in the range.
-  exception.type = debug_ipc::ExceptionType::kSoftware;
+  exception.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   exception.thread.frames[0].ip += 4;
   InjectException(exception);
 
@@ -299,7 +299,7 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(bool stop_on_no_symbol
 
   // Send a breakpoint completion notification at the previous stack frame. Breakpoint exceptions
   // are "software".
-  src_exception.type = debug_ipc::ExceptionType::kSoftware;
+  src_exception.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   src_exception.hit_breakpoints.resize(1);
   src_exception.hit_breakpoints[0].id = mock_remote_api()->last_breakpoint_id();
   src_exception.hit_breakpoints[0].hit_count = 1;

@@ -95,7 +95,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
 
   // Simulate a breakpoint hit of that breakpoint (breakpoint exceptions are "software").
   debug_ipc::NotifyException exception;
-  exception.type = debug_ipc::ExceptionType::kSoftware;
+  exception.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
   exception.thread.process_koid = process()->GetKoid();
   exception.thread.thread_koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -218,7 +218,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline2) {
 
   // Send the software breakpoint exception for PHYSICAL to finish.
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::ExceptionType::kSoftware,
+                           debug_ipc::ExceptionType::kSoftwareBreakpoint,
                            MockFrameVectorToFrameVector(std::move(stack)), true);
   // That should have finished PHYSICAL (deleting the temporary breakpoint) and OVER#1. Then started
   // stepping over OVER#2 which should continue.

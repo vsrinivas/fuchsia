@@ -29,7 +29,7 @@ class FinishPhysicalFrameThreadControllerTest : public InlineThreadControllerTes
   debug_ipc::NotifyException MakeBreakNotification() {
     debug_ipc::NotifyException n;
 
-    n.type = debug_ipc::ExceptionType::kSoftware;
+    n.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
     n.thread.process_koid = process()->GetKoid();
     n.thread.thread_koid = thread()->GetKoid();
     n.thread.state = debug_ipc::ThreadRecord::State::kBlocked;

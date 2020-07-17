@@ -33,7 +33,7 @@ TEST(DecodeException, Arm64) {
   ArmTestInfo info;
 
   // Exceptions that require no decoding.
-  EXPECT_EQ(ExceptionType::kSoftware, DecodeException(ZX_EXCP_SW_BREAKPOINT, info));
+  EXPECT_EQ(ExceptionType::kSoftwareBreakpoint, DecodeException(ZX_EXCP_SW_BREAKPOINT, info));
   EXPECT_EQ(ExceptionType::kGeneral, DecodeException(ZX_EXCP_GENERAL, info));
   EXPECT_EQ(ExceptionType::kPageFault, DecodeException(ZX_EXCP_FATAL_PAGE_FAULT, info));
   EXPECT_EQ(ExceptionType::kUndefinedInstruction,
@@ -46,9 +46,9 @@ TEST(DecodeException, Arm64) {
 
   // Hardware breakpoints. The meaty stuff.
   info.esr = 0b110000 << 26;
-  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
+  EXPECT_EQ(ExceptionType::kHardwareBreakpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
   info.esr = 0b110001 << 26;
-  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
+  EXPECT_EQ(ExceptionType::kHardwareBreakpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
 
   info.esr = 0b110010 << 26;
   EXPECT_EQ(ExceptionType::kSingleStep, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
@@ -60,7 +60,7 @@ TEST(DecodeException, X64) {
   X64TestInfo info;
 
   // Exceptions that require no decoding.
-  EXPECT_EQ(ExceptionType::kSoftware, DecodeException(ZX_EXCP_SW_BREAKPOINT, info));
+  EXPECT_EQ(ExceptionType::kSoftwareBreakpoint, DecodeException(ZX_EXCP_SW_BREAKPOINT, info));
   EXPECT_EQ(ExceptionType::kGeneral, DecodeException(ZX_EXCP_GENERAL, info));
   EXPECT_EQ(ExceptionType::kPageFault, DecodeException(ZX_EXCP_FATAL_PAGE_FAULT, info));
   EXPECT_EQ(ExceptionType::kUndefinedInstruction,
@@ -83,25 +83,25 @@ TEST(DecodeException, X64) {
 
   info.regs.dr6 = 0;
   X86_DBG_STATUS_B0_SET(&info.regs.dr6, 1);
-  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
+  EXPECT_EQ(ExceptionType::kHardwareBreakpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
   X86_DBG_CONTROL_RW0_SET(&info.regs.dr7, 1);
   EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
 
   info.regs.dr6 = 0;
   X86_DBG_STATUS_B1_SET(&info.regs.dr6, 1);
-  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
+  EXPECT_EQ(ExceptionType::kHardwareBreakpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
   X86_DBG_CONTROL_RW1_SET(&info.regs.dr7, 1);
   EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
 
   info.regs.dr6 = 0;
   X86_DBG_STATUS_B2_SET(&info.regs.dr6, 1);
-  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
+  EXPECT_EQ(ExceptionType::kHardwareBreakpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
   X86_DBG_CONTROL_RW2_SET(&info.regs.dr7, 1);
   EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
 
   info.regs.dr6 = 0;
   X86_DBG_STATUS_B3_SET(&info.regs.dr6, 1);
-  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
+  EXPECT_EQ(ExceptionType::kHardwareBreakpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
   X86_DBG_CONTROL_RW3_SET(&info.regs.dr7, 1);
   EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, info));
 }
