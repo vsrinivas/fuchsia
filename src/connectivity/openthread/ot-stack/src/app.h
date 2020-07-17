@@ -9,6 +9,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/port.h>
@@ -34,7 +35,6 @@ class OtStackApp {
   async::Loop* loop() { return &loop_; }
 
   void AddFidlRequestHandler(const char* service_name, zx_handle_t service_request);
-  void RemoveFidlRequestHandler(zx_handle_t service_request, fidl::UnboundReason reason);
 
  private:
   zx_status_t SetupFidlService();
@@ -70,7 +70,7 @@ class OtStackApp {
   zx::port port_;
   std::thread event_thread_;
 
-  zx::channel fidl_request_handle_ = zx::channel(ZX_HANDLE_INVALID);
+  std::optional<fidl::ServerBindingRef<fidl_spinel::Device>> binding_;
   std::unique_ptr<LowpanSpinelDeviceFidlImpl> fidl_request_handler_ptr_;
 
   std::string device_path_;

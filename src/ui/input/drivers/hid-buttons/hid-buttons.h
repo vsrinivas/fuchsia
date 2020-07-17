@@ -221,19 +221,22 @@ class ButtonsNotifyInterface : public Buttons::Interface {
   explicit ButtonsNotifyInterface(HidButtonsDevice* peripheral) : device_(peripheral) {}
   ~ButtonsNotifyInterface() = default;
 
-  void Init(async_dispatcher_t* dispatcher, zx::channel chan, uint64_t id) {
+  zx_status_t Init(async_dispatcher_t* dispatcher, zx::channel chan, uint64_t id) {
     id_ = id;
-    chan_ = zx::unowned_channel(chan);
 
     fidl::OnUnboundFn<ButtonsNotifyInterface> unbound =
         [this](ButtonsNotifyInterface*, fidl::UnboundReason, zx_status_t, zx::channel) {
           device_->ClosingChannel(id_);
         };
-    fidl::BindServer(dispatcher, std::move(chan), this, std::move(unbound));
+    auto res = fidl::BindServer(dispatcher, std::move(chan), this, std::move(unbound));
+    if (res.is_error())
+      return res.error();
+    binding_ = res.take_value();
+    return ZX_OK;
   }
 
   uint64_t id() const { return id_; }
-  zx::unowned_channel& chan() { return chan_; }
+  const fidl::ServerBindingRef<Buttons>& binding() { return *binding_; }
 
   // Methods required by the FIDL interface
   void GetState(ButtonType type, GetStateCompleter::Sync _completer) {
@@ -251,7 +254,7 @@ class ButtonsNotifyInterface : public Buttons::Interface {
  private:
   HidButtonsDevice* device_;
   uint64_t id_;
-  zx::unowned_channel chan_;
+  std::optional<fidl::ServerBindingRef<Buttons>> binding_;
 };
 
 }  // namespace buttons

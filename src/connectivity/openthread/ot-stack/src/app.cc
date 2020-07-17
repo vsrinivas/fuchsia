@@ -11,7 +11,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/epitaph.h>
-#include <lib/fidl/llcpp/server.h>
 #include <lib/svc/dir.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
@@ -27,9 +26,18 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher
                                                   const char* service_name,
                                                   zx_handle_t service_request) {
   fidl::OnUnboundFn<OtStackApp::LowpanSpinelDeviceFidlImpl> on_unbound =
-      [](LowpanSpinelDeviceFidlImpl* server, fidl::UnboundReason reason, zx_status_t,
-         zx::channel channel) { server->app_.RemoveFidlRequestHandler(channel.get(), reason); };
-  fidl::BindServer(dispatcher, zx::channel(service_request), this, std::move(on_unbound));
+      [](LowpanSpinelDeviceFidlImpl*, fidl::UnboundReason reason, zx_status_t,
+         zx::channel channel) {
+        FX_LOGS(INFO) << "channel handle " << channel.get() << " unbound with reason "
+                      << static_cast<uint32_t>(reason);
+      };
+  auto res =
+      fidl::BindServer(dispatcher, zx::channel(service_request), this, std::move(on_unbound));
+  if (res.is_error()) {
+    FX_LOGS(ERROR) << "Failed to bind FIDL server with status: " << res.error();
+    return;
+  }
+  app_.binding_ = res.take_value();
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync completer) {
@@ -123,18 +131,11 @@ static void connect(void* untyped_context, const char* service_name, zx_handle_t
 }
 
 void OtStackApp::AddFidlRequestHandler(const char* service_name, zx_handle_t service_request) {
-  if (fidl_request_handle_.is_valid()) {  // TODO (jiamingw) add support for multiple clients
+  if (binding_) {  // TODO (jiamingw) add support for multiple clients
     FX_LOGS(ERROR) << "FIDL connect request rejected: already bound";
     return;
   }
   fidl_request_handler_ptr_->Bind(loop_.dispatcher(), service_name, service_request);
-  fidl_request_handle_ = zx::channel(service_request);
-}
-
-void OtStackApp::RemoveFidlRequestHandler(zx_handle_t service_request, fidl::UnboundReason reason) {
-  (void)fidl_request_handle_.release();
-  FX_LOGS(INFO) << "channel handle " << service_request << " unbounded with reason "
-                << static_cast<uint32_t>(reason);
 }
 
 // Setup FIDL server side which handle requests from upper layer components.
@@ -331,24 +332,18 @@ void OtStackApp::EventThread() {
         zx_status_t result = device_client_ptr_->HandleEvents(fidl_spinel::Device::EventHandlers{
             .on_ready_for_send_frames =
                 [this](uint32_t number_of_frames) {
-                  return fidl_spinel::Device::SendOnReadyForSendFramesEvent(
-                      this->fidl_request_handle_.borrow(), number_of_frames);
+                  return (*binding_)->OnReadyForSendFrames(number_of_frames);
                 },
             .on_receive_frame =
                 [this](::fidl::VectorView<uint8_t> data) {
-                  return fidl_spinel::Device::SendOnReceiveFrameEvent(
-                      this->fidl_request_handle_.borrow(), std::move(data));
+                  return (*binding_)->OnReceiveFrame(std::move(data));
                 },
-            .on_error =
-                [this](fidl_spinel::Error error, bool did_close) {
-                  return fidl_spinel::Device::SendOnErrorEvent(this->fidl_request_handle_.borrow(),
-                                                               error, did_close);
-                },
+            .on_error = [this](fidl_spinel::Error error,
+                               bool did_close) { return (*binding_)->OnError(error, did_close); },
             .unknown =
                 [this]() {
-                  fidl_spinel::Device::SendOnErrorEvent(this->fidl_request_handle_.borrow(),
-                                                        fidl_spinel::Error::IO_ERROR, true);
-                  this->DisconnectDevice();
+                  (*binding_)->OnError(fidl_spinel::Error::IO_ERROR, true);
+                  DisconnectDevice();
                   return ZX_ERR_IO;
                 }});
         if (result != ZX_OK) {
@@ -388,8 +383,8 @@ void OtStackApp::DisconnectDevice() {
 
 void OtStackApp::Shutdown() {
   FX_LOGS(ERROR) << "terminating message loop in ot-stack";
-  if (fidl_request_handle_.is_valid()) {
-    fidl_epitaph_write(fidl_request_handle_.get(), ZX_ERR_INTERNAL);
+  if (binding_) {
+    binding_->Close(ZX_ERR_INTERNAL);
   }
   TerminateEventThread();
   DisconnectDevice();

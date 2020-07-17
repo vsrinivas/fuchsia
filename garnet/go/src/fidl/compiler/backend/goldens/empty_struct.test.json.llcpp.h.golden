@@ -600,7 +600,7 @@ class EmptyProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
 class EmptyProtocol::EventSender {
  public:
-  zx_status_t Receive(::llcpp::fidl::test::json::Empty e) {
+  zx_status_t Receive(::llcpp::fidl::test::json::Empty e) const {
     if (auto _binding = binding_.lock()) {
       return SendReceiveEvent(_binding->channel(), std::move(e));
     }
@@ -608,7 +608,7 @@ class EmptyProtocol::EventSender {
   }
 
   zx_status_t Receive(::fidl::BytePart _buffer,
-                      ::llcpp::fidl::test::json::Empty e) {
+                      ::llcpp::fidl::test::json::Empty e) const {
     if (auto _binding = binding_.lock()) {
       return SendReceiveEvent(_binding->channel(), std::move(_buffer),
                               std::move(e));

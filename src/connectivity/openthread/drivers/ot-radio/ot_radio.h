@@ -131,7 +131,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::UnbindableNew, ddk:
   class LowpanSpinelDeviceFidlImpl : public llcpp::fuchsia::lowpan::spinel::Device::Interface {
    public:
     LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio);
-    void Bind(async_dispatcher_t* dispatcher, zx::channel channel);
+    zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel);
 
    private:
     // FIDL request handlers
@@ -149,7 +149,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::UnbindableNew, ddk:
   uint32_t outbound_allowance_ = kOutboundAllowanceInit;
   uint64_t inbound_cnt_ = 0;
   uint64_t outbound_cnt_ = 0;
-  zx::unowned_channel fidl_channel_ = zx::unowned_channel(ZX_HANDLE_INVALID);
+  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::lowpan::spinel::Device>> fidl_binding_;
   std::unique_ptr<LowpanSpinelDeviceFidlImpl> fidl_impl_obj_ = 0;
   ot_radio_power_status_e power_status_ = OT_SPINEL_DEVICE_OFF;
 };

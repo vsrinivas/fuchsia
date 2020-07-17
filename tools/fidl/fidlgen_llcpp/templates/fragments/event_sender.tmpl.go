@@ -9,7 +9,7 @@ const EventSender = `
 class {{ .Name }}::EventSender {
  public:
   {{- range FilterMethodsWithReqs .Methods }}
-  zx_status_t {{ .Name }}({{ template "Params" .Response }}) {
+  zx_status_t {{ .Name }}({{ template "Params" .Response }}) const {
     if (auto _binding = binding_.lock()) {
       return Send{{ .Name }}Event(_binding->channel() {{- if .Response }}, {{ end -}} {{ template "SyncClientMoveParams" .Response }});
     }
@@ -18,7 +18,7 @@ class {{ .Name }}::EventSender {
 
     {{- if .Response }}
 {{ "" }}
-  zx_status_t {{ .Name }}(::fidl::BytePart _buffer, {{ template "Params" .Response }}) {
+  zx_status_t {{ .Name }}(::fidl::BytePart _buffer, {{ template "Params" .Response }}) const {
     if (auto _binding = binding_.lock()) {
       return Send{{ .Name }}Event(_binding->channel(), std::move(_buffer), {{ template "SyncClientMoveParams" .Response }});
     }

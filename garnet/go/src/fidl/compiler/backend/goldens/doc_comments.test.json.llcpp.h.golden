@@ -777,7 +777,7 @@ class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
 
 class Interface::EventSender {
  public:
-  zx_status_t OnEvent() {
+  zx_status_t OnEvent() const {
     if (auto _binding = binding_.lock()) {
       return SendOnEventEvent(_binding->channel());
     }

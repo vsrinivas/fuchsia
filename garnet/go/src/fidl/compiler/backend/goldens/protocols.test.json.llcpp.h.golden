@@ -3376,14 +3376,14 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
 
 class Transitional::EventSender {
  public:
-  zx_status_t Event(int64_t x) {
+  zx_status_t Event(int64_t x) const {
     if (auto _binding = binding_.lock()) {
       return SendEventEvent(_binding->channel(), std::move(x));
     }
     return ZX_ERR_CANCELED;
   }
 
-  zx_status_t Event(::fidl::BytePart _buffer, int64_t x) {
+  zx_status_t Event(::fidl::BytePart _buffer, int64_t x) const {
     if (auto _binding = binding_.lock()) {
       return SendEventEvent(_binding->channel(), std::move(_buffer),
                             std::move(x));
@@ -3499,14 +3499,14 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
 class ChannelProtocol::EventSender {
  public:
-  zx_status_t EventA(int64_t a, int64_t b) {
+  zx_status_t EventA(int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
       return SendEventAEvent(_binding->channel(), std::move(a), std::move(b));
     }
     return ZX_ERR_CANCELED;
   }
 
-  zx_status_t EventA(::fidl::BytePart _buffer, int64_t a, int64_t b) {
+  zx_status_t EventA(::fidl::BytePart _buffer, int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
       return SendEventAEvent(_binding->channel(), std::move(_buffer),
                              std::move(a), std::move(b));
@@ -3703,21 +3703,22 @@ class WithAndWithoutRequestResponse::ClientImpl final
 
 class WithAndWithoutRequestResponse::EventSender {
  public:
-  zx_status_t OnEmptyResponse() {
+  zx_status_t OnEmptyResponse() const {
     if (auto _binding = binding_.lock()) {
       return SendOnEmptyResponseEvent(_binding->channel());
     }
     return ZX_ERR_CANCELED;
   }
 
-  zx_status_t OnWithResponse(::fidl::StringView ret) {
+  zx_status_t OnWithResponse(::fidl::StringView ret) const {
     if (auto _binding = binding_.lock()) {
       return SendOnWithResponseEvent(_binding->channel(), std::move(ret));
     }
     return ZX_ERR_CANCELED;
   }
 
-  zx_status_t OnWithResponse(::fidl::BytePart _buffer, ::fidl::StringView ret) {
+  zx_status_t OnWithResponse(::fidl::BytePart _buffer,
+                             ::fidl::StringView ret) const {
     if (auto _binding = binding_.lock()) {
       return SendOnWithResponseEvent(_binding->channel(), std::move(_buffer),
                                      std::move(ret));

@@ -73,9 +73,9 @@ class ServerBindingRef {
 
   // Return the interface for sending FIDL events. If the server has been unbound, calls on the
   // interface return error with status ZX_ERR_CANCELED.
-  typename Protocol::EventSender* get() { return &event_sender_; }
-  typename Protocol::EventSender* operator->() { return &event_sender_; }
-  typename Protocol::EventSender& operator*() { return event_sender_; }
+  const typename Protocol::EventSender* get() const { return &event_sender_; }
+  const typename Protocol::EventSender* operator->() const { return &event_sender_; }
+  const typename Protocol::EventSender& operator*() const { return event_sender_; }
 
  private:
   friend fit::result<ServerBindingRef<Protocol>, zx_status_t>

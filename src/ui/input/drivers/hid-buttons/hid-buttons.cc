@@ -57,9 +57,8 @@ void HidButtonsDevice::Notify(uint32_t type) {
   // Notify
   fbl::AutoLock lock(&channels_lock_);
   for (auto const& interface : button2channels_[type]) {
-    Buttons::SendOnNotifyEvent(zx::unowned_channel(interface->chan()),
-                               static_cast<ButtonType>(buttons_[type].id),
-                               debounce_states_[type].value);
+    interface->binding()->OnNotify(static_cast<ButtonType>(buttons_[type].id),
+                                   debounce_states_[type].value);
   }
 
   debounce_states_[type].enqueued = false;
@@ -513,10 +512,11 @@ zx_status_t HidButtonsDevice::ButtonsGetChannel(zx::channel chan, async_dispatch
   fbl::AutoLock lock(&channels_lock_);
 
   interfaces_.emplace_back(this);
-  interfaces_.back().Init(dispatcher, std::move(chan),
-                          reinterpret_cast<uint64_t>(&(interfaces_.back())));
-
-  return ZX_OK;
+  auto status = interfaces_.back().Init(dispatcher, std::move(chan),
+                                        reinterpret_cast<uint64_t>(&(interfaces_.back())));
+  if (status != ZX_OK)
+    interfaces_.pop_back();
+  return status;
 }
 
 bool HidButtonsDevice::GetState(ButtonType type) {

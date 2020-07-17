@@ -51,15 +51,17 @@ enum {
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
     : ot_radio_obj_(ot_radio) {}
 
-void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher,
-                                                     zx::channel channel) {
-  ot_radio_obj_.fidl_channel_ = zx::unowned_channel(channel);
+zx_status_t OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher,
+                                                            zx::channel channel) {
   fidl::OnUnboundFn<LowpanSpinelDeviceFidlImpl> on_unbound =
       [](LowpanSpinelDeviceFidlImpl* server, fidl::UnboundReason, zx_status_t, zx::channel) {
-        server->ot_radio_obj_.fidl_channel_ = zx::unowned_channel(ZX_HANDLE_INVALID);
         server->ot_radio_obj_.fidl_impl_obj_.release();
       };
-  fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
+  auto res = fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
+  if (res.is_error())
+    return res.error();
+  ot_radio_obj_.fidl_binding_ = res.take_value();
+  return ZX_OK;
 }
 
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync completer) {
@@ -67,8 +69,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync complet
   if (res == ZX_OK) {
     zxlogf(DEBUG, "open succeed, returning");
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
-    lowpan_spinel_fidl::Device::SendOnReadyForSendFramesEvent(ot_radio_obj_.fidl_channel_->borrow(),
-                                                              kOutboundAllowanceInit);
+    (*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kOutboundAllowanceInit);
     ot_radio_obj_.inbound_allowance_ = 0;
     ot_radio_obj_.outbound_allowance_ = kOutboundAllowanceInit;
     ot_radio_obj_.inbound_cnt_ = 0;
@@ -101,18 +102,15 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_t> data,
                                                           SendFrameCompleter::Sync completer) {
   if (ot_radio_obj_.power_status_ == OT_SPINEL_DEVICE_OFF) {
-    lowpan_spinel_fidl::Device::SendOnErrorEvent(ot_radio_obj_.fidl_channel_->borrow(),
-                                                 lowpan_spinel_fidl::Error::CLOSED, false);
+    (*ot_radio_obj_.fidl_binding_)->OnError(lowpan_spinel_fidl::Error::CLOSED, false);
   } else if (data.count() > kMaxFrameSize) {
-    lowpan_spinel_fidl::Device::SendOnErrorEvent(
-        ot_radio_obj_.fidl_channel_->borrow(), lowpan_spinel_fidl::Error::OUTBOUND_FRAME_TOO_LARGE,
-        false);
+    (*ot_radio_obj_.fidl_binding_)
+        ->OnError(lowpan_spinel_fidl::Error::OUTBOUND_FRAME_TOO_LARGE, false);
   } else if (ot_radio_obj_.outbound_allowance_ == 0) {
     // Client violates the protocol, close FIDL channel and device. Will not send OnError event.
-    ot_radio_obj_.fidl_channel_ = zx::unowned_channel(ZX_HANDLE_INVALID);
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_OFF;
     ot_radio_obj_.AssertResetPin();
-    ot_radio_obj_.fidl_impl_obj_.release();
+    ot_radio_obj_.fidl_binding_->Close(ZX_ERR_IO_OVERRUN);
     completer.Close(ZX_ERR_IO_OVERRUN);
   } else {
     // All good, send out the frame.
@@ -124,8 +122,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uin
       ot_radio_obj_.outbound_cnt_++;
       zxlogf(DEBUG, "Successfully Txed pkt, total tx pkt %lu", ot_radio_obj_.outbound_cnt_);
       if ((ot_radio_obj_.outbound_cnt_ & 1) == 0) {
-        lowpan_spinel_fidl::Device::SendOnReadyForSendFramesEvent(
-            ot_radio_obj_.fidl_channel_->borrow(), kOutboundAllowanceInc);
+        (*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kOutboundAllowanceInc);
         ot_radio_obj_.outbound_allowance_ += kOutboundAllowanceInc;
       }
     }
@@ -163,8 +160,13 @@ void OtRadioDevice::SetChannel(zx::channel channel, SetChannelCompleter::Sync co
     return;
   }
   fidl_impl_obj_ = std::make_unique<LowpanSpinelDeviceFidlImpl>(*this);
-  fidl_impl_obj_->Bind(loop_.dispatcher(), std::move(channel));
-  completer.ReplySuccess();
+  auto status = fidl_impl_obj_->Bind(loop_.dispatcher(), std::move(channel));
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    fidl_impl_obj_ = nullptr;
+    completer.ReplyError(status);
+  }
 }
 
 zx_status_t OtRadioDevice::StartLoopThread() {
@@ -296,8 +298,7 @@ zx_status_t OtRadioDevice::HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t len
     ::fidl::VectorView<uint8_t> data;
     data.set_count(length);
     data.set_data(fidl::unowned_ptr(frameBuffer));
-    zx_status_t res = lowpan_spinel_fidl::Device::SendOnReceiveFrameEvent(fidl_channel_->borrow(),
-                                                                          std::move(data));
+    zx_status_t res = (*fidl_binding_)->OnReceiveFrame(std::move(data));
     if (res != ZX_OK) {
       zxlogf(ERROR, "ot-radio: failed to send OnReceive() event due to %s",
              zx_status_get_string(res));
