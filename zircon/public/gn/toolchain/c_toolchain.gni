@@ -358,11 +358,13 @@ template("c_toolchain") {
 
       # dump_syms will fail if there is no build ID.  buildidtool succeeds and
       # writes an empty stamp file for that case, so use it to tell whether
-      # dump_syms should be run.
+      # dump_syms should be run. In any case, always create a .sym, because we
+      # told ninja we would create one above.
       assert(use_buildidtool)
       strip_command +=
           " && { " +  # The brace group is superfluous.
-          "test ! -s \"$buildid_stampfile\" || " +
+          "test ! -s \"$buildid_stampfile\" && " +
+          "touch \"$breakpad_outfile\" || " +
           "$dump_syms \"$unstripped_outfile\" > \"$breakpad_outfile\"" +
           "; }"  # But makes the control flow a little clearer.
     }
