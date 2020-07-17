@@ -211,15 +211,11 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
   StubLogListener log_listener;
   ASSERT_TRUE(log_listener.Listen(env->ConnectToService<fuchsia::logger::Log>()));
 
-  RunLoopUntil([&log_listener]() { return log_listener.GetLogs().size() >= 2; });
+  RunLoopUntil([&log_listener]() { return log_listener.GetLogs().size() >= 1; });
   auto& logs = log_listener.GetLogs();
-  auto& msg = logs[1];
+  auto& msg = logs[0];
   ASSERT_EQ(msg.tags.size(), 1u);
   ASSERT_EQ(msg.tags[0], tag);
-  auto& start_msg = logs[0];
-  ASSERT_EQ(start_msg.tags.size(), 2u);
-  ASSERT_EQ(start_msg.tags[0], "observer");
-  ASSERT_EQ(start_msg.tags[1], "archivist");
 }
 
 }  // namespace

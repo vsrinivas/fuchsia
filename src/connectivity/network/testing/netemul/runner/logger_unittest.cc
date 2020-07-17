@@ -23,7 +23,9 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
   fuchsia::sys::LaunchInfo MakeLoggerLaunchInfo() {
     fuchsia::sys::LaunchInfo ret;
     ret.url = kLoggerUrl;
-    ret.arguments = std::vector{std::string{"--disable-log-connector"}};
+    // TODO(fxb/56438) remove --consume-own-logs
+    ret.arguments =
+        std::vector{std::string{"--disable-log-connector"}, std::string{"--consume-own-logs"}};
     return ret;
   }
 

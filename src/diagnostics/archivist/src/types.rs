@@ -26,7 +26,7 @@ use {
     futures::stream::StreamExt,
     futures::{FutureExt, TryFutureExt, TryStreamExt},
     inspect_fidl_load as deprecated_inspect, io_util,
-    log::error,
+    log::{error, warn},
     parking_lot::Mutex,
     pin_utils::pin_mut,
     std::collections::HashMap,
@@ -583,7 +583,7 @@ pub trait DiagnosticsServer: 'static + Sized + Send + Sync {
             .unwrap_or_else(move |e: anyhow::Error| {
                 errorful_server_stats.global_stats.batch_iterator_get_next_errors.add(1);
                 errorful_server_stats.global_stats.batch_iterator_connections_closed.add(1);
-                error!("Error encountered running diagnostics server: {:?}", e);
+                warn!("Error encountered running diagnostics server: {:?}", e);
             }),
         );
         Ok(())

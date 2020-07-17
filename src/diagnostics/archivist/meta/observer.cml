@@ -14,6 +14,10 @@
             protocol: "/svc/fuchsia.sys2.EventSource",
             from: "framework",
         },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "parent",
+        },
     ],
     expose: [
         {

@@ -32,6 +32,10 @@ pub struct Args {
     #[argh(switch)]
     disable_log_connector: bool,
 
+    /// initializes syslog library with a log socket to itself
+    #[argh(switch)]
+    consume_own_logs: bool,
+
     /// serve fuchsia.diagnostics.test.Controller
     #[argh(switch)]
     install_controller: bool,
@@ -44,10 +48,18 @@ pub struct Args {
 fn main() -> Result<(), Error> {
     let opt: Args = argh::from_env();
 
-    let (log_client, log_server) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
-    let log_name = if opt.disable_klog { "observer" } else { "archivist" };
-    fuchsia_syslog::init_with_socket_and_name(log_client, log_name)?;
-    info!("Logging started.");
+    let log_name;
+    let mut log_server = None;
+    if opt.consume_own_logs {
+        let (log_client, server) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
+        log_server = Some(server);
+        log_name = "archivist";
+        fuchsia_syslog::init_with_socket_and_name(log_client, log_name)?;
+        info!("Logging started.");
+    } else {
+        log_name = "observer";
+        fuchsia_syslog::init_with_tags(&[log_name])?;
+    }
 
     let mut executor = fasync::Executor::new()?;
 
@@ -70,7 +82,11 @@ fn main() -> Result<(), Error> {
         .install_logger_services()
         .add_event_source("v1", Box::new(legacy_event_provider))
         .add_event_source("v2", Box::new(event_source));
-    fasync::spawn(archivist.log_manager().clone().drain_internal_log_sink(log_server, log_name));
+    if let Some(log_server) = log_server {
+        fasync::spawn(
+            archivist.log_manager().clone().drain_internal_log_sink(log_server, log_name),
+        );
+    }
 
     if opt.install_controller {
         archivist.install_controller_service();

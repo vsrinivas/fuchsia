@@ -66,14 +66,10 @@ async fn hello_world_integration_test() -> Result<(), Error> {
 
     // We should see two log messages, one that states that logging started and the hello world
     // message we're expecting.
-    let mut logs: Vec<_> = log_stream.take(2).collect().await;
+    let logs: Vec<_> = log_stream.take(1).collect().await;
 
-    // sort logs to account for out-of-order arrival
-    logs.sort_by(|a, b| a.msg.cmp(&b.msg));
-
-    assert_eq!(2, logs.len(), "log stream closed unexpectedly");
+    assert_eq!(1, logs.len(), "log stream closed unexpectedly");
     assert_eq!(logs[0].msg, "Hippo: Hello World!");
-    assert_eq!(logs[1].msg, "Logging started.");
 
     Ok(())
 }
