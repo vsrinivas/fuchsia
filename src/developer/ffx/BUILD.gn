@@ -21,6 +21,7 @@ if (host_toolchain == current_toolchain) {
     with_unit_tests = true
 
     plugin_deps = [
+      "//src/developer/ffx/packaging:ffx_packaging",
       "//src/developer/ffx/plugins/component:ffx_component",
       "//src/developer/ffx/plugins/config:ffx_config_plugin",
       "//src/developer/ffx/plugins/daemon:ffx_daemon_suite",
