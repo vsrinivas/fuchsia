@@ -33,7 +33,7 @@ int main() {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  auto broker = ExceptionBroker::Create(loop.dispatcher(), context->svc());
+  auto broker = ExceptionBroker::Create();
   if (!broker)
     return EXIT_FAILURE;
 

@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/forensics/exceptions/exception_broker.h"
+#include "src/developer/forensics/exceptions/exception_handler/handler.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
@@ -40,11 +40,10 @@ using fuchsia::exception::ExceptionType;
 using fuchsia::exception::ProcessException;
 using testing::UnorderedElementsAreArray;
 
-// ExceptionBroker unit test -----------------------------------------------------------------------
+// Handler unit test ------------------------------------------------------------------------------
 //
-// This test is meant to verify that the exception broker does the correct thing depending on the
-// configuration. The main objective of this test is to verify that the connected crash reporter and
-// exception handlers actually receive the exception from the broker.
+// The main objective of this test is to verify that the connected crash reporter actually receive
+// the exception.
 
 class StubCrashReporter : public fuchsia::feedback::CrashReporter {
  public:
@@ -113,7 +112,7 @@ class StubIntrospect : public fuchsia::sys::internal::Introspect {
   fidl::BindingSet<fuchsia::sys::internal::Introspect> bindings_;
 };
 
-// Test Setup --------------------------------------------------------------------------------------
+// Test Setup -------------------------------------------------------------------------------------
 //
 // Necessary elements for a fidl test to run. The ServiceDirectoryProvider is meant to mock the
 // environment from which a process gets its services. This is the way we "inject" in our stub
@@ -138,8 +137,8 @@ std::unique_ptr<TestContext> CreateTestContext() {
 }
 
 // Runs a loop until |condition| is true. Does this by stopping every |step| to check the condition.
-// If |condition| is never true, the thread will never leave this cycle.
-// The test harness has to be able to handle this "hanging" case.
+// If |condition| is never true, the thread will never leave this cycle. The test harness has to be
+// able to handle this "hanging" case.
 void RunUntil(TestContext* context, fit::function<bool()> condition,
               zx::duration step = zx::msec(10)) {
   while (!condition()) {
@@ -197,7 +196,7 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
     EXPECT_THAT(report.annotations(), UnorderedElementsAreArray(matchers));
   }
 
-  // If the broker could not get a minidump, it will not send a mem buffer.
+  // If the crash reporter could not get a minidump, it will not send a mem buffer.
   if (!validate_minidump) {
     ASSERT_FALSE(native_report.has_minidump());
     return;
@@ -233,96 +232,20 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
 
 // Tests -------------------------------------------------------------------------------------------
 
-TEST(ExceptionBroker, CallingMultipleExceptions) {
-  auto test_context = CreateTestContext();
-
-  // We add the services we're injecting.
-  test_context->services.AddService(test_context->crash_reporter->GetHandler());
-  test_context->services.AddService(test_context->introspect->GetHandler());
-
-  auto broker = ExceptionBroker::Create(test_context->loop.dispatcher(),
-                                        test_context->services.service_directory());
-  ASSERT_TRUE(broker);
-
-  // We create multiple exceptions.
-  ExceptionContext excps[3];
-  ASSERT_TRUE(RetrieveExceptionContext(excps + 0));
-  ASSERT_TRUE(RetrieveExceptionContext(excps + 1));
-  ASSERT_TRUE(RetrieveExceptionContext(excps + 2));
-
-  // Get the fidl representation of the exception.
-  ExceptionInfo infos[3];
-  infos[0] = ExceptionContextToExceptionInfo(excps[0]);
-  infos[1] = ExceptionContextToExceptionInfo(excps[1]);
-  infos[2] = ExceptionContextToExceptionInfo(excps[2]);
-
-  StubIntrospect::ComponentInfo component_infos[2];
-  component_infos[0] = StubIntrospect::ComponentInfo{
-      .component_url = "component_url_1",
-      .realm_path = std::vector<std::string>({"realm", "path"}),
-  };
-  component_infos[1] = StubIntrospect::ComponentInfo{
-      .component_url = "component_url_2",
-      .realm_path = std::nullopt,
-  };
-
-  for (size_t i = 0; i < 2; ++i) {
-    test_context->introspect->AddProcessKoidToComponentInfo(infos[i].process_koid,
-                                                            component_infos[i]);
-  }
-
-  // It's not easy to pass array references to lambdas.
-  bool cb_call0 = false;
-  bool cb_call1 = false;
-  bool cb_call2 = false;
-  broker->OnException(std::move(excps[0].exception), infos[0], [&cb_call0]() { cb_call0 = true; });
-  broker->OnException(std::move(excps[1].exception), infos[1], [&cb_call1]() { cb_call1 = true; });
-  broker->OnException(std::move(excps[2].exception), infos[2], [&cb_call2]() { cb_call2 = true; });
-
-  // There should be many connections opened.
-  ASSERT_EQ(broker->crash_reporters().size(), 3u);
-
-  // We wait until the crash reporter has received all exceptions.
-  RunUntil(test_context.get(),
-           [&test_context]() { return test_context->crash_reporter->reports().size() == 3u; });
-
-  EXPECT_TRUE(cb_call0);
-  EXPECT_TRUE(cb_call1);
-  EXPECT_TRUE(cb_call2);
-
-  // All connections should be killed now.
-  EXPECT_EQ(broker->crash_reporters().size(), 0u);
-
-  auto& reports = test_context->crash_reporter->reports();
-  ValidateReport(reports[0], "component_url_1", "/realm/path", true);
-  ValidateReport(reports[1], "component_url_2", true);
-  ValidateReport(reports[2], "crasher", true);
-
-  // Process limbo should be empty.
-  ASSERT_EQ(broker->limbo_manager().limbo().size(), 0u);
-
-  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
-  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
-  // environment and create noise on the overall system.
-  excps[0].job.kill();
-  excps[1].job.kill();
-  excps[2].job.kill();
-}
-
-TEST(CrashReporter, NoIntrospectConnection) {
+TEST(HandlerTest, NoIntrospectConnection) {
   auto test_context = CreateTestContext();
 
   // We add the services we're injecting.
   test_context->services.AddService(test_context->crash_reporter->GetHandler());
 
-  CrashReporter crash_reporter(test_context->services.service_directory());
+  Handler handler(test_context->services.service_directory());
 
   // Create the exception.
   ExceptionContext exception;
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
 
   bool called = false;
-  crash_reporter.FileCrashReport(std::move(exception.exception), [&called]() { called = true; });
+  handler.Handle(std::move(exception.exception), [&called]() { called = true; });
 
   // We wait until the crash reporter has received all exceptions.
   RunUntil(test_context.get(),
@@ -335,18 +258,18 @@ TEST(CrashReporter, NoIntrospectConnection) {
   exception.job.kill();
 }
 
-TEST(CrashReporter, NoCrashReporterConnection) {
+TEST(HandlerTest, NoCrashReporterConnection) {
   // We don't inject a stub service. This will make connecting to the service fail.
   auto test_context = CreateTestContext();
 
-  CrashReporter crash_reporter(test_context->services.service_directory());
+  Handler handler(test_context->services.service_directory());
 
   // Create the exception.
   ExceptionContext exception;
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
 
   bool called = false;
-  crash_reporter.FileCrashReport(std::move(exception.exception), [&called]() { called = true; });
+  handler.Handle(std::move(exception.exception), [&called]() { called = true; });
 
   RunUntil(test_context.get(), [&called]() { return called; });
 
@@ -359,16 +282,16 @@ TEST(CrashReporter, NoCrashReporterConnection) {
   exception.job.kill();
 }
 
-TEST(CrashReporter, GettingInvalidVMO) {
+TEST(HandlerTest, GettingInvalidVMO) {
   auto test_context = CreateTestContext();
   test_context->services.AddService(test_context->crash_reporter->GetHandler());
   test_context->services.AddService(test_context->introspect->GetHandler());
 
-  CrashReporter crash_reporter(test_context->services.service_directory());
+  Handler handler(test_context->services.service_directory());
 
   // We create a bogus exception, which will fail to create a valid VMO.
   bool called = false;
-  crash_reporter.FileCrashReport(zx::exception{}, [&called]() { called = true; });
+  handler.Handle(zx::exception{}, [&called]() { called = true; });
 
   RunUntil(test_context.get(),
            [&test_context]() { return test_context->crash_reporter->reports().size() == 1u; });

@@ -9,6 +9,7 @@
         "services": [
             "fuchsia.feedback.CrashReporter",
             "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
             "fuchsia.sys.internal.Introspect"
         ]
     }

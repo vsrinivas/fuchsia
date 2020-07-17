@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_CRASH_REPORTER_H_
-#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_CRASH_REPORTER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_HANDLER_H_
+#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_HANDLER_H_
 
 #include <fuchsia/exception/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
@@ -13,24 +13,24 @@
 
 #include <memory>
 
-#include "src/developer/forensics/exceptions/crash_report_builder.h"
+#include "src/developer/forensics/exceptions/exception_handler/report_builder.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace forensics {
 namespace exceptions {
 
 // Handles asynchronously filing a crash report for a given zx::exception.
-class CrashReporter {
+class Handler {
  public:
-  explicit CrashReporter(std::shared_ptr<sys::ServiceDirectory> services);
+  explicit Handler(std::shared_ptr<sys::ServiceDirectory> services);
 
-  void FileCrashReport(
+  void Handle(
       zx::exception exception, fit::closure callback = [] {});
 
  private:
   void FileCrashReport();
 
-  fxl::WeakPtr<CrashReporter> GetWeakPtr();
+  fxl::WeakPtr<Handler> GetWeakPtr();
 
   std::shared_ptr<sys::ServiceDirectory> services_;
 
@@ -40,10 +40,10 @@ class CrashReporter {
 
   fit::closure callback_;
 
-  fxl::WeakPtrFactory<CrashReporter> weak_factory_;
+  fxl::WeakPtrFactory<Handler> weak_factory_;
 };
 
 }  // namespace exceptions
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_CRASH_REPORTER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_HANDLER_H_

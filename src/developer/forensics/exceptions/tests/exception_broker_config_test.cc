@@ -1,10 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -23,24 +19,13 @@ constexpr char kTestConfigFile[] = "/pkg/data/enable_jitd_on_startup.json";
 }  // namespace
 
 TEST(ExceptionBrokerConfig, NonExistanceShouldNotActivate) {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-
-  sys::testing::ServiceDirectoryProvider services;
-
-  auto broker = ExceptionBroker::Create(loop.dispatcher(), services.service_directory());
+  auto broker = ExceptionBroker::Create();
 
   ASSERT_FALSE(broker->limbo_manager().active());
 }
 
 TEST(ExceptionBrokerConfig, ExistanceShouldActivate) {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-
-  sys::testing::ServiceDirectoryProvider services;
-
-  auto broker =
-      ExceptionBroker::Create(loop.dispatcher(), services.service_directory(), kTestConfigFile);
+  auto broker = ExceptionBroker::Create(kTestConfigFile);
 
   ASSERT_TRUE(broker->limbo_manager().active());
 
@@ -53,13 +38,7 @@ TEST(ExceptionBrokerConfig, ExistanceShouldActivate) {
 constexpr char kFilterConfigFile[] = "/pkg/data/filter_jitd_config.json";
 
 TEST(ExceptionBrokerConfig, FilterArray) {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-
-  sys::testing::ServiceDirectoryProvider services;
-
-  auto broker =
-      ExceptionBroker::Create(loop.dispatcher(), services.service_directory(), kFilterConfigFile);
+  auto broker = ExceptionBroker::Create(kFilterConfigFile);
 
   ASSERT_TRUE(broker->limbo_manager().active());
 

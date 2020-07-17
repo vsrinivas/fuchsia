@@ -1,0 +1,53 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("exe") {
+  output_name = "exception_handler"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("lib") {
+  sources = [
+    "handler.cc",
+    "handler.h",
+    "minidump.cc",
+    "minidump.h",
+    "report_builder.cc",
+    "report_builder.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.exception",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.sys.internal",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//third_party/crashpad/minidump",
+    "//third_party/crashpad/snapshot",
+    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
+    "//third_party/crashpad/util",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
+  ]
+}

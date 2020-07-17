@@ -3,9 +3,6 @@
 
 #include "src/developer/forensics/exceptions/process_limbo_manager.h"
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
@@ -29,20 +26,6 @@ using fuchsia::exception::ProcessLimbo_ReleaseProcess_Result;
 using fuchsia::exception::ProcessLimbo_RemoveFilters_Result;
 using fuchsia::exception::ProcessLimbo_RetrieveException_Result;
 using fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result;
-
-struct TestContext {
-  async::Loop loop;
-  sys::testing::ServiceDirectoryProvider services;
-};
-
-std::unique_ptr<TestContext> CreateTestContext() {
-  std::unique_ptr<TestContext> context(new TestContext{
-      .loop = async::Loop(&kAsyncLoopConfigAttachToCurrentThread),
-      .services = sys::testing::ServiceDirectoryProvider{},
-  });
-
-  return context;
-}
 
 bool RetrieveExceptionContext(ExceptionContext* pe) {
   // Create a process that crashes and obtain the relevant handles and exception.
@@ -338,9 +321,7 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
 }
 
 TEST(ProcessLimboManager, FromExceptionBroker) {
-  auto test_context = CreateTestContext();
-  auto broker = ExceptionBroker::Create(test_context->loop.dispatcher(),
-                                        test_context->services.service_directory());
+  auto broker = ExceptionBroker::Create();
   ASSERT_TRUE(broker);
   ASSERT_TRUE(broker->limbo_manager().SetActive(true));
 
@@ -363,9 +344,6 @@ TEST(ProcessLimboManager, FromExceptionBroker) {
   broker->OnException(std::move(excps[0].exception), infos[0], [&cb_call0]() { cb_call0 = true; });
   broker->OnException(std::move(excps[1].exception), infos[1], [&cb_call1]() { cb_call1 = true; });
   broker->OnException(std::move(excps[2].exception), infos[2], [&cb_call2]() { cb_call2 = true; });
-
-  // There should not be an outgoing connection and no reports generated.
-  ASSERT_EQ(broker->crash_reporters().size(), 0u);
 
   // There should be 3 exceptions on the limbo.
   auto& limbo = broker->limbo_manager().limbo();

@@ -100,8 +100,8 @@ executable("exception_broker_unittest") {
   testonly = true
 
   sources = [
-    "crash_report_generation_unittest.cc",
-    "exception_broker_unittest.cc",
+    "handler_unittest.cc",
+    "minidump_unittest.cc",
     "process_limbo_manager_unittest.cc",
     "unittest_main.cc",
   ]
@@ -111,6 +111,7 @@ executable("exception_broker_unittest") {
     "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/forensics/exceptions:lib",
+    "//src/developer/forensics/exceptions/exception_handler:lib",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/lib/fxl",

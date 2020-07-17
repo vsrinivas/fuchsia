@@ -20,7 +20,10 @@ fuchsia_component("component") {
 
   manifest = "meta/exceptions.cmx"
 
-  deps = [ ":exe" ]
+  deps = [
+    ":exe",
+    "exception_handler:exe",
+  ]
 }
 
 ###############################################################################
@@ -39,12 +42,6 @@ executable("exe") {
 ###############################################################################
 source_set("lib") {
   sources = [
-    "crash_report_builder.cc",
-    "crash_report_builder.h",
-    "crash_report_generation.cc",
-    "crash_report_generation.h",
-    "crash_reporter.cc",
-    "crash_reporter.h",
     "exception_broker.cc",
     "exception_broker.h",
     "json_utils.cc",
@@ -55,16 +52,10 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.exception",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//third_party/crashpad/minidump",
-    "//third_party/crashpad/snapshot",
-    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
-    "//third_party/crashpad/util",
     "//third_party/rapidjson",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

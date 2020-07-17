@@ -3,6 +3,7 @@
 
 #include <fuchsia/exception/cpp/fidl.h>
 #include <fuchsia/feedback/testing/cpp/fidl.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
