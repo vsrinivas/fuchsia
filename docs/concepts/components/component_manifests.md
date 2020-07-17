@@ -564,6 +564,17 @@ explained in [Routing terminology](#routing-terminology).
     capability. If omitted, defaults to the source path. `as` cannot be used:
     -   For storage capabilities.
     -   When `protocol` is an array of multiple items.
+-   `dependency` _(optional)_: The type of dependency between the source and
+    targets, one of:
+    -   `strong`: a strong dependency, which is used to determine shutdown
+        ordering. Component manager is guaranteed to stop the target before the
+        source. This is the default.
+    -   `weak_for_migration`: a weak dependency, which is ignored during
+        shutdown. When component manager stops the parent realm, the source may
+        stop before the clients. Clients of weak dependencies must be able to
+        handle these dependencies becoming unavailable. This type exists to keep
+        track of weak dependencies that resulted from migrations into v2
+        components.
 
 Example:
 
@@ -573,6 +584,7 @@ Example:
         "protocol": "/svc/fuchsia.logger.LogSink",
         "from": "#logger",
         "to": [ "#fshost", "#pkg_cache" ],
+        "dependency": "weak_for_migration",
     },
     {
         "protocol": [
@@ -581,6 +593,7 @@ Example:
         ],
         "from": "#session",
         "to": [ "#ui_shell" ],
+        "dependency": "strong",
     },
     {
         "directory": "/data/blobfs",
