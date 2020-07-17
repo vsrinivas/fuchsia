@@ -1339,6 +1339,29 @@ foreach(firmware, firmware_prebuilts) {
   ]
 }
 
+# If a GPT image was specified, make it available as a build artifact.
+if (gpt_image != "") {
+  copy("gpt") {
+    testonly = true
+    sources = [ rebase_path(gpt_image, root_build_dir) ]
+    outputs = [ "$root_out_dir/gpt.bin" ]
+
+    metadata = {
+      images = [
+        {
+          archive = true
+          name = "gpt"
+          path = "gpt.bin"
+          type = "bin"
+        },
+      ]
+      image_paths = [ "IMAGE_GPT=gpt.bin" ]
+    }
+  }
+
+  default_image_deps += [ ":gpt" ]
+}
+
 action("filesystem_sizes.json") {
   testonly = true
   script = "format_filesystem_sizes.py"

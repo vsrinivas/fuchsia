@@ -55,6 +55,11 @@ declare_args() {
   # that users can easily switch revisions using a single arg.
   firmware_prebuilts_path_suffix = ""
 
+  # GUID Partition Table (GPT) image.
+  #
+  # Typically useful for initially flashing a device from zero-state.
+  gpt_image = ""
+
   # Path to manifest file containing data to place into the initial /data
   # partition.
   data_partition_manifest = ""
