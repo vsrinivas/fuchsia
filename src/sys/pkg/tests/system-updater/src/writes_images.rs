@@ -10,10 +10,7 @@ async fn fails_on_paver_connect_error() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
     let result = env
@@ -34,14 +31,7 @@ async fn fails_on_paver_connect_error() {
     let interactions = env.take_interactions();
     assert!(
         interactions == &[]
-            || interactions
-                == &[
-                    Gc,
-                    PackageResolve(UPDATE_PKG_URL.to_string()),
-                    Gc,
-                    PackageResolve(SYSTEM_IMAGE_URL.to_string()),
-                    BlobfsSync,
-                ],
+            || interactions == &[Gc, PackageResolve(UPDATE_PKG_URL.to_string()), Gc, BlobfsSync,],
         "expected early failure or failure while querying active configuration. Got {:#?}",
         interactions
     );
@@ -54,10 +44,7 @@ async fn fails_on_image_write_error() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
     let result = env
@@ -90,7 +77,6 @@ async fn fails_on_image_write_error() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
         ]
@@ -103,10 +89,7 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi")
         .add_file("zedboot", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
@@ -127,7 +110,6 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
@@ -151,10 +133,7 @@ async fn writes_to_both_configs_if_abr_not_supported() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
@@ -186,7 +165,6 @@ async fn writes_to_both_configs_if_abr_not_supported() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::A,
@@ -213,10 +191,7 @@ async fn do_writes_to_inactive_config_if_abr_supported(
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
@@ -248,7 +223,6 @@ async fn do_writes_to_inactive_config_if_abr_supported(
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
@@ -282,10 +256,7 @@ async fn writes_recovery_called_legacy_zedboot() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi")
         .add_file("zedboot", "new recovery");
 
@@ -304,7 +275,6 @@ async fn writes_recovery_called_legacy_zedboot() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
@@ -332,10 +302,7 @@ async fn writes_recovery() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi")
         .add_file("recovery", "new recovery");
 
@@ -354,7 +321,6 @@ async fn writes_recovery() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
@@ -381,10 +347,7 @@ async fn writes_recovery_vbmeta() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi")
         .add_file("zedboot", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
@@ -404,7 +367,6 @@ async fn writes_recovery_vbmeta() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
@@ -436,10 +398,7 @@ async fn writes_fuchsia_vbmeta() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi")
         .add_file("fuchsia.vbmeta", "fake zbi vbmeta");
 
@@ -458,7 +417,6 @@ async fn writes_fuchsia_vbmeta() {
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
