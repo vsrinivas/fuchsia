@@ -194,8 +194,7 @@ class MmioBuffer {
     zxlogf(INFO, "size = %lu", get_size());
   }
 
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  void* get() const { return (void*)(mmio_.vaddr); }
+  MMIO_PTR void* get() const { return mmio_.vaddr; }
   zx_off_t get_offset() const { return mmio_.offset; }
   size_t get_size() const { return mmio_.size; }
   zx::unowned_vmo get_vmo() const { return zx::unowned_vmo(mmio_.vmo); }

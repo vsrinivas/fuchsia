@@ -122,7 +122,7 @@ class AmlSdEmmcTest : public zxtest::Test {
     EXPECT_EQ(mmio_.Read32(kAmlSdEmmcAdjustOffset), 0);
 
     mmio_.Write32(1, kAmlSdEmmcCfgOffset);  // Set bus width 4.
-    memcpy(reinterpret_cast<uint8_t*>(mmio_.get()) + kAmlSdEmmcPingOffset,
+    memcpy(reinterpret_cast<uint8_t*>(registers_.get()) + kAmlSdEmmcPingOffset,
            aml_sd_emmc_tuning_blk_pattern_4bit, sizeof(aml_sd_emmc_tuning_blk_pattern_4bit));
   }
 

@@ -56,8 +56,9 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
   metadata.read(phdrs.data(), ehdr.e_phoff, ehdr.e_phnum * sizeof(Elf32_Phdr));
 
   // Copy metadata to the intended physical address.
-  status =
-      zx_vmo_read(metadata.get(), mmios_[fw_n]->get(), 0, ZX_ROUNDUP(metadata_size, PAGE_SIZE));
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  status = zx_vmo_read(metadata.get(), (void*)mmios_[fw_n]->get(), 0,
+                       ZX_ROUNDUP(metadata_size, PAGE_SIZE));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s VMO read failed %d", __func__, status);
     return status;

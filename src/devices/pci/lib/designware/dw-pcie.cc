@@ -56,7 +56,8 @@ zx_status_t DwPcie::ProgramOutboundAtu(const uint32_t index, const uint32_t type
   // Each ATU region has its own bank of registers at this offset from the
   // DBI base
   const size_t bank_offset = (0x3 << 20) | (index << 9);
-  volatile uint8_t* atu_base = reinterpret_cast<volatile uint8_t*>(dbi_.get()) + bank_offset;
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  volatile uint8_t* atu_base = reinterpret_cast<volatile uint8_t*>((void*)dbi_.get()) + bank_offset;
 
   volatile atu_ctrl_regs_t* regs = reinterpret_cast<volatile atu_ctrl_regs_t*>(atu_base);
 

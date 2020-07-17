@@ -62,7 +62,8 @@ int xhci_get_root_hub_index(xhci_t* xhci, uint32_t device_id) {
 
 static void xhci_read_extended_caps(xhci_t* xhci) {
   uint32_t* cap_ptr = nullptr;
-  while ((cap_ptr = xhci_get_next_ext_cap(xhci->mmio->get(), cap_ptr, nullptr))) {
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  while ((cap_ptr = xhci_get_next_ext_cap((void*)xhci->mmio->get(), cap_ptr, nullptr))) {
     uint32_t cap_id =
         XHCI_GET_BITS32(cap_ptr, EXT_CAP_CAPABILITY_ID_START, EXT_CAP_CAPABILITY_ID_BITS);
 
@@ -152,6 +153,7 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
   usb_request_pool_init(&xhci->free_reqs,
                         sizeof(usb_request_t) + offsetof(xhci_usb_request_internal_t, node));
 
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
   xhci->cap_regs = (xhci_cap_regs_t*)xhci->mmio->get();
   xhci->op_regs = (xhci_op_regs_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->length);
   xhci->doorbells = (uint32_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->dboff);
@@ -346,7 +348,8 @@ fail:
 }
 
 uint32_t xhci_get_max_interrupters(xhci_t* xhci) {
-  auto* cap_regs = static_cast<xhci_cap_regs_t*>(xhci->mmio->get());
+  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  auto* cap_regs = static_cast<xhci_cap_regs_t*>((void*)xhci->mmio->get());
   volatile uint32_t* hcsparams1 = &cap_regs->hcsparams1;
   return XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START, HCSPARAMS1_MAX_INTRS_BITS);
 }

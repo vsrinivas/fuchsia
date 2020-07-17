@@ -7,7 +7,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <hw/reg.h>
 #include <soc/aml-common/aml-usb-phy.h>
 #include <soc/aml-s912/s912-hw.h>
 
@@ -66,38 +65,39 @@ zx_status_t Vim::UsbInit() {
     return status;
   }
 
-  volatile uint8_t* regs = static_cast<uint8_t*>(usb_phy->get());
+  MMIO_PTR volatile auto* regs = static_cast<MMIO_PTR uint32_t*>(usb_phy->get());
 
   // amlogic_new_usb2_init
   for (int i = 0; i < 4; i++) {
-    volatile uint8_t* addr = regs + (i * PHY_REGISTER_SIZE) + U2P_R0_OFFSET;
+    MMIO_PTR volatile auto* addr =
+        regs + (i * PHY_REGISTER_SIZE / sizeof(uint32_t)) + U2P_R0_OFFSET;
 
-    uint32_t temp = readl(addr);
+    uint32_t temp = MmioRead32(addr);
     temp |= U2P_R0_POR;
     temp |= U2P_R0_DMPULLDOWN;
     temp |= U2P_R0_DPPULLDOWN;
     if (i == 1) {
       temp |= U2P_R0_IDPULLUP;
     }
-    writel(temp, addr);
+    MmioWrite32(temp, addr);
     zx_nanosleep(zx_deadline_after(ZX_USEC(500)));
-    temp = readl(addr);
+    temp = MmioRead32(addr);
     temp &= ~U2P_R0_POR;
-    writel(temp, addr);
+    MmioWrite32(temp, addr);
   }
 
   // amlogic_new_usb3_init
-  volatile uint8_t* addr = regs + (4 * PHY_REGISTER_SIZE);
+  MMIO_PTR volatile auto* addr = regs + (4 * PHY_REGISTER_SIZE / sizeof(uint32_t));
 
-  uint32_t temp = readl(addr + USB_R1_OFFSET);
+  uint32_t temp = MmioRead32(addr + USB_R1_OFFSET);
   temp = SET_BITS(temp, USB_R1_U3H_FLADJ_30MHZ_REG_START, USB_R1_U3H_FLADJ_30MHZ_REG_BITS, 0x20);
-  writel(temp, addr + USB_R1_OFFSET);
+  MmioWrite32(temp, addr + USB_R1_OFFSET);
 
-  temp = readl(addr + USB_R5_OFFSET);
+  temp = MmioRead32(addr + USB_R5_OFFSET);
   temp |= USB_R5_IDDIG_EN0;
   temp |= USB_R5_IDDIG_EN1;
   temp = SET_BITS(temp, USB_R5_IDDIG_TH_START, USB_R5_IDDIG_TH_BITS, 255);
-  writel(temp, addr + USB_R5_OFFSET);
+  MmioWrite32(temp, addr + USB_R5_OFFSET);
 
   if ((status = pbus_.DeviceAdd(&xhci_dev)) != ZX_OK) {
     zxlogf(ERROR, "UsbInit could not add xhci_dev: %d", status);
