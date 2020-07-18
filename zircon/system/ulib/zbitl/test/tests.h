@@ -1,0 +1,142 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
+#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
+
+#include <lib/zbitl/view.h>
+
+#include <string>
+#include <type_traits>
+
+#include <zxtest/zxtest.h>
+
+#include "corpus.h"
+
+#define ASSERT_IS_OK(result)                                              \
+  do {                                                                    \
+    const auto& result_ = result;                                         \
+    ASSERT_TRUE(result_.is_ok(), "unexpected error: %.*s",                \
+                static_cast<int>(result_.error_value().zbi_error.size()), \
+                result_.error_value().zbi_error.data());                  \
+  } while (0)
+
+// Usage of StorageIo below is a default-constructible class that should look
+// like
+// * a namespace member of `storage_type`, giving the underlying storage type.
+// * a means of creating a 'ZBI' of that type from a string representation:
+//   ```
+//  void Create(std::string_view, storage_type* zbi)
+//   ```
+// * a means of reading the payload of an item:
+//   ```
+//  void ReadPayload(const storage_type& zbi, const zbi_header_t& header, payload_type payload)
+//   ```
+// (where payload_type is that of the official storage traits associated with
+// storage_type.)
+
+template <typename StorageIo>
+inline void TestDefaultConstructedView(bool expect_storage_error) {
+  static_assert(std::is_default_constructible_v<typename StorageIo::storage_type>,
+                "this test case only applies to default-constructible storage types");
+
+  zbitl::View<typename StorageIo::storage_type> view;
+
+  // This ensures that everything statically compiles when instantiating the
+  // templates, even though the header/payloads are never used.
+  for (auto [header, payload] : view) {
+    EXPECT_EQ(header->flags, header->flags);
+    EXPECT_TRUE(false, "should not be reached");
+  }
+
+  auto error = view.take_error();
+  ASSERT_TRUE(error.is_error(), "no error when header cannot be read??");
+  EXPECT_FALSE(error.error_value().zbi_error.empty(), "empty zbi_error string!!");
+  if (expect_storage_error) {
+    EXPECT_TRUE(error.error_value().storage_error.is_error());
+  } else {
+    EXPECT_TRUE(error.error_value().storage_error.is_ok());
+  }
+}
+
+template <typename StorageIo>
+inline void TestEmptyZbi() {
+  StorageIo io;
+
+  typename StorageIo::storage_type zbi;
+  ASSERT_NO_FATAL_FAILURES(
+      io.Create({zbitl::test::kEmptyZbi, sizeof(zbitl::test::kEmptyZbi)}, &zbi));
+  zbitl::View view(std::move(zbi));  // Yay deduction guides!
+
+  ASSERT_IS_OK(view.container_header());
+
+  EXPECT_EQ(view.end(), view.begin());
+
+  for (auto [header, payload] : view) {
+    EXPECT_EQ(header->type, header->type);
+    EXPECT_TRUE(false, "should not be reached");
+  }
+
+  auto error = view.take_error();
+  EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+               error.error_value().item_offset);
+}
+
+template <typename StorageIo>
+inline void TestSimpleZbi() {
+  StorageIo io;
+
+  typename StorageIo::storage_type zbi;
+  ASSERT_NO_FATAL_FAILURES(
+      io.Create({zbitl::test::kSimpleZbi, sizeof(zbitl::test::kSimpleZbi)}, &zbi));
+  zbitl::View view(std::move(zbi));
+
+  ASSERT_IS_OK(view.container_header());
+
+  size_t num_items = 0;
+  for (auto [header, payload] : view) {
+    EXPECT_EQ(ZBI_TYPE_CMDLINE, header->type);
+
+    std::string contents;
+    ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &contents));
+    switch (num_items++) {
+      case 0:
+        EXPECT_STR_EQ("hello world", contents.c_str(), "payload: %s", contents.c_str());
+        break;
+    }
+    const uint32_t flags = header->flags;
+    EXPECT_TRUE(flags & ZBI_FLAG_VERSION, "flags: %#x", flags);
+  }
+  EXPECT_EQ(1, num_items);
+
+  auto error = view.take_error();
+  EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+               error.error_value().item_offset);
+}
+
+template <typename StorageIo>
+void TestBadCrcZbi() {
+  StorageIo io;
+
+  typename StorageIo::storage_type zbi;
+  ASSERT_NO_FATAL_FAILURES(
+      io.Create({zbitl::test::kBadCrcZbi, sizeof(zbitl::test::kBadCrcZbi)}, &zbi));
+  zbitl::View<typename StorageIo::storage_type, zbitl::Checking::kCrc> view(std::move(zbi));
+
+  ASSERT_IS_OK(view.container_header());
+
+  for (auto [header, payload] : view) {
+    EXPECT_EQ(header->type, header->type);
+    EXPECT_TRUE(false, "should not be reached");
+  }
+
+  auto error = view.take_error();
+  ASSERT_TRUE(error.is_error());
+  // The error shouldn't be one of storage.
+  EXPECT_TRUE(error.error_value().storage_error.is_ok());
+}
+
+#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_

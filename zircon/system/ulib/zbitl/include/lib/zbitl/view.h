@@ -263,9 +263,9 @@ class View {
           offset_ += ZBI_ALIGN(header_->length);
           payload_ = std::move(payload.value());
           if constexpr (Check == Checking::kCrc) {
-            if (auto crc = Traits::Crc32(view_->storage(), offset_, header_.length);
+            if (auto crc = Traits::Crc32(view_->storage(), offset_, header_->length);
                 crc.is_error()) {
-              Fail("cannot compute payload CRC32", std::move(crc));
+              Fail("cannot compute payload CRC32", fitx::error{std::move(crc.error_value())});
             }
           }
         }

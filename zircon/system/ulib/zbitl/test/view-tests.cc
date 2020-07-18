@@ -2,54 +2,57 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zbitl/view.h>
-
-#include <zxtest/zxtest.h>
+#include "tests.h"
 
 namespace {
 
-alignas(ZBI_ALIGNMENT) constexpr char kEmptyZbiHeader[] =
-    "\x42\x4f\x4f\x54\x00\x00\x00\x00\xe6\xf7\x8c\x86\x00\x00\x01\x00"
-    "\x00\x00\x00\x00\x00\x00\x00\x00\x29\x17\x78\xb5\xd6\xe8\x87\x4a";
-constexpr std::string_view kEmptyZbi(kEmptyZbiHeader, sizeof(kEmptyZbiHeader));
+struct TestEmptyTupleTraits {
+  using storage_type = std::tuple<>;
+};
 
-TEST(ZbitlViewTests, Basic) {
-  zbitl::View view(kEmptyZbi);  // Yay deduction guides!
-  for (auto [header, payload] : view) {
-    EXPECT_EQ(header->type, header->type);
-    EXPECT_TRUE(false, "should not be reached");
+template <typename T>
+struct BasicStringIo {
+  using storage_type = std::basic_string_view<T>;
+
+  void Create(std::string_view contents, std::basic_string_view<T>* zbi) {
+    ASSERT_EQ(0, contents.size() % sizeof(T), "size (%zu) is not a multiple of %lu",
+              contents.size(), sizeof(T));
+    *zbi = std::basic_string_view<T>(reinterpret_cast<const T*>(contents.data()),
+                                     contents.size() / sizeof(T));
   }
 
-  auto error = view.take_error();
-  ASSERT_FALSE(error.is_error(), "%s at offset %#x",
-               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
-               error.error_value().item_offset);
-}
-
-TEST(ZbitlViewTests, Error) {
-  zbitl::View<std::string_view> view;
-  for (auto [header, payload] : view) {
-    EXPECT_EQ(header->type, header->type);
-    EXPECT_TRUE(false, "should not be reached");
+  void ReadPayload(std::basic_string_view<T> zbi, const zbi_header_t& header,
+                   std::basic_string_view<T> payload, std::string* string) {
+    *string =
+        std::string(reinterpret_cast<const char*>(payload.data()), payload.size() * sizeof(T));
   }
+};
 
-  auto error = view.take_error();
-  ASSERT_TRUE(error.is_error(), "no error when header cannot be read??");
-  EXPECT_FALSE(error.error_value().zbi_error.empty(), "empty zbi_error string!!");
-  EXPECT_TRUE(error.error_value().storage_error.is_ok(), "read past capacity?");
+using StringIo = BasicStringIo<char>;
+using ByteViewIo = BasicStringIo<std::byte>;
+
+TEST(ZbitlViewEmptyTupleTests, DefaultConstructed) {
+  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<TestEmptyTupleTraits>(true));
 }
 
-TEST(ZbitlViewTests, StorageError) {
-  zbitl::View<std::tuple<>> view;
-  for (auto [header, payload] : view) {
-    EXPECT_EQ(header->type, header->type);
-    EXPECT_TRUE(false, "should not be reached");
-  }
-
-  auto error = view.take_error();
-  ASSERT_TRUE(error.is_error(), "no error when header cannot be read??");
-  EXPECT_FALSE(error.error_value().zbi_error.empty(), "empty zbi_error string!!");
-  EXPECT_TRUE(error.error_value().storage_error.is_error(), "read error not propagated?");
+TEST(ZbitlViewStringTests, DefaultConstructed) {
+  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<StringIo>(false));
 }
+
+TEST(ZbitlViewStringTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<StringIo>()); }
+
+TEST(ZbitlViewStringTests, SimpleZbi) { ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<StringIo>()); }
+
+TEST(ZbitlViewStringTests, BadCrcZbi) { ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<StringIo>()); }
+
+TEST(ZbitlViewByteViewTests, DefaultConstructed) {
+  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<ByteViewIo>(false));
+}
+
+TEST(ZbitlViewByteViewTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<ByteViewIo>()); }
+
+TEST(ZbitlViewByteViewTests, SimpleZbi) { ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<ByteViewIo>()); }
+
+TEST(ZbitlViewByteViewTests, BadCrcZbi) { ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<ByteViewIo>()); }
 
 }  // namespace

@@ -29,6 +29,7 @@ test("zbitl-unittests") {
     "view-tests.cc",
   ]
   deps = [
+    "//src/lib/fxl",
     "//zircon/public/lib/zbitl",
     "//zircon/public/lib/zxtest",
   ]
