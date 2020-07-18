@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <lib/trace/event.h>
 
+#include <cmath>
 #include <fstream>
 #include <regex>
 #include <sstream>
@@ -82,33 +83,39 @@ std::string SortLog(const std::string& log) {
 }  // namespace
 
 bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder* decoder,
-                 const std::string& output_file_path) {
-  uint64_t log_size{0};
+                 const std::string& output_file_path, float* compression_ratio) {
+  uint64_t total_compressed_log_size{0};
   for (auto path = input_file_paths.crbegin(); path != input_file_paths.crend(); ++path) {
     uint64_t size;
-    files::GetFileSize(*path, &size);
-    log_size += size;
+    // To get a valid size, the file must exist!
+    if (files::IsFile(*path)) {
+      files::GetFileSize(*path, &size);
+      total_compressed_log_size += size;
+    }
   }
 
-  if (log_size == 0) {
+  if (total_compressed_log_size == 0) {
     return false;
   }
 
-  std::string log;
+  std::string uncompressed_log;
   for (auto path = input_file_paths.crbegin(); path != input_file_paths.crend(); ++path) {
     std::string block;
     if (!files::ReadFileToString(*path, &block)) {
       continue;
     }
 
-    log += decoder->Decode(block);
+    uncompressed_log += decoder->Decode(block);
   }
 
-  if (log.empty()) {
+  if (uncompressed_log.empty()) {
+    *compression_ratio = NAN;
     return false;
   }
 
-  return files::WriteFile(output_file_path, SortLog(log));
+  *compression_ratio = ((float)uncompressed_log.size()) / (float)total_compressed_log_size;
+
+  return files::WriteFile(output_file_path, SortLog(uncompressed_log));
 }
 
 }  // namespace system_log_recorder

@@ -9,6 +9,7 @@
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -56,6 +57,14 @@ class EncoderStub : public Encoder {
 
  private:
   std::vector<std::string> input_ = {""};
+};
+
+class Decoder2x : public Decoder {
+ public:
+  Decoder2x() {}
+  virtual ~Decoder2x() {}
+  virtual std::string Decode(const std::string& msg) { return msg + msg; }
+  virtual void Reset() {}
 };
 
 std::unique_ptr<Encoder> MakeIdentityEncoder() {
@@ -384,7 +393,9 @@ TEST(WriterTest, VerifyFileRotation) {
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  float compression_ratio;
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+  EXPECT_EQ(compression_ratio, 1.0);
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -445,7 +456,9 @@ TEST(WriterTest, WritesMessages) {
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  float compression_ratio;
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+  EXPECT_EQ(compression_ratio, 1.0);
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -458,12 +471,34 @@ TEST(WriterTest, WritesMessages) {
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 4")));
   writer.Write();
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+  EXPECT_EQ(compression_ratio, 1.0);
 
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 3
 [15604.000][07559][07687][] INFO: line 4
 )");
+}
+
+TEST(WriterTest, VerifyCompressionRatio) {
+  // Generate 2x data when decoding. The decoder data output is not useful, just its size.
+  files::ScopedTempDir temp_dir;
+  const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/2);
+
+  LogMessageStore store(kMaxLogLineSize * 4, kMaxLogLineSize * 4, MakeIdentityEncoder());
+  SystemLogWriter writer(file_paths, &store);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  writer.Write();
+
+  const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
+  Decoder2x decoder;
+
+  float compression_ratio;
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+  EXPECT_EQ(compression_ratio, 2.0);
 }
 
 TEST(WriterTest, VerifyProductionEcoding) {
@@ -485,7 +520,9 @@ TEST(WriterTest, VerifyProductionEcoding) {
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
   ProductionDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  float compression_ratio;
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+  EXPECT_FALSE(std::isnan(compression_ratio));
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -518,7 +555,9 @@ TEST(ReaderTest, SortsMessages) {
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  float compression_ratio;
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+  EXPECT_EQ(compression_ratio, 1.0);
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -559,7 +598,9 @@ TEST(ReaderTest, SortsMessagesMultipleFiles) {
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  float compression_ratio;
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+  EXPECT_EQ(compression_ratio, 1.0);
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -650,7 +691,11 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  {
+    float compression_ratio;
+    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    EXPECT_EQ(compression_ratio, 1.0);
+  }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -659,7 +704,11 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  {
+    float compression_ratio;
+    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    EXPECT_EQ(compression_ratio, 1.0);
+  }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -669,7 +718,11 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  {
+    float compression_ratio;
+    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    EXPECT_EQ(compression_ratio, 1.0);
+  }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -680,7 +733,11 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  {
+    float compression_ratio;
+    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    EXPECT_EQ(compression_ratio, 1.0);
+  }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9
@@ -690,7 +747,11 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  {
+    float compression_ratio;
+    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    EXPECT_EQ(compression_ratio, 1.0);
+  }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9
@@ -701,7 +762,11 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path));
+  {
+    float compression_ratio;
+    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    EXPECT_EQ(compression_ratio, 1.0);
+  }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9

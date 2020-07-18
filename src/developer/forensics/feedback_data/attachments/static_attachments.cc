@@ -15,6 +15,7 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -45,8 +46,12 @@ AttachmentValue ReadAttachmentValueFromFilepath(const AttachmentKey& key,
 void CreatePreviousLogsFile() {
   // We read the set of /cache files into a single /tmp file.
   system_log_recorder::ProductionDecoder decoder;
-  if (system_log_recorder::Concatenate(kCurrentLogsFilePaths, &decoder, kPreviousLogsFilePath)) {
-    FX_LOGS(INFO) << "Found logs from previous boot cycle, available at " << kPreviousLogsFilePath;
+  float compression_ratio;
+  if (system_log_recorder::Concatenate(kCurrentLogsFilePaths, &decoder, kPreviousLogsFilePath,
+                                       &compression_ratio)) {
+    FX_LOGS(INFO) << fxl::StringPrintf(
+        "Found logs from previous boot cycle (compression ratio %.2f), available at %s\n",
+        compression_ratio, kPreviousLogsFilePath);
 
     // Clean up the /cache files now that they have been concatenated into a single /tmp file.
     for (const auto& file : kCurrentLogsFilePaths) {

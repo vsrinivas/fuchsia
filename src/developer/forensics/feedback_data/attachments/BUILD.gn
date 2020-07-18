@@ -60,6 +60,7 @@ source_set("static_attachments") {
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
     "//src/developer/forensics/utils:errors",
     "//src/lib/files",
+    "//src/lib/fxl",
   ]
 }
 

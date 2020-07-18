@@ -15,7 +15,7 @@ namespace feedback_data {
 namespace system_log_recorder {
 
 bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder* decoder,
-                 const std::string& output_file_path);
+                 const std::string& output_file_path, float* compression_ratio);
 
 }  // namespace system_log_recorder
 }  // namespace feedback_data
