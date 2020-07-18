@@ -104,6 +104,9 @@ extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
   return false;
 }
 
+extern "C" void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
+                                      const char* msg, va_list args) {}
+
 extern "C" void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
                                      const char* msg, ...) {}
 

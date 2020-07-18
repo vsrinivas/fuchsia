@@ -6,6 +6,7 @@
 #define SRC_LIB_DDK_INCLUDE_DDK_DEBUG_H_
 
 #include <lib/syslog/logger.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 
@@ -77,11 +78,23 @@ bool driver_log_severity_enabled_internal(const zx_driver_t* drv, fx_log_severit
 void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* msg, ...)
     __PRINTFLIKE(3, 4);
 
+// Do not use this function directly, use zxlogvf() instead.
+void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* msg,
+                           va_list args);
+
 // Do not use this macro directly, use zxlogf() instead.
 #define zxlogf_etc(flag, msg...)                                                    \
   do {                                                                              \
     if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) { \
       driver_logf_internal(__zircon_driver_rec__.driver, flag, msg);                \
+    }                                                                               \
+  } while (0)
+
+// Do not use this macro directly, use zxlogvf() instead.
+#define zxlogvf_etc(flag, format, args)                                             \
+  do {                                                                              \
+    if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) { \
+      driver_logvf_internal(__zircon_driver_rec__.driver, flag, format, args);      \
     }                                                                               \
   } while (0)
 
@@ -98,6 +111,23 @@ void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const 
 // Example driver.floppydisk.log=trace
 //
 #define zxlogf(flag, msg...) zxlogf_etc(DDK_LOG_##flag, msg)
+
+// zxlogvf() is similar to zxlogf() but it accepts a va_list as argument,
+// analogous to vprintf() and printf().
+//
+// Examples:
+//   void log(const char* format, ...) {
+//     std::string new_format = std::string("[tag] ") + format;
+//
+//     va_list args;
+//     va_start(args, format);
+//     zxlogvf(new_format.c_str(), args);
+//     va_end(args);
+//   }
+//
+// The debug levels are the same as those of zxlogf() macro.
+//
+#define zxlogvf(flag, format, args) zxlogvf_etc(DDK_LOG_##flag, format, args);
 
 __END_CDECLS
 

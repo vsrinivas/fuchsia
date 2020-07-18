@@ -492,12 +492,17 @@ extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
   return flag >= fake_ddk::kMinLogSeverity;
 }
 
+extern "C" void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
+                                      const char* msg, va_list args) {
+  vfprintf(stdout, msg, args);
+  putchar('\n');
+}
+
 extern "C" void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
                                      const char* msg, ...) {
   va_list args;
   va_start(args, msg);
-  vfprintf(stdout, msg, args);
-  putchar('\n');
+  driver_logvf_internal(drv, flag, msg, args);
   va_end(args);
 }
 
