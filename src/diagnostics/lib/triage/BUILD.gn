@@ -25,6 +25,14 @@ rustc_library("triage") {
   deps = lib_deps
 }
 
-rustc_test("unittests") {
+rustc_test("triage_unittests") {
   deps = [ ":triage" ] + lib_deps
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":triage_unittests($host_toolchain)",
+    "wasm:tests",
+  ]
 }

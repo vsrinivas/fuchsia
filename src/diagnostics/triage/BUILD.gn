@@ -18,6 +18,9 @@ group("triage") {
   ]
 }
 
+# Note: This does not pick up all triage tests - there are tests in
+# //src/diagnostics/lib/triage and //src/diagnostics/config/triage.
+# Use --with //src/diagnostics:tests, not --with //src/diagnostics/triage:tests.
 group("tests") {
   testonly = true
 
@@ -25,8 +28,6 @@ group("tests") {
     ":triage_lib_test($host_toolchain)",
     "build/triage_config_test_runner:tests",
     "test_data",
-    "//src/diagnostics/lib/triage:unittests($host_toolchain)",
-    "//src/diagnostics/lib/triage/wasm:tests($host_toolchain)",
   ]
 }
 

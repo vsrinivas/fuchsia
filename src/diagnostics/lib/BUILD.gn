@@ -10,7 +10,7 @@ group("tests") {
     "selectors:tests",
     "streams/cpp:tests",
     "streams/dart:tests",
-    "triage:unittests",
+    "triage:tests",
     "validating-log-listener:tests",
   ]
 }
