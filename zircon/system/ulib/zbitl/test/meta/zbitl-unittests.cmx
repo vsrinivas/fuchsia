@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/zbitl-unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}

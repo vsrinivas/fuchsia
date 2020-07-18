@@ -26,9 +26,11 @@ group("test") {
 test("zbitl-unittests") {
   sources = [
     "checking-tests.cc",
+    "fd-tests.cc",
     "view-tests.cc",
   ]
   deps = [
+    "//src/lib/files",
     "//src/lib/fxl",
     "//zircon/public/lib/zbitl",
     "//zircon/public/lib/zxtest",
@@ -38,7 +40,7 @@ test("zbitl-unittests") {
   }
 }
 
-unittest_package("zbitl-test-package") {
+test_package("zbitl-test-package") {
   package_name = "zbitl-tests"
   deps = [ ":zbitl-unittests" ]
 

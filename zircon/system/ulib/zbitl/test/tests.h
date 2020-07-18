@@ -132,7 +132,6 @@ void TestBadCrcZbi() {
     EXPECT_EQ(header->type, header->type);
     EXPECT_TRUE(false, "should not be reached");
   }
-
   auto error = view.take_error();
   ASSERT_TRUE(error.is_error());
   // The error shouldn't be one of storage.
