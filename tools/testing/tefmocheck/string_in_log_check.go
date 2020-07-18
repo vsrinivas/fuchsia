@@ -22,11 +22,13 @@ type stringInLogCheck struct {
 	// ExceptString will cause Check() to return false if present.
 	ExceptString string
 	// ExceptBlocks will cause Check() to return false if the string is only within these blocks.
-	ExceptBlocks []*logBlock
-	Type         logType
+	ExceptBlocks   []*logBlock
+	Type           logType
+	swarmingResult *SwarmingRpcsTaskResult
 }
 
-func (c stringInLogCheck) Check(to *TestingOutputs) bool {
+func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
+	c.swarmingResult = to.SwarmingSummary.Results
 	var toCheck []byte
 	switch c.Type {
 	case serialLogType:
@@ -84,13 +86,13 @@ func (c stringInLogCheck) Check(to *TestingOutputs) bool {
 	return false
 }
 
-func (c stringInLogCheck) Name() string {
+func (c *stringInLogCheck) Name() string {
 	return path.Join("string_in_log", string(c.Type), strings.ReplaceAll(c.String, " ", "_"))
 }
 
-func (c stringInLogCheck) DebugText() string {
-	debugStr := fmt.Sprintf("Found the string \"%s\" in %s. That file should be accessible from the build result page or Sponge.",
-		c.String, c.Type)
+func (c *stringInLogCheck) DebugText() string {
+	debugStr := fmt.Sprintf("Found the string \"%s\" in %s for task %s.", c.String, c.Type, c.swarmingResult.TaskId)
+	debugStr += "\nThat file should be accessible from the build result page or Sponge.\n"
 	if c.ExceptString != "" {
 		debugStr += fmt.Sprintf("\nDid not find the exception string \"%s\"", c.ExceptString)
 	}
@@ -102,36 +104,36 @@ func (c stringInLogCheck) DebugText() string {
 	return debugStr
 }
 
-func driverHostCrash(hostName, exceptHost string) stringInLogCheck {
+func driverHostCrash(hostName, exceptHost string) *stringInLogCheck {
 	c := stringInLogCheck{String: "<== fatal : process driver_host:" + hostName, Type: serialLogType}
 	if exceptHost != "" {
 		c.ExceptString = "<== fatal : process driver_host:" + exceptHost
 	}
-	return c
+	return &c
 }
 
 // StringInLogsChecks returns checks to detect bad strings in certain logs.
 func StringInLogsChecks() (ret []FailureModeCheck) {
 	// For fxbug.dev/47649.
-	ret = append(ret, stringInLogCheck{String: "kvm run failed Bad address", Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: "kvm run failed Bad address", Type: swarmingOutputType})
 	// For fxbug.dev/44779.
-	ret = append(ret, stringInLogCheck{String: netutilconstants.CannotFindNodeErrMsg, Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: netutilconstants.CannotFindNodeErrMsg, Type: swarmingOutputType})
 	// For fxbug.dev/51015.
-	ret = append(ret, stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Type: swarmingOutputType})
 	// For fxbug.dev/52719.
-	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Type: swarmingOutputType})
 	// For fxbug.dev/43188.
-	ret = append(ret, stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType})
 	// For fxbug.dev/53101.
-	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Type: swarmingOutputType})
 	// For fxbug.dev/51441.
-	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.ReadConfigFileErrorMsg), Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.ReadConfigFileErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/43355
-	ret = append(ret, stringInLogCheck{String: "Timed out loading dynamic linker from fuchsia.ldsvc.Loader", Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: "Timed out loading dynamic linker from fuchsia.ldsvc.Loader", Type: swarmingOutputType})
 	// For fxbug.dev/53854
 	ret = append(ret, driverHostCrash("composite-device", ""))
 	ret = append(ret, driverHostCrash("pci", ""))
-	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToReceiveFileMsg), Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToReceiveFileMsg), Type: swarmingOutputType})
 	// Don't fail if we see PDEV_DID_CRASH_TEST, defined in
 	// zircon/system/ulib/ddk-platform-defs/include/ddk/platform-defs.h.
 	// That's used for a test that intentionally crashes a driver host.
@@ -141,10 +143,10 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// These are rather generic. New checks should probably go above here so that they run before these.
 	allLogTypes := []logType{serialLogType, swarmingOutputType, syslogType}
 	for _, lt := range allLogTypes {
-		ret = append(ret, stringInLogCheck{String: "ERROR: AddressSanitizer", Type: lt})
-		ret = append(ret, stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt})
-		ret = append(ret, stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Type: lt})
-		ret = append(ret, stringInLogCheck{
+		ret = append(ret, &stringInLogCheck{String: "ERROR: AddressSanitizer", Type: lt})
+		ret = append(ret, &stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt})
+		ret = append(ret, &stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Type: lt})
+		ret = append(ret, &stringInLogCheck{
 			String: "ZIRCON KERNEL OOPS",
 			Type:   lt,
 			ExceptBlocks: []*logBlock{
@@ -152,10 +154,10 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 				{startString: "RUN   TestKillCriticalProcess", endString: ": TestKillCriticalProcess"},
 			},
 		})
-		ret = append(ret, stringInLogCheck{String: "ZIRCON KERNEL PANIC", Type: lt})
+		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL PANIC", Type: lt})
 	}
 	// These may be in the output of tests, but the syslogType doesn't contain any test output.
-	ret = append(ret, stringInLogCheck{String: "ASSERT FAILED", Type: syslogType})
-	ret = append(ret, stringInLogCheck{String: "DEVICE SUSPEND TIMED OUT", Type: syslogType})
+	ret = append(ret, &stringInLogCheck{String: "ASSERT FAILED", Type: syslogType})
+	ret = append(ret, &stringInLogCheck{String: "DEVICE SUSPEND TIMED OUT", Type: syslogType})
 	return ret
 }

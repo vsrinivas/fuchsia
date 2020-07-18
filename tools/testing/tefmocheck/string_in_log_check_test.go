@@ -86,9 +86,12 @@ func TestStringInLogCheck(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			// It accesses this field for DebugText().
+			tc.testingOutputs.SwarmingSummary = &SwarmingTaskSummary{Results: &SwarmingRpcsTaskResult{TaskId: "abc"}}
 			if c.Check(&tc.testingOutputs) != tc.shouldMatch {
 				t.Errorf("c.Check(%q) returned %v, expected %v", string(tc.testingOutputs.SerialLog), !tc.shouldMatch, tc.shouldMatch)
 			}
+			c.DebugText() // minimal coverage, check it doesn't crash.
 		})
 	}
 }
