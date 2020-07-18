@@ -3,14 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/test/test_package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 source_set("geometry") {
   sources = [ "geometry.cc" ]
 }
 
-executable("geometry-test") {
+test("geometry-test") {
   testonly = true
 
   output_name = "geometry-test"
@@ -46,8 +47,7 @@ driver_module("block-verity") {
   ]
 }
 
-executable("block-verity-test") {
-  testonly = true
+test("block-verity-test") {
   output_name = "block-verity-test"
   sources = [ "block-verity-test.cc" ]
   deps = [
@@ -63,37 +63,28 @@ executable("block-verity-test") {
   ]
 }
 
-devmgr_manifest("devmgr-manifest") {
+fuchsia_unittest_package("block-verity-geometry-test") {
+  executable_path = "test/geometry-test"
+  deps = [ ":geometry-test" ]
 }
 
-test_package("block-verity-tests") {
-  tests = [
-    {
-      name = "geometry-test"
-      environments = basic_envs
-    },
-    {
-      name = "block-verity-test"
-      environments = basic_envs
-    },
-  ]
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  drivers = [
-    {
-      name = "block-verity.so"
-    },
-  ]
-
+isolated_devmgr_unittest_package("block-verity-test-package") {
+  package_name = "block-verity-test"
+  executable_path = "test/block-verity-test"
   deps = [
     ":block-verity",
     ":block-verity-test",
-    ":devmgr-manifest",
-    ":geometry-test",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
   ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":block-verity-tests" ]
+  deps = [
+    ":block-verity-geometry-test",
+    ":block-verity-test-package",
+  ]
 }

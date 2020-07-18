@@ -28,22 +28,15 @@ constexpr uint64_t kBlockCount = 8192;
 
 using driver_integration_test::IsolatedDevmgr;
 
-const char* kDriverLib = "/pkg/driver/block-verity.so";
+const char* kDriverLib = "/boot/driver/block-verity.so";
 
 class BlockVerityTest : public zxtest::Test {
  public:
   BlockVerityTest() {}
   void SetUp() override {
     IsolatedDevmgr::Args args;
-    zx::channel pkg_client, pkg_server;
-    // Export /pkg to the isolated devmgr as /pkg
-    ASSERT_OK(zx::channel::create(0, &pkg_client, &pkg_server));
-    ASSERT_OK(fdio_open(
-        "/pkg", llcpp::fuchsia::io::OPEN_RIGHT_READABLE | llcpp::fuchsia::io::OPEN_RIGHT_EXECUTABLE,
-        pkg_server.release()));
-    args.flat_namespace.push_back(std::make_pair("/pkg", std::move(pkg_client)));
-    args.driver_search_paths.push_back("/pkg/driver");
     args.driver_search_paths.push_back("/boot/driver");
+    args.path_prefix = "/pkg/";
     args.disable_block_watcher = true;
     args.disable_netsvc = true;
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
