@@ -13,7 +13,10 @@ library("zbitl") {
   sdk = "source"
   sdk_headers = []
 
-  sources = [ "checking.cc" ]
+  sources = [
+    "checking.cc",
+    "item.cc",
+  ]
   deps = [
     "$zx/system/ulib/zxc",
     "$zx/third_party/ulib/cksum",

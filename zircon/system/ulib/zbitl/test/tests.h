@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
 #define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
 
+#include <lib/zbitl/json.h>
 #include <lib/zbitl/view.h>
 
 #include <string>

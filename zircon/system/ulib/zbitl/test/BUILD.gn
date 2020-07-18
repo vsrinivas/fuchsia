@@ -27,12 +27,14 @@ test("zbitl-unittests") {
   sources = [
     "checking-tests.cc",
     "fd-tests.cc",
+    "json-tests.cc",
     "stdio-tests.cc",
     "view-tests.cc",
   ]
   deps = [
     "//src/lib/files",
     "//src/lib/fxl",
+    "//third_party/rapidjson",
     "//zircon/public/lib/zbitl",
     "//zircon/public/lib/zxtest",
   ]
