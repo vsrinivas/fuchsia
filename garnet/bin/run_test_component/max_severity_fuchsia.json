@@ -57,11 +57,11 @@
          "max_severity": "FATAL"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/audio_device_service_tests#meta/audio_device_service_tests.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/audio-device-service-tests#meta/audio-device-service-tests.cmx",
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/audio_device_tests#meta/audio_device_tests.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/audio-device-tests#meta/audio-device-tests.cmx",
          "max_severity": "ERROR"
       },
       {
