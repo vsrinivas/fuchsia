@@ -49,7 +49,7 @@ func (iob *IOBuffer) buffer(i int32) Buffer {
 }
 
 func (iob *IOBuffer) index(b Buffer) int {
-	return int((*(*reflect.SliceHeader)(unsafe.Pointer(&b))).Data-iob.GetPointer(0)) / bufferSize
+	return int((*(*reflect.SliceHeader)(unsafe.Pointer(&b))).Data-uintptr(iob.GetPointer(0))) / bufferSize
 }
 
 func (iob *IOBuffer) entry(b Buffer) eth.FifoEntry {

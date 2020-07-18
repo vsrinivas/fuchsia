@@ -12,7 +12,6 @@ import (
 	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
-	"unsafe"
 
 	"gen/netstack/link/netdevice"
 
@@ -448,7 +447,7 @@ func (c *Client) GetStatusWatcher(ctx context.Context) (*statusWatcher, error) {
 // by d.
 func (c *Client) getDescriptor(d uint16) *bufferDescriptor {
 	offset := uint64(d) * c.config.DescriptorLength
-	return (*bufferDescriptor)(unsafe.Pointer(c.descriptors.GetPointer(offset)))
+	return (*bufferDescriptor)(c.descriptors.GetPointer(offset))
 }
 
 // getDescriptorData returns the shared contiguous memory for a descriptor.

@@ -41,11 +41,11 @@ func (vmo *MappedVMO) GetData(offset, len uint64) []byte {
 
 // GetPointer returns a pointer to the mapped VMO at offset. If the offset is
 // not within bounds of the mapped VMO, GetPointer panics.
-func (vmo *MappedVMO) GetPointer(offset uint64) uintptr {
+func (vmo *MappedVMO) GetPointer(offset uint64) unsafe.Pointer {
 	if offset > vmo.len {
 		panic(fmt.Sprintf("invalid VMO pointer (offset:%d) for VMO with %d bytes", offset, vmo.len))
 	}
-	return uintptr(vmo.vaddr) + uintptr(offset)
+	return unsafe.Pointer(uintptr(vmo.vaddr) + uintptr(offset))
 }
 
 // NewMappedVMO creates a new VMO the given name and size, in bytes, and maps it
