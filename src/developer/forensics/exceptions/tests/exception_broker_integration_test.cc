@@ -53,6 +53,7 @@ ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
 
 TEST(ExceptionBrokerIntegrationTest, DISABLED_OnExceptionSmokeTest) {
   constexpr size_t kNumExceptions = 5;
+  std::vector<ExceptionContext> exceptions(kNumExceptions);
 
   fuchsia::exception::HandlerSyncPtr exception_handler;
 
@@ -60,16 +61,12 @@ TEST(ExceptionBrokerIntegrationTest, DISABLED_OnExceptionSmokeTest) {
   environment_services->Connect(exception_handler.NewRequest());
 
   for (size_t i = 0; i < kNumExceptions; ++i) {
-    ExceptionContext pe;
-    ASSERT_TRUE(GetExceptionContext(&pe));
+    auto& exception = exceptions[i];
+    ASSERT_TRUE(GetExceptionContext(&exception));
 
-    ASSERT_EQ(exception_handler->OnException(std::move(pe.exception),
-                                             ExceptionContextToExceptionInfo(pe)),
+    ASSERT_EQ(exception_handler->OnException(std::move(exception.exception),
+                                             ExceptionContextToExceptionInfo(exception)),
               ZX_OK);
-
-    // Kill the job so that the exception that will be freed here doesn't bubble out of the test
-    // environment.
-    pe.job.kill();
   }
 
   fuchsia::feedback::testing::FakeCrashReporterQuerierSyncPtr crash_reporter;
@@ -84,6 +81,12 @@ TEST(ExceptionBrokerIntegrationTest, DISABLED_OnExceptionSmokeTest) {
   }
 
   EXPECT_EQ(num_crashreports, kNumExceptions);
+
+  for (auto& exception : exceptions) {
+    // Kill the job so that the exception that will be freed here doesn't bubble out of the test
+    // environment.
+    exception.job.kill();
+  }
 }
 
 TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
