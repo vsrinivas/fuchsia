@@ -7,6 +7,7 @@
 #include <fnmatch.h>
 #include <getopt.h>
 #include <lib/cksum.h>
+#include <lib/zbitl/json.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
@@ -1421,63 +1422,28 @@ Extracted items use the file names shown below:\n\
     return 0;
   }
 
-  void EmitJsonContents(rapidjson::PrettyWriter<rapidjson::FileWriteStream>& writer) {
+  void EmitJsonContents(rapidjson::PrettyWriter<rapidjson::FileWriteStream>& writer,
+                        const char* key) {
     if (AlreadyCompressed()) {
-      CreateFromCompressed(*this)->EmitJsonContents(writer);
+      CreateFromCompressed(*this)->EmitJsonContents(writer, key);
     } else {
       if (header_.type == ZBI_TYPE_STORAGE_BOOTFS) {
-        writer.Key("contents");
+        writer.Key(key);
         EmitJsonBootFS(writer);
       } else if (!strcmp(TypeExtension(header_.type), ".txt")) {
-        writer.Key("contents");
+        writer.Key(key);
         EmitJsonCmdline(writer);
       }
     }
   }
 
   void EmitJson(rapidjson::PrettyWriter<rapidjson::FileWriteStream>& writer) {
-    writer.StartObject();
-    zbi_header_t header = CheckHeader();
-    const char* type_name = TypeName(type());
-    writer.Key("type");
-    if (!type_name) {
-      writer.Uint(type());
-    } else {
-      writer.String(type_name);
-    }
-    writer.Key("size");
-    writer.Uint(header.length);
-    if (TypeIsStorage(type()) && AlreadyCompressed()) {
-      writer.Key("uncompressed_size");
-      writer.Uint(header.extra);
-    } else if (header.extra) {
-      writer.Key("extra");
-      writer.Uint(header.extra);
-    }
-    uint32_t expected_flags = ZBI_FLAG_CRC32;
-    if (TypeIsStorage(type())) {
-      expected_flags |= ZBI_FLAG_STORAGE_COMPRESSED;
-    }
-    if (!(header.flags & ZBI_FLAG_VERSION) || (header.flags & ~expected_flags) != 0) {
-      writer.Key("flags");
-      writer.Uint(header.flags);
-    }
-    if (header.reserved0) {
-      writer.Key("reserved0");
-      writer.Uint(header.reserved0);
-    }
-    if (header.reserved1) {
-      writer.Key("reserved1");
-      writer.Uint(header.reserved1);
-    }
-    if (header.flags & ZBI_FLAG_CRC32) {
-      writer.Key("crc32");
-      writer.Uint(header.crc32);
-    }
-    if (header.length > 0) {
-      EmitJsonContents(writer);
-    }
-    writer.EndObject();
+    zbitl::JsonWriteItemWithContents(
+        writer,
+        [](auto&& writer, auto&& key, auto&& header, auto&& payload) {
+          payload->EmitJsonContents(writer, key);
+        },
+        CheckHeader(), this);
   }
 
   // Streaming exhausts the item's payload.  The OutputStream will now
@@ -2723,9 +2689,10 @@ int main(int argc, char** argv) {
     // other storage in the middle, and CMDLINE last.
     std::stable_sort(items.begin(), items.end(), [](const ItemPtr& a, const ItemPtr& b) {
       auto item_rank = [](uint32_t type) {
-        return (ZBI_IS_KERNEL_BOOTITEM(type)
-                    ? 0
-                    : type == ZBI_TYPE_STORAGE_BOOTFS ? 1 : type == ZBI_TYPE_CMDLINE ? 9 : 5);
+        return (ZBI_IS_KERNEL_BOOTITEM(type)      ? 0
+                : type == ZBI_TYPE_STORAGE_BOOTFS ? 1
+                : type == ZBI_TYPE_CMDLINE        ? 9
+                                                  : 5);
       };
       return item_rank(a->type()) < item_rank(b->type());
     });
