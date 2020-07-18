@@ -10,6 +10,7 @@
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/pci.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -21,7 +22,7 @@
 
 #include "kpci-private.h"
 
-#define KPCIDBG(f, ...) zxlogf(TRACE, "%s: " f, __func__, ##__VA_ARGS__)
+#define KPCIDBG(f, ...) zxlogf(DEBUG, "%s: " f, __func__, ##__VA_ARGS__)
 #define KPCIERR(f, ...) zxlogf(ERROR, "%s: " f, __func__, ##__VA_ARGS__)
 
 // Convenience reply methods.
@@ -129,6 +130,26 @@ static zx_status_t kpci_set_irq_mode(pci_msg_t* req, kpci_device_t* device, zx_h
   return pci_rpc_reply(ch, st, NULL, req, &resp);
 }
 
+static zx_status_t kpci_configure_irq_mode(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
+  pci_msg_t resp = {};
+
+  // Walk the available IRQ mdoes from best to worst (from a system
+  // perspective): MSI -> Legacy. Enable the mode that can provide the
+  // number of interrupts requested. This enables drivers that don't care about
+  // how they get their interrupt to call one method rather than doing the
+  // QueryIrqMode/SetIrqMode dance.
+  // TODO(32978): This method only covers MSI/Legacy because the transition to MSI-X requires the
+  // userspace driver. When that happens, this code will go away.
+  zx_pci_irq_mode_t mode = ZX_PCIE_IRQ_MODE_MSI;
+  zx_status_t st = zx_pci_set_irq_mode(device->handle, mode, req->irq.requested_irqs);
+  if (st != ZX_OK) {
+    mode = ZX_PCIE_IRQ_MODE_LEGACY;
+    st = zx_pci_set_irq_mode(device->handle, mode, req->irq.requested_irqs);
+  }
+  KPCIDBG("{ irq mode = %u, requested irqs = %u, status = %u }", mode, req->irq.requested_irqs, st);
+  return pci_rpc_reply(ch, st, NULL, req, &resp);
+}
+
 static zx_status_t kpci_map_interrupt(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
   pci_msg_t resp = {};
   zx_handle_t handle = ZX_HANDLE_INVALID;
@@ -199,6 +220,7 @@ const rxrpc_cbk_t rxrpc_cbk_tbl[] = {
     [PCI_OP_GET_BAR] = kpci_get_bar,
     [PCI_OP_QUERY_IRQ_MODE] = kpci_query_irq_mode,
     [PCI_OP_SET_IRQ_MODE] = kpci_set_irq_mode,
+    [PCI_OP_CONFIGURE_IRQ_MODE] = kpci_configure_irq_mode,
     [PCI_OP_MAP_INTERRUPT] = kpci_map_interrupt,
     [PCI_OP_GET_DEVICE_INFO] = kpci_get_device_info,
     [PCI_OP_GET_AUXDATA] = kpci_get_auxdata,
@@ -209,11 +231,11 @@ const rxrpc_cbk_t rxrpc_cbk_tbl[] = {
 
 #define LABEL(x) [x] = #x
 const char* const rxrpc_string_tbl[] = {
-    LABEL(PCI_OP_INVALID),         LABEL(PCI_OP_RESET_DEVICE), LABEL(PCI_OP_ENABLE_BUS_MASTER),
-    LABEL(PCI_OP_CONFIG_READ),     LABEL(PCI_OP_CONFIG_WRITE), LABEL(PCI_OP_GET_BAR),
-    LABEL(PCI_OP_QUERY_IRQ_MODE),  LABEL(PCI_OP_SET_IRQ_MODE), LABEL(PCI_OP_MAP_INTERRUPT),
-    LABEL(PCI_OP_GET_DEVICE_INFO), LABEL(PCI_OP_GET_AUXDATA),  LABEL(PCI_OP_GET_BTI),
-    LABEL(PCI_OP_CONNECT_SYSMEM),
+    LABEL(PCI_OP_INVALID),       LABEL(PCI_OP_RESET_DEVICE),    LABEL(PCI_OP_ENABLE_BUS_MASTER),
+    LABEL(PCI_OP_CONFIG_READ),   LABEL(PCI_OP_CONFIG_WRITE),    LABEL(PCI_OP_CONFIGURE_IRQ_MODE),
+    LABEL(PCI_OP_GET_BAR),       LABEL(PCI_OP_QUERY_IRQ_MODE),  LABEL(PCI_OP_SET_IRQ_MODE),
+    LABEL(PCI_OP_MAP_INTERRUPT), LABEL(PCI_OP_GET_DEVICE_INFO), LABEL(PCI_OP_GET_AUXDATA),
+    LABEL(PCI_OP_GET_BTI),       LABEL(PCI_OP_CONNECT_SYSMEM),
 };
 #undef LABEL
 static_assert(countof(rxrpc_string_tbl) == PCI_OP_MAX, "rpc string table is not contiguous!");
@@ -233,7 +255,7 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
 
   kpci_device_t* device = ctx;
   const char* name = device_get_name(device->zxdev);
-  pci_msg_t req;
+  pci_msg_t req = {};
   uint32_t actual_bytes;
   zx_handle_t handle = ZX_HANDLE_INVALID;
   uint32_t actual_handles;
@@ -267,14 +289,14 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
     }
   }
 
-  KPCIDBG("pci[%s]: rpc id %u op %s(%u) args '%#02x %#02x %#02x %#02x...'", name, id,
-         rpc_op_lbl(op), op, req.data[0], req.data[1], req.data[2], req.data[3]);
+  KPCIDBG("pci[%s]: rpc = %#x, op = %s(%u) args '%#02x %#02x %#02x %#02x...'", name, id,
+          rpc_op_lbl(op), op, req.data[0], req.data[1], req.data[2], req.data[3]);
   st = rxrpc_cbk_tbl[req.hdr.ordinal](&req, device, ch);
   if (st != ZX_OK) {
     goto err;
   }
 
-  KPCIDBG("pci[%s]: rpc id %u op %s(%u) ZX_OK", name, id, rpc_op_lbl(op), op);
+  KPCIDBG("pci[%s]: rpc = %#x, op = %s(%u) ZX_OK", name, id, rpc_op_lbl(op), op);
   return st;
 
 err:;
@@ -284,7 +306,7 @@ err:;
   fidl_init_txn_header(&resp.hdr, req.hdr.txid, st);
   zx_handle_close(handle);
 
-  KPCIDBG("pci[%s]: rpc id %u op %s(%u) error %d", name, id, rpc_op_lbl(op), op, st);
+  KPCIDBG("pci[%s]: rpc = %#x, op = %s(%u) error %d", name, id, rpc_op_lbl(op), op, st);
   return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
 }
 

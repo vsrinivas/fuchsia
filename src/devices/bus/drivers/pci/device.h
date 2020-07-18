@@ -88,6 +88,7 @@ class Device : public PciDeviceType,
   };
 
   // DDKTL PciProtocol methods that will be called by Rxrpc.
+  zx_status_t RpcConfigureIrqMode(const zx::unowned_channel& ch);
   zx_status_t RpcConfigRead(const zx::unowned_channel& ch);
   zx_status_t RpcConfigWrite(const zx::unowned_channel& ch);
   zx_status_t RpcEnableBusMaster(const zx::unowned_channel& ch);

@@ -7,6 +7,8 @@
 #include <lib/zx/vmo.h>
 #include <string.h>
 
+#include <ddk/protocol/pci.h>
+
 #include "common.h"
 #include "device.h"
 // TODO(ZX-3927): Stop depending on the types in this file.
@@ -290,6 +292,19 @@ zx_status_t Device::RpcGetNextCapability(const zx::unowned_channel& ch) {
   } else {
     st = GetNextCapability<uint8_t, CapabilityList>(&request_, &response_, &capabilities().list);
   }
+  return RpcReply(ch, st);
+}
+
+zx_status_t Device::RpcConfigureIrqMode(const zx::unowned_channel& ch) {
+  pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
+  zx_status_t st = SetIrqMode(mode, request_.irq.requested_irqs);
+  if (st != ZX_OK) {
+    mode = PCI_IRQ_MODE_MSI;
+    st = SetIrqMode(mode, request_.irq.requested_irqs);
+  }
+
+  zxlogf(DEBUG, "[%s] ConfigureIrqMode { mode = %u, requested_irqs = %u, status = %s }",
+         cfg_->addr(), mode, request_.irq.requested_irqs, zx_status_get_string(st));
   return RpcReply(ch, st);
 }
 

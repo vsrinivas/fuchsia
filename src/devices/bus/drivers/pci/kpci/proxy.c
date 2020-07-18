@@ -306,6 +306,18 @@ static zx_status_t pci_op_set_irq_mode(void* ctx, zx_pci_irq_mode_t mode,
   return pci_rpc_request(dev, PCI_OP_SET_IRQ_MODE, NULL, &req, &resp);
 }
 
+static zx_status_t pci_op_configure_irq_mode(void* ctx, uint32_t requested_irq_count) {
+  kpci_device_t* dev = ctx;
+  pci_msg_t req = {
+      .irq =
+          {
+              .requested_irqs = requested_irq_count,
+          },
+  };
+  pci_msg_t resp = {};
+  return pci_rpc_request(dev, PCI_OP_CONFIGURE_IRQ_MODE, NULL, &req, &resp);
+}
+
 static zx_status_t pci_op_get_device_info(void* ctx, zx_pcie_device_info_t* out_info) {
   kpci_device_t* dev = ctx;
   pci_msg_t req = {};
@@ -349,6 +361,7 @@ static pci_protocol_ops_t _pci_protocol = {
     .reset_device = pci_op_reset_device,
     .get_bar = pci_op_get_bar,
     .map_interrupt = pci_op_map_interrupt,
+    .configure_irq_mode = pci_op_configure_irq_mode,
     .query_irq_mode = pci_op_query_irq_mode,
     .set_irq_mode = pci_op_set_irq_mode,
     .get_device_info = pci_op_get_device_info,

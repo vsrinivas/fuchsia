@@ -155,6 +155,14 @@ zx_status_t DeviceProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_
   return st;
 }
 
+zx_status_t DeviceProxy::PciConfigureIrqMode(uint32_t requested_irq_count) {
+  PciRpcMsg req = {};
+  PciRpcMsg resp = {};
+
+  req.irq.requested_irqs = requested_irq_count;
+  return RpcRequest(PCI_OP_CONFIGURE_IRQ_MODE, nullptr, &req, &resp);
+}
+
 zx_status_t DeviceProxy::PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
   PciRpcMsg req = {};
   PciRpcMsg resp = {};

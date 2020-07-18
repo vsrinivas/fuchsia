@@ -17,6 +17,7 @@ enum PciRpcOp : uint32_t {
   PCI_OP_INVALID = 0,
   PCI_OP_CONFIG_READ,
   PCI_OP_CONFIG_WRITE,
+  PCI_OP_CONFIGURE_IRQ_MODE,
   PCI_OP_CONNECT_SYSMEM,
   PCI_OP_ENABLE_BUS_MASTER,
   PCI_OP_GET_AUXDATA,
@@ -110,6 +111,7 @@ class DeviceProxy : public PciDeviceProxyType, public ddk::PciProtocol<pci::Devi
   zx_status_t PciEnableBusMaster(bool enable);
   zx_status_t PciResetDevice();
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
+  zx_status_t PciConfigureIrqMode(uint32_t requested_irq_count);
   zx_status_t PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
   zx_status_t PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count);
   zx_status_t PciGetDeviceInfo(zx_pcie_device_info_t* out_into);
