@@ -34,6 +34,7 @@ class Handler {
 
   std::shared_ptr<sys::ServiceDirectory> services_;
 
+  zx::exception exception_;
   CrashReportBuilder builder_;
   fuchsia::feedback::CrashReporterPtr crash_reporter_connection_;
   fuchsia::sys::internal::IntrospectPtr introspect_connection_;
