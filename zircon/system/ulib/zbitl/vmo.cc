@@ -63,4 +63,13 @@ fitx::result<zx_status_t, uint32_t> StorageTraits<zx::vmo>::Crc32(const zx::vmo&
   return fitx::ok(crc);
 }
 
+fitx::result<zx_status_t> StorageTraits<zx::vmo>::Write(const zx::vmo& vmo, uint32_t offset,
+                                                        ByteView data) {
+  zx_status_t status = vmo.write(data.data(), offset, data.size());
+  if (status != ZX_OK) {
+    return fitx::error{status};
+  }
+  return fitx::ok();
+}
+
 }  // namespace zbitl

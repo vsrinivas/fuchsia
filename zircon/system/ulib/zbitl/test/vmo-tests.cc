@@ -19,7 +19,7 @@ struct VmoIo {
   }
 
   void ReadPayload(const zx::vmo& zbi, const zbi_header_t& header, uint64_t payload,
-              std::string* string) {
+                   std::string* string) {
     string->resize(header.length);
     ASSERT_EQ(ZX_OK, zbi.read(string->data(), payload, header.length));
   }
@@ -34,5 +34,7 @@ TEST(ZbitlViewVmoTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<VmoIo>
 TEST(ZbitlViewVmoTests, SimpleZbi) { ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<VmoIo>()); }
 
 TEST(ZbitlViewVmoTests, BadCrcZbi) { ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<VmoIo>()); }
+
+TEST(ZbitlViewVmoTests, Mutation) { ASSERT_NO_FATAL_FAILURES(TestMutation<VmoIo>()); }
 
 }  // namespace

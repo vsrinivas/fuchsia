@@ -33,6 +33,8 @@ struct StorageTraits<fbl::unique_fd> {
 
   static fitx::result<error_type, uint32_t> Crc32(const fbl::unique_fd&, uint32_t offset,
                                                   uint32_t length);
+
+  static fitx::result<error_type> Write(const fbl::unique_fd&, uint32_t offset, ByteView data);
 };
 
 /// zbitl::View<const fbl::unique_fd&> is an unmovable, uncopyable type that

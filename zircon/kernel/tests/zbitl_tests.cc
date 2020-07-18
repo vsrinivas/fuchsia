@@ -20,6 +20,8 @@
 
 namespace {
 
+constexpr char kHelloWorld[] = "hello world";
+
 bool EmptyZbiTest() {
   BEGIN_TEST;
 
@@ -49,7 +51,8 @@ bool SimpleZbiTest() {
     EXPECT_EQ(static_cast<uint32_t>(ZBI_TYPE_CMDLINE), header->type);
     switch (num_items++) {
       case 0:
-        EXPECT_EQ(0, strcmp("hello world", payload.data()), payload.data());
+        ASSERT_EQ(sizeof(kHelloWorld), payload.size());
+        EXPECT_EQ(0, memcmp(kHelloWorld, payload.data(), payload.size()));
         break;
     }
     EXPECT_TRUE(header->flags & ZBI_FLAG_VERSION);
@@ -82,10 +85,59 @@ bool BadCrcZbiTest() {
   END_TEST;
 }
 
+bool MutationTest() {
+  BEGIN_TEST;
+
+  alignas(ZBI_ALIGNMENT) char contents[sizeof(zbitl::test::kSimpleZbi)];
+  memcpy(contents, zbitl::test::kSimpleZbi, sizeof(contents));
+
+  // Storage type is mutable.
+  zbitl::View zbi(ktl::span<char>{contents, sizeof(contents)});
+
+  ASSERT_IS_OK(zbi.container_header());
+
+  size_t num_items = 0;
+  for (auto it = zbi.begin(); it != zbi.end(); ++it) {
+    auto [header, payload] = *it;
+    EXPECT_EQ(static_cast<uint32_t>(ZBI_TYPE_CMDLINE), header->type);
+    switch (num_items++) {
+      case 0:
+        ASSERT_EQ(sizeof(kHelloWorld), payload.size());
+        EXPECT_EQ(0, memcmp(kHelloWorld, payload.data(), payload.size()));
+        // GCC's -Wmissing-field-initializers is buggy: it should allow
+        // designated initializers without all fields, but doesn't (in C++?).
+        zbi_header_t discard{};
+        discard.type = ZBI_TYPE_DISCARD;
+        ASSERT_TRUE(it.Replace(discard).is_ok());
+        break;
+    }
+    EXPECT_TRUE(header->flags & ZBI_FLAG_VERSION);
+  }
+  EXPECT_EQ(1u, num_items);
+
+  num_items = 0;
+  for (auto [header, payload] : zbi) {
+    EXPECT_EQ(static_cast<uint32_t>(ZBI_TYPE_DISCARD), header->type);
+    switch (num_items++) {
+      case 0:
+        ASSERT_EQ(sizeof(kHelloWorld), payload.size());
+        EXPECT_EQ(0, memcmp(kHelloWorld, payload.data(), payload.size()));
+        break;
+    }
+    EXPECT_TRUE(header->flags & ZBI_FLAG_VERSION);
+  }
+  EXPECT_EQ(1u, num_items);
+
+  ASSERT_IS_OK(zbi.take_error());
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(zbitl_tests)
 UNITTEST("empty", EmptyZbiTest)
 UNITTEST("simple", SimpleZbiTest)
 UNITTEST("bad CRC", BadCrcZbiTest)
+UNITTEST("mutation", MutationTest)
 UNITTEST_END_TESTCASE(zbitl_tests, "zbitl", "Tests of ZBI template library")

@@ -31,6 +31,8 @@ struct StorageTraits<zx::vmo> {
   }
 
   static fitx::result<error_type, uint32_t> Crc32(const zx::vmo&, uint32_t offset, uint32_t length);
+
+  static fitx::result<error_type> Write(const zx::vmo&, uint32_t offset, ByteView);
 };
 
 }  // namespace zbitl

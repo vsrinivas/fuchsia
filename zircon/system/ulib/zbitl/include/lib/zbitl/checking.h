@@ -51,6 +51,17 @@ inline fitx::result<std::string_view> CheckHeader<Checking::kCrc>(const zbi_head
   return CheckHeader<Checking::kStrict>(header, capacity);
 }
 
+// Modify a header so that it passes checks.  This can be used to mint new
+// items from a designated initializer that omits uninteresting bits.
+inline constexpr zbi_header_t SanitizeHeader(zbi_header_t header) {
+  header.magic = ZBI_ITEM_MAGIC;
+  header.flags |= ZBI_FLAG_VERSION;
+  if (!(header.flags & ZBI_FLAG_CRC32)) {
+    header.crc32 = ZBI_ITEM_NO_CRC32;
+  }
+  return header;
+}
+
 /// Returns empty if and only if the ZBI is complete (bootable), otherwise an
 /// error string.  This takes any zbitl::View type or any type that acts like
 /// it.  Note this does not check for errors from zbi.take_error() so if Zbi is

@@ -10,6 +10,8 @@
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 
+#include <cstdint>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <string_view>
@@ -21,6 +23,18 @@
 #endif
 
 namespace zbitl {
+
+using ByteView = std::basic_string_view<std::byte>;
+
+inline ByteView AsBytes(const void* ptr, size_t len) {
+  return {reinterpret_cast<const std::byte*>(ptr), len};
+}
+
+template <typename T>
+inline ByteView AsBytes(const T& payload) {
+  static_assert(std::has_unique_object_representations_v<T>);
+  return AsBytes(&payload, sizeof(payload));
+}
 
 /// The zbitl::StorageTraits template must be specialized for each type used as
 /// the Storage type parameter to zbitl::View (see <lib/zbitl/view.h).  The
@@ -76,6 +90,17 @@ struct StorageTraits {
   static fitx::result<error_type, uint32_t> Crc32(Storage& zbi, uint32_t offset, uint32_t length) {
     return fitx::error<error_type>{};
   }
+
+  // A specialization defines this only if it supports mutation.  It might be
+  // called to write whole or partial headers and/or payloads, but it will
+  // never be called with an offset and size that would exceed the capacity
+  // previously reported by Capacity (above).  It returns success only if it
+  // wrote the whole chunk specified.  If it returns an error, any subset of
+  // the chunk that failed to write might be corrupted in the image and the
+  // container will always revalidate everything.
+  static fitx::result<error_type> Write(Storage& zbi, uint32_t offset, ByteView data) {
+    return fitx::error<error_type>{};
+  }
 };
 
 // Specialization for std::basic_string_view<byte-size type> as Storage.  Its
@@ -121,6 +146,10 @@ struct StorageTraits<std::basic_string_view<T>> {
 // same type as Storage, just yielding the subspan of the original whole-ZBI
 // span.
 #if __cpp_lib_span
+inline std::span<std::byte> AsWritableBytes(void* ptr, size_t len) {
+  return {reinterpret_cast<std::byte*>(ptr), len};
+}
+
 template <typename T, size_t Extent>
 struct StorageTraits<std::span<T, Extent>> {
   using Storage = std::span<T, Extent>;
@@ -159,6 +188,15 @@ struct StorageTraits<std::span<T, Extent>> {
     auto payload = std::as_bytes(zbi).subspan(offset, length);
     ZX_DEBUG_ASSERT(payload.size() == length);
     return fitx::ok(crc32(0, reinterpret_cast<const uint8_t*>(payload.data()), payload.size()));
+  }
+
+  template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
+  static fitx::result<error_type> Write(Storage& zbi, uint32_t offset, ByteView data) {
+    // The caller is supposed to maintain these invariants.
+    ZX_DEBUG_ASSERT(offset <= zbi.size_bytes());
+    ZX_DEBUG_ASSERT(data.size() <= zbi.size_bytes() - offset);
+    memcpy(&std::as_writable_bytes(zbi)[offset], data.data(), data.size());
+    return fitx::ok();
   }
 };
 #endif  // __cpp_lib_span

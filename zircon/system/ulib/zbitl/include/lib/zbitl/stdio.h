@@ -32,6 +32,8 @@ struct StorageTraits<FILE*> {
   }
 
   static fitx::result<error_type, uint32_t> Crc32(FILE*, uint32_t offset, uint32_t length);
+
+  static fitx::result<error_type> Write(FILE*, uint32_t offset, ByteView data);
 };
 
 }  // namespace zbitl

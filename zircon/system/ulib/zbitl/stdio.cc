@@ -60,4 +60,21 @@ fitx::result<error_type, uint32_t> StorageTraits<FILE*>::Crc32(FILE* f, uint32_t
   return fitx::ok(crc);
 }
 
+fitx::result<error_type> StorageTraits<FILE*>::Write(FILE* f, uint32_t offset, ByteView data) {
+  if (fseek(f, offset, SEEK_SET) != 0) {
+    return fitx::error{errno};
+  }
+
+  while (!data.empty()) {
+    size_t n = fwrite(data.data(), 1, data.size(), f);
+    if (n == 0) {
+      return fitx::error{ferror(f) ? errno : ESPIPE};
+    }
+    ZX_ASSERT(n <= data.size());
+    offset += static_cast<uint32_t>(n);
+    data.remove_prefix(n);
+  }
+  return fitx::ok();
+}
+
 }  // namespace zbitl

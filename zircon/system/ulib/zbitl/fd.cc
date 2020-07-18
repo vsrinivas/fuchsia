@@ -67,4 +67,18 @@ fitx::result<error_type, uint32_t> StorageTraits<fbl::unique_fd>::Crc32(const fb
   return fitx::ok(crc);
 }
 
+fitx::result<error_type> StorageTraits<fbl::unique_fd>::Write(const fbl::unique_fd& fd,
+                                                              uint32_t offset, ByteView data) {
+  while (!data.empty()) {
+    ssize_t n = pwrite(fd.get(), data.data(), data.size(), offset);
+    if (n < 0) {
+      return fitx::error{errno};
+    }
+    ZX_ASSERT(static_cast<size_t>(n) <= data.size());
+    offset += static_cast<uint32_t>(n);
+    data.remove_prefix(static_cast<size_t>(n));
+  }
+  return fitx::ok();
+}
+
 }  // namespace zbitl

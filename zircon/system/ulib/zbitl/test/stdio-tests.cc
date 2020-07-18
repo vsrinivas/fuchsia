@@ -15,7 +15,7 @@ struct FileIo {
   void Create(std::string_view contents, FILE** zbi) {
     std::string filename;
     ASSERT_TRUE(temp_dir_.NewTempFileWithData(std::string(contents), &filename));
-    FILE* f = fopen(filename.c_str(), "r");
+    FILE* f = fopen(filename.c_str(), "r+");
     ASSERT_NOT_NULL(f, "cannot open '%s': %s", filename.c_str(), strerror(errno));
     *zbi = f;
   }
@@ -39,5 +39,7 @@ TEST(ZbitlViewStdioTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<File
 TEST(ZbitlViewStdioTests, SimpleZbi) { ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<FileIo>()); }
 
 TEST(ZbitlViewStdioTests, BadCrcZbi) { ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<FileIo>()); }
+
+TEST(ZbitlViewStdioTests, Mutation) { ASSERT_NO_FATAL_FAILURES(TestMutation<FileIo>()); }
 
 }  // namespace

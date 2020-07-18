@@ -139,4 +139,61 @@ void TestBadCrcZbi() {
   EXPECT_TRUE(error.error_value().storage_error.is_ok());
 }
 
+template <typename StorageIo>
+void TestMutation() {
+  StorageIo io;
+
+  typename StorageIo::storage_type zbi;
+  ASSERT_NO_FATAL_FAILURES(
+      io.Create({zbitl::test::kSimpleZbi, sizeof(zbitl::test::kSimpleZbi)}, &zbi));
+  zbitl::View view(std::move(zbi));
+
+  ASSERT_IS_OK(view.container_header());
+
+  size_t num_items = 0;
+  for (auto it = view.begin(); it != view.end(); ++it) {
+    auto [header, payload] = *it;
+
+    EXPECT_EQ(ZBI_TYPE_CMDLINE, header->type);
+
+    std::string contents;
+    ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &contents));
+    switch (num_items++) {
+      case 0:
+        EXPECT_STR_EQ("hello world", contents.c_str());
+        ASSERT_TRUE(it.Replace({.type = ZBI_TYPE_DISCARD}).is_ok());
+        break;
+    }
+  }
+  EXPECT_EQ(1, num_items);
+
+  {
+    auto error = view.take_error();
+    EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+                 std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+                 error.error_value().item_offset);
+  }
+
+  num_items = 0;
+  for (auto [header, payload] : view) {
+    EXPECT_EQ(ZBI_TYPE_DISCARD, header->type);
+
+    std::string contents;
+    ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &contents));
+    switch (num_items++) {
+      case 0:
+        EXPECT_STR_EQ("hello world", contents.c_str());
+        break;
+    }
+  }
+  EXPECT_EQ(1, num_items);
+
+  {
+    auto error = view.take_error();
+    EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+                 std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+                 error.error_value().item_offset);
+  }
+}
+
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_

@@ -16,7 +16,7 @@ struct FdIo {
   void Create(std::string_view contents, fbl::unique_fd* zbi) {
     std::string filename;
     ASSERT_TRUE(temp_dir_.NewTempFileWithData(std::string(contents), &filename));
-    fbl::unique_fd fd{open(filename.c_str(), O_RDONLY)};
+    fbl::unique_fd fd{open(filename.c_str(), O_RDWR)};
     ASSERT_TRUE(fd, "cannot open '%s': %s", filename.c_str(), strerror(errno));
     *zbi = std::move(fd);
   }
@@ -41,5 +41,7 @@ TEST(ZbitlViewFdTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<FdIo>()
 TEST(ZbitlViewFdTests, SimpleZbi) { ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<FdIo>()); }
 
 TEST(ZbitlViewFdTests, BadCrcZbi) { ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<FdIo>()); }
+
+TEST(ZbitlViewFdTests, Mutation) { ASSERT_NO_FATAL_FAILURES(TestMutation<FdIo>()); }
 
 }  // namespace
