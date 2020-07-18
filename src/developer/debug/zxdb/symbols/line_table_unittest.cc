@@ -152,4 +152,28 @@ TEST(LineTable, GetRowForAddress_Line0) {
   EXPECT_EQ(0u, result.get().Line);
 }
 
+// Tests that when an address matches two lines, one an EndSequence and one a good match, that the
+// second one is returned. This construct can appear on function boundaries when there is no padding
+// between them. The EndSequece marker is non-inclusive, it just marks the end of the previous
+// function.
+TEST(LineTable, GetRowForAddress_EndSequence) {
+  SymbolContext context(0x1000);
+
+  MockLineTable::FileNameVector files;
+  files.push_back("file.cc");  // Name for file #1.
+
+  MockLineTable::RowVector rows;
+  rows.push_back(MockLineTable::MakeStatementRow(0x4, 1, 2));
+  rows.push_back(MockLineTable::MakeEndSequenceRow(0x8, 1, 2));
+  rows.push_back(MockLineTable::MakeStatementRow(0x8, 1, 3));  // <- Duplicate address.
+  rows.push_back(MockLineTable::MakeStatementRow(0xa, 1, 4));
+  rows.push_back(MockLineTable::MakeEndSequenceRow(0xa, 1, 4));
+
+  MockLineTable table(files, rows);
+  auto found = table.GetRowForAddress(context, 0x1008, LineTable::kSkipCompilerGenerated);
+  ASSERT_FALSE(found.empty());
+  EXPECT_EQ(0x8u, found.get().Address);
+  EXPECT_EQ(3u, found.get().Line);  // This is the non-end-sequence row at this address.
+}
+
 }  // namespace zxdb

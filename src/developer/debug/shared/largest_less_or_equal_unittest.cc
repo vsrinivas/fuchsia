@@ -67,4 +67,25 @@ TEST(LargestLessOrEqual, Container) {
                                                   pair_first_less, pair_first_equal));
 }
 
+TEST(LargestLessOrEqual, Duplicates) {
+  // Indices:                0  1  2  3  4  5  6
+  std::vector<int> container{1, 1, 3, 3, 3, 5, 5};
+
+  // Querying exactly for a duplicate will return the first one of that sequence.
+  EXPECT_EQ(container.begin(), LargestLessOrEqual(container.begin(), container.end(), 1,
+                                                    std::less<int>(), std::equal_to<int>()));
+  EXPECT_EQ(container.begin() + 2, LargestLessOrEqual(container.begin(), container.end(), 3,
+                                                    std::less<int>(), std::equal_to<int>()));
+  EXPECT_EQ(container.begin() + 5, LargestLessOrEqual(container.begin(), container.end(), 5,
+                                                    std::less<int>(), std::equal_to<int>()));
+
+  // Querying for the following value will return the last one of the sequence.
+  EXPECT_EQ(container.begin() + 1, LargestLessOrEqual(container.begin(), container.end(), 2,
+                                                    std::less<int>(), std::equal_to<int>()));
+  EXPECT_EQ(container.begin() + 4, LargestLessOrEqual(container.begin(), container.end(), 4,
+                                                    std::less<int>(), std::equal_to<int>()));
+  EXPECT_EQ(container.begin() + 6, LargestLessOrEqual(container.begin(), container.end(), 6,
+                                                    std::less<int>(), std::equal_to<int>()));
+}
+
 }  // namespace debug_ipc

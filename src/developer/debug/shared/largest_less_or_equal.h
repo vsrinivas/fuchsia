@@ -13,6 +13,10 @@ namespace debug_ipc {
 // given |val|. As with std::lower_bound, the range [first, last) must be sorted according to
 // the |less| comparator.
 //
+// If the query matches exactly a sequence of equal items, the first duplicate will be returned. If
+// the query value matches a sequence of duplicates and does not exactly equal to them (it's
+// returning the previous item), the last of the sequence will be returned.
+//
 // For example, if you had a sorted range of addresses and you want to know which one begins the
 // range which an address falls into:
 //

@@ -50,6 +50,8 @@ LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_con
     return FoundRow();
 
   TargetPointer rel_address = address_context.AbsoluteToRelative(absolute_address);
+  // LargestLessOrEqual() will return the first item when it compares equal to an item and that's
+  // a sequence of exact matches. That's the behavior we want here.
   auto found = debug_ipc::LargestLessOrEqual(
       seq.begin(), seq.end(), rel_address,
       [](const Row& row, TargetPointer addr) { return row.Address < addr; },
@@ -59,13 +61,7 @@ LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_con
   // LargestLessOrEqual()). Otherwise GetRowSequenceForAddress() shouldn't have returned it.
   FX_DCHECK(found != seq.end());
 
-  // Skip duplicates if there are any. LargestLessOrEqual() may have returned the last one of a
-  // series of duplicates preceeding the address in question. We want the first entry for this
-  // address range.
   size_t found_index = found - seq.begin();
-  while (found_index > 0 && seq[found_index].Address == seq[found_index - 1].Address)
-    found_index--;
-
   if (skip_mode == kSkipCompilerGenerated) {
     // Skip compiler-generated rows. Don't advance to an "end sequence" line because that doesn't
     // represent actual code, just the end of the extent of the sequence.
@@ -83,9 +79,10 @@ const LineTable::Sequence* LineTable::GetSequenceForRelativeAddress(
   if (sequences_.empty())
     return nullptr;
 
-  auto found = std::lower_bound(
+  auto found = debug_ipc::LargestLessOrEqual(
       sequences_.begin(), sequences_.end(), relative_address,
-      [](const Sequence& seq, TargetPointer addr) { return seq.addresses.end() < addr; });
+      [](const Sequence& seq, TargetPointer addr) { return seq.addresses.begin() < addr; },
+      [](const Sequence& seq, TargetPointer addr) { return seq.addresses.begin() == addr; });
   if (found == sequences_.end() || !found->addresses.InRange(relative_address))
     return nullptr;  // Not in any range.
 
