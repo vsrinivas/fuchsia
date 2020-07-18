@@ -37,6 +37,7 @@ test("zbitl-unittests") {
     "//zircon/public/lib/zxtest",
   ]
   if (is_fuchsia) {
+    sources += [ "vmo-tests.cc" ]
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
 }

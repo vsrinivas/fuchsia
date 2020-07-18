@@ -43,5 +43,14 @@ library("zbitl") {
       # <lib/zbitl/fd.h> has #include <fbl/unique_fd.h>.
       "$zx/system/ulib/fbl:headers",
     ]
+
+    if (is_fuchsia) {
+      sources += [ "vmo.cc" ]
+      deps += [ "$zx/system/ulib/zx" ]
+      public_deps += [
+        # <lib/zbitl/vmo.h> has #include <lib/zx/vmo.h>.
+        "$zx/system/ulib/zx:headers",
+      ]
+    }
   }
 }
