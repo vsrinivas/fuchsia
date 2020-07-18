@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:lib.widgets/utils.dart';
 
-void main(List<String> args) {
+void main([List<String> args = const []]) {
   final argParser = ArgParser()
     ..addOption('sampling-offset-ms',
         abbr: 'o',
