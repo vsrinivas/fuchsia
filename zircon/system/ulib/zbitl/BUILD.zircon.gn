@@ -34,7 +34,10 @@ library("zbitl") {
     ]
     public_deps += [ "$zx/kernel/lib/ktl:headers" ]
   } else {
-    sources += [ "fd.cc" ]
+    sources += [
+      "fd.cc",
+      "stdio.cc",
+    ]
     deps += [ "$zx/system/ulib/fbl" ]
     public_deps += [
       # <lib/zbitl/fd.h> has #include <fbl/unique_fd.h>.
