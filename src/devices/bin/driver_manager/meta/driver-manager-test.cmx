@@ -7,15 +7,13 @@
         }
     },
     "program": {
-        "binary": "test/driver_manager_test"
+        "binary": "test/driver-manager-test"
     },
     "sandbox": {
-        "features": [
-            "deprecated-shell"
-        ],
         "services": [
             "fuchsia.boot.Items",
             "fuchsia.boot.RootJob",
+            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
         ]
     }

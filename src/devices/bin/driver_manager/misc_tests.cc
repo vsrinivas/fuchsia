@@ -28,7 +28,7 @@
 #include "driver_test_reporter.h"
 #include "fdio.h"
 
-constexpr char kDriverPath[] = "/boot/driver/test/mock-device.so";
+constexpr char kDriverPath[] = "/pkg/driver/test/mock-device.so";
 constexpr char kLogMessage[] = "log message text";
 constexpr char kLogTestCaseName[] = "log test case";
 

@@ -177,6 +177,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/driver-manager-tests#meta/driver-manager-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/e2e_input_tests#meta/mediabuttons_listener_test.cmx",
          "max_severity": "ERROR"
       },

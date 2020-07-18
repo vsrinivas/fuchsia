@@ -29,6 +29,7 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
   config.suspend_fallback = true;
   config.suspend_timeout = zx::sec(2);
   config.resume_timeout = zx::sec(2);
+  config.path_prefix = "/pkg/";
   // Should be MEXEC to verify the test behavior without rebooting.
   config.default_shutdown_system_state = power_fidl::statecontrol::SystemPowerState::MEXEC;
   return config;
