@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+#
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Grovels around in a LUCI build's log files to extract the gn args, and the
+ninja targets that need to be built to reproduce the settings on a bot."""
+
+import os
+import re
+import shlex
+import stat
+import sys
+import urllib.request
+import multiprocessing
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    print(
+        'Need BeautifulSoup, try\n\n    sudo apt-get install python3-bs4\n',
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def message(msg, f=sys.stdout):
+    print('gen-bot: %s' % msg, file=f)
+
+
+def error(msg):
+    message(msg, f=sys.stderr)
+    sys.exit(1)
+
+
+def get_command_from_execution_details(soup, name, regex):
+    links = soup.find_all('a', href=re.compile(regex))
+    if len(links) != 1:
+        error('couldn\'t find %s in logs' % name)
+    link = links[0]['href']
+
+    log = urllib.request.urlopen(link + '?format=raw').read().decode('utf-8')
+    prefix = 'escaped for shell: '
+    for l in log.splitlines():
+        if l.startswith(prefix):
+            cmd = l[len(prefix) :]
+            break
+    else:
+        error('couldn\'t find command in %s log' % name)
+    return cmd
+
+
+def munge_ninja_command(name, original):
+    # Drop all the ninja_wrapper goop until we get to the actual ninja command.
+    cmd_parts = shlex.split(original)
+    while not cmd_parts[0].endswith('/ninja'):
+        cmd_parts.pop(0)
+    cmd_parts.insert(0, 'fx')
+    cmd_parts[1] = 'ninja'
+
+    # Replace the bot's -C arg with a local-appropriate one.
+    for i, arg in enumerate(cmd_parts):
+        if arg == '-C':
+            if name == 'zircon':
+                cmd_parts[i + 1] = 'out/default.zircon'
+            else:
+                cmd_parts[i + 1] = 'out/default'
+            break
+
+    # Replace the bot's -j arg with a local-appropriate one.
+    for i, arg in enumerate(cmd_parts):
+        if arg == '-j':
+            cmd_parts[i + 1] = str(10 * multiprocessing.cpu_count())
+            break
+
+    return shlex.join(cmd_parts)
+
+
+def output_sh(fn, *lines):
+    with open(fn, 'w') as f:
+        print('#!/bin/sh', file=f)
+        for l in lines:
+            print(l, file=f)
+    st = os.stat(fn)
+    os.chmod(fn, st.st_mode | stat.S_IEXEC)
+    message('wrote ./%s' % fn)
+
+
+def main():
+    url_prefix = 'https://ci.chromium.org/'
+    if len(sys.argv) != 2:
+        error('usage: gen-bot \'%s...\'' % url_prefix)
+
+    url = sys.argv[1]
+    if not url.startswith(url_prefix):
+        error('expected url to start with %s' % url_prefix)
+
+    with urllib.request.urlopen(url) as data:
+        soup = BeautifulSoup(data, 'html.parser')
+    gn_cmd = get_command_from_execution_details(
+        soup, 'gn gen', r'gn_gen/execution_details'
+    )
+
+    # Strip out gn args that are bot specific.
+    cmd_parts = shlex.split(gn_cmd)
+    _, _, gn_args = cmd_parts[-1].partition('=')
+    munged_gn_args = []
+    for a in gn_args.split():
+        if a.startswith('goma_dir=') or a.startswith('test_durations_file='):
+            continue
+        munged_gn_args.append(a)
+
+    # Remerge and munge to 'fx' style invocation.
+    cmd_parts[-1] = '--args=' + ' '.join(munged_gn_args)
+
+    cmd_parts.insert(0, 'fx')
+    cmd_parts[1] = 'gn'
+    cmd_parts[3] = 'out/default'
+
+    output_sh('gen-bot-gn.sh', shlex.join(cmd_parts))
+
+    output_sh(
+        'gen-bot-ninja.sh',
+        munge_ninja_command(
+            'zircon',
+            get_command_from_execution_details(
+                soup, 'zircon command', r'build/ninja/zircon/execution_details'
+            ),
+        ),
+        munge_ninja_command(
+            'fuchsia',
+            get_command_from_execution_details(
+                soup, 'fuchsia command', r'build/ninja/fuchsia/execution_details'
+            ),
+        ),
+    )
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
