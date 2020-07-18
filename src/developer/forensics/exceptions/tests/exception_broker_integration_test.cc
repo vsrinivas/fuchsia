@@ -51,7 +51,7 @@ ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
   return exception_info;
 }
 
-TEST(ExceptionBrokerIntegrationTest, OnExceptionSmokeTest) {
+TEST(ExceptionBrokerIntegrationTest, DISABLED_OnExceptionSmokeTest) {
   constexpr size_t kNumExceptions = 5;
 
   fuchsia::exception::HandlerSyncPtr exception_handler;
