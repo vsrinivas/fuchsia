@@ -51,10 +51,18 @@ bool eviction_enabled = false;
 // Tracks what the scanner should do when it is next woken up.
 ktl::atomic<uint32_t> scanner_operation = 0;
 
-// Eviction uses a free memory target to prevent races between multiple requests to evict and
-// eviction actually happening. This a target minimum amount of bytes to have free, with the
-// default 0 resulting in no attempts at eviction, as there is always >=0 bytes free by definition.
-ktl::atomic<uint64_t> scanner_eviction_free_mem_target = 0;
+// Eviction target state is grouped together behind a lock to allow different threads to safely
+// trigger and perform the eviction.
+struct EvictionTarget {
+  bool pending = false;
+  // The desired value to get pmm_count_free_pages() to
+  uint64_t free_target_pages = 0;
+  // A minimum amount of pages we want to evict, regardless of how much free memory is available.
+  uint64_t min_pages_free = 0;
+  scanner::EvictionLevel level = scanner::EvictionLevel::OnlyOldest;
+};
+DECLARE_SINGLETON_SPINLOCK(scanner_eviction_target_lock);
+EvictionTarget scanner_eviction_target TA_GUARDED(scanner_eviction_target_lock::Get()) = {};
 
 // Event to signal the scanner thread to wake up and perform work.
 AutounsignalEvent scanner_request_event;
@@ -89,41 +97,40 @@ zx_time_t calc_next_zero_scan_deadline(zx_time_t current) {
                                         : ZX_TIME_INFINITE;
 }
 
-uint64_t scanner_do_reclaim() {
+uint64_t scanner_do_evict() {
+  // Create a local copy of the eviction target to operate against.
+  EvictionTarget target;
+  {
+    Guard<SpinLock, IrqSave> guard{scanner_eviction_target_lock::Get()};
+    target = scanner_eviction_target;
+    scanner_eviction_target = {};
+  }
+  if (!target.pending) {
+    return 0;
+  }
+
   uint64_t total_pages_freed = 0;
-  // Run a loop repeatedly evicting pages until we reached the target free memory level and are
-  // certain that we aren't racing with additional eviction requests, or we run out of candidate
-  // pages. Races could come due to a low memory event that wants to reclaim memory, potentially
-  // whilst a previous low memory reclamation was still in progress, as well as 'k' command
-  // requests.
-  uint64_t target_mem = scanner_eviction_free_mem_target.load();
+
   do {
-    const uint64_t free_mem = pmm_count_free_pages() * PAGE_SIZE;
-    if (free_mem >= target_mem) {
-      // To indicate we are 'done' reclaiming and that all requests to achieve a target have
-      // completed we want to reset the target free memory to 0. If the compare and swap fails then
-      // someone may have set a new (higher) target and so we will retry the loop. In this case
-      // compare_exchange_strong loads |target_mem| with the current value.
-      if (scanner_eviction_free_mem_target.compare_exchange_strong(target_mem, 0)) {
-        break;
-      }
-      // Explicitly restart the loop here in case target_mem is now less than free_mem, which would
-      // violate the assumption we want to make at the conclusion of this if statement.
-      continue;
+    const uint64_t free_mem = pmm_count_free_pages();
+    uint64_t pages_to_free = 0;
+    if (total_pages_freed < target.min_pages_free) {
+      pages_to_free = target.min_pages_free - total_pages_freed;
+    } else if (free_mem < target.free_target_pages) {
+      pages_to_free = target.free_target_pages - free_mem;
+    } else {
+      break;
     }
 
-    // Calculate the current pages we would need to free to reach our target, and attempt that.
-    const uint64_t pages_to_free = (target_mem - free_mem) / PAGE_SIZE;
     list_node_t free_list;
     list_initialize(&free_list);
-    const uint64_t pages_freed = scanner_evict_pager_backed(pages_to_free, &free_list);
+    const uint64_t pages_freed =
+        scanner_evict_pager_backed(pages_to_free, target.level, &free_list);
     pmm_free(&free_list);
     total_pages_freed += pages_freed;
 
-    // Should we fail to free any pages then we give up and stop trying and consider any eviction
-    // requests to be completed by clearing the target memory.
+    // Should we fail to free any pages then we give up and consider the eviction request complete.
     if (pages_freed == 0) {
-      scanner_eviction_free_mem_target.store(0);
       break;
     }
   } while (1);
@@ -184,11 +191,14 @@ int scanner_request_thread(void *) {
     if (op & kScannerOpReclaimAll) {
       op &= ~kScannerOpReclaimAll;
       reclaim_all = true;
-      scanner_eviction_free_mem_target.store(UINT64_MAX);
+      Guard<SpinLock, IrqSave> guard{scanner_eviction_target_lock::Get()};
+      scanner_eviction_target.pending = true;
+      scanner_eviction_target.level = scanner::EvictionLevel::IncludeNewest;
+      scanner_eviction_target.free_target_pages = UINT64_MAX;
     }
     if ((op & kScannerOpReclaim) || reclaim_all) {
       op &= ~kScannerOpReclaim;
-      const uint64_t pages = scanner_do_reclaim();
+      const uint64_t pages = scanner_do_evict();
       if (print) {
         printf("[SCAN]: Evicted %lu user pager backed pages\n", pages);
       }
@@ -227,15 +237,23 @@ void scanner_dump_info() {
 
 }  // namespace
 
-void scanner_trigger_reclaim(uint64_t reclaim_target, bool print) {
-  // Want to see our target free memory to the max of its current value and reclaim_target so we
-  // need to compare_exchange in a loop until we don't race with someone else.
-  uint64_t old_target = scanner_eviction_free_mem_target.load();
-  while (old_target < reclaim_target &&
-         !scanner_eviction_free_mem_target.compare_exchange_strong(old_target, reclaim_target))
-    ;
+void scanner_trigger_evict(uint64_t min_free_target, uint64_t free_mem_target,
+                           scanner::EvictionLevel eviction_level, scanner::Output output) {
+  if (!eviction_enabled) {
+    return;
+  }
+  {
+    Guard<SpinLock, IrqSave> guard{scanner_eviction_target_lock::Get()};
+    scanner_eviction_target.pending = true;
+    scanner_eviction_target.level = ktl::max(scanner_eviction_target.level, eviction_level);
+    // Convert the targets from bytes to pages and combine with any existing requests.
+    scanner_eviction_target.min_pages_free += min_free_target / PAGE_SIZE;
+    scanner_eviction_target.free_target_pages =
+        ktl::max(scanner_eviction_target.free_target_pages, free_mem_target / PAGE_SIZE);
+  }
 
-  const uint32_t op = kScannerOpReclaim | (print ? kScannerFlagPrint : 0);
+  const uint32_t op =
+      kScannerOpReclaim | (output == scanner::Output::Print ? kScannerFlagPrint : 0);
   scanner_operation.fetch_or(op);
   scanner_request_event.Signal();
 }
@@ -264,7 +282,8 @@ uint64_t scanner_do_zero_scan(uint64_t limit) {
   return deduped;
 }
 
-uint64_t scanner_evict_pager_backed(uint64_t max_pages, list_node_t *free_list) {
+uint64_t scanner_evict_pager_backed(uint64_t max_pages, scanner::EvictionLevel eviction_level,
+                                    list_node_t *free_list) {
   if (!eviction_enabled) {
     return 0;
   }
@@ -272,8 +291,10 @@ uint64_t scanner_evict_pager_backed(uint64_t max_pages, list_node_t *free_list) 
   uint64_t count = 0;
 
   while (count < max_pages) {
-    // Currently we only evict from the oldest page queue.
-    constexpr size_t lowest_evict_queue = PageQueues::kNumPagerBacked - 1;
+    // Avoid evicting from the newest queue to prevent thrashing.
+    const size_t lowest_evict_queue = eviction_level == scanner::EvictionLevel::IncludeNewest
+                                          ? 1
+                                          : PageQueues::kNumPagerBacked - 1;
     if (ktl::optional<PageQueues::VmoBacklink> backlink =
             pmm_page_queues()->PeekPagerBacked(lowest_evict_queue)) {
       if (!backlink->vmo) {
@@ -336,13 +357,14 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
   usage:
     printf("not enough arguments\n");
     printf("usage:\n");
-    printf("%s dump             : dump scanner info\n", argv[0].str);
-    printf("%s push_disable     : increase scanner disable count\n", argv[0].str);
-    printf("%s pop_disable      : decrease scanner disable count\n", argv[0].str);
-    printf("%s reclaim_all      : attempt to reclaim all possible memory\n", argv[0].str);
-    printf("%s rotate_queue     : immediately rotate the page queues\n", argv[0].str);
-    printf("%s reclaim <MB>     : attempt to reclaim requested MB of memory.\n", argv[0].str);
-    printf("%s harvest_accessed : harvest all page accessed information\n", argv[0].str);
+    printf("%s dump                    : dump scanner info\n", argv[0].str);
+    printf("%s push_disable            : increase scanner disable count\n", argv[0].str);
+    printf("%s pop_disable             : decrease scanner disable count\n", argv[0].str);
+    printf("%s reclaim_all             : attempt to reclaim all possible memory\n", argv[0].str);
+    printf("%s rotate_queue            : immediately rotate the page queues\n", argv[0].str);
+    printf("%s reclaim <MB> [only_old] : attempt to reclaim requested MB of memory.\n",
+           argv[0].str);
+    printf("%s harvest_accessed        : harvest all page accessed information\n", argv[0].str);
     return ZX_ERR_INTERNAL;
   }
   if (!strcmp(argv[1].str, "dump")) {
@@ -365,16 +387,14 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
       goto usage;
     }
     if (!eviction_enabled) {
-      printf(
-          "%s is false, reclamation request will have "
-          "no effect\n",
-          kEvictionCmdLineFlag);
+      printf("%s is false, reclamation request will have no effect\n", kEvictionCmdLineFlag);
     }
-    // To free the requested memory we set our target free memory level to current free memory +
-    // desired amount to free.
+    scanner::EvictionLevel eviction_level = scanner::EvictionLevel::IncludeNewest;
+    if (argc >= 4 && !strcmp(argv[3].str, "only_old")) {
+      eviction_level = scanner::EvictionLevel::OnlyOldest;
+    }
     const uint64_t bytes = argv[2].u * MB;
-    const uint64_t target = pmm_count_free_pages() * PAGE_SIZE + bytes;
-    scanner_trigger_reclaim(target, true);
+    scanner_trigger_evict(bytes, 0, eviction_level, scanner::Output::Print);
   } else {
     printf("unknown command\n");
     goto usage;
