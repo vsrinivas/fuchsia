@@ -120,9 +120,6 @@ executable("hwstress_v2_test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
   ]
-
-  # TODO(fxb/56368): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("hwstress_test_pkg") {

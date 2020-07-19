@@ -368,6 +368,8 @@ zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out)
 // Takes ownership of |dir|.
 int open_partition_impl(DIR* dir, const char* out_path_base, const uint8_t* uniqueGUID,
                         const uint8_t* typeGUID, zx_duration_t timeout, char* out_path) {
+  auto cleanup = fbl::MakeAutoCall([&]() { closedir(dir); });
+
   typedef struct {
     const uint8_t* guid;
     const uint8_t* type;
@@ -409,7 +411,6 @@ int open_partition_impl(DIR* dir, const char* out_path_base, const uint8_t* uniq
   if (fdio_watch_directory(dirfd(dir), cb, deadline, &info) != ZX_ERR_STOP) {
     return -1;
   }
-  closedir(dir);
   return info.out_partition.release();
 }
 
