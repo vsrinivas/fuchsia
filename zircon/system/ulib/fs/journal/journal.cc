@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 #include <lib/sync/completion.h>
+#include <lib/zx/status.h>
 #include <zircon/status.h>
 
 #include <fs/journal/journal.h>
 #include <fs/trace.h>
 #include <fs/transaction/writeback.h>
+#include <safemath/checked_math.h>
 
 #include "entry_view.h"
 #include "format_assertions.h"
@@ -15,23 +17,27 @@
 namespace fs {
 namespace {
 
-zx_status_t CheckAllWriteOperations(const fbl::Vector<storage::UnbufferedOperation>& operations) {
+template <storage::OperationType type, typename T>
+zx::status<uint64_t> CheckOperationsAndGetTotalBlockCount(const T& operations) {
+  uint64_t total_blocks = 0;
   for (const auto& operation : operations) {
-    if (operation.op.type != storage::OperationType::kWrite) {
-      FS_TRACE_ERROR("journal: Transmitted non-write operation to writeback\n");
-      return ZX_ERR_WRONG_TYPE;
+    if (operation.op.type != type) {
+      FS_TRACE_ERROR("journal: Unexpected operation type (actual=%u, expected=%u)\n",
+                     operation.op.type, type);
+      return zx::error(ZX_ERR_WRONG_TYPE);
+    }
+    if (!safemath::CheckAdd(total_blocks, operation.op.length).AssignIfValid(&total_blocks)) {
+      FS_TRACE_ERROR("journal: Too many blocks\n");
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
   }
-  return ZX_OK;
-}
-
-zx_status_t CheckAllTrimOperations(const std::vector<storage::BufferedOperation>& operations) {
-  for (const auto& operation : operations) {
-    if (operation.op.type != storage::OperationType::kTrim) {
-      return ZX_ERR_WRONG_TYPE;
-    }
+  // Make sure there's enough for kEntryMetadataBlocks without overflowing, but don't include that
+  // in the result.
+  if (!safemath::CheckAdd(total_blocks, kEntryMetadataBlocks).IsValid()) {
+    FS_TRACE_ERROR("journal: Too many blocks\n");
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
-  return ZX_OK;
+  return zx::ok(total_blocks);
 }
 
 fit::result<void, zx_status_t> SignalSyncComplete(sync_completion_t* completion) {
@@ -50,7 +56,11 @@ Journal::Journal(TransactionHandler* transaction_handler, JournalSuperblock jour
       writeback_buffer_(std::move(writeback_buffer)),
       writer_(transaction_handler, std::move(journal_superblock), journal_start_block,
               journal_buffer_->capacity()),
-      options_(options) {}
+      options_(options) {
+  // For now, the ring buffers must use the same block size as kJournalBlockSize.
+  ZX_ASSERT(journal_buffer_->BlockSize() == kJournalBlockSize);
+  ZX_ASSERT(writeback_buffer_->BlockSize() == kJournalBlockSize);
+}
 
 Journal::Journal(TransactionHandler* transaction_handler,
                  std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer)
@@ -65,20 +75,17 @@ Journal::~Journal() {
 }
 
 Journal::Promise Journal::WriteData(fbl::Vector<storage::UnbufferedOperation> operations) {
-  zx_status_t status = CheckAllWriteOperations(operations);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("Not all operations to WriteData are writes\n");
-    return fit::make_error_promise(status);
+  auto block_count_or =
+      CheckOperationsAndGetTotalBlockCount<storage::OperationType::kWrite>(operations);
+  if (block_count_or.is_error()) {
+    return fit::make_error_promise(block_count_or.status_value());
   }
-
-  // Ensure there is enough space in the writeback buffer.
-  uint64_t block_count = BlockCount(operations);
-  if (block_count == 0) {
+  if (block_count_or.value() == 0) {
     return fit::make_result_promise<void, zx_status_t>(fit::ok());
   }
 
   storage::BlockingRingBufferReservation reservation;
-  status = writeback_buffer_->Reserve(block_count, &reservation);
+  zx_status_t status = writeback_buffer_->Reserve(block_count_or.value(), &reservation);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to reserve space in writeback buffer: %s\n",
                    zx_status_get_string(status));
@@ -116,18 +123,18 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation
     return WriteData(std::move(operations));
   }
 
-  zx_status_t status = CheckAllWriteOperations(operations);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("Not all operations to WriteMetadata are writes\n");
-    return fit::make_error_promise(status);
+  auto block_count_or =
+      CheckOperationsAndGetTotalBlockCount<storage::OperationType::kWrite>(operations);
+  if (block_count_or.is_error()) {
+    return fit::make_error_promise(block_count_or.status_value());
   }
 
   // Ensure there is enough space in the journal buffer.
   // Note that in addition to the operation's blocks, we also reserve space for the journal
   // entry's metadata (header, footer, etc).
-  uint64_t block_count = BlockCount(operations) + kEntryMetadataBlocks;
+  uint64_t block_count = block_count_or.value() + kEntryMetadataBlocks;
   storage::BlockingRingBufferReservation reservation;
-  status = journal_buffer_->Reserve(block_count, &reservation);
+  zx_status_t status = journal_buffer_->Reserve(block_count, &reservation);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to reserve space in journal buffer: %s\n",
                    zx_status_get_string(status));
@@ -146,13 +153,12 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation
 
   // Return the deferred action to write the metadata operations to the device.
   auto promise =
-      fit::make_promise([this, work = std::move(work)]() mutable
-                        -> fit::result<void, zx_status_t> {
-          fit::result<void, zx_status_t> result = writer_.WriteMetadata(std::move(work));
-          if (write_metadata_callback_) {
-            write_metadata_callback_(result.is_ok() ? ZX_OK : result.error());
-          }
-          return result;
+      fit::make_promise([this, work = std::move(work)]() mutable -> fit::result<void, zx_status_t> {
+        fit::result<void, zx_status_t> result = writer_.WriteMetadata(std::move(work));
+        if (write_metadata_callback_) {
+          write_metadata_callback_(result.is_ok() ? ZX_OK : result.error());
+        }
+        return result;
       });
 
   // Ensure all metadata operations are completed in order.
@@ -163,7 +169,9 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation
 }
 
 Journal::Promise Journal::TrimData(std::vector<storage::BufferedOperation> operations) {
-  zx_status_t status = CheckAllTrimOperations(operations);
+  zx_status_t status =
+      CheckOperationsAndGetTotalBlockCount<storage::OperationType::kTrim>(operations)
+          .status_value();
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Not all operations to TrimData are trims\n");
     return fit::make_error_promise(status);

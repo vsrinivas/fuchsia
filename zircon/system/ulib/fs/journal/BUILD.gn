@@ -70,7 +70,9 @@ zx_library("journal") {
     deps += [
       "//sdk/lib/fdio",
       "//zircon/public/lib/fbl",
+      "//zircon/public/lib/safemath",
       "//zircon/public/lib/sync",
+      "//zircon/public/lib/zxc",
       "//zircon/system/ulib/disk_inspector",
       "//zircon/system/ulib/fs/transaction",
       "//zircon/system/ulib/range",

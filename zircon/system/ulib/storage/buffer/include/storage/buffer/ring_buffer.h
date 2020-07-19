@@ -200,6 +200,7 @@ class RingBuffer {
 
   // Returns the total amount of pending blocks which may be buffered.
   size_t capacity() const { return state_.capacity(); }
+  uint32_t BlockSize() const { return state_.buffer()->BlockSize(); }
 
  private:
   internal::RingBufferState state_;

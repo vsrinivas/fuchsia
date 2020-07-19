@@ -50,8 +50,9 @@ zx_status_t FuzzedVmoidRegistry::BlockDetachVmo(storage::Vmoid vmoid) {
 
 void FuzzedTransactionHandler::Init(FuzzerUtils* fuzz_utils) {
   fuzz_utils_ = fuzz_utils;
-  // Pick a block size between 2^9 (512) and 2^15 (32768)
-  block_size_ = 1 << fuzz_utils_->data_provider()->ConsumeIntegralInRange<size_t>(9, 15);
+  // For now, the journal only works with kJournalBlockSize. If and when we support different block
+  // sizes, we could fuzz the block size here.
+  block_size_ = kJournalBlockSize;
 }
 
 zx_status_t FuzzedTransactionHandler::RunRequests(

@@ -667,7 +667,7 @@ TEST_F(JournalTest, WriteNoDataSucceeds) {
   Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
                   Journal::Options());
   sync_completion_t sync_completion;
-  auto promise = journal.WriteData({}).inspect([&] (const fit::result<void, zx_status_t>& result) {
+  auto promise = journal.WriteData({}).inspect([&](const fit::result<void, zx_status_t>& result) {
     EXPECT_TRUE(result.is_ok());
     sync_completion_signal(&sync_completion);
   });
@@ -1904,7 +1904,7 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
 
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
-                    Journal::Options{ .sequence_data_writes = false });
+                    Journal::Options{.sequence_data_writes = false});
 
     // Although we "WriteData" in a particular order, we can "and-then" data
     // to force an arbitrary order that we want. This is visible in the transaction
@@ -2717,6 +2717,25 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
                     kJournalStartBlock, Journal::Options());
     journal.schedule_task(journal.WriteMetadata({operation}));
   }
+}
+
+TEST_F(JournalTest, WriteMetadataWithBadBlockCountFails) {
+  MockTransactionHandler handler(registry(), {}, 0);
+  Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                  Journal::Options());
+  fbl::Vector<storage::UnbufferedOperation> operations = {
+      storage::UnbufferedOperation{.op = {.type = storage::OperationType::kWrite, .length = 10}},
+      storage::UnbufferedOperation{.op = {.type = storage::OperationType::kWrite,
+                                          .length = std::numeric_limits<uint64_t>::max() - 10}}};
+  sync_completion_t sync_completion;
+  auto promise = journal.WriteMetadata(std::move(operations))
+                     .inspect([&](const fit::result<void, zx_status_t>& result) {
+                       ASSERT_TRUE(result.is_error());
+                       EXPECT_STATUS(result.error(), ZX_ERR_OUT_OF_RANGE);
+                       sync_completion_signal(&sync_completion);
+                     });
+  journal.schedule_task(std::move(promise));
+  EXPECT_OK(sync_completion_wait(&sync_completion, zx::duration::infinite().get()));
 }
 
 zx_status_t MakeJournalHelper(uint8_t* dest_buffer, uint64_t blocks, uint64_t block_size) {

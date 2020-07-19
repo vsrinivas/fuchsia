@@ -35,6 +35,7 @@ class BlockingRingBufferImpl {
   void Wake();
 
   size_t capacity() const { return buffer_->capacity(); }
+  uint32_t BlockSize() const { return buffer_->BlockSize(); }
 
  private:
   std::unique_ptr<RingBuffer> buffer_;
@@ -60,8 +61,8 @@ class BlockingRingBuffer {
   ~BlockingRingBuffer() = default;
 
   static zx_status_t Create(storage::VmoidRegistry* vmoid_registry, size_t blocks,
-                            uint32_t block_size,
-                            const char* label, std::unique_ptr<BlockingRingBuffer>* out);
+                            uint32_t block_size, const char* label,
+                            std::unique_ptr<BlockingRingBuffer>* out);
 
   // Same as |RingBuffer.Reserve|, but only returns ZX_ERR_NO_SPACE if |blocks| is greater
   // than capacity. In all other cases, blocks the caller until space is available.
@@ -70,6 +71,7 @@ class BlockingRingBuffer {
   }
 
   size_t capacity() const { return buffer_.capacity(); }
+  uint32_t BlockSize() const { return buffer_.BlockSize(); }
 
  private:
   BlockingRingBuffer(std::unique_ptr<RingBuffer> buffer);
