@@ -41,6 +41,9 @@ class MemoryWatchdog {
   // The callback provided to |pmm_init_reclamation|.
   static void AvailableStateUpdatedCallback(void* context, uint8_t idx);
   void AvailableStateUpdate(uint8_t idx);
+  // The callback provided to the |eviction_trigger_| timer.
+  static void EvictionTriggerCallback(Timer* timer, zx_time_t now, void* arg);
+  void EvictionTrigger();
 
   void WorkerThread() __NO_RETURN;
 
@@ -62,6 +65,16 @@ class MemoryWatchdog {
 
   // Tracks last time the memory state was evaluated (and signaled if required).
   zx_time_t prev_mem_state_eval_time_ = ZX_TIME_INFINITE_PAST;
+
+  // The free memory target to aim for when we trigger eviction.
+  uint64_t free_mem_target_ = 0;
+
+  // Current minimum amount of memory we want the triggered eviction to reclaim.
+  uint64_t min_free_target_ = 0;
+
+  // A timer is used to trigger eviction so that user space is given a chance to act upon a memory
+  // pressure signal first.
+  Timer eviction_trigger_;
 
   Executor* executor_;
 };

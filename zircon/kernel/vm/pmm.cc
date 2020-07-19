@@ -243,6 +243,18 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       rate = strtoul(argv[2].str, nullptr, 0) * 1024 * 1024 / PAGE_SIZE;
     }
 
+    // When we reach the oom state the kernel may 'try harder' to reclaim memory and prevent us from
+    // hitting oom. To avoid this we disable the scanner to prevent additional memory from becoming
+    // classified as evictable, and then evict anything that is already considered.
+    printf("Disabling VM scanner\n");
+    scanner_push_disable_count();
+    list_node evict_list = LIST_INITIAL_VALUE(evict_list);
+    uint64_t pages_evicted =
+        scanner_evict_pager_backed(UINT64_MAX, scanner::EvictionLevel::IncludeNewest, &evict_list);
+    if (pages_evicted > 0) {
+      printf("Leaked %" PRIu64 " pages from eviction\n", pages_evicted);
+    }
+
     uint64_t pages_till_oom;
     // In case we are racing with someone freeing pages we will leak in a loop until we are sure
     // we have hit the oom state.

@@ -6,6 +6,7 @@
 
 #include <object/executor.h>
 #include <object/memory_watchdog.h>
+#include <vm/scanner.h>
 
 static const char* PressureLevelToString(MemoryWatchdog::PressureLevel level) {
   switch (level) {
@@ -48,6 +49,21 @@ void MemoryWatchdog::AvailableStateUpdatedCallback(void* context, uint8_t idx) {
 void MemoryWatchdog::AvailableStateUpdate(uint8_t idx) {
   MemoryWatchdog::mem_event_idx_ = PressureLevel(idx);
   MemoryWatchdog::mem_state_signal_.Signal();
+}
+
+void MemoryWatchdog::EvictionTriggerCallback(Timer* timer, zx_time_t now, void* arg) {
+  MemoryWatchdog* watchdog = reinterpret_cast<MemoryWatchdog*>(arg);
+  watchdog->EvictionTrigger();
+}
+
+void MemoryWatchdog::EvictionTrigger() {
+  // This runs from a timer interrupt context, as such we do not want to be performing synchronous
+  // eviction and blocking some random thread. Therefore we use the asynchronous eviction trigger
+  // that will cause the scanner thread to perform the actual eviction work.
+  scanner_trigger_evict(min_free_target_, free_mem_target_,
+                        mem_event_idx_ <= PressureLevel::kCritical
+                            ? scanner::EvictionLevel::IncludeNewest
+                            : scanner::EvictionLevel::OnlyOldest);
 }
 
 // Helper called by the memory pressure thread when OOM state is entered.
@@ -108,6 +124,19 @@ void MemoryWatchdog::OnOom() {
 
 void MemoryWatchdog::WorkerThread() {
   while (true) {
+    // If we've hit OOM level perform some immediate synchronous eviction to attempt to avoid OOM.
+    if (mem_event_idx_ == PressureLevel::kOutOfMemory) {
+      list_node_t free_pages;
+      list_initialize(&free_pages);
+      // Keep trying to perform eviction for as long as we are evicting non-zero pages and we remain
+      // in the out of memory state.
+      while (mem_event_idx_ == PressureLevel::kOutOfMemory &&
+             scanner_evict_pager_backed(MB * 10 / PAGE_SIZE, scanner::EvictionLevel::IncludeNewest,
+                                        &free_pages) > 0) {
+        pmm_free(&free_pages);
+      }
+    }
+
     // Get a local copy of the atomic. It's possible by the time we read this that we've already
     // exited the last observed state, but that's fine as we don't necessarily need to signal every
     // transient state.
@@ -122,6 +151,22 @@ void MemoryWatchdog::WorkerThread() {
     if (idx < prev_mem_event_idx_ ||
         zx_time_sub_time(time_now, prev_mem_state_eval_time_) >= kHysteresisSeconds_) {
       printf("memory-pressure: memory availability state - %s\n", PressureLevelToString(idx));
+
+      // Clear any previous eviction trigger. Once Cancel completes we know that we will not race
+      // with the callback and are free to update the targets.
+      eviction_trigger_.Cancel();
+      const uint64_t free_mem = pmm_count_free_pages() * PAGE_SIZE;
+      // Set the minimum amount to free as half the amount required to reach our desired free memory
+      // level. This minimum ensures that even if the user reduces memory in reaction to this signal
+      // we will always attempt to free a bit.
+      // TODO: measure and fine tune this over time as user space evolves.
+      min_free_target_ = free_mem < free_mem_target_ ? (free_mem_target_ - free_mem) / 2 : 0;
+      // Trigger the eviction for slightly in the future. Half the hysteresis time here is a balance
+      // between giving user space time to release memory and the eviction running before the end of
+      // the hysteresis period.
+      eviction_trigger_.Set(
+          Deadline::no_slack(zx_time_add_duration(time_now, kHysteresisSeconds_ / 2)),
+          EvictionTriggerCallback, this);
 
       // Unsignal the last event that was signaled.
       zx_status_t status =
@@ -190,6 +235,10 @@ void MemoryWatchdog::Init(Executor* executor) {
         gCmdline.GetUInt64("kernel.oom.critical-mb", 150) * MB;
     mem_watermarks[PressureLevel::kWarning] = gCmdline.GetUInt64("kernel.oom.warning-mb", 300) * MB;
     uint64_t watermark_debounce = gCmdline.GetUInt64("kernel.oom.debounce-mb", 1) * MB;
+
+    // Set our eviction target to be such that we try to get completely out of the warning level,
+    // taking into account the debounce.
+    free_mem_target_ = mem_watermarks[PressureLevel::kWarning] + watermark_debounce;
 
     zx_status_t status =
         pmm_init_reclamation(&mem_watermarks[PressureLevel::kOutOfMemory], kNumWatermarks,
