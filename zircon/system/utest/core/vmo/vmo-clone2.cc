@@ -15,6 +15,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
 
+#include <thread>
 #include <utility>
 
 #include <fbl/auto_call.h>
@@ -1599,6 +1600,37 @@ TEST_F(VmoClone2TestCase, ParentStartLimitRegression) {
 
   // This is where it might explode.
   vmo_c.reset();
+}
+
+// This is a regression test for fxb/56137 and checks that if both children of a hidden parent are
+// dropped 'at the same time', then there are no races with their parallel destruction.
+TEST_F(VmoClone2TestCase, DropChildrenInParallel) {
+  // Try some N times and hope that if there is a bug we get the right timing. Prior to fixing
+  // fxb/56137 this was enough iterations to reliably trigger.
+  for (size_t i = 0; i < 10000; i++) {
+    zx::vmo vmo;
+
+    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+
+    zx::vmo child;
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &child));
+
+    // Use a three step ready protocol to ensure both threads can issue their requests at close to
+    // the same time.
+    std::atomic<bool> ready = true;
+
+    std::thread thread{[&ready, &child] {
+      ready = false;
+      while (!ready) {
+      }
+      child.reset();
+    }};
+    while (ready) {
+    }
+    ready = true;
+    vmo.reset();
+    thread.join();
+  }
 }
 
 }  // namespace vmo_test

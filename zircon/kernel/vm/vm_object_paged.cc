@@ -882,6 +882,11 @@ bool VmObjectPaged::OnChildAddedLocked() {
 
 void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
   DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
+
+  // This is scoped before guard to ensure the guard is dropped first, see comment where child_ref
+  // is assigned for more details.
+  fbl::RefPtr<VmObject> child_ref;
+
   Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
 
   if (!is_hidden()) {
@@ -896,9 +901,22 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
   bool removed_left = &left_child_locked() == removed;
 
   DropChildLocked(removed);
-  DEBUG_ASSERT(children_list_.front().is_paged());
-  VmObjectPaged& child = static_cast<VmObjectPaged&>(children_list_.front());
-  AssertHeld(child.lock_);
+
+  VmObject* child = &children_list_.front();
+  DEBUG_ASSERT(child);
+
+  // Attempt to upgrade our raw pointer to a ref ptr. This upgrade can fail in the scenario that
+  // the childs refcount has dropped to zero and is also attempting to delete itself. If this
+  // happens, as we hold the vmo lock we know our child cannot complete its destructor, and so we
+  // can still modify pieces of it until we drop the lock. It is now possible that after we upgrade
+  // we become the sole holder of a refptr, and the refptr *must* be destroyed after we release the
+  // VMO lock to prevent a deadlock.
+  child_ref = fbl::MakeRefPtrUpgradeFromRaw(child, guard);
+
+  // Our children must be paged.
+  DEBUG_ASSERT(child->is_paged());
+  VmObjectPaged* typed_child = static_cast<VmObjectPaged*>(child);
+  AssertHeld(typed_child->lock_);
 
   // Merge this vmo's content into the remaining child.
   DEBUG_ASSERT(removed->is_paged());
@@ -908,7 +926,7 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
   // to us, in addition to child.parent_ which we are about to clear.
   DEBUG_ASSERT(ref_count_debug() >= 2);
 
-  if (child.page_attribution_user_id_ != page_attribution_user_id_) {
+  if (typed_child->page_attribution_user_id_ != page_attribution_user_id_) {
     // If the attribution user id of this vmo doesn't match that of its remaining child,
     // then the vmo with the matching attribution user id  was just closed. In that case, we
     // need to reattribute the pages of any ancestor hidden vmos to vmos that still exist.
@@ -944,28 +962,36 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
 
   // Drop the child from our list, but don't recurse back into this function. Then
   // remove ourselves from the clone tree.
-  DropChildLocked(&child);
+  DropChildLocked(typed_child);
   if (parent_) {
     AssertHeld(parent_->lock_ref());
-    parent_->ReplaceChildLocked(this, &child);
+    parent_->ReplaceChildLocked(this, typed_child);
   }
-  child.parent_ = ktl::move(parent_);
+  typed_child->parent_ = ktl::move(parent_);
 
-  // We need to proxy the closure down to the original user-visible vmo. To find
-  // that, we can walk down the clone tree following the user_id_.
-  VmObjectPaged* descendant = &child;
-  AssertHeld(descendant->lock_);
-  while (descendant && descendant->user_id_ == user_id_) {
-    if (!descendant->is_hidden()) {
-      descendant->OnUserChildRemoved(guard.take());
-      return;
-    }
-    if (descendant->left_child_locked().user_id_ == user_id_) {
-      descendant = &descendant->left_child_locked();
-    } else if (descendant->right_child_locked().user_id_ == user_id_) {
-      descendant = &descendant->right_child_locked();
-    } else {
-      descendant = nullptr;
+  // To use child here  we need to ensure that it will live long enough. Up until here even if child
+  // was waiting to be destroyed, we knew it would stay alive as long as we held the lock. Since we
+  // give away the guard in the call to OnUserChildRemoved, we can only perform the call if we can
+  // separately guarantee the child stays alive by having a refptr to it.
+  // In the scenario where the refptr does not exist, that means the upgrade failed and there is no
+  // user object to signal anyway.
+  if (child_ref) {
+    // We need to proxy the closure down to the original user-visible vmo. To find
+    // that, we can walk down the clone tree following the user_id_.
+    VmObjectPaged* descendant = typed_child;
+    AssertHeld(descendant->lock_);
+    while (descendant && descendant->user_id_ == user_id_) {
+      if (!descendant->is_hidden()) {
+        descendant->OnUserChildRemoved(guard.take());
+        return;
+      }
+      if (descendant->left_child_locked().user_id_ == user_id_) {
+        descendant = &descendant->left_child_locked();
+      } else if (descendant->right_child_locked().user_id_ == user_id_) {
+        descendant = &descendant->right_child_locked();
+      } else {
+        descendant = nullptr;
+      }
     }
   }
 }
