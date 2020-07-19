@@ -219,6 +219,24 @@ fuchsia_component("link-tests") {
   ]
 }
 
+test("lseek_tests") {
+  sources = [ "lseek.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("lseek-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/lseek-tests.cml"
+  deps = [
+    ":lseek_tests",
+    ":manifests",
+  ]
+}
+
 test("minfs_tests") {
   sources = [ "minfs.cc" ]
   deps = [
@@ -496,6 +514,7 @@ fuchsia_test_package("fs-tests") {
     ":dot-dot-tests",
     ":fcntl-tests",
     ":link-tests",
+    ":lseek-tests",
     ":minfs-tests",
     ":mmap-tests",
     ":overflow-tests",
@@ -570,6 +589,7 @@ action("manifests") {
     "$target_gen_dir/dot-dot-tests.cml",
     "$target_gen_dir/fcntl-tests.cml",
     "$target_gen_dir/link-tests.cml",
+    "$target_gen_dir/lseek-tests.cml",
     "$target_gen_dir/max-file-tests.cml",
     "$target_gen_dir/minfs-tests.cml",
     "$target_gen_dir/mmap-tests.cml",
