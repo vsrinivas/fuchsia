@@ -202,6 +202,9 @@ impl fmt::Display for RemoteDevice {
             if let Some(name) = &ad.name {
                 write!(f, "{}, ", name)?;
             }
+            for m in &ad.manufacturer_data {
+                write!(f, "(mfct data: {:#06x} - {:x?}), ", m.company_id, m.data)?;
+            }
         }
 
         write!(f, "id: {}]", self.identifier)
