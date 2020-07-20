@@ -780,7 +780,9 @@ void Controller::CallOnDisplaysChanged(DisplayDevice** added, size_t added_count
   }
   dc_intf_.OnDisplaysChanged(added_args, added_count, removed, removed_count, added_info,
                              added_count, &added_actual);
-  ZX_DEBUG_ASSERT(added_count == added_actual);
+  if (added_count != added_actual) {
+    LOG_WARN("%lu displays could not be added\n", added_count - added_actual);
+  }
   for (unsigned i = 0; i < added_actual; i++) {
     added[i]->set_is_hdmi(added_info[i].is_hdmi_out);
   }
