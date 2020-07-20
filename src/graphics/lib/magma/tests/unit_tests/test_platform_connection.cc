@@ -697,6 +697,46 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
     EXPECT_EQ(1u, count);
     EXPECT_EQ(kStartBytes + kNewBytes, bytes);
   }
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kStartBytes = kMaxBytes;
+    constexpr uint64_t kNewBytes = 0;
+    wrapper.set_for_test(0, kStartBytes);
+    auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
+    EXPECT_FALSE(wait);  // At max bytes, not sending more
+    EXPECT_EQ(1u, count);
+    EXPECT_EQ(kStartBytes + kNewBytes, bytes);
+  }
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kStartBytes = kMaxBytes + 1;
+    constexpr uint64_t kNewBytes = 0;
+    wrapper.set_for_test(0, kStartBytes);
+    auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
+    EXPECT_FALSE(wait);  // Above max bytes, not sending more
+    EXPECT_EQ(1u, count);
+    EXPECT_EQ(kStartBytes + kNewBytes, bytes);
+  }
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kStartBytes = kMaxBytes;
+    constexpr uint64_t kNewBytes = 1;
+    wrapper.set_for_test(0, kStartBytes);
+    auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
+    EXPECT_TRUE(wait);  // At max bytes, sending more
+    EXPECT_EQ(1u, count);
+    EXPECT_EQ(kStartBytes + kNewBytes, bytes);
+  }
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kStartBytes = kMaxBytes + 1;
+    constexpr uint64_t kNewBytes = 1;
+    wrapper.set_for_test(0, kStartBytes);
+    auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
+    EXPECT_TRUE(wait);  // Above max bytes, sending more
+    EXPECT_EQ(1u, count);
+    EXPECT_EQ(kStartBytes + kNewBytes, bytes);
+  }
 #else
   GTEST_SKIP();
 #endif

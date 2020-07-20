@@ -17,19 +17,8 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
   std::unique_ptr<PlatformConnectionClient> Connect() {
     uint64_t inflight_params = 0;
 
-    {
-      uint64_t result;
-      if (Query(MAGMA_QUERY_VENDOR_ID, &result)) {
-        // TODO(fxb/12989) - enable for all platforms
-        if (result == 0x13B5) {
-          // Skipping ARM/Mali for now
-        } else if (!Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, &inflight_params)) {
-          return DRETP(nullptr, "Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS) failed");
-        }
-      } else {
-        DLOG("Query(MAGMA_QUERY_VENDOR_ID) failed");
-      }
-    }
+    if (!Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, &inflight_params))
+      return DRETP(nullptr, "Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS) failed");
 
     uint32_t device_handle;
     uint32_t device_notification_handle;

@@ -965,9 +965,6 @@ TEST(MagmaAbi, ExecuteCommandBufferNoResources) {
 }
 
 TEST(MagmaAbi, FlowControl) {
-  if (gVendorId == 0x13B5)  // TODO(fxb/12989) - enable for all platforms
-    GTEST_SKIP();
-
   if (TestConnection::is_virtmagma())
     GTEST_SKIP();
 

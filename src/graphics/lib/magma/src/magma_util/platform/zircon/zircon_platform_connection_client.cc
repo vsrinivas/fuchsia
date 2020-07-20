@@ -208,7 +208,7 @@ std::tuple<bool, uint64_t, uint64_t> PrimaryWrapper::ShouldWait(uint64_t new_byt
     return {false, count, bytes};
   }
 
-  return {bytes > max_inflight_bytes_, count, bytes};
+  return {new_bytes && bytes > max_inflight_bytes_, count, bytes};
 }
 
 void PrimaryWrapper::FlowControl(uint64_t new_bytes) {
