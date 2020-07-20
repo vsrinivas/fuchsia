@@ -478,9 +478,10 @@ table Value {
 ### Unions
 
 *   Record type consisting of an ordinal and an envelope.
-*   Ordinal indicates member selection, and is represented with a **uint32**.
+*   Ordinal indicates member selection, and is represented with a **uint64**.
 *   Each element is associated with a user specified ordinal.
-*   Ordinals are sequential, gaps incur an empty envelope cost and hence are discouraged.
+*   Ordinals are sequential. Unlike tables, gaps in ordinals do not incur a wire
+    format space cost.
 *   Nullable unions are represented with a `0` ordinal, and an empty envelope.
 *   Empty unions are not allowed.
 
