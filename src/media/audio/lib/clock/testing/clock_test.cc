@@ -90,24 +90,17 @@ void VerifyIsNotSystemMonotonic(const zx::clock& clock) {
 }
 
 fit::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props) {
-  constexpr zx::duration kOffsetPad = zx::usec(10);
-
   zx::clock clock;
   zx_status_t status;
 
-  if (props.start_val.has_value() || props.mono_offset.has_value()) {
+  if (props.start_val.has_value()) {
     status = zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &clock);
     if (status != ZX_OK) {
       return fit::error(status);
     }
 
     zx::clock::update_args args;
-    if (props.start_val.has_value()) {
-      args.reset().set_value(props.start_val.value());
-    } else {
-      auto offset = props.mono_offset.value() + kOffsetPad;
-      args.reset().set_value(zx::clock::get_monotonic() + offset);
-    }
+    args.reset().set_value(props.start_val.value());
 
     status = clock.update(args);
     if (status != ZX_OK) {
@@ -136,6 +129,26 @@ fit::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props) {
   }
 
   return fit::ok(std::move(clock));
+}
+
+fit::result<zx::duration, zx_status_t> GetOffsetFromMonotonic(const zx::clock& clock) {
+  if (!clock.is_valid()) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  zx_clock_details_v1_t clock_details;
+  zx_status_t status = clock.get_details(&clock_details);
+  if (status != ZX_OK) {
+    return fit::error(status);
+  }
+
+  auto synthetic_per_mono = affine::Ratio(clock_details.mono_to_synthetic.rate.synthetic_ticks,
+                                          clock_details.mono_to_synthetic.rate.reference_ticks);
+  auto synthetic_offset_from_mono = affine::Transform::Apply(
+      clock_details.mono_to_synthetic.reference_offset,
+      clock_details.mono_to_synthetic.synthetic_offset, synthetic_per_mono, 0);
+
+  return fit::ok(zx::duration(synthetic_offset_from_mono));
 }
 
 }  // namespace media::audio::clock::testing

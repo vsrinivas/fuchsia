@@ -26,17 +26,20 @@ using testing::Pointwise;
 namespace media::audio {
 namespace {
 
+constexpr uint32_t kDefaultFrameRate = 48000;
 const Format kDefaultFormat =
     Format::Create(fuchsia::media::AudioStreamType{
                        .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
                        .channels = 2,
-                       .frames_per_second = 48000,
+                       .frames_per_second = kDefaultFrameRate,
                    })
         .take_value();
 
 const TimelineFunction kDefaultTransform = TimelineFunction(
     TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                  zx::sec(1).to_nsecs()));
+
+enum ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 
 class OutputPipelineTest : public testing::ThreadingModelFixture {
  protected:
@@ -102,6 +105,10 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
                                                 kDefaultTransform, device_clock_);
   }
 
+  zx::time time_until(zx::duration delta) { return zx::time(delta.to_nsecs()); }
+  AudioClock SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
+                                                  testing::PacketFactory& factory);
+
   void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
     float* floats = reinterpret_cast<float*>(buffer);
     for (size_t i = 0; i < num_samples; ++i) {
@@ -109,27 +116,64 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
     }
   }
 
-  void TestDifferentMixRates(bool use_clock_offset);
+  void TestOutputPipelineTrim(ClockMode clock_mode);
+  void TestDifferentMixRates(ClockMode clock_mode);
 
   AudioClock client_clock_;
   AudioClock device_clock_;
 };
 
-TEST_F(OutputPipelineTest, Trim) {
-  constexpr int kNumSecondsOffset = 3;
-
+AudioClock OutputPipelineTest::SetPacketFactoryWithOffsetAudioClock(
+    zx::duration clock_offset, testing::PacketFactory& factory) {
   auto custom_clock_result =
-      clock::testing::CreateCustomClock({.mono_offset = zx::sec(kNumSecondsOffset)});
-  ASSERT_TRUE(custom_clock_result.is_ok());
-  auto custom_clock = custom_clock_result.take_value();
-  auto custom_audio_clock = AudioClock::CreateAsCustom(std::move(custom_clock));
+      clock::testing::CreateCustomClock({.start_val = zx::clock::get_monotonic() + clock_offset});
+  EXPECT_TRUE(custom_clock_result.is_ok());
 
+  zx::clock custom_clock = custom_clock_result.take_value();
+  EXPECT_TRUE(custom_clock.is_valid());
+
+  auto offset_result = clock::testing::GetOffsetFromMonotonic(custom_clock);
+  EXPECT_TRUE(offset_result.is_ok());
+  auto actual_offset = offset_result.take_value();
+
+  int64_t seek_frame = round(
+      static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
+  factory.SeekToFrame(seek_frame);
+
+  auto custom_audio_clock = AudioClock::CreateAsCustom(std::move(custom_clock));
+  EXPECT_TRUE(custom_audio_clock.is_valid());
+
+  return custom_audio_clock;
+}
+
+void OutputPipelineTest::TestOutputPipelineTrim(ClockMode clock_mode) {
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(kDefaultTransform);
-  auto stream1 =
-      std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, custom_audio_clock);
+
+  // We set up four different streams (PacketQueues), each with its own PacketFactory.
+  // The last one might have a custom clock; the rest share a common "client_clock_".
+  testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory2(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory3(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory4(dispatcher(), kDefaultFormat, PAGE_SIZE);
+
+  auto stream1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
   auto stream2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
   auto stream3 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
-  auto stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+  std::shared_ptr<PacketQueue> stream4;
+
+  AudioClock custom_audio_clock;
+
+  if (clock_mode == ClockMode::SAME) {
+    stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+  } else if (clock_mode == ClockMode::WITH_OFFSET) {
+    custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(-3), packet_factory4);
+    ASSERT_TRUE(custom_audio_clock.is_valid());
+
+    stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, custom_audio_clock);
+  } else {
+    ASSERT_TRUE(clock_mode == ClockMode::RATE_ADJUST) << "Unknown clock mode";
+    ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
+  }
 
   // Add some streams so that one is routed to each mix stage in our pipeline.
   auto pipeline = CreateOutputPipeline();
@@ -139,29 +183,24 @@ TEST_F(OutputPipelineTest, Trim) {
   pipeline->AddInput(stream4, StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION));
 
   bool packet_released[8] = {};
-  testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
-    packet_factory1.SeekToFrame(kDefaultFormat.frames_per_second() * kNumSecondsOffset);
     stream1->PushPacket(packet_factory1.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[0] = true; }));
     stream1->PushPacket(packet_factory1.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[1] = true; }));
   }
-  testing::PacketFactory packet_factory2(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
     stream2->PushPacket(packet_factory2.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[2] = true; }));
     stream2->PushPacket(packet_factory2.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[3] = true; }));
   }
-  testing::PacketFactory packet_factory3(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
     stream3->PushPacket(packet_factory3.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[4] = true; }));
     stream3->PushPacket(packet_factory3.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[5] = true; }));
   }
-  testing::PacketFactory packet_factory4(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
     stream4->PushPacket(packet_factory4.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[6] = true; }));
@@ -169,22 +208,32 @@ TEST_F(OutputPipelineTest, Trim) {
         1.0, zx::msec(5), [&packet_released] { packet_released[7] = true; }));
   }
 
-  // After 4ms we should still be retaining all packets.
-  pipeline->Trim(zx::time(0) + zx::msec(4));
+  // Because of how we set up custom clocks, we can't reliably Trim to a specific frame number (we
+  // might be off by half a frame), so we allow ourselves one frame of tolerance either direction.
+  constexpr zx::duration kToleranceInterval = zx::sec(1) / kDefaultFrameRate;
+
+  // Before 5ms: no packet is entirely consumed; we should still retain all packets.
+  pipeline->Trim(time_until(zx::msec(5) - kToleranceInterval));
   RunLoopUntilIdle();
   EXPECT_THAT(packet_released, Each(Eq(false)));
 
-  // At 5ms we should have trimmed the first packet from each queue.
-  pipeline->Trim(zx::time(0) + zx::msec(5));
+  // After 5ms: first packets are consumed and released. We should still retain the others.
+  pipeline->Trim(time_until(zx::msec(5) + kToleranceInterval));
   RunLoopUntilIdle();
   EXPECT_THAT(packet_released,
               Pointwise(Eq(), {true, false, true, false, true, false, true, false}));
 
   // After 10ms we should have trimmed all the packets.
-  pipeline->Trim(zx::time(0) + zx::msec(10));
+  pipeline->Trim(time_until(zx::msec(10) + kToleranceInterval));
   RunLoopUntilIdle();
   EXPECT_THAT(packet_released, Each(Eq(true)));
+
+  // Upon any fail, slab_allocator asserts at exit. Clear all allocations, so testing can continue.
+  pipeline->Trim(zx::time::infinite());
 }
+
+TEST_F(OutputPipelineTest, Trim) { TestOutputPipelineTrim(ClockMode::SAME); }
+TEST_F(OutputPipelineTest, Trim_ClockOffset) { TestOutputPipelineTrim(ClockMode::WITH_OFFSET); }
 
 TEST_F(OutputPipelineTest, Loopback) {
   auto test_effects = testing::TestEffectsModule::Open();
@@ -474,7 +523,7 @@ TEST_F(OutputPipelineTest, ReportMinLeadTime) {
   EXPECT_EQ(communications_lead_time, communications_stream->GetMinLeadTime());
 }
 
-void OutputPipelineTest::TestDifferentMixRates(bool use_clock_offset) {
+void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   static const PipelineConfig::MixGroup root{
       .name = "linearize",
       .input_streams =
@@ -500,28 +549,25 @@ void OutputPipelineTest::TestDifferentMixRates(bool use_clock_offset) {
       .output_channels = 2,
   };
 
-  testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
-
   // Add the stream with a usage that routes to the mix stage. We request a simple point sampler
   // to make data verification a bit simpler.
   const Mixer::Resampler resampler = Mixer::Resampler::SampleAndHold;
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(kDefaultTransform);
+
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
   std::shared_ptr<PacketQueue> stream;
   AudioClock custom_audio_clock;
 
-  if (use_clock_offset) {
-    constexpr int kNumSecondsOffset = 7;
-    packet_factory1.SeekToFrame(kDefaultFormat.frames_per_second() * kNumSecondsOffset);
-
-    auto custom_clock_result =
-        clock::testing::CreateCustomClock({.mono_offset = zx::sec(kNumSecondsOffset)});
-    ASSERT_TRUE(custom_clock_result.is_ok());
-    zx::clock custom_clock = custom_clock_result.take_value();
-    custom_audio_clock = AudioClock::CreateAsCustom(std::move(custom_clock));
+  if (clock_mode == ClockMode::SAME) {
+    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+  } else if (clock_mode == ClockMode::WITH_OFFSET) {
+    custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(7), packet_factory);
+    ASSERT_TRUE(custom_audio_clock.is_valid());
 
     stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, custom_audio_clock);
   } else {
-    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+    ASSERT_TRUE(clock_mode == ClockMode::RATE_ADJUST) << "Unknown clock mode";
+    ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
   }
 
   auto pipeline_config = PipelineConfig(root);
@@ -533,9 +579,9 @@ void OutputPipelineTest::TestDifferentMixRates(bool use_clock_offset) {
 
   bool packet_released[2] = {};
   {
-    stream->PushPacket(packet_factory1.CreatePacket(
+    stream->PushPacket(packet_factory.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[0] = true; }));
-    stream->PushPacket(packet_factory1.CreatePacket(
+    stream->PushPacket(packet_factory.CreatePacket(
         100.0, zx::msec(5), [&packet_released] { packet_released[1] = true; }));
   }
 
@@ -552,7 +598,7 @@ void OutputPipelineTest::TestDifferentMixRates(bool use_clock_offset) {
   }
 
   {
-    auto buf = pipeline->ReadLock(zx::time(0) + zx::msec(10), 240, 240);
+    auto buf = pipeline->ReadLock(time_until(zx::msec(10)), 240, 240);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);
@@ -564,12 +610,9 @@ void OutputPipelineTest::TestDifferentMixRates(bool use_clock_offset) {
   }
 }
 
-TEST_F(OutputPipelineTest, DifferentMixRates) {
-  TestDifferentMixRates(/* use_clock_offset = */ false);
-}
-
+TEST_F(OutputPipelineTest, DifferentMixRates) { TestDifferentMixRates(ClockMode::SAME); }
 TEST_F(OutputPipelineTest, DifferentMixRates_ClockOffset) {
-  TestDifferentMixRates(/* use_clock_offset = */ true);
+  TestDifferentMixRates(ClockMode::WITH_OFFSET);
 }
 
 TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {

@@ -24,11 +24,11 @@ void VerifyIsNotSystemMonotonic(const zx::clock& clock);
 
 struct ClockProperties {
   std::optional<zx::time> start_val = std::nullopt;
-  std::optional<zx::duration> mono_offset = std::nullopt;
   std::optional<int32_t> rate_adjust_ppm = std::nullopt;
 };
 
 fit::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props);
+fit::result<zx::duration, zx_status_t> GetOffsetFromMonotonic(const zx::clock& clock);
 
 }  // namespace media::audio::clock::testing
 
