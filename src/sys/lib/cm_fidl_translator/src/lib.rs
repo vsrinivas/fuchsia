@@ -361,11 +361,21 @@ impl CmInto<fsys::CollectionDecl> for cm::Collection {
 impl CmInto<fsys::CapabilityDecl> for cm::Capability {
     fn cm_into(self) -> Result<fsys::CapabilityDecl, Error> {
         Ok(match self {
+            cm::Capability::Service(service) => fsys::CapabilityDecl::Service(service.cm_into()?),
             cm::Capability::Storage(storage) => fsys::CapabilityDecl::Storage(storage.cm_into()?),
             cm::Capability::Runner(runner) => fsys::CapabilityDecl::Runner(runner.cm_into()?),
             cm::Capability::Resolver(resolver) => {
                 fsys::CapabilityDecl::Resolver(resolver.cm_into()?)
             }
+        })
+    }
+}
+
+impl CmInto<fsys::ServiceDecl> for cm::Service {
+    fn cm_into(self) -> Result<fsys::ServiceDecl, Error> {
+        Ok(fsys::ServiceDecl {
+            name: Some(self.name.into()),
+            source_path: Some(self.source_path.into()),
         })
     }
 }
@@ -1754,6 +1764,12 @@ mod tests {
             input = json!({
                 "capabilities": [
                     {
+                        "service": {
+                            "name": "fuchsia.netstack.Netstack",
+                            "source_path": "/svc/fuchsia.netstack.Netstack"
+                        }
+                    },
+                    {
                         "storage": {
                             "name": "memfs",
                             "source": {
@@ -1781,6 +1797,10 @@ mod tests {
             }),
             output = {
                 let capabilities = vec![
+                    fsys::CapabilityDecl::Service(fsys::ServiceDecl {
+                        name: Some("fuchsia.netstack.Netstack".to_string()),
+                        source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                    }),
                     fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                         name: Some("memfs".to_string()),
                         source_path: Some("/memfs".to_string()),
@@ -1850,24 +1870,6 @@ mod tests {
                     }
                 ],
                 "capabilities": [
-                    {
-                        "storage": {
-                            "name": "memfs",
-                            "source": {
-                                "self": {}
-                            },
-                            "source_path": "/memfs"
-                        }
-                    },
-                    {
-                        "runner": {
-                            "name": "elf",
-                            "source": {
-                                "self": {}
-                            },
-                            "source_path": "/elf"
-                        }
-                    },
                     {
                         "resolver": {
                             "name": "pkg_resolver",
@@ -1985,16 +1987,6 @@ mod tests {
                     },
                 ]};
                 let capabilities = vec![
-                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
-                        name: Some("memfs".to_string()),
-                        source_path: Some("/memfs".to_string()),
-                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
-                    }),
-                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
-                        name: Some("elf".to_string()),
-                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
-                        source_path: Some("/elf".to_string()),
-                    }),
                     fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
                         name: Some("pkg_resolver".to_string()),
                         source_path: Some("/resolver".to_string()),

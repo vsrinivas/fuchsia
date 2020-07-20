@@ -56,12 +56,12 @@ table OfferServiceDecl {
     4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
-/// Declares a legacy service offered by a component to one of its children,
+/// Declares a protocol offered by a component to one of its children,
 /// which may have been offered by the component's containing realm, the
 /// component itself, or one of its other children.
 ///
-/// A legacy service is a service with a single instance, provided by a single
-/// FIDL protocol.
+/// To learn more about protocols, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#protocol
 table OfferProtocolDecl {
     /// The provider of the capability relative to the component itself. Must be
     /// `parent`, `self`, or `child`.
@@ -140,14 +140,14 @@ table OfferRunnerDecl {
     1: Ref source;
 
     /// Name of the runner being offered.
-    2: fuchsia.component.runner_name source_name;
+    2: fuchsia.component.name source_name;
 
     /// Reference to the target of the capability. Must be `child` or
     /// `collection`.
     3: Ref target;
 
     /// Name under which the capability is being offered.
-    4: fuchsia.component.runner_name target_name;
+    4: fuchsia.component.name target_name;
 };
 
 /// Declares a resolver capability offered by a component to one of its children, which
@@ -159,14 +159,14 @@ table OfferResolverDecl {
     1: Ref source;
 
     /// Name of the resolver being offered.
-    2: fuchsia.component.resolver_name source_name;
+    2: fuchsia.component.name source_name;
 
     /// Reference to the target of the capability. Must be `child` or
     /// `collection`.
     3: Ref target;
 
     /// Name under which the capability is being offered.
-    4: fuchsia.component.resolver_name target_name;
+    4: fuchsia.component.name target_name;
 };
 
 /// Declares an event offered by a component.
@@ -175,13 +175,13 @@ table OfferEventDecl {
     1: Ref source;
 
     /// Name of the event being offered.
-    2: fuchsia.component.event_name source_name;
+    2: fuchsia.component.name source_name;
 
     /// Reference to the target of the event. Must be `child` or `collection`.
     3: Ref target;
 
     /// Name under which the event is being offered.
-    4: fuchsia.component.resolver_name target_name;
+    4: fuchsia.component.name target_name;
 
     /// Filter for the event. The structure of the filter depends on the event type. May be absent
     /// for some events.

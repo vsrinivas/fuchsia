@@ -10,7 +10,7 @@ using fuchsia.component;
 table CollectionDecl {
     /// The name of the collection. Instances created in the collection are
     /// scoped to this name.
-    1: fuchsia.component.collection_name name;
+    1: fuchsia.component.name name;
 
     /// The durability of instances in the collection.
     2: Durability durability;
@@ -20,7 +20,7 @@ table CollectionDecl {
     /// Must be non-empty, reference an environment defined in the containing
     /// `ComponentDecl`, and contain only the following characters:
     /// [a-z0-9-_.].
-    3: fuchsia.component.environment_name environment;
+    3: fuchsia.component.name environment;
 };
 
 /// The durability of component instances created in a collection.

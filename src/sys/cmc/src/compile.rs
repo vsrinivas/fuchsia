@@ -437,22 +437,27 @@ fn translate_capabilities(
 ) -> Result<Vec<cm::Capability>, Error> {
     let mut out_capabilities = vec![];
     for capability in capabilities_in {
-        if let Some(n) = &capability.storage {
+        if let Some(n) = &capability.service {
+            let source_path =
+                capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
+            out_capabilities
+                .push(cm::Capability::Service(cm::Service { name: n.clone(), source_path }));
+        } else if let Some(n) = &capability.storage {
             out_capabilities.push(cm::Capability::Storage(cm::Storage {
                 name: n.clone(),
-                source_path: capability.path.clone(),
+                source_path: capability.path.clone().expect("missing path"),
                 source: offer_source_from_ref(capability.from.as_ref().unwrap().into())?,
             }));
         } else if let Some(n) = &capability.runner {
             out_capabilities.push(cm::Capability::Runner(cm::Runner {
                 name: n.clone(),
-                source_path: capability.path.clone(),
+                source_path: capability.path.clone().expect("missing path"),
                 source: offer_source_from_ref(capability.from.as_ref().unwrap().into())?,
             }));
         } else if let Some(n) = &capability.resolver {
             out_capabilities.push(cm::Capability::Resolver(cm::Resolver {
                 name: n.clone(),
-                source_path: capability.path.clone(),
+                source_path: capability.path.clone().expect("missing path"),
             }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
@@ -823,7 +828,6 @@ mod tests {
         assert_eq!(buffer, expected_output);
     }
 
-    // TODO: Consider converting these to a golden test
     test_compile! {
         test_compile_empty => {
             input = json!({}),
@@ -1796,6 +1800,13 @@ mod tests {
             input = json!({
                 "capabilities": [
                     {
+                        "service": "myservice",
+                        "path": "/service",
+                    },
+                    {
+                        "service": "myservice2",
+                    },
+                    {
                         "storage": "mystorage",
                         "path": "/storage",
                         "from": "#minfs",
@@ -1819,6 +1830,18 @@ mod tests {
             }),
             output = r#"{
     "capabilities": [
+        {
+            "service": {
+                "name": "myservice",
+                "source_path": "/service"
+            }
+        },
+        {
+            "service": {
+                "name": "myservice2",
+                "source_path": "/svc/myservice2"
+            }
+        },
         {
             "storage": {
                 "name": "mystorage",

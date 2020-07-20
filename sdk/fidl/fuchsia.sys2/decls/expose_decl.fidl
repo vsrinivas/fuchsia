@@ -43,22 +43,22 @@ table ExposeServiceDecl {
     4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
-/// Declares a legacy service exposed to a component's containing realm, such as
-/// a legacy service exposed by the component or one of its children at runtime.
+/// Declares a protocol exposed to a component's containing realm, such as
+/// a protocol exposed by the component or one of its children at runtime.
 ///
-/// A legacy service is a service with a single instance, provided by a single
-/// FIDL protocol.
+/// To learn more about protocols, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#protocol
 table ExposeProtocolDecl {
     /// The provider of the capability relative to the component itself. Must
     /// be `self` or `child`.
     1: Ref source;
 
-    /// Path identifying the legacy service, by which it was presented to this
+    /// Path identifying the protocol, by which it was presented to this
     /// component.
     2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 
-    /// The destination to which the legacy service is exposed: either the component's realm or the
-    /// framework.
+    /// The destination to which the protocol is exposed: either the component's
+    /// realm or the framework.
     3: Ref target;
 
     /// The path by which the capability is being exposed.
@@ -102,14 +102,14 @@ table ExposeRunnerDecl {
     1: Ref source;
 
     /// The name of the runner, by which it was presented to this component.
-    2: fuchsia.component.runner_name source_name;
+    2: fuchsia.component.name source_name;
 
     /// The destination to which the runner is exposed: either the component's realm or the
     /// framework.
     3: Ref target;
 
     /// The name by which the capability is being exposed.
-    4: fuchsia.component.runner_name target_name;
+    4: fuchsia.component.name target_name;
 };
 
 /// Declares a resolver exposed to a component's containing realm, such as a
@@ -120,12 +120,12 @@ table ExposeResolverDecl {
     1: Ref source;
 
     /// The name of the resolver, by which it was presented to this component.
-    2: fuchsia.component.resolver_name source_name;
+    2: fuchsia.component.name source_name;
 
     /// The destination to which the resolver is exposed: either the component's realm or the
     /// framework.
     3: Ref target;
 
     /// The name by which the capability is being exposed.
-    4: fuchsia.component.resolver_name target_name;
+    4: fuchsia.component.name target_name;
 };

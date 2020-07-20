@@ -522,6 +522,20 @@ impl Document {
         }
     }
 
+    pub fn all_service_names(&self) -> Vec<&Name> {
+        if let Some(capabilities) = self.capabilities.as_ref() {
+            capabilities
+                .iter()
+                .filter_map(|c| match c.service.as_ref() {
+                    Some(r) => Some(r),
+                    None => None,
+                })
+                .collect()
+        } else {
+            vec![]
+        }
+    }
+
     pub fn all_runner_names(&self) -> Vec<&Name> {
         if let Some(capabilities) = self.capabilities.as_ref() {
             capabilities
@@ -601,11 +615,12 @@ pub struct ResolverRegistration {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Capability {
+    pub service: Option<Name>,
     pub storage: Option<Name>,
     pub runner: Option<Name>,
     pub resolver: Option<Name>,
     pub from: Option<CapabilityFromRef>,
-    pub path: Path,
+    pub path: Option<Path>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -682,7 +697,7 @@ pub trait FromClause {
 }
 
 pub trait CapabilityClause {
-    fn service(&self) -> &Option<Path>;
+    fn service(&self) -> Option<Path>;
     fn protocol(&self) -> &Option<OneOrMany<Path>>;
     fn directory(&self) -> &Option<Path>;
     fn storage(&self) -> &Option<Name>;
@@ -694,6 +709,8 @@ pub trait CapabilityClause {
 
     /// Returns the name of the capability for display purposes.
     /// If `service()` returns `Some`, the capability name must be "service", etc.
+    ///
+    /// Panics if a capability keyword is not set.
     fn capability_name(&self) -> &'static str;
 
     fn decl_type(&self) -> &'static str;
@@ -704,13 +721,18 @@ pub trait AsClause {
     fn r#as(&self) -> Option<&NameOrPath>;
 }
 
+pub trait PathClause {
+    fn path(&self) -> Option<&Path>;
+}
+
 pub trait FilterClause {
     fn filter(&self) -> Option<&Map<String, Value>>;
 }
 
 impl CapabilityClause for Capability {
-    fn service(&self) -> &Option<Path> {
-        &None
+    fn service(&self) -> Option<Path> {
+        // TODO: Once service capabilites are integrated with use/offer/expose, return the name
+        self.service.as_ref().map(|s| format!("/svc/{}", s).parse().unwrap())
     }
     fn protocol(&self) -> &Option<OneOrMany<Path>> {
         &None
@@ -737,27 +759,35 @@ impl CapabilityClause for Capability {
         &None
     }
     fn capability_name(&self) -> &'static str {
-        if self.storage.is_some() {
+        if self.service.is_some() {
+            "service"
+        } else if self.storage.is_some() {
             "storage"
         } else if self.runner.is_some() {
             "runner"
         } else if self.resolver.is_some() {
             "resolver"
         } else {
-            ""
+            panic!("Missing capability name")
         }
     }
     fn decl_type(&self) -> &'static str {
         "capability"
     }
     fn supported(&self) -> &[&'static str] {
-        &["storage", "runner", "resolver"]
+        &["service", "storage", "runner", "resolver"]
     }
 }
 
 impl AsClause for Capability {
     fn r#as(&self) -> Option<&NameOrPath> {
         None
+    }
+}
+
+impl PathClause for Capability {
+    fn path(&self) -> Option<&Path> {
+        self.path.as_ref()
     }
 }
 
@@ -768,8 +798,8 @@ impl FilterClause for Capability {
 }
 
 impl CapabilityClause for Use {
-    fn service(&self) -> &Option<Path> {
-        &self.service
+    fn service(&self) -> Option<Path> {
+        self.service.clone()
     }
     fn protocol(&self) -> &Option<OneOrMany<Path>> {
         &self.protocol
@@ -811,7 +841,7 @@ impl CapabilityClause for Use {
         } else if self.event_stream.is_some() {
             "event_stream"
         } else {
-            ""
+            panic!("Missing capability name")
         }
     }
     fn decl_type(&self) -> &'static str {
@@ -834,6 +864,12 @@ impl AsClause for Use {
     }
 }
 
+impl PathClause for Use {
+    fn path(&self) -> Option<&Path> {
+        None
+    }
+}
+
 impl FromClause for Expose {
     fn from_(&self) -> OneOrMany<AnyRef<'_>> {
         one_or_many_from_impl(&self.from)
@@ -841,8 +877,8 @@ impl FromClause for Expose {
 }
 
 impl CapabilityClause for Expose {
-    fn service(&self) -> &Option<Path> {
-        &self.service
+    fn service(&self) -> Option<Path> {
+        self.service.clone()
     }
     // TODO(340156): Only OneOrMany::One protocol is supported for now. Teach `expose` rules to accept
     // `Many` protocols.
@@ -882,7 +918,7 @@ impl CapabilityClause for Expose {
         } else if self.resolver.is_some() {
             "resolver"
         } else {
-            ""
+            panic!("Missing capability name")
         }
     }
     fn decl_type(&self) -> &'static str {
@@ -899,6 +935,12 @@ impl AsClause for Expose {
     }
 }
 
+impl PathClause for Expose {
+    fn path(&self) -> Option<&Path> {
+        None
+    }
+}
+
 impl FilterClause for Expose {
     fn filter(&self) -> Option<&Map<String, Value>> {
         None
@@ -912,8 +954,8 @@ impl FromClause for Offer {
 }
 
 impl CapabilityClause for Offer {
-    fn service(&self) -> &Option<Path> {
-        &self.service
+    fn service(&self) -> Option<Path> {
+        self.service.clone()
     }
     fn protocol(&self) -> &Option<OneOrMany<Path>> {
         &self.protocol
@@ -955,7 +997,7 @@ impl CapabilityClause for Offer {
         } else if self.event.is_some() {
             "event"
         } else {
-            ""
+            panic!("Missing capability name")
         }
     }
     fn decl_type(&self) -> &'static str {
@@ -969,6 +1011,12 @@ impl CapabilityClause for Offer {
 impl AsClause for Offer {
     fn r#as(&self) -> Option<&NameOrPath> {
         self.r#as.as_ref()
+    }
+}
+
+impl PathClause for Offer {
+    fn path(&self) -> Option<&Path> {
+        None
     }
 }
 
@@ -1002,18 +1050,12 @@ where
     r.into()
 }
 
-pub(super) fn alias_or_name<'a>(
-    alias: Option<&'a NameOrPath>,
-    name: &'a Name,
-) -> Result<&'a Name, Error> {
-    Ok(alias.map(|a| a.extract_name_borrowed()).transpose()?.unwrap_or(name))
+pub(super) fn alias_or_name(alias: Option<&NameOrPath>, name: &Name) -> Result<Name, Error> {
+    Ok(alias.map(|a| a.extract_name_borrowed()).transpose()?.unwrap_or(name).clone())
 }
 
-pub(super) fn alias_or_path<'a>(
-    alias: Option<&'a NameOrPath>,
-    path: &'a Path,
-) -> Result<&'a Path, Error> {
-    Ok(alias.map(|a| a.extract_path_borrowed()).transpose()?.unwrap_or(path))
+pub(super) fn alias_or_path(alias: Option<&NameOrPath>, path: &Path) -> Result<Path, Error> {
+    Ok(alias.map(|a| a.extract_path_borrowed()).transpose()?.unwrap_or(path).clone())
 }
 
 #[cfg(test)]

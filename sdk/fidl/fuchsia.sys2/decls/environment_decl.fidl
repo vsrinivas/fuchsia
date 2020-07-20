@@ -9,7 +9,7 @@ using fuchsia.component;
 /// Declares an environment which configures a realm.
 table EnvironmentDecl {
     /// The name of this environment.
-    1: fuchsia.component.environment_name name;
+    1: fuchsia.component.name name;
 
     /// Specifies how the initial state of this environment is constructed.
     2: EnvironmentExtends extends;
@@ -44,20 +44,20 @@ enum EnvironmentExtends {
 table RunnerRegistration {
     /// The name of the runner capability as it's exposed to, offered, or
     /// defined by this component.
-    1: fuchsia.component.runner_name source_name;
+    1: fuchsia.component.name source_name;
 
     /// The provider of the capability relative to the component itself. Must be
     /// `parent`, `self`, or `child`.
     2: Ref source;
 
     /// The name by which the runner is made available in this environment.
-    3: fuchsia.component.runner_name target_name;
+    3: fuchsia.component.name target_name;
 };
 
 /// A mapping of URL scheme to resolver name.
 table ResolverRegistration {
     /// The name of the resolver.
-    1: fuchsia.component.resolver_name resolver;
+    1: fuchsia.component.name resolver;
 
     /// The provider of the capability relative to the component itself. Must be
     /// `parent`, `self`, or `child`.

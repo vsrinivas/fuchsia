@@ -13,7 +13,7 @@ table ChildDecl {
     ///
     /// Must be non-empty, unique among all siblings, and contain only the
     /// following characters: [a-z0-9-_.].
-    1: fuchsia.component.child_name name;
+    1: fuchsia.component.name name;
 
     /// The child component's URL.
     ///
@@ -28,7 +28,7 @@ table ChildDecl {
     /// Must be non-empty, reference an environment defined in the containing
     /// `ComponentDecl`, and contain only the following characters:
     /// [a-z0-9-_.].
-    4: fuchsia.component.environment_name environment;
+    4: fuchsia.component.name environment;
 
     // TODO(CP-154): Provide a way to supply parameters to the child, possibly
     // as command-line arguments, by URL, or maybe in some other way which is

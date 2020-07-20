@@ -106,7 +106,7 @@ table UseStorageDecl {
 table UseRunnerDecl {
     /// The name of the runner, as it was presented to this component by the
     /// realm.
-    1: fuchsia.component.runner_name source_name;
+    1: fuchsia.component.name source_name;
 };
 
 /// Declares an event used by a component.
@@ -115,10 +115,10 @@ table UseEventDecl {
     1: Ref source;
 
     /// Name identifying the event which was presented to this component.
-    2: fuchsia.component.event_name source_name;
+    2: fuchsia.component.name source_name;
 
     /// The name which the component will use to refer to this event.
-    3: fuchsia.component.event_name target_name;
+    3: fuchsia.component.name target_name;
 
     /// Filter for the event. The structure of the filter depends on the event type. May be absent
     /// for some events.
@@ -134,5 +134,5 @@ table UseEventStreamDecl {
 
     /// The set of event names to which this EventStream is subscribed.
     /// Note: This vector must be non-empty.
-    2: vector<fuchsia.component.event_name>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED events;
+    2: vector<fuchsia.component.name>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED events;
 };

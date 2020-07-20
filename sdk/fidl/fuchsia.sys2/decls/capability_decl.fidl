@@ -8,9 +8,10 @@ using fuchsia.component;
 
 /// Declares a capability defined by this component.
 flexible union CapabilityDecl {
-    1: StorageDecl storage;
-    2: RunnerDecl runner;
-    3: ResolverDecl resolver;
+    1: ServiceDecl service;
+    2: StorageDecl storage;
+    3: RunnerDecl runner;
+    4: ResolverDecl resolver;
 };
 
 /// The type of storage offered or used by a component.
@@ -26,11 +27,23 @@ enum StorageType {
     META = 3;
 };
 
+/// Declares a service capability backed by this component.
+///
+/// To learn more about services, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#service
+table ServiceDecl {
+    /// The name of this service.
+    1: string:fuchsia.component.MAX_NAME_LENGTH name;
+
+    /// The path to the service in the component's outgoing directory.
+    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+};
+
 /// Declares a storage capability backed by a directory from which data, cache,
 /// or meta storage can be offered.
 table StorageDecl {
     /// The name of this storage
-    1: string:fuchsia.component.MAX_STORAGE_NAME_LENGTH name;
+    1: fuchsia.component.name name;
 
     /// The provider of the underlying directory capability relative to the
     /// component itself. Must be `parent`, `self`, or `child`.
@@ -45,7 +58,7 @@ table StorageDecl {
 /// Declares a runner capability backed by a service.
 table RunnerDecl {
     /// The name of this runner.
-    1: fuchsia.component.runner_name name;
+    1: fuchsia.component.name name;
 
     /// The provider of the underlying service relative to the component itself.
     /// Must be `parent`, `self`, or `child`.
@@ -61,7 +74,7 @@ table ResolverDecl {
     /// The name of this resolver.
     /// Must be non-empty, unique among resolvers declared in the same `ComponentDecl`, and
     /// contain only the following characters: [a-z0-9-_.].
-    1: fuchsia.component.resolver_name name;
+    1: fuchsia.component.name name;
 
     /// The path of the capability in the declaring component's namespace.
     2: string:fuchsia.component.MAX_PATH_LENGTH source_path;

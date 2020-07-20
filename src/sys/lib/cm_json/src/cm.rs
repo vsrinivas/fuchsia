@@ -74,6 +74,7 @@ pub struct Rights(pub Vec<Right>);
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum Capability {
+    Service(Service),
     Storage(Storage),
     Runner(Runner),
     Resolver(Resolver),
@@ -100,6 +101,15 @@ pub struct Collection {
     pub durability: Durability,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub environment: Option<Name>,
+}
+
+/// A service capability. See [`ServiceDecl`].
+///
+/// [`ServiceDecl`]: ../../fidl_fuchsia_sys2/struct.ServiceDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Service {
+    pub name: Name,
+    pub source_path: Path,
 }
 
 /// A storage capability. See [`StorageDecl`].

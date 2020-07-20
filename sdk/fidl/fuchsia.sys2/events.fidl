@@ -337,7 +337,7 @@ protocol EventSource {
     /// Errors:
     /// - `RESOURCE_UNAVAILABLE` when the component hasn't been granted the capability to subscribe
     ///   to some event in the requested `events`.
-    Subscribe(vector<fuchsia.component.event_name>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED events,
+    Subscribe(vector<fuchsia.component.name>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED events,
               EventStream stream)
         -> () error fuchsia.component.Error;
 };

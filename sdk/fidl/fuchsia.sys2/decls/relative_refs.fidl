@@ -30,21 +30,21 @@ struct ChildRef {
     /// The name assigned to the child by its parent. If `collection` is set,
     /// `name` is scoped to `collection` and the child is a dynamic instance.
     /// Required.
-    fuchsia.component.child_name name;
+    fuchsia.component.name name;
     /// The collection `name` belongs to. If omitted, `name` references a static
     /// instance. This field must be omitted if the `ChildRef` is being used in
     /// a component declaration. Optional.
-    fuchsia.component.collection_name? collection;
+    fuchsia.component.name? collection;
 };
 
 /// A reference to one of the component's collections.
 struct CollectionRef {
-    fuchsia.component.collection_name name;
+    fuchsia.component.name name;
 };
 
 /// A reference to one of the component's storage sections.
 struct StorageRef {
-    string:fuchsia.component.MAX_STORAGE_NAME_LENGTH name;
+    fuchsia.component.name name;
 };
 
 /// A reference to the component framework itself.

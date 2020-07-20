@@ -608,9 +608,15 @@ fsys::OfferEventDecl,
 });
 fidl_into_enum!(CapabilityDecl, CapabilityDecl, fsys::CapabilityDecl, fsys::CapabilityDecl,
 {
+    Service(ServiceDecl),
     Storage(StorageDecl),
     Runner(RunnerDecl),
     Resolver(ResolverDecl),
+});
+fidl_into_struct!(ServiceDecl, ServiceDecl, fsys::ServiceDecl, fsys::ServiceDecl,
+{
+    name: CapabilityName,
+    source_path: CapabilityPath,
 });
 fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
 fsys::StorageDecl,
@@ -1962,6 +1968,10 @@ mod tests {
                    }),
                ]),
                capabilities: Some(vec![
+                   fsys::CapabilityDecl::Service(fsys::ServiceDecl {
+                       name: Some("netstack".to_string()),
+                       source_path: Some("/netstack".to_string()),
+                   }),
                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                        name: Some("memfs".to_string()),
                        source_path: Some("/memfs".to_string()),
@@ -2184,6 +2194,10 @@ mod tests {
                         }),
                     ],
                     capabilities: vec![
+                        CapabilityDecl::Service(ServiceDecl {
+                            name: "netstack".into(),
+                            source_path: "/netstack".try_into().unwrap(),
+                        }),
                         CapabilityDecl::Storage(StorageDecl {
                             name: "memfs".to_string(),
                             source_path: "/memfs".try_into().unwrap(),
