@@ -30,7 +30,7 @@ Future<ProcessResult> initializeRepo(String pmPath, String repoPath) async =>
 Future<ProcessResult> publishPackage(
         String pmPath, String repoPath, String archivePath) async =>
     Process.run(
-        pmPath, ['publish', '-a', '-n', '-r=$repoPath', '-f=$archivePath']);
+        pmPath, ['publish', '-a', '-f=$archivePath', '-repo=$repoPath']);
 
 Future<ProcessResult> createArchive(
     String pmPath, String packageManifestPath) async {
