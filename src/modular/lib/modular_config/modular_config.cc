@@ -48,6 +48,26 @@ std::string StripLeadingSlash(std::string str) {
 
 }  // namespace
 
+fit::result<fuchsia::modular::session::ModularConfig, std::string> ParseConfig(
+    std::string_view config_json) {
+  rapidjson::Document doc;
+
+  doc.Parse<kModularConfigParseFlags>(config_json.data(), config_json.length());
+  if (doc.HasParseError()) {
+    auto error = std::stringstream();
+    error << "Failed to parse JSON: " << rapidjson::GetParseError_En(doc.GetParseError()) << " ("
+          << doc.GetErrorOffset() << ")";
+    return fit::error(error.str());
+  }
+
+  fuchsia::modular::session::ModularConfig config;
+  if (!XdrRead(&doc, &config, XdrModularConfig)) {
+    return fit::error("Failed to read JSON as Modular configuration (does not follow schema?)");
+  }
+
+  return fit::ok(std::move(config));
+}
+
 ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {
   FX_CHECK(dir_fd.get() >= 0);
 

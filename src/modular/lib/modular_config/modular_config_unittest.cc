@@ -270,3 +270,48 @@ TEST_F(ModularConfigReaderTest, ParseComments) {
   // Verify that ModularConfigReader parsed the config.
   EXPECT_EQ(1u, config.session_shell_map().size());
 }
+
+// Tests that ParseConfig successfully parses a valid Modular config JSON string with
+// some non-default values set.
+TEST_F(ModularConfigReaderTest, ParseConfigOk) {
+  static constexpr auto kConfigJson = R"({
+    "basemgr": {
+      "enable_cobalt": false
+    },
+    "sessionmgr": {
+      "enable_cobalt": false
+    }
+  })";
+
+  auto config_result = modular::ParseConfig(kConfigJson);
+  ASSERT_TRUE(config_result.is_ok());
+
+  auto config = config_result.take_value();
+  ASSERT_TRUE(config.has_basemgr_config());
+  EXPECT_FALSE(config.basemgr_config().enable_cobalt());
+  ASSERT_TRUE(config.has_sessionmgr_config());
+  EXPECT_FALSE(config.sessionmgr_config().enable_cobalt());
+}
+
+// Tests that ParseConfig return an error when passed a string that doesn't contain valid JSON.
+TEST_F(ModularConfigReaderTest, ParseConfigInvalidJson) {
+  static constexpr auto kConfigJson = R"(this is not valid JSON)";
+
+  auto config_result = modular::ParseConfig(kConfigJson);
+  EXPECT_TRUE(config_result.is_error());
+}
+
+// Tests that ParseConfig return an error when passed a JSON string that doesn't match
+// the Modular config schema.
+TEST_F(ModularConfigReaderTest, ParseConfigInvalidSchema) {
+  static constexpr auto kConfigJson = R"({
+    "basemgr": {
+      "session_shells": {
+        "this is valid JSON but not a valid modular config"
+      }
+    }
+  })";
+
+  auto config_result = modular::ParseConfig(kConfigJson);
+  EXPECT_TRUE(config_result.is_error());
+}

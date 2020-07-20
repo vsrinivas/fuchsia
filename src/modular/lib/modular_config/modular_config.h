@@ -7,6 +7,7 @@
 
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fit/result.h>
 
 #include <rapidjson/reader.h>
 
@@ -14,6 +15,12 @@
 #include "src/lib/json_parser/json_parser.h"
 
 namespace modular {
+
+// Parse Modular configuration from JSON into a FIDL table.
+//
+// Returns either the parsed configuration or an error string.
+fit::result<fuchsia::modular::session::ModularConfig, std::string> ParseConfig(
+    std::string_view config_json);
 
 // A utility for parsing a modular configuration file.
 //
