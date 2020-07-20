@@ -465,6 +465,24 @@ fuchsia_component("sync-tests") {
   ]
 }
 
+test("threading_tests") {
+  sources = [ "threading.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("threading-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/threading-tests.cml"
+  deps = [
+    ":manifests",
+    ":threading_tests",
+  ]
+}
+
 test("unlink_tests") {
   sources = [ "unlink.cc" ]
   deps = [
@@ -527,6 +545,7 @@ fuchsia_test_package("fs-tests") {
     ":rw-workers-tests",
     ":sparse-tests",
     ":sync-tests",
+    ":threading-tests",
     ":unlink-tests",
     ":watcher-tests",
   ]
@@ -604,6 +623,7 @@ action("manifests") {
     "$target_gen_dir/sparse-tests.cml",
     "$target_gen_dir/sparse-large-tests.cml",
     "$target_gen_dir/sync-tests.cml",
+    "$target_gen_dir/threading-tests.cml",
     "$target_gen_dir/unlink-tests.cml",
     "$target_gen_dir/watcher-tests.cml",
   ]
