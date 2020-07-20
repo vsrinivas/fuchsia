@@ -98,6 +98,7 @@ TEST_P(AttrTest, WriteSetsModificationTime) {
   struct stat stat1, stat2;
   EXPECT_EQ(fstat(fd1, &stat1), 0);
 
+  zx_nanosleep(zx_deadline_after(fs().GetTraits().timestamp_granularity.to_nsecs()));
   char buffer[100];
   memset(buffer, 'a', sizeof(buffer));
   ssize_t ret = write(fd1, buffer, sizeof(buffer));
@@ -106,7 +107,29 @@ TEST_P(AttrTest, WriteSetsModificationTime) {
   EXPECT_EQ(close(fd1), 0);
   ASSERT_EQ(stat(file.c_str(), &stat2), 0);
 
-  ASSERT_LE(ToNanoSeconds(stat1.st_mtim), ToNanoSeconds(stat2.st_mtim));
+  ASSERT_LT(ToNanoSeconds(stat1.st_mtim), ToNanoSeconds(stat2.st_mtim));
+  EXPECT_EQ(unlink(file.c_str()), 0);
+}
+
+TEST_P(AttrTest, WriteSetsModificationTimeNoClose) {
+  const std::string file = GetPath("file.txt");
+  int fd1 = open(file.c_str(), O_CREAT | O_RDWR, 0644);
+  EXPECT_GT(fd1, 0);
+
+  struct stat stat1, stat2;
+  EXPECT_EQ(fstat(fd1, &stat1), 0);
+
+  zx_nanosleep(zx_deadline_after(fs().GetTraits().timestamp_granularity.to_nsecs()));
+  char buffer[100];
+  memset(buffer, 'a', sizeof(buffer));
+
+  ssize_t ret = write(fd1, buffer, sizeof(buffer));
+  EXPECT_GT(ret, 0);
+  EXPECT_EQ((unsigned long)(ret), sizeof(buffer));
+  ASSERT_EQ(stat(file.c_str(), &stat2), 0);
+
+  ASSERT_LT(ToNanoSeconds(stat1.st_mtim), ToNanoSeconds(stat2.st_mtim));
+  EXPECT_EQ(close(fd1), 0);
   EXPECT_EQ(unlink(file.c_str()), 0);
 }
 
