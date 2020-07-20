@@ -6,6 +6,7 @@ use std::time::Duration;
 // Config keys
 pub const LOG_DIR: &str = "log-dir";
 pub const LOG_ENABLED: &str = "log-enabled";
+pub const PACKAGE_REPO: &str = "package-repo";
 pub const SSH_PUB: &str = "ssh-pub";
 pub const SSH_PRIV: &str = "ssh-priv";
 pub const SSH_PORT: &str = "ssh-port";

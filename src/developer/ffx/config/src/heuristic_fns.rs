@@ -42,3 +42,8 @@ pub(crate) fn find_ssh_keys(key: &str) -> Option<Value> {
         Err(_) => None,
     }
 }
+
+pub(crate) fn find_package_repo(_key: &str) -> Option<Value> {
+    let repo_dir = home::home_dir()?.join(".local/share/ffx");
+    Some(Value::String(repo_dir.to_str()?.to_string()))
+}

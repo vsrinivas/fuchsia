@@ -7,6 +7,7 @@ mod repository;
 use anyhow::{anyhow, Context, Error};
 use ffx_core::ffx_plugin;
 use ffx_packaging_args::{BuildCommand, PackageCommand, SubCommand};
+use repository::Repository;
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::BufRead;
@@ -14,7 +15,7 @@ use std::path::PathBuf;
 
 #[ffx_plugin()]
 pub async fn cmd_package(cmd: PackageCommand) -> Result<(), Error> {
-    let repo = &repository::DEFAULT_REPO;
+    let repo = &Repository::default_repo().await;
     match cmd.sub {
         SubCommand::Build(subcmd) => cmd_package_build(subcmd, std::io::stdout(), repo),
     }
@@ -35,7 +36,7 @@ fn parse_entry(entry: String) -> Result<ManifestEntry, Error> {
 fn cmd_package_build(
     cmd: BuildCommand,
     mut w: impl std::io::Write,
-    repo: &repository::Repository,
+    repo: &Repository,
 ) -> Result<(), Error> {
     let mut entries = Vec::new();
     for entry in cmd.entries {
@@ -71,7 +72,7 @@ fn cmd_package_build(
 }
 
 fn build_package(
-    repo: &repository::Repository,
+    repo: &Repository,
     contents: BTreeMap<String, PathBuf>,
     mut meta_files: BTreeMap<String, Vec<u8>>,
 ) -> Result<fuchsia_merkle::Hash, Error> {
@@ -100,7 +101,7 @@ fn build_package(
 
 #[cfg(test)]
 mod test {
-    use crate::repository;
+    use crate::repository::Repository;
     use anyhow::Error;
     use std::fs;
     use std::io;
@@ -109,7 +110,7 @@ mod test {
     fn test_build() -> Result<(), Error> {
         let tmp_dir = tempfile::TempDir::new()?;
         let tmp_path = tmp_dir.path();
-        let repo = repository::Repository::new_with_blobs(tmp_path.into(), tmp_path.join("blobs"));
+        let repo = Repository::new(tmp_path.into(), tmp_path.join("blobs"));
         fs::write(
             tmp_path.join("foo.cmx"),
             r#"{
@@ -151,7 +152,7 @@ mod test {
     fn test_manifest_syntax_error() -> Result<(), Error> {
         let tmp_dir = tempfile::TempDir::new()?;
         let tmp_path = tmp_dir.path();
-        let repo = repository::Repository::new_with_blobs(tmp_path.into(), tmp_path.join("blobs"));
+        let repo = Repository::new(tmp_path.into(), tmp_path.join("blobs"));
         let res = crate::cmd_package_build(
             ffx_packaging_args::BuildCommand {
                 entries: vec!["bad entry".into()],

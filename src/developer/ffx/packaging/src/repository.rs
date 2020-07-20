@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use lazy_static::lazy_static;
+use ffx_config::constants::PACKAGE_REPO;
+use ffx_config::get;
 use std::{fs, path};
 
 #[derive(Clone)]
@@ -16,11 +17,6 @@ pub struct Repository {
     // This will be used eventually to store published packages
     #[allow(dead_code)]
     packages_dir: path::PathBuf,
-}
-
-lazy_static! {
-    pub static ref DATA_DIR: path::PathBuf = home::home_dir().unwrap().join(".local/share/ffx");
-    pub static ref DEFAULT_REPO: Repository = Repository::new(DATA_DIR.clone());
 }
 
 impl BlobsDir {
@@ -45,16 +41,34 @@ impl BlobsDir {
 }
 
 impl Repository {
-    pub fn new(dir: path::PathBuf) -> Repository {
-        Self::new_with_blobs(dir, DATA_DIR.join("blobs"))
-    }
-    pub fn new_with_blobs(dir: path::PathBuf, blobs: path::PathBuf) -> Repository {
+    pub fn new(dir: path::PathBuf, blobs: path::PathBuf) -> Repository {
         let packages_dir = dir.join("packages");
         fs::create_dir_all(&packages_dir).unwrap();
         Repository { blobs: BlobsDir::new(blobs), packages_dir }
     }
 
+    pub async fn default_repo() -> Repository {
+        let repo_dir: path::PathBuf = get!(str, PACKAGE_REPO, "").await.into();
+        Repository::new(repo_dir.clone(), repo_dir)
+    }
+
     pub fn blobs(&self) -> &BlobsDir {
         &self.blobs
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[cfg(target_os = "linux")]
+    use {crate::repository::Repository, anyhow::Error, std::path};
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    #[cfg(target_os = "linux")]
+    async fn test_package_repo_config() -> Result<(), Error> {
+        let default_repo_dir = Repository::default_repo().await.packages_dir;
+        let expected_repo_dir =
+            path::PathBuf::from(std::env::var("HOME")?).join(".local/share/ffx/packages");
+        assert_eq!(default_repo_dir, expected_repo_dir);
+        Ok(())
     }
 }

@@ -4,9 +4,9 @@
 #[cfg(not(target_os = "linux"))]
 pub(crate) mod imp {
     use {
-        crate::constants::{SSH_PORT, SSH_PRIV, SSH_PUB},
+        crate::constants::{PACKAGE_REPO, SSH_PORT, SSH_PRIV, SSH_PUB},
         crate::heuristic_config::HeuristicFn,
-        crate::heuristic_fns::find_ssh_keys,
+        crate::heuristic_fns::{find_package_repo, find_ssh_keys},
         std::collections::HashMap,
     };
 
@@ -14,6 +14,7 @@ pub(crate) mod imp {
         let mut heuristics = HashMap::<&str, HeuristicFn>::new();
         heuristics.insert(SSH_PUB, find_ssh_keys);
         heuristics.insert(SSH_PRIV, find_ssh_keys);
+        heuristics.insert(PACKAGE_REPO, find_package_repo);
         heuristics
     }
 
