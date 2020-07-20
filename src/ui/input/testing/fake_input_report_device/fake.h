@@ -25,10 +25,7 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
  public:
   explicit FakeInputDevice(fidl::InterfaceRequest<fuchsia::input::report::InputDevice> request,
                            async_dispatcher_t* dispatcher)
-      : binding_(this, std::move(request), dispatcher) {
-    zx::event::create(0, &reports_event_);
-    assert(reports_event_.is_valid());
-  }
+      : binding_(this, std::move(request), dispatcher) {}
 
   // Sets the fake's report, which will be read with |GetReports|. This also
   // triggers the |reports_events_| signal which wakes up any clients waiting
@@ -41,8 +38,6 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
   // The overriden FIDL function calls.
   void GetInputReportsReader(
       fidl::InterfaceRequest<fuchsia::input::report::InputReportsReader> reader) override;
-  void GetReportsEvent(GetReportsEventCallback callback) override;
-  void GetReports(GetReportsCallback callback) override;
   void GetDescriptor(GetDescriptorCallback callback) override;
   void SendOutputReport(fuchsia::input::report::OutputReport report,
                         SendOutputReportCallback callback) override;
@@ -68,7 +63,6 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
   // reports and handling the FIDL calls can happen on seperate threads.
   fbl::Mutex lock_;
 
-  zx::event reports_event_ __TA_GUARDED(lock_);
   std::vector<fuchsia::input::report::InputReport> reports_ __TA_GUARDED(lock_);
   fuchsia::input::report::DeviceDescriptorPtr descriptor_ __TA_GUARDED(lock_);
   std::optional<FakeInputReportsReader> reader_ __TA_GUARDED(lock_);

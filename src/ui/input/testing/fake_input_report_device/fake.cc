@@ -32,19 +32,6 @@ void FakeInputDevice::GetInputReportsReader(
   reader_.emplace(std::move(reader), binding_.dispatcher(), this);
 }
 
-void FakeInputDevice::GetReportsEvent(GetReportsEventCallback callback) {
-  fbl::AutoLock lock(&lock_);
-  zx::event new_event;
-  zx_status_t status = reports_event_.duplicate(ZX_RIGHTS_BASIC, &new_event);
-  callback(status, std::move(new_event));
-}
-
-void FakeInputDevice::GetReports(GetReportsCallback callback) {
-  fbl::AutoLock lock(&lock_);
-  reports_event_.signal(ZX_USER_SIGNAL_0, 0);
-  callback(std::move(reports_));
-}
-
 void FakeInputDevice::SendOutputReport(fuchsia::input::report::OutputReport report,
                                        SendOutputReportCallback callback) {
   callback(
@@ -54,7 +41,6 @@ void FakeInputDevice::SendOutputReport(fuchsia::input::report::OutputReport repo
 void FakeInputDevice::SetReports(std::vector<fuchsia::input::report::InputReport> reports) {
   fbl::AutoLock lock(&lock_);
   reports_ = std::move(reports);
-  reports_event_.signal(0, ZX_USER_SIGNAL_0);
   if (reader_) {
     reader_->QueueCallback();
   }
@@ -62,7 +48,6 @@ void FakeInputDevice::SetReports(std::vector<fuchsia::input::report::InputReport
 
 std::vector<fuchsia::input::report::InputReport> FakeInputDevice::ReadReports() {
   fbl::AutoLock lock(&lock_);
-  reports_event_.signal(ZX_USER_SIGNAL_0, 0);
   return std::move(reports_);
 }
 

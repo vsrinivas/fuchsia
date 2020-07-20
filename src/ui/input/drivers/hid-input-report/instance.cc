@@ -21,12 +21,6 @@ zx_status_t InputReportInstance::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 zx_status_t InputReportInstance::Bind(InputReportBase* base) {
   base_ = base;
-
-  zx_status_t status = zx::event::create(0, &reports_event_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   return DdkAdd("input-report-instance", DEVICE_ADD_INSTANCE);
 }
 
@@ -124,26 +118,12 @@ void InputReportInstance::SendReportsToWaitingRead() {
     reports_data_.pop();
   }
 
-  reports_event_.signal(DEV_STATE_READABLE, 0);
-
   input_reports_waiting_read_->ReplySuccess(fidl::VectorView<fuchsia_input_report::InputReport>(
       fidl::unowned_ptr(reports.data()), num_reports));
   input_reports_waiting_read_.reset();
 
   // We have sent the reports so reset the allocator.
   report_allocator_.inner_allocator().reset();
-}
-
-void InputReportInstance::GetReportsEvent(GetReportsEventCompleter::Sync completer) {
-  zx::event new_event;
-  zx_status_t status;
-
-  {
-    fbl::AutoLock lock(&report_lock_);
-    status = reports_event_.duplicate(ZX_RIGHTS_BASIC, &new_event);
-  }
-
-  completer.Reply(status, std::move(new_event));
 }
 
 void InputReportInstance::GetDescriptor(GetDescriptorCompleter::Sync completer) {
@@ -154,29 +134,6 @@ void InputReportInstance::GetDescriptor(GetDescriptorCompleter::Sync completer) 
   base_->CreateDescriptor(&descriptor_allocator, &descriptor_builder);
 
   completer.Reply(descriptor_builder.build());
-}
-
-void InputReportInstance::GetReports(GetReportsCompleter::Sync completer) {
-  fbl::AutoLock lock(&report_lock_);
-
-  std::array<fuchsia_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
-      reports;
-  size_t num_reports = 0;
-
-  TRACE_DURATION("input", "InputReportInstance GetReports", "instance_id", instance_id_);
-  while (!reports_data_.empty()) {
-    TRACE_FLOW_STEP("input", "input_report", reports_data_.front().trace_id());
-    reports[num_reports++] = std::move(reports_data_.front());
-    reports_data_.pop();
-  }
-
-  reports_event_.signal(DEV_STATE_READABLE, 0);
-
-  completer.Reply(fidl::VectorView<fuchsia_input_report::InputReport>(
-      fidl::unowned_ptr(reports.data()), num_reports));
-
-  // We have sent the reports so reset the allocator.
-  report_allocator_.inner_allocator().reset();
 }
 
 void InputReportInstance::SendOutputReport(fuchsia_input_report::OutputReport report,
@@ -204,9 +161,6 @@ void InputReportInstance::ReceiveReport(const uint8_t* report, size_t report_siz
   report_builder.set_event_time(report_allocator_.make<zx_time_t>(time));
   report_builder.set_trace_id(report_allocator_.make<uint64_t>(TRACE_NONCE()));
 
-  if (reports_data_.empty()) {
-    reports_event_.signal(0, DEV_STATE_READABLE);
-  }
   // If we are full, pop the oldest report.
   if (reports_data_.full()) {
     reports_data_.pop();

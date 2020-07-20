@@ -33,16 +33,6 @@ protocol InputDevice {
     /// InputReportsReaders.
     GetInputReportsReader(request<InputReportsReader> reader);
 
-    /// Receive an event that will be signalled when there are reports in the
-    /// Device's report FIFO. When there are events in the FIFO, `event` will have
-    /// `DEV_STATE_READABLE` triggered. When the client has read all of the events,
-    /// `DEV_STATE_READABLE` will be  cleared.
-    GetReportsEvent() -> (zx.status status, zx.handle:EVENT event);
-
-    /// Get all of the reports that have been seen since the last time this method was called.
-    /// If this returns 0 reports, please wait on the report event.
-    GetReports() -> (vector<InputReport>:MAX_DEVICE_REPORT_COUNT reports);
-
     /// Gets the device descriptor for this device.
     GetDescriptor() -> (DeviceDescriptor descriptor);
 

@@ -272,54 +272,6 @@ TEST_F(HidDevTest, ReportDescInfoTest) {
   dev_ops.ops->close(dev_ops.ctx, 0);
 }
 
-TEST_F(HidDevTest, GetReportTest) {
-  std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
-  fake_hid_.SetReportDesc(boot_mouse);
-
-  device_->Bind();
-
-  // Open an instance device.
-  zx_device_t* open_dev;
-  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
-  // Opening the device created an instance device to be created, and we can
-  // get its arguments here.
-  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
-
-  auto sync_client =
-      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
-
-  // Spoof send a report.
-  std::vector<uint8_t> sent_report = {0xFF, 0x50, 0x70};
-  fake_hid_.SendReport(sent_report);
-
-  // Get the report.
-  fuchsia_input_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
-  ASSERT_OK(result.status());
-  auto& reports = result.Unwrap()->reports;
-
-  ASSERT_EQ(1, reports.count());
-
-  auto& report = reports[0];
-  ASSERT_TRUE(report.has_event_time());
-  ASSERT_TRUE(report.has_mouse());
-  auto& mouse = report.mouse();
-
-  ASSERT_TRUE(mouse.has_movement_x());
-  ASSERT_EQ(0x50, mouse.movement_x());
-
-  ASSERT_TRUE(mouse.has_movement_y());
-  ASSERT_EQ(0x70, mouse.movement_y());
-
-  ASSERT_TRUE(mouse.has_pressed_buttons());
-  fidl::VectorView<uint8_t> pressed_buttons = std::move(mouse.pressed_buttons());
-  for (size_t i = 0; i < pressed_buttons.count(); i++) {
-    ASSERT_EQ(i + 1, pressed_buttons[i]);
-  }
-
-  // Close the instance device.
-  dev_ops.ops->close(dev_ops.ctx, 0);
-}
-
 TEST_F(HidDevTest, ReadInputReportsTest) {
   std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
   fake_hid_.SetReportDesc(boot_mouse);
@@ -522,6 +474,16 @@ TEST_F(HidDevTest, SensorTest) {
   ASSERT_EQ(sensor_desc.values()[3].type, fuchsia_input_report::SensorType::LIGHT_GREEN);
   ASSERT_EQ(sensor_desc.values()[3].axis.unit.type, fuchsia_input_report::UnitType::NONE);
 
+  // Get an InputReportsReader.
+  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+  }
+
   // Create the report.
   ambient_light_input_rpt_t report_data = {};
   // Values are arbitrarily chosen.
@@ -541,14 +503,15 @@ TEST_F(HidDevTest, SensorTest) {
   fake_hid_.SendReport(report_vector);
 
   // Get the report.
-  fuchsia_input_report::InputDevice::ResultOf::GetReports report_result = sync_client.GetReports();
-  ASSERT_OK(result.status());
+  auto report_result = reader.ReadInputReports();
+  ASSERT_OK(report_result.status());
 
-  fidl::VectorView<fuchsia_input_report::InputReport>& reports = report_result->reports;
+  const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+      report_result->result.response().reports;
   ASSERT_EQ(1, reports.count());
 
   ASSERT_TRUE(reports[0].has_sensor());
-  fuchsia_input_report::SensorInputReport& sensor_report = reports[0].sensor();
+  const fuchsia_input_report::SensorInputReport& sensor_report = reports[0].sensor();
   EXPECT_TRUE(sensor_report.has_values());
   EXPECT_EQ(4, sensor_report.values().count());
 
@@ -581,6 +544,16 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
   auto sync_client =
       fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
 
+  // Get an InputReportsReader.
+  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+  }
+
   // Spoof send a report.
   paradise_touch_t touch_report = {};
   touch_report.rpt_id = PARADISE_RPT_ID_TOUCH;
@@ -596,17 +569,18 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
   fake_hid_.SendReport(sent_report);
 
   // Get the report.
-  fuchsia_input_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
-  ASSERT_OK(result.status());
-  auto& reports = result.Unwrap()->reports;
+  auto report_result = reader.ReadInputReports();
+  ASSERT_OK(report_result.status());
 
+  const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+      report_result->result.response().reports;
   ASSERT_EQ(1, reports.count());
 
-  auto& report = reports[0];
-  auto& touch = report.touch();
+  const auto& report = reports[0];
+  const auto& touch = report.touch();
   ASSERT_TRUE(touch.has_contacts());
   ASSERT_EQ(1, touch.contacts().count());
-  auto& contact = touch.contacts()[0];
+  const auto& contact = touch.contacts()[0];
 
   ASSERT_TRUE(contact.has_position_x());
   ASSERT_EQ(2500, contact.position_x());
@@ -664,6 +638,17 @@ TEST_F(HidDevTest, KeyboardTest) {
 
   auto sync_client =
       fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
+
+  // Get an InputReportsReader.
+  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+  }
+
   // Spoof send a report.
   hid_boot_kbd_report keyboard_report = {};
   keyboard_report.usage[0] = HID_USAGE_KEY_A;
@@ -676,14 +661,15 @@ TEST_F(HidDevTest, KeyboardTest) {
   fake_hid_.SendReport(sent_report);
 
   // Get the report.
-  fuchsia_input_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
-  ASSERT_OK(result.status());
-  auto& reports = result->reports;
+  auto report_result = reader.ReadInputReports();
+  ASSERT_OK(report_result.status());
 
+  const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+      report_result->result.response().reports;
   ASSERT_EQ(1, reports.count());
 
-  auto& report = reports[0];
-  auto& keyboard = report.keyboard();
+  const auto& report = reports[0];
+  const auto& keyboard = report.keyboard();
   ASSERT_TRUE(keyboard.has_pressed_keys());
   ASSERT_EQ(3, keyboard.pressed_keys().count());
   EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::A, keyboard.pressed_keys()[0]);
@@ -786,6 +772,16 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   ASSERT_EQ(consumer_control_desc.buttons()[3],
             llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
 
+  // Get an InputReportsReader.
+  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+  }
+
   // Create another report.
   {
     struct buttons_input_rpt report = {};
@@ -799,17 +795,18 @@ TEST_F(HidDevTest, ConsumerControlTest) {
     fake_hid_.SendReport(report_vector);
   }
 
-  // Get the reports.
-  fuchsia_input_report::InputDevice::ResultOf::GetReports report_result = sync_client.GetReports();
+  // Get the report.
+  auto report_result = reader.ReadInputReports();
   ASSERT_OK(report_result.status());
 
-  fidl::VectorView<fuchsia_input_report::InputReport>& reports = report_result->reports;
+  const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+      report_result->result.response().reports;
   ASSERT_EQ(2, reports.count());
 
   // Check the initial report.
   {
     ASSERT_TRUE(reports[0].has_consumer_control());
-    fuchsia_input_report::ConsumerControlInputReport& report = reports[0].consumer_control();
+    const auto& report = reports[0].consumer_control();
     EXPECT_TRUE(report.has_pressed_buttons());
     EXPECT_EQ(0, report.pressed_buttons().count());
   }
@@ -817,7 +814,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   // Check the second report.
   {
     ASSERT_TRUE(reports[1].has_consumer_control());
-    fuchsia_input_report::ConsumerControlInputReport& report = reports[1].consumer_control();
+    const auto& report = reports[1].consumer_control();
     EXPECT_TRUE(report.has_pressed_buttons());
     EXPECT_EQ(3, report.pressed_buttons().count());
 
@@ -869,26 +866,50 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
 
   // Get and check report a.
   {
-    fuchsia_input_report::InputDevice::ResultOf::GetReports reports_a = client_a.GetReports();
-    ASSERT_OK(reports_a.status());
-    ASSERT_EQ(1, reports_a->reports.count());
+    // Get an InputReportsReader.
+    llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+    {
+      zx::channel token_server, token_client;
+      ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+      auto result = client_a.GetInputReportsReader(std::move(token_server));
+      ASSERT_OK(result.status());
+      reader =
+          llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+    }
 
-    ASSERT_TRUE(reports_a->reports[0].has_consumer_control());
-    fuchsia_input_report::ConsumerControlInputReport& report =
-        reports_a->reports[0].consumer_control();
+    auto report_result = reader.ReadInputReports();
+    ASSERT_OK(report_result.status());
+    const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+        report_result->result.response().reports;
+    ASSERT_EQ(1, reports.count());
+
+    ASSERT_TRUE(reports[0].has_consumer_control());
+    const auto& report = reports[0].consumer_control();
     EXPECT_TRUE(report.has_pressed_buttons());
     EXPECT_EQ(0, report.pressed_buttons().count());
   }
 
   // Get and check report b.
   {
-    fuchsia_input_report::InputDevice::ResultOf::GetReports reports_b = client_b.GetReports();
-    ASSERT_OK(reports_b.status());
-    ASSERT_EQ(1, reports_b->reports.count());
+    // Get an InputReportsReader.
+    llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+    {
+      zx::channel token_server, token_client;
+      ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+      auto result = client_b.GetInputReportsReader(std::move(token_server));
+      ASSERT_OK(result.status());
+      reader =
+          llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+    }
 
-    ASSERT_TRUE(reports_b->reports[0].has_consumer_control());
-    fuchsia_input_report::ConsumerControlInputReport& report =
-        reports_b->reports[0].consumer_control();
+    auto report_result = reader.ReadInputReports();
+    ASSERT_OK(report_result.status());
+    const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+        report_result->result.response().reports;
+    ASSERT_EQ(1, reports.count());
+
+    ASSERT_TRUE(reports[0].has_consumer_control());
+    const auto& report = reports[0].consumer_control();
     EXPECT_TRUE(report.has_pressed_buttons());
     EXPECT_EQ(0, report.pressed_buttons().count());
   }

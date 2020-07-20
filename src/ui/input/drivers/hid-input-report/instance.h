@@ -66,8 +66,6 @@ class InputReportInstance : public InstanceDeviceType,
   // FIDL functions.
   void GetInputReportsReader(zx::channel req,
                              GetInputReportsReaderCompleter::Sync completer) override;
-  void GetReportsEvent(GetReportsEventCompleter::Sync completer) override;
-  void GetReports(GetReportsCompleter::Sync completer) override;
   void GetDescriptor(GetDescriptorCompleter::Sync completer) override;
   void SendOutputReport(::llcpp::fuchsia::input::report::OutputReport report,
                         SendOutputReportCompleter::Sync completer) override;
@@ -96,7 +94,6 @@ class InputReportInstance : public InstanceDeviceType,
   uint32_t instance_id_;
 
   fbl::Mutex report_lock_;
-  zx::event reports_event_ __TA_GUARDED(report_lock_);
 
   fidl::BufferThenHeapAllocator<kFidlReportBufferSize> report_allocator_ __TA_GUARDED(report_lock_);
   fbl::RingBuffer<fuchsia_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
