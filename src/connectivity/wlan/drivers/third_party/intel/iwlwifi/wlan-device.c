@@ -151,8 +151,7 @@ static zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) 
   memcpy(info->ifc_info.mac_addr, nvm_data->hw_addr, sizeof(info->ifc_info.mac_addr));
   info->ifc_info.mac_role = mvmvif->mac_role;
   // TODO(43517): Better handling of driver features bits/flags
-  info->ifc_info.driver_features =
-      WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL | WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
+  info->ifc_info.driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
   info->ifc_info.supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |
                                   WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
   info->ifc_info.caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
@@ -423,8 +422,7 @@ static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
   // TODO(fxb/36683): supports HT (802.11n): WLAN_INFO_PHY_TYPE_HT
   // TODO(fxb/36684): suuports VHT (802.11ac): WLAN_INFO_PHY_TYPE_VHT
 
-  info->wlan_info.driver_features =
-      WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL | WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
+  info->wlan_info.driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
 
   // TODO(43517): Better handling of driver features bits/flags
   info->wlan_info.caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |

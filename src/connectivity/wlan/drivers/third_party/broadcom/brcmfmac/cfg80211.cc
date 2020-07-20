@@ -3623,8 +3623,7 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
   info->role = wdev->iftype;
 
   // features
-  info->driver_features |=
-      WLAN_INFO_DRIVER_FEATURE_DFS | WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
+  info->driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
 
   // bands
   uint32_t bandlist[3];

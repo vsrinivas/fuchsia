@@ -133,8 +133,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
       auto name = name_;
       zxlogf(INFO, "%s: unbinding device because the channel was closed", name.c_str());
       if (report_tx_status_count_) {
-        zxlogf(INFO, "Tx Status Reports sent druing device lifetime: %zu",
-               report_tx_status_count_);
+        zxlogf(INFO, "Tx Status Reports sent druing device lifetime: %zu", report_tx_status_count_);
       }
       // Remove the device if the client closed the channel
       Unbind();
@@ -213,13 +212,6 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     auto role_str = RoleToString(dev_role);
     if (!contains(phy_config_->phy_info.mac_roles, dev_role)) {
       zxlogf(ERROR, "%s: CreateIface(%s): role not supported", name_.c_str(), role_str.c_str());
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (!contains(phy_config_->phy_info.driver_features,
-                  wlan_common::DriverFeature::TEMP_DIRECT_SME_CHANNEL)) {
-      zxlogf(ERROR, "%s: CraeteIface(%s): phy without SME channel support is not allowed.",
-             name_.c_str(), role_str.c_str());
-      ZX_ASSERT(0);
       return ZX_ERR_NOT_SUPPORTED;
     }
 

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::format_err,
     fidl::endpoints::Proxy,
     fidl_fuchsia_wlan_device as fidl_wlan_dev, fuchsia_async as fasync,
-    anyhow::format_err,
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon::Status as zx_Status,
     futures::prelude::*,
@@ -135,7 +135,7 @@ mod tests {
                     SupportedPhy::Ofdm,
                     SupportedPhy::Ht,
                 ],
-                driver_features: vec![fidl_common::DriverFeature::TempDirectSmeChannel],
+                driver_features: vec![],
                 mac_roles: vec![fidl_wlan_dev::MacRole::Client],
                 caps: vec![],
                 bands: vec![create_2_4_ghz_band_info()],

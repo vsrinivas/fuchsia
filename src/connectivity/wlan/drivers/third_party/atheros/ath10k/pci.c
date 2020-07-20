@@ -438,7 +438,7 @@ static zx_status_t __ath10k_pci_wake(struct ath10k* ar) {
   return ZX_OK;
 }
 
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
 static void __ath10k_pci_sleep(struct ath10k* ar) {
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
 
@@ -503,7 +503,7 @@ static zx_status_t ath10k_pci_force_wake(struct ath10k* ar) {
   return ret;
 }
 
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
 static void ath10k_pci_force_sleep(struct ath10k* ar) {
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
 
@@ -570,7 +570,7 @@ static void ath10k_pci_sleep(struct ath10k* ar) {
 
   ar_pci->ps_wake_refcount--;
 
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
     mod_timer(&ar_pci->ps_timer, jiffies +
               msecs_to_jiffies(ATH10K_PCI_SLEEP_GRACE_PERIOD_MSEC));
 #endif  // NEEDS PORTING
@@ -579,7 +579,7 @@ skip:
   mtx_unlock(&ar_pci->ps_lock);
 }
 
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
 static void ath10k_pci_ps_timer(unsigned long ptr) {
     struct ath10k* ar = (void*)ptr;
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
@@ -1327,7 +1327,7 @@ uint16_t ath10k_pci_hif_get_free_queue_number(struct ath10k* ar, uint8_t pipe) {
   return ath10k_ce_num_free_src_entries(ar_pci->pipe_info[pipe].ce_hdl);
 }
 
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
 static void ath10k_pci_dump_registers(struct ath10k* ar,
                                       struct ath10k_fw_crash_data* crash_data) {
     uint32_t reg_dump_values[REG_DUMP_COUNT_QCA988X] = {};
@@ -1366,7 +1366,7 @@ static void ath10k_pci_dump_registers(struct ath10k* ar,
 #endif  // NEEDS PORTING
 
 static void ath10k_pci_fw_crashed_dump(struct ath10k* ar) {
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
     struct ath10k_fw_crash_data* crash_data;
     char uuid[50];
 
@@ -1523,7 +1523,7 @@ static void ath10k_pci_irq_disable(struct ath10k* ar) {
 }
 
 static void ath10k_pci_irq_sync(struct ath10k* ar) {
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
 
     synchronize_irq(ar_pci->pdev->irq);
@@ -1542,7 +1542,7 @@ static zx_status_t ath10k_pci_hif_start(struct ath10k* ar) {
   ath10k_pci_irq_enable(ar);
   ath10k_pci_rx_post(ar);
 
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     pcie_capability_write_word(ar_pci->pdev, PCI_EXP_LNKCTL,
                                ar_pci->link_ctl);
@@ -2324,7 +2324,7 @@ static zx_status_t ath10k_pci_hif_power_up(struct ath10k* ar) {
 
   ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot hif power up\n");
 
-#if 0   // TODO - get PCI express capability offset with kPciCapIdPciExpress and then
+#if 0  // TODO - get PCI express capability offset with kPciCapIdPciExpress and then
     //        read capability at offset + PCI_EXP_LNKCTL */
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     pcie_capability_read_word(ar_pci->pdev, PCI_EXP_LNKCTL,
@@ -2681,7 +2681,7 @@ static void ath10k_pci_deinit_irq(struct ath10k* ar) {
       ath10k_pci_deinit_irq_legacy(ar);
       break;
     default:
-#if 0   // TODO - How to disable MSI interrupts?
+#if 0  // TODO - How to disable MSI interrupts?
         pci_disable_msi(ar_pci->pdev);
 #endif  // TODO
       break;
@@ -2861,7 +2861,7 @@ zx_status_t ath10k_pci_setup_resource(struct ath10k* ar) {
   zx_status_t ret;
 
   mtx_init(&ar_pci->ce_lock, mtx_plain);
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
     mtx_init(&ar_pci->ps_lock, mtx_plain);
 #endif  // NEEDS PORTING
 
@@ -3134,8 +3134,7 @@ void ath10k_pci_fill_wlan_info(struct ath10k* ar, wlan_info_t* ifc_info) {
   // driver_features
   ifc_info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD |
                               WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION |
-                              WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD |
-                              WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
+                              WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD;
 
   // caps
   ifc_info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
@@ -3259,27 +3258,24 @@ static zx_status_t ath10k_pci_configure_beacon(void* ctx, uint32_t options,
   return ZX_OK;
 }
 
-static zx_status_t ath10k_pci_set_key(void* ctx, uint32_t options, const wlan_key_config_t* key_config) {
+static zx_status_t ath10k_pci_set_key(void* ctx, uint32_t options,
+                                      const wlan_key_config_t* key_config) {
   struct ath10k* ar = ctx;
   ath10k_info(
       "attempting to set key (bssid: %d, prot: %s, cipher: %s, type: %s, len: %d,"
       " addr: %02x:%02x:%02x:%02x:%02x:%02x key_idx: %d)\n",
       key_config->bssid,
-      key_config->protection == WLAN_PROTECTION_NONE
-          ? "none"
-          : key_config->protection == WLAN_PROTECTION_RX
-                ? "rx"
-                : key_config->protection == WLAN_PROTECTION_TX
-                      ? "rx"
-                      : key_config->protection == WLAN_PROTECTION_RX_TX ? "rx/tx" : "unknown",
+      key_config->protection == WLAN_PROTECTION_NONE    ? "none"
+      : key_config->protection == WLAN_PROTECTION_RX    ? "rx"
+      : key_config->protection == WLAN_PROTECTION_TX    ? "rx"
+      : key_config->protection == WLAN_PROTECTION_RX_TX ? "rx/tx"
+                                                        : "unknown",
       ieee80211_cipher_str(key_config->cipher_oui, key_config->cipher_type),
-      key_config->key_type == WLAN_KEY_TYPE_PAIRWISE
-          ? "pairwise"
-          : key_config->key_type == WLAN_KEY_TYPE_GROUP
-                ? "group"
-                : key_config->key_type == WLAN_KEY_TYPE_IGTK
-                      ? "IGTK"
-                      : key_config->key_type == WLAN_KEY_TYPE_PEER ? "peer" : "unknown",
+      key_config->key_type == WLAN_KEY_TYPE_PAIRWISE ? "pairwise"
+      : key_config->key_type == WLAN_KEY_TYPE_GROUP  ? "group"
+      : key_config->key_type == WLAN_KEY_TYPE_IGTK   ? "IGTK"
+      : key_config->key_type == WLAN_KEY_TYPE_PEER   ? "peer"
+                                                     : "unknown",
       key_config->key_len, key_config->peer_addr[0], key_config->peer_addr[1],
       key_config->peer_addr[2], key_config->peer_addr[3], key_config->peer_addr[4],
       key_config->peer_addr[5], key_config->key_idx);
@@ -3579,7 +3575,7 @@ err_deinit_irq:
   ath10k_pci_deinit_irq(ar);
 
 err_sleep:
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
     ath10k_pci_sleep_sync(ar);
 #endif  // NEEDS PORTING
   ath10k_pci_release(ar);
@@ -3593,7 +3589,7 @@ err_core_destroy:
   return ret;
 }
 
-#if 0   // NEEDS PORTING
+#if 0  // NEEDS PORTING
 static void ath10k_pci_remove(struct pci_dev* pdev) {
     struct ath10k* ar = pci_get_drvdata(pdev);
     struct ath10k_pci* ar_pci;

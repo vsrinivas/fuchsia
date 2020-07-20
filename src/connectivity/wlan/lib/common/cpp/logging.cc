@@ -15,7 +15,7 @@ static std::map<wlan_info_driver_feature_t, std::string> driver_feature_flags_st
     {WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT, "Tx Status Report"},
     {WLAN_INFO_DRIVER_FEATURE_DFS, "Dynamic Frequency Selection (DFS)"},
     {WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD, "Probe Response Offload"},
-    {WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL, "Temporary Direct SME Channel"}};
+};
 
 static std::map<wlan_info_hardware_capability_t, std::string> hardware_capability_flags_string_map =
     {{WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE, "Short Preamble"},

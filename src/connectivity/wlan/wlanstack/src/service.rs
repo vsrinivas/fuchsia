@@ -5,7 +5,6 @@
 use anyhow::Context as _;
 use core::sync::atomic::AtomicUsize;
 use fidl::endpoints::create_proxy;
-use fidl_fuchsia_wlan_common::DriverFeature;
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
 use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MinstrelStatsResponse, MlmeMarker};
@@ -314,22 +313,6 @@ async fn create_iface<'a>(
     let phy_id = req.phy_id;
     let phy = phys.get(&req.phy_id).ok_or(zx::Status::NOT_FOUND)?;
 
-    let phy_info = phy
-        .proxy
-        .query()
-        .await
-        .map_err(|e| {
-            error!("error sending query request to phy #{}: {}", phy_id, e);
-            zx::Status::INTERNAL
-        })
-        .map(|x| x.info)?;
-
-    let supports_sme_channel =
-        phy_info.driver_features.contains(&DriverFeature::TempDirectSmeChannel);
-    if !supports_sme_channel {
-        error!("error, driver does not support SME Channel feature");
-        return Err(zx::Status::NOT_SUPPORTED);
-    }
     let (mlme_channel, sme_channel) = create_proxy::<MlmeMarker>()
         .map_err(|e| {
             error!("failed to create MlmeProxy: {}", e);
@@ -689,21 +672,6 @@ mod tests {
         let fut_result = exec.run_until_stalled(&mut create_fut);
         assert_variant!(fut_result, Poll::Pending);
 
-        // TODO(WLAN-927): SME Channel transition requires querying PHY for driver feature
-        // support. Remove once feature landed.
-        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
-            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder
-        );
-        responder
-            .send(&mut fidl_wlan_dev::QueryResponse {
-                status: zx::sys::ZX_OK,
-                info: fidl_wlan_dev::PhyInfo {
-                    driver_features: vec![DriverFeature::TempDirectSmeChannel],
-                    ..fake_phy_info()
-                },
-            })
-            .expect("failed to send QueryResponse");
-
         // Continue running create iface request.
 
         let fut_result = exec.run_until_stalled(&mut create_fut);
@@ -757,19 +725,6 @@ mod tests {
         );
         pin_mut!(create_fut);
         assert_variant!(exec.run_until_stalled(&mut create_fut), Poll::Pending);
-
-        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
-            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder
-        );
-        responder
-            .send(&mut fidl_wlan_dev::QueryResponse {
-                status: zx::sys::ZX_OK,
-                info: fidl_wlan_dev::PhyInfo {
-                    driver_features: vec![DriverFeature::TempDirectSmeChannel],
-                    ..fake_phy_info()
-                },
-            })
-            .expect("failed to send QueryResponse");
 
         // Continue running create iface request.
         assert_variant!(exec.run_until_stalled(&mut create_fut), Poll::Pending);
@@ -1195,20 +1150,6 @@ mod tests {
 
         // Advance the server so that it gets the CreateIfaceRequest
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // There should be a pending PHY query event
-        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
-            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder
-        );
-        responder
-            .send(&mut fidl_wlan_dev::QueryResponse {
-                status: zx::sys::ZX_OK,
-                info: fidl_wlan_dev::PhyInfo {
-                    driver_features: vec![DriverFeature::TempDirectSmeChannel],
-                    ..fake_phy_info()
-                },
-            })
-            .expect("failed to send QueryResponse");
 
         // There should be a pending CreateIfaceRequest. Send it a response and capture its request
         // so that the MLME channel associated with the request can be used to inject a successful

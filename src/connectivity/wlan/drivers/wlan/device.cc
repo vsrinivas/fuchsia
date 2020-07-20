@@ -124,8 +124,6 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     errorf("could not query wlanmac device: %d\n", status);
     return status;
   }
-  ZX_DEBUG_ASSERT(wlanmac_info_.ifc_info.driver_features &
-                  WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL);
 
   status = ValidateWlanMacInfo(wlanmac_info_);
   if (status != ZX_OK) {

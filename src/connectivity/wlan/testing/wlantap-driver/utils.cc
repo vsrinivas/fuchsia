@@ -74,9 +74,6 @@ uint32_t ConvertDriverFeatures(const ::std::vector<wlan_common::DriverFeature>& 
       case wlan_common::DriverFeature::MFP:
         ret |= WLAN_INFO_DRIVER_FEATURE_MFP;
         break;
-      case wlan_common::DriverFeature::TEMP_DIRECT_SME_CHANNEL:
-        ret |= WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
-        break;
         // TODO(41640): Remove this flag once FullMAC drivers stop interacting with SME.
       case wlan_common::DriverFeature::TEMP_SOFTMAC:
         // Vendor driver has no control over this flag.

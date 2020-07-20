@@ -55,7 +55,6 @@ void PhyQueryTest::VerifyPhyTypeBitfield(wlan_info_phy_type_t phy_type_bitfield)
 // static
 void PhyQueryTest::VerifyDriverFeatureBitfield(wlan_info_driver_feature_t driver_feature_bitfield) {
   // Available driver features
-  EXPECT_NE(0U, driver_feature_bitfield & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL);
   EXPECT_NE(0U, driver_feature_bitfield & WLAN_INFO_DRIVER_FEATURE_DFS);
   EXPECT_NE(0U, driver_feature_bitfield & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD);
 

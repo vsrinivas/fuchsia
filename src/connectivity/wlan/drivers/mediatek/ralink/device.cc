@@ -3567,8 +3567,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
   info->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
   info->caps =
       WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE | WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
-  info->driver_features =
-      WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT | WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
+  info->driver_features = WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT;
   info->bands_count = 1;
   info->bands[0] = {
       .band = WLAN_INFO_BAND_2GHZ,

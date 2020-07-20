@@ -241,7 +241,7 @@ mod tests {
             role: fidl_mlme::MacRole::Client,
             bands: vec![],
             mac_addr: [0xAC; 6],
-            driver_features: vec![DriverFeature::TempDirectSmeChannel],
+            driver_features: vec![],
             qos_capable: false,
         }
     }

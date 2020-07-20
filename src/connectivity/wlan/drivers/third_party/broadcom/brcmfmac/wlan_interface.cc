@@ -239,10 +239,6 @@ wlan_info_phy_type_t WlanInterface::GetSupportedPhyTypes(struct brcmf_pub* drvr)
 wlan_info_driver_feature_t WlanInterface::GetSupportedDriverFeatures(struct brcmf_pub* drvr) {
   wlan_info_driver_feature_t driver_features = 0;
 
-  // Temporary feature flag for incrementally transitioning drivers to use SME channel on iface
-  // creation.
-  driver_features |= WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
-
   if (brcmf_feat_is_enabled(drvr->iflist[0], BRCMF_FEAT_DFS)) {
     driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
   }
