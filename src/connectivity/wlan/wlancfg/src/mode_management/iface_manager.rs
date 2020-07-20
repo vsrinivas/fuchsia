@@ -566,7 +566,6 @@ mod tests {
             TryFutureExt,
         },
         pin_utils::pin_mut,
-        std::path::Path,
         wlan_common::{
             assert_variant,
             channel::{Cbw, Phy},
@@ -586,7 +585,7 @@ mod tests {
     pub fn create_connect_request(ssid: &str, password: &str) -> client_fsm::ConnectRequest {
         let network = ap_types::NetworkIdentifier {
             ssid: ssid.as_bytes().to_vec(),
-            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
+            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
         };
         let credential = Credential::Password(password.as_bytes().to_vec());
 
@@ -615,24 +614,10 @@ mod tests {
         pub client_event_sender: mpsc::Sender<client_fsm::ClientStateMachineNotification>,
         pub client_event_receiver: mpsc::Receiver<client_fsm::ClientStateMachineNotification>,
         pub saved_networks: Arc<SavedNetworksManager>,
-        pub temp_dir: tempfile::TempDir,
-    }
-
-    /// Creates a SavedNetworksManager for use in tests.
-    async fn create_saved_networks(
-        stash_id: impl AsRef<str>,
-        path: impl AsRef<Path>,
-        tmp_path: impl AsRef<Path>,
-    ) -> Arc<SavedNetworksManager> {
-        Arc::new(
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
-                .await
-                .expect("failed to create an SavedNetworksManager"),
-        )
     }
 
     /// Create a TestValues for a unit test.
-    pub fn test_setup(exec: &mut Executor, id: &str) -> TestValues {
+    pub fn test_setup(exec: &mut Executor) -> TestValues {
         set_logger_for_test();
         let (proxy, requests) =
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceServiceMarker>()
@@ -643,11 +628,10 @@ mod tests {
         let (ap_sender, ap_receiver) = mpsc::unbounded();
         let (fsm_sender, fsm_receiver) = mpsc::channel(0);
 
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("networks.tmp");
-
-        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, path, tmp_path));
+        let saved_networks = exec
+            .run_singlethreaded(SavedNetworksManager::new_for_test())
+            .expect("failed to create saved networks manager.");
+        let saved_networks = Arc::new(saved_networks);
 
         TestValues {
             device_service_proxy: proxy,
@@ -659,7 +643,6 @@ mod tests {
             client_event_sender: fsm_sender,
             client_event_receiver: fsm_receiver,
             saved_networks: saved_networks,
-            temp_dir: temp_dir,
         }
     }
 
@@ -678,13 +661,15 @@ mod tests {
     #[async_trait]
     impl PhyManagerApi for FakePhyManager {
         async fn add_phy(&mut self, _phy_id: u16) -> Result<(), PhyManagerError> {
-            Ok(())
+            unimplemented!()
         }
 
-        fn remove_phy(&mut self, _phy_id: u16) {}
+        fn remove_phy(&mut self, _phy_id: u16) {
+            unimplemented!()
+        }
 
         async fn on_iface_added(&mut self, _iface_id: u16) -> Result<(), PhyManagerError> {
-            Ok(())
+            unimplemented!()
         }
 
         fn on_iface_removed(&mut self, _iface_id: u16) {}
@@ -733,10 +718,12 @@ mod tests {
             }
         }
 
-        fn suggest_ap_mac(&mut self, _mac: MacAddress) {}
+        fn suggest_ap_mac(&mut self, _mac: MacAddress) {
+            unimplemented!()
+        }
 
         fn get_phy_ids(&self) -> Vec<u16> {
-            Vec::new()
+            unimplemented!()
         }
     }
 
@@ -849,7 +836,7 @@ mod tests {
         if configured {
             client_container.config = Some(ap_types::NetworkIdentifier {
                 ssid: TEST_SSID.as_bytes().to_vec(),
-                type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
+                type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
             });
         }
         iface_manager.clients.push(client_container);
@@ -898,7 +885,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "scan_with_configured_iface");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _next_sme_req) =
             create_iface_manager_with_client(&test_values, true);
 
@@ -919,7 +906,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create an unconfigured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "scan_with_unconfigured_iface");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _next_sme_req) =
             create_iface_manager_with_client(&test_values, false);
 
@@ -940,7 +927,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a PhyManager with no knowledge of any client ifaces.
-        let test_values = test_setup(&mut exec, "scan_with_no_ifaces");
+        let test_values = test_setup(&mut exec);
         let phy_manager = create_empty_phy_manager(test_values.device_service_proxy.clone());
 
         // Create and IfaceManager and issue a scan request.
@@ -965,7 +952,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "scan_fails");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, next_sme_req) =
             create_iface_manager_with_client(&test_values, true);
 
@@ -986,7 +973,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create an IfaceManager and drop its client.
-        let test_values = test_setup(&mut exec, "scan_sme_creation_fails");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _next_sme_req) =
             create_iface_manager_with_client(&test_values, true);
         let _ = iface_manager.clients.pop();
@@ -1009,11 +996,11 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "connect_with_configured_iface");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Update the saved networks with knowledge of the test SSID and credentials.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1041,11 +1028,11 @@ mod tests {
     fn test_connect_with_unconfigured_iface() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
-        let test_values = test_setup(&mut exec, "connect_with_unconfigured_iface");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, false);
 
         // Add credentials for the test network to the saved networks.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1078,7 +1065,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a PhyManager with no knowledge of any client ifaces.
-        let test_values = test_setup(&mut exec, "connect_with_no_ifaces");
+        let test_values = test_setup(&mut exec);
         let phy_manager = create_empty_phy_manager(test_values.device_service_proxy.clone());
 
         let mut iface_manager = IfaceManager::new(
@@ -1105,7 +1092,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "connect_fails");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Make the client state machine's connect call fail.
@@ -1113,7 +1100,7 @@ mod tests {
             Box::new(FakeClient { connect_ok: false, disconnect_ok: true, exit_ok: false });
 
         // Update the saved networks with knowledge of the test SSID and credentials.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1133,7 +1120,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create an IfaceManager and drop its client
-        let test_values = test_setup(&mut exec, "connect_sme_creation_fails");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
         let _ = iface_manager.clients.pop();
 
@@ -1142,7 +1129,7 @@ mod tests {
         drop(test_values.device_service_stream);
 
         // Update the saved networks with knowledge of the test SSID and credentials.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1161,10 +1148,10 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "disconnect_configured_iface");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1173,7 +1160,7 @@ mod tests {
             // Issue a call to disconnect from the network.
             let network_id = ap_types::NetworkIdentifier {
                 ssid: TEST_SSID.as_bytes().to_vec(),
-                type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
+                type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
             };
             let disconnect_fut = iface_manager.disconnect(network_id);
 
@@ -1194,11 +1181,11 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a ClientIfaceContainer with a valid client.
-        let test_values = test_setup(&mut exec, "disconnect_nonexistent_config");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Create a PhyManager with knowledge of a single client iface.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1207,7 +1194,7 @@ mod tests {
             // Issue a disconnect request for a bogus network configuration.
             let network_id = ap_types::NetworkIdentifier {
                 ssid: "nonexistent_ssid".as_bytes().to_vec(),
-                type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
+                type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
             };
             let disconnect_fut = iface_manager.disconnect(network_id);
 
@@ -1225,7 +1212,7 @@ mod tests {
     #[test]
     fn test_disconnect_no_clients() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "disconnect_no_clients");
+        let test_values = test_setup(&mut exec);
 
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
@@ -1241,7 +1228,7 @@ mod tests {
         // Call disconnect on the IfaceManager
         let network_id = ap_types::NetworkIdentifier {
             ssid: "nonexistent_ssid".as_bytes().to_vec(),
-            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
+            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
         };
         let disconnect_fut = iface_manager.disconnect(network_id);
 
@@ -1256,7 +1243,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "disconnect_fails");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Make the client state machine's connect call fail.
@@ -1266,7 +1253,7 @@ mod tests {
         // Call disconnect on the IfaceManager
         let network_id = ap_types::NetworkIdentifier {
             ssid: TEST_SSID.as_bytes().to_vec(),
-            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
+            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
         };
         let disconnect_fut = iface_manager.disconnect(network_id);
 
@@ -1280,11 +1267,11 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let mut test_values = test_setup(&mut exec, "stop_disconnected_client");
+        let mut test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Create a PhyManager with a single, known client iface.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1317,11 +1304,11 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "stop_unconfigured_client");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Create a PhyManager with one known client.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1341,7 +1328,7 @@ mod tests {
     #[test]
     fn test_stop_no_clients() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "stop_no_clients");
+        let test_values = test_setup(&mut exec);
 
         // Create and empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
@@ -1369,13 +1356,13 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "stop_fails");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
         iface_manager.clients[0].client_state_machine =
             Box::new(FakeClient { connect_ok: true, disconnect_ok: false, exit_ok: true });
 
         // Create a PhyManager with a single, known client iface.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1398,13 +1385,13 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "stop_exit_fails");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
         iface_manager.clients[0].client_state_machine =
             Box::new(FakeClient { connect_ok: true, disconnect_ok: true, exit_ok: false });
 
         // Create a PhyManager with a single, known client iface.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1426,13 +1413,13 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "stop_iface_destruction_fails");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
         iface_manager.phy_manager =
             Arc::new(Mutex::new(FakePhyManager { create_iface_ok: true, destroy_iface_ok: false }));
 
         // Create a PhyManager with a single, known client iface.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
@@ -1452,7 +1439,7 @@ mod tests {
     #[test]
     fn test_mark_iface_idle() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "test_mark_iface_idle");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         assert!(iface_manager.clients[0].config.is_some());
@@ -1464,7 +1451,7 @@ mod tests {
     #[test]
     fn test_mark_nonexistent_iface_idle() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "test_mark_nonexistent_iface_idle");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         assert!(iface_manager.clients[0].config.is_some());
@@ -1476,7 +1463,7 @@ mod tests {
     #[test]
     fn test_unconfigured_iface_idle_check() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "test_unconfigured_iface_idle_check");
+        let test_values = test_setup(&mut exec);
         let (iface_manager, _) = create_iface_manager_with_client(&test_values, false);
         assert!(iface_manager.has_idle_client());
     }
@@ -1485,7 +1472,7 @@ mod tests {
     #[test]
     fn test_configured_iface_idle_check() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "test_configured_iface_idle_check");
+        let test_values = test_setup(&mut exec);
         let (iface_manager, _) = create_iface_manager_with_client(&test_values, true);
         assert!(!iface_manager.has_idle_client());
     }
@@ -1494,7 +1481,7 @@ mod tests {
     #[test]
     fn test_no_ifaces_idle_check() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "test_no_ifaces_idle_check");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
         let _ = iface_manager.clients.pop();
         assert!(!iface_manager.has_idle_client());
@@ -1504,7 +1491,7 @@ mod tests {
     #[test]
     fn test_start_clients_succeeds() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup(&mut exec, "start_client_connections_succeeds");
+        let mut test_values = test_setup(&mut exec);
 
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
@@ -1541,7 +1528,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "start_client_connections_fails");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
         iface_manager.phy_manager =
             Arc::new(Mutex::new(FakePhyManager { create_iface_ok: false, destroy_iface_ok: true }));
@@ -1556,7 +1543,7 @@ mod tests {
     #[test]
     fn test_start_ap_succeeds() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "start_ap_succeeds");
+        let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
         let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
@@ -1572,7 +1559,7 @@ mod tests {
     #[test]
     fn test_start_ap_fails() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "start_ap_fails");
+        let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: false, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
         let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
@@ -1587,7 +1574,7 @@ mod tests {
     #[test]
     fn test_start_ap_no_ifaces() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "start_ap_no_ifaces");
+        let test_values = test_setup(&mut exec);
 
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
@@ -1613,7 +1600,7 @@ mod tests {
     #[test]
     fn test_stop_ap_succeeds() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "stop_ap_succeeds");
+        let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
         let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
@@ -1632,7 +1619,7 @@ mod tests {
     #[test]
     fn test_stop_ap_invalid_config() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "stop_ap_invalid_config");
+        let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
 
@@ -1650,7 +1637,7 @@ mod tests {
     #[test]
     fn test_stop_ap_stop_fails() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "stop_ap_stop_fails");
+        let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: false, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
         let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
@@ -1671,7 +1658,7 @@ mod tests {
     #[test]
     fn test_stop_ap_exit_fails() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "stop_ap_stop_fails");
+        let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: false };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
         let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
@@ -1691,7 +1678,7 @@ mod tests {
     #[test]
     fn test_stop_ap_no_ifaces() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "stop_ap_no_ifaces");
+        let test_values = test_setup(&mut exec);
 
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
@@ -1713,7 +1700,7 @@ mod tests {
     #[test]
     fn test_stop_all_aps_succeeds() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "stop_all_aps_succeeds");
+        let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
 
@@ -1741,7 +1728,7 @@ mod tests {
     #[test]
     fn test_stop_all_aps_stop_fails() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "stop_all_aps_stop_fails");
+        let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: false, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
 
@@ -1769,7 +1756,7 @@ mod tests {
     #[test]
     fn test_stop_all_aps_exit_fails() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "stop_all_aps_exit_fails");
+        let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: false };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
 
@@ -1798,7 +1785,7 @@ mod tests {
     #[test]
     fn test_stop_all_aps_no_ifaces() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "stop_all_aps_no_ifaces");
+        let test_values = test_setup(&mut exec);
 
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
@@ -1821,7 +1808,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create an IfaceManager with a client and an AP.
-        let test_values = test_setup(&mut exec, "test_remove_client_iface");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _next_sme_req) =
             create_iface_manager_with_client(&test_values, true);
 
@@ -1852,7 +1839,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create an IfaceManager with a client and an AP.
-        let test_values = test_setup(&mut exec, "test_remove_ap_iface");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _next_sme_req) =
             create_iface_manager_with_client(&test_values, true);
 
@@ -1883,7 +1870,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create an IfaceManager with a client and an AP.
-        let test_values = test_setup(&mut exec, "test_remove_nonexistent_iface");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _next_sme_req) =
             create_iface_manager_with_client(&test_values, true);
 
@@ -1924,7 +1911,7 @@ mod tests {
     #[test]
     fn test_add_client_iface() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "test_add_client_iface");
+        let test_values = test_setup(&mut exec);
 
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
@@ -1987,7 +1974,7 @@ mod tests {
     #[test]
     fn test_add_ap_iface() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "test_add_ap_iface");
+        let test_values = test_setup(&mut exec);
 
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
@@ -2051,7 +2038,7 @@ mod tests {
     #[test]
     fn test_add_nonexistent_iface() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "test_add_nonexistent_iface");
+        let test_values = test_setup(&mut exec);
 
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
@@ -2097,7 +2084,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "test_add_existing_client_iface");
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _next_sme_req) =
             create_iface_manager_with_client(&test_values, true);
 
@@ -2141,7 +2128,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "test_add_existing_ap_iface");
+        let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
 

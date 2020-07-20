@@ -622,15 +622,21 @@ mod tests {
             Ok(receiver)
         }
 
-        fn record_idle_client(&mut self, _iface_id: u16) {}
-
-        fn has_idle_client(&self) -> bool {
-            true
+        fn record_idle_client(&mut self, _iface_id: u16) {
+            unimplemented!()
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {}
+        fn has_idle_client(&self) -> bool {
+            unimplemented!()
+        }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {}
+        async fn handle_added_iface(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
+
+        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
 
         async fn scan(
             &mut self,
@@ -664,8 +670,7 @@ mod tests {
             _config: ap_fsm::ApConfig,
         ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, anyhow::Error>
         {
-            let (_, receiver) = oneshot::channel();
-            Ok(receiver)
+            unimplemented!()
         }
 
         async fn stop_ap(
@@ -673,11 +678,11 @@ mod tests {
             _ssid: Vec<u8>,
             _password: Vec<u8>,
         ) -> Result<(), anyhow::Error> {
-            Ok(())
+            unimplemented!()
         }
 
         async fn stop_all_aps(&mut self) -> Result<(), anyhow::Error> {
-            Ok(())
+            unimplemented!()
         }
     }
 

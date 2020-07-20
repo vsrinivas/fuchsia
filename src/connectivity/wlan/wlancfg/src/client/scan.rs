@@ -267,40 +267,25 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm, client::state_machine as client_fsm,
-            config_management::Credential, util::logger::set_logger_for_test,
+            util::logger::set_logger_for_test,
         },
         anyhow::Error,
         async_trait::async_trait,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
+        fuchsia_async as fasync,
         futures::{channel::oneshot, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
         std::sync::Arc,
         wlan_common::assert_variant,
     };
 
-    /// convert from policy fidl Credential to sme fidl Credential
-    pub fn sme_credential_from_policy(cred: &Credential) -> fidl_sme::Credential {
-        match cred {
-            Credential::Password(pwd) => fidl_sme::Credential::Password(pwd.clone()),
-            Credential::Psk(psk) => fidl_sme::Credential::Psk(psk.clone()),
-            Credential::None => fidl_sme::Credential::None(fidl_sme::Empty {}),
-        }
-    }
-
     struct FakeIfaceManager {
         pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
-        pub connect_response: Result<(), ()>,
-        pub client_connections_enabled: bool,
     }
 
     impl FakeIfaceManager {
         pub fn new(proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy) -> Self {
-            FakeIfaceManager {
-                sme_proxy: proxy,
-                connect_response: Ok(()),
-                client_connections_enabled: false,
-            }
+            FakeIfaceManager { sme_proxy: proxy }
         }
     }
 
@@ -310,43 +295,31 @@ mod tests {
             &mut self,
             _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
         ) -> Result<(), Error> {
-            Ok(())
+            unimplemented!()
         }
 
         async fn connect(
             &mut self,
-            connect_req: client_fsm::ConnectRequest,
+            _connect_req: client_fsm::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
-            let credential = sme_credential_from_policy(&connect_req.credential);
-            let mut req = fidl_sme::ConnectRequest {
-                ssid: connect_req.network.ssid,
-                credential,
-                radio_cfg: fidl_sme::RadioConfig {
-                    override_phy: false,
-                    phy: fidl_common::Phy::Ht,
-                    override_cbw: false,
-                    cbw: fidl_common::Cbw::Cbw20,
-                    override_primary_chan: false,
-                    primary_chan: 0,
-                },
-                deprecated_scan_type: fidl_common::ScanType::Passive,
-            };
-            self.sme_proxy.connect(&mut req, None)?;
-
-            let (responder, receiver) = oneshot::channel();
-            let _ = responder.send(());
-            Ok(receiver)
+            unimplemented!()
         }
 
-        fn record_idle_client(&mut self, _iface_id: u16) {}
+        fn record_idle_client(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
 
         fn has_idle_client(&self) -> bool {
-            true
+            unimplemented!()
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {}
+        async fn handle_added_iface(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {}
+        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
 
         async fn scan(
             &mut self,
@@ -361,29 +334,26 @@ mod tests {
         }
 
         async fn stop_client_connections(&mut self) -> Result<(), Error> {
-            self.client_connections_enabled = false;
-            Ok(())
+            unimplemented!()
         }
 
         async fn start_client_connections(&mut self) -> Result<(), Error> {
-            self.client_connections_enabled = true;
-            Ok(())
+            unimplemented!()
         }
 
         async fn start_ap(
             &mut self,
             _config: ap_fsm::ApConfig,
         ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
-            let (_, receiver) = oneshot::channel();
-            Ok(receiver)
+            unimplemented!()
         }
 
         async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
-            Ok(())
+            unimplemented!()
         }
 
         async fn stop_all_aps(&mut self) -> Result<(), Error> {
-            Ok(())
+            unimplemented!()
         }
     }
 

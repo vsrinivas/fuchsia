@@ -366,6 +366,7 @@ mod tests {
         fuchsia_async as fasync,
         futures::{channel::oneshot, task::Poll},
         pin_utils::pin_mut,
+        std::unimplemented,
         wlan_common::assert_variant,
     };
 
@@ -389,40 +390,46 @@ mod tests {
     #[async_trait]
     impl IfaceManagerApi for FakeIfaceManager {
         async fn disconnect(&mut self, _network_id: types::NetworkIdentifier) -> Result<(), Error> {
-            Ok(())
+            unimplemented!()
         }
 
         async fn connect(
             &mut self,
             _connect_req: client_fsm::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
-            Err(format_err!("connect is not implemented for FakeIfaceManager"))
+            unimplemented!()
         }
 
-        fn record_idle_client(&mut self, _iface_id: u16) {}
+        fn record_idle_client(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
 
         fn has_idle_client(&self) -> bool {
-            true
+            unimplemented!()
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {}
+        async fn handle_added_iface(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {}
+        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
 
         async fn scan(
             &mut self,
             _timeout: u8,
             _scan_type: fidl_fuchsia_wlan_common::ScanType,
         ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
-            Err(format_err!("scan is not implemented for FakeIfaceManager"))
+            unimplemented!()
         }
 
         async fn stop_client_connections(&mut self) -> Result<(), Error> {
-            Err(format_err!("stop_client_connections is not implemented for FakeIfaceManager"))
+            unimplemented!()
         }
 
         async fn start_client_connections(&mut self) -> Result<(), Error> {
-            Err(format_err!("start_client_connections is not implemented for FakeIfaceManager"))
+            unimplemented!()
         }
 
         async fn start_ap(

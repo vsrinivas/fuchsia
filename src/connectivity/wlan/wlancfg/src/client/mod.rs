@@ -581,9 +581,13 @@ mod tests {
             !self.disconnected_ifaces.is_empty()
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {}
+        async fn handle_added_iface(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {}
+        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
 
         async fn scan(
             &mut self,
@@ -611,16 +615,15 @@ mod tests {
             &mut self,
             _config: ap_fsm::ApConfig,
         ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
-            let (_, receiver) = oneshot::channel();
-            Ok(receiver)
+            unimplemented!()
         }
 
         async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
-            Ok(())
+            unimplemented!()
         }
 
         async fn stop_all_aps(&mut self) -> Result<(), Error> {
-            Ok(())
+            unimplemented!()
         }
     }
 
@@ -1802,15 +1805,21 @@ mod tests {
             Err(format_err!("No ifaces"))
         }
 
-        fn record_idle_client(&mut self, _iface_id: u16) {}
-
-        fn has_idle_client(&self) -> bool {
-            true
+        fn record_idle_client(&mut self, _iface_id: u16) {
+            unimplemented!()
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {}
+        fn has_idle_client(&self) -> bool {
+            unimplemented!()
+        }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {}
+        async fn handle_added_iface(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
+
+        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+            unimplemented!()
+        }
 
         async fn scan(
             &mut self,
@@ -1821,27 +1830,26 @@ mod tests {
         }
 
         async fn stop_client_connections(&mut self) -> Result<(), Error> {
-            Ok(())
+            unimplemented!()
         }
 
         async fn start_client_connections(&mut self) -> Result<(), Error> {
-            Ok(())
+            unimplemented!()
         }
 
         async fn start_ap(
             &mut self,
             _config: ap_fsm::ApConfig,
         ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
-            let (_, receiver) = oneshot::channel();
-            Ok(receiver)
+            unimplemented!()
         }
 
         async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
-            Ok(())
+            unimplemented!()
         }
 
         async fn stop_all_aps(&mut self) -> Result<(), Error> {
-            Ok(())
+            unimplemented!()
         }
     }
 
