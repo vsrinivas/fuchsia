@@ -71,7 +71,7 @@ impl FatFilesystem {
     fn root_dir(self: Arc<Self>) -> Arc<FatDirectory> {
         let clone = self.clone();
         let fs_lock = clone.inner.lock().unwrap();
-        let dir = unsafe { FatfsDirRef::from_root(fs_lock.root_dir()) };
+        let dir = unsafe { FatfsDirRef::from(fs_lock.root_dir()) };
         FatDirectory::new(dir, None, self)
     }
 

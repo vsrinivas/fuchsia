@@ -3,7 +3,7 @@ use {
         directory::FatDirectory,
         filesystem::{FatFilesystem, FatFilesystemInner},
         refs::FatfsFileRef,
-        types::{DirEntry, File},
+        types::File,
         util::{dos_to_unix_time, fatfs_error_to_status, unix_to_dos_time},
     },
     async_trait::async_trait,
@@ -55,10 +55,9 @@ impl FatFile {
         unsafe { self.file.get().as_mut() }.unwrap().borrow_mut(fs)
     }
 
-    /// Borrow the underlying Fatfs dirent.
-    fn borrow_dirent<'a>(&'a self, fs: &'a FatFilesystemInner) -> &'a DirEntry<'a> {
+    fn borrow_file<'a>(&'a self, fs: &'a FatFilesystemInner) -> &'a File<'a> {
         // Safe because the file is protected by the lock on fs.
-        unsafe { self.file.get().as_ref() }.unwrap().borrow_dirent(fs)
+        unsafe { self.file.get().as_ref() }.unwrap().borrow(fs)
     }
 }
 
@@ -129,10 +128,10 @@ impl VfsFile for FatFile {
 
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let dirent = self.borrow_dirent(&fs_lock);
-        let size = dirent.len();
-        let creation_time = dos_to_unix_time(dirent.created());
-        let modification_time = dos_to_unix_time(dirent.modified());
+        let file = self.borrow_file(&fs_lock);
+        let size = file.len() as u64;
+        let creation_time = dos_to_unix_time(file.created());
+        let modification_time = dos_to_unix_time(file.modified());
 
         Ok(NodeAttributes {
             mode: 0,
@@ -172,8 +171,8 @@ impl VfsFile for FatFile {
 
     async fn get_size(&self) -> Result<u64, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let dirent = self.borrow_dirent(&fs_lock);
-        Ok(dirent.len())
+        let file = self.borrow_file(&fs_lock);
+        Ok(file.len() as u64)
     }
 
     async fn close(&self) -> Result<(), Status> {
