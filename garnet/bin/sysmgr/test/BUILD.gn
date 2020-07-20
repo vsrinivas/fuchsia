@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Do not use this target directly, instead depend on //src/sys/sysmgr/test:sysmgr_tests.
+# Do not use this target directly, instead depend on //src/sys/sysmgr/test:sysmgr-tests.
 group("sysmgr_tests") {
-  public_deps = [ "//src/sys/sysmgr/test:sysmgr_tests" ]
+  deps = [ "//src/sys/sysmgr/test:sysmgr-tests" ]
   testonly = true
 }

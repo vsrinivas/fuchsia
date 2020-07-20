@@ -4,9 +4,7 @@
 
 import("//build/config.gni")
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 fidl("interface") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
@@ -18,8 +16,9 @@ fidl("interface") {
   sources = [ "interface.test.fidl" ]
 }
 
-executable("test_sysmgr_service") {
+executable("test_sysmgr_service_bin") {
   testonly = true
+  output_name = "test_sysmgr_service"
 
   sources = [ "test_sysmgr_service.cc" ]
 
@@ -35,8 +34,15 @@ executable("test_sysmgr_service") {
   ]
 }
 
-executable("mock_resolver") {
+fuchsia_component("test_sysmgr_service") {
   testonly = true
+  manifest = "meta/test_sysmgr_service.cmx"
+  deps = [ ":test_sysmgr_service_bin" ]
+}
+
+executable("mock_resolver_bin") {
+  testonly = true
+  output_name = "mock_resolver"
 
   sources = [ "mock_resolver.cc" ]
 
@@ -52,9 +58,15 @@ executable("mock_resolver") {
   ]
 }
 
-executable("service_startup_test") {
+fuchsia_component("mock_resolver") {
   testonly = true
+  manifest = "meta/mock_resolver.cmx"
+  deps = [ ":mock_resolver_bin" ]
+}
 
+executable("service_startup_test_bin") {
+  testonly = true
+  output_name = "service_startup_test"
   sources = [ "service_startup_test.cc" ]
 
   deps = [
@@ -72,8 +84,15 @@ executable("service_startup_test") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-executable("package_updating_loader_test") {
+fuchsia_component("service_startup_test") {
   testonly = true
+  manifest = "meta/service_startup_test.cmx"
+  deps = [ ":service_startup_test_bin" ]
+}
+
+executable("package_updating_loader_test_bin") {
+  testonly = true
+  output_name = "package_updating_loader_test"
 
   sources = [ "package_updating_loader_test.cc" ]
 
@@ -90,84 +109,62 @@ executable("package_updating_loader_test") {
   ]
 }
 
-config_data("sysmgr_integration_test_observer_config") {
-  for_pkg = "sysmgr_integration_tests"
-  outputs = [ "service_startup_test.config" ]
+fuchsia_component("package_updating_loader_test") {
+  testonly = true
+  manifest = "meta/package_updating_loader_test.cmx"
+  deps = [ ":package_updating_loader_test_bin" ]
+}
 
+config_data("sysmgr_integration_test_observer_config") {
+  for_pkg = "sysmgr-integration-tests"
+  outputs = [ "service_startup_test.config" ]
   sources = [ "config/service_startup_test.config" ]
 }
 
-test_package("integration_tests") {
-  package_name = "sysmgr_integration_tests"
+resource("observer_config") {
+  sources = [ "//src/diagnostics/archivist/configs/observer_config.json" ]
+  outputs = [ "data/observer_config.json" ]
+}
 
+fuchsia_component("observer") {
+  testonly = true
+  manifest = "meta/observer.cmx"
   deps = [
-    ":mock_resolver",
-    ":package_updating_loader_test",
-    ":service_startup_test",
+    ":observer_config",
     ":sysmgr_integration_test_observer_config",
-    ":test_sysmgr_service",
-    "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
     "//src/diagnostics/archivist:bin",
-    "//src/sys/sysmgr:bin",
   ]
+}
 
-  binaries = [
-    {
-      name = "mock_resolver"
-    },
-    {
-      name = "test_sysmgr_service"
-    },
-    {
-      name = "archivist"
-    },
-    {
-      name = "sysmgr"
-    },
-    {
-      name = "echo_server_rust"
-      dest = "echo_server"
-    },
-  ]
+resource("echo_server_bin") {
+  sources = [ "$root_out_dir/echo_server_rust" ]
+  outputs = [ "bin/echo_server" ]
+}
 
-  tests = [
-    {
-      name = "service_startup_test"
-      environments = basic_envs
-    },
-    {
-      name = "package_updating_loader_test"
-      environments = basic_envs
-    },
+fuchsia_component("echo_server_rust") {
+  testonly = true
+  manifest = rebase_path("//garnet/examples/fidl/meta/echo_server.cmx")
+  deps = [
+    ":echo_server_bin",
+    "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
   ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/test_sysmgr_service.cmx")
-      dest = "test_sysmgr_service.cmx"
-    },
-    {
-      path = rebase_path("meta/mock_resolver.cmx")
-      dest = "mock_resolver.cmx"
-    },
-    {
-      path = rebase_path("meta/observer.cmx")
-      dest = "observer.cmx"
-    },
-    {
-      path = "//src/sys/sysmgr/meta/sysmgr.cmx"
-      dest = "sysmgr.cmx"
-    },
-    {
-      path = rebase_path("//garnet/examples/fidl/meta/echo_server.cmx")
-      dest = "echo_server_rust.cmx"
-    },
+fuchsia_test_package("sysmgr-integration-tests") {
+  test_components = [
+    ":service_startup_test",
+    ":package_updating_loader_test",
   ]
+  deps = [
+    ":echo_server_rust",
+    ":mock_resolver",
+    ":observer",
+    ":test_sysmgr_service",
+    "//src/sys/sysmgr:sysmgr_component",
+  ]
+}
 
-  resources = [
-    {
-      path = "//src/diagnostics/archivist/configs/observer_config.json"
-      dest = "observer_config.json"
-    },
-  ]
+group("integration_tests") {
+  testonly = true
+  deps = [ ":sysmgr-integration-tests" ]
 }

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/package_updating_loader_test"
+        "binary": "bin/package_updating_loader_test"
     },
     "sandbox": {
         "pkgfs": [

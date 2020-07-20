@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/config_test"
+        "binary": "bin/config_test"
     },
     "sandbox": {
         "features": [

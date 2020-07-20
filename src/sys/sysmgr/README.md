@@ -39,10 +39,10 @@ Config unit tests are available in the `sysmgr_tests` package.
 $ fx test sysmgr_tests
 ```
 
-Integration tests are available in the `sysmgr_integration_tests` package.
+Integration tests are available in the `sysmgr-integration-tests` package.
 
 ```
-$ fx test sysmgr_integration_tests
+$ fx test sysmgr-integration-tests
 ```
 
 ## Source layout

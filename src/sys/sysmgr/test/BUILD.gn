@@ -3,18 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":config_test",
-    ":sysmgr_tests",
-  ]
+  deps = [ ":sysmgr-tests" ]
 }
 
-executable("config_test") {
+executable("bin") {
   testonly = true
   output_name = "config_test"
   sources = [ "config_test.cc" ]
@@ -29,13 +26,7 @@ executable("config_test") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-test_package("sysmgr_tests") {
-  deps = [ ":config_test" ]
-
-  tests = [
-    {
-      name = "config_test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("sysmgr-tests") {
+  manifest = "meta/config_test.cmx"
+  deps = [ ":bin" ]
 }

@@ -32,7 +32,7 @@ namespace sysmgr {
 namespace {
 
 const char kEchoServerURL[] =
-    "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/"
+    "fuchsia-pkg://fuchsia.com/sysmgr-integration-tests#meta/"
     "echo_server_rust.cmx";
 
 class PackageResolverMock : public fuchsia::pkg::PackageResolver {
@@ -169,7 +169,7 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   // Verify that Resolve was called with the expected arguments.
   fuchsia::pkg::UpdatePolicy policy;
   policy.fetch_if_absent = true;
-  constexpr char kResolvedUrl[] = "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests/0";
+  constexpr char kResolvedUrl[] = "fuchsia-pkg://fuchsia.com/sysmgr-integration-tests/0";
   const auto& args = resolver_service.args();
   EXPECT_EQ(std::get<0>(args), std::string(kResolvedUrl));
   EXPECT_EQ(std::get<1>(args), std::vector<std::string>{});

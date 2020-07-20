@@ -11,12 +11,15 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <stdio.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <src/lib/files/glob.h>
 #include <test/sysmgr/cpp/fidl.h>
+
+#include "lib/sys/cpp/termination_reason.h"
 
 namespace sysmgr {
 namespace test {
@@ -94,7 +97,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
 
   auto environment_services = sys::ComponentContext::CreateAndServeOutgoingDirectory()->svc();
   fuchsia::sys::LaunchInfo launch_info{
-      .url = "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/sysmgr.cmx"};
+      .url = "fuchsia-pkg://fuchsia.com/sysmgr-integration-tests#meta/sysmgr.cmx"};
   fuchsia::sys::ServiceListPtr additional_services = std::make_unique<fuchsia::sys::ServiceList>();
   fuchsia::sys::LauncherPtr launcher;
   environment_services->Connect(launcher.NewRequest());
@@ -102,9 +105,20 @@ TEST_F(TestSysmgr, ServiceStartup) {
   fuchsia::sys::ComponentControllerPtr contoller;
   launcher->CreateComponent(std::move(launch_info), contoller.NewRequest());
 
+  bool sysmgr_alive = true;
+  contoller.events().OnTerminated = [&](int64_t return_code,
+                                        fuchsia::sys::TerminationReason termination_reason) {
+    fprintf(stderr, "sysmgr died: %s\n",
+            sys::HumanReadableTerminationReason(termination_reason).c_str());
+    sysmgr_alive = false;
+  };
+
   // wait for sysmgr to create environment.
   std::string path;
   RunLoopUntil([&] {
+    if (!sysmgr_alive) {
+      return true;  // end loop if sysmgr died.
+    }
     files::Glob glob(kGlob);
     if (glob.size() == 1u) {
       path = std::string(*glob.begin());
@@ -113,6 +127,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
     return false;
   });
 
+  ASSERT_TRUE(sysmgr_alive);
   // connect to nested environment's svc.
   zx::channel directory;
   auto sysmgr_svc = sys::ServiceDirectory::CreateWithRequest(&directory);
