@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
@@ -79,7 +80,7 @@ func TestRunChecks(t *testing.T) {
 			Name:                 path.Join(checkTestNamePrefix, trueCheck.Name()),
 			Result:               runtests.TestFailure,
 			IsTestingFailureMode: true,
-			OutputFile:           debugPathForCheck(outputsDir, trueCheck),
+			OutputFile:           debugPathForCheck(trueCheck),
 		},
 		{
 			Name:                 path.Join(checkTestNamePrefix, panicCheck.Name()),
@@ -97,7 +98,7 @@ func TestRunChecks(t *testing.T) {
 	}
 	for _, td := range want {
 		if td.OutputFile != "" {
-			if _, err := os.Stat(td.OutputFile); err != nil {
+			if _, err := os.Stat(filepath.Join(outputsDir, td.OutputFile)); err != nil {
 				t.Errorf("failed to stat OutputFile %s: %v", td.OutputFile, err)
 			}
 		}

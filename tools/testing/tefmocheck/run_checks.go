@@ -16,8 +16,8 @@ import (
 
 const checkTestNamePrefix = "testing_failure_mode"
 
-func debugPathForCheck(outputsDir string, check FailureModeCheck) string {
-	return filepath.Join(outputsDir, checkTestNamePrefix, check.Name(), "debug.txt")
+func debugPathForCheck(check FailureModeCheck) string {
+	return filepath.Join(checkTestNamePrefix, check.Name(), "debug.txt")
 }
 
 // RunChecks runs the given checks on the given TestingOutputs.
@@ -45,14 +45,15 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string)
 		} else if anyFailed = check.Check(to); anyFailed {
 			testDetails.Result = runtests.TestFailure
 			if len(outputsDir) > 0 {
-				testDetails.OutputFile = debugPathForCheck(outputsDir, check)
-				if err := os.MkdirAll(filepath.Dir(testDetails.OutputFile), 0777); err != nil {
+				testDetails.OutputFile = debugPathForCheck(check)
+				outputFileAbsPath := filepath.Join(outputsDir, testDetails.OutputFile)
+				if err := os.MkdirAll(filepath.Dir(outputFileAbsPath), 0777); err != nil {
 					return nil, err
 				}
 				debugText := fmt.Sprintf(
 					"This is a synthetic test that was produced by the tefmocheck tool during post-processing of test results. See https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/tefmocheck/README.md\n%s",
 					check.DebugText())
-				if err := ioutil.WriteFile(testDetails.OutputFile, []byte(debugText), 0666); err != nil {
+				if err := ioutil.WriteFile(outputFileAbsPath, []byte(debugText), 0666); err != nil {
 					return nil, err
 				}
 			}
