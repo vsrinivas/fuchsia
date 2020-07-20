@@ -612,13 +612,39 @@ included. The details vary by runtime and toolchain configuration.
 *   Typically if an `output_name` or `name` is specified, it overrides the
     target name.
 
+Some rudimentary examples are given below:
+
+   * {C++}
+
+   ```gn
+   # This will be packaged as `bin/rot13_encode`
+   executable("rot13_encode") {
+     sources = [ "main.cc" ]
+   }
+   ```
+
+   * {Rust}
+
+   ```gn
+   # This will be packaged as `bin/rot13_encode`
+   rustc_binary("rot13_encode") {}
+   ```
+
+   * {Go}
+
+   ```gn
+   # This will be packaged as `bin/rot13_encode`
+   go_binary("rot13_encode") {}
+   ```
+
 In order to reference an executable in a component manifest, the author will
 need to know its packaged path.
 
 One way to find the packaged path for an executable is to make sure that the
 target that builds the executable is in a package's `deps`, then follow the
 above guide for [listing the contents of a
-package](#listing-the-contents-of-a-package).
+package](#listing-the-contents-of-a-package). The executable will be among the
+listed contents of the package.
 
 ### Finding a [component's launch URL][glossary-component-url]
 
