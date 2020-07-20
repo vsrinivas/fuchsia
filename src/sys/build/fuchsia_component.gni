@@ -32,7 +32,7 @@ import("//src/sys/cmc/build/cmx.gni")
 # }
 #
 # fuchsia_package("my-package") {
-#   components = [ ":my-component" ]
+#   deps = [ ":my-component" ]
 # }
 # ```
 # The component above will have the following launch URL:
@@ -48,7 +48,7 @@ import("//src/sys/cmc/build/cmx.gni")
 # ```
 # resource("my_file") {
 #   sources = [ "my_file.txt" ]
-#   destination = "data/{{source_file_part}}"
+#   outputs = [ "data/{{source_file_part}}" ]
 # }
 #
 # fuchsia_component("my-component") {
