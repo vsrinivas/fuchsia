@@ -486,6 +486,27 @@ fuchsia_component("threading-tests") {
   ]
 }
 
+test("truncate_tests") {
+  sources = [
+    "truncate.cc",
+    "truncate_fixture.cc",
+  ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("truncate-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/truncate-tests.cml"
+  deps = [
+    ":manifests",
+    ":truncate_tests",
+  ]
+}
+
 test("unlink_tests") {
   sources = [ "unlink.cc" ]
   deps = [
@@ -549,6 +570,7 @@ fuchsia_test_package("fs-tests") {
     ":sparse-tests",
     ":sync-tests",
     ":threading-tests",
+    ":truncate-tests",
     ":unlink-tests",
     ":watcher-tests",
   ]
@@ -591,10 +613,32 @@ fuchsia_component("sparse-large-tests") {
   ]
 }
 
+test("truncate_large_tests") {
+  sources = [
+    "truncate_fixture.cc",
+    "truncate_large.cc",
+  ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("truncate-large-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/truncate-large-tests.cml"
+  deps = [
+    ":manifests",
+    ":truncate_large_tests",
+  ]
+}
+
 fuchsia_test_package("large-fs-tests") {
   test_components = [
     ":max-file-tests",
     ":sparse-large-tests",
+    ":truncate-large-tests",
   ]
 }
 
@@ -627,6 +671,8 @@ action("manifests") {
     "$target_gen_dir/sparse-large-tests.cml",
     "$target_gen_dir/sync-tests.cml",
     "$target_gen_dir/threading-tests.cml",
+    "$target_gen_dir/truncate-large-tests.cml",
+    "$target_gen_dir/truncate-tests.cml",
     "$target_gen_dir/unlink-tests.cml",
     "$target_gen_dir/watcher-tests.cml",
   ]
