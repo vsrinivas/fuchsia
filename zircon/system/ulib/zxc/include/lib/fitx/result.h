@@ -200,7 +200,7 @@ class result;
 
 // Specialization of result for one value type.
 template <typename E, typename T>
-class LIB_FITX_NODISCARD result<E, T> {
+class LIB_FITX_NODISCARD result<E, T> : private ::fitx::internal::modulate_copy_and_move<E, T> {
   static_assert(!::fitx::internal::is_success<E>,
                 "fitx::success may not be used as the error type of fitx::result!");
   static_assert(!std::is_same<failed, std::decay_t<T>>::value,
@@ -213,7 +213,8 @@ class LIB_FITX_NODISCARD result<E, T> {
   using failed_or_none = std::conditional_t<std::is_same<failed, E>::value, failed, none>;
 
  public:
-  // Result has the same trivial copyability and moveablity as E and T.
+  // Result is trivially copy and/or move assignable only if E and T are
+  // trivially copy and/or move assignable.
   constexpr result(const result&) = default;
   constexpr result& operator=(const result&) = default;
   constexpr result(result&&) = default;
@@ -379,7 +380,7 @@ class LIB_FITX_NODISCARD result<E, T> {
 
 // Specialization of the result type for zero values.
 template <typename E>
-class LIB_FITX_NODISCARD result<E> {
+class LIB_FITX_NODISCARD result<E> : private ::fitx::internal::modulate_copy_and_move<E> {
   static_assert(!::fitx::internal::is_success<E>,
                 "fitx::success may not be used as the error type of fitx::result!");
 
@@ -391,8 +392,8 @@ class LIB_FITX_NODISCARD result<E> {
   using failure_or_none = std::conditional_t<std::is_same<failed, E>::value, failed, none<1>>;
 
  public:
-  // Result has the same trivial copyability and moveablity as E and the
-  // elements of Ts.
+  // Result is trivially copy and/or move assignable only if E is trivially copy
+  // and/or move assignable.
   constexpr result(const result&) = default;
   constexpr result& operator=(const result&) = default;
   constexpr result(result&&) = default;

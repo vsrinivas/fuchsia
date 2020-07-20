@@ -27,6 +27,45 @@ class success;
 
 namespace internal {
 
+// Implicitly deletes the copy assignment operator of a subclass when T is not
+// trivially copy assignable.
+template <size_t Index, typename T, bool = std::is_trivially_copy_assignable<T>::value>
+struct modulate_copy_assignment {};
+template <size_t Index, typename T>
+struct modulate_copy_assignment<Index, T, false> {
+  constexpr modulate_copy_assignment() = default;
+  constexpr modulate_copy_assignment(const modulate_copy_assignment&) = default;
+  constexpr modulate_copy_assignment& operator=(const modulate_copy_assignment&) = delete;
+  constexpr modulate_copy_assignment(modulate_copy_assignment&&) = default;
+  constexpr modulate_copy_assignment& operator=(modulate_copy_assignment&&) = default;
+};
+
+// Implicitly deletes the move assignment operator of a subclass when T is not
+// trivially move assignable.
+template <size_t Index, typename T, bool = std::is_trivially_move_assignable<T>::value>
+struct modulate_move_assignment {};
+template <size_t Index, typename T>
+struct modulate_move_assignment<Index, T, false> {
+  constexpr modulate_move_assignment() = default;
+  constexpr modulate_move_assignment(const modulate_move_assignment&) = default;
+  constexpr modulate_move_assignment& operator=(const modulate_move_assignment&) = default;
+  constexpr modulate_move_assignment(modulate_move_assignment&&) = default;
+  constexpr modulate_move_assignment& operator=(modulate_move_assignment&&) = delete;
+};
+
+// Modulates the copy-move assignment operators of a subclass based on whether
+// the types in Ts are trivially copy-move assignable.
+template <typename IndexSequence, typename... Ts>
+struct modulate_copy_move_assignment;
+
+template <size_t... Is, typename... Ts>
+struct modulate_copy_move_assignment<std::index_sequence<Is...>, Ts...>
+    : modulate_copy_assignment<Is, Ts>..., modulate_move_assignment<Is, Ts>... {};
+
+template <typename... Ts>
+struct modulate_copy_and_move
+    : modulate_copy_move_assignment<std::index_sequence_for<Ts...>, Ts...> {};
+
 // Determines whether T has an operator-> overload and provides a method that
 // forwards its argument by reference when T has the overload, or by pointer
 // otherwise.
@@ -213,11 +252,10 @@ struct storage_type<storage_class, E, T> {
   template <storage_class_e other_storage_class, typename F, typename U>
   explicit constexpr storage_type(storage_type<other_storage_class, F, U>&& other)
       : state{other.state},
-        error_or_value{other.state == state_e::empty
-                           ? value_type{}
-                           : other.state == state_e::has_error
-                                 ? value_type{error_v, std::move(other.error_or_value.error)}
-                                 : value_type{value_v, std::move(other.error_or_value.value)}} {}
+        error_or_value{other.state == state_e::empty ? value_type{}
+                       : other.state == state_e::has_error
+                           ? value_type{error_v, std::move(other.error_or_value.error)}
+                           : value_type{value_v, std::move(other.error_or_value.value)}} {}
 
   state_e state{state_e::empty};
   value_type error_or_value;
@@ -261,11 +299,10 @@ struct storage_type<storage_class_e::non_trivial, E, T> {
   template <storage_class_e other_storage_class, typename F, typename U>
   explicit constexpr storage_type(storage_type<other_storage_class, F, U>&& other)
       : state{other.state},
-        error_or_value{other.state == state_e::empty
-                           ? value_type{}
-                           : other.state == state_e::has_error
-                                 ? value_type{error_v, std::move(other.error_or_value.error)}
-                                 : value_type{value_v, std::move(other.error_or_value.value)}} {}
+        error_or_value{other.state == state_e::empty ? value_type{}
+                       : other.state == state_e::has_error
+                           ? value_type{error_v, std::move(other.error_or_value.error)}
+                           : value_type{value_v, std::move(other.error_or_value.value)}} {}
 
   state_e state{state_e::empty};
   value_type error_or_value;
@@ -300,11 +337,10 @@ struct storage_type<storage_class, E> {
   template <storage_class_e other_storage_class, typename F>
   explicit constexpr storage_type(storage_type<other_storage_class, F>&& other)
       : state{other.state},
-        error_or_value{other.state == state_e::empty
-                           ? value_type{}
-                           : other.state == state_e::has_error
-                                 ? value_type{error_v, std::move(other.error_or_value.error)}
-                                 : value_type{value_v, std::move(other.error_or_value.value)}} {}
+        error_or_value{other.state == state_e::empty ? value_type{}
+                       : other.state == state_e::has_error
+                           ? value_type{error_v, std::move(other.error_or_value.error)}
+                           : value_type{value_v, std::move(other.error_or_value.value)}} {}
 
   state_e state{state_e::empty};
   value_type error_or_value;
@@ -347,11 +383,10 @@ struct storage_type<storage_class_e::non_trivial, E> {
   template <storage_class_e other_storage_class, typename F>
   explicit constexpr storage_type(storage_type<other_storage_class, F>&& other)
       : state{other.state},
-        error_or_value{other.state == state_e::empty
-                           ? value_type{}
-                           : other.state == state_e::has_error
-                                 ? value_type{error_v, std::move(other.error_or_value.error)}
-                                 : value_type{value_v, std::move(other.error_or_value.value)}} {}
+        error_or_value{other.state == state_e::empty ? value_type{}
+                       : other.state == state_e::has_error
+                           ? value_type{error_v, std::move(other.error_or_value.error)}
+                           : value_type{value_v, std::move(other.error_or_value.value)}} {}
 
   state_e state{state_e::empty};
   value_type error_or_value;
