@@ -29,5 +29,8 @@ fuchsia_unittest_package("dhcpv6-core-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":dhcpv6-core-test" ]
+  deps = [
+    ":core_test($host_toolchain)",
+    ":dhcpv6-core-test",
+  ]
 }
