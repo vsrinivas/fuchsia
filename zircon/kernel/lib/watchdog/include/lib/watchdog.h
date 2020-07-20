@@ -25,20 +25,6 @@ typedef struct watchdog {
   timer_t expire_timer;
 } watchdog_t;
 
-/* A global weak-reference to the common watchdog handler.  By default, this
- * function will dprintf a message indicating which watchdog fired, and then
- * request a halt using platform_halt, indicating that a SW watchdog was the
- * reason for the reset.  It is the platform/target's responsibility to either
- * implement the panic behavior they want when a watchdog fires in
- * platform_halt, or to replace the implementation of the watchdog handler with
- * their own appropriate implementation.
- */
-void watchdog_handler(watchdog_t *dog) __NO_RETURN;
-
-zx_status_t watchdog_init(watchdog_t *dog, zx_duration_t timeout, const char *name);
-void watchdog_set_enabled(watchdog_t *dog, bool enabled);
-void watchdog_pet(watchdog_t *dog);
-
 /* HW watchdog support.  This is nothing but a simple helper used to
  * automatically dismiss a platform's HW watchdog using LK timers.  Platforms
  * must supply

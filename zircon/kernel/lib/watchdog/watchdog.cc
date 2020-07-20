@@ -23,64 +23,6 @@
 
 static SpinLock lock;
 
-__WEAK void watchdog_handler(watchdog_t* dog) {
-  dprintf(INFO, "Watchdog \"%s\" (timeout %" PRId64 " mSec) just fired!!\n", dog->name,
-          dog->timeout / (1000 * 1000));
-  platform_halt(HALT_ACTION_HALT, ZirconCrashReason::SoftwareWatchdog);
-}
-
-static void watchdog_timer_callback(timer_t* timer, zx_time_t now, void* arg) {
-  watchdog_handler((watchdog_t*)arg);
-
-  /* We should never get here; watchdog handlers should always be fatal. */
-  DEBUG_ASSERT(false);
-}
-
-zx_status_t watchdog_init(watchdog_t* dog, zx_duration_t timeout, const char* name) {
-  DEBUG_ASSERT(NULL != dog);
-  DEBUG_ASSERT(ZX_TIME_INFINITE != timeout);
-
-  dog->magic = WATCHDOG_MAGIC;
-  dog->name = name ? name : "unnamed watchdog";
-  dog->enabled = false;
-  dog->timeout = timeout;
-  timer_init(&dog->expire_timer);
-
-  return ZX_OK;
-}
-
-void watchdog_set_enabled(watchdog_t* dog, bool enabled) {
-  AutoSpinLock guard(&lock);
-
-  DEBUG_ASSERT((NULL != dog) && (WATCHDOG_MAGIC == dog->magic));
-
-  if (dog->enabled == enabled) {
-    return;
-  }
-
-  dog->enabled = enabled;
-  zx_time_t deadline = zx_time_add_duration(current_time(), dog->timeout);
-  if (enabled) {
-    timer_set_oneshot(&dog->expire_timer, deadline, watchdog_timer_callback, dog);
-  } else {
-    timer_cancel(&dog->expire_timer);
-  }
-}
-
-void watchdog_pet(watchdog_t* dog) {
-  AutoSpinLock guard(&lock);
-
-  DEBUG_ASSERT((NULL != dog) && (WATCHDOG_MAGIC == dog->magic));
-
-  if (!dog->enabled) {
-    return;
-  }
-
-  timer_cancel(&dog->expire_timer);
-  zx_time_t deadline = zx_time_add_duration(current_time(), dog->timeout);
-  timer_set_oneshot(&dog->expire_timer, deadline, watchdog_timer_callback, dog);
-}
-
 static timer_t hw_watchdog_timer;
 static bool hw_watchdog_enabled;
 static zx_duration_t hw_watchdog_pet_timeout;
