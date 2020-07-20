@@ -276,17 +276,35 @@ zx::status<> PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload
 
   // The payload_vmo might be pager-backed. Commit its pages first before using it for
   // block writes below, to avoid deadlocks in the block server. If all the pages of the
-  // payload_vmo are not in memory, the block server might see a read fault in the midst of
-  // a write. Read faults need to be fulfilled by the block server itself, so it will deadlock.
+  // payload_vmo are not in memory, the block server might see a read fault in the midst of a write.
+  // Read faults need to be fulfilled by the block server itself, so it will deadlock.
   //
-  // TODO(ZX-48145): The caveat with this approach is that we also need to lock these pages to make
-  // sure they don't get evicted after we've committed them here.
+  // Note that these pages would be committed anyway when the block server pins them for the write.
+  // We're simply committing a little early here.
   //
-  // We should investigate if the block server can handle page faults without deadlocking. If we can
-  // support that, the client will not need to worry about re-entrancy in the block server code, and
-  // this ZX_VMO_OP_COMMIT will no longer be needed.
+  // If payload_vmo is pager-backed, committing its pages guarantees that they will remain in memory
+  // and not be evicted only if it's a clone of a pager-backed VMO, and not a root pager-backed VMO
+  // (directly backed by a pager source). Blobfs only hands out clones of root pager-backed VMOs.
+  // Assert that that is indeed the case. This will cause us to fail deterministically if that
+  // invariant does not hold. Otherwise, if pages get evicted in the midst of the partition write,
+  // the block server can deadlock due to a read fault, putting the device in an unrecoverable
+  // state.
+  //
+  // TODO(ZX-48145): If it's possible for payload_vmo to be a root pager-backed VMO, we will need to
+  // lock it instead of simply committing its pages, to opt it out of eviction. The assert below
+  // verifying that it's a pager-backed clone will need to be removed as well.
+  zx_info_vmo_t info;
   auto status =
-      zx::make_status(payload_vmo.op_range(ZX_VMO_OP_COMMIT, 0, payload_size, nullptr, 0));
+      zx::make_status(payload_vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  if (status.is_error()) {
+    ERROR("Failed to get info for payload VMO for partition \"%s\": %s\n", spec.ToString().c_str(),
+          status.status_string());
+    return status.take_error();
+  }
+  // If payload_vmo is pager-backed, it is a clone (has a parent).
+  ZX_ASSERT(!(info.flags & ZX_INFO_VMO_PAGER_BACKED) || info.parent_koid);
+
+  status = zx::make_status(payload_vmo.op_range(ZX_VMO_OP_COMMIT, 0, payload_size, nullptr, 0));
   if (status.is_error()) {
     ERROR("Failed to commit payload VMO for partition \"%s\": %s\n", spec.ToString().c_str(),
           status.status_string());
