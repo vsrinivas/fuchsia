@@ -78,6 +78,7 @@ unsafe fn resize_vec_no_zeroing<T>(buf: &mut Vec<T>, new_len: usize) {
 /// Rounds `x` up if necessary so that it is a multiple of `align`.
 ///
 /// Requires `align` to be a (nonzero) power of two.
+#[inline(always)]
 pub fn round_up_to_align(x: usize, align: usize) -> usize {
     debug_assert_ne!(align, 0);
     debug_assert_eq!(align & (align - 1), 0);
@@ -260,6 +261,7 @@ impl<'a> Encoder<'a> {
     }
 
     /// Validate that the recursion depth is within the limit.
+    #[inline(always)]
     pub fn check_recursion_depth(recursion_depth: usize) -> Result<()> {
         if recursion_depth > MAX_RECURSION {
             return Err(Error::MaxRecursionDepth);
@@ -746,6 +748,7 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
     impl_layout_int!($int_ty);
 
     impl Encodable for $int_ty {
+        #[inline(always)]
         unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
             debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$int_ty>());
             let ptr = encoder.buf.get_unchecked_mut(offset);
@@ -757,6 +760,8 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
 
     impl Decodable for $int_ty {
         fn new_empty() -> Self { 0 as $int_ty }
+
+        #[inline(always)]
         unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
             debug_assert!(decoder.buf.len() >= offset + mem::size_of::<$int_ty>());
             let ptr = decoder.buf.get_unchecked(offset);
@@ -789,6 +794,7 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
 
     impl Decodable for $float_ty {
         fn new_empty() -> Self { 0 as $float_ty }
+
         unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
             debug_assert!(decoder.buf.len() >= offset + mem::size_of::<$float_ty>());
             let ptr = decoder.buf.get_unchecked(offset);
@@ -923,6 +929,7 @@ impl_layout_int!(u8);
 impl_slice_encoding_by_copy!(u8);
 
 impl Encodable for u8 {
+    #[inline(always)]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -940,6 +947,7 @@ impl Decodable for u8 {
         0
     }
 
+    #[inline(always)]
     unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         debug_assert!(decoder.buf.len() >= offset + 1);
         *self = *decoder.buf.get_unchecked(offset);
@@ -951,6 +959,7 @@ impl_layout_int!(i8);
 impl_slice_encoding_by_copy!(i8);
 
 impl Encodable for i8 {
+    #[inline(always)]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -968,6 +977,7 @@ impl Decodable for i8 {
         0
     }
 
+    #[inline(always)]
     unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         debug_assert!(decoder.buf.len() >= offset + 1);
         *self = *std::mem::transmute::<*const u8, *const i8>(decoder.buf.get_unchecked(offset));
