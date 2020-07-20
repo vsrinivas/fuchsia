@@ -46,7 +46,7 @@ component sees its own children, it has no direct knowledge of its grandchildren
 `echo_tool`, `logger`, or `echo`. Nevertheless, all of these component instances
 are considered part of the `shell` realm.
 
-The red arrows illustrate the path of an `/svc/echo` service capability that is
+The arrows illustrate the path of an `/svc/echo` service capability that is
 routed through the realm from `echo` to `echo_tool`. The upward arrows
 correspond to [`expose`][expose] declarations, while the downward arrows
 represent [`offer`][offer] declarations. The `expose` declarations cause
@@ -162,7 +162,7 @@ The use of a collection implies that the existence of `ls` and `grep` is not
 known in advance. This is plausible if you imagine that `ls` and `grep` are
 command-line tools that are instantiated on demand as the user requests them.
 
-The example also illustrates a capability routing path with the red arrows.
+The example also illustrates a capability routing path with the arrows.
 First, `console` [exposes][expose] `/svc/console` to its parent `shell`, which
 [offers][offer] it to `(tools)`. `/svc/console` then becomes available for any
 component instance in the collection to [use][use] -- it does not need to be
