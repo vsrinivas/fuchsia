@@ -16,6 +16,7 @@ use crate::byteorder_ext::{ReadBytesExt, WriteBytesExt};
 use crate::boot_sector::{format_boot_sector, BiosParameterBlock, BootSector};
 use crate::dir::{Dir, DirRawStream};
 use crate::dir_entry::{SFN_PADDING, SFN_SIZE};
+use crate::error::FatfsError;
 use crate::file::File;
 use crate::table::{alloc_cluster, count_free_clusters, format_fat, read_fat_flags, ClusterIterator, RESERVED_FAT_ENTRIES};
 use crate::time::{TimeProvider, DefaultTimeProvider};
@@ -136,13 +137,13 @@ impl FsInfoSector {
     fn deserialize<R: Read>(rdr: &mut R) -> io::Result<FsInfoSector> {
         let lead_sig = rdr.read_u32::<LittleEndian>()?;
         if lead_sig != Self::LEAD_SIG {
-            return Err(Error::new(ErrorKind::Other, "invalid lead_sig in FsInfo sector"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::InvalidLeadSig));
         }
         let mut reserved = [0u8; 480];
         rdr.read_exact(&mut reserved)?;
         let struc_sig = rdr.read_u32::<LittleEndian>()?;
         if struc_sig != Self::STRUC_SIG {
-            return Err(Error::new(ErrorKind::Other, "invalid struc_sig in FsInfo sector"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::InvalidStrucSig));
         }
         let free_cluster_count = match rdr.read_u32::<LittleEndian>()? {
             0xFFFFFFFF => None,
@@ -162,7 +163,7 @@ impl FsInfoSector {
         rdr.read_exact(&mut reserved2)?;
         let trail_sig = rdr.read_u32::<LittleEndian>()?;
         if trail_sig != Self::TRAIL_SIG {
-            return Err(Error::new(ErrorKind::Other, "invalid trail_sig in FsInfo sector"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::InvalidTrailSig));
         }
         Ok(FsInfoSector { free_cluster_count, next_free_cluster, dirty: false })
     }
@@ -953,7 +954,7 @@ pub fn format_volume<IO: ReadWriteSeek>(mut disk: IO, options: FormatVolumeOptio
         let total_sectors_64 = total_bytes / u64::from(bytes_per_sector);
         disk.seek(SeekFrom::Start(0))?;
         if total_sectors_64 > u64::from(u32::MAX) {
-            return Err(Error::new(ErrorKind::Other, "Volume has too many sectors"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::TooManySectors));
         }
         total_sectors_64 as u32
     };

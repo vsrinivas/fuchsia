@@ -9,6 +9,7 @@ use byteorder::LittleEndian;
 use crate::byteorder_ext::{ReadBytesExt, WriteBytesExt};
 
 use crate::dir_entry::DIR_ENTRY_SIZE;
+use crate::error::{FatfsError, FatfsNumericError};
 use crate::fs::{FatType, FormatVolumeOptions, FsStatusFlags};
 use crate::table::RESERVED_FAT_ENTRIES;
 
@@ -140,19 +141,37 @@ impl BiosParameterBlock {
     fn validate(&self) -> io::Result<()> {
         // sanity checks
         if self.bytes_per_sector.count_ones() != 1 {
-            return Err(Error::new(ErrorKind::Other, "invalid bytes_per_sector value in BPB (not power of two)"));
+            return Err(Error::new(
+                ErrorKind::Other,
+                FatfsError::InvalidBytesPerSector(FatfsNumericError::NotPowerOfTwo),
+            ));
         } else if self.bytes_per_sector < 512 {
-            return Err(Error::new(ErrorKind::Other, "invalid bytes_per_sector value in BPB (value < 512)"));
+            return Err(Error::new(
+                ErrorKind::Other,
+                FatfsError::InvalidBytesPerSector(FatfsNumericError::TooSmall(512)),
+            ));
         } else if self.bytes_per_sector > 4096 {
-            return Err(Error::new(ErrorKind::Other, "invalid bytes_per_sector value in BPB (value > 4096)"));
+            return Err(Error::new(
+                ErrorKind::Other,
+                FatfsError::InvalidBytesPerSector(FatfsNumericError::TooLarge(4096)),
+            ));
         }
 
         if self.sectors_per_cluster.count_ones() != 1 {
-            return Err(Error::new(ErrorKind::Other, "invalid sectors_per_cluster value in BPB (not power of two)"));
+            return Err(Error::new(
+                ErrorKind::Other,
+                FatfsError::InvalidSectorsPerCluster(FatfsNumericError::NotPowerOfTwo),
+            ));
         } else if self.sectors_per_cluster < 1 {
-            return Err(Error::new(ErrorKind::Other, "invalid sectors_per_cluster value in BPB (value < 1)"));
+            return Err(Error::new(
+                ErrorKind::Other,
+                FatfsError::InvalidSectorsPerCluster(FatfsNumericError::TooSmall(1)),
+            ));
         } else if self.sectors_per_cluster > 128 {
-            return Err(Error::new(ErrorKind::Other, "invalid sectors_per_cluster value in BPB (value > 128)"));
+            return Err(Error::new(
+                ErrorKind::Other,
+                FatfsError::InvalidSectorsPerCluster(FatfsNumericError::TooLarge(128)),
+            ));
         }
 
         // bytes per sector is u16, sectors per cluster is u8, so guaranteed no overflow in multiplication
@@ -169,7 +188,7 @@ impl BiosParameterBlock {
 
         let is_fat32 = self.is_fat32();
         if self.reserved_sectors < 1 {
-            return Err(Error::new(ErrorKind::Other, "invalid reserved_sectors value in BPB"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::InvalidReservedSectors));
         } else if !is_fat32 && self.reserved_sectors != 1 {
             // Microsoft document indicates fat12 and fat16 code exists that presume this value is 1
             warn!(
@@ -179,7 +198,7 @@ impl BiosParameterBlock {
         }
 
         if self.fats == 0 {
-            return Err(Error::new(ErrorKind::Other, "invalid fats value in BPB"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::InvalidFats));
         } else if self.fats > 2 {
             // Microsoft document indicates that few implementations support any values other than 1 or 2
             warn!(
@@ -189,11 +208,11 @@ impl BiosParameterBlock {
         }
 
         if is_fat32 && self.root_entries != 0 {
-            return Err(Error::new(ErrorKind::Other, "Invalid root_entries value in BPB (should be zero for FAT32)"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::NonZeroRootEntries));
         }
 
         if !is_fat32 && self.root_entries == 0 {
-            return Err(Error::new(ErrorKind::Other, "Empty root directory region defined in FAT12/FAT16 BPB"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::ZeroRootEntries));
         }
 
         if (u32::from(self.root_entries) * DIR_ENTRY_SIZE as u32) % u32::from(self.bytes_per_sector) != 0 {
@@ -201,52 +220,40 @@ impl BiosParameterBlock {
         }
 
         if is_fat32 && self.total_sectors_16 != 0 {
-            return Err(Error::new(
-                ErrorKind::Other,
-                "Invalid total_sectors_16 value in BPB (should be zero for FAT32)",
-            ));
+            return Err(Error::new(ErrorKind::Other, FatfsError::NonZeroTotalSectors));
         }
 
         if (self.total_sectors_16 == 0) == (self.total_sectors_32 == 0) {
-            return Err(Error::new(
-                ErrorKind::Other,
-                "Invalid BPB (total_sectors_16 or total_sectors_32 should be non-zero)",
-            ));
+            return Err(Error::new(ErrorKind::Other, FatfsError::ZeroTotalSectors));
         }
 
         if is_fat32 && self.sectors_per_fat_32 == 0 {
-            return Err(Error::new(
-                ErrorKind::Other,
-                "Invalid sectors_per_fat_32 value in BPB (should be non-zero for FAT32)",
-            ));
+            return Err(Error::new(ErrorKind::Other, FatfsError::InvalidSectorsPerFat));
         }
 
         if self.fs_version != 0 {
-            return Err(Error::new(ErrorKind::Other, "Unknown FS version"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::UnknownVersion));
         }
 
         if self.total_sectors() <= self.first_data_sector() {
-            return Err(Error::new(ErrorKind::Other, "Invalid BPB (total_sectors field value is too small)"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::TotalSectorsTooSmall));
         }
 
         if is_fat32 && self.backup_boot_sector() >= self.reserved_sectors() {
-            return Err(Error::new(ErrorKind::Other, "Invalid BPB (backup boot-sector not in a reserved region)"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::BackupBootSectorInvalid));
         }
 
         if is_fat32 && self.fs_info_sector() >= self.reserved_sectors() {
-            return Err(Error::new(ErrorKind::Other, "Invalid BPB (FSInfo sector not in a reserved region)"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::FsInfoInvalid));
         }
 
         let total_clusters = self.total_clusters();
         let fat_type = FatType::from_clusters(total_clusters);
         if is_fat32 != (fat_type == FatType::Fat32) {
-            return Err(Error::new(
-                ErrorKind::Other,
-                "Invalid BPB (result of FAT32 determination from total number of clusters and sectors_per_fat_16 field differs)",
-            ));
+            return Err(Error::new(ErrorKind::Other, FatfsError::InvalidNumClusters));
         }
         if fat_type == FatType::Fat32 && total_clusters > 0x0FFF_FFFF {
-            return Err(Error::new(ErrorKind::Other, "Invalid BPB (too many clusters)"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::TooManyClusters));
         }
 
         let bits_per_fat_entry = fat_type.bits_per_fat_entry();
@@ -392,7 +399,7 @@ impl BootSector {
 
     pub(crate) fn validate(&self) -> io::Result<()> {
         if self.boot_sig != [0x55, 0xAA] {
-            return Err(Error::new(ErrorKind::Other, "Invalid boot sector signature"));
+            return Err(Error::new(ErrorKind::Other, FatfsError::InvalidBootSectorSig));
         }
         if self.bootjmp[0] != 0xEB && self.bootjmp[0] != 0xE9 {
             warn!("Unknown opcode {:x} in bootjmp boot sector field", self.bootjmp[0]);
@@ -525,7 +532,7 @@ fn try_fs_geometry(
     // Check if volume has enough space to accomodate reserved sectors, FAT, root directory and some data space
     // Having less than 8 sectors for FAT and data would make a little sense
     if total_sectors <= u32::from(reserved_sectors) + u32::from(root_dir_sectors) + 8 {
-        return Err(Error::new(ErrorKind::Other, "Volume is too small"));
+        return Err(Error::new(ErrorKind::Other, FatfsError::VolumeTooSmall));
     }
 
     // calculate File Allocation Table size
@@ -543,12 +550,12 @@ fn try_fs_geometry(
         total_sectors - u32::from(reserved_sectors) - u32::from(root_dir_sectors) - sectors_per_fat * u32::from(fats);
     let total_clusters = data_sectors / u32::from(sectors_per_cluster);
     if fat_type != FatType::from_clusters(total_clusters) {
-        return Err(Error::new(ErrorKind::Other, "Invalid FAT type"));
+        return Err(Error::new(ErrorKind::Other, FatfsError::InvalidFatType));
     }
     debug_assert!(total_clusters >= fat_type.min_clusters());
     if total_clusters > fat_type.max_clusters() {
         // Note: it can happen for FAT32
-        return Err(Error::new(ErrorKind::Other, "Too many clusters"));
+        return Err(Error::new(ErrorKind::Other, FatfsError::TooManyClusters));
     }
 
     return Ok((reserved_sectors, sectors_per_fat));
@@ -580,7 +587,7 @@ fn determine_fs_geometry(
         }
     }
 
-    return Err(Error::new(ErrorKind::Other, "Cannot select FAT type - unfortunate disk size"));
+    return Err(Error::new(ErrorKind::Other, FatfsError::BadDiskSize));
 }
 
 fn format_bpb(
@@ -665,10 +672,7 @@ fn format_bpb(
 
     // Check if number of clusters is proper for used FAT type
     if FatType::from_clusters(bpb.total_clusters()) != fat_type {
-        return Err(Error::new(
-            ErrorKind::Other,
-            "Total number of clusters and FAT type does not match. Try other volume size",
-        ));
+        return Err(Error::new(ErrorKind::Other, FatfsError::ClusterFatMismatch));
     }
 
     Ok((bpb, fat_type))

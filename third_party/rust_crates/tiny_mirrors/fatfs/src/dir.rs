@@ -11,6 +11,7 @@ use crate::dir_entry::{DirEntry, DirEntryData, DirEntryEditor, DirFileEntryData,
 #[cfg(feature = "lfn")]
 use crate::dir_entry::{LFN_ENTRY_LAST_FLAG, LFN_PART_LEN};
 use crate::dir_entry::{SFN_SIZE, SFN_PADDING};
+use crate::error::FatfsError;
 use crate::file::File;
 use crate::fs::{DiskSlice, FileSystem, FsIoAdapter, ReadWriteSeek, OemCpConverter};
 use crate::time::{DateTime, Date, TimeProvider};
@@ -140,8 +141,9 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
             if e.eq_name(name) {
                 // check if file or directory is expected
                 if is_dir.is_some() && Some(e.is_dir()) != is_dir {
-                    let error_msg = if e.is_dir() { "Is a directory" } else { "Not a directory" };
-                    return Err(io::Error::new(ErrorKind::Other, error_msg));
+                    let error =
+                        if e.is_dir() { FatfsError::IsDirectory } else { FatfsError::NotDirectory };
+                    return Err(io::Error::new(ErrorKind::Other, error));
                 }
                 return Ok(e);
             }
@@ -348,7 +350,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         // in case of directory check if it is empty
         let e = self.find_entry(name, None, None)?;
         if e.is_dir() && !e.to_dir().is_empty()? {
-            return Err(io::Error::new(ErrorKind::Other, "Directory not empty"));
+            return Err(io::Error::new(ErrorKind::Other, FatfsError::DirectoryNotEmpty));
         }
         // free data
         if let Some(n) = e.first_cluster() {
@@ -640,10 +642,10 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC> Iterator for DirIter<'a, IO, 
 fn validate_long_name(name: &str) -> io::Result<()> {
     // check if length is valid
     if name.is_empty() {
-        return Err(io::Error::new(ErrorKind::Other, "File name is empty"));
+        return Err(io::Error::new(ErrorKind::Other, FatfsError::FileNameEmpty));
     }
     if name.len() > 255 {
-        return Err(io::Error::new(ErrorKind::Other, "File name too long"));
+        return Err(io::Error::new(ErrorKind::Other, FatfsError::FileNameTooLong));
     }
     // check if there are only valid characters
     for c in name.chars() {
@@ -652,7 +654,7 @@ fn validate_long_name(name: &str) -> io::Result<()> {
             '\u{80}'..='\u{FFFF}' => {},
             '$' | '%' | '\'' | '-' | '_' | '@' | '~' | '`' | '!' | '(' | ')' | '{' | '}' | '.' | ' ' | '+' | ','
             | ';' | '=' | '[' | ']' | '^' | '#' | '&' => {},
-            _ => return Err(io::Error::new(ErrorKind::Other, "File name contains unsupported characters")),
+            _ => return Err(io::Error::new(ErrorKind::Other, FatfsError::FileNameBadCharacter)),
         }
     }
     Ok(())

@@ -3,6 +3,7 @@ use crate::byteorder_ext::{ReadBytesExt, WriteBytesExt};
 use crate::core::cmp;
 use crate::io;
 
+use crate::error::FatfsError;
 use crate::fs::{FatType, FsStatusFlags, ReadSeek, ReadWriteSeek};
 
 struct Fat<T> {
@@ -225,7 +226,7 @@ impl FatTrait for Fat12 {
             }
             cluster += 1;
             if cluster == end_cluster {
-                return Err(io::Error::new(io::ErrorKind::Other, "No space left on device"));
+                return Err(io::Error::new(io::ErrorKind::Other, FatfsError::NoSpace));
             }
             packed_val = match cluster & 1 {
                 0 => fat.read_u16::<LittleEndian>()?,
@@ -307,7 +308,7 @@ impl FatTrait for Fat16 {
             }
             cluster += 1;
         }
-        Err(io::Error::new(io::ErrorKind::Other, "No space left on device"))
+        Err(io::Error::new(io::ErrorKind::Other, FatfsError::NoSpace))
     }
 
     fn count_free<T: ReadSeek>(fat: &mut T, end_cluster: u32) -> io::Result<u32> {
@@ -393,7 +394,7 @@ impl FatTrait for Fat32 {
             }
             cluster += 1;
         }
-        Err(io::Error::new(io::ErrorKind::Other, "No space left on device"))
+        Err(io::Error::new(io::ErrorKind::Other, FatfsError::NoSpace))
     }
 
     fn count_free<T: ReadSeek>(fat: &mut T, end_cluster: u32) -> io::Result<u32> {
