@@ -15,7 +15,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	tap "go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
 )
 
@@ -345,51 +344,5 @@ func TestRunTest(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestRunTests(t *testing.T) {
-	tests := []testsharder.Test{
-		{
-			Test: build.Test{
-				Name:       "bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
-			},
-			Runs:        2,
-			MaxAttempts: 1,
-		}, {
-			Test: build.Test{
-				Name:       "baz",
-				Path:       "/foo/baz",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/baz",
-			},
-			Runs:        1,
-			MaxAttempts: 1,
-		},
-	}
-	tester := &fakeTester{}
-	err := runTests(context.Background(), tests, tester, &testOutputs{tap: &tap.Producer{}})
-	if err != nil {
-		t.Errorf("got error: %v", err)
-	}
-	funcCalls := strings.Join(tester.funcCalls, ",")
-	testCount := strings.Count(funcCalls, testFunc)
-	copySinksCount := strings.Count(funcCalls, copySinksFunc)
-	bugreportCount := strings.Count(funcCalls, runBugreportFunc)
-	if testCount != 3 {
-		t.Errorf("ran %d tests, expected: 3", testCount)
-	}
-	if copySinksCount != 1 {
-		t.Errorf("ran CopySinks %d times, expected: 1", copySinksCount)
-	}
-	if bugreportCount != 1 {
-		t.Errorf("ran RunBugreport %d times, expected: 1", bugreportCount)
-	}
-	// Ensure CopySinks and RunBugreport are run after all calls to Test.
-	lastCalls := strings.Join(tester.funcCalls[len(tester.funcCalls)-2:], ",")
-	if !strings.Contains(lastCalls, copySinksFunc) || !strings.Contains(lastCalls, runBugreportFunc) {
-		t.Errorf("expected last calls to include %v, actual: %v", []string{runBugreportFunc, copySinksFunc}, lastCalls)
 	}
 }

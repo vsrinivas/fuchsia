@@ -190,62 +190,52 @@ type tester interface {
 	RunBugreport(context.Context, string) error
 }
 
+// TODO: write tests for this function. Tests were deleted in fxrev.dev/407968 as part of a refactoring.
 func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, nodename, sshKeyFile, serialSocketPath string) error {
-	var localTests, fuchsiaTests []testsharder.Test
+	var sinks []runtests.DataSinkReference
+	var fuchsiaTester, localTester tester
+
 	for _, test := range tests {
+		var t tester
 		switch test.OS {
 		case "fuchsia":
-			fuchsiaTests = append(fuchsiaTests, test)
-		case "linux":
-			if runtime.GOOS != "linux" {
+			if fuchsiaTester == nil {
+				var err error
+				if nodename == "" {
+					return fmt.Errorf("%q must be set", nodenameEnvVar)
+				}
+				if sshKeyFile != "" {
+					fuchsiaTester, err = newFuchsiaSSHTester(ctx, nodename, sshKeyFile, outputs.outDir, useRuntests, perTestTimeout)
+				} else {
+					if serialSocketPath == "" {
+						return fmt.Errorf("%q must be set if %q and %q are not", serialSocketEnvVar, sshKeyEnvVar, nodenameEnvVar)
+					}
+					fuchsiaTester, err = newFuchsiaSerialTester(ctx, serialSocketPath, perTestTimeout)
+				}
+				if err != nil {
+					return fmt.Errorf("failed to initialize fuchsia tester: %w", err)
+				}
+			}
+			t = fuchsiaTester
+		case "linux", "mac":
+			if test.OS == "linux" && runtime.GOOS != "linux" {
 				return fmt.Errorf("cannot run linux tests when GOOS = %q", runtime.GOOS)
 			}
-			localTests = append(localTests, test)
-		case "mac":
-			if runtime.GOOS != "darwin" {
+			if test.OS == "mac" && runtime.GOOS != "darwin" {
 				return fmt.Errorf("cannot run mac tests when GOOS = %q", runtime.GOOS)
 			}
-			localTests = append(localTests, test)
+			if localTester == nil {
+				localEnv := append(os.Environ(),
+					// Tell tests written in Rust to print stack on failures.
+					"RUST_BACKTRACE=1",
+				)
+				localTester = newSubprocessTester(localWD, localEnv, perTestTimeout)
+			}
+			t = localTester
 		default:
 			return fmt.Errorf("test %#v has unsupported OS: %q", test, test.OS)
 		}
-	}
 
-	localEnv := append(os.Environ(),
-		// Tell tests written in Rust to print stack on failures.
-		"RUST_BACKTRACE=1",
-	)
-	localTester := newSubprocessTester(localWD, localEnv, perTestTimeout)
-	if err := runTests(ctx, localTests, localTester, outputs); err != nil {
-		return err
-	}
-
-	if len(fuchsiaTests) == 0 {
-		return nil
-	} else if nodename == "" {
-		return fmt.Errorf("%q must be set", nodenameEnvVar)
-	}
-
-	var t tester
-	var err error
-	if sshKeyFile != "" {
-		t, err = newFuchsiaSSHTester(ctx, nodename, sshKeyFile, outputs.outDir, useRuntests, perTestTimeout)
-	} else {
-		if serialSocketPath == "" {
-			return fmt.Errorf("%q must be set if %q and %q are not", serialSocketEnvVar, sshKeyEnvVar, nodenameEnvVar)
-		}
-		t, err = newFuchsiaSerialTester(ctx, serialSocketPath, perTestTimeout)
-	}
-	if err != nil {
-		return fmt.Errorf("failed to initialize fuchsia tester: %w", err)
-	}
-	defer t.Close()
-	return runTests(ctx, fuchsiaTests, t, outputs)
-}
-
-func runTests(ctx context.Context, tests []testsharder.Test, t tester, outputs *testOutputs) error {
-	var sinks []runtests.DataSinkReference
-	for _, test := range tests {
 		for i := 0; i < test.Runs; i++ {
 			result, err := runTest(ctx, test, i, t)
 			if sshutil.IsConnectionError(err) {
@@ -257,11 +247,20 @@ func runTests(ctx context.Context, tests []testsharder.Test, t tester, outputs *
 			sinks = append(sinks, result.DataSinks)
 		}
 	}
-	// TODO(ihuh): Combine the following functions into a single postprocess function.
-	if err := t.RunBugreport(ctx, bugreportFile); err != nil {
-		return err
+
+	for _, t := range []tester{fuchsiaTester, localTester} {
+		if t == nil {
+			continue
+		}
+		defer t.Close()
+		if err := t.RunBugreport(ctx, bugreportFile); err != nil {
+			return err
+		}
+		if err := t.CopySinks(ctx, sinks); err != nil {
+			return err
+		}
 	}
-	return t.CopySinks(ctx, sinks)
+	return nil
 }
 
 // stdioBuffer is a simple thread-safe wrapper around bytes.Buffer. It
