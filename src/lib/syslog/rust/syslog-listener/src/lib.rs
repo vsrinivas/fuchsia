@@ -146,9 +146,8 @@ impl AppWithLogs {
             tags: vec![],
         };
         let (send_logs, recv_logs) = mpsc::unbounded();
-        let l = Listener(send_logs);
         fasync::spawn(async move {
-            run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false, None)
+            run_log_listener_with_proxy(&log_proxy, send_logs, Some(&mut options), false, None)
                 .await
                 .unwrap();
         });
@@ -217,13 +216,13 @@ impl Deref for AppWithLogs {
     }
 }
 
-struct Listener(mpsc::UnboundedSender<LogMessage>);
-impl LogProcessor for Listener {
+impl LogProcessor for mpsc::UnboundedSender<LogMessage> {
     fn log(&mut self, message: LogMessage) {
-        self.0.unbounded_send(message).unwrap();
+        // this is called in spawned tasks which may outlive the test's interest
+        self.unbounded_send(message).ok();
     }
 
     fn done(&mut self) {
-        self.0.close_channel();
+        self.close_channel();
     }
 }

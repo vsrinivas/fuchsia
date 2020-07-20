@@ -56,6 +56,8 @@ impl Listener {
     /// Send all messages currently in the provided buffer to this listener. Attempts to batch up
     /// to the message size limit. Returns early if the listener appears to be unhealthy.
     pub async fn backfill<'a>(&mut self, messages: impl Iterator<Item = &'a Message>) {
+        let mut messages: Vec<_> = messages.collect();
+        messages.sort_by_key(|m| m.time);
         let mut batch_size = 0;
         let mut filtered_batch = vec![];
         for msg in messages {

@@ -3,6 +3,19 @@
 Logs are primarily consumed in either an interactive ("online") context with a live device, or in an
 "offline" context with logs collected from past execution of a device.
 
+## Ordering
+
+All logs have a timestamp attached which is read from the [monotonic clock] when recording the
+message. There are many ways that a `LogSink` can receive messages in a different order than
+indicated by their timestamps.
+
+The primary [`fuchsia.logger.Log`] implementation sorts messages it is sending via the `LogMany`
+method on [`fuchsia.logger.LogListenerSafe`]. This method is called whenever sending
+already-collected messages to a newly-connected listener. However, when messages first arrive with
+out-of-order timestamps, any active listeners will receive them in an arbitrary ordering. Tools
+which display logs accumulated from successive calls to `fuchsia.logger/LogListenerSafe.Log` should
+alert their users when messages are received without a strictly linear ordering in timestamps.
+
 ## Online
 
 Because there are two buffers which store logs, there are two main ways to view them when you have a
@@ -103,6 +116,7 @@ Normally this includes the following notable items, all interleaved:
 
 This aggregate log is run through the equivalent of `fx symbolize` before upload.
 
+[monotonic clock]: /docs/reference/syscalls/clock_get_monotonic.md
 [Concepts: Storage]: /docs/development/logs/concepts.md#storage
 [forwarded from the klog]: /docs/development/logs/recording.md#forwarding-klog-to-syslog
 [`log_listener`]: /garnet/bin/log_listener/README.md

@@ -86,13 +86,14 @@ impl LogManager {
             inner.stats.get_component_log_stats(&source).await
         };
         let mut kernel_logger = debuglog::DebugLogBridge::create(klog_reader);
-        let messages = match kernel_logger.existing_logs().await {
+        let mut messages = match kernel_logger.existing_logs().await {
             Ok(messages) => messages,
             Err(e) => {
                 error!("failed to read from kernel log, important logs may be missing: {}", e);
                 return;
             }
         };
+        messages.sort_by_key(|m| m.time);
         for message in messages {
             component_log_stats.lock().await.record_log(&message);
             self.ingest_message(message, LogSource::Kernel).await;
