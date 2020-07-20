@@ -279,3 +279,125 @@ char* brcmu_dotrev_str(uint32_t dotrev, char* buf) {
 
   return buf;
 }
+
+void brcmu_set_rx_rate_index_hist_rx11b(const uint32_t (&rx11b)[WSTATS_RATE_RANGE_11B],
+                                        uint32_t* out_rx_rate) {
+  // Index 0-3: 802.11b
+  for (size_t i = 0; i < WSTATS_RATE_RANGE_11B; i++) {
+    out_rx_rate[i] = rx11b[i];
+  }
+}
+
+void brcmu_set_rx_rate_index_hist_rx11g(const uint32_t (&rx11g)[WSTATS_RATE_RANGE_11G],
+                                        uint32_t* out_rx_rate) {
+  // Index 4-11: 802.11g
+  for (size_t i = 0; i < WSTATS_RATE_RANGE_11G; i++) {
+    out_rx_rate[i + WSTATS_RATE_RANGE_11B] = rx11g[i];
+  }
+}
+
+void brcmu_set_rx_rate_index_hist_rx11n(
+    const uint32_t (&rx11n)[WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11N][WSTATS_MCS_RANGE_11N],
+    uint32_t* out_rx_rate) {
+  // Index 12-27: 802.11n 20Mhz, no SGI
+  size_t start = WSTATS_RATE_RANGE_11B + WSTATS_RATE_RANGE_11G;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11N; i++) {
+    out_rx_rate[i + start] = rx11n[0][0][i];
+  }
+
+  // Index 28-43: 802.11n 40Mhz, no SGI
+  start += WSTATS_MCS_RANGE_11N;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11N; i++) {
+    out_rx_rate[i + start] = rx11n[0][1][i];
+  }
+
+  // Index 44-59: 802.11n 20Mhz, SGI
+  start += WSTATS_MCS_RANGE_11N;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11N; i++) {
+    out_rx_rate[i + start] = rx11n[1][0][i];
+  }
+
+  // Index 60-75: 802.11n 20Mhz, SGI
+  start += WSTATS_MCS_RANGE_11N;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11N; i++) {
+    out_rx_rate[i + start] = rx11n[1][1][i];
+  }
+}
+
+void brcmu_set_rx_rate_index_hist_rx11ac(
+    const uint32_t (
+        &rx11ac)[WSTATS_NSS_RANGE][WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11AC][WSTATS_MCS_RANGE_11AC],
+    uint32_t* out_rx_rate) {
+  // Index 76-85: 802.11ac 20Mhz, no SGI, 1SS
+  size_t start = WSTATS_RATE_RANGE_11B + WSTATS_RATE_RANGE_11G +
+                 WSTATS_SGI_RANGE * WSTATS_BW_RANGE_11N * WSTATS_MCS_RANGE_11N;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[0][0][0][i];
+  }
+
+  // Index 86-95: 802.11ac 20Mhz, no SGI, 2SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[1][0][0][i];
+  }
+
+  // Index 96-105: 802.11ac 40Mhz, no SGI, 1SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[0][0][1][i];
+  }
+
+  // Index 106-115: 802.11ac 40Mhz, no SGI, 2SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[1][0][1][i];
+  }
+
+  // Index 116-125: 802.11ac 80Mhz, no SGI, 1SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[0][0][2][i];
+  }
+
+  // Index 126-135: 802.11ac 80Mhz, no SGI, 2SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[1][0][2][i];
+  }
+
+  // Index 136-145: 802.11ac 20Mhz, SGI, 1SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[0][1][0][i];
+  }
+
+  // Index 146-155: 802.11ac 20Mhz, SGI, 2SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[1][1][0][i];
+  }
+
+  // Index 156-165: 802.11ac 40Mhz, SGI, 1SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[0][1][1][i];
+  }
+
+  // Index 166-175: 802.11ac 40Mhz, SGI, 2SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[1][1][1][i];
+  }
+
+  // Index 176-185: 802.11ac 80Mhz, SGI, 1SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[0][1][2][i];
+  }
+
+  // Index 186-195: 802.11ac 80Mhz, SGI, 2SS
+  start += WSTATS_MCS_RANGE_11AC;
+  for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
+    out_rx_rate[i + start] = rx11ac[1][1][2][i];
+  }
+}

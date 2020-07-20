@@ -19,6 +19,9 @@
 
 #include <zircon/compiler.h>
 
+#include <third_party/bcmdhd/crossdriver/dhd.h>
+
+#include "ddk/protocol/wlanif.h"
 #include "netbuf.h"
 
 /*
@@ -187,7 +190,7 @@ static inline void* brcmu_alloc_and_copy(const void* buf, size_t size) {
 /* format/print */
 #if !defined(NDEBUG)
 __PRINTFLIKE(3, 4) void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...);
-#else   // !defined(NDEBUG)
+#else  // !defined(NDEBUG)
 __PRINTFLIKE(3, 4)
 static inline void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...) {}
 #endif  // !defined(NDEBUG)
@@ -197,5 +200,39 @@ static inline void brcmu_dbg_hex_dump(const void* data, size_t size, const char*
 
 char* brcmu_boardrev_str(uint32_t brev, char* buf);
 char* brcmu_dotrev_str(uint32_t dotrev, char* buf);
+
+/*
+ * Convert the buckets of a wstats_counter `rx11b[WSTATS_RATE_RANGE_11B]` histogram
+ * into a wlanif RxRateIndex histogram. The `out_rx_rate` is expected to be an
+ * array of size `WLANIF_MAX_RX_RATE_INDEX_SAMPLES`.
+ */
+void brcmu_set_rx_rate_index_hist_rx11b(const uint32_t (&rx11b)[WSTATS_RATE_RANGE_11B],
+                                        uint32_t* out_rx_rate);
+/*
+ * Convert the buckets of a wstats_counter `rx11g[WSTATS_RATE_RANGE_11G]` histogram
+ * into a wlanif RxRateIndex histogram. The `out_rx_rate` is expected to be an
+ * array of size `WLANIF_MAX_RX_RATE_INDEX_SAMPLES`.
+ */
+void brcmu_set_rx_rate_index_hist_rx11g(const uint32_t (&rx11g)[WSTATS_RATE_RANGE_11G],
+                                        uint32_t* out_rx_rate);
+/*
+ * Convert the buckets of a wstats_counter
+ * `rx11n[WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11N][WSTATS_MCS_RANGE_11N]` histogram
+ * into a wlanif RxRateIndex histogram. The `out_rx_rate` is expected to be an
+ * array of size `WLANIF_MAX_RX_RATE_INDEX_SAMPLES`.
+ */
+void brcmu_set_rx_rate_index_hist_rx11n(
+    const uint32_t (&rx11n)[WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11N][WSTATS_MCS_RANGE_11N],
+    uint32_t out_rx_rate[WLANIF_MAX_RX_RATE_INDEX_SAMPLES]);
+/*
+ * Convert the buckets of a wstats_counter
+ * `rx11ac[WSTATS_NSS_RANGE][WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11AC][WSTATS_MCS_RANGE_11AC]`
+ * histogram into a wlanif RxRateIndex histogram. The `out_rx_rate` is expected to be an
+ * array of size `WLANIF_MAX_RX_RATE_INDEX_SAMPLES`.
+ */
+void brcmu_set_rx_rate_index_hist_rx11ac(
+    const uint32_t (
+        &rx11ac)[WSTATS_NSS_RANGE][WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11AC][WSTATS_MCS_RANGE_11AC],
+    uint32_t* out_rx_rate);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_UTILS_H_
