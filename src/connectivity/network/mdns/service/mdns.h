@@ -156,7 +156,12 @@ class Mdns : public MdnsAgent::Host {
    private:
     void Connect(std::shared_ptr<InstanceResponder> instance_responder);
 
+    void ConnectProber(std::shared_ptr<InstanceProber> instance_prober);
+
+    void DisconnectProber();
+
     std::shared_ptr<InstanceResponder> instance_responder_;
+    std::shared_ptr<InstanceProber> instance_prober_;
 
     friend class Mdns;
   };
@@ -295,15 +300,6 @@ class Mdns : public MdnsAgent::Host {
     std::unordered_set<std::shared_ptr<DnsResource>, ResourceHash, ResourceEqual> additionals_;
   };
 
-  // Agent information.
-  struct AgentInfo {
-    // Agent.
-    std::shared_ptr<MdnsAgent> agent_;
-
-    // Optional closure to be called with the agent is removed.
-    fit::closure remove_cleanup_;
-  };
-
   // Starts the address probe or transitions to ready state, depending on
   // |perform_address_probe|. This method is called the first time a transceiver
   // becomes ready.
@@ -341,15 +337,10 @@ class Mdns : public MdnsAgent::Host {
 
   void Renew(const DnsResource& resource) override;
 
-  void RemoveAgent(const MdnsAgent* agent) override;
+  void RemoveAgent(std::shared_ptr<MdnsAgent> agent) override;
 
   // Adds an agent and, if |started_|, starts it.
-  void AddAgent(std::shared_ptr<MdnsAgent> agent, fit::closure cleanup = nullptr);
-
-  // Adds an instance responder after performing optional probe for conflicts.
-  bool AddInstanceResponder(const std::string& service_name, const std::string& instance_name,
-                            inet::IpPort port, std::shared_ptr<InstanceResponder> agent,
-                            bool perform_probe);
+  void AddAgent(std::shared_ptr<MdnsAgent> agent);
 
   // Sends any messages found in |outbound_messages_by_reply_address_| and
   // clears |outbound_messages_by_reply_address_|.
@@ -379,8 +370,8 @@ class Mdns : public MdnsAgent::Host {
   zx::time posted_task_time_ = zx::time::infinite();
   std::unordered_map<ReplyAddress, DnsMessageBuilder, ReplyAddressHash>
       outbound_message_builders_by_reply_address_;
-  std::vector<AgentInfo> agents_awaiting_start_;
-  std::unordered_map<const MdnsAgent*, AgentInfo> agent_info_by_agent_;
+  std::vector<std::shared_ptr<MdnsAgent>> agents_awaiting_start_;
+  std::unordered_set<std::shared_ptr<MdnsAgent>> agents_;
   std::unordered_map<std::string, std::shared_ptr<InstanceRequestor>>
       instance_requestors_by_service_name_;
   std::unordered_map<std::string, std::shared_ptr<InstanceResponder>>

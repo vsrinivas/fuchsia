@@ -106,8 +106,8 @@ void AgentTest::Renew(const DnsResource& resource) {
   renew_calls_.push(RenewCall{.resource_ = resource});
 }
 
-void AgentTest::RemoveAgent(const MdnsAgent* agent) {
-  EXPECT_EQ(agent_, agent);
+void AgentTest::RemoveAgent(std::shared_ptr<MdnsAgent> agent) {
+  EXPECT_EQ(agent_, agent.get());
   remove_agent_called_ = true;
 }
 

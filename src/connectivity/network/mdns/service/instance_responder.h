@@ -36,11 +36,6 @@ class InstanceResponder : public MdnsAgent {
 
   void Quit() override;
 
-  // Reports whether the publication attempt was successful. Publication can
-  // fail if the service instance is currently be published by another device
-  // on the subnet.
-  void ReportSuccess(bool success);
-
   // Sets the subtypes to publish.
   void SetSubtypes(std::vector<std::string> subtypes);
 

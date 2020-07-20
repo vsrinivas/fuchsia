@@ -89,6 +89,10 @@ protocol Publisher {
     /// `perform_probe` indicates whether a probe for a conflicting instance
     /// should be performed before publishing the instance. This value should
     /// be `true` unless the instance name is known to be unique.
+    ///
+    /// If a service with the same service and instance names is already published, the
+    /// old publication will be terminated, and the responder channel for the old
+    /// publication will be closed.
     [Transitional]
     PublishServiceInstance(service_name service,
                            instance_name instance,
@@ -103,6 +107,10 @@ protocol Publisher {
     /// `perform_probe` indicates whether a probe for a conflicting instance
     /// should be performed before publishing the instance. This value should
     /// be `true` unless the instance name is known to be unique.
+    ///
+    /// If a service with the same service and instance names is already published, the
+    /// old publication will be terminated, and the responder channel for the old
+    /// publication will be closed.
     [Transitional, Deprecated]
     PublishServiceInstance2(service_name service,
                             instance_name instance,
@@ -120,6 +128,9 @@ enum Error : int32 {
 
     /// The specified service instance is already being published by this
     /// mDNS implementation.
+    /// NOTE: This value isn't used currently. It appears here for backward
+    /// compatibility.
+    [Deprecated]
     ALREADY_PUBLISHED_LOCALLY = 3;
 
     /// The specified service instance is already being published by another

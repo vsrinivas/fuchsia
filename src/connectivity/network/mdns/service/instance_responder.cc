@@ -71,15 +71,9 @@ void InstanceResponder::Quit() {
     SendGoodbye();
   }
 
-  RemoveSelf();
-
   publisher_ = nullptr;
-}
 
-void InstanceResponder::ReportSuccess(bool success) {
-  if (publisher_) {
-    publisher_->ReportSuccess(success);
-  }
+  MdnsAgent::Quit();
 }
 
 void InstanceResponder::SetSubtypes(std::vector<std::string> subtypes) {

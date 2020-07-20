@@ -35,7 +35,9 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
 
   bool HasInterfaces() override { return has_interfaces_; }
 
-  void SendMessage(DnsMessage* message, const ReplyAddress& reply_address) override {}
+  void SendMessage(DnsMessage* message, const ReplyAddress& reply_address) override {
+    send_message_called_ = true;
+  }
 
   void LogTraffic() override {}
 
@@ -51,6 +53,13 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
 
   // Whether |Mdns::Transceiver::Stop| has been called.
   bool stop_called() const { return stop_called_; }
+
+  // Whether |Mdns::Transceiver::SendMessage| has been called and resets the flag.
+  bool get_and_clear_send_message_called() {
+    bool result = send_message_called_;
+    send_message_called_ = false;
+    return result;
+  }
 
   // Whether the ready callback has been called by the unit under test.
   bool ready() const { return ready_; }
@@ -120,6 +129,7 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
   bool has_interfaces_ = false;
   bool start_called_ = false;
   bool stop_called_ = false;
+  bool send_message_called_ = false;
   bool ready_ = false;
   fit::closure link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
@@ -241,7 +251,7 @@ TEST_F(MdnsUnitTests, PublishUnpublish) {
   // Publish should work the first time.
   EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, &publisher0));
 
-  // A second atemp should fail.
+  // A second attempt should fail.
   EXPECT_FALSE(
       under_test().PublishServiceInstance(kServiceName, kInstanceName, false, &publisher1));
 
@@ -251,6 +261,32 @@ TEST_F(MdnsUnitTests, PublishUnpublish) {
 
   // Clean up.
   publisher1.Unpublish();
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests that unpublishing works when an instance prober is running.
+TEST_F(MdnsUnitTests, UnpublishDuringProbe) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  Publisher publisher;
+
+  // Publish with probe and then immediately unpublish.
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, true, &publisher));
+  publisher.Unpublish();
+  RunLoopUntilIdle();
+
+  // The prober may send one message immediately due to a random backoff delay that can be zero.
+  (void)get_and_clear_send_message_called();
+
+  // The prober sends a message within 250 ms, so wait 300 ms before checking that the prober isn't
+  // sending anymore.
+  RunLoopWithTimeout(zx::duration(zx::msec(300)));
+  EXPECT_FALSE(get_and_clear_send_message_called());
+
+  // Clean up.
   under_test().Stop();
   RunLoopUntilIdle();
 }

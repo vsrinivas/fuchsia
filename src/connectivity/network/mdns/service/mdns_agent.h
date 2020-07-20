@@ -53,7 +53,7 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     virtual void Renew(const DnsResource& resource) = 0;
 
     // Removes the specified agent.
-    virtual void RemoveAgent(const MdnsAgent* agent) = 0;
+    virtual void RemoveAgent(std::shared_ptr<MdnsAgent> agent) = 0;
   };
 
   virtual ~MdnsAgent() {}
@@ -78,9 +78,22 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // a call to this method.
   virtual void EndOfMessage(){};
 
-  // Tells the agent to quit. The agent should call |RemoveSelf| shortly
-  // thereafter. The default calls |RemoveSelf|.
-  virtual void Quit() { RemoveSelf(); }
+  // Tells the agent to quit. Any overrides should call this base implementation.
+  virtual void Quit() {
+    RemoveSelf();
+    if (on_quit_) {
+      on_quit_();
+      on_quit_ = nullptr;
+    }
+  }
+
+  // Sets the 'on quit' callback that's called when the agent quits. May be called once at most
+  // for a given agent.
+  void SetOnQuitCallback(fit::closure on_quit) {
+    FX_DCHECK(on_quit);
+    FX_DCHECK(!on_quit_);
+    on_quit_ = std::move(on_quit);
+  }
 
  protected:
   MdnsAgent(Host* host) : host_(host) { FX_DCHECK(host_); }
@@ -129,11 +142,12 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   void Renew(const DnsResource& resource) const { host_->Renew(resource); }
 
   // Removes this agent.
-  void RemoveSelf() const { host_->RemoveAgent(this); }
+  void RemoveSelf() { host_->RemoveAgent(shared_from_this()); }
 
  private:
   Host* host_;
   const MdnsAddresses* addresses_ = nullptr;
+  fit::closure on_quit_;
 };
 
 }  // namespace mdns

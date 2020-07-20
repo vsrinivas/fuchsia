@@ -102,8 +102,8 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
 
         resource_renewer_->EndOfMessage();
         DPROHIBIT_AGENT_REMOVAL();
-        for (auto& [_, agent_info] : agent_info_by_agent_) {
-          agent_info.agent_->EndOfMessage();
+        for (auto& agent : agents_) {
+          agent->EndOfMessage();
         }
         DALLOW_AGENT_REMOVAL();
 
@@ -142,15 +142,17 @@ void Mdns::SubscribeToService(const std::string& service_name, Subscriber* subsc
   auto iter = instance_requestors_by_service_name_.find(service_name);
   if (iter == instance_requestors_by_service_name_.end()) {
     agent = std::make_shared<InstanceRequestor>(this, service_name);
+
+    instance_requestors_by_service_name_.emplace(service_name, agent);
+    agent->SetOnQuitCallback(
+        [this, service_name]() { instance_requestors_by_service_name_.erase(service_name); });
+
     subscriber->Connect(agent);
+
     // Add the subscriber before calling AddAgent (which starts the agent), so the subscriber will
     // be notified of the first query.
     agent->AddSubscriber(subscriber);
-    instance_requestors_by_service_name_.emplace(service_name, agent);
-    AddAgent(agent,
-             /* cleanup */ [this, service_name]() {
-               instance_requestors_by_service_name_.erase(service_name);
-             });
+    AddAgent(agent);
   } else {
     agent = iter->second;
     subscriber->Connect(agent);
@@ -165,14 +167,48 @@ bool Mdns::PublishServiceInstance(const std::string& service_name, const std::st
   FX_DCHECK(publisher);
   FX_DCHECK(state_ == State::kActive);
 
+  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  if (instance_responders_by_instance_full_name_.find(instance_full_name) !=
+      instance_responders_by_instance_full_name_.end()) {
+    return false;
+  }
+
   auto agent = std::make_shared<InstanceResponder>(this, service_name, instance_name, publisher);
+
+  instance_responders_by_instance_full_name_.emplace(instance_full_name, agent);
+  agent->SetOnQuitCallback([this, instance_full_name]() {
+    instance_responders_by_instance_full_name_.erase(instance_full_name);
+  });
 
   publisher->Connect(agent);
 
-  // We're using a bogus port number here, which is OK, because the 'proposed'
-  // resource created from it is only used for collision resolution.
-  return AddInstanceResponder(service_name, instance_name, inet::IpPort::From_uint16_t(0), agent,
-                              perform_probe);
+  if (perform_probe) {
+    // We're using a bogus port number here, which is OK, because the 'proposed'
+    // resource created from it is only used for collision resolution.
+    auto prober = std::make_shared<InstanceProber>(
+        this, service_name, instance_name, inet::IpPort::From_uint16_t(0),
+        [this, instance_full_name, agent, publisher](bool successful) {
+          publisher->DisconnectProber();
+
+          if (!successful) {
+            publisher->ReportSuccess(false);
+            instance_responders_by_instance_full_name_.erase(instance_full_name);
+            return;
+          }
+
+          publisher->ReportSuccess(true);
+          AddAgent(agent);
+        });
+
+    AddAgent(prober);
+    publisher->ConnectProber(prober);
+  } else {
+    publisher->ReportSuccess(true);
+    AddAgent(agent);
+  }
+
+  return true;
 }
 
 void Mdns::LogTraffic() { transceiver_.LogTraffic(); }
@@ -196,7 +232,7 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
   // Create an address prober to look for host name conflicts. The address
   // prober removes itself immediately before it calls the callback.
   auto address_prober = std::make_shared<AddressProber>(this, [this](bool successful) {
-    FX_DCHECK(agent_info_by_agent_.empty());
+    FX_DCHECK(agents_.empty());
 
     if (!successful) {
       std::cout << "mDNS: Another host is using name " << host_full_name_ << "\n";
@@ -209,7 +245,7 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
 
   // We don't use |AddAgent| here, because agents added that way don't
   // actually participate until we're done probing for host name conflicts.
-  agent_info_by_agent_.emplace(address_prober.get(), AgentInfo{address_prober, nullptr});
+  agents_.emplace(address_prober);
   address_prober->Start(host_full_name_, *addresses_);
   SendMessages();
 }
@@ -230,8 +266,8 @@ void Mdns::OnReady() {
   // anyway in case that changes.
   resource_renewer_->Start(host_full_name_, *addresses_);
 
-  for (auto& [agent, cleanup] : agents_awaiting_start_) {
-    AddAgent(agent, std::move(cleanup));
+  for (auto& agent : agents_awaiting_start_) {
+    AddAgent(agent);
   }
 
   agents_awaiting_start_.clear();
@@ -275,8 +311,8 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSecti
     // separately so we don't create an empty outbound message.
     prohibit_agent_removal_ = true;
 
-    for (auto& [_, agent_info] : agent_info_by_agent_) {
-      agent_info.agent_->ReceiveResource(*resource, MdnsResourceSection::kExpired);
+    for (auto& agent : agents_) {
+      agent->ReceiveResource(*resource, MdnsResourceSection::kExpired);
     }
 
     prohibit_agent_removal_ = false;
@@ -292,25 +328,18 @@ void Mdns::SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_
 
 void Mdns::Renew(const DnsResource& resource) { resource_renewer_->Renew(resource); }
 
-void Mdns::RemoveAgent(const MdnsAgent* agent) {
+void Mdns::RemoveAgent(std::shared_ptr<MdnsAgent> agent) {
   FX_DCHECK(agent);
   FX_DCHECK(!prohibit_agent_removal_);
 
-  auto iter = agent_info_by_agent_.find(agent);
-  if (iter != agent_info_by_agent_.end()) {
-    if (iter->second.remove_cleanup_) {
-      iter->second.remove_cleanup_();
-    }
-
-    agent_info_by_agent_.erase(iter);
-  }
+  agents_.erase(agent);
 
   // Remove all pending tasks posted by this agent.
   std::priority_queue<TaskQueueEntry> temp;
   task_queue_.swap(temp);
 
   while (!temp.empty()) {
-    if (temp.top().agent_ != agent) {
+    if (temp.top().agent_ != agent.get()) {
       task_queue_.emplace(temp.top().agent_, std::move(temp.top().task_), temp.top().time_);
     }
 
@@ -321,59 +350,15 @@ void Mdns::RemoveAgent(const MdnsAgent* agent) {
   SendMessages();
 }
 
-void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent, fit::closure cleanup) {
+void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   if (state_ == State::kActive) {
-    agent_info_by_agent_.emplace(agent.get(), AgentInfo{agent, std::move(cleanup)});
+    agents_.emplace(agent);
     FX_DCHECK(!host_full_name_.empty());
     agent->Start(host_full_name_, *addresses_);
     SendMessages();
   } else {
-    agents_awaiting_start_.push_back(AgentInfo{agent, std::move(cleanup)});
+    agents_awaiting_start_.push_back(agent);
   }
-}
-
-bool Mdns::AddInstanceResponder(const std::string& service_name, const std::string& instance_name,
-                                inet::IpPort port, std::shared_ptr<InstanceResponder> agent,
-                                bool perform_probe) {
-  FX_DCHECK(MdnsNames::IsValidServiceName(service_name));
-  FX_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
-
-  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance_name, service_name);
-
-  if (instance_responders_by_instance_full_name_.find(instance_full_name) !=
-      instance_responders_by_instance_full_name_.end()) {
-    return false;
-  }
-
-  instance_responders_by_instance_full_name_.emplace(instance_full_name, agent);
-
-  if (perform_probe) {
-    auto prober = std::make_shared<InstanceProber>(
-        this, service_name, instance_name, port,
-        [this, instance_full_name, agent](bool successful) {
-          if (!successful) {
-            agent->ReportSuccess(false);
-            instance_responders_by_instance_full_name_.erase(instance_full_name);
-            return;
-          }
-
-          agent->ReportSuccess(true);
-          AddAgent(agent,
-                   /* cleanup */ [this, instance_full_name]() {
-                     instance_responders_by_instance_full_name_.erase(instance_full_name);
-                   });
-        });
-
-    AddAgent(prober);
-  } else {
-    agent->ReportSuccess(true);
-    AddAgent(agent,
-             /* cleanup */ [this, instance_full_name]() {
-               instance_responders_by_instance_full_name_.erase(instance_full_name);
-             });
-  }
-
-  return true;
 }
 
 void Mdns::SendMessages() {
@@ -405,8 +390,8 @@ void Mdns::ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& repl
 
   // Renewer doesn't need questions.
   DPROHIBIT_AGENT_REMOVAL();
-  for (auto& [_, agent_info] : agent_info_by_agent_) {
-    agent_info.agent_->ReceiveQuestion(question, reply_address, sender_address);
+  for (auto& agent : agents_) {
+    agent->ReceiveQuestion(question, reply_address, sender_address);
   }
 
   DALLOW_AGENT_REMOVAL();
@@ -416,8 +401,8 @@ void Mdns::ReceiveResource(const DnsResource& resource, MdnsResourceSection sect
   // Renewer is always first.
   resource_renewer_->ReceiveResource(resource, section);
   DPROHIBIT_AGENT_REMOVAL();
-  for (auto& [_, agent_info] : agent_info_by_agent_) {
-    agent_info.agent_->ReceiveResource(resource, section);
+  for (auto& agent : agents_) {
+    agent->ReceiveResource(resource, section);
   }
 
   DALLOW_AGENT_REMOVAL();
@@ -512,6 +497,11 @@ void Mdns::Publisher::Reannounce() {
 }
 
 void Mdns::Publisher::Unpublish() {
+  if (instance_prober_) {
+    instance_prober_->Quit();
+    instance_prober_ = nullptr;
+  }
+
   if (instance_responder_) {
     instance_responder_->Quit();
     instance_responder_ = nullptr;
@@ -521,6 +511,16 @@ void Mdns::Publisher::Unpublish() {
 void Mdns::Publisher::Connect(std::shared_ptr<InstanceResponder> instance_responder) {
   FX_DCHECK(instance_responder);
   instance_responder_ = instance_responder;
+}
+
+void Mdns::Publisher::ConnectProber(std::shared_ptr<InstanceProber> instance_prober) {
+  FX_DCHECK(instance_prober);
+  instance_prober_ = instance_prober;
+}
+
+void Mdns::Publisher::DisconnectProber() {
+  FX_DCHECK(instance_prober_);
+  instance_prober_ = nullptr;
 }
 
 }  // namespace mdns

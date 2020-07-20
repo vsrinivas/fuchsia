@@ -217,33 +217,24 @@ void MdnsServiceImpl::PublishServiceInstance(
     return;
   }
 
+  // TODO(fxb/56579): Review this approach to conflicts.
+  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance, service);
+
+  // If there's an existing publisher for this full name, destroy it so the new publication
+  // supercedes the old one.
+  publishers_by_instance_full_name_.erase(instance_full_name);
+
   auto responder_ptr = responder_handle.Bind();
   FX_DCHECK(responder_ptr);
-
-  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance, service);
 
   auto publisher = std::make_unique<ResponderPublisher>(
       std::move(responder_ptr), std::move(callback), [this, instance_full_name]() {
         publishers_by_instance_full_name_.erase(instance_full_name);
       });
 
-  if (!mdns_.PublishServiceInstance(service, instance, perform_probe, publisher.get())) {
-    if (publisher->callback_) {
-      fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result;
-      result.set_err(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_LOCALLY);
-      publisher->callback_(std::move(result));
-    } else {
-      fuchsia::net::mdns::Publisher_PublishServiceInstance2_Result result;
-      result.set_err(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_LOCALLY);
-      publisher->callback2_(std::move(result));
-    }
-    return;
-  }
-
-  // |Mdns| told us our instance is unique locally, so the full name should
-  // not appear in our collection.
-  FX_DCHECK(publishers_by_instance_full_name_.find(instance_full_name) ==
-            publishers_by_instance_full_name_.end());
+  bool result = mdns_.PublishServiceInstance(service, instance, perform_probe, publisher.get());
+  // Because of the erase call above, |PublishServiceInstance| should always succeed.
+  FX_DCHECK(result);
 
   publishers_by_instance_full_name_.emplace(instance_full_name, std::move(publisher));
 }
@@ -270,27 +261,24 @@ void MdnsServiceImpl::PublishServiceInstance2(
     return;
   }
 
+  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance, service);
+
+  // If there's an existing publisher for this full name, destroy it so the new publication
+  // supercedes the old one.
+  publishers_by_instance_full_name_.erase(instance_full_name);
+
   auto responder_ptr = responder_handle.Bind();
   FX_DCHECK(responder_ptr);
-
-  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance, service);
 
   auto publisher = std::make_unique<ResponderPublisher>(
       std::move(responder_ptr), std::move(callback), [this, instance_full_name]() {
         publishers_by_instance_full_name_.erase(instance_full_name);
       });
 
-  if (!mdns_.PublishServiceInstance(service, instance, perform_probe, publisher.get())) {
-    fuchsia::net::mdns::Publisher_PublishServiceInstance2_Result result;
-    result.set_err(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_LOCALLY);
-    publisher->callback2_(std::move(result));
-    return;
-  }
-
-  // |Mdns| told us our instance is unique locally, so the full name should
-  // not appear in our collection.
-  FX_DCHECK(publishers_by_instance_full_name_.find(instance_full_name) ==
-            publishers_by_instance_full_name_.end());
+  bool result = mdns_.PublishServiceInstance(service, instance, perform_probe, publisher.get());
+  // Because of the erase call above, |PublishServiceInstance| should always succeed.
+  FX_DCHECK(result);
+  (void)result;
 
   publishers_by_instance_full_name_.emplace(instance_full_name, std::move(publisher));
 }

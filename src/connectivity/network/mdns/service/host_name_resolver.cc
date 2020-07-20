@@ -75,7 +75,7 @@ void HostNameResolver::Quit() {
     callback_ = nullptr;
   }
 
-  RemoveSelf();
+  MdnsAgent::Quit();
 }
 
 }  // namespace mdns
