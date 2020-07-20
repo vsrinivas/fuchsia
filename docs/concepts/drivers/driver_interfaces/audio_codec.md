@@ -1,7 +1,7 @@
 # Audio Codec Interface
 
 This document describes the codec interface between controllers and codecs in
-Zircon. It is meant to serve as a reference for driver-authors, and to define
+Fuchsia. It is meant to serve as a reference for driver-authors, and to define
 the interface contract which codec drivers must implement and that controllers
 can use. The codec interface is a Banjo protocol exposed by codec drivers.
 
@@ -50,6 +50,9 @@ required to get codecs to an initialized state.
 Codecs are composite devices that provide the codec protocol to controllers. It
 is expected that only one controller uses a codec's protocol, and one controller
 may use multiple codecs at once.
+
+The [simple-codec](/src/media/audio/lib/simple-codec/README.md) library facilitates
+writing and using simple codec drivers implementing the codec protocol.
 
 ## Protocol definition
 
