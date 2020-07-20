@@ -164,6 +164,7 @@ static inline void mp_set_curr_cpu_active(bool active) {
   } else {
     atomic_and((volatile int*)&mp.active_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
   }
+  arch_set_blocking_disallowed(!active);
 }
 
 static inline cpu_mask_t mp_get_active_mask(void) {

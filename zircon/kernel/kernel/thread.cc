@@ -1313,6 +1313,10 @@ void Thread::SecondaryCpuInitEarly() {
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(stack_.base() != 0);
 
+  // At this point, the CPU isn't far enough along to allow threads to block. Set blocking
+  // disallowed until to catch bugs where code might block before we're ready.
+  arch_set_blocking_disallowed(true);
+
   // Save |this|'s stack because |thread_construct_first| will zero out the whole struct.
   KernelStack stack = ktl::move(stack_);
 
@@ -1328,6 +1332,8 @@ void Thread::SecondaryCpuInitEarly() {
  * @brief The last routine called on the secondary cpu's bootstrap thread.
  */
 void thread_secondary_cpu_entry() {
+  DEBUG_ASSERT(arch_blocking_disallowed());
+
   mp_set_curr_cpu_active(true);
 
   get_local_percpu()->dpc_queue.InitForCurrentCpu();

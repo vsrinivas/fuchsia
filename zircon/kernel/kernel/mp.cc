@@ -233,6 +233,7 @@ static void mp_unplug_trampoline() {
   // never block.  If this thread blocks, the scheduler may attempt to select
   // this CPU's idle thread to run.  Doing so would violate an invariant: tasks
   // may only be scheduled on active CPUs.
+  DEBUG_ASSERT(arch_blocking_disallowed());
 
   // Note that before this invocation, but after we stopped accepting
   // interrupts, we may have received a synchronous task to perform.
