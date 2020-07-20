@@ -408,10 +408,16 @@ static bool is_spi_enabled() {
 static void gic_shutdown_cpu() {
   DEBUG_ASSERT(arch_ints_disabled());
 
-  // Before we shutdown the GIC, make sure we've migrated/disabled any and all peripheral
-  // interrupts targeted at this CPU (PPIs and SPIs).
-  DEBUG_ASSERT(!is_ppi_enabled());
-  DEBUG_ASSERT(!is_spi_enabled());
+  // If we're running on a secondary CPU there's a good chance this CPU will be powered off shortly
+  // (PSCI_CPU_OFF).  Sending an interrupt to a CPU that's been powered off may result in an
+  // "erronerous state" (see Power State Coordination Interface (PSCI) System Software on ARM
+  // specification, 5.5.2).  So before we shutdown the GIC, make sure we've migrated/disabled any
+  // and all peripheral interrupts targeted at this CPU (PPIs and SPIs).
+  //
+  // Note, we don't perform these checks on the boot CPU because we don't call PSCI_CPU_OFF on the
+  // boot CPU, and we likely still have PPIs and SPIs targeting the boot CPU.
+  DEBUG_ASSERT(arch_curr_cpu_num() == BOOT_CPU_ID || !is_ppi_enabled());
+  DEBUG_ASSERT(arch_curr_cpu_num() == BOOT_CPU_ID || !is_spi_enabled());
 
   // Turn off interrupts at the CPU interface.
   GICREG(0, GICC_CTLR) = 0;
