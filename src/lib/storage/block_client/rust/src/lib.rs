@@ -568,7 +568,13 @@ mod tests {
         let _ = futures::join!(futures::future::join_all(reads), async {
             ramdisk.destroy().expect("ramdisk.destroy failed")
         });
-        remote_block_device.detach_vmo(vmo_id).await.expect_err("ramdisk should be destroyed");
+        // Destroying the ramdisk is asynchronous. Keep issuing reads until they start failing.
+        while remote_block_device
+            .read_at(MutableBufferSlice::new_with_vmo_id(&vmo_id, 0, 1024), 0)
+            .await
+            .is_ok()
+        {}
+        let _ = remote_block_device.detach_vmo(vmo_id).await;
     }
 
     #[fasync::run_singlethreaded(test)]
