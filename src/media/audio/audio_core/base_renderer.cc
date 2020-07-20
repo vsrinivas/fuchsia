@@ -493,9 +493,8 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
     // streams across multiple parallel outputs. In this mode we must update lead time upon changes
     // in internal interconnect requirements, but impact should be small since internal lead time
     // factors tend to be small, while external factors can be huge.
-    auto ref_clock_now = reference_clock().Read();
 
-    reference_time = ref_clock_now + min_lead_time_ + kPaddingForUnspecifiedRefTime;
+    reference_time = reference_clock().Read() + min_lead_time_ + kPaddingForUnspecifiedRefTime;
   }
 
   // If no media time was specified, use the first pending packet's media time.
@@ -657,13 +656,7 @@ void BaseRenderer::GetReferenceClock(GetReferenceClockCallback callback) {
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
-  auto result = reference_clock().DuplicateClock();
-  if (result.is_error()) {
-    FX_PLOGS(ERROR, result.error()) << "Could not duplicate the reference clock handle";
-    return;
-  }
-
-  callback(result.take_value());
+  callback(reference_clock().DuplicateClock());
 
   cleanup.cancel();
 }

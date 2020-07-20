@@ -9,6 +9,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
+#include <limits>
+
 #include "src/media/audio/lib/clock/pid_control.h"
 #include "src/media/audio/lib/clock/utils.h"
 
@@ -82,6 +84,7 @@ class AudioClock {
   // hardware's rate, we do not know the exact instant of that rate change. Our rate adjustments
   // might overshoot or undershoot our intention; thus we must track POSITION (not just rate), and
   // eliminate any error over time with a feedback control loop.
+
   static constexpr uint32_t kMonotonicDomain = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
 
   friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);
@@ -96,12 +99,6 @@ class AudioClock {
   AudioClock(AudioClock&& moved_clock) = default;
   AudioClock& operator=(AudioClock&& moved_clock) = default;
 
-  // Because 1) AudioClock objects are not copyable, and 2) AudioClock 'consumes' the zx::clock
-  // provided to it, and 3) handle values are unique across the system, and 4) even duplicate
-  // handles have different values, this all means that the clock handle is essentially the unique
-  // ID for this AudioClock object.
-  bool operator==(const AudioClock& comparable) const { return (clock_ == comparable.clock_); }
-
   static AudioClock CreateAsDeviceAdjustable(zx::clock clock, uint32_t domain);
   static AudioClock CreateAsDeviceStatic(zx::clock clock, uint32_t domain);
   static AudioClock CreateAsOptimal(zx::clock clock);
@@ -110,23 +107,30 @@ class AudioClock {
 
   explicit operator bool() const { return is_valid(); }
   bool is_valid() const { return (type_ != Type::Invalid); }
-
   bool is_adjustable() const { return (type_ == Type::Adjustable); }
   bool is_device_clock() const { return (source_ == Source::Device); }
   bool controls_hardware_clock() const { return controls_hardware_clock_; }
-  TimelineRate rate_adjustment() const { return rate_adjustment_; }
   uint32_t domain() const {
     FX_CHECK(is_device_clock());
     return domain_;
   }
 
+  TimelineRate rate_adjustment() const { return rate_adjustment_; }
+
   const TimelineFunction& ref_clock_to_clock_mono();
   const TimelineFunction& quick_ref_clock_to_clock_mono() const { return ref_clock_to_clock_mono_; }
 
+  // Because 1) AudioClock objects are not copyable, and 2) AudioClock 'consumes' the zx::clock
+  // provided to it, and 3) handle values are unique across the system, and 4) even duplicate
+  // handles have different values, this all means that the clock handle is essentially the unique
+  // ID for this AudioClock object.
+  bool operator==(const AudioClock& comparable) const { return (clock_ == comparable.clock_); }
+
+  zx::clock DuplicateClock() const;
   zx::time Read() const;
-  fit::result<zx::time, zx_status_t> ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
-  fit::result<zx::time, zx_status_t> MonotonicTimeFromReferenceTime(zx::time ref_time) const;
-  fit::result<zx::clock, zx_status_t> DuplicateClock() const;
+
+  zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
+  zx::time MonotonicTimeFromReferenceTime(zx::time ref_time) const;
 
   void RateAdjust(int64_t error_factor, int64_t curr_time);
   void ResetAdjustments(int64_t curr_time);

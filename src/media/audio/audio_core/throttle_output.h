@@ -63,19 +63,18 @@ class ThrottleOutput : public AudioOutput {
   std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time ref_time) override {
     // Compute the next callback time; check whether trimming is falling behind.
     last_sched_time_mono_ = last_sched_time_mono_ + TRIM_PERIOD;
-    auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(ref_time).take_value();
+    auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(ref_time);
+
     if (mono_time > last_sched_time_mono_) {
       // TODO(mpuryear): Trimming is falling behind. We should tell someone.
       last_sched_time_mono_ = mono_time + TRIM_PERIOD;
     }
 
-    // TODO(mpuryear): Optimize the trim operation by scheduling callbacks for
-    // when our first pending packet ends, rather than polling . This will also
-    // tighten our timing in returning packets (currently, we hold packets up to
-    // [TRIM_PERIOD-episilon] past their end PTS before releasing).
+    // TODO(mpuryear): Optimize Trim by scheduling at the end of our first pending packet, instead
+    // of polling. This will also make our timing in returning packets more consistent.
     //
-    // To do this, we would need wake and recompute, whenever an AudioRenderer
-    // client changes its rate transformation. For now, just polling is simpler.
+    // To do this, we would need wake and recompute, whenever an AudioRenderer client changes its
+    // rate transformation. For now, just polling is simpler.
     SetNextSchedTimeMono(last_sched_time_mono_);
 
     // Throttle outputs don't actually mix; they provide backpressure to the

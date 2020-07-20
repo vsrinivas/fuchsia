@@ -622,6 +622,7 @@ zx_status_t BaseCapturer::Process() {
     // Ideally, if there were only one capture source and our frame rates match, we would align our
     // start time exactly with a source sample boundary.
     auto ref_now = reference_clock().Read();
+
     if (!ref_clock_to_fractional_dest_frames_->get().first.invertible()) {
       // Ideally a timeline function could alter offsets without also recalculating the scale
       // factor. Then we could re-establish this function without re-reducing the fps-to-nsec rate.
@@ -657,17 +658,10 @@ zx_status_t BaseCapturer::Process() {
       zx::time next_mix_ref_time = last_frame_ref_time + min_fence_time_ + kFenceTimePadding;
 
       auto mono_wakeup_time = reference_clock().MonotonicTimeFromReferenceTime(next_mix_ref_time);
-      zx_status_t status;
-      if (!mono_wakeup_time.is_ok()) {
-        FX_LOGS(ERROR) << "clock.get_details() failed during conversion";
-        status = ZX_ERR_INTERNAL;
-      } else {
-        status = mix_timer_.PostForTime(mix_domain_->dispatcher(), mono_wakeup_time.take_value());
-        if (status != ZX_OK) {
-          FX_PLOGS(ERROR, status) << "Failed to schedule capturer mix";
-        }
-      }
+
+      zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), mono_wakeup_time);
       if (status != ZX_OK) {
+        FX_PLOGS(ERROR, status) << "Failed to schedule capturer mix";
         ShutdownFromMixDomain();
         return ZX_ERR_INTERNAL;
       }
@@ -954,8 +948,7 @@ void BaseCapturer::FinishBuffersThunk() {
     finish_buffers_signal_time_ = zx::time(0);
   }
 
-  auto ref_now = reference_clock().Read();
-  auto time_to_schedule = ref_now - signal_time;
+  auto time_to_schedule = reference_clock().Read() - signal_time;
   if (signal_time != zx::time(0) && time_to_schedule > zx::msec(500)) {
     FX_LOGS(WARNING) << "FinishBuffersThunk took " << time_to_schedule.to_msecs()
                      << "ms to schedule";
@@ -1050,13 +1043,7 @@ void BaseCapturer::GetReferenceClock(GetReferenceClockCallback callback) {
 
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 
-  auto result = reference_clock().DuplicateClock();
-  if (result.is_error()) {
-    FX_PLOGS(ERROR, result.error()) << "Could not duplicate the reference clock handle";
-    return;
-  }
-
-  callback(result.take_value());
+  callback(reference_clock().DuplicateClock());
 
   cleanup.cancel();
 }

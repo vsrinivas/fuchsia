@@ -135,7 +135,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   int64_t output_frames_consumed = ref_clock_to_safe_wr_frame.Apply(ref_time.get());
   int64_t output_frames_transmitted = output_frames_consumed - fifo_frames;
 
-  auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(ref_time).take_value();
+  auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(ref_time);
 
   if (output_frames_consumed >= frames_sent_) {
     if (!underflow_start_time_mono_.get()) {
@@ -324,7 +324,8 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
       driver_safe_read_or_write_ref_clock_to_frames().ApplyInverse(low_water_frame_number);
   auto low_water_mono_time =
       reference_clock().MonotonicTimeFromReferenceTime(zx::time(low_water_ref_time));
-  SetNextSchedTimeMono(low_water_mono_time.take_value());
+
+  SetNextSchedTimeMono(low_water_mono_time);
 }
 
 void DriverOutput::OnDriverInfoFetched() {

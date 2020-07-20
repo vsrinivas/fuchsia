@@ -36,7 +36,7 @@ TEST_F(ThrottleOutputTest, NextTrimTime) {
   auto past_ref_time = throttle_output_->reference_clock().ReferenceTimeFromMonotonicTime(
       last_trim_mono_time - zx::min(1));
 
-  throttle_output_->StartMixJob(past_ref_time.take_value());
+  throttle_output_->StartMixJob(past_ref_time);
   auto next_trim_mono_time = throttle_output_->last_sched_time_mono();
   EXPECT_EQ(next_trim_mono_time, last_trim_mono_time + TRIM_PERIOD);
 
@@ -47,7 +47,7 @@ TEST_F(ThrottleOutputTest, NextTrimTime) {
 
   throttle_output_->StartMixJob(future_ref_time);
   next_trim_mono_time = throttle_output_->last_sched_time_mono();
-  EXPECT_EQ(next_trim_mono_time, future_mono_time.take_value() + TRIM_PERIOD);
+  EXPECT_EQ(next_trim_mono_time, future_mono_time + TRIM_PERIOD);
 }
 
 }  // namespace

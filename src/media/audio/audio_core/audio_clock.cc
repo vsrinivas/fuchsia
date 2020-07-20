@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_clock.h"
 
+#include <zircon/syscalls.h>
+
 namespace media::audio {
 
 // static methods
@@ -36,18 +38,18 @@ AudioClock AudioClock::CreateAsCustom(zx::clock clock) {
 
 AudioClock::AudioClock(zx::clock clock, Source source, Type type, uint32_t domain)
     : clock_(std::move(clock)), source_(source), type_(type), domain_(domain) {
-  if (!clock_.is_valid()) {
+  // If we can read the clock now, we will always be able to read it. This quick check covers all
+  // error modes: bad handle, wrong object type, no RIGHT_READ, clock not running.
+  zx_time_t ref_now;
+  if (clock_.read(&ref_now) != ZX_OK) {
     type_ = Type::Invalid;
+    clock_.reset();
   }
 
   if (is_valid()) {
     auto result = audio::clock::SnapshotClock(clock_);
-    if (result.is_ok()) {
-      ref_clock_to_clock_mono_ = result.take_value().reference_to_monotonic;
-    } else {
-      FX_LOGS(WARNING) << "SnapshotClock failed; marking clock as invalid";
-      type_ = Type::Invalid;
-    }
+    FX_CHECK(result.is_ok());  // We pre-qualify the clock, so this should never fail.
+    ref_clock_to_clock_mono_ = result.take_value().reference_to_monotonic;
   }
 
   // Check here whether an Adjustable|Client zx::clock has write privileges (can be rate-adjusted)?
@@ -64,45 +66,52 @@ bool AudioClock::SetAsHardwareControlling(bool controls_hardware_clock) {
 }
 
 const TimelineFunction& AudioClock::ref_clock_to_clock_mono() {
-  FX_DCHECK(clock_.is_valid()) << "this (" << std::hex << static_cast<void*>(this)
-                               << "), ref_clock_to_clock_mono called before clock was valid";
+  FX_CHECK(is_valid());
 
   auto result = audio::clock::SnapshotClock(clock_);
-  FX_DCHECK(result.is_ok()) << "SnapshotClock failed";
+  FX_CHECK(result.is_ok());  // We pre-qualify the clock, so this should never fail.
   ref_clock_to_clock_mono_ = result.take_value().reference_to_monotonic;
 
   return ref_clock_to_clock_mono_;
 }
 
 zx::time AudioClock::Read() const {
-  FX_DCHECK(clock_.is_valid()) << "Invalid clock cannot be read";
-  zx::time now;
-  auto status = clock_.read(now.get_address());
-  FX_DCHECK(status == ZX_OK) << "Error while reading clock: " << status;
-  return now;
+  FX_CHECK(is_valid());
+
+  zx::time ref_now;
+  auto status = clock_.read(ref_now.get_address());
+  FX_CHECK(status == ZX_OK) << "Error while reading clock: " << status;
+
+  return ref_now;
 }
 
-fit::result<zx::time, zx_status_t> AudioClock::ReferenceTimeFromMonotonicTime(
-    zx::time mono_time) const {
-  if (!is_valid()) {
-    return fit::error(ZX_ERR_BAD_HANDLE);
-  }
-  return audio::clock::ReferenceTimeFromMonotonicTime(clock_, mono_time);
+zx::time AudioClock::ReferenceTimeFromMonotonicTime(zx::time mono_time) const {
+  FX_CHECK(is_valid());
+
+  auto result = audio::clock::ReferenceTimeFromMonotonicTime(clock_, mono_time);
+  FX_CHECK(result.is_ok());  // We pre-qualify the clock, so this should never fail.
+
+  return result.take_value();
 }
 
-fit::result<zx::time, zx_status_t> AudioClock::MonotonicTimeFromReferenceTime(
-    zx::time ref_time) const {
-  if (!is_valid()) {
-    return fit::error(ZX_ERR_BAD_HANDLE);
-  }
-  return audio::clock::MonotonicTimeFromReferenceTime(clock_, ref_time);
+zx::time AudioClock::MonotonicTimeFromReferenceTime(zx::time ref_time) const {
+  FX_CHECK(is_valid());
+
+  auto result = audio::clock::MonotonicTimeFromReferenceTime(clock_, ref_time);
+  FX_CHECK(result.is_ok());  // We pre-qualify the clock, so this should never fail.
+
+  return result.take_value();
 }
 
-fit::result<zx::clock, zx_status_t> AudioClock::DuplicateClock() const {
+zx::clock AudioClock::DuplicateClock() const {
   if (!is_valid()) {
-    return fit::error(ZX_ERR_BAD_HANDLE);
+    return zx::clock();
   }
-  return audio::clock::DuplicateClock(clock_);
+
+  auto result = audio::clock::DuplicateClock(clock_);
+  FX_CHECK(result.is_ok());  // We pre-qualify the clock, so this should never fail.
+
+  return result.take_value();
 }
 
 }  // namespace media::audio

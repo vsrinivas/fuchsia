@@ -157,22 +157,9 @@ void MixStage::ForEachSource(TaskType task_type, zx::time dest_ref_time) {
     std::lock_guard<std::mutex> lock(stream_lock_);
     for (const auto& holder : streams_) {
       if (holder.stream && holder.mixer) {
-        auto mono_result = reference_clock().MonotonicTimeFromReferenceTime(dest_ref_time);
-        if (mono_result.is_error()) {
-          FX_LOGS_FIRST_N(ERROR, 200) << "Error converting dest ref time to monotonic time";
-          // Our destination clock isn't working. We won't be able to mix any of these streams.
-          break;
-        }
-        auto mono_time = mono_result.take_value();
-
-        auto source_ref_result =
+        auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(dest_ref_time);
+        auto source_ref_time =
             holder.stream->reference_clock().ReferenceTimeFromMonotonicTime(mono_time);
-        if (source_ref_result.is_error()) {
-          FX_LOGS_FIRST_N(ERROR, 200) << "Error converting monotonic time to source ref time";
-          // Our source clock isn't working. We won't be able to mix this one stream.
-          continue;
-        }
-        auto source_ref_time = source_ref_result.take_value();
 
         // Ensure the mappings from source-frame to source-ref-time and monotonic-time are
         // up-to-date.

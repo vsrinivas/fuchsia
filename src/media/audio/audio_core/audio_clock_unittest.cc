@@ -24,8 +24,9 @@ TEST(AudioClockTest, Basic) {
   EXPECT_TRUE(audio_clock);
   EXPECT_TRUE(audio_clock.is_valid());
 
-  auto time1 = audio_clock.Read();
-  auto time2 = audio_clock.Read();
+  auto time1 = audio_clock.Read().get();
+  auto time2 = audio_clock.Read().get();
+
   EXPECT_LT(time1, time2);
 }
 
@@ -46,31 +47,51 @@ TEST(AudioClockTest, ClockMonoToRefClock) {
 TEST(AudioClockTest, DuplicateClock) {
   auto audio_clock = AudioClock::CreateAsCustom(clock::CloneOfMonotonic());
 
-  auto result = audio_clock.DuplicateClock();
-  EXPECT_FALSE(result.is_error());
-
-  auto dupe_clock = result.take_value();
+  auto dupe_clock = audio_clock.DuplicateClock();
   EXPECT_TRUE(dupe_clock.is_valid());
 
   auto dupe_audio_clock = AudioClock::CreateAsCustom(std::move(dupe_clock));
-  auto time1 = dupe_audio_clock.Read();
-  auto time2 = dupe_audio_clock.Read();
+
+  auto time1 = dupe_audio_clock.Read().get();
+  auto time2 = dupe_audio_clock.Read().get();
+
   EXPECT_LT(time1, time2);
 }
 
-TEST(AudioClockTest, InvalidClockReturnsErrors) {
+TEST(AudioClockTest, DuplicateWithInvalidClocks) {
   AudioClock uninitialized_audio_clock;
-  auto result = uninitialized_audio_clock.ReferenceTimeFromMonotonicTime(zx::time{0});
-  EXPECT_TRUE(result.is_error());
-  EXPECT_EQ(result.error(), ZX_ERR_BAD_HANDLE);
+  auto dupe_uninit_audio_clock = uninitialized_audio_clock.DuplicateClock();
+  EXPECT_FALSE(dupe_uninit_audio_clock.is_valid());
 
-  result = uninitialized_audio_clock.MonotonicTimeFromReferenceTime(zx::time{0});
-  EXPECT_TRUE(result.is_error());
-  EXPECT_EQ(result.error(), ZX_ERR_BAD_HANDLE);
+  auto has_invalid_zx_clock = AudioClock::CreateAsCustom(zx::clock());
+  auto dupe_uninit = has_invalid_zx_clock.DuplicateClock();
+  EXPECT_FALSE(dupe_uninit.is_valid());
+}
 
-  auto dupe_result = uninitialized_audio_clock.DuplicateClock();
-  EXPECT_TRUE(dupe_result.is_error());
-  EXPECT_EQ(dupe_result.error(), ZX_ERR_BAD_HANDLE);
+TEST(AudioClockTest, InvalidAudioClockHalts) {
+  AudioClock uninitialized_audio_clock;
+
+  ASSERT_DEATH(uninitialized_audio_clock.ref_clock_to_clock_mono(), "");
+
+  ASSERT_DEATH(uninitialized_audio_clock.Read(), "");
+  ASSERT_DEATH(uninitialized_audio_clock.ReferenceTimeFromMonotonicTime(zx::time{0}), "");
+  ASSERT_DEATH(uninitialized_audio_clock.MonotonicTimeFromReferenceTime(zx::time{0}), "");
+
+  auto dupe_uninit = uninitialized_audio_clock.DuplicateClock();
+  EXPECT_FALSE(dupe_uninit.is_valid());
+}
+
+TEST(AudioClockTest, InvalidZxClockCausesHalt) {
+  auto has_invalid_zx_clock = AudioClock::CreateAsCustom(zx::clock());
+
+  ASSERT_DEATH(has_invalid_zx_clock.ref_clock_to_clock_mono(), "");
+
+  ASSERT_DEATH(has_invalid_zx_clock.Read(), "");
+  ASSERT_DEATH(has_invalid_zx_clock.ReferenceTimeFromMonotonicTime(zx::time{0}), "");
+  ASSERT_DEATH(has_invalid_zx_clock.MonotonicTimeFromReferenceTime(zx::time{0}), "");
+
+  auto dupe_uninit = has_invalid_zx_clock.DuplicateClock();
+  EXPECT_FALSE(dupe_uninit.is_valid());
 }
 
 }  // namespace

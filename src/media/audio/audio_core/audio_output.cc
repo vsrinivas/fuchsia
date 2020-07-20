@@ -52,7 +52,7 @@ void AudioOutput::Process() {
     // Clear the flag. If the implementation does not set it during the cycle by calling
     // SetNextSchedTimeMono, we consider it an error and shut down.
     ClearNextSchedTime();
-    auto ref_now = reference_clock().ReferenceTimeFromMonotonicTime(mono_now).take_value();
+    auto ref_now = reference_clock().ReferenceTimeFromMonotonicTime(mono_now);
 
     uint32_t frames_remaining;
     do {
