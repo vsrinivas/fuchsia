@@ -19,8 +19,6 @@
 
 __BEGIN_CDECLS
 
-extern const char* kMountPath;
-
 typedef struct fs_info {
   const char* name;
   bool (*should_test)(void);
