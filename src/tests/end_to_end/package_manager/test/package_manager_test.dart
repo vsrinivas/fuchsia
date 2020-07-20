@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:logging/logging.dart';
+import 'package:path/path.dart' as path;
 import 'package:ports/ports.dart';
 import 'package:pkg/pkg.dart';
 import 'package:quiver/core.dart' show Optional;
@@ -310,6 +311,30 @@ void main() {
       log.info('Checking repo name is $repoName');
       var listSrcsResponseOutput = listSrcsResponse.stdout.toString();
       expect(listSrcsResponseOutput.contains(repoName), isTrue);
+    });
+    test('Test `pm serve` writes its port number to a given file path.',
+        () async {
+      // Covers these commands (success cases only):
+      //
+      // Newly covered:
+      // pm serve -repo=<path> -l :<port> -f <path to export port number>
+      final repoPath = tempDir.path;
+      final portFilePath = path.join(repoPath, 'port_file.txt');
+      final processInfo = await setupServe(log, pmPath, repoPath,
+          'component_hello_world-0.far', ['-f', '$portFilePath']);
+      serveProcess = processInfo[0];
+      int port = processInfo[1];
+
+      // Wait long enough for the serve process to come up.
+      log.info('Getting the available packages');
+      final curlResponse =
+          await Process.run('curl', ['http://localhost:$port/targets.json']);
+
+      expect(curlResponse.exitCode, 0);
+
+      log.info('Checking that $portFilePath was generated with content: $port');
+      String fileContents = (await File(portFilePath).readAsString()).trim();
+      expect(int.parse(fileContents), port);
     });
   }, timeout: _timeout);
 }
