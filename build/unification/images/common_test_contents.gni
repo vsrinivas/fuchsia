@@ -160,7 +160,6 @@ common_test_contents = [
   "//zircon/system/utest/core:vmar",
   "//zircon/system/utest/core:vmo",
   "//zircon/system/utest/dlfcn",
-  "//zircon/system/utest/fs",
   "//zircon/system/utest/fs-bench",
   "//zircon/system/utest/fs-management",
   "//zircon/system/utest/fs-recovery",
