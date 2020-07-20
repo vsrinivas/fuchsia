@@ -50,7 +50,9 @@ function select_device() {
   done
 }
 
-if is-remote-workflow-device; then
+# FX_REMOTE_INVOCATION is set by serve-remote to supress the warning
+# for that use case.
+if is-remote-workflow-device && [[ -z "${FX_REMOTE_INVOCATION}" ]]; then
   fx-warn "Local configuration indicates a remote-workflow setup"
   fx-warn "  'fx set-device' does not work correctly at this end of a remote setup"
   fx-warn "Execute set-device on the local machine in order to change targets in the remote flow"
