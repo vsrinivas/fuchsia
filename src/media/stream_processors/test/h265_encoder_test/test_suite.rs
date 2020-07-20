@@ -64,7 +64,7 @@ impl OutputValidator for H265NalValidator {
         }
 
         if let Some(expected_frames) = self.expected_frames {
-            if seen_frames != expected_frames {
+            if seen_frames < expected_frames {
                 return Err(format_err!(
                     "Wrong number of frames received {} {}",
                     seen_frames,
@@ -74,7 +74,7 @@ impl OutputValidator for H265NalValidator {
         }
 
         if let Some(expected_key_frames) = self.expected_key_frames {
-            if seen_key_frames != expected_key_frames {
+            if seen_key_frames < expected_key_frames {
                 return Err(format_err!(
                     "Wrong number of key frames received {} {}",
                     seen_key_frames,
