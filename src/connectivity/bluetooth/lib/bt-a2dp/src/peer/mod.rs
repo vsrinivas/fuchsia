@@ -528,6 +528,15 @@ impl PeerInner {
                 self.opening = self.opening.take().filter(|id| id != &stream_id);
                 responder.send()
             }
+            avdtp::Request::DelayReport { responder, delay, stream_id } => {
+                // Delay is in 1/10 ms
+                let delay_ns = delay as u64 * 100000;
+                info!(
+                    "Peer {} reports stream {} delay of {} ns, acknowledging..",
+                    self.peer_id, stream_id, delay_ns
+                );
+                responder.send()
+            }
         }
     }
 }
@@ -1154,6 +1163,32 @@ mod tests {
             Poll::Ready(Ok(_stream)) => panic!("Shouldn't have succeeded stream here"),
             Poll::Ready(Err(_)) => {}
         }
+    }
+
+    /// Test that the delay reports get acknowledged
+    #[test]
+    fn test_peer_delay_report() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let (avdtp, remote) = setup_avdtp_peer();
+        let (profile_proxy, _requests) =
+            create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
+        let mut streams = Streams::new();
+        let test_builder = TestMediaTaskBuilder::new();
+        streams.insert(Stream::build(make_sbc_endpoint(1), test_builder.builder()));
+
+        let _peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy, None);
+        let remote_peer = avdtp::Peer::new(remote).expect("create peer failure");
+
+        // Stream ID chosen randomly by fair dice roll
+        let seid: StreamEndpointId = 0x09_u8.try_into().unwrap();
+        let delay_report_fut = remote_peer.delay_report(&seid, 0xc0de);
+        pin_mut!(delay_report_fut);
+
+        match exec.run_until_stalled(&mut delay_report_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Expected delay report to complete and got {:?}", x),
+        };
     }
 
     /// Test that the remote end can configure and start a stream.

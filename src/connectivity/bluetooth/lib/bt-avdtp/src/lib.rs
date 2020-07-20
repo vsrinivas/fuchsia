@@ -272,6 +272,22 @@ impl Peer {
         response.and(Ok(()))
     }
 
+    /// Send a Delay Report (Sec 8.19) to the remote peer for the given `stream_id`.
+    /// `delay` is in tenths of milliseconds.
+    /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
+    /// remote peer rejects the command with the code returned by the remote.
+    pub async fn delay_report<'a>(
+        &'a self,
+        stream_id: &'a StreamEndpointId,
+        delay: u16,
+    ) -> Result<()> {
+        let delay_bytes: [u8; 2] = delay.to_be_bytes();
+        let params = &[stream_id.to_msg(), delay_bytes[0], delay_bytes[1]];
+        let response: Result<SimpleResponse> =
+            self.send_command(SignalIdentifier::DelayReport, params).await;
+        response.and(Ok(()))
+    }
+
     /// The maximum amount of time we will wait for a response to a signaling command.
     fn command_timeout() -> Duration {
         const RTX_SIG_TIMER_MS: i64 = 3000;
@@ -363,7 +379,11 @@ pub enum Request {
         stream_id: StreamEndpointId,
         responder: SimpleResponder,
     },
-    // TODO(jamuraa): add the rest of the requests
+    DelayReport {
+        stream_id: StreamEndpointId,
+        delay: u16,
+        responder: SimpleResponder,
+    }, // TODO(jamuraa): add the rest of the requests
 }
 
 macro_rules! parse_one_seid {
@@ -489,6 +509,18 @@ impl Request {
             }
             SignalIdentifier::Abort => {
                 parse_one_seid!(body, signal, peer, id, Abort, SimpleResponder)
+            }
+            SignalIdentifier::DelayReport => {
+                if body.len() != 3 {
+                    return Err(Error::RequestInvalid(ErrorCode::BadLength));
+                }
+                let delay_arr: [u8; 2] = [body[1], body[2]];
+                let delay = u16::from_be_bytes(delay_arr);
+                Ok(Request::DelayReport {
+                    stream_id: StreamEndpointId::from_msg(&body[0]),
+                    delay,
+                    responder: SimpleResponder { signal, peer, id },
+                })
             }
             _ => Err(Error::UnimplementedMessage),
         }

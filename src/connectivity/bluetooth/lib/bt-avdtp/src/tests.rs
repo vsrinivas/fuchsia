@@ -124,8 +124,8 @@ fn closed_peer_ends_request_stream() {
 fn command_not_supported_response() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    // TxLabel 4, DelayReport, which is not implemented
-    assert!(remote.write(&[0x40, 0x0D, 0x40, 0x00, 0x00]).is_ok());
+    // TxLabel 4, SecurityControl, which is not implemented
+    assert!(remote.write(&[0x40, 0x0B, 0x40, 0x00, 0x00]).is_ok());
 
     let mut fut = stream.next();
     let complete = exec.run_until_stalled(&mut fut);
@@ -135,7 +135,7 @@ fn command_not_supported_response() {
 
     // The peer should have responded with a Response Reject message with the
     // same TxLabel with NOT_SUPPORTED_COMMAND
-    expect_remote_recv(&[0x43, 0x0D, 0x19], &remote);
+    expect_remote_recv(&[0x43, 0x0B, 0x19], &remote);
 }
 
 #[test]
@@ -2166,4 +2166,137 @@ fn get_capabilities_command_with_only_invalid_service_capabilities_works() {
     };
 
     assert_eq!(0, capabilities.len());
+}
+
+// DelayReport tests
+const CMD_DELAY_REPORT_VALUE: &'static u8 = &0x0D;
+const CMD_DELAY_REPORT: &'static [u8] = &[
+    0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
+    0x0D, // RFA (0b00), Delay Report (0x0D)
+    0x30, // SEID 12 (0b001100)
+    0x12, // Delay (MSB) = 0x12
+    0x34, // Delay (LSB) = 0x34
+];
+
+const DELAY_VALUE: u16 = 0x1234;
+
+incoming_cmd_length_fail_test!(delay_report_too_short, *CMD_DELAY_REPORT_VALUE, 2);
+incoming_cmd_length_fail_test!(delay_report_too_long, *CMD_DELAY_REPORT_VALUE, 4);
+
+#[test]
+fn delay_report_event_responder_send_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    assert!(remote.write(&CMD_DELAY_REPORT).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::DelayReport { responder, stream_id, delay } => {
+            assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
+            assert_eq!(DELAY_VALUE, delay);
+            responder.send()
+        }
+        _ => panic!("should have received a DelayReport"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    // Should receive the encoded version of the MediaTransport
+    #[rustfmt::skip]
+    let delay_report_rsp = &[
+        0x42, // TxLabel (4) + ResponseAccept (0x02)
+        0x0D, // DelayReport Signal
+    ];
+    expect_remote_recv(delay_report_rsp, &remote);
+}
+
+#[test]
+fn delay_report_responder_reject_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    assert!(remote.write(&CMD_DELAY_REPORT).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::DelayReport { responder, stream_id, delay } => {
+            assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
+            assert_eq!(DELAY_VALUE, delay);
+            responder.reject(ErrorCode::BadAcpSeid)
+        }
+        _ => panic!("should have received a DelayReport"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    let delay_report_rsp = &[
+        0x43, // TxLabel (4),  RemoteRejected (3)
+        0x0D, // Delay Report
+        0x12, // BAD_ACP_SEID
+    ];
+    expect_remote_recv(delay_report_rsp, &remote);
+}
+
+#[test]
+fn delay_report_command_works() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = &StreamEndpointId::try_from(1).unwrap();
+    let mut response_fut = Box::pin(peer.delay_report(&seid, 0xc0de));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x0D, received[1]); // 0x0D = DelayReport
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01) , RFA
+    assert_eq!(0xc0, received[3]);
+    assert_eq!(0xde, received[4]);
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    #[rustfmt::skip]
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x0D,                              // Delay Report
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    match complete {
+        Poll::Ready(Ok(())) => {}
+        x => panic!("Should have a ready Ok response: {:?}", x),
+    };
+}
+
+#[test]
+fn delay_report_reject_command() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = &StreamEndpointId::try_from(1).unwrap();
+    let mut response_fut = Box::pin(peer.delay_report(&seid, 0xc0de));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x0D, received[1]); // 0x0D = DelayReport
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01), RFA
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let response: &[u8] = &[
+        txlabel_raw | 0x0 << 2 | 0x3, // txlabel (same), Single (0b00), Response Reject (0b11)
+        0x0D,                         // Delay Report
+        0x12,                         // BAD_ACP_SEID
+    ];
+
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let error = match complete {
+        Poll::Ready(Err(response)) => response,
+        x => panic!("Should have a ready Error response: {:?}", x),
+    };
+
+    assert_matches!(error, Error::RemoteRejected(0x12));
 }
