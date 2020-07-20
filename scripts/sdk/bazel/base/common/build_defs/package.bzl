@@ -2,9 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":package_info.bzl", "PackageAggregateInfo", "PackageComponentInfo",
-     "PackageGeneratedInfo", "PackageInfo", "PackageLocalInfo",
-     "get_aggregate_info")
+load(
+    ":package_info.bzl",
+    "PackageAggregateInfo",
+    "PackageComponentInfo",
+    "PackageGeneratedInfo",
+    "PackageInfo",
+    "PackageLocalInfo",
+    "get_aggregate_info",
+)
 
 """
 Defines a Fuchsia package
@@ -75,21 +81,29 @@ def _fuchsia_package_impl(context):
     for dest, source in info.mappings.to_list():
         # Only add file to the manifest if not empty.
         content += "if [[ -s %s ]]; then\n" % source.path
-        content += "  echo '%s=%s' >> %s\n" % (dest, source.path,
-                                               manifest_file.path)
+        content += "  echo '%s=%s' >> %s\n" % (
+            dest,
+            source.path,
+            manifest_file.path,
+        )
         content += "fi\n"
         package_contents.append(source)
 
     # Add cmx file for each component.
     for name, cmx in info.components.to_list():
-        content += "echo 'meta/%s.cmx=%s' >> %s\n" % (name, cmx.path,
-                                                      manifest_file.path)
+        content += "echo 'meta/%s.cmx=%s' >> %s\n" % (
+            name,
+            cmx.path,
+            manifest_file.path,
+        )
         package_contents.append(cmx)
 
     # Add the meta/package file to the manifest.
     meta_package = context.actions.declare_file(base + "meta/package")
-    content += "echo 'meta/package=%s' >> %s\n" % (meta_package.path,
-                                                   manifest_file.path)
+    content += "echo 'meta/package=%s' >> %s\n" % (
+        meta_package.path,
+        manifest_file.path,
+    )
 
     # Write the manifest file.
     manifest_script = context.actions.declare_file(base + "package_manifest.sh")
@@ -235,7 +249,7 @@ fuchsia_package = rule(
             cfg = "host",
         ),
         "_dev_finder": attr.label(
-            default = Label("//tools:dev_finder"),
+            default = Label("//tools:device-finder"),
             allow_single_file = True,
             executable = True,
             cfg = "host",

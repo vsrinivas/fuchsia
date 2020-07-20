@@ -29,7 +29,7 @@ base_package_labels = []
 cache_package_labels = []
 
 universe_package_labels = [
-  "//tools/net/dev_finder:host",
+  "//tools/net/device-finder:host",
   "//tools/vboot_reference:cgpt_host",
   "//tools/vboot_reference:futility_host",
 ]

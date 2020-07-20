@@ -19,7 +19,7 @@ if (is_host) {
       "//prebuilt/tools/lkg/lkg",
     ]
     outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
-    public_deps = [ "//tools/net/dev_finder:host($host_toolchain)" ]
+    public_deps = [ "//tools/net/device-finder:host($host_toolchain)" ]
   }
 
   if (use_vbmeta) {

@@ -7,7 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/net/dev_finder"
+  name = "go.fuchsia.dev/fuchsia/tools/net/device-finder"
   source_dir = "cmd"
   deps = [
     "//third_party/golibs:github.com/google/go-cmp",
@@ -18,24 +18,14 @@ go_library("main") {
   ]
 }
 
-go_binary("dev_finder") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/net/dev_finder"
-  deps = [ ":main" ]
-  sdk_category = "partner"
-}
-
-# TODO(awdavies): Get rid of the underscore-named binary. This will involve:
-# -- A duplicate binary.
-# -- Renaming all code that references dev_finder to device-finder.
-# -- Removing "dev_finder"
 go_binary("device-finder") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/net/dev_finder"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/net/device-finder"
   deps = [ ":main" ]
   sdk_category = "partner"
 }
 
 go_test("dev_finder_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/dev_finder" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/device-finder" ]
   deps = [ ":main" ]
 }
 

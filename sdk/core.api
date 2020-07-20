@@ -149,7 +149,6 @@ sdk://pkg/vulkan
 sdk://pkg/vulkan_layers
 sdk://pkg/zx
 sdk://tools/arm64/bootserver
-sdk://tools/arm64/dev_finder
 sdk://tools/arm64/device-finder
 sdk://tools/arm64/far
 sdk://tools/arm64/fidl-format
@@ -164,7 +163,6 @@ sdk://tools/arm64/symbolize
 sdk://tools/arm64/zbi
 sdk://tools/bootserver
 sdk://tools/cmc
-sdk://tools/dev_finder
 sdk://tools/device-finder
 sdk://tools/far
 sdk://tools/fidl-format
@@ -179,7 +177,6 @@ sdk://tools/pm
 sdk://tools/symbolize
 sdk://tools/x64/bootserver
 sdk://tools/x64/cmc
-sdk://tools/x64/dev_finder
 sdk://tools/x64/device-finder
 sdk://tools/x64/far
 sdk://tools/x64/fidl-format

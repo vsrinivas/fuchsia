@@ -20,7 +20,7 @@ group("tools") {
     "//tools/loglistener:host($host_toolchain)",
     "//tools/make-efi:host",
     "//tools/make-fuchsia-vol:host",
-    "//tools/net/dev_finder:host",
+    "//tools/net/device-finder:host",
     "//tools/netprotocol($host_toolchain)",
   ]
 }
