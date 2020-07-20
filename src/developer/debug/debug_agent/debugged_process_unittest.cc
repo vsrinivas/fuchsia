@@ -7,7 +7,6 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
-#include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 
@@ -78,7 +77,7 @@ constexpr debug_ipc::AddressRange kAddressRange1 = {0x1, 0x2};
 
 TEST(DebuggedProcess, RegisterBreakpoints) {
   MockProcessDelegate process_delegate;
-  MockProcess process(nullptr, kProcessKoid, kProcessName, CreateDefaultMockObjectProvider());
+  MockProcess process(nullptr, kProcessKoid, kProcessName);
 
   // There needs to be memory backing the breakpoints so set some memory here. When the breakpoint
   // is uninstalled, the breakpoint expects that it will be the debug break instruction. So we
@@ -167,7 +166,7 @@ TEST(DebuggedProcess, WatchpointRegistration) {
   MockProcessDelegate process_delegate;
   Breakpoint breakpoint(&process_delegate);
 
-  MockProcess process(nullptr, kProcessKoid, kProcessName, CreateDefaultMockObjectProvider());
+  MockProcess process(nullptr, kProcessKoid, kProcessName);
 
   // 1 byte.
   for (uint32_t i = 0; i < 16; i++) {

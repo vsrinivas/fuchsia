@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/mock_job_handle.h"
-#include "src/developer/debug/debug_agent/mock_object_provider.h"
+#include "src/developer/debug/debug_agent/mock_job_tree.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

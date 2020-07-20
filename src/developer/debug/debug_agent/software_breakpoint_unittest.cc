@@ -13,7 +13,6 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
-#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/shared/logging/debug.h"
 
 namespace debug_agent {
@@ -146,7 +145,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 
   zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(nullptr, process_koid, process_name, std::make_shared<ObjectProvider>());
+  MockProcess process(nullptr, process_koid, process_name);
 
   LoadOriginalMemory(process.mock_process_handle());
 
@@ -176,8 +175,6 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 }
 
 TEST(ProcessBreakpoint, StepSingle) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
   TestProcessDelegate process_delegate;
 
   Breakpoint main_breakpoint(&process_delegate);
@@ -187,7 +184,7 @@ TEST(ProcessBreakpoint, StepSingle) {
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(nullptr, process_koid, process_name, object_provider);
+  MockProcess process(nullptr, process_koid, process_name);
 
   process.mock_process_handle().mock_memory().AddMemory(kAddress, GetOriginalData());
 
@@ -390,8 +387,6 @@ TEST(ProcessBreakpoint, StepSingle) {
 }
 
 TEST(ProcessBreakpoint, MultipleBreakpoints) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
   TestProcessDelegate process_delegate1;
   TestProcessDelegate process_delegate2;
   TestProcessDelegate process_delegate3;
@@ -408,7 +403,7 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(nullptr, process_koid, process_name, object_provider);
+  MockProcess process(nullptr, process_koid, process_name);
 
   constexpr uint64_t kAddress1 = kAddress;
   constexpr uint64_t kAddress2 = kAddress + 0x100;
@@ -729,8 +724,7 @@ TEST(ProcessBreakpoint, HitCount) {
   TestProcessDelegate process_delegate;
 
   constexpr zx_koid_t kProcess1 = 1;
-  auto owning_process =
-      std::make_unique<MockProcess>(nullptr, kProcess1, "", std::make_shared<ObjectProvider>());
+  auto owning_process = std::make_unique<MockProcess>(nullptr, kProcess1);
   owning_process->mock_process_handle().mock_memory().AddMemory(kAddress, GetOriginalData());
   process_delegate.InjectMockProcess(std::move(owning_process));
 

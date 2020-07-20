@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_HANDLE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_HANDLE_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/process.h>
 #include <zircon/status.h>
 
@@ -19,6 +20,7 @@ struct Module;
 
 namespace debug_agent {
 
+class ProcessHandleObserver;
 class ThreadHandle;
 
 class ProcessHandle {
@@ -43,6 +45,15 @@ class ProcessHandle {
   // Retrieves the return code for an exited process. Returns some default value if the process is
   // still running (as defined by the kernel).
   virtual int64_t GetReturnCode() const = 0;
+
+  // Registers for process notifications on the given interface. The pointer must outlive this class
+  // or until Detach() is called. The observer nust not be null (use Detach() instead). Calling
+  // multiple times will replace the observer pointer.
+  virtual zx_status_t Attach(ProcessHandleObserver* observer) = 0;
+
+  // Unregisters for process notifications. See Attach(). It is legal to call Detach() multiple
+  // times or when not already attached.
+  virtual void Detach() = 0;
 
   // Returns the address space information. If the address is non-null, only the regions covering
   // that address will be returned. Otherwise all regions will be returned.

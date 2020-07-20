@@ -31,6 +31,13 @@ zx_status_t MockProcessHandle::Kill() { return kill_status_; }
 
 int64_t MockProcessHandle::GetReturnCode() const { return 0; }
 
+zx_status_t MockProcessHandle::Attach(ProcessHandleObserver* observer) {
+  is_attached_ = true;
+  return ZX_OK;
+}
+
+void MockProcessHandle::Detach() { is_attached_ = false; }
+
 std::vector<debug_ipc::AddressRegion> MockProcessHandle::GetAddressSpace(uint64_t address) const {
   // Not currently implemented in this mock.
   return {};

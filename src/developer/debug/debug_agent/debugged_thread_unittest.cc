@@ -16,7 +16,6 @@
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_handle.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
-#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 
 namespace debug_agent {
@@ -68,10 +67,8 @@ void SetRegister(const Register& reg, std::vector<Register>* regs) {
 // Ref-counted Suspension --------------------------------------------------------------------------
 
 TEST(DebuggedThread, NormalSuspension) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
   constexpr zx_koid_t kProcessKoid = 0x8723456;
-  MockProcess process(nullptr, kProcessKoid, "", object_provider);
+  MockProcess process(nullptr, kProcessKoid);
 
   // Create the event for coordination.
   zx::event event;
@@ -83,15 +80,11 @@ TEST(DebuggedThread, NormalSuspension) {
     // Create a debugged thread for this other thread.
     zx::thread current_thread;
     zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
-    zx_koid_t current_thread_koid = object_provider->KoidForObject(current_thread);
 
-    DebuggedThread::CreateInfo create_info = {};
-    create_info.process = &process;
-    create_info.koid = current_thread_koid;
     // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
     // with that in a way that will make the DebuggedThread happy.
-    create_info.handle = std::make_unique<ZirconThreadHandle>(std::move(current_thread));
-    debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
+    debugged_thread = std::make_unique<DebuggedThread>(
+        nullptr, &process, std::make_unique<ZirconThreadHandle>(std::move(current_thread)));
 
     // Let the test know it can continue.
     ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
@@ -135,10 +128,8 @@ TEST(DebuggedThread, NormalSuspension) {
 }
 
 TEST(DebuggedThread, RefCountedSuspension) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
   constexpr zx_koid_t kProcessKoid = 0x8723456;
-  MockProcess process(nullptr, kProcessKoid, "", object_provider);
+  MockProcess process(nullptr, kProcessKoid);
 
   // Create the event for coordination.
   zx::event event;
@@ -150,15 +141,11 @@ TEST(DebuggedThread, RefCountedSuspension) {
     // Create a debugged thread for this other thread.
     zx::thread current_thread;
     zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
-    zx_koid_t current_thread_koid = object_provider->KoidForObject(current_thread);
 
-    DebuggedThread::CreateInfo create_info = {};
-    create_info.process = &process;
-    create_info.koid = current_thread_koid;
     // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
     // with that in a way that will make the DebuggedThread happy.
-    create_info.handle = std::make_unique<ZirconThreadHandle>(std::move(current_thread));
-    debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
+    debugged_thread = std::make_unique<DebuggedThread>(
+        nullptr, &process, std::make_unique<ZirconThreadHandle>(std::move(current_thread)));
 
     // Let the test know it can continue.
     ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
@@ -219,10 +206,8 @@ TEST(DebuggedThread, RefCountedSuspension) {
 }
 
 TEST(DebuggedThread, Resume) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
   constexpr zx_koid_t kProcessKoid = 0x8723456;
-  MockProcess process(nullptr, kProcessKoid, "", object_provider);
+  MockProcess process(nullptr, kProcessKoid);
 
   // Create the event for coordination.
   zx::event event;
@@ -234,15 +219,11 @@ TEST(DebuggedThread, Resume) {
     // Create a debugged thread for this other thread.
     zx::thread current_thread;
     zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
-    zx_koid_t current_thread_koid = object_provider->KoidForObject(current_thread);
 
-    DebuggedThread::CreateInfo create_info = {};
-    create_info.process = &process;
-    create_info.koid = current_thread_koid;
     // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
     // with that in a way that will make the DebuggedThread happy.
-    create_info.handle = std::make_unique<ZirconThreadHandle>(std::move(current_thread));
-    debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
+    debugged_thread = std::make_unique<DebuggedThread>(
+        nullptr, &process, std::make_unique<ZirconThreadHandle>(std::move(current_thread)));
 
     // Let the test know it can continue.
     ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_0), ZX_OK);

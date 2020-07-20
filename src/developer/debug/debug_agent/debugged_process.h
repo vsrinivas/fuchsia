@@ -15,10 +15,10 @@
 
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/process_handle.h"
+#include "src/developer/debug/debug_agent/process_handle_observer.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/buffered_zx_socket.h"
 #include "src/developer/debug/shared/message_loop.h"
-#include "src/developer/debug/shared/zircon_exception_watcher.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
 
@@ -27,26 +27,16 @@ namespace debug_agent {
 class Breakpoint;
 class DebugAgent;
 class HardwareBreakpoint;
-class ObjectProvider;
 class ProcessBreakpoint;
 class ProcessWatchpoint;
 class SoftwareBreakpoint;
 class Watchpoint;
 
 struct DebuggedProcessCreateInfo {
-  DebuggedProcessCreateInfo();
-
-  // Constructor with only the required fields.
-  DebuggedProcessCreateInfo(zx_koid_t koid, std::unique_ptr<ProcessHandle> handle);
-  DebuggedProcessCreateInfo(zx_koid_t koid, std::unique_ptr<ProcessHandle> handle,
-                            std::shared_ptr<ObjectProvider>);
+  explicit DebuggedProcessCreateInfo(std::unique_ptr<ProcessHandle> handle);
 
   // Required.
-  zx_koid_t koid = 0;
   std::unique_ptr<ProcessHandle> handle;
-
-  // Required.
-  std::shared_ptr<ObjectProvider> object_provider;
 
   // Optional.
   zx::socket out;  // stdout.
@@ -59,9 +49,7 @@ struct DebuggedProcessCreateInfo {
   bool from_limbo = false;
 };
 
-// Creates a CreateInfo struct from only the required fields.
-
-class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
+class DebuggedProcess : public ProcessHandleObserver {
  public:
   using WatchpointMap = std::map<debug_ipc::AddressRange, std::unique_ptr<Watchpoint>,
                                  debug_ipc::AddressRangeBeginCmp>;
@@ -71,7 +59,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   DebuggedProcess(DebugAgent*, DebuggedProcessCreateInfo&&);
   virtual ~DebuggedProcess();
 
-  zx_koid_t koid() const { return koid_; }
+  zx_koid_t koid() const { return process_handle_->GetKoid(); }
   DebugAgent* debug_agent() const { return debug_agent_; }
 
   const ProcessHandle& process_handle() const { return *process_handle_; }
@@ -185,15 +173,12 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
 
   bool from_limbo() const { return from_limbo_; }
 
- protected:
-  std::shared_ptr<ObjectProvider> object_provider_;
-
  private:
-  // ZirconExceptionWatcher implementation.
-  void OnThreadStarting(zx::exception exception_token, zx_exception_info_t exception_info) override;
-  void OnProcessTerminated(zx_koid_t process_koid) override;
-  void OnThreadExiting(zx::exception exception_token, zx_exception_info_t exception_info) override;
-  void OnException(zx::exception exception_token, zx_exception_info_t exception_info) override;
+  // ProcessHandleObserver implementation.
+  void OnProcessTerminated() override;
+  void OnThreadStarting(std::unique_ptr<ExceptionHandle> exception) override;
+  void OnThreadExiting(std::unique_ptr<ExceptionHandle> exception) override;
+  void OnException(std::unique_ptr<ExceptionHandle> exception) override;
 
   void OnStdout(bool close);
   void OnStderr(bool close);
@@ -226,14 +211,10 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
 
   DebugAgent* debug_agent_ = nullptr;  // Non-owning.
 
-  zx_koid_t koid_;
   std::unique_ptr<ProcessHandle> process_handle_;
 
   // Address in the debugged program of the dl_debug_state in ld.so.
   uint64_t dl_debug_addr_ = 0;
-
-  // Handle for watching the process exceptions.
-  debug_ipc::MessageLoop::WatchHandle process_watch_handle_;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedThread>> threads_;
 

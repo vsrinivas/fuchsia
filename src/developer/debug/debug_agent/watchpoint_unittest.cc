@@ -11,7 +11,6 @@
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
-#include "src/developer/debug/debug_agent/object_provider.h"
 
 namespace debug_agent {
 namespace {
@@ -65,9 +64,7 @@ bool ContainsKoids(const Watchpoint& watchpoint, const std::vector<zx_koid_t>& k
 const AddressRange kAddressRange = {0x1000, 0x2000};
 
 TEST(Watchpoint, SimpleInstallAndRemove) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
-  MockProcess process(nullptr, 0x1, "process", object_provider);
+  MockProcess process(nullptr, 0x1, "process");
   MockThread* thread1 = process.AddThread(0x1001);
 
   MockProcessDelegate process_delegate;
@@ -211,9 +208,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
 }
 
 TEST(Watchpoint, InstalledRanges) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
-  MockProcess process(nullptr, 0x1, "process", object_provider);
+  MockProcess process(nullptr, 0x1, "process");
   MockThread* thread1 = process.AddThread(0x1001);
 
   MockProcessDelegate process_delegate;
@@ -258,9 +253,7 @@ TEST(Watchpoint, InstalledRanges) {
 }
 
 TEST(Watchpoint, MatchesException) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
-  MockProcess process(nullptr, 0x1, "process", object_provider);
+  MockProcess process(nullptr, 0x1, "process");
   MockThread* thread1 = process.AddThread(0x1001);
   MockThread* thread2 = process.AddThread(0x1002);
 
@@ -318,9 +311,7 @@ TEST(Watchpoint, MatchesException) {
 }
 
 TEST(Watchpoint, DifferentTypes) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
-  MockProcess process(nullptr, 0x1, "process", object_provider);
+  MockProcess process(nullptr, 0x1, "process");
   MockThread* thread1 = process.AddThread(0x1001);
 
   MockProcessDelegate process_delegate;

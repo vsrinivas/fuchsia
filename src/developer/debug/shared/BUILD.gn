@@ -77,9 +77,13 @@ source_set("test_support") {
   sources = [
     "mock_memory.cc",
     "mock_memory.h",
+    "test_with_loop.h",
   ]
 
-  public_deps = [ ":shared" ]
+  public_deps = [
+    ":shared",
+    "//third_party/googletest:gtest",
+  ]
 }
 
 # Unit tests for this directory. These are intended to be referenced by unit

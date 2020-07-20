@@ -9,7 +9,6 @@
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
-#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 
 namespace debug_agent {
@@ -58,9 +57,7 @@ constexpr uint64_t kAddress = 0x1234;
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
-  MockProcess process(nullptr, 0x1, "process", object_provider);
+  MockProcess process(nullptr, 0x1, "process");
   MockThread* thread1 = process.AddThread(0x1001);
 
   MockProcessDelegate process_delegate;
@@ -206,11 +203,9 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
 }
 
 TEST(HardwareBreakpoint, StepSimple) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(nullptr, process_koid, process_name, object_provider);
+  MockProcess process(nullptr, process_koid, process_name);
 
   MockProcessDelegate process_delegate;
   Breakpoint main_breakpoint(&process_delegate);
@@ -269,11 +264,9 @@ TEST(HardwareBreakpoint, StepSimple) {
 }
 
 TEST(HardwareBreakpoint, MultipleSteps) {
-  auto object_provider = std::make_shared<ObjectProvider>();
-
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(nullptr, process_koid, process_name, object_provider);
+  MockProcess process(nullptr, process_koid, process_name);
 
   MockProcessDelegate process_delegate;
   Breakpoint main_breakpoint(&process_delegate);

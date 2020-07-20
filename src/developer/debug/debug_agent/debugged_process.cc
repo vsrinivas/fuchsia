@@ -15,7 +15,6 @@
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
-#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
@@ -77,22 +76,13 @@ void LogRegisterBreakpoint(debug_ipc::FileLineFunction location, DebuggedProcess
 
 // DebuggedProcessCreateInfo -----------------------------------------------------------------------
 
-DebuggedProcessCreateInfo::DebuggedProcessCreateInfo() = default;
-DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid,
-                                                     std::unique_ptr<ProcessHandle> handle)
-    : koid(process_koid), handle(std::move(handle)) {}
-
-DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(
-    zx_koid_t process_koid, std::unique_ptr<ProcessHandle> handle,
-    std::shared_ptr<ObjectProvider> object_provider)
-    : koid(process_koid), handle(std::move(handle)), object_provider(std::move(object_provider)) {}
+DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(std::unique_ptr<ProcessHandle> handle)
+    : handle(std::move(handle)) {}
 
 // DebuggedProcess ---------------------------------------------------------------------------------
 
 DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateInfo&& create_info)
-    : object_provider_(std::move(create_info.object_provider)),
-      debug_agent_(debug_agent),
-      koid_(create_info.koid),
+    : debug_agent_(debug_agent),
       process_handle_(std::move(create_info.handle)),
       from_limbo_(create_info.from_limbo) {
   RegisterDebugState();
@@ -124,25 +114,16 @@ void DebuggedProcess::DetachFromProcess() {
   // Technically a 0'ed request would work, but being explicit is future-proof.
   debug_ipc::ResumeRequest resume_request = {};
   resume_request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
-  resume_request.process_koid = koid_;
+  resume_request.process_koid = koid();
   OnResume(resume_request);
 
-  // 3. Unbind from the exception port.
-  process_watch_handle_.StopWatching();
+  // 3. Unbind from notifications (this will detach from the process).
+  process_handle_->Detach();
 }
 
 zx_status_t DebuggedProcess::Init() {
-  debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
-  FX_DCHECK(loop);  // Loop must be created on this thread first.
-
-  // Register for debug exceptions.
-  debug_ipc::MessageLoopTarget::WatchProcessConfig config;
-  config.process_name = process_handle_->GetName();
-  config.process_handle = handle().get();
-  config.process_koid = koid_;
-  config.watcher = this;
-  zx_status_t status = loop->WatchProcessExceptions(std::move(config), &process_watch_handle_);
-  if (status != ZX_OK)
+  // Watch for process events.
+  if (zx_status_t status = process_handle_->Attach(this); status != ZX_OK)
     return status;
 
   // Binding stdout/stderr.
@@ -152,8 +133,7 @@ zx_status_t DebuggedProcess::Init() {
   if (stdout_.valid()) {
     stdout_.set_data_available_callback([this]() { OnStdout(false); });
     stdout_.set_error_callback([this]() { OnStdout(true); });
-    status = stdout_.Start();
-    if (status != ZX_OK) {
+    if (zx_status_t status = stdout_.Start(); status != ZX_OK) {
       FX_LOGS(WARNING) << "Could not listen on stdout for process " << process_handle_->GetName()
                        << ": " << debug_ipc::ZxStatusToString(status);
       stdout_.Reset();
@@ -163,8 +143,7 @@ zx_status_t DebuggedProcess::Init() {
   if (stderr_.valid()) {
     stderr_.set_data_available_callback([this]() { OnStderr(false); });
     stderr_.set_error_callback([this]() { OnStderr(true); });
-    status = stderr_.Start();
-    if (status != ZX_OK) {
+    if (zx_status_t status = stderr_.Start(); status != ZX_OK) {
       FX_LOGS(WARNING) << "Could not listen on stderr for process " << process_handle_->GetName()
                        << ": " << debug_ipc::ZxStatusToString(status);
       stderr_.Reset();
@@ -247,9 +226,9 @@ void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
 }
 
 void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
-  // Remove the watch handle before killing the process to avoid getting
-  // exceptions after we stopped listening to them.
-  process_watch_handle_ = {};
+  // Stop observing before killing the process to avoid getting exceptions after we stopped
+  // listening to them.
+  process_handle_->Detach();
 
   // Since we're being killed, we treat this process as not having any more
   // threads. This makes cleanup code more straightforward, as there are no
@@ -280,13 +259,8 @@ void DebuggedProcess::PopulateCurrentThreads() {
     if (threads_.find(thread_koid) != threads_.end())
       continue;
 
-    DebuggedThread::CreateInfo create_info = {};
-    create_info.process = this;
-    create_info.koid = thread_koid;
-    create_info.handle = std::move(thread);
-    create_info.creation_option = ThreadCreationOption::kRunningKeepRunning;
-
-    auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, std::move(create_info));
+    auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, this, std::move(thread),
+                                                       ThreadCreationOption::kRunningKeepRunning);
     threads_.emplace(thread_koid, std::move(new_thread));
   }
 }
@@ -357,7 +331,7 @@ void DebuggedProcess::SuspendAndSendModulesIfKnown() {
 void DebuggedProcess::SendModuleNotification(std::vector<uint64_t> paused_thread_koids) {
   // Notify the client of any libraries.
   debug_ipc::NotifyModules notify;
-  notify.process_koid = koid_;
+  notify.process_koid = koid();
   notify.modules = process_handle_->GetModules(dl_debug_addr_);
   notify.stopped_thread_koids = std::move(paused_thread_koids);
 
@@ -535,47 +509,44 @@ void DebuggedProcess::OnBreakpointFinishedSteppingOver() {
   }
 }
 
-void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {
+void DebuggedProcess::OnProcessTerminated() {
   DEBUG_LOG(Process) << LogPreamble(this) << "Terminating.";
   debug_ipc::NotifyProcessExiting notify;
-  notify.process_koid = process_koid;
+  notify.process_koid = koid();
   notify.return_code = process_handle_->GetReturnCode();
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyProcessExiting(notify, &writer);
   debug_agent_->stream()->Write(writer.MessageComplete());
 
-  debug_agent_->RemoveDebuggedProcess(process_koid);
+  debug_agent_->RemoveDebuggedProcess(koid());
   // "THIS" IS NOW DELETED.
 }
 
-void DebuggedProcess::OnThreadStarting(zx::exception exception,
-                                       zx_exception_info_t exception_info) {
-  FX_DCHECK(exception_info.pid == koid());
-  FX_DCHECK(threads_.find(exception_info.tid) == threads_.end());
+void DebuggedProcess::OnThreadStarting(std::unique_ptr<ExceptionHandle> exception) {
+  auto thread_handle = exception->GetThreadHandle();
+  zx_koid_t thread_id = thread_handle->GetKoid();
+  DEBUG_LOG(Process) << LogPreamble(this) << " Thread starting with koid " << thread_id;
 
-  DebuggedThread::CreateInfo create_info = {};
-  create_info.process = this;
-  create_info.koid = exception_info.tid;
-  // TODO(brettw) this should use ExceptionHandle::GetThread().
-  create_info.handle = std::make_unique<ZirconThreadHandle>(
-      object_provider_->GetThreadFromException(exception.get()));
-  create_info.exception =
-      std::make_unique<ZirconExceptionHandle>(std::move(exception), exception_info);
-  create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
+  // Shouldn't have this thread yet.
+  FX_DCHECK(threads_.find(thread_id) == threads_.end());
 
-  auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, std::move(create_info));
-  auto added = threads_.emplace(exception_info.tid, std::move(new_thread));
+  auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, this, std::move(thread_handle),
+                                                     ThreadCreationOption::kSuspendedKeepSuspended,
+                                                     std::move(exception));
+  auto added = threads_.emplace(thread_id, std::move(new_thread));
 
   // Notify the client.
   added.first->second->SendThreadNotification();
 }
 
-void DebuggedProcess::OnThreadExiting(zx::exception exception, zx_exception_info_t exception_info) {
-  FX_DCHECK(exception_info.pid == koid());
+void DebuggedProcess::OnThreadExiting(std::unique_ptr<ExceptionHandle> exception) {
+  auto excepting_thread_handle = exception->GetThreadHandle();
+  zx_koid_t thread_id = excepting_thread_handle->GetKoid();
+  DEBUG_LOG(Process) << LogPreamble(this) << " Thread exiting with koid " << thread_id;
 
   // Clean up our DebuggedThread object.
-  auto found_thread = threads_.find(exception_info.tid);
+  auto found_thread = threads_.find(thread_id);
   if (found_thread == threads_.end()) {
     FX_NOTREACHED();
     return;
@@ -585,12 +556,12 @@ void DebuggedProcess::OnThreadExiting(zx::exception exception, zx_exception_info
   // lifecycle it must be resumed.
   exception.reset();
 
-  threads_.erase(exception_info.tid);
+  threads_.erase(thread_id);
 
   // Notify the client. Can't call GetThreadRecord since the thread doesn't exist any more.
   debug_ipc::NotifyThread notify;
-  notify.record.process_koid = exception_info.pid;
-  notify.record.thread_koid = exception_info.tid;
+  notify.record.process_koid = koid();
+  notify.record.thread_koid = thread_id;
   notify.record.state = debug_ipc::ThreadRecord::State::kDead;
 
   debug_ipc::MessageWriter writer;
@@ -598,18 +569,17 @@ void DebuggedProcess::OnThreadExiting(zx::exception exception, zx_exception_info
   debug_agent_->stream()->Write(writer.MessageComplete());
 }
 
-void DebuggedProcess::OnException(zx::exception exception_token,
-                                  zx_exception_info_t exception_info) {
-  FX_DCHECK(exception_info.pid == koid());
+void DebuggedProcess::OnException(std::unique_ptr<ExceptionHandle> exception) {
+  auto excepting_thread_handle = exception->GetThreadHandle();
+  zx_koid_t thread_id = excepting_thread_handle->GetKoid();
 
-  DebuggedThread* thread = GetThread(exception_info.tid);
+  DebuggedThread* thread = GetThread(thread_id);
   if (!thread) {
-    FX_LOGS(ERROR) << "Exception on thread " << exception_info.tid << " which we don't know about.";
+    FX_LOGS(ERROR) << "Exception on thread " << thread_id << " which we don't know about.";
     return;
   }
 
-  thread->OnException(
-      std::make_unique<ZirconExceptionHandle>(std::move(exception_token), exception_info));
+  thread->OnException(std::move(exception));
 }
 
 void DebuggedProcess::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
@@ -719,7 +689,7 @@ void DebuggedProcess::SendIO(debug_ipc::NotifyIO::Type type, const std::vector<c
     size -= chunk_size;
 
     debug_ipc::NotifyIO notify;
-    notify.process_koid = koid_;
+    notify.process_koid = koid();
     notify.type = type;
     // We tell whether this is a piece of a bigger message.
     notify.more_data_available = size > 0;

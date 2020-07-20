@@ -115,14 +115,16 @@ DebuggedThread::SuspendToken::~SuspendToken() {
 
 // DebuggedThread ----------------------------------------------------------------------------------
 
-DebuggedThread::DebuggedThread(DebugAgent* debug_agent, CreateInfo&& create_info)
-    : koid_(create_info.koid),
-      thread_handle_(std::move(create_info.handle)),
+DebuggedThread::DebuggedThread(DebugAgent* debug_agent, DebuggedProcess* process,
+                               std::unique_ptr<ThreadHandle> handle,
+                               ThreadCreationOption creation_option,
+                               std::unique_ptr<ExceptionHandle> exception)
+    : thread_handle_(std::move(handle)),
       debug_agent_(debug_agent),
-      process_(create_info.process),
-      exception_handle_(std::move(create_info.exception)),
+      process_(process),
+      exception_handle_(std::move(exception)),
       weak_factory_(this) {
-  switch (create_info.creation_option) {
+  switch (creation_option) {
     case ThreadCreationOption::kRunningKeepRunning:
       // do nothing
       break;

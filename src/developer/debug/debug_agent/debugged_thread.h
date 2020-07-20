@@ -62,20 +62,15 @@ class DebuggedThread {
   };
   const char* ClientStateToString(ClientState);
 
-  struct CreateInfo {
-    DebuggedProcess* process = nullptr;
-    zx_koid_t koid = 0;
-    std::unique_ptr<ThreadHandle> handle;
-    ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning;
+  DebuggedThread(DebugAgent*, DebuggedProcess* process, std::unique_ptr<ThreadHandle> handle,
+                 ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning,
+                 std::unique_ptr<ExceptionHandle> exception = nullptr);
 
-    std::unique_ptr<ExceptionHandle> exception;  // Optional.
-  };
-  DebuggedThread(DebugAgent*, CreateInfo&&);
   virtual ~DebuggedThread();
 
   const DebuggedProcess* process() const { return process_; }
 
-  zx_koid_t koid() const { return koid_; }
+  zx_koid_t koid() const { return thread_handle_->GetKoid(); }
 
   const ThreadHandle& thread_handle() const { return *thread_handle_; }
   ThreadHandle& thread_handle() { return *thread_handle_; }
@@ -178,7 +173,6 @@ class DebuggedThread {
   virtual void IncreaseSuspend();
   virtual void DecreaseSuspend();
 
-  zx_koid_t koid_;
   std::unique_ptr<ThreadHandle> thread_handle_;
 
  private:

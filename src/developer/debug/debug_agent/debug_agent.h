@@ -35,7 +35,7 @@ struct SystemProviders {
   static SystemProviders CreateDefaults(std::shared_ptr<sys::ServiceDirectory> services);
 
   std::shared_ptr<LimboProvider> limbo_provider;
-  std::shared_ptr<ObjectProvider> object_provider;
+  std::shared_ptr<ObjectProvider> object_provider = std::make_shared<ObjectProvider>();
 };
 
 // Main state and control for the debug agent.

@@ -43,7 +43,6 @@ namespace debug_agent {
 SystemProviders SystemProviders::CreateDefaults(std::shared_ptr<sys::ServiceDirectory> services) {
   SystemProviders system_providers;
   system_providers.limbo_provider = std::make_shared<LimboProvider>(std::move(services));
-  system_providers.object_provider = std::make_shared<ObjectProvider>();
 
   zx_status_t status = system_providers.limbo_provider->Init();
   if (status != ZX_OK)
@@ -542,13 +541,13 @@ zx_status_t DebugAgent::AddDebuggedProcess(DebuggedProcessCreateInfo&& create_in
                                            DebuggedProcess** new_process) {
   *new_process = nullptr;
 
-  zx_koid_t process_koid = create_info.koid;
   auto proc = std::make_unique<DebuggedProcess>(this, std::move(create_info));
   if (zx_status_t status = proc->Init(); status != ZX_OK)
     return status;
 
+  auto process_id = proc->koid();
   *new_process = proc.get();
-  procs_[process_koid] = std::move(proc);
+  procs_[process_id] = std::move(proc);
   return ZX_OK;
 }
 
@@ -669,11 +668,8 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
 
   LimboProvider::RetrievedException& exception = retrieved.value();
 
-  DebuggedProcessCreateInfo create_info;
-  create_info.koid = process_koid;
-  create_info.object_provider = object_provider_;
+  DebuggedProcessCreateInfo create_info(std::move(exception.process));
   create_info.from_limbo = true;
-  create_info.handle = std::move(exception.process);
 
   DebuggedProcess* debugged_process = nullptr;
   zx_status_t status = AddDebuggedProcess(std::move(create_info), &debugged_process);
@@ -712,14 +708,9 @@ zx_status_t DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t
   if (!process_handle)
     return ZX_ERR_NOT_FOUND;
 
-  // We attach to the process.
-  DebuggedProcessCreateInfo create_info = {};
-  create_info.koid = process_koid;
-  create_info.handle = std::move(process_handle);
-  create_info.object_provider = object_provider_;
-
   DebuggedProcess* process = nullptr;
-  zx_status_t status = AddDebuggedProcess(std::move(create_info), &process);
+  zx_status_t status =
+      AddDebuggedProcess(DebuggedProcessCreateInfo(std::move(process_handle)), &process);
   if (status != ZX_OK)
     return status;
 
@@ -749,12 +740,9 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   zx::process process = launcher.GetProcess();
   zx_koid_t process_koid = object_provider_->KoidForObject(process);
 
-  DebuggedProcessCreateInfo create_info;
-  create_info.koid = process_koid;
-  create_info.handle = std::make_unique<ZirconProcessHandle>(std::move(process));
+  DebuggedProcessCreateInfo create_info(std::make_unique<ZirconProcessHandle>(std::move(process)));
   create_info.out = launcher.ReleaseStdout();
   create_info.err = launcher.ReleaseStderr();
-  create_info.object_provider = object_provider_;
 
   DebuggedProcess* new_process = nullptr;
   zx_status_t status = AddDebuggedProcess(std::move(create_info), &new_process);
@@ -887,12 +875,9 @@ void DebugAgent::OnProcessStart(const std::string& filter,
   debug_ipc::WriteNotifyProcessStarting(notify, &writer);
   stream()->Write(writer.MessageComplete());
 
-  DebuggedProcessCreateInfo create_info;
-  create_info.koid = process_koid;
-  create_info.handle = std::move(process_handle);
+  DebuggedProcessCreateInfo create_info(std::move(process_handle));
   create_info.out = std::move(handles.out);
   create_info.err = std::move(handles.err);
-  create_info.object_provider = object_provider_;
 
   DebuggedProcess* new_process = nullptr;
   AddDebuggedProcess(std::move(create_info), &new_process);

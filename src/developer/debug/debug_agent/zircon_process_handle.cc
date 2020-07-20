@@ -5,9 +5,12 @@
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 
 #include "src/developer/debug/debug_agent/elf_utils.h"
+#include "src/developer/debug/debug_agent/process_handle_observer.h"
+#include "src/developer/debug/debug_agent/zircon_exception_handle.h"
 #include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/message_loop_target.h"
 
 namespace debug_agent {
 
@@ -30,6 +33,33 @@ int64_t ZirconProcessHandle::GetReturnCode() const {
   if (process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr) == ZX_OK)
     return info.return_code;
   return 0;
+}
+
+zx_status_t ZirconProcessHandle::Attach(ProcessHandleObserver* observer) {
+  FX_DCHECK(observer);
+  observer_ = observer;
+
+  if (!process_watch_handle_.watching()) {
+    // Start watching.
+    debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
+    FX_DCHECK(loop);  // Loop must be created on this thread first.
+
+    // Register for debug exceptions.
+    debug_ipc::MessageLoopTarget::WatchProcessConfig config;
+    config.process_name = GetName();
+    config.process_handle = process_.get();
+    config.process_koid = GetKoid();
+    config.watcher = this;
+    return loop->WatchProcessExceptions(std::move(config), &process_watch_handle_);
+  }
+  return ZX_OK;
+}
+
+void ZirconProcessHandle::Detach() {
+  observer_ = nullptr;
+
+  // Unbind from the exception port.
+  process_watch_handle_.StopWatching();
 }
 
 std::vector<debug_ipc::AddressRegion> ZirconProcessHandle::GetAddressSpace(uint64_t address) const {
@@ -164,6 +194,27 @@ std::vector<zx_info_maps_t> ZirconProcessHandle::GetMaps() const {
 
   map.resize(actual);
   return map;
+}
+
+void ZirconProcessHandle::OnProcessTerminated(zx_koid_t process_koid) {
+  FX_DCHECK(observer_);
+  FX_DCHECK(process_koid == GetKoid());
+  observer_->OnProcessTerminated();
+}
+
+void ZirconProcessHandle::OnThreadStarting(zx::exception exception, zx_exception_info_t info) {
+  FX_DCHECK(observer_);
+  observer_->OnThreadStarting(std::make_unique<ZirconExceptionHandle>(std::move(exception), info));
+}
+
+void ZirconProcessHandle::OnThreadExiting(zx::exception exception, zx_exception_info_t info) {
+  FX_DCHECK(observer_);
+  observer_->OnThreadExiting(std::make_unique<ZirconExceptionHandle>(std::move(exception), info));
+}
+
+void ZirconProcessHandle::OnException(zx::exception exception, zx_exception_info_t info) {
+  FX_DCHECK(observer_);
+  observer_->OnException(std::make_unique<ZirconExceptionHandle>(std::move(exception), info));
 }
 
 }  // namespace debug_agent

@@ -38,6 +38,8 @@ class MockProcessHandle final : public ProcessHandle {
   // Value to return from Kill().
   void set_kill_status(zx_status_t s) { kill_status_ = s; }
 
+  bool is_attached() const { return is_attached_; }
+
   // ProcessHandle implementation.
   const zx::process& GetNativeHandle() const override { return null_handle_; }
   zx::process& GetNativeHandle() override { return null_handle_; }
@@ -46,6 +48,8 @@ class MockProcessHandle final : public ProcessHandle {
   std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const override;
   zx_status_t Kill() override;
   int64_t GetReturnCode() const override;
+  zx_status_t Attach(ProcessHandleObserver* observer) override;
+  void Detach() override;
   std::vector<debug_ipc::AddressRegion> GetAddressSpace(uint64_t address) const override;
   std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const override;
   zx_status_t ReadMemory(uintptr_t address, void* buffer, size_t len,
@@ -62,6 +66,8 @@ class MockProcessHandle final : public ProcessHandle {
 
   zx_koid_t process_koid_;
   std::string name_;
+
+  bool is_attached_ = false;
 
   std::vector<MockThreadHandle> threads_;
 
