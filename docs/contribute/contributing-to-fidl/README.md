@@ -139,7 +139,7 @@ Read the [Fuchsia Getting Started][getting_started] guide first.
 If you are working on the FIDL toolchain, use:
 
 ```sh
-fx set core.x64 --with //bundles/fidl:tests
+fx set core.x64 --with //bundles/fidl:tests --with //topaz/bundles/fidl:tests
 ```
 
 If you are working on an LSC:
