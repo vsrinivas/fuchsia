@@ -18,38 +18,18 @@
             no: [
                 "no_timezone",
             ],
-            inspect: [
-                {
-                    moniker: "timezone.cmx",
-                    payload: {
-                        root: {
-                            "fuchsia.inspect.Health": {
-                                start_timestamp_nanos: 17453421103,
-                                status: "OK",
-                            },
-                        },
-                    },
-                },
-            ],
+            values: {
+                health: "OK",
+            },
         },
         is_not_healthy: {
             yes: [
                 "no_timezone",
             ],
             no: [],
-            inspect: [
-                {
-                    moniker: "timezone.cmx",
-                    payload: {
-                        root: {
-                            "fuchsia.inspect.Health": {
-                                start_timestamp_nanos: 17453421103,
-                                status: "UNHEALTHY",
-                            },
-                        },
-                    },
-                },
-            ],
+            values: {
+                health: "UNHEALTHY",
+            },
         },
     },
 }

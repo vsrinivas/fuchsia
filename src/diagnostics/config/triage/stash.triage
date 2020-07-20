@@ -22,19 +22,10 @@
                 "should_not_be_secure",
             ],
             no: [],
-            inspect: [
-                {
-                    moniker: "stash.cmx",
-                    payload: {
-                        root: {
-                            "fuchsia.inspect.Health": {
-                                status: "UNHEALTHY",
-                            },
-                            secure_mode: true,
-                        },
-                    },
-                },
-            ],
+            values: {
+                status: "UNHEALTHY",
+                is_secure: true,
+            },
         },
         ok: {
             yes: [],
@@ -42,19 +33,10 @@
                 "unhealthy",
                 "should_not_be_secure",
             ],
-            inspect: [
-                {
-                    moniker: "stash.cmx",
-                    payload: {
-                        root: {
-                            "fuchsia.inspect.Health": {
-                                status: "OK",
-                            },
-                            secure_mode: false,
-                        },
-                    },
-                },
-            ],
+            values: {
+                status: "OK",
+                is_secure: false,
+            },
         },
     },
 }

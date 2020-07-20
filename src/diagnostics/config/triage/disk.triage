@@ -34,88 +34,40 @@
                 "disk_full_old",
             ],
             no: [],
-            inspect: [
-                {
-                    moniker: "archivist.cmx",
-                    payload: {
-                        root: {
-                            data_stats: {
-                                global_data: {
-                                    stats: {
-                                        total_bytes: 100,
-                                        used_bytes: 99,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            ],
+            values: {
+                total_old: 100,
+                used_old: 99,
+            },
         },
         not_full_old: {
             yes: [],
             no: [
                 "disk_full_old",
             ],
-            inspect: [
-                {
-                    moniker: "archivist.cmx",
-                    payload: {
-                        root: {
-                            data_stats: {
-                                global_data: {
-                                    stats: {
-                                        total_bytes: 100,
-                                        used_bytes: 98,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            ],
+            values: {
+                total_old: 100,
+                used_old: 98,
+            },
         },
         is_full: {
             yes: [
                 "disk_full",
             ],
             no: [],
-            inspect: [
-                {
-                    moniker: "bootstrap/fshost",
-                    payload: {
-                        root: {
-                            data_stats: {
-                                stats: {
-                                    total_bytes: 100,
-                                    used_bytes: 99,
-                                },
-                            },
-                        },
-                    },
-                },
-            ],
+            values: {
+                total: 100,
+                used: 99,
+            },
         },
         not_full: {
             yes: [],
             no: [
                 "disk_full",
             ],
-            inspect: [
-                {
-                    moniker: "bootstrap/fshost",
-                    payload: {
-                        root: {
-                            data_stats: {
-                                stats: {
-                                    total_bytes: 100,
-                                    used_bytes: 98,
-                                },
-                            },
-                        },
-                    },
-                },
-            ],
+            values: {
+                total: 100,
+                used: 98,
+            },
         },
     },
 }

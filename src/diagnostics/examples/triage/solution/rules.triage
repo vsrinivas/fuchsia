@@ -42,23 +42,10 @@
             no: [
                 "disk_full",
             ],
-            inspect: [
-                {
-                    path: "archivist.cmx",
-                    contents: {
-                        root: {
-                            data_stats: {
-                                global_data: {
-                                    stats: {
-                                        total_bytes: 100,
-                                        used_bytes: 97,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            ],
+            values: {
+                disk_used: 97,
+                disk_total: 100,
+            },
         },
     },
 }
