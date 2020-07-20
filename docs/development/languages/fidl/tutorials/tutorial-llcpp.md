@@ -1,4 +1,4 @@
-G# Low-level C++ language FIDL tutorial
+# Low-level C++ language FIDL tutorial
 
 [TOC]
 
