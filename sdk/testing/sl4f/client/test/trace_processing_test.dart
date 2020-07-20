@@ -384,13 +384,15 @@ void main(List<String> args) {
         model, {'flutterAppName': 'flutter_app'});
 
     expect(results[0].label, 'flutter_app_fps');
-    expect(results[0].values[0], _closeTo(57.65979623262868));
+    expect(results[0].values[0], _closeTo(53.999868151104536));
     expect(results[1].label, 'flutter_app_frame_build_times');
-    expect(computeMean(results[1].values), _closeTo(1.1693780864197532));
+    expect(computeMean(results[1].values), _closeTo(1.5090477545454541));
     expect(results[2].label, 'flutter_app_frame_rasterizer_times');
-    expect(computeMean(results[2].values), _closeTo(2.0420014880952384));
+    expect(computeMean(results[2].values), _closeTo(4.803573118483413));
     expect(results[3].label, 'flutter_app_frame_latencies');
-    expect(computeMean(results[3].values), _closeTo(33.31596996));
+    expect(computeMean(results[3].values), _closeTo(34.17552801895736));
+    expect(results[4].label, 'flutter_app_render_frame_total_durations');
+    expect(computeMean(results[4].values), _closeTo(10.729088445497638));
   });
 
   test('Flutter frame stats with long name app', () async {
@@ -399,13 +401,16 @@ void main(List<String> args) {
         model, {'flutterAppName': 'flutter_app_long_name_xy'});
 
     expect(results[0].label, 'flutter_app_long_name_xy_fps');
-    expect(results[0].values[0], _closeTo(57.65979623262868));
+    expect(results[0].values[0], _closeTo(53.999868151104536));
     expect(results[1].label, 'flutter_app_long_name_xy_frame_build_times');
-    expect(computeMean(results[1].values), _closeTo(1.1693780864197532));
+    expect(computeMean(results[1].values), _closeTo(1.5090477545454541));
     expect(results[2].label, 'flutter_app_long_name_xy_frame_rasterizer_times');
-    expect(computeMean(results[2].values), _closeTo(2.0420014880952384));
+    expect(computeMean(results[2].values), _closeTo(4.803573118483413));
     expect(results[3].label, 'flutter_app_long_name_xy_frame_latencies');
-    expect(computeMean(results[3].values), _closeTo(33.31596996));
+    expect(computeMean(results[3].values), _closeTo(34.17552801895736));
+    expect(results[4].label,
+        'flutter_app_long_name_xy_render_frame_total_durations');
+    expect(computeMean(results[4].values), _closeTo(10.729088445497638));
   });
 
   test('Flutter frame stats metric (no Scenic edge case)', () async {
@@ -459,20 +464,20 @@ void main(List<String> args) {
     final results =
         drmFpsMetricsProcessor(model, {'flutterAppName': 'flutter_app'});
 
-    expect(computeMean(results[0].values), _closeTo(58.75067228666503));
-    expect(results[1].values[0], _closeTo(59.976428836915716));
-    expect(results[2].values[0], _closeTo(60.00052440691961));
-    expect(results[3].values[0], _closeTo(60.025630989830326));
+    expect(computeMean(results[0].values), _closeTo(57.72797479950718));
+    expect(results[1].values[0], _closeTo(59.954463866487885));
+    expect(results[2].values[0], _closeTo(59.997900074985296));
+    expect(results[3].values[0], _closeTo(60.034055041976686));
   });
 
   test('System DRM FPS metric', () async {
     final model = createModelFromJsonString(flutterAppTraceJsonString);
     final results = systemDrmFpsMetricsProcessor(model, {});
 
-    expect(computeMean(results[0].values), _closeTo(58.80063339525843));
-    expect(results[1].values[0], _closeTo(59.97681878050269));
-    expect(results[2].values[0], _closeTo(60.000150000375));
-    expect(results[3].values[0], _closeTo(60.0252706908439));
+    expect(computeMean(results[0].values), _closeTo(53.22293098104574));
+    expect(results[1].values[0], _closeTo(20.00118695220081));
+    expect(results[2].values[0], _closeTo(59.99295082827768));
+    expect(results[3].values[0], _closeTo(60.03226494111525));
   });
 
   test('CPU metric', () async {

@@ -195,12 +195,44 @@ List<double> _computeFrameLatencies(Thread uiThread) {
       .toList();
 }
 
+List<double> _computeRenderFrameTotalDurations(Model model) {
+  final startRenderingEvents = filterEventsTyped<DurationEvent>(
+      getAllEvents(model),
+      category: 'flutter',
+      name: 'vsync callback');
+
+  final endRenderingEvents =
+      startRenderingEvents.map((DurationEvent durationEvent) {
+    final followingEvents = filterEventsTyped<DurationEvent>(
+        getFollowingEvents(durationEvent),
+        category: 'gfx',
+        name: 'scenic_impl::Session::ScheduleNextPresent');
+    if (followingEvents.isEmpty) {
+      return null;
+    }
+    return followingEvents.first;
+  });
+
+  final renderFrameTotalDurations =
+      Zip2Iterable<DurationEvent, DurationEvent, double>(
+          startRenderingEvents,
+          endRenderingEvents,
+          (startRenderingEvent, endRenderingEvent) => (endRenderingEvent ==
+                  null)
+              ? null
+              : (endRenderingEvent.start - startRenderingEvent.start)
+                  .toMillisecondsF()).where((delta) => delta != null).toList();
+
+  return renderFrameTotalDurations;
+}
+
 class _Results {
   String appName;
   _FpsResult fpsResult;
   List<double> frameBuildTimes;
   List<double> frameRasterizerTimes;
   List<double> frameLatencies;
+  List<double> renderFrameTotalDurations;
 }
 
 String _appResultToString(_Results results) {
@@ -226,6 +258,9 @@ ${results.appName} Flutter Frame Stats
     ..write('\n')
     ..write('frame_latencies:\n')
     ..write(describeValues(results.frameLatencies, indent: 2))
+    ..write('\n')
+    ..write('render_frame_total_durations:\n')
+    ..write(describeValues(results.renderFrameTotalDurations, indent: 2))
     ..write('\n');
 
   return buffer.toString();
@@ -307,7 +342,8 @@ List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
                 name: 'GPURasterizer::Draw')
             .map(getDurationInMilliseconds)
             .toList()
-        ..frameLatencies = _computeFrameLatencies(uiThread));
+        ..frameLatencies = _computeFrameLatencies(uiThread)
+        ..renderFrameTotalDurations = _computeRenderFrameTotalDurations(model));
     }
   }
 
@@ -352,6 +388,8 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
         Unit.milliseconds, results.frameRasterizerTimes),
     TestCaseResults('${flutterAppName}_frame_latencies', Unit.milliseconds,
         results.frameLatencies),
+    TestCaseResults('${flutterAppName}_render_frame_total_durations',
+        Unit.milliseconds, results.renderFrameTotalDurations),
   ];
 }
 

@@ -186,6 +186,8 @@ void Session::SchedulePresentRequest(
         [this, present_id, requested_presentation_time,
          commands = std::move(commands_pending_present_)]() mutable {
           if (auto scheduler = frame_scheduler_.lock()) {
+            // WARNING: Do not change the trace category or name here without also updating the
+            // values in flutter_frame_stats.dart.
             TRACE_DURATION("gfx", "scenic_impl::Session::ScheduleNextPresent", "session_id", id_,
                            "requested_presentation_time",
                            requested_presentation_time.get() / 1'000'000);
