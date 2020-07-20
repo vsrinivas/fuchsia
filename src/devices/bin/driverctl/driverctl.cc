@@ -28,6 +28,7 @@ static void usage(void) {
           "    \"info\" or \"i\":    DDK_LOG_INFO\n"
           "    \"debug\" or \"d\":   DDK_LOG_DEBUG\n"
           "    \"trace\" or \"t\":   DDK_LOG_TRACE\n"
+          "    \"serial\" or \"s\":  DDK_LOG_SERIAL\n"
           "\n"
           "  With no options provided, \"driverctl log\" will print the current\n"
           "  minimum log severity for the driver\n"
@@ -76,7 +77,7 @@ int main(int argc, char** argv) {
       return -1;
     }
     printf("Log severity: ");
-    switch (response->flags) {
+    switch (static_cast<fx_log_severity_t>(response->flags)) {
       case DDK_LOG_ERROR:
         printf("error\n");
         break;
@@ -91,6 +92,9 @@ int main(int argc, char** argv) {
         break;
       case DDK_LOG_TRACE:
         printf("trace\n");
+        break;
+      case DDK_LOG_SERIAL:
+        printf("serial\n");
         break;
       default:
         printf("unknown\n");
@@ -111,6 +115,8 @@ int main(int argc, char** argv) {
     flags = DDK_LOG_DEBUG;
   } else if (!strcasecmp(arg, "t") || !strcasecmp(arg, "trace")) {
     flags = DDK_LOG_TRACE;
+  } else if (!strcasecmp(arg, "s") || !strcasecmp(arg, "serial")) {
+    flags = DDK_LOG_SERIAL;
   } else {
     fprintf(stderr, "Unknown log severity \"%s\"\n", arg);
     return -1;

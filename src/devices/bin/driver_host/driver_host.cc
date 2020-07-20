@@ -85,6 +85,9 @@ static fx_log_severity_t log_min_severity(const char* name, const char* flag) {
   if (!strcasecmp(flag, "trace")) {
     return FX_LOG_TRACE;
   }
+  if (!strcasecmp(flag, "serial")) {
+    return DDK_LOG_SERIAL;
+  }
   LOGF(WARNING, "Invalid minimum log severity '%s' for driver '%s', will log all", flag, name);
   return FX_LOG_ALL;
 }
