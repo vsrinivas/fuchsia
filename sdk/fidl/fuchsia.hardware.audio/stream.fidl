@@ -96,7 +96,7 @@ struct PcmFormat {
     uint32 frame_rate;
 };
 
-/// Gain state requested by the client or returned a current by the driver.
+/// Gain state requested by the client or returned by the driver.
 table GainState {
     /// Current mute state. If not included, the state is unmuted.
     1: bool muted;
@@ -198,8 +198,9 @@ protocol StreamConfig {
     CreateRingBuffer(Format format, request<RingBuffer> ring_buffer);
 
     /// Get the gain state via a hanging get. The driver will reply to the first `WatchGainState`
-    /// sent by the client. The driver will not respond to subsequent client `WatchGainState` calls
-    /// until the gain state changes from what was most recently reported.
+    /// sent by the client and this reply must include a `gain_db` set to 0dB or lower. The driver
+    /// will not respond to subsequent client `WatchGainState` calls until the gain state changes
+    /// from what was most recently reported.
     WatchGainState() -> (GainState gain_state);
 
     /// Client update of the gain state.
