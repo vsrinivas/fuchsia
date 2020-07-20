@@ -183,6 +183,13 @@ void print_log_message(const std::shared_ptr<fuchsia::logger::LogMessage>& log) 
          log_level(log->severity).c_str(), log->msg.c_str());
 }
 
+void print_dropped_log_count(const std::shared_ptr<fuchsia::logger::LogMessage>& log) {
+  auto time = log->time;
+  printf("[%05ld.%06ld][%ld][%ld][%s] WARNING: Dropped logs count: %u\n", time / kNanosInSec,
+         (time / kMillisInSec) % kMicrosInSec, log->pid, log->tid, join_tags(log->tags).c_str(),
+         log->dropped_logs);
+}
+
 }  // namespace
 
 int main(int argc, const char** argv) {
@@ -286,10 +293,20 @@ int main(int argc, const char** argv) {
   auto log_collector = std::make_unique<run::LogCollector>(
       [dispather = loop.dispatcher(), restrict_logs, max_severity_allowed,
        &restricted_logs](fuchsia::logger::LogMessage log) {
+        static std::map<uint32_t, uint32_t> dropped_logs_map;
         auto log_wrapper = std::make_shared<fuchsia::logger::LogMessage>(std::move(log));
 
         if (restrict_logs && log_wrapper->severity > max_severity_allowed) {
           restricted_logs.push_back(log_wrapper);
+        }
+        if (log_wrapper->dropped_logs > 0) {
+          auto dropped_logs =
+              dropped_logs_map[log_wrapper->pid];  // default initializer will set it to zero if key
+                                                   // is not found.
+          if (log_wrapper->dropped_logs > dropped_logs) {
+            dropped_logs_map[log_wrapper->pid] = log_wrapper->dropped_logs;
+            print_dropped_log_count(log_wrapper);
+          }
         }
         async::PostTask(dispather, [log = std::move(log_wrapper)]() mutable {
           print_log_message(log);
