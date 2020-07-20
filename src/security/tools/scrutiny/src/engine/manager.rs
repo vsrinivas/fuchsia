@@ -10,6 +10,7 @@ use {
     },
     anyhow::Result,
     log::{error, info},
+    serde::{Deserialize, Serialize},
     std::fmt,
     std::{
         boxed::Box,
@@ -48,7 +49,7 @@ fn log_error(error: PluginError) -> Result<()> {
 
 /// `PluginState` informs the `PluginManager` whether the plugin has its
 /// `DataCollector` and `DataController` instances currently hooked or not.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum PluginState {
     Loaded,
     Unloaded,

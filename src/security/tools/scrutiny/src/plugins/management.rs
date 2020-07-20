@@ -1,0 +1,287 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    crate::{
+        engine::{
+            dispatcher::ControllerDispatcher,
+            hook::PluginHooks,
+            manager::{PluginManager, PluginState},
+            plugin::{Plugin, PluginDescriptor},
+            scheduler::{CollectorScheduler, CollectorState},
+        },
+        model::controller::DataController,
+        model::model::DataModel,
+    },
+    anyhow::Result,
+    serde::{Deserialize, Serialize},
+    serde_json::{json, value::Value},
+    std::sync::{Arc, Mutex, RwLock},
+};
+
+/// The `ManagementPlugin` allows introspection into the Scrutiny engine
+/// through a plugin. This allows users to inspect the abstracted state of
+/// the system such as seeing what collectors, controllers and plugins are
+/// active. It also allows the user to reschedule collector tasks, disable and
+/// enable plugins etc.
+pub struct ManagementPlugin {
+    desc: PluginDescriptor,
+    hooks: PluginHooks,
+    deps: Vec<PluginDescriptor>,
+}
+
+impl ManagementPlugin {
+    pub fn new(
+        scheduler: Arc<Mutex<CollectorScheduler>>,
+        dispatcher: Arc<RwLock<ControllerDispatcher>>,
+        manager: Arc<Mutex<PluginManager>>,
+    ) -> Self {
+        Self {
+            desc: PluginDescriptor::new("ManagementPlugin".to_string()),
+            hooks: PluginHooks::new(
+                collectors! {},
+                controllers! {
+                    "/management/plugin/list" => PluginListController::new(manager),
+                    "/management/model/stats" => ModelStatsController::default(),
+                    "/management/collector/list" => CollectorListController::new(scheduler.clone()),
+                    "/management/controller/list" => ControllerListController::new(dispatcher),
+                    "/management/collector/schedule" => CollectorSchedulerController::new(scheduler.clone()),
+                },
+            ),
+            deps: vec![],
+        }
+    }
+}
+
+impl Plugin for ManagementPlugin {
+    fn descriptor(&self) -> &PluginDescriptor {
+        &self.desc
+    }
+    fn dependencies(&self) -> &Vec<PluginDescriptor> {
+        &self.deps
+    }
+    fn hooks(&mut self) -> &PluginHooks {
+        &self.hooks
+    }
+}
+
+/// Lists all the registered plugins and their states.
+struct PluginListController {
+    manager: Arc<Mutex<PluginManager>>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct PluginListEntry {
+    name: String,
+    state: PluginState,
+}
+
+impl PluginListController {
+    pub fn new(manager: Arc<Mutex<PluginManager>>) -> Self {
+        Self { manager }
+    }
+}
+
+impl DataController for PluginListController {
+    fn query(&self, _: Arc<DataModel>, _query: Value) -> Result<Value> {
+        let manager = self.manager.lock().unwrap();
+        let plugin_descriptors = manager.plugins();
+        let mut plugins = vec![];
+        for plugin_desc in plugin_descriptors.iter() {
+            let state = manager.state(plugin_desc).unwrap();
+            plugins.push(PluginListEntry { name: format!("{}", plugin_desc), state });
+        }
+        return Ok(json!(plugins));
+    }
+}
+
+/// Displays basic stats from the model controller.
+#[derive(Default)]
+struct ModelStatsController {}
+
+#[derive(Serialize, Deserialize)]
+struct ModelStats {
+    components: usize,
+    manifests: usize,
+    routes: usize,
+}
+
+impl DataController for ModelStatsController {
+    fn query(&self, model: Arc<DataModel>, _query: Value) -> Result<Value> {
+        let stats = ModelStats {
+            components: model.components().read().unwrap().len(),
+            manifests: model.manifests().read().unwrap().len(),
+            routes: model.routes().read().unwrap().len(),
+        };
+        Ok(json!(stats))
+    }
+}
+
+/// Displays a list of all the collectors.
+struct CollectorListController {
+    scheduler: Arc<Mutex<CollectorScheduler>>,
+}
+
+impl CollectorListController {
+    fn new(scheduler: Arc<Mutex<CollectorScheduler>>) -> Self {
+        Self { scheduler }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct CollectorListEntry {
+    name: String,
+    state: CollectorState,
+}
+
+impl DataController for CollectorListController {
+    fn query(&self, _model: Arc<DataModel>, _query: Value) -> Result<Value> {
+        let scheduler = self.scheduler.lock().unwrap();
+        let mut collectors = vec![];
+        for (handle, name) in scheduler.collectors_all() {
+            let state = scheduler.state(&handle).unwrap();
+            collectors.push(CollectorListEntry { name, state });
+        }
+        Ok(json!(collectors))
+    }
+}
+
+/// Runs all of the collectors when called.
+struct CollectorSchedulerController {
+    scheduler: Arc<Mutex<CollectorScheduler>>,
+}
+
+impl CollectorSchedulerController {
+    fn new(scheduler: Arc<Mutex<CollectorScheduler>>) -> Self {
+        Self { scheduler }
+    }
+}
+
+impl DataController for CollectorSchedulerController {
+    fn query(&self, _model: Arc<DataModel>, _query: Value) -> Result<Value> {
+        if self.scheduler.lock().unwrap().schedule().is_ok() {
+            Ok(json!({"status": "ok"}))
+        } else {
+            Ok(json!({"status": "failed"}))
+        }
+    }
+}
+
+/// Lists all of the controllers.
+struct ControllerListController {
+    dispatcher: Arc<RwLock<ControllerDispatcher>>,
+}
+
+impl ControllerListController {
+    fn new(dispatcher: Arc<RwLock<ControllerDispatcher>>) -> Self {
+        Self { dispatcher }
+    }
+}
+
+impl DataController for ControllerListController {
+    fn query(&self, _model: Arc<DataModel>, _query: Value) -> Result<Value> {
+        Ok(json!(self.dispatcher.read().unwrap().controllers_all()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, crate::model::collector::DataCollector, crate::model::model::Component,
+        std::boxed::Box, tempfile::tempdir, uuid::Uuid,
+    };
+
+    plugin!(FakePlugin, PluginHooks::new(collectors! {}, controllers! {}), vec![]);
+
+    struct FakeCollector {}
+    impl DataCollector for FakeCollector {
+        fn collect(&self, _model: Arc<DataModel>) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    fn data_model() -> Arc<DataModel> {
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        Arc::new(DataModel::connect(uri).unwrap())
+    }
+
+    fn dispatcher(model: Arc<DataModel>) -> Arc<RwLock<ControllerDispatcher>> {
+        Arc::new(RwLock::new(ControllerDispatcher::new(model)))
+    }
+
+    fn scheduler(model: Arc<DataModel>) -> Arc<Mutex<CollectorScheduler>> {
+        Arc::new(Mutex::new(CollectorScheduler::new(model)))
+    }
+
+    fn plugin_manager(model: Arc<DataModel>) -> Arc<Mutex<PluginManager>> {
+        let dispatcher = dispatcher(model.clone());
+        let scheduler = scheduler(model.clone());
+        Arc::new(Mutex::new(PluginManager::new(scheduler, dispatcher)))
+    }
+
+    #[test]
+    fn test_plugin_list_controller() {
+        let model = data_model();
+        let manager = plugin_manager(model.clone());
+        manager.lock().unwrap().register(Box::new(FakePlugin::new())).unwrap();
+        let plugin_list = PluginListController::new(manager.clone());
+        let response = plugin_list.query(model.clone(), json!("")).unwrap();
+        let list: Vec<PluginListEntry> = serde_json::from_value(response).unwrap();
+        assert_eq!(list.len(), 1);
+    }
+
+    #[test]
+    fn test_model_stats_controller() {
+        let model = data_model();
+        let model_stats = ModelStatsController::default();
+        assert_eq!(model_stats.query(model.clone(), json!("")).is_ok(), true);
+        model.components().write().unwrap().push(Component {
+            id: 1,
+            url: "".to_string(),
+            version: 1,
+            inferred: true,
+        });
+        let response = model_stats.query(model.clone(), json!("")).unwrap();
+        let stats: ModelStats = serde_json::from_value(response).unwrap();
+        assert_eq!(stats.components, 1);
+        assert_eq!(stats.routes, 0);
+        assert_eq!(stats.manifests, 0);
+    }
+
+    #[test]
+    fn test_controller_list_controller() {
+        let model = data_model();
+        let dispatcher = dispatcher(model.clone());
+        dispatcher
+            .write()
+            .unwrap()
+            .add(Uuid::new_v4(), "/foo/bar".to_string(), Arc::new(ModelStatsController::default()))
+            .unwrap();
+        let controller_list = ControllerListController::new(dispatcher);
+        let response = controller_list.query(model.clone(), json!("")).unwrap();
+        let controllers: Vec<String> = serde_json::from_value(response).unwrap();
+        assert_eq!(controllers, vec!["/foo/bar".to_string()]);
+    }
+
+    #[test]
+    fn test_collector_list_controller() {
+        let model = data_model();
+        let scheduler = scheduler(model.clone());
+        scheduler.lock().unwrap().add(Uuid::new_v4(), "foo", Arc::new(FakeCollector {}));
+        let collector_list = CollectorListController::new(scheduler);
+        let response = collector_list.query(model.clone(), json!("")).unwrap();
+        let list: Vec<CollectorListEntry> = serde_json::from_value(response).unwrap();
+        assert_eq!(list.len(), 1);
+    }
+
+    #[test]
+    fn test_collector_scheduler_controller() {
+        let model = data_model();
+        let scheduler = scheduler(model.clone());
+        let schedule_controller = CollectorSchedulerController::new(scheduler);
+        let response = schedule_controller.query(model.clone(), json!("")).unwrap();
+        assert_eq!(response, json!({"status": "ok"}));
+    }
+}

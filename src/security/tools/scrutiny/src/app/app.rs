@@ -128,6 +128,24 @@ impl ScrutinyApp {
         self.manager.lock().unwrap().register_and_load(Box::new(plugin))
     }
 
+    /// Returns an arc to the dispatcher controller that can be exposed to
+    /// plugins that may wish to use it for managemnet.
+    pub fn dispatcher(&self) -> Arc<RwLock<ControllerDispatcher>> {
+        Arc::clone(&self.dispatcher)
+    }
+
+    /// Returns an arc to the collector scheduler that can be exposed to plugins
+    /// that may wish to use it for management.
+    pub fn scheduler(&self) -> Arc<Mutex<CollectorScheduler>> {
+        Arc::clone(&self.scheduler)
+    }
+
+    /// Returns an arc to the plugin manager that can be exposed to plugins that
+    /// may wish to use it for management.
+    pub fn plugin_manager(&self) -> Arc<Mutex<PluginManager>> {
+        Arc::clone(&self.manager)
+    }
+
     /// Schedules the DataCollectors to run and starts the REST service.
     pub fn run(&mut self) -> Result<()> {
         self.scheduler.lock().unwrap().schedule()?;

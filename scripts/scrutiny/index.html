@@ -11,7 +11,8 @@
     <div class="wrapper">
       <div class="nav">
         <img class="header-logo" src="/static/img/logo.png">
-        <a href="/"><span class="header-text">Fuchsia Scrutiny</span></a>
+        <a href="/"><span id="title" class="header-text">Fuchsia Scrutiny</span></a>
+        <a href="/"><span id="title-offline" style="display:none" class="header-text">Fuchsia Scrutiny (Offline)</span></a>
       </div>
       <div class="dashboard">
           <div class="tile">
@@ -30,13 +31,18 @@
                   <span class="header-text">Data Collectors</span>
               </div>
               <div class="tile-body">
+                  <table class="tile-table" id="collectors">
+                  </table>
+                  <button id="schedule-button" class="menu-button">Schedule</button>
               </div>
           </div>
           <div class="tile">
               <div class="tile-header">
-                  <span class="header-text">Data Controllers</span>
+                  <span class="header-text">Data Model</span>
               </div>
               <div class="tile-body">
+                  <table class="tile-table" id="model">
+                  </table>
               </div>
           </div>
           <div class="tile">
@@ -50,18 +56,23 @@
               <div class="tile-header">
                   <span class="header-text">Plugins</span>
               </div>
-              <div class="tile-body">
+              <div  class="tile-body">
+                  <table class="tile-table" id="plugins">
+                  </table>
               </div>
           </div>
           <div class="tile">
               <div class="tile-header">
-                  <span class="header-text">Data Model</span>
+                  <span class="header-text">Data Controllers</span>
               </div>
               <div class="tile-body">
+                  <table class="tile-table" id="controllers">
+                  </table>
               </div>
           </div>
 
       </div>
     </div>
+    <script type="text/javascript" src="/static/js/dashboard.js"></script>
   </body>
 </html>

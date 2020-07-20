@@ -7,12 +7,15 @@ mod app;
 use {
     anyhow::Result,
     app::app::ScrutinyApp,
-    scrutiny::{plugins::components::graph::ComponentGraphPlugin, plugins::health::HealthPlugin},
+    scrutiny::plugins::{
+        components::graph::ComponentGraphPlugin, health::HealthPlugin, management::ManagementPlugin,
+    },
 };
 
 fn main() -> Result<()> {
     let mut app = ScrutinyApp::new(ScrutinyApp::args())?;
     app.plugin(HealthPlugin::new())?;
     app.plugin(ComponentGraphPlugin::new())?;
+    app.plugin(ManagementPlugin::new(app.scheduler(), app.dispatcher(), app.plugin_manager()))?;
     app.run()
 }

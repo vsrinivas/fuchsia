@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {super::hook::PluginHooks, std::fmt};
+use {
+    super::hook::PluginHooks,
+    serde::{Deserialize, Serialize},
+    std::fmt,
+};
 
 /// Core identifying information about the plugin.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PluginDescriptor {
     // A unique name for the plugin.
     name: String,
@@ -25,7 +29,7 @@ impl fmt::Display for PluginDescriptor {
 
 /// A ScrutinyPlugin is defined as a collection of data controllers
 /// and data collectors that can be dynamically loaded and unloaded.
-pub trait Plugin {
+pub trait Plugin: Send + Sync {
     /// Returns the identifying plugin information.
     fn descriptor(&self) -> &PluginDescriptor;
     /// Other plugins which must be loaded for this plugin to operate correctly.

@@ -7,6 +7,7 @@ use {
     crate::model::model::DataModel,
     anyhow::Result,
     log::{error, info},
+    serde::{Deserialize, Serialize},
     std::collections::HashMap,
     std::fmt,
     std::sync::{mpsc, Arc, Mutex},
@@ -14,7 +15,7 @@ use {
     uuid::Uuid,
 };
 
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Deserialize, Serialize)]
 pub enum CollectorState {
     Running,
     Idle,

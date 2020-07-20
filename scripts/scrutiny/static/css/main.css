@@ -10,15 +10,26 @@ html, body, .wrapper {
 }
 
 a:link {
-    text-decoration: none;
+  text-decoration: none;
+  color: #FFFFFF;
 }
 
 a:visited {
-    text-decoration: none;
+  color: #FFFFFF;
+  text-decoration: none;
 }
 
 pre {
   text-align: left;
+}
+
+table, th, td {
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #5f6369;
+    border-collapse: collapse;
 }
 
 .header-text {
@@ -136,6 +147,7 @@ pre {
 }
 
 .tile-header {
+  background: grey;
   border-bottom: 1px solid #5f6369;
   border-left: 0px;
   border-right: 0px;
@@ -171,10 +183,15 @@ pre {
   text-align: left;
 }
 
+
 .tile-content {
   overflow: hidden;
   white-space: normal;
   width: 100%;
+}
+
+.tile-table {
+ margin-bottom: 10px;
 }
 
 .menu {

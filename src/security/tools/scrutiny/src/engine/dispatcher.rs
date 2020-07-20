@@ -73,6 +73,17 @@ impl ControllerDispatcher {
         }
     }
 
+    /// Returns all of the controller namespaces.
+    pub fn controllers_all(&self) -> Vec<String> {
+        let controllers = self.controllers.read().unwrap();
+        let mut hooks = Vec::new();
+        for (hook, _controller) in controllers.iter() {
+            hooks.push(hook.clone());
+        }
+        hooks.sort();
+        hooks
+    }
+
     /// Returns a list of all controllers associated with a given instance_id.
     pub fn controllers(&self, instance_id: Uuid) -> Vec<String> {
         let controllers = self.controllers.read().unwrap();
