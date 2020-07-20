@@ -51,7 +51,7 @@ ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
   return exception_info;
 }
 
-TEST(ExceptionBrokerIntegrationTest, DISABLED_OnExceptionSmokeTest) {
+TEST(ExceptionBrokerIntegrationTest, OnExceptionSmokeTest) {
   constexpr size_t kNumExceptions = 5;
   std::vector<ExceptionContext> exceptions(kNumExceptions);
 
@@ -73,7 +73,9 @@ TEST(ExceptionBrokerIntegrationTest, DISABLED_OnExceptionSmokeTest) {
   environment_services->Connect(crash_reporter.NewRequest());
 
   size_t num_crashreports{0};
-  for (size_t i = 0; i < kNumExceptions; ++i) {
+  // Depending on how fast exception handling happens for each of the 5 exceptions, there might be
+  // up to 6 calls to WatchFile() needed to get to the 5 filed crash reports.
+  for (size_t i = 0; i < kNumExceptions + 1; ++i) {
     ASSERT_EQ(crash_reporter->WatchFile(&num_crashreports), ZX_OK);
     if (num_crashreports == kNumExceptions) {
       break;
