@@ -165,7 +165,7 @@ something accessing a capability provided by the component. Components may also
 be marked as "eager", which causes the component to start at the same point its
 parent starts.
 
-In order to start the system running, appmgr is [marked as an eager
+In order to get the system running, appmgr is [marked as an eager
 component][appmgr-is-eager]. Since appmgr is stored in a package this causes
 component manager to attempt to load appmgr, and thus access the /pkgfs-delayed
 handle from fshost, causing fshost to be started.

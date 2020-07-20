@@ -33,10 +33,10 @@ considered fatal and the system will reboot.
 
 ### The system runs out of memory
 
-If the kernel detects that the amount of free physical memory falls below an The
-kernel does not kill processes in attempt to reclaim memory before rebooting,
-meaning a single process could cause a system-wide shortage of memory and force
-the device to reboot.
+If the kernel detects that the amount of free physical memory falls below a
+threshold, the system will reboot. The kernel does not kill processes to try
+to reclaim memory before rebooting, meaning a single process could cause a
+system-wide shortage of memory and force the device to reboot.
 
 ### Cold boot
 
