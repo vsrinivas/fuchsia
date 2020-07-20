@@ -273,7 +273,6 @@ class Ddk : public fake_ddk::Bind, public ddk::UsbBusInterfaceProtocol<Ddk> {
   Ddk() {}
   bool added() { return add_called_; }
   const device_add_args_t& args() { return add_args_; }
-  bool visible() { return make_visible_called_; }
 
   void reset() { sync_completion_reset(&completion_); }
 
@@ -314,12 +313,14 @@ class Ddk : public fake_ddk::Bind, public ddk::UsbBusInterfaceProtocol<Ddk> {
     return ZX_OK;
   }
 
-  void DeviceMakeVisible(zx_device_t* device) override {
+  void DeviceInitReply(zx_device_t* device, zx_status_t status,
+                       const device_init_reply_args_t* args) override {
     usb_bus_interface_protocol_t proto;
     proto.ctx = this;
     proto.ops = &usb_bus_interface_protocol_ops_;
     static_cast<UsbXhci*>(add_args_.ctx)->UsbHciSetBusInterface(&proto);
-    make_visible_called_ = true;
+
+    fake_ddk::Bind::DeviceInitReply(device, status, args);
   }
   std::map<uint32_t, FakeUsbDevice> devices_;
   sync_completion_t completion_;
@@ -448,12 +449,13 @@ class XhciMmioHarness : public XhciHarness {
       protocols[0] = {ZX_PROTOCOL_PDEV, {pdev_.pdev()->ops, pdev_.pdev()->ctx}};
       ddk_.SetProtocols(std::move(protocols));
     }
-    auto dev = std::make_unique<UsbXhci>(fake_ddk::kFakeParent);
+    auto dev = std::make_unique<UsbXhci>(fake_ddk::kFakeParent, ddk_fake::CreateBufferFactory());
     dev->set_test_harness(this);
-    dev->DdkAdd("xhci");
-    dev->InitThread(ddk_fake::CreateBufferFactory());
+    dev->DdkAdd("xhci");  // This will also call DdkInit.
     ASSERT_TRUE(ddk_.added());
-    ASSERT_TRUE(ddk_.visible());
+    ASSERT_OK(ddk_.WaitUntilInitComplete());
+    ASSERT_TRUE(ddk_.init_reply().has_value());
+    ASSERT_OK(ddk_.init_reply().value());
     dev.release();
     device_.reset(static_cast<UsbXhci*>(ddk_.args().ctx));
   }

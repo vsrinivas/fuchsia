@@ -55,14 +55,15 @@ inline void InvalidatePageCache(void* addr, uint32_t options) {
 // This is the main class for the USB XHCI host controller driver.
 // Refer to 3.1 for general architectural information on xHCI.
 class UsbXhci;
-using UsbXhciType = ddk::Device<UsbXhci, ddk::Suspendable, ddk::UnbindableNew>;
+using UsbXhciType = ddk::Device<UsbXhci, ddk::Initializable, ddk::Suspendable, ddk::UnbindableNew>;
 class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::base_protocol> {
  public:
-  explicit UsbXhci(zx_device_t* parent)
+  explicit UsbXhci(zx_device_t* parent, std::unique_ptr<dma_buffer::BufferFactory> buffer_factory)
       : UsbXhciType(parent),
         pci_(parent),
         pdev_(parent),
         composite_(parent),
+        buffer_factory_(std::move(buffer_factory)),
         ddk_interaction_loop_(&kAsyncLoopConfigNeverAttachToThread),
         ddk_interaction_executor_(ddk_interaction_loop_.dispatcher()) {}
 
@@ -79,6 +80,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // be recovered from.
   void Shutdown(zx_status_t status);
   // Device protocol implementation.
+  void DdkInit(ddk::InitTxn txn);
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
 
@@ -266,7 +268,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   // Initialization thread method. This is invoked from a separate detached thread
   // when xHCI binds
-  zx_status_t InitThread(std::unique_ptr<dma_buffer::BufferFactory> buffer_factory);
+  zx_status_t InitThread();
 
   // Resets the xHCI controller. This should only be called during initialization.
   void ResetController();
@@ -466,6 +468,8 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   sync_completion_t init_complete_;
 
   std::optional<thrd_t> init_thread_;
+
+  std::optional<ddk::InitTxn> init_txn_;
 };
 
 }  // namespace usb_xhci

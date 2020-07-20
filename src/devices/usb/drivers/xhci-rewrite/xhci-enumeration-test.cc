@@ -311,7 +311,7 @@ void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
   state->pending_operations.push_back(std::move(context));
 }
 
-int UsbXhci::InitThread(std::unique_ptr<dma_buffer::BufferFactory> factory) {
+int UsbXhci::InitThread() {
   interrupters_.reset(new Interrupter[1]);
   mmio_buffer_t invalid_mmio = {
       // Add a dummy vaddr to pass the check in the MmioBuffer constructor.
@@ -344,8 +344,9 @@ size_t UsbXhci::UsbHciGetRequestSize() { return Request::RequestSize(sizeof(usb_
 
 class EnumerationTests : public zxtest::Test {
  public:
-  EnumerationTests() : controller_(reinterpret_cast<zx_device_t*>(&state_)) {
-    controller_.InitThread(ddk_fake::CreateBufferFactory());
+  EnumerationTests()
+      : controller_(reinterpret_cast<zx_device_t*>(&state_), ddk_fake::CreateBufferFactory()) {
+    controller_.InitThread();
   }
   TestState& state() { return state_; }
 

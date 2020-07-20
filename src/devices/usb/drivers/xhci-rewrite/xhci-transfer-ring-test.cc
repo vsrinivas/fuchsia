@@ -26,7 +26,8 @@ const zx::bti kFakeBti(42);
 class TransferRingHarness : public zxtest::Test {
  public:
   TransferRingHarness()
-      : trb_context_allocator_(-1, true), hci_(reinterpret_cast<zx_device_t*>(this)) {}
+      : trb_context_allocator_(-1, true),
+        hci_(reinterpret_cast<zx_device_t*>(this), ddk_fake::CreateBufferFactory()) {}
   void SetUp() override {
     constexpr auto kOffset = 6;
     constexpr auto kErdp = 2062;
@@ -41,7 +42,7 @@ class TransferRingHarness : public zxtest::Test {
       erdp_ = reg.Pointer();
     });
     hci_.set_test_harness(this);
-    ASSERT_OK(hci_.InitThread(ddk_fake::CreateBufferFactory()));
+    ASSERT_OK(hci_.InitThread());
   }
 
   void TearDown() override {}
@@ -101,13 +102,12 @@ zx_status_t UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
 
 zx_status_t EventRing::AddTRB() { return ZX_OK; }
 
-zx_status_t UsbXhci::InitThread(std::unique_ptr<dma_buffer::BufferFactory> factory) {
+zx_status_t UsbXhci::InitThread() {
   fbl::AllocChecker ac;
   interrupters_.reset(new (&ac) Interrupter[1]);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  buffer_factory_ = std::move(factory);
   max_slots_ = 32;
   device_state_.reset(new (&ac) DeviceState[max_slots_]);
   if (!ac.check()) {

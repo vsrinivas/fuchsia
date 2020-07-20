@@ -53,7 +53,8 @@ struct Command : public fbl::DoublyLinkedListable<std::unique_ptr<Command>> {
 class EventRingHarness : public zxtest::Test {
  public:
   EventRingHarness()
-      : trb_context_allocator_(-1, true), hci_(reinterpret_cast<zx_device_t*>(this)) {}
+      : trb_context_allocator_(-1, true),
+        hci_(reinterpret_cast<zx_device_t*>(this), ddk_fake::CreateBufferFactory()) {}
   void SetUp() override {
     // Globals
     constexpr auto kRuntimeRegisterOffset = 6;
@@ -83,7 +84,7 @@ class EventRingHarness : public zxtest::Test {
     hci_.set_test_harness(this);
 
     // Initialization
-    ASSERT_OK(hci_.InitThread(ddk_fake::CreateBufferFactory()));
+    ASSERT_OK(hci_.InitThread());
   }
 
   void TearDown() override {}
@@ -243,13 +244,12 @@ zx_status_t UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t UsbXhci::InitThread(std::unique_ptr<dma_buffer::BufferFactory> factory) {
+zx_status_t UsbXhci::InitThread() {
   fbl::AllocChecker ac;
   interrupters_.reset(new (&ac) Interrupter[1]);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  buffer_factory_ = std::move(factory);
   max_slots_ = 32;
   device_state_.reset(new (&ac) DeviceState[max_slots_]);
   if (!ac.check()) {

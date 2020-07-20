@@ -1838,8 +1838,10 @@ void UsbXhci::ResetController() {
   }
 }
 
-int UsbXhci::InitThread(std::unique_ptr<dma_buffer::BufferFactory> factory) {
-  fbl::AutoCall call([=]() { DdkAsyncRemove(); });
+int UsbXhci::InitThread() {
+  ZX_ASSERT(init_txn_.has_value());  // This is set in DdkInit before creating this thread.
+
+  fbl::AutoCall call([=]() { init_txn_->Reply(ZX_ERR_INTERNAL); });
   fbl::AutoCall init_completer([=]() { sync_completion_signal(&init_complete_); });
   // Initialize either the PCI or MMIO structures first
   if (pci_.is_valid()) {
@@ -1862,7 +1864,6 @@ int UsbXhci::InitThread(std::unique_ptr<dma_buffer::BufferFactory> factory) {
   // initial state.
   uint8_t cap_length = CapLength::Get().ReadFrom(&mmio_.value()).Length();
   cap_length_ = cap_length;
-  buffer_factory_ = std::move(factory);
   // Perform xHCI reset process
   ResetController();
   // Start DDK interaction thread
@@ -1885,6 +1886,7 @@ int UsbXhci::InitThread(std::unique_ptr<dma_buffer::BufferFactory> factory) {
     zxlogf(ERROR, "xHCI initialization failed with code %i", (int)status);
     return status;
   }
+  // If |HciFinalize| succeeded, it would have replied to |init_txn_| and made the device visible.
   call.cancel();
   return 0;
 }
@@ -1902,11 +1904,11 @@ zx_status_t UsbXhci::HciFinalize() {
     zx::bti bti;
     if (pci_.is_valid()) {
       if (pci_.GetBti(0, &bti) != ZX_OK) {
-        return 0;
+        return ZX_ERR_INTERNAL;
       }
     } else {
       if (pdev_.GetBti(0, &bti) != ZX_OK) {
-        return 0;
+        return ZX_ERR_INTERNAL;
       }
     }
     bti_ = std::move(bti);
@@ -1916,14 +1918,14 @@ zx_status_t UsbXhci::HciFinalize() {
   // TODO (bbosak): Correct this to use variable alignment when we get kernel
   // support for this.
   if (page_size != ZX_PAGE_SIZE) {
-    return 0;
+    return ZX_ERR_INTERNAL;
   }
   uint32_t align_log2 = 0;
   if (buffer_factory_->CreatePaged(bti_, ZX_PAGE_SIZE, false, &dcbaa_buffer_) != ZX_OK) {
-    return 0;
+    return ZX_ERR_INTERNAL;
   }
   if (is_32bit_ && (dcbaa_buffer_->phys()[0] >= UINT32_MAX)) {
-    return 0;
+    return ZX_ERR_INTERNAL;
   }
   dcbaa_ = static_cast<uint64_t*>(dcbaa_buffer_->virt());
   fbl::AllocChecker ac;
@@ -1939,19 +1941,19 @@ zx_status_t UsbXhci::HciFinalize() {
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (buffer_factory_->CreatePaged(bti_, ZX_PAGE_SIZE, false, &scratchpad_buffer_array_) != ZX_OK) {
-    return 0;
+    return ZX_ERR_INTERNAL;
   }
   if (is_32bit_ && (scratchpad_buffer_array_->phys()[0] >= UINT32_MAX)) {
-    return 0;
+    return ZX_ERR_INTERNAL;
   }
   uint64_t* scratchpad_buffer_array = static_cast<uint64_t*>(scratchpad_buffer_array_->virt());
   for (size_t i = 0; i < buffers - 1; i++) {
     if (buffer_factory_->CreateContiguous(bti_, page_size, align_log2, &scratchpad_buffers_[i]) !=
         ZX_OK) {
-      return 0;
+      return ZX_ERR_INTERNAL;
     }
     if (is_32bit_ && (scratchpad_buffers_[i]->phys() >= UINT32_MAX)) {
-      return 0;
+      return ZX_ERR_INTERNAL;
     }
     scratchpad_buffer_array[i] = scratchpad_buffers_[i]->phys();
   }
@@ -1978,11 +1980,11 @@ zx_status_t UsbXhci::HciFinalize() {
           ERDP::Get(offset, 0).ReadFrom(&mmio_.value()), IMAN::Get(offset, 0).FromValue(0),
           cap_length_, HCSPARAMS1::Get().ReadFrom(&mmio_.value()), &command_ring_, doorbell_offset_,
           this, hcc_, dcbaa_) != ZX_OK) {
-    return 0;
+    return ZX_ERR_INTERNAL;
   }
   if (command_ring_.Init(page_size, &bti_, &interrupters_[0].ring(), is_32bit_, &mmio_.value(),
                          this) != ZX_OK) {
-    return 0;
+    return ZX_ERR_INTERNAL;
   }
   CRCR cr = command_ring_.phys(cap_length_);
   cr.WriteTo(&mmio_.value());
@@ -1993,9 +1995,9 @@ zx_status_t UsbXhci::HciFinalize() {
     active_interrupters_ = 1;
   }
   if (interrupters_[0].Start(0, offset, mmio_.value().View(0), this) != ZX_OK) {
-    return 0;
+    return ZX_ERR_INTERNAL;
   }
-  DdkMakeVisible();
+  init_txn_->Reply(ZX_OK);  // This will make the device visible and able to be unbound.
   sync_completion_wait(&bus_completion, ZX_TIME_INFINITE);
   USBCMD::Get(cap_length_)
       .ReadFrom(&mmio_.value())
@@ -2008,7 +2010,7 @@ zx_status_t UsbXhci::HciFinalize() {
     zx::nanosleep(zx::deadline_after(zx::msec(1)));
   }
   sync_completion_signal(&bringup_);
-  return 0;
+  return ZX_OK;
 }
 
 zx_status_t UsbXhci::Init() {
@@ -2022,28 +2024,24 @@ zx_status_t UsbXhci::Init() {
     zxlogf(WARNING, "Failed to obtain scheduler profile for high priority completer (res %d)",
            status);
   }
+  return DdkAdd("xhci");
+}
+
+void UsbXhci::DdkInit(ddk::InitTxn txn) {
+  init_txn_ = std::move(txn);
   thrd_t init_thread;
-  status = DdkAdd("xhci", DEVICE_ADD_INVISIBLE);
-  if (status != ZX_OK) {
-    return status;
-  }
   if (thrd_create_with_name(
           &init_thread,
           [](void* ctx) {
             UsbXhci* hci = static_cast<UsbXhci*>(ctx);
-            return hci->InitThread(dma_buffer::CreateBufferFactory());
+            return hci->InitThread();
           },
           this, "xhci-init-thread") != thrd_success) {
-    DdkAsyncRemove();
-    // We've successfully called DdkAdd, so return ZX_OK
-    // since ownership was passed to the DDK
-    // and we need to wait for DdkAsyncRemove to complete
-    // before the object can be freed.
-    return ZX_OK;
+    return init_txn_->Reply(ZX_ERR_INTERNAL);  // This will schedule unbinding of the device.
   }
   init_thread_ = init_thread;
-
-  return ZX_OK;
+  // The init thread will reply to |init_txn_| once it is ready to make the device visible
+  // and able to be unbound.
 }
 
 TRBPromise UsbXhci::SubmitCommand(const TRB& command, std::unique_ptr<TRBContext> trb_context) {
@@ -2060,7 +2058,7 @@ TRBPromise UsbXhci::SubmitCommand(const TRB& command, std::unique_ptr<TRBContext
 
 zx_status_t UsbXhci::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<UsbXhci>(new (&ac) UsbXhci(parent));
+  auto dev = std::unique_ptr<UsbXhci>(new (&ac) UsbXhci(parent, dma_buffer::CreateBufferFactory()));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
