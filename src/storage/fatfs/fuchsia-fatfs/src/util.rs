@@ -4,7 +4,7 @@
 
 use {
     chrono::{offset::TimeZone, Local},
-    fatfs::DateTime,
+    fatfs::{DateTime, FatfsError},
     fuchsia_zircon::Status,
     std::io::{self, ErrorKind},
 };
@@ -39,10 +39,35 @@ pub fn fatfs_error_to_status(error: io::Error) -> Status {
         ErrorKind::UnexpectedEof => Status::BUFFER_TOO_SMALL,
         ErrorKind::WouldBlock => Status::BAD_STATE,
         ErrorKind::WriteZero => Status::IO, // Never used in fatfs.
-        // TODO(53796): We should figure out a way to get better errors from fatfs.
-        // For instance, the rust io::Error has no concept of Status::NOT_DIR and Status::NOT_FILE,
-        // which fatfs returns as `ErrorKind::Other` with a string error message.
-        ErrorKind::Other => Status::IO,
+        ErrorKind::Other => {
+            error
+                .into_inner()
+                .and_then(|b| b.downcast::<FatfsError>().ok())
+                .map(|b| {
+                    match *b {
+                        // errors caused in boot_sector.rs
+                        FatfsError::UnknownVersion => Status::NOT_SUPPORTED,
+                        FatfsError::InvalidBootSectorSig => Status::NOT_SUPPORTED,
+                        FatfsError::VolumeTooSmall => Status::NO_SPACE,
+                        // errors caused in dir.rs:
+                        FatfsError::IsDirectory => Status::NOT_FILE,
+                        FatfsError::NotDirectory => Status::NOT_DIR,
+                        FatfsError::DirectoryNotEmpty => Status::NOT_EMPTY,
+                        FatfsError::FileNameTooLong => Status::BAD_PATH,
+                        FatfsError::FileNameEmpty => Status::BAD_PATH,
+                        FatfsError::FileNameBadCharacter => Status::BAD_PATH,
+                        // errors caused in fs.rs
+                        FatfsError::TooManySectors => Status::OUT_OF_RANGE,
+                        // errors caused in table.rs
+                        FatfsError::NoSpace => Status::NO_SPACE,
+                        // Other errors (which come from boot_sector.rs and fs.rs) indicate
+                        // that the filesystem is corrupted or invalid in some way.
+                        // We don't enumerate them here, because there's a lot of them.
+                        _ => Status::INVALID_ARGS,
+                    }
+                })
+                .unwrap_or(Status::IO)
+        }
         _ => Status::IO,
     }
 }
