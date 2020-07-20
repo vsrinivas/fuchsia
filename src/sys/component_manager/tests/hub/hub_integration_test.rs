@@ -27,13 +27,13 @@ impl TestRunner {
         root_component_url: &str,
         num_eager_static_components: i32,
         event_names: Vec<&str>,
-    ) -> Result<(TestRunner, EventStream), Error> {
+    ) -> (TestRunner, EventStream) {
         assert!(
             num_eager_static_components >= 1,
             "There must always be at least one eager static component (the root)"
         );
 
-        let test = OpaqueTest::default(root_component_url).await?;
+        let test = OpaqueTest::default(root_component_url).await.unwrap();
 
         let (hub_report_capability, channel_close_rx) = HubReportCapability::new();
 
@@ -42,30 +42,36 @@ impl TestRunner {
             // These events are subscribed to separately because the events do not happen
             // in predictable orders. There is a possibility for the CapabilityRouted event
             // to be interleaved between the Started events.
-            let event_source = test.connect_to_event_source().await?;
-            let mut start_event_stream = event_source.subscribe(vec![Started::NAME]).await?;
+            let event_source = test.connect_to_event_source().await.unwrap();
+            let mut start_event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
             // Subscribe to events which are required by this test runner.
             // TODO(xbhatnag): There may be problems here if event_names contains
             // Started or CapabilityRouted
-            let event_stream = event_source.subscribe(event_names).await?;
+            let event_stream = event_source.subscribe(event_names).await.unwrap();
 
             // Inject HubReportCapability wherever it's requested.
-            event_source.install_injector(hub_report_capability.clone(), None).await?;
+            event_source.install_injector(hub_report_capability.clone(), None).await.unwrap();
 
             // Unblock component manager
-            event_source.start_component_tree().await?;
+            event_source.start_component_tree().await;
 
             // Wait for the root component to start up
             start_event_stream
                 .expect_exact::<Started>(EventMatcher::new().expect_moniker("."))
-                .await?
+                .await
                 .resume()
-                .await?;
+                .await
+                .unwrap();
 
             // Wait for all child components to start up
             for _ in 1..=(num_eager_static_components - 1) {
-                start_event_stream.expect_type::<Started>().await?.resume().await?;
+                start_event_stream
+                    .expect_exact::<Started>(EventMatcher::new())
+                    .await
+                    .resume()
+                    .await
+                    .unwrap();
             }
 
             // Return the event_stream to be used later
@@ -82,7 +88,7 @@ impl TestRunner {
             _event_source: event_source,
         };
 
-        Ok((runner, event_stream))
+        (runner, event_stream)
     }
 
     pub async fn connect_to_echo_service(&self, echo_service_path: String) -> Result<(), Error> {
@@ -186,7 +192,7 @@ impl TestRunner {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn advanced_routing() -> Result<(), Error> {
+async fn advanced_routing() {
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
 
@@ -195,7 +201,7 @@ async fn advanced_routing() -> Result<(), Error> {
         3,
         vec![],
     )
-    .await?;
+    .await;
 
     // Verify that echo_realm has two children.
     test_runner
@@ -242,11 +248,11 @@ async fn advanced_routing() -> Result<(), Error> {
 
     // Verify that we can connect to the echo service from the in/svc directory.
     let in_echo_service_path = format!("{}/{}", svc_dir, echo_service_name);
-    test_runner.connect_to_echo_service(in_echo_service_path).await?;
+    test_runner.connect_to_echo_service(in_echo_service_path).await.unwrap();
 
     // Verify that we can connect to the echo service from the expose/svc directory.
     let expose_echo_service_path = format!("{}/{}", expose_svc_dir, echo_service_name);
-    test_runner.connect_to_echo_service(expose_echo_service_path).await?;
+    test_runner.connect_to_echo_service(expose_echo_service_path).await.unwrap();
 
     // Verify that the 'hub' directory is available. The 'hub' mapped to 'reporter''s
     // namespace is actually mapped to the 'exec' directory of 'reporter'.
@@ -264,14 +270,16 @@ async fn advanced_routing() -> Result<(), Error> {
             vec!["expose", "in", "out", "resolved_url", "runtime"],
         )
         .await
-        .send()?;
+        .send()
+        .unwrap();
 
     // Verify that reporter's view is able to correctly read the names of the
     // children of the parent echo_realm.
     test_runner
         .verify_directory_listing_locally("/parent_hub/children", vec!["echo_server", "reporter"])
         .await
-        .send()?;
+        .send()
+        .unwrap();
 
     // Verify that reporter is able to see its sibling's hub correctly.
     test_runner
@@ -280,21 +288,20 @@ async fn advanced_routing() -> Result<(), Error> {
             "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm",
         )
         .await
-        .send()?;
+        .send()
+        .unwrap();
 
     test_runner.wait_for_component_stop().await;
-
-    Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn dynamic_child_test() -> Result<(), Error> {
+async fn dynamic_child_test() {
     let (test_runner, mut event_stream) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/dynamic_child_reporter.cm",
         1,
         vec![MarkedForDestruction::NAME, Stopped::NAME, Destroyed::NAME],
     )
-    .await?;
+    .await;
 
     // Verify that the dynamic child exists in the parent's hub
     test_runner.verify_directory_listing("children", vec!["coll:simple_instance"]).await;
@@ -312,7 +319,8 @@ async fn dynamic_child_test() -> Result<(), Error> {
     test_runner
         .verify_file_content_locally("/hub/children/coll:simple_instance/id", "1")
         .await
-        .send()?;
+        .send()
+        .unwrap();
 
     // Before binding, verify that the dynamic child's static children are invisible
     test_runner.verify_directory_listing("children/coll:simple_instance/children", vec![]).await;
@@ -334,14 +342,15 @@ async fn dynamic_child_test() -> Result<(), Error> {
     test_runner
         .verify_file_content_locally("/hub/children/coll:simple_instance/children/child/id", "0")
         .await
-        .send()?;
+        .send()
+        .unwrap();
 
     // Wait for the dynamic child to begin deletion
     let event = event_stream
         .expect_exact::<MarkedForDestruction>(
             EventMatcher::new().expect_moniker("./coll:simple_instance:1"),
         )
-        .await?;
+        .await;
 
     // When deletion begins, the dynamic child should be moved to the deleting directory
     test_runner.verify_directory_listing("children", vec![]).await;
@@ -354,12 +363,12 @@ async fn dynamic_child_test() -> Result<(), Error> {
         .await;
 
     // Unblock the ComponentManager
-    event.resume().await?;
+    event.resume().await.unwrap();
 
     // Wait for the dynamic child to stop
     let event = event_stream
         .expect_exact::<Stopped>(EventMatcher::new().expect_moniker("./coll:simple_instance:1"))
-        .await?;
+        .await;
 
     // After stopping, the dynamic child should not have an exec directory
     test_runner
@@ -370,14 +379,14 @@ async fn dynamic_child_test() -> Result<(), Error> {
         .await;
 
     // Unblock the Component Manager
-    event.resume().await?;
+    event.resume().await.unwrap();
 
     // Wait for the dynamic child's static child to begin deletion
     let event = event_stream
         .expect_exact::<MarkedForDestruction>(
             EventMatcher::new().expect_moniker("./coll:simple_instance:1/child:0"),
         )
-        .await?;
+        .await;
 
     // When deletion begins, the dynamic child's static child should be moved to the deleting directory
     test_runner.verify_directory_listing("deleting/coll:simple_instance:1/children", vec![]).await;
@@ -392,46 +401,44 @@ async fn dynamic_child_test() -> Result<(), Error> {
         .await;
 
     // Unblock the Component Manager
-    event.resume().await?;
+    event.resume().await.unwrap();
 
     // Wait for the dynamic child's static child to be destroyed
     let event = event_stream
         .expect_exact::<Destroyed>(
             EventMatcher::new().expect_moniker("./coll:simple_instance:1/child:0"),
         )
-        .await?;
+        .await;
 
     // The dynamic child's static child should not be visible in the hub anymore
     test_runner.verify_directory_listing("deleting/coll:simple_instance:1/deleting", vec![]).await;
 
     // Unblock the Component Manager
-    event.resume().await?;
+    event.resume().await.unwrap();
 
     // Wait for the dynamic child to be destroyed
     let event = event_stream
         .expect_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:simple_instance:1"))
-        .await?;
+        .await;
 
     // After deletion, verify that parent can no longer see the dynamic child in the Hub
     test_runner.verify_directory_listing("deleting", vec![]).await;
 
     // Unblock the Component Manager
-    event.resume().await?;
+    event.resume().await.unwrap();
 
     // Wait for the component to stop
     test_runner.wait_for_component_stop().await;
-
-    Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn visibility_test() -> Result<(), Error> {
+async fn visibility_test() {
     let (test_runner, _) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/visibility_reporter.cm",
         1,
         vec![],
     )
-    .await?;
+    .await;
 
     // Verify that the child exists in the parent's hub
     test_runner.verify_directory_listing("children", vec!["child"]).await;
@@ -450,6 +457,4 @@ async fn visibility_test() -> Result<(), Error> {
 
     // Wait for the component to stop
     test_runner.wait_for_component_stop().await;
-
-    Ok(())
 }

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
     fidl::endpoints::{create_proxy, DiscoverableService, ServerEnd},
     fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
@@ -45,14 +44,14 @@ async fn call_trigger(directory: &DirectoryProxy, paths: &Vec<String>) {
 /// directory.
 /// It sends "Saw: /path/to/dir on /some_moniker:0" for each successful read.
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+async fn main() {
     let fs = ServiceFs::new_local();
-    let event_source = EventSource::new_sync()?;
-    let mut event_stream = event_source.subscribe(vec![CapabilityReady::NAME]).await?;
+    let event_source = EventSource::new_sync().unwrap();
+    let mut event_stream = event_source.subscribe(vec![CapabilityReady::NAME]).await.unwrap();
 
-    event_source.start_component_tree().await?;
+    event_source.start_component_tree().await;
 
-    let echo = connect_to_service::<fecho::EchoMarker>()?;
+    let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
 
     let expected_entries = hashmap! {
         "/foo".to_string() => vec![ftest::TriggerMarker::SERVICE_NAME.to_string()],
@@ -62,7 +61,7 @@ async fn main() -> Result<(), Error> {
     let mut seen = HashSet::new();
 
     while seen.len() != 3 {
-        let event = event_stream.expect_type::<CapabilityReady>().await?;
+        let event = event_stream.expect_type::<CapabilityReady>().await.unwrap();
         let (node_clone, server_end) = fidl::endpoints::create_proxy().expect("create proxy");
         match &event.result {
             Ok(payload) if !seen.contains(&payload.path) => {
@@ -98,9 +97,8 @@ async fn main() -> Result<(), Error> {
             }
             _ => {}
         }
-        event.resume().await?;
+        event.resume().await.unwrap();
     }
 
     fs.collect::<()>().await;
-    Ok(())
 }

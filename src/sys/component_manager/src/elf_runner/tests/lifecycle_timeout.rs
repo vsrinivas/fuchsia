@@ -18,7 +18,7 @@ async fn test_stop_timeouts() {
     fxlog::init().unwrap();
 
     let event_source = EventSource::new_sync().unwrap();
-    event_source.start_component_tree().await.unwrap();
+    event_source.start_component_tree().await;
     let mut event_stream =
         event_source.subscribe(vec![Stopped::NAME, Destroyed::NAME]).await.unwrap();
     let collection_name = String::from("test-collection");

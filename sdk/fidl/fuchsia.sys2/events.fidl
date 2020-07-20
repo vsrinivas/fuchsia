@@ -126,8 +126,26 @@ flexible union EventErrorPayload {
     /// Payload for CapabilityRouted events
     3: CapabilityRoutedError capability_routed;
 
+    /// Payload for Destroyed events.
+    4: DestroyedError destroyed;
+
+    /// Payload for Discovered events.
+    5: DiscoveredError discovered;
+
+    /// Payload for MarkedForDestruction events.
+    6: MarkedForDestructionError marked_for_destruction;
+
+    /// Payload for Resolved events
+    7: ResolvedError resolved;
+
     /// Payload for Running events
-    4: RunningError running;
+    8: RunningError running;
+
+    /// Payload for Started events
+    9: StartedError started;
+
+    /// Payload for Stopped events
+    10: StoppedError stopped;
 };
 
 /// Error payload for CapabilityReady events
@@ -152,10 +170,34 @@ table CapabilityRoutedError {
     1: string:MAX_CAPABILITY_ID_LENGTH capability_id;
 };
 
+/// Error payload for Discovered events.
+table DiscoveredError {
+};
+
+/// Error payload for Destroyed events.
+table DestroyedError {
+};
+
+/// Error payload for Resolved events.
+table ResolvedError {
+};
+
 /// Error payload for Running events.
 table RunningError {
     /// Time when the component started.
     1: zx.time started_timestamp;
+};
+
+/// Error payload for MarkedForDestruction events.
+table MarkedForDestructionError {
+};
+
+/// Error payload for Started events.
+table StartedError {
+};
+
+/// Error payload for Stopped events.
+table StoppedError {
 };
 
 /// Encapsulates additional data/protocols for some event types.
@@ -169,8 +211,26 @@ flexible union EventPayload {
     /// Payload for CapabilityRouted events
     3: CapabilityRoutedPayload capability_routed;
 
+    /// Payload for Destroyed events.
+    4: DestroyedPayload destroyed;
+
+    /// Payload for Discovered events.
+    5: DiscoveredPayload discovered;
+
+    /// Payload for MarkedForDestruction events.
+    6: MarkedForDestructionPayload marked_for_destruction;
+
+    /// Payload for Resolved events
+    7: ResolvedPayload resolved;
+
     /// Payload for Running events
-    4: RunningPayload running;
+    8: RunningPayload running;
+
+    /// Payload for Started events
+    9: StartedPayload started;
+
+    /// Payload for Stopped events
+    10: StoppedPayload stopped;
 };
 
 /// Payload for CapabilityReady events
@@ -208,10 +268,34 @@ table CapabilityRoutedPayload {
     3: CapabilitySource source;
 };
 
+/// Payload for Destroyed events.
+table DestroyedPayload {
+};
+
+/// Payload for Discovered events.
+table DiscoveredPayload {
+};
+
+/// Payload for MarkedForDestruction events.
+table MarkedForDestructionPayload {
+};
+
+/// Payload for Resolved events.
+table ResolvedPayload {
+};
+
 /// Payload for Running events.
 table RunningPayload {
     /// Time when the component started.
     1: zx.time started_timestamp;
+};
+
+/// Payload for Started events.
+table StartedPayload {
+};
+
+/// Payload for Stopped events.
+table StoppedPayload {
 };
 
 /// A descriptor providing metadata about a target component instance.

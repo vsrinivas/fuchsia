@@ -20,7 +20,7 @@ async fn test_exit_detection() {
     fxlog::init().unwrap();
 
     let event_source = EventSource::new_sync().unwrap();
-    event_source.start_component_tree().await.unwrap();
+    event_source.start_component_tree().await;
     let mut event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
     let collection_name = String::from("test-collection");
 
@@ -49,7 +49,7 @@ async fn test_exit_after_rendezvous() {
     let event_source = EventSource::new_sync().unwrap();
     let rendezvous_service = Arc::new(RendezvousService { call_count: Mutex::new(0) });
     event_source.install_injector(rendezvous_service.clone(), None).await.unwrap();
-    event_source.start_component_tree().await.unwrap();
+    event_source.start_component_tree().await;
 
     // Launch the component under test.
     let collection_name = String::from("test-collection");

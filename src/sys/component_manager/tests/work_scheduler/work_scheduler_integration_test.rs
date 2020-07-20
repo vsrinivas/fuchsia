@@ -19,14 +19,10 @@ async fn basic_work_scheduler_test() {
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
     event_source.install_injector(work_scheduler_dispatch_reporter.clone(), None).await.unwrap();
 
-    event_source.start_component_tree().await.unwrap();
+    event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream
-        .expect_exact::<Started>(EventMatcher::new().expect_moniker("."))
-        .await
-        .unwrap();
-    assert!(event.error.is_none());
+    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     let dispatched_event = work_scheduler_dispatch_reporter
@@ -48,22 +44,16 @@ async fn unbound_work_scheduler_test() {
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
     event_source.install_injector(work_scheduler_dispatch_reporter.clone(), None).await.unwrap();
 
-    event_source.start_component_tree().await.unwrap();
+    event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream
-        .expect_exact::<Started>(EventMatcher::new().expect_moniker("."))
-        .await
-        .unwrap();
-    assert!(event.error.is_none());
+    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     // `/worker_sibling:0` has started.
     let event = event_stream
         .expect_exact::<Started>(EventMatcher::new().expect_moniker("./worker_sibling:0"))
-        .await
-        .unwrap();
-    assert!(event.error.is_none());
+        .await;
     event.resume().await.unwrap();
 
     // We no longer need to track `StartInstance` events.

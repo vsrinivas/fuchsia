@@ -29,14 +29,10 @@ async fn empty_component() {
     let event_source = test.connect_to_event_source().await.unwrap();
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
-    event_source.start_component_tree().await.unwrap();
+    event_source.start_component_tree().await;
 
     // Root must be created first
-    let event = event_stream
-        .expect_exact::<Started>(EventMatcher::new().expect_moniker("."))
-        .await
-        .unwrap();
-    assert!(event.error.is_none());
+    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     let hub_v2_path = test.get_hub_v2_path().into_os_string().into_string().unwrap();
@@ -63,20 +59,15 @@ async fn tree() {
     let event_source = test.connect_to_event_source().await.unwrap();
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
-    event_source.start_component_tree().await.unwrap();
+    event_source.start_component_tree().await;
 
     // Root must be created first
-    let event = event_stream
-        .expect_exact::<Started>(EventMatcher::new().expect_moniker("."))
-        .await
-        .unwrap();
-    assert!(event.error.is_none());
+    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     // 6 descendants are created eagerly. Order is irrelevant.
     for _ in 1..=6 {
-        let event = event_stream.expect_type::<Started>().await.unwrap();
-        assert!(event.error.is_none());
+        let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
         event.resume().await.unwrap();
     }
 
@@ -153,14 +144,13 @@ async fn echo_realm() {
 
     {
         let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
-        event_source.start_component_tree().await.unwrap();
+        event_source.start_component_tree().await;
 
         // 3 components are started. Order is irrelevant.
         // root and echo_client are started eagerly.
         // echo_server is started after echo_client connects to the Echo service.
         for _ in 1..=3 {
-            let event = event_stream.expect_type::<Started>().await.unwrap();
-            assert!(event.error.is_none());
+            let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
             event.resume().await.unwrap();
         }
     }

@@ -21,7 +21,12 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.sys2.BlockingEventSource" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.sys2.BlockingEventSource",
+            ],
+        },
         {
             protocol: [ "/svc/fidl.examples.routing.echo.Echo" ],
             from: "framework",

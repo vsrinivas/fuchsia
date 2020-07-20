@@ -75,7 +75,7 @@ async fn builtin_time_service_routed() -> Result<(), Error> {
 
     // Unblock the component_manager.
     debug!("starting component tree");
-    event_source.start_component_tree().await.expect("failed to start the component tree");
+    event_source.start_component_tree().await;
 
     // Await the test result.
     debug!("waiting for test outcome");

@@ -32,12 +32,11 @@ pub async fn start_policy_test(
         .await?;
     let event_source = test.connect_to_event_source().await?;
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
-    event_source.start_component_tree().await?;
+    event_source.start_component_tree().await;
 
     // Wait for the root component to be started so we can connect to its Realm service through the
     // hub.
-    let event =
-        event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await?;
+    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
     event.resume().await?;
 
     let realm = connect_to_root_service::<fsys::RealmMarker>(&test)

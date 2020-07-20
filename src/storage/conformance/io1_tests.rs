@@ -34,7 +34,7 @@ async fn setup_harness_connection(
         .await
         .context("Cannot install injector.")?;
 
-    event_source.start_component_tree().await?;
+    event_source.start_component_tree().await;
 
     // Wait for the injector to receive the TestHarness connection from the child component
     // before continuing.

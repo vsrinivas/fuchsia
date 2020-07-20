@@ -41,20 +41,17 @@ async fn storage() {
     let event_source = test.connect_to_event_source().await.unwrap();
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
 
-    event_source.start_component_tree().await.unwrap();
+    event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = event_stream
-        .expect_exact::<Started>(EventMatcher::new().expect_moniker("."))
-        .await
-        .unwrap();
+    let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
     // Expect the 2 children to be bound to
-    let event = event_stream.expect_type::<Started>().await.unwrap();
+    let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
     event.resume().await.unwrap();
 
-    let event = event_stream.expect_type::<Started>().await.unwrap();
+    let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
     event.resume().await.unwrap();
 
     let component_manager_path = test.get_component_manager_path();
@@ -92,7 +89,7 @@ async fn storage_from_collection() {
     let trigger_capability = TriggerCapability::new(trigger_lock.clone());
     event_source.install_injector(trigger_capability, None).await.unwrap();
 
-    event_source.start_component_tree().await.unwrap();
+    event_source.start_component_tree().await;
 
     // Expect the root component to be started
     let event = event_stream

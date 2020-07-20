@@ -25,7 +25,7 @@ async fn scoped_instances() -> Result<(), Error> {
     let expected_events: Vec<_> = (0..3).map(|_| event.clone()).collect();
     let expectation = event_source.expect_events(Ordering::Unordered, expected_events).await?;
 
-    event_source.start_component_tree().await?;
+    event_source.start_component_tree().await;
     info!("Waiting for scoped instances to be destroyed");
     expectation.await?;
     Ok(())

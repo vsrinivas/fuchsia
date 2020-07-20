@@ -30,7 +30,7 @@ async fn destruction() {
 
     let event_log = event_source.record_events(vec![Stopped::NAME, Destroyed::NAME]).await.unwrap();
     let mut event_stream = event_source.subscribe(vec![Destroyed::NAME]).await.unwrap();
-    event_source.start_component_tree().await.unwrap();
+    event_source.start_component_tree().await;
 
     // Wait for `coll:parent` to be destroyed.
     let event = event_stream

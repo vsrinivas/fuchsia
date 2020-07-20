@@ -13,7 +13,9 @@ use {
                 source::EventSource,
                 stream::EventStream,
             },
-            hooks::{EventError, EventErrorPayload, EventPayload, EventResult, HasEventType},
+            hooks::{
+                EventError, EventErrorPayload, EventPayload, EventResult, EventType, HasEventType,
+            },
             moniker::{AbsoluteMoniker, RelativeMoniker},
         },
     },
@@ -112,6 +114,7 @@ async fn maybe_create_event_result(
                 fsys::RunningPayload { started_timestamp: Some(started_timestamp.into_nanos()) },
             ))))
         }
+        Ok(payload) => Ok(maybe_create_empty_payload(payload.event_type())),
         Err(EventError {
             source,
             event_error_payload: EventErrorPayload::CapabilityReady { path },
@@ -142,11 +145,7 @@ async fn maybe_create_event_result(
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
         }))),
-        Err(EventError { source, .. }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
-            description: Some(format!("{}", source)),
-            ..fsys::EventError::empty()
-        }))),
-        _ => Ok(None),
+        Err(error) => Ok(maybe_create_empty_error_payload(error)),
     }
 }
 
@@ -228,6 +227,54 @@ fn maybe_create_capability_routed_payload(
 
     let payload = fsys::CapabilityRoutedPayload { routing_protocol, capability_id, source };
     Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(payload)))
+}
+
+fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult> {
+    let result = match event_type {
+        EventType::Destroyed => {
+            fsys::EventResult::Payload(fsys::EventPayload::Destroyed(fsys::DestroyedPayload {}))
+        }
+        EventType::Discovered => {
+            fsys::EventResult::Payload(fsys::EventPayload::Discovered(fsys::DiscoveredPayload {}))
+        }
+        EventType::MarkedForDestruction => fsys::EventResult::Payload(
+            fsys::EventPayload::MarkedForDestruction(fsys::MarkedForDestructionPayload {}),
+        ),
+        EventType::Resolved => {
+            fsys::EventResult::Payload(fsys::EventPayload::Resolved(fsys::ResolvedPayload {}))
+        }
+        EventType::Started => {
+            fsys::EventResult::Payload(fsys::EventPayload::Started(fsys::StartedPayload {}))
+        }
+        EventType::Stopped => {
+            fsys::EventResult::Payload(fsys::EventPayload::Stopped(fsys::StoppedPayload {}))
+        }
+        _ => fsys::EventResult::__UnknownVariant { ordinal: 999, bytes: vec![], handles: vec![] },
+    };
+    Some(result)
+}
+
+fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventResult> {
+    let error_payload = match error.event_type() {
+        EventType::Destroyed => fsys::EventErrorPayload::Destroyed(fsys::DestroyedError {}),
+        EventType::Discovered => fsys::EventErrorPayload::Discovered(fsys::DiscoveredError {}),
+        EventType::MarkedForDestruction => {
+            fsys::EventErrorPayload::MarkedForDestruction(fsys::MarkedForDestructionError {})
+        }
+        EventType::Resolved => fsys::EventErrorPayload::Resolved(fsys::ResolvedError {}),
+        EventType::Started => fsys::EventErrorPayload::Started(fsys::StartedError {}),
+        EventType::Stopped => fsys::EventErrorPayload::Stopped(fsys::StoppedError {}),
+        _ => fsys::EventErrorPayload::__UnknownVariant {
+            ordinal: 999,
+            bytes: vec![],
+            handles: vec![],
+        },
+    };
+    Some(fsys::EventResult::Error(fsys::EventError {
+        error_payload: Some(error_payload),
+        description: Some(format!("{}", error.source)),
+        ..fsys::EventError::empty()
+    }))
 }
 
 /// Creates the basic FIDL Event object containing the event type, target_realm

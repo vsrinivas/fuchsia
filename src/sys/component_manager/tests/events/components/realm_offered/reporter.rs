@@ -3,22 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
     fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    test_utils_lib::events::{Event, EventSource, Handler, Started},
+    test_utils_lib::events::{Event, EventMatcher, EventSource, Handler, Started},
 };
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+async fn main() {
     // Track all the starting components.
-    let event_source = EventSource::new_sync()?;
-    let mut event_stream = event_source.subscribe(vec!["started_nested"]).await?;
+    let event_source = EventSource::new_sync().unwrap();
+    let mut event_stream = event_source.subscribe(vec!["started_nested"]).await.unwrap();
 
-    event_source.start_component_tree().await?;
+    event_source.start_component_tree().await;
 
-    let echo = connect_to_service::<fecho::EchoMarker>()?;
+    let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
 
     // Connect to the parent offered Trigger. The parent will start the lazy child components and
     // this component should know about their started events given that it was offered those
@@ -28,11 +27,9 @@ async fn main() -> Result<(), Error> {
     trigger.run().await.expect("start trigger failed");
 
     for _ in 0..3 {
-        let event = event_stream.expect_type::<Started>().await?;
+        let event = event_stream.expect_exact::<Started>(EventMatcher::new()).await;
         let target_moniker = event.target_moniker();
-        let _ = echo.echo_string(Some(target_moniker)).await?;
-        event.resume().await?;
+        let _ = echo.echo_string(Some(target_moniker)).await.unwrap();
+        event.resume().await.unwrap();
     }
-
-    Ok(())
 }

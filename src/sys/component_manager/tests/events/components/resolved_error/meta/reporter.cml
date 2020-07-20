@@ -15,6 +15,7 @@
         {
             protocol: [
                 "/svc/fidl.examples.routing.echo.Echo",
+                "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.sys2.Realm",
             ],
             from: "framework",
