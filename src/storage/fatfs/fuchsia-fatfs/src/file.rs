@@ -129,15 +129,20 @@ impl VfsFile for FatFile {
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file(&fs_lock);
-        let size = file.len() as u64;
+        let content_size = file.len() as u64;
         let creation_time = dos_to_unix_time(file.created());
         let modification_time = dos_to_unix_time(file.modified());
+
+        // Figure out the storage size by rounding content_size up to the nearest
+        // multiple of cluster_size.
+        let cluster_size = fs_lock.cluster_size() as u64;
+        let storage_size = ((content_size + cluster_size - 1) / cluster_size) * cluster_size;
 
         Ok(NodeAttributes {
             mode: 0,
             id: INO_UNKNOWN,
-            content_size: size,
-            storage_size: size,
+            content_size,
+            storage_size,
             link_count: 1,
             creation_time,
             modification_time,

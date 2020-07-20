@@ -37,6 +37,10 @@ impl FatFilesystemInner {
         self.filesystem.unmount().map_err(fatfs_error_to_status)
         // TODO(55291): send flush to the underlying block device.
     }
+
+    pub fn cluster_size(&self) -> u32 {
+        self.filesystem.cluster_size()
+    }
 }
 
 pub struct FatFilesystem {
