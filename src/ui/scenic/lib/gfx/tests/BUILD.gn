@@ -188,9 +188,6 @@ executable("unittests") {
     "//third_party/googletest:gmock",
   ]
 
-  # TODO(46839): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   include_dirs = [ "//src/ui/lib/escher" ]
 }
 
@@ -228,9 +225,6 @@ executable("apptests") {
     ":gfx_tests_main",
     ":testing_deps",
   ]
-
-  # TODO(46839): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("pixeltests") {

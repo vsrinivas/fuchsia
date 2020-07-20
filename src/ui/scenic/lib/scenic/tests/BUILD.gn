@@ -56,7 +56,4 @@ executable("unittests") {
     "//src/ui/scenic/lib/shutdown/tests:unittests",
     "//src/ui/scenic/lib/watchdog/tests:unittests",
   ]
-
-  # TODO(46839): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

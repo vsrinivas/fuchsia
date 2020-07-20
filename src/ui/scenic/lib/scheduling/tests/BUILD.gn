@@ -36,7 +36,4 @@ executable("unittests") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/inspect",
   ]
-
-  # TODO(46839): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
