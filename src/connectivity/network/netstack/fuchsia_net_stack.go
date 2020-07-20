@@ -343,8 +343,9 @@ func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) stack.StackA
 		return result
 	}
 
-	if err := ns.AddRoute(fidlconv.ForwardingEntryToTcpipRoute(entry), metricNotSet, false /* not dynamic */); err != nil {
-		syslog.Errorf("adding forwarding entry %+v to route table failed: %s", entry, err)
+	route := fidlconv.ForwardingEntryToTcpipRoute(entry)
+	if err := ns.AddRoute(route, metricNotSet, false /* not dynamic */); err != nil {
+		_ = syslog.Errorf("adding route %s to route table failed: %s", route, err)
 		result.SetErr(stack.ErrorInvalidArgs)
 		return result
 	}
@@ -360,8 +361,9 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) stack.StackDelForwardi
 		return result
 	}
 
-	if err := ns.DelRoute(tcpip.Route{Destination: fidlconv.ToTCPIPSubnet(subnet)}); err != nil {
-		syslog.Errorf("deleting forwarding entry %+v from route table failed: %s", subnet, err)
+	destination := fidlconv.ToTCPIPSubnet(subnet)
+	if err := ns.DelRoute(tcpip.Route{Destination: destination}); err != nil {
+		_ = syslog.Errorf("deleting destination %s from route table failed: %s", destination, err)
 		result.SetErr(stack.ErrorNotFound)
 		return result
 	}
