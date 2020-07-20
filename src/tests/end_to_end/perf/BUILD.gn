@@ -197,14 +197,26 @@ dart_test("touch_input_latency_benchmarks_test") {
   ]
 }
 
-# Unit test of processing logic for touch latency
+# Unit tests of processing logic
 group("tests") {
   testonly = true
-  deps = [ ":touch_input_latency_metric_test($host_toolchain)" ]
+  deps = [
+    ":flutter_startup_time_metric_test($host_toolchain)",
+    ":touch_input_latency_metric_test($host_toolchain)",
+  ]
 }
 
 dart_test("touch_input_latency_metric_test") {
   sources = [ "touch_input_latency_metric_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}
+
+dart_test("flutter_startup_time_metric_test") {
+  sources = [ "flutter/flutter_startup_time_metric_test.dart" ]
 
   deps = [
     "//sdk/testing/sl4f/client",

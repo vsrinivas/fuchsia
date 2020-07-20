@@ -4,6 +4,7 @@
 
 import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart';
+import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
 import '../helpers.dart';
@@ -69,4 +70,74 @@ class FlutterTestHelper {
         .addFromUrl('fuchsia-pkg://fuchsia.com/$appName#meta/$appName.cmx');
     log.info('Launched $appName with tile key $_tileKey.');
   }
+
+  /// A [MetricsProcessor] that finds the startup time of a Flutter app.
+  ///
+  /// [extraArgs] must contain the key 'flutterAppName'.
+  ///
+  /// This measures time between the 'StartComponent' event and the end of the
+  /// first frame ('vsync callback' event with thread '$flutterAppName.cmx.ui').
+  static List<TestCaseResults> flutterStartupTimeMetricsProcessor(
+      Model model, Map<String, dynamic> extraArgs) {
+    final appName = extraArgs['flutterAppName'];
+    if (!(appName is String)) {
+      throw ArgumentError('flutterAppName not specified in extraArgs');
+    }
+
+    final startComponentEvent = filterEventsTyped<DurationEvent>(
+      getAllEvents(model),
+      category: 'flutter',
+      name: 'StartComponent',
+    ).firstWhere(
+        (event) =>
+            event.args['url'] ==
+            'fuchsia-pkg://fuchsia.com/$appName#meta/$appName.cmx',
+        orElse: () => null);
+
+    if (startComponentEvent == null) {
+      throw ArgumentError(
+          'No flutter "StartComponent" event was found in the trace with the '
+          'URL "fuchsia-pkg://fuchsia.com/$appName#meta/$appName.cmx".');
+    }
+
+    // This is expensive if there are events from other flutter apps before
+    // the one being measured, but this doesn't happen in the current use case.
+    final vsyncCallbackEvent = filterEventsTyped<DurationEvent>(
+      getAllEvents(model),
+      category: 'flutter',
+      name: 'vsync callback',
+    ).firstWhere(
+        (event) =>
+            model.processes
+                .firstWhere((Process process) => process.pid == event.pid)
+                .threads
+                .firstWhere((Thread thread) => thread.tid == event.tid)
+                .name ==
+            '$appName.cmx.ui',
+        orElse: () => null);
+
+    if (vsyncCallbackEvent == null) {
+      throw ArgumentError(
+          'No flutter "vsync callback" events were found in the trace with the '
+          'thread name "$appName.cmx.ui".');
+    }
+
+    final TimePoint appLaunch = startComponentEvent.start;
+    final TimePoint endOfFirstFrame =
+        vsyncCallbackEvent.start + vsyncCallbackEvent.duration;
+    final TimeDelta elapsedTime = endOfFirstFrame - appLaunch;
+
+    return [
+      TestCaseResults(
+        'flutter_startup_time',
+        Unit.milliseconds,
+        [elapsedTime.toMillisecondsF()],
+      ),
+    ];
+  }
+
+  static const Map<String, MetricsProcessor> metricsRegistry = {
+    ...defaultMetricsRegistry,
+    'flutter_startup_time': flutterStartupTimeMetricsProcessor,
+  };
 }

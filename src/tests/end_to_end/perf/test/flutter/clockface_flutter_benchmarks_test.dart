@@ -18,7 +18,6 @@ const _appName = 'clockface-flutter';
 const _duration = Duration(seconds: 30); // seconds
 
 void main() {
-  // TODO(55832): Add a startup time benchmark.
   test('trace clockface for $_duration seconds', () async {
     final helper = await FlutterTestHelper.make();
 
@@ -43,12 +42,14 @@ void main() {
       MetricsSpec(name: 'drm_fps', extraArgs: flutterExtraArgs),
       MetricsSpec(name: 'flutter_frame_stats', extraArgs: flutterExtraArgs),
       MetricsSpec(name: 'scenic_frame_stats'),
+      MetricsSpec(name: 'flutter_startup_time', extraArgs: flutterExtraArgs),
     ];
 
     await helper.perf.processTrace(
       MetricsSpecSet(metricsSpecs: metricsSpecs, testName: _testName),
       jsonTraceFile,
       converterPath: _catapultConverterPath,
+      registry: FlutterTestHelper.metricsRegistry,
     );
   }, timeout: Timeout(Duration(minutes: 2)));
 }
