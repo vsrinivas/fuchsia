@@ -122,6 +122,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Type: swarmingOutputType})
 	// For fxbug.dev/52719.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Type: swarmingOutputType})
+	// For fxbug.dev/56651.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunBugreportMsg), Type: swarmingOutputType})
 	// For fxbug.dev/43188.
 	ret = append(ret, &stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType})
 	// For fxbug.dev/53101.
@@ -133,6 +135,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// For fxbug.dev/53854
 	ret = append(ret, driverHostCrash("composite-device", ""))
 	ret = append(ret, driverHostCrash("pci", ""))
+	// For fxbug.dev/56494.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToReceiveFileMsg), Type: swarmingOutputType})
 	// Don't fail if we see PDEV_DID_CRASH_TEST, defined in
 	// zircon/system/ulib/ddk-platform-defs/include/ddk/platform-defs.h.

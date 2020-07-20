@@ -263,6 +263,9 @@ func (t *fuchsiaSSHTester) RunBugreport(ctx context.Context, bugreportFile strin
 	defer bugreportOutFile.Close()
 	startTime := time.Now()
 	err = t.client.Run(ctx, []string{"/bin/bugreport"}, bugreportOutFile, os.Stderr)
+	if err != nil {
+		logger.Errorf(ctx, "%s: %v", constants.FailedToRunBugreportMsg, err)
+	}
 	logger.Debugf(ctx, "ran bugreport in %v", time.Now().Sub(startTime))
 	return err
 }
