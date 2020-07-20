@@ -50,5 +50,5 @@ bool arch_spin_trylock(arch_spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
 
 void arch_spin_unlock(arch_spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
   WRITE_PERCPU_FIELD32(num_spinlocks, READ_PERCPU_FIELD32(num_spinlocks) - 1);
-  __atomic_store_n(&lock->value, 0UL, __ATOMIC_SEQ_CST);
+  __atomic_store_n(&lock->value, 0UL, __ATOMIC_RELEASE);
 }
