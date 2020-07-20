@@ -21,6 +21,7 @@ if (host_toolchain == current_toolchain) {
     with_unit_tests = true
 
     plugin_deps = [
+      "//src/developer/ffx/doctor:ffx_doctor",
       "//src/developer/ffx/packaging:ffx_packaging",
       "//src/developer/ffx/plugins/component:ffx_component",
       "//src/developer/ffx/plugins/config:ffx_config_plugin",
@@ -45,6 +46,9 @@ if (host_toolchain == current_toolchain) {
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+
+      # "//third_party/rust_crates:async-std",
+      # "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:simplelog",

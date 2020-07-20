@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 use std::time::Duration;
 
+pub(crate) const DAEMON: &str = "daemon";
+
 #[cfg(not(test))]
 pub(crate) const SOCKET: &str = "/tmp/ascendd";
 

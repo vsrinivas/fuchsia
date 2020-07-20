@@ -3,26 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::DAEMON,
     crate::logger::setup_logger,
     anyhow::{format_err, Context, Error},
-    ffx_daemon::{find_and_connect, is_daemon_running},
+    ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     ffx_lib_args::Ffx,
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::DaemonProxy,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
-    std::env,
-    std::process::Command,
 };
 
-mod constants;
 mod logger;
-
-async fn spawn_daemon() -> Result<(), Error> {
-    Command::new(env::current_exe().unwrap()).arg(DAEMON).arg("start").spawn()?;
-    Ok(())
-}
 
 async fn get_daemon_proxy() -> Result<DaemonProxy, Error> {
     if !is_daemon_running() {

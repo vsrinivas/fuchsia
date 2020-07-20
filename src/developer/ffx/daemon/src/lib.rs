@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{MAX_RETRY_COUNT, SOCKET},
+    crate::constants::{DAEMON, MAX_RETRY_COUNT, SOCKET},
     crate::daemon::Daemon,
     anyhow::{Context, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
@@ -14,6 +14,8 @@ use {
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::spawn,
     futures::prelude::*,
+    std::env,
+    std::process::Command,
 };
 
 mod constants;
@@ -64,6 +66,10 @@ pub async fn find_and_connect() -> Result<Option<DaemonProxy>, Error> {
     Ok(None)
 }
 
+pub async fn spawn_daemon() -> Result<(), Error> {
+    Command::new(env::current_exe().unwrap()).arg(DAEMON).arg("start").spawn()?;
+    Ok(())
+}
 ////////////////////////////////////////////////////////////////////////////////
 // Overnet Server implementation
 
