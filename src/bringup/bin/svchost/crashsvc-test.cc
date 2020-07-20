@@ -16,6 +16,7 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 
+#include <list>
 #include <memory>
 
 #include <crashsvc/crashsvc.h>
@@ -170,13 +171,29 @@ class StubExceptionHandler final : public llcpp::fuchsia::exception::Handler::In
   void OnException(::zx::exception exception, llcpp::fuchsia::exception::ExceptionInfo info,
                    OnExceptionCompleter::Sync completer) override {
     exception_count_++;
-    completer.Reply();
+    if (respond_sync_) {
+      completer.Reply();
+    } else {
+      completers_.push_back(completer.ToAsync());
+    }
   }
+
+  void SendAsyncResponses() {
+    for (auto& completer : completers_) {
+      completer.Reply();
+    }
+
+    completers_.clear();
+  }
+
+  void SetRespondSync(bool val) { respond_sync_ = true; }
 
   int exception_count() const { return exception_count_; }
 
  private:
   int exception_count_ = 0;
+  bool respond_sync_{true};
+  std::list<OnExceptionCompleter::Async> completers_;
 };
 
 // Exposes the services through a virtual directory that crashsvc uses in order to connect to
@@ -197,7 +214,7 @@ class FakeService {
     vfs_.ServeDirectory(root_dir, std::move(svc_remote));
   }
 
-  const StubExceptionHandler& exception_handler() const { return exception_handler_; }
+  StubExceptionHandler& exception_handler() { return exception_handler_; }
   const zx::channel& service_channel() const { return svc_local_; }
 
  private:
@@ -233,6 +250,36 @@ TEST(crashsvc, ExceptionHandlerSuccess) {
 
   ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
   EXPECT_EQ(test_svc.exception_handler().exception_count(), 1);
+
+  // Kill the test job so that the exception doesn't bubble outside of this test.
+  ASSERT_OK(jobs.job.kill());
+  EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
+}
+
+TEST(crashsvc, ExceptionHandlerAsync) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  FakeService test_svc(loop.dispatcher());
+
+  Jobs jobs;
+  ASSERT_NO_FATAL_FAILURES(GetTestJobs(&jobs));
+
+  // We tell the stub exception handler to not respond immediately to test that this does not block
+  // crashsvc from further processing other exceptions.
+  test_svc.exception_handler().SetRespondSync(false);
+
+  // Start crashsvc.
+  thrd_t cthread;
+  ASSERT_OK(start_crashsvc(std::move(jobs.job_copy), test_svc.service_channel().get(), &cthread));
+
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  EXPECT_EQ(test_svc.exception_handler().exception_count(), 4);
+
+  // We now tell the stub exception handler to respond all the pending requests it had, which would
+  // trigger the (empty) callbacks in crashsvc on the next async loop run.
+  test_svc.exception_handler().SendAsyncResponses();
 
   // Kill the test job so that the exception doesn't bubble outside of this test.
   ASSERT_OK(jobs.job.kill());
