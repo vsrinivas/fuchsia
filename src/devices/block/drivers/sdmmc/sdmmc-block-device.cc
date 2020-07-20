@@ -5,6 +5,7 @@
 #include "sdmmc-block-device.h"
 
 #include <inttypes.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/unowned_ptr.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/hw/gpt.h>
@@ -123,6 +124,20 @@ zx_status_t RpmbDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::rpmb::Rpmb::Dispatch(this, msg, &transaction);
   return ZX_ERR_ASYNC;
+}
+
+void RpmbDevice::RpmbConnectServer(zx::channel server) {
+  zx_status_t status;
+  if (!loop_started_ && (status = loop_.StartThread("sdmmc-rpmb-thread")) != ZX_OK) {
+    zxlogf(ERROR, "sdmmc: failed to start RPMB thread: %d", status);
+  }
+
+  loop_started_ = true;
+
+  status = fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), this);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "sdmmc: failed to bind channel: %d", status);
+  }
 }
 
 void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) {

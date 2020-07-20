@@ -57,7 +57,7 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
   void TearDown() override {
     dut_.StopWorkerThread();
     // The client must be unbound prior to the loop being destroyed.
-    rpmb_.Unbind();
+    rpmb_fidl_.Unbind();
   }
 
   void QueueBlockOps();
@@ -101,15 +101,16 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     user_ = GetBlockClient(USER_DATA_PARTITION);
     boot1_ = GetBlockClient(BOOT_PARTITION_1);
     boot2_ = GetBlockClient(BOOT_PARTITION_2);
+    rpmb_ = GetRpmbClient(RPMB_PARTITION);
 
     ASSERT_TRUE(user_.is_valid());
 
     const auto message_op = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
-      return static_cast<decltype(ddk_)*>(ctx)->MessageChild(3, msg, txn);
+      return static_cast<decltype(ddk_)*>(ctx)->MessageChild(RPMB_PARTITION, msg, txn);
     };
     ASSERT_OK(messenger_.SetMessageOp(&ddk_, message_op));
     ASSERT_OK(loop_.StartThread("rpmb-client-thread"));
-    ASSERT_OK(rpmb_.Bind(std::move(messenger_.local()), loop_.dispatcher()));
+    ASSERT_OK(rpmb_fidl_.Bind(std::move(messenger_.local()), loop_.dispatcher()));
   }
 
   void MakeBlockOp(uint32_t command, uint32_t length, uint64_t offset,
@@ -193,14 +194,24 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     return ddk::BlockImplProtocolClient(&proto);
   }
 
+  ddk::RpmbProtocolClient GetRpmbClient(size_t index) {
+    rpmb_protocol_t proto;
+    if (ddk_.GetChildProtocol(index, &proto) != ZX_OK) {
+      return ddk::RpmbProtocolClient();
+    }
+    return ddk::RpmbProtocolClient(&proto);
+  }
+
   FakeSdmmcDevice sdmmc_;
   SdmmcBlockDevice dut_;
   ddk::BlockImplProtocolClient user_;
   ddk::BlockImplProtocolClient boot1_;
   ddk::BlockImplProtocolClient boot2_;
-  fidl::Client<::llcpp::fuchsia::hardware::rpmb::Rpmb> rpmb_;
+  ddk::RpmbProtocolClient rpmb_;
+  fidl::Client<::llcpp::fuchsia::hardware::rpmb::Rpmb> rpmb_fidl_;
   Bind ddk_;
   std::atomic<bool> run_threads_ = true;
+  async::Loop loop_;
 
  private:
   static constexpr uint8_t kTestData[] = {
@@ -215,7 +226,6 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
 
   std::vector<uint8_t> test_block_;
   fake_ddk::FidlMessenger messenger_;
-  async::Loop loop_;
 };
 
 TEST_F(SdmmcBlockDeviceTest, BlockImplQuery) {
@@ -1123,7 +1133,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   ASSERT_OK(messenger.SetMessageOp(&ddk_, message_op));
 
   sync_completion_t completion;
-  rpmb_->GetDeviceInfo([&](auto result) {
+  rpmb_fidl_->GetDeviceInfo([&](auto result) {
     EXPECT_TRUE(result.is_emmc_info());
     EXPECT_EQ(result.emmc_info().rpmb_size, 0x74);
     EXPECT_EQ(result.emmc_info().reliable_write_sector_count, 1);
@@ -1166,7 +1176,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
     EXPECT_EQ(value, 0xa8 | RPMB_PARTITION);
   });
 
-  rpmb_->Request(std::move(write_read_request), [&](auto result) {
+  rpmb_fidl_->Request(std::move(write_read_request), [&](auto result) {
     EXPECT_FALSE(result.is_err());
     sync_completion_signal(&completion);
   });
@@ -1193,7 +1203,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
     EXPECT_TRUE(req->arg & MMC_SET_BLOCK_COUNT_RELIABLE_WRITE);
   });
 
-  rpmb_->Request(std::move(write_request), [&](auto result) {
+  rpmb_fidl_->Request(std::move(write_request), [&](auto result) {
     EXPECT_FALSE(result.is_err());
     sync_completion_signal(&completion);
   });
@@ -1225,7 +1235,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
     ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
     request.tx_frames.offset = 0;
     request.tx_frames.size = 512;
-    rpmb_->Request(std::move(request), [&](__UNUSED auto result) {});
+    rpmb_fidl_->Request(std::move(request), [&](__UNUSED auto result) {});
   }
 
   ::llcpp::fuchsia::hardware::rpmb::Request error_request = {};
@@ -1234,7 +1244,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
   error_request.tx_frames.size = 512;
 
   sync_completion_t error_completion;
-  rpmb_->Request(std::move(error_request), [&](auto result) {
+  rpmb_fidl_->Request(std::move(error_request), [&](auto result) {
     EXPECT_TRUE(result.is_err());
     sync_completion_signal(&error_completion);
   });
@@ -1312,7 +1322,7 @@ void SdmmcBlockDeviceTest::QueueRpmbRequests() {
       request.tx_frames.offset = 0;
       request.tx_frames.size = 512;
 
-      rpmb_->Request(std::move(request), [&](auto result) {
+      rpmb_fidl_->Request(std::move(request), [&](auto result) {
         EXPECT_FALSE(result.is_err());
         if (outstanding_op_count.fetch_sub(1) == kMaxOutstandingOps / 2) {
           sync_completion_signal(&completion);
@@ -1367,7 +1377,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestsGetToRun) {
     request.tx_frames.offset = 0;
     request.tx_frames.size = 512;
 
-    rpmb_->Request(std::move(request), [&](auto result) {
+    rpmb_fidl_->Request(std::move(request), [&](auto result) {
       EXPECT_FALSE(result.is_err());
       if ((ops_completed.fetch_add(1) + 1) == kMaxOutstandingOps) {
         sync_completion_signal(&completion);
@@ -1442,6 +1452,42 @@ TEST_F(SdmmcBlockDeviceTest, BlockOpsGetToRun) {
 
   run_threads_.store(false);
   EXPECT_EQ(thrd_join(rpmb_thread, nullptr), thrd_success);
+}
+
+TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    auto* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    *reinterpret_cast<uint32_t*>(&ext_csd[212]) = htole32(kBlockCount);
+
+    ext_csd[MMC_EXT_CSD_RPMB_SIZE_MULT] = 0x74;
+    ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 0xa8;
+    ext_csd[MMC_EXT_CSD_REL_WR_SEC_C] = 1;
+    ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+    ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 0x10;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  AddDevice();
+
+  ASSERT_TRUE(rpmb_.is_valid());
+
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+  rpmb_.ConnectServer(std::move(server));
+
+  fidl::Client<::llcpp::fuchsia::hardware::rpmb::Rpmb> rpmb_client;
+  ASSERT_OK(rpmb_client.Bind(std::move(client), loop_.dispatcher()));
+
+  sync_completion_t completion;
+  rpmb_client->GetDeviceInfo([&](auto result) {
+    EXPECT_TRUE(result.is_emmc_info());
+    EXPECT_EQ(result.emmc_info().rpmb_size, 0x74);
+    EXPECT_EQ(result.emmc_info().reliable_write_sector_count, 1);
+    sync_completion_signal(&completion);
+  });
+
+  sync_completion_wait(&completion, zx::duration::infinite().get());
+  sync_completion_reset(&completion);
 }
 
 }  // namespace sdmmc

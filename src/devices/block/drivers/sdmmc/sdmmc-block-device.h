@@ -6,6 +6,8 @@
 #define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
 
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/operation/block.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
@@ -20,6 +22,7 @@
 #include <ddktl/protocol/block.h>
 #include <ddktl/protocol/block/partition.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/rpmb.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <hw/sdmmc.h>
@@ -89,7 +92,7 @@ class RpmbDevice;
 using RpmbDeviceType = ddk::Device<RpmbDevice, ddk::Messageable>;
 
 class RpmbDevice : public RpmbDeviceType,
-                   public ddk::EmptyProtocol<ZX_PROTOCOL_RPMB>,
+                   public ddk::RpmbProtocol<RpmbDevice, ddk::base_protocol>,
                    public ::llcpp::fuchsia::hardware::rpmb::Rpmb::Interface {
  public:
   // sdmmc_parent is owned by the SDMMC root device when the RpmbDevice object is created. Ownership
@@ -102,11 +105,14 @@ class RpmbDevice : public RpmbDeviceType,
         sdmmc_parent_(sdmmc_parent),
         cid_(cid),
         rpmb_size_(ext_csd[MMC_EXT_CSD_RPMB_SIZE_MULT]),
-        reliable_write_sector_count_(ext_csd[MMC_EXT_CSD_REL_WR_SEC_C]) {}
+        reliable_write_sector_count_(ext_csd[MMC_EXT_CSD_REL_WR_SEC_C]),
+        loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void DdkRelease() { delete this; }
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
+  void RpmbConnectServer(zx::channel server);
 
   void GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) override;
   void Request(::llcpp::fuchsia::hardware::rpmb::Request request,
@@ -117,6 +123,8 @@ class RpmbDevice : public RpmbDeviceType,
   const std::array<uint8_t, SDMMC_CID_SIZE> cid_;
   const uint8_t rpmb_size_;
   const uint8_t reliable_write_sector_count_;
+  async::Loop loop_;
+  bool loop_started_ = false;
 };
 
 class SdmmcBlockDevice;

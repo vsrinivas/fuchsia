@@ -12,6 +12,7 @@
 #include <map>
 #include <vector>
 
+#include <ddktl/device.h>
 #include <ddktl/protocol/sdio.h>
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/span.h>
@@ -52,6 +53,18 @@ class Bind : public fake_ddk::Bind {
     return children_ops_[index].get_protocol(children_ops_[index].ctx, proto_id, proto);
   }
 
+  template <typename T>
+  zx_status_t GetChildProtocol(size_t index, T* proto) const {
+    if (index >= children_ops_.size()) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    auto* protocol = reinterpret_cast<ddk::AnyProtocol*>(proto);
+    protocol->ops = children_ops_[index].proto_ops;
+    protocol->ctx = children_ops_[index].ctx;
+    return ZX_OK;
+  }
+
   zx_status_t MessageChild(size_t index, fidl_msg_t* msg, fidl_txn_t* txn) const {
     if (index >= children_ops_.size()) {
       return ZX_ERR_OUT_OF_RANGE;
@@ -74,11 +87,13 @@ class Bind : public fake_ddk::Bind {
   struct ChildOps {
     explicit ChildOps(device_add_args_t* args)
         : ctx(args->ctx),
+          proto_ops(args->proto_ops),
           get_protocol(args->ops->get_protocol),
           release(args->ops->release),
           message(args->ops->message) {}
 
     void* const ctx;
+    void* const proto_ops;
     zx_status_t (*const get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
     void (*const release)(void* ctx);
     zx_status_t (*const message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
