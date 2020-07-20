@@ -146,7 +146,6 @@ void main() {
       // Typically, there is a pre-existing rule pointing to `devhost`, but it isn't
       // guaranteed. Record what the rule list is before we begin, and confirm that is
       // the rule list when we are finished.
-
       log.info('Recording the current rule list');
       var ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
       expect(ruleListResponse.exitCode, 0);
@@ -335,6 +334,58 @@ void main() {
       log.info('Checking that $portFilePath was generated with content: $port');
       String fileContents = (await File(portFilePath).readAsString()).trim();
       expect(int.parse(fileContents), port);
+    });
+    test(
+        'Test `amberctl add_repo_cfg` does not set a rewrite rule to use the '
+        'added repo.', () async {
+      // Covers these commands (success cases only):
+      //
+      // Newly covered:
+      // amberctl add_repo_cfg -n <path> -f http://<host>:<port>/config.json
+      //
+      // Previously covered:
+      // pkgctl repo
+      // pm serve -repo=<path> -l :<port>
+      final repoPath = tempDir.path;
+      final processInfo = await setupServe(
+          log, pmPath, repoPath, 'component_hello_world-0.far', []);
+      serveProcess = processInfo[0];
+      int port = processInfo[1];
+
+      log.info('Getting Host Address');
+      final hostAddress = await formattedHostAddress(sl4fDriver);
+
+      // Typically, there is a pre-existing rule pointing to `devhost`, but it isn't
+      // guaranteed. Record what the rule list is before we begin, and confirm that is
+      // the rule list when we are finished.
+      log.info('Recording the current rule list');
+      var ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
+      expect(ruleListResponse.exitCode, 0);
+      final originalRuleList = ruleListResponse.stdout.toString();
+
+      log.info(
+          'Adding the new repository as an update source with http://$hostAddress:$port');
+      final addRepoCfgResponse = await sl4fDriver.ssh.run(
+          'amberctl add_repo_cfg -n $repoPath -f http://$hostAddress:$port/config.json');
+      expect(addRepoCfgResponse.exitCode, 0);
+
+      log.info('Running pkgctl repo to list sources');
+      var listSrcsResponse = await sl4fDriver.ssh.run('pkgctl repo');
+      expect(listSrcsResponse.exitCode, 0);
+
+      var listSrcsResponseOutput = listSrcsResponse.stdout.toString();
+      String repoName = repoPath.replaceAll('/', '_');
+      String repoUrl = 'fuchsia-pkg://$repoName';
+
+      expect(listSrcsResponseOutput.contains(repoUrl), isTrue);
+
+      log.info('Confirm rule list is NOT updated to point to $repoName');
+      ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
+      expect(ruleListResponse.exitCode, 0);
+
+      var ruleListResponseOutput = ruleListResponse.stdout.toString();
+      expect(ruleListResponseOutput.contains(repoName), isFalse);
+      expect(ruleListResponseOutput, originalRuleList);
     });
   }, timeout: _timeout);
 }
