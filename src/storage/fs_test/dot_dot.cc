@@ -4,6 +4,9 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
+#include <lib/zx/channel.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,6 +21,8 @@ namespace fs_test {
 namespace {
 
 using DotDotTest = FilesystemTest;
+
+namespace fio = llcpp::fuchsia::io;
 
 // Test cases of '..' where the path can be canonicalized on the client.
 TEST_P(DotDotTest, DotDotClient) {
@@ -91,6 +96,47 @@ TEST_P(DotDotTest, DotDotServer) {
   ASSERT_EQ(unlink(GetPath("foo").c_str()), 0);
 }
 
+TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
+  ASSERT_EQ(mkdir(GetPath("foo").c_str(), 0755), 0);
+  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_RDONLY | O_DIRECTORY));
+  ASSERT_TRUE(fd);
+
+  fdio_cpp::FdioCaller caller(std::move(fd));
+
+  // Opening with OPEN_FLAG_CREATE should fail.
+  zx::channel local, remote;
+  ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
+  auto result = fio::Directory::Call::Open(
+      caller.channel(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+      0755, fidl::StringView("."), std::move(remote));
+  ASSERT_EQ(result.status(), ZX_OK);
+
+  auto close_result = fio::Directory::Call::Close(local.borrow());
+  // Can't get an epitaph with LLCPP bindings, so this will do for now.
+  ASSERT_EQ(close_result.status(), ZX_ERR_PEER_CLOSED);
+}
+
+TEST_P(DotDotTest, RawOpenDotDirectoryCreateIfAbsent) {
+  ASSERT_EQ(mkdir(GetPath("foo").c_str(), 0755), 0);
+  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_RDONLY | O_DIRECTORY));
+  ASSERT_TRUE(fd);
+  fdio_cpp::FdioCaller caller(std::move(fd));
+
+  // Opening with OPEN_FLAG_CREATE_IF_ABSENT should fail.
+  zx::channel local, remote;
+  ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
+  auto result =
+      fio::Directory::Call::Open(caller.channel(),
+                                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE |
+                                     fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT,
+                                 0755, fidl::StringView("."), std::move(remote));
+  ASSERT_EQ(result.status(), ZX_OK);
+
+  auto close_result2 = fio::Directory::Call::Close(local.borrow());
+  // Can't get an epitaph with LLCPP bindings, so this will do for now.
+  ASSERT_EQ(close_result2.status(), ZX_ERR_PEER_CLOSED);
+}
+
 // Test cases of '..' which operate on multiple paths.
 // This is mostly intended to test other pathways for client-side
 // cleaning operations.
@@ -121,11 +167,15 @@ TEST_P(DotDotTest, DotDotRename) {
   ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("foo").c_str(), foo_dir_bit));
 
   // Check that both are cleaned
-  ASSERT_EQ(rename(GetPath("foo/bar/../bit/.").c_str(), GetPath("foo/bar/baz/../../././bits").c_str()), 0);
+  ASSERT_EQ(
+      rename(GetPath("foo/bar/../bit/.").c_str(), GetPath("foo/bar/baz/../../././bits").c_str()),
+      0);
   ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("foo").c_str(), foo_dir_bits));
 
   // Check that both are cleaned (including trailing '/')
-  ASSERT_EQ(rename(GetPath("foo/./bar/../bits/").c_str(), GetPath("foo/bar/baz/../../././bit/.//").c_str()), 0);
+  ASSERT_EQ(rename(GetPath("foo/./bar/../bits/").c_str(),
+                   GetPath("foo/bar/baz/../../././bit/.//").c_str()),
+            0);
   ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("foo").c_str(), foo_dir_bit));
 
   // Clean up

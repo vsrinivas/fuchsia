@@ -25,7 +25,7 @@ use {
         DirectoryReadDirentsResponder, DirectoryRenameResponder, DirectoryRequest,
         DirectoryRequestStream, DirectoryRewindResponder, DirectorySetAttrResponder,
         DirectorySyncResponder, DirectoryUnlinkResponder, DirectoryWatchResponder, NodeAttributes,
-        NodeInfo, NodeMarker, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
+        NodeInfo, NodeMarker, INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::{
@@ -397,6 +397,13 @@ where
         }
 
         if path == "." || path == "./" {
+            // Note that we reject both OPEN_FLAG_CREATE and OPEN_FLAG_CREATE_IF_ABSENT, rather
+            // than just OPEN_FLAG_CREATE_IF_ABSENT. This matches the behaviour of the C++
+            // filesystems.
+            if flags & OPEN_FLAG_CREATE != 0 {
+                send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
+                return;
+            }
             self.handle_clone(flags, mode, server_end);
             return;
         }

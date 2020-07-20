@@ -170,7 +170,10 @@ test("dot_dot_tests") {
   sources = [ "dot_dot.cc" ]
   deps = [
     ":fs_test",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fdio-caller",
   ]
 }
 
