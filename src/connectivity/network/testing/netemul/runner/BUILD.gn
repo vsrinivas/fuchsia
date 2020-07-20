@@ -2,14 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
+import("//src/sys/build/components.gni")
 
 group("runner") {
   testonly = true
   deps = [
     ":bin",
-    ":netemul_sandbox",
+    ":netemul-sandbox",
     ":sandbox_unittest",
     ":src",
     "helpers",
@@ -144,72 +144,57 @@ executable("sandbox_unittest") {
   ]
 }
 
-package("netemul_sandbox") {
+fuchsia_component("netemul-sandbox-component") {
   testonly = true
-
+  component_name = "netemul-sandbox"
+  manifest = "meta/netemul_sandbox.cmx"
   deps = [
     ":bin",
-    "helpers",
-  ]
-
-  binaries = [
-    {
-      name = "netemul_sandbox"
-    },
-    {
-      name = "netstack_cfg"
-    },
-    {
-      name = "mock_device_settings"
-    },
-    {
-      name = "guest_netstack_intermediary"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/netemul_sandbox.cmx")
-      dest = "netemul_sandbox.cmx"
-    },
-    {
-      path = rebase_path("helpers/meta/helper_netstack_cfg.cmx")
-      dest = "helper_netstack_cfg.cmx"
-    },
-    {
-      path = rebase_path("helpers/meta/mock_device_settings.cmx")
-      dest = "mock_device_settings.cmx"
-    },
-    {
-      path = rebase_path("helpers/meta/helper_netstack_intermediary.cmx")
-      dest = "helper_netstack_intermediary.cmx"
-    },
+    ":netemul-devmgr",
   ]
 }
 
-devmgr_manifest("devmgr_manifest") {
+fuchsia_component("netstack-cfg") {
+  testonly = true
+  manifest = "helpers/meta/helper_netstack_cfg.cmx"
+  deps = [ "helpers/netstack_cfg" ]
 }
 
-package("netemul_devmgr") {
+fuchsia_component("mock-device-settings") {
+  testonly = true
+  manifest = "helpers/meta/mock_device_settings.cmx"
+  deps = [ "helpers/mock_device_settings" ]
+}
+
+fuchsia_component("netstack-intermediary") {
+  testonly = true
+  manifest = "helpers/meta/helper_netstack_intermediary.cmx"
+  deps = [ "helpers/netstack_intermediary" ]
+}
+
+isolated_devmgr_component("netemul-devmgr") {
+  args = [
+    "--svc_name=fuchsia.netemul.devmgr.IsolatedDevmgr",
+    "--load_driver=/boot/driver/ethertap.so",
+    "--load_driver=/boot/driver/ethernet.so",
+    "--wait_for=test/tapctl",
+  ]
+
+  deps = [
+    "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/ethernet/drivers/ethertap",
+    "//src/devices/tests/sysdev",
+  ]
+}
+
+fuchsia_package("netemul-sandbox") {
   testonly = true
 
   deps = [
-    ":devmgr_manifest",
-    "//src/lib/isolated_devmgr",
-  ]
-
-  extra = [ "$target_gen_dir/devmgr.manifest" ]
-
-  binaries = [
-    {
-      name = "isolated_devmgr"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/netemul_devmgr.cmx")
-      dest = "netemul_devmgr.cmx"
-    },
+    ":mock-device-settings",
+    ":netemul-devmgr",
+    ":netemul-sandbox-component",
+    ":netstack-cfg",
+    ":netstack-intermediary",
   ]
 }

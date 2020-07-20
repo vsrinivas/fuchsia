@@ -2,23 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-test_package("netemul_lib_test") {
+fuchsia_component("network-test") {
+  testonly = true
+  manifest = "meta/network_test.cmx"
+
   deps = [
     "network:network_test_bin",
-    "sync:sync_test_bin",
+    "//src/connectivity/network/testing/netemul/runner:netemul-devmgr",
   ]
+}
 
-  tests = [
-    {
-      name = "network_test"
-      environments = basic_envs
-    },
-    {
-      name = "sync_test"
-      environments = basic_envs
-    },
+fuchsia_component("sync-test") {
+  testonly = true
+  manifest = "meta/sync_test.cmx"
+
+  deps = [ "sync:sync_test_bin" ]
+}
+
+fuchsia_test_package("netemul-lib-tests") {
+  test_components = [
+    ":network-test",
+    ":sync-test",
   ]
 }

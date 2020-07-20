@@ -14,7 +14,7 @@
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace netemul {
-static const char* kSandbox = "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx";
+static const char* kSandbox = "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netemul-sandbox.cmx";
 static const char* kDefinitionArg = "--definition=";
 static const char* kDefinitionRoot = "/definition";
 

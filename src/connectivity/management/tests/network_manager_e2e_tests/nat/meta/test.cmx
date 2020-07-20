@@ -17,7 +17,7 @@
                                     "-g",
                                     "192.168.1.1"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
@@ -38,7 +38,7 @@
                                     "-i",
                                     "192.168.1.1/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
                             },
                             {
                                 "arguments": [
@@ -47,7 +47,7 @@
                                     "-i",
                                     "192.168.0.21/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
                             },
                             {
                                 "arguments": [
@@ -83,7 +83,7 @@
                             "-i",
                             "192.168.0.22/24"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
                     }
                 ],
                 "test": [

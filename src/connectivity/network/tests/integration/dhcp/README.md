@@ -67,7 +67,7 @@ This block describes all ethertap networks available to this test.
                     "-e",
                     "client-ep"
                 ],
-                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
             }
         ],
         "test": [

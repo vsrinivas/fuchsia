@@ -1,9 +1,10 @@
 {
     "program": {
-        "binary": "test/sync_test"
+        "binary": "bin/sync_test"
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

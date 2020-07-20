@@ -22,7 +22,7 @@
                                     "-g",
                                     "192.168.0.1"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [

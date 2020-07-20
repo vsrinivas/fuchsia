@@ -3,12 +3,12 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cmx",
-                "fuchsia.netemul.devmgr.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/netemul_devmgr#meta/netemul_devmgr.cmx"
+                "fuchsia.netemul.devmgr.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/netemul-lib-tests#meta/netemul-devmgr.cmx"
             }
         }
     },
     "program": {
-        "binary": "test/network_test"
+        "binary": "bin/network_test"
     },
     "sandbox": {
         "services": [

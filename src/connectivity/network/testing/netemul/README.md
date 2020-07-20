@@ -90,7 +90,7 @@ by injecting it into your test component's environment. Your component's cmx man
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.netemul.sandbox.Sandbox": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx"
+                "fuchsia.netemul.sandbox.Sandbox": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netemul-sandbox.cmx"
             }
         }
     },
@@ -285,7 +285,7 @@ operations.
 
 The `netstack_cfg` helper is a CLI-like tool that uses the *NetworkContext* service to retrieve
 emulated endpoints and attach them to netstack instances in an emulated environment. You can launch
-it by using its package url: `fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx`.
+it by using its package url: `fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx`.
 It receives the command line arguments shown below and is typically used as a "setup" process in an
 [environment's facet definition](#environment).
 
@@ -312,7 +312,7 @@ OPTIONS:
 
 The `mock_device_settings` helper is a mock implementation of the FIDL protocol
 `fuchsia.devicesettings.DeviceSettingsManager`. You can launch it
-by using its package url: `fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx`.
+by using its package url: `fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/mock-device-settings.cmx`.
 It receives the command line arguments shown below and is intended to be used as a "services" entry in
 [environment's facet definition](#environment). You **must** specify the values for **every** key that your
 tests may want to access as a command-line option.

@@ -173,12 +173,12 @@ void EthDev::RecvLocked(const void* data, size_t len, uint32_t extra) {
   if ((status = receive_fifo_.write(sizeof(*e), e, 1, nullptr)) < 0) {
     if (status == ZX_ERR_SHOULD_WAIT) {
       if ((fail_receive_write_++ % kFailureReportRate) == 0) {
-        zxlogf(ERROR, "eth [%s]: no rx_fifo space available (%u times)", name_,
+        zxlogf(WARNING, "eth [%s]: no rx_fifo space available (%u times)", name_,
                fail_receive_write_);
       }
     } else {
       // Fatal, should force teardown.
-      zxlogf(ERROR, "eth [%s]: rx_fifo write failed %d", name_, status);
+      zxlogf(WARNING, "eth [%s]: rx_fifo write failed %d", name_, status);
     }
     return;
   }
@@ -190,7 +190,7 @@ int EthDev::TransmitFifoWrite(eth_fifo_entry_t* entries, size_t count) {
   // Writing should never fail, or fail to write all entries.
   status = transmit_fifo_.write(sizeof(eth_fifo_entry_t), entries, count, &actual);
   if (status < 0) {
-    zxlogf(ERROR, "eth [%s]: tx_fifo write failed %d", name_, status);
+    zxlogf(WARNING, "eth [%s]: tx_fifo write failed %d", name_, status);
     return -1;
   }
   if (actual != count) {

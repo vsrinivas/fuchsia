@@ -27,7 +27,7 @@
                                     "-s",
                                     "DeviceName=mdns-test-device-remote"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/mock-device-settings.cmx"
                             },
                             "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
                             "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
@@ -41,7 +41,7 @@
                                     "-i",
                                     "fe80::4607:bff:fe60:595d/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
                             }
                         ]
                     }
@@ -60,7 +60,7 @@
                             "-s",
                             "DeviceName=mdns-test-device-local"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/mock-device-settings.cmx"
                     },
                     "fuchsia.net.mdns.Resolver": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
                     "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
@@ -75,7 +75,7 @@
                             "-i",
                             "fe80::4607:bff:fe60:595e/24"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
                     },
                     {
                         "arguments": [
@@ -84,7 +84,7 @@
                             "-i",
                             "fe80::4607:bff:fe60:595f/24"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
                     }
                 ],
                 "test": [

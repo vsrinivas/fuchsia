@@ -41,7 +41,7 @@
                                     "--interface=72:00:0a:0b:0c:0d=net-1",
                                     "--interface=72:00:01:02:03:04=net-2"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_intermediary.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-intermediary.cmx"
                             }
                         },
                         "test": [

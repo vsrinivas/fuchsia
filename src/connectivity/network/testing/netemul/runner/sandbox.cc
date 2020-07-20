@@ -43,8 +43,7 @@ static const char* kGuestDiscoveryUrl =
     "fuchsia-pkg://fuchsia.com/guest_discovery_service#meta/"
     "guest_discovery_service.cmx";
 static const char* kNetstackIntermediaryUrl =
-    "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/"
-    "helper_netstack_intermediary.cmx";
+    "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-intermediary.cmx";
 
 #define STATIC_MSG_STRUCT(name, msgv) \
   struct name {                       \

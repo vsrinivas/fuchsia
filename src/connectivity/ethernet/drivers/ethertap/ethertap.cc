@@ -223,7 +223,7 @@ void TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
     status = msg.Write(channel_.get(), 0);
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "ethertap: EthernetImplQueueTx error writing: %d", status);
+      zxlogf(WARNING, "ethertap: EthernetImplQueueTx error writing: %d", status);
     }
   }
   // returning ZX_ERR_SHOULD_WAIT indicates that we will call complete_tx(), which we will not
