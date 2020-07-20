@@ -8,6 +8,7 @@
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
 
+#include <optional>
 #include <string>
 
 #include <fbl/unique_fd.h>
@@ -37,6 +38,9 @@ struct TestFilesystemOptions {
 __EXPORT std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options);
 
 __EXPORT std::vector<TestFilesystemOptions> AllTestFilesystems();
+// Provides the ability to map and filter all test file systems, using the supplied function.
+__EXPORT std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
+    std::function<std::optional<TestFilesystemOptions>(const TestFilesystemOptions&)>);
 
 // A file system instance is a specific instance created for test purposes.
 class FilesystemInstance {
@@ -63,6 +67,7 @@ class Filesystem {
     bool supports_mmap = false;
     bool supports_resize = false;
     uint64_t max_file_size = std::numeric_limits<uint64_t>::max();
+    bool in_memory = false;
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
@@ -97,6 +102,7 @@ class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
         .supports_mmap = false,
         .supports_resize = true,
         .max_file_size = minfs::kMinfsMaxFileSize,
+        .in_memory = false,
     };
     return traits;
   }
@@ -115,6 +121,7 @@ class MemfsFilesystem : public FilesystemImpl<MemfsFilesystem> {
         .supports_mmap = true,
         .supports_resize = false,
         .max_file_size = 512 * 1024 * 1024,
+        .in_memory = true,
     };
     return traits;
   }
@@ -133,6 +140,7 @@ class FatFilesystem : public FilesystemImpl<FatFilesystem> {
         .supports_mmap = false,
         .supports_resize = false,
         .max_file_size = 4'294'967'295,
+        .in_memory = false,
     };
     return traits;
   }

@@ -56,70 +56,29 @@ TEST_P(DirectoryTest, DirectoryFilenameMax) {
   ASSERT_EQ(errno, ENAMETOOLONG);
 }
 
-#if 0  // TODO(fxb/52611): Move to large tests
+// Hopefully not pushing against any 'max file length' boundaries, but large enough to fill a
+// directory quickly.
+constexpr int kLargePathLength = 128;
 
-// Hopefully not pushing against any 'max file length' boundaries, but large
-// enough to fill a directory quickly.
-#define LARGE_PATH_LENGTH 128
-
-bool TestDirectoryLarge(void) {
-  BEGIN_TEST;
-
-  // ZX-2107: This test is humongous: ~8000 seconds in non-kvm qemu on
-  // a fast desktop.
-  unittest_cancel_timeout();
-
+TEST_P(DirectoryTest, Large) {
   // Write a bunch of files to a directory
   const int num_files = 1024;
   for (int i = 0; i < num_files; i++) {
-    char path[LARGE_PATH_LENGTH + 1];
-    snprintf(path, sizeof(path), "%0*d", LARGE_PATH_LENGTH - 2, i);
+    char path[kLargePathLength + 1];
+    snprintf(path, sizeof(path), "%0*d", kLargePathLength - 2, i);
     fbl::unique_fd fd(open(GetPath(path).c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
     ASSERT_TRUE(fd);
   }
 
   // Unlink all those files
   for (int i = 0; i < num_files; i++) {
-    char path[LARGE_PATH_LENGTH + 1];
-    snprintf(path, sizeof(path), "%0*d", LARGE_PATH_LENGTH - 2, i);
+    char path[kLargePathLength + 1];
+    snprintf(path, sizeof(path), "%0*d", kLargePathLength - 2, i);
     ASSERT_EQ(unlink(GetPath(path).c_str()), 0);
   }
 
   // TODO(smklein): Verify contents
-
-  END_TEST;
 }
-
-bool TestDirectoryMax(void) {
-  BEGIN_TEST;
-
-  // Write the maximum number of files to a directory
-  int i = 0;
-  for (;; i++) {
-    char path[LARGE_PATH_LENGTH + 1];
-    snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i);
-    if (i % 100 == 0) {
-      printf(" Allocating: %s\n", path);
-    }
-
-    fbl::unique_fd fd(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
-    if (!fd) {
-      printf("    wrote %d direntries\n", i);
-      break;
-    }
-  }
-
-  // Unlink all those files
-  for (i -= 1; i >= 0; i--) {
-    char path[LARGE_PATH_LENGTH + 1];
-    snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i);
-    ASSERT_EQ(unlink(path), 0);
-  }
-
-  END_TEST;
-}
-
-#endif
 
 void TestDirectoryCoalesceHelper(const std::string& base_path, const int* unlink_order) {
   const std::string files[] = {
@@ -293,50 +252,23 @@ TEST_P(DirectoryTest, TestDirectoryReaddir) {
   ASSERT_EQ(unlink(GetPath("a").c_str()), 0);
 }
 
-#if 0  // TODO(fxb/52611): Move to large tests
+TEST_P(DirectoryTest, TestDirectoryReaddirRmAll) {
+  constexpr size_t kNumEntries = 1000;
 
-// Create a directory named GetPath("dir").c_str() with entries "00000", "00001" ... up to
-// num_entries.
-bool large_dir_setup(size_t num_entries) {
+  // Create a directory named GetPath("dir").c_str() with entries "00000", "00001" ... up to
+  // kNumEntries.
   ASSERT_EQ(mkdir(GetPath("dir").c_str(), 0755), 0);
 
-  // Create a large directory (ideally, large enough that our libc
-  // implementation can't cache the entire contents of the directory
-  // with one 'getdirents' call).
-  for (size_t i = 0; i < num_entries; i++) {
+  // Create a large directory (ideally, large enough that our libc implementation can't cache the
+  // entire contents of the directory with one 'getdirents' call).
+  for (size_t i = 0; i < kNumEntries; i++) {
     char dirname[100];
     snprintf(dirname, 100, GetPath("dir/%05lu").c_str(), i);
     ASSERT_EQ(mkdir(dirname, 0755), 0);
   }
 
   DIR* dir = opendir(GetPath("dir").c_str());
-  ASSERT_NONNULL(dir);
-
-  // As a sanity check, it should contain all then entries we made
-  struct dirent* de;
-  size_t num_seen = 0;
-  size_t i = 0;
-  while ((de = readdir(dir)) != NULL) {
-    if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
-      // Ignore these entries
-      continue;
-    }
-    char dirname[100];
-    snprintf(dirname, 100, "%05lu", i++);
-    ASSERT_EQ(strcmp(de->d_name, dirname), 0, "Unexpected dirent");
-    num_seen++;
-  }
-  ASSERT_EQ(closedir(dir), 0);
-
-  return true;
-}
-
-TEST_P(DirectoryTest, TestDirectoryReaddirRmAll) {
-  size_t num_entries = 1000;
-  ASSERT_TRUE(large_dir_setup(num_entries));
-
-  DIR* dir = opendir(GetPath("dir").c_str());
-  ASSERT_NONNULL(dir);
+  ASSERT_NE(dir, nullptr);
 
   // Unlink all the entries as we read them.
   struct dirent* de;
@@ -349,17 +281,15 @@ TEST_P(DirectoryTest, TestDirectoryReaddirRmAll) {
     }
     char dirname[100];
     snprintf(dirname, 100, "%05lu", i++);
-    ASSERT_EQ(strcmp(de->d_name, dirname), 0, "Unexpected dirent");
+    ASSERT_EQ(strcmp(de->d_name, dirname), 0) << "Unexpected dirent";
     ASSERT_EQ(unlinkat(dirfd(dir), dirname, AT_REMOVEDIR), 0);
     num_seen++;
   }
 
-  ASSERT_EQ(num_seen, num_entries, "Did not see all expected entries");
+  ASSERT_EQ(num_seen, kNumEntries) << "Did not see all expected entries";
   ASSERT_EQ(closedir(dir), 0);
-  ASSERT_EQ(rmdir(GetPath("dir").c_str()), 0, "Could not unlink containing directory");
+  ASSERT_EQ(rmdir(GetPath("dir").c_str()), 0);
 }
-
-#endif
 
 TEST_P(DirectoryTest, TestDirectoryRewind) {
   ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);

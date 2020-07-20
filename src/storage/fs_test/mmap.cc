@@ -531,13 +531,14 @@ TEST_P(MmapDeathTest, Death) {
 }
 
 std::vector<TestFilesystemOptions> GetTestCombinations() {
-  std::vector<TestFilesystemOptions> test_combinations;
-  for (TestFilesystemOptions options : AllTestFilesystems()) {
-    if (options.filesystem->GetTraits().supports_mmap) {
-      test_combinations.push_back(options);
-    }
-  }
-  return test_combinations;
+  return MapAndFilterAllTestFilesystems(
+      [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+        if (options.filesystem->GetTraits().supports_mmap) {
+          return options;
+        } else {
+          return std::nullopt;
+        }
+      });
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MmapTest, testing::ValuesIn(GetTestCombinations()),

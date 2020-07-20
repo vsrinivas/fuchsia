@@ -135,6 +135,19 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
   };
 }
 
+std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
+    std::function<std::optional<TestFilesystemOptions>(const TestFilesystemOptions&)>
+        map_and_filter) {
+  std::vector<TestFilesystemOptions> results;
+  for (const TestFilesystemOptions& options : AllTestFilesystems()) {
+    auto r = map_and_filter(options);
+    if (r) {
+      results.push_back(*std::move(r));
+    }
+  }
+  return results;
+}
+
 zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t format) {
   auto status =
       zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &default_mkfs_options));

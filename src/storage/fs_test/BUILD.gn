@@ -576,6 +576,24 @@ fuchsia_test_package("fs-tests") {
   ]
 }
 
+test("directory_large_tests") {
+  sources = [ "directory_large.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("directory-large-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/directory-large-tests.cml"
+  deps = [
+    ":directory_large_tests",
+    ":manifests",
+  ]
+}
+
 test("max_file_tests") {
   sources = [ "max_file.cc" ]
   deps = [
@@ -636,6 +654,7 @@ fuchsia_component("truncate-large-tests") {
 
 fuchsia_test_package("large-fs-tests") {
   test_components = [
+    ":directory-large-tests",
     ":max-file-tests",
     ":sparse-large-tests",
     ":truncate-large-tests",
@@ -651,6 +670,7 @@ action("manifests") {
     "$target_gen_dir/attr-tests.cml",
     "$target_gen_dir/basic-tests.cml",
     "$target_gen_dir/clone-tests.cml",
+    "$target_gen_dir/directory-large-tests.cml",
     "$target_gen_dir/directory-tests.cml",
     "$target_gen_dir/dot-dot-tests.cml",
     "$target_gen_dir/fcntl-tests.cml",

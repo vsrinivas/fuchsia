@@ -296,18 +296,17 @@ TEST_P(HardLinkTest, Errors) {
   ASSERT_EQ(unlink(old_path.c_str()), 0);
 }
 
-std::vector<TestFilesystemOptions> GetTestCombinations() {
-  std::vector<TestFilesystemOptions> test_combinations;
-  for (TestFilesystemOptions options : AllTestFilesystems()) {
-    if (options.filesystem->GetTraits().supports_hard_links) {
-      test_combinations.push_back(options);
-    }
-  }
-  return test_combinations;
-}
-
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, HardLinkTest, testing::ValuesIn(GetTestCombinations()),
-                         testing::PrintToStringParamName());
+INSTANTIATE_TEST_SUITE_P(
+    /*no prefix*/, HardLinkTest,
+    testing::ValuesIn(MapAndFilterAllTestFilesystems(
+        [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+          if (options.filesystem->GetTraits().supports_hard_links) {
+            return options;
+          } else {
+            return std::nullopt;
+          }
+        })),
+    testing::PrintToStringParamName());
 
 }  // namespace
 }  // namespace fs_test

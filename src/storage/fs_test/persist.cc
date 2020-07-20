@@ -256,15 +256,16 @@ TEST_P(PersistRenameLoopTest, MultipleRenamesCorrectAfterRemount) {
   ASSERT_TRUE(target_found) << "Target was never unlinked";
 }
 
-// These tests only work on filesystems that can be unmounted.
 std::vector<TestFilesystemOptions> GetTestCombinations() {
-  std::vector<TestFilesystemOptions> test_combinations;
-  for (TestFilesystemOptions options : AllTestFilesystems()) {
-    if (options.filesystem->GetTraits().can_unmount) {
-      test_combinations.push_back(options);
-    }
-  }
-  return test_combinations;
+  return MapAndFilterAllTestFilesystems(
+      [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+        // These tests only work on filesystems that can be unmounted.
+        if (options.filesystem->GetTraits().can_unmount) {
+          return options;
+        } else {
+          return std::nullopt;
+        }
+      });
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, PersistTest, testing::ValuesIn(GetTestCombinations()),
