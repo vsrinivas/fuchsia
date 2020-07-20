@@ -113,6 +113,46 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
         }
     }
 
+    /// Get the current length of this file.
+    pub fn len(&self) -> u32 {
+        match self.entry {
+            Some(ref e) => e.inner().size().unwrap_or(0),
+            None => 0,
+        }
+    }
+
+    /// Get the access time of this file.
+    pub fn accessed(&self) -> Date {
+        match self.entry {
+            Some(ref e) => e.inner().accessed(),
+            None => Date::decode(0)
+        }
+    }
+
+    /// Get the creation time of this file.
+    pub fn created(&self) -> DateTime {
+        match self.entry {
+            Some(ref e) => e.inner().created(),
+            None => DateTime::decode(0, 0, 0)
+        }
+    }
+
+    /// Get the modification time of this file.
+    pub fn modified(&self) -> DateTime {
+        match self.entry {
+            Some(ref e) => e.inner().modified(),
+            None => DateTime::decode(0, 0, 0)
+        }
+    }
+
+    pub(crate) fn editor_mut(&mut self) -> Option<&mut DirEntryEditor> {
+        self.entry.as_mut()
+    }
+
+    pub(crate) fn editor(&self) -> Option<&DirEntryEditor> {
+        self.entry.as_ref()
+    }
+
     fn size(&self) -> Option<u32> {
         match self.entry {
             Some(ref e) => e.inner().size(),

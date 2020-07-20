@@ -7,13 +7,13 @@ use crate::io;
 use crate::io::prelude::*;
 use crate::io::{ErrorKind, SeekFrom};
 
-use crate::dir_entry::{DirEntry, DirEntryData, DirFileEntryData, DirLfnEntryData, FileAttributes, ShortName, DIR_ENTRY_SIZE};
+use crate::dir_entry::{DirEntry, DirEntryData, DirEntryEditor, DirFileEntryData, DirLfnEntryData, FileAttributes, ShortName, DIR_ENTRY_SIZE};
 #[cfg(feature = "lfn")]
 use crate::dir_entry::{LFN_ENTRY_LAST_FLAG, LFN_PART_LEN};
 use crate::dir_entry::{SFN_SIZE, SFN_PADDING};
 use crate::file::File;
 use crate::fs::{DiskSlice, FileSystem, FsIoAdapter, ReadWriteSeek, OemCpConverter};
-use crate::time::TimeProvider;
+use crate::time::{DateTime, Date, TimeProvider};
 
 pub(crate) enum DirRawStream<'a, IO: ReadWriteSeek, TP, OCC> {
     File(File<'a, IO, TP, OCC>),
@@ -34,6 +34,21 @@ impl<IO: ReadWriteSeek, TP, OCC> DirRawStream<'_, IO, TP, OCC> {
             DirRawStream::Root(_) => None,
         }
     }
+
+    fn entry_mut(&mut self) -> Option<&mut DirEntryEditor> {
+        match self {
+            DirRawStream::File(file) => file.editor_mut(),
+            DirRawStream::Root(_) => None,
+        }
+    }
+
+    fn entry(&self) -> Option<&DirEntryEditor> {
+        match self {
+            DirRawStream::File(file) => file.editor(),
+            DirRawStream::Root(_) => None,
+        }
+    }
+
 }
 
 // Note: derive cannot be used because of invalid bounds. See: https://github.com/rust-lang/rust/issues/26925
@@ -163,6 +178,54 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
                 return Ok(DirEntryOrShortName::ShortName(name));
             }
             short_name_gen.next_iteration();
+        }
+    }
+
+    /// Set modification datetime for this directory.
+    pub fn set_created(&mut self, date_time: DateTime) {
+        match self.stream.entry_mut() {
+            Some(e) => e.set_created(date_time),
+            None => {},
+        }
+    }
+
+    /// Set access date for this directory.
+    pub fn set_accessed(&mut self, date: Date) {
+        match self.stream.entry_mut() {
+            Some(e) => e.set_accessed(date),
+            None => {},
+        }
+    }
+
+    /// Set modification datetime for this directory.
+    pub fn set_modified(&mut self, date_time: DateTime) {
+        match self.stream.entry_mut() {
+            Some(e) => e.set_modified(date_time),
+            None => {},
+        }
+    }
+
+    /// Get the access time of this directory.
+    pub fn accessed(&self) -> Date {
+        match self.stream.entry() {
+            Some(ref e) => e.inner().accessed(),
+            None => Date::decode(0)
+        }
+    }
+
+    /// Get the creation time of this directory.
+    pub fn created(&self) -> DateTime {
+        match self.stream.entry() {
+            Some(ref e) => e.inner().created(),
+            None => DateTime::decode(0, 0, 0)
+        }
+    }
+
+    /// Get the modification time of this directory.
+    pub fn modified(&self) -> DateTime {
+        match self.stream.entry() {
+            Some(ref e) => e.inner().modified(),
+            None => DateTime::decode(0, 0, 0)
         }
     }
 
