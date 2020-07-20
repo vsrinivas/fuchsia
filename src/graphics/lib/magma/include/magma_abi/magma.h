@@ -461,7 +461,7 @@ magma_status_t magma_query2(
 magma_status_t magma_query_returns_buffer2(
     magma_device_t device,
     uint64_t id,
-    uint32_t* handle_out);
+    magma_handle_t* handle_out);
 
 ///
 /// \brief Opens a connection to a device.

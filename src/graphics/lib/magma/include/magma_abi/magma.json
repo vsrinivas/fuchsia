@@ -863,7 +863,7 @@
           },
           {
             "name": "handle_out",
-            "type": "uint32_t*",
+            "type": "magma_handle_t*",
             "description": "Handle to the returned buffer."
           }
         ]

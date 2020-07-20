@@ -51,7 +51,7 @@ magma_status_t magma_query2(magma_device_t device, uint64_t id, uint64_t* value_
 }
 
 magma_status_t magma_query_returns_buffer2(magma_device_t device, uint64_t id,
-                                           uint32_t* handle_out) {
+                                           magma_handle_t* handle_out) {
   auto platform_device_client = reinterpret_cast<magma::PlatformDeviceClient*>(device);
   if (!handle_out)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad handle_out address");

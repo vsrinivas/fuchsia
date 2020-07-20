@@ -75,7 +75,7 @@ magma_status_t magma_query_returns_buffer(int32_t file_descriptor, uint64_t id,
 }
 
 magma_status_t magma_query_returns_buffer2(magma_device_t device, uint64_t id,
-                                           uint32_t* handle_out) {
+                                           magma_handle_t* handle_out) {
   return MAGMA_STATUS_INVALID_ARGS;
 }
 
