@@ -152,19 +152,20 @@ void EncodeVectorBody(UseStdCopy<false>, EncoderImpl* encoder,
 
 template <typename T, typename DecoderImpl>
 void DecodeVectorBody(UseStdCopy<true>, DecoderImpl* decoder, size_t in_begin_offset,
-                      size_t in_end_offset, typename std::vector<T>::iterator out_begin) {
+                      size_t in_end_offset, std::vector<T>* out, size_t count) {
   static_assert(CodingTraits<T>::inline_size_v1_no_ee == sizeof(T),
                 "stride doesn't match object size");
-  std::copy(decoder->template GetPtr<T>(in_begin_offset),
-            decoder->template GetPtr<T>(in_end_offset), out_begin);
+  *out = std::vector<T>(decoder->template GetPtr<T>(in_begin_offset),
+                        decoder->template GetPtr<T>(in_end_offset));
 }
 
 template <typename T, typename DecoderImpl>
 void DecodeVectorBody(UseStdCopy<false>, DecoderImpl* decoder, size_t in_begin_offset,
-                      size_t in_end_offset, typename std::vector<T>::iterator out_begin) {
+                      size_t in_end_offset, std::vector<T>* out, size_t count) {
+  out->resize(count);
   constexpr size_t stride = CodingTraits<T>::inline_size_v1_no_ee;
   size_t in_offset = in_begin_offset;
-  typename std::vector<T>::iterator out_it = out_begin;
+  typename std::vector<T>::iterator out_it = out->begin();
   for (; in_offset < in_end_offset; in_offset += stride, out_it++) {
     CodingTraits<T>::Decode(decoder, &*out_it, in_offset);
   }
@@ -187,12 +188,11 @@ struct CodingTraits<::std::vector<T>> {
   template <class DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::std::vector<T>* value, size_t offset) {
     fidl_vector_t* encoded = decoder->template GetPtr<fidl_vector_t>(offset);
-    value->resize(encoded->count);
     constexpr size_t stride = CodingTraits<T>::inline_size_v1_no_ee;
     size_t base = decoder->GetOffset(encoded->data);
     size_t count = encoded->count;
     internal::DecodeVectorBody<T>(internal::UseStdCopy<IsMemcpyCompatible<T>::value>(), decoder,
-                                  base, base + stride * count, value->begin());
+                                  base, base + stride * count, value, count);
   }
 };
 

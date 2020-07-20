@@ -1,6 +1,6 @@
 {
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/clone.h": "78c6e19f843046cceb9b1a31bd9125ab",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/coding_traits.h": "94f59c9bf34f23bd5f3dc4a3d2e16894",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/coding_traits.h": "eb54c765e96b97f860aa4e395709976f",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/comparison.h": "ae54305158f5f3abbf078dedee88f768",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/decoder.h": "34b0c1f352301a2e375aa1a7c6d947e1",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/encoder.h": "8fd3258444569fa8ca251f15c36bed48",
