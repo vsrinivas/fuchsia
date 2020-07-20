@@ -18,6 +18,7 @@ dart_test("sl4f_test") {
     "repository_manager_test.dart",
     "setui_test.dart",
     "storage_test.dart",
+    "tcp_proxy_test.dart",
   ]
 
   deps = [

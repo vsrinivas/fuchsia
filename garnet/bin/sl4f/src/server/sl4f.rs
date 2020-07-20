@@ -114,6 +114,9 @@ use crate::repository_manager::facade::RepositoryManagerFacade;
 // Paver related includes
 use crate::paver::facade::PaverFacade;
 
+// Proxy related includes
+use crate::proxy::facade::ProxyFacade;
+
 // Scenic related includes
 use crate::scenic::facade::ScenicFacade;
 
@@ -220,6 +223,7 @@ impl Sl4f {
                 "repo_facade" => RepositoryManagerFacade::new(),
                 "paver" => PaverFacade::new(),
                 "profile_server_facade" => ProfileServerFacade::new(),
+                "proxy_facade" => ProxyFacade::new(),
                 "scenic_facade" => ScenicFacade::new(),
                 "setui_facade" => SetUiFacade::new(),
                 "sysinfo_facade" => SysInfoFacade::new(),

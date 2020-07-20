@@ -15,6 +15,7 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
+    "//garnet/bin/sl4f/fidl:fuchsia.testing.proxy-rustc",
     "//garnet/lib/rust/connectivity-testing",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
@@ -153,7 +154,7 @@ package("sl4f") {
       dest = "sl4f.cmx"
     },
     {
-      path = "proxy/meta/data_proxy.cmx"
+      path = rebase_path("proxy/meta/data_proxy.cmx")
       dest = "data_proxy.cmx"
     },
   ]
