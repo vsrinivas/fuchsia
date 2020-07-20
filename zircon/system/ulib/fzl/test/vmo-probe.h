@@ -11,10 +11,10 @@ static volatile uint32_t g_access_check_var;
 enum class AccessType { Rd, Wr };
 
 // Test read or write access at the address |addr|.
-bool probe_access(void* addr, AccessType access_type, bool expect_can_access);
+void probe_access(void* addr, AccessType access_type, bool expect_can_access);
 
 // Tests read or write access over a region starting at |start| and ending at
 // |start| + |size|.
-bool probe_verify_region(void* start, size_t size, uint32_t access);
+void probe_verify_region(void* start, size_t size, uint32_t access);
 
 }  // namespace vmo_probe

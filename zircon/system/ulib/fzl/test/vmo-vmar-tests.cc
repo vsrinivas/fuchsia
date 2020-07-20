@@ -11,7 +11,7 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "vmo-probe.h"
 
@@ -37,9 +37,7 @@ bool contained_in(const T& contained, const U& container) {
          (contained_end <= container_end);
 }
 
-bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
-  BEGIN_TEST;
-
+void vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
   RefPtr<VmarManager> managers[2];
   RefPtr<VmarManager> target_vmar;
 
@@ -47,7 +45,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
   size_t vmar_size = kSubVmarTestSize;
   for (uint32_t i = 0; i < vmar_levels; ++i) {
     managers[i] = VmarManager::Create(vmar_size, i ? managers[i - 1] : nullptr);
-    ASSERT_NONNULL(managers[i], "Failed to create VMAR manager");
+    ASSERT_NOT_NULL(managers[i], "Failed to create VMAR manager");
 
     if (i) {
       ASSERT_TRUE(contained_in(*managers[i], *managers[i - 1]),
@@ -165,8 +163,8 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
               vmar_end += target_vmar->size();
               if (vmo_end < vmar_end) {
                 void* probe_tgt = reinterpret_cast<void*>(vmo_end);
-                ASSERT_TRUE(vmo_probe::probe_access(probe_tgt, AccessType::Rd, false));
-                ASSERT_TRUE(vmo_probe::probe_access(probe_tgt, AccessType::Wr, false));
+                ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_access(probe_tgt, AccessType::Rd, false));
+                ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_access(probe_tgt, AccessType::Wr, false));
               }
             }
           }
@@ -205,7 +203,8 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
       // everything checks out by probing and looking for seg-faults
       // if/when we violate permissions.
       for (const auto& t : kVmoTests) {
-        ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, t.access_flags));
+        ASSERT_NO_FATAL_FAILURES(
+            vmo_probe::probe_verify_region(t.start, t.test_size, t.access_flags));
       }
 
       // Release all of our VMO handles, then verify again.  Releasing
@@ -215,7 +214,8 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
       }
 
       for (const auto& t : kVmoTests) {
-        ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, t.access_flags));
+        ASSERT_NO_FATAL_FAILURES(
+            vmo_probe::probe_verify_region(t.start, t.test_size, t.access_flags));
       }
 
       // If this is the first pass, manually unmap all of the VmoMappers
@@ -243,7 +243,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
         // option, so we have to simply skip this portion of the test.
         if (vmar_levels != 0) {
           for (const auto& t : kVmoTests) {
-            ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, 0));
+            ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_verify_region(t.start, t.test_size, 0));
           }
         }
       }
@@ -258,7 +258,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
     // above for reasoning.
     if (pass && (vmar_levels != 0)) {
       for (const auto& t : kVmoTests) {
-        ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, 0));
+        ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_verify_region(t.start, t.test_size, 0));
       }
     }
   }
@@ -267,49 +267,23 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
   // that they were destroyed as they should have been.  Right now this is
   // rather difficult as we cannot fetch mapping/vmar info for our current
   // process, so we are skipping the check.
-
-  END_TEST;
 }
 
-bool vmo_create_and_map_root_test() {
-  BEGIN_TEST;
-  ASSERT_TRUE(vmar_vmo_core_test(0, true));
-  END_TEST;
+TEST(VmoMapperVmarManagerTests, vmo_create_and_map_root_test) { vmar_vmo_core_test(0, true); }
+
+TEST(VmoMapperVmarManagerTests, vmo_create_and_map_sub_vmar_test) { vmar_vmo_core_test(1, true); }
+
+TEST(VmoMapperVmarManagerTests, vmo_create_and_map_sub_sub_vmar_test) {
+  vmar_vmo_core_test(2, true);
 }
 
-bool vmo_create_and_map_sub_vmar_test() {
-  BEGIN_TEST;
-  ASSERT_TRUE(vmar_vmo_core_test(1, true));
-  END_TEST;
-}
+TEST(VmoMapperVmarManagerTests, vmo_map_root_test) { vmar_vmo_core_test(0, false); }
 
-bool vmo_create_and_map_sub_sub_vmar_test() {
-  BEGIN_TEST;
-  ASSERT_TRUE(vmar_vmo_core_test(2, true));
-  END_TEST;
-}
+TEST(VmoMapperVmarManagerTests, vmo_map_sub_vmar_test) { vmar_vmo_core_test(1, false); }
 
-bool vmo_map_root_test() {
-  BEGIN_TEST;
-  ASSERT_TRUE(vmar_vmo_core_test(0, false));
-  END_TEST;
-}
+TEST(VmoMapperVmarManagerTests, vmo_map_sub_sub_vmar_test) { vmar_vmo_core_test(2, false); }
 
-bool vmo_map_sub_vmar_test() {
-  BEGIN_TEST;
-  ASSERT_TRUE(vmar_vmo_core_test(1, false));
-  END_TEST;
-}
-
-bool vmo_map_sub_sub_vmar_test() {
-  BEGIN_TEST;
-  ASSERT_TRUE(vmar_vmo_core_test(2, false));
-  END_TEST;
-}
-
-bool vmo_mapper_move_test() {
-  BEGIN_TEST;
-
+TEST(VmoMapperVmarManagerTests, vmo_mapper_move_test) {
   // Start by creating a sub-vmar to use during the test.  This is important for two reasons.
   //
   // 1) We want to make sure that VmarManagers are properly moved between
@@ -326,7 +300,7 @@ bool vmo_mapper_move_test() {
   //    which cannot conflict with mappings made for threads in the root VMAR.
   RefPtr<VmarManager> sub_vmar;
   sub_vmar = VmarManager::Create(kSubVmarTestSize);
-  ASSERT_NONNULL(sub_vmar);
+  ASSERT_NOT_NULL(sub_vmar);
 
   constexpr uint32_t ACCESS_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   void* addr;
@@ -350,7 +324,7 @@ bool vmo_mapper_move_test() {
 
     ASSERT_EQ(res, ZX_OK);
     ASSERT_EQ(sub_vmar.get(), mapper1.manager().get());
-    ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
+    ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
 
     // Move the mapping from mapper1 into mapper2 using assignment.  Make sure
     // the region is still mapped and has not moved in our address space.
@@ -362,7 +336,7 @@ bool vmo_mapper_move_test() {
     ASSERT_EQ(sub_vmar.get(), mapper2.manager().get());
     ASSERT_EQ(mapper2.start(), addr);
     ASSERT_EQ(mapper2.size(), size);
-    ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
+    ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
 
     // Now do the same thing, but this time move using construction.
     VmoMapper mapper3(std::move(mapper2));
@@ -373,7 +347,7 @@ bool vmo_mapper_move_test() {
     ASSERT_EQ(sub_vmar.get(), mapper3.manager().get());
     ASSERT_EQ(mapper3.start(), addr);
     ASSERT_EQ(mapper3.size(), size);
-    ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
+    ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
 
     // Map a new region into mapper1, make sure it is OK.
     res = mapper1.CreateAndMap(ZX_PAGE_SIZE, ACCESS_FLAGS, sub_vmar);
@@ -381,7 +355,8 @@ bool vmo_mapper_move_test() {
     size_t second_size = mapper1.size();
 
     ASSERT_EQ(res, ZX_OK);
-    ASSERT_TRUE(vmo_probe::probe_verify_region(second_addr, second_size, ACCESS_FLAGS));
+    ASSERT_NO_FATAL_FAILURES(
+        vmo_probe::probe_verify_region(second_addr, second_size, ACCESS_FLAGS));
 
     // Now, move mapper3 on top of mapper1 via assignment and make sure that
     // mapper1's old region is properly unmapped while mapper3's contents remain
@@ -394,27 +369,15 @@ bool vmo_mapper_move_test() {
     ASSERT_EQ(sub_vmar.get(), mapper1.manager().get());
     ASSERT_EQ(mapper1.start(), addr);
     ASSERT_EQ(mapper1.size(), size);
-    ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
-    ASSERT_TRUE(vmo_probe::probe_verify_region(second_addr, second_size, 0));
+    ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
+    ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_verify_region(second_addr, second_size, 0));
   }
 
   // Finally, now that we have left the scope, the original mapping that we
   // have been moving around should be gone by now.
-  ASSERT_NONNULL(addr);
+  ASSERT_NOT_NULL(addr);
   ASSERT_EQ(size, ZX_PAGE_SIZE);
-  ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, 0));
-
-  END_TEST;
+  ASSERT_NO_FATAL_FAILURES(vmo_probe::probe_verify_region(addr, size, 0));
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(vmo_mapper_vmar_manager_tests)
-RUN_NAMED_TEST("vmo_create_and_map_root", vmo_create_and_map_root_test)
-RUN_NAMED_TEST("vmo_create_and_map_sub_vmar", vmo_create_and_map_sub_vmar_test)
-RUN_NAMED_TEST("vmo_create_and_map_sub_sub_vmar", vmo_create_and_map_sub_sub_vmar_test)
-RUN_NAMED_TEST("vmo_map_root", vmo_map_root_test)
-RUN_NAMED_TEST("vmo_map_sub_vmar", vmo_map_sub_vmar_test)
-RUN_NAMED_TEST("vmo_map_sub_sub_vmar", vmo_map_sub_sub_vmar_test)
-RUN_NAMED_TEST("vmo_mapper_move_test", vmo_mapper_move_test)
-END_TEST_CASE(vmo_mapper_vmar_manager_tests)

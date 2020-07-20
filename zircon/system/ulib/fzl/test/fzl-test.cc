@@ -13,38 +13,30 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
 template <typename T>
-bool AlmostEqual(T t0, T t1, T e) {
-  BEGIN_HELPER;
-
-  char buf[128];
-  snprintf(buf, sizeof(buf), "%zu != %zu (within error of %zu)", t0, t1, e);
-  ASSERT_TRUE(std::min(t0, t1) + e >= std::max(t0, t1), buf);
-
-  END_HELPER;
+void AlmostEqual(T t0, T t1, T e) {
+  ASSERT_TRUE(std::min(t0, t1) + e >= std::max(t0, t1), "%zu != %zu (within error of %zu)", t0, t1,
+              e);
 }
 
-bool TickConverter(zx::ticks ticks, zx::ticks err) {
-  BEGIN_HELPER;
-  ASSERT_TRUE(AlmostEqual(ticks.get(), fzl::NsToTicks(fzl::TicksToNs(ticks)).get(), err.get()));
-  ASSERT_TRUE(AlmostEqual(ticks.get(), ns_to_ticks(ticks_to_ns(ticks.get())), err.get()));
-  END_HELPER;
+void TickConverter(zx::ticks ticks, zx::ticks err) {
+  ASSERT_NO_FATAL_FAILURES(
+      AlmostEqual(ticks.get(), fzl::NsToTicks(fzl::TicksToNs(ticks)).get(), err.get()));
+  ASSERT_NO_FATAL_FAILURES(
+      AlmostEqual(ticks.get(), ns_to_ticks(ticks_to_ns(ticks.get())), err.get()));
 }
 
-bool NsConverter(zx::duration ns, zx::duration err) {
-  BEGIN_HELPER;
-  ASSERT_TRUE(AlmostEqual(ns.get(), fzl::TicksToNs(fzl::NsToTicks(ns)).get(), err.get()));
-  ASSERT_TRUE(AlmostEqual(ns.get(), ticks_to_ns(ns_to_ticks(ns.get())), err.get()));
-  END_HELPER;
+void NsConverter(zx::duration ns, zx::duration err) {
+  ASSERT_NO_FATAL_FAILURES(
+      AlmostEqual(ns.get(), fzl::TicksToNs(fzl::NsToTicks(ns)).get(), err.get()));
+  ASSERT_NO_FATAL_FAILURES(AlmostEqual(ns.get(), ticks_to_ns(ns_to_ticks(ns.get())), err.get()));
 }
 
-bool TimeTest() {
-  BEGIN_TEST;
-
+TEST(LibfzlTests, TimeTest) {
   zx::ticks tps = zx::ticks::per_second();
   zx::duration nps = zx::sec(1);
 
@@ -76,26 +68,22 @@ bool TimeTest() {
   zx::ticks tick_loss = std::max(zx::ticks(1 + (tps.get() / nps.get())), zx::ticks(1));
   zx::duration duration_loss = std::max(zx::duration(1 + (nps.get() / tps.get())), zx::duration(1));
 
-  ASSERT_TRUE(TickConverter(zx::ticks(0), zx::ticks(0)));
-  ASSERT_TRUE(TickConverter(zx::ticks(50), tick_loss));
-  ASSERT_TRUE(TickConverter(zx::ticks(100), tick_loss));
-  ASSERT_TRUE(TickConverter(zx::ticks(100000), tick_loss));
-  ASSERT_TRUE(TickConverter(zx::ticks(1000000000), tick_loss));
-  ASSERT_TRUE(TickConverter(zx::ticks(10000000000000), tick_loss));
+  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(0), zx::ticks(0)));
+  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(50), tick_loss));
+  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(100), tick_loss));
+  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(100000), tick_loss));
+  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(1000000000), tick_loss));
+  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(10000000000000), tick_loss));
 
-  ASSERT_TRUE(NsConverter(zx::duration(0), zx::duration(0)));
-  ASSERT_TRUE(NsConverter(zx::duration(50), duration_loss));
-  ASSERT_TRUE(NsConverter(zx::duration(100), duration_loss));
-  ASSERT_TRUE(NsConverter(zx::duration(100000), duration_loss));
-  ASSERT_TRUE(NsConverter(zx::duration(1000000000), duration_loss));
-  ASSERT_TRUE(NsConverter(zx::duration(10000000000000), duration_loss));
-
-  END_TEST;
+  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(0), zx::duration(0)));
+  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(50), duration_loss));
+  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(100), duration_loss));
+  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(100000), duration_loss));
+  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(1000000000), duration_loss));
+  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(10000000000000), duration_loss));
 }
 
-bool FifoTest() {
-  BEGIN_TEST;
-
+TEST(LibfzlTests, FifoTest) {
   // Default constructor
   {
     fzl::fifo<int> invalid;
@@ -183,13 +171,6 @@ bool FifoTest() {
     ASSERT_EQ(fifo_0.get_handle(), ZX_HANDLE_INVALID);
     ASSERT_NE(replaced.get_handle(), ZX_HANDLE_INVALID);
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(libfzl_tests)
-RUN_TEST(TimeTest)
-RUN_TEST(FifoTest)
-END_TEST_CASE(libfzl_tests)
