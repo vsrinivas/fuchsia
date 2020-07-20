@@ -58,27 +58,3 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
   // Finally, fall into the platform specific halt handler.
   platform_specific_halt(suggested_action, reason, halt_on_panic);
 }
-
-/*
- * default implementations of these routines, if the platform code
- * chooses not to implement.
- */
-__WEAK void platform_specific_halt(platform_halt_action suggested_action,
-                                   zircon_crash_reason_t reason, bool halt_on_panic) {
-  Thread::Current::PrintBacktrace();
-
-  if constexpr (ENABLE_PANIC_SHELL) {
-    if (reason == ZirconCrashReason::Panic) {
-      dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %d)\n", static_cast<int>(reason));
-      arch_disable_ints();
-      panic_shell_start();
-    }
-  }
-
-  dprintf(ALWAYS, "HALT: spinning forever... (reason = %d)\n", static_cast<int>(reason));
-  arch_disable_ints();
-  for (;;) {
-  }
-}
-
-__WEAK void platform_halt_cpu() {}

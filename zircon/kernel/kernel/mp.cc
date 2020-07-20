@@ -443,14 +443,7 @@ interrupt_eoi mp_mbx_interrupt_irq(void*) {
   return IRQ_EOI_DEACTIVATE;
 }
 
-__WEAK zx_status_t arch_mp_cpu_hotplug(cpu_num_t cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
-__WEAK zx_status_t arch_mp_prep_cpu_unplug(cpu_num_t cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
-__WEAK zx_status_t arch_mp_cpu_unplug(cpu_num_t cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
-__WEAK zx_status_t platform_mp_cpu_hotplug(cpu_num_t cpu_id) { return arch_mp_cpu_hotplug(cpu_id); }
-__WEAK zx_status_t platform_mp_prep_cpu_unplug(cpu_num_t cpu_id) {
-  return arch_mp_prep_cpu_unplug(cpu_id);
-}
-__WEAK zx_status_t platform_mp_cpu_unplug(cpu_num_t cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
+zx_status_t platform_mp_cpu_hotplug(cpu_num_t cpu_id) { return arch_mp_cpu_hotplug(cpu_id); }
 
 static int cmd_mp(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {

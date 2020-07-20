@@ -132,3 +132,5 @@ zx_status_t arch_mp_cpu_unplug(cpu_num_t cpu_id) {
   }
   return ZX_OK;
 }
+
+zx_status_t arch_mp_cpu_hotplug(cpu_num_t cpu_id) { return ZX_ERR_NOT_SUPPORTED; }

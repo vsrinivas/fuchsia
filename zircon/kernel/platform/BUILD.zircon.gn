@@ -7,10 +7,8 @@
 source_set("platform") {
   sources = [
     "crashlog.cc",
-    "debug.cc",
     "halt_helper.cc",
     "hw_reboot_reason.cc",
-    "init.cc",
     "power.cc",
   ]
   deps = [

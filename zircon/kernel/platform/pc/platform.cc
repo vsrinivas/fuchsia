@@ -789,6 +789,8 @@ zx_status_t platform_mp_prep_cpu_unplug(cpu_num_t cpu_id) {
   return arch_mp_prep_cpu_unplug(cpu_id);
 }
 
+zx_status_t platform_mp_cpu_unplug(cpu_num_t cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
+
 const char* manufacturer = "unknown";
 const char* product = "unknown";
 
