@@ -297,8 +297,7 @@ void UsbXhci::DdkInit(ddk::InitTxn txn) {
       "src/devices/usb/drivers/xhci/usb-xhci", xhci_->profile_handle.reset_and_get_address());
 
   if (status != ZX_OK) {
-    zxlogf(WARNING, "Failed to obtain scheduler profile for high priority completer (res %d)",
-           status);
+    zxlogf(INFO, "Failed to obtain scheduler profile for high priority completer (res %d)", status);
   }
 
   // The StartThread will reply to |init_txn_|.
@@ -339,37 +338,16 @@ zx_status_t UsbXhci::InitPci() {
   }
   xhci_->mmio = ddk::MmioBuffer(mmio);
 
-  uint32_t irq_cnt;
-  irq_cnt = 0;
-  status = pci_.QueryIrqMode(ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "pci_query_irq_mode failed %d", status);
-    return status;
-  }
-
   // Cap IRQ count at the number of interrupters we want to use and
   // the number of interrupters supported by XHCI.
-  irq_cnt = std::min(irq_cnt, INTERRUPTER_COUNT);
-  irq_cnt = std::min(irq_cnt, xhci_get_max_interrupters(xhci_.get()));
+  uint32_t irq_cnt = std::min(INTERRUPTER_COUNT, xhci_get_max_interrupters(xhci_.get()));
+  while (irq_cnt && (status = pci_.ConfigureIrqMode(irq_cnt)) != ZX_OK) {
+    irq_cnt--;
+  }
 
-  // select our IRQ mode
-  xhci_mode_t mode;
-  mode = XHCI_PCI_MSI;
-  status = pci_.SetIrqMode(ZX_PCIE_IRQ_MODE_MSI, irq_cnt);
-  if (status < 0) {
-    zxlogf(ERROR, "MSI interrupts not available, irq_cnt: %d, err: %d", irq_cnt, status);
-    zx_status_t status_legacy = pci_.SetIrqMode(ZX_PCIE_IRQ_MODE_LEGACY, 1);
-
-    if (status_legacy < 0) {
-      zxlogf(ERROR,
-             "usb_xhci_bind Failed to set IRQ mode to either MSI "
-             "(err = %d) or Legacy (err = %d)\n",
-             status, status_legacy);
-      return status;
-    }
-
-    mode = XHCI_PCI_LEGACY;
-    irq_cnt = 1;
+  if (!irq_cnt || status != ZX_OK) {
+    zxlogf(ERROR, "usb_xhci_bind Failed to set IRQ mode (err = %d)", status);
+    return status;
   }
 
   for (uint32_t i = 0; i < irq_cnt; i++) {
@@ -384,7 +362,7 @@ zx_status_t UsbXhci::InitPci() {
   // used for enabling bus mastering
   pci_.GetProto(&xhci_->pci);
 
-  status = xhci_init(xhci_.get(), mode, irq_cnt);
+  status = xhci_init(xhci_.get(), XHCI_PCI, irq_cnt);
   if (status != ZX_OK) {
     return status;
   }

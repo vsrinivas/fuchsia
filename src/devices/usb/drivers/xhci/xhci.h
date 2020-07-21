@@ -109,8 +109,7 @@ struct xhci_command_context_t {
 };
 
 enum xhci_mode_t {
-  XHCI_PCI_LEGACY,
-  XHCI_PCI_MSI,
+  XHCI_PCI,
   XHCI_PDEV,
 };
 

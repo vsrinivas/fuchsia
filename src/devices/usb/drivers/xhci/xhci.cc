@@ -420,7 +420,7 @@ zx_status_t xhci_start(xhci_t* xhci) {
   xhci_wait_bits(usbcmd, USBCMD_HCRST, 0);
   xhci_wait_bits(usbsts, USBSTS_CNR, 0);
 
-  if (xhci->mode == XHCI_PCI_MSI || xhci->mode == XHCI_PCI_LEGACY) {
+  if (xhci->mode == XHCI_PCI) {
     // enable bus master
     zx_status_t status = pci_enable_bus_master(&xhci->pci, true);
     if (status < 0) {
