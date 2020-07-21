@@ -18,7 +18,8 @@ import("//build/compiled_action.gni")
 #     Usual GN meanings.
 #
 template("prebuilt_binaries") {
-  assert(defined(invoker.build_id_dir), "build_id_dir is required")
+  assert(defined(invoker.build_id_dir) || defined(invoker.debug_archive),
+         "build_id_dir or debug_archive is required")
 
   binary_manifest = "$target_gen_dir/${target_name}_binaries.json"
 
@@ -35,8 +36,8 @@ template("prebuilt_binaries") {
     args = [
       "-build-dir",
       rebase_path(root_build_dir),
-      "-build-id-dir",
-      rebase_path(invoker.build_id_dir),
+      "-build-id-dir-out",
+      rebase_path("$root_build_dir/.build-id"),
       "-cpu",
       target_cpu,
       "-os",
@@ -55,6 +56,11 @@ template("prebuilt_binaries") {
       args += [
         "-debug-archive",
         rebase_path(invoker.debug_archive),
+      ]
+    } else {
+      args += [
+        "-build-id-dir-in",
+        rebase_path(invoker.build_id_dir),
       ]
     }
 

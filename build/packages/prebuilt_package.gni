@@ -52,8 +52,6 @@ template("prebuilt_package") {
 
   if (defined(invoker.debug_archive) && unpack_debug_archives) {
     prebuilt_binaries(unpack_action_name) {
-      build_id_dir = "$root_build_dir/.build-id"
-
       forward_variables_from(invoker,
                              [
                                "debug_archive",
