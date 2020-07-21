@@ -315,6 +315,7 @@ mod test {
 
     #[test]
     fn test_build_routes() {
+        crate::test_util::init();
         assert!(builds_route_ok(&[(1, 2, 1, 10), (2, 1, 123, 5)], &[(2, 1)]));
         assert!(builds_route_ok(
             &[
@@ -371,6 +372,7 @@ mod test {
 
     #[test]
     fn no_loops() {
+        crate::test_util::init();
         let start = Instant::now();
         while Instant::now() - start < Duration::from_secs(1) {
             let mut random_junk = [0u8; 64];

@@ -975,6 +975,7 @@ impl Router {
         if let Some(removed) = proxied_streams.remove(&this_handle_key) {
             assert_eq!(removed.original_paired, pair_handle_key);
             let _ = removed.remove_sender.send(RemoveFromProxyTable::Dropped);
+            removed.proxy_task.detach();
         }
     }
 
@@ -1236,164 +1237,24 @@ impl Router {
 }
 
 #[cfg(test)]
-pub mod test_util {
-    use super::*;
-    use std::sync::Once;
-
-    const LOG_LEVEL: log::Level = log::Level::Info;
-    const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
-
-    struct Logger;
-
-    fn short_log_level(level: &log::Level) -> &'static str {
-        match *level {
-            log::Level::Error => "E",
-            log::Level::Warn => "W",
-            log::Level::Info => "I",
-            log::Level::Debug => "D",
-            log::Level::Trace => "T",
-        }
-    }
-
-    impl log::Log for Logger {
-        fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
-            metadata.level() <= LOG_LEVEL
-        }
-
-        fn log(&self, record: &log::Record<'_>) {
-            if self.enabled(record.metadata()) {
-                let msg = format!(
-                    "{:?} {:?} {} {} [{}]: {}",
-                    std::time::Instant::now(),
-                    std::thread::current().id(),
-                    record.target(),
-                    record
-                        .file()
-                        .map(|file| {
-                            if let Some(line) = record.line() {
-                                format!("{}:{}: ", file, line)
-                            } else {
-                                format!("{}: ", file)
-                            }
-                        })
-                        .unwrap_or(String::new()),
-                    short_log_level(&record.level()),
-                    record.args()
-                );
-                let _ = std::panic::catch_unwind(|| {
-                    println!("{}", msg);
-                });
-            }
-        }
-
-        fn flush(&self) {}
-    }
-
-    static LOGGER: Logger = Logger;
-    static START: Once = Once::new();
-
-    pub fn init() {
-        START.call_once(|| {
-            log::set_logger(&LOGGER).unwrap();
-            log::set_max_level(MAX_LOG_LEVEL);
-        })
-    }
-
-    const TEST_TIMEOUT: Duration = Duration::from_secs(300);
-
-    pub fn run<Fut, R>(f: Fut) -> R
-    where
-        Fut: Future<Output = R> + Send + 'static,
-        R: Send + 'static,
-    {
-        init();
-        fuchsia_async::Executor::new()
-            .unwrap()
-            .run(
-                async move { Ok(f.await) }.on_timeout(TEST_TIMEOUT, || Err(format_err!("timeout"))),
-                4,
-            )
-            .unwrap()
-    }
-
-    #[allow(dead_code)]
-    pub fn run_repeatedly<Fut>(
-        count: u64,
-        f: impl 'static + Send + Fn(u64) -> Fut,
-    ) -> Result<(), Error>
-    where
-        Fut: Future<Output = Result<(), Error>> + Send + 'static,
-    {
-        init();
-        const CONCURRENCY: usize = 10; // Pretty arbitrary: not too high, not too low for our test environments
-        if let Err(e) = fuchsia_async::Executor::new()?.run(
-            async move {
-                futures::stream::iter(0..count)
-                    .map(Ok)
-                    .try_for_each_concurrent(CONCURRENCY, move |i| {
-                        let run = i + 1;
-                        let f = f(run);
-                        async move {
-                            Ok(f.on_timeout(TEST_TIMEOUT, || Err(format_err!("timeout"))).await?)
-                        }
-                        .map_err(move |e: Error| e.context(format!("run {}", run)))
-                    })
-                    .await
-            },
-            CONCURRENCY,
-        ) {
-            log::info!("ERROR: {:?}", e);
-            Err(e)
-        } else {
-            Ok(())
-        }
-    }
-
-    pub fn test_security_context() -> impl SecurityContext {
-        #[cfg(target_os = "fuchsia")]
-        return crate::security_context::SimpleSecurityContext {
-            node_cert: "/pkg/data/cert.crt",
-            node_private_key: "/pkg/data/cert.key",
-            root_cert: "/pkg/data/root.crt",
-        };
-        #[cfg(not(target_os = "fuchsia"))]
-        return crate::security_context::MemoryBuffers {
-            node_cert: include_bytes!(
-                "../../../../../../third_party/rust-mirrors/quiche/examples/cert.crt"
-            ),
-            node_private_key: include_bytes!(
-                "../../../../../../third_party/rust-mirrors/quiche/examples/cert.key"
-            ),
-            root_cert: include_bytes!(
-                "../../../../../../third_party/rust-mirrors/quiche/examples/rootca.crt"
-            ),
-        }
-        .into_security_context()
-        .unwrap();
-    }
-}
-
-#[cfg(test)]
 mod tests {
 
-    use super::test_util::*;
     use super::*;
+    use crate::test_util::*;
 
-    #[test]
-    fn no_op() {
-        run(async move {
-            Router::new(RouterOptions::new(), Box::new(test_security_context())).unwrap();
-            assert_eq!(
-                Router::new(
-                    RouterOptions::new().set_node_id(1.into()),
-                    Box::new(test_security_context())
-                )
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn no_op(run: usize) {
+        crate::test_util::init();
+
+        let mut node_id_gen = NodeIdGenerator::new("router::no_op", run);
+        node_id_gen.new_router().unwrap();
+        let id = node_id_gen.next().unwrap();
+        assert_eq!(
+            Router::new(RouterOptions::new().set_node_id(id), Box::new(test_security_context()))
                 .unwrap()
-                .node_id
-                .0,
-                1
-            );
-        })
+                .node_id,
+            id
+        );
     }
 
     async fn forward(sender: LinkSender, receiver: LinkReceiver) -> Result<(), Error> {
@@ -1467,63 +1328,63 @@ mod tests {
         recv
     }
 
-    fn run_two_node<
-        F: 'static + Send + FnOnce(Arc<Router>, Arc<Router>) -> Fut,
-        Fut: 'static + Send + Future<Output = ()>,
+    async fn run_two_node<
+        F: 'static + Clone + Sync + Send + Fn(Arc<Router>, Arc<Router>) -> Fut,
+        Fut: 'static + Send + Future<Output = Result<(), Error>>,
     >(
-        node_id_base: u64,
+        name: &'static str,
+        run: usize,
         f: F,
-    ) {
-        run(async move {
-            let router1 = Router::new(
-                RouterOptions::new().set_node_id((node_id_base + 1).into()),
-                Box::new(test_security_context()),
+    ) -> Result<(), Error> {
+        let mut node_id_gen = NodeIdGenerator::new(name, run);
+        let router1 = node_id_gen.new_router()?;
+        let router2 = node_id_gen.new_router()?;
+        let (link1_sender, link1_receiver) = router1.new_link(router2.node_id).await?;
+        let (link2_sender, link2_receiver) = router2.new_link(router1.node_id).await?;
+        let _fwd = Task::spawn(async move {
+            if let Err(e) = futures::future::try_join(
+                forward(link1_sender, link2_receiver),
+                forward(link2_sender, link1_receiver),
             )
-            .unwrap();
-            let router2 = Router::new(
-                RouterOptions::new().set_node_id((node_id_base + 2).into()),
-                Box::new(test_security_context()),
-            )
-            .unwrap();
-            let (link1_sender, link1_receiver) = router1.new_link(router2.node_id).await.unwrap();
-            let (link2_sender, link2_receiver) = router2.new_link(router1.node_id).await.unwrap();
-            let _fwd = Task::spawn(async move {
-                if let Err(e) = futures::future::try_join(
-                    forward(link1_sender, link2_receiver),
-                    forward(link2_sender, link1_receiver),
-                )
-                .await
-                {
-                    log::trace!("forwarding failed: {:?}", e)
-                }
-            });
-            f(router1, router2).await;
-        })
+            .await
+            {
+                log::trace!("forwarding failed: {:?}", e)
+            }
+        });
+        f(router1, router2).await
     }
 
-    #[test]
-    fn no_op_env() {
-        run_two_node(9900, |_router1, _router2| async {})
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn no_op_env(run: usize) -> Result<(), Error> {
+        crate::test_util::init();
+
+        run_two_node("router::no_op_env", run, |_router1, _router2| async { Ok(()) }).await
     }
 
-    #[test]
-    fn create_stream() {
-        run_two_node(9910, |router1, router2| async move {
-            let (_, p) = fidl::Channel::create().unwrap();
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn create_stream(run: usize) -> Result<(), Error> {
+        crate::test_util::init();
+
+        run_two_node("create_stream", run, |router1, router2| async move {
+            let (_, p) = fidl::Channel::create()?;
             println!("create_stream: register service");
             let s = register_test_service(router2.clone(), router1.clone(), "create_stream").await;
             println!("create_stream: connect to service");
-            router1.connect_to_service(router2.node_id, "create_stream", p).await.unwrap();
+            router1.connect_to_service(router2.node_id, "create_stream", p).await?;
             println!("create_stream: wait for connection");
-            let (node_id, _) = s.await.unwrap();
+            let (node_id, _) = s.await?;
             assert_eq!(node_id, router1.node_id);
+            Ok(())
         })
+        .await
     }
 
-    #[test]
-    fn send_datagram_immediately() {
-        run_two_node(9920, |router1, router2| async move {
-            let (c, p) = fidl::Channel::create().unwrap();
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn send_datagram_immediately(run: usize) -> Result<(), Error> {
+        crate::test_util::init();
+
+        run_two_node("send_datagram_immediately", run, |router1, router2| async move {
+            let (c, p) = fidl::Channel::create()?;
             println!("send_datagram_immediately: register service");
             let s = register_test_service(
                 router2.clone(),
@@ -1532,52 +1393,55 @@ mod tests {
             )
             .await;
             println!("send_datagram_immediately: connect to service");
-            router1
-                .connect_to_service(router2.node_id, "send_datagram_immediately", p)
-                .await
-                .unwrap();
+            router1.connect_to_service(router2.node_id, "send_datagram_immediately", p).await?;
             println!("send_datagram_immediately: wait for connection");
-            let (node_id, s) = s.await.unwrap();
+            let (node_id, s) = s.await?;
             assert_eq!(node_id, router1.node_id);
-            let c = fidl::AsyncChannel::from_channel(c).unwrap();
-            let s = fidl::AsyncChannel::from_channel(s).unwrap();
-            c.write(&[1, 2, 3, 4, 5], &mut Vec::new()).unwrap();
+            let c = fidl::AsyncChannel::from_channel(c)?;
+            let s = fidl::AsyncChannel::from_channel(s)?;
+            c.write(&[1, 2, 3, 4, 5], &mut Vec::new())?;
             let mut buf = fidl::MessageBuf::new();
             println!("send_datagram_immediately: wait for datagram");
-            s.recv_msg(&mut buf).await.unwrap();
+            s.recv_msg(&mut buf).await?;
             assert_eq!(buf.n_handles(), 0);
             assert_eq!(buf.bytes(), &[1, 2, 3, 4, 5]);
+            Ok(())
         })
+        .await
     }
 
-    #[test]
-    fn ping_pong() {
-        run_two_node(9930, |router1, router2| async move {
-            let (c, p) = fidl::Channel::create().unwrap();
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn ping_pong(run: usize) -> Result<(), Error> {
+        run_two_node("ping_pong", run, |router1, router2| async move {
+            crate::test_util::init();
+
+            let (c, p) = fidl::Channel::create()?;
             println!("ping_pong: register service");
             let s = register_test_service(router2.clone(), router1.clone(), "ping_pong").await;
             println!("ping_pong: connect to service");
-            router1.connect_to_service(router2.node_id, "ping_pong", p).await.unwrap();
+            router1.connect_to_service(router2.node_id, "ping_pong", p).await?;
             println!("ping_pong: wait for connection");
-            let (node_id, s) = s.await.unwrap();
+            let (node_id, s) = s.await?;
             assert_eq!(node_id, router1.node_id);
-            let c = fidl::AsyncChannel::from_channel(c).unwrap();
-            let s = fidl::AsyncChannel::from_channel(s).unwrap();
+            let c = fidl::AsyncChannel::from_channel(c)?;
+            let s = fidl::AsyncChannel::from_channel(s)?;
             println!("ping_pong: send ping");
-            c.write(&[1, 2, 3, 4, 5], &mut Vec::new()).unwrap();
+            c.write(&[1, 2, 3, 4, 5], &mut Vec::new())?;
             println!("ping_pong: receive ping");
             let mut buf = fidl::MessageBuf::new();
-            s.recv_msg(&mut buf).await.unwrap();
+            s.recv_msg(&mut buf).await?;
             assert_eq!(buf.n_handles(), 0);
             assert_eq!(buf.bytes(), &[1, 2, 3, 4, 5]);
             println!("ping_pong: send pong");
-            s.write(&[9, 8, 7, 6, 5, 4, 3, 2, 1], &mut Vec::new()).unwrap();
+            s.write(&[9, 8, 7, 6, 5, 4, 3, 2, 1], &mut Vec::new())?;
             println!("ping_pong: receive pong");
             let mut buf = fidl::MessageBuf::new();
-            c.recv_msg(&mut buf).await.unwrap();
+            c.recv_msg(&mut buf).await?;
             assert_eq!(buf.n_handles(), 0);
             assert_eq!(buf.bytes(), &[9, 8, 7, 6, 5, 4, 3, 2, 1]);
+            Ok(())
         })
+        .await
     }
 
     fn ensure_pending(f: &mut (impl Send + Unpin + Future<Output = ()>)) {
@@ -1588,79 +1452,84 @@ mod tests {
         }
     }
 
-    #[test]
-    fn concurrent_list_peer_calls_will_error() {
-        run(async move {
-            let n = Router::new(RouterOptions::new(), Box::new(test_security_context())).unwrap();
-            let lp = n.new_list_peers_context();
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn concurrent_list_peer_calls_will_error(run: usize) -> Result<(), Error> {
+        crate::test_util::init();
+
+        let mut node_id_gen = NodeIdGenerator::new("concurrent_list_peer_calls_will_error", run);
+        let n = node_id_gen.new_router().unwrap();
+        let lp = n.new_list_peers_context();
+        lp.list_peers().await.unwrap();
+        let mut never_completes = async {
             lp.list_peers().await.unwrap();
-            let mut never_completes = async {
-                lp.list_peers().await.unwrap();
-            }
-            .boxed();
-            ensure_pending(&mut never_completes);
-            lp.list_peers().await.expect_err("Concurrent list peers should fail");
-            ensure_pending(&mut never_completes);
-        })
+        }
+        .boxed();
+        ensure_pending(&mut never_completes);
+        lp.list_peers().await.expect_err("Concurrent list peers should fail");
+        ensure_pending(&mut never_completes);
+        Ok(())
     }
 
-    #[test]
-    fn initial_greeting_packet() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn initial_greeting_packet(run: usize) -> Result<(), Error> {
+        crate::test_util::init();
+
         use crate::coding::decode_fidl;
         use crate::stream_framer::{new_deframer, FrameType, LosslessBinary};
         use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
-        run(async move {
-            let n = Router::new(RouterOptions::new(), Box::new(test_security_context())).unwrap();
-            let node_id = n.node_id();
-            let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
-            let mut c = fidl::AsyncSocket::from_socket(c).unwrap();
-            let (mut deframer_writer, mut deframer) = new_deframer(LosslessBinary);
-            let _s = Task::spawn(async move {
-                n.run_socket_link(
-                    s,
-                    fidl_fuchsia_overnet::SocketLinkOptions {
-                        connection_label: Some("test".to_string()),
-                        bytes_per_second: None,
-                    },
-                )
-                .await
-                .unwrap();
-            });
-            let _d = Task::spawn(async move {
-                let mut buf = [0u8; 1024];
-                loop {
-                    let n = c.read(&mut buf).await.unwrap();
-                    if n == 0 {
-                        log::info!("initial_greeting_packet: socket closed");
-                        return;
-                    }
-                    deframer_writer.write(&buf[..n]).await.unwrap();
-                }
-            });
-            let (frame_type, mut greeting_bytes) = deframer.read().await.unwrap();
-            assert_eq!(frame_type, Some(FrameType::OvernetHello));
-            let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut()).unwrap();
-            assert_eq!(greeting.magic_string, Some("OVERNET SOCKET LINK".to_string()));
-            assert_eq!(greeting.node_id, Some(node_id.into()));
-            assert_eq!(greeting.connection_label, Some("test".to_string()));
-        })
-    }
-
-    #[test]
-    fn attach_with_zero_bytes_per_second() {
-        run(async move {
-            let n = Router::new(RouterOptions::new(), Box::new(test_security_context())).unwrap();
-            let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
+        let mut node_id_gen = NodeIdGenerator::new("initial_greeting_packet", run);
+        let n = node_id_gen.new_router()?;
+        let node_id = n.node_id();
+        let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
+        let mut c = fidl::AsyncSocket::from_socket(c)?;
+        let (mut deframer_writer, mut deframer) = new_deframer(LosslessBinary);
+        let _s = Task::spawn(async move {
             n.run_socket_link(
                 s,
                 fidl_fuchsia_overnet::SocketLinkOptions {
                     connection_label: Some("test".to_string()),
-                    bytes_per_second: Some(0),
+                    bytes_per_second: None,
                 },
             )
             .await
-            .expect_err("bytes_per_second == 0 should fail");
-            drop(c);
-        })
+            .unwrap();
+        });
+        let _d = Task::spawn(async move {
+            let mut buf = [0u8; 1024];
+            loop {
+                let n = c.read(&mut buf).await.unwrap();
+                if n == 0 {
+                    log::info!("initial_greeting_packet: socket closed");
+                    return;
+                }
+                deframer_writer.write(&buf[..n]).await.unwrap();
+            }
+        });
+        let (frame_type, mut greeting_bytes) = deframer.read().await?;
+        assert_eq!(frame_type, Some(FrameType::OvernetHello));
+        let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())?;
+        assert_eq!(greeting.magic_string, Some("OVERNET SOCKET LINK".to_string()));
+        assert_eq!(greeting.node_id, Some(node_id.into()));
+        assert_eq!(greeting.connection_label, Some("test".to_string()));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn attach_with_zero_bytes_per_second(run: usize) -> Result<(), Error> {
+        crate::test_util::init();
+        let mut node_id_gen = NodeIdGenerator::new("attach_with_zero_bytes_per_second", run);
+        let n = node_id_gen.new_router()?;
+        let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
+        n.run_socket_link(
+            s,
+            fidl_fuchsia_overnet::SocketLinkOptions {
+                connection_label: Some("test".to_string()),
+                bytes_per_second: Some(0),
+            },
+        )
+        .await
+        .expect_err("bytes_per_second == 0 should fail");
+        drop(c);
+        Ok(())
     }
 }

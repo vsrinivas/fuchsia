@@ -20,7 +20,7 @@ pub async fn log_errors(
     message: impl std::fmt::Display,
 ) {
     if let Err(e) = f.await {
-        eprintln!("{}: {:?}", message, e);
+        log::warn!("{}: {:?}", message, e);
     }
 }
 

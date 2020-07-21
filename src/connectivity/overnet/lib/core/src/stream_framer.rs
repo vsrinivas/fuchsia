@@ -475,7 +475,7 @@ impl<Fmt: Format> DeframerReader<Fmt> {
                     Poll::Ready(()) => {
                         let mut unframed = unparsed.split_off(1);
                         std::mem::swap(&mut unframed, &mut unparsed);
-                        log::warn!("timeout - drop byte {:?} rest {:?}", unframed, unparsed);
+                        log::trace!("timeout - drop byte {:?} rest {:?}", unframed, unparsed);
                         waiting_read.map(|w| w.wake());
                         *incoming = Incoming::Queuing {
                             unframed: Some(BVec(unframed)),
@@ -659,101 +659,71 @@ impl Format for LosslessBinary {
 mod test {
 
     use super::*;
-    use crate::router::test_util::run;
 
     fn join(mut a: Vec<u8>, mut b: Vec<u8>) -> Vec<u8> {
         a.append(&mut b);
         a
     }
 
-    #[test]
-    fn simple_frame() {
-        run(async move {
-            let (mut framer_writer, mut framer_reader) = new_framer(LosslessBinary, 1024);
-            framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await.unwrap();
-            let (mut deframer_writer, mut deframer_reader) = new_deframer(LosslessBinary);
-            deframer_writer.write(framer_reader.read().await.unwrap().as_slice()).await.unwrap();
-            assert_eq!(
-                deframer_reader.read().await.unwrap(),
-                (Some(FrameType::Overnet), vec![1, 2, 3, 4])
-            );
-            framer_writer.write(FrameType::Overnet, &[5, 6, 7, 8]).await.unwrap();
-            deframer_writer.write(framer_reader.read().await.unwrap().as_slice()).await.unwrap();
-            assert_eq!(
-                deframer_reader.read().await.unwrap(),
-                (Some(FrameType::Overnet), vec![5, 6, 7, 8])
-            );
-        })
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn simple_frame() -> Result<(), Error> {
+        let (mut framer_writer, mut framer_reader) = new_framer(LosslessBinary, 1024);
+        framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await?;
+        let (mut deframer_writer, mut deframer_reader) = new_deframer(LosslessBinary);
+        deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
+        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![1, 2, 3, 4]));
+        framer_writer.write(FrameType::Overnet, &[5, 6, 7, 8]).await?;
+        deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
+        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![5, 6, 7, 8]));
+        Ok(())
     }
 
-    #[test]
-    fn simple_frame_lossy_binary() {
-        run(async move {
-            let (mut framer_writer, mut framer_reader) =
-                new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
-            framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await.unwrap();
-            let (mut deframer_writer, mut deframer_reader) =
-                new_deframer(LossyBinary::new(Duration::from_millis(100)));
-            deframer_writer.write(framer_reader.read().await.unwrap().as_slice()).await.unwrap();
-            assert_eq!(
-                deframer_reader.read().await.unwrap(),
-                (Some(FrameType::Overnet), vec![1, 2, 3, 4])
-            );
-            framer_writer.write(FrameType::Overnet, &[5, 6, 7, 8]).await.unwrap();
-            deframer_writer.write(framer_reader.read().await.unwrap().as_slice()).await.unwrap();
-            assert_eq!(
-                deframer_reader.read().await.unwrap(),
-                (Some(FrameType::Overnet), vec![5, 6, 7, 8])
-            );
-        })
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn simple_frame_lossy_binary() -> Result<(), Error> {
+        let (mut framer_writer, mut framer_reader) =
+            new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
+        framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await?;
+        let (mut deframer_writer, mut deframer_reader) =
+            new_deframer(LossyBinary::new(Duration::from_millis(100)));
+        deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
+        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![1, 2, 3, 4]));
+        framer_writer.write(FrameType::Overnet, &[5, 6, 7, 8]).await?;
+        deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
+        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![5, 6, 7, 8]));
+        Ok(())
     }
 
-    #[test]
-    fn large_frame() {
-        run(async move {
-            let big_slice = vec![0u8; 100000];
-            let (mut framer_writer, _framer_reader) = new_framer(LosslessBinary, 1024);
-            assert!(framer_writer.write(FrameType::Overnet, &big_slice).await.is_err());
-        })
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn large_frame() -> Result<(), Error> {
+        let big_slice = vec![0u8; 100000];
+        let (mut framer_writer, _framer_reader) = new_framer(LosslessBinary, 1024);
+        assert!(framer_writer.write(FrameType::Overnet, &big_slice).await.is_err());
+        Ok(())
     }
 
-    #[test]
-    fn skip_junk_start_0() {
-        run(async move {
-            let (mut framer_writer, mut framer_reader) =
-                new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
-            framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await.unwrap();
-            let (mut deframer_writer, mut deframer_reader) =
-                new_deframer(LossyBinary::new(Duration::from_millis(100)));
-            deframer_writer
-                .write(join(vec![0], framer_reader.read().await.unwrap()).as_slice())
-                .await
-                .unwrap();
-            assert_eq!(deframer_reader.read().await.unwrap(), (None, vec![0]));
-            assert_eq!(
-                deframer_reader.read().await.unwrap(),
-                (Some(FrameType::Overnet), vec![1, 2, 3, 4])
-            );
-        })
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn skip_junk_start_0() -> Result<(), Error> {
+        let (mut framer_writer, mut framer_reader) =
+            new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
+        framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await?;
+        let (mut deframer_writer, mut deframer_reader) =
+            new_deframer(LossyBinary::new(Duration::from_millis(100)));
+        deframer_writer.write(join(vec![0], framer_reader.read().await?).as_slice()).await?;
+        assert_eq!(deframer_reader.read().await?, (None, vec![0]));
+        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![1, 2, 3, 4]));
+        Ok(())
     }
 
-    #[test]
-    fn skip_junk_start_1() {
-        run(async move {
-            let (mut framer_writer, mut framer_reader) =
-                new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
-            framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await.unwrap();
-            let (mut deframer_writer, mut deframer_reader) =
-                new_deframer(LossyBinary::new(Duration::from_millis(100)));
-            deframer_writer
-                .write(join(vec![1], framer_reader.read().await.unwrap()).as_slice())
-                .await
-                .unwrap();
-            assert_eq!(deframer_reader.read().await.unwrap(), (None, vec![1]));
-            assert_eq!(
-                deframer_reader.read().await.unwrap(),
-                (Some(FrameType::Overnet), vec![1, 2, 3, 4])
-            );
-        })
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn skip_junk_start_1() -> Result<(), Error> {
+        let (mut framer_writer, mut framer_reader) =
+            new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
+        framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await?;
+        let (mut deframer_writer, mut deframer_reader) =
+            new_deframer(LossyBinary::new(Duration::from_millis(100)));
+        deframer_writer.write(join(vec![1], framer_reader.read().await?).as_slice()).await?;
+        assert_eq!(deframer_reader.read().await?, (None, vec![1]));
+        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![1, 2, 3, 4]));
+        Ok(())
     }
 }

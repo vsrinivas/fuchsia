@@ -82,3 +82,6 @@ impl<X: std::fmt::Debug> Trace for X {
         self
     }
 }
+
+#[cfg(test)]
+mod test_util;

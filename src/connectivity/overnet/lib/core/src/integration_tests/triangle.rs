@@ -8,10 +8,7 @@
 
 use {
     super::Overnet,
-    crate::{
-        router::test_util::{run, run_repeatedly},
-        NodeId,
-    },
+    crate::{test_util::NodeIdGenerator, NodeId},
     anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
     fidl_fidl_examples_echo as echo,
@@ -28,134 +25,129 @@ use {
 ////////////////////////////////////////////////////////////////////////////////
 // Test scenarios
 
-#[test]
-fn simple_loop() -> Result<(), Error> {
-    run_repeatedly(1, |i| async move {
-        // Three nodes, fully connected
-        // A creates a channel, passes either end to B, C to do an echo request
-        let a = Overnet::new((i * 10000 + 101).into())?;
-        let b = Overnet::new((i * 10000 + 102).into())?;
-        let c = Overnet::new((i * 10000 + 103).into())?;
-        super::connect(&a, &b)?;
-        super::connect(&b, &c)?;
-        super::connect(&a, &c)?;
-        run_triangle_echo_test(
-            b.node_id(),
-            c.node_id(),
-            a,
-            vec![],
-            vec![b, c],
-            Some("HELLO INTEGRATION TEST WORLD"),
-        )
-        .await
-    })
+#[fuchsia_async::run_singlethreaded(test)]
+async fn simple_loop(run: usize) -> Result<(), Error> {
+    crate::test_util::init();
+    let mut node_id_gen = NodeIdGenerator::new("simple_loop", run);
+    // Three nodes, fully connected
+    // A creates a channel, passes either end to B, C to do an echo request
+    let a = Overnet::new(&mut node_id_gen)?;
+    let b = Overnet::new(&mut node_id_gen)?;
+    let c = Overnet::new(&mut node_id_gen)?;
+    super::connect(&a, &b)?;
+    super::connect(&b, &c)?;
+    super::connect(&a, &c)?;
+    run_triangle_echo_test(
+        b.node_id(),
+        c.node_id(),
+        a,
+        vec![],
+        vec![b, c],
+        Some("HELLO INTEGRATION TEST WORLD"),
+    )
+    .await
 }
 
-#[test]
-fn simple_flat() -> Result<(), Error> {
-    run(async move {
-        // Three nodes, connected linearly: C - A - B
-        // A creates a channel, passes either end to B, C to do an echo request
-        let a = Overnet::new(201.into())?;
-        let b = Overnet::new(202.into())?;
-        let c = Overnet::new(203.into())?;
-        super::connect(&a, &b)?;
-        super::connect(&a, &c)?;
-        run_triangle_echo_test(
-            b.node_id(),
-            c.node_id(),
-            a,
-            vec![],
-            vec![b, c],
-            Some("HELLO INTEGRATION TEST WORLD"),
-        )
-        .await
-    })
+#[fuchsia_async::run_singlethreaded(test)]
+async fn simple_flat(run: usize) -> Result<(), Error> {
+    crate::test_util::init();
+    let mut node_id_gen = NodeIdGenerator::new("simple_flat", run);
+    // Three nodes, connected linearly: C - A - B
+    // A creates a channel, passes either end to B, C to do an echo request
+    let a = Overnet::new(&mut node_id_gen)?;
+    let b = Overnet::new(&mut node_id_gen)?;
+    let c = Overnet::new(&mut node_id_gen)?;
+    super::connect(&a, &b)?;
+    super::connect(&a, &c)?;
+    run_triangle_echo_test(
+        b.node_id(),
+        c.node_id(),
+        a,
+        vec![],
+        vec![b, c],
+        Some("HELLO INTEGRATION TEST WORLD"),
+    )
+    .await
 }
 
-#[test]
-fn full_transfer() -> Result<(), Error> {
-    run(async move {
-        // Two nodes connected
-        // A creates a channel, passes both ends to B to do an echo request
-        let a = Overnet::new(301.into())?;
-        let b = Overnet::new(302.into())?;
-        super::connect(&a, &b)?;
-        run_triangle_echo_test(
-            b.node_id(),
-            b.node_id(),
-            a,
-            vec![],
-            vec![b],
-            Some("HELLO INTEGRATION TEST WORLD"),
-        )
-        .await
-    })
+#[fuchsia_async::run_singlethreaded(test)]
+async fn full_transfer(run: usize) -> Result<(), Error> {
+    crate::test_util::init();
+    let mut node_id_gen = NodeIdGenerator::new("full_transfer", run);
+    // Two nodes connected
+    // A creates a channel, passes both ends to B to do an echo request
+    let a = Overnet::new(&mut node_id_gen)?;
+    let b = Overnet::new(&mut node_id_gen)?;
+    super::connect(&a, &b)?;
+    run_triangle_echo_test(
+        b.node_id(),
+        b.node_id(),
+        a,
+        vec![],
+        vec![b],
+        Some("HELLO INTEGRATION TEST WORLD"),
+    )
+    .await
 }
 
-#[test]
-fn forwarded_twice_to_separate_nodes() -> Result<(), Error> {
-    #[cfg(target_os = "fuchsia")]
-    const RUN_COUNT: u64 = 1;
-    #[cfg(not(target_os = "fuchsia"))]
-    const RUN_COUNT: u64 = 1;
-    run_repeatedly(RUN_COUNT, |i| async move {
-        let base = 1000 * i;
-        // Five nodes connected in a line: A - B - C - D - E
-        // A creates a channel, passes either end to B & C
-        // B & C forward to D & E (respectively) and then do an echo request
-        let a = Overnet::new((base + 401).into())?;
-        let b = Overnet::new((base + 402).into())?;
-        let c = Overnet::new((base + 403).into())?;
-        let d = Overnet::new((base + 404).into())?;
-        let e = Overnet::new((base + 405).into())?;
-        log::info!(
-            "NODEIDS:-> A:{:?} B:{:?} C:{:?} D:{:?} E:{:?}",
-            a.node_id(),
-            b.node_id(),
-            c.node_id(),
-            d.node_id(),
-            e.node_id()
-        );
-        super::connect(&a, &b)?;
-        super::connect(&b, &c)?;
-        super::connect(&c, &d)?;
-        super::connect(&d, &e)?;
-        run_triangle_echo_test(
-            b.node_id(),
-            c.node_id(),
-            a,
-            vec![(b, d.node_id()), (c, e.node_id())],
-            vec![d, e],
-            Some("HELLO INTEGRATION TEST WORLD"),
-        )
-        .await
-    })
+#[fuchsia_async::run_singlethreaded(test)]
+async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
+    crate::test_util::init();
+    let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_to_separate_nodes", run);
+    // Five nodes connected in a line: A - B - C - D - E
+    // A creates a channel, passes either end to B & C
+    // B & C forward to D & E (respectively) and then do an echo request
+    let a = Overnet::new(&mut node_id_gen)?;
+    let b = Overnet::new(&mut node_id_gen)?;
+    let c = Overnet::new(&mut node_id_gen)?;
+    let d = Overnet::new(&mut node_id_gen)?;
+    let e = Overnet::new(&mut node_id_gen)?;
+    log::info!(
+        "NODEIDS:-> A:{:?} B:{:?} C:{:?} D:{:?} E:{:?}",
+        a.node_id(),
+        b.node_id(),
+        c.node_id(),
+        d.node_id(),
+        e.node_id()
+    );
+    super::connect(&a, &b)?;
+    super::connect(&b, &c)?;
+    super::connect(&c, &d)?;
+    super::connect(&d, &e)?;
+    run_triangle_echo_test(
+        b.node_id(),
+        c.node_id(),
+        a,
+        vec![(b, d.node_id()), (c, e.node_id())],
+        vec![d, e],
+        Some("HELLO INTEGRATION TEST WORLD"),
+    )
+    .await
 }
 
-#[test]
-fn forwarded_twice_full_transfer() -> Result<(), Error> {
-    run_repeatedly(1, |i| async move {
-        // Four nodes connected in a line: A - B - C - D
-        // A creates a channel, passes either end to B & C
-        // B & C forward to D which then does an echo request
-        let a = Overnet::new((10000 * i + 501).into())?;
-        let b = Overnet::new((10000 * i + 502).into())?;
-        let c = Overnet::new((10000 * i + 503).into())?;
-        let d = Overnet::new((10000 * i + 504).into())?;
-        super::connect(&a, &b)?;
-        super::connect(&b, &c)?;
-        super::connect(&c, &d)?;
-        run_triangle_echo_test(
-            b.node_id(),
-            c.node_id(),
-            a,
-            vec![(b, d.node_id()), (c, d.node_id())],
-            vec![d],
-            Some("HELLO INTEGRATION TEST WORLD"),
-        )
-        .await
-    })
+#[fuchsia_async::run_singlethreaded(test)]
+async fn forwarded_twice_full_transfer(run: usize) -> Result<(), Error> {
+    crate::test_util::init();
+    let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_full_transfer", run);
+    // Four nodes connected in a line: A - B - C - D
+    // A creates a channel, passes either end to B & C
+    // B & C forward to D which then does an echo request
+    let a = Overnet::new(&mut node_id_gen)?;
+    let b = Overnet::new(&mut node_id_gen)?;
+    let c = Overnet::new(&mut node_id_gen)?;
+    let d = Overnet::new(&mut node_id_gen)?;
+    super::connect(&a, &b)?;
+    super::connect(&b, &c)?;
+    super::connect(&c, &d)?;
+    run_triangle_echo_test(
+        b.node_id(),
+        c.node_id(),
+        a,
+        vec![(b, d.node_id()), (c, d.node_id())],
+        vec![d],
+        Some("HELLO INTEGRATION TEST WORLD"),
+    )
+    .await
 }
 
 ////////////////////////////////////////////////////////////////////////////////

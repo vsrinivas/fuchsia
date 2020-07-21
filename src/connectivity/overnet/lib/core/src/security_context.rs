@@ -53,6 +53,31 @@ impl SecurityContext for SimpleSecurityContext {
     }
 }
 
+/// SecurityContext implementation that just lists files to read for the various pieces.
+#[derive(Debug)]
+pub struct StringSecurityContext {
+    /// The node certificate
+    pub node_cert: String,
+    /// The node private key
+    pub node_private_key: String,
+    /// The root cert for this Overnet mesh
+    pub root_cert: String,
+}
+
+impl SecurityContext for StringSecurityContext {
+    fn node_cert(&self) -> &str {
+        &self.node_cert
+    }
+
+    fn node_private_key(&self) -> &str {
+        &self.node_private_key
+    }
+
+    fn root_cert(&self) -> &str {
+        &self.root_cert
+    }
+}
+
 /// SecurityContext builder that takes static data and turns it into temporary files
 #[cfg(not(target_os = "fuchsia"))]
 pub struct MemoryBuffers {

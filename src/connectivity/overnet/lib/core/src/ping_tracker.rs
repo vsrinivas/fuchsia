@@ -332,6 +332,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn published_mean_updates() {
+        crate::test_util::init();
         let (pt, mut rtt_obs) = PingTracker::new();
         let pt_run = pt.run();
         let _pt_run = Task::spawn(async move {

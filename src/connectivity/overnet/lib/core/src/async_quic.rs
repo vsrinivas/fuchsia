@@ -743,15 +743,14 @@ impl<'b> Future for QuicRead<'b> {
 pub(crate) mod test_util {
 
     use super::*;
-    use crate::router::test_util::run;
     use crate::security_context::quiche_config_from_security_context;
+    use crate::test_util::NodeIdGenerator;
     use futures::future::poll_fn;
     use rand::Rng;
 
     async fn server_config() -> Result<quiche::Config, Error> {
         let mut config =
-            quiche_config_from_security_context(&crate::router::test_util::test_security_context())
-                .await?;
+            quiche_config_from_security_context(&crate::test_util::test_security_context()).await?;
 
         // TODO(ctiller): don't hardcode these
         config
@@ -791,52 +790,54 @@ pub(crate) mod test_util {
     }
 
     /// Generate a test connection pair, that automatically forwards packets from client to server.
-    pub fn run_client_server<
-        F: 'static + Send + FnOnce(AsyncConnection, AsyncConnection) -> Fut,
+    pub async fn run_client_server<
+        F: 'static + Sync + Clone + Send + FnOnce(AsyncConnection, AsyncConnection) -> Fut,
         Fut: 'static + Send + Future<Output = ()>,
     >(
+        name: &'static str,
+        run: usize,
         f: F,
     ) {
-        run(async move {
-            let cli_id = crate::router::generate_node_id();
-            let svr_id = crate::router::generate_node_id();
-            let scid: Vec<u8> = rand::thread_rng()
-                .sample_iter(&rand::distributions::Standard)
-                .take(quiche::MAX_CONN_ID_LEN)
-                .collect();
-            let client = AsyncConnection::from_connection(
-                quiche::connect(None, &scid, &mut client_config().unwrap()).unwrap(),
-                Endpoint::Client,
-                cli_id,
-                svr_id,
-            );
-            let scid: Vec<u8> = rand::thread_rng()
-                .sample_iter(&rand::distributions::Standard)
-                .take(quiche::MAX_CONN_ID_LEN)
-                .collect();
-            let server = AsyncConnection::from_connection(
-                quiche::accept(&scid, None, &mut server_config().await.unwrap()).unwrap(),
-                Endpoint::Server,
-                svr_id,
-                cli_id,
-            );
-            let forward = futures::future::try_join(
-                direct_packets(client.clone(), server.clone()),
-                direct_packets(server.clone(), client.clone()),
-            );
-            let run_client = client.run();
-            let run_server = server.run();
-            let _1 = Task::spawn(async move {
-                forward.await.unwrap();
-            });
-            let _2 = Task::spawn(async move {
-                run_client.await.unwrap();
-            });
-            let _3 = Task::spawn(async move {
-                run_server.await.unwrap();
-            });
-            f(client, server).await;
-        })
+        crate::test_util::init();
+        let mut node_id_gen = NodeIdGenerator::new(name, run);
+        let cli_id = node_id_gen.next().unwrap();
+        let svr_id = node_id_gen.next().unwrap();
+        let scid: Vec<u8> = rand::thread_rng()
+            .sample_iter(&rand::distributions::Standard)
+            .take(quiche::MAX_CONN_ID_LEN)
+            .collect();
+        let client = AsyncConnection::from_connection(
+            quiche::connect(None, &scid, &mut client_config().unwrap()).unwrap(),
+            Endpoint::Client,
+            cli_id,
+            svr_id,
+        );
+        let scid: Vec<u8> = rand::thread_rng()
+            .sample_iter(&rand::distributions::Standard)
+            .take(quiche::MAX_CONN_ID_LEN)
+            .collect();
+        let server = AsyncConnection::from_connection(
+            quiche::accept(&scid, None, &mut server_config().await.unwrap()).unwrap(),
+            Endpoint::Server,
+            svr_id,
+            cli_id,
+        );
+        let forward = futures::future::try_join(
+            direct_packets(client.clone(), server.clone()),
+            direct_packets(server.clone(), client.clone()),
+        );
+        let run_client = client.run();
+        let run_server = server.run();
+        let _1 = Task::spawn(async move {
+            forward.await.unwrap();
+        });
+        let _2 = Task::spawn(async move {
+            run_client.await.unwrap();
+        });
+        let _3 = Task::spawn(async move {
+            run_server.await.unwrap();
+        });
+        f(client, server).await;
     }
 }
 
@@ -846,9 +847,9 @@ mod test {
     use super::test_util::run_client_server;
     use super::StreamProperties;
 
-    #[test]
-    fn simple_send() {
-        run_client_server(|client, server| async move {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn simple_send(run: usize) {
+        run_client_server("simple_send", run, |client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();
             let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
@@ -859,11 +860,12 @@ mod test {
             assert_eq!(fin, false);
             assert_eq!(&buf[..n], &[1, 2, 3]);
         })
+        .await
     }
 
-    #[test]
-    fn send_fin() {
-        run_client_server(|client, server| async move {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn send_fin(run: usize) {
+        run_client_server("send_fin", run, |client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();
             let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
@@ -874,11 +876,12 @@ mod test {
             assert_eq!(fin, true);
             assert_eq!(&buf[..n], &[1, 2, 3]);
         })
+        .await
     }
 
-    #[test]
-    fn recv_before_send() {
-        run_client_server(|client, server| async move {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn recv_before_send(run: usize) {
+        run_client_server("recv_before_send", run, |client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();
             let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
@@ -909,5 +912,6 @@ mod test {
             )
             .await;
         })
+        .await
     }
 }

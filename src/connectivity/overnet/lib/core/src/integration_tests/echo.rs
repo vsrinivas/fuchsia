@@ -9,7 +9,7 @@
 
 use {
     super::Overnet,
-    crate::router::test_util::{run, run_repeatedly},
+    crate::test_util::NodeIdGenerator,
     anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_examples_echo as echo,
@@ -25,65 +25,64 @@ use {
 ////////////////////////////////////////////////////////////////////////////////
 // Test scenarios
 
-#[test]
-fn simple() -> Result<(), Error> {
-    run(async move {
-        let client = Overnet::new(88801.into())?;
-        let server = Overnet::new(88802.into())?;
-        super::connect(&client, &server)?;
-        run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
-    })
+#[fuchsia_async::run_singlethreaded(test)]
+async fn simple(run: usize) -> Result<(), Error> {
+    crate::test_util::init();
+    let mut node_id_gen = NodeIdGenerator::new("simple", run);
+    let client = Overnet::new(&mut node_id_gen)?;
+    let server = Overnet::new(&mut node_id_gen)?;
+    super::connect(&client, &server)?;
+    run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
 }
 
-#[test]
-fn kilobyte() -> Result<(), Error> {
-    run(async move {
-        let client = Overnet::new(88811.into())?;
-        let server = Overnet::new(88812.into())?;
-        super::connect(&client, &server)?;
-        run_echo_test(client, server, Some(&std::iter::repeat('a').take(1024).collect::<String>()))
-            .await
-    })
+#[fuchsia_async::run_singlethreaded(test)]
+async fn kilobyte(run: usize) -> Result<(), Error> {
+    crate::test_util::init();
+    let mut node_id_gen = NodeIdGenerator::new("kilobyte", run);
+    let client = Overnet::new(&mut node_id_gen)?;
+    let server = Overnet::new(&mut node_id_gen)?;
+    super::connect(&client, &server)?;
+    run_echo_test(client, server, Some(&std::iter::repeat('a').take(1024).collect::<String>()))
+        .await
 }
 
-#[test]
-fn quite_large() -> Result<(), Error> {
-    run(async move {
-        let client = Overnet::new(88821.into())?;
-        let server = Overnet::new(88822.into())?;
-        super::connect(&client, &server)?;
-        run_echo_test(client, server, Some(&std::iter::repeat('a').take(60000).collect::<String>()))
-            .await
-    })
+#[fuchsia_async::run_singlethreaded(test)]
+async fn quite_large(run: usize) -> Result<(), Error> {
+    crate::test_util::init();
+    let mut node_id_gen = NodeIdGenerator::new("quite_large", run);
+    let client = Overnet::new(&mut node_id_gen)?;
+    let server = Overnet::new(&mut node_id_gen)?;
+    super::connect(&client, &server)?;
+    run_echo_test(client, server, Some(&std::iter::repeat('a').take(60000).collect::<String>()))
+        .await
 }
 
-#[test]
-fn quic() -> Result<(), Error> {
-    run(async move {
-        let client = Overnet::new(88831.into())?;
-        let server = Overnet::new(88832.into())?;
-        super::connect_with_quic(&client, &server)?;
-        run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
-    })
+#[fuchsia_async::run_singlethreaded(test)]
+async fn quic(run: usize) -> Result<(), Error> {
+    crate::test_util::init();
+    let mut node_id_gen = NodeIdGenerator::new("quic", run);
+    let client = Overnet::new(&mut node_id_gen)?;
+    let server = Overnet::new(&mut node_id_gen)?;
+    super::connect_with_quic(&client, &server)?;
+    run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
 }
 
-#[test]
-fn interspersed_log_messages() -> Result<(), Error> {
-    run_repeatedly(1, |i| async move {
-        let client = Overnet::new((i * 100000 + 88841).into())?;
-        let server = Overnet::new((i * 100000 + 88842).into())?;
-        let _t = Task::spawn({
-            let client = client.clone();
-            let server = server.clone();
-            async move {
-                if let Err(e) = super::connect_with_interspersed_log_messages(client, server).await
-                {
-                    panic!("interspersed_log_messages connection failed: {:?}", e);
-                }
+#[fuchsia_async::run_singlethreaded(test)]
+async fn interspersed_log_messages(run: usize) -> Result<(), Error> {
+    crate::test_util::init();
+    let mut node_id_gen = NodeIdGenerator::new("interspersed_log_messages", run);
+    let client = Overnet::new(&mut node_id_gen)?;
+    let server = Overnet::new(&mut node_id_gen)?;
+    let _t = Task::spawn({
+        let client = client.clone();
+        let server = server.clone();
+        async move {
+            if let Err(e) = super::connect_with_interspersed_log_messages(client, server).await {
+                panic!("interspersed_log_messages connection failed: {:?}", e);
             }
-        });
-        run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).map_ok(drop).await
-    })
+        }
+    });
+    run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).map_ok(drop).await
 }
 
 ////////////////////////////////////////////////////////////////////////////////

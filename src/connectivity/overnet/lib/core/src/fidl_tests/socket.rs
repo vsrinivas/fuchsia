@@ -5,15 +5,17 @@
 #![cfg(test)]
 
 use super::{Fixture, Target};
+use crate::test_util::NodeIdGenerator;
 use fidl_handle_tests::{socket, LoggingFixture};
+use fuchsia_async::Task;
 
 struct SockFixture {
     fixture: Fixture,
 }
 
 impl SockFixture {
-    fn new(test_name: &'static str) -> SockFixture {
-        SockFixture { fixture: Fixture::new(test_name) }
+    async fn new(node_id_gen: NodeIdGenerator) -> SockFixture {
+        SockFixture { fixture: Fixture::new(node_id_gen).await }
     }
 }
 
@@ -30,7 +32,10 @@ impl LoggingFixture for SockFixture {
     }
 }
 
-#[test]
-fn fidl_socket_tests() {
-    super::run_test(move || socket::run(SockFixture::new("fidl_socket_tests")))
+#[fuchsia_async::run_singlethreaded(test)]
+async fn fidl_socket_tests(run: usize) {
+    crate::test_util::init();
+    let node_id_gen = NodeIdGenerator::new("fidl_socket_tests", run);
+    let fixture = SockFixture::new(node_id_gen).await;
+    Task::blocking(async move { socket::run(fixture) }).await
 }

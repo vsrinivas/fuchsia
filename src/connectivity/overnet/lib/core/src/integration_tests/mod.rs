@@ -12,9 +12,10 @@ mod echo;
 mod triangle;
 
 use {
+    crate::test_util::NodeIdGenerator,
     crate::{
         log_errors, new_quic_link, Endpoint, LinkReceiver, LinkSender, ListPeersContext, NodeId,
-        QuicReceiver, Router, RouterOptions, SecurityContext,
+        QuicReceiver, Router,
     },
     anyhow::Error,
     fidl::endpoints::ClientEnd,
@@ -29,12 +30,6 @@ use {
         Arc,
     },
 };
-
-#[cfg(not(target_os = "fuchsia"))]
-use crate::MemoryBuffers;
-
-#[cfg(target_os = "fuchsia")]
-use crate::SimpleSecurityContext;
 
 pub use fidl_fuchsia_overnet::MeshControllerProxyInterface;
 pub use fidl_fuchsia_overnet::ServiceConsumerProxyInterface;
@@ -74,43 +69,17 @@ pub struct Overnet {
     _task: Task<()>,
 }
 
-pub fn test_security_context() -> impl SecurityContext {
-    #[cfg(target_os = "fuchsia")]
-    return SimpleSecurityContext {
-        node_cert: "/pkg/data/cert.crt",
-        node_private_key: "/pkg/data/cert.key",
-        root_cert: "/pkg/data/root.crt",
-    };
-    #[cfg(not(target_os = "fuchsia"))]
-    return MemoryBuffers {
-        node_cert: include_bytes!(
-            "../../../../../../../third_party/rust-mirrors/quiche/examples/cert.crt"
-        ),
-        node_private_key: include_bytes!(
-            "../../../../../../../third_party/rust-mirrors/quiche/examples/cert.key"
-        ),
-        root_cert: include_bytes!(
-            "../../../../../../../third_party/rust-mirrors/quiche/examples/rootca.crt"
-        ),
-    }
-    .into_security_context()
-    .unwrap();
-}
-
 impl Overnet {
     /// Create a new instance
-    pub fn new(node_id: NodeId) -> Result<Arc<Overnet>, Error> {
-        let node = Router::new(
-            RouterOptions::new().set_node_id(node_id),
-            Box::new(test_security_context()),
-        )?;
+    pub fn new(node_id_gen: &mut NodeIdGenerator) -> Result<Arc<Overnet>, Error> {
+        let node = node_id_gen.new_router()?;
 
         let (tx, rx) = futures::channel::mpsc::unbounded();
-        log::info!("{:?} SPAWN OVERNET", node_id);
+        log::info!("{:?} SPAWN OVERNET", node.node_id());
         let tx = Mutex::new(tx);
         Ok(Arc::new(Overnet {
             tx,
-            node_id,
+            node_id: node.node_id(),
             _task: Task::spawn(log_errors(run_overnet(node, rx), "Main loop failed")),
         }))
     }

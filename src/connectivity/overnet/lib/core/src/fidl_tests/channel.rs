@@ -5,7 +5,9 @@
 #![cfg(test)]
 
 use super::{Fixture, Target};
+use crate::test_util::NodeIdGenerator;
 use fidl_handle_tests::{channel, LoggingFixture};
+use fuchsia_async::Task;
 
 struct ChanFixture {
     fixture: Fixture,
@@ -13,12 +15,12 @@ struct ChanFixture {
 }
 
 impl ChanFixture {
-    fn new(
-        test_name: &'static str,
+    async fn new(
+        node_id_gen: NodeIdGenerator,
         map_purpose_to_target: impl 'static + Send + Fn(channel::CreateHandlePurpose) -> Target,
     ) -> ChanFixture {
         ChanFixture {
-            fixture: Fixture::new(test_name),
+            fixture: Fixture::new(node_id_gen).await,
             map_purpose_to_target: Box::new(map_purpose_to_target),
         }
     }
@@ -40,29 +42,34 @@ impl LoggingFixture for ChanFixture {
     }
 }
 
-#[test]
-fn fidl_channel_tests_no_transfer() {
-    super::run_test(move || {
-        channel::run(ChanFixture::new("fidl_channel_tests_no_transfer", |purpose| match purpose {
-            channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
-            channel::CreateHandlePurpose::PayloadChannel => Target::A,
-        }))
+#[fuchsia_async::run_singlethreaded(test)]
+async fn fidl_channel_tests_no_transfer(run: usize) {
+    crate::test_util::init();
+    let node_id_gen = NodeIdGenerator::new("fidl_channel_tests_no_transfer", run);
+    let fixture = ChanFixture::new(node_id_gen, |purpose| match purpose {
+        channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
+        channel::CreateHandlePurpose::PayloadChannel => Target::A,
     })
+    .await;
+    Task::blocking(async move { channel::run(fixture) }).await
 }
 
-#[test]
-fn fidl_channel_tests_all_to_b() {
-    super::run_test(move || {
-        channel::run(ChanFixture::new("fidl_channel_tests_all_to_b", |_| Target::B))
-    })
+#[fuchsia_async::run_singlethreaded(test)]
+async fn fidl_channel_tests_all_to_b(run: usize) {
+    crate::test_util::init();
+    let node_id_gen = NodeIdGenerator::new("fidl_channel_tests_all_to_b", run);
+    let fixture = ChanFixture::new(node_id_gen, |_| Target::B).await;
+    Task::blocking(async move { channel::run(fixture) }).await
 }
 
-#[test]
-fn fidl_channel_tests_b_then_c() {
-    super::run_test(move || {
-        channel::run(ChanFixture::new("fidl_channel_tests_b_then_c", |purpose| match purpose {
-            channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
-            channel::CreateHandlePurpose::PayloadChannel => Target::C,
-        }))
+#[fuchsia_async::run_singlethreaded(test)]
+async fn fidl_channel_tests_b_then_c(run: usize) {
+    crate::test_util::init();
+    let node_id_gen = NodeIdGenerator::new("fidl_channel_tests_b_then_c", run);
+    let fixture = ChanFixture::new(node_id_gen, |purpose| match purpose {
+        channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
+        channel::CreateHandlePurpose::PayloadChannel => Target::C,
     })
+    .await;
+    Task::blocking(async move { channel::run(fixture) }).await
 }
