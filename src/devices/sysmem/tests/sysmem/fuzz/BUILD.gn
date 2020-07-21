@@ -64,6 +64,9 @@ fuzzer("sysmem_fuzzer") {
     "//zircon/system/ulib/sysmem-version",
     "//zircon/system/ulib/trace:trace-driver",
   ]
+
+  # TODO(fxb/56714): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuzzer("sysmem_fuzzer_multi") {
@@ -83,6 +86,7 @@ fuzzer("sysmem_fuzzer_multi") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
+    "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
     "//src/devices/testing/fake-bti",
@@ -91,7 +95,6 @@ fuzzer("sysmem_fuzzer_multi") {
     "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//sdk/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/fit",
