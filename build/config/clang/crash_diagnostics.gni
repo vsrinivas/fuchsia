@@ -1,0 +1,8 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Clang crash reports directory path. Use empty path to disable altogether.
+  crash_diagnostics_dir = "$root_build_dir/clang-crashreports"
+}

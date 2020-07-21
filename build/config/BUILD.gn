@@ -3,15 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
+import("//build/config/clang/crash_diagnostics.gni")
 import("//build/config/compiler.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 
 declare_args() {
-  # Clang crash reports directory path. Use empty path to disable altogether.
-  crash_diagnostics_dir = "$root_build_dir/clang-crashreports"
-
   if (is_fuchsia) {
     # Controls whether the compiler emits full stack frames for function calls.
     # This reduces performance but increases the ability to generate good
@@ -153,7 +151,8 @@ config("relative_paths") {
     # on the absolute path of build directory. -fdebug-compilation-dir is
     # designed to address this issue, making both debug info and the compile
     # command itself independent of the absolute path of the build directory.
-    "-fdebug-compilation-dir", ".",
+    "-fdebug-compilation-dir",
+    ".",
 
     # This makes sure that include directories in the toolchain are
     # represented as relative to the build directory (because that's how
