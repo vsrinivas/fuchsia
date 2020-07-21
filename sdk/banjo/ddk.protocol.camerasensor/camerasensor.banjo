@@ -126,4 +126,3 @@ protocol CameraSensor {
     // Returns the sensor power state.
     IsPoweredUp() -> (bool s);
 };
-

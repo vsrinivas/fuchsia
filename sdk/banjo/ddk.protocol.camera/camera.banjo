@@ -1,0 +1,45 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.camera;
+
+enum BayerPattern : uint8 {
+    RGGB = 1;
+    GRBG = 2;
+    GBRG = 3;
+    BGGR = 4;
+};
+
+/// Encodes R, Gr, B, Gb pixel values.
+struct ColorVal {
+    uint16 red;
+    uint16 green_r;
+    uint16 blue;
+    uint16 green_b;
+};
+
+/// Encodes a pair of width and height values.
+/// For example, for use as a representation of frame resolution
+/// where |x| is width and |y| is height.
+struct Dimensions {
+    float32 x;
+    float32 y;
+};
+
+/// Encodes a pair of minimum and maximum values.
+/// For example, for use as sensor constraints for exposure settings.
+struct MinMaxConstraints {
+    uint32 min;
+    uint32 max;
+};
+
+/// Encodes information to represent a rectangle on a grid.
+// TODO(55419): Overrides ddk.protocol.ge2d struct.
+//              Consolidate here and rename to just `Rect`.
+struct RectVals {
+    uint32 x_pos;
+    uint32 y_pos;
+    uint32 width;
+    uint32 height;
+};

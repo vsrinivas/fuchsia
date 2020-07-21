@@ -86,7 +86,7 @@ DDK_PROTOCOL_DEF(AUDIO_OUTPUT,            63,   "audio-output", 0)
 DDK_PROTOCOL_DEF(CAMERA,                  64,   "camera", 0)
 DDK_PROTOCOL_DEF(CAMERA_SENSOR,           65,   "camera-sensor", PF_NOPUB)
 DDK_PROTOCOL_DEF(ISP,                     66,   "isp", PF_NOPUB)
-DDK_PROTOCOL_DEF(ISP_TEST,                67,   "isp-device-test", 0)  // RESERVED
+DDK_PROTOCOL_DEF(CAMERA_SENSOR2,          67,   "camera-sensor2", PF_NOPUB)  // RESERVED
 DDK_PROTOCOL_DEF(VCAM_FACTORY,            68,   "virtual-camera-factory", 0)
 DDK_PROTOCOL_DEF(OUTPUT_STREAM,           69,   "output-stream", PF_NOPUB)
 DDK_PROTOCOL_DEF(MEDIA_CODEC,             70,   "media-codec", 0)

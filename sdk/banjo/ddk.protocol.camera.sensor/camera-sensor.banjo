@@ -1,0 +1,182 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.camera.sensor;
+
+using ddk.protocol.camera;
+using zx;
+
+const uint32 EXTENSION_VALUE_DATA_BYTE_ARRAY_LEN = 32;
+
+/// A type used to distinguish extension parameters.
+union ExtensionValueDataType {
+    int32 int_value;
+    uint32 uint_value;
+    array<uint8>:EXTENSION_VALUE_DATA_BYTE_ARRAY_LEN byte_array_value;
+    ddk.protocol.camera.Dimensions resolution_value;
+    ddk.protocol.camera.MinMaxConstraints constraints_value;
+};
+
+enum PixelType : uint8 {
+    RAW8 = 1;
+    RAW10 = 2;
+};
+
+enum DynamicRangeMode : uint8 {
+    LINEAR = 1;
+    WIDE = 2;
+};
+
+enum BinningMode : uint8 {
+    NONE = 1;
+    ADDITIVE = 2;
+    AVERAGE = 3;
+};
+
+struct SamplingParams {
+    BinningMode mode;
+    uint32 bin_amount;
+    uint32 skip_amount;
+};
+
+struct ReadoutConfig {
+    /// Describes sampling parameters for the x plane.
+    SamplingParams sampling_x;
+    /// Describes sampling parameters for the y plane.
+    SamplingParams sampling_y;
+    /// The x and y offset as well as the width and height for cropping.
+    ddk.protocol.camera.RectVals scaler_crop;
+};
+
+/// A sensor can support several different predefined modes.
+/// This structure keeps all necessary information about a mode.
+// TODO(55427): Move non-sensor-specific params out of this struct.
+struct Mode {
+    /// This mode's index.
+    uint8 idx;
+    /// This mode's identifying string.
+    string identifier;
+    /// Maximum frames per second.
+    uint32 fps;
+    /// Input resolution, where |x| is pixel width and |y| is pixel height.
+    ddk.protocol.camera.Dimensions resolution_in;
+    /// Output resolution, where |x| is pixel width and |y| is pixel height.
+    ddk.protocol.camera.Dimensions resolution_out;
+    /// How many exposures this mode supports.
+    uint8 exposures;
+    /// A mode that reflects what dynamic range technique is being used.
+    DynamicRangeMode dr_mode;
+    /// The pixel type (e.g. whether the output is in RAW8, RAW10, etc. format).
+    PixelType pixel_type;
+    /// Lane count.
+    uint8 lanes;
+    /// MBps per lane.
+    uint32 mbps;
+    /// Line time.
+    float32 line_time;
+    /// Frame time.
+    float32 frame_time;
+    /// A structure containing information on binning, skipping, and scaling
+    /// operations carried out on frame data.
+    ReadoutConfig readout;
+};
+
+/// Exposes a product-agnostic interface to the camera's sensor.
+/// Allows clients to get and set sensor constraints, sensor mode,
+/// and its dynamic operating state.
+///
+/// Most methods provide a `zx.status` return value. This can be:
+///    ZX_OK                      - The operation was successful.
+///    ZX_ERR_INTERNAL            - The sensor has not been initialized.
+///    ZX_ERR_NOT_SUPPORTED       - The operation is not supported on the current device.
+///    ZX_ERR_INVALID_ARGS        - Invalid args for this operation.
+///    ZX_ERR_OUT_OF_RANGE        - Args fall outside of min/max constraints.
+///    ZX_ERR_BUFFER_TOO_SMALL    - Buffer provided cannot hold all required data.
+///    ZX_ERR_IO_NOT_PRESENT      - There is no sensor device present or bound.
+// TODO(55428): Incorporate muting behavior into documentation. Add arg/return value info.
+// TODO(56558): Add a versioning mechanism.
+// TODO(55430): Transition methods to use [Async].
+[Layout = "ddk-protocol"]
+protocol CameraSensor2 {
+    /// Initializes the sensor.
+    Init() -> (zx.status s);
+    /// De-Initializes the sensor.
+    DeInit() -> ();
+
+    /// Retrieves the sensor's ID.
+    GetSensorId() -> (zx.status s, uint32 id);
+
+    /// Retrieve a vector of available modes.
+    GetAvailableModes() -> (zx.status s, vector<Mode> modes);
+    /// Use a specific mode for the initialization sequence.
+    SetMode(uint32 mode) -> (zx.status s);
+
+    /// Start streaming.
+    /// Is safe to call this if streaming is already started.
+    StartStreaming() -> (zx.status s);
+    /// Stop streaming.
+    /// It is safe to call this if streaming is already stopped.
+    StopStreaming() -> ();
+
+    // Exposure Settings
+
+    /// Retrieve analog gain value.
+    GetAnalogGain() -> (zx.status s, float32 gain);
+    /// Changes analog gain value.
+    SetAnalogGain(float32 gain) -> (zx.status s, float32 gain);
+    /// Retrieve digital gain value.
+    GetDigitalGain() -> (zx.status s, float32 gain);
+    /// Changes digital gain value.
+    SetDigitalGain(float32 gain) -> (zx.status s, float32 gain);
+    /// Retrieve integration time value.
+    GetIntegrationTime() -> (zx.status s, float32 int_time);
+    /// Changes Integration Time.
+    SetIntegrationTime(float32 int_time) -> (zx.status s, float32 int_time);
+
+    /// Update the sensor with new parameters.
+    Update() -> (zx.status s);
+
+    // OTP
+
+    /// Retrieve the total size of the data stored in the OTP module.
+    GetOtpSize() -> (zx.status s, uint32 size);
+    /// Retrieve the specified amount of OTP data at the offset and write them to
+    /// the provided buffer.
+    GetOtpData(uint32 byte_count, uint32 offset, vector<uint8> buf) -> (zx.status s);
+
+    // Test Controls
+
+    /// Retrieves the test pattern mode the sensor is set to.
+    ///    0            – No pattern (default)
+    ///    1            – Solid colour
+    ///    2            – 100% colour bars
+    ///    3            – Fade to grey’ colour bars
+    ///    4            - PN9
+    ///    5-255        - Reserved
+    ///    256-65535    – Manufacturer specific
+    GetTestPatternMode() -> (zx.status s, uint16 value);
+    /// Changes the sensor's test pattern mode.
+    SetTestPatternMode(uint16 mode) -> (zx.status s);
+    /// Retrieves the test pattern data being used.
+    GetTestPatternData() -> (zx.status s, ddk.protocol.camera.ColorVal data);
+    /// Changes data used by the test pattern. Only used by certain modes.
+    SetTestPatternData(ddk.protocol.camera.ColorVal data) -> (zx.status s);
+
+    /// Retrieves the test cursor data being used.
+    GetTestCursorData() -> (zx.status s, ddk.protocol.camera.RectVals data);
+    /// Changes the sensor's cursor-related parameters.
+    SetTestCursorData(ddk.protocol.camera.RectVals data) -> (zx.status s);
+
+    // Other Capabilities
+
+    /// This subset of the API provides implementers with the flexibility to provide custom
+    /// endpoints for elements not otherwise included.
+    /// Retrieves the specified element. The caller must reference the implementer's ID list.
+    GetExtensionValue(uint64 id) -> (zx.status s, ExtensionValueDataType? value);
+    /// This subset of the API provides implementers with the flexibility to provide custom
+    /// endpoints for elements not otherwise included.
+    /// Changes the specified element. The caller must reference the implementer's ID list.
+    SetExtensionValue(uint64 id, ExtensionValueDataType value)
+        -> (zx.status s, ExtensionValueDataType? value);
+};

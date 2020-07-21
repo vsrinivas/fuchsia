@@ -17,6 +17,7 @@ source_set("source") {
   ]
 
   public_deps = [
+    "//sdk/banjo/ddk.protocol.camera.sensor",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
