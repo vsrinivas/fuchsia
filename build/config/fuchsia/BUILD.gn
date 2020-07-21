@@ -2,19 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/build_id.gni")
 import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
 
 assert(current_os == "fuchsia")
-
-declare_args() {
-  # Build ID algorithm to use for Fuchsia-target code.  This does not apply
-  # to host or guest code.  The value is the argument to the linker's
-  # `--build-id=...` switch.  If left empty (the default), the linker's
-  # default format is used.
-  build_id_format = ""
-}
 
 # Deprecated.
 # TODO(44795): Remove once none of the petals depend on this.

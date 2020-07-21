@@ -1,0 +1,11 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Build ID algorithm to use for Fuchsia-target code.  This does not apply
+  # to host or guest code.  The value is the argument to the linker's
+  # `--build-id=...` switch.  If left empty (the default), the linker's
+  # default format is used.
+  build_id_format = ""
+}
