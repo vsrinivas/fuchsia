@@ -44,7 +44,9 @@ impl AtModem {
     }
 
     pub fn fidl_service(modem: Arc<Mutex<AtModem>>) -> impl Fn(SetupRequestStream) -> () {
-        move |stream| fasync::spawn(AtModem::fidl_service_async(modem.clone(), stream))
+        move |stream| {
+            fasync::Task::spawn(AtModem::fidl_service_async(modem.clone(), stream)).detach()
+        }
     }
 
     fn connect_transport(&mut self, chan: zx::Channel) -> bool {
@@ -107,7 +109,7 @@ impl FrilService {
     ) -> impl Fn(RadioInterfaceLayerRequestStream) -> () {
         move |stream: RadioInterfaceLayerRequestStream| {
             fx_log_info!("New client connecting to the Fuchsia RIL");
-            fasync::spawn(FrilService::fidl_service_async(modem.clone(), stream))
+            fasync::Task::spawn(FrilService::fidl_service_async(modem.clone(), stream)).detach()
         }
     }
 
@@ -127,8 +129,8 @@ impl FrilService {
     ) -> Result<(), fidl::Error> {
         let mut modem = modem.lock().await;
         (&(*modem)).await; // Await transport setup.
-        // This await  is ok since the transport has been set up.
-        let transport = (&mut modem.transport).as_mut().unwrap(); 
+                           // This await  is ok since the transport has been set up.
+        let transport = (&mut modem.transport).as_mut().unwrap();
         match request {
             RadioInterfaceLayerRequest::RawCommand { command, responder } => {
                 let resp = at_query!(responder, transport, command);

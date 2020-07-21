@@ -83,7 +83,7 @@ fn spawn_device_settings_server(
     state: Arc<Mutex<DeviceSettingsManagerServer>>,
     stream: DeviceSettingsManagerRequestStream,
 ) {
-    fasync::spawn(
+    fasync::Task::spawn(
         stream
             .try_for_each(move |req| {
                 let mut state = state.lock().unwrap();
@@ -165,7 +165,8 @@ fn spawn_device_settings_server(
             })
             .map_ok(|_| ())
             .unwrap_or_else(|e| fx_log_err!("error running mock device settings server: {:?}", e)),
-    );
+    )
+    .detach();
 }
 
 #[fasync::run_singlethreaded]

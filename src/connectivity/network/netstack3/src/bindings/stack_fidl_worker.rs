@@ -35,7 +35,7 @@ struct LockedFidlWorker<'a, C: StackContext> {
 
 impl<C: StackContext> StackFidlWorker<C> {
     pub(crate) fn spawn(ctx: C, mut stream: StackRequestStream) {
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let worker = StackFidlWorker { ctx };
                 while let Some(e) = stream.try_next().await? {
@@ -46,7 +46,8 @@ impl<C: StackContext> StackFidlWorker<C> {
             .unwrap_or_else(|e: anyhow::Error| {
                 debug!("Stack Fidl worker finished with error {}", e)
             }),
-        );
+        )
+        .detach();
     }
 
     async fn lock_worker(&self) -> LockedFidlWorker<'_, C> {

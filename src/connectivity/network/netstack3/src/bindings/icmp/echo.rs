@@ -59,7 +59,7 @@ where
     /// Spawn a background worker to handle requests from a
     /// [`fidl_fuchsia_net_icmp::EchoSocketRequestStream`].
     pub(crate) fn spawn(mut self, mut stream: EchoSocketRequestStream) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             loop {
                 select! {
                     evt = stream.next() => {
@@ -83,7 +83,8 @@ where
                     complete => return,
                 };
             }
-        });
+        })
+        .detach();
     }
 }
 

@@ -224,10 +224,11 @@ fn main() -> Result<(), Error> {
 
     fs.dir("svc").add_fidl_service(move |stream| {
         fx_log_info!("Spawning Management Interface");
-        fasync::spawn(
+        fasync::Task::spawn(
             start_service(mgr.clone(), stream)
                 .unwrap_or_else(|e| fx_log_err!("Failed to spawn {:?}", e)),
         )
+        .detach()
     });
 
     // Serves the Inspect Tree at the standard location "/diagnostics/fuchsia.inspect.Tree"

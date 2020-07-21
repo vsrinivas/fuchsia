@@ -40,7 +40,7 @@ where
     }
 
     pub(crate) fn spawn(ctx: C, mut rs: ProviderRequestStream) {
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let worker = Self::new(ctx);
                 while let Some(req) = rs.try_next().await? {
@@ -51,7 +51,8 @@ where
             .unwrap_or_else(|e: fidl::Error| {
                 debug!("IcmpProviderWorker finished with error {:?}", e)
             }),
-        );
+        )
+        .detach();
     }
 
     /// Handle a [`fidl_fuchsia_net_icmp::ProviderRequest`], which is used for opening ICMP sockets.

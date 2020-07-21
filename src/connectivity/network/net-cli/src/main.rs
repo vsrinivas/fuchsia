@@ -501,7 +501,7 @@ mod tests {
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             // Verify that the first request is as expected and return OK.
             let (id, addr, responder) = next_request(&mut requests).await;
             assert_eq!(id, 1);
@@ -527,7 +527,8 @@ mod tests {
                 }
             );
             responder.send(&mut Err(fidl_fuchsia_net_stack::Error::NotFound)).unwrap();
-        });
+        })
+        .detach();
 
         // Make the first request.
         let () = do_if(

@@ -188,7 +188,8 @@ mod test {
         let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<NewDeviceMarker>()?;
         let (mut tx_wr, rx_wr) = mpsc::channel(1);
         let (tx_rd, mut rx_rd) = mpsc::channel(1);
-        fasync::spawn_local(async move { run(&mut stream, &mut tx_wr, &mut rx_rd).await.unwrap() });
+        fasync::Task::local(async move { run(&mut stream, &mut tx_wr, &mut rx_rd).await.unwrap() })
+            .detach();
         Ok(TestProxy { proxy, writes: rx_wr, reads: tx_rd })
     }
 

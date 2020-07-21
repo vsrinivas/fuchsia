@@ -150,7 +150,7 @@ async fn main() -> Result<(), Error> {
     let env = services.create_nested_environment("netstack3-env")?;
 
     let _netstack = ns_builder.spawn(env.launcher())?;
-    fasync::spawn_local(services.collect());
+    fasync::Task::local(services.collect()).detach();
 
     let stack = Netstack::new(&env)?;
     if let Some(eth_path) = options.ethernet {

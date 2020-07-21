@@ -60,9 +60,10 @@ impl UdpSocketHolder {
         let sock = Arc::new(fasync::net::UdpSocket::from_socket(sock)?);
         let abort_publisher = if publish_mdns {
             let (publisher, abort_publisher) = abortable(mdns::publish(node_id, port));
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 let _ = publisher.await;
-            });
+            })
+            .detach();
             Some(abort_publisher)
         } else {
             None
@@ -119,7 +120,7 @@ async fn register_udp(
     if udp_links.get(&addr).is_none() {
         let (link_sender, link_receiver) = node.new_link(node_id).await?;
         udp_links.insert(addr, link_receiver);
-        fasync::spawn_local(log_errors(
+        fasync::Task::local(log_errors(
             async move {
                 let mut buf = [0u8; 1400];
                 while let Some(n) = link_sender.next_send(&mut buf).await? {
@@ -129,7 +130,8 @@ async fn register_udp(
                 Ok(())
             },
             "Failed sending UDP on link",
-        ));
+        ))
+        .detach();
     }
     Ok(())
 }
@@ -235,24 +237,27 @@ async fn main() -> Result<(), Error> {
         }),
     )?;
 
-    fasync::spawn_local(log_errors(
+    fasync::Task::local(log_errors(
         crate::serial::run_serial_link_handlers(Arc::downgrade(&node), opt.serial),
         "serial handler failed",
-    ));
+    ))
+    .detach();
 
     if opt.udp {
         let udp_socket = Arc::new(UdpSocketHolder::new(node.node_id(), opt.mdns_publish)?);
         let udp_links: UdpLinks = Arc::new(Mutex::new(HashMap::new()));
         let (tx_addr, mut rx_addr) = futures::channel::mpsc::channel(1);
-        fasync::spawn_local(log_errors(
+        fasync::Task::local(log_errors(
             read_udp(udp_socket.clone(), udp_links.clone()),
             "Error reading UDP socket",
-        ));
+        ))
+        .detach();
         if opt.mdns_connect {
-            fasync::spawn_local(log_errors(mdns::subscribe(tx_addr), "MDNS Subscriber failed"));
+            fasync::Task::local(log_errors(mdns::subscribe(tx_addr), "MDNS Subscriber failed"))
+                .detach();
         }
         let udp_node = node.clone();
-        fasync::spawn_local(log_errors(
+        fasync::Task::local(log_errors(
             async move {
                 while let Some((addr, node_id)) = rx_addr.next().await {
                     register_udp(
@@ -267,7 +272,8 @@ async fn main() -> Result<(), Error> {
                 Ok(())
             },
             "Error registering links",
-        ));
+        ))
+        .detach();
     }
 
     fs.for_each_concurrent(None, move |svcreq| match svcreq {

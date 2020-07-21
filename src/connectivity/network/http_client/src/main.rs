@@ -102,7 +102,7 @@ async fn to_success_response(
         }),
     };
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let hyper_body = hyper_response.body_mut();
         while let Some(chunk) = hyper_body.next().await {
             if let Ok(chunk) = chunk {
@@ -140,7 +140,7 @@ async fn to_success_response(
                 }
             }
         }
-    });
+    }).detach();
 
     Ok(response)
 }
@@ -355,7 +355,7 @@ fn calculate_redirect(
 }
 
 fn spawn_server(stream: net_http::LoaderRequestStream) {
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             stream
                 .err_into()
@@ -399,7 +399,8 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
                 .await
         }
         .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
-    );
+    )
+    .detach();
 }
 
 #[fasync::run_singlethreaded]

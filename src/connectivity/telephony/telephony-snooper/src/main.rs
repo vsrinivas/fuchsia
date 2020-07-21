@@ -87,7 +87,7 @@ async fn watch_new_devices(
                 let mut request_stream: QmiSnoopRequestStream =
                     snoop_endpoint_server_side.into_stream()?;
                 snooper.lock().device_num += 1;
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     fx_log_info!("watch_new_devices: spawn async block for forwarding msg");
                     while let Ok(Some(QmiSnoopRequest::SendMessage {
                         mut msg,
@@ -119,7 +119,8 @@ async fn watch_new_devices(
                         }
                     }
                     fx_log_info!("watch_new_devices: stop forwarding msg");
-                });
+                })
+                .detach();
             }
             _ => {
                 return Err(format_err!("watch_new_devices: unknown watcher event"));
@@ -146,7 +147,7 @@ async fn main() {
         fx_log_info!("new client connect to Snooper");
         snooper.lock().control_handles.push(stream.control_handle());
         let snooper_clone = snooper.clone();
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 while let Some(req) = (stream.try_next()).await? {
                     match req {
@@ -160,7 +161,8 @@ async fn main() {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        );
+        )
+        .detach();
     });
     fs.take_and_serve_directory_handle().expect("ServiceFs failed to serve directory");
     future::join(fs.collect::<()>(), qmi_device_watcher).await;

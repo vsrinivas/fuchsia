@@ -145,7 +145,7 @@ where
         }
         let (sender, mut recv) = mpsc::unbounded();
         self.futures_sender = Some(sender);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut futures = FuturesUnordered::<InternalFut<T>>::new();
 
             #[derive(Debug)]
@@ -210,7 +210,8 @@ where
                     PollResult::ReceiverClosed | PollResult::FuturesClosed => break,
                 }
             }
-        });
+        })
+        .detach();
     }
 
     /// Schedule a new timer with identifier `timer_id` at `time`.

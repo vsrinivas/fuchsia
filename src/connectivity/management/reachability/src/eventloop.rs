@@ -188,7 +188,7 @@ mod tests {
         event_worker.spawn(streams, event_send.clone());
         let mut event_loop = EventLoop { event_recv, monitor };
 
-        fasync::spawn_local(async {
+        fasync::Task::local(async {
             // Send event to it
             let e = Event::NetstackEvent(netstack::NetstackEvent::OnInterfacesChanged {
                 interfaces: vec![net_interface(5, [1, 2, 3, 1])],
@@ -208,7 +208,8 @@ mod tests {
             });
             event_send.unbounded_send(e).unwrap();
             drop(event_send);
-        });
+        })
+        .detach();
 
         let x = event_loop
             .run()

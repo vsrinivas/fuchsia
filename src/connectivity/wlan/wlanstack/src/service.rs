@@ -112,7 +112,7 @@ pub async fn serve_device_requests(
                             }
                             inspect_tree.notify_iface_removed(iface_id);
                         });
-                        fasync::spawn(serve_sme_fut);
+                        fasync::Task::spawn(serve_sme_fut).detach();
                         Ok(())
                     }
                     Err(status) => responder.send(status.into_raw(), None),

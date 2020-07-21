@@ -40,7 +40,7 @@ mod test {
         fs.add_fidl_service_at(
             fnet::NameLookupMarker::NAME,
             |mut stream: fnet::NameLookupRequestStream| {
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     while let Some(Ok(fnet::NameLookupRequest::LookupIp {
                         hostname,
                         options,
@@ -69,7 +69,8 @@ mod test {
                             responder.send(&mut Err(fnet::LookupError::NotFound)).unwrap();
                         }
                     }
-                });
+                })
+                .detach();
             },
         );
         fs.serve_connection(server_chan).unwrap();

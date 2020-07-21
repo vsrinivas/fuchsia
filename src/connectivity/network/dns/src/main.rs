@@ -571,9 +571,10 @@ mod tests {
                 .expect("failed to create resolver"),
         );
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             let () = run_name_lookup(&resolver, stream).await.expect("failed to run_name_lookup");
-        });
+        })
+        .detach();
         proxy
     }
 

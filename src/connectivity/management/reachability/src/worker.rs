@@ -21,7 +21,7 @@ impl EventWorker {
         streams: (stack::StackEventStream, netstack::NetstackEventStream),
         event_chan: mpsc::UnboundedSender<Event>,
     ) {
-        fasync::spawn_local(
+        fasync::Task::local(
             async move {
                 let mut select_stream = futures::stream::select(
                     streams.0.map(|e| e.map(Event::StackEvent)),
@@ -38,7 +38,8 @@ impl EventWorker {
                 Ok(())
             }
             .unwrap_or_else(|err: Error| error!("Sending event error {:?}", err)),
-        );
+        )
+        .detach();
     }
 }
 
@@ -52,7 +53,7 @@ impl FidlWorker {
         let inspector = component::inspector();
         inspector.serve(&mut fs)?;
 
-        fasync::spawn_local(fs.collect());
+        fasync::Task::local(fs.collect()).detach();
         Ok(inspector)
     }
 }
@@ -69,12 +70,13 @@ impl TimerWorker {
         id: Option<u64>,
     ) {
         debug!("spawn periodic timer");
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Some(()) = (timer.next()).await {
                 event_chan.unbounded_send(Event::TimerEvent(id)).unwrap_or_else(
                     |err: mpsc::TrySendError<Event>| error!("Sending event error {:?}", err),
                 );
             }
-        });
+        })
+        .detach();
     }
 }

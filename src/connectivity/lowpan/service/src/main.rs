@@ -32,7 +32,7 @@ const MAX_CONCURRENT: usize = 100;
 pub struct FuchsiaGlobalExecutor;
 impl Spawn for FuchsiaGlobalExecutor {
     fn spawn_obj(&self, future: FutureObj<'static, ()>) -> Result<(), SpawnError> {
-        fasync::spawn(future);
+        fasync::Task::spawn(future).detach();
         Ok(())
     }
 }

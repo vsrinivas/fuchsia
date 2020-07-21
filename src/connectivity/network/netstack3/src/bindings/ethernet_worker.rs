@@ -79,7 +79,7 @@ impl<C: StackContext> EthernetWorker<C> {
     }
 
     pub fn spawn(self, mut events: eth::EventStream) {
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 // TODO(brunodalbo) remove this temporary buffer, we should be
                 // owning buffers until processing is done, this is just an
@@ -100,6 +100,7 @@ impl<C: StackContext> EthernetWorker<C> {
                 Ok(())
             }
             .unwrap_or_else(|e: Error| error!("{:?}", e)),
-        );
+        )
+        .detach();
     }
 }

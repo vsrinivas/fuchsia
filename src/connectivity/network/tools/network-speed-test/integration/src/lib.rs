@@ -16,7 +16,7 @@ const NETWORK_SPEED_TEST_URL: &'static str =
     fuchsia_single_component_package_url!("network-speed-test");
 
 fn start_fake_loader(stream: fidl_fuchsia_net_http::LoaderRequestStream) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         stream
             .err_into()
             .try_for_each_concurrent(None, |message| async move {
@@ -33,12 +33,13 @@ fn start_fake_loader(stream: fidl_fuchsia_net_http::LoaderRequestStream) {
                             redirect: None,
                         })?;
 
-                        fasync::spawn(async move {
+                        fasync::Task::spawn(async move {
                             for i in 0..100 {
                                 let _ =
                                     tx.write(&std::iter::repeat(i).take(100).collect::<Vec<u8>>());
                             }
-                        });
+                        })
+                        .detach();
 
                         Ok(())
                     }
@@ -47,7 +48,8 @@ fn start_fake_loader(stream: fidl_fuchsia_net_http::LoaderRequestStream) {
             })
             .await
             .unwrap()
-    });
+    })
+    .detach();
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -57,7 +59,7 @@ async fn test_run_network_speed_test() -> Result<(), Error> {
 
     let env = fs.create_salted_nested_environment("network-speed-test_integration_test_env")?;
 
-    fasync::spawn(fs.collect());
+    fasync::Task::spawn(fs.collect()).detach();
 
     assert!(client::AppBuilder::new(NETWORK_SPEED_TEST_URL)
         .arg("-u")

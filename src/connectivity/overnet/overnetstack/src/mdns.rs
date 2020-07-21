@@ -46,7 +46,7 @@ pub async fn publish(node_id: NodeId, port: u16) -> Result<(), Error> {
 
     let publisher = fuchsia_component::client::connect_to_service::<PublisherMarker>()?;
 
-    fasync::spawn_local(connect_to_proxy(publisher, node_id, port, proxy));
+    fasync::Task::local(connect_to_proxy(publisher, node_id, port, proxy)).detach();
 
     log::info!("Waiting for mdns requests");
 

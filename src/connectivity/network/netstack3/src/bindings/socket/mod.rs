@@ -92,7 +92,7 @@ where
     C::Dispatcher: SocketStackDispatcher,
 {
     pub(crate) fn spawn(ctx: C, mut rs: psocket::ProviderRequestStream) {
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let worker = SocketProviderWorker { ctx };
                 while let Some(req) = rs.try_next().await? {
@@ -104,6 +104,7 @@ where
                 debug!("SocketProviderWorker finished with error {:?}", e)
             }),
         )
+        .detach()
     }
 
     /// Spawns a socket worker for the given `transport`.

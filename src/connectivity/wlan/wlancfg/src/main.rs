@@ -130,26 +130,30 @@ async fn serve_fidl(
                 saved_networks.clone(),
             )
             .unwrap_or_else(|e| error!("error serving legacy wlan API: {}", e));
-            fasync::spawn(fut)
+            fasync::Task::spawn(fut).detach()
         })
         .add_fidl_service(move |reqs| {
-            fasync::spawn(client::serve_provider_requests(
+            fasync::Task::spawn(client::serve_provider_requests(
                 iface_manager.clone(),
                 client_sender1.clone(),
                 Arc::clone(&saved_networks_clone),
                 Arc::clone(&network_selector),
                 reqs,
             ))
+            .detach()
         })
         .add_fidl_service(move |reqs| {
-            fasync::spawn(client::serve_listener_requests(client_sender2.clone(), reqs))
-        })
-        .add_fidl_service(move |reqs| fasync::spawn(ap.clone().serve_provider_requests(reqs)))
-        .add_fidl_service(move |reqs| {
-            fasync::spawn(second_ap.clone().serve_listener_requests(reqs))
+            fasync::Task::spawn(client::serve_listener_requests(client_sender2.clone(), reqs))
+                .detach()
         })
         .add_fidl_service(move |reqs| {
-            fasync::spawn(configurator.clone().serve_deprecated_configuration(reqs))
+            fasync::Task::spawn(ap.clone().serve_provider_requests(reqs)).detach()
+        })
+        .add_fidl_service(move |reqs| {
+            fasync::Task::spawn(second_ap.clone().serve_listener_requests(reqs)).detach()
+        })
+        .add_fidl_service(move |reqs| {
+            fasync::Task::spawn(configurator.clone().serve_deprecated_configuration(reqs)).detach()
         });
     fs.take_and_serve_directory_handle()?;
     let service_fut = fs.collect::<()>().fuse();

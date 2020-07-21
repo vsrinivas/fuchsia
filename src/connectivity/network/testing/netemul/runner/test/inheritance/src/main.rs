@@ -157,7 +157,7 @@ struct CounterData {
 }
 
 fn spawn_counter_server(mut stream: CounterRequestStream, data: Arc<Mutex<CounterData>>) {
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             while let Some(CounterRequest::Increment { responder }) =
                 stream.try_next().await.context("error running counter server")?
@@ -171,6 +171,7 @@ fn spawn_counter_server(mut stream: CounterRequestStream, data: Arc<Mutex<Counte
         }
         .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
     )
+    .detach()
 }
 
 async fn run_server() -> Result<(), Error> {

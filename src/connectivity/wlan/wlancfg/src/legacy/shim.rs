@@ -532,7 +532,7 @@ mod tests {
         // Begin handling legacy requests.
         let fut = serve_legacy(requests, IfaceRef::new(), Arc::clone(&saved_networks))
             .unwrap_or_else(|e| panic!("failed to serve legacy requests: {}", e));
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
 
         // Save the network directly without going through the legacy API.
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);

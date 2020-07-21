@@ -253,7 +253,7 @@ where
         if let Err(e) = local_event.signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_OUTGOING) {
             error!("UDP socket failed to signal peer: {:?}", e);
         }
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let id = {
                     let mut locked = ctx.lock().await;
@@ -276,7 +276,8 @@ where
             // If any errors occured as a result of the closure, we just log
             // them.
             .unwrap_or_else(|e: fidl::Error| error!("UDP socket control request error: {:?}", e)),
-        );
+        )
+        .detach();
         Ok(())
     }
 
@@ -294,7 +295,7 @@ where
         object: ServerEnd<NodeMarker>,
         mut worker: UdpSocketWorker<I, C>,
     ) {
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let channel = AsyncChannel::from_channel(object.into_channel())
                     .expect("failed to create async channel");
@@ -340,7 +341,8 @@ where
                 worker.handle_stream(events).await
             }
             .unwrap_or_else(|e: fidl::Error| error!("UDP socket control request error: {:?}", e)),
-        );
+        )
+        .detach();
     }
 
     async fn make_handler(&self) -> RequestHandler<'_, I, C> {
@@ -1652,13 +1654,14 @@ mod tests {
         );
 
         let (e1, e2) = zx::EventPair::create().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             fasync::OnSignals::new(&events, ZXSIO_SIGNAL_INCOMING)
                 .await
                 .expect("should become unblocked because of the shutdown");
 
             e1.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
-        });
+        })
+        .detach();
 
         socket.shutdown(libc::SHUT_RD as i16).await.unwrap().expect("failed to shutdown");
         let (_, data, _, _) = socket

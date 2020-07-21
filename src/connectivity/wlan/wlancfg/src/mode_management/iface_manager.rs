@@ -188,7 +188,7 @@ impl IfaceManager {
         );
 
         // TODO(fxb/53749): Return this future and allow the policy service to monitor it.
-        fuchsia_async::spawn(fut);
+        fuchsia_async::Task::spawn(fut).detach();
 
         Ok(ClientIfaceContainer {
             iface_id: iface_id,
@@ -247,7 +247,7 @@ impl IfaceManager {
             self.ap_update_sender.clone(),
             state_machine_start_sender,
         );
-        fuchsia_async::spawn(state_machine_fut);
+        fuchsia_async::Task::spawn(state_machine_fut).detach();
 
         Ok(ApIfaceContainer {
             iface_id: iface_id,

@@ -132,7 +132,7 @@ impl FrilService {
                 .unwrap_or_else(|e| fx_log_err!("Error running {:?}", e))
                 .await
         };
-        fasync::spawn(server);
+        fasync::Task::spawn(server).detach();
     }
 
     async fn handle_request(
@@ -211,7 +211,7 @@ async fn main() -> Result<(), Error> {
         })
         .add_fidl_service(move |mut stream: SetupRequestStream| {
             let modem = modem_setup.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let res = stream.next().await.unwrap();
                 if let Ok(SetupRequest::ConnectTransport { channel, responder }) = res {
                     let mut lock = modem.lock().await;
@@ -223,7 +223,8 @@ async fn main() -> Result<(), Error> {
                         let _ = responder.send(&mut Err(RilError::TransportError));
                     }
                 }
-            });
+            })
+            .detach();
         });
 
     fs.take_and_serve_directory_handle()?;
