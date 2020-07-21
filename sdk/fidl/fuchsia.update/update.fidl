@@ -30,6 +30,26 @@ protocol Manager {
     ///         The [`Monitor`], if provided, will not receive any notifications.
     CheckNow(CheckOptions options, Monitor? monitor)
         -> () error CheckNotStartedReason;
+
+    /// Performs any pending reboot of the system into an updated OS, if an
+    /// update has been staged for the next system startup.
+    ///
+    /// Should be used when the platform is configured to let the product drive
+    /// reboot scheduling. If this method is called when the platform is not
+    /// configured to let the product drive reboot scheduling, no reboot will
+    /// occur, and the system will reboot on its own after an update.
+    ///
+    /// In product-driven reboot configurations, the platform still contains a
+    /// backstop for post-update reboots. This means that if an update
+    /// is installed but the system has not rebooted before the backstop
+    /// duration occurs, the update system will automatically reboot the
+    /// system as a security measure. To avoid hitting this backstop,
+    /// products which desire control over reboot timing should call this
+    /// method roughly daily.
+    ///
+    /// - response `rebooting` true if the system is rebooting, false if no
+    ///                        update was pending reboot.
+    PerformPendingReboot() -> (bool rebooting);
 };
 
 /// Configuration options for an update check.

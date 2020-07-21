@@ -89,6 +89,10 @@ impl MockUpdateManager {
                     *self.called.lock() += 1;
                     responder.send(&mut *self.check_now_result.lock())?;
                 }
+
+                fidl_fuchsia_update::ManagerRequest::PerformPendingReboot { responder: _ } => {
+                    panic!("amberctl should never call PerformPendingReboot");
+                }
             }
         }
 

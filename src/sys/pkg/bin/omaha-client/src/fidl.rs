@@ -311,6 +311,12 @@ where
 
                 responder.send(&mut res).context("error sending response")?;
             }
+
+            ManagerRequest::PerformPendingReboot { responder } => {
+                // TODO(56514): implement this stub
+                info!("Received PerformPendingRebootRequest");
+                responder.send(false)?;
+            }
         }
         Ok(())
     }
@@ -1079,5 +1085,13 @@ mod tests {
                 }
             }
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_perform_pending_reboot_returns_false() {
+        let fidl = FidlServerBuilder::new().build().await;
+        let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
+        let result = proxy.perform_pending_reboot().await.unwrap();
+        assert_eq!(result, false);
     }
 }

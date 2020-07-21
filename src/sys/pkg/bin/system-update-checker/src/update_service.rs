@@ -68,6 +68,10 @@ impl UpdateService {
                     let mut res = self.handle_check_now(options, monitor).await;
                     responder.send(&mut res).context("error sending CheckNow response")?;
                 }
+
+                ManagerRequest::PerformPendingReboot { responder } => {
+                    responder.send(false).context("error sending PerformPendingReboot response")?;
+                }
             }
         }
         Ok(())
@@ -470,5 +474,21 @@ mod tests {
             ]
         );
         assert_eq!(fake_update_applier.call_count(), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_perform_pending_reboot_returns_false() {
+        let proxy = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_error(),
+        )
+        .await
+        .0;
+
+        let res = proxy.perform_pending_reboot().await.unwrap();
+
+        assert_eq!(res, false);
     }
 }

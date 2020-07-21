@@ -125,6 +125,10 @@ impl MockUpdateManagerService {
                     }
                     responder.send(&mut *self.check_now_response.lock()).unwrap();
                 }
+
+                fidl_update::ManagerRequest::PerformPendingReboot { responder: _ } => {
+                    panic!("update tool should not be calling perform pending reboot!");
+                }
             }
         }
         Ok(())

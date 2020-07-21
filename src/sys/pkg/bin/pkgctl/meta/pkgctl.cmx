@@ -9,8 +9,7 @@
             "fuchsia.pkg.PackageResolverAdmin",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",
-            "fuchsia.space.Manager",
-            "fuchsia.update.Manager"
+            "fuchsia.space.Manager"
         ]
     }
 }

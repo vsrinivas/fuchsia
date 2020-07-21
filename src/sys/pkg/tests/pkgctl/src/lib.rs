@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fidl_fuchsia_space as fidl_space,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
-    fidl_fuchsia_update as fidl_update, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::{
         client::{AppBuilder, Output},
         server::{NestedEnvironment, ServiceFs},
@@ -47,7 +47,6 @@ struct TestEnv {
     repository_manager: Arc<MockRepositoryManagerService>,
     package_cache: Arc<MockPackageCacheService>,
     package_resolver: Arc<MockPackageResolverService>,
-    update_manager: Arc<MockUpdateManagerService>,
     space_manager: Arc<MockSpaceManagerService>,
     _test_dir: TempDir,
     repo_config_arg_path: PathBuf,
@@ -105,17 +104,6 @@ impl TestEnv {
             )
         });
 
-        let update_manager = Arc::new(MockUpdateManagerService::new());
-        let update_manager_clone = Arc::clone(&update_manager);
-        fs.add_fidl_service(move |stream: fidl_update::ManagerRequestStream| {
-            let update_manager_clone = Arc::clone(&update_manager_clone);
-            fasync::spawn(
-                update_manager_clone
-                    .run_service(stream)
-                    .unwrap_or_else(|e| panic!("error running update service: {:?}", e)),
-            )
-        });
-
         let space_manager = Arc::new(MockSpaceManagerService::new());
         let space_manager_clone = space_manager.clone();
         fs.add_fidl_service(move |stream: fidl_space::ManagerRequestStream| {
@@ -143,7 +131,6 @@ impl TestEnv {
             repository_manager,
             package_cache,
             package_resolver,
-            update_manager,
             space_manager,
             _test_dir,
             repo_config_arg_path,
@@ -182,7 +169,6 @@ impl TestEnv {
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
         assert_eq!(self.engine.captured_args.lock().len(), 0);
         assert_eq!(*self.repository_manager.captured_args.lock(), expected_args);
-        assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 0);
     }
 
@@ -195,7 +181,6 @@ impl TestEnv {
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
         assert_eq!(*self.engine.captured_args.lock(), expected_args);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
-        assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 0);
     }
 
@@ -204,7 +189,6 @@ impl TestEnv {
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
         assert_eq!(self.engine.captured_args.lock().len(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
-        assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 1);
     }
 
@@ -212,7 +196,6 @@ impl TestEnv {
         assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.engine.captured_args.lock().len(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
-        assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 0);
         assert_eq!(*self.package_resolver.captured_args.lock(), reqs);
     }
@@ -225,7 +208,6 @@ impl TestEnv {
         assert_eq!(*self.package_cache.captured_args.lock(), cache_reqs);
         assert_eq!(self.engine.captured_args.lock().len(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
-        assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 0);
         assert_eq!(*self.package_resolver.captured_args.lock(), resolver_reqs);
     }
@@ -433,41 +415,6 @@ impl MockPackageCacheService {
                     panic!("should only support Open requests")
                 }
                 PackageCacheRequest::Sync { .. } => panic!("should only support Open requests"),
-            }
-        }
-        Ok(())
-    }
-}
-
-#[derive(PartialEq, Debug)]
-enum CapturedUpdateManagerRequest {
-    CheckNow { options: fidl_update::CheckOptions },
-}
-
-// fidl_update::CheckOptions does not impl Eq, but it is semantically Eq.
-impl Eq for CapturedUpdateManagerRequest {}
-
-struct MockUpdateManagerService {
-    captured_args: Mutex<Vec<CapturedUpdateManagerRequest>>,
-    check_now_result: Mutex<fidl_update::ManagerCheckNowResult>,
-}
-
-impl MockUpdateManagerService {
-    fn new() -> Self {
-        Self { captured_args: Mutex::new(vec![]), check_now_result: Mutex::new(Ok(())) }
-    }
-    async fn run_service(
-        self: Arc<Self>,
-        mut stream: fidl_update::ManagerRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(req) = stream.try_next().await? {
-            match req {
-                fidl_update::ManagerRequest::CheckNow { options, monitor: _, responder } => {
-                    self.captured_args
-                        .lock()
-                        .push(CapturedUpdateManagerRequest::CheckNow { options });
-                    responder.send(&mut *self.check_now_result.lock())?;
-                }
             }
         }
         Ok(())
