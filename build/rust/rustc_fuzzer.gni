@@ -30,6 +30,9 @@ import("//build/rust/rustc_staticlib.gni")
 #   edition
 #   deps
 #   source_root
+#   enforce_source_listing
+#   sources
+#   inputs
 #   features
 #     Same meaning as for rustc_staticlib.
 #
@@ -72,6 +75,9 @@ template("rustc_fuzzer") {
                              "edition",
                              "non_rust_deps",
                              "source_root",
+                             "enforce_source_listing",
+                             "sources",
+                             "inputs",
                              "features",
                            ])
     visibility = [ ":*" ]

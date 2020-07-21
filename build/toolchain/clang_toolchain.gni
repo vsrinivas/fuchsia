@@ -93,6 +93,7 @@ template("clang_toolchain") {
     ar = "${prefix}/llvm-ar"
     ld = cxx
     rustc = "${rustc_prefix}/rustc"
+    verify_depfile = rebase_path("//build/gn/verify_depfile.py", root_build_dir)
 
     forward_variables_from(invoker, [ "use_strip" ])
     if (use_strip) {
@@ -217,6 +218,7 @@ template("clang_toolchain") {
 
       # TODO(47565): Replacement for rustenv
       command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
@@ -255,6 +257,8 @@ template("clang_toolchain") {
 
       # TODO(47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
+
       description = "RUST {{output}}"
       outputs =
           [ "{{output_dir}}/lib{{target_output_name}}{{output_extension}}" ]
@@ -269,6 +273,8 @@ template("clang_toolchain") {
 
       # TODO(47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
+
       description = "RUST {{output}}"
 
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
@@ -297,6 +303,7 @@ template("clang_toolchain") {
 
       # TODO(47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+
       description = "RUST {{output}}"
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
@@ -340,6 +347,8 @@ template("clang_toolchain") {
       }
 
       command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
+
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
       if (invoker.toolchain_os == "mac") {
@@ -382,6 +391,8 @@ template("clang_toolchain") {
 
       # TODO(47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
+
       description = "RUST {{output}}"
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{root_out_dir}}"
