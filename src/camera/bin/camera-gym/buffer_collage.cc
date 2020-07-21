@@ -342,8 +342,8 @@ static std::tuple<float, float> ScaleToFit(float element_width, float element_he
 // Builds a mesh that is equivalent to a scenic::Rectangle with the given |width| and |height|, but
 // also includes a second smaller rectangle superimposed in the corner that shows a zoomed subregion
 // of the associated material's center.
-static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float width,
-                                               float height) {
+static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float width, float height,
+                                               bool magnify) {
   auto mesh = std::make_unique<scenic::Mesh>(session);
 
   auto format = scenic::NewMeshVertexFormat(fuchsia::ui::gfx::ValueType::kVector3,
@@ -369,6 +369,8 @@ static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float w
     x2, y1, 0, 1,  0,
     x1, y2, 0, 0,  1,
     x2, y2, 0, 1,  1,
+  };
+  std::vector<float> vb_magnify {
     x3, y3, 0, t1, t1,
     x4, y3, 0, t2, t1,
     x3, y4, 0, t1, t2,
@@ -376,9 +378,16 @@ static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float w
   };
   std::vector<uint32_t> ib {
     0, 1, 2, 2, 1, 3,
+  };
+  std::vector<uint32_t> ib_magnify {
     4, 5, 6, 6, 5, 7,
   };
   //clang-format on
+
+  if (magnify) {
+    vb.insert(vb.end(), vb_magnify.begin(), vb_magnify.end());
+    ib.insert(ib.end(), ib_magnify.begin(), ib_magnify.end());
+  }
 
   zx::vmo vb_vmo;
   size_t vb_size = vb.size() * sizeof(vb[0]);
@@ -435,7 +444,7 @@ void BufferCollage::UpdateLayout() {
     }
     auto [element_width, element_height] = ScaleToFit(
         view.image_format.coded_width, view.image_format.coded_height, cell_width, cell_height);
-    view.mesh = BuildMesh(session_.get(), element_width, element_height);
+    view.mesh = BuildMesh(session_.get(), element_width, element_height, show_magnify_boxes_);
     view.node = std::make_unique<scenic::ShapeNode>(session_.get());
     view.node->SetShape(*view.mesh);
     view.node->SetMaterial(*view.material);
@@ -466,6 +475,10 @@ void BufferCollage::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events
       } else {
         view_extents_ = aabb;
       }
+      UpdateLayout();
+    }
+    if (event.is_input() && event.input().is_pointer() && event.input().pointer().phase == fuchsia::ui::input::PointerEventPhase::UP) {
+      show_magnify_boxes_ = !show_magnify_boxes_;
       UpdateLayout();
     }
   }

@@ -115,6 +115,7 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
     std::unique_ptr<scenic::ShapeNode> node;
   } heartbeat_indicator_;
   zx::time start_time_;
+  bool show_magnify_boxes_ = false;
 };
 
 }  // namespace camera
