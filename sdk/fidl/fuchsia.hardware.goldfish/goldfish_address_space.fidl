@@ -35,7 +35,6 @@ enum AddressSpaceChildDriverType : uint32 {
 // permanently associate a particular goldfish address space driver connection
 // with a particular type of child driver, discussed next.
 
-[ForDeprecatedCBindings]
 protocol AddressSpaceDevice {
     OpenChildDriver(AddressSpaceChildDriverType type, request<AddressSpaceChildDriver> req);
 };
@@ -71,7 +70,6 @@ struct AddressSpaceChildDriverPingMessage {
     uint32 data3;
 };
 
-[ForDeprecatedCBindings]
 protocol AddressSpaceChildDriver {
     // Allocates goldfish address space of given size.
     AllocateBlock(uint64 size) -> (zx.status res, uint64 paddr, zx.handle:VMO? vmo);

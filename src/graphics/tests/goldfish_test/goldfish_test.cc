@@ -3,13 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
-#include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
@@ -27,43 +24,57 @@ TEST(GoldfishPipeTests, GoldfishPipeTest) {
   zx::channel pipe_client;
   zx::channel pipe_server;
   EXPECT_EQ(zx::channel::create(0, &pipe_client, &pipe_server), ZX_OK);
-  EXPECT_EQ(fuchsia_hardware_goldfish_PipeDeviceOpenPipe(channel.get(), pipe_server.release()),
-            ZX_OK);
 
-  int32_t res;
+  llcpp::fuchsia::hardware::goldfish::PipeDevice::SyncClient pipe_device(std::move(channel));
+  EXPECT_TRUE(pipe_device.OpenPipe(std::move(pipe_server)).ok());
+
+  llcpp::fuchsia::hardware::goldfish::Pipe::SyncClient pipe(std::move(pipe_client));
   const size_t kSize = 3 * 4096;
-  EXPECT_EQ(fuchsia_hardware_goldfish_PipeSetBufferSize(pipe_client.get(), kSize, &res), ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
+  {
+    auto result = pipe.SetBufferSize(kSize);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+  }
 
   zx::vmo vmo;
-  EXPECT_EQ(
-      fuchsia_hardware_goldfish_PipeGetBuffer(pipe_client.get(), &res, vmo.reset_and_get_address()),
-      ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
+  {
+    auto result = pipe.GetBuffer();
+    ASSERT_TRUE(result.ok());
+    vmo = std::move(result.Unwrap()->vmo);
+  }
 
   // Connect to pingpong service.
   constexpr char kPipeName[] = "pipe:pingpong";
   size_t bytes = strlen(kPipeName) + 1;
   EXPECT_EQ(vmo.write(kPipeName, 0, bytes), ZX_OK);
-  uint64_t actual;
-  EXPECT_EQ(fuchsia_hardware_goldfish_PipeWrite(pipe_client.get(), bytes, 0, &res, &actual), ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
-  EXPECT_EQ(actual, bytes);
+
+  {
+    auto result = pipe.Write(bytes, 0);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+    EXPECT_EQ(result.Unwrap()->actual, bytes);
+  }
 
   // Write 1 byte.
   const uint8_t kSentinel = 0xaa;
   EXPECT_EQ(vmo.write(&kSentinel, 0, 1), ZX_OK);
-  EXPECT_EQ(fuchsia_hardware_goldfish_PipeWrite(pipe_client.get(), 1, 0, &res, &actual), ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
-  EXPECT_EQ(actual, 1);
+  {
+    auto result = pipe.Write(1, 0);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+    EXPECT_EQ(result.Unwrap()->actual, 1);
+  }
 
   // Read 1 byte result.
-  EXPECT_EQ(fuchsia_hardware_goldfish_PipeRead(pipe_client.get(), 1, 0, &res, &actual), ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
-  EXPECT_EQ(actual, 1);
+  {
+    auto result = pipe.Read(1, 0);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+    EXPECT_EQ(result.Unwrap()->actual, 1);
+  }
+
   uint8_t result = 0;
   EXPECT_EQ(vmo.read(&result, 0, 1), ZX_OK);
-
   // pingpong service should have returned the data received.
   EXPECT_EQ(result, kSentinel);
 
@@ -71,14 +82,20 @@ TEST(GoldfishPipeTests, GoldfishPipeTest) {
   uint8_t send_buffer[kSize];
   memset(send_buffer, kSentinel, kSize);
   EXPECT_EQ(vmo.write(send_buffer, 0, kSize), ZX_OK);
-  EXPECT_EQ(fuchsia_hardware_goldfish_PipeWrite(pipe_client.get(), kSize, 0, &res, &actual), ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
-  EXPECT_EQ(actual, kSize);
+  {
+    auto result = pipe.Write(kSize, 0);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+    EXPECT_EQ(result.Unwrap()->actual, kSize);
+  }
 
   // Read 3 * 4096 bytes.
-  EXPECT_EQ(fuchsia_hardware_goldfish_PipeRead(pipe_client.get(), kSize, 0, &res, &actual), ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
-  EXPECT_EQ(actual, kSize);
+  {
+    auto result = pipe.Read(kSize, 0);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+    EXPECT_EQ(result.Unwrap()->actual, kSize);
+  }
   uint8_t recv_buffer[kSize];
   EXPECT_EQ(vmo.read(recv_buffer, 0, kSize), ZX_OK);
 
@@ -90,22 +107,19 @@ TEST(GoldfishPipeTests, GoldfishPipeTest) {
   const size_t kRecvOffset = kSmallSize;
   memset(send_buffer, kSentinel, kSmallSize);
   EXPECT_EQ(vmo.write(send_buffer, 0, kSmallSize), ZX_OK);
-  EXPECT_EQ(fuchsia_hardware_goldfish_PipeDoCall(pipe_client.get(), kSmallSize, 0, kSmallSize,
-                                                 kRecvOffset, &res, &actual),
-            ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
-  EXPECT_EQ(actual, kSmallSize);
+
+  {
+    auto result = pipe.DoCall(kSmallSize, 0u, kSmallSize, kRecvOffset);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+    EXPECT_EQ(result.Unwrap()->actual, kSmallSize);
+  }
 
   EXPECT_EQ(vmo.read(recv_buffer, kRecvOffset, kSmallSize), ZX_OK);
 
   // pingpong service should have returned the data received.
   EXPECT_EQ(memcmp(send_buffer, recv_buffer, kSmallSize), 0);
 }
-
-using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                                               llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
-using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                        llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
 
 TEST(GoldfishControlTests, GoldfishControlTest) {
   int fd = open("/dev/class/goldfish-control/000", O_RDWR);
@@ -120,25 +134,24 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
   EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
             ZX_OK);
 
+  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+
   zx::channel token_client;
   zx::channel token_server;
   EXPECT_EQ(zx::channel::create(0, &token_client, &token_server), ZX_OK);
-  EXPECT_EQ(fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
-                                                             token_server.release()),
-            ZX_OK);
+  EXPECT_TRUE(allocator.AllocateSharedCollection(std::move(token_server)).ok());
 
   zx::channel collection_client;
   zx::channel collection_server;
   EXPECT_EQ(zx::channel::create(0, &collection_client, &collection_server), ZX_OK);
-  EXPECT_EQ(fuchsia_sysmem_AllocatorBindSharedCollection(
-                allocator_client.get(), token_client.release(), collection_server.release()),
-            ZX_OK);
+  EXPECT_TRUE(
+      allocator.BindSharedCollection(std::move(token_client), std::move(collection_server)).ok());
 
-  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
-  constraints->usage.vulkan = fuchsia_sysmem_vulkanUsageTransferDst;
-  constraints->min_buffer_count_for_camping = 1;
-  constraints->has_buffer_memory_constraints = true;
-  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+  llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = llcpp::fuchsia::sysmem::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  constraints.min_buffer_count_for_camping = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::BufferMemoryConstraints{
       .min_size_bytes = 4 * 1024,
       .max_size_bytes = 4 * 1024,
       .physically_contiguous_required = false,
@@ -147,56 +160,59 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
       .cpu_domain_supported = false,
       .inaccessible_domain_supported = true,
       .heap_permitted_count = 1,
-      .heap_permitted = {fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL}};
-  EXPECT_EQ(fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
-                                                          constraints.release()),
-            ZX_OK);
+      .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  zx_status_t status2 = ZX_OK;
-  BufferCollectionInfo info(BufferCollectionInfo::Default);
-  EXPECT_EQ(fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(),
-                                                                   &status2, info.get()),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_OK);
-  EXPECT_EQ(info->buffer_count, 1);
-  EXPECT_NE(info->buffers[0].vmo, ZX_HANDLE_INVALID);
+  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  zx::vmo vmo(info->buffers[0].vmo);
-  info->buffers[0].vmo = ZX_HANDLE_INVALID;
+  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
+  {
+    auto result = collection.WaitForBuffersAllocated();
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->status, ZX_OK);
+
+    info = std::move(result.Unwrap()->buffer_collection_info);
+    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_TRUE(info.buffers[0].vmo.is_valid());
+  }
+
+  zx::vmo vmo = std::move(info.buffers[0].vmo);
   EXPECT_TRUE(vmo.is_valid());
 
-  EXPECT_EQ(fuchsia_sysmem_BufferCollectionClose(collection_client.get()), ZX_OK);
+  EXPECT_TRUE(collection.Close().ok());
 
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  status2 = ZX_OK;
-  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer(
-                channel.get(), vmo_copy.release(), 64, 64,
-                fuchsia_hardware_goldfish_ColorBufferFormatType_BGRA, &status2),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_OK);
+  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+  {
+    auto result =
+        control.CreateColorBuffer(std::move(vmo_copy), 64, 64,
+                                  llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+  }
 
   zx::vmo vmo_copy2;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy2), ZX_OK);
 
-  status2 = ZX_OK;
-  uint32_t id = 0;
-  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer(
-                channel.get(), vmo_copy2.release(), &status2, &id),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_OK);
-  EXPECT_NE(id, 0);
+  {
+    auto result = control.GetColorBuffer(std::move(vmo_copy2));
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+    EXPECT_NE(result.Unwrap()->id, 0u);
+  }
 
   zx::vmo vmo_copy3;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy3), ZX_OK);
 
-  status2 = ZX_OK;
-  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer(
-                channel.get(), vmo_copy3.release(), 64, 64,
-                fuchsia_hardware_goldfish_ColorBufferFormatType_BGRA, &status2),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_ERR_ALREADY_EXISTS);
+  {
+    auto result =
+        control.CreateColorBuffer(std::move(vmo_copy3), 64, 64,
+                                  llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_ALREADY_EXISTS);
+  }
 }
 
 TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
@@ -212,26 +228,25 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
   EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
             ZX_OK);
 
+  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+
   zx::channel token_client;
   zx::channel token_server;
   EXPECT_EQ(zx::channel::create(0, &token_client, &token_server), ZX_OK);
-  EXPECT_EQ(fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
-                                                             token_server.release()),
-            ZX_OK);
+  EXPECT_TRUE(allocator.AllocateSharedCollection(std::move(token_server)).ok());
 
   zx::channel collection_client;
   zx::channel collection_server;
   EXPECT_EQ(zx::channel::create(0, &collection_client, &collection_server), ZX_OK);
-  EXPECT_EQ(fuchsia_sysmem_AllocatorBindSharedCollection(
-                allocator_client.get(), token_client.release(), collection_server.release()),
-            ZX_OK);
+  EXPECT_TRUE(
+      allocator.BindSharedCollection(std::move(token_client), std::move(collection_server)).ok());
 
   constexpr size_t kBufferSizeBytes = 4 * 1024;
-  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
-  constraints->usage.vulkan = fuchsia_sysmem_vulkanUsageTransferDst;
-  constraints->min_buffer_count_for_camping = 1;
-  constraints->has_buffer_memory_constraints = true;
-  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+  llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = llcpp::fuchsia::sysmem::VULKAN_BUFFER_USAGE_TRANSFER_DST;
+  constraints.min_buffer_count_for_camping = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::BufferMemoryConstraints{
       .min_size_bytes = kBufferSizeBytes,
       .max_size_bytes = kBufferSizeBytes,
       .physically_contiguous_required = false,
@@ -240,67 +255,67 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
       .cpu_domain_supported = false,
       .inaccessible_domain_supported = true,
       .heap_permitted_count = 1,
-      .heap_permitted = {fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL}};
-  EXPECT_EQ(fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
-                                                          constraints.release()),
-            ZX_OK);
+      .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  zx_status_t status2 = ZX_OK;
-  BufferCollectionInfo info(BufferCollectionInfo::Default);
-  EXPECT_EQ(fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(),
-                                                                   &status2, info.get()),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_OK);
-  EXPECT_EQ(info->buffer_count, 1);
-  EXPECT_NE(info->buffers[0].vmo, ZX_HANDLE_INVALID);
+  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  zx::vmo vmo(info->buffers[0].vmo);
-  info->buffers[0].vmo = ZX_HANDLE_INVALID;
+  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
+  {
+    auto result = collection.WaitForBuffersAllocated();
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->status, ZX_OK);
+
+    info = std::move(result.Unwrap()->buffer_collection_info);
+    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_TRUE(info.buffers[0].vmo.is_valid());
+  }
+
+  zx::vmo vmo = std::move(info.buffers[0].vmo);
   EXPECT_TRUE(vmo.is_valid());
 
-  EXPECT_EQ(fuchsia_sysmem_BufferCollectionClose(collection_client.get()), ZX_OK);
+  EXPECT_TRUE(collection.Close().ok());
 
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  status2 = ZX_OK;
-  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceCreateBuffer(channel.get(), vmo_copy.release(),
-                                                                kBufferSizeBytes, &status2),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_OK);
+  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+  {
+    auto result = control.CreateBuffer(std::move(vmo_copy), kBufferSizeBytes);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+  }
 
   zx::vmo vmo_copy2;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy2), ZX_OK);
 
-  status2 = ZX_OK;
-  uint32_t id = 0;
-  fuchsia_hardware_goldfish_BufferHandleType handle_type =
-      fuchsia_hardware_goldfish_BufferHandleType_INVALID;
-  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceGetBufferHandle(
-                channel.get(), vmo_copy2.release(), &status2, &id, &handle_type),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_OK);
-  EXPECT_NE(id, 0);
-  EXPECT_EQ(handle_type, fuchsia_hardware_goldfish_BufferHandleType_BUFFER);
+  {
+    auto result = control.GetBufferHandle(std::move(vmo_copy2));
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+    EXPECT_NE(result.Unwrap()->id, 0u);
+    EXPECT_EQ(result.Unwrap()->type, llcpp::fuchsia::hardware::goldfish::BufferHandleType::BUFFER);
+  }
 
   zx::vmo vmo_copy3;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy3), ZX_OK);
 
-  status2 = ZX_OK;
-  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer(
-                channel.get(), vmo_copy3.release(), 64, 64,
-                fuchsia_hardware_goldfish_ColorBufferFormatType_BGRA, &status2),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_ERR_ALREADY_EXISTS);
+  {
+    auto result =
+        control.CreateColorBuffer(std::move(vmo_copy3), 64, 64,
+                                  llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_ALREADY_EXISTS);
+  }
 
   zx::vmo vmo_copy4;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy4), ZX_OK);
 
-  status2 = ZX_OK;
-  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceCreateBuffer(channel.get(), vmo_copy4.release(),
-                                                                kBufferSizeBytes, &status2),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_ERR_ALREADY_EXISTS);
+  {
+    auto result = control.CreateBuffer(std::move(vmo_copy4), kBufferSizeBytes);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_ALREADY_EXISTS);
+  }
 }
 
 // In this test case we call CreateColorBuffer() and GetColorBuffer()
@@ -322,23 +337,26 @@ TEST(GoldfishControlTests, GoldfishControlTest_InvalidVmo) {
   // sysmem heap.
   zx::vmo vmo_copy;
   EXPECT_EQ(non_sysmem_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
-  zx_status_t status2 = ZX_OK;
-  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer(
-                channel.get(), vmo_copy.release(), 16, 16,
-                fuchsia_hardware_goldfish_ColorBufferFormatType_BGRA, &status2),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_ERR_INVALID_ARGS);
+
+  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+  {
+    auto result =
+        control.CreateColorBuffer(std::move(vmo_copy), 16, 16,
+                                  llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
+  }
 
   // Call GetColorBuffer() using vmo not registered with goldfish
   // sysmem heap.
   zx::vmo vmo_copy2;
   EXPECT_EQ(non_sysmem_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy2), ZX_OK);
-  status2 = ZX_OK;
-  uint32_t id = 0;
-  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer(
-                channel.get(), vmo_copy2.release(), &status2, &id),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_ERR_INVALID_ARGS);
+
+  {
+    auto result = control.GetColorBuffer(std::move(vmo_copy2));
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
+  }
 }
 
 // In this test case we call GetColorBuffer() on a vmo
@@ -359,25 +377,24 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
   EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
             ZX_OK);
 
+  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+
   zx::channel token_client;
   zx::channel token_server;
   EXPECT_EQ(zx::channel::create(0, &token_client, &token_server), ZX_OK);
-  EXPECT_EQ(fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
-                                                             token_server.release()),
-            ZX_OK);
+  EXPECT_TRUE(allocator.AllocateSharedCollection(std::move(token_server)).ok());
 
   zx::channel collection_client;
   zx::channel collection_server;
   EXPECT_EQ(zx::channel::create(0, &collection_client, &collection_server), ZX_OK);
-  EXPECT_EQ(fuchsia_sysmem_AllocatorBindSharedCollection(
-                allocator_client.get(), token_client.release(), collection_server.release()),
-            ZX_OK);
+  EXPECT_TRUE(
+      allocator.BindSharedCollection(std::move(token_client), std::move(collection_server)).ok());
 
-  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
-  constraints->usage.vulkan = fuchsia_sysmem_vulkanUsageTransferDst;
-  constraints->min_buffer_count_for_camping = 1;
-  constraints->has_buffer_memory_constraints = true;
-  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+  llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = llcpp::fuchsia::sysmem::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  constraints.min_buffer_count_for_camping = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::BufferMemoryConstraints{
       .min_size_bytes = 4 * 1024,
       .max_size_bytes = 4 * 1024,
       .physically_contiguous_required = false,
@@ -386,35 +403,36 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
       .cpu_domain_supported = false,
       .inaccessible_domain_supported = true,
       .heap_permitted_count = 1,
-      .heap_permitted = {fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL}};
-  EXPECT_EQ(fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
-                                                          constraints.release()),
-            ZX_OK);
+      .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  zx_status_t status2 = ZX_OK;
-  BufferCollectionInfo info(BufferCollectionInfo::Default);
-  EXPECT_EQ(fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(),
-                                                                   &status2, info.get()),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_OK);
-  EXPECT_EQ(info->buffer_count, 1);
-  EXPECT_NE(info->buffers[0].vmo, ZX_HANDLE_INVALID);
+  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  zx::vmo vmo(info->buffers[0].vmo);
-  info->buffers[0].vmo = ZX_HANDLE_INVALID;
+  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
+  {
+    auto result = collection.WaitForBuffersAllocated();
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->status, ZX_OK);
+
+    info = std::move(result.Unwrap()->buffer_collection_info);
+    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_TRUE(info.buffers[0].vmo.is_valid());
+  }
+
+  zx::vmo vmo = std::move(info.buffers[0].vmo);
   EXPECT_TRUE(vmo.is_valid());
 
-  EXPECT_EQ(fuchsia_sysmem_BufferCollectionClose(collection_client.get()), ZX_OK);
+  EXPECT_TRUE(collection.Close().ok());
 
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  status2 = ZX_OK;
-  uint32_t id = 0;
-  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer(channel.get(), vmo_copy.release(),
-                                                                  &status2, &id),
-            ZX_OK);
-  EXPECT_EQ(status2, ZX_ERR_NOT_FOUND);
+  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+  {
+    auto result = control.GetColorBuffer(std::move(vmo_copy));
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_NOT_FOUND);
+  }
 }
 
 TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
@@ -428,47 +446,65 @@ TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
   zx::channel child_channel2;
   EXPECT_EQ(zx::channel::create(0, &child_channel, &child_channel2), ZX_OK);
 
-  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceDeviceOpenChildDriver(
-                parent_channel.get(), fuchsia_hardware_goldfish_AddressSpaceChildDriverType_DEFAULT,
-                child_channel.get()),
-            ZX_OK);
+  llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::SyncClient asd_parent(
+      std::move(parent_channel));
+  {
+    auto result = asd_parent.OpenChildDriver(
+        llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType::DEFAULT,
+        std::move(child_channel));
+    ASSERT_TRUE(result.ok());
+  }
 
   constexpr uint64_t kHeapSize = 16ULL * 1048576ULL;
 
-  zx_status_t res;
-  uint64_t actual_size = 0;
+  llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient asd_child(
+      std::move(child_channel2));
   uint64_t paddr = 0;
   zx::vmo vmo;
-  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceChildDriverAllocateBlock(
-                child_channel2.get(), kHeapSize, &res, &paddr, vmo.reset_and_get_address()),
-            ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
-  EXPECT_NE(paddr, 0);
-  EXPECT_EQ(vmo.is_valid(), true);
-  EXPECT_EQ(vmo.get_size(&actual_size), ZX_OK);
-  EXPECT_GE(actual_size, kHeapSize);
+  {
+    auto result = asd_child.AllocateBlock(kHeapSize);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
 
-  uint64_t paddr2 = 0;
+    paddr = result.Unwrap()->paddr;
+    EXPECT_NE(paddr, 0);
+
+    vmo = std::move(result.Unwrap()->vmo);
+    EXPECT_EQ(vmo.is_valid(), true);
+    uint64_t actual_size = 0;
+    EXPECT_EQ(vmo.get_size(&actual_size), ZX_OK);
+    EXPECT_GE(actual_size, kHeapSize);
+  }
+
   zx::vmo vmo2;
-  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceChildDriverAllocateBlock(
-                child_channel2.get(), kHeapSize, &res, &paddr2, vmo2.reset_and_get_address()),
-            ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
-  EXPECT_NE(paddr2, 0);
-  EXPECT_NE(paddr2, paddr);
-  EXPECT_EQ(vmo2.is_valid(), true);
-  EXPECT_EQ(vmo.get_size(&actual_size), ZX_OK);
-  EXPECT_GE(actual_size, kHeapSize);
+  uint64_t paddr2 = 0;
+  {
+    auto result = asd_child.AllocateBlock(kHeapSize);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
 
-  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceChildDriverDeallocateBlock(child_channel2.get(),
-                                                                             paddr, &res),
-            ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
+    paddr2 = result.Unwrap()->paddr;
+    EXPECT_NE(paddr2, 0);
+    EXPECT_NE(paddr2, paddr);
 
-  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceChildDriverDeallocateBlock(child_channel2.get(),
-                                                                             paddr2, &res),
-            ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
+    vmo2 = std::move(result.Unwrap()->vmo);
+    EXPECT_EQ(vmo2.is_valid(), true);
+    uint64_t actual_size = 0;
+    EXPECT_EQ(vmo2.get_size(&actual_size), ZX_OK);
+    EXPECT_GE(actual_size, kHeapSize);
+  }
+
+  {
+    auto result = asd_child.DeallocateBlock(paddr);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+  }
+
+  {
+    auto result = asd_child.DeallocateBlock(paddr2);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+  }
 
   // No testing into this too much, as it's going to be child driver-specific.
   // Use fixed values for shared offset/size and ping metadata.
@@ -488,44 +524,44 @@ TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
 
   const size_t overlaps_to_test = sizeof(overlap_offsets) / sizeof(overlap_offsets[0]);
 
-  fuchsia_hardware_goldfish_AddressSpaceChildDriverPingMessage msg;
+  using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
+
+  AddressSpaceChildDriverPingMessage msg;
   msg.metadata = 0;
-  fuchsia_hardware_goldfish_AddressSpaceChildDriverPingMessage msg_out;
 
-  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceChildDriverPing(child_channel2.get(), &msg, &res,
-                                                                  &msg_out),
-            ZX_OK);
+  EXPECT_TRUE(asd_child.Ping(std::move(msg)).ok());
 
-  zx_handle_t shared_vmo_handle = ZX_HANDLE_INVALID;
-
-  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceChildDriverClaimSharedBlock(
-                child_channel2.get(), shared_offset, shared_size, &res, &shared_vmo_handle),
-            ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
+  {
+    auto result = asd_child.ClaimSharedBlock(shared_offset, shared_size);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+  }
 
   // Test that overlapping blocks cannot be claimed in the same connection.
   for (size_t i = 0; i < overlaps_to_test; ++i) {
-    EXPECT_EQ(
-        fuchsia_hardware_goldfish_AddressSpaceChildDriverClaimSharedBlock(
-            child_channel2.get(), overlap_offsets[i], overlap_sizes[i], &res, &shared_vmo_handle),
-        ZX_OK);
-    EXPECT_EQ(res, ZX_ERR_INVALID_ARGS);
+    auto result = asd_child.ClaimSharedBlock(overlap_offsets[i], overlap_sizes[i]);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
   }
 
-  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceChildDriverUnclaimSharedBlock(
-                child_channel2.get(), shared_offset, &res),
-            ZX_OK);
-  EXPECT_EQ(res, ZX_OK);
+  {
+    auto result = asd_child.UnclaimSharedBlock(shared_offset);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+  }
 
   // Test that removed or unknown offsets cannot be unclaimed.
-  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceChildDriverUnclaimSharedBlock(
-                child_channel2.get(), shared_offset, &res),
-            ZX_OK);
-  EXPECT_EQ(res, ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceChildDriverUnclaimSharedBlock(
-                child_channel2.get(), 0, &res),
-            ZX_OK);
-  EXPECT_EQ(res, ZX_ERR_INVALID_ARGS);
+  {
+    auto result = asd_child.UnclaimSharedBlock(shared_offset);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
+  }
+
+  {
+    auto result = asd_child.UnclaimSharedBlock(0);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
+  }
 }
 
 int main(int argc, char** argv) {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/goldfish/c/fidl.h>
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -101,15 +101,19 @@ void RunAndMeasure(const char* test_name, unsigned iterations, const T& closure)
          kTestOutputPrefix, min / static_cast<float>(iterations));
 }
 
-void RunPingPongBenchmark(zx_handle_t channel, unsigned size, unsigned iterations) {
-  int32_t res;
-  ZX_ASSERT(fuchsia_hardware_goldfish_PipeSetBufferSize(channel, size, &res) == ZX_OK);
-  ZX_ASSERT(res == ZX_OK);
+void RunPingPongBenchmark(llcpp::fuchsia::hardware::goldfish::Pipe::SyncClient& pipe, unsigned size,
+                          unsigned iterations) {
+  {
+    auto result = pipe.SetBufferSize(size);
+    ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
+  }
 
   zx::vmo vmo;
-  ZX_ASSERT(fuchsia_hardware_goldfish_PipeGetBuffer(channel, &res, vmo.reset_and_get_address()) ==
-            ZX_OK);
-  ZX_ASSERT(res == ZX_OK);
+  {
+    auto result = pipe.GetBuffer();
+    ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
+    vmo = std::move(result.value().vmo);
+  }
 
   {
     auto buffer = std::make_unique<uint8_t[]>(size);
@@ -121,13 +125,10 @@ void RunPingPongBenchmark(zx_handle_t channel, unsigned size, unsigned iteration
   char test_name[64];
   snprintf(test_name, sizeof(test_name), "pingpong, %u%s", SizeValue(size), SizeSuffix(size));
 
-  RunAndMeasure(test_name, iterations, [channel, size] {
-    int32_t res;
-    uint64_t actual;
-    ZX_ASSERT(fuchsia_hardware_goldfish_PipeDoCall(channel, size, 0, size, 0, &res, &actual) ==
-              ZX_OK);
-    ZX_ASSERT(res == ZX_OK);
-    ZX_ASSERT(actual == size);
+  RunAndMeasure(test_name, iterations, [&pipe, size] {
+    auto result = pipe.DoCall(size, 0, size, 0);
+    ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
+    ZX_ASSERT(result.value().actual == size);
   });
 }
 
@@ -143,35 +144,40 @@ int main(int argc, char** argv) {
   zx::channel pipe_client;
   zx::channel pipe_server;
   ZX_ASSERT(zx::channel::create(0, &pipe_client, &pipe_server) == ZX_OK);
-  ZX_ASSERT(fuchsia_hardware_goldfish_PipeDeviceOpenPipe(channel.get(), pipe_server.release()) ==
-            ZX_OK);
 
+  llcpp::fuchsia::hardware::goldfish::PipeDevice::SyncClient pipe_device(std::move(channel));
+  ZX_ASSERT(pipe_device.OpenPipe(std::move(pipe_server)).ok());
+
+  llcpp::fuchsia::hardware::goldfish::Pipe::SyncClient pipe(std::move(pipe_client));
   zx::vmo vmo;
-  int32_t res;
-  ZX_ASSERT(fuchsia_hardware_goldfish_PipeGetBuffer(pipe_client.get(), &res,
-                                                    vmo.reset_and_get_address()) == ZX_OK);
-  ZX_ASSERT(res == ZX_OK);
+
+  {
+    auto result = pipe.GetBuffer();
+    ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
+    vmo = std::move(result.value().vmo);
+  }
 
   // Connect to pingpong service.
   constexpr char kPipeName[] = "pipe:pingpong";
   size_t bytes = strlen(kPipeName) + 1;
   ZX_ASSERT(vmo.write(kPipeName, 0, bytes) == ZX_OK);
-  uint64_t actual;
-  ZX_ASSERT(fuchsia_hardware_goldfish_PipeWrite(pipe_client.get(), bytes, 0, &res, &actual) ==
-            ZX_OK);
-  ZX_ASSERT(res == ZX_OK);
-  ZX_ASSERT(actual == bytes);
+
+  {
+    auto result = pipe.Write(bytes, 0);
+    ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
+    ZX_ASSERT(result.value().actual == bytes);
+  }
 
   if (argc > 1) {
     for (int i = 1; (i + 1) < argc; i += 2) {
       unsigned size = atoi(argv[i]);
       unsigned iterations = atoi(argv[i + 1]);
 
-      RunPingPongBenchmark(pipe_client.get(), size, iterations);
+      RunPingPongBenchmark(pipe, size, iterations);
     }
   } else {
-    RunPingPongBenchmark(pipe_client.get(), ZX_PAGE_SIZE, 500);
-    RunPingPongBenchmark(pipe_client.get(), kMb, 5);
+    RunPingPongBenchmark(pipe, ZX_PAGE_SIZE, 500);
+    RunPingPongBenchmark(pipe, kMb, 5);
   }
 
   printf("\nGoldfish benchmarks completed.\n");

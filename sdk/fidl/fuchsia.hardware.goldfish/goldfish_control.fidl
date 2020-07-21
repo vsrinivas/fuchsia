@@ -20,7 +20,6 @@ enum ColorBufferFormatType : uint32 {
 
 /// Interface for the Goldfish control driver providing color buffers and
 /// data buffers.
-[ForDeprecatedCBindings]
 protocol ControlDevice {
     /// Create shared color buffer. Color buffer is automatically freed when
     /// all references to `vmo` have been closed. Fails if VMO is not

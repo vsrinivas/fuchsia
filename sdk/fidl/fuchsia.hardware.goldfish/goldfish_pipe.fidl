@@ -19,7 +19,6 @@ const uint32 SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
 const uint32 SIGNAL_HANGUP = 0x04000000; // ZX_USER_SIGNAL_2
 
 /// Interface for the Goldfish pipe driver.
-[ForDeprecatedCBindings]
 protocol PipeDevice {
     /// Open pipe. A protocol request `pipe_request` provides an interface
     /// to the pipe. Multiple pipes can be opened for a single device.
@@ -28,7 +27,6 @@ protocol PipeDevice {
     OpenPipe(request<Pipe> pipe_request);
 };
 
-[ForDeprecatedCBindings]
 protocol Pipe {
     /// Request new IO buffer size. Can fail if out of memory. Discards
     /// contents of existing buffer on success. Leaves existing buffer
