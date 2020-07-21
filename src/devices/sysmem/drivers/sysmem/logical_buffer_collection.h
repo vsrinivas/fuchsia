@@ -93,6 +93,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // for child BufferCollection(s) to use the allocator.
   FidlAllocator& fidl_allocator() { return allocator_; }
 
+  inspect::Node& node() { return node_; }
+
  private:
   enum class CheckSanitizeStage { kInitial, kNotAggregated, kAggregated };
 
@@ -257,6 +259,11 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   ParentVmoMap parent_vmos_;
   async::TaskMethod<LogicalBufferCollection, &LogicalBufferCollection::CreationTimedOut>
       creation_timer_{this};
+
+  inspect::Node node_;
+  inspect::StringProperty name_property_;
+  inspect::UintProperty vmo_count_property_;
+  inspect::ValueList vmo_properties_;
 };
 
 }  // namespace sysmem_driver

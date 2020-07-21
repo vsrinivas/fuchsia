@@ -392,6 +392,8 @@ zx_status_t BufferCollection::SetDebugClientInfo(const char* name_data, size_t n
                                                  uint64_t id) {
   debug_name_ = std::string(name_data, name_size);
   debug_id_ = id;
+  debug_id_property_ = node_.CreateUint("debug_id", debug_id_);
+  debug_name_property_ = node_.CreateString("debug_name", debug_name_);
   return ZX_OK;
 }
 
@@ -521,6 +523,7 @@ BufferCollection::BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent)
   TRACE_DURATION("gfx", "BufferCollection::BufferCollection", "this", this, "parent",
                  parent_.get());
   ZX_DEBUG_ASSERT(parent_);
+  node_ = parent_->node().CreateChild(parent_->node().UniqueName("collection-"));
 }
 
 // This method is only meant to be called from GetClientVmoRights().

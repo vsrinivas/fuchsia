@@ -80,6 +80,9 @@ class BufferCollectionToken
 
   std::string debug_name_;
   uint64_t debug_id_;
+  inspect::Node node_;
+  inspect::UintProperty debug_id_property_;
+  inspect::StringProperty debug_name_property_;
 };
 
 }  // namespace sysmem_driver

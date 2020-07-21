@@ -117,6 +117,8 @@ class Device final : public DdkDeviceType,
     logical_buffer_collections_.erase(collection);
   }
 
+  inspect::Node& collections_node() { return collections_node_; }
+
  private:
   class SecureMemConnection {
    public:
@@ -134,6 +136,8 @@ class Device final : public DdkDeviceType,
   thrd_t loop_thrd_;
 
   inspect::Node heaps_;
+
+  inspect::Node collections_node_;
 
   ddk::PDevProtocolClient pdev_;
   zx::bti bti_;

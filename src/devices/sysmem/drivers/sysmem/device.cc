@@ -239,6 +239,7 @@ void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
 
 zx_status_t Device::Bind() {
   heaps_ = inspector_.GetRoot().CreateChild("heaps");
+  collections_node_ = inspector_.GetRoot().CreateChild("collections");
 
   zx_status_t status = ddk::PDevProtocolClient::CreateFromDevice(parent_, &pdev_);
   if (status != ZX_OK) {

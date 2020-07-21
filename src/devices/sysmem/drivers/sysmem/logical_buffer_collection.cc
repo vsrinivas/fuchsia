@@ -374,6 +374,7 @@ void LogicalBufferCollection::OnSetConstraints() {
 void LogicalBufferCollection::SetName(uint32_t priority, std::string name) {
   if (!name_ || (priority > name_->first)) {
     name_ = std::make_pair(priority, name);
+    name_property_ = node_.CreateString("name", name);
   }
 }
 
@@ -404,6 +405,8 @@ LogicalBufferCollection::LogicalBufferCollection(Device* parent_device)
   TRACE_DURATION("gfx", "LogicalBufferCollection::LogicalBufferCollection", "this", this);
   LogInfo("LogicalBufferCollection::LogicalBufferCollection()");
   parent_device_->AddLogicalBufferCollection(this);
+  node_ = parent_device_->collections_node().CreateChild(
+      parent_device_->collections_node().UniqueName("logical-collection-"));
 
   zx_status_t status = creation_timer_.PostDelayed(parent_device_->dispatcher(), zx::sec(5));
   ZX_ASSERT(status == ZX_OK);
@@ -1821,6 +1824,7 @@ LogicalBufferCollection::Allocate() {
     }
     result.buffers()[i] = vmo_buffer.build();
   }
+  vmo_count_property_ = node_.CreateUint("vmo_count", result.buffers().count());
   // Make sure we have sufficient barrier after allocating/clearing/flushing any VMO newly allocated
   // by allocator above.
   BarrierAfterFlush();
@@ -1875,6 +1879,10 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
     LogError("raw_parent_vmo.get_info(ZX_INFO_VMO) failed - status %d", status);
     return fit::error();
   }
+
+  auto node = node_.CreateChild(node_.UniqueName("vmo-"));
+  node.CreateUint("koid", info.koid, &vmo_properties_);
+  vmo_properties_.emplace(std::move(node));
 
   // Write zeroes to the VMO, so that the allocator doesn't need to.  Also flush those zeroes to
   // RAM so the newly-allocated VMO is fully zeroed in both RAM and CPU coherency domains.
