@@ -287,7 +287,7 @@ information to know how to disable the WDT at all.
 
 If this option is set (disabled by default), the system will halt on
 a kernel panic instead of rebooting. To enable halt-on-panic,
-pass the kernel commandline argument `kernel.halt-on-panic=false`.
+pass the kernel commandline argument `kernel.halt-on-panic=true`.
 
 Since the kernel can't reliably draw to a framebuffer when the GPU is enabled,
 the system will reboot by default if the kernel crashes or panics.
