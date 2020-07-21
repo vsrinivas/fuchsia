@@ -91,6 +91,16 @@ static void bootpart_queue(void* ctx, block_op_t* bop, block_impl_queue_callback
   bootpart->bp.ops->queue(bootpart->bp.ctx, bop, completion_cb, cookie);
 }
 
+static void bootpart_init(void* ctx) {
+  bootpart_device_t* device = ctx;
+
+  // Add empty partition map metadata to prevent this driver from binding to its child devices.
+  zx_status_t status = device_add_metadata(device->zxdev, DEVICE_METADATA_PARTITION_MAP, NULL, 0);
+  // Make the device visible after adding metadata. If there was an error, this will schedule
+  // unbinding of the device.
+  return device_init_reply(device->zxdev, status, NULL);
+}
+
 static void bootpart_unbind(void* ctx) {
   bootpart_device_t* device = ctx;
   device_unbind_reply(device->zxdev);
@@ -170,6 +180,7 @@ static zx_protocol_device_t device_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = bootpart_get_protocol,
     .get_size = bootpart_get_size,
+    .init = bootpart_init,
     .unbind = bootpart_unbind,
     .release = bootpart_release,
 };
@@ -235,7 +246,6 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
         .ops = &device_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
         .proto_ops = &block_ops,
-        .flags = DEVICE_ADD_INVISIBLE,
     };
 
     zx_status_t status = device_add(parent, &args, &device->zxdev);
@@ -243,18 +253,7 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
       free(device);
       return status;
     }
-
-    // add empty partition map metadata to prevent this driver from binding to its child devices
-    status = device_add_metadata(device->zxdev, DEVICE_METADATA_PARTITION_MAP, NULL, 0);
-    if (status != ZX_OK) {
-      device_async_remove(device->zxdev);
-      continue;
-    }
-
-    // make device visible after adding metadata
-    device_make_visible(device->zxdev, NULL);
   }
-
   return ZX_OK;
 }
 
