@@ -136,6 +136,7 @@ executable("session_context_impl_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:environment",
+    "//src/modular/lib/modular_config",
   ]
 }
 

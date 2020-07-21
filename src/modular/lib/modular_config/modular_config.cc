@@ -68,6 +68,18 @@ fit::result<fuchsia::modular::session::ModularConfig, std::string> ParseConfig(
   return fit::ok(std::move(config));
 }
 
+// Returns the default Modular configuration.
+fuchsia::modular::session::ModularConfig DefaultConfig() {
+  rapidjson::Document doc;
+  doc.SetObject();
+
+  fuchsia::modular::session::ModularConfig config;
+  auto ok = XdrRead(&doc, &config, XdrModularConfig);
+  FX_DCHECK(ok);
+
+  return config;
+}
+
 ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {
   FX_CHECK(dir_fd.get() >= 0);
 

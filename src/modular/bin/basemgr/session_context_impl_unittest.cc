@@ -11,6 +11,7 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/modular_config/modular_config.h"
 
 namespace modular_testing {
 namespace {

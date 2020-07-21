@@ -315,3 +315,17 @@ TEST_F(ModularConfigReaderTest, ParseConfigInvalidSchema) {
   auto config_result = modular::ParseConfig(kConfigJson);
   EXPECT_TRUE(config_result.is_error());
 }
+
+// Tests that DefaultConfig returns a ModularConfig with some default values.
+TEST_F(ModularConfigReaderTest, DefaultConfig) {
+  auto config = modular::DefaultConfig();
+
+  ASSERT_TRUE(config.has_basemgr_config());
+  EXPECT_TRUE(config.basemgr_config().enable_cobalt());
+  ASSERT_EQ(1u, config.basemgr_config().session_shell_map().size());
+  EXPECT_EQ(modular_config::kDefaultSessionShellUrl,
+            config.basemgr_config().session_shell_map().at(0).name());
+
+  ASSERT_TRUE(config.has_sessionmgr_config());
+  EXPECT_TRUE(config.sessionmgr_config().enable_cobalt());
+}

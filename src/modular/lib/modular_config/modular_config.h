@@ -22,6 +22,9 @@ namespace modular {
 fit::result<fuchsia::modular::session::ModularConfig, std::string> ParseConfig(
     std::string_view config_json);
 
+// Returns the default Modular configuration.
+fuchsia::modular::session::ModularConfig DefaultConfig();
+
 // A utility for parsing a modular configuration file.
 //
 // Use |ModularConfigReader::CreateFromNamespace()| to read modular
