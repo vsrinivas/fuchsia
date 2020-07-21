@@ -23,6 +23,8 @@ source_set("test_harness_fixture") {
     "fake_module.h",
     "fake_session_shell.cc",
     "fake_session_shell.h",
+    "fake_settings_intl.cc",
+    "fake_settings_intl.h",
     "fake_story_shell.cc",
     "fake_story_shell.h",
     "test_harness_fixture.cc",
@@ -34,6 +36,7 @@ source_set("test_harness_fixture") {
   deps = [
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",

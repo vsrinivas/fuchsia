@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/basemgr_impl_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

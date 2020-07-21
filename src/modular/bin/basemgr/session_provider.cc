@@ -11,6 +11,7 @@
 
 #include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
 
+#include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
@@ -28,9 +29,6 @@ const zx::duration kMaxCrashRecoveryDuration = zx::msec(3600 * 1000);  // 1 hour
 SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
                                  fuchsia::hardware::power::statecontrol::AdminPtr administrator,
                                  fuchsia::modular::session::AppConfig sessionmgr,
-                                 fuchsia::modular::session::AppConfig session_shell,
-                                 fuchsia::modular::session::AppConfig story_shell,
-                                 bool use_session_shell_for_story_shell_factory,
                                  std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
                                  fuchsia::modular::session::ModularConfig config,
                                  fit::function<void()> on_zero_sessions)
@@ -38,9 +36,6 @@ SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launche
       launcher_(launcher),
       administrator_(std::move(administrator)),
       sessionmgr_(std::move(sessionmgr)),
-      session_shell_(std::move(session_shell)),
-      story_shell_(std::move(story_shell)),
-      use_session_shell_for_story_shell_factory_(use_session_shell_for_story_shell_factory),
       on_zero_sessions_(std::move(on_zero_sessions)),
       intl_property_provider_(std::move(intl_property_provider)),
       config_(std::move(config)) {
@@ -81,15 +76,19 @@ bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token, boo
   auto basemgr = CloneStruct(config_.basemgr_config());
   auto sessionmgr = CloneStruct(config_.sessionmgr_config());
   auto config_str = ModularConfigReader::GetConfigAsString(&basemgr, &sessionmgr);
+  auto session_shell =
+      CloneStruct(config_.basemgr_config().session_shell_map().at(0).config().app_config());
+  auto story_shell = CloneStruct(config_.basemgr_config().story_shell().app_config());
+
   config_dir_ =
       modular::MakeFilePathWithContents(modular_config::kStartupConfigFilePath, config_str);
   config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(config_request_));
 
   // Session context initializes and holds the sessionmgr process.
   session_context_ = std::make_unique<SessionContextImpl>(
-      launcher_, use_random_id, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
-      CloneStruct(story_shell_), use_session_shell_for_story_shell_factory_, std::move(view_token),
-      std::move(services), std::move(client),
+      launcher_, use_random_id, CloneStruct(sessionmgr_), std::move(session_shell),
+      std::move(story_shell), config_.basemgr_config().use_session_shell_for_story_shell_factory(),
+      std::move(view_token), std::move(services), std::move(client),
       /* get_presentation= */
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));

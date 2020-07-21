@@ -94,7 +94,8 @@ int main(int argc, const char** argv) {
         std::move(override_base_shell));
   }
 
-  auto basemgr_impl = CreateBasemgrImpl(modular_config, component_context.get(), &loop);
+  std::unique_ptr<modular::BasemgrImpl> basemgr_impl =
+      CreateBasemgrImpl(modular_config, component_context.get(), &loop);
 
   // NOTE: component_controller.events.OnDirectoryReady() is triggered when a
   // component's out directory has mounted. basemgr_launcher uses this signal
@@ -113,5 +114,6 @@ int main(int argc, const char** argv) {
 
   loop.Run();
 
-  return 0;
+  // The loop will run until graceful shutdown is complete so returning SUCCESS here indicates that.
+  return EXIT_SUCCESS;
 }

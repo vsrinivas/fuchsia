@@ -94,12 +94,12 @@ void BasemgrImpl::Start() {
   outgoing_services_->AddPublicService<fuchsia::modular::Lifecycle>(
       lifecycle_bindings_.GetHandler(this));
 
+  outgoing_services_->AddPublicService(process_lifecycle_bindings_.GetHandler(this),
+                                       "fuchsia.process.lifecycle.Lifecycle");
+
   session_provider_.reset(new SessionProvider(
       /* delegate= */ this, launcher_.get(), std::move(device_administrator_),
-      std::move(sessionmgr_app_config), CloneStruct(session_shell_config_),
-      std::move(story_shell_config),
-      config_.basemgr_config().use_session_shell_for_story_shell_factory(),
-      std::move(intl_property_provider), CloneStruct(config_),
+      std::move(sessionmgr_app_config), std::move(intl_property_provider), CloneStruct(config_),
       /* on_zero_sessions= */
       [this] {
         if (state_ == State::SHUTTING_DOWN) {
@@ -114,7 +114,7 @@ void BasemgrImpl::Start() {
 }
 
 void BasemgrImpl::Shutdown() {
-  FX_LOGS(INFO) << "BASEMGR SHUTDOWN";
+  FX_LOGS(INFO) << "Shutting down basemgr";
   // Prevent the shutdown sequence from running twice.
   if (state_ == State::SHUTTING_DOWN) {
     return;
@@ -134,6 +134,8 @@ void BasemgrImpl::Shutdown() {
 }
 
 void BasemgrImpl::Terminate() { Shutdown(); }
+
+void BasemgrImpl::Stop() { Shutdown(); }
 
 void BasemgrImpl::StartSession(bool use_random_id) {
   if (state_ == State::SHUTTING_DOWN) {

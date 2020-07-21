@@ -36,6 +36,7 @@ executable_package("basemgr") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.lifecycle",
@@ -57,6 +58,7 @@ executable_package("basemgr") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
@@ -69,7 +71,10 @@ executable_package("basemgr") {
 }
 
 hermetic_tests_package("basemgr_unittests") {
-  deps = [ ":session_context_impl_unittest" ]
+  deps = [
+    ":basemgr_impl_unittest",
+    ":session_context_impl_unittest",
+  ]
   environments = basic_envs
 }
 
@@ -131,6 +136,32 @@ executable("session_context_impl_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:environment",
+  ]
+}
+
+executable("basemgr_impl_unittest") {
+  testonly = true
+
+  sources = [ "basemgr_impl_unittest.cc" ]
+
+  deps = [
+    ":basemgr",
+    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.devicesettings",
+    "//sdk/fidl/fuchsia.identity.account",
+    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.testing.runner",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/modular_config",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//src/sys/appmgr:appmgr_for_test",
+    "//src/ui/scenic/lib/scenic:scenic",
+    "//third_party/googletest:gtest",
   ]
 }
 

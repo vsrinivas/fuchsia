@@ -9,6 +9,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
+#include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -31,6 +32,7 @@ namespace modular {
 // 1) Initializes and owns the system's root view and presentation.
 // 2) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
 class BasemgrImpl : public fuchsia::modular::Lifecycle,
+                    public fuchsia::process::lifecycle::Lifecycle,
                     fuchsia::modular::internal::BasemgrDebug,
                     modular::SessionProvider::Delegate {
  public:
@@ -56,6 +58,9 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // |fuchsia::modular::Lifecycle|
   void Terminate() override;
+
+  // |fuchsia::process::lifecycle::Lifecycle|
+  void Stop() override;
 
  private:
   FuturePtr<> StopScenic();
@@ -107,6 +112,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   fidl::BindingSet<fuchsia::modular::Lifecycle> lifecycle_bindings_;
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_debug_bindings_;
+  fidl::BindingSet<fuchsia::process::lifecycle::Lifecycle> process_lifecycle_bindings_;
 
   fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
 

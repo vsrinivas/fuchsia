@@ -169,16 +169,6 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher, b
 }
 
 fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace(zx::channel config_handle) {
-  // Determine where basemgr is reading configs from
-  std::string config_dir = modular_config::kOverriddenConfigDir;
-  if (!files::IsDirectory(config_dir)) {
-    config_dir = modular_config::kDefaultConfigDir;
-    if (!files::IsDirectory(config_dir)) {
-      return nullptr;
-    }
-  }
-  // Clone basemgr's config directory.
-  fbl::unique_fd dir(open(config_dir.c_str(), O_DIRECTORY | O_RDONLY));
   auto flat_namespace = fuchsia::sys::FlatNamespace::New();
   flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
   flat_namespace->directories.push_back(std::move(config_handle));
