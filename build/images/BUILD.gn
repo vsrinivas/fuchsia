@@ -432,6 +432,7 @@ action("devmgr_config.txt") {
     ":fuchsia.vbmeta__zbi_props",
     ":fuchsia.vbmeta__vb_desc",
     ":devmgr_config_prime.txt",
+    "//build/unification/future/images:*",
   ]
   testonly = true
 
@@ -513,6 +514,7 @@ action("devmgr_config_prime.txt") {
     ":fuchsia_prime.vbmeta",
     ":fuchsia_prime.vbmeta__zbi_props",
     ":fuchsia_prime.vbmeta__vb_desc",
+    "//build/unification/future/images:*",
   ]
   testonly = true
 
@@ -2075,6 +2077,9 @@ group("updates") {
     ":publish",
     ":root_component_index_metadata",
     ":system_snapshot",
+
+    # Force the comparison with the new zbi's.
+    "//build/unification/future/images",
   ]
 }
 

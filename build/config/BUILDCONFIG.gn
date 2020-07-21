@@ -472,7 +472,8 @@ if (toolchain_variant.with_shared) {
         # toolchain.
         variant_dir = ""
         if (toolchain_variant.instrumented) {
-          variant_dir = "${toolchain_variant.name}/"
+          variant_dir =
+              string_replace(toolchain_variant.name, "-fuzzer", "") + "/"
         }
         metadata = {
           # Used by link_output_rspfile(), see its documentation for details

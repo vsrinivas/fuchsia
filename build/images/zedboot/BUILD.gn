@@ -99,6 +99,7 @@ action("devmgr_config.txt") {
     ":zedboot.vbmeta",
     ":zedboot.vbmeta__zbi_props",
     ":zedboot.vbmeta__vb_desc",
+    "//build/unification/future/images:*",
   ]
 
   script = "../manifest.py"
