@@ -206,9 +206,9 @@ async fn run_power_manager_missing_test(
         let (_shutdown_shim, shim_statecontrol) =
             setup_shim("shutdown-shim-statecontrol-missing").await?;
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             shim_statecontrol.poweroff().await.expect_err("the shutdown shim should close the channel when manual shutdown driving is complete");
-        });
+        }).detach();
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
@@ -222,12 +222,12 @@ async fn run_power_manager_missing_test(
         let (_shutdown_shim, shim_statecontrol) =
             setup_shim("shutdown-shim-statecontrol-missing").await?;
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             shim_statecontrol
                 .reboot(fstatecontrol::RebootReason::SystemUpdate)
                 .await
                 .expect_err("the shutdown shim should close the channel when manual shutdown driving is complete");
-        });
+        }).detach();
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
@@ -254,9 +254,9 @@ async fn run_power_manager_not_present_test(
         let (_shutdown_shim, shim_statecontrol) =
             setup_shim("shutdown-shim-statecontrol-not-present").await?;
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             shim_statecontrol.poweroff().await.expect_err("the shutdown shim should close the channel when manual shutdown driving is complete");
-        });
+        }).detach();
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
@@ -270,12 +270,12 @@ async fn run_power_manager_not_present_test(
         let (_shutdown_shim, shim_statecontrol) =
             setup_shim("shutdown-shim-statecontrol-not-present").await?;
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             shim_statecontrol
                 .reboot(fstatecontrol::RebootReason::SystemUpdate)
                 .await
                 .expect_err("the shutdown shim should close the channel when manual shutdown driving is complete");
-        });
+        }).detach();
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
@@ -331,21 +331,22 @@ async fn main() -> Result<(), Error> {
     let mut fs = fserver::ServiceFs::new();
     let send_admin_signals = send_signals.clone();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn(run_statecontrol_admin(send_admin_signals.clone(), stream));
+        fasync::Task::spawn(run_statecontrol_admin(send_admin_signals.clone(), stream)).detach();
     });
     let send_system_state_transition_signals = send_signals.clone();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn(run_device_manager_system_state_transition(
+        fasync::Task::spawn(run_device_manager_system_state_transition(
             send_system_state_transition_signals.clone(),
             stream,
-        ));
+        ))
+        .detach();
     });
     let send_sys2_signals = send_signals.clone();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn(run_sys2_system_controller(send_sys2_signals.clone(), stream));
+        fasync::Task::spawn(run_sys2_system_controller(send_sys2_signals.clone(), stream)).detach();
     });
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn(run_tests(stream, recv_signals.clone()));
+        fasync::Task::spawn(run_tests(stream, recv_signals.clone())).detach();
     });
 
     // The black_hole directory points to a channel we will never answer, so that capabilities

@@ -26,7 +26,7 @@ fn main() -> Result<(), Error> {
     let i_am_player_2_clone = i_am_player_2.clone();
 
     println!("registering with game service");
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         while let Some(PaddleRequest::NewGame { is_player_2, .. }) = prs.try_next().await.unwrap() {
             // TODO: remove unwrap
             if is_player_2 {
@@ -36,7 +36,8 @@ fn main() -> Result<(), Error> {
             }
             *i_am_player_2_clone.lock() = is_player_2
         }
-    });
+    })
+    .detach();
 
     let resp: Result<(), Error> = executor.run_singlethreaded(async move {
         loop {

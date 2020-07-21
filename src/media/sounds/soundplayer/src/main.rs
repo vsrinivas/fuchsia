@@ -16,7 +16,7 @@ use futures::prelude::*;
 type Result<T> = std::result::Result<T, Error>;
 
 fn spawn_log_error(fut: impl Future<Output = Result<()>> + 'static) {
-    fasync::spawn_local(fut.unwrap_or_else(|e| fuchsia_syslog::fx_log_err!("{}", e)))
+    fasync::Task::local(fut.unwrap_or_else(|e| fuchsia_syslog::fx_log_err!("{}", e))).detach()
 }
 
 #[fasync::run_singlethreaded]

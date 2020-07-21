@@ -185,11 +185,12 @@ mod tests {
                 match req {
                     PaverRequest::FindDataSink { data_sink, .. } => {
                         let mock_paver_clone = self.clone();
-                        fuchsia_async::spawn(
+                        fuchsia_async::Task::spawn(
                             mock_paver_clone
                                 .run_data_sink_service(data_sink.into_stream()?)
                                 .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
-                        );
+                        )
+                        .detach();
                     }
                     req => println!("mock Paver ignoring request: {:?}", req),
                 }
@@ -239,17 +240,18 @@ mod tests {
             let paver_clone = Arc::clone(&paver);
             fs.add_fidl_service(move |stream: PaverRequestStream| {
                 let paver_clone = Arc::clone(&paver_clone);
-                fuchsia_async::spawn_local(
+                fuchsia_async::Task::local(
                     paver_clone
                         .run_service(stream)
                         .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
                 )
+                .detach()
             });
 
             let env = fs
                 .create_salted_nested_environment("recovery_test_env")
                 .expect("nested environment to create successfully");
-            fuchsia_async::spawn(fs.collect());
+            fuchsia_async::Task::spawn(fs.collect()).detach();
 
             Self { env, _paver: paver }
         }

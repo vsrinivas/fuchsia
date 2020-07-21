@@ -116,14 +116,15 @@ impl CrashReportHandler {
         proxy: fidl_feedback::CrashReporterProxy,
         mut receive_channel: mpsc::Receiver<String>,
     ) {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Some(signature) = receive_channel.next().await {
                 log_if_err!(
                     Self::send_crash_report(&proxy, signature).await,
                     "Failed to file crash report"
                 );
             }
-        });
+        })
+        .detach();
     }
 
     /// Send a File request to the CrashReporter service with the specified crash report signature.

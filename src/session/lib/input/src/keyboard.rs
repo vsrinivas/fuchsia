@@ -293,7 +293,7 @@ impl KeyboardBinding {
             &new_keys.iter().filter(|key| is_modifier(**key)).collect(),
         );
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             match input_event_sender
                 .send(input_device::InputEvent {
                     device_event: input_device::InputDeviceEvent::Keyboard(KeyboardEvent {
@@ -310,7 +310,8 @@ impl KeyboardBinding {
                 }
                 _ => (),
             }
-        });
+        })
+        .detach();
     }
 }
 

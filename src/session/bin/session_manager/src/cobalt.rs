@@ -24,13 +24,14 @@ pub fn get_logger() -> Result<LoggerProxy, Error> {
     let logger_factory = connect_to_service::<LoggerFactoryMarker>()
         .context("Failed to connect to the Cobalt LoggerFactory")?;
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         if let Err(e) =
             logger_factory.create_logger_from_project_id(metrics::PROJECT_ID, server_end).await
         {
             syslog::fx_log_err!("Failed to create Cobalt logger: {}", e);
         }
-    });
+    })
+    .detach();
 
     Ok(logger_proxy)
 }
@@ -86,9 +87,10 @@ mod tests {
         let end_time = zx::Time::from_nanos(5000);
         let session_url = "fuchsia-pkg://fuchsia.com/whale_session#meta/whale_session.cm";
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let _ = log_session_launch_time(logger_proxy, session_url, start_time, end_time).await;
-        });
+        })
+        .detach();
 
         if let Some(log_request) = logger_server.try_next().await.unwrap() {
             if let fidl_fuchsia_cobalt::LoggerRequest::LogElapsedTime {

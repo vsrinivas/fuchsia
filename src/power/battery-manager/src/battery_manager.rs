@@ -136,7 +136,7 @@ impl BatteryManager {
         info: fpower::BatteryInfo,
     ) {
         fx_vlog!(LOG_VERBOSITY, "::manager:: run watchers...");
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let watchers = {
                 let mut watchers = watchers.lock().await;
                 watchers.retain(|w| !w.is_closed());
@@ -149,6 +149,7 @@ impl BatteryManager {
                 }
             }
         })
+        .detach()
     }
 
     fn update_battery_info(

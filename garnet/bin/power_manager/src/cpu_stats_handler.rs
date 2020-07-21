@@ -318,7 +318,7 @@ pub mod tests {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fstats::StatsMarker>().unwrap();
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fstats::StatsRequest::GetCpuStats { responder }) => {
@@ -328,7 +328,8 @@ pub mod tests {
                     _ => assert!(false),
                 }
             }
-        });
+        })
+        .detach();
 
         proxy
     }

@@ -52,7 +52,7 @@ impl TestService {
         let (new_usage_watchers_sink, new_usage_watchers) = mpsc::channel(10);
         fs.add_fidl_service::<_, UsageReporterRequestStream>(move |mut request_stream| {
             let mut new_usage_watchers_sink = new_usage_watchers_sink.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 while let Some(Ok(UsageReporterRequest::Watch { usage, usage_watcher, .. })) =
                     request_stream.next().await
                 {
@@ -68,11 +68,12 @@ impl TestService {
                     }
                 }
             })
+            .detach()
         });
 
         let env = fs.create_salted_nested_environment("environment")?;
 
-        fasync::spawn(fs.for_each(|_| future::ready(())));
+        fasync::Task::spawn(fs.for_each(|_| future::ready(()))).detach();
 
         let mediasession = comp::client::launch(
             env.launcher(),

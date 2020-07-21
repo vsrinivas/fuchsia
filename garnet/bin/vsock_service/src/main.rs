@@ -34,17 +34,18 @@ async fn main() -> Result<(), Error> {
     let service_clone = service.clone();
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn(
+        fasync::Task::spawn(
             service_clone
                 .clone()
                 .run_client_connection(stream)
                 .unwrap_or_else(|err| fx_log_info!("Error {} during client connection", err)),
-        );
+        )
+        .detach();
     });
     fs.take_and_serve_directory_handle()?;
 
     // Spawn the services server with a wrapper to discard the return value.
-    fasync::spawn(fs.collect());
+    fasync::Task::spawn(fs.collect()).detach();
 
     // Run the event loop until completion. The event loop only terminates
     // with an error.

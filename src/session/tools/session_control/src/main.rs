@@ -110,7 +110,7 @@ mod tests {
             create_proxy_and_stream::<LauncherMarker>().expect("Failed to create Launcher FIDL.");
         let session_url = "test_session";
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Some(launch_request) = launcher_server.try_next().await.unwrap() {
                 if let LauncherRequest::LaunchSession { configuration, responder } = launch_request
                 {
@@ -122,7 +122,8 @@ mod tests {
             } else {
                 assert!(false);
             }
-        });
+        })
+        .detach();
 
         assert!(launch_session(&session_url, launcher).await.is_ok());
     }
@@ -135,7 +136,7 @@ mod tests {
             create_proxy_and_stream::<LauncherMarker>().expect("Failed to create Launcher FIDL.");
         let session_url = "test_session";
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Some(launch_request) = launcher_server.try_next().await.unwrap() {
                 if let LauncherRequest::LaunchSession { configuration: _, responder } =
                     launch_request
@@ -147,7 +148,8 @@ mod tests {
             } else {
                 assert!(false);
             }
-        });
+        })
+        .detach();
 
         assert!(launch_session(&session_url, launcher).await.is_err());
     }
@@ -157,7 +159,7 @@ mod tests {
         let (launcher, mut launcher_server) =
             create_proxy_and_stream::<LauncherMarker>().expect("Failed to create Launcher FIDL.");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Some(launch_request) = launcher_server.try_next().await.unwrap() {
                 if let LauncherRequest::RestartSession { responder } = launch_request {
                     let _ = responder.send(&mut Ok(()));
@@ -167,7 +169,8 @@ mod tests {
             } else {
                 assert!(false);
             }
-        });
+        })
+        .detach();
 
         assert!(restart_session(launcher).await.is_ok());
     }
@@ -178,7 +181,7 @@ mod tests {
         let (launcher, mut launcher_server) =
             create_proxy_and_stream::<LauncherMarker>().expect("Failed to create Launcher FIDL.");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Some(launch_request) = launcher_server.try_next().await.unwrap() {
                 if let LauncherRequest::RestartSession { responder } = launch_request {
                     let _ = responder.send(&mut Err(LaunchSessionError::NotFound));
@@ -188,7 +191,8 @@ mod tests {
             } else {
                 assert!(false);
             }
-        });
+        })
+        .detach();
 
         assert!(restart_session(launcher).await.is_err());
     }

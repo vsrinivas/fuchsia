@@ -263,9 +263,10 @@ mod tests {
             &mut iter::empty(),
             test_dir_service.into_channel().into(),
         );
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let _ = test_dir.await;
-        });
+        })
+        .detach();
 
         Ok(test_dir_proxy)
     }
@@ -282,7 +283,7 @@ mod tests {
 
         let env = fs.create_salted_nested_environment("factoryctl_env");
 
-        fasync::spawn(fs.for_each_concurrent(None, |req| async {
+        fasync::Task::spawn(fs.for_each_concurrent(None, |req| async {
             match req {
                 IncomingServices::FactoryItems(stream) => {
                     stream
@@ -443,7 +444,8 @@ mod tests {
                         .unwrap();
                 }
             }
-        }));
+        }))
+        .detach();
 
         env
     }

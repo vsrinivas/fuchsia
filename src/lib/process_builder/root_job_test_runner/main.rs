@@ -53,7 +53,7 @@ fn serve_proxy_svc_dir() -> Result<zx::Channel, Error> {
 
     let (client, server) = zx::Channel::create().expect("Failed to create channel");
     fs.serve_connection(server)?;
-    fasync::spawn_local(fs.collect());
+    fasync::Task::local(fs.collect()).detach();
     Ok(client)
 }
 

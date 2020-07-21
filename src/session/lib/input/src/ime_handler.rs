@@ -252,9 +252,10 @@ async fn dispatch_key_event(
     key_listener: &mut fidl_ui_input2::KeyListenerRequestStream,
 ) -> Option<fidl_ui_input::KeyboardEvent> {
     let fut = ime.dispatch_key(key_event);
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let _ = fut.await;
-    });
+    })
+    .detach();
 
     match key_listener.next().await {
         Some(Ok(fidl_ui_input2::KeyListenerRequest::OnKeyEvent { event, responder, .. })) => {
@@ -316,7 +317,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_input2::KeyboardMarker>()
                 .expect("Failed to create KeyboardProxy and stream.");
 
-        fuchsia_async::spawn(async move {
+        fuchsia_async::Task::spawn(async move {
             match keyboard_request_stream.next().await {
                 Some(Ok(fidl_ui_input2::KeyboardRequest::SetListener {
                     view_ref: _,
@@ -327,12 +328,13 @@ mod tests {
                 }
                 _ => assert!(false),
             }
-        });
+        })
+        .detach();
 
         let (key_listener_client_end, key_listener) =
             fidl::endpoints::create_request_stream::<fidl_ui_input2::KeyListenerMarker>().unwrap();
 
-        fuchsia_async::spawn(async move {
+        fuchsia_async::Task::spawn(async move {
             let key_listener_client = key_listener_client_end.into_proxy().unwrap().clone();
             loop {
                 match ime_request_stream.next().await {
@@ -347,7 +349,8 @@ mod tests {
                     _ => assert!(false),
                 }
             }
-        });
+        })
+        .detach();
 
         // This dummy key listener is passed to [`Keyboard.SetListener()`] but not used.
         let (dummy_key_listener_client_end, _dummy_key_listener) =

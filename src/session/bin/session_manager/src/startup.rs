@@ -97,14 +97,15 @@ pub async fn launch_session(session_url: &str) -> Result<(), StartupError> {
     let end_time = zx::Time::get(zx::ClockId::Monotonic);
 
     let url = session_url.to_string();
-    fasync::spawn_local(async move {
+    fasync::Task::local(async move {
         if let Ok(cobalt_logger) = cobalt::get_logger() {
             // The result is disregarded as there is not retry-logic if it fails, and the error is
             // not meant to be fatal.
             let _ =
                 cobalt::log_session_launch_time(cobalt_logger, &url, start_time, end_time).await;
         }
-    });
+    })
+    .detach();
 
     Ok(())
 }
@@ -187,11 +188,12 @@ mod tests {
         let (realm_proxy, mut realm_server) = create_proxy_and_stream::<fsys::RealmMarker>()
             .expect("Failed to create realm proxy and server.");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(realm_request) = realm_server.try_next().await.unwrap() {
                 request_handler(realm_request);
             }
-        });
+        })
+        .detach();
 
         realm_proxy
     }

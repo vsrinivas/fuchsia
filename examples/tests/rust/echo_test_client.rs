@@ -15,9 +15,10 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("error creating executor")?;
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             run_test_suite(stream).await.expect("failed to run test suite service")
-        });
+        })
+        .detach();
     });
     fs.take_and_serve_directory_handle()?;
     executor.run_singlethreaded(fs.collect::<()>());
@@ -48,7 +49,7 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
         match event {
             ftest::SuiteRequest::GetTests { iterator, control_handle: _ } => {
                 let mut stream = iterator.into_stream()?;
-                fasync::spawn(
+                fasync::Task::spawn(
                     async move {
                         let mut cases_iter = vec![ftest::Case {
                             name: Some("EchoTest".to_string()),
@@ -63,7 +64,8 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                         Ok(())
                     }
                     .unwrap_or_else(|e: anyhow::Error| println!("error serving tests: {:?}", e)),
-                );
+                )
+                .detach();
             }
             ftest::SuiteRequest::Run { mut tests, options: _, listener, .. } => {
                 assert_eq!(tests.len(), 1);

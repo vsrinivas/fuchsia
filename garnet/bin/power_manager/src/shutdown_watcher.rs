@@ -130,7 +130,7 @@ impl ShutdownWatcher {
             fuchsia_trace::Scope::Thread
         );
 
-        fasync::spawn_local(
+        fasync::Task::local(
             async move {
                 while let Some(req) = stream.try_next().await? {
                     match req {
@@ -145,7 +145,8 @@ impl ShutdownWatcher {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
-        );
+        )
+        .detach();
     }
 
     /// Adds a new RebootMethodsWatcher channel to the list of registered watchers.

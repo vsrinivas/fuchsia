@@ -114,22 +114,25 @@ impl ProductInfoServer {
 }
 
 pub fn spawn_device_info_server(server: DeviceInfoServer, stream: DeviceRequestStream) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         server.handle_requests_from_stream(stream).await.expect("Failed to run device_info service")
-    });
+    })
+    .detach();
 }
 
 pub fn spawn_board_info_server(server: BoardInfoServer, stream: BoardRequestStream) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         server.handle_requests_from_stream(stream).await.expect("Failed to run board_info service")
-    });
+    })
+    .detach();
 }
 
 pub fn spawn_product_info_server(server: ProductInfoServer, stream: ProductRequestStream) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         server
             .handle_requests_from_stream(stream)
             .await
             .expect("Failed to run product_info service")
-    });
+    })
+    .detach();
 }

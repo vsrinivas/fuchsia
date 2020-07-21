@@ -207,7 +207,7 @@ impl RemoteBlockDevice {
     /// Returns a connection to a remote block device via the given channel.
     pub fn new(channel: zx::Channel) -> Result<Self, Error> {
         let device = Self::from_channel(channel)?;
-        fasync::spawn(FifoPoller { fifo_state: device.fifo_state.clone() });
+        fasync::Task::spawn(FifoPoller { fifo_state: device.fifo_state.clone() }).detach();
         Ok(device)
     }
 

@@ -68,9 +68,10 @@ fn start_test_dir(config_path: &str) -> Result<DirectoryProxy, Error> {
         test_dir_service.into_channel().into(),
     );
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let _ = test_dir.await;
-    });
+    })
+    .detach();
 
     Ok(test_dir_proxy)
 }

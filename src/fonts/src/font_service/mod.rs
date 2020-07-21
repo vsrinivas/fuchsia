@@ -389,7 +389,7 @@ where
     ) -> Result<(), fonts_exp::Error> {
         let mut results = self.list_typefaces_inner(request)?;
 
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let mut stream = iterator.into_stream()?;
                 while let Some(request) = stream.try_next().await? {
@@ -409,7 +409,8 @@ where
             .unwrap_or_else(|e: Error| {
                 fx_log_err!("Error while running ListTypefacesIterator: {:?}", e)
             }),
-        );
+        )
+        .detach();
 
         Ok(())
     }

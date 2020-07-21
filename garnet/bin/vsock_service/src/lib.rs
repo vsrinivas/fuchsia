@@ -57,16 +57,18 @@ mod tests {
         // those callbacks over the below oneshot channel that we can then receive after
         // Vsock::new completes.
         let (tx, rx) = channel::oneshot::channel();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let (cb, responder) =
                 unwrap_msg!(DeviceRequest::Start{cb, responder} from driver_server);
             let driver_callbacks = cb.into_proxy().unwrap();
             responder.send(zx::Status::OK.into_raw()).unwrap();
             let _ = tx.send((driver_server, driver_callbacks));
-        });
+        })
+        .detach();
 
         let (service, event_loop) = Vsock::new(driver_client.into_proxy()?).await?;
-        fasync::spawn(event_loop.map_err(|x| panic!("Event loop stopped {}", x)).map(|_| ()));
+        fasync::Task::spawn(event_loop.map_err(|x| panic!("Event loop stopped {}", x)).map(|_| ()))
+            .detach();
         let (driver_server, driver_callbacks) = rx.await?;
         let driver = MockDriver::new(driver_server, driver_callbacks);
         Ok((driver, service))
@@ -84,10 +86,11 @@ mod tests {
         let (app_client, app_remote) = endpoints::create_endpoints::<ConnectorMarker>()?;
         let app_client = app_client.into_proxy()?;
         // Run the client
-        fasync::spawn(
+        fasync::Task::spawn(
             Vsock::run_client_connection(service.clone(), app_remote.into_stream()?)
                 .then(|_| future::ready(())),
-        );
+        )
+        .detach();
         Ok(app_client)
     }
 

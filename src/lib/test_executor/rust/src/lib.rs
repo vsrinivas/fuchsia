@@ -250,7 +250,7 @@ impl TestCaseProcessor {
         let f = Self::process_run_event(test_case_name, listener, log_fut, sender);
 
         let (remote, remote_handle) = f.remote_handle();
-        fuchsia_async::spawn(remote);
+        fuchsia_async::Task::spawn(remote).detach();
 
         TestCaseProcessor { f: Some(remote_handle.boxed()) }
     }
@@ -317,7 +317,7 @@ impl TestCaseProcessor {
         };
 
         let (remote, remote_handle) = f.remote_handle();
-        fuchsia_async::spawn(remote);
+        fuchsia_async::Task::spawn(remote).detach();
         Some(remote_handle.boxed())
     }
 

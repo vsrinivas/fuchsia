@@ -42,9 +42,10 @@ async fn main() -> Result<(), Error> {
         Arc::downgrade(&battery_manager) as Weak<dyn BatterySimulationStateObserver>,
     ));
 
-    fasync::spawn(f.unwrap_or_else(|e| {
+    fasync::Task::spawn(f.unwrap_or_else(|e| {
         fx_log_err!("watch_power_device failed {:?}", e);
-    }));
+    }))
+    .detach();
 
     fs.dir("svc")
         .add_fidl_service(IncomingService::BatteryManager)

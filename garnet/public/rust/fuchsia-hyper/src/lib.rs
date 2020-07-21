@@ -191,7 +191,7 @@ pub struct Executor;
 
 impl<F: Future + Send + 'static> hyper::rt::Executor<F> for Executor {
     fn execute(&self, fut: F) {
-        fuchsia_async::spawn(fut.map(|_| ()))
+        fuchsia_async::Task::spawn(fut.map(|_| ())).detach()
     }
 }
 
@@ -314,14 +314,15 @@ mod test {
         let listener = TcpListener::bind(&addr).unwrap();
         let addr = listener.local_addr().unwrap();
         let listener = listener.accept_stream();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             listener
                 .map(|res| {
                     res.unwrap();
                 })
                 .collect()
                 .await
-        });
+        })
+        .detach();
 
         let idle = std::time::Duration::from_secs(36);
         let interval = std::time::Duration::from_secs(47);

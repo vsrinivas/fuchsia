@@ -221,11 +221,12 @@ impl Vsock {
     ) -> Result<(), Error> {
         let acceptor = acceptor.into_proxy().map_err(|x| Error::ClientCommunication(x.into()))?;
         let stream = self.listen_port(local_port)?;
-        fasync::spawn(
+        fasync::Task::spawn(
             self.clone()
                 .run_connection_listener(stream, acceptor)
                 .unwrap_or_else(|err| fx_log_warn!("Error {} running connection listener", err)),
-        );
+        )
+        .detach();
         Ok(())
     }
 
@@ -466,14 +467,15 @@ impl Vsock {
                             .into_stream()
                             .map_err(|x| Error::ClientCommunication(x.into()))?;
                         let shutdown_event = self.send_response(&addr, data)?.await?;
-                        fasync::spawn(
+                        fasync::Task::spawn(
                             self.clone()
                                 .run_connection(addr, shutdown_event, con, None)
                                 .map_err(|err| {
                                     fx_log_warn!("Error {} whilst running connection", err)
                                 })
                                 .map(|_| ()),
-                        );
+                        )
+                        .detach();
                         Ok(())
                     }
                     None => {
@@ -509,11 +511,12 @@ impl Vsock {
             response_event = response_event.fuse() => response_event?,
         }
 
-        fasync::spawn(
+        fasync::Task::spawn(
             self.clone()
                 .run_connection(addr, shutdown_event, con, Some(port))
                 .unwrap_or_else(|err| fx_log_warn!("Error {} whilst running connection", err)),
-        );
+        )
+        .detach();
         Ok(port_value)
     }
 }
@@ -608,7 +611,7 @@ impl State {
                     }
                     None => {
                         fx_log_warn!("Request on port {} with no listener", addr.local_port);
-                        fasync::spawn(self.send_rst(&addr).map(|_| ()));
+                        fasync::Task::spawn(self.send_rst(&addr).map(|_| ())).detach();
                     }
                 }
             }

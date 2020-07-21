@@ -47,9 +47,10 @@ async fn concurrently_ready_items_are_yielded() -> Result<(), anyhow::Error> {
 
     for i in 0..1000usize {
         let (mut sender, receiver) = mpsc::channel::<usize>(1);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             sender.send(i).await.expect("Sending message");
-        });
+        })
+        .detach();
         stream_map.insert(i, receiver).await;
         expected_output.insert(i);
     }

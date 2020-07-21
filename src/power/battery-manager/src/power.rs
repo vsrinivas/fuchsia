@@ -92,7 +92,7 @@ where
         .map_err(|e| io::Error::new(e.kind(), format!("error copying power device file: {}", e)))?;
 
     fx_vlog!(LOG_VERBOSITY, "::power:: spawn device state change event listener");
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             loop {
                 // Note that get_state_change_event & wait on signal must
@@ -123,7 +123,8 @@ where
         .unwrap_or_else(|e: anyhow::Error| {
             fx_log_err!("not able to apply listener to power device, wait failed: {:?}", e)
         }),
-    );
+    )
+    .detach();
 
     Ok(())
 }
@@ -157,11 +158,12 @@ async fn process_watch_event(
     add_listener(&file, move |p_info, b_info| {
         fx_vlog!(LOG_VERBOSITY, "::power event listener:: callback firing => UPDATE_STATUS");
         let battery_manager2 = battery_manager2.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Err(e) = battery_manager2.update_status(p_info.clone(), b_info.clone()) {
                 fx_log_err!("{}", e);
             }
         })
+        .detach()
     })?;
 
     if power_info.type_ == hpower::PowerType::Battery {
@@ -172,7 +174,7 @@ async fn process_watch_event(
         let mut timer = fasync::Interval::new(zx::Duration::from_seconds(60));
         fx_vlog!(LOG_VERBOSITY, "::power:: process_watch_event spawn periodic timer");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(()) = (timer.next()).await {
                 fx_vlog!(LOG_VERBOSITY, "::power:: periodic timer fired => UPDDATE_STATUS");
                 let power_info = get_power_info(&file).await.unwrap();
@@ -183,7 +185,8 @@ async fn process_watch_event(
                     fx_log_err!("{}", e);
                 }
             }
-        });
+        })
+        .detach();
     } else {
         *adapter_device_found = true;
     }

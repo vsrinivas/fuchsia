@@ -179,11 +179,12 @@ mod tests {
         let (proxy, mut stream) = endpoints::create_proxy_and_stream::<DeviceConnectorMarker>()
             .expect("Failed to create DeviceConnector proxy and server.");
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
                 request_handler(request).await;
             }
-        });
+        })
+        .detach();
 
         proxy
     }
@@ -248,10 +249,11 @@ mod tests {
 
         let (mut sender, receiver) = mpsc::channel::<IncomingRequest>(1);
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             let result = serve(dev_connector, receiver.fuse()).await;
             assert!(result.is_ok(), "{}", result.unwrap_err());
-        });
+        })
+        .detach();
 
         let (device_client, device_server) = endpoints::create_endpoints::<DeviceMarker>()
             .expect("Failed to create Device endpoints");
@@ -304,10 +306,11 @@ mod tests {
 
         let (mut sender, receiver) = mpsc::channel::<IncomingRequest>(1);
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             let result = serve(dev_connector, receiver.fuse()).await;
             assert!(result.is_ok(), "{}", result.unwrap_err());
-        });
+        })
+        .detach();
 
         let (app_client, app_server) = endpoints::create_endpoints::<ApplicationMarker>()
             .expect("Failed to create Device endpoints");
@@ -343,10 +346,11 @@ mod tests {
 
         let (mut sender, receiver) = mpsc::channel::<IncomingRequest>(1);
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             let result = serve(dev_connector, receiver.fuse()).await;
             assert!(result.is_ok(), "{}", result.unwrap_err());
-        });
+        })
+        .detach();
 
         let (device_info_client, device_info_server) =
             endpoints::create_endpoints::<DeviceInfoMarker>()

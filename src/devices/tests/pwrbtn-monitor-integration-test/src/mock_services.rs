@@ -42,7 +42,7 @@ async fn main() -> Result<(), Error> {
     let mut fs = fserver::ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |mut stream: test_pwrbtn::TestsRequestStream| {
         let recv_test_result = recv_test_result.take();
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 fx_log_info!("new connection to {}", test_pwrbtn::TestsMarker::NAME);
                 match stream.try_next().await? {
@@ -61,14 +61,15 @@ async fn main() -> Result<(), Error> {
             .unwrap_or_else(|e: anyhow::Error| {
                 panic!("couldn't run fuchsia.test.pwrbtn.Tests: {:?}", e);
             }),
-        );
+        )
+        .detach();
     });
     fs.dir("svc").add_fidl_service(move |mut stream: statecontrol::AdminRequestStream| {
         let send_test_result = send_test_result.take();
         let event_for_test_protocol = event_for_test_protocol
             .duplicate_handle(event_handle_rights())
             .expect("failed to clone event");
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 fx_log_info!("new connection to {}", statecontrol::AdminMarker::NAME);
                 match stream.try_next().await? {
@@ -97,14 +98,15 @@ async fn main() -> Result<(), Error> {
             .unwrap_or_else(|e: anyhow::Error| {
                 panic!("couldn't run fuchsia.power.hardware.statecontrol.Admin: {:?}", e);
             }),
-        );
+        )
+        .detach();
     });
     // A pseudo_directory must be used here because a ServiceFs does not support portions of
     // fuchsia.io required by `fdio_watch_directory`, which pwrbtn-monitor uses on this directory.
     let input_dir = pseudo_directory! {
         "mock_input_device" => service::endpoint(move |_, channel| {
             let event = event.duplicate_handle(event_handle_rights()).expect("failed to clone event");
-            fasync::spawn(
+            fasync::Task::spawn(
                 async move {
                     fx_log_info!("new connection to the mock input device");
                     let mut stream = finput::DeviceRequestStream::from_channel(channel);
@@ -154,7 +156,7 @@ async fn main() -> Result<(), Error> {
                 .unwrap_or_else(|e: anyhow::Error| {
                     panic!("couldn't run fuchsia.hardware.input.Device: {:?}", e);
                 })
-            )
+            ).detach()
         }),
     };
     let (proxy, server_end) = create_proxy()?;

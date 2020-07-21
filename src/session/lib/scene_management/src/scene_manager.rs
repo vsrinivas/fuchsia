@@ -149,7 +149,7 @@ pub trait SceneManager: Sized {
 /// Connects to the Scenic event stream to listen for OnFramePresented messages and calls present
 /// when Scenic is ready for an update.
 pub fn start_presentation_loop(weak_session: Weak<Mutex<scenic::Session>>) {
-    fasync::spawn_local(async move {
+    fasync::Task::local(async move {
         if let Some(session) = weak_session.upgrade() {
             present(&session);
             let mut event_stream = session.lock().take_event_stream();
@@ -166,12 +166,13 @@ pub fn start_presentation_loop(weak_session: Weak<Mutex<scenic::Session>>) {
                 }
             }
         }
-    });
+    })
+    .detach();
 }
 
 /// Inform Scenic that is should render any pending changes
 fn present(session: &scenic::SessionPtr) {
-    fasync::spawn_local(
+    fasync::Task::local(
         session
             .lock()
             // Passing 0 for requested_presentation_time tells scenic that that it should process
@@ -181,5 +182,6 @@ fn present(session: &scenic::SessionPtr) {
             .present2(0, 0)
             .map_ok(|_| ())
             .unwrap_or_else(|error| syslog::fx_log_err!("Present error: {:?}", error)),
-    );
+    )
+    .detach();
 }

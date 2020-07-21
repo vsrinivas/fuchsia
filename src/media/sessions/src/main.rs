@@ -38,7 +38,7 @@ const CHANNEL_BUFFER_SIZE: usize = 100;
 const MAX_EVENTS_SENT_WITHOUT_ACK: usize = 20;
 
 fn spawn_log_error(fut: impl Future<Output = Result<()>> + 'static) {
-    fasync::spawn_local(fut.unwrap_or_else(|e| fx_log_warn!("{}", e)))
+    fasync::Task::local(fut.unwrap_or_else(|e| fx_log_warn!("{}", e))).detach()
 }
 
 #[fasync::run_singlethreaded]

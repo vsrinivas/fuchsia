@@ -246,7 +246,7 @@ impl SystemShutdownHandler {
             "SystemShutdownHandler::handle_new_service_connection",
             fuchsia_trace::Scope::Thread
         );
-        fasync::spawn_local(
+        fasync::Task::local(
             async move {
                 while let Some(req) = stream.try_next().await? {
                     match req {
@@ -284,7 +284,8 @@ impl SystemShutdownHandler {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
-        );
+        )
+        .detach();
     }
 
     /// Called each time a client calls the fuchsia.hardware.power.statecontrol.Admin API to
@@ -462,7 +463,7 @@ pub mod tests {
     ) -> fsys::SystemControllerProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fsys::SystemControllerMarker>().unwrap();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fsys::SystemControllerRequest::Shutdown { responder }) => {
@@ -472,7 +473,8 @@ pub mod tests {
                     e => panic!("Unexpected request: {:?}", e),
                 }
             }
-        });
+        })
+        .detach();
 
         proxy
     }

@@ -87,12 +87,13 @@ impl App {
 
         self.view.update(self.context.clone());
 
-        fasync::spawn_local(
+        fasync::Task::local(
             self.session
                 .lock()
                 .present(self.context.lock().unwrap().presentation_time.into_nanos() as u64)
                 .map_ok(|_| ())
                 .unwrap_or_else(|error| syslog::fx_log_err!("Present error: {:?}", error)),
-        );
+        )
+        .detach();
     }
 }

@@ -78,7 +78,7 @@ impl InputPipeline {
         let device_watcher = Self::get_device_watcher().await?;
         let dir_proxy =
             open_directory_in_namespace(input_device::INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)?;
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut bindings = HashMap::new();
             let _ = Self::watch_for_devices(
                 device_watcher,
@@ -89,7 +89,8 @@ impl InputPipeline {
                 false, /* break_on_idle */
             )
             .await;
-        });
+        })
+        .detach();
 
         Ok(input_pipeline)
     }
@@ -303,9 +304,10 @@ mod tests {
         let second_device_event = send_input_event(second_device_binding.input_event_sender());
 
         // Run the pipeline.
-        fasync::spawn(async {
+        fasync::Task::spawn(async {
             input_pipeline.handle_input_events().await;
-        });
+        })
+        .detach();
 
         // Assert the handler receives the events.
         let first_handled_event = handler_event_receiver.next().await;
@@ -345,9 +347,10 @@ mod tests {
         let input_event = send_input_event(input_device_binding.input_event_sender());
 
         // Run the pipeline.
-        fasync::spawn(async {
+        fasync::Task::spawn(async {
             input_pipeline.handle_input_events().await;
-        });
+        })
+        .detach();
 
         // Assert both handlers receive the event.
         let first_handler_event = first_handler_event_receiver.next().await;

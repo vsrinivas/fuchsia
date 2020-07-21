@@ -66,7 +66,7 @@ fn get_provider_from_config() -> Result<KeyProvider, Error> {
 }
 
 fn spawn(mut stream: KeyManagerRequestStream, key_manager: Arc<KeyManager>) {
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             while let Some(r) = stream.try_next().await? {
                 key_manager.handle_request(r)?;
@@ -74,5 +74,6 @@ fn spawn(mut stream: KeyManagerRequestStream, key_manager: Arc<KeyManager>) {
             Ok(())
         }
         .unwrap_or_else(|e: fidl::Error| error!("Error handling KMS request: {:?}", e)),
-    );
+    )
+    .detach();
 }

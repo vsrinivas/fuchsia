@@ -123,11 +123,12 @@ mod tests {
         let (realm_proxy, mut realm_server) = create_proxy_and_stream::<fsys::RealmMarker>()
             .expect("Failed to create realm proxy and server.");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(realm_request) = realm_server.try_next().await.unwrap() {
                 request_handler(realm_request);
             }
-        });
+        })
+        .detach();
 
         realm_proxy
     }
@@ -145,11 +146,12 @@ mod tests {
     ) where
         F: Fn(fio::DirectoryRequest) + Send,
     {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(directory_request) = directory_server.try_next().await.unwrap() {
                 request_handler(directory_request);
             }
-        });
+        })
+        .detach();
     }
 
     /// Tests that creating a child results in the appropriate call to the `RealmProxy`.

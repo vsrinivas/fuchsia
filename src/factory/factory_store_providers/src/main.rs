@@ -156,7 +156,7 @@ async fn create_dir_from_context<'a>(
 async fn apply_config(config: Config, dir: Arc<Mutex<DirectoryProxy>>) -> DirectoryProxy {
     let (directory_proxy, directory_server_end) = create_proxy::<DirectoryMarker>().unwrap();
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let dir_mtx = dir.clone();
 
         // We only want to hold this lock to create `dir` so limit the scope of `dir_ref`.
@@ -174,7 +174,8 @@ async fn apply_config(config: Config, dir: Arc<Mutex<DirectoryProxy>>) -> Direct
         );
 
         dir.await;
-    });
+    })
+    .detach();
 
     directory_proxy
 }
@@ -213,7 +214,7 @@ async fn open_factory_source() -> Result<DirectoryProxy, Error> {
     match factory_config {
         FactoryConfig::FactoryItems => {
             syslog::fx_log_info!("{}", "Reading from FactoryItems service");
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let mut factory_items_directory = fetch_new_factory_item()
                     .await
                     .map(|vmo| parse_bootfs(vmo))
@@ -233,7 +234,8 @@ async fn open_factory_source() -> Result<DirectoryProxy, Error> {
                 );
 
                 factory_items_directory.await;
-            });
+            })
+            .detach();
             Ok(directory_proxy)
         }
         FactoryConfig::Ext4(path) => {

@@ -56,10 +56,11 @@ pub fn spawn_fake_factory_items_server(
     server: FakeFactoryItemsServer,
     stream: FactoryItemsRequestStream,
 ) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         server
             .handle_requests_from_stream(stream)
             .await
             .expect("Failed to run fake_factory_store service")
-    });
+    })
+    .detach();
 }

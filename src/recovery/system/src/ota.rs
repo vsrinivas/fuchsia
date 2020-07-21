@@ -196,7 +196,7 @@ impl OtaEnvBuilder {
                 let mut paver_fs = ServiceFs::new();
                 paver_fs.add_proxy_service::<fpaver::PaverMarker, _>();
                 paver_fs.serve_connection(remote).context("Failed to serve on channel")?;
-                fasync::spawn(paver_fs.collect());
+                fasync::Task::spawn(paver_fs.collect()).detach();
                 ClientEnd::from(paver_connector)
             }
             PaverType::Fake { connector } => connector,
@@ -496,14 +496,15 @@ mod tests {
             let mut paver_fs = ServiceFs::new();
             let paver_clone = Arc::clone(&mock_paver);
             paver_fs.add_fidl_service(move |stream: fpaver::PaverRequestStream| {
-                fasync::spawn(
+                fasync::Task::spawn(
                     Arc::clone(&paver_clone)
                         .run_paver_service(stream)
                         .unwrap_or_else(|e| panic!("Failed to run paver: {:?}", e)),
-                );
+                )
+                .detach();
             });
             paver_fs.serve_connection(remote).context("serving paver svcfs")?;
-            fasync::spawn(paver_fs.collect());
+            fasync::Task::spawn(paver_fs.collect()).detach();
             let paver_connector = ClientEnd::from(paver_connector);
 
             // Get the devhost config

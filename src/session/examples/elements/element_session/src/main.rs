@@ -111,9 +111,10 @@ async fn handle_element_manager_requests(
                         match element_controller {
                             Some(element_controller) => match element_controller.into_stream() {
                                 Ok(stream) => {
-                                    fasync::spawn(handle_element_controller_request_stream(
+                                    fasync::Task::spawn(handle_element_controller_request_stream(
                                         stream, element,
-                                    ));
+                                    ))
+                                    .detach();
                                     Ok(())
                                 }
                                 Err(_) => Err(ProposeElementError::Rejected),
@@ -204,7 +205,11 @@ mod tests {
             create_proxy_and_stream::<fidl_fuchsia_session::ElementControllerMarker>()
                 .expect("Failed to create ElementController proxy and server.");
 
-        fasync::spawn(handle_element_controller_request_stream(element_controller_server, element));
+        fasync::Task::spawn(handle_element_controller_request_stream(
+            element_controller_server,
+            element,
+        ))
+        .detach();
         let annotations = element_controller_proxy.get_annotations().await;
         assert!(annotations.is_ok());
         let unwrapped_annotations = annotations.unwrap();
@@ -231,10 +236,11 @@ mod tests {
             create_proxy_and_stream::<fidl_fuchsia_session::ElementControllerMarker>()
                 .expect("Failed to create ElementController proxy and server.");
 
-        fasync::spawn_local(handle_element_controller_request_stream(
+        fasync::Task::local(handle_element_controller_request_stream(
             element_controller_server,
             element,
-        ));
+        ))
+        .detach();
 
         let annotation = fidl_fuchsia_session::Annotation {
             key: "key".to_string(),
@@ -279,10 +285,11 @@ mod tests {
             create_proxy_and_stream::<fidl_fuchsia_session::ElementControllerMarker>()
                 .expect("Failed to create ElementController proxy and server.");
 
-        fasync::spawn_local(handle_element_controller_request_stream(
+        fasync::Task::local(handle_element_controller_request_stream(
             element_controller_server,
             element,
-        ));
+        ))
+        .detach();
 
         let annotation = fidl_fuchsia_session::Annotation {
             key: "key".to_string(),
@@ -350,10 +357,11 @@ mod tests {
             create_proxy_and_stream::<fidl_fuchsia_session::ElementControllerMarker>()
                 .expect("Failed to create ElementController proxy and server.");
 
-        fasync::spawn_local(handle_element_controller_request_stream(
+        fasync::Task::local(handle_element_controller_request_stream(
             element_controller_server,
             element,
-        ));
+        ))
+        .detach();
 
         let annotation = fidl_fuchsia_session::Annotation {
             key: "key".to_string(),

@@ -272,7 +272,7 @@ impl ThermalPolicy {
             self.config.policy_params.controller_params.sample_interval.into_nanos(),
         ));
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Some(()) = periodic_timer.next().await {
                 fuchsia_trace::instant!(
                     "power_manager",
@@ -288,7 +288,8 @@ impl ThermalPolicy {
                     "result" => format!("{:?}", result).as_str()
                 );
             }
-        });
+        })
+        .detach();
     }
 
     /// This is the main body of the closed loop thermal control logic. The function is called
@@ -975,7 +976,7 @@ impl CobaltMetrics {
             .serve(ConnectionType::project_id(power_metrics_registry::PROJECT_ID));
 
         // Spawn the future that handles sending data to Cobalt
-        fasync::spawn_local(sender_future);
+        fasync::Task::local(sender_future).detach();
 
         Self::new_with_cobalt_sender(cobalt_sender)
     }

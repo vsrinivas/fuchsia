@@ -580,11 +580,12 @@ mod tests {
         let (realm_proxy, mut realm_server) = create_proxy_and_stream::<fsys2::RealmMarker>()
             .expect("Failed to create realm proxy and server.");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(realm_request) = realm_server.try_next().await.unwrap() {
                 request_handler(realm_request);
             }
-        });
+        })
+        .detach();
 
         realm_proxy
     }
@@ -595,11 +596,12 @@ mod tests {
     ) where
         F: Fn(fio::DirectoryRequest) + Send,
     {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(directory_request) = directory_server.try_next().await.unwrap() {
                 request_handler(directory_request);
             }
-        });
+        })
+        .detach();
     }
 
     /// Spawns a local `fidl_fuchsia_sys::Launcher` server, and returns a proxy to the spawned
@@ -618,11 +620,12 @@ mod tests {
             create_proxy_and_stream::<fsys::LauncherMarker>()
                 .expect("Failed to create launcher proxy and server.");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(launcher_request) = launcher_server.try_next().await.unwrap() {
                 request_handler(launcher_request);
             }
-        });
+        })
+        .detach();
 
         launcher_proxy
     }
@@ -802,10 +805,11 @@ mod tests {
             } => {
                 assert_eq!(url, component_url);
                 let mut result_sender = sender.clone();
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     let _ = result_sender.send(()).await.expect("Could not create component.");
                     CALL_COUNT.inc();
                 })
+                .detach()
             }
         });
 
@@ -860,10 +864,11 @@ mod tests {
                 launch_info: fsys::LaunchInfo { .. }, ..
             } => {
                 let mut result_sender = sender.clone();
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     let _ = result_sender.send(()).await.expect("Could not create component.");
                     CALL_COUNT.inc();
                 })
+                .detach()
             }
         });
 

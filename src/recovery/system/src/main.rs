@@ -130,7 +130,7 @@ impl<'a> RecoveryViewAssistant<'a> {
             }
         };
 
-        fasync::spawn_local(f);
+        fasync::Task::local(f).detach();
 
         Ok(())
     }

@@ -137,7 +137,7 @@ impl Environment {
         let env = fs.create_salted_nested_environment("environment")?;
         let launched_components = launch_components(env.launcher())?;
 
-        fasync::spawn(fs.for_each_concurrent(None, move |request| {
+        fasync::Task::spawn(fs.for_each_concurrent(None, move |request| {
             match launched_components.get(request.component_url) {
                 Some(component) => {
                     component.pass_to_named_service(request.service, request.channel).expect(
@@ -150,7 +150,8 @@ impl Environment {
                 None => panic!("Unknown component: {:?}", request.component_url),
             }
             future::ready(())
-        }));
+        }))
+        .detach();
 
         Ok(Self { env })
     }

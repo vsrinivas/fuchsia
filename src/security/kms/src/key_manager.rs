@@ -174,7 +174,7 @@ impl KeyManager {
         let key_name = String::from(key_name);
         // Copy the key map into the async function.
         let key_map_ref = Arc::clone(&self.user_key_map);
-        fasync::spawn_local(
+        fasync::Task::local(
             // Spawn async job to handle requests.
             async move {
                 while let Some(r) = request_stream.try_next().await? {
@@ -190,7 +190,8 @@ impl KeyManager {
                 Ok(())
             })
             .unwrap_or_else(|e: fidl::Error| error!("Error running AsymmetricKey {:?}", e)),
-        );
+        )
+        .detach();
         Ok(())
     }
 

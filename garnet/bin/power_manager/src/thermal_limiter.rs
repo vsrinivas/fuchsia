@@ -198,7 +198,7 @@ impl ThermalLimiter {
             "ThermalLimiter::handle_new_service_connection",
             fuchsia_trace::Scope::Thread
         );
-        fasync::spawn_local(
+        fasync::Task::local(
             async move {
                 while let Some(req) = stream.try_next().await? {
                     match req {
@@ -233,7 +233,8 @@ impl ThermalLimiter {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
-        );
+        )
+        .detach();
     }
 
     /// Handle a new client connection. Called each time a client makes the Subscribe call.
@@ -337,7 +338,7 @@ impl ThermalLimiter {
 
     fn send_thermal_state(&self, proxy: fthermal::ActorProxy, state: u32) {
         // Spawn a future to update this client's thermal state
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             fuchsia_trace::duration!(
                 "power_manager",
                 "ThermalLimiter::set_thermal_state",
@@ -352,7 +353,8 @@ impl ThermalLimiter {
                 fuchsia_trace::Scope::Thread,
                 "result" => format!("{:?}", result).as_str()
             );
-        });
+        })
+        .detach();
     }
 }
 

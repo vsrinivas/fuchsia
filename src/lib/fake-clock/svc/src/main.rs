@@ -160,7 +160,7 @@ impl<T: FakeClockObserver> FakeClock<T> {
         };
 
         self.registered_events.insert(koid, registered);
-        fasync::spawn_local(closed_fut);
+        fasync::Task::local(closed_fut).detach();
     }
 
     fn reschedule_event(&mut self, time: zx::Time, koid: zx::Koid) {
@@ -247,7 +247,7 @@ fn start_free_running<T: FakeClockObserver>(
         (signal.into_stream(), finished)
     };
     let mock_clock = Arc::clone(mock_clock);
-    fasync::spawn_local(async move {
+    fasync::Task::local(async move {
         let mut itv = fasync::Interval::new(real_increment);
         debug!("free running mock clock {:?} {:?}", real_increment, increment);
         loop {
@@ -264,7 +264,8 @@ fn start_free_running<T: FakeClockObserver>(
             }
         }
         finished.send(()).unwrap();
-    });
+    })
+    .detach();
 }
 
 async fn stop_free_running<T: FakeClockObserver>(mock_clock: &FakeClockHandle<T>) {
@@ -372,11 +373,11 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc")
         .add_fidl_service(move |rs: FakeClockControlRequestStream| {
             let cl = Arc::clone(&mock_clock);
-            fasync::spawn_local(handle_control_events(cl, rs))
+            fasync::Task::local(handle_control_events(cl, rs)).detach()
         })
         .add_fidl_service(move |rs: FakeClockRequestStream| {
             let cl = Arc::clone(&m1);
-            fasync::spawn_local(handle_events(cl, rs))
+            fasync::Task::local(handle_events(cl, rs)).detach()
         });
     fs.take_and_serve_directory_handle()?;
     let () = fs.collect().await;

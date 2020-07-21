@@ -343,7 +343,8 @@ mod tests {
         let (_logger_proxy, server) =
             create_proxy::<LoggerMarker>().expect("create logger proxy and server end to succeed");
 
-        fasync::spawn_local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()));
+        fasync::Task::local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()))
+            .detach();
 
         assert!(loggers.lock().await.is_empty());
 
@@ -369,8 +370,10 @@ mod tests {
 
         // Spawn service handlers. Any failures in the services spawned here will trigger panics
         // via expect method calls below.
-        fasync::spawn_local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()));
-        fasync::spawn_local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()));
+        fasync::Task::local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()))
+            .detach();
+        fasync::Task::local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()))
+            .detach();
 
         factory_proxy
             .create_logger_from_project_id(123, server)
@@ -402,8 +405,10 @@ mod tests {
 
         // Spawn service handlers. Any failures in the services spawned here will trigger panics
         // via expect method calls below.
-        fasync::spawn_local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()));
-        fasync::spawn_local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()));
+        fasync::Task::local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()))
+            .detach();
+        fasync::Task::local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()))
+            .detach();
 
         factory_proxy
             .create_logger_from_project_id(12, server)
@@ -438,7 +443,8 @@ mod tests {
 
         // Spawn service handler. Any failures in the service spawned here will trigger panics
         // via expect method calls below.
-        fasync::spawn_local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()));
+        fasync::Task::local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()))
+            .detach();
 
         // Assert on initial state
         assert_eq!(
@@ -459,7 +465,8 @@ mod tests {
         let (logger_proxy, server) =
             create_proxy::<LoggerMarker>().expect("create logger proxy and server end to succeed");
 
-        fasync::spawn_local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()));
+        fasync::Task::local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()))
+            .detach();
         let project_id = 1;
 
         factory_proxy
@@ -522,8 +529,10 @@ mod tests {
 
         // Spawn service handlers. Any failures in the services spawned here will trigger panics
         // via expect method calls below.
-        fasync::spawn_local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()));
-        fasync::spawn_local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()));
+        fasync::Task::local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()))
+            .detach();
+        fasync::Task::local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()))
+            .detach();
 
         factory_proxy
             .create_logger_from_project_id(987, server)

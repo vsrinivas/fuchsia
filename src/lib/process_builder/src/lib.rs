@@ -1328,7 +1328,7 @@ mod tests {
 
         let test_content1_bytes = test_content1.clone().into_bytes();
         let (dir1_server, dir1_client) = zx::Channel::create()?;
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut dir1 = pseudo_directory! {
                 "test_file1" => read_only(|| Ok(test_content1_bytes.clone())),
             };
@@ -1340,11 +1340,12 @@ mod tests {
             );
             dir1.await;
             panic!("Psuedo dir stopped serving!");
-        });
+        })
+        .detach();
 
         let test_content2_bytes = test_content2.clone().into_bytes();
         let (dir2_server, dir2_client) = zx::Channel::create()?;
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut dir2 = pseudo_directory! {
                 "test_file2" => read_only(|| Ok(test_content2_bytes.clone())),
             };
@@ -1356,7 +1357,8 @@ mod tests {
             );
             dir2.await;
             panic!("Psuedo dir stopped serving!");
-        });
+        })
+        .detach();
 
         let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.add_namespace_entries(vec![

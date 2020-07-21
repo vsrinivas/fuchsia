@@ -478,7 +478,7 @@ mod tests {
             let (tx, rx) = oneshot::channel();
             let clone_dir =
                 io_util::clone_directory(&dir, fio::CLONE_FLAG_SAME_RIGHTS).expect("clone dir");
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let entries = readdir_recursive(&clone_dir, None)
                     .collect::<Vec<Result<DirEntry, Error>>>()
                     .await
@@ -486,7 +486,8 @@ mod tests {
                     .collect::<Result<Vec<_>, _>>()
                     .expect("readdir_recursive to succeed");
                 tx.send(entries).expect("Unable to send entries");
-            });
+            })
+            .detach();
             let entries = rx.await.expect("Receive entrie");
             assert_eq!(
                 entries,

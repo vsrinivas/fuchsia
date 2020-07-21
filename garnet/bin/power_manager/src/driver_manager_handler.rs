@@ -318,7 +318,7 @@ fn handle_new_driver_manager_registration_stream(
         "DriverManagerHandler::handle_new_driver_manager_registration_stream",
         fuchsia_trace::Scope::Thread
     );
-    fasync::spawn_local(
+    fasync::Task::local(
         async move {
             while let Some(req) = stream.try_next().await? {
                 match req {
@@ -360,7 +360,8 @@ fn handle_new_driver_manager_registration_stream(
             Ok(())
         }
         .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
-    );
+    )
+    .detach();
 }
 
 /// Handles a register request sent to the fuchsia.power.manager.DriverManagerRegistration service.
@@ -390,11 +391,12 @@ fn enable_proxy_close_handler(
     proxy: fdevicemgr::SystemStateTransitionProxy,
     handler: impl FnOnce() + 'static,
 ) {
-    fasync::spawn_local(async move {
+    fasync::Task::local(async move {
         let _ =
             fasync::OnSignals::new(&proxy.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED).await;
         handler();
-    });
+    })
+    .detach();
 }
 
 /// Creates a "/dev" directory within the namespace that is bound to the provided DirectoryProxy.
@@ -541,7 +543,7 @@ mod tests {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fdevicemgr::SystemStateTransitionMarker>()
                 .unwrap();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fdevicemgr::SystemStateTransitionRequest::SetTerminationSystemState {
@@ -554,7 +556,8 @@ mod tests {
                     e => panic!("Unexpected request: {:?}", e),
                 }
             }
-        });
+        })
+        .detach();
 
         proxy
     }

@@ -151,7 +151,7 @@ where
     Fut: Future<Output = ()> + 'static,
 {
     let (proxy, stream) = create_proxy_and_stream::<P::Service>()?;
-    fasync::spawn_local(for_each_or_log(stream, f));
+    fasync::Task::local(for_each_or_log(stream, f)).detach();
     Ok(proxy)
 }
 
@@ -164,7 +164,7 @@ where
     Fut: Future<Output = ()> + 'static + Send,
 {
     let (proxy, stream) = create_proxy_and_stream::<P::Service>()?;
-    fasync::spawn(for_each_or_log(stream, f));
+    fasync::Task::spawn(for_each_or_log(stream, f)).detach();
     Ok(proxy)
 }
 

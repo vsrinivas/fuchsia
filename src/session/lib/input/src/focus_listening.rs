@@ -93,9 +93,10 @@ mod tests {
         let (focus_chain_listener_client_end, focus_chain_listener) =
             fidl::endpoints::create_proxy_and_stream::<focus::FocusChainListenerMarker>()?;
 
-        fuchsia_async::spawn(async move {
+        fuchsia_async::Task::spawn(async move {
             let _ = dispatch_focus_change_to_ime(ime_proxy, focus_chain_listener).await;
-        });
+        })
+        .detach();
 
         let view_ref = scenic::ViewRefPair::new()?.view_ref;
         let view_ref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;

@@ -10,8 +10,8 @@
 #![deny(missing_docs)]
 
 use {
-    fidl_fuchsia_io::NodeInfo,
     anyhow::{format_err, Error},
+    fidl_fuchsia_io::NodeInfo,
     fuchsia_async as fasync,
     fuchsia_vfs_watcher::Watcher,
     futures::{
@@ -157,7 +157,7 @@ async fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Err
         }
     };
 
-    fasync::spawn(path_future);
+    fasync::Task::spawn(path_future).detach();
 
     Ok(rx.boxed() as BoxStream<'_, _>)
 }
@@ -172,7 +172,7 @@ async fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Err
 pub fn watch_recursive(path: impl Into<PathBuf>) -> BoxStream<'static, Result<PathEvent, Error>> {
     let (tx, rx) = channel(1);
 
-    fasync::spawn(inner_watch_recursive(tx, path.into(), true));
+    fasync::Task::spawn(inner_watch_recursive(tx, path.into(), true)).detach();
 
     rx.boxed()
 }
@@ -227,7 +227,8 @@ fn inner_watch_recursive(
                 break;
             }
             if let Some(next_path) = next_path {
-                fasync::spawn(inner_watch_recursive(tx.clone(), next_path, next_existing));
+                fasync::Task::spawn(inner_watch_recursive(tx.clone(), next_path, next_existing))
+                    .detach();
             }
         }
     }

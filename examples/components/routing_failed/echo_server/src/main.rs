@@ -12,9 +12,10 @@ fn main() {
     let mut executor = fasync::Executor::new().expect("error creating executor");
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             run_echo_service(stream).await;
-        });
+        })
+        .detach();
     });
     fs.take_and_serve_directory_handle().expect("failed to serve outgoing directory");
     executor.run_singlethreaded(fs.collect::<()>());

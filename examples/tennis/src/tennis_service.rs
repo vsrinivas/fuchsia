@@ -22,7 +22,7 @@ impl TennisService {
 
     pub fn bind(&self, mut stream: fidl_tennis::TennisServiceRequestStream) {
         let self_clone = self.clone();
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             async move {
                 while let Some(msg) = stream
                     .try_next()
@@ -49,7 +49,8 @@ impl TennisService {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        );
+        )
+        .detach();
     }
 
     pub fn register_paddle(
@@ -62,7 +63,7 @@ impl TennisService {
         let paddle_proxy = paddle.into_proxy().unwrap();
         let mut stream = paddle_proxy.take_event_stream();
         let player_state = game.register_new_paddle(player_name.clone(), paddle_proxy);
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 while let Some(event) = stream
                     .try_next()
@@ -80,11 +81,12 @@ impl TennisService {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        );
+        )
+        .detach();
         if game.players_ready() {
             fx_log_info!("game is beginning");
             let game_arc = game_arc.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 loop {
                     game_arc.lock().step();
                     let time_step: i64 = (100.0 * game_arc.lock().time_scale_factor()) as i64;
@@ -94,7 +96,8 @@ impl TennisService {
                         return;
                     }
                 }
-            });
+            })
+            .detach();
         }
     }
 }

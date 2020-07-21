@@ -118,7 +118,7 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
             &mut Sender<InputEvent>,
         ) -> Option<InputReport>,
 {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let mut previous_report: Option<InputReport> = None;
         let (report_reader, server_end) = match fidl::endpoints::create_proxy() {
             Ok(res) => res,
@@ -148,7 +148,8 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
         }
         // TODO(54445): Add signaling for when this loop exits, since it means the device
         // binding is no longer functional.
-    });
+    })
+    .detach();
 }
 
 /// Returns true if the device type of `input_device` matches `device_type`.
@@ -259,11 +260,12 @@ mod tests {
             create_proxy_and_stream::<fidl_fuchsia_input_report::InputDeviceMarker>()
                 .expect("Failed to create InputDevice proxy and server.");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(input_device_request) = input_device_server.try_next().await.unwrap() {
                 request_handler(input_device_request);
             }
-        });
+        })
+        .detach();
 
         input_device_proxy
     }

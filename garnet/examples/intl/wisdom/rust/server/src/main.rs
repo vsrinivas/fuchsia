@@ -22,9 +22,10 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("error creating executor")?;
     let mut fs = server::ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             run_service(stream).await.expect("failed to run service");
-        });
+        })
+        .detach();
     });
     fs.take_and_serve_directory_handle()?;
     executor.run_singlethreaded(fs.collect::<()>());

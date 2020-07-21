@@ -193,7 +193,7 @@ mod tests {
         state: Arc<RwLock<DeviceState>>,
         mut stream: fidl_thermal::DeviceRequestStream,
     ) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fidl_thermal::DeviceRequest::GetDeviceInfo { responder }) => {
@@ -224,13 +224,14 @@ mod tests {
                 }
             }
         })
+        .detach()
     }
 
     fn spawn_fake_gpu_service(
         state: Arc<RwLock<DeviceState>>,
         mut stream: fidl_gpu::ClockRequestStream,
     ) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fidl_gpu::ClockRequest::SetFrequencySource { source, responder }) => {
@@ -243,6 +244,7 @@ mod tests {
                 }
             }
         })
+        .detach()
     }
 
     // test that invalid trip point key is rejected

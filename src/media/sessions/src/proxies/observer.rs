@@ -171,7 +171,7 @@ mod test {
             .filter_map(|r| future::ready(r.into_watch_status()));
 
         let observer = Observer::new(status_stream, responders);
-        fasync::spawn(observer.map(drop));
+        fasync::Task::spawn(observer.map(drop)).detach();
 
         let waker = noop_waker();
         let mut ctx = Context::from_waker(&waker);
@@ -198,7 +198,7 @@ mod test {
             .filter_map(|r| future::ready(r.into_watch_status()));
 
         let observer = Observer::new(status_stream, responders);
-        fasync::spawn(observer.map(drop));
+        fasync::Task::spawn(observer.map(drop)).detach();
 
         status_sink.send(SessionInfoDelta::new_empty()).await?;
         assert_matches!(session_control_proxy.watch_status().await, Ok(_));

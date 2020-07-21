@@ -50,7 +50,7 @@ fn spawn_server(buffer_size: usize) -> (String, EventSender) {
             }
         }))
         .unwrap_or_else(|e| panic!("mock sse server failed: {:?}", e));
-    fasync::spawn(server);
+    fasync::Task::spawn(server).detach();
     (url, event_sender)
 }
 

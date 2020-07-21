@@ -132,7 +132,7 @@ mod tests {
                 Ok::<_, Infallible>(service_fn(handle_req))
             }))
             .unwrap_or_else(|e| panic!("mock sse server failed: {:?}", e));
-        fasync::spawn(server);
+        fasync::Task::spawn(server).detach();
         url
     }
 

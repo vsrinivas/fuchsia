@@ -283,7 +283,7 @@ impl TerminalViewAssistant {
         // We want spawn_local here to enforce the single threaded model. If we
         // do move to multithreaded we will need to refactor the term parsing
         // logic to account for thread safaty.
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             pty.spawn(spawn_command).await.expect("unable to spawn pty");
 
             let fd = pty.try_clone_fd().expect("unable to clone pty read fd");
@@ -329,7 +329,8 @@ impl TerminalViewAssistant {
                 }
                 );
             }
-        });
+        })
+        .detach();
 
         self.pty_context = Some(pty_context);
 
@@ -654,9 +655,10 @@ mod tests {
             .map(|ctx| ctx.file.try_clone().expect("attempt to clone fd failed"))
             .unwrap();
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             let _ = fd.write_all(b"ls");
-        });
+        })
+        .detach();
 
         // No redraw will trigger a timeout and failure
         wait_until_update_received_or_timeout(&mut receiver)
@@ -708,9 +710,10 @@ mod tests {
             .map(|ctx| ctx.file.try_clone().expect("attempt to clone fd failed"))
             .unwrap();
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             let _ = fd.write_all(b"A");
-        });
+        })
+        .detach();
 
         // Wait until we get a notice that the view is ready to redraw
         wait_until_update_received_or_timeout(&mut receiver)

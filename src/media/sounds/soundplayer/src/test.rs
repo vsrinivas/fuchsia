@@ -411,7 +411,7 @@ impl TestService {
             .expect("Launching soundplayer");
         let sound_player = app.connect_to_service::<PlayerMarker>().expect("Connecting to Player");
 
-        fasync::spawn_local(service_fs.collect::<()>());
+        fasync::Task::local(service_fs.collect::<()>()).detach();
 
         Self { app, environment, sound_player }
     }
