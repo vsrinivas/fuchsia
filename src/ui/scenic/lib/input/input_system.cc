@@ -177,7 +177,7 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
 
   ime_service_ = this->context()->app_context()->svc()->Connect<fuchsia::ui::input::ImeService>();
   ime_service_.set_error_handler(
-      [](zx_status_t status) { FX_LOGS(ERROR) << "Scenic lost connection to TextSync"; });
+      [](zx_status_t status) { FX_LOGS(WARNING) << "Scenic lost connection to TextSync"; });
 
   this->context()->app_context()->outgoing()->AddPublicService(injector_registry_.GetHandler(this));
 
@@ -759,6 +759,7 @@ void InputSystem::ReportPointerEventToView(const InternalPointerEvent& event,
   InputEvent input_event;
   input_event.set_pointer(
       InternalPointerEventToGfxPointerEvent(event, view_from_context_transform.value(), type));
+  FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
   event_reporter->EnqueueEvent(std::move(input_event));
 }
 
