@@ -101,12 +101,12 @@ zx_status_t LogExporter::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
 
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-  case fuchsia_logger_LogListenerLogOrdinal:
-    return Log(std::move(message));
-  case fuchsia_logger_LogListenerLogManyOrdinal:
-    return LogMany(std::move(message));
-  default:
-    return ZX_ERR_NOT_SUPPORTED;
+    case fuchsia_logger_LogListenerSafeLogOrdinal:
+      return Log(std::move(message));
+    case fuchsia_logger_LogListenerSafeLogManyOrdinal:
+      return LogMany(std::move(message));
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
   }
 }
 
@@ -197,7 +197,7 @@ int LogExporter::LogMessage(fuchsia_logger_LogMessage* log_message) {
 
 zx_status_t LogExporter::Log(fidl::Message message) {
   const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(&fuchsia_logger_LogListenerLogRequestTable, &error_msg);
+  zx_status_t status = message.Decode(&fuchsia_logger_LogListenerSafeLogRequestTable, &error_msg);
   if (status != ZX_OK) {
     fprintf(stderr, "log-listener: error: Log: %s\n", error_msg);
     return status;
@@ -206,13 +206,18 @@ zx_status_t LogExporter::Log(fidl::Message message) {
   fuchsia_logger_LogMessage* log_message = message.GetPayloadAs<fuchsia_logger_LogMessage>();
   if (LogMessage(log_message) < 0) {
     NotifyFileError(strerror(errno));
+    return ZX_OK;
   }
-  return ZX_OK;
+
+  fuchsia_logger_LogListenerSafeLogManyResponse response;
+  memset(&response, 0, sizeof(response));
+  fidl_init_txn_header(&response.hdr, message.txid(), message.ordinal());
+  return channel_.write(0, &response, sizeof(response), nullptr, 0);
 }
 
 zx_status_t LogExporter::LogMany(fidl::Message message) {
   const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(&fuchsia_logger_LogListenerLogManyRequestTable, &error_msg);
+  zx_status_t status = message.Decode(&fuchsia_logger_LogListenerSafeLogManyRequestTable, &error_msg);
   if (status != ZX_OK) {
     fprintf(stderr, "log-listener: error: LogMany: %s\n", error_msg);
     return status;
@@ -226,7 +231,11 @@ zx_status_t LogExporter::LogMany(fidl::Message message) {
       return ZX_OK;
     }
   }
-  return ZX_OK;
+
+  fuchsia_logger_LogListenerSafeLogManyResponse response;
+  memset(&response, 0, sizeof(response));
+  fidl_init_txn_header(&response.hdr, message.txid(), message.ordinal());
+  return channel_.write(0, &response, sizeof(response), nullptr, 0);
 }
 
 void LogExporter::NotifyError(zx_status_t error) {
@@ -288,8 +297,8 @@ std::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
     *error = CREATE_CHANNEL;
     return nullptr;
   }
-  fuchsia_logger_LogListenRequest req = {};
-  fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogListenOrdinal);
+  fuchsia_logger_LogListenSafeRequest req = {};
+  fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogListenSafeOrdinal);
   req.log_listener = FIDL_HANDLE_PRESENT;
   zx_handle_t listener_handle = listener.release();
   status = logger.write(0, &req, sizeof(req), &listener_handle, 1);

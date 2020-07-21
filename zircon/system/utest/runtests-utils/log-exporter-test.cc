@@ -63,8 +63,8 @@ class LogMessage {
   uint32_t dropped_logs_;
 };
 
-// Encode |log_msg| and fills up fidl message object to be sent to LogListener
-// implementation.
+// Encode |log_msg| and fills up fidl message object to be sent to
+// LogListenerSafe implementation.
 size_t FillLogMessagePayload(fuchsia_logger_LogMessage* lm, fidl_string_t* strings,
                              const LogMessage& log_msg) {
   log_msg.SetFidlLogMessageValues(lm);
@@ -104,8 +104,8 @@ zx_status_t SendLogMessagesHelper(const zx::channel& listener, uint64_t ordinal,
 
   size_t msg_len = sizeof(fidl_message_header_t) + n_msgs * sizeof(fuchsia_logger_LogMessage) +
                    tags_n_msgs * sizeof(fidl_string_t) + FIDL_ALIGN(len);
-  if (ordinal == fuchsia_logger_LogListenerLogManyOrdinal ||
-      ordinal == fuchsia_logger_LogListenerLogManyOrdinal) {
+  if (ordinal == fuchsia_logger_LogListenerSafeLogManyOrdinal ||
+      ordinal == fuchsia_logger_LogListenerSafeLogManyOrdinal) {
     msg_len += sizeof(fidl_vector_t);
   }
   if (msg_len > UINT32_MAX) {
@@ -116,8 +116,8 @@ zx_status_t SendLogMessagesHelper(const zx::channel& listener, uint64_t ordinal,
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg);
   fidl_init_txn_header(hdr, 0, ordinal);
   fuchsia_logger_LogMessage* fidl_log_msg = reinterpret_cast<fuchsia_logger_LogMessage*>(hdr + 1);
-  if (ordinal == fuchsia_logger_LogListenerLogManyOrdinal ||
-      ordinal == fuchsia_logger_LogListenerLogManyOrdinal) {
+  if (ordinal == fuchsia_logger_LogListenerSafeLogManyOrdinal ||
+      ordinal == fuchsia_logger_LogListenerSafeLogManyOrdinal) {
     fidl_vector_t* vector = reinterpret_cast<fidl_vector_t*>(hdr + 1);
     vector->count = n_msgs;
     vector->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
@@ -132,7 +132,7 @@ zx_status_t SendLogMessagesHelper(const zx::channel& listener, uint64_t ordinal,
       strings = reinterpret_cast<fidl_string_t*>((reinterpret_cast<uint8_t*>(strings)) + offset);
     }
   }
-  return listener.write(0, msg, static_cast<uint32_t>(msg_len), NULL, 0);
+  return listener.write(0, msg, static_cast<uint32_t>(msg_len), nullptr, 0);
 }
 
 // Encodes and writes |log_msg| to |listener|. This will replicate behaviour of
@@ -140,13 +140,41 @@ zx_status_t SendLogMessagesHelper(const zx::channel& listener, uint64_t ordinal,
 zx_status_t SendLogMessage(const zx::channel& listener, LogMessage log_msg) {
   fbl::Vector<LogMessage> log_msgs;
   log_msgs.push_back(std::move(log_msg));
-  return SendLogMessagesHelper(listener, fuchsia_logger_LogListenerLogOrdinal, log_msgs);
+  return SendLogMessagesHelper(listener, fuchsia_logger_LogListenerSafeLogOrdinal, log_msgs);
 }
 
 // Encodes and writes |log_msgs| to |listener|. This will replicate behaviour of
 // LogMany call in Log interface.
 zx_status_t SendLogMessages(const zx::channel& listener, const fbl::Vector<LogMessage>& log_msgs) {
-  return SendLogMessagesHelper(listener, fuchsia_logger_LogListenerLogManyOrdinal, log_msgs);
+  return SendLogMessagesHelper(listener, fuchsia_logger_LogListenerSafeLogManyOrdinal, log_msgs);
+}
+
+zx_status_t ReceiveLogMessagesHelper(const zx::channel& listener, uint64_t ordinal) {
+  zx_status_t status;
+  status = listener.wait_one(ZX_CHANNEL_READABLE, zx::time(0), nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  constexpr uint32_t header_size = sizeof(fidl_message_header_t);
+  alignas(fidl_message_header_t) uint8_t bytes[header_size];
+  fidl_message_header_t* header = reinterpret_cast<fidl_message_header_t*>(bytes);
+  uint32_t bytes_read = 0u;
+  status = listener.read(0, bytes, nullptr, header_size, 0, &bytes_read, nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (header->ordinal != ordinal) {
+    return ZX_ERR_WRONG_TYPE;
+  }
+  return ZX_OK;
+}
+
+zx_status_t ReceiveLogMessage(const zx::channel& listener) {
+  return ReceiveLogMessagesHelper(listener, fuchsia_logger_LogListenerSafeLogOrdinal);
+}
+
+zx_status_t ReceiveLogMessages(const zx::channel& listener) {
+  return ReceiveLogMessagesHelper(listener, fuchsia_logger_LogListenerSafeLogManyOrdinal);
 }
 
 TEST(LogListenerTests, TestLog) {
@@ -164,12 +192,14 @@ TEST(LogListenerTests, TestLog) {
 
   LogMessage msg1("my message");
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg1)));
+  ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
+  ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
   LogMessage msg2("my message", {"tag123"});
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg2)));
-
   ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
-  fflush(buf_file);
+  ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
 
+  fflush(buf_file);
   ASSERT_STR_EQ(R"([00093.892493][1024][1034][] INFO: my message
 [00093.892493][1024][1034][tag123] INFO: my message
 )",
@@ -177,10 +207,10 @@ TEST(LogListenerTests, TestLog) {
 
   LogMessage msg3("my message", {"tag123", "tag2"});
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg3)));
-
   ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
-  fflush(buf_file);
+  ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
 
+  fflush(buf_file);
   ASSERT_STR_EQ(R"([00093.892493][1024][1034][] INFO: my message
 [00093.892493][1024][1034][tag123] INFO: my message
 [00093.892493][1024][1034][tag123, tag2] INFO: my message
@@ -207,8 +237,8 @@ TEST(LogListenerTests, TestLogMany) {
   msgs.push_back(std::move(msg1));
   msgs.push_back(std::move(msg2));
   ASSERT_EQ(ZX_OK, SendLogMessages(listener, msgs));
-
   ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
+  ASSERT_EQ(ZX_OK, ReceiveLogMessages(listener));
   fflush(buf_file);
 
   ASSERT_STR_EQ(R"([00093.892493][1024][1034][] INFO: my message
@@ -219,10 +249,10 @@ TEST(LogListenerTests, TestLogMany) {
   msgs.reset();
   msgs.push_back(std::move(msg3));
   ASSERT_EQ(ZX_OK, SendLogMessages(listener, msgs));
-
   ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
-  fflush(buf_file);
+  ASSERT_EQ(ZX_OK, ReceiveLogMessages(listener));
 
+  fflush(buf_file);
   ASSERT_STR_EQ(R"([00093.892493][1024][1034][] INFO: my message
 [00093.892493][1024][1034][tag1, tag2] INFO: my message2
 [00093.892493][1024][1034][tag1] INFO: my message
@@ -245,20 +275,30 @@ TEST(LogListenerTests, TestDroppedLogs) {
 
   LogMessage msg1("my message1", 1);
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg1)));
+  ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
+  ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
   LogMessage msg2("my message2", 1);
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg2)));
+  ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
+  ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
   LogMessage msg3("my message3", 1, 1011);
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg3)));
+  ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
+  ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
   LogMessage msg4("my message4", 1, 1011);
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg4)));
+  ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
+  ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
   LogMessage msg5("my message5", 2, 1011);
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg5)));
+  ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
+  ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
   LogMessage msg6("my message6", 2);
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg6)));
-
   ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
-  fflush(buf_file);
+  ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
 
+  fflush(buf_file);
   ASSERT_STR_EQ(R"([00093.892493][1024][1034][] INFO: my message1
 [00093.892493][1024][1034][] WARNING: Dropped logs count:1
 [00093.892493][1024][1034][] INFO: my message2
@@ -288,8 +328,8 @@ TEST(LogListenerTests, TestBadOutputFile) {
 
   LogMessage msg1("my message");
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg1)));
-
   ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
+
   ASSERT_STR_EQ("", buf);
 }
 
