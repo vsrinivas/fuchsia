@@ -10,10 +10,16 @@ etc.
 ## Example usage
 
 ```
-fx set bringup.x64 --with-base //garnet/packages/tests:zircon  # or bringup.arm64
+fx set core.x64 --with-base //bundles/buildbot:bringup  # or arm64
 fx build
-fx qemu -k -z out/default/obj/zircon/system/utest/core/core-tests.zbi
+fx core-tests [gtest-filter]
 ```
+
+The helper fx command runs AEMU providing the specially-built core-tests.zbi as
+a `-z` argument.
+
+`gtest-filter` can be optionally specified to run only the given gtest suite,
+e.g. `fx core-tests 'FutexTest.*'`.
 
 ## Notes
 
