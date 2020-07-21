@@ -129,7 +129,7 @@ Type: <code>uint32</code>
         </tr><tr id="vec_at_most_five">
             <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#20">vec_at_most_five</a></td>
             <td>
-                <code>example/vector</code></td>
+                <code>example/vector</code>[<code>5</code>]</td>
             <td></td>
         </tr><tr id="vec_of_strings">
             <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#21">vec_of_strings</a></td>
@@ -139,12 +139,12 @@ Type: <code>uint32</code>
         </tr><tr id="vec_of_strings_at_most_5">
             <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#22">vec_of_strings_at_most_5</a></td>
             <td>
-                <code>vector</code></td>
+                <code>vector</code>[<code>5</code>]</td>
             <td></td>
         </tr><tr id="vec_at_most_5">
             <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#23">vec_at_most_5</a></td>
             <td>
-                <code>example/vector</code></td>
+                <code>example/vector</code>[<code>5</code>]</td>
             <td></td>
         </tr><tr id="channel">
             <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#24">channel</a></td>

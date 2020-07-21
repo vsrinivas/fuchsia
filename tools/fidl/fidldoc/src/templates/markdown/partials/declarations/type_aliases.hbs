@@ -10,6 +10,10 @@
                 <code>{{~ partial_type_ctor.name ~}}</code>
                 {{~ #if partial_type_ctor.maybe_size.identifier ~}}
                     [<code>{{~ pl partial_type_ctor.maybe_size.identifier @root.name ~}}</code>]
+                {{~ else ~}}
+                    {{~ #if (eq partial_type_ctor.maybe_size.kind "literal") ~}}
+                        [<code>{{~ partial_type_ctor.maybe_size.value ~}}</code>]
+                    {{~ /if ~}}
                 {{~ /if ~}}
             </td>
             <td>{{~> doc ~}}</td>
