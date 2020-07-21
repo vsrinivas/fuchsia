@@ -282,7 +282,7 @@ impl log::Log for Logger {
     fn log(&self, record: &Record<'_>) {
         if record.level() == Level::Error {
             fx_log!(tag:record.target(),
-                get_fx_logger_severity(record.level()), "{}({}): {}", 
+                get_fx_logger_severity(record.level()), "{}({}): {}",
                 record.file().unwrap_or("??"), record.line().unwrap_or(0), record.args());
         } else {
             fx_log!(tag:record.target(),
@@ -295,9 +295,7 @@ impl log::Log for Logger {
 
 /// Initializes syslogger using default options.
 pub fn init() -> Result<(), zx::Status> {
-    log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
-    log::set_max_level(log::LevelFilter::Info);
-    Ok(())
+    init_with_tags_and_handle(zx::sys::ZX_HANDLE_INVALID, &[])
 }
 
 /// Initializes syslogger with tags. Max number of tags can be 4

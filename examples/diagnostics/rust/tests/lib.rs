@@ -17,21 +17,21 @@ async fn launch_example_and_read_hello_world() {
 
     let next = logs.next().unwrap();
     assert_eq!(next.severity, syslog::levels::DEBUG);
-    assert_eq!(next.tags, vec!["rust-logs-example.cmx", "rust_logs_example"]);
+    assert_eq!(next.tags, vec!["rust_logs_example"]);
     assert_eq!(next.msg, "should print ");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
 
     let next = logs.next().unwrap();
     assert_eq!(next.severity, syslog::levels::INFO);
-    assert_eq!(next.tags, vec!["rust-logs-example.cmx", "rust_logs_example"]);
+    assert_eq!(next.tags, vec!["rust_logs_example"]);
     assert_eq!(next.msg, "hello, world! foo=1 bar=\"baz\" ");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
 
     let next = logs.next().unwrap();
     assert_eq!(next.severity, syslog::levels::WARN);
-    assert_eq!(next.tags, vec!["rust-logs-example.cmx", "rust_logs_example"]);
+    assert_eq!(next.tags, vec!["rust_logs_example"]);
     assert_eq!(next.msg, "warning: using old api");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
