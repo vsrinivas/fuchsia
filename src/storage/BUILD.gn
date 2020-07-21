@@ -13,6 +13,7 @@ group("tests") {
     "blobfs-corrupt:tests",
     "conformance:tests",
     "ext4:tests",
+    "factory:tests",
     "fs-management-tests:tests",
     "fs_test:tests",
     "lib:tests",
