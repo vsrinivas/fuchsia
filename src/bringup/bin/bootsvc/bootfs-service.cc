@@ -265,6 +265,10 @@ void BootfsService::PublishStartupVmos(uint8_t type, const char* debug_type_name
              zx_status_get_string(status));
       continue;
     }
+    if (strlen(name) == kVmoSubdirLen) {
+      // Nameless VMOs do not get published.
+      continue;
+    }
     status = vmo->get_size(&size);
     if (status != ZX_OK) {
       printf("bootsvc: vmo.get_size on %s %u: %s\n", debug_type_name, i,
@@ -272,7 +276,7 @@ void BootfsService::PublishStartupVmos(uint8_t type, const char* debug_type_name
       continue;
     }
     if (size == 0) {
-      // empty vmos do not get installed
+      // Empty VMOs do not get published.
       continue;
     }
 
@@ -289,7 +293,7 @@ void BootfsService::PublishStartupVmos(uint8_t type, const char* debug_type_name
     }
 
     if (!strcmp(name + kVmoSubdirLen, "crashlog")) {
-      // the crashlog has a special home
+      // The crashlog has a special home.
       strcpy(name, kLastPanicFilePath);
     }
 
