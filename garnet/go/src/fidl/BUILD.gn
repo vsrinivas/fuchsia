@@ -9,7 +9,7 @@ import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("fidl_lib") {
-  name = "fidl"
+  name = "fidl/..."
 
   deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }

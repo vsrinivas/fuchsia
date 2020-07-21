@@ -43,7 +43,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    name = "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests"
+    name = "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests/..."
 
     deps = [
       "//src/testing/qemu",

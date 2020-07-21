@@ -11,7 +11,7 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 
 go_library("thinfs_lib") {
-  name = "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs"
+  name = "go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/..."
 
   deps = [
     "//sdk/fidl/fuchsia.io($go_toolchain)",

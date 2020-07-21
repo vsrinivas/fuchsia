@@ -9,7 +9,7 @@ import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
-  name = "fidlgen_go"
+  name = "fidlgen_go/..."
 }
 
 go_binary("fidlgen_go") {

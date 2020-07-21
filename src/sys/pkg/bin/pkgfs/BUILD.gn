@@ -11,7 +11,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("pmd") {
-  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs"
+  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/..."
 
   deps = [
     "//garnet/go/src/far",

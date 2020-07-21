@@ -10,7 +10,7 @@ import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
-  name = "gidl"
+  name = "gidl/..."
 
   deps = [ "//garnet/go/src/fidl:fidl_lib" ]
 }

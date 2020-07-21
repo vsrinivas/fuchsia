@@ -7,7 +7,7 @@ import("//build/go/go_test.gni")
 
 go_library("host-target-testing") {
   testonly = true
-  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing"
+  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/..."
   deps = [
     "//garnet/go/src/far:far",
     "//src/sys/pkg/bin/pm:pm_lib",

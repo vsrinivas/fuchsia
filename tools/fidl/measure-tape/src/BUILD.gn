@@ -8,7 +8,7 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 
 go_library("lib") {
-  name = "measure-tape"
+  name = "measure-tape/..."
 
   deps = [ "//garnet/go/src/fidl:fidl_lib" ]
 }

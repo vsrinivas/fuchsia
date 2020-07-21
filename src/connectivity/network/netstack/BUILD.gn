@@ -142,7 +142,7 @@ generated_go("gen/netstack") {
 }
 
 go_library("netstack_lib") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/..."
 
   deps = [
     ":gen/netstack",

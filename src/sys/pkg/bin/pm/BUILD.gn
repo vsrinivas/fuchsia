@@ -9,7 +9,7 @@ import("//build/host.gni")
 import("//build/package.gni")
 
 go_library("pm_lib") {
-  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm"
+  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/..."
 
   deps = [
     "//garnet/go/src/far",

@@ -7,7 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/host.gni")
 
 go_library("lib") {
-  name = "gen"
+  name = "gen/..."
 }
 
 go_binary("regen_fidl_benchmark_suite") {

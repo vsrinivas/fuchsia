@@ -156,9 +156,6 @@ def main():
                   src = src[:-4]
             dstdir = os.path.join(gopath_src, dst)
 
-            # TODO(fxb/55387): Enable non-recursive mode.
-            recurse = True
-
             if recurse:
                 # Map the whole directory, which implicitly makes Go subpackages
                 # (subdirectories) available.
