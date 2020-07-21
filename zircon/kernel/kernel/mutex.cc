@@ -154,9 +154,13 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
       affine::utils::ClampAdd(current_ticks(), time_to_ticks.Scale(spin_max_duration));
   do {
     uintptr_t old_mutex_state = STATE_FREE;
-    if (likely(val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
-                                            ktl::memory_order_seq_cst,
-                                            ktl::memory_order_seq_cst))) {
+    // Attempt to acquire the mutex by swapping out "STATE_FREE" for our current thread.
+    //
+    // We use the weak form of compare exchange here: it saves an extra
+    // conditional branch on ARM, and if it fails spuriously, we'll just
+    // loop around and try again.
+    if (likely(val_.compare_exchange_weak(old_mutex_state, new_mutex_state,
+                                          ktl::memory_order_seq_cst, ktl::memory_order_seq_cst))) {
       // Same as above in the fastest path: leave accounting to later contending
       // threads.
       KTracer{}.KernelMutexUncontestedAcquire(this);
