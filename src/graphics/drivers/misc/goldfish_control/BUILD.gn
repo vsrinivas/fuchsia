@@ -8,24 +8,29 @@ import("//build/driver_package.gni")
 driver_module("control_driver") {
   output_name = "goldfish_control"
 
-  sources = [ "control_device.cc" ]
+  sources = [
+    "control_device.cc",
+    "control_device.h",
+    "heap.cc",
+    "heap.h",
+  ]
 
   deps = [
     "//sdk/banjo/ddk.protocol.goldfish.control",
     "//sdk/banjo/ddk.protocol.goldfish.pipe",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_c",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace:trace-driver",

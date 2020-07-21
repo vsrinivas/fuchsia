@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "control_device.h"
+#include "src/graphics/drivers/misc/goldfish_control/control_device.h"
 
-#include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl-async-2/fidl_server.h>
-#include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/event.h>
 #include <zircon/syscalls.h>
@@ -20,6 +17,8 @@
 #include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+
+#include "src/graphics/drivers/misc/goldfish_control/heap.h"
 
 namespace goldfish {
 namespace {
@@ -88,87 +87,6 @@ zx_koid_t GetKoidForVmo(const zx::vmo& vmo) {
   return info.koid;
 }
 
-void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* format,
-          va_list args) {
-  va_list args2;
-  va_copy(args2, args);
-
-  size_t buffer_bytes = vsnprintf(nullptr, 0, format, args) + 1;
-
-  std::unique_ptr<char[]> buffer(new char[buffer_bytes]);
-
-  size_t buffer_bytes_2 = vsnprintf(buffer.get(), buffer_bytes, format, args2) + 1;
-  (void)buffer_bytes_2;
-  // sanity check; should match so go ahead and assert that it does.
-  ZX_DEBUG_ASSERT(buffer_bytes == buffer_bytes_2);
-  va_end(args2);
-
-  if (is_error) {
-    zxlogf(ERROR, "[%s %s] %s", prefix1, prefix2, buffer.get());
-  } else {
-    zxlogf(DEBUG, "[%s %s] %s", prefix1, prefix2, buffer.get());
-  }
-}
-
-constexpr uint32_t kConcurrencyCap = 64;
-
-// An instance of this class serves a Heap connection.
-class Heap : public FidlServer<
-                 Heap, SimpleBinding<Heap, fuchsia_sysmem_Heap_ops_t, fuchsia_sysmem_Heap_dispatch>,
-                 vLog> {
- public:
-  // Public for std::unique_ptr<Heap>:
-  ~Heap() = default;
-
- private:
-  friend class FidlServer;
-
-  Heap(Control* control, async_dispatcher_t* dispatcher)
-      : FidlServer(dispatcher, "GoldfishHeap", kConcurrencyCap), control_(control) {}
-
-  zx_status_t AllocateVmo(uint64_t size, fidl_txn* txn) {
-    BindingType::Txn::RecognizeTxn(txn);
-
-    zx::vmo vmo;
-    zx_status_t status = zx::vmo::create(size, 0, &vmo);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: zx::vmo::create() failed - size: %lu status: %d", kTag, size, status);
-      return fuchsia_sysmem_HeapAllocateVmo_reply(txn, status, ZX_HANDLE_INVALID);
-    }
-
-    return fuchsia_sysmem_HeapAllocateVmo_reply(txn, ZX_OK, vmo.release());
-  }
-
-  zx_status_t CreateResource(zx_handle_t vmo_handle, fidl_txn* txn) {
-    BindingType::Txn::RecognizeTxn(txn);
-
-    zx::vmo vmo(vmo_handle);
-
-    zx_koid_t id = GetKoidForVmo(vmo);
-    if (id == ZX_KOID_INVALID) {
-      return fuchsia_sysmem_HeapCreateResource_reply(txn, ZX_ERR_INVALID_ARGS, 0);
-    }
-
-    control_->RegisterBufferHandle(id);
-    return fuchsia_sysmem_HeapCreateResource_reply(txn, ZX_OK, id);
-  }
-
-  zx_status_t DestroyResource(uint64_t id, fidl_txn* txn) {
-    BindingType::Txn::RecognizeTxn(txn);
-
-    control_->FreeBufferHandle(id);
-    return fuchsia_sysmem_HeapDestroyResource_reply(txn);
-  }
-
-  static constexpr fuchsia_sysmem_Heap_ops_t kOps = {
-      fidl::Binder<Heap>::BindMember<&Heap::AllocateVmo>,
-      fidl::Binder<Heap>::BindMember<&Heap::CreateResource>,
-      fidl::Binder<Heap>::BindMember<&Heap::DestroyResource>,
-  };
-
-  Control* const control_;
-};
-
 }  // namespace
 
 // static
@@ -183,14 +101,12 @@ zx_status_t Control::Create(void* ctx, zx_device_t* device) {
   return status;
 }
 
-Control::Control(zx_device_t* parent)
-    : ControlType(parent), pipe_(parent), heap_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+Control::Control(zx_device_t* parent) : ControlType(parent), pipe_(parent) {
   goldfish_control_protocol_t self{&goldfish_control_protocol_ops_, this};
   control_ = ddk::GoldfishControlProtocolClient(&self);
 }
 
 Control::~Control() {
-  heap_loop_.Shutdown();
   if (id_) {
     fbl::AutoLock lock(&lock_);
     if (cmd_buffer_.is_valid()) {
@@ -282,34 +198,37 @@ zx_status_t Control::Bind() {
     zxlogf(ERROR, "%s: zx::channel:create() failed: %d", kTag, status);
     return status;
   }
-  status = pipe_.RegisterSysmemHeap(fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL,
-                                    std::move(heap_connection));
+  status = pipe_.RegisterSysmemHeap(
+      static_cast<uint64_t>(llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL),
+      std::move(heap_connection));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to register heap: %d", kTag, status);
     return status;
   }
 
-  // Start server thread. Heap server must be running on a seperate
-  // thread as sysmem might be making synchronous allocation requests
-  // from the main thread.
-  heap_loop_.StartThread("goldfish_control_heap_thread");
-  async::PostTask(heap_loop_.dispatcher(), [this, request = std::move(heap_request)]() mutable {
-    // The Heap is channel-owned / self-owned.
-    Heap::CreateChannelOwned(std::move(request), this, heap_loop_.dispatcher());
-  });
+  std::unique_ptr<Heap> heap = Heap::Create(this);
+  Heap* heap_ptr = heap.get();
+  heaps_.push_back(std::move(heap));
+  heap_ptr->Bind(std::move(heap_request));
 
   return DdkAdd(ddk::DeviceAddArgs("goldfish-control").set_proto_id(ZX_PROTOCOL_GOLDFISH_CONTROL));
 }
 
-void Control::RegisterBufferHandle(zx_koid_t koid) {
+uint64_t Control::RegisterBufferHandle(const zx::vmo& vmo) {
+  zx_koid_t koid = GetKoidForVmo(vmo);
+  if (koid == ZX_KOID_INVALID) {
+    return static_cast<uint64_t>(ZX_KOID_INVALID);
+  }
+
   fbl::AutoLock lock(&lock_);
   buffer_handles_[koid] = kInvalidColorBuffer;
+  return static_cast<uint64_t>(koid);
 }
 
-void Control::FreeBufferHandle(zx_koid_t koid) {
+void Control::FreeBufferHandle(uint64_t id) {
   fbl::AutoLock lock(&lock_);
 
-  auto it = buffer_handles_.find(koid);
+  auto it = buffer_handles_.find(static_cast<zx_koid_t>(id));
   if (it == buffer_handles_.end()) {
     zxlogf(ERROR, "%s: invalid key", kTag);
     return;
@@ -670,6 +589,11 @@ zx_status_t Control::SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode, 
   cmd->mode = mode;
 
   return ExecuteCommandLocked(kSize_rcSetColorBufferVulkanMode, result);
+}
+
+void Control::RemoveHeap(Heap* heap) {
+  fbl::AutoLock lock(&lock_);
+  heaps_.erase(*heap);
 }
 
 }  // namespace goldfish

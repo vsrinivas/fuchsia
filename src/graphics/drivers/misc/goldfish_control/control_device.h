@@ -20,7 +20,10 @@
 #include <ddktl/protocol/goldfish/control.h>
 #include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/condition_variable.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
+
+#include "src/graphics/drivers/misc/goldfish_control/heap.h"
 
 namespace goldfish {
 
@@ -38,8 +41,8 @@ class Control : public ControlType,
 
   zx_status_t Bind();
 
-  void RegisterBufferHandle(zx_koid_t koid);
-  void FreeBufferHandle(zx_koid_t koid);
+  uint64_t RegisterBufferHandle(const zx::vmo& vmo);
+  void FreeBufferHandle(uint64_t id);
 
   zx_status_t FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t width, uint32_t height,
                                     uint32_t format, fidl_txn_t* txn);
@@ -53,6 +56,9 @@ class Control : public ControlType,
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
   zx_status_t GoldfishControlGetColorBuffer(zx::vmo vmo, uint32_t* out_id);
+
+  // Used by heaps. Removes a specific heap from the linked list.
+  void RemoveHeap(Heap* heap);
 
  private:
   static void OnSignal(void* ctx, int32_t flags);
@@ -79,11 +85,13 @@ class Control : public ControlType,
   zx::bti bti_ TA_GUARDED(lock_);
   ddk::IoBuffer cmd_buffer_ TA_GUARDED(lock_);
   ddk::IoBuffer io_buffer_ TA_GUARDED(lock_);
+
+  fbl::DoublyLinkedList<std::unique_ptr<Heap>> heaps_ TA_GUARDED(lock_);
+
   // TODO(TC-383): This should be std::unordered_map.
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);
   std::map<uint32_t, fuchsia_hardware_goldfish_BufferHandleType> buffer_handle_types_
       TA_GUARDED(lock_);
-  async::Loop heap_loop_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Control);
 };
