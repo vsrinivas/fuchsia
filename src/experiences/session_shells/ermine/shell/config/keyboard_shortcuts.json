@@ -22,8 +22,9 @@
   ],
   "overview": [
     {
+      "char": "escape",
       "modifier": "meta",
-      "chord": "Meta",
+      "chord": "Meta + Escape",
       "description": "Toggle Overview"
     }
   ],
