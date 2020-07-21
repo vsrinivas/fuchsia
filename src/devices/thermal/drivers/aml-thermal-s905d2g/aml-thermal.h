@@ -81,11 +81,11 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   zx_status_t SetFanLevel(uint32_t fan_level, fidl_txn_t* txn);
 
   static constexpr fuchsia_hardware_thermal_Device_ops_t fidl_ops = {
+      .GetTemperatureCelsius =
+          fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetTemperatureCelsius>,
       .GetInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetInfo>,
       .GetDeviceInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDeviceInfo>,
       .GetDvfsInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDvfsInfo>,
-      .GetTemperatureCelsius =
-          fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetTemperatureCelsius>,
       .GetStateChangeEvent = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetStateChangeEvent>,
       .GetStateChangePort = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetStateChangePort>,
       .SetTripCelsius = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetTripCelsius>,

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "thermal-cli.h"
+
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mock-function/mock-function.h>
-#include <zxtest/zxtest.h>
 
-#include "thermal-cli.h"
+#include <zxtest/zxtest.h>
 
 class ThermalCliTest : public zxtest::Test {
  public:
@@ -124,10 +125,10 @@ class ThermalCliTest : public zxtest::Test {
       mock_SetDvfsOperatingPoint_;
 
   static constexpr fuchsia_hardware_thermal_Device_ops_t ops_ = {
+      .GetTemperatureCelsius = Binder::BindMember<&ThermalCliTest::GetTemperatureCelsius>,
       .GetInfo = Binder::BindMember<&ThermalCliTest::GetInfo>,
       .GetDeviceInfo = Binder::BindMember<&ThermalCliTest::GetDeviceInfo>,
       .GetDvfsInfo = Binder::BindMember<&ThermalCliTest::GetDvfsInfo>,
-      .GetTemperatureCelsius = Binder::BindMember<&ThermalCliTest::GetTemperatureCelsius>,
       .GetStateChangeEvent = Binder::BindMember<&ThermalCliTest::GetStateChangeEvent>,
       .GetStateChangePort = Binder::BindMember<&ThermalCliTest::GetStateChangePort>,
       .SetTripCelsius = Binder::BindMember<&ThermalCliTest::SetTripCelsius>,

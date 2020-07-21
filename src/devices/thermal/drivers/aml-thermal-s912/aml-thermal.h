@@ -37,8 +37,8 @@ enum FanLevel {
 };
 
 class AmlThermal;
-using DeviceType = ddk::Device<AmlThermal, ddk::Initializable, ddk::Messageable,
-                               ddk::UnbindableNew>;
+using DeviceType =
+    ddk::Device<AmlThermal, ddk::Initializable, ddk::Messageable, ddk::UnbindableNew>;
 
 // AmlThermal implements the s912 AmLogic thermal driver.
 class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, ddk::base_protocol> {
@@ -90,11 +90,11 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   void JoinWorkerThread();
 
   static constexpr fuchsia_hardware_thermal_Device_ops_t fidl_ops = {
+      .GetTemperatureCelsius =
+          fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetTemperatureCelsius>,
       .GetInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetInfo>,
       .GetDeviceInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDeviceInfo>,
       .GetDvfsInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDvfsInfo>,
-      .GetTemperatureCelsius =
-          fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetTemperatureCelsius>,
       .GetStateChangeEvent = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetStateChangeEvent>,
       .GetStateChangePort = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetStateChangePort>,
       .SetTripCelsius = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetTripCelsius>,

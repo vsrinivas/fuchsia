@@ -173,10 +173,10 @@ static zx_status_t fidl_SetFanLevel(void* ctx, uint32_t fan_level, fidl_txn_t* t
 
 // Not static so the test harness can use them.
 fuchsia_hardware_thermal_Device_ops_t fidl_ops = {
+    .GetTemperatureCelsius = fidl_GetTemperatureCelsius,
     .GetInfo = fidl_GetInfo,
     .GetDeviceInfo = fidl_GetDeviceInfo,
     .GetDvfsInfo = fidl_GetDvfsInfo,
-    .GetTemperatureCelsius = fidl_GetTemperatureCelsius,
     .GetStateChangeEvent = fidl_GetStateChangeEvent,
     .GetStateChangePort = fidl_GetStateChangePort,
     .SetTripCelsius = fidl_SetTripCelsius,

@@ -5,6 +5,7 @@
 library fuchsia.hardware.thermal;
 
 using zx;
+using fuchsia.hardware.temperature;
 
 /// The maximum number of trip points that can be used.
 const uint32 MAX_TRIP_POINTS = 16;
@@ -96,6 +97,8 @@ struct ThermalDeviceInfo {
 
 [ForDeprecatedCBindings]
 protocol Device {
+    compose fuchsia.hardware.temperature.Device;
+
     /// Get information about the device's current state.
     GetInfo() -> (zx.status status, ThermalInfo? info);
 
@@ -105,9 +108,6 @@ protocol Device {
     /// Get the device's operating points.
     /// TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
     GetDvfsInfo(PowerDomain power_domain) -> (zx.status status, OperatingPoint? info);
-
-    /// Get the current temperature in degrees Celsius.
-    GetTemperatureCelsius() -> (zx.status status, float32 temp);
 
     /// Get an event to get trip point notifications on. `ZX_USER_SIGNAL_`0 is changed when either
     /// trip point is reached. It is deasserted when the state is read via GetInfo.

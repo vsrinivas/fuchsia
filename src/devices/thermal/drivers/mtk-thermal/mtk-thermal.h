@@ -100,11 +100,11 @@ class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
   zx_status_t SetFanLevel(uint32_t fan_level, fidl_txn_t* txn);
 
   static constexpr fuchsia_hardware_thermal_Device_ops_t fidl_ops = {
+      .GetTemperatureCelsius =
+          fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetTemperatureCelsius>,
       .GetInfo = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetInfo>,
       .GetDeviceInfo = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetDeviceInfo>,
       .GetDvfsInfo = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetDvfsInfo>,
-      .GetTemperatureCelsius =
-          fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetTemperatureCelsius>,
       .GetStateChangeEvent = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetStateChangeEvent>,
       .GetStateChangePort = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetStateChangePort>,
       .SetTripCelsius = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::SetTripCelsius>,
