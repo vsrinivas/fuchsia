@@ -177,6 +177,7 @@ if (current_toolchain == default_toolchain) {
       "array_tests.cc",
       "attributes_tests.cc",
       "bits_tests.cc",
+      "c_generator_tests.cc",
       "canonical_names_tests.cc",
       "coded_types_generator_tests.cc",
       "consts_tests.cc",

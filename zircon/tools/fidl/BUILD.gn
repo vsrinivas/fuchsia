@@ -44,7 +44,6 @@ source_set("compiler") {
       "//zircon/public/lib/cmdline",
       "//zircon/public/lib/fit",
       "//zircon/public/lib/safemath",
-      "//zircon/system/public",
     ]
   }
 }

@@ -135,8 +135,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       if (iter != handle_type_map_.end())
         return iter->second;
       auto name = NameCodedHandle(handle_type->subtype, handle_type->nullability);
-      zx_rights_t rights =
-          static_cast<const flat::NumericConstantValue<zx_rights_t>&>(handle_type->rights->Value());
+      types::Rights rights = static_cast<const flat::NumericConstantValue<types::Rights>&>(
+          handle_type->rights->Value());
       auto coded_handle_type = std::make_unique<coded::HandleType>(
           std::move(name), handle_type->subtype, rights, handle_type->nullability);
       handle_type_map_[handle_type] = coded_handle_type.get();
@@ -320,7 +320,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
       auto type = named_coded_types_[decl->name].get();
       switch (wire_format) {
         case WireFormat::kV1Header:
-          __FALLTHROUGH;
+          [[fallthrough]];
         case WireFormat::kV1NoEe: {
           coded::XUnionType* coded_xunion = static_cast<coded::XUnionType*>(type);
           coded::XUnionType* nullable_coded_xunion = coded_xunion->maybe_reference_type;
@@ -480,7 +480,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
 
       switch (wire_format) {
         case WireFormat::kV1Header:
-          __FALLTHROUGH;
+          [[fallthrough]];
         case WireFormat::kV1NoEe: {
           std::string nullable_xunion_name = NameCodedNullableName(union_decl->name);
 

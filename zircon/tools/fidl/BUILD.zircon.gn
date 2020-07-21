@@ -56,6 +56,7 @@ zx_library("fidl") {
     "$zx/system/ulib/fit",
     "$zx/third_party/ulib/boringssl",
   ]
+  assert_no_deps = [ "//zircon/system/public" ]
   configs += [ ":fidlc_config" ]
 }
 

@@ -2017,7 +2017,7 @@ bool Library::ResolveConstant(Constant* constant, const Type* type) {
     }
   }
 
-  __UNREACHABLE;
+  __builtin_unreachable();
 }
 
 ConstantValue::Kind Library::ConstantValuePrimitiveKind(
@@ -2086,7 +2086,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         }
         break;
       }
-      __FALLTHROUGH;
+      [[fallthrough]];
     }
     case Decl::Kind::kBits: {
       // If there is no member name, fallthrough to default.
@@ -2104,7 +2104,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         }
         break;
       }
-      __FALLTHROUGH;
+      [[fallthrough]];
     }
     default: {
       return Fail(ErrExpectedValueButGotType, identifier_constant->name.span(),

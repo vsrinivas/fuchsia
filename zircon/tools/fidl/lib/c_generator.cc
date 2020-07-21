@@ -449,7 +449,7 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
                     << member.type << "\");\n";
               break;
             }
-            __FALLTHROUGH;
+            [[fallthrough]];
           case flat::Decl::Kind::kStruct:
             switch (member.nullability) {
               case types::Nullability::kNullable:
@@ -688,7 +688,7 @@ void GetMethodParameters(const flat::Library* library, const CGenerator::NamedMe
 uint32_t CGenerator::GetMaxHandlesFor(Transport transport, const TypeShape& typeshape) {
   switch (transport) {
     case Transport::Channel:
-      return std::min(ZX_CHANNEL_MAX_MSG_HANDLES, typeshape.MaxHandles());
+      return std::min(kChannelMaxMessageHandles, typeshape.MaxHandles());
   }
   assert(false && "what transport?");
   return 0u;
@@ -1311,7 +1311,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
                         << member.type << "\");\n";
                   break;
                 }
-                __FALLTHROUGH;
+                [[fallthrough]];
 
               case flat::Decl::Kind::kStruct:
                 switch (member.nullability) {

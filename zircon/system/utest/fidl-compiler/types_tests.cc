@@ -67,5 +67,64 @@ TEST(TypesTests, root_types_with_some_library_in_lookup) {
   CheckPrimitiveType(library_ptr, &typespace, "float64", types::PrimitiveSubtype::kFloat64);
 }
 
+// Check that fidl's types.h and zircon/types.h's handle subtype
+// values stay in sync, until the latter is generated.
+TEST(TypesTests, handle_subtype) {
+  static_assert(sizeof(types::HandleSubtype) == sizeof(zx_obj_type_t));
+
+  static_assert(types::HandleSubtype::kHandle ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_NONE));
+
+  static_assert(types::HandleSubtype::kBti == static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_BTI));
+  static_assert(types::HandleSubtype::kChannel ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_CHANNEL));
+  static_assert(types::HandleSubtype::kClock ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_CLOCK));
+  static_assert(types::HandleSubtype::kEvent ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_EVENT));
+  static_assert(types::HandleSubtype::kEventpair ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_EVENTPAIR));
+  static_assert(types::HandleSubtype::kException ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_EXCEPTION));
+  static_assert(types::HandleSubtype::kFifo == static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_FIFO));
+  static_assert(types::HandleSubtype::kGuest ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_GUEST));
+  static_assert(types::HandleSubtype::kInterrupt ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_INTERRUPT));
+  static_assert(types::HandleSubtype::kIommu ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_IOMMU));
+  static_assert(types::HandleSubtype::kJob == static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_JOB));
+  static_assert(types::HandleSubtype::kLog == static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_LOG));
+  static_assert(types::HandleSubtype::kPager ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_PAGER));
+  static_assert(types::HandleSubtype::kPciDevice ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_PCI_DEVICE));
+  static_assert(types::HandleSubtype::kPmt == static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_PMT));
+  static_assert(types::HandleSubtype::kPort == static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_PORT));
+  static_assert(types::HandleSubtype::kProcess ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_PROCESS));
+  static_assert(types::HandleSubtype::kProfile ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_PROFILE));
+  static_assert(types::HandleSubtype::kResource ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_RESOURCE));
+  static_assert(types::HandleSubtype::kSocket ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_SOCKET));
+  static_assert(types::HandleSubtype::kStream ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_STREAM));
+  static_assert(types::HandleSubtype::kSuspendToken ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_SUSPEND_TOKEN));
+  static_assert(types::HandleSubtype::kThread ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_THREAD));
+  static_assert(types::HandleSubtype::kTimer ==
+                static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_TIMER));
+  static_assert(types::HandleSubtype::kVcpu == static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_VCPU));
+  static_assert(types::HandleSubtype::kVmar == static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_VMAR));
+  static_assert(types::HandleSubtype::kVmo == static_cast<types::HandleSubtype>(ZX_OBJ_TYPE_VMO));
+}
+
+// Check that fidl's types.h and zircon/types.h's rights types stay in
+// sync, until the latter is generated.
+TEST(TypesTests, rights) { static_assert(sizeof(types::Rights) == sizeof(zx_rights_t)); }
+
 }  // namespace flat
 }  // namespace fidl

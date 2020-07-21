@@ -5,10 +5,16 @@
 #ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_TYPES_H_
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_TYPES_H_
 
-#include <zircon/types.h>
+#include <stdint.h>
 
 namespace fidl {
 namespace types {
+
+// TODO(51002): zircon/types.h's zx_rights_t needs to be kept in sync with
+// this. Eventually, zx_rights_t will be generated from a fidl
+// declaration. This is currently tested by fidl-compiler's
+// TypesTests' rights test.
+using Rights = uint32_t;
 
 enum struct Nullability {
   kNullable,
@@ -20,38 +26,41 @@ enum struct Strictness {
   kStrict,
 };
 
-// Note: must keep in sync with userspace lib internal.h FidlHandleSubtype.
-enum struct HandleSubtype : zx_obj_type_t {
+// TODO(51002): zircon/types.h's zx_obj_type_t and related values must be
+// kept in sync with this. Eventually, they will be generated from
+// fidl declarations. This is currently tested by fidl-compiler's
+// TypesTests's handle_subtype test.
+enum struct HandleSubtype : uint32_t {
   // special case to indicate subtype is not specified.
-  kHandle = ZX_OBJ_TYPE_NONE,
+  kHandle = 0,
 
-  kBti = ZX_OBJ_TYPE_BTI,
-  kChannel = ZX_OBJ_TYPE_CHANNEL,
-  kClock = ZX_OBJ_TYPE_CLOCK,
-  kEvent = ZX_OBJ_TYPE_EVENT,
-  kEventpair = ZX_OBJ_TYPE_EVENTPAIR,
-  kException = ZX_OBJ_TYPE_EXCEPTION,
-  kFifo = ZX_OBJ_TYPE_FIFO,
-  kGuest = ZX_OBJ_TYPE_GUEST,
-  kInterrupt = ZX_OBJ_TYPE_INTERRUPT,
-  kIommu = ZX_OBJ_TYPE_IOMMU,
-  kJob = ZX_OBJ_TYPE_JOB,
-  kLog = ZX_OBJ_TYPE_LOG,
-  kPager = ZX_OBJ_TYPE_PAGER,
-  kPciDevice = ZX_OBJ_TYPE_PCI_DEVICE,
-  kPmt = ZX_OBJ_TYPE_PMT,
-  kPort = ZX_OBJ_TYPE_PORT,
-  kProcess = ZX_OBJ_TYPE_PROCESS,
-  kProfile = ZX_OBJ_TYPE_PROFILE,
-  kResource = ZX_OBJ_TYPE_RESOURCE,
-  kSocket = ZX_OBJ_TYPE_SOCKET,
-  kStream = ZX_OBJ_TYPE_STREAM,
-  kSuspendToken = ZX_OBJ_TYPE_SUSPEND_TOKEN,
-  kThread = ZX_OBJ_TYPE_THREAD,
-  kTimer = ZX_OBJ_TYPE_TIMER,
-  kVcpu = ZX_OBJ_TYPE_VCPU,
-  kVmar = ZX_OBJ_TYPE_VMAR,
-  kVmo = ZX_OBJ_TYPE_VMO,
+  kBti = 24,
+  kChannel = 4,
+  kClock = 30,
+  kEvent = 5,
+  kEventpair = 16,
+  kException = 29,
+  kFifo = 19,
+  kGuest = 20,
+  kInterrupt = 9,
+  kIommu = 23,
+  kJob = 17,
+  kLog = 12,
+  kPager = 28,
+  kPciDevice = 11,
+  kPmt = 26,
+  kPort = 6,
+  kProcess = 1,
+  kProfile = 25,
+  kResource = 15,
+  kSocket = 14,
+  kStream = 31,
+  kSuspendToken = 27,
+  kThread = 2,
+  kTimer = 22,
+  kVcpu = 21,
+  kVmar = 18,
+  kVmo = 3,
 };
 
 enum struct PrimitiveSubtype {

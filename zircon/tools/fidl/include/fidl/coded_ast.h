@@ -154,7 +154,7 @@ struct BitsType : public Type {
 };
 
 struct HandleType : public Type {
-  HandleType(std::string name, types::HandleSubtype subtype, zx_rights_t rights,
+  HandleType(std::string name, types::HandleSubtype subtype, types::Rights rights,
              types::Nullability nullability)
       : Type(Kind::kHandle, std::move(name), 4u, true, false),
         subtype(subtype),
@@ -162,7 +162,7 @@ struct HandleType : public Type {
         nullability(nullability) {}
 
   const types::HandleSubtype subtype;
-  const zx_rights_t rights;
+  const types::Rights rights;
   const types::Nullability nullability;
 };
 
