@@ -230,7 +230,6 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       // "sys/platform/03:03:5/gt92xx HidDevice/hid-device-000",
       "backlight/ti-lp8556",
       "display/amlogic-display/display-controller",
-      "display/amlogic-display/display-clamp-rgb",
       "sys/platform/05:00:10/aml-canvas",
       "tee/optee",
       "aml-video",
@@ -407,7 +406,6 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "aml-thermal/thermal",
       "sys/platform/00:00:1e/dw-dsi",
       "display/amlogic-display/display-controller",
-      "display/amlogic-display/display-clamp-rgb",
       "sys/platform/05:00:18/aml-usb-phy-v2",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.

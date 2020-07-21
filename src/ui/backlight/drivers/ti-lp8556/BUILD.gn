@@ -15,7 +15,6 @@ driver_module("ti-lp8556") {
   sources = [ "ti-lp8556.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.display.clamprgb",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
@@ -46,7 +45,6 @@ test("ti-lp8556-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.display.clamprgb",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c",

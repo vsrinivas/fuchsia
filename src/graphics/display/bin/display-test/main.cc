@@ -284,6 +284,11 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
   return dc->HandleEvents(std::move(handlers));
 }
 
+zx_status_t set_minimum_rgb(uint8_t min_rgb) {
+  auto resp = dc->SetMinimumRgb(min_rgb);
+  return resp.status();
+}
+
 zx_status_t capture_setup() {
   // TODO(41413): Pull common image setup code into a library
 
@@ -601,6 +606,7 @@ void usage(void) {
       "                           <g> is the gamma correction value\n"
       "                           Valid values between [1.0 3.0]"
       "                           For Linear gamma, use g = 1\n"
+      "--clamp-rgb c            : Set minimum RGB value [0 255].\n"
       "\nTest Modes:\n\n"
       "--bundle N       : Run test from test bundle N as described below\n\n"
       "                   bundle %d: Display a single pattern using single buffer\n"
@@ -718,6 +724,7 @@ int main(int argc, const char* argv[]) {
   uint32_t bgcolor_rgba = 0xffffffff;  // white (default)
   bool use_color_correction = false;
   float gamma = std::nanf("");
+  int clamp_rgb = -1;
 
   testing::display::ColorCorrectionArgs color_correction_args;
 
@@ -785,6 +792,14 @@ int main(int argc, const char* argv[]) {
     } else if (strcmp(argv[0], "--gamma") == 0) {
       gamma = std::stof(argv[1]);
       if (gamma < 1 || gamma > 3) {
+        usage();
+        return -1;
+      }
+      argv += 2;
+      argc -= 2;
+    } else if (strcmp(argv[0], "--clamp-rgb") == 0) {
+      clamp_rgb = atoi(argv[1]);
+      if (clamp_rgb < 0 || clamp_rgb > 255) {
         usage();
         return -1;
       }
@@ -860,6 +875,12 @@ int main(int argc, const char* argv[]) {
   if (capture && capture_setup() != ZX_OK) {
     printf("Cound not setup capture\n");
     capture = false;
+  }
+
+  if (clamp_rgb != -1) {
+    if (set_minimum_rgb(static_cast<uint8_t>(clamp_rgb)) != ZX_OK) {
+      printf("Warning: RGB Clamping Not Supported!\n");
+    }
   }
 
   fbl::AllocChecker ac;

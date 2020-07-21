@@ -10,13 +10,11 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/display/clamprgb.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/buttons.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/codec.h>
-#include <ddktl/protocol/display/clamprgb.h>
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
@@ -49,8 +47,7 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::SpiProtocol<FragmentProxy>,
                       public ddk::SysmemProtocol<FragmentProxy>,
                       public ddk::TeeProtocol<FragmentProxy>,
-                      public ddk::UsbModeSwitchProtocol<FragmentProxy>,
-                      public ddk::DisplayClampRgbImplProtocol<FragmentProxy> {
+                      public ddk::UsbModeSwitchProtocol<FragmentProxy> {
  public:
   FragmentProxy(zx_device_t* parent, zx::channel rpc)
       : FragmentProxyBase(parent), rpc_(std::move(rpc)) {}
@@ -148,9 +145,6 @@ class FragmentProxy : public FragmentProxyBase,
 
   // USB Mode Switch
   zx_status_t UsbModeSwitchSetMode(usb_mode_t mode);
-
-  // Display RGB Clamp
-  zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
 
  private:
   zx::channel rpc_;

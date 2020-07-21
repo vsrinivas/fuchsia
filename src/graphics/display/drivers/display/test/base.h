@@ -260,7 +260,6 @@ class TestBase : public zxtest::Test {
   Binder& ddk() { return ddk_; }
   Controller* controller() { return controller_; }
   fake_display::FakeDisplay* display() { return display_; }
-  fake_display::ClampRgb* clamprgb() { return clamp_rgb_; }
   zx::unowned_channel sysmem_fidl();
   zx::unowned_channel display_fidl();
 
@@ -280,8 +279,6 @@ class TestBase : public zxtest::Test {
   std::unique_ptr<sysmem_driver::Driver> sysmem_ctx_;
   // Not owned, FakeDisplay will delete itself on shutdown.
   fake_display::FakeDisplay* display_;
-
-  fake_display::ClampRgb* clamp_rgb_;
 
   // Valid until test case destruction
   Controller* controller_;

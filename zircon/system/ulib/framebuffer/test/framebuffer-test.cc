@@ -273,6 +273,10 @@ class StubDisplayController : public fhd::Controller::Interface {
     EXPECT_TRUE(false);
   }
 
+  void SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
  private:
   std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator_;
   std::unique_ptr<sysmem::BufferCollection::SyncClient> current_buffer_collection_;

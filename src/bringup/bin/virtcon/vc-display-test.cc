@@ -193,6 +193,10 @@ class StubDisplayController : public fhd::Controller::Interface {
     EXPECT_TRUE(false);
   }
 
+  void SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
   void AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   };

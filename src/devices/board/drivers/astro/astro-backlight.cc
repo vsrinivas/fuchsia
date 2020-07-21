@@ -37,21 +37,8 @@ constexpr device_fragment_part_t i2c_fragment[] = {
     {countof(i2c_match), i2c_match},
 };
 
-constexpr zx_bind_inst_t clamp_rgb_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL),
-};
-
-constexpr device_fragment_part_t clamp_rgb_fragment[] = {
-    {countof(root_match), root_match},
-    {countof(clamp_rgb_match), clamp_rgb_match},
-};
-
 constexpr device_fragment_t fragments[] = {
     {countof(i2c_fragment), i2c_fragment},
-    // Add new fragments here
-
-    // Since this is optional, it should always be the last item.
-    {countof(clamp_rgb_fragment), clamp_rgb_fragment},
 };
 
 constexpr double kMaxBrightnessInNits = 250.0;

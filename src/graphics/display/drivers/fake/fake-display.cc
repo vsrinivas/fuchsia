@@ -51,23 +51,8 @@ constexpr uint32_t kRefreshRateFps = 60;
 constexpr uint64_t kNumOfVsyncsForCapture = 5;  // 5 * 16ms = 80ms
 }  // namespace
 
-void ClampRgb::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
-
-void ClampRgb::DdkRelease() { delete this; }
-
-zx_status_t ClampRgb::DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb) {
+zx_status_t FakeDisplay::DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb) {
   clamp_rgb_value_ = minimum_rgb;
-  return ZX_OK;
-}
-
-zx_status_t ClampRgb::Bind() {
-  auto cleanup = fbl::MakeAutoCall([&]() { DdkRelease(); });
-  auto status = DdkAdd("Display Clamp Rgb");
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not add device (%d)\n", status);
-    return status;
-  }
-  cleanup.cancel();
   return ZX_OK;
 }
 
@@ -391,6 +376,9 @@ zx_status_t FakeDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
     case ZX_PROTOCOL_DISPLAY_CAPTURE_IMPL:
       proto->ops = &display_capture_impl_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL:
+      proto->ops = &display_clamp_rgb_impl_protocol_ops_;
+      return ZX_OK;
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -542,19 +530,6 @@ zx_status_t FakeDisplay::Bind(bool start_vsync) {
   if (status != ZX_OK) {
     DISP_ERROR("Could not add device\n");
     return status;
-  }
-
-  // Create ClampRgb device and add it to Ddk as a child. Pass pdev so that
-  // ClampRgb can map vpu registers in order to set the minimum RGB value
-  fbl::AllocChecker ac;
-  auto clamp_rgb = fbl::make_unique_checked<ClampRgb>(&ac, zxdev());
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  status = clamp_rgb->Bind();
-  if (status == ZX_OK) {
-    // devmgr is now in charge of the memory for clamp_rgb
-    __UNUSED auto ptr = clamp_rgb.release();
   }
 
   return ZX_OK;

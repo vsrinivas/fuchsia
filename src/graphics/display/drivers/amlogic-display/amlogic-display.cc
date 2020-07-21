@@ -30,6 +30,7 @@
 #include <ddk/protocol/dsiimpl.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/protocol/display/capture.h>
+#include <ddktl/protocol/display/clamprgb.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -62,33 +63,12 @@ constexpr uint32_t kCanvasLittleEndian64Bit = 7;
 constexpr uint32_t kBufferAlignment = 64;
 }  // namespace
 
-void ClampRgb::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
-
-void ClampRgb::DdkRelease() { delete this; }
-
-zx_status_t ClampRgb::DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb) {
-  VppClipMisc1Reg::Get().FromValue(0).set_val(minimum_rgb).WriteTo(&(*vpu_mmio_));
-  return ZX_OK;
-}
-
-zx_status_t ClampRgb::Bind() {
-  // Map vpu mmio
-  mmio_buffer_t mmio;
-  auto status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
-  if (status != ZX_OK) {
-    DISP_ERROR("osd: Could not map VPU mmio\n");
-    return status;
+zx_status_t AmlogicDisplay::DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb) {
+  if (osd_) {
+    osd_->SetMinimumRgb(minimum_rgb);
+    return ZX_OK;
   }
-
-  vpu_mmio_ = ddk::MmioBuffer(mmio);
-  auto cleanup = fbl::MakeAutoCall([&]() { DdkRelease(); });
-  status = DdkAdd("display-clamp-rgb");
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not add device (%d)\n", status);
-    return status;
-  }
-  cleanup.cancel();
-  return ZX_OK;
+  return ZX_ERR_INTERNAL;
 }
 
 // This function copies the display settings into our internal structure
@@ -218,8 +198,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
     }
   }
   osd_ = fbl::make_unique_checked<amlogic_display::Osd>(
-      &ac, width_, height_, disp_setting_.h_active, disp_setting_.v_active,
-      &inspector_.GetRoot());
+      &ac, width_, height_, disp_setting_.h_active, disp_setting_.v_active, &inspector_.GetRoot());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -480,6 +459,9 @@ zx_status_t AmlogicDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol
       return ZX_OK;
     case ZX_PROTOCOL_DISPLAY_CAPTURE_IMPL:
       proto->ops = &display_capture_impl_protocol_ops_;
+      return ZX_OK;
+    case ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL:
+      proto->ops = &display_clamp_rgb_impl_protocol_ops_;
       return ZX_OK;
     default:
       return ZX_ERR_NOT_SUPPORTED;
@@ -890,27 +872,14 @@ zx_status_t AmlogicDisplay::Bind() {
   auto cleanup = fbl::MakeAutoCall([&]() { DdkRelease(); });
 
   status = DdkAdd(ddk::DeviceAddArgs("amlogic-display")
-                  .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
-                  .set_inspect_vmo(inspector_.DuplicateVmo()));
+                      .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+                      .set_inspect_vmo(inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     DISP_ERROR("Could not add device\n");
     return status;
   }
 
   cleanup.cancel();
-
-  // Create ClampRgb device and add it to Ddk as a child. Pass pdev so that
-  // ClampRgb can map vpu registers in order to set the minimum RGB value
-  fbl::AllocChecker ac;
-  auto clamp_rgb = fbl::make_unique_checked<ClampRgb>(&ac, zxdev(), pdev_);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  status = clamp_rgb->Bind();
-  if (status == ZX_OK) {
-    // devmgr is now in charge of the memory for clamp_rgb
-    __UNUSED auto ptr = clamp_rgb.release();
-  }
 
   return ZX_OK;
 }

@@ -29,6 +29,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
+#include "ddk/protocol/display/clamprgb.h"
+
 namespace fake_display {
 
 struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> {
@@ -39,36 +41,19 @@ class FakeDisplay;
 class ClampRgb;
 
 using DeviceType = ddk::Device<FakeDisplay, ddk::GetProtocolable, ddk::UnbindableNew>;
-using DeviceType2 = ddk::Device<ClampRgb, ddk::UnbindableNew>;
-
-class ClampRgb : public DeviceType2,
-                 public ddk::DisplayClampRgbImplProtocol<ClampRgb, ddk::base_protocol> {
- public:
-  ClampRgb(zx_device_t* parent) : DeviceType2(parent) {}
-
-  zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
-  zx_status_t Bind();
-
-  // Required functions for DeviceType
-  void DdkUnbindNew(ddk::UnbindTxn txn);
-  void DdkRelease();
-
-  uint8_t GetClampRgbValue() const { return clamp_rgb_value_; }
-
- private:
-  // Value that hold the clamped RGB value
-  uint8_t clamp_rgb_value_ = 0;
-};
 
 class FakeDisplay : public DeviceType,
                     public ddk::DisplayControllerImplProtocol<FakeDisplay, ddk::base_protocol>,
-                    public ddk::DisplayCaptureImplProtocol<FakeDisplay> {
+                    public ddk::DisplayCaptureImplProtocol<FakeDisplay>,
+                    public ddk::DisplayClampRgbImplProtocol<FakeDisplay> {
  public:
   explicit FakeDisplay(zx_device_t* parent)
-      : DeviceType(parent), dcimpl_proto_({&display_controller_impl_protocol_ops_, this}) {}
+      : DeviceType(parent),
+        dcimpl_proto_({&display_controller_impl_protocol_ops_, this}),
+        clamp_rgbimpl_proto_({&display_clamp_rgb_impl_protocol_ops_, this}) {}
 
-  // This function is called from the c-bind function upon driver matching. If start_vsync is true,
-  // a background thread will be started to issue vsync events.
+  // This function is called from the c-bind function upon driver matching. If start_vsync is
+  // true, a background thread will be started to issue vsync events.
   zx_status_t Bind(bool start_vsync);
 
   // Required functions needed to implement Display Controller Protocol
@@ -104,6 +89,7 @@ class FakeDisplay : public DeviceType,
   zx_status_t DisplayCaptureImplReleaseCapture(uint64_t capture_handle)
       __TA_EXCLUDES(capture_lock_);
   bool DisplayCaptureImplIsCaptureCompleted() __TA_EXCLUDES(capture_lock_);
+  zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
 
   // Required functions for DeviceType
   void DdkUnbindNew(ddk::UnbindTxn txn);
@@ -111,6 +97,9 @@ class FakeDisplay : public DeviceType,
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
 
   const display_controller_impl_protocol_t* dcimpl_proto() const { return &dcimpl_proto_; }
+  const display_clamp_rgb_impl_protocol_t* clamp_rgbimpl_proto() const {
+    return &clamp_rgbimpl_proto_;
+  }
   void SendVsync();
 
   // Just for display core unittests.
@@ -120,6 +109,8 @@ class FakeDisplay : public DeviceType,
     fbl::AutoLock lock(&image_lock_);
     return imported_images_.size_slow();
   }
+
+  uint8_t GetClampRgbValue() const { return clamp_rgb_value_; }
 
  private:
   enum {
@@ -135,6 +126,7 @@ class FakeDisplay : public DeviceType,
   void PopulateAddedDisplayArgs(added_display_args_t* args);
 
   display_controller_impl_protocol_t dcimpl_proto_ = {};
+  display_clamp_rgb_impl_protocol_t clamp_rgbimpl_proto_ = {};
   pdev_protocol_t pdev_ = {};
   sysmem_protocol_t sysmem_ = {};
 
@@ -164,6 +156,9 @@ class FakeDisplay : public DeviceType,
   // Capture complete is signaled at vsync time. This counter introduces a bit of delay
   // for signal capture complete
   uint64_t capture_complete_signal_count_ = 0;
+
+  // Value that holds the clamped RGB value
+  uint8_t clamp_rgb_value_ = 0;
 
   // Display controller related data
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);

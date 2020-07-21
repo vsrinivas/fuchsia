@@ -14,6 +14,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <cstdint>
 #include <optional>
 
 #include <ddk/protocol/platform/device.h>
@@ -93,6 +94,8 @@ class Osd {
   // [11][10][9:0] = [sign][integer][fraction]
   static uint32_t FloatToFixed2_10(float f);
   static constexpr size_t kGammaTableSize = 256;
+
+  void SetMinimumRgb(uint8_t minimum_rgb);
 
  private:
   void DefaultSetup();

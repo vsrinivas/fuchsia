@@ -5,9 +5,9 @@
 #include "osd.h"
 
 #include <float.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <math.h>
 #include <stdint.h>
-#include <lib/inspect/cpp/inspect.h>
 #include <zircon/errors.h>
 #include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
@@ -675,6 +675,11 @@ zx_status_t Osd::SetGamma(GammaChannel channel, const float* data) {
     return status;
   }
   return ZX_OK;
+}
+
+void Osd::SetMinimumRgb(uint8_t minimum_rgb) {
+  ZX_DEBUG_ASSERT(initialized_);
+  VppClipMisc1Reg::Get().FromValue(0).set_val(minimum_rgb).WriteTo(&(*vpu_mmio_));
 }
 
 void Osd::HwInit() {

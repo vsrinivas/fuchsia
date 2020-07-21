@@ -136,6 +136,8 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
   uint32_t id() const { return id_; }
   void CaptureCompleted();
 
+  uint8_t GetMinimumRgb() const { return client_minimum_rgb_; }
+
   // Test helpers
   size_t TEST_imported_images_count() const { return images_.size(); }
 
@@ -221,6 +223,9 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
   void ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync _completer) override;
 
   void AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync _completer) override;
+
+  void SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync _completer) override;
+
   // Cleans up layer state associated with an image. If image == nullptr, then
   // cleans up all image state. Return true if a current layer was modified.
   bool CleanUpImage(Image* image);
@@ -245,6 +250,8 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
   // a configuration. This does not account for changes due to waiting images.
   uint32_t client_apply_count_ = 0;
 
+  // This is the client's clamped RGB value.
+  uint8_t client_minimum_rgb_ = 0;
   sync_completion_t fidl_unbound_;
 
   llcpp::fuchsia::sysmem::Allocator::SyncClient sysmem_allocator_;
@@ -324,6 +331,11 @@ class ClientProxy : public ClientParent {
     enable_capture_ = enable;
   }
   void OnClientDead();
+
+  // This function restores client configurations that are not part of
+  // the standard configuration. These configurations are typically one-time
+  // settings that need to get restored once client takes control again.
+  void ReapplySpecialConfigs();
 
   uint32_t id() const { return handler_.id(); }
 

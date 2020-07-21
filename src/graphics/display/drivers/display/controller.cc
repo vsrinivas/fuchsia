@@ -24,6 +24,7 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/display/capture.h>
+#include <ddktl/protocol/display/clamprgb.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 
@@ -701,6 +702,9 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
     vc_applied_ = is_vc;
     applied_stamp_ = client_stamp;
     applied_client_id_ = client_id;
+    if (switching_client) {
+      active_client_->ReapplySpecialConfigs();
+    }
   }
   dc_.ApplyConfiguration(display_configs.get(), display_count);
 }
@@ -953,6 +957,9 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
   if (!dc_capture_.is_valid()) {
     zxlogf(WARNING, "Display Capture not supported by this platform");
   }
+
+  // optional display controller clamp rgb protocol client
+  dc_clamp_rgb_ = ddk::DisplayClampRgbImplProtocolClient(parent_);
 
   i2c_ = ddk::I2cImplProtocolClient(parent_);
 

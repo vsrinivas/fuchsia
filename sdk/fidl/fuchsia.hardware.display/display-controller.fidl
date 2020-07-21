@@ -560,4 +560,13 @@ protocol Controller {
     /// Releases resources allocated for capture.
     /// Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     ReleaseCapture(uint64 image_id) -> () error zx.status;
+
+    /// Set the minimum value of rgb channels. Valid range [0 255] inclusive. Returns
+    /// ZX_ERR_NOT_SUPPORTED when the display hardware does not support this feature.
+    /// This API is meant to address backlight bleeding that may occur on some hardware
+    /// that have a specific type of panel and hardware assembly. The evolution of this
+    /// API is highly hardware and product dependant and therefore as products evolve, this
+    /// API may change or support for this API may become non-existent. Therefore, this
+    /// API should be used with caution.
+    SetMinimumRgb(uint8 minimum_rgb) -> () error zx.status;
 };

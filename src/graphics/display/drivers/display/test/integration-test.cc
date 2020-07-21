@@ -55,6 +55,12 @@ class IntegrationTest : public TestBase {
             controller()->primary_client_->enable_vsync_);
   }
 
+  bool virtcon_client_connected() {
+    fbl::AutoLock l(controller()->mtx());
+    return (controller()->vc_client_ != nullptr &&
+            controller()->vc_client_ == controller()->active_client_);
+  }
+
   bool vsync_acknowledge_delivered(uint64_t cookie) {
     fbl::AutoLock l(controller()->mtx());
     fbl::AutoLock cl(&controller()->primary_client_->mtx_);
@@ -672,9 +678,43 @@ TEST_F(IntegrationTest, ImportImage_InvalidCollection) {
   ASSERT_NE(ii_reply->res, ZX_OK);
 }
 
-TEST_F(IntegrationTest, ClampRgbValue) {
-  clamprgb()->DisplayClampRgbImplSetMinimumRgb(32);
-  EXPECT_EQ(32, clamprgb()->GetClampRgbValue());
+TEST_F(IntegrationTest, ClampRgb) {
+  // Create vc client
+  TestFidlClient vc_client(sysmem_.get());
+  ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
+  {
+    fbl::AutoLock lock(vc_client.mtx());
+    // set mode to Fallback
+    vc_client.dc_->SetVirtconMode(1);
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([this]() { return virtcon_client_connected(); }, zx::sec(1)));
+    // Clamp RGB to a minimum value
+    vc_client.dc_->SetMinimumRgb(32);
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return display()->GetClampRgbValue() == 32; },
+                                          zx::sec(1)));
+  }
+
+  // Create a primary client
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    // Clamp RGB to a new value
+    primary_client->dc_->SetMinimumRgb(1);
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return display()->GetClampRgbValue() == 1; },
+                                          zx::sec(1)));
+  }
+  // close client and wait for virtcon to become active again
+  primary_client.reset(nullptr);
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return virtcon_client_connected(); }, zx::sec(1)));
+  display()->SendVsync();
+  // make sure clamp value was restored
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return display()->GetClampRgbValue() == 32; },
+                                        zx::sec(1)));
 }
 
 }  // namespace display

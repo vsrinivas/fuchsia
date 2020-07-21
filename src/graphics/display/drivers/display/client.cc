@@ -873,6 +873,22 @@ void Client::ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync _co
   _completer.ReplySuccess();
 }
 
+void Client::SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync _completer) {
+  if (controller_->dc_clamp_rgb() == nullptr) {
+    return _completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  if (!is_owner_) {
+    return _completer.ReplyError(ZX_ERR_NOT_CONNECTED);
+  }
+  auto status = controller_->dc_clamp_rgb()->SetMinimumRgb(minimum_rgb);
+  if (status == ZX_OK) {
+    client_minimum_rgb_ = minimum_rgb;
+    _completer.ReplySuccess();
+  } else {
+    _completer.ReplyError(status);
+  }
+}
+
 bool Client::CheckConfig(fhd::ConfigResult* res, std::vector<fhd::ClientCompositionOp>* ops) {
   const display_config_t* configs[configs_.size()];
   layer_t* layers[layers_.size()];
@@ -1507,6 +1523,13 @@ void ClientProxy::SetOwnership(bool is_owner) {
 void ClientProxy::OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
                                     const uint64_t* displays_removed, size_t removed_count) {
   handler_.OnDisplaysChanged(displays_added, added_count, displays_removed, removed_count);
+}
+
+void ClientProxy::ReapplySpecialConfigs() {
+  ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+  if (controller_->dc_clamp_rgb()) {
+    controller_->dc_clamp_rgb()->SetMinimumRgb(handler_.GetMinimumRgb());
+  }
 }
 
 void ClientProxy::ReapplyConfig() {

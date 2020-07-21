@@ -21,6 +21,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/amlogiccanvas.h>
+#include <ddk/protocol/display/clamprgb.h>
 #include <ddk/protocol/dsiimpl.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/device.h>
@@ -61,30 +62,11 @@ class ClampRgb;
 
 // AmlogicDisplay will implement only a few subset of Device.
 using DeviceType = ddk::Device<AmlogicDisplay, ddk::GetProtocolable, ddk::UnbindableNew>;
-using DeviceType2 = ddk::Device<ClampRgb, ddk::UnbindableNew>;
-
-class ClampRgb : public DeviceType2,
-                 public ddk::DisplayClampRgbImplProtocol<ClampRgb, ddk::base_protocol> {
- public:
-  ClampRgb(zx_device_t* parent, pdev_protocol_t pdev) : DeviceType2(parent), pdev_(pdev) {}
-
-  zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
-  zx_status_t Bind();
-
-  // Required functions for DeviceType
-  void DdkUnbindNew(ddk::UnbindTxn txn);
-  void DdkRelease();
-
- private:
-  pdev_protocol_t pdev_ = {nullptr, nullptr};
-  // Display Clamp RGB interface protocol
-  std::optional<ddk::MmioBuffer> vpu_mmio_;
-};
-
 class AmlogicDisplay
     : public DeviceType,
       public ddk::DisplayControllerImplProtocol<AmlogicDisplay, ddk::base_protocol>,
-      public ddk::DisplayCaptureImplProtocol<AmlogicDisplay> {
+      public ddk::DisplayCaptureImplProtocol<AmlogicDisplay>,
+      public ddk::DisplayClampRgbImplProtocol<AmlogicDisplay> {
  public:
   AmlogicDisplay(zx_device_t* parent) : DeviceType(parent) {}
 
@@ -120,6 +102,8 @@ class AmlogicDisplay
   zx_status_t DisplayCaptureImplStartCapture(uint64_t capture_handle);
   zx_status_t DisplayCaptureImplReleaseCapture(uint64_t capture_handle);
   bool DisplayCaptureImplIsCaptureCompleted() __TA_EXCLUDES(capture_lock_);
+
+  zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
 
   // Required functions for DeviceType
   void DdkUnbindNew(ddk::UnbindTxn txn);

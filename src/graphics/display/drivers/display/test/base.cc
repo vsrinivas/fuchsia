@@ -20,6 +20,12 @@ zx_status_t Binder::DeviceGetProtocol(const zx_device_t* device, uint32_t proto_
     out->ctx = p->ctx;
     return ZX_OK;
   }
+  if (proto_id == ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL) {
+    const auto& p = display_->clamp_rgbimpl_proto();
+    out->ops = p->ops;
+    out->ctx = p->ctx;
+    return ZX_OK;
+  }
   for (const auto& proto : protocols_) {
     if (proto_id == proto.id) {
       out->ops = proto.proto.ops;
@@ -48,8 +54,6 @@ void TestBase::SetUp() {
   display_ = new fake_display::FakeDisplay(fake_ddk::kFakeParent);
   ASSERT_OK(display_->Bind(/*start_vsync=*/false));
   ddk_.SetDisplay(display_);
-
-  clamp_rgb_ = new fake_display::ClampRgb(fake_ddk::kFakeParent);
 
   std::unique_ptr<display::Controller> c(new Controller(display_->zxdev()));
   // Save a copy for test cases.

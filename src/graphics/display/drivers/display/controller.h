@@ -19,6 +19,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/capture.h>
+#include <ddktl/protocol/display/clamprgb.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/i2cimpl.h>
@@ -133,6 +134,12 @@ class Controller : public ControllerParent,
     }
     return nullptr;
   }
+  ddk::DisplayClampRgbImplProtocolClient* dc_clamp_rgb() {
+    if (dc_clamp_rgb_.is_valid()) {
+      return &dc_clamp_rgb_;
+    }
+    return nullptr;
+  }
   async::Loop& loop() { return loop_; }
   bool current_thread_is_loop() { return thrd_current() == loop_thread_; }
   // Thread-safety annotations currently don't deal with pointer aliases. Use this to document
@@ -179,6 +186,7 @@ class Controller : public ControllerParent,
   thrd_t loop_thread_;
   ddk::DisplayControllerImplProtocolClient dc_;
   ddk::DisplayCaptureImplProtocolClient dc_capture_;
+  ddk::DisplayClampRgbImplProtocolClient dc_clamp_rgb_;
   ddk::I2cImplProtocolClient i2c_;
 };
 
