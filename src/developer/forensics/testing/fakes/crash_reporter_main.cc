@@ -29,7 +29,7 @@ int main(int argc, const char** argv) {
       ::fidl::InterfaceRequestHandler<fuchsia::feedback::testing::FakeCrashReporterQuerier>(
           [&crash_reporter](
               ::fidl::InterfaceRequest<fuchsia::feedback::testing::FakeCrashReporterQuerier>
-                  request) { crash_reporter.AddNewQuerier(std::move(request)); }));
+                  request) { crash_reporter.SetQuerier(std::move(request)); }));
 
   loop.Run();
 

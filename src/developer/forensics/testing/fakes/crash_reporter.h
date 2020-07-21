@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/binding.h>
 
 #include <list>
+#include <memory>
 
 namespace forensics {
 namespace fakes {
@@ -20,20 +21,22 @@ class FakeCrashReporterQuerier;
 // doesn't contain a program name. Otherwise, an ok reponse is returned.
 class CrashReporter : public fuchsia::feedback::CrashReporter {
  public:
-  void AddNewQuerier(
+  void SetQuerier(
       fidl::InterfaceRequest<fuchsia::feedback::testing::FakeCrashReporterQuerier> request);
+  void ResetQuerier();
 
   // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 
  private:
-  std::list<FakeCrashReporterQuerier> queriers_;
+  std::unique_ptr<FakeCrashReporterQuerier> querier_;
   size_t num_crash_reports_filed_{0};
 };
 
 class FakeCrashReporterQuerier : public fuchsia::feedback::testing::FakeCrashReporterQuerier {
  public:
   FakeCrashReporterQuerier(
+      CrashReporter* crash_reporter,
       fidl::InterfaceRequest<fuchsia::feedback::testing::FakeCrashReporterQuerier> request,
       size_t num_crash_reports_filed);
 

@@ -5,7 +5,11 @@
 #include "src/developer/forensics/testing/fakes/crash_reporter.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
+
+#include <memory>
 
 namespace forensics {
 namespace fakes {
@@ -20,22 +24,35 @@ void CrashReporter::File(CrashReport report, FileCallback callback) {
   }
 
   ++num_crash_reports_filed_;
-  for (auto& querier : queriers_) {
-    querier.UpdateAndNotify(num_crash_reports_filed_);
+  if (querier_) {
+    querier_->UpdateAndNotify(num_crash_reports_filed_);
   }
 }
 
-void CrashReporter::AddNewQuerier(
+void CrashReporter::SetQuerier(
     fidl::InterfaceRequest<fuchsia::feedback::testing::FakeCrashReporterQuerier> request) {
-  queriers_.emplace_back(std::move(request), num_crash_reports_filed_);
+  FX_LOGS(INFO) << "Registering FakeCrashReporterQuerier";
+  querier_ = std::make_unique<FakeCrashReporterQuerier>(this, std::move(request),
+                                                        num_crash_reports_filed_);
+}
+
+void CrashReporter::ResetQuerier() {
+  FX_LOGS(INFO) << "Deregistering FakeCrashReporterQuerier";
+  querier_.reset();
+  // We reset so that the next Querier gets values starting at 0 as they would expect.
+  num_crash_reports_filed_ = 0;
 }
 
 FakeCrashReporterQuerier::FakeCrashReporterQuerier(
+    CrashReporter* crash_reporter,
     fidl::InterfaceRequest<fuchsia::feedback::testing::FakeCrashReporterQuerier> request,
     size_t num_crash_reports_filed)
     : connection_(this, std::move(request)),
       num_crash_reports_filed_(num_crash_reports_filed),
-      watch_file_dirty_bit_(true) {}
+      watch_file_dirty_bit_(true) {
+  connection_.set_error_handler(
+      [crash_reporter](const zx_status_t status) { crash_reporter->ResetQuerier(); });
+}
 
 void FakeCrashReporterQuerier::UpdateAndNotify(size_t num_crash_reports_filed) {
   num_crash_reports_filed_ = num_crash_reports_filed;
