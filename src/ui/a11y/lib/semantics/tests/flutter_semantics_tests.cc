@@ -36,11 +36,14 @@ TEST_F(FlutterSemanticsTests, StaticSemantics) {
   });
 
   // Embed the view.
+  bool is_rendering = false;
   embedder_view.EmbedView(std::move(flutter_runner),
-                          [this](fuchsia::ui::gfx::ViewState view_state) {
-                            EXPECT_TRUE(view_state.is_rendering);
+                          [this, &is_rendering](fuchsia::ui::gfx::ViewState view_state) {
+                            is_rendering = view_state.is_rendering;
                             QuitLoop();
                           });
+  RunLoopWithTimeoutOrUntil([&is_rendering] { return is_rendering; }, kTimeout);
+  EXPECT_TRUE(is_rendering);
 
   // Get the viewref koid.
   zx_koid_t view_ref_koid = WaitForKoid();

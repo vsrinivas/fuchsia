@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.accessibility.ColorTransform": "fuchsia-pkg://fuchsia.com/a11_manager#meta/a11_manager.cmx",
-                "fuchsia.accessibility.Magnifier": "fuchsia-pkg://fuchsia.com/a11_manager#meta/a11_manager.cmx",
+                "fuchsia.accessibility.ColorTransform": "fuchsia-pkg://fuchsia.com/a11y_manager#meta/a11y_manager.cmx",
+                "fuchsia.accessibility.Magnifier": "fuchsia-pkg://fuchsia.com/a11y_manager#meta/a11y_manager.cmx",
                 "fuchsia.fonts.Provider": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx",
                 "fuchsia.intl.PropertyProvider": "fuchsia-pkg://fuchsia.com/intl_services#meta/intl_services.cmx",
                 "fuchsia.memorypressure.Provider": "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx",
@@ -20,12 +20,12 @@
             },
             "system-services": [
                 "fuchsia.device.NameProvider",
+                "fuchsia.net.NameLookup",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader",
-                "fuchsia.posix.socket.Provider",
-                "fuchsia.net.NameLookup",
-                "fuchsia.netstack.Netstack"
+                "fuchsia.vulkan.loader.Loader"
             ]
         }
     },
@@ -43,10 +43,10 @@
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.memorypressure.Provider",
             "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Environment",
