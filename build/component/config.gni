@@ -1,0 +1,71 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/unification/zbi/resource.gni")
+
+# Generates binary config using FIDL format and .json data values.
+#
+# Example instantiation:
+#
+# ```
+# component_config("some_config") {
+#   values = "config.json"
+# }
+# ```
+#
+# Inputs:
+#
+# - JSON file with config values.
+#
+# Outputs:
+#
+# - Persistent FIDL binary config file.
+#
+# Parameters:
+#
+#   values: (required string), path to json file containing config values.
+#
+#   output_name: (optional string), path to the binary config destination.
+#     By default, rule name is used as a file name.
+template("component_config") {
+  # Best practices forward.
+  forward_variables_from(invoker,
+                         [
+                           "testonly",
+                           "visibility",
+                           "values",
+                         ])
+
+  assert(defined(values), "Parameter values=... is required")
+
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  } else {
+    output_name = target_name
+  }
+  output_file_name = "${target_gen_dir}/${output_name}"
+
+  compiled_action("${target_name}_generate_config") {
+    tool = "//tools/component_manager_config:generate_config_bin"
+    tool_output_name = "generate_config"
+
+    inputs = [ values ]
+
+    outputs = [ output_file_name ]
+
+    args = [
+      "--output",
+      rebase_path(output_file_name, root_build_dir),
+      "--input",
+      rebase_path(values, root_build_dir),
+    ]
+  }
+
+  resource(target_name) {
+    sources = [ output_file_name ]
+    deps = [ ":${target_name}_generate_config" ]
+    outputs = [ "config/${target_name}" ]
+  }
+}

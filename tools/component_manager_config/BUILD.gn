@@ -1,0 +1,45 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("component_manager_config") {
+  testonly = true
+
+  public_deps = [
+    ":install",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":generate_config_bin_test($host_toolchain)" ]
+}
+
+install_host_tools("install") {
+  deps = [ ":generate_config_bin($host_toolchain)" ]
+  outputs = [ "generate_config" ]
+}
+
+if (host_toolchain == current_toolchain) {
+  rustc_binary("generate_config_bin") {
+    name = "generate_config"
+    with_unit_tests = true
+    edition = "2018"
+    deps = [
+      "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
+      "//src/lib/fidl/rust/fidl",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:json5",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+    ]
+
+    test_deps = [ "//third_party/rust_crates:tempfile" ]
+  }
+}
