@@ -5,17 +5,8 @@
 import("//build/config/clang/clang.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
+import("//build/toolchain/default_tools.gni")
 import("//build/toolchain/goma.gni")
-
-# Each toolchain must define "stamp" and "copy" tools,
-# but they are always the same in every toolchain.
-stamp_command = "touch {{output}}"
-stamp_description = "STAMP {{output}}"
-
-# We use link instead of copy; the way "copy" tool is being used is
-# compatible with links since Ninja is tracking changes to the source.
-copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
-copy_description = "COPY {{source}} {{output}}"
 
 # Defines a Clang-based toolchain.
 #
