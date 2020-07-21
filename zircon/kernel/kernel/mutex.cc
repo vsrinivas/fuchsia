@@ -129,7 +129,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
   // Fast path: The mutex is unlocked and uncontested. Try to acquire it immediately.
   uintptr_t old_mutex_state = STATE_FREE;
   if (likely(val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
-                                          ktl::memory_order_seq_cst, ktl::memory_order_seq_cst))) {
+                                          ktl::memory_order_acquire, ktl::memory_order_relaxed))) {
     // Don't bother to update the ownership of the wait queue. If another thread
     // attempts to acquire the mutex and discovers it to be already locked, it
     // will take care of updating the wait queue ownership while it is inside of
@@ -160,7 +160,7 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
     // conditional branch on ARM, and if it fails spuriously, we'll just
     // loop around and try again.
     if (likely(val_.compare_exchange_weak(old_mutex_state, new_mutex_state,
-                                          ktl::memory_order_seq_cst, ktl::memory_order_seq_cst))) {
+                                          ktl::memory_order_acquire, ktl::memory_order_relaxed))) {
       // Same as above in the fastest path: leave accounting to later contending
       // threads.
       KTracer{}.KernelMutexUncontestedAcquire(this);
@@ -193,14 +193,18 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
 
     if (unlikely(!(old_mutex_state & STATE_FLAG_CONTESTED))) {
       // Set the queued flag to indicate that we're blocking.
-      old_mutex_state = val_.fetch_or(STATE_FLAG_CONTESTED, ktl::memory_order_seq_cst);
-      // We may have raced with the holder as they dropped the mutex.
+      //
+      // We may find the old state was |STATE_FREE| if we raced with the
+      // holder as they dropped the mutex. We use the |acquire| memory ordering
+      // in the |fetch_or| just in case this happens, to ensure we see the memory
+      // released by the previous lock holder.
+      old_mutex_state = val_.fetch_or(STATE_FLAG_CONTESTED, ktl::memory_order_acquire);
       if (unlikely(old_mutex_state == STATE_FREE)) {
         // Since we set the contested flag we know that there are no
         // waiters and no one is able to perform fast path acquisition.
         // Therefore we can just take the mutex, and remove the queued
         // flag.
-        val_.store(new_mutex_state, ktl::memory_order_seq_cst);
+        val_.store(new_mutex_state, ktl::memory_order_relaxed);
         return;
       }
     }
@@ -234,8 +238,8 @@ inline void Mutex::ReleaseInternal(const bool allow_reschedule) {
 
   // Try the fast path.  Assume that we are locked, but uncontested.
   uintptr_t old_mutex_state = reinterpret_cast<uintptr_t>(ct);
-  if (likely(val_.compare_exchange_strong(old_mutex_state, STATE_FREE, ktl::memory_order_seq_cst,
-                                          ktl::memory_order_seq_cst))) {
+  if (likely(val_.compare_exchange_strong(old_mutex_state, STATE_FREE, ktl::memory_order_release,
+                                          ktl::memory_order_relaxed))) {
     // We're done.  Since this mutex was uncontested, we know that we were
     // not receiving any priority pressure from the wait queue, and there is
     // nothing further to do.
@@ -323,8 +327,8 @@ __NO_INLINE void Mutex::ReleaseContendedMutex(const bool allow_reschedule,
   }
 
   if (unlikely(!val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
-                                             ktl::memory_order_seq_cst,
-                                             ktl::memory_order_seq_cst))) {
+                                             ktl::memory_order_release,
+                                             ktl::memory_order_relaxed))) {
     panic("bad state (%lx != %lx) in mutex release %p, current thread %p\n",
           reinterpret_cast<uintptr_t>(ct) | STATE_FLAG_CONTESTED, old_mutex_state, this, ct);
   }
