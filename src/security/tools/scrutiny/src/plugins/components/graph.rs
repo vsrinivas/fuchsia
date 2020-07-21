@@ -325,12 +325,15 @@ impl DataCollector for PackageDataCollector {
         let (components, mut manifests, mut routes) =
             PackageDataCollector::build_model(served_packages, builtin_packages, services)?;
         let mut model_comps = model.components().write().unwrap();
+        model_comps.clear();
         for (_, val) in components.into_iter() {
             model_comps.push(val);
         }
         let mut model_manifests = model.manifests().write().unwrap();
+        model_manifests.clear();
         model_manifests.append(&mut manifests);
         let mut model_routes = model.routes().write().unwrap();
+        model_routes.clear();
         model_routes.append(&mut routes);
 
         Ok(())
@@ -345,7 +348,7 @@ impl DataCollector for PackageDataCollector {
 // building logic.
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::plugins::components::jsons::*, std::sync::RwLock};
+    use {super::*, crate::plugins::components::jsons::*, std::sync::RwLock, tempfile::tempdir};
 
     struct MockPackageReader {
         targets: RwLock<Vec<TargetsJson>>,
@@ -365,11 +368,11 @@ mod tests {
         }
 
         // Adds values to the FIFO queue for targets
-        fn _append_target(&self, target: TargetsJson) {
+        fn append_target(&self, target: TargetsJson) {
             self.targets.write().unwrap().push(target);
         }
         // Adds values to the FIFO queue for package_defs
-        fn _append_pkg_def(&self, package_def: PackageDefinition) {
+        fn append_pkg_def(&self, package_def: PackageDefinition) {
             self.package_defs.write().unwrap().push(package_def);
         }
         // Adds values to the FIFO queue for service_package_defs
@@ -377,7 +380,7 @@ mod tests {
             self.service_package_defs.write().unwrap().push(svc_pkg_def);
         }
         // Adds values to the FIFO queue for builtins
-        fn _append_builtin(&self, builtin: BuiltinsJson) {
+        fn append_builtin(&self, builtin: BuiltinsJson) {
             self.builtins.write().unwrap().push(builtin);
         }
     }
@@ -802,5 +805,82 @@ mod tests {
         assert_eq!(2, manifests.len());
         assert_eq!(1, routes.len());
         assert_eq!((2, 0), count_defined_inferred(components)); // 2 real, 0 inferred
+    }
+
+    // =-=-=-=-= collect() tests =-=-=-=-= //
+
+    fn create_model() -> (String, Arc<DataModel>) {
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        let uri_clone = uri.clone();
+        (uri, Arc::new(DataModel::connect(uri_clone).unwrap()))
+    }
+
+    #[test]
+    fn test_collect_clears_data_model_before_adding_new() {
+        let mock_reader = MockPackageReader::new();
+        let (_, model) = create_model();
+        // Put some "previous" content into the model.
+        {
+            let mut comps = model.components().write().unwrap();
+            comps.push(Component {
+                id: 1,
+                url: String::from("test.component"),
+                version: 0,
+                inferred: false,
+            });
+            comps.push(Component {
+                id: 1,
+                url: String::from("foo.bar"),
+                version: 0,
+                inferred: false,
+            });
+
+            let mut manis = model.manifests().write().unwrap();
+            manis.push(crate::model::model::Manifest {
+                component_id: 1,
+                manifest: String::from("test.component.manifest"),
+                uses: vec![String::from("test.service")],
+            });
+            manis.push(crate::model::model::Manifest {
+                component_id: 2,
+                manifest: String::from("foo.bar.manifest"),
+                uses: Vec::new(),
+            });
+
+            let mut routes = model.routes().write().unwrap();
+            routes.push(Route {
+                id: 1,
+                src_id: 1,
+                dst_id: 2,
+                service_name: String::from("test.service"),
+                protocol_id: 0,
+            })
+        }
+
+        mock_reader.append_builtin(BuiltinsJson { packages: Vec::new(), services: HashMap::new() });
+        let mut targets = HashMap::new();
+        targets.insert(
+            String::from("123"),
+            FarPackageDefinition { custom: Custom { merkle: String::from("123") } },
+        );
+        mock_reader.append_target(TargetsJson { signed: Signed { targets: targets } });
+        let sb = create_test_sandbox(vec![String::from("fuchsia.test.service")]);
+        let cms = create_test_cmx_map(vec![(String::from("meta/bar.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        mock_reader.append_pkg_def(pkg);
+
+        let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
+        collector.collect(Arc::clone(&model)).unwrap();
+
+        // Ensure the model reflects only the latest collection.
+        let comps = model.components().read().unwrap();
+        let manis = model.manifests().read().unwrap();
+        let routes = model.routes().read().unwrap();
+        // There are 2 components (1 inferred, 1 defined),
+        // 1 manifest (for the defined package), and 1 route
+        assert_eq!(comps.len(), 2);
+        assert_eq!(manis.len(), 1);
+        assert_eq!(routes.len(), 1);
     }
 }
