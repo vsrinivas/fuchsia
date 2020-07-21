@@ -82,6 +82,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_C18                9
 #define PDEV_PID_NELSON             10
 #define PDEV_PID_VS680_EVK          11
+#define PDEV_PID_LUIS               12
 
 #define PDEV_DID_GAUSS_AUDIO_IN     1
 #define PDEV_DID_GAUSS_AUDIO_OUT    2

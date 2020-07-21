@@ -220,7 +220,9 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace sherlock
 
-ZIRCON_DRIVER_BEGIN(sherlock, sherlock::driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(sherlock, sherlock::driver_ops, "zircon", "0.1", 4)
 BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SHERLOCK), ZIRCON_DRIVER_END(sherlock)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SHERLOCK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_LUIS),
+ZIRCON_DRIVER_END(sherlock)
