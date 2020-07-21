@@ -1448,6 +1448,9 @@ class Syscall {
       const OutputEvent*, const fidl_codec::semantic::MethodSemantic*)) {
     inference_ = inference;
   }
+  void set_compute_statistics(void (*compute_statistics)(const OutputEvent* event)) {
+    compute_statistics_ = compute_statistics;
+  }
 
   // Adds an argument definition to the syscall.
   template <typename Type>
@@ -1692,6 +1695,8 @@ class Syscall {
   const fidl_codec::StructMember* SearchOutlineMember(const std::string& name, bool invoked) const;
   const fidl_codec::StructMember* SearchOutlineMember(uint32_t id, bool invoked) const;
 
+  void ComputeStatistics(const OutputEvent* event) const;
+
  private:
   const std::string name_;
   const SyscallReturnType return_type_;
@@ -1708,6 +1713,8 @@ class Syscall {
   bool (SyscallDecoderDispatcher::*inputs_decoded_action_)(SyscallDecoder* decoder) = nullptr;
   void (SyscallDecoderDispatcher::*inference_)(
       const OutputEvent* event, const fidl_codec::semantic::MethodSemantic* semantic) = nullptr;
+  // Method which can compute statistics for the syscall.
+  void (*compute_statistics_)(const OutputEvent* event) = nullptr;
 };
 
 // Decoder for syscalls. This creates the breakpoints for all the syscalls we
@@ -1738,6 +1745,7 @@ class SyscallDecoderDispatcher {
 
   // True if we need to save the events in memory.
   bool needs_to_save_events() const { return needs_to_save_events_; }
+  void set_needs_to_save_events() { needs_to_save_events_ = true; }
 
   Syscall* SearchSyscall(const std::string& name) const {
     auto result = syscalls_.find(name);
@@ -1975,7 +1983,11 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
       : SyscallDecoderDispatcher(decode_options),
         message_decoder_dispatcher_(loader, display_options),
         os_(os),
-        dump_messages_(display_options.dump_messages) {}
+        dump_messages_(display_options.dump_messages) {
+    if (!display_options.extra_generation.empty()) {
+      set_needs_to_save_events();
+    }
+  }
 
   fidl_codec::MessageDecoderDispatcher& message_decoder_dispatcher() {
     return message_decoder_dispatcher_;
@@ -1986,6 +1998,14 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   int columns() const { return message_decoder_dispatcher_.columns(); }
 
   bool with_process_info() const { return message_decoder_dispatcher_.with_process_info(); }
+
+  const std::vector<ExtraGeneration>& extra_generation() const {
+    return message_decoder_dispatcher_.display_options().extra_generation;
+  }
+
+  bool extra_generation_needs_colors() const {
+    return message_decoder_dispatcher_.display_options().extra_generation_needs_colors;
+  }
 
   fidl_codec::LibraryLoader* loader() const { return message_decoder_dispatcher_.loader(); }
 
@@ -2030,6 +2050,10 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   void AddOutputEvent(std::shared_ptr<OutputEvent> output_event) override;
 
   void AddExceptionEvent(std::shared_ptr<ExceptionEvent> exception_event) override;
+
+  void SessionEnded() override;
+
+  void DisplaySummary(std::ostream& os);
 
  private:
   // Class which can decode a FIDL message.

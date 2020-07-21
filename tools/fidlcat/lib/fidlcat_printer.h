@@ -15,6 +15,7 @@
 
 namespace fidlcat {
 
+class HandleInfo;
 class Location;
 class Process;
 class SyscallDisplayDispatcher;
@@ -23,6 +24,9 @@ class SyscallDisplayDispatcher;
 class FidlcatPrinter : public fidl_codec::PrettyPrinter {
  public:
   FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* process, std::ostream& os,
+                 const fidl_codec::Colors& colors, std::string_view line_header,
+                 int tabulations = 0);
+  FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* process, std::ostream& os,
                  std::string_view line_header, int tabulations = 0);
 
   bool display_stack_frame() const { return display_stack_frame_; }
@@ -30,6 +34,11 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
   bool DumpMessages() const override { return dump_messages_; }
 
   void DisplayHandle(const zx_handle_info_t& handle) override;
+  void DisplayHandle(zx_handle_t handle) {
+    zx_handle_info_t info = {.handle = handle, .type = 0, .rights = 0};
+    DisplayHandle(info);
+  }
+  void DisplayHandleInfo(HandleInfo* handle_info);
   void DisplayStatus(zx_status_t status);
   void DisplayInline(
       const std::vector<std::unique_ptr<fidl_codec::StructMember>>& members,

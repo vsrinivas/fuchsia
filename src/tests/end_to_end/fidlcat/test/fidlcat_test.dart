@@ -190,13 +190,13 @@ void main(List<String> arguments) {
       /// The first and second displayed messages must be EchoString (everything else has been
       /// filtered out).
       expect(
-          lines[2],
+          lines[4],
           contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
               '    value: string = "hello world"\n'
               '  }'),
           reason: instance.additionalResult);
       expect(
-          lines[3],
+          lines[5],
           contains('received response fidl.examples.echo/Echo.EchoString = {\n'
               '      response: string = "hello world"\n'
               '    }'),

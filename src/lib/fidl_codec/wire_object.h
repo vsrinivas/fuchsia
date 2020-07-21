@@ -22,6 +22,7 @@ class FidlMessageValue;
 class HandleValue;
 class StringValue;
 class StructValue;
+class VectorValue;
 class Visitor;
 
 // Base class for all the values we can find within a message.
@@ -50,6 +51,7 @@ class Value {
   virtual const HandleValue* AsHandleValue() const { return nullptr; }
   virtual StructValue* AsStructValue() { return nullptr; }
   virtual const StructValue* AsStructValue() const { return nullptr; }
+  virtual const VectorValue* AsVectorValue() const { return nullptr; }
   virtual const FidlMessageValue* AsFidlMessageValue() const { return nullptr; }
 
   // Returns true if we need to load information about the handle (call to zx_object_get_info with
@@ -344,6 +346,8 @@ class VectorValue : public Value {
     }
     values_.push_back(std::move(value));
   }
+
+  const VectorValue* AsVectorValue() const override { return this; }
 
   bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;

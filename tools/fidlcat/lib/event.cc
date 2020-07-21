@@ -43,9 +43,10 @@ void Process::LoadHandleInfo(Inference* inference) {
               handle_info->set_object_type(handle.type);
               handle_info->set_rights(handle.rights);
               handle_info->set_koid(handle.koid);
+              inference->AddKoidHandleInfo(handle.koid, handle_info);
             }
             if (handle.related_koid != ZX_HANDLE_INVALID) {
-              // However, the associated of koids is always useful.
+              // However, the association of koids is always useful.
               inference->AddLinkedKoids(handle.koid, handle.related_koid);
             }
           }
@@ -55,6 +56,26 @@ void Process::LoadHandleInfo(Inference* inference) {
           }
         }
       });
+}
+
+void ProcessLaunchedEvent::Write(proto::Event* dst) const {
+  dst->set_timestamp(timestamp());
+  proto::ProcessLaunchedEvent* event = dst->mutable_process_launched();
+  event->set_command(command());
+  event->set_error_message(error_message());
+}
+
+void ProcessMonitoredEvent::Write(proto::Event* dst) const {
+  dst->set_timestamp(timestamp());
+  proto::ProcessMonitoredEvent* event = dst->mutable_process_monitored();
+  event->set_process_koid(process()->koid());
+  event->set_error_message(error_message());
+}
+
+void StopMonitoringEvent::Write(proto::Event* dst) const {
+  dst->set_timestamp(timestamp());
+  proto::StopMonitoringEvent* event = dst->mutable_stop_monitoring();
+  event->set_process_koid(process()->koid());
 }
 
 bool SyscallEvent::NeedsToLoadHandleInfo(Inference* inference) {
@@ -78,6 +99,17 @@ const fidl_codec::FidlMessageValue* SyscallEvent::GetMessage() const {
   return outline_fields_.begin()->second->AsFidlMessageValue();
 }
 
+const fidl_codec::Value* SyscallEvent::GetValue(const fidl_codec::StructMember* member) const {
+  if (member == nullptr) {
+    return nullptr;
+  }
+  auto result = inline_fields_.find(member);
+  if (result == inline_fields_.end()) {
+    return nullptr;
+  }
+  return result->second.get();
+}
+
 const fidl_codec::HandleValue* SyscallEvent::GetHandleValue(
     const fidl_codec::StructMember* member) const {
   if (member == nullptr) {
@@ -90,24 +122,41 @@ const fidl_codec::HandleValue* SyscallEvent::GetHandleValue(
   return result->second->AsHandleValue();
 }
 
-void ProcessLaunchedEvent::Write(proto::Event* dst) const {
-  dst->set_timestamp(timestamp());
-  proto::ProcessLaunchedEvent* event = dst->mutable_process_launched();
-  event->set_command(command());
-  event->set_error_message(error_message());
+HandleInfo* SyscallEvent::GetHandleInfo(const fidl_codec::StructMember* member) const {
+  if (member == nullptr) {
+    return nullptr;
+  }
+  auto result = inline_fields_.find(member);
+  if (result == inline_fields_.end()) {
+    return nullptr;
+  }
+  const fidl_codec::HandleValue* value = result->second->AsHandleValue();
+  if (value == nullptr) {
+    return nullptr;
+  }
+  return thread()->process()->SearchHandleInfo(value->handle().handle);
 }
 
-void ProcessMonitoredEvent::Write(proto::Event* dst) const {
-  dst->set_timestamp(timestamp());
-  proto::ProcessMonitoredEvent* event = dst->mutable_process_monitored();
-  event->set_process_koid(process()->koid());
-  event->set_error_message(error_message());
-}
-
-void StopMonitoringEvent::Write(proto::Event* dst) const {
-  dst->set_timestamp(timestamp());
-  proto::StopMonitoringEvent* event = dst->mutable_stop_monitoring();
-  event->set_process_koid(process()->koid());
+void InvokedEvent::ComputeHandleInfo(SyscallDisplayDispatcher* dispatcher) {
+  switch (syscall()->kind()) {
+    case SyscallKind::kChannelRead:
+    case SyscallKind::kChannelWrite:
+    case SyscallKind::kChannelCall: {
+      // Compute the handle which is used to read/write a message.
+      FX_DCHECK(!syscall()->input_inline_members().empty());
+      auto value = inline_fields().find(syscall()->input_inline_members()[0].get());
+      FX_DCHECK(value != inline_fields().end());
+      handle_info_ =
+          thread()->process()->SearchHandleInfo(value->second->AsHandleValue()->handle().handle);
+      if (handle_info_ == nullptr) {
+        handle_info_ = dispatcher->CreateHandleInfo(
+            thread(), value->second->AsHandleValue()->handle().handle, 0, false);
+      }
+      break;
+    }
+    default:
+      break;
+  }
 }
 
 void InvokedEvent::Write(proto::Event* dst) const {
@@ -186,6 +235,46 @@ void OutputEvent::Write(proto::Event* dst) const {
     } else {
       event->mutable_outline_fields()->insert(
           google::protobuf::MapPair(field.first->name(), value));
+    }
+  }
+}
+
+void OutputEvent::Display(FidlcatPrinter& printer) const {
+  const fidl_codec::FidlMessageValue* message = invoked_event_->GetMessage();
+  if (message == nullptr) {
+    message = GetMessage();
+    if (message == nullptr) {
+      return;
+    }
+  }
+  switch (syscall()->kind()) {
+    case SyscallKind::kChannelRead:
+      printer << "read  ";
+      break;
+    case SyscallKind::kChannelWrite:
+      printer << "write ";
+      break;
+    case SyscallKind::kChannelCall:
+      printer << "call  ";
+      break;
+    default:
+      return;
+  }
+  const fidl_codec::InterfaceMethod* method = message->method();
+  if (message->ordinal() == kFidlOrdinalEpitaph) {
+    printer << fidl_codec::WhiteOnMagenta << "epitaph " << fidl_codec::ResetColor << ' '
+            << ((message->epitaph_error() == "ZX_OK") ? fidl_codec::Green : fidl_codec::Red)
+            << message->epitaph_error() << fidl_codec::ResetColor << '\n';
+  } else {
+    printer << fidl_codec::WhiteOnMagenta
+            << (message->is_request() ? "request "
+                                      : ((method->request() != nullptr) ? "response" : "event   "))
+            << fidl_codec::ResetColor;
+    if (method == nullptr) {
+      printer << " ordinal=" << std::hex << message->ordinal() << std::dec;
+    } else {
+      printer << ' ' << fidl_codec::Green << method->enclosing_interface().name() << '.'
+              << method->name() << fidl_codec::ResetColor << '\n';
     }
   }
 }

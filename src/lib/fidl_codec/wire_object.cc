@@ -124,6 +124,9 @@ void StringValue::Visit(Visitor* visitor, const Type* for_type) const {
 
 bool HandleValue::NeedsToLoadHandleInfo(zx_koid_t tid,
                                         semantic::HandleSemantic* handle_semantic) const {
+  if (handle_.handle == ZX_HANDLE_INVALID) {
+    return false;
+  }
   return handle_semantic->NeedsToLoadHandleInfo(tid, handle_.handle);
 }
 

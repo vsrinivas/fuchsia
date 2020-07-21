@@ -31,6 +31,8 @@ struct CommandLineOptions {
   std::string to;
   // Format (output) option:
   std::optional<std::string> format;
+  // Extra generation:
+  std::vector<std::string> extra_generation;
   // Session comparison option:
   std::optional<std::string> compare_file;
   // Display options:

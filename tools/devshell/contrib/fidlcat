@@ -65,16 +65,22 @@
 ##                displayed.
 ##
 ## Format (output) options:
-##    --format=<output> This option must be used at most once.
-##                      The output format can be:
-##                      --format=pretty    This is the default output. The session is pretty printed
-##                                         (with colors).
+##    --format=<output> You can use one of this output formats:
+##                      --format=pretty    The session is pretty printed (with colors).
+##                                         This is the default output if --with is not used.
 ##                      --format=json      The session is printed using a json format.
 ##                      --format=textproto The session is printed using a text protobuf format.
 ##                      --format=          Nothing is displayed on the standard output (this option
 ##                                         only makes sense when used with --to=<path>).
 ##                                         When there is no output, fidlcat is much faster (this is
 ##                                         better when you want to monitor real time components).
+##                                         This is the default output is --with is used.
+##
+## Extra generation:
+##    --with=summary        At the end of the session, a summary of the session is displayed on the
+##                          standard output.
+##    --with=summary=<path> At the end of the session, a summary of the session is stored in the
+##                          file specified by path.
 ##
 ## Display options:
 ##    --with-process-info         Display the process name, process id and thread id on
@@ -228,6 +234,9 @@ while [[ $# -gt 0 ]]; do
       arguments+=("--format=none")
       ;;
     --format=*)
+      arguments+=("$1")
+      ;;
+    --with=*)
       arguments+=("$1")
       ;;
     --with-process-info)

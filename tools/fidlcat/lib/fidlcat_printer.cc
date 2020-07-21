@@ -11,15 +11,19 @@
 namespace fidlcat {
 
 FidlcatPrinter::FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* process,
-                               std::ostream& os, std::string_view line_header, int tabulations)
-    : PrettyPrinter(os, dispatcher->colors(),
-                    dispatcher->message_decoder_dispatcher().display_options().pretty_print,
-                    line_header, dispatcher->columns(), dispatcher->with_process_info(),
-                    tabulations),
+                               std::ostream& os, const fidl_codec::Colors& colors,
+                               std::string_view line_header, int tabulations)
+    : PrettyPrinter(
+          os, colors, dispatcher->message_decoder_dispatcher().display_options().pretty_print,
+          line_header, dispatcher->columns(), dispatcher->with_process_info(), tabulations),
       inference_(dispatcher->inference()),
       process_(process),
       display_stack_frame_(dispatcher->decode_options().stack_level != kNoStack),
       dump_messages_(dispatcher->dump_messages()) {}
+
+FidlcatPrinter::FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* process,
+                               std::ostream& os, std::string_view line_header, int tabulations)
+    : FidlcatPrinter(dispatcher, process, os, dispatcher->colors(), line_header, tabulations) {}
 
 void FidlcatPrinter::DisplayHandle(const zx_handle_info_t& handle) {
   HandleInfo* handle_info = process_->SearchHandleInfo(handle.handle);
@@ -32,6 +36,20 @@ void FidlcatPrinter::DisplayHandle(const zx_handle_info_t& handle) {
   }
   const fidl_codec::semantic::InferredHandleInfo* inferred_handle_info =
       inference_.GetInferredHandleInfo(process_->koid(), handle.handle);
+  if (inferred_handle_info != nullptr) {
+    (*this) << '(';
+    inferred_handle_info->Display(*this);
+    (*this) << ')';
+  }
+}
+
+void FidlcatPrinter::DisplayHandleInfo(HandleInfo* handle_info) {
+  zx_handle_info_t info = {
+      .handle = handle_info->handle(), .type = handle_info->object_type(), .rights = 0};
+  fidl_codec::DisplayHandle(info, *this);
+  const fidl_codec::semantic::InferredHandleInfo* inferred_handle_info =
+      inference_.GetInferredHandleInfo(handle_info->thread()->process()->koid(),
+                                       handle_info->handle());
   if (inferred_handle_info != nullptr) {
     (*this) << '(';
     inferred_handle_info->Display(*this);

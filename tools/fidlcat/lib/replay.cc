@@ -105,6 +105,7 @@ bool Replay::ReplayProto(const std::string& file_name, std::istream& is) {
           proto_handle_description.startup());
       handle_info->set_object_type(proto_handle_description.object_type());
       handle_info->set_koid(proto_handle_description.koid());
+      dispatcher()->inference().AddKoidHandleInfo(proto_handle_description.koid(), handle_info);
     }
     auto inferred_handle_info = std::make_unique<fidl_codec::semantic::InferredHandleInfo>(
         proto_handle_description.type(), proto_handle_description.fd(),

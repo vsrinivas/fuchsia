@@ -6,6 +6,7 @@
 #define SRC_LIB_FIDL_CODEC_VISITOR_H_
 
 #include "src/lib/fidl_codec/wire_object.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
 namespace fidl_codec {
 
@@ -39,19 +40,33 @@ class Visitor {
     VisitValue(node, for_type);
   }
   virtual void VisitUnionValue(const UnionValue* node, const Type* for_type) {
-    VisitValue(node, for_type);
+    node->value()->Visit(this, node->member().type());
   }
   virtual void VisitStructValue(const StructValue* node, const Type* for_type) {
-    VisitValue(node, for_type);
+    for (const auto& field : node->fields()) {
+      field.second->Visit(this, field.first->type());
+    }
   }
   virtual void VisitVectorValue(const VectorValue* node, const Type* for_type) {
-    VisitValue(node, for_type);
+    FX_DCHECK(for_type != nullptr);
+    const Type* component_type = for_type->GetComponentType();
+    FX_DCHECK(component_type != nullptr);
+    for (const auto& value : node->values()) {
+      value->Visit(this, component_type);
+    }
   }
   virtual void VisitTableValue(const TableValue* node, const Type* for_type) {
-    VisitValue(node, for_type);
+    for (const auto& member : node->members()) {
+      member.second->Visit(this, member.first->type());
+    }
   }
   virtual void VisitFidlMessageValue(const FidlMessageValue* node, const Type* for_type) {
-    VisitValue(node, for_type);
+    if (node->decoded_request() != nullptr) {
+      node->decoded_request()->Visit(this, nullptr);
+    }
+    if (node->decoded_response() != nullptr) {
+      node->decoded_response()->Visit(this, nullptr);
+    }
   }
 
   friend class Value;

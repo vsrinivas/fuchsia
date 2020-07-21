@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -15,6 +16,7 @@
 
 namespace fidlcat {
 
+class HandleInfo;
 class OutputEvent;
 class SyscallDecoder;
 class SyscallDecoderDispatcher;
@@ -23,6 +25,18 @@ class SyscallDecoderDispatcher;
 class Inference : public fidl_codec::semantic::HandleSemantic {
  public:
   explicit Inference(SyscallDecoderDispatcher* dispatcher) : dispatcher_(dispatcher) {}
+
+  void AddKoidHandleInfo(zx_koid_t koid, HandleInfo* handle_info) {
+    koid_handle_infos_[koid].emplace(handle_info);
+  }
+
+  const std::set<HandleInfo*>* GetKoidHandleInfos(zx_koid_t koid) const {
+    auto result = koid_handle_infos_.find(koid);
+    if (result == koid_handle_infos_.end()) {
+      return nullptr;
+    }
+    return &result->second;
+  }
 
   void CreateHandleInfo(zx_koid_t thread_koid, zx_handle_t handle) override;
 
@@ -57,6 +71,9 @@ class Inference : public fidl_codec::semantic::HandleSemantic {
   uint32_t next_port_ = 0;
   // Id for the next created timer.
   uint32_t next_timer_ = 0;
+  // All the handle info associated with a koid. A handle can be transfered from one process to
+  // another. Each time it keeps the same koid but this generates a different handle info.
+  std::map<zx_koid_t, std::set<HandleInfo*>> koid_handle_infos_;
 };
 
 }  // namespace fidlcat

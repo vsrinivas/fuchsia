@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "tools/fidlcat/lib/statistics.h"
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
 namespace fidlcat {
@@ -2778,6 +2779,14 @@ void SyscallDecoderDispatcher::Populate() {
     // Inputs
     zx_handle_close->Input<zx_handle_t>("handle",
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+
+    zx_handle_close->set_compute_statistics([](const OutputEvent* event) {
+      auto handle_info = event->invoked_event()->GetHandleInfo(
+          event->syscall()->SearchInlineMember("handle", /*invoked=*/true));
+      if (handle_info != nullptr) {
+        handle_info->add_close_event(event);
+      }
+    });
   }
 
   {
@@ -2789,6 +2798,21 @@ void SyscallDecoderDispatcher::Populate() {
     zx_handle_close_many->InputBuffer<zx_handle_t, zx_handle_t, size_t>(
         "handles", SyscallType::kHandle, std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
         std::make_unique<ArgumentAccess<size_t>>(num_handles));
+
+    zx_handle_close_many->set_compute_statistics([](const OutputEvent* event) {
+      const fidl_codec::Value* values = event->invoked_event()->GetValue(
+          event->syscall()->SearchOutlineMember("handles", /*invoked=*/true));
+      FX_DCHECK(values != nullptr);
+      auto handles = values->AsVectorValue();
+      FX_DCHECK(handles != nullptr);
+      for (const auto& value : handles->values()) {
+        auto handle_value = value->AsHandleValue();
+        FX_DCHECK(handle_value != nullptr);
+        HandleInfo* handle_info =
+            event->thread()->process()->SearchHandleInfo(handle_value->handle().handle);
+        handle_info->add_close_event(event);
+      }
+    });
   }
 
   {
@@ -3317,7 +3341,19 @@ void SyscallDecoderDispatcher::Populate() {
                                            std::make_unique<ArgumentAccess<zx_handle_t>>(out0));
     zx_channel_create->Output<zx_handle_t>(ZX_OK, "out1",
                                            std::make_unique<ArgumentAccess<zx_handle_t>>(out1));
+
     zx_channel_create->set_inference(&SyscallDecoderDispatcher::ZxChannelCreate);
+
+    zx_channel_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out0 =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out0", /*invoked=*/false));
+      FX_DCHECK(out0 != nullptr);
+      out0->add_creation_event(event);
+      auto out1 =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out1", /*invoked=*/false));
+      FX_DCHECK(out1 != nullptr);
+      out1->add_creation_event(event);
+    });
   }
 
   {
@@ -3353,7 +3389,16 @@ void SyscallDecoderDispatcher::Populate() {
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes));
     zx_channel_read->Output<uint32_t>(ZX_ERR_BUFFER_TOO_SMALL, "actual_handles",
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
+
     zx_channel_read->set_inference(&SyscallDecoderDispatcher::ZxChannelRead);
+
+    zx_channel_read->set_compute_statistics([](const OutputEvent* event) {
+      const fidl_codec::FidlMessageValue* message = event->GetMessage();
+      if (!message->unknown_direction()) {
+        CreateHandleVisitor visitor(event);
+        message->Visit(&visitor, nullptr);
+      }
+    });
   }
 
   {
@@ -3390,7 +3435,16 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_read_etc->Output<uint32_t>(
         ZX_ERR_BUFFER_TOO_SMALL, "actual_handles",
         std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
+
     zx_channel_read_etc->set_inference(&SyscallDecoderDispatcher::ZxChannelRead);
+
+    zx_channel_read_etc->set_compute_statistics([](const OutputEvent* event) {
+      const fidl_codec::FidlMessageValue* message = event->GetMessage();
+      if (!message->unknown_direction()) {
+        CreateHandleVisitor visitor(event);
+        message->Visit(&visitor, nullptr);
+      }
+    });
   }
 
   {
@@ -3414,7 +3468,16 @@ void SyscallDecoderDispatcher::Populate() {
                                        std::make_unique<ArgumentAccess<uint32_t>>(num_bytes),
                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
                                        std::make_unique<ArgumentAccess<uint32_t>>(num_handles));
+
     zx_channel_write->set_inference(&SyscallDecoderDispatcher::ZxChannelWrite);
+
+    zx_channel_write->set_compute_statistics([](const OutputEvent* event) {
+      const fidl_codec::FidlMessageValue* message = event->invoked_event()->GetMessage();
+      if (!message->unknown_direction()) {
+        CloseHandleVisitor visitor(event);
+        message->Visit(&visitor, nullptr);
+      }
+    });
   }
   {
     Syscall* zx_channel_call =
@@ -3464,7 +3527,17 @@ void SyscallDecoderDispatcher::Populate() {
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes));
     zx_channel_call->Output<uint32_t>(ZX_ERR_BUFFER_TOO_SMALL, "actual_handles",
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
+
     zx_channel_call->set_inference(&SyscallDecoderDispatcher::ZxChannelCall);
+
+    zx_channel_call->set_compute_statistics([](const OutputEvent* event) {
+      const fidl_codec::FidlMessageValue* request = event->invoked_event()->GetMessage();
+      CloseHandleVisitor close_handle_visitor(event);
+      request->Visit(&close_handle_visitor, nullptr);
+      const fidl_codec::FidlMessageValue* response = event->GetMessage();
+      CreateHandleVisitor create_handle_visitor(event);
+      response->Visit(&create_handle_visitor, nullptr);
+    });
   }
 
   {
@@ -3481,6 +3554,17 @@ void SyscallDecoderDispatcher::Populate() {
                                           std::make_unique<ArgumentAccess<zx_handle_t>>(out0));
     zx_socket_create->Output<zx_handle_t>(ZX_OK, "out1",
                                           std::make_unique<ArgumentAccess<zx_handle_t>>(out1));
+
+    zx_socket_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out0 =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out0", /*invoked=*/false));
+      FX_DCHECK(out0 != nullptr);
+      out0->add_creation_event(event);
+      auto out1 =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out1", /*invoked=*/false));
+      FX_DCHECK(out1 != nullptr);
+      out1->add_creation_event(event);
+    });
   }
 
   {
@@ -3560,6 +3644,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_thread_create->Output<zx_handle_t>(ZX_OK, "out",
                                           std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_thread_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -3815,6 +3906,17 @@ void SyscallDecoderDispatcher::Populate() {
         ZX_OK, "proc_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(proc_handle));
     zx_process_create->Output<zx_handle_t>(
         ZX_OK, "vmar_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(vmar_handle));
+
+    zx_process_create->set_compute_statistics([](const OutputEvent* event) {
+      auto proc_handle = event->GetHandleInfo(
+          event->syscall()->SearchInlineMember("proc_handle", /*invoked=*/false));
+      FX_DCHECK(proc_handle != nullptr);
+      proc_handle->add_creation_event(event);
+      auto vmar_handle = event->GetHandleInfo(
+          event->syscall()->SearchInlineMember("vmar_handle", /*invoked=*/false));
+      FX_DCHECK(vmar_handle != nullptr);
+      vmar_handle->add_creation_event(event);
+    });
   }
 
   {
@@ -3895,6 +3997,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_job_create->Output<zx_handle_t>(ZX_OK, "out",
                                        std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_job_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -3971,6 +4080,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_task_create_exception_channel->Output<zx_handle_t>(
         ZX_OK, "out", std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_task_create_exception_channel->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4019,6 +4135,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_event_create->Output<zx_handle_t>(ZX_OK, "out",
                                          std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_event_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4035,6 +4158,17 @@ void SyscallDecoderDispatcher::Populate() {
                                              std::make_unique<ArgumentAccess<zx_handle_t>>(out0));
     zx_eventpair_create->Output<zx_handle_t>(ZX_OK, "out1",
                                              std::make_unique<ArgumentAccess<zx_handle_t>>(out1));
+
+    zx_eventpair_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out0 =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out0", /*invoked=*/false));
+      FX_DCHECK(out0 != nullptr);
+      out0->add_creation_event(event);
+      auto out1 =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out1", /*invoked=*/false));
+      FX_DCHECK(out1 != nullptr);
+      out1->add_creation_event(event);
+    });
   }
 
   {
@@ -4171,7 +4305,15 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_port_create->Output<zx_handle_t>(ZX_OK, "out",
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
     zx_port_create->set_inference(&SyscallDecoderDispatcher::ZxPortCreate);
+
+    zx_port_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4232,7 +4374,15 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_timer_create->Output<zx_handle_t>(ZX_OK, "out",
                                          std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
     zx_timer_create->set_inference(&SyscallDecoderDispatcher::ZxTimerCreate);
+
+    zx_timer_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4271,6 +4421,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_vmo_create->Output<zx_handle_t>(ZX_OK, "out",
                                        std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_vmo_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4366,6 +4523,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_vmo_create_child->Output<zx_handle_t>(ZX_OK, "out",
                                              std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_vmo_create_child->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4413,6 +4577,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_vmo_create_contiguous->Output<zx_handle_t>(
         ZX_OK, "out", std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_vmo_create_contiguous->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4431,6 +4602,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_vmo_create_physical->Output<zx_handle_t>(ZX_OK, "out",
                                                 std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_vmo_create_physical->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4581,6 +4759,17 @@ void SyscallDecoderDispatcher::Populate() {
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(out0));
     zx_fifo_create->Output<zx_handle_t>(ZX_OK, "out1",
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(out1));
+
+    zx_fifo_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out0 =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out0", /*invoked=*/false));
+      FX_DCHECK(out0 != nullptr);
+      out0->add_creation_event(event);
+      auto out1 =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out1", /*invoked=*/false));
+      FX_DCHECK(out1 != nullptr);
+      out1->add_creation_event(event);
+    });
   }
 
   {
@@ -4647,6 +4836,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_profile_create->Output<zx_handle_t>(ZX_OK, "out",
                                            std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_profile_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4663,6 +4859,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_debuglog_create->Output<zx_handle_t>(ZX_OK, "out",
                                             std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_debuglog_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4842,6 +5045,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_interrupt_create->Output<zx_handle_t>(
         ZX_OK, "out_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(out_handle));
+
+    zx_interrupt_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out_handle = event->GetHandleInfo(
+          event->syscall()->SearchInlineMember("out_handle", /*invoked=*/false));
+      FX_DCHECK(out_handle != nullptr);
+      out_handle->add_creation_event(event);
+    });
   }
 
   {
@@ -4973,6 +5183,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_iommu_create->Output<zx_handle_t>(ZX_OK, "out",
                                          std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_iommu_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -4990,6 +5207,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_bti_create->Output<zx_handle_t>(ZX_OK, "out",
                                        std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_bti_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -5349,6 +5573,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_resource_create->Output<zx_handle_t>(
         ZX_OK, "resource_out", std::make_unique<ArgumentAccess<zx_handle_t>>(resource_out));
+
+    zx_resource_create->set_compute_statistics([](const OutputEvent* event) {
+      auto resource_out = event->GetHandleInfo(
+          event->syscall()->SearchInlineMember("resource_out", /*invoked=*/false));
+      FX_DCHECK(resource_out != nullptr);
+      resource_out->add_creation_event(event);
+    });
   }
 
   {
@@ -5368,6 +5599,17 @@ void SyscallDecoderDispatcher::Populate() {
         ZX_OK, "guest_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(guest_handle));
     zx_guest_create->Output<zx_handle_t>(
         ZX_OK, "vmar_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(vmar_handle));
+
+    zx_guest_create->set_compute_statistics([](const OutputEvent* event) {
+      auto guest_handle = event->GetHandleInfo(
+          event->syscall()->SearchInlineMember("guest_handle", /*invoked=*/false));
+      FX_DCHECK(guest_handle != nullptr);
+      guest_handle->add_creation_event(event);
+      auto vmar_handle = event->GetHandleInfo(
+          event->syscall()->SearchInlineMember("vmar_handle", /*invoked=*/false));
+      FX_DCHECK(vmar_handle != nullptr);
+      vmar_handle->add_creation_event(event);
+    });
   }
 
   {
@@ -5406,6 +5648,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_vcpu_create->Output<zx_handle_t>(ZX_OK, "out",
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_vcpu_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -5511,6 +5760,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_pager_create->Output<zx_handle_t>(ZX_OK, "out",
                                          std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_pager_create->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {
@@ -5534,6 +5790,13 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_pager_create_vmo->Output<zx_handle_t>(ZX_OK, "out",
                                              std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+
+    zx_pager_create_vmo->set_compute_statistics([](const OutputEvent* event) {
+      auto out =
+          event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
+      FX_DCHECK(out != nullptr);
+      out->add_creation_event(event);
+    });
   }
 
   {

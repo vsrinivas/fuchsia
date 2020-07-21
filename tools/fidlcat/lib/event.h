@@ -22,6 +22,7 @@ namespace fidlcat {
 
 class Event;
 class Location;
+class OutputEvent;
 class Syscall;
 class SyscallDecoder;
 class SyscallDisplayDispatcher;
@@ -42,6 +43,15 @@ class HandleInfo {
   void set_rights(zx_rights_t rights) { rights_ = rights; }
   zx_koid_t koid() const { return koid_; }
   void set_koid(zx_koid_t koid) { koid_ = koid; }
+  const std::vector<Event*>& events() const { return events_; }
+  const std::vector<const OutputEvent*>& creation_events() const { return creation_events_; }
+  void add_creation_event(const OutputEvent* creation_event) {
+    creation_events_.emplace_back(creation_event);
+  }
+  const std::vector<const OutputEvent*> close_events() const { return close_events_; }
+  void add_close_event(const OutputEvent* close_event) { close_events_.emplace_back(close_event); }
+
+  void AddEvent(Event* event) { events_.emplace_back(event); }
 
  private:
   Thread* const thread_;
@@ -54,6 +64,13 @@ class HandleInfo {
   zx_rights_t rights_ = 0;
   // The unique id assigned by the kernel to the object referenced by the handle.
   zx_koid_t koid_ = ZX_KOID_INVALID;
+  // All the events which created the handle. It should contain at most one event (and zero event
+  // for a startup handle).
+  std::vector<const OutputEvent*> creation_events_;
+  // All the events which closed the handle. It should contain at most one event.
+  std::vector<const OutputEvent*> close_events_;
+  // All the regular events which use the handle.
+  std::vector<Event*> events_;
 };
 
 class Process {
@@ -64,6 +81,7 @@ class Process {
   const std::string& name() const { return name_; }
   zx_koid_t koid() const { return koid_; }
   zxdb::Process* zxdb_process() const { return zxdb_process_.get(); }
+  std::vector<HandleInfo*>& handle_infos() { return handle_infos_; }
   std::map<uint32_t, HandleInfo*>& handle_info_map() { return handle_info_map_; }
 
   void LoadHandleInfo(Inference* inference);
@@ -87,8 +105,16 @@ class Process {
   bool loading_handle_info_ = false;
   // True if we need to load again the info after the current load will be finished.
   bool needs_to_load_handle_info_ = false;
+  // All the handles used by the process (first used handle first).
+  std::vector<HandleInfo*> handle_infos_;
+  // A map to quickly find a handle for a process.
   std::map<uint32_t, HandleInfo*> handle_info_map_;
 };
+
+inline FidlcatPrinter& operator<<(FidlcatPrinter& printer, const Process& process) {
+  printer << process.name() << ' ' << fidl_codec::Red << process.koid() << fidl_codec::ResetColor;
+  return printer;
+}
 
 class Thread {
  public:
@@ -133,6 +159,9 @@ class Event {
 
   // Write the content of the event into a protobuf event.
   virtual void Write(proto::Event* dst) const = 0;
+
+  // Display a short version of the event (without all the details).
+  virtual void Display(FidlcatPrinter& printer) const {}
 
  private:
   const int64_t timestamp_;
@@ -228,7 +257,11 @@ class SyscallEvent : public ThreadEvent {
 
   const fidl_codec::FidlMessageValue* GetMessage() const;
 
+  const fidl_codec::Value* GetValue(const fidl_codec::StructMember* member) const;
+
   const fidl_codec::HandleValue* GetHandleValue(const fidl_codec::StructMember* member) const;
+
+  HandleInfo* GetHandleInfo(const fidl_codec::StructMember* member) const;
 
  private:
   const Syscall* const syscall_;
@@ -251,6 +284,12 @@ class InvokedEvent final : public SyscallEvent {
   bool displayed() const { return displayed_; }
   void set_displayed() { displayed_ = true; }
 
+  HandleInfo* handle_info() const { return handle_info_; }
+
+  // For syscalls which read/write a FIDL message, computes the handle used to read/write the
+  // message.
+  void ComputeHandleInfo(SyscallDisplayDispatcher* dispatcher);
+
   void Write(proto::Event* dst) const override;
 
   void PrettyPrint(FidlcatPrinter& printer) const;
@@ -259,6 +298,8 @@ class InvokedEvent final : public SyscallEvent {
   uint32_t id_ = 0;
   std::vector<Location> stack_frame_;
   bool displayed_ = false;
+  // For syscalls which read/write a FIDL message, the handle used to read/write the message.
+  HandleInfo* handle_info_ = nullptr;
 };
 
 // Event that represents the return value and out parameters when a syscall returns.
@@ -274,6 +315,8 @@ class OutputEvent final : public SyscallEvent {
   const InvokedEvent* invoked_event() const { return invoked_event_.get(); }
 
   void Write(proto::Event* dst) const override;
+
+  void Display(FidlcatPrinter& printer) const override;
 
   void PrettyPrint(FidlcatPrinter& printer) const;
 

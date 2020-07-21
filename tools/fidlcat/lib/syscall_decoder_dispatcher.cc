@@ -340,6 +340,12 @@ const fidl_codec::StructMember* Syscall::SearchOutlineMember(uint32_t id, bool i
   return nullptr;
 }
 
+void Syscall::ComputeStatistics(const OutputEvent* event) const {
+  if (compute_statistics_ != nullptr) {
+    (*compute_statistics_)(event);
+  }
+}
+
 SyscallDecoderDispatcher::SyscallDecoderDispatcher(const DecodeOptions& decode_options)
     : decode_options_(decode_options), startup_timestamp_(time(nullptr)), inference_(this) {
   Populate();
@@ -377,6 +383,7 @@ HandleInfo* SyscallDecoderDispatcher::CreateHandleInfo(Thread* thread, uint32_t 
   }
   auto result = std::make_unique<HandleInfo>(thread, handle, creation_time, startup);
   auto returned_value = result.get();
+  thread->process()->handle_infos().emplace_back(result.get());
   thread->process()->handle_info_map().emplace(std::make_pair(handle, result.get()));
   handle_infos_.emplace_back(std::move(result));
   return returned_value;
@@ -521,8 +528,8 @@ void SyscallDecoderDispatcher::GenerateProtoSession(proto::Session* session) {
     proto_handle_description->set_object_type(handle_info->object_type());
   }
   for (const auto& linked_koids : inference().linked_koids()) {
-    proto::LinkedKoids* proto_linked_koids = session->add_linked_koids();
     if (linked_koids.first < linked_koids.second) {
+      proto::LinkedKoids* proto_linked_koids = session->add_linked_koids();
       proto_linked_koids->set_koid_0(linked_koids.first);
       proto_linked_koids->set_koid_1(linked_koids.second);
     }
@@ -613,6 +620,9 @@ void SyscallDisplayDispatcher::AddStopMonitoringEvent(std::shared_ptr<StopMonito
 
 void SyscallDisplayDispatcher::AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) {
   invoked_event->set_id(GetNextInvokedEventId());
+  if (!extra_generation().empty()) {
+    invoked_event->ComputeHandleInfo(this);
+  }
   if (!display_started()) {
     // The user specified a trigger. Check if this is a message which satisfies one of the triggers.
     const fidl_codec::FidlMessageValue* message = invoked_event->GetMessage();
@@ -660,6 +670,12 @@ void SyscallDisplayDispatcher::DisplayInvokedEvent(const InvokedEvent* invoked_e
 }
 
 void SyscallDisplayDispatcher::AddOutputEvent(std::shared_ptr<OutputEvent> output_event) {
+  if (!extra_generation().empty()) {
+    if (output_event->invoked_event()->handle_info() != nullptr) {
+      output_event->invoked_event()->handle_info()->AddEvent(output_event.get());
+    }
+    output_event->syscall()->ComputeStatistics(output_event.get());
+  }
   if (!output_event->invoked_event()->displayed()) {
     // The display of the syscall wasn't allowed by the input arguments. Check if the output
     // arguments allows its display.
@@ -725,6 +741,26 @@ void SyscallDisplayDispatcher::AddExceptionEvent(std::shared_ptr<ExceptionEvent>
   }
 
   SaveEvent(std::move(exception_event));
+}
+
+void SyscallDisplayDispatcher::SessionEnded() {
+  SyscallDecoderDispatcher::SessionEnded();
+  for (const auto& extra_generation : extra_generation()) {
+    switch (extra_generation.kind) {
+      case ExtraGeneration::Kind::kSummary:
+        if (extra_generation.path.empty()) {
+          DisplaySummary(os_);
+        } else {
+          std::fstream output(extra_generation.path, std::ios::out | std::ios::trunc);
+          if (output.fail()) {
+            FX_LOGS(ERROR) << "Can't open <" << extra_generation.path << "> for writing.";
+          } else {
+            DisplaySummary(output);
+          }
+        }
+        break;
+    }
+  }
 }
 
 std::unique_ptr<SyscallDecoder> SyscallCompareDispatcher::CreateDecoder(

@@ -114,13 +114,21 @@ const char* const kToHelp = R"(  --to=<path>
 const char* const kFormatHelp = R"(  --format=<output>
       This option must be used at most once.
       The output format can be:
-      --format=pretty    This is the default output. The session is pretty printed (with colors).
+      --format=pretty    The session is pretty printed (with colors).
+                         This is the default output is --with is not used.
       --format=json      The session is printed using a json format.
       --format=textproto The session is printed using a text protobuf format.
       --format=none      Nothing is displayed on the standard output (this option only makes sense
                          when used with --to=<path>).
                          When there is no output, fidlcat is much faster (this is better when you
-                         want to monitor real time components).)";
+                         want to monitor real time components).
+                         This is the default output is --with is used.)";
+
+const char* const kWithHelp = R"(  --with=summary
+      At the end of the session, a summary of the session is displayed on the standard output.
+  --with=summary=<path>
+      At the end of the session, a summary of the session is stored in the file specified by
+      path.)";
 
 const char* const kCompareHelp = R"(  --compare=<path>
       Compare output with the one stored in the given file)";
@@ -287,6 +295,8 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("to", 0, kToHelp, &CommandLineOptions::to);
   // Format (output) option:
   parser.AddSwitch("format", 0, kFormatHelp, &CommandLineOptions::format);
+  // Extra generation:
+  parser.AddSwitch("with", 0, kWithHelp, &CommandLineOptions::extra_generation);
   // Session comparison option:
   parser.AddSwitch("compare", 'c', kCompareHelp, &CommandLineOptions::compare_file);
   // Display options:
@@ -338,6 +348,10 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   if (options->syscall_filters.empty()) {
     regex_t r;
     regcomp(&r, "zx_channel_.*", REG_EXTENDED);
+    decode_options->syscall_filters.emplace_back(std::make_unique<Regex>(r));
+    regcomp(&r, "zx_handle_close", REG_EXTENDED);
+    decode_options->syscall_filters.emplace_back(std::make_unique<Regex>(r));
+    regcomp(&r, "zx_handle_close_many", REG_EXTENDED);
     decode_options->syscall_filters.emplace_back(std::make_unique<Regex>(r));
   } else if ((options->syscall_filters.size() != 1) || (options->syscall_filters[0] != ".*")) {
     for (const auto& filter : options->syscall_filters) {
@@ -402,19 +416,36 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
     decode_options->input_mode = InputMode::kFile;
   }
 
-  if (!options->format.has_value() || (options->format.value() == "pretty")) {
+  if ((!options->format.has_value() && options->extra_generation.empty()) ||
+      (options->format.has_value() && (options->format.value() == "pretty"))) {
     decode_options->output_mode = OutputMode::kStandard;
     display_options->pretty_print = true;
     display_options->needs_colors =
         ((options->colors == "always") || ((options->colors == "auto") && (ioctl_result != -1))) &&
         !(options->compare_file.has_value());
-  } else if (options->format.value() == "json") {
-    decode_options->output_mode = OutputMode::kStandard;
-  } else if (options->format.value() == "textproto") {
-    decode_options->output_mode = OutputMode::kTextProtobuf;
-  } else if (options->format.value() == "none") {
-  } else {
-    return "Invalid destination " + options->format.value() + " for option --format.";
+  } else if (options->format.has_value()) {
+    if (options->format.value() == "json") {
+      decode_options->output_mode = OutputMode::kStandard;
+    } else if (options->format.value() == "textproto") {
+      decode_options->output_mode = OutputMode::kTextProtobuf;
+    } else if (options->format.value() == "none") {
+    } else {
+      return "Invalid format " + options->format.value() + " for option --format.";
+    }
+  }
+
+  display_options->extra_generation_needs_colors =
+      ((options->colors == "always") || ((options->colors == "auto") && (ioctl_result != -1)));
+
+  for (const auto& extra_generation : options->extra_generation) {
+    if (extra_generation == "summary") {
+      display_options->AddExtraGeneration(ExtraGeneration::Kind::kSummary, "");
+    } else if (extra_generation.find("summary=") == 0) {
+      display_options->AddExtraGeneration(ExtraGeneration::Kind::kSummary,
+                                          extra_generation.substr(8));
+    } else {
+      return "Invalid generation " + extra_generation + " for option --with.";
+    }
   }
 
   return "";

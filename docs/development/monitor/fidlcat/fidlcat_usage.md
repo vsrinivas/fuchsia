@@ -336,3 +336,37 @@ Fidlcat can connect to a symbol server. You have to use the option:
 
 The first time you use this option, fidlcat will give you a link to an
 authentication page. You then have to use the generated key to authenticate.
+
+## High level summary
+
+Sometime, you don't need to display all the messages exchanged but only a high level view of the
+session. The options "--with=summary" and "--with=summary=&lt;path&gt;" generate a high level
+summary of the session.
+
+With those options, fidlcat displays a list of all the monitored processes.
+
+For each process, fidlcat displays a list of all the handles found for the process.
+
+For each handle, fidlcat displays the information we have about the process. That includes the data
+fidlcat has been able to infer. It also display if the handle is a startup handle (inherited while
+the process has been created) or a handle created during the process life.
+
+For channels, fidlcat tries to display the other end of the channel (even if the other end is own
+by another process).
+
+For non startup handles, fidlcat displays how the handle was created:
+
+*   by calling zx_channel_create, zx_port_create, zx_timer_create, ...
+
+*   by receiving a handle within a message.
+
+Then fidlcat displays a list of all the messages sent and received (only for channels).
+
+Finally fidlcat displays how the handle was closed:
+
+*   by calling zx_handle_close or zx_handle_close_many.
+
+*   by sending the handle to another process.
+
+If fidlcat doesn't display that a handle is closed, that probably means that the program forgot to
+close it.

@@ -170,6 +170,8 @@ You have the following output options:
 
  * --format=textproto The session is printed using a text protobuf format.
 
+ * --format=summary   At the end of the session, a summary of the session is displayed.
+
  * --format= Nothing is displayed on the standard output (this option only makes sense when used
  with --to=&lt;path&gt;). When there is no output, fidlcat is much faster (this is better when you
  want to monitor real time components).
