@@ -4,7 +4,7 @@
 
 use {
     super::{Filesystem, FilesystemRename},
-    crate::directory::helper::DirectlyMutable,
+    crate::{directory::helper::DirectlyMutable, path::Path},
     fuchsia_zircon::Status,
     std::{any::Any, marker::PhantomData, sync::Arc},
 };
@@ -26,9 +26,9 @@ where
     fn rename(
         &self,
         src_dir: Arc<Any + Sync + Send + 'static>,
-        src: String,
+        src: Path,
         dst_dir: Arc<Any + Sync + Send + 'static>,
-        dst: String,
+        dst: Path,
     ) -> Result<(), Status> {
         let src_parent = src_dir.downcast::<T>().map_err(|_| Status::INVALID_ARGS)?;
         let dst_parent = dst_dir.downcast::<T>().map_err(|_| Status::INVALID_ARGS)?;
@@ -46,18 +46,21 @@ where
             // `src_parent` and `dst_parent` and we are calling `rename_from` as `src_parent` has a
             // smaller memory address than the `dst_parent`.
             unsafe {
-                src_parent.rename_from(src, Box::new(move |entry| dst_parent.link(dst, entry)))
+                src_parent.rename_from(
+                    src.into_string(),
+                    Box::new(move |entry| dst_parent.link(dst.into_string(), entry)),
+                )
             }
         } else if src_order == dst_order {
-            src_parent.rename_within(src, dst)
+            src_parent.rename_within(src.into_string(), dst.into_string())
         } else {
             // `unsafe` here indicates that we have checked the global order for the locks for
             // `src_parent` and `dst_parent` and we are calling `rename_to` as `dst_parent` has a
             // smaller memory address than the `src_parent`.
             unsafe {
                 dst_parent.rename_to(
-                    dst,
-                    Box::new(move || match src_parent.remove_entry_impl(src)? {
+                    dst.into_string(),
+                    Box::new(move || match src_parent.remove_entry_impl(src.into_string())? {
                         None => Err(Status::NOT_FOUND),
                         Some(entry) => Ok(entry),
                     }),

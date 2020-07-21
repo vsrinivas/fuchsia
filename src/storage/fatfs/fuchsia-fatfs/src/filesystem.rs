@@ -17,7 +17,10 @@ use {
         pin::Pin,
         sync::{Arc, LockResult, Mutex, MutexGuard},
     },
-    vfs::filesystem::{Filesystem, FilesystemRename},
+    vfs::{
+        filesystem::{Filesystem, FilesystemRename},
+        path::Path,
+    },
 };
 
 pub struct FatFilesystemInner {
@@ -99,16 +102,19 @@ impl FilesystemRename for FatFilesystem {
     fn rename(
         &self,
         src_dir: Arc<dyn Any + Sync + Send + 'static>,
-        src_name: String,
+        src_path: Path,
         dst_dir: Arc<dyn Any + Sync + Send + 'static>,
-        dst_name: String,
+        dst_path: Path,
     ) -> Result<(), Status> {
         let src_dir = src_dir.downcast::<FatDirectory>().map_err(|_| Status::INVALID_ARGS)?;
         let dst_dir = dst_dir.downcast::<FatDirectory>().map_err(|_| Status::INVALID_ARGS)?;
 
+        let src_name = src_path.peek().unwrap();
+        let dst_name = dst_path.peek().unwrap();
+
         // TODO(simonshields): We currently require there is only one reference to the child.
         // We should fix this by just moving the Arc<> and updating the parent of the child instead of doing this.
-        match src_dir.cache_get(&src_name) {
+        match src_dir.cache_get(src_name) {
             // References to the child still exist, not safe to rename.
             Some(_) => return Err(Status::UNAVAILABLE),
             // Not opened by anyone.
@@ -122,7 +128,7 @@ impl FilesystemRename for FatFilesystem {
         let filesystem = self.inner.lock().unwrap();
         let src_dir = src_dir.borrow_dir(&filesystem);
         let dst_dir = dst_dir.borrow_dir(&filesystem);
-        src_dir.rename(&src_name, &dst_dir, &dst_name).map_err(fatfs_error_to_status)?;
+        src_dir.rename(src_name, &dst_dir, dst_name).map_err(fatfs_error_to_status)?;
         Ok(())
     }
 }

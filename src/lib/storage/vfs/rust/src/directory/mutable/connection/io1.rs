@@ -261,6 +261,19 @@ impl MutableConnection {
             return responder(Status::ACCESS_DENIED);
         }
 
+        let src = match Path::validate_and_split(src) {
+            Ok(src) => src,
+            Err(status) => return responder(status),
+        };
+        let dst = match Path::validate_and_split(dst) {
+            Ok(dst) => dst,
+            Err(status) => return responder(status),
+        };
+
+        if !src.is_single_component() || !dst.is_single_component() {
+            return responder(Status::INVALID_ARGS);
+        }
+
         let token_registry = match self.base.scope.token_registry() {
             None => return responder(Status::NOT_SUPPORTED),
             Some(registry) => registry,
@@ -418,17 +431,17 @@ mod tests {
         fn rename(
             &self,
             src_dir: Arc<Any + Sync + Send + 'static>,
-            src_name: String,
+            src_name: Path,
             dst_dir: Arc<Any + Sync + Send + 'static>,
-            dst_name: String,
+            dst_name: Path,
         ) -> Result<(), Status> {
             let src_dir = src_dir.downcast::<MockDirectory>().unwrap();
             let dst_dir = dst_dir.downcast::<MockDirectory>().unwrap();
             self.env.handle_event(MutableDirectoryAction::Rename {
                 id: src_dir.id,
-                src_name,
+                src_name: src_name.into_string(),
                 dst_dir,
-                dst_name,
+                dst_name: dst_name.into_string(),
             })
         }
     }

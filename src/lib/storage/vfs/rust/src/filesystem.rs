@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::path::Path,
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},
 };
@@ -15,9 +16,9 @@ pub trait FilesystemRename: Sync + Send {
     fn rename(
         &self,
         src_dir: Arc<Any + Sync + Send + 'static>,
-        src_name: String,
+        src_name: Path,
         dst_dir: Arc<Any + Sync + Send + 'static>,
-        dst_name: String,
+        dst_name: Path,
     ) -> Result<(), Status>;
 }
 
