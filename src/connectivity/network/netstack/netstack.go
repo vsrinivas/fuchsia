@@ -438,7 +438,7 @@ func (ns *Netstack) onInterfacesChanged() {
 	interfaces := interfaces2ListToInterfacesList(interfaces2)
 	for pxy := range ns.netstackService.mu.proxies {
 		if err := pxy.OnInterfacesChanged(interfaces); err != nil {
-			syslog.Warnf("OnInterfacesChanged failed: %s", err)
+			_ = syslog.Warnf("OnInterfacesChanged failed: %s", err)
 		}
 	}
 	ns.netstackService.mu.Unlock()

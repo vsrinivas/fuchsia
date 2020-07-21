@@ -380,24 +380,16 @@ func Main() {
 				// Send a synthetic InterfacesChanged event to each client when they join
 				// Prevents clients from having to race GetInterfaces / InterfacesChanged.
 				if err := pxy.OnInterfacesChanged(interfaces2ListToInterfacesList(ns.getNetInterfaces2())); err != nil {
-					warn := true
-					if err, ok := err.(*zx.Error); ok {
-						switch err.Status {
-						// TODO(fxb/47328): Suppress warning for ErrBadHandle until
-						// the likely bug with Go bindings is addressed.
-						case zx.ErrBadHandle:
-							fallthrough
-						// ErrPeerClosed would mean that the peer closed its side
-						// of the channel.
-						case zx.ErrPeerClosed:
-							warn = false
-						}
-					}
-					if warn {
-						syslog.Warnf("OnInterfacesChanged failed: %v", err)
+					if err, ok := err.(*zx.Error); !ok || err.Status != zx.ErrPeerClosed {
+						_ = syslog.Warnf("OnInterfacesChanged failed: %s", err)
 					}
 					return err
 				}
+
+				ns.netstackService.mu.Lock()
+				ns.netstackService.mu.proxies[&pxy] = struct{}{}
+				ns.netstackService.mu.Unlock()
+
 				go func() {
 					defer func() {
 						ns.netstackService.mu.Lock()
@@ -408,10 +400,6 @@ func Main() {
 						_ = syslog.WarnTf(netstack.NetstackName, "%s", err)
 					})
 				}()
-
-				ns.netstackService.mu.Lock()
-				ns.netstackService.mu.proxies[&pxy] = struct{}{}
-				ns.netstackService.mu.Unlock()
 
 				return nil
 			},
