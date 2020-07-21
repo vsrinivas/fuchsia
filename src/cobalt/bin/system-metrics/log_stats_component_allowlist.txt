@@ -18,3 +18,4 @@
 17 fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cmx
 18 fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx
 19 fuchsia-boot://klog
+20 fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx
