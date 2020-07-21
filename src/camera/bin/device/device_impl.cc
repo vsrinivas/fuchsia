@@ -287,7 +287,9 @@ static bool WaitForFreeSpace(fuchsia::sysmem::AllocatorPtr& allocator_ptr,
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   zx_status_t status = ZX_OK;
   uint32_t num_attempts = 0;
-  constexpr uint32_t kMaxAttempts = 50;
+  constexpr uint32_t kMaxAttempts = 10;
+  constexpr uint32_t kInitialDelayMs = 200;
+  constexpr uint32_t kFinalDelayMs = 1000;
   do {
     fuchsia::sysmem::BufferCollectionSyncPtr collection;
     ZX_ASSERT(allocator->AllocateNonSharedCollection(collection.NewRequest()) == ZX_OK);
@@ -310,7 +312,9 @@ static bool WaitForFreeSpace(fuchsia::sysmem::AllocatorPtr& allocator_ptr,
     // Free any allocated buffers and wait enough time for them to be freed by sysmem as well.
     collection = nullptr;
     buffers = {};
-    zx::nanosleep(zx::deadline_after(zx::msec(100)));
+    uint32_t delay_ms =
+        kInitialDelayMs + ((kFinalDelayMs - kInitialDelayMs) * num_attempts) / (kMaxAttempts - 1);
+    zx::nanosleep(zx::deadline_after(zx::msec(delay_ms)));
   } while (++num_attempts < kMaxAttempts && status == ZX_ERR_NO_MEMORY);
 
   // Return the channel to the async binding.
