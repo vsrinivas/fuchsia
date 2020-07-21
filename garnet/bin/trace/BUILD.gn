@@ -40,7 +40,6 @@ source_set("trace_app") {
     "//sdk/fidl/fuchsia.tracing.controller",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/zlib:zfstream",
     "//zircon/public/lib/fit",
@@ -49,26 +48,13 @@ source_set("trace_app") {
     "//zircon/system/ulib/trace-reader",
   ]
 
-  deps = [
-    ":options",
-    "//third_party/rapidjson",
-  ]
+  deps = [ ":options" ]
 }
 
 source_set("options") {
   sources = [
     "options.cc",
     "options.h",
-  ]
-
-  public_deps = [
-    "//src/lib/fxl",
-    "//zircon/public/lib/zx",
-  ]
-
-  deps = [
-    "//src/lib/json_parser",
-    "//third_party/rapidjson",
   ]
 }
 
