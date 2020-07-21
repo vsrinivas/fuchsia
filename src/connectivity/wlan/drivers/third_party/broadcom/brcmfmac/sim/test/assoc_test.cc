@@ -3,15 +3,23 @@
 // found in the LICENSE file.
 
 #include <ddk/protocol/wlanif.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
 
+#include "fuchsia/wlan/mlme/cpp/fidl.h"
+#include "fuchsia/wlan/stats/cpp/fidl.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
+#include "src/connectivity/wlan/drivers/wlanif/convert.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
 
 namespace wlan::brcmfmac {
+
+using ::testing::IsEmpty;
+using ::testing::NotNull;
 
 // Some default AP and association request values
 constexpr wlan_channel_t kDefaultChannel = {
@@ -63,6 +71,8 @@ class AssocTest : public SimTest {
 
   void AssocErrorInject();
 
+  void SendStatsQuery();
+
  protected:
   struct AssocContext {
     // Information about the BSS we are attempting to associate with. Used to generate the
@@ -94,6 +104,8 @@ class AssocTest : public SimTest {
     int16_t signal_ind_snr = 0;
     // RSSI seen in the signal report indication.
     int16_t signal_ind_rssi = 0;
+    // IfaceStats from StatsQuery response, if non-empty.
+    fuchsia::wlan::stats::IfaceStats iface_stats;
   };
 
   struct AssocRespInfo {
@@ -149,6 +161,7 @@ class AssocTest : public SimTest {
   void OnDeauthConf(const wlanif_deauth_confirm_t* resp);
   void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   void OnSignalReport(const wlanif_signal_report_indication* ind);
+  void OnStatsQueryResp(const wlanif_stats_query_response_t* resp);
 };
 
 // Since we're acting as wlanif, we need handlers for any protocol calls we may receive
@@ -188,6 +201,10 @@ wlanif_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
     .signal_report =
         [](void* cookie, const wlanif_signal_report_indication* ind) {
           static_cast<AssocTest*>(cookie)->OnSignalReport(ind);
+        },
+    .stats_query_resp =
+        [](void* cookie, const wlanif_stats_query_response_t* resp) {
+          static_cast<AssocTest*>(cookie)->OnStatsQueryResp(resp);
         },
 };
 
@@ -241,6 +258,7 @@ void AssocTest::Init() {
   context_.signal_ind_count = 0;
   context_.signal_ind_rssi = 0;
   context_.signal_ind_snr = 0;
+  context_.iface_stats = {};
 }
 
 void AssocTest::DisassocFromAp() {
@@ -302,6 +320,10 @@ void AssocTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
   context_.signal_ind_snr = ind->snr_db;
 }
 
+void AssocTest::OnStatsQueryResp(const wlanif_stats_query_response_t* resp) {
+  wlanif::ConvertIfaceStats(&context_.iface_stats, resp->stats);
+}
+
 void AssocTest::StartAssoc() {
   // Send join request
   wlanif_join_req join_req = {};
@@ -333,6 +355,58 @@ TEST_F(AssocTest, SignalReportTest) {
   // Verify the plumbing between the firmware and the signal report.
   EXPECT_EQ(context_.signal_ind_snr, kDefaultSimFwSnr);
   EXPECT_EQ(context_.signal_ind_rssi, kDefaultSimFwRssi);
+}
+
+void AssocTest::SendStatsQuery() {
+  client_ifc_.if_impl_ops_->stats_query_req(client_ifc_.if_impl_ctx_);
+}
+
+// Verify that StatsQueryReq works when associated.
+TEST_F(AssocTest, StatsQueryReqTest) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  SCHEDULE_CALL(zx::msec(30), &AssocTest::SendStatsQuery, this);
+
+  env_->Run(kTestDuration);
+
+  // Verify that a stats query response was received.
+  ASSERT_THAT(context_.iface_stats.mlme_stats, NotNull());
+  ASSERT_TRUE(context_.iface_stats.mlme_stats->is_client_mlme_stats());
+  const auto& client_mlme_stats = context_.iface_stats.mlme_stats->client_mlme_stats();
+
+  // Sim firmware returns these fake values for packet counters.
+  const uint8_t rx_in = 10;
+  const uint8_t rx_out = 6;
+  const uint8_t rx_drop = 4;
+  const uint8_t tx_in = 5;
+  const uint8_t tx_out = 3;
+  const uint8_t tx_drop = 2;
+  EXPECT_EQ(client_mlme_stats.rx_frame.in.name, "Good+Bad+Ocast");
+  EXPECT_EQ(client_mlme_stats.rx_frame.in.count, rx_in);
+  EXPECT_EQ(client_mlme_stats.rx_frame.out.name, "Good+Ocast");
+  EXPECT_EQ(client_mlme_stats.rx_frame.out.count, rx_out);
+  EXPECT_EQ(client_mlme_stats.rx_frame.drop.name, "Bad");
+  EXPECT_EQ(client_mlme_stats.rx_frame.drop.count, rx_drop);
+  EXPECT_EQ(client_mlme_stats.tx_frame.in.name, "Good+Bad");
+  EXPECT_EQ(client_mlme_stats.tx_frame.in.count, tx_in);
+  EXPECT_EQ(client_mlme_stats.tx_frame.out.name, "Good");
+  EXPECT_EQ(client_mlme_stats.tx_frame.out.count, tx_out);
+  EXPECT_EQ(client_mlme_stats.tx_frame.drop.name, "Bad");
+  EXPECT_EQ(client_mlme_stats.tx_frame.drop.count, tx_drop);
+
+  // Per-antenna histograms are empty (for now).
+  EXPECT_THAT(client_mlme_stats.noise_floor_histograms, IsEmpty());
+  EXPECT_THAT(client_mlme_stats.rssi_histograms, IsEmpty());
+  EXPECT_THAT(client_mlme_stats.rx_rate_index_histograms, IsEmpty());
+  EXPECT_THAT(client_mlme_stats.snr_histograms, IsEmpty());
 }
 
 void AssocTest::AssocErrorInject() {

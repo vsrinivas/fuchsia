@@ -22,6 +22,9 @@
 #include <cstddef>
 #include <memory>
 
+#include <third_party/bcmdhd/crossdriver/dhd.h>
+
+#include "ddk/protocol/wlanif.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
@@ -162,7 +165,11 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
   if (dcmd->len > (len - hdr_size)) {
     BRCMF_DBG(SIM, "BCDC total message length (%zd) exceeds buffer size (%u)", dcmd->len + hdr_size,
               len);
-    return ZX_ERR_INVALID_ARGS;
+    // The real firmware allows buffer size to be exceeded for iovar get. If it's not an iovar get,
+    // sim firmware should reject TX CTL messages that have an oversized buffer.
+    if (dcmd->cmd != BRCMF_C_GET_VAR) {
+      return ZX_ERR_INVALID_ARGS;
+    }
   }
 
   // Retrieve ifidx from the command and validate if the corresponding
@@ -201,6 +208,25 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       // (e.g., n or ac).
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(kIoType))) == ZX_OK) {
         std::memcpy(data, &kIoType, sizeof(kIoType));
+      }
+      break;
+    }
+    case BRCMF_C_GET_GET_PKTCNTS: {
+      if (!iface_tbl_[kClientIfidx].allocated) {
+        BRCMF_ERR("Client iface has not been allocated.");
+        return ZX_ERR_BAD_STATE;
+      }
+      // Fake packet counter arbitrary values.
+      const brcmf_pktcnt_le sim_pktcnt = {
+          .rx_good_pkt = 5,
+          .rx_bad_pkt = 4,
+          .tx_good_pkt = 3,
+          .tx_bad_pkt = 2,
+          .rx_ocast_good_pkt = 1,
+      };
+
+      if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(brcmf_pktcnt_le))) == ZX_OK) {
+        std::memcpy(data, &sim_pktcnt, sizeof(brcmf_pktcnt_le));
       }
       break;
     }
@@ -1676,6 +1702,16 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
       return ZX_ERR_BAD_STATE;
     }
     memcpy(value_out, &iface_tbl_[ifidx].chanspec, sizeof(uint16_t));
+  } else if (!std::strcmp(name, "rxchain")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (!iface_tbl_[ifidx].allocated) {
+      return ZX_ERR_BAD_STATE;
+    }
+    // rxchain 1 indicates antenna index 0.
+    const uint32_t sim_rxchain = 1;
+    memcpy(value_out, &sim_rxchain, sizeof(uint32_t));
   } else if (!std::strcmp(name, "snr")) {
     if (value_len < sizeof(int32_t)) {
       return ZX_ERR_INVALID_ARGS;
@@ -1693,6 +1729,32 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
       return ZX_ERR_BAD_STATE;
     }
     memcpy(value_out, &iface_tbl_[ifidx].tlv, sizeof(uint32_t));
+  } else if (!std::strcmp(name, "wstats_counters")) {
+    if (value_len < sizeof(wl_wstats_cnt_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (!iface_tbl_[ifidx].allocated) {
+      return ZX_ERR_BAD_STATE;
+    }
+    wl_wstats_cnt_t wstats_cnt = {
+        .version = WSTATS_CNT_T_VERSION,
+    };
+
+    // Manually populate a few histograms.
+    const uint16_t snr_db = 60;
+    const uint32_t snr_num_frames = 50;
+    wstats_cnt.rxsnr[snr_db] = snr_num_frames;
+    const uint32_t noiseflr_dbm_index = 170;
+    const uint32_t noiseflr_num_frames = 20;
+    wstats_cnt.rxnoiseflr[noiseflr_dbm_index] = noiseflr_num_frames;
+    const uint32_t rssi_dbm_index = 190;
+    const uint32_t rssi_num_frames = 40;
+    wstats_cnt.rxrssi[rssi_dbm_index] = rssi_num_frames;
+    const uint32_t rate_index = 7;
+    const uint32_t rate_num_frames = 80;
+    wstats_cnt.rx11g[rate_index] = rate_num_frames;
+
+    memcpy(value_out, &wstats_cnt, sizeof(wl_wstats_cnt_t));
   } else if (!std::strcmp(name, "assoc_info")) {
     if (value_len < sizeof(struct brcmf_cfg80211_assoc_ielen_le)) {
       return ZX_ERR_INVALID_ARGS;

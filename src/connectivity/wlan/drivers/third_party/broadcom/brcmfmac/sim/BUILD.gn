@@ -35,6 +35,7 @@ source_set("sim") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/devices/lib/broadcom",
     "//src/lib/ddk",
+    "//third_party/bcmdhd/crossdriver:bcmdhd_crossdriver",
     "//zircon/system/public",
   ]
   public_deps = [
