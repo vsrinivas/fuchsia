@@ -194,6 +194,11 @@ table, th, td {
  margin-bottom: 10px;
 }
 
+.tile-content {
+ text-align: left;
+ white-space: normal;
+}
+
 .menu {
   list-style-type: none;
   list-style-position: inside;
