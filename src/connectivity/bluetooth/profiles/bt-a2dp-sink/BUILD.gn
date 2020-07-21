@@ -58,6 +58,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
   ]
+
+  test_deps = [ "//third_party/rust_crates:futures-test" ]
 }
 
 package("bt-a2dp-sink") {

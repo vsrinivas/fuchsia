@@ -447,7 +447,7 @@ mod tests {
         loop {
             assert!(exec.run_until_stalled(&mut decode_fut).is_pending());
             match exec.run_until_stalled(&mut sink_requests.select_next_some()) {
-                Poll::Ready(Ok(StreamSinkRequest::SendPacketNoReply { .. })) => break,
+                Poll::Ready(Ok(StreamSinkRequest::SendPacket { .. })) => break,
                 Poll::Pending => {}
                 x => panic!("Expected to receive a packet from sending data.. got {:?}", x),
             };

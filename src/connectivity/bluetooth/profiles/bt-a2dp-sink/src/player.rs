@@ -8,6 +8,7 @@ use {
     bitfield::bitfield,
     bt_a2dp::codec::MediaCodecConfig,
     bt_avdtp::{MediaCodecType, RtpHeader},
+    fidl::client::QueryResponseFut,
     fidl_fuchsia_media::{
         AudioConsumerProxy, AudioConsumerStartFlags, AudioConsumerStatus, AudioSampleFormat,
         AudioStreamType, Compression, SessionAudioConsumerFactoryMarker,
@@ -16,33 +17,40 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_audio_codec::StreamProcessor,
-    fuchsia_syslog::fx_log_info,
+    fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{
         channel::mpsc,
-        future::{AbortHandle, Abortable, Aborted},
+        future::{AbortHandle, Abortable, Aborted, MapOk},
         io::{AsyncWrite, AsyncWriteExt},
+        ready,
+        stream::FuturesUnordered,
         task::{Context, Poll},
-        Future, StreamExt,
+        Future, StreamExt, TryFutureExt,
     },
+    std::collections::HashSet,
     std::{convert::TryInto, io, pin::Pin},
 };
 
 use crate::latm::AudioMuxElement;
 use crate::DEFAULT_SAMPLE_RATE;
 
-const DEFAULT_BUFFER_LEN: usize = 65536;
+// Max supported by AudioConsumer as defined in the FIDL interface
+const NUM_BUFFERS: usize = 16;
+// For both SBC and AAC, buffers are less than a page
+const DEFAULT_BUFFER_LEN: usize = 4096;
 
 struct AudioConsumerSink {
-    buffer: zx::Vmo,
-    buffer_len: usize,
-    current_offset: usize,
+    buffers: Vec<zx::Vmo>,
+    buffers_free: HashSet<usize>,
     tx_count: u64,
     first_packet_sent: Option<fasync::Time>,
     flags_receiver: mpsc::Receiver<u32>,
     stream_sink: StreamSinkProxy,
     audio_consumer: AudioConsumerProxy,
+    /// A set of futures that finish when packets are no longer in use by the sink.
+    send_futures: FuturesUnordered<MapOk<QueryResponseFut<()>, Box<dyn FnOnce(()) -> usize>>>,
 }
 
 impl AudioConsumerSink {
@@ -60,59 +68,92 @@ impl AudioConsumerSink {
             frames_per_second,
         };
 
-        let buffer_len = DEFAULT_BUFFER_LEN;
-
-        let buffer = zx::Vmo::create(buffer_len as u64)?;
-        let buffers = vec![buffer.duplicate_handle(
-            zx::Rights::READ
-                | zx::Rights::DUPLICATE
-                | zx::Rights::GET_PROPERTY
-                | zx::Rights::TRANSFER
-                | zx::Rights::MAP,
-        )?];
+        // Build buffer set
+        let mut buffers = Vec::new();
+        let mut vmos_for_sink = Vec::new();
+        for _ in 0..NUM_BUFFERS {
+            let vmo = zx::Vmo::create(DEFAULT_BUFFER_LEN as u64)?;
+            vmos_for_sink.push(vmo.duplicate_handle(
+                zx::Rights::READ
+                    | zx::Rights::DUPLICATE
+                    | zx::Rights::GET_PROPERTY
+                    | zx::Rights::TRANSFER
+                    | zx::Rights::MAP,
+            )?);
+            buffers.push(vmo);
+        }
+        let buffers_free = (0..buffers.len()).collect();
 
         audio_consumer.create_stream_sink(
-            &mut buffers.into_iter(),
+            &mut vmos_for_sink.into_iter(),
             &mut audio_stream_type,
             compression.as_mut(),
             stream_sink_server,
         )?;
 
         Ok(AudioConsumerSink {
-            buffer,
-            buffer_len,
-            current_offset: 0,
+            buffers,
+            buffers_free,
             tx_count: 0,
             first_packet_sent: None,
             flags_receiver,
             stream_sink,
             audio_consumer: audio_consumer.clone(),
+            send_futures: FuturesUnordered::new(),
         })
+    }
+
+    fn poll_writable(&mut self, cx: &mut Context<'_>) -> Poll<()> {
+        while let Poll::Ready(Some(result)) = self.send_futures.poll_next_unpin(cx) {
+            match result {
+                Ok(index) => {
+                    self.buffers_free.insert(index);
+                }
+                Err(e) => fx_log_warn!("Failed to send packet: {}", e),
+            };
+        }
+        if !self.buffers_free.is_empty() {
+            Poll::Ready(())
+        } else {
+            // The waker in cx will have been set to wake by the send_futures above,
+            // so the writer will be woken up when any buffer becomes free.
+            Poll::Pending
+        }
+    }
+
+    /// Get a free stream sink buffer and write `frame` into it, marking as in use.
+    /// Returns "none" if no buffer is available, or if the buffers allocated aren't large enough
+    /// for the frame.
+    fn copy_to_buffer(&mut self, frame: &[u8]) -> Option<usize> {
+        let buffer_index = match self.buffers_free.iter().next() {
+            Some(idx) => *idx,
+            None => return None,
+        };
+
+        let buffer = &mut self.buffers[buffer_index];
+        if frame.len() > DEFAULT_BUFFER_LEN {
+            return None;
+        }
+        if let Err(_) = buffer.write(frame, 0) {
+            return None;
+        }
+        self.buffers_free.remove(&buffer_index);
+        Some(buffer_index)
     }
 
     /// Push an encoded media frame into the buffer and signal that it's there to media.
     fn send_frame(&mut self, frame: &[u8], flags: u32) -> Result<(), Error> {
-        if frame.len() > self.buffer_len {
-            self.stream_sink.end_of_stream()?;
-            return Err(format_err!("frame is too large for buffer"));
-        }
-
         trace::duration!("bt-a2dp-sink", "Media:PacketSent");
+
+        let buffer_index = self.copy_to_buffer(frame).ok_or(format_err!("No free buffers"))?;
 
         self.tx_count += 1;
         trace::flow_begin!("stream-sink", "SendPacket", self.tx_count);
 
-        if self.current_offset + frame.len() > self.buffer_len {
-            self.current_offset = 0;
-        }
-
-        let start_offset = self.current_offset;
-
-        self.buffer.write(frame, self.current_offset as u64)?;
         let mut packet = StreamPacket {
             pts: NO_TIMESTAMP,
-            payload_buffer_id: 0,
-            payload_offset: start_offset as u64,
+            payload_buffer_id: buffer_index as u32,
+            payload_offset: 0,
             payload_size: frame.len() as u64,
             buffer_config: 0,
             flags,
@@ -124,9 +165,9 @@ impl AudioConsumerSink {
             self.first_packet_sent = Some(now);
             self.audio_consumer.start(AudioConsumerStartFlags::SupplyDriven, 0, NO_TIMESTAMP)?;
         }
-        self.stream_sink.send_packet_no_reply(&mut packet)?;
 
-        self.current_offset += frame.len();
+        let send_fut = self.stream_sink.send_packet(&mut packet);
+        self.send_futures.push(send_fut.map_ok(Box::new(move |_| buffer_index)));
         Ok(())
     }
 }
@@ -134,10 +175,10 @@ impl AudioConsumerSink {
 impl AsyncWrite for AudioConsumerSink {
     fn poll_write(
         mut self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
+        cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        // TODO(48584): check to see if we have a free buffer here
+        ready!(self.poll_writable(cx));
         let mut flags = 0;
         loop {
             match self.flags_receiver.try_next() {
@@ -152,7 +193,7 @@ impl AsyncWrite for AudioConsumerSink {
     }
 
     fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-        // TODO(48584): Track the flushing and return when this ie empty
+        // We write data immediately to the shared VMO. There is nothing to flush here.
         Poll::Ready(Ok(()))
     }
 
@@ -425,7 +466,6 @@ impl Player {
                 }
                 &MediaCodecType::AUDIO_AAC => {
                     let element = AudioMuxElement::try_from_bytes(&payload[offset..])?;
-
                     let frame = element.get_payload(0).ok_or(format_err!("Payload not found"))?;
                     if let Err(e) = self.audio_sink.write_all(frame).await {
                         fx_log_info!("Failed to write packet to sink: {:?}", e);
@@ -474,11 +514,13 @@ pub(crate) mod tests {
     use {
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_media::{
-            AudioConsumerRequest, AudioConsumerRequestStream, SessionAudioConsumerFactoryRequest,
-            SessionAudioConsumerFactoryRequestStream, StreamSinkRequest, StreamSinkRequestStream,
+            AudioConsumerMarker, AudioConsumerRequest, AudioConsumerRequestStream,
+            SessionAudioConsumerFactoryRequest, SessionAudioConsumerFactoryRequestStream,
+            StreamSinkRequest, StreamSinkRequestStream,
         },
         fuchsia_async as fasync,
-        futures::{pin_mut, task::Poll},
+        futures::{pin_mut, task::Poll, FutureExt},
+        futures_test::task::new_count_waker,
     };
 
     #[test]
@@ -511,12 +553,45 @@ pub(crate) mod tests {
         assert_eq!(HEADER2_FRAMELEN, Player::find_sbc_frame_len(&header2).unwrap());
     }
 
-    pub(crate) fn expect_player_setup(
+    pub fn expect_audio_consumer_sink_setup(
         exec: &mut fasync::Executor,
+        audio_consumer_request_stream: &mut AudioConsumerRequestStream,
+        expect_compression: bool,
+    ) -> (StreamSinkRequestStream, Vec<zx::Vmo>) {
+        let complete =
+            exec.run_until_stalled(&mut audio_consumer_request_stream.select_next_some());
+        let audio_consumer_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected audio consumer request message but got {:?}", x),
+        };
+
+        let (stream_sink_request, buffers, compression) = match audio_consumer_req {
+            AudioConsumerRequest::CreateStreamSink {
+                stream_sink_request,
+                buffers,
+                compression,
+                ..
+            } => (stream_sink_request, buffers, compression),
+            _ => panic!("should be CreateStreamSink"),
+        };
+
+        assert_eq!(expect_compression, compression.is_some());
+
+        buffers[0].write(&[0], 0).expect_err("Write should fail");
+
+        let sink_request_stream = stream_sink_request
+            .into_stream()
+            .expect("a sink request stream to be created from the request");
+
+        (sink_request_stream, buffers)
+    }
+
+    pub(crate) fn expect_player_setup(
+        mut exec: &mut fasync::Executor,
         audio_consumer_factory_request_stream: &mut SessionAudioConsumerFactoryRequestStream,
         codec_type: MediaCodecType,
         expected_session_id: u64,
-    ) -> (StreamSinkRequestStream, AudioConsumerRequestStream, zx::Vmo) {
+    ) -> (StreamSinkRequestStream, AudioConsumerRequestStream, Vec<zx::Vmo>) {
         let complete =
             exec.run_until_stalled(&mut audio_consumer_factory_request_stream.select_next_some());
         let audio_consumer_create_req = match complete {
@@ -537,38 +612,15 @@ pub(crate) mod tests {
         let mut audio_consumer_request_stream =
             audio_consumer_create_request.into_stream().expect("audio consumer stream");
 
-        let complete =
-            exec.run_until_stalled(&mut audio_consumer_request_stream.select_next_some());
-        let audio_consumer_req = match complete {
-            Poll::Ready(Ok(req)) => req,
-            x => panic!("expected audio consumer request message but got {:?}", x),
-        };
+        let expect_compression = codec_type == MediaCodecType::AUDIO_AAC;
 
-        let (stream_sink_request, mut buffers, compression) = match audio_consumer_req {
-            AudioConsumerRequest::CreateStreamSink {
-                stream_sink_request,
-                buffers,
-                compression,
-                ..
-            } => (stream_sink_request, buffers, compression),
-            _ => panic!("should be CreateStreamSink"),
-        };
+        let (sink_request_stream, buffers) = expect_audio_consumer_sink_setup(
+            &mut exec,
+            &mut audio_consumer_request_stream,
+            expect_compression,
+        );
 
-        match codec_type {
-            MediaCodecType::AUDIO_SBC => assert_matches!(compression, None),
-            MediaCodecType::AUDIO_AAC => assert_matches!(compression, Some(_)),
-            _ => panic!("Unknown codec type"),
-        };
-
-        let sink_vmo = buffers.remove(0);
-
-        sink_vmo.write(&[0], 0).expect_err("Write should fail");
-
-        let sink_request_stream = stream_sink_request
-            .into_stream()
-            .expect("a sink request stream to be created from the request");
-
-        (sink_request_stream, audio_consumer_request_stream, sink_vmo)
+        (sink_request_stream, audio_consumer_request_stream, buffers)
     }
 
     pub(crate) fn respond_event_status(
@@ -597,7 +649,7 @@ pub(crate) mod tests {
     pub(crate) fn setup_player(
         mut exec: &mut fasync::Executor,
         codec_config: MediaCodecConfig,
-    ) -> (Player, StreamSinkRequestStream, AudioConsumerRequestStream, zx::Vmo) {
+    ) -> (Player, StreamSinkRequestStream, AudioConsumerRequestStream, Vec<zx::Vmo>) {
         const TEST_SESSION_ID: u64 = 1;
         let codec_type = codec_config.codec_type().clone();
 
@@ -609,7 +661,7 @@ pub(crate) mod tests {
             Player::from_proxy(TEST_SESSION_ID, codec_config, audio_consumer_factory_proxy)
                 .expect("player to build");
 
-        let (sink_request_stream, mut audio_consumer_request_stream, sink_vmo) =
+        let (sink_request_stream, mut audio_consumer_request_stream, sink_vmos) =
             expect_player_setup(
                 &mut exec,
                 &mut audio_consumer_factory_request_stream,
@@ -643,7 +695,7 @@ pub(crate) mod tests {
             };
         }
 
-        (player, sink_request_stream, audio_consumer_request_stream, sink_vmo)
+        (player, sink_request_stream, audio_consumer_request_stream, sink_vmos)
     }
 
     fn build_config(codec_type: &MediaCodecType) -> MediaCodecConfig {
@@ -719,7 +771,7 @@ pub(crate) mod tests {
     fn test_send_frame() {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
-        let (mut player, mut sink_request_stream, _player_request_stream, sink_vmo) =
+        let (mut player, mut sink_request_stream, _player_request_stream, sink_vmos) =
             setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
 
         let content = &[1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -736,14 +788,15 @@ pub(crate) mod tests {
         let sink_req = exec
             .run_singlethreaded(&mut sink_request_stream.select_next_some())
             .expect("got a packet");
-        //let sink_req = match complete {
-        //    Poll::Ready(Ok(req)) => req,
-        //    x => panic!("expected sink request message but got {:?}", x),
-        //};
 
-        let (offset, size) = match sink_req {
-            StreamSinkRequest::SendPacketNoReply { packet, .. } => {
-                (packet.payload_offset, packet.payload_size as usize)
+        let (offset, size, buffer_index) = match sink_req {
+            StreamSinkRequest::SendPacket { responder, packet, .. } => {
+                responder.send().expect("sent response");
+                (
+                    packet.payload_offset,
+                    packet.payload_size as usize,
+                    packet.payload_buffer_id as usize,
+                )
             }
             _ => panic!("should have received a packet"),
         };
@@ -751,7 +804,9 @@ pub(crate) mod tests {
         let mut recv = Vec::with_capacity(size);
         recv.resize(size, 0);
 
-        sink_vmo.read(recv.as_mut_slice(), offset).expect("should be able to read packet data");
+        sink_vmos[buffer_index]
+            .read(recv.as_mut_slice(), offset)
+            .expect("should be able to read packet data");
 
         assert_eq!(&recv[..content.len()], content, "received didn't match payload");
     }
@@ -773,7 +828,10 @@ pub(crate) mod tests {
             .run_singlethreaded(&mut sink_request_stream.select_next_some())
             .expect("sent packet");
         match sink_req {
-            StreamSinkRequest::SendPacketNoReply { packet, .. } => packet.flags,
+            StreamSinkRequest::SendPacket { packet, responder, .. } => {
+                responder.send().expect("send reponse should work");
+                packet.flags
+            }
             _ => panic!("should have received a packet"),
         }
     }
@@ -871,5 +929,67 @@ pub(crate) mod tests {
         };
 
         assert_matches!(player_req, AudioConsumerRequest::Start { .. });
+    }
+
+    /// Test that the buffers behave correctly for AudioConsumerSink
+    #[test]
+    fn test_sink_buffer_handling() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+
+        let (mut audio_consumer_proxy, mut audio_consumer_request_stream) =
+            create_proxy_and_stream::<AudioConsumerMarker>().expect("proxy creation");
+        let (_sender, receiver) = mpsc::channel(1);
+
+        let mut sink = AudioConsumerSink::build(&mut audio_consumer_proxy, 48000, None, receiver)
+            .expect("builds correctliy");
+
+        let (mut sink_request_stream, _buffers) =
+            expect_audio_consumer_sink_setup(&mut exec, &mut audio_consumer_request_stream, false);
+
+        let payload = &[0xF0, 0x9F, 0x92, 0x96];
+        let mut responders = Vec::new();
+        // run out of send buffers
+        for _ in 0..NUM_BUFFERS {
+            assert!(sink.send_frame(payload, 0).is_ok());
+
+            // Should send the packet through
+            let req = exec.run_until_stalled(&mut sink_request_stream.next());
+            match req {
+                Poll::Ready(Some(Ok(StreamSinkRequest::SendPacket { packet: _, responder }))) => {
+                    responders.push(responder);
+                }
+                x => panic!("Expected SendPacket request, got {:?}", x),
+            };
+        }
+
+        // No more buffers left, send_frame should be an error.
+        assert!(sink.send_frame(payload, 0).is_err());
+
+        // Writing to the sink shoould be pending.
+        let mut write_fut = sink.write_all(payload);
+
+        let (waker, write_fut_wake_count) = new_count_waker();
+        let mut counting_ctx = Context::from_waker(&waker);
+
+        assert!(write_fut.poll_unpin(&mut counting_ctx).is_pending());
+
+        // responding to one of the responders should wake up the writer.
+        responders.pop().expect("a responder").send().expect("responder to send correctly");
+
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        assert_eq!(1, write_fut_wake_count.get());
+
+        // Polling the write future should finish now, since a buffer is ready.
+        assert!(write_fut.poll_unpin(&mut counting_ctx).is_ready());
+
+        // Should have sent the packet through
+        let req = exec.run_until_stalled(&mut sink_request_stream.next());
+        match req {
+            Poll::Ready(Some(Ok(StreamSinkRequest::SendPacket { packet: _, responder }))) => {
+                responders.push(responder);
+            }
+            x => panic!("Expected SendPacket request, got {:?}", x),
+        };
     }
 }
