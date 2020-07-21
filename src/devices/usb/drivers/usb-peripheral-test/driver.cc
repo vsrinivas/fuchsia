@@ -109,14 +109,20 @@ zx_status_t UsbTest::Init() {
 
 void UsbTest::TestIntrComplete(usb_request_t* req) {
   zxlogf(SERIAL, "%s %d %ld", __func__, req->response.status, req->response.actual);
-
+  if (suspending_) {
+    usb_request_release(req);
+    return;
+  }
   fbl::AutoLock lock(&lock_);
   intr_reqs_.push(usb::Request<void>(req, parent_req_size_));
 }
 
 void UsbTest::TestBulkOutComplete(usb_request_t* req) {
   zxlogf(SERIAL, "%s %d %ld", __func__, req->response.status, req->response.actual);
-
+  if (suspending_) {
+    usb_request_release(req);
+    return;
+  }
   if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
     fbl::AutoLock lock(&lock_);
     bulk_out_reqs_.push_next(usb::Request<void>(req, parent_req_size_));
@@ -161,9 +167,12 @@ void UsbTest::TestBulkOutComplete(usb_request_t* req) {
 
 void UsbTest::TestBulkInComplete(usb_request_t* req) {
   zxlogf(SERIAL, "%s %d %ld", __func__, req->response.status, req->response.actual);
-
+  auto req_managed = usb::Request<void>(req, parent_req_size_);
+  if (suspending_) {
+    return;
+  }
   fbl::AutoLock lock(&lock_);
-  bulk_in_reqs_.push(usb::Request<void>(req, parent_req_size_));
+  bulk_in_reqs_.push(std::move(req_managed));
 }
 
 void UsbTest::UsbFunctionInterfaceGetDescriptors(void* buffer, size_t buffer_size,
@@ -262,6 +271,15 @@ zx_status_t UsbTest::UsbFunctionInterfaceSetConfigured(bool configured, usb_spee
 
 zx_status_t UsbTest::UsbFunctionInterfaceSetInterface(uint8_t interface, uint8_t alt_setting) {
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+void UsbTest::DdkSuspend(ddk::SuspendTxn txn) {
+  // Set suspend bit so that all requests are free'd when complete
+  suspending_ = true;
+  function_.CancelAll(bulk_out_addr_);
+  function_.CancelAll(intr_addr_);
+  function_.CancelAll(bulk_in_addr_);
+  txn.Reply(ZX_OK, 0);
 }
 
 void UsbTest::DdkUnbindNew(ddk::UnbindTxn txn) {

@@ -4,13 +4,20 @@
 
 #include "dwc2.h"
 
+#include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
+#include <threads.h>
+#include <zircon/syscalls.h>
 
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
+#include <usb/usb-request.h>
+
+#include "usb_dwc_regs.h"
 
 namespace dwc2 {
 
@@ -346,7 +353,6 @@ void Dwc2::StartEp0() {
 // Queues the next USB request for the specified endpoint
 void Dwc2::QueueNextRequest(Endpoint* ep) {
   std::optional<Request> req;
-
   if (ep->current_req == nullptr) {
     req = ep->queued_reqs.pop();
   }
@@ -976,11 +982,40 @@ void Dwc2::DdkUnbindNew(ddk::UnbindTxn txn) {
 void Dwc2::DdkRelease() { delete this; }
 
 void Dwc2::DdkSuspend(ddk::SuspendTxn txn) {
-  HandleSuspend();
+  fbl::AutoLock lock(&lock_);
+  irq_.destroy();
+  shutting_down_ = true;
+  // Disconnect from host to prevent DMA from being started
+  DCTL::Get().ReadFrom(&mmio_.value()).set_sftdiscon(1).WriteTo(&mmio_.value());
+  auto grstctl = GRSTCTL::Get();
+  auto mmio = &mmio_.value();
+  // Start soft reset sequence -- I think this should clear the DMA FIFOs
+  grstctl.FromValue(0).set_csftrst(1).WriteTo(mmio);
+
+  // Wait for reset to complete
+  while (grstctl.ReadFrom(mmio).csftrst()) {
+    // Arbitrary sleep to yield our timeslice while we wait for
+    // hardware to complete its reset.
+    zx::nanosleep(zx::deadline_after(zx::msec(1)));
+  }
+  lock.release();
+
+  if (irq_thread_started_) {
+    irq_thread_started_ = false;
+    thrd_join(irq_thread_, nullptr);
+  }
+  ep0_buffer_.release();
   txn.Reply(ZX_OK, 0);
 }
 
 void Dwc2::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb) {
+  {
+    fbl::AutoLock lock(&lock_);
+    if (shutting_down_) {
+      lock.release();
+      usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, cb);
+    }
+  }
   uint8_t ep_num = DWC_ADDR_TO_INDEX(req->header.ep_address);
   if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= std::size(endpoints_)) {
     zxlogf(ERROR, "Dwc2::UsbDciRequestQueue: bad ep address 0x%02X", req->header.ep_address);

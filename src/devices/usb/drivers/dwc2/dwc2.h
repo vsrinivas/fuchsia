@@ -7,8 +7,11 @@
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/hw/usb.h>
+
+#include <atomic>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -161,6 +164,7 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
   zx::time irq_dispatch_timestamp_;
   // Timestamp when we started waiting for the interrupt
   zx::time wait_start_time_;
+  bool shutting_down_ __TA_GUARDED(lock_) = false;
 };
 
 }  // namespace dwc2

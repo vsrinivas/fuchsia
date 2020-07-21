@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/function.h>
+#include <ddktl/suspend-txn.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 
@@ -21,7 +24,7 @@ static constexpr size_t INTR_MAX_PACKET = 64;
 namespace usb_function_test {
 
 class UsbTest;
-using UsbTestType = ddk::Device<UsbTest, ddk::UnbindableNew>;
+using UsbTestType = ddk::Device<UsbTest, ddk::UnbindableNew, ddk::Suspendable>;
 class UsbTest : public UsbTestType, public ddk::UsbFunctionInterfaceProtocol<UsbTest> {
  public:
   explicit UsbTest(zx_device_t* parent) : UsbTestType(parent) {}
@@ -40,6 +43,8 @@ class UsbTest : public UsbTestType, public ddk::UsbFunctionInterfaceProtocol<Usb
   zx_status_t UsbFunctionInterfaceSetInterface(uint8_t interface, uint8_t alt_setting);
 
   void DdkUnbindNew(ddk::UnbindTxn txn);
+
+  void DdkSuspend(ddk::SuspendTxn txn);
 
   size_t UsbFunctionGetRequestSize() { return parent_req_size_ + sizeof(usb_req_internal_t); }
 
@@ -66,6 +71,7 @@ class UsbTest : public UsbTestType, public ddk::UsbFunctionInterfaceProtocol<Usb
   fbl::Mutex lock_;
 
   uint8_t bulk_out_addr_;
+  std::atomic_bool suspending_ = false;
   uint8_t bulk_in_addr_;
   uint8_t intr_addr_;
   size_t parent_req_size_;
