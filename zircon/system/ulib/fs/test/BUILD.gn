@@ -37,7 +37,6 @@ test("fs-vnode") {
   }
   sources = [
     "lazy_dir_tests.cc",
-    "main.cc",
     "pseudo_dir_tests.cc",
     "pseudo_file_tests.cc",
     "remote_dir_tests.cc",
@@ -69,7 +68,6 @@ test("fs-vnode") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/unittest",
   ]
 }
 
