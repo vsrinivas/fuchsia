@@ -4,7 +4,7 @@
 
 #include "address_space_device.h"
 
-#include <fuchsia/hardware/goldfish/c/fidl.h>
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fidl-utils/bind.h>
 #include <limits.h>
@@ -15,6 +15,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
+#include <ddktl/fidl.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
@@ -60,7 +61,8 @@ using InstanceType = ddk::Device<Instance, ddk::Messageable>;
 
 // Deprecated
 // This class implements an address space instance device.
-class Instance : public InstanceType {
+class Instance : public InstanceType,
+                 public llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface {
  public:
   Instance(AddressSpaceDevice* device, uint64_t dma_region_paddr)
       : Device(device->zxdev()), device_(device), dma_region_paddr_(dma_region_paddr) {}
@@ -76,20 +78,21 @@ class Instance : public InstanceType {
     return DdkAdd("address-space", DEVICE_ADD_INSTANCE);
   }
 
-  zx_status_t FidlOpenChildDriver(fuchsia_hardware_goldfish_AddressSpaceChildDriverType type,
-                                  zx_handle_t request_handle) {
-    zx::channel request(request_handle);
+  // |llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface|
+  void OpenChildDriver(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
+                       zx::channel request, OpenChildDriverCompleter::Sync completer) override {
+    using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
 
     ddk::IoBuffer io_buffer;
     uint32_t handle;
     zx_status_t status = device_->CreateChildDriver(&io_buffer, &handle);
     if (status != ZX_OK) {
-      return status;
+      completer.Close(status);
+      return;
     }
 
-    fuchsia_hardware_goldfish_AddressSpaceChildDriverPingMessage* ping =
-        reinterpret_cast<struct fuchsia_hardware_goldfish_AddressSpaceChildDriverPingMessage*>(
-            io_buffer.virt());
+    AddressSpaceChildDriverPingMessage* ping =
+        reinterpret_cast<struct AddressSpaceChildDriverPingMessage*>(io_buffer.virt());
     memset(ping, 0, sizeof(*ping));
     ping->offset = dma_region_paddr_;
     ping->metadata = static_cast<uint64_t>(type);
@@ -104,23 +107,20 @@ class Instance : public InstanceType {
 
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: failed to DdkAdd child driver: %d", kTag, status);
-      return status;
+      completer.Close(status);
+      return;
     }
 
     child_driver.release();
 
-    return ZX_OK;
+    completer.Close(ZX_OK);
   }
 
   // Device protocol implementation.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    using Binder = fidl::Binder<Instance>;
-
-    static const fuchsia_hardware_goldfish_AddressSpaceDevice_ops_t kOps = {
-        .OpenChildDriver = Binder::BindMember<&Instance::FidlOpenChildDriver>,
-    };
-
-    return fuchsia_hardware_goldfish_AddressSpaceDevice_dispatch(this, txn, msg, &kOps);
+    DdkTransaction transaction(txn);
+    llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Dispatch(this, msg, &transaction);
+    return transaction.Status();
   }
   zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
   void DdkRelease() { delete this; }
@@ -318,8 +318,9 @@ uint32_t AddressSpaceDevice::CommandMmioLocked(uint32_t cmd) {
 }
 
 AddressSpaceChildDriver::AddressSpaceChildDriver(
-    fuchsia_hardware_goldfish_AddressSpaceChildDriverType type, AddressSpaceDevice* device,
-    uint64_t dma_region_paddr, ddk::IoBuffer&& io_buffer, uint32_t child_device_handle)
+    llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
+    AddressSpaceDevice* device, uint64_t dma_region_paddr, ddk::IoBuffer&& io_buffer,
+    uint32_t child_device_handle)
     : Device(device->zxdev()),
       device_(device),
       dma_region_paddr_(dma_region_paddr),
@@ -339,15 +340,15 @@ zx_status_t AddressSpaceChildDriver::Bind() {
   return DdkAdd("address-space", DEVICE_ADD_INSTANCE);
 }
 
-zx_status_t AddressSpaceChildDriver::FidlAllocateBlock(uint64_t size, fidl_txn_t* txn) {
+void AddressSpaceChildDriver::AllocateBlock(uint64_t size, AllocateBlockCompleter::Sync completer) {
   TRACE_DURATION("gfx", "Instance::FidlAllocateBlock", "size", size);
 
   uint64_t offset;
   uint32_t result = device_->AllocateBlock(&size, &offset);
   if (result) {
     zxlogf(ERROR, "%s: failed to allocate block: %lu %d", kTag, size, result);
-    return fuchsia_hardware_goldfish_AddressSpaceChildDriverAllocateBlock_reply(
-        txn, ZX_ERR_INTERNAL, 0, ZX_HANDLE_INVALID);
+    completer.Reply(ZX_ERR_INTERNAL, 0, zx::vmo());
+    return;
   }
 
   auto deallocate_block = fbl::MakeAutoCall([this, offset]() { device_->DeallocateBlock(offset); });
@@ -358,37 +359,39 @@ zx_status_t AddressSpaceChildDriver::FidlAllocateBlock(uint64_t size, fidl_txn_t
   zx_status_t status = device_->PinBlock(offset, size, &paddr, &pmt, &vmo);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to pin block: %d", kTag, status);
-    return status;
+    completer.Close(status);
+    return;
   }
 
   deallocate_block.cancel();
   allocated_blocks_[paddr] = {offset, size, std::move(pmt)};
-  return fuchsia_hardware_goldfish_AddressSpaceChildDriverAllocateBlock_reply(txn, ZX_OK, paddr,
-                                                                              vmo.release());
+  completer.Reply(ZX_OK, paddr, std::move(vmo));
 }
 
-zx_status_t AddressSpaceChildDriver::FidlDeallocateBlock(uint64_t paddr, fidl_txn_t* txn) {
+void AddressSpaceChildDriver::DeallocateBlock(uint64_t paddr,
+                                              DeallocateBlockCompleter::Sync completer) {
   TRACE_DURATION("gfx", "Instance::FidlDeallocateBlock", "paddr", paddr);
 
   auto it = allocated_blocks_.find(paddr);
   if (it == allocated_blocks_.end()) {
     zxlogf(ERROR, "%s: invalid block: %lu", kTag, paddr);
-    return ZX_ERR_INVALID_ARGS;
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   uint32_t result = device_->DeallocateBlock(it->second.offset);
   if (result) {
     zxlogf(ERROR, "%s: failed to deallocate block: %lu %d", kTag, paddr, result);
-    return fuchsia_hardware_goldfish_AddressSpaceChildDriverDeallocateBlock_reply(txn,
-                                                                                  ZX_ERR_INTERNAL);
+    completer.Reply(ZX_ERR_INTERNAL);
+    return;
   }
 
   allocated_blocks_.erase(it);
-  return fuchsia_hardware_goldfish_AddressSpaceChildDriverDeallocateBlock_reply(txn, ZX_OK);
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t AddressSpaceChildDriver::FidlClaimSharedBlock(uint64_t offset, uint64_t size,
-                                                          fidl_txn_t* txn) {
+void AddressSpaceChildDriver::ClaimSharedBlock(uint64_t offset, uint64_t size,
+                                               ClaimSharedBlockCompleter::Sync completer) {
   auto end = offset + size;
   for (const auto& entry : claimed_blocks_) {
     auto entry_start = entry.second.offset;
@@ -399,8 +402,8 @@ zx_status_t AddressSpaceChildDriver::FidlClaimSharedBlock(uint64_t offset, uint6
              "0x%llx). %d\n",
              kTag, (unsigned long long)offset, (unsigned long long)size,
              (unsigned long long)entry_start, (unsigned long long)entry_end, ZX_ERR_INVALID_ARGS);
-      return fuchsia_hardware_goldfish_AddressSpaceChildDriverClaimSharedBlock_reply(
-          txn, ZX_ERR_INVALID_ARGS, ZX_HANDLE_INVALID);
+      completer.Reply(ZX_ERR_INVALID_ARGS, zx::vmo());
+      return;
     }
   }
 
@@ -410,51 +413,45 @@ zx_status_t AddressSpaceChildDriver::FidlClaimSharedBlock(uint64_t offset, uint6
   zx_status_t status = device_->PinBlock(offset, size, &paddr, &pmt, &vmo);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to pin block: %d", kTag, status);
-    return status;
+    completer.Close(status);
+    return;
   }
 
   claimed_blocks_[offset] = {offset, size, std::move(pmt)};
-  return fuchsia_hardware_goldfish_AddressSpaceChildDriverClaimSharedBlock_reply(txn, ZX_OK,
-                                                                                 vmo.release());
+  completer.Reply(ZX_OK, std::move(vmo));
 };
 
-zx_status_t AddressSpaceChildDriver::FidlUnclaimSharedBlock(uint64_t offset, fidl_txn_t* txn) {
+void AddressSpaceChildDriver::UnclaimSharedBlock(uint64_t offset,
+                                                 UnclaimSharedBlockCompleter::Sync completer) {
   if (claimed_blocks_.end() == claimed_blocks_.find(offset)) {
     zxlogf(ERROR,
            "%s: tried to erase region at 0x%llx but there is no such region with that offset: %d\n",
            kTag, (unsigned long long)offset, ZX_ERR_INVALID_ARGS);
-    return fuchsia_hardware_goldfish_AddressSpaceChildDriverUnclaimSharedBlock_reply(
-        txn, ZX_ERR_INVALID_ARGS);
+    completer.Reply(ZX_ERR_INVALID_ARGS);
+    return;
   }
   claimed_blocks_.erase(offset);
-  return fuchsia_hardware_goldfish_AddressSpaceChildDriverUnclaimSharedBlock_reply(txn, ZX_OK);
+  completer.Reply(ZX_OK);
 };
 
-zx_status_t AddressSpaceChildDriver::FidlPing(
-    const fuchsia_hardware_goldfish_AddressSpaceChildDriverPingMessage* ping, fidl_txn_t* txn) {
-  fuchsia_hardware_goldfish_AddressSpaceChildDriverPingMessage* output =
-      reinterpret_cast<struct fuchsia_hardware_goldfish_AddressSpaceChildDriverPingMessage*>(
-          io_buffer_.virt());
-  *output = *ping;
+void AddressSpaceChildDriver::Ping(
+    llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage ping,
+    PingCompleter::Sync completer) {
+  using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
+  AddressSpaceChildDriverPingMessage* output =
+      reinterpret_cast<struct AddressSpaceChildDriverPingMessage*>(io_buffer_.virt());
+  *output = ping;
   output->offset += dma_region_paddr_;
   device_->ChildDriverPing(handle_);
 
-  return fuchsia_hardware_goldfish_AddressSpaceChildDriverPing_reply(txn, ZX_OK, output);
+  completer.Reply(ZX_OK, *output);
 }
 
 // Device protocol implementation.
 zx_status_t AddressSpaceChildDriver::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  using Binder = fidl::Binder<AddressSpaceChildDriver>;
-
-  static const fuchsia_hardware_goldfish_AddressSpaceChildDriver_ops_t kOps = {
-      .AllocateBlock = Binder::BindMember<&AddressSpaceChildDriver::FidlAllocateBlock>,
-      .DeallocateBlock = Binder::BindMember<&AddressSpaceChildDriver::FidlDeallocateBlock>,
-      .ClaimSharedBlock = Binder::BindMember<&AddressSpaceChildDriver::FidlClaimSharedBlock>,
-      .UnclaimSharedBlock = Binder::BindMember<&AddressSpaceChildDriver::FidlUnclaimSharedBlock>,
-      .Ping = Binder::BindMember<&AddressSpaceChildDriver::FidlPing>,
-  };
-
-  return fuchsia_hardware_goldfish_AddressSpaceChildDriver_dispatch(this, txn, msg, &kOps);
+  DdkTransaction transaction(txn);
+  llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
 zx_status_t AddressSpaceChildDriver::DdkClose(uint32_t flags) { return ZX_OK; }

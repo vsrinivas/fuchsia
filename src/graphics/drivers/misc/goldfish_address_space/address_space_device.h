@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_ADDRESS_SPACE_ADDRESS_SPACE_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_ADDRESS_SPACE_ADDRESS_SPACE_DEVICE_H_
 
-#include <fuchsia/hardware/goldfish/c/fidl.h>
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
@@ -64,21 +64,27 @@ class AddressSpaceDevice : public DeviceType {
   DISALLOW_COPY_ASSIGN_AND_MOVE(AddressSpaceDevice);
 };
 
-class AddressSpaceChildDriver : public ChildDriverType {
+class AddressSpaceChildDriver
+    : public ChildDriverType,
+      public llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::Interface {
  public:
-  explicit AddressSpaceChildDriver(fuchsia_hardware_goldfish_AddressSpaceChildDriverType type,
-                                   AddressSpaceDevice* device, uint64_t dma_region_paddr,
-                                   ddk::IoBuffer&& io_buffer, uint32_t child_device_handle);
+  explicit AddressSpaceChildDriver(
+      llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
+      AddressSpaceDevice* device, uint64_t dma_region_paddr, ddk::IoBuffer&& io_buffer,
+      uint32_t child_device_handle);
   ~AddressSpaceChildDriver();
 
   zx_status_t Bind();
 
-  zx_status_t FidlAllocateBlock(uint64_t size, fidl_txn_t* txn);
-  zx_status_t FidlDeallocateBlock(uint64_t paddr, fidl_txn_t* txn);
-  zx_status_t FidlClaimSharedBlock(uint64_t offset, uint64_t size, fidl_txn_t* txn);
-  zx_status_t FidlUnclaimSharedBlock(uint64_t offset, fidl_txn_t* txn);
-  zx_status_t FidlPing(const fuchsia_hardware_goldfish_AddressSpaceChildDriverPingMessage* ping,
-                       fidl_txn_t* txn);
+  // |llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::Interface|
+  void AllocateBlock(uint64_t size, AllocateBlockCompleter::Sync completer) override;
+  void DeallocateBlock(uint64_t paddr, DeallocateBlockCompleter::Sync completer) override;
+  void ClaimSharedBlock(uint64_t offset, uint64_t size,
+                        ClaimSharedBlockCompleter::Sync completer) override;
+  void UnclaimSharedBlock(uint64_t offset, UnclaimSharedBlockCompleter::Sync completer) override;
+  void Ping(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage ping,
+            PingCompleter::Sync completer) override;
+
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkClose(uint32_t flags);
   void DdkRelease();
