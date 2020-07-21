@@ -24,6 +24,7 @@ source_set("modular_config") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
     "//src/lib/fsl",
+    "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:json_xdr",
   ]
 }

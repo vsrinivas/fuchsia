@@ -329,3 +329,49 @@ TEST_F(ModularConfigReaderTest, DefaultConfig) {
   ASSERT_TRUE(config.has_sessionmgr_config());
   EXPECT_TRUE(config.sessionmgr_config().enable_cobalt());
 }
+
+// Tests that ConfigToJsonString returns a JSON string containing a serialized ModularConfig.
+TEST_F(ModularConfigReaderTest, ConfigToJsonString) {
+  static constexpr auto kExpectedJson = R"({
+      "basemgr": {
+        "enable_cobalt": true,
+        "use_session_shell_for_story_shell_factory": false,
+        "base_shell": {
+          "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
+          "keep_alive_after_login": false,
+          "args": []
+        },
+        "session_shells": [
+          {
+            "name": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+            "display_usage": "unknown",
+            "screen_height": 0.0,
+            "screen_width": 0.0,
+            "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+            "args": []
+          }
+        ],
+        "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+      },
+      "sessionmgr": {
+        "enable_cobalt": true,
+        "startup_agents": [],
+        "session_agents": [],
+        "component_args": [],
+        "agent_service_index": [],
+        "restart_session_on_agent_crash": []
+      }
+    })";
+  rapidjson::Document expected_json_doc;
+  expected_json_doc.Parse(kExpectedJson);
+  ASSERT_FALSE(expected_json_doc.HasParseError());
+
+  fuchsia::modular::session::ModularConfig config;
+  auto config_json = modular::ConfigToJsonString(config);
+
+  rapidjson::Document config_json_doc;
+  config_json_doc.Parse(config_json);
+  EXPECT_FALSE(config_json_doc.HasParseError());
+
+  EXPECT_EQ(expected_json_doc, config_json_doc);
+}

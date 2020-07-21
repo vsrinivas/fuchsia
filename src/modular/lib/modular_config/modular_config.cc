@@ -14,6 +14,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/fidl/json_xdr.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/modular_config/modular_config_xdr.h"
@@ -78,6 +79,13 @@ fuchsia::modular::session::ModularConfig DefaultConfig() {
   FX_DCHECK(ok);
 
   return config;
+}
+
+std::string ConfigToJsonString(const fuchsia::modular::session::ModularConfig& config) {
+  std::string json;
+  auto config_copy = CloneStruct(config);
+  XdrWrite(&json, &config_copy, XdrModularConfig);
+  return json;
 }
 
 ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {

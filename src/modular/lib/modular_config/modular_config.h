@@ -25,6 +25,9 @@ fit::result<fuchsia::modular::session::ModularConfig, std::string> ParseConfig(
 // Returns the default Modular configuration.
 fuchsia::modular::session::ModularConfig DefaultConfig();
 
+// Returns the Modular configuration as a JSON string.
+std::string ConfigToJsonString(const fuchsia::modular::session::ModularConfig& config);
+
 // A utility for parsing a modular configuration file.
 //
 // Use |ModularConfigReader::CreateFromNamespace()| to read modular
