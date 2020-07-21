@@ -581,5 +581,13 @@ TEST(UnbufferedOperationsBuilderTest, RequestCoalescedWithOnlyOneOfTwoMergableRe
   EXPECT_EQ(requests[1].op.length, operations[0].op.length);
 }
 
+TEST(UnbufferedOperationsBuilderDeathTest, BlockCountOverflowAsserts) {
+  fbl::Vector<UnbufferedOperation> operations = {
+      UnbufferedOperation{.op = {.length = std::numeric_limits<uint64_t>::max()}},
+      UnbufferedOperation{.op = {.length = std::numeric_limits<uint64_t>::max()}},
+  };
+  ASSERT_DEATH([&] { BlockCount(operations); });
+}
+
 }  // namespace
 }  // namespace storage
