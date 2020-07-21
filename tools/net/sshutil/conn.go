@@ -35,8 +35,6 @@ const (
 )
 
 // Conn is a wrapper around ssh that supports keepalive and auto-reconnection.
-// TODO(fxb/48042): change all usage of sshutil to use this Conn type instead
-// of ssh.Client.
 type Conn struct {
 	*ssh.Client
 
