@@ -31,10 +31,11 @@ fn main() -> Result<(), Error> {
             // which to make new clones.
             let store = store.clone();
             move |stream| {
-                fasync::spawn(
+                fasync::Task::spawn(
                     registry_server(stream, store.clone())
                         .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-                );
+                )
+                .detach();
             }
         })
         .add_fidl_service_at(ui_shortcut::ManagerMarker::NAME, {
@@ -42,10 +43,11 @@ fn main() -> Result<(), Error> {
             // which to make new clones.
             let store = Arc::clone(&store);
             move |stream| {
-                fasync::spawn(
+                fasync::Task::spawn(
                     manager_server(stream, store.clone())
                         .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-                );
+                )
+                .detach();
             }
         });
     fs.take_and_serve_directory_handle()?;

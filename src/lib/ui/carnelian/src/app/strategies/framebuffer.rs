@@ -97,10 +97,11 @@ impl AppStrategy for FrameBufferAppStrategy {
     ) -> Result<(), Error> {
         let view_key = self.view_key;
         let input_report_sender = internal_sender.clone();
-        fasync::spawn_local(
+        fasync::Task::local(
             listen_for_user_input(view_key, input_report_sender)
                 .unwrap_or_else(|e: anyhow::Error| eprintln!("error: listening for input {:?}", e)),
-        );
+        )
+        .detach();
         Ok(())
     }
 

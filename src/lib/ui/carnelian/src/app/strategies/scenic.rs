@@ -39,7 +39,7 @@ impl ScenicAppStrategy {
 
         self.scenic.create_session(session_request, Some(session_listener))?;
         let sender = app_sender.clone();
-        fasync::spawn_local(
+        fasync::Task::local(
             session_listener_request
                 .into_stream()?
                 .map_ok(move |request| match request {
@@ -91,7 +91,8 @@ impl ScenicAppStrategy {
                 })
                 .try_collect::<()>()
                 .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
-        );
+        )
+        .detach();
 
         Ok(Session::new(session_proxy))
     }
@@ -155,7 +156,7 @@ impl AppStrategy for ScenicAppStrategy {
         let sender = app_sender.clone();
         let f = move |stream: ViewProviderRequestStream| {
             let sender = sender.clone();
-            fasync::spawn_local(
+            fasync::Task::local(
                 stream
                     .try_for_each(move |req| {
                         let (token, control_ref, view_ref) = match req {
@@ -186,6 +187,7 @@ impl AppStrategy for ScenicAppStrategy {
                     })
                     .unwrap_or_else(|e| eprintln!("error running ViewProvider server: {:?}", e)),
             )
+            .detach()
         };
         public.add_fidl_service(f);
 
@@ -204,7 +206,7 @@ impl AppStrategy for ScenicAppStrategy {
             Ok(_) => (),
         }
 
-        fasync::spawn_local(fs.collect());
+        fasync::Task::local(fs.collect()).detach();
 
         Ok(())
     }

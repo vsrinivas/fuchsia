@@ -207,7 +207,7 @@ impl ScenicViewStrategy {
 
         let present_sender = app_sender.clone();
         let info_fut = session.lock().present(0);
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             match info_fut.await {
                 // TODO: figure out how to recover from this error
                 Err(err) => eprintln!("Present Error: {}", err),
@@ -217,7 +217,8 @@ impl ScenicViewStrategy {
                         .expect("unbounded_send");
                 }
             }
-        });
+        })
+        .detach();
 
         let strat = ScenicViewStrategy {
             view,
@@ -292,10 +293,11 @@ impl ScenicViewStrategy {
             let timer = fasync::Timer::new(fuchsia_async::Time::from_nanos(presentation_time));
             let timer_sender = self.app_sender.clone();
             let key = self.view_key;
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 timer.await;
                 timer_sender.unbounded_send(MessageInternal::Render(key)).expect("unbounded_send");
-            });
+            })
+            .detach();
             self.render_timer_scheduled = true;
         }
     }
@@ -398,13 +400,14 @@ impl ViewStrategy for ScenicViewStrategy {
                 let app_sender = self.app_sender.clone();
                 let key = view_details.key;
                 let collection_id = plumber.collection_id;
-                fasync::spawn_local(async move {
+                fasync::Task::local(async move {
                     let signals = OnSignals::new(&local_event, Signals::EVENT_SIGNALED);
                     signals.await.expect("to wait");
                     app_sender
                         .unbounded_send(MessageInternal::ImageFreed(key, available, collection_id))
                         .expect("unbounded_send");
-                });
+                })
+                .detach();
                 self.content_material.set_texture_resource(Some(&self.image_pipe));
                 let image_present_event = self.image_pipe_client.present_image(
                     available as u32,
@@ -412,9 +415,10 @@ impl ViewStrategy for ScenicViewStrategy {
                     &mut iter::once(buffer_ready_event_for_image_pipe),
                     &mut iter::once(image_freed_event),
                 );
-                fasync::spawn_local(async move {
+                fasync::Task::local(async move {
                     image_present_event.await.expect("to present_image");
-                });
+                })
+                .detach();
                 // Image is guaranteed to be presented at this point.
                 plumber.frame_set.mark_presented(available);
                 true
@@ -434,7 +438,7 @@ impl ViewStrategy for ScenicViewStrategy {
             let presentation_time = self.next_presentation_time;
             let present_event = self.session.lock().present(presentation_time);
             let key = view_details.key;
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 match present_event.await {
                     // TODO: figure out how to recover from this error
                     Err(err) => eprintln!("Present Error: {}", err),
@@ -444,7 +448,8 @@ impl ViewStrategy for ScenicViewStrategy {
                             .expect("unbounded_send");
                     }
                 }
-            });
+            })
+            .detach();
             // Advance presentation time.
             self.pending_present_count += 1;
             self.last_presentation_time = presentation_time;

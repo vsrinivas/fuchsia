@@ -382,7 +382,7 @@ async fn listen_to_entry(
     let input_report_sender = internal_sender.clone();
     let (input_reports_reader_proxy, input_reports_reader_request) = create_proxy()?;
     device.get_input_reports_reader(input_reports_reader_request)?;
-    fasync::spawn_local(async move {
+    fasync::Task::local(async move {
         let _device = device;
         loop {
             let reports_res = input_reports_reader_proxy.read_input_reports().await;
@@ -408,7 +408,8 @@ async fn listen_to_entry(
                 }
             }
         }
-    });
+    })
+    .detach();
     Ok(())
 }
 

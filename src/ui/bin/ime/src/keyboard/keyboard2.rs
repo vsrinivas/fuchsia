@@ -53,10 +53,11 @@ impl Service {
             layout_state.watch().await.context("failed to load initial keyboard layout")?;
         let layout = Arc::new(Mutex::new(layout));
 
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             Service::spawn_layout_watcher(layout_state, layout.clone())
                 .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-        );
+        )
+        .detach();
 
         Ok(Service { _ime: ime, layout, store: Arc::new(Mutex::new(Store::default())) })
     }
@@ -71,7 +72,7 @@ impl Service {
     /// Start serving fuchsia.ui.input2.Keyboard protocol.
     pub fn spawn_service(&self, mut stream: ui_input2::KeyboardRequestStream) {
         let store = self.store.clone();
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             async move {
                 // Store subscriber ids to cleanup once client disconnects.
                 let mut subscriber_ids: Vec<usize> = Vec::new();
@@ -93,7 +94,8 @@ impl Service {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-        );
+        )
+        .detach();
     }
 
     async fn spawn_layout_watcher(

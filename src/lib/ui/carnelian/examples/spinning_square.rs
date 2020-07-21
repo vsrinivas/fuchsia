@@ -53,7 +53,7 @@ impl AppAssistant for SpinningSquareAppAssistant {
 
 impl SpinningSquareAppAssistant {
     fn create_echo_server(channel: fasync::Channel, quiet: bool) {
-        fasync::spawn_local(
+        fasync::Task::local(
             async move {
                 let mut stream = EchoRequestStream::from_channel(channel);
                 while let Some(EchoRequest::EchoString { value, responder }) =
@@ -72,7 +72,8 @@ impl SpinningSquareAppAssistant {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| eprintln!("{:?}", e)),
-        );
+        )
+        .detach();
     }
 }
 

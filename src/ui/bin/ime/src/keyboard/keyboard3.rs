@@ -99,10 +99,11 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<ui_input3::KeyboardMarker>()
                 .expect("Failed to create KeyboardProxy and stream.");
         let service = KeyboardService::new().await?;
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             async move { service.spawn_service(keyboard_request_stream).await }
                 .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-        );
+        )
+        .detach();
 
         let (listener_client_end, _listener) =
             fidl::endpoints::create_request_stream::<ui_input3::KeyboardListenerMarker>()?;

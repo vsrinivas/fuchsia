@@ -72,7 +72,7 @@ impl LegacyIme {
     /// `InputMethodEditorClient`, and for events, vice-versa.
     pub fn bind_text_field(&self, mut stream: txt::TextFieldRequestStream) {
         let mut self_clone = self.clone();
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             async move {
                 let control_handle = stream.control_handle();
                 {
@@ -96,14 +96,15 @@ impl LegacyIme {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        );
+        )
+        .detach();
     }
 
     /// Handles all state updates passed down the `InputMethodEditorRequestStream`.
     pub fn bind_ime(&self, mut stream: uii::InputMethodEditorRequestStream) {
         let self_clone = self.clone();
         let self_clone_2 = self.clone();
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             async move {
                 while let Some(msg) = stream
                     .try_next()
@@ -123,7 +124,8 @@ impl LegacyIme {
                     ime_service.update_keyboard_visibility_from_ime(&self_clone_2.0, false).await;
                 }
             }),
-        );
+        )
+        .detach();
     }
 
     /// Handles a TextFieldRequest, returning a FIDL error if one occurred when sending a reply.

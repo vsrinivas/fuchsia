@@ -38,7 +38,7 @@ impl Service {
         let keyboard2 = self.keyboard2.clone();
         let keyboard3 = self.keyboard3.clone();
         let mut ime_service = self.ime_service.clone();
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             async move {
                 while let Some(msg) =
                     stream.try_next().await.context("error running keyboard service")?
@@ -72,19 +72,22 @@ impl Service {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-        );
+        )
+        .detach();
     }
 
     pub fn spawn_keyboard2_service(&self, stream: ui_input2::KeyboardRequestStream) {
         let keyboard2 = self.keyboard2.clone();
-        fuchsia_async::spawn(async move { keyboard2.lock().await.spawn_service(stream) });
+        fuchsia_async::Task::spawn(async move { keyboard2.lock().await.spawn_service(stream) })
+            .detach();
     }
 
     pub fn spawn_keyboard3_service(&self, stream: ui_input3::KeyboardRequestStream) {
         let keyboard3 = self.keyboard3.clone();
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             async move { keyboard3.lock().await.spawn_service(stream).await }
                 .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-        );
+        )
+        .detach();
     }
 }

@@ -261,9 +261,10 @@ mod test {
     fn spawn_allocator_server() -> Result<AllocatorProxy, Error> {
         let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<AllocatorMarker>()?;
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(_) = stream.try_next().await.expect("Failed to get request") {}
-        });
+        })
+        .detach();
         Ok(proxy)
     }
 
@@ -271,7 +272,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<BufferCollectionMarker>()?;
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut stored_constraints = None;
             while let Some(req) = stream.try_next().await.expect("Failed to get request") {
                 match req {
@@ -379,7 +380,8 @@ mod test {
                     _ => panic!("Unexpected request"),
                 }
             }
-        });
+        })
+        .detach();
 
         return Ok(proxy);
     }

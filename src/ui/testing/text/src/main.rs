@@ -51,7 +51,7 @@ fn main() -> Result<(), Error> {
 }
 
 fn bind_text_tester(mut stream: txt_testing::TextFieldTestSuiteRequestStream) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         while let Some(msg) =
             stream.try_next().await.expect("error reading value from IME service request stream")
         {
@@ -75,7 +75,8 @@ fn bind_text_tester(mut stream: txt_testing::TextFieldTestSuiteRequestStream) {
                 }
             }
         }
-    });
+    })
+    .detach();
 }
 
 async fn run_test(text_field: txt::TextFieldProxy, test_id: u64) -> Result<(), String> {

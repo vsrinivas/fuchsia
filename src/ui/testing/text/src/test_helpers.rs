@@ -275,11 +275,12 @@ mod test {
             .into_stream_and_control_handle()
             .expect("Should have created stream and control handle");
         control_handle.send_on_update(default_state(0).into()).expect("Should have sent update");
-        fuchsia_async::spawn(async {
+        fuchsia_async::Task::spawn(async {
             let mut wrapper =
                 TextFieldWrapper::new(proxy).await.expect("Should have created text field wrapper");
             wrapper.simple_insert("meow!").await.expect("Should have inserted successfully");
-        });
+        })
+        .detach();
         let (revision, _ch) = stream
             .try_next()
             .await

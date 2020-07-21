@@ -37,7 +37,7 @@ impl TextFieldMultiplexer {
             TextFieldMultiplexerState { proxy, control_handles: Vec::new(), last_state: None };
         let multiplexer = TextFieldMultiplexer { inner: Arc::new(Mutex::new(state)) };
         let multiplexer2 = multiplexer.clone();
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 while let Some(msg) = event_stream
                     .try_next()
@@ -62,14 +62,15 @@ impl TextFieldMultiplexer {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        );
+        )
+        .detach();
 
         multiplexer
     }
 
     pub fn add_request_stream(&self, mut stream: txt::TextFieldRequestStream) {
         let this = self.clone();
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 {
                     let mut multiplex_state = this.inner.lock().await;
@@ -98,7 +99,8 @@ impl TextFieldMultiplexer {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        );
+        )
+        .detach();
     }
 
     async fn handle_request<'a>(
@@ -278,11 +280,12 @@ mod tests {
     async fn forwards_content_requests_correctly() {
         let (mut stream, proxy_a, proxy_b) = setup().await;
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             loop {
                 expect_position_offset(&mut stream).await;
             }
-        });
+        })
+        .detach();
 
         let position_a = async move {
             let (position, _err) = proxy_a
@@ -305,7 +308,7 @@ mod tests {
     async fn queues_interleaving_edits_correctly() {
         let (mut stream, proxy_a, proxy_b) = setup().await;
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             expect_position_offset(&mut stream).await;
 
             expect_begin_edit(&mut stream, 0).await;
@@ -317,7 +320,8 @@ mod tests {
             expect_replace(&mut stream, 2).await;
             expect_replace(&mut stream, 4).await;
             expect_commit_edit(&mut stream).await;
-        });
+        })
+        .detach();
 
         fn make_range(i: u64) -> txt::Range {
             txt::Range { start: txt::Position { id: i }, end: txt::Position { id: i } }

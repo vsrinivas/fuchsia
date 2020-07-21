@@ -190,7 +190,7 @@ fn main() -> Result<(), Error> {
 
         // wait for events from the image freed fence to know when an
         // image can prepared.
-        fasync::spawn_local(
+        fasync::Task::local(
             async move {
                 while let Some(image_id) = image_receiver.next().await {
                     // Grab a mutable reference. This is guaranteed to work
@@ -216,10 +216,11 @@ fn main() -> Result<(), Error> {
             .unwrap_or_else(|e: anyhow::Error| {
                 println!("error {:#?}", e);
             }),
-        );
+        )
+        .detach();
 
         // Listen for vsync messages to schedule an update of the displayed image
-        fasync::spawn_local(
+        fasync::Task::local(
             async move {
                 while let Some(_vsync_message) = receiver.next().await {
                     // Wait an arbitrary 10 milliseconds after vsync to present the
@@ -244,7 +245,8 @@ fn main() -> Result<(), Error> {
             .unwrap_or_else(|e: anyhow::Error| {
                 println!("error {:#?}", e);
             }),
-        );
+        )
+        .detach();
         Ok::<(), Error>(())
     })?;
     executor.run_singlethreaded(future::pending::<()>());

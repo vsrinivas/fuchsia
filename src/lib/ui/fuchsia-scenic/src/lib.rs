@@ -899,10 +899,11 @@ mod tests {
 
         let _ = Layer::new(session.clone());
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let fut = session.lock().present(0);
             let _ = fut.await;
-        });
+        })
+        .detach();
 
         if let Some(session_request) = session_server.try_next().await.unwrap() {
             assert!(verify_session_command(session_request, |gfx_command| {
@@ -957,10 +958,11 @@ mod tests {
         ) => {
             let _ = $resource_type::new($session.clone());
 
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let fut = $session.lock().present(0);
                 let _ = fut.await;
-            });
+            })
+            .detach();
 
             while let Some(session_request) = $session_server.try_next().await.unwrap() {
                 let passed = verify_session_command(session_request, |gfx_command| {
@@ -1188,10 +1190,11 @@ mod tests {
         let child_node = EntityNode::new(session.clone());
         parent_node.add_child(&child_node);
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let fut = session.lock().present(0);
             let _ = fut.await;
-        });
+        })
+        .detach();
 
         let mut commands = vec![];
 
@@ -1222,10 +1225,11 @@ mod tests {
         parent_node.add_child(&child_node);
         parent_node.remove_child(&child_node);
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let fut = session.lock().present(0);
             let _ = fut.await;
-        });
+        })
+        .detach();
 
         let mut commands = vec![];
 
@@ -1258,10 +1262,11 @@ mod tests {
         compositor.set_display_rotation(DisplayRotation::By90Degrees);
         compositor.set_display_rotation(DisplayRotation::None);
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let fut = session.lock().present(0);
             let _ = fut.await;
-        });
+        })
+        .detach();
 
         let mut commands = vec![];
 
@@ -1309,10 +1314,11 @@ mod tests {
         };
         view_holder.set_view_properties(view_properties);
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let fut = session.lock().present(0);
             let _ = fut.await;
-        });
+        })
+        .detach();
 
         let mut commands = vec![];
 

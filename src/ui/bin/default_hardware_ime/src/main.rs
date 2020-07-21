@@ -70,7 +70,7 @@ impl DefaultHardwareIme {
 
     fn on_focus(&self, text_field: txt::TextFieldProxy) {
         let this = self.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut evt_stream = text_field.take_event_stream();
             // wait for first onupdate to populate self.current_field
             let res = evt_stream.next().await;
@@ -89,7 +89,8 @@ impl DefaultHardwareIme {
             } else {
                 fx_log_err!("failed to get OnUpdate from newly focused TextField: {:?}", res);
             }
-        });
+        })
+        .detach();
     }
 
     async fn process_text_field_events(
@@ -321,10 +322,11 @@ async fn main() -> Result<(), Error> {
 
     if ENABLE_TEXTFIELD {
         let ime = DefaultHardwareIme::new()?;
-        fasync::spawn(
+        fasync::Task::spawn(
             serve_textfield(ime.clone())
                 .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-        );
+        )
+        .detach();
     }
 
     Ok(())
@@ -366,10 +368,11 @@ async fn serve_keymap(keymap_service: keymap::KeymapService) -> Result<(), Error
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(|stream: ui_input::KeyboardLayoutStateRequestStream| {
         let keymap_service = keymap_service.clone();
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             keymap::handle_watch_keymap(stream, keymap_service)
                 .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
-        );
+        )
+        .detach();
     });
     fs.take_and_serve_directory_handle()?;
 

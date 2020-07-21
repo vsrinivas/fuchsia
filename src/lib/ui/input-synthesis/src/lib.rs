@@ -447,7 +447,7 @@ mod tests {
                     _: &mut DeviceDescriptor,
                     server: ServerEnd<InputDeviceMarker>,
                 ) -> Result<(), Error> {
-                    fasync::spawn(async move {
+                    fasync::Task::spawn(async move {
                         let mut stream = server.into_stream().expect("failed to convert to stream");
 
                         $(
@@ -470,7 +470,7 @@ mod tests {
                                 .is_none(),
                             "stream should be empty"
                         );
-                    });
+                    }).detach();
 
                     Ok(())
                 }

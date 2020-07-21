@@ -605,7 +605,7 @@ impl FrameBuffer {
 
         if let Some(vsync_sender) = vsync_sender {
             proxy.enable_vsync(true).context("enable_vsync failed")?;
-            fasync::spawn_local(
+            fasync::Task::local(
                 stream
                     .map_ok(move |request| match request {
                         ControllerEvent::OnVsync { display_id, timestamp, images, cookie } => {
@@ -622,7 +622,8 @@ impl FrameBuffer {
                     })
                     .try_collect::<()>()
                     .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
-            );
+            )
+            .detach();
         }
 
         // Connect to sysmem and allocate shared buffer collection.
@@ -780,11 +781,12 @@ impl FrameBuffer {
             let image_id = frame.image_id;
             let local_event = frame.signal_event.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
             local_event.as_handle_ref().signal(Signals::EVENT_SIGNALED, Signals::NONE)?;
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 let signals = OnSignals::new(&local_event, Signals::EVENT_SIGNALED);
                 signals.await.expect("to wait");
                 signal_sender.unbounded_send(image_id).expect("send to work");
-            });
+            })
+            .detach();
         }
         Ok(())
     }
@@ -817,7 +819,7 @@ mod test {
         let vsync_enabled = Rc::new(Cell::new(false));
         let vsync_enabled_clone = Rc::clone(&vsync_enabled);
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Some(req) = stream.try_next().await.expect("Failed to get request!") {
                 match req {
                     ControllerRequest::EnableVsync { enable: true, control_handle: _ } => {
@@ -829,7 +831,8 @@ mod test {
                     _ => panic!("Unexpected request"),
                 }
             }
-        });
+        })
+        .detach();
 
         let proxy = client.into_proxy()?;
         let (dummy, _) = zx::Channel::create()?;

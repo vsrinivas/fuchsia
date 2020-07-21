@@ -65,7 +65,7 @@ fn test_main() -> Result<(), Error> {
         let fb_ptr = Rc::new(RefCell::new(fb));
 
         // Listen for vsync messages to schedule an update of the displayed image
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             receiver.next().await;
             let mut fb = fb_ptr.borrow_mut();
             let frame2 = fb.get_frame_mut(image_id_2);
@@ -79,15 +79,17 @@ fn test_main() -> Result<(), Error> {
             fb.present_frame(image_id_2, None, true).expect("frame2 present to succeed");
             image_receiver.next().await;
             test_sender.unbounded_send(TestResult::TestPassed).unwrap();
-        });
+        })
+        .detach();
 
         let timeout = Timer::new(5_i64.second().after_now());
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             timeout.await;
             timeout_sender
                 .unbounded_send(TestResult::TimeoutFired)
                 .expect("test_sender.send expected to work");
-        });
+        })
+        .detach();
 
         let r = test_receiver.next().await;
         assert_eq!(r.unwrap(), TestResult::TestPassed);

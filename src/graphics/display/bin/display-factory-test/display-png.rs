@@ -192,10 +192,11 @@ impl ViewAssistant for DisplayPngViewAssistant {
             }
         }
         let timer = fasync::Timer::new(fasync::Time::after(Duration::from_seconds(args.timeout)));
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             timer.await;
             process::exit(1);
-        });
+        })
+        .detach();
         Ok(())
     }
 

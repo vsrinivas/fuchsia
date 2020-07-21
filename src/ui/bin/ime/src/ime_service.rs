@@ -170,7 +170,7 @@ impl ImeService {
 
     pub fn bind_ime_service(&self, mut stream: uii::ImeServiceRequestStream) {
         let mut self_clone = self.clone();
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             async move {
                 while let Some(msg) = stream
                     .try_next()
@@ -185,7 +185,8 @@ impl ImeService {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        );
+        )
+        .detach();
     }
 
     pub async fn handle_ime_service_msg(
@@ -231,7 +232,7 @@ impl ImeService {
 
     pub fn bind_ime_visibility_service(&self, stream: uii::ImeVisibilityServiceRequestStream) {
         let self_clone = self.clone();
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             async move {
                 let control_handle = stream.control_handle();
                 let mut state = self_clone.state.lock().await;
@@ -244,12 +245,13 @@ impl ImeService {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        );
+        )
+        .detach();
     }
 
     pub fn bind_text_input_context(&self, mut stream: txt::TextInputContextRequestStream) {
         let self_clone = self.clone();
-        fuchsia_async::spawn(
+        fuchsia_async::Task::spawn(
             async move {
                 let control_handle = stream.control_handle();
                 {
@@ -274,7 +276,7 @@ impl ImeService {
                 Ok(())
             }
                 .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        );
+        ).detach();
     }
 }
 

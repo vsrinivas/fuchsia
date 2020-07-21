@@ -82,13 +82,14 @@ impl FrameBufferViewStrategy {
         let (image_sender, mut image_receiver) = unbounded::<u64>();
         // wait for events from the image freed fence to know when an
         // image can prepared.
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Some(image_id) = image_receiver.next().await {
                 image_freed_sender
                     .unbounded_send(MessageInternal::ImageFreed(key, image_id, 0))
                     .expect("unbounded_send");
             }
-        });
+        })
+        .detach();
         let fb_pixel_format =
             if render_options.use_spinel { context.pixel_format() } else { pixel_format };
         fb.allocate_frames(RENDER_FRAME_COUNT, fb_pixel_format).await?;

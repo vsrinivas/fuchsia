@@ -105,7 +105,7 @@ pub(crate) async fn create_app_strategy(
         let vsync_internal_sender = internal_sender.clone();
 
         // TODO: improve scheduling of updates
-        fasync::spawn_local(
+        fasync::Task::local(
             async move {
                 while let Some(VSyncMessage { display_id: _, timestamp, cookie, .. }) =
                     receiver.next().await
@@ -126,7 +126,8 @@ pub(crate) async fn create_app_strategy(
             .unwrap_or_else(|e: anyhow::Error| {
                 println!("error {:#?}", e);
             }),
-        );
+        )
+        .detach();
 
         let config = fb.get_config();
         let size = IntSize::new(config.width as i32, config.height as i32);
