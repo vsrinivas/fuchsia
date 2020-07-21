@@ -25,3 +25,7 @@ pub static PER_COMPONENT_ASYNC_TIMEOUT_SECONDS: i64 = 10;
 /// This protocol applies static selectors configured under config/data/feedback to
 /// inspect exfiltration.
 pub static FEEDBACK_ARCHIVE_ACCESSOR_NAME: &str = "fuchsia.diagnostics.FeedbackArchiveAccessor";
+
+/// The maximum number of Inspect files that can be simultaneously snapshotted and formatted per
+/// reader.
+pub static MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER: usize = 2;

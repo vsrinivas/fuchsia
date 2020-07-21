@@ -17,17 +17,19 @@ use {
     async_trait::async_trait,
     diagnostics_schema::{self as schema, Schema},
     fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream},
-    fuchsia_async::{DurationExt, TimeoutExt},
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_inspect::{reader::PartialNodeHierarchy, NumericProperty},
     fuchsia_inspect_node_hierarchy::{InspectHierarchyMatcher, NodeHierarchy},
     fuchsia_zircon::{self as zx, DurationNum},
-    futures::future::join_all,
+    futures::channel::mpsc::{channel, Receiver},
+    futures::sink::SinkExt,
+    futures::stream,
     futures::stream::FusedStream,
+    futures::stream::StreamExt,
     futures::TryStreamExt,
     log::error,
     parking_lot::RwLock,
     selectors,
-    std::collections::HashMap,
     std::convert::{TryFrom, TryInto},
     std::sync::Arc,
 };
@@ -129,10 +131,9 @@ impl ReaderServer {
     }
 
     fn filter_single_components_snapshots(
-        sanitized_moniker: String,
         snapshots: Vec<SnapshotData>,
         static_matcher: Option<InspectHierarchyMatcher>,
-        client_matcher_container: &HashMap<String, Option<InspectHierarchyMatcher>>,
+        client_matcher: Option<InspectHierarchyMatcher>,
     ) -> Vec<NodeHierarchyData> {
         let statically_filtered_hierarchies: Vec<NodeHierarchyData> = match static_matcher {
             Some(static_matcher) => snapshots
@@ -181,12 +182,12 @@ impl ReaderServer {
             None => snapshots.into_iter().map(|snapshot_data| snapshot_data.into()).collect(),
         };
 
-        match client_matcher_container.get(&sanitized_moniker) {
-            // If the moniker key was present, and there was an InspectHierarchyMatcher,
+        match client_matcher {
+            // If matcher is present, and there was an InspectHierarchyMatcher,
             // then this means the client provided their own selectors, and a subset of
             // them matched this component. So we need to filter each of the snapshots from
             // this component with the dynamically provided components.
-            Some(Some(dynamic_matcher)) => statically_filtered_hierarchies
+            Some(dynamic_matcher) => statically_filtered_hierarchies
                 .into_iter()
                 .map(|node_hierarchy_data| match node_hierarchy_data.hierarchy {
                     Some(node_hierarchy) => {
@@ -216,147 +217,141 @@ impl ReaderServer {
                     },
                 })
                 .collect(),
-            // If the moniker key was present, but the InspectHierarchyMatcher option was
-            // None, this means that the client provided their own selectors, and none of
-            // them matched this particular component, so no values are to be returned.
-            Some(None) => Vec::new(),
-            // If the moniker key was absent, then the entire client_matcher_container should
-            // be empty since the implication is that the client provided none of their own
-            // selectors. Either every moniker is present or none are. And, if no dynamically
-            // provided selectors exist, then the statically filtered snapshots are all that
-            // we need.
-            None => {
-                assert!(client_matcher_container.is_empty());
-                statically_filtered_hierarchies
-            }
+            None => statically_filtered_hierarchies,
         }
     }
 
-    /// Takes a batch of unpopulated inspect data containers, traverses their diagnostics
-    /// directories, takes snapshots of all the Inspect hierarchies in those directories,
-    /// and then transforms the data containers into `PopulatedInspectDataContainer` results.
+    /// Takes a batch of unpopulated inspect data containers and returns a receiver that emits the
+    /// populated versions of those containers.
+    ///
+    /// Each `PopulatedInspectDataContainer` in the output is the result of traversing each
+    /// `UnpopulatedInspectDataContainer` directory and snapshotting all Inspect hierarchies.
+    ///
+    /// The receiver channel is eagerly populated with a limited number of populated containers (up
+    /// to `MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER`). The receiver stream must be continually
+    /// polled to continue the snapshotting process.
     ///
     /// An entry is only an Error if connecting to the directory fails. Within a component's
     /// diagnostics directory, individual snapshots of hierarchies can fail and the transformation
     /// to a PopulatedInspectDataContainer will still succeed.
-    async fn pump_inspect_data(
+    fn pump_inspect_data(
         &self,
         inspect_batch: Vec<UnpopulatedInspectDataContainer>,
-    ) -> Vec<PopulatedInspectDataContainer> {
-        join_all(inspect_batch.into_iter().map(move |inspect_data_packet| {
-            let attempted_relative_moniker = inspect_data_packet.relative_moniker.clone();
-            let attempted_inspect_matcher = inspect_data_packet.inspect_matcher.clone();
-            let component_url = inspect_data_packet.component_url.clone();
-            let global_stats = self.inspect_reader_server_stats.global_stats.clone();
-            PopulatedInspectDataContainer::from(inspect_data_packet).on_timeout(
-                constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
-                move || {
-                    global_stats.component_timeouts_count.add(1);
-                    let error_string = format!(
-                        "Exceeded per-component time limit for fetching diagnostics data: {:?}",
-                        attempted_relative_moniker
-                    );
-                    error!("{}", error_string);
-                    let no_success_snapshot_data = vec![SnapshotData::failed(
-                        schema::Error { message: error_string },
-                        "NO_FILE_SUCCEEDED".to_string(),
-                    )];
-                    PopulatedInspectDataContainer {
-                        relative_moniker: attempted_relative_moniker,
-                        component_url,
-                        snapshots: no_success_snapshot_data,
-                        inspect_matcher: attempted_inspect_matcher,
-                    }
-                },
-            )
-        }))
-        .await
+    ) -> Receiver<PopulatedInspectDataContainer> {
+        let (mut sender, receiver) = channel(constants::MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER);
+        let global_stats = self.inspect_reader_server_stats.global_stats.clone();
+        fasync::spawn(async move {
+            for fut in inspect_batch.into_iter().map(move |inspect_data_packet| {
+                let attempted_relative_moniker = inspect_data_packet.relative_moniker.clone();
+                let attempted_inspect_matcher = inspect_data_packet.inspect_matcher.clone();
+                let component_url = inspect_data_packet.component_url.clone();
+                let global_stats = global_stats.clone();
+                PopulatedInspectDataContainer::from(inspect_data_packet).on_timeout(
+                    constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
+                    move || {
+                        global_stats.component_timeouts_count.add(1);
+                        let error_string = format!(
+                            "Exceeded per-component time limit for fetching diagnostics data: {:?}",
+                            attempted_relative_moniker
+                        );
+                        error!("{}", error_string);
+                        let no_success_snapshot_data = vec![SnapshotData::failed(
+                            schema::Error { message: error_string },
+                            "NO_FILE_SUCCEEDED".to_string(),
+                        )];
+                        PopulatedInspectDataContainer {
+                            relative_moniker: attempted_relative_moniker,
+                            component_url,
+                            snapshots: no_success_snapshot_data,
+                            inspect_matcher: attempted_inspect_matcher,
+                        }
+                    },
+                )
+            }) {
+                if sender.send(fut.await).await.is_err() {
+                    // The other side probably disconnected. This is not an error.
+                    break;
+                }
+            }
+        });
+        receiver
     }
 
-    /// Takes a batch of PopulatedInspectDataContainer results, and for all the non-error
-    /// entries converts all snapshots into in-memory node hierarchies, filters those hierarchies
-    /// so that the only diagnostics properties they contain are those configured by the static
-    /// and client-provided selectors, and then packages the filtered hierarchies into
-    /// HierarchyData data structs.
+    /// Takes a PopulatedInspectDataContainer and converts all non-error
+    /// results into in-memory node hierarchies. The hierarchies are filtered
+    /// such that the only diagnostics properties they contain are those
+    /// configured by the static and client-provided selectors.
     ///
     // TODO(4601): Error entries should still be included, but with a custom hierarchy
     //             that makes it clear to clients that snapshotting failed.
-    pub fn filter_snapshots(
+    pub fn filter_snapshot(
         &self,
-        pumped_inspect_data: Vec<PopulatedInspectDataContainer>,
+        pumped_inspect_data: PopulatedInspectDataContainer,
     ) -> Vec<BatchResultItem> {
-        // In case we encounter multiple PopulatedDataContainers with the same moniker we don't
-        // want to do the component selector filtering again, so store the results in a map.
-        let mut client_selector_matches: HashMap<String, Option<InspectHierarchyMatcher>> =
-            HashMap::new();
+        // Since a single PopulatedInspectDataContainer shares a moniker for all pieces of data it
+        // contains, we can store the result of component selector filtering to avoid reapplying
+        // the selectors.
+        let mut client_selectors: Option<InspectHierarchyMatcher> = None;
 
         // We iterate the vector of pumped inspect data packets, consuming each inspect vmo
         // and filtering it using the provided selector regular expressions. Each filtered
         // inspect hierarchy is then added to an accumulator as a HierarchyData to be converted
         // into a JSON string and returned.
-        pumped_inspect_data.into_iter().fold(Vec::new(), |mut acc, pumped_data| {
-            let sanitized_moniker = pumped_data
-                .relative_moniker
-                .iter()
-                .map(|s| selectors::sanitize_string_for_selectors(s))
-                .collect::<Vec<String>>()
-                .join("/");
+        let sanitized_moniker = pumped_inspect_data
+            .relative_moniker
+            .iter()
+            .map(|s| selectors::sanitize_string_for_selectors(s))
+            .collect::<Vec<String>>()
+            .join("/");
 
-            if let Some(configured_selectors) = &self.configured_selectors {
-                let configured_matchers =
-                    client_selector_matches.entry(sanitized_moniker.clone()).or_insert_with(|| {
-                        let matching_selectors =
-                            selectors::match_component_moniker_against_selectors(
-                                &pumped_data.relative_moniker,
-                                configured_selectors,
-                            )
-                            .unwrap_or_else(|err| {
-                                error!(
-                                    "Failed to evaluate client selectors for: {:?} Error: {:?}",
-                                    pumped_data.relative_moniker, err
-                                );
-                                Vec::new()
-                            });
+        if let Some(configured_selectors) = &self.configured_selectors {
+            client_selectors = {
+                let matching_selectors = selectors::match_component_moniker_against_selectors(
+                    &pumped_inspect_data.relative_moniker,
+                    configured_selectors,
+                )
+                .unwrap_or_else(|err| {
+                    error!(
+                        "Failed to evaluate client selectors for: {:?} Error: {:?}",
+                        pumped_inspect_data.relative_moniker, err
+                    );
+                    Vec::new()
+                });
 
-                        if matching_selectors.is_empty() {
+                if matching_selectors.is_empty() {
+                    None
+                } else {
+                    match (&matching_selectors).try_into() {
+                        Ok(hierarchy_matcher) => Some(hierarchy_matcher),
+                        Err(e) => {
+                            error!("Failed to create hierarchy matcher: {:?}", e);
                             None
-                        } else {
-                            match (&matching_selectors).try_into() {
-                                Ok(hierarchy_matcher) => Some(hierarchy_matcher),
-                                Err(e) => {
-                                    error!("Failed to create hierarchy matcher: {:?}", e);
-                                    None
-                                }
-                            }
                         }
-                    });
-
-                // If there were configured matchers and none of them matched
-                // this component, then we should return early since there is no data to
-                // extract.
-                if configured_matchers.is_none() {
-                    return acc;
+                    }
                 }
+            };
+
+            // If there were configured matchers and none of them matched
+            // this component, then we should return early since there is no data to
+            // extract.
+            if client_selectors.is_none() {
+                return vec![];
             }
+        }
 
-            let component_url = pumped_data.component_url;
-            let mut result = ReaderServer::filter_single_components_snapshots(
-                sanitized_moniker.clone(),
-                pumped_data.snapshots,
-                pumped_data.inspect_matcher,
-                &client_selector_matches,
-            )
-            .into_iter()
-            .map(|hierarchy_data| BatchResultItem {
-                moniker: sanitized_moniker.clone(),
-                component_url: component_url.clone(),
-                hierarchy_data,
-            })
-            .collect();
-
-            acc.append(&mut result);
-            acc
+        let component_url = pumped_inspect_data.component_url;
+        ReaderServer::filter_single_components_snapshots(
+            pumped_inspect_data.snapshots,
+            pumped_inspect_data.inspect_matcher,
+            client_selectors,
+        )
+        .into_iter()
+        .map(|hierarchy_data| BatchResultItem {
+            moniker: sanitized_moniker.clone(),
+            component_url: component_url.clone(),
+            hierarchy_data,
         })
+        .collect()
     }
 
     /// Takes a vector of HierarchyData structs, and a `fidl_fuchsia_diagnostics/Format`
@@ -367,59 +362,20 @@ impl ReaderServer {
     ///
     /// Errors in the returned Vector correspond to IO failures in writing to a VMO. If
     /// a node hierarchy fails to format, its vmo is an empty string.
-    fn format_hierarchies(
+    fn format_hierarchy(
         format: &fidl_fuchsia_diagnostics::Format,
-        batch_results: Vec<BatchResultItem>,
-    ) -> Vec<Result<fidl_fuchsia_diagnostics::FormattedContent, Error>> {
-        batch_results
-            .into_iter()
-            .map(|batch_item| {
-                let inspect_schema = Schema::for_inspect(
-                    batch_item.moniker,
-                    batch_item.hierarchy_data.hierarchy,
-                    batch_item.hierarchy_data.timestamp.into_nanos(),
-                    batch_item.component_url,
-                    batch_item.hierarchy_data.filename,
-                    batch_item.hierarchy_data.errors,
-                );
+        batch_item: BatchResultItem,
+    ) -> Result<fidl_fuchsia_diagnostics::FormattedContent, Error> {
+        let inspect_schema = Schema::for_inspect(
+            batch_item.moniker,
+            batch_item.hierarchy_data.hierarchy,
+            batch_item.hierarchy_data.timestamp.into_nanos(),
+            batch_item.component_url,
+            batch_item.hierarchy_data.filename,
+            batch_item.hierarchy_data.errors,
+        );
 
-                formatter::write_schema_to_formatted_content(inspect_schema, format)
-            })
-            .collect()
-    }
-
-    // Checks a data container for constraints the system places, and if the container is
-    // in violation, replaces the container with an error container.
-    // Known violations:
-    //      TODO(53795): Relax this violation to support diagnostics sources of any count.
-    //   1) Hosting more than 64 sources of diagnostics data.
-    fn sanitize_populated_data_container(
-        container: PopulatedInspectDataContainer,
-    ) -> PopulatedInspectDataContainer {
-        // Convert VMOs that contain too many snapshots to be sent into
-        // an error schema explaining what wat went wrong.
-        if container.snapshots.len() > constants::IN_MEMORY_SNAPSHOT_LIMIT {
-            let no_success_snapshot_data = vec![SnapshotData::failed(
-                schema::Error {
-                    message: format!(
-                        concat!(
-                            "Platform cannot exfiltrate >64 diagnostics",
-                            " sources per component.: {:?}, see fxb/53795 for details."
-                        ),
-                        container.relative_moniker.clone()
-                    ),
-                },
-                "NO_FILE_SUCCEEDED".to_string(),
-            )];
-            PopulatedInspectDataContainer {
-                relative_moniker: container.relative_moniker,
-                component_url: container.component_url,
-                snapshots: no_success_snapshot_data,
-                inspect_matcher: container.inspect_matcher,
-            }
-        } else {
-            container
-        }
+        formatter::write_schema_to_formatted_content(inspect_schema, format)
     }
 }
 #[async_trait]
@@ -445,104 +401,47 @@ impl DiagnosticsServer for ReaderServer {
         let inspect_repo_data =
             self.inspect_repo.read().fetch_inspect_data(&self.configured_selectors);
 
-        let inspect_repo_length = inspect_repo_data.len();
-        let mut inspect_repo_iter = inspect_repo_data.into_iter();
-        let mut iter = 0;
-        let max = (inspect_repo_length - 1 / constants::IN_MEMORY_SNAPSHOT_LIMIT) + 1;
-        let mut overflow_bucket: Vec<PopulatedInspectDataContainer> = Vec::new();
+        let mut data_stream = self
+            .pump_inspect_data(inspect_repo_data)
+            .fuse() // Ensure that the read following the end of the stream does not panic
+            .map(|populated_data_container| {
+                stream::iter(self.filter_snapshot(populated_data_container).into_iter())
+            })
+            .flatten()
+            .filter_map(|batch_item| async {
+                if !batch_item.hierarchy_data.errors.is_empty() {
+                    server_stats.global_stats.batch_iterator_get_next_result_errors.add(1);
+                }
+                server_stats.global_stats.batch_iterator_get_next_result_count.add(1);
+
+                ReaderServer::format_hierarchy(format, batch_item).ok()
+            })
+            .boxed();
 
         while let Some(req) = stream.try_next().await? {
             match req {
                 fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
                     server_stats.global_stats.batch_iterator_get_next_requests.add(1);
                     server_stats.batch_iterator_get_next_requests.add(1);
-                    loop {
-                        // Only retrieve new data from the repository if the overflow bucket
-                        // is empty.
-                        let pumped_inspect_data = if overflow_bucket.is_empty() {
-                            let snapshot_batch: Vec<UnpopulatedInspectDataContainer> =
-                                (&mut inspect_repo_iter)
-                                    .take(constants::IN_MEMORY_SNAPSHOT_LIMIT)
-                                    .collect();
+                    let filtered_results = data_stream
+                        .by_ref()
+                        .take(constants::IN_MEMORY_SNAPSHOT_LIMIT)
+                        .collect::<Vec<_>>()
+                        .await;
 
-                            iter = iter + 1;
-
-                            // Asynchronously populate data containers with snapshots
-                            // of relevant inspect hierarchies.
-                            self.pump_inspect_data(snapshot_batch).await
-                        } else {
-                            std::mem::take(&mut overflow_bucket)
-                        };
-
-                        let mut current_batch = Vec::new();
-                        let mut snapshot_count = 0;
-                        for populated_data_container in pumped_inspect_data {
-                            let populated_data_container =
-                                ReaderServer::sanitize_populated_data_container(
-                                    populated_data_container,
-                                );
-                            let snapshots_in_container = populated_data_container.snapshots.len();
-
-                            if (snapshot_count + snapshots_in_container)
-                                > constants::IN_MEMORY_SNAPSHOT_LIMIT
-                            {
-                                overflow_bucket.push(populated_data_container);
-                            } else {
-                                current_batch.push(populated_data_container);
-                                snapshot_count += snapshots_in_container;
-                            }
-                        }
-
-                        if current_batch.is_empty() {
-                            // Either nothing remains in the repository, or the
-                            // only remaining things have more than 64 data sources.
-                            server_stats.batch_iterator_terminal_responses.add(1);
-                            server_stats.batch_iterator_get_next_responses.add(1);
-                            server_stats.global_stats.batch_iterator_get_next_responses.add(1);
-                            responder.send(&mut Ok(Vec::new()))?;
-                            return Ok(());
-                        }
-
-                        // Apply selector filtering to all snapshot inspect hierarchies in
-                        // the batch
-                        let batch_hierarchy_data = self.filter_snapshots(current_batch);
-
-                        batch_hierarchy_data.iter().for_each(|batch_item| {
-                            if !batch_item.hierarchy_data.errors.is_empty() {
-                                server_stats
-                                    .global_stats
-                                    .batch_iterator_get_next_result_errors
-                                    .add(1);
-                            }
-                            server_stats.global_stats.batch_iterator_get_next_result_count.add(1);
-                        });
-
-                        let formatted_content: Vec<
-                            Result<fidl_fuchsia_diagnostics::FormattedContent, Error>,
-                        > = ReaderServer::format_hierarchies(format, batch_hierarchy_data);
-
-                        let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
-                            formatted_content.into_iter().filter_map(Result::ok).collect();
-
-                        // We had data in the current_batch but it all got filtered away.
-                        // We shouldn't send the terminal batch since we don't know if the
-                        // repository is empty! We should try again from the top.
-                        if filtered_results.is_empty() {
-                            continue;
-                        }
-
-                        server_stats.global_stats.batch_iterator_get_next_responses.add(1);
+                    if filtered_results.is_empty() {
+                        // Nothing remains in the repository.
+                        server_stats.batch_iterator_terminal_responses.add(1);
                         server_stats.batch_iterator_get_next_responses.add(1);
-                        responder.send(&mut Ok(filtered_results))?;
-                        break;
+                        server_stats.global_stats.batch_iterator_get_next_responses.add(1);
+                        responder.send(&mut Ok(Vec::new()))?;
+                        return Ok(());
                     }
-                }
-            }
 
-            // We've sent all the meaningful content available in snapshot mode.
-            // The terminal value must be handled separately.
-            if iter == max - 1 {
-                break;
+                    server_stats.global_stats.batch_iterator_get_next_responses.add(1);
+                    server_stats.batch_iterator_get_next_responses.add(1);
+                    responder.send(&mut Ok(filtered_results))?;
+                }
             }
         }
         Ok(())
@@ -570,6 +469,7 @@ mod tests {
         fuchsia_inspect_node_hierarchy::{trie::TrieIterableNode, NodeHierarchy},
         fuchsia_zircon as zx,
         fuchsia_zircon::Peered,
+        futures::future::join_all,
         futures::{FutureExt, StreamExt},
         serde_json::json,
         std::path::PathBuf,
@@ -887,7 +787,7 @@ mod tests {
     async fn canonical_inspect_reader_stress_test() {
         // Test that 3 directories, each with 33 vmos, has snapshots served over 3 batches
         // each of which contains the 33 vmos of one component.
-        stress_test_diagnostics_repository(vec![33, 33, 33], vec![33, 33, 33]).await;
+        stress_test_diagnostics_repository(vec![33, 33, 33], vec![64, 35]).await;
 
         // The 64 entry vmo is served by itself, and the 63 vmo and 1 vmo directories are combined.
         stress_test_diagnostics_repository(vec![64, 63, 1], vec![64, 64]).await;
@@ -895,16 +795,14 @@ mod tests {
         // 64 1vmo components are sent in one batch.
         stress_test_diagnostics_repository([1usize; 64].to_vec(), vec![64]).await;
 
-        // A 65+ vmo component will manifest as an error schema.
-        // TODO(53795): Support streaming arbitrary diagnostics source counts from
-        // components using mpsc pipelines.
-        stress_test_diagnostics_repository(vec![65], vec![1]).await;
+        // A component with > the maximum batch size is split in two batches.
+        stress_test_diagnostics_repository(vec![65], vec![64, 1]).await;
 
         // An errorful component doesn't halt iteration.
-        stress_test_diagnostics_repository(vec![64, 65, 64, 64], vec![64, 1, 64, 64]).await;
+        stress_test_diagnostics_repository(vec![64, 65, 64, 64], vec![64, 64, 64, 64, 1]).await;
 
         // An errorful component can be merged into a batch where it may fit.
-        stress_test_diagnostics_repository(vec![63, 65], vec![64]).await;
+        stress_test_diagnostics_repository(vec![63, 65], vec![64, 64]).await;
     }
 
     async fn stress_test_diagnostics_repository(
@@ -1415,7 +1313,7 @@ mod tests {
 
     async fn read_snapshot_verify_batch_count_and_batch_size(
         reader_server: ReaderServer,
-        mut expected_batch_sizes: Vec<usize>,
+        expected_batch_sizes: Vec<usize>,
         server_stats: Arc<DiagnosticsServerStats>,
     ) -> serde_json::Value {
         let (consumer, batch_iterator): (
@@ -1441,8 +1339,6 @@ mod tests {
                 consumer.get_next().await.unwrap().unwrap();
 
             if next_batch.is_empty() {
-                expected_batch_sizes.sort();
-                batch_counts.sort();
                 assert_eq!(expected_batch_sizes, batch_counts);
                 break;
             }
