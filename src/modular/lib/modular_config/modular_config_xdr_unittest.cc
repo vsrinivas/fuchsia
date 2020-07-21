@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/files/file.h"
+#include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
@@ -227,11 +228,11 @@ TEST(ModularConfigXdr, ModularWriteDefaultValues) {
       },
       "sessionmgr": {
         "enable_cobalt": true,
-        "startup_agents": null,
-        "session_agents": null,
-        "component_args": null,
-        "agent_service_index": null,
-        "restart_session_on_agent_crash": null
+        "startup_agents": [],
+        "session_agents": [],
+        "component_args": [],
+        "agent_service_index": [],
+        "restart_session_on_agent_crash": []
       }
     })";
   rapidjson::Document expected_json_doc;
@@ -312,6 +313,24 @@ TEST(ModularConfigXdr, ModularReadWriteValues) {
 
   EXPECT_TRUE(read_config.has_sessionmgr_config());
   EXPECT_FALSE(read_config.sessionmgr_config().enable_cobalt());
+}
+
+// Tests that XdrModularConfig returns default values when reading an empty object.
+TEST(ModularConfigXdr, ModularConfigReadDefaultValues) {
+  // Deserialize an empty JSON document into ModularConfig.
+  rapidjson::Document read_json_doc;
+  read_json_doc.SetObject();
+  fuchsia::modular::session::ModularConfig config;
+  EXPECT_TRUE(XdrRead(&read_json_doc, &config, XdrModularConfig));
+
+  ASSERT_TRUE(config.has_basemgr_config());
+  EXPECT_TRUE(config.basemgr_config().enable_cobalt());
+  ASSERT_EQ(1u, config.basemgr_config().session_shell_map().size());
+  EXPECT_EQ(modular_config::kDefaultSessionShellUrl,
+            config.basemgr_config().session_shell_map().at(0).name());
+
+  ASSERT_TRUE(config.has_sessionmgr_config());
+  EXPECT_TRUE(config.sessionmgr_config().enable_cobalt());
 }
 
 }  // namespace modular

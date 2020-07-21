@@ -144,20 +144,40 @@ fuchsia::modular::session::BaseShellConfig GetDefaultBaseShellConfig() {
   return base_shell_config;
 }
 
+fuchsia::modular::session::BasemgrConfig GetDefaultBasemgrConfig() {
+  rapidjson::Document doc;
+  doc.SetObject();
+
+  fuchsia::modular::session::BasemgrConfig config;
+  auto ok = XdrRead(&doc, &config, XdrBasemgrConfig);
+  FX_DCHECK(ok);
+
+  return config;
+}
+
+fuchsia::modular::session::SessionmgrConfig GetDefaultSessionmgrConfig() {
+  rapidjson::Document doc;
+  doc.SetObject();
+
+  fuchsia::modular::session::SessionmgrConfig config;
+  auto ok = XdrRead(&doc, &config, XdrSessionmgrConfig);
+  FX_DCHECK(ok);
+
+  return config;
+}
+
 }  // namespace
 
 void XdrModularConfig_v1(XdrContext* const xdr,
                          fuchsia::modular::session::ModularConfig* const data) {
-  fuchsia::modular::session::BasemgrConfig default_basemgr_config;
   bool has_basemgr_config = data->has_basemgr_config();
   xdr->FieldWithDefault(modular_config::kBasemgrConfigName, data->mutable_basemgr_config(),
-                        XdrBasemgrConfig_v1, has_basemgr_config, std::move(default_basemgr_config));
+                        XdrBasemgrConfig_v1, has_basemgr_config, GetDefaultBasemgrConfig());
 
-  fuchsia::modular::session::SessionmgrConfig default_sessionmgr_config;
   bool has_sessionmgr_config = data->has_sessionmgr_config();
   xdr->FieldWithDefault(modular_config::kSessionmgrConfigName, data->mutable_sessionmgr_config(),
                         XdrSessionmgrConfig_v1, has_sessionmgr_config,
-                        std::move(default_sessionmgr_config));
+                        GetDefaultSessionmgrConfig());
 }
 
 void XdrBasemgrConfig_v1(XdrContext* const xdr,
@@ -185,7 +205,8 @@ void XdrBasemgrConfig_v1(XdrContext* const xdr,
   // |XdrSessionShellMapEntry| will fill in individual fields of each session
   // shell.
   auto session_shell_config = GetDefaultSessionShellMap();
-  bool has_nonempty_session_shell_map = data->has_session_shell_map() && data->session_shell_map().size() > 0;
+  bool has_nonempty_session_shell_map =
+      data->has_session_shell_map() && !data->session_shell_map().empty();
   xdr->FieldWithDefault(modular_config::kSessionShells, data->mutable_session_shell_map(),
                         XdrSessionShellMapEntry, has_nonempty_session_shell_map,
                         std::move(session_shell_config));
