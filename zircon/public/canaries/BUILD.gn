@@ -1,0 +1,82 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Build rules for canary targets, used to verify toolchain migration from
+# the Zircon build to the Fuchsia one. For more context, see
+# http://fxbug.dev/54160
+#
+# The targets here don't need to be part of any regular Fuchsia or Zircon
+# build configuration. They are used by the "compare_toolchains.py" script
+# in this directory, which will invoke "gn gen" and "ninja -t commands"
+# with appropriate arguments.
+#
+
+# NOTE: This file is symlinked from BUILD.zircon.gn and will be parsed
+# by both the Fuchsia and Zircon build system.
+
+if (zx == "/") {
+  # Zircon toolchains without shlib set to true cannot generate
+  # shared libraries and loadable modules.
+  _can_build_shared_library = defined(toolchain.shlib) && toolchain.shlib
+} else {
+  _can_build_shared_library = toolchain_variant.with_shared
+}
+
+# A canary static library that will end up being linked to a shared
+# library and an executable, using two different toolchains.
+#
+# In the shared library case, the sources should be compiled with -fPIC.
+# In the executable case, the soruces should be compiled with -fpie
+# instead.
+#
+static_library("bar") {
+  sources = [ "bar.cc" ]
+}
+
+# A static library that will only be linked to an executable target.
+static_library("foo_static") {
+  sources = [ "foo.cc" ]
+  deps = [ ":bar" ]
+}
+
+# An executable that links to a static library.
+executable("main_with_static") {
+  _label = get_label_info(":$target_name", "label_with_toolchain")
+
+  # NOTE: This print() statement is intentional and helps verify that the
+  # script will generate the expected targets in the expected toolchains.
+  # Keep in mind that these targets are never part of a regular build.
+  print("MAIN_WITH_STATIC $_label")
+
+  sources = [ "main.cc" ]
+  deps = [ ":foo_static" ]
+}
+
+if (_can_build_shared_library) {
+  # A shared library that links to the static library "bar".
+  shared_library("foo_shared") {
+    sources = [ "foo.cc" ]
+    deps = [ ":bar" ]
+  }
+
+  # An executable that links to a shared library only.
+  executable("main_with_shared") {
+    _label = get_label_info(":$target_name", "label_with_toolchain")
+
+    # NOTE: This print() statement is intentional and helps verify that the
+    # script will generate the expected targets in the expected toolchains.
+    # Keep in mind that these targets are never part of a regular build.
+    print("MAIN_WITH_SHARED $_label")
+
+    sources = [ "main.cc" ]
+    deps = [ ":foo_shared" ]
+  }
+}
+
+group("canaries") {
+  deps = [ ":main_with_static" ]
+  if (_can_build_shared_library) {
+    deps += [ ":main_with_shared" ]
+  }
+}
