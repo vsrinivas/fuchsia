@@ -261,6 +261,11 @@ void StoryProviderImpl::SetSessionShell(fuchsia::modular::SessionShellPtr sessio
   //
   // TODO(mesch): Add a WARNING log if the operation is not empty.
   session_shell_ = std::move(session_shell);
+
+  session_shell_.set_error_handler([](zx_status_t status) {
+    FX_PLOGS(ERROR, status) << "SessionShell service channel (from session shell component) "
+                            << "unexpectedly closed.";
+  });
 }
 
 void StoryProviderImpl::Teardown(fit::function<void()> callback) {
@@ -269,6 +274,7 @@ void StoryProviderImpl::Teardown(fit::function<void()> callback) {
   // stories is done on |operation_queue_| since that must strictly happen
   // after all pending messgages have been processed.
   bindings_.CloseAll();
+  session_shell_.set_error_handler(nullptr);
   operation_queue_.Add(std::make_unique<StopAllStoriesCall>(this, [] {}));
   operation_queue_.Add(std::make_unique<StopStoryShellCall>(this, std::move(callback)));
 }
@@ -385,14 +391,17 @@ void StoryProviderImpl::GetStoryInfo2(std::string story_id, GetStoryInfo2Callbac
 void StoryProviderImpl::AttachView(std::string story_id,
                                    fuchsia::ui::views::ViewHolderToken view_holder_token) {
   FX_CHECK(session_shell_)
-      << "Is the session shell component exporting a fuchsia.modular.SessionShell service?";
+      << "The session shell component must export and keep alive a "
+      << "fuchsia.modular.SessionShell service for sessionmgr to function.";
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = story_id;
   session_shell_->AttachView2(std::move(view_id), std::move(view_holder_token));
 }
 
 void StoryProviderImpl::DetachView(std::string story_id, fit::function<void()> done) {
-  FX_CHECK(session_shell_);
+  FX_CHECK(session_shell_)
+      << "The session shell component must export and keep alive a "
+      << "fuchsia.modular.SessionShell service for sessionmgr to function.";
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = story_id;
   session_shell_->DetachView(std::move(view_id), std::move(done));
