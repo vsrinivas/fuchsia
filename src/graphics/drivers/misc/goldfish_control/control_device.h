@@ -5,10 +5,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 
-#include <fuchsia/hardware/goldfish/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async/cpp/wait.h>
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -32,7 +29,8 @@ using ControlType =
     ddk::Device<Control, ddk::UnbindableNew, ddk::Messageable, ddk::GetProtocolable>;
 
 class Control : public ControlType,
-                public ddk::GoldfishControlProtocol<Control, ddk::base_protocol> {
+                public ddk::GoldfishControlProtocol<Control, ddk::base_protocol>,
+                public llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -44,11 +42,19 @@ class Control : public ControlType,
   uint64_t RegisterBufferHandle(const zx::vmo& vmo);
   void FreeBufferHandle(uint64_t id);
 
-  zx_status_t FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t width, uint32_t height,
-                                    uint32_t format, fidl_txn_t* txn);
-  zx_status_t FidlCreateBuffer(zx_handle_t vmo_handle, uint32_t size, fidl_txn_t* txn);
-  zx_status_t FidlGetColorBuffer(zx_handle_t vmo_handle, fidl_txn_t* txn);
-  zx_status_t FidlGetBufferHandle(zx_handle_t vmo_handle, fidl_txn_t* txn);
+  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  void CreateColorBuffer(zx::vmo vmo, uint32_t width, uint32_t height,
+                         llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType format,
+                         CreateColorBufferCompleter::Sync completer) override;
+
+  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  void CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync completer) override;
+
+  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  void GetColorBuffer(zx::vmo vmo, GetColorBufferCompleter::Sync completer) override;
+
+  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  void GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync completer) override;
 
   // Device protocol implementation.
   void DdkUnbindNew(ddk::UnbindTxn txn);
@@ -90,7 +96,7 @@ class Control : public ControlType,
 
   // TODO(TC-383): This should be std::unordered_map.
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);
-  std::map<uint32_t, fuchsia_hardware_goldfish_BufferHandleType> buffer_handle_types_
+  std::map<uint32_t, llcpp::fuchsia::hardware::goldfish::BufferHandleType> buffer_handle_types_
       TA_GUARDED(lock_);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Control);
