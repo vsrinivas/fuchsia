@@ -10,13 +10,6 @@ group("tests") {
   testonly = true
   deps = [
     ":fs-tests",
-    "//src/lib/isolated_devmgr/v2_component",
-  ]
-}
-
-group("large_tests") {
-  testonly = true
-  deps = [
     ":large-fs-tests",
     "//src/lib/isolated_devmgr/v2_component",
   ]
@@ -659,6 +652,14 @@ fuchsia_test_package("large-fs-tests") {
     ":sparse-large-tests",
     ":truncate-large-tests",
   ]
+  test_specs = {
+    environments = [
+      {
+        dimensions = emu_env.dimensions
+        tags = [ "slow" ]
+      },
+    ]
+  }
 }
 
 action("manifests") {
