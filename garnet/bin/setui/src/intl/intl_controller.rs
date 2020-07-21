@@ -102,7 +102,7 @@ impl IntlController {
             if !self.time_zone_ids.contains(time_zone_id.as_str()) {
                 return Err(SwitchboardError::InvalidArgument {
                     setting_type: SettingType::Intl,
-                    argument: "timezone id".to_string(),
+                    argument: "timezone id".into(),
                     value: time_zone_id.as_str().to_string(),
                 });
             }

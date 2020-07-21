@@ -3,21 +3,23 @@
 // found in the LICENSE file.
 
 #[cfg(test)]
+use std::collections::HashMap;
+use std::option::Option::Some;
 use std::sync::Arc;
 
-use crate::agent::restore_agent;
-use fidl_fuchsia_settings::{LightMarker, LightProxy};
+use fidl_fuchsia_settings::{LightError, LightMarker, LightProxy};
 use futures::lock::Mutex;
 
+use crate::agent::restore_agent;
 use crate::registry::device_storage::testing::*;
 use crate::registry::device_storage::DeviceStorage;
 use crate::switchboard::base::SettingType;
-use crate::switchboard::light_types::{LightGroup, LightInfo, LightState, LightType, LightValue};
+use crate::switchboard::light_types::{
+    ColorRgb, LightGroup, LightInfo, LightState, LightType, LightValue,
+};
 use crate::tests::fakes::hardware_light_service::HardwareLightService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;
-use std::collections::HashMap;
-use std::option::Option::Some;
 
 type HardwareLightServiceHandle = Arc<Mutex<HardwareLightService>>;
 
@@ -323,14 +325,6 @@ async fn test_light_set_none() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_wrong_light_group_name() {
-    let (light_service, _) =
-        create_test_light_env_with_service(Some(get_test_light_info()), None).await;
-
-    light_service.watch_light_group("random_name").await.expect_err("watch should fail");
-}
-
-#[fuchsia_async::run_until_stalled(test)]
 async fn test_individual_light_group() {
     let test_light_info = get_test_light_info();
     let light_group_1 = test_light_info.light_groups.get(LIGHT_NAME_1).unwrap().clone();
@@ -360,4 +354,182 @@ async fn test_individual_light_group() {
 
     let settings = light_service.watch_light_group(LIGHT_NAME_2).await.expect("watch completed");
     assert_eq!(settings, light_group_2_updated.into());
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_watch_unknown_light_group_name() {
+    let (light_service, _) =
+        create_test_light_env_with_service(Some(get_test_light_info()), None).await;
+
+    // Unknown name should be rejected.
+    light_service.watch_light_group("unknown_name").await.expect_err("watch should fail");
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_set_unknown_light_group_name() {
+    let (light_service, _) =
+        create_test_light_env_with_service(Some(get_test_light_info()), None).await;
+
+    // Unknown name should be rejected.
+    let result = light_service
+        .set_light_group_values("unknown_name", &mut vec![].into_iter())
+        .await
+        .expect("set returns");
+    assert_eq!(result, Err(LightError::InvalidName));
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_set_wrong_state_length() {
+    let test_light_info = get_test_light_info();
+    let (light_service, _) = create_test_light_env_with_service(Some(test_light_info), None).await;
+
+    // Set with no light state should fail.
+    let result = light_service
+        .set_light_group_values(LIGHT_NAME_1, &mut vec![].into_iter())
+        .await
+        .expect("set returns");
+    assert_eq!(result, Err(LightError::InvalidValue));
+
+    // Set with an extra light state should fail.
+    let extra_state = vec![
+        fidl_fuchsia_settings::LightState { value: None },
+        fidl_fuchsia_settings::LightState { value: None },
+    ];
+    let result = light_service
+        .set_light_group_values(LIGHT_NAME_1, &mut extra_state.into_iter())
+        .await
+        .expect("set returns");
+    assert_eq!(result, Err(LightError::InvalidValue));
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_set_wrong_value_type() {
+    const TEST_LIGHT_NAME: &str = "multiple_lights";
+    const LIGHT_START_VAL: u8 = 24;
+    const LIGHT_CHANGED_VAL: u8 = 11;
+    let original_light_group = LightGroup {
+        name: TEST_LIGHT_NAME.to_string(),
+        enabled: true,
+        light_type: LightType::Brightness,
+        lights: vec![
+            LightState { value: Some(LightValue::Brightness(LIGHT_START_VAL)) },
+            LightState { value: Some(LightValue::Brightness(LIGHT_START_VAL)) },
+        ],
+        hardware_index: vec![0, 1],
+    };
+    let mut light_groups = HashMap::new();
+    light_groups.insert(TEST_LIGHT_NAME.to_string(), original_light_group);
+    let starting_light_info = LightInfo { light_groups };
+
+    let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
+
+    let (light_service, _) = create_test_light_env_with_service(
+        Some(starting_light_info.clone()),
+        Some(hardware_light_service_handle.clone()),
+    )
+    .await;
+
+    // One of the light values is On instead of brightness, the set should fail.
+    let result = light_service
+        .set_light_group_values(
+            TEST_LIGHT_NAME,
+            &mut vec![
+                fidl_fuchsia_settings::LightState { value: None },
+                fidl_fuchsia_settings::LightState {
+                    value: Some(fidl_fuchsia_settings::LightValue::On(true)),
+                },
+            ]
+            .into_iter(),
+        )
+        .await
+        .expect("set returns");
+    assert_eq!(result, Err(LightError::InvalidValue));
+
+    // One of the values is the right type, but the other is still wrong, the set should fail.
+    let result = light_service
+        .set_light_group_values(
+            TEST_LIGHT_NAME,
+            &mut vec![
+                fidl_fuchsia_settings::LightState {
+                    value: Some(fidl_fuchsia_settings::LightValue::Brightness(LIGHT_CHANGED_VAL)),
+                },
+                fidl_fuchsia_settings::LightState {
+                    value: Some(fidl_fuchsia_settings::LightValue::On(true)),
+                },
+            ]
+            .into_iter(),
+        )
+        .await
+        .expect("set returns");
+    assert_eq!(result, Err(LightError::InvalidValue));
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_set_invalid_rgb_values() {
+    const TEST_LIGHT_NAME: &str = "light";
+    const LIGHT_START_VAL: f32 = 0.25;
+    const INVALID_VAL_1: f32 = 1.1;
+    const INVALID_VAL_2: f32 = -0.1;
+    let original_light_group = LightGroup {
+        name: TEST_LIGHT_NAME.to_string(),
+        enabled: true,
+        light_type: LightType::Rgb,
+        lights: vec![LightState {
+            value: Some(LightValue::Rgb(ColorRgb {
+                red: LIGHT_START_VAL,
+                green: LIGHT_START_VAL,
+                blue: LIGHT_START_VAL,
+            })),
+        }],
+        hardware_index: vec![0],
+    };
+    let mut light_groups = HashMap::new();
+    light_groups.insert(TEST_LIGHT_NAME.to_string(), original_light_group);
+    let starting_light_info = LightInfo { light_groups };
+
+    let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
+
+    let (light_service, _) = create_test_light_env_with_service(
+        Some(starting_light_info.clone()),
+        Some(hardware_light_service_handle.clone()),
+    )
+    .await;
+
+    // One of the RGB components is too big, the set should fail.
+    let result = light_service
+        .set_light_group_values(
+            TEST_LIGHT_NAME,
+            &mut vec![fidl_fuchsia_settings::LightState {
+                value: Some(fidl_fuchsia_settings::LightValue::Color(
+                    fidl_fuchsia_ui_types::ColorRgb {
+                        red: LIGHT_START_VAL,
+                        green: LIGHT_START_VAL,
+                        blue: INVALID_VAL_1,
+                    },
+                )),
+            }]
+            .into_iter(),
+        )
+        .await
+        .expect("set returns");
+    assert_eq!(result, Err(LightError::InvalidValue));
+
+    // One of the RGB components is negative, the set should fail.
+    let result = light_service
+        .set_light_group_values(
+            TEST_LIGHT_NAME,
+            &mut vec![fidl_fuchsia_settings::LightState {
+                value: Some(fidl_fuchsia_settings::LightValue::Color(
+                    fidl_fuchsia_ui_types::ColorRgb {
+                        red: LIGHT_START_VAL,
+                        green: INVALID_VAL_2,
+                        blue: LIGHT_START_VAL,
+                    },
+                )),
+            }]
+            .into_iter(),
+        )
+        .await
+        .expect("set returns");
+    assert_eq!(result, Err(LightError::InvalidValue));
 }

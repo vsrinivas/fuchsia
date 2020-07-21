@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct LightInfo {
@@ -173,13 +174,63 @@ impl From<ColorRgb> for fidl_fuchsia_ui_types::ColorRgb {
 }
 
 /// Converts between internal RGB representation and underlying fuchsia.hardware.light
-/// representation for convenience in tests.
-impl From<ColorRgb> for fidl_fuchsia_hardware_light::Rgb {
-    fn from(src: ColorRgb) -> Self {
-        fidl_fuchsia_hardware_light::Rgb {
-            red: src.red as u8,
-            green: src.green as u8,
-            blue: src.blue as u8,
+/// representation.
+impl TryFrom<ColorRgb> for fidl_fuchsia_hardware_light::Rgb {
+    type Error = &'static str;
+    fn try_from(src: ColorRgb) -> Result<Self, Self::Error> {
+        if src.red > 1.0
+            || src.green > 1.0
+            || src.blue > 1.0
+            || src.red < 0.0
+            || src.green < 0.0
+            || src.blue < 0.0
+        {
+            return Err("values must be between 0.0 and 1.0 inclusive");
         }
+
+        Ok(fidl_fuchsia_hardware_light::Rgb {
+            red: (src.red * 255.0).round() as u8,
+            green: (src.green * 255.0).round() as u8,
+            blue: (src.blue * 255.0).round() as u8,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::switchboard::light_types::ColorRgb;
+    use std::convert::TryFrom;
+
+    #[test]
+    fn test_try_from_rgb() {
+        assert!(fidl_fuchsia_hardware_light::Rgb::try_from(ColorRgb {
+            red: -0.0,
+            green: 0.1,
+            blue: 1.0
+        })
+        .is_ok());
+
+        assert!(fidl_fuchsia_hardware_light::Rgb::try_from(ColorRgb {
+            red: 0.0 - f32::EPSILON,
+            green: 0.1,
+            blue: 0.2
+        })
+        .is_err());
+
+        assert!(fidl_fuchsia_hardware_light::Rgb::try_from(ColorRgb {
+            red: 0.3,
+            green: 1.0 + f32::EPSILON,
+            blue: 0.2
+        })
+        .is_err());
+
+        assert_eq!(
+            fidl_fuchsia_hardware_light::Rgb::try_from(ColorRgb {
+                red: 0.0,
+                green: 1.0,
+                blue: 0.5
+            }),
+            Ok(fidl_fuchsia_hardware_light::Rgb { red: 0, green: 255, blue: 128 })
+        );
     }
 }

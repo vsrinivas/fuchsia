@@ -13,6 +13,7 @@ use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::{LightInfo, LightState};
 use bitflags::bitflags;
+use std::borrow::Cow;
 
 /// Return type from a controller after handling a state change.
 pub type ControllerStateResult = Result<(), SwitchboardError>;
@@ -35,7 +36,7 @@ pub enum SwitchboardError {
     #[error(
         "Invalid argument for setting type: {setting_type:?} argument:{argument:?} value:{value:?}"
     )]
-    InvalidArgument { setting_type: SettingType, argument: String, value: String },
+    InvalidArgument { setting_type: SettingType, argument: Cow<'static, str>, value: String },
 
     #[error(
     "External failure for setting type:{setting_type:?} dependency: {dependency:?} request:{request:?}"

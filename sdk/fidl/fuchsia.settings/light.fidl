@@ -36,6 +36,10 @@ union LightValue {
     2: uint8 brightness;
 
     /// Lights with LightType.RGB will have this value.
+    ///
+    /// Each color channel should be a value between 0.0 and 1.0 inclusive.
+    /// Values outside this range will cause SetLightGroup to fail with
+    /// INVALID_VALUE.
     3: fuchsia.ui.types.ColorRgb color;
 };
 
@@ -70,7 +74,7 @@ enum LightError {
     INVALID_NAME = 3;
 
     /// An invalid LightValue was provided that did not match the light group's
-    /// LightType.
+    /// LightType or did not match the requirements for the value type.
     INVALID_VALUE = 4;
 };
 

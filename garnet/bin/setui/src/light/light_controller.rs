@@ -11,10 +11,16 @@ use crate::registry::setting_handler::persist::{
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
-    SettingRequest, SettingResponse, SettingResponseResult, SettingType, SwitchboardError,
+    ControllerStateResult, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
+    SwitchboardError,
 };
 use crate::switchboard::light_types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use std::collections::hash_map::Entry;
+use std::convert::TryInto;
+
+/// Used as the argument field in a SwitchboardError::InvalidArgument to signal the FIDL handler to
+/// signal that a LightError::INVALID_NAME should be returned to the client.
+pub const ARG_NAME: &'static str = "name";
 
 impl DeviceStorageCompatible for LightInfo {
     fn default_value() -> Self {
@@ -79,13 +85,12 @@ impl LightController {
     async fn set(&self, name: String, state: Vec<LightState>) -> SettingResponseResult {
         let mut current = self.client.read().await;
 
-        // TODO(fxb/55713): validate incoming values, not just name.
         let mut entry = match current.light_groups.entry(name.clone()) {
             Entry::Vacant(_) => {
                 // Reject sets if the light name is not known.
                 return Err(SwitchboardError::InvalidArgument {
                     setting_type: SettingType::Light,
-                    argument: "name".to_string(),
+                    argument: ARG_NAME.into(),
                     value: name,
                 });
             }
@@ -99,11 +104,41 @@ impl LightController {
             // return an error.
             return Err(SwitchboardError::InvalidArgument {
                 setting_type: SettingType::Light,
-                argument: "state".to_string(),
+                argument: "state".into(),
                 value: format!("{:?}", state),
             });
         }
 
+        if !state.iter().filter_map(|state| state.value.clone()).all(|value| {
+            match group.light_type {
+                LightType::Brightness => matches!(value, LightValue::Brightness(_)),
+                LightType::Rgb => matches!(value, LightValue::Rgb(_)),
+                LightType::Simple => matches!(value, LightValue::Simple(_)),
+            }
+        }) {
+            // If not all the light values match the light type of this light group, return an
+            // error.
+            return Err(SwitchboardError::InvalidArgument {
+                setting_type: SettingType::Light,
+                argument: "state".into(),
+                value: format!("{:?}", state),
+            });
+        }
+
+        // After the main validations, write the state to the hardware.
+        self.write_light_group_to_hardware(group, &state).await?;
+
+        write(&self.client, current, false).await.into_response_result()
+    }
+
+    /// Writes the given list of light states for a light group to the actual hardware.
+    ///
+    /// None elements in the vector are ignored and not written to the hardware.
+    async fn write_light_group_to_hardware(
+        &self,
+        group: &mut LightGroup,
+        state: &Vec<LightState>,
+    ) -> ControllerStateResult {
         for (i, (light, hardware_index)) in
             state.iter().zip(group.hardware_index.iter()).enumerate()
         {
@@ -116,7 +151,16 @@ impl LightController {
                     "set_brightness_value",
                 ),
                 Some(LightValue::Rgb(rgb)) => (
-                    self.light_proxy.set_rgb_value(*hardware_index, &mut rgb.into()),
+                    self.light_proxy.set_rgb_value(
+                        *hardware_index,
+                        &mut rgb.clone().try_into().or_else(|_| {
+                            Err(SwitchboardError::InvalidArgument {
+                                setting_type: SettingType::Light,
+                                argument: "value".into(),
+                                value: format!("{:?}", rgb),
+                            })
+                        })?,
+                    ),
                     "set_rgb_value",
                 ),
                 Some(LightValue::Simple(on)) => {
@@ -134,8 +178,7 @@ impl LightController {
             // Set was successful, save this light value.
             group.lights[i] = light.clone();
         }
-
-        write(&self.client, current, false).await.into_response_result()
+        Ok(())
     }
 
     async fn restore(&self) -> SettingResponseResult {

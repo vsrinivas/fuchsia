@@ -13,6 +13,7 @@ use fuchsia_zircon::Channel;
 use futures::lock::Mutex;
 use futures::TryStreamExt;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::sync::Arc;
 
 /// An implementation of fuchsia.hardware.light for testing use.
@@ -48,7 +49,10 @@ impl HardwareLightService {
                 self.brightness_values.lock().await.insert(index, value);
             }
             LightValue::Rgb(value) => {
-                self.rgb_values.lock().await.insert(index, value.into());
+                self.rgb_values
+                    .lock()
+                    .await
+                    .insert(index, value.try_into().expect("rgb conversion failed"));
             }
             LightValue::Simple(value) => {
                 self.simple_values.lock().await.insert(index, value);

@@ -15,6 +15,7 @@ use futures::FutureExt;
 
 use crate::fidl_process_full;
 use crate::fidl_processor::RequestContext;
+use crate::light::light_controller::ARG_NAME;
 use crate::switchboard::base::{FidlResponseErrorLogger, SwitchboardError};
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
@@ -109,14 +110,15 @@ async fn process_request(
                     )
                     .await
                     .map(|_| ())
-                    .map_err(|e| {
-                        if matches!(e, SwitchboardError::InvalidArgument { .. }) {
-                            // TODO(fxb/53625): figure out how to return different errors depending
-                            // on the argument that's invalid.
-                            LightError::InvalidName
-                        } else {
-                            LightError::Failed
+                    .map_err(|e| match e {
+                        SwitchboardError::InvalidArgument { argument, .. } => {
+                            if ARG_NAME == argument {
+                                LightError::InvalidName
+                            } else {
+                                LightError::InvalidValue
+                            }
                         }
+                        _ => LightError::Failed,
                     });
                 responder.send(&mut res).log_fidl_response_error(LightMarker::DEBUG_NAME);
             });
