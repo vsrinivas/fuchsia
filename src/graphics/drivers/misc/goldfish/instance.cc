@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "instance.h"
+#include "src/graphics/drivers/misc/goldfish/instance.h"
 
-#include <fuchsia/hardware/goldfish/c/fidl.h>
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl-utils/bind.h>
 #include <lib/zx/bti.h>
 #include <zircon/threads.h>
 
 #include <ddk/debug.h>
+#include <ddktl/fidl.h>
 
-#include "pipe.h"
+#include "src/graphics/drivers/misc/goldfish/pipe.h"
 
 namespace goldfish {
 namespace {
@@ -47,48 +47,40 @@ zx_status_t Instance::Bind() {
   return DdkAdd("pipe", DEVICE_ADD_INSTANCE);
 }
 
-zx_status_t Instance::FidlOpenPipe(zx_handle_t pipe_request_handle) {
-  zx::channel pipe_request(pipe_request_handle);
+void Instance::OpenPipe(zx::channel pipe_request, OpenPipeCompleter::Sync completer) {
   if (!pipe_request.is_valid()) {
     zxlogf(ERROR, "%s: invalid channel", kTag);
-    return ZX_ERR_INVALID_ARGS;
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   // Create and bind pipe to client thread.
   async::PostTask(client_loop_.dispatcher(), [this, request = std::move(pipe_request)]() mutable {
-    auto pipe = Pipe::Create(parent(), client_loop_.dispatcher());
-    pipe->SetErrorHandler([this, pipe_ptr = pipe.get()](zx_status_t status) {
-      // |status| passed to an error handler is never ZX_OK.
-      // Clean close is ZX_ERR_PEER_CLOSED.
-      ZX_DEBUG_ASSERT(status != ZX_OK);
-      // We know |pipe_ptr| is still alive because |pipe_ptr| is still in |pipes_|.
-      ZX_DEBUG_ASSERT(pipes_.find(pipe_ptr) != pipes_.end());
+    auto pipe = std::make_unique<Pipe>(parent(), client_loop_.dispatcher(), /* OnBind */ nullptr,
+                                       /* OnClose */ [this](Pipe* pipe_ptr) {
+                                         // We know |pipe_ptr| is still alive because |pipe_ptr| is
+                                         // still in |pipes_|.
+                                         ZX_DEBUG_ASSERT(pipes_.find(pipe_ptr) != pipes_.end());
+                                         pipes_.erase(pipe_ptr);
+                                       });
 
-      if (status != ZX_ERR_PEER_CLOSED) {
-        zxlogf(ERROR, "%s: pipe error: %d", kTag, status);
-      }
-      pipes_.erase(pipe_ptr);
-    });
-    pipe->Bind(std::move(request));
+    auto pipe_ptr = pipe.get();
+    pipes_.insert({pipe_ptr, std::move(pipe)});
+
+    pipe_ptr->Bind(std::move(request));
     // Init() must be called after Bind() as it can cause an asynchronous
     // failure. The pipe will be cleaned up later by the error handler in
     // the event of a failure.
-    pipe->Init();
-    auto pipe_ptr = pipe.get();
-    pipes_.insert({pipe_ptr, std::move(pipe)});
+    pipe_ptr->Init();
   });
 
-  return ZX_OK;
+  completer.Close(ZX_OK);
 }
 
 zx_status_t Instance::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  using Binder = fidl::Binder<Instance>;
-
-  static const fuchsia_hardware_goldfish_PipeDevice_ops_t kOps = {
-      .OpenPipe = Binder::BindMember<&Instance::FidlOpenPipe>,
-  };
-
-  return fuchsia_hardware_goldfish_PipeDevice_dispatch(this, txn, msg, &kOps);
+  DdkTransaction transaction(txn);
+  llcpp::fuchsia::hardware::goldfish::PipeDevice::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
 zx_status_t Instance::DdkClose(uint32_t flags) { return ZX_OK; }

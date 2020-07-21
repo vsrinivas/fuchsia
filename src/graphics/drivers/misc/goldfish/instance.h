@@ -5,9 +5,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_INSTANCE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_INSTANCE_H_
 
-#include <ddk/device.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/goldfish/pipe.h>
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <threads.h>
@@ -15,6 +13,10 @@
 
 #include <map>
 #include <memory>
+
+#include <ddk/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/goldfish/pipe.h>
 
 namespace goldfish {
 
@@ -25,12 +27,16 @@ using InstanceType = ddk::Device<Instance, ddk::Messageable, ddk::Closable>;
 // This class implements a pipe instance device. By opening the pipe device,
 // an instance of this class will be created to service a new channel
 // to the virtual device.
-class Instance : public InstanceType {
+class Instance : public InstanceType,
+                 public llcpp::fuchsia::hardware::goldfish::PipeDevice::Interface {
  public:
   explicit Instance(zx_device_t* parent);
   ~Instance();
 
   zx_status_t Bind();
+
+  // |llcpp::fuchsia::hardware::goldfish::PipeDevice::Interface|
+  void OpenPipe(zx::channel pipe_request, OpenPipeCompleter::Sync completer) override;
 
   // FIDL interface
   zx_status_t FidlOpenPipe(zx_handle_t pipe_request_handle);

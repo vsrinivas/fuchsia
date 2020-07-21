@@ -10,26 +10,27 @@ driver_module("goldfish_driver") {
 
   sources = [
     "instance.cc",
+    "instance.h",
     "pipe.cc",
+    "pipe.h",
     "pipe_device.cc",
+    "pipe_device.h",
   ]
 
   deps = [
     "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/banjo/ddk.protocol.goldfish.pipe",
-    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_c",
+    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl-async-2",
-    "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace:trace-driver",
   ]

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "pipe.h"
+#include "src/graphics/drivers/misc/goldfish/pipe.h"
 
-#include <fuchsia/hardware/goldfish/c/fidl.h>
-#include <lib/fidl-utils/bind.h>
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <lib/zx/bti.h>
 
 #include <ddk/debug.h>
@@ -15,48 +14,21 @@
 namespace goldfish {
 namespace {
 
+static const char* kTag = "GoldfishPipe";
+
 constexpr size_t DEFAULT_BUFFER_SIZE = 8192;
 
-constexpr zx_signals_t SIGNALS =
-    fuchsia_hardware_goldfish_SIGNAL_READABLE | fuchsia_hardware_goldfish_SIGNAL_WRITABLE;
-
-constexpr uint32_t kConcurrencyCap = 64;
+constexpr zx_signals_t SIGNALS = llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE |
+                                 llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE;
 
 }  // namespace
 
-void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* format,
-          va_list args) {
-  va_list args2;
-  va_copy(args2, args);
-
-  size_t buffer_bytes = vsnprintf(nullptr, 0, format, args) + 1;
-
-  std::unique_ptr<char[]> buffer(new char[buffer_bytes]);
-
-  size_t buffer_bytes_2 = vsnprintf(buffer.get(), buffer_bytes, format, args2) + 1;
-  (void)buffer_bytes_2;
-  // sanity check; should match so go ahead and assert that it does.
-  ZX_DEBUG_ASSERT(buffer_bytes == buffer_bytes_2);
-  va_end(args2);
-
-  if (is_error) {
-    zxlogf(ERROR, "[%s %s] %s", prefix1, prefix2, buffer.get());
-  } else {
-    zxlogf(DEBUG, "[%s %s] %s", prefix1, prefix2, buffer.get());
-  }
-}
-
-const fuchsia_hardware_goldfish_Pipe_ops_t Pipe::kOps = {
-    fidl::Binder<Pipe>::BindMember<&Pipe::SetBufferSize>,
-    fidl::Binder<Pipe>::BindMember<&Pipe::SetEvent>,
-    fidl::Binder<Pipe>::BindMember<&Pipe::GetBuffer>,
-    fidl::Binder<Pipe>::BindMember<&Pipe::Read>,
-    fidl::Binder<Pipe>::BindMember<&Pipe::Write>,
-    fidl::Binder<Pipe>::BindMember<&Pipe::Call>,
-};
-
-Pipe::Pipe(zx_device_t* parent, async_dispatcher_t* dispatcher)
-    : FidlServer(dispatcher, "GoldfishPipe", kConcurrencyCap), pipe_(parent) {}
+Pipe::Pipe(zx_device_t* parent, async_dispatcher_t* dispatcher, OnBindFn on_bind,
+           OnCloseFn on_close)
+    : on_bind_(std::move(on_bind)),
+      on_close_(std::move(on_close)),
+      dispatcher_(dispatcher),
+      pipe_(parent) {}
 
 Pipe::~Pipe() {
   fbl::AutoLock lock(&lock_);
@@ -78,25 +50,25 @@ void Pipe::Init() {
   fbl::AutoLock lock(&lock_);
 
   if (!pipe_.is_valid()) {
-    FailAsync(ZX_ERR_BAD_STATE, "Pipe::Pipe() no pipe protocol");
+    FailAsync(ZX_ERR_BAD_STATE, "[%s] Pipe::Pipe() no pipe protocol", kTag);
     return;
   }
 
   zx_status_t status = pipe_.GetBti(&bti_);
   if (status != ZX_OK) {
-    FailAsync(status, "Pipe::Pipe() GetBti failed");
+    FailAsync(status, "[%s] Pipe::Pipe() GetBti failed", kTag);
     return;
   }
 
   status = SetBufferSizeLocked(DEFAULT_BUFFER_SIZE);
   if (status != ZX_OK) {
-    FailAsync(status, "Pipe::Pipe() failed to set initial buffer size");
+    FailAsync(status, "[%s] Pipe::Pipe() failed to set initial buffer size", kTag);
     return;
   }
 
   status = zx::event::create(0, &event_);
   if (status != ZX_OK) {
-    FailAsync(status, "Pipe::Pipe() failed to create event");
+    FailAsync(status, "[%s] Pipe::Pipe() failed to create event", kTag);
     return;
   }
   status = event_.signal(0, SIGNALS);
@@ -106,13 +78,13 @@ void Pipe::Init() {
   goldfish_pipe_signal_value_t signal_cb = {Pipe::OnSignal, this};
   status = pipe_.Create(&signal_cb, &id_, &vmo);
   if (status != ZX_OK) {
-    FailAsync(status, "Pipe::Pipe() failed to create pipe");
+    FailAsync(status, "[%s] Pipe::Pipe() failed to create pipe", kTag);
     return;
   }
 
   status = cmd_buffer_.InitVmo(bti_.get(), vmo.get(), 0, IO_BUFFER_RW);
   if (status != ZX_OK) {
-    FailAsync(status, "Pipe::Pipe() io_buffer_init_vmo failed");
+    FailAsync(status, "[%s] Pipe::Pipe() io_buffer_init_vmo failed", kTag);
     return;
   }
 
@@ -123,34 +95,58 @@ void Pipe::Init() {
 
   pipe_.Open(id_);
   if (buffer->status) {
-    FailAsync(ZX_ERR_INTERNAL, "Pipe::Pipe() failed to open pipe");
+    FailAsync(ZX_ERR_INTERNAL, "[%s] Pipe::Pipe() failed to open pipe", kTag);
     cmd_buffer_.release();
   }
 }
 
-zx_status_t Pipe::SetBufferSize(uint64_t size, fidl_txn_t* txn) {
-  TRACE_DURATION("gfx", "Pipe::SetBufferSize", "size", size);
+void Pipe::Bind(zx::channel server_request) {
+  using PipeInterface = llcpp::fuchsia::hardware::goldfish::Pipe::Interface;
+  auto on_unbound = [this](PipeInterface* interface, fidl::UnboundReason reason, zx_status_t status,
+                           zx::channel) {
+    if (reason == fidl::UnboundReason::kInternalError) {
+      zxlogf(ERROR, "[%s] Pipe error: %d\n", kTag, status);
+    }
+    if (on_close_) {
+      on_close_(this);
+    }
+  };
 
-  BindingType::Txn::RecognizeTxn(txn);
+  auto result =
+      fidl::BindServer<PipeInterface>(dispatcher_, std::move(server_request),
+                                      static_cast<PipeInterface*>(this), std::move(on_unbound));
+  if (!result.is_ok()) {
+    if (on_close_) {
+      on_close_(this);
+    }
+  } else {
+    binding_ref_ =
+        std::make_unique<fidl::ServerBindingRef<llcpp::fuchsia::hardware::goldfish::Pipe>>(
+            result.take_value());
+  }
+}
+
+void Pipe::SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync completer) {
+  TRACE_DURATION("gfx", "Pipe::SetBufferSize", "size", size);
 
   fbl::AutoLock lock(&lock_);
 
   zx_status_t status = SetBufferSizeLocked(size);
   if (status != ZX_OK) {
-    LogError("Pipe::SetBufferSize() failed to create buffer: %lu", size);
-    return status;
+    zxlogf(ERROR, "[%s] Pipe::SetBufferSize() failed to create buffer: %lu", kTag, size);
+    completer.Close(status);
+  } else {
+    completer.Reply(status);
   }
-
-  return fuchsia_hardware_goldfish_PipeSetBufferSize_reply(txn, status);
 }
 
-zx_status_t Pipe::SetEvent(zx_handle_t event_handle) {
+void Pipe::SetEvent(zx::event event, SetEventCompleter::Sync completer) {
   TRACE_DURATION("gfx", "Pipe::SetEvent");
 
-  zx::event event(event_handle);
   if (!event.is_valid()) {
-    LogError("Pipe::SetEvent() invalid event");
-    return ZX_ERR_INVALID_ARGS;
+    zxlogf(ERROR, "[%s] Pipe::SetEvent() invalid event", kTag);
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   fbl::AutoLock lock(&lock_);
@@ -158,82 +154,78 @@ zx_status_t Pipe::SetEvent(zx_handle_t event_handle) {
   zx_handle_t observed = 0;
   zx_status_t status = event_.wait_one(SIGNALS, zx::time::infinite_past(), &observed);
   if (status != ZX_OK) {
-    LogError("Pipe::SetEvent() failed to transfer observed signals: %d", status);
-    return status;
+    zxlogf(ERROR, "[%s] Pipe::SetEvent() failed to transfer observed signals: %d", kTag, status);
+    completer.Close(status);
   }
 
   event_ = std::move(event);
   status = event_.signal(SIGNALS, observed & SIGNALS);
   ZX_ASSERT(status == ZX_OK);
-  return ZX_OK;
+  completer.Close(ZX_OK);
 }
 
-zx_status_t Pipe::GetBuffer(fidl_txn_t* txn) {
+void Pipe::GetBuffer(GetBufferCompleter::Sync completer) {
   TRACE_DURATION("gfx", "Pipe::GetBuffer");
-
-  BindingType::Txn::RecognizeTxn(txn);
 
   fbl::AutoLock lock(&lock_);
 
   zx::vmo vmo;
   zx_status_t status = buffer_.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
   if (status != ZX_OK) {
-    LogError("Pipe::GetBuffer() zx_vmo_duplicate failed: %d", status);
-    return status;
+    zxlogf(ERROR, "[%s] Pipe::GetBuffer() zx_vmo_duplicate failed: %d", kTag, status);
+    completer.Close(status);
+  } else {
+    completer.Reply(ZX_OK, std::move(vmo));
   }
-
-  return fuchsia_hardware_goldfish_PipeGetBuffer_reply(txn, ZX_OK, vmo.release());
 }
 
-zx_status_t Pipe::Read(size_t count, zx_off_t offset, fidl_txn_t* txn) {
+void Pipe::Read(uint64_t count, uint64_t offset, ReadCompleter::Sync completer) {
   TRACE_DURATION("gfx", "Pipe::Read", "count", count);
-
-  BindingType::Txn::RecognizeTxn(txn);
 
   fbl::AutoLock lock(&lock_);
 
   if ((offset + count) > buffer_.size || (offset + count) < offset) {
-    return ZX_ERR_INVALID_ARGS;
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   size_t actual;
   zx_status_t status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
-                                      fuchsia_hardware_goldfish_SIGNAL_READABLE,
+                                      llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE,
                                       buffer_.phys + offset, count, 0, 0, &actual);
-  return fuchsia_hardware_goldfish_PipeRead_reply(txn, status, actual);
+  completer.Reply(status, actual);
 }
 
-zx_status_t Pipe::Write(size_t count, zx_off_t offset, fidl_txn_t* txn) {
+void Pipe::Write(uint64_t count, uint64_t offset, WriteCompleter::Sync completer) {
   TRACE_DURATION("gfx", "Pipe::Write", "count", count);
-
-  BindingType::Txn::RecognizeTxn(txn);
 
   fbl::AutoLock lock(&lock_);
 
   if ((offset + count) > buffer_.size || (offset + count) < offset) {
-    return ZX_ERR_INVALID_ARGS;
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   size_t actual;
   zx_status_t status = TransferLocked(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
-                                      fuchsia_hardware_goldfish_SIGNAL_WRITABLE,
+                                      llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE,
                                       buffer_.phys + offset, count, 0, 0, &actual);
-  return fuchsia_hardware_goldfish_PipeWrite_reply(txn, status, actual);
+  completer.Reply(status, actual);
 }
 
-zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_t read_offset,
-                       fidl_txn_t* txn) {
+void Pipe::DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t read_offset,
+                  DoCallCompleter::Sync completer) {
   TRACE_DURATION("gfx", "Pipe::Call", "count", count, "read_count", read_count);
-
-  BindingType::Txn::RecognizeTxn(txn);
 
   fbl::AutoLock lock(&lock_);
 
   if ((offset + count) > buffer_.size || (offset + count) < offset) {
-    return ZX_ERR_INVALID_ARGS;
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
   if ((read_offset + read_count) > buffer_.size || (read_offset + read_count) < read_offset) {
-    return ZX_ERR_INVALID_ARGS;
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   size_t remaining = count;
@@ -249,9 +241,9 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
   // Blocking write. This should always make progress or fail.
   while (remaining) {
     size_t actual;
-    zx_status_t status =
-        TransferLocked(cmd, PIPE_CMD_CODE_WAKE_ON_WRITE, fuchsia_hardware_goldfish_SIGNAL_WRITABLE,
-                       buffer_.phys + offset, remaining, read_paddr, read_count, &actual);
+    zx_status_t status = TransferLocked(
+        cmd, PIPE_CMD_CODE_WAKE_ON_WRITE, llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE,
+        buffer_.phys + offset, remaining, read_paddr, read_count, &actual);
     if (status == ZX_OK) {
       // Calculate bytes written and bytes read. Adjust counts and offsets accordingly.
       size_t actual_write = std::min(actual, remaining);
@@ -263,7 +255,8 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
       continue;
     }
     if (status != ZX_ERR_SHOULD_WAIT) {
-      return fuchsia_hardware_goldfish_PipeDoCall_reply(txn, status, 0);
+      completer.Reply(status, 0);
+      return;
     }
     signal_cvar_.Wait(&lock_);
   }
@@ -273,14 +266,14 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
   if (read_count && remaining_read == read_count) {
     size_t actual = 0;
     status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
-                            fuchsia_hardware_goldfish_SIGNAL_READABLE, buffer_.phys + read_offset,
-                            remaining_read, 0, 0, &actual);
+                            llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE,
+                            buffer_.phys + read_offset, remaining_read, 0, 0, &actual);
     if (status == ZX_OK) {
       remaining_read -= actual;
     }
   }
   size_t actual_read = read_count - remaining_read;
-  return fuchsia_hardware_goldfish_PipeDoCall_reply(txn, status, actual_read);
+  completer.Reply(status, actual_read);
 }
 
 // This function can be trusted to complete fairly quickly. It will cause a
@@ -312,7 +305,7 @@ zx_status_t Pipe::TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t sta
   *actual = 0;
   // Early out if error is not because of back-pressure.
   if (buffer->status != PIPE_ERROR_AGAIN) {
-    LogError("Pipe::Transfer() transfer failed: %d", buffer->status);
+    zxlogf(ERROR, "[%s] Pipe::Transfer() transfer failed: %d", kTag, buffer->status);
     return ZX_ERR_INTERNAL;
   }
 
@@ -327,7 +320,7 @@ zx_status_t Pipe::TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t sta
   buffer->status = PIPE_ERROR_INVAL;
   pipe_.Exec(id_);
   if (buffer->status) {
-    LogError("Pipe::Transfer() failed to request interrupt: %d", buffer->status);
+    zxlogf(ERROR, "[%s] Pipe::Transfer() failed to request interrupt: %d", kTag, buffer->status);
     return ZX_ERR_INTERNAL;
   }
 
@@ -338,7 +331,8 @@ zx_status_t Pipe::SetBufferSizeLocked(size_t size) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create_contiguous(bti_, size, 0, &vmo);
   if (status != ZX_OK) {
-    LogError("Pipe::CreateBuffer() zx_vmo_create_contiguous failed %d size: %zu", status, size);
+    zxlogf(ERROR, "[%s] Pipe::CreateBuffer() zx_vmo_create_contiguous failed %d size: %zu", kTag,
+           status, size);
     return status;
   }
 
@@ -347,7 +341,7 @@ zx_status_t Pipe::SetBufferSizeLocked(size_t size) {
   // We leave pinned continuously, since buffer is expected to be used frequently.
   status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, 0, size, &phys, 1, &pmt);
   if (status != ZX_OK) {
-    LogError("Pipe::CreateBuffer() zx_bti_pin failed %d size: %zu", status, size);
+    zxlogf(ERROR, "[%s] Pipe::CreateBuffer() zx_bti_pin failed %d size: %zu", kTag, status, size);
     return status;
   }
 
@@ -358,19 +352,30 @@ zx_status_t Pipe::SetBufferSizeLocked(size_t size) {
   return ZX_OK;
 }
 
+void Pipe::FailAsync(zx_status_t epitaph, const char* format, ...) {
+  if (binding_ref_) {
+    binding_ref_->Close(epitaph);
+  }
+
+  va_list args;
+  va_start(args, format);
+  zxlogvf(ERROR, format, args);
+  va_end(args);
+}
+
 // static
 void Pipe::OnSignal(void* ctx, int32_t flags) {
   TRACE_DURATION("gfx", "Pipe::OnSignal", "flags", flags);
 
   zx_signals_t state_set = 0;
   if (flags & PIPE_WAKE_FLAG_CLOSED) {
-    state_set |= fuchsia_hardware_goldfish_SIGNAL_HANGUP;
+    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_HANGUP;
   }
   if (flags & PIPE_WAKE_FLAG_READ) {
-    state_set |= fuchsia_hardware_goldfish_SIGNAL_READABLE;
+    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE;
   }
   if (flags & PIPE_WAKE_FLAG_WRITE) {
-    state_set |= fuchsia_hardware_goldfish_SIGNAL_WRITABLE;
+    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE;
   }
 
   auto pipe = static_cast<Pipe*>(ctx);

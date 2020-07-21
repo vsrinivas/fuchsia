@@ -5,9 +5,8 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_H_
 
-#include <fuchsia/hardware/goldfish/c/fidl.h>
-#include <lib/fidl-async-2/fidl_server.h>
-#include <lib/fidl-async-2/simple_binding.h>
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
 #include <lib/zx/pmt.h>
@@ -22,41 +21,55 @@
 
 namespace goldfish {
 
-void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* format,
-          va_list args);
-
 // An instance of this class serves a Pipe connection.
-class Pipe : public FidlServer<Pipe,
-                               SimpleBinding<Pipe, fuchsia_hardware_goldfish_Pipe_ops_t,
-                                             fuchsia_hardware_goldfish_Pipe_dispatch>,
-                               vLog> {
+class Pipe : public llcpp::fuchsia::hardware::goldfish::Pipe::Interface {
  public:
+  using OnBindFn = fit::function<void(Pipe*)>;
+  using OnCloseFn = fit::function<void(Pipe*)>;
+
+  Pipe(zx_device_t* parent, async_dispatcher_t* dispatcher, OnBindFn on_bind, OnCloseFn on_close);
   // Public for std::unique_ptr<Pipe>:
   ~Pipe();
 
   void Init();
 
+  void Bind(zx::channel server_request);
+
  private:
-  friend class FidlServer;
+  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  void SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync completer) override;
 
-  explicit Pipe(zx_device_t* parent, async_dispatcher_t* dispatcher);
+  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  void SetEvent(::zx::event event, SetEventCompleter::Sync completer) override;
 
-  zx_status_t SetBufferSize(uint64_t size, fidl_txn_t* txn);
-  zx_status_t SetEvent(zx_handle_t event_handle);
-  zx_status_t GetBuffer(fidl_txn_t* txn);
-  zx_status_t Read(size_t count, zx_off_t offset, fidl_txn_t* txn);
-  zx_status_t Write(size_t count, zx_off_t offset, fidl_txn_t* txn);
-  zx_status_t Call(size_t count, zx_off_t offset, size_t read_count, zx_off_t read_offset,
-                   fidl_txn_t* txn);
+  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  void GetBuffer(GetBufferCompleter::Sync completer) override;
+
+  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  void Read(uint64_t count, uint64_t offset, ReadCompleter::Sync completer) override;
+
+  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  void Write(uint64_t count, uint64_t offset, WriteCompleter::Sync completer) override;
+
+  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  void DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t read_offset,
+              DoCallCompleter::Sync completer) override;
 
   zx_status_t TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t state_clr,
                              zx_paddr_t paddr, size_t count, zx_paddr_t read_paddr,
                              size_t read_count, size_t* actual) TA_REQ(lock_);
   zx_status_t SetBufferSizeLocked(uint64_t size) TA_REQ(lock_);
 
+  // Close current bounded channel and send an epitaph to the client.
+  void FailAsync(zx_status_t epitaph, const char* format, ...);
+
   static void OnSignal(void* ctx, int32_t flags);
 
-  static const fuchsia_hardware_goldfish_Pipe_ops_t kOps;
+  std::unique_ptr<fidl::ServerBindingRef<llcpp::fuchsia::hardware::goldfish::Pipe>> binding_ref_;
+  const OnBindFn on_bind_;
+  const OnCloseFn on_close_;
+
+  async_dispatcher_t* dispatcher_;
 
   fbl::Mutex lock_;
   fbl::ConditionVariable signal_cvar_;
