@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -164,7 +165,12 @@ void AnalyzeCrash(async::Loop* loop, const zx::job& parent_job, const zx::job& j
 class StubExceptionHandler final : public llcpp::fuchsia::exception::Handler::Interface {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
+    auto binding = fidl::BindServer(dispatcher, std::move(request), this);
+    if (binding.is_error()) {
+      return binding.error();
+    }
+    binding_ = binding.take_value();
+    return ZX_OK;
   }
 
   // fuchsia.exception.Handler
@@ -188,9 +194,19 @@ class StubExceptionHandler final : public llcpp::fuchsia::exception::Handler::In
 
   void SetRespondSync(bool val) { respond_sync_ = true; }
 
+  zx_status_t Unbind() {
+    if (!binding_.has_value()) {
+      return ZX_ERR_BAD_STATE;
+    }
+    binding_.value().Close(ZX_ERR_PEER_CLOSED);
+    return ZX_OK;
+  }
+
   int exception_count() const { return exception_count_; }
 
  private:
+  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::exception::Handler>> binding_;
+
   int exception_count_ = 0;
   bool respond_sync_{true};
   std::list<OnExceptionCompleter::Async> completers_;
@@ -279,6 +295,35 @@ TEST(crashsvc, ExceptionHandlerAsync) {
 
   // We now tell the stub exception handler to respond all the pending requests it had, which would
   // trigger the (empty) callbacks in crashsvc on the next async loop run.
+  test_svc.exception_handler().SendAsyncResponses();
+
+  // Kill the test job so that the exception doesn't bubble outside of this test.
+  ASSERT_OK(jobs.job.kill());
+  EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
+}
+
+TEST(crashsvc, ExceptionHandlerUnbinds) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  FakeService test_svc(loop.dispatcher());
+
+  Jobs jobs;
+  ASSERT_NO_FATAL_FAILURES(GetTestJobs(&jobs));
+
+  // Start crashsvc.
+  thrd_t cthread;
+  ASSERT_OK(start_crashsvc(std::move(jobs.job_copy), test_svc.service_channel().get(), &cthread));
+
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  EXPECT_EQ(test_svc.exception_handler().exception_count(), 1);
+
+  // Simulates crashsvc losing connection with fuchsia.exception.Handler.
+  ASSERT_OK(test_svc.exception_handler().Unbind());
+
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+
+  // Checks that the next exception is still handled, meaning re-connection happened.
+  EXPECT_EQ(test_svc.exception_handler().exception_count(), 2);
+
   test_svc.exception_handler().SendAsyncResponses();
 
   // Kill the test job so that the exception doesn't bubble outside of this test.

@@ -33,7 +33,7 @@ namespace {
 
 struct crash_ctx {
   zx::channel exception_channel;
-  zx::channel handler_client;
+  zx_handle_t exception_handler_svc;
 };
 
 // Logs a general error unrelated to a particular exception.
@@ -73,25 +73,6 @@ bool ResumeIfBacktraceRequest(const zx::thread& thread, const zx::exception& exc
   }
 
   return false;
-}
-
-zx_status_t ConnectToExceptionHandler(zx_handle_t exception_handler_svc,
-                                      zx::channel* handler_client) {
-  // We are in a build without a server for fuchsia.exception.Handler, e.g., bringup.
-  if (exception_handler_svc == ZX_HANDLE_INVALID) {
-    return ZX_OK;
-  }
-
-  zx::channel handler_server;
-  zx::channel::create(0u, &handler_server, handler_client);
-  const zx_status_t status = fdio_service_connect_at(
-      exception_handler_svc, llcpp::fuchsia::exception::Handler::Name, handler_server.release());
-
-  if (status != ZX_OK) {
-    LogError("unable to connect to exception handler service", status);
-  }
-
-  return status;
 }
 
 void HandOffException(
@@ -142,15 +123,60 @@ void HandOffException(
   }
 }
 
+// Initialize |client| as a new fidl::Client of fuchsia.exception.Handler that will reconnect to the
+// service if disconnected. If |exception_handler_svc| is invalid or connecting to the service
+// fails, |client| will be set to null.
+void MakeExceptionHandlerClient(
+    zx::channel channel, async_dispatcher_t* dispatcher, zx_handle_t exception_handler_svc,
+    std::unique_ptr<fidl::Client<llcpp::fuchsia::exception::Handler>>* client) {
+  // We are in a build without a server for fuchsia.exception.Handler, e.g., bringup.
+  if (exception_handler_svc == ZX_HANDLE_INVALID) {
+    *client = nullptr;
+    return;
+  }
+
+  zx::channel server;
+  zx::channel::create(0u, &server, &channel);
+  if (const zx_status_t status = fdio_service_connect_at(
+          exception_handler_svc, llcpp::fuchsia::exception::Handler::Name, server.release());
+      status != ZX_OK) {
+    LogError("unable to connect to fuchsia.exception.Handler", status);
+    *client = nullptr;
+    return;
+  }
+
+  fidl::OnClientUnboundFn on_unbound = [dispatcher, exception_handler_svc, client](
+                                           fidl::UnboundReason reason, zx_status_t status,
+                                           zx::channel channel) {
+    // If the unbind was not an error, don't reconnect and stop sending exceptions to
+    // fuchsia.exception.Handler. This should only happen in tests.
+    if (status == ZX_OK || status == ZX_ERR_CANCELED) {
+      *client = nullptr;
+      return;
+    }
+
+    LogError("Lost connection to fuchsia.exception.Handler", status);
+
+    // Immediately attempt to reconnect to fuchsia.exception.Handler. An exponential backoff is not
+    // used because a reconnection loop will only ever happen if the build does not contain a server
+    // for the protocol and crashsvc is configured to use the exception handling server.
+    //
+    // TODO(56491): figure out a way to detect if the process holding the other end of |channel|
+    // has crashed and stop sending exceptions to it.
+    MakeExceptionHandlerClient(std::move(channel), dispatcher, exception_handler_svc, client);
+  };
+
+  *client = std::make_unique<fidl::Client<llcpp::fuchsia::exception::Handler>>(
+      std::move(channel), dispatcher, std::move(on_unbound));
+}
+
 int crash_svc(void* arg) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto ctx = std::unique_ptr<crash_ctx>(reinterpret_cast<crash_ctx*>(arg));
-
-  auto exception_handler = (ctx->handler_client.is_valid())
-                               ? std::make_unique<fidl::Client<llcpp::fuchsia::exception::Handler>>(
-                                     std::move(ctx->handler_client), loop.dispatcher())
-                               : nullptr;
+  std::unique_ptr<fidl::Client<llcpp::fuchsia::exception::Handler>> exception_handler;
+  MakeExceptionHandlerClient(zx::channel(), loop.dispatcher(), ctx->exception_handler_svc,
+                             &exception_handler);
 
   for (;;) {
     zx_signals_t signals = 0;
@@ -199,15 +225,9 @@ zx_status_t start_crashsvc(zx::job root_job, zx_handle_t exception_handler_svc, 
     return status;
   }
 
-  zx::channel handler_client;
-  if (const zx_status_t status = ConnectToExceptionHandler(exception_handler_svc, &handler_client);
-      status != ZX_OK) {
-    return status;
-  }
-
   auto ctx = new crash_ctx{
       std::move(exception_channel),
-      std::move(handler_client),
+      exception_handler_svc,
   };
 
   if (const zx_status_t status =
