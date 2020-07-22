@@ -174,38 +174,35 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 }
             }
         } else if let Some(beacon) = self.beacons.get(&sender_id) {
-            let mut target_messengers = vec![];
             let author_id = self.resolve_messenger_id(&message.get_author());
-
-            // The author cannot participate as a broker.
-            let mut valid_brokers = self.brokers.clone();
-            let broker_to_remove =
-                valid_brokers.iter().enumerate().find(|(_i, elem)| **elem == author_id);
-            if let Some((i, _elem)) = broker_to_remove {
-                valid_brokers.remove(i);
-            }
 
             // If the message is not a reply, determine if the current sender is a broker.
             // In the case of a broker, the message should be forwarded to the next
             // broker.
-            if valid_brokers.contains(&beacon.get_messenger_id()) {
-                if let Some(index) = valid_brokers.iter().position(|&id| id == sender_id) {
-                    if index < valid_brokers.len() - 1 {
-                        // Add the next broker
-                        target_messengers.push(valid_brokers[index + 1].clone());
-                    }
-                }
-            } else if let Some(broker) = valid_brokers.first() {
-                target_messengers.push(broker.clone());
-            }
+            let mut target_messengers: Vec<_> = {
+                // The author cannot participate as a broker.
+                let iter = self.brokers.iter().copied().filter(|&id| id != author_id);
 
-            // If no brokers were added, the original target now should participate.
+                let should_find_sender = {
+                    let beacon_messenger_id = beacon.get_messenger_id();
+                    beacon_messenger_id != author_id && self.brokers.contains(&beacon_messenger_id)
+                };
+
+                if should_find_sender {
+                    // Ignore until we find the matching broker, then move the next broker one over.
+                    iter.skip_while(|&id| id != sender_id).skip(1).take(1).collect()
+                } else {
+                    iter.take(1).collect()
+                }
+            };
+
+            // If no broker was added, the original target now should participate.
             if target_messengers.is_empty() {
                 if let MessageType::Origin(audience) = message_type {
                     match audience {
                         Audience::Address(address) => {
-                            if let Some(messenger_id) = self.addresses.get(&address) {
-                                target_messengers.push(messenger_id.clone());
+                            if let Some(&messenger_id) = self.addresses.get(&address) {
+                                target_messengers.push(messenger_id);
                                 require_delivery = true;
                             } else {
                                 // This error will occur if the sender specifies a non-existent
@@ -216,8 +213,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                         Audience::Messenger(signature) => {
                             match signature {
                                 Signature::Address(address) => {
-                                    if let Some(messenger_id) = self.addresses.get(&address) {
-                                        target_messengers.push(messenger_id.clone());
+                                    if let Some(&messenger_id) = self.addresses.get(&address) {
+                                        target_messengers.push(messenger_id);
                                         require_delivery = true;
                                     } else {
                                         // This error will occur if the sender specifies a non-existent
@@ -235,9 +232,9 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                             message.report_status(Status::Broadcasted).await;
 
                             // Gather all messengers
-                            for id in self.beacons.keys() {
-                                if *id != sender_id && !self.brokers.contains(id) {
-                                    target_messengers.push(id.clone());
+                            for &id in self.beacons.keys() {
+                                if id != sender_id && !self.brokers.contains(&id) {
+                                    target_messengers.push(id);
                                 }
                             }
                         }
