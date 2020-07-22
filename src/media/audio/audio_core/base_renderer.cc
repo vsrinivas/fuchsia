@@ -370,9 +370,9 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
 
   // Make sure that we don't exceed the maximum permissible frames-per-packet.
   uint32_t frame_count = packet.payload_size / frame_size;
-  if (frame_count > kMaxFrames) {
+  if (frame_count > fuchsia::media::MAX_FRAMES_PER_RENDERER_PACKET) {
     FX_LOGS(ERROR) << "Audio frame count (" << frame_count << ") exceeds maximum allowed ("
-                   << kMaxFrames << ")";
+                   << fuchsia::media::MAX_FRAMES_PER_RENDERER_PACKET << ")";
     return;
   }
 

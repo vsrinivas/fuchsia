@@ -14,8 +14,6 @@ namespace media::audio {
 template <typename Integer>
 using FractionalFrames = ffl::Fixed<Integer, kPtsFractionalBits>;
 
-static constexpr uint32_t kMaxFrames = FractionalFrames<uint32_t>::Max().Floor();
-
 }  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_LIB_FORMAT_FRAMES_H_

@@ -7,6 +7,9 @@ library fuchsia.media;
 using fuchsia.media.audio;
 using zx;
 
+/// The maximum number of frames that may be contained within a single StreamPacket.
+const int64 MAX_FRAMES_PER_RENDERER_PACKET = 0x3ffff;
+
 ///
 /// AudioRenderers can be in one of two states at any time: _configurable_ or _operational_. A
 /// renderer is considered operational whenever it has packets queued to be rendered; otherwise it

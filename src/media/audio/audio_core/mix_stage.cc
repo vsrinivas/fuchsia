@@ -381,9 +381,13 @@ bool MixStage::ProcessMix(const MixStage::MixerInput& input,
   FX_DCHECK(frac_source_offset_64 >= std::numeric_limits<int32_t>::min());
   auto frac_source_offset = FractionalFrames<int32_t>(frac_source_offset_64);
 
-  // Looks like we are ready to go. Mix.
+  // Assert our implementation-defined limit is compatible with the FIDL limit. The latter is
+  // already enforced by the renderer implementation.
+  static_assert(fuchsia::media::MAX_FRAMES_PER_RENDERER_PACKET <=
+                FractionalFrames<int32_t>::Max().Floor());
   FX_DCHECK(source_buffer.length() <= FractionalFrames<uint32_t>(FractionalFrames<int32_t>::Max()));
 
+  // Looks like we are ready to go. Mix.
   FX_DCHECK(frac_source_offset + mixer->pos_filter_width() >= FractionalFrames<uint32_t>(0));
   bool consumed_source = false;
   if (frac_source_offset + mixer->pos_filter_width() < source_buffer.length()) {
