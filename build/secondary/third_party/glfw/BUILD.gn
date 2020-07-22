@@ -39,7 +39,7 @@ static_library("glfw") {
       "_GLFW_COCOA",
       "_GLFW_USE_RETINA",
     ]
-    libs = [
+    frameworks = [
       "Cocoa.framework",
       "CoreFoundation.framework",
       "CoreGraphics.framework",

@@ -63,7 +63,7 @@ config("mac_executable_flags") {
 
 # Standard libraries.
 config("default_libs") {
-  libs = [
+  frameworks = [
     "AppKit.framework",
     "ApplicationServices.framework",
     "Carbon.framework",
