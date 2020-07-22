@@ -36,11 +36,6 @@ foreach(host, standard_build_hosts) {
   ]
 }
 
-declare_args() {
-  # Path to Mac SDK.
-  mac_sdk_path = ""
-}
-
 # Cross-compiling to Mac isn't possible because of the Mach-O linker.
 if (host_os == "mac") {
   standard_build_hosts += [
@@ -49,21 +44,19 @@ if (host_os == "mac") {
       os = "mac"
     },
   ]
-  if (mac_sdk_path == "") {
-    mac_sdk_path = exec_script("/usr/bin/xcrun",
+  _xcode_sysroot = exec_script("/usr/bin/xcrun",
                                [
                                  "--sdk",
                                  "macosx",
                                  "--show-sdk-path",
                                ],
                                "trim string")
-  }
-  if (mac_sdk_path != "") {
+  if (_xcode_sysroot != "") {
     standard_sysroot += [
       {
         cpu = host_cpu
         os = "mac"
-        sysroot = mac_sdk_path
+        sysroot = _xcode_sysroot
       },
     ]
   }
