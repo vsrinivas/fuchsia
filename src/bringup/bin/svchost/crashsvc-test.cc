@@ -302,7 +302,8 @@ TEST(crashsvc, ExceptionHandlerAsync) {
   EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
 }
 
-TEST(crashsvc, ExceptionHandlerUnbinds) {
+// TODO(56845): Reenable this test once it no longer flakes.
+TEST(crashsvc, DISABLED_ExceptionHandlerUnbinds) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   FakeService test_svc(loop.dispatcher());
 
