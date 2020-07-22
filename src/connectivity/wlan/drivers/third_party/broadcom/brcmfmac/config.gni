@@ -1,0 +1,74 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/cipd.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/driver_package.gni")
+
+# Firmware file copying below.  There are three targets:
+#
+# * brcmfmac-firmware-copy
+# * brcmfmac-nvram-copy
+# * brcmfmac-clm-copy
+#
+# which copy the firmware, NVRAM definition, and CLM blob respectively.  They are either copy()
+# targets, or empty group() targets, for use in the driver_driver_package() targets below.
+#
+# All files that must be included as libraries in the driver_driver_package() target are added to the
+# driver_library_files list.
+
+template("brcmfmac_copy") {
+  forward_variables_from(invoker,
+                         [
+                           "board",
+                           "chip",
+                           "bus",
+                         ])
+  driver_library_files = [
+    "${chip}-${bus}.bin",
+    "${chip}-${bus}.txt",
+    "${chip}-${bus}.clm_blob",
+  ]
+  copy("brcmfmac-firmware-copy-${target_name}") {
+    sources = [ "firmware/${chip}-${bus}-${board}.bin" ]
+    outputs =
+        [ "$root_out_dir/firmware/${target_name}/brcmfmac/${chip}-${bus}.bin" ]
+  }
+  copy("brcmfmac-nvram-copy-${target_name}") {
+    sources = [ "firmware/${chip}-${bus}-${board}.txt" ]
+    outputs =
+        [ "$root_out_dir/firmware/${target_name}/brcmfmac/${chip}-${bus}.txt" ]
+  }
+  copy("brcmfmac-clm-copy-${target_name}") {
+    sources = [ "firmware/${chip}-${bus}-${board}.clm_blob" ]
+    outputs = [
+      "$root_out_dir/firmware/${target_name}/brcmfmac/${chip}-${bus}.clm_blob",
+    ]
+  }
+
+  # Driver package for the brcmfmac driver.
+  # Note that shlib_toolchain is not being used anymore.
+  driver_package(target_name) {
+    deps = [
+      ":brcmfmac-clm-copy-${target_name}",
+      ":brcmfmac-firmware-copy-${target_name}",
+      ":brcmfmac-nvram-copy-${target_name}",
+      ":driver_module",
+    ]
+    drivers = [
+      {
+        name = "brcmfmac.so"
+      },
+    ]
+    libraries = []
+    foreach(file, driver_library_files) {
+      libraries += [
+        {
+          name = "firmware/brcmfmac/$file"
+          source = "firmware/${target_name}/brcmfmac/$file"
+        },
+      ]
+    }
+    visibility = [ "*" ]
+  }
+}
