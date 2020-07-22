@@ -86,7 +86,6 @@ group("test") {
 
   deps = [
     ":archivist_reader_test($host_toolchain)",
-    ":blobfs_metrics_test($host_toolchain)",
     ":inspect_metrics_emulator_test($host_toolchain)",
     ":inspect_metrics_test($host_toolchain)",
   ]
