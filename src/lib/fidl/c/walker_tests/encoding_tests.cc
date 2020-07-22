@@ -1686,12 +1686,12 @@ bool encode_absent_nullable_vector_of_uint32() {
   auto status =
       encode_helper<mode>(&unbounded_nullable_vector_of_uint32_message_type, &message, buf,
                           ArrayCount(buf), nullptr, 0, &actual_bytes, &actual_handles, &error);
-  auto& result = *reinterpret_cast<unbounded_nullable_vector_of_uint32_message_layout*>(buf);
+  auto& result = *reinterpret_cast<decltype(message.inline_struct)*>(buf);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error);
 
-  auto result_uint32 = reinterpret_cast<uint64_t>(result.inline_struct.vector.data);
+  auto result_uint32 = reinterpret_cast<uint64_t>(result.vector.data);
   EXPECT_EQ(result_uint32, FIDL_ALLOC_ABSENT);
 
   END_TEST;
