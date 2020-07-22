@@ -26,6 +26,16 @@ impl FatfsDirRef {
         self.inner.as_ref()
     }
 
+    /// Extracts a mutable reference to the wrapped value. The lifetime is restored to
+    /// that of _fs.
+    pub fn borrow_mut<'a>(&'a mut self, _fs: &'a FatFilesystemInner) -> Option<&'a mut Dir<'a>> {
+        // We need to transmute() back to the right lifetime because otherwise rust forces us to
+        // return a &'static mut, because it thinks that any references within the file must be to
+        // objects with a static lifetime. This isn't the case (because the lifetime is determined
+        // by the lock on FatFilesystemInner, which we know is held), so this is safe.
+        unsafe { std::mem::transmute(self.inner.as_mut()) }
+    }
+
     /// Extracts the wrapped value, restoring its lifetime to that of _fs, and invalidate
     /// this FatfsDirRef. Any future calls to the borrow_*() functions will panic.
     pub fn take<'a>(&mut self, _fs: &'a FatFilesystemInner) -> Option<Dir<'a>> {

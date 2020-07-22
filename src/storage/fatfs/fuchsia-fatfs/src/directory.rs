@@ -8,7 +8,7 @@ use {
         node::{FatNode, WeakFatNode},
         refs::{FatfsDirRef, FatfsFileRef},
         types::{Dir, DirEntry},
-        util::{dos_to_unix_time, fatfs_error_to_status},
+        util::{dos_to_unix_time, fatfs_error_to_status, unix_to_dos_time},
     },
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
@@ -90,6 +90,14 @@ impl FatDirectory {
         fs: &'a FatFilesystemInner,
     ) -> Result<&'a Dir<'a>, Status> {
         unsafe { self.dir.get().as_ref() }.unwrap().borrow(fs).ok_or(Status::UNAVAILABLE)
+    }
+
+    /// Borrow the underlying fatfs `Dir` that corresponds to this directory.
+    pub(crate) fn borrow_dir_mut<'a>(
+        &'a self,
+        fs: &'a FatFilesystemInner,
+    ) -> Result<&'a mut Dir<'a>, Status> {
+        unsafe { self.dir.get().as_mut() }.unwrap().borrow_mut(fs).ok_or(Status::UNAVAILABLE)
     }
 
     /// Gets a child directory entry from the underlying fatfs implementation.
@@ -320,8 +328,18 @@ impl MutableDirectory for FatDirectory {
         self.borrow_dir(&fs_lock)?.remove(&name).map_err(fatfs_error_to_status)
     }
 
-    fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {
-        Err(Status::NOT_SUPPORTED)
+    fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
+        let fs_lock = self.filesystem.lock().unwrap();
+        let dir = self.borrow_dir_mut(&fs_lock)?;
+
+        if flags & fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME != 0 {
+            dir.set_created(unix_to_dos_time(attrs.creation_time));
+        }
+        if flags & fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME != 0 {
+            dir.set_modified(unix_to_dos_time(attrs.modification_time));
+        }
+
+        Ok(())
     }
 
     fn get_filesystem(&self) -> Arc<dyn Filesystem> {
