@@ -743,10 +743,7 @@ static zx_status_t brcmf_dev_escan_set_randmac(struct brcmf_if* ifp) {
   pfn_mac.version = BRCMF_PFN_MACADDR_CFG_VER;
   pfn_mac.flags = BRCMF_PFN_USE_FULL_MACADDR;
 
-  err = brcmf_gen_random_mac_addr(pfn_mac.mac);
-  if (err != ZX_OK) {
-    return err;
-  }
+  brcmf_gen_random_mac_addr(pfn_mac.mac);
 
   err = brcmf_fil_iovar_data_set(ifp, "pfn_macaddr", &pfn_mac, sizeof(pfn_mac), &fw_err);
   if (err)
@@ -878,9 +875,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
 
   if (params->params_le.scan_type == BRCMF_SCANTYPE_ACTIVE &&
       !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
-    if (brcmf_dev_escan_set_randmac(ifp) != ZX_OK) {
-      goto exit;
-    }
+    brcmf_dev_escan_set_randmac(ifp);
   }
 
   err = brcmf_fil_iovar_data_set(ifp, "escan", params, params_size, &fw_err);
