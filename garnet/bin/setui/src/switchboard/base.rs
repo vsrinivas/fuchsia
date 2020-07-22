@@ -164,6 +164,31 @@ pub enum SettingRequest {
     SetConfigurationInterfaces(ConfigurationInterfaceFlags),
 }
 
+impl SettingRequest {
+    /// Returns the name of the enum, for writing to inspect.
+    /// TODO(fxb/56718): write a macro to simplify this
+    pub fn for_inspect(self) -> &'static str {
+        match self {
+            SettingRequest::Get => "Get",
+            SettingRequest::SetAccessibilityInfo(_) => "SetAccessibilityInfo",
+            SettingRequest::ScheduleClearAccounts => "ScheduleClearAccounts",
+            SettingRequest::SetVolume(_) => "SetVolume",
+            SettingRequest::SetMicMute(_) => "SetMicMute",
+            SettingRequest::SetBrightness(_) => "SetBrightness",
+            SettingRequest::SetAutoBrightness(_) => "SetAutoBrightness",
+            SettingRequest::SetLowLightMode(_) => "SetLowLightMode",
+            SettingRequest::SetDnD(_) => "SetDnD",
+            SettingRequest::SetIntlInfo(_) => "SetIntlInfo",
+            SettingRequest::SetLightGroupValue(_, _) => "SetLightGroupValue",
+            SettingRequest::SetNightModeInfo(_) => "SetNightModeInfo",
+            SettingRequest::Reboot => "Reboot",
+            SettingRequest::Restore => "Restore",
+            SettingRequest::SetUserDataSharingConsent(_) => "SetUserDataSharingConsent",
+            SettingRequest::SetConfigurationInterfaces(_) => "SetConfigurationInterfaces",
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceInfo {
     pub build_tag: String,
@@ -338,7 +363,7 @@ pub enum SettingResponse {
 
 impl SettingResponse {
     /// Returns the name of the enum and its value, debug-formatted, for writing to inspect.
-    /// TODO(fxb/51123): simplify this with a macro or fuchsia-inspect-derive.
+    /// TODO(fxb/56718): simplify this with a macro.
     pub fn for_inspect(self) -> (&'static str, String) {
         match self {
             SettingResponse::Unknown => ("Unknown", "".to_string()),

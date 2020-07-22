@@ -19,7 +19,9 @@ use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
 use futures::FutureExt;
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
+use std::result::Result::Ok;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
@@ -30,6 +32,30 @@ const INSPECT_REQUESTS_COUNT: usize = 25;
 /// Information about a switchboard setting to be written to inspect.
 #[derive(Inspect)]
 struct SettingTypeInfo {
+    /// Map from the name of the SettingRequest variant to a RequestTypeInfo that holds a list of
+    /// recent requests.
+    #[inspect(skip)]
+    requests_by_type: HashMap<String, RequestTypeInfo>,
+
+    /// Incrementing count for all requests of this setting type.
+    ///
+    /// Count is used across all request types to easily see the order that requests occurred in.
+    #[inspect(skip)]
+    count: u64,
+
+    /// Node of this info.
+    inspect_node: inspect::Node,
+}
+
+impl SettingTypeInfo {
+    fn new() -> Self {
+        Self { count: 0, requests_by_type: HashMap::new(), inspect_node: inspect::Node::default() }
+    }
+}
+
+/// Information for all requests of a particular SettingType variant for a given setting type.
+#[derive(Inspect)]
+struct RequestTypeInfo {
     /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
     #[inspect(skip)]
     last_requests: VecDeque<RequestInfo>,
@@ -38,7 +64,7 @@ struct SettingTypeInfo {
     inspect_node: inspect::Node,
 }
 
-impl SettingTypeInfo {
+impl RequestTypeInfo {
     fn new() -> Self {
         Self {
             last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
@@ -53,10 +79,6 @@ impl SettingTypeInfo {
 /// once they go out of scope.
 #[derive(Inspect)]
 struct RequestInfo {
-    /// Incrementing count for each request.
-    #[inspect(skip)]
-    count: u64,
-
     /// Debug string representation of this SettingRequest.
     request: inspect::StringProperty,
 
@@ -68,9 +90,8 @@ struct RequestInfo {
 }
 
 impl RequestInfo {
-    fn new(count: u64) -> Self {
+    fn new() -> Self {
         Self {
-            count,
             request: inspect::StringProperty::default(),
             timestamp: inspect::StringProperty::default(),
             inspect_node: inspect::Node::default(),
@@ -351,23 +372,37 @@ impl SwitchboardImpl {
                 .with_inspect(&inspect_node, format!("{:?}", setting_type))
                 // `with_inspect` will only return an error on types with interior mutability.
                 // Since none are used here, this should be fine.
-                .unwrap()
+                .expect("failed to create SettingTypeInfo inspect node")
         });
 
-        let last_requests = &mut setting_type_info.last_requests;
+        let key = request.clone().for_inspect().to_string();
+        let request_type_info = match setting_type_info.requests_by_type.entry(key.clone()) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => {
+                let request_type_info = RequestTypeInfo::new()
+                    .with_inspect(&setting_type_info.inspect_node, key)
+                    // `with_inspect` will only return an error on types with interior mutability.
+                    // Since none are used here, this should be fine.
+                    .expect("failed to create RequestTypeInfo inspect node");
+                entry.insert(request_type_info)
+            }
+        };
+
+        let last_requests = &mut request_type_info.last_requests;
         if last_requests.len() >= INSPECT_REQUESTS_COUNT {
             last_requests.pop_back();
         }
 
-        let count = last_requests.front().map(|req| req.count + 1).unwrap_or(0);
+        let count = setting_type_info.count;
+        setting_type_info.count += 1;
         let timestamp = clock::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .as_ref()
             .map(Duration::as_millis)
             .unwrap_or(0);
         // std::u64::MAX maxes out at 20 digits.
-        if let Ok(request_info) = RequestInfo::new(count)
-            .with_inspect(&setting_type_info.inspect_node, format!("{:020}", count))
+        if let Ok(request_info) = RequestInfo::new()
+            .with_inspect(&request_type_info.inspect_node, format!("{:020}", count))
         {
             request_info.request.set(&format!("{:?}", request));
             request_info.timestamp.set(&timestamp.to_string());
@@ -647,21 +682,88 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             switchboard: {
                 "Display": {
-                    "00000000000000000000": {
-                        request: "SetAutoBrightness(false)",
-                        timestamp: "0",
-                    },
-                    "00000000000000000001": {
-                        request: "SetAutoBrightness(false)",
-                        timestamp: "0",
+                    "SetAutoBrightness": {
+                        "00000000000000000000": {
+                            request: "SetAutoBrightness(false)",
+                            timestamp: "0",
+                        },
+                        "00000000000000000001": {
+                            request: "SetAutoBrightness(false)",
+                            timestamp: "0",
+                        },
                     },
                 },
                 "Intl": {
-                    "00000000000000000000": {
-                        request: "SetIntlInfo(IntlInfo { locales: Some([LocaleId { id: \"en-US\" }]), temperature_unit: Some(Celsius), time_zone_id: Some(\"UTC\"), hour_cycle: None })",
-                        timestamp: "0",
-                    }
+                    "SetIntlInfo": {
+                        "00000000000000000000": {
+                            request: "SetIntlInfo(IntlInfo { locales: Some([LocaleId { id: \"en-US\" }]), temperature_unit: Some(Celsius), time_zone_id: Some(\"UTC\"), hour_cycle: None })",
+                            timestamp: "0",
+                        }
+                    },
                 }
+            }
+        });
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_inspect_mixed_request_types() {
+        clock::mock::set(SystemTime::UNIX_EPOCH);
+
+        let inspector = inspect::Inspector::new();
+        let inspect_node = inspector.root().create_child("switchboard");
+        let switchboard_factory = switchboard::message::create_hub();
+        assert!(SwitchboardBuilder::create()
+            .inspect_node(inspect_node)
+            .switchboard_messenger_factory(switchboard_factory.clone())
+            .build()
+            .await
+            .is_ok());
+
+        let (messenger, _) = switchboard_factory.create(MessengerType::Unbound).await.unwrap();
+
+        // Interlace different request types to make sure the counter is correct.
+        send_request_and_wait(
+            &messenger,
+            SettingType::Display,
+            SettingRequest::SetAutoBrightness(false),
+        )
+        .await;
+
+        send_request_and_wait(&messenger, SettingType::Display, SettingRequest::Get).await;
+
+        send_request_and_wait(
+            &messenger,
+            SettingType::Display,
+            SettingRequest::SetAutoBrightness(true),
+        )
+        .await;
+
+        send_request_and_wait(&messenger, SettingType::Display, SettingRequest::Get).await;
+
+        assert_inspect_tree!(inspector, root: {
+            switchboard: {
+                "Display": {
+                    "SetAutoBrightness": {
+                        "00000000000000000000": {
+                            request: "SetAutoBrightness(false)",
+                            timestamp: "0",
+                        },
+                        "00000000000000000002": {
+                            request: "SetAutoBrightness(true)",
+                            timestamp: "0",
+                        },
+                    },
+                    "Get": {
+                        "00000000000000000001": {
+                            request: "Get",
+                            timestamp: "0",
+                        },
+                        "00000000000000000003": {
+                            request: "Get",
+                            timestamp: "0",
+                        },
+                    },
+                },
             }
         });
     }
@@ -694,8 +796,7 @@ mod tests {
         .await;
 
         // Send one more than the max requests to make sure they get pushed off the end of the queue
-        for i in 0..26u8 {
-            println!("{}", i);
+        for _ in 0..INSPECT_REQUESTS_COUNT + 1 {
             send_request_and_wait(
                 &messenger,
                 SettingType::Display,
@@ -704,13 +805,17 @@ mod tests {
             .await;
         }
 
-        // ensures we have 25 items and that the queue dropped the earliest one when hitting the limit
+        // Ensures we have INSPECT_REQUESTS_COUNT items and that the queue dropped the earliest one
+        // when hitting the limit.
         fn display_subtree_assertion() -> TreeAssertion {
             let mut tree_assertion = TreeAssertion::new("Display", true);
-            for i in 1..26 {
-                tree_assertion
+            let mut request_assertion = TreeAssertion::new("SetAutoBrightness", true);
+
+            for i in 1..INSPECT_REQUESTS_COUNT + 1 {
+                request_assertion
                     .add_child_assertion(TreeAssertion::new(&format!("{:020}", i), false));
             }
+            tree_assertion.add_child_assertion(request_assertion);
             tree_assertion
         };
 
@@ -718,9 +823,11 @@ mod tests {
             switchboard: {
                 display_subtree_assertion(),
                 "Intl": {
-                    "00000000000000000000": {
-                        request: AnyProperty,
-                        timestamp: "0",
+                    "SetIntlInfo": {
+                        "00000000000000000000": {
+                            request: AnyProperty,
+                            timestamp: "0",
+                        }
                     }
                 }
             }
