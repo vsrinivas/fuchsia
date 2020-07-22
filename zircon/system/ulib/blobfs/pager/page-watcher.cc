@@ -63,6 +63,8 @@ void PageWatcher::HandlePageRequest(async_dispatcher_t* dispatcher, async::Paged
     // Signal here without waiting for a ZX_PAGER_VMO_COMPLETE packet, to prevent holding up
     // destruction indefinitely. The pager async loop is shutting down, so we won't receive any more
     // packets on its port.
+    FS_TRACE_INFO("blobfs: Pager async loop shutting down. Signaling detach for vmo %u\n",
+                  vmo_->get());
     SignalPagerDetach();
     return;
   }
@@ -81,6 +83,8 @@ void PageWatcher::HandlePageRequest(async_dispatcher_t* dispatcher, async::Paged
       return;
     }
     default:
+      FS_TRACE_ERROR("blobfs: Invalid pager request on vmo %u. [%u, %zu, %zu, %u]\n", vmo_->get(),
+                     request->command, request->offset, request->length, request->flags);
       return;
   }
 }

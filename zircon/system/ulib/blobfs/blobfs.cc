@@ -751,6 +751,9 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   if (!block_device_) {
     return nullptr;
   }
+
+  FS_TRACE_INFO("blobfs: Shutting down\n");
+
   // Shutdown all internal connections to blobfs.
   Cache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
