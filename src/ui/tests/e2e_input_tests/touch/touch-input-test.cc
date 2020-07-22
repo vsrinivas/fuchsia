@@ -21,6 +21,7 @@
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <iostream>
@@ -162,7 +163,7 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
 
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
   // Returns the timestamp on the first injected InputReport.
-  zx_time_t InjectInput() {
+  zx_time_t InjectInput(zx_clock_t clock_id) {
     using fuchsia::ui::input::InputReport;
     // Device parameters
     auto parameters = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -187,7 +188,7 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
       *touch = {
           .touches = {{.finger_id = 1, .x = 500, .y = -500}}};  // center of top right quadrant
       // Use system clock, instead of dispatcher clock, for measurement purposes.
-      InputReport report{.event_time = RealNow(), .touchscreen = std::move(touch)};
+      InputReport report{.event_time = RealNow(clock_id), .touchscreen = std::move(touch)};
       injection_time = report.event_time;
       connection->DispatchReport(std::move(report));
       FX_LOGS(INFO) << "Dispatching touch report at (500, -500)";
@@ -195,7 +196,7 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
 
     {
       auto touch = fuchsia::ui::input::TouchscreenReport::New();
-      InputReport report{.event_time = RealNow(), .touchscreen = std::move(touch)};
+      InputReport report{.event_time = RealNow(clock_id), .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
     }
 
@@ -223,7 +224,13 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
   }
 
  private:
-  uint64_t RealNow() { return static_cast<uint64_t>(zx_clock_get_monotonic()); }
+  // Returns `uint64_t` for compatibility with `InputReport::event_time`.
+  uint64_t RealNow(zx_clock_t clock_id) {
+    zx_time_t now = ZX_TIME_INFINITE_PAST;
+    FX_CHECK(zx_clock_get(clock_id, &now) == ZX_OK);
+    FX_CHECK(now >= 0);
+    return static_cast<uint64_t>(now);
+  };
 
   fidl::Binding<fuchsia::test::ui::ResponseListener> response_listener_;
   std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
@@ -307,7 +314,7 @@ TEST_F(TouchInputTest, FlutterTap) {
         bool hittable = event.gfx().view_state_changed().state.is_rendering;
         FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
         if (hittable) {
-          input_injection_time = InjectInput();
+          input_injection_time = InjectInput(ZX_CLOCK_MONOTONIC);
         }
 
       } else if (IsViewDisconnectedEvent(event)) {
@@ -426,7 +433,7 @@ TEST_F(TouchInputTest, CppGfxClientTap) {
         bool hittable = event.gfx().view_state_changed().state.is_rendering;
         FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
         if (hittable) {
-          input_injection_time = InjectInput();
+          input_injection_time = InjectInput(ZX_CLOCK_MONOTONIC);
         }
 
       } else if (IsViewDisconnectedEvent(event)) {
