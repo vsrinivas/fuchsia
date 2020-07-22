@@ -247,7 +247,8 @@ zx_status_t VerifySlicesSize(const Superblock* info, const TransactionLimits& li
   if (ibm_blocks_needed > ibm_blocks_allocated) {
     FS_TRACE_ERROR("minfs: Not enough slices for inode bitmap\n");
     return ZX_ERR_INVALID_ARGS;
-  } else if (ibm_blocks_allocated + info->ibm_block >= info->abm_block) {
+  }
+  if (ibm_blocks_allocated + info->ibm_block >= info->abm_block) {
     FS_TRACE_ERROR("minfs: Inode bitmap collides into block bitmap\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -257,7 +258,8 @@ zx_status_t VerifySlicesSize(const Superblock* info, const TransactionLimits& li
   if (abm_blocks_needed > abm_blocks_allocated) {
     FS_TRACE_ERROR("minfs: Not enough slices for block bitmap\n");
     return ZX_ERR_INVALID_ARGS;
-  } else if (abm_blocks_allocated + info->abm_block >= info->ino_block) {
+  }
+  if (abm_blocks_allocated + info->abm_block >= info->ino_block) {
     FS_TRACE_ERROR("minfs: Block bitmap collides with inode table\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -267,7 +269,8 @@ zx_status_t VerifySlicesSize(const Superblock* info, const TransactionLimits& li
   if (ino_blocks_needed > ino_blocks_allocated) {
     FS_TRACE_ERROR("minfs: Not enough slices for inode table\n");
     return ZX_ERR_INVALID_ARGS;
-  } else if (ino_blocks_allocated + info->ino_block >= info->integrity_start_block) {
+  }
+  if (ino_blocks_allocated + info->ino_block >= info->integrity_start_block) {
     FS_TRACE_ERROR("minfs: Inode table collides with data blocks\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -288,10 +291,12 @@ zx_status_t VerifySlicesSize(const Superblock* info, const TransactionLimits& li
   if (dat_blocks_needed > dat_blocks_allocated) {
     FS_TRACE_ERROR("minfs: Not enough slices for data blocks\n");
     return ZX_ERR_INVALID_ARGS;
-  } else if (dat_blocks_allocated + info->dat_block > std::numeric_limits<blk_t>::max()) {
+  }
+  if (dat_blocks_allocated + info->dat_block > std::numeric_limits<blk_t>::max()) {
     FS_TRACE_ERROR("minfs: Data blocks overflow blk_t\n");
     return ZX_ERR_INVALID_ARGS;
-  } else if (dat_blocks_needed <= 1) {
+  }
+  if (dat_blocks_needed <= 1) {
     FS_TRACE_ERROR("minfs: Not enough data blocks\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -533,7 +538,7 @@ void Minfs::EnqueueCallback(SyncCallback callback) {
 template <typename T>
 class ReleaseObject {
  public:
-  ReleaseObject(T object) : object_(std::move(object)) {}
+  explicit ReleaseObject(T object) : object_(std::move(object)) {}
 
   void operator()([[maybe_unused]] const fit::result<void, zx_status_t>& dont_care) {
     object_.reset();
@@ -640,7 +645,7 @@ Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
       sb_(std::move(sb)),
       block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)),
-      offsets_(std::move(offsets)),
+      offsets_(offsets),
       limits_(sb_->Info()),
       mount_options_(mount_options) {}
 #endif
@@ -948,7 +953,7 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
 }
 
 // Allocate a new data block from the block bitmap.
-void Minfs::BlockNew(PendingWork* transaction, blk_t* out_bno) {
+void Minfs::BlockNew(PendingWork* transaction, blk_t* out_bno) const {
   size_t allocated_bno = transaction->AllocateBlock();
   *out_bno = static_cast<blk_t>(allocated_bno);
   ValidateBno(*out_bno);
@@ -1087,7 +1092,7 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
 #else
   *out_minfs =
       std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
-                                       std::move(inodes), std::move(offsets), mount_options));
+                                       std::move(inodes), offsets, mount_options));
 #endif
   return ZX_OK;
 }
@@ -1627,7 +1632,8 @@ zx_status_t Minfs::ReadBlock(blk_t start_block_num, void* out_data) const {
 }
 
 #ifndef __Fuchsia__
-zx_status_t Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data) {
+zx_status_t Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max,
+                           void* data) const {
   if (bno >= hard_max) {
     return ZX_ERR_OUT_OF_RANGE;
   }

@@ -24,10 +24,10 @@ namespace minfs {
 
 // Type of a reference to block number, either absolute (able to index into disk directly) or
 // relative to some entity (such as a file).
-typedef uint32_t blk_t;
+using blk_t = uint32_t;
 
 // The type of an inode number, which may be used as an index into the inode table.
-typedef uint32_t ino_t;
+using ino_t = uint32_t;
 
 // clang-format off
 

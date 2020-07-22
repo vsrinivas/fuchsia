@@ -151,8 +151,6 @@ class TransactionalFs {
 
 class InspectableMinfs : public fs::Inspectable {
  public:
-  virtual ~InspectableMinfs() {}
-
   // Returns an immutable reference to the superblock.
   virtual const Superblock& Info() const = 0;
 
@@ -164,7 +162,7 @@ class InspectableMinfs : public fs::Inspectable {
 
 #ifndef __Fuchsia__
   // Gets an immutable copy of offsets_.
-  virtual const BlockOffsets GetBlockOffsets() const = 0;
+  virtual BlockOffsets GetBlockOffsets() const = 0;
 #endif
 };
 
@@ -184,7 +182,7 @@ class Minfs :
   Minfs(Minfs&&) = delete;
   Minfs& operator=(Minfs&&) = delete;
 
-  ~Minfs();
+  ~Minfs() override;
 
   // Destroys a "minfs" object, but take back ownership of the bcache object.
   static std::unique_ptr<Bcache> Destroy(std::unique_ptr<Minfs> minfs);
@@ -218,7 +216,7 @@ class Minfs :
   void VnodeRelease(VnodeMinfs* vn) FS_TA_EXCLUDES(hash_lock_);
 
   // Allocate a new data block.
-  void BlockNew(PendingWork* transaction, blk_t* out_bno);
+  void BlockNew(PendingWork* transaction, blk_t* out_bno) const;
 
   // Set/Unset the flags.
   void UpdateFlags(PendingWork* transaction, uint32_t flags, bool set);
@@ -302,7 +300,7 @@ class Minfs :
     metrics_.SetEnable(enable);
 #endif
   }
-  fs::Ticker StartTicker() {
+  fs::Ticker StartTicker() const {
 #ifdef __Fuchsia__
     return fs::Ticker(metrics_.Enabled());
 #endif
@@ -366,7 +364,7 @@ class Minfs :
   const Allocator& GetBlockAllocator() const final { return *block_allocator_; }
 
 #ifndef __Fuchsia__
-  const BlockOffsets GetBlockOffsets() const final { return offsets_; }
+  BlockOffsets GetBlockOffsets() const final { return offsets_; }
 #endif
 
   zx_status_t ReadBlock(blk_t start_block_num, void* data) const final;
@@ -431,7 +429,7 @@ class Minfs :
   zx_status_t UpdateCleanBitAndOldestRevision(bool is_clean);
 
 #ifndef __Fuchsia__
-  zx_status_t ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data);
+  zx_status_t ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data) const;
 #endif
 
   // Global information about the filesystem.
