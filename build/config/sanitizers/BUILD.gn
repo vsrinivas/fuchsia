@@ -19,10 +19,8 @@ declare_args() {
   # the empty string to support this.
   asan_default_options = ":"
   if (is_fuchsia) {
-    # TODO(45047): Temporary until all lsan bugs are filed and marked with
-    # deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
     # TODO(52369): Temporary until asan runtime decommits large allocations.
-    asan_default_options = "detect_leaks=0:clear_shadow_mmap_threshold=16384"
+    asan_default_options = "clear_shadow_mmap_threshold=16384"
   }
 
   # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -45,13 +43,9 @@ declare_args() {
 # to the target that builds the leaky code.  When all leaky tests have been
 # marked that way, the asan_default_options default above will be removed.
 source_set("suppress-lsan.DO-NOT-USE-THIS") {
-  # This would conflict with the generic one.
-  if (asan_default_options == "") {
-    sources = [ "asan_default_options.c" ]
-    defines = [ "ASAN_DEFAULT_OPTIONS=\"detect_leaks=0\"" ]
-    configs -= [ "//build/config:symbol_visibility_hidden" ]
-    cflags = [ "-fPIE" ]
-  }
+  # See asan_default_options.c comments.
+  deps = [ ":asan_default_options" ]
+  libs = [ "./suppress-lsan.ld" ]
 }
 
 variant("asan") {
@@ -89,22 +83,20 @@ variant("asan") {
   }
 }
 
-if (asan_default_options != "") {
-  source_set("asan_default_options") {
-    visibility = [ ":*" ]
-    sources = [ "asan_default_options.c" ]
-    defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
+source_set("asan_default_options") {
+  visibility = [ ":*" ]
+  sources = [ "asan_default_options.c" ]
+  defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
 
-    # On Fuchsia, the ASan runtime is dynamically linked and needs to have
-    # the __asan_default_options symbol exported.  On systems where the
-    # ASan runtime is statically linked, it doesn't matter either way.
-    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  # On Fuchsia, the ASan runtime is dynamically linked and needs to have
+  # the __asan_default_options symbol exported.  On systems where the
+  # ASan runtime is statically linked, it doesn't matter either way.
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 
-    # This is the default on Fuchsia but not on all host platforms.
-    # It's necessary to link into Rust binaries, which are PIE even
-    # on platforms where C binaries are not PIE by default.
-    cflags = [ "-fPIE" ]
-  }
+  # This is the default on Fuchsia but not on all host platforms.
+  # It's necessary to link into Rust binaries, which are PIE even
+  # on platforms where C binaries are not PIE by default.
+  cflags = [ "-fPIE" ]
 }
 
 # rustc flags for AddressSanitizer, primarily used for fuzzing Rust code.

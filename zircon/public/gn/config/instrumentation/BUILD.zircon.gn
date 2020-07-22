@@ -14,10 +14,8 @@ declare_args() {
   # function.
   asan_default_options = ""
   if (is_fuchsia) {
-    # TODO(45047): Temporary until all lsan bugs are filed and marked with
-    # deps += [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
     # TODO(52369): Temporary until asan runtime decommits large allocations.
-    asan_default_options = "detect_leaks=0:clear_shadow_mmap_threshold=16384"
+    asan_default_options = "clear_shadow_mmap_threshold=16384"
   }
 
   # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -40,12 +38,9 @@ declare_args() {
 # to the target that builds the leaky code.  When all leaky tests have been
 # marked that way, the asan_default_options default above will be removed.
 source_set("suppress-lsan.DO-NOT-USE-THIS") {
-  # This would conflict with the generic one.
-  if (asan_default_options == "") {
-    sources = [ "asan_default_options.c" ]
-    defines = [ "ASAN_DEFAULT_OPTIONS=\"detect_leaks=0\"" ]
-    configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
-  }
+  # See asan_default_options.c comments.
+  deps = [ ":asan_default_options" ]
+  libs = [ "./suppress-lsan.ld" ]
 }
 
 config("asan") {
@@ -81,7 +76,7 @@ config("asan") {
 }
 
 source_set("asan_default_options") {
-  if (asan_default_options != "" && !is_kernel) {
+  if (!is_kernel) {
     sources = [ "asan_default_options.c" ]
     defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
 
