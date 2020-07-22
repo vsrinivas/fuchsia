@@ -18,9 +18,11 @@ class DashboardView {
     console.log('[Dashboard] - Init');
     let self = this;
     this.scheduleButton.addEventListener('click', async function() {
-      self.scheduleButton.textContent = 'Running';
+      self.scheduleButton.textContent = 'Queuing...';
       await self.scheduleCollector();
-      self.scheduleButton.textContent = 'Schedule';
+      setTimeout(function() {
+        self.scheduleButton.textContent = 'Schedule'
+      }, 2000);
     });
   }
 
@@ -92,7 +94,7 @@ class DashboardView {
     let pluginName = document.createElement('th');
     pluginName.appendChild(document.createTextNode('Plugin'));
     let stateName = document.createElement('th');
-    stateName.appendChild(document.createTextNode('State'));
+    stateName.appendChild(document.createTextNode('Loaded'));
     header.appendChild(pluginName);
     header.appendChild(stateName);
     this.pluginsTile.appendChild(header);
@@ -102,7 +104,14 @@ class DashboardView {
       let pluginName = document.createElement('td');
       pluginName.appendChild(document.createTextNode(this.splitCamelCase(plugin.name)));
       let stateName = document.createElement('td');
-      stateName.appendChild(document.createTextNode(plugin.state));
+      stateName.style.textAlign = 'center';
+      if (plugin.state == 'Loaded') {
+        stateName.style.color = '#189910';
+        stateName.appendChild(document.createTextNode('✓'));
+      } else {
+        stateName.style.color = '#d83010';
+        stateName.appendChild(document.createTextNode('✗'));
+      }
       entry.appendChild(pluginName);
       entry.appendChild(stateName);
       this.pluginsTile.appendChild(entry);

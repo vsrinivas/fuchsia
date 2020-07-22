@@ -71,6 +71,11 @@ class ManifestView {
       return 0;
     });
 
+    let stats = document.createElement('pre');
+    stats.className = 'search-stats';
+    stats.appendChild(document.createTextNode(matches.length + ' results'));
+    this.searchResults.appendChild(stats);
+
     matches.forEach((component) => {
       let manifest = component.manifest;
       try {

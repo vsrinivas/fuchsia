@@ -147,7 +147,7 @@ table, th, td {
 }
 
 .tile-header {
-  background: grey;
+  background: #202120;
   border-bottom: 1px solid #5f6369;
   border-left: 0px;
   border-right: 0px;
@@ -194,6 +194,14 @@ table, th, td {
  margin-bottom: 10px;
 }
 
+.tile-table th {
+    background: #202120;
+}
+
+.tile-table tr:hover {
+    background: #202120;
+}
+
 .tile-content {
  text-align: left;
  white-space: normal;
@@ -218,7 +226,19 @@ table, th, td {
   border: 1px solid #5f6369;
   border-radius: 10px;
   color: #e8eaee;
+  font-family: 'Roboto', sans-serif;
+  font-size: 1em;
   padding: 10px;
+  transition-duration: 0.3s;
+  outline: 0;
+}
+
+.menu-button:hover {
+    background: #202120;
+}
+
+.search-stats {
+    margin-left: 15px;
 }
 
 .nav {
