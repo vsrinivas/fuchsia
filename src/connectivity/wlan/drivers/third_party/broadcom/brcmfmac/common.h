@@ -48,7 +48,7 @@ struct brcmf_mp_device {
   } bus;
 };
 
-void brcmf_gen_random_mac_addr(uint8_t* mac_addr);
+zx_status_t brcmf_gen_random_mac_addr(uint8_t* mac_addr);
 
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp);
 

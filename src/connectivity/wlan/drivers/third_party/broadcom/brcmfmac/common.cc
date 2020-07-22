@@ -26,6 +26,7 @@
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
+#include "calls.h"
 #include "cfg80211.h"
 #include "debug.h"
 #include "device.h"
@@ -128,12 +129,18 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
   return ZX_OK;
 }
 
-void brcmf_gen_random_mac_addr(uint8_t* mac_addr) {
-  int err = getentropy(mac_addr, ETH_ALEN);
-  ZX_ASSERT(!err);
+zx_status_t brcmf_gen_random_mac_addr(uint8_t* mac_addr) {
+  int err = BRCMF_CALL(getentropy, mac_addr, ETH_ALEN);
+  if (err != 0) {
+    // The only reason getentropy() should fail is if we asked for more bytes than it is willing to
+    // provide in one go. We don't have a backup plan for this.
+    BRCMF_ERR("getentropy failed with status %d", err);
+    return ZX_ERR_INTERNAL;
+  }
 
   mac_addr[0] &= 0xfe;  // bit 0: 0 = unicast
   mac_addr[0] |= 0x02;  // bit 1: 1 = locally-administered
+  return ZX_OK;
 }
 
 zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
@@ -163,7 +170,10 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
 
     // Fallback to a random mac address.
     BRCMF_ERR("Failed to get mac address from bootloader. Fallback to random mac address");
-    brcmf_gen_random_mac_addr(mac_addr);
+    err = brcmf_gen_random_mac_addr(mac_addr);
+    if (err != ZX_OK) {
+      return err;
+    }
     BRCMF_ERR("random mac address to be assigned: %02x:%02x:%02x:%02x:%02x:%02x", mac_addr[0],
               mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
   }

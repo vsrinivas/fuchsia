@@ -152,6 +152,7 @@ source_set("core") {
     "brcmu_utils.h",
     "brcmu_wifi.h",
     "bus.h",
+    "calls.h",
     "cfg80211.h",
     "chip.h",
     "chipcommon.h",
