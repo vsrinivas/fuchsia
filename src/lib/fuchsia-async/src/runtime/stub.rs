@@ -7,7 +7,23 @@
 
 pub mod task {
     /// Stub Task.
-    pub struct Task {}
+    pub struct Task<T> {
+        _unused: T,
+    }
+
+    impl Task<()> {
+        /// Stub detach, panics if used.
+        pub fn detach(self) {
+            unimplemented!();
+        }
+    }
+
+    impl<T: Send> Task<T> {
+        /// Stub blocking, panics if used.
+        pub fn blocking(_: impl core::future::Future<Output = T> + Send + 'static) -> Task<T> {
+            unimplemented!();
+        }
+    }
 }
 
 pub mod executor {
@@ -23,6 +39,25 @@ pub mod executor {
 
     /// Stub Executor.
     pub struct Executor {}
+
+    impl Executor {
+        /// Stub run, panics if used.
+        pub fn run<F>(&mut self, _: F, __: usize) -> F::Output
+        where
+            F: core::future::Future + Send + 'static,
+            F::Output: Send + 'static,
+        {
+            unimplemented!();
+        }
+
+        /// Stub run_singlethreaded, panics if used.
+        pub fn run_singlethreaded<F>(&mut self, _: F) -> F::Output
+        where
+            F: core::future::Future + 'static,
+        {
+            unimplemented!();
+        }
+    }
 
     pub use std::time::Instant as Time;
 }
