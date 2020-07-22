@@ -23,6 +23,8 @@
 
 #include <cmath>
 
+#include "src/lib/fsl/vmo/file.h"
+
 namespace camera {
 
 // Returns an event such that when the event is signaled and the dispatcher executed, the provided
@@ -235,6 +237,13 @@ void BufferCollage::PostSetCollectionVisibility(uint32_t id, bool visible) {
   });
 }
 
+void BufferCollage::PostSetMuteIconVisibility(bool visible) {
+  async::PostTask(loop_.dispatcher(), [=] {
+    mute_visible_ = visible;
+    UpdateLayout();
+  });
+}
+
 void BufferCollage::OnNewRequest(fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
   if (view_provider_binding_.is_bound()) {
     request.Close(ZX_ERR_ALREADY_BOUND);
@@ -382,7 +391,7 @@ static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float w
   std::vector<uint32_t> ib_magnify {
     4, 5, 6, 6, 5, 7,
   };
-  //clang-format on
+  // clang-format on
 
   if (magnify) {
     vb.insert(vb.end(), vb_magnify.begin(), vb_magnify.end());
@@ -394,7 +403,7 @@ static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float w
   ZX_ASSERT(zx::vmo::create(vb_size, 0, &vb_vmo) == ZX_OK);
   ZX_ASSERT(vb_vmo.write(vb.data(), 0, vb_size) == ZX_OK);
   scenic::Memory vb_mem(session, std::move(vb_vmo), vb_size,
-                     fuchsia::images::MemoryType::HOST_MEMORY);
+                        fuchsia::images::MemoryType::HOST_MEMORY);
   scenic::Buffer scenic_vb(vb_mem, 0, vb_size);
 
   zx::vmo ib_vmo;
@@ -402,7 +411,7 @@ static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float w
   ZX_ASSERT(zx::vmo::create(ib_size, 0, &ib_vmo) == ZX_OK);
   ZX_ASSERT(ib_vmo.write(ib.data(), 0, ib_size) == ZX_OK);
   scenic::Memory ib_mem(session, std::move(ib_vmo), ib_size,
-                     fuchsia::images::MemoryType::HOST_MEMORY);
+                        fuchsia::images::MemoryType::HOST_MEMORY);
   scenic::Buffer scenic_ib(ib_mem, 0, ib_size);
 
   std::array<float, 3> aabb_min{x1, y1, 0};
@@ -440,7 +449,7 @@ void BufferCollage::UpdateLayout() {
     view.material = std::make_unique<scenic::Material>(session_.get());
     view.material->SetTexture(view.image_pipe_id);
     if (!view.visible) {
-      view.material->SetColor(0, 0, 0, 0);
+      view.material->SetColor(32, 32, 32, 255);
     }
     auto [element_width, element_height] = ScaleToFit(
         view.image_format.coded_width, view.image_format.coded_height, cell_width, cell_height);
@@ -457,6 +466,10 @@ void BufferCollage::UpdateLayout() {
   }
   if (heartbeat_indicator_.node) {
     heartbeat_indicator_.node->SetTranslation(view_width * 0.5f, view_height, -1.0f);
+  }
+  if (mute_indicator_.node) {
+    mute_indicator_.node->SetTranslation(view_width * 0.5f, view_height * 0.5f,
+                                         mute_visible_ ? -1.0f : 1.0f);
   }
 }
 
@@ -477,7 +490,8 @@ void BufferCollage::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events
       }
       UpdateLayout();
     }
-    if (event.is_input() && event.input().is_pointer() && event.input().pointer().phase == fuchsia::ui::input::PointerEventPhase::UP) {
+    if (event.is_input() && event.input().is_pointer() &&
+        event.input().pointer().phase == fuchsia::ui::input::PointerEventPhase::UP) {
       show_magnify_boxes_ = !show_magnify_boxes_;
       UpdateLayout();
     }
@@ -504,6 +518,34 @@ void BufferCollage::CreateView(
     heartbeat_indicator_.node->SetShape(*heartbeat_indicator_.shape);
     heartbeat_indicator_.node->SetMaterial(*heartbeat_indicator_.material);
     view_->AddChild(*heartbeat_indicator_.node);
+
+    constexpr uint32_t kMuteIconSize = 64;
+    fsl::SizedVmo svmo;
+    if (!fsl::VmoFromFilename("/pkg/data/mute.bin", &svmo) ||
+        svmo.size() != kMuteIconSize * kMuteIconSize * 4) {
+      FX_LOGS(ERROR) << "Failed to load mute icon.";
+      view_provider_binding_.Close(ZX_ERR_INTERNAL);
+      Stop();
+      return;
+    }
+    mute_indicator_.memory =
+        std::make_unique<scenic::Memory>(session_.get(), std::move(svmo.vmo()), svmo.size(),
+                                         fuchsia::images::MemoryType::HOST_MEMORY);
+    mute_indicator_.image = std::make_unique<scenic::Image>(
+        *mute_indicator_.memory, 0,
+        fuchsia::images::ImageInfo{.width = kMuteIconSize,
+                                   .height = kMuteIconSize,
+                                   .stride = kMuteIconSize * 4,
+                                   .alpha_format = fuchsia::images::AlphaFormat::PREMULTIPLIED});
+    mute_indicator_.material = std::make_unique<scenic::Material>(session_.get());
+    mute_indicator_.material->SetTexture(*mute_indicator_.image);
+    mute_indicator_.shape =
+        std::make_unique<scenic::Rectangle>(session_.get(), kMuteIconSize, kMuteIconSize);
+    mute_indicator_.node = std::make_unique<scenic::ShapeNode>(session_.get());
+    mute_indicator_.node->SetMaterial(*mute_indicator_.material);
+    mute_indicator_.node->SetShape(*mute_indicator_.shape);
+    view_->AddChild(*mute_indicator_.node);
+
     session_->set_on_frame_presented_handler(
         [this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
           constexpr std::array kHeartbeatColor = {0xFF, 0x00, 0xFF};

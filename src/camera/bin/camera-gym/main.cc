@@ -103,6 +103,7 @@ int main(int argc, char* argv[]) {
   };
 
   camera::StreamCycler::MuteStateHandler mute_handler = [&](bool muted) {
+    collage->PostSetMuteIconVisibility(muted);
     if (muted) {
       // Immediately hide all collections on mute.
       for (auto id : collection_ids) {

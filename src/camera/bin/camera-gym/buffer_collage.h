@@ -70,6 +70,9 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // Updates the view to show or hide a collection with the given |id|.
   void PostSetCollectionVisibility(uint32_t id, bool visible);
 
+  // Updates the view to show or hide a mute icon.
+  void PostSetMuteIconVisibility(bool visible);
+
  private:
   BufferCollage();
 
@@ -116,6 +119,14 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   } heartbeat_indicator_;
   zx::time start_time_;
   bool show_magnify_boxes_ = false;
+  bool mute_visible_ = false;
+  struct {
+    std::unique_ptr<scenic::Memory> memory;
+    std::unique_ptr<scenic::Image> image;
+    std::unique_ptr<scenic::Material> material;
+    std::unique_ptr<scenic::Rectangle> shape;
+    std::unique_ptr<scenic::ShapeNode> node;
+  } mute_indicator_;
 };
 
 }  // namespace camera

@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Generates a premultiplied BGRA image from a straight-alpha RGBA image.
+template("convert_image") {
+  compiled_action(target_name) {
+    assert(defined(invoker.output), "output must be defined for $target_name")
+    assert(defined(invoker.input), "input must be defined for $target_name")
+    forward_variables_from(invoker, "*")
+    tool = "//src/camera/bin/camera-gym/assets:convert_image"
+    outputs = [ output ]
+    args = [
+      rebase_path(input, root_out_dir),
+      rebase_path(output, root_out_dir)
+    ]
+  }
+}

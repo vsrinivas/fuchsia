@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//src/camera/bin/camera-gym/assets/convert_image.gni")
 import("//src/camera/debug.gni")
 
 name = "camera-gym"
@@ -35,6 +36,7 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fsl",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -44,12 +46,27 @@ executable("bin") {
   defines = [ camera_debug_define ]
 }
 
+convert_image("mute_icon") {
+  input = "assets/mute.bin"
+  output = "$target_out_dir/mute.bin"
+}
+
 package("${name}") {
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    ":mute_icon",
+  ]
 
   binaries = [
     {
       name = name
+    },
+  ]
+
+  resources = [
+    {
+      path = "$target_out_dir/mute.bin"
+      dest = "mute.bin"
     },
   ]
 
