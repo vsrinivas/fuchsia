@@ -11,11 +11,13 @@ use {
 
 /// Drains the required number of events, sorts them and compares them
 /// to the expected events
-fn expect_next(events: &mut Vec<EventMatcher>, expected: Vec<EventMatcher>) {
-    let num_events: usize = min(expected.len(), events.len());
-    let mut next: Vec<EventMatcher> = events.drain(0..num_events).collect();
-    next.sort_unstable();
-    assert_eq!(next, expected);
+fn expect_next(actual_events: &mut Vec<EventDescriptor>, expected_events: Vec<EventMatcher>) {
+    let num_events: usize = min(expected_events.len(), actual_events.len());
+    let mut actual_events: Vec<EventDescriptor> = actual_events.drain(0..num_events).collect();
+    actual_events.sort_unstable();
+    for (actual_event, expected_event) in actual_events.iter().zip(expected_events.iter()) {
+        assert!(expected_event.matches(actual_event));
+    }
 }
 
 #[fasync::run_singlethreaded(test)]

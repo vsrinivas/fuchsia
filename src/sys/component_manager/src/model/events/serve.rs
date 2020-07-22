@@ -399,8 +399,13 @@ fn maybe_serve_handler_async(event: Event) -> Option<ClientEnd<fsys::HandlerMark
         .expect("could not create request stream for handler protocol");
     fasync::spawn(async move {
         // Expect exactly one call to Resume
+        let mut out_responder = None;
         if let Some(Ok(fsys::HandlerRequest::Resume { responder })) = stream.next().await {
-            event.resume();
+            out_responder = Some(responder);
+        }
+        // Always resume the event even if the stream has closed.
+        event.resume();
+        if let Some(responder) = out_responder {
             if let Err(e) = responder.send() {
                 debug!("failed to respond to Resume request: {:?}", e);
             }
