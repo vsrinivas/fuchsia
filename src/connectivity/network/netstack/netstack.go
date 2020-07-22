@@ -13,8 +13,6 @@ import (
 	"syscall/zx"
 	"time"
 
-	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
-
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/connectivity"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
@@ -24,6 +22,8 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
+
 	networking_metrics "networking_metrics_golib"
 
 	"fidl/fuchsia/cobalt"
@@ -484,7 +484,7 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 
 		nicInfo, ok := ns.stack.NICInfo()[r.NIC]
 		if !ok {
-			return fmt.Errorf("error getting nicInfo for NIC %d, not in map", r.NIC)
+			return fmt.Errorf("error getting nicInfo for NIC %d, not in map: %w", r.NIC, routes.ErrNoSuchNIC)
 		}
 
 		ifs := nicInfo.Context.(*ifState)

@@ -6,10 +6,12 @@ package netstack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	networking_metrics "networking_metrics_golib"
@@ -396,7 +398,9 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				nicID, addr := event.nicID, event.addr
 				rt := defaultV6Route(nicID, addr)
 				syslog.Infof("ndp: invalidating a default router (%s) from nicID (%d), removing the default route to it: [%s]", addr, nicID, rt)
-				if err := n.ns.DelRoute(rt); err != nil {
+				// If the route does not exist, we do not consider that an error as it
+				// may have been removed by the user.
+				if err := n.ns.DelRoute(rt); err != nil && !errors.Is(err, routes.ErrNoSuchRoute) {
 					syslog.Errorf("ndp: failed to remove the default route [%s] for the invalidated router (%s) on nicID (%d): %s", rt, addr, nicID, err)
 				}
 
@@ -415,7 +419,9 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				nicID, prefix := event.nicID, event.prefix
 				rt := onLinkV6Route(nicID, prefix)
 				syslog.Infof("ndp: invalidating an on-link prefix (%s) from nicID (%d), removing the on-link route to it: [%s]", prefix, nicID, rt)
-				if err := n.ns.DelRoute(rt); err != nil {
+				// If the route does not exist, we do not consider that an error as it
+				// may have been removed by the user.
+				if err := n.ns.DelRoute(rt); err != nil && !errors.Is(err, routes.ErrNoSuchRoute) {
 					syslog.Errorf("ndp: failed to remove the on-link route [%s] for the invalidated on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
 				}
 
