@@ -178,13 +178,14 @@ impl CapabilityProvider for WorkSchedulerControlCapabilityProvider {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsys::WorkSchedulerControlMarker>::new(server_end);
         let stream: fsys::WorkSchedulerControlRequestStream = server_end.into_stream().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let result = self.open_async(stream).await;
             if let Err(e) = result {
                 // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
                 warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
             }
-        });
+        })
+        .detach();
         Ok(())
     }
 }
@@ -247,13 +248,14 @@ impl CapabilityProvider for WorkSchedulerCapabilityProvider {
         let stream: fsys::WorkSchedulerRequestStream = server_end.into_stream().unwrap();
         let work_scheduler = self.work_scheduler.clone();
         let scope_moniker = self.scope_moniker.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let result = Self::open_async(work_scheduler, scope_moniker, stream).await;
             if let Err(e) = result {
                 // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
                 warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
             }
-        });
+        })
+        .detach();
         Ok(())
     }
 }

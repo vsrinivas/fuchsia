@@ -23,7 +23,7 @@ pub fn route_use_fn(realm: WeakRealm, use_: UseDecl) -> RoutingFn {
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let realm = realm.clone();
             let use_ = use_.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let realm = match realm.upgrade() {
                     Ok(realm) => realm,
                     Err(e) => {
@@ -50,7 +50,8 @@ pub fn route_use_fn(realm: WeakRealm, use_: UseDecl) -> RoutingFn {
                     let cap = ComponentCapability::Use(use_);
                     routing::report_routing_failure(&realm.abs_moniker, &cap, &e, server_end);
                 }
-            });
+            })
+            .detach();
         },
     )
 }
@@ -60,7 +61,7 @@ pub fn route_expose_fn(realm: WeakRealm, expose: ExposeDecl) -> RoutingFn {
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let realm = realm.clone();
             let expose = expose.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let realm = match realm.upgrade() {
                     Ok(realm) => realm,
                     Err(e) => {
@@ -87,7 +88,8 @@ pub fn route_expose_fn(realm: WeakRealm, expose: ExposeDecl) -> RoutingFn {
                     let cap = ComponentCapability::UsedExpose(expose);
                     routing::report_routing_failure(&realm.abs_moniker, &cap, &e, server_end);
                 }
-            });
+            })
+            .detach();
         },
     )
 }

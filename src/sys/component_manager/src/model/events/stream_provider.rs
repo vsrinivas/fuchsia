@@ -85,9 +85,10 @@ impl EventStreamProvider {
         let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>().unwrap();
         event_streams
             .push(EventStreamAttachment { target_path: target_path.to_string(), server_end });
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             serve_event_stream(event_stream, client_end).await.unwrap();
-        });
+        })
+        .detach();
         Ok(())
     }
 

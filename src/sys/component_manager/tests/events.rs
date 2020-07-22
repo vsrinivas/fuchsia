@@ -114,7 +114,7 @@ impl EventSource {
         let mut event_stream = self.subscribe(vec![CapabilityRouted::NAME]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
 
-        fasync::spawn(
+        fasync::Task::spawn(
             Abortable::new(
                 async move {
                     loop {
@@ -137,7 +137,8 @@ impl EventSource {
                 abort_registration,
             )
             .unwrap_or_else(|_| ()),
-        );
+        )
+        .detach();
         Ok(abort_handle)
     }
 
@@ -153,7 +154,7 @@ impl EventSource {
     {
         let mut event_stream = self.subscribe(vec![CapabilityRouted::NAME]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        fasync::spawn(
+        fasync::Task::spawn(
             Abortable::new(
                 async move {
                     loop {
@@ -178,7 +179,8 @@ impl EventSource {
                 abort_registration,
             )
             .unwrap_or_else(|_| (())),
-        );
+        )
+        .detach();
         Ok(abort_handle)
     }
 
@@ -215,10 +217,11 @@ impl EventSource {
 
         let mut event_stream = self.subscribe(event_names).await?;
         let (tx, rx) = oneshot::channel();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let res = event_stream.validate(ordering, expected_events).await;
             tx.send(res).expect("Unable to send result");
-        });
+        })
+        .detach();
 
         Ok(Box::pin(async move { rx.await? }))
     }
@@ -465,7 +468,7 @@ pub trait RoutingProtocol {
                 .expect("Could not create request stream for CapabilityProvider");
 
         // Wait for an Open request on the CapabilityProvider channel
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Some(Ok(fsys::CapabilityProviderRequest::Open { server_end, responder })) =
                 provider_capability_stream.next().await
             {
@@ -483,7 +486,8 @@ pub trait RoutingProtocol {
                     "Failed to inject capability! CapabilityProvider was not able to invoke Open"
                 );
             }
-        });
+        })
+        .detach();
 
         // Send the client end of the CapabilityProvider protocol
         if let Some(protocol_proxy) = self.protocol_proxy() {
@@ -507,7 +511,7 @@ pub trait RoutingProtocol {
                 .expect("Could not create request stream for CapabilityProvider");
 
         // Wait for an Open request on the CapabilityProvider channel
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Some(Ok(fsys::CapabilityProviderRequest::Open { server_end, responder })) =
                 provider_capability_stream.next().await
             {
@@ -529,7 +533,8 @@ pub trait RoutingProtocol {
             } else {
                 panic!("Failed to interpose! CapabilityProvider was not able to invoke Open");
             }
-        });
+        })
+        .detach();
 
         // Replace the existing provider and open it with the
         // server end of the Interposer <---> Server channel.
@@ -733,7 +738,7 @@ impl EventLog {
         {
             // Start an async task that records events from the event_stream
             let recorded_events = recorded_events.clone();
-            fasync::spawn(
+            fasync::Task::spawn(
                 Abortable::new(
                     async move {
                         loop {
@@ -757,7 +762,8 @@ impl EventLog {
                     abort_registration,
                 )
                 .unwrap_or_else(|_| ()),
-            );
+            )
+            .detach();
         }
         Self { recorded_events, abort_handle }
     }

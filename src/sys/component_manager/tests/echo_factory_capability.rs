@@ -21,9 +21,10 @@ impl EchoFactoryCapability {
     }
 
     pub fn serve_async(self: Arc<Self>, request_stream: fechofactory::EchoFactoryRequestStream) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             self.serve(request_stream).await.expect("EchoFactoryCapability injector failed");
-        });
+        })
+        .detach();
     }
 }
 
@@ -41,15 +42,17 @@ impl Injector for EchoFactoryCapability {
         })) = request_stream.next().await
         {
             let (capability, mut echo_rx) = EchoCapability::new();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let stream = server_end.into_stream().expect("could not convert into stream");
                 capability.serve(stream).await.expect("EchoCapability injector failed");
-            });
-            fasync::spawn(async move {
+            })
+            .detach();
+            fasync::Task::spawn(async move {
                 while let Some(echo) = echo_rx.next().await {
                     echo.resume();
                 }
-            });
+            })
+            .detach();
 
             responder.send()?;
         }

@@ -37,9 +37,10 @@ async fn main() {
         child_fs.add_proxy_service_to::<LogSinkMarker, _>(observer_dir_req);
         let observed_env = child_fs.create_salted_nested_environment("appmgr_log_tests").unwrap();
         let observed_launcher = observed_env.launcher();
-        fasync::spawn(Box::pin(async move {
+        fasync::Task::spawn(Box::pin(async move {
             child_fs.collect::<()>().await;
-        }));
+        }))
+        .detach();
 
         let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
 

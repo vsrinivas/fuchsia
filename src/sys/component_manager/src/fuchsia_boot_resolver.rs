@@ -131,7 +131,7 @@ mod tests {
     impl FakeBootfs {
         pub fn new() -> DirectoryProxy {
             let (proxy, mut stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 while let Some(request) = stream.try_next().await.unwrap() {
                     match request {
                         DirectoryRequest::Open {
@@ -144,7 +144,8 @@ mod tests {
                         _ => panic!("Fake doesn't support request: {:?}", request),
                     }
                 }
-            });
+            })
+            .detach();
             proxy
         }
 

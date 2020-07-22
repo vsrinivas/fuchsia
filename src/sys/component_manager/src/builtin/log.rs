@@ -123,11 +123,12 @@ mod tests {
         let read_only_log = ReadOnlyLog::new(Resource::from(zx::Handle::invalid()));
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fboot::ReadOnlyLogMarker>()?;
-        fasync::spawn_local(
+        fasync::Task::local(
             read_only_log
                 .serve(stream)
                 .unwrap_or_else(|err| panic!("Error serving read-only log: {}", err)),
-        );
+        )
+        .detach();
 
         let read_only_log = proxy.get().await?;
         let info = zx::Handle::from(read_only_log).basic_info()?;
@@ -183,11 +184,12 @@ mod tests {
             WriteOnlyLog::new(zx::DebugLog::create(&resource, zx::DebugLogOpts::empty()).unwrap());
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fboot::WriteOnlyLogMarker>()?;
-        fasync::spawn_local(
+        fasync::Task::local(
             write_only_log
                 .serve(stream)
                 .unwrap_or_else(|err| panic!("Error serving write-only log: {}", err)),
-        );
+        )
+        .detach();
 
         let write_only_log = proxy.get().await?;
         let info = zx::Handle::from(write_only_log).basic_info()?;

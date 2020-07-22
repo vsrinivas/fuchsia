@@ -43,13 +43,14 @@ impl CapabilityProvider for EchoCapabilityProvider {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<EchoMarker>::new(server_end);
         let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(EchoRequest::EchoString { value, responder }) =
                 stream.try_next().await.unwrap()
             {
                 responder.send(value.as_ref().map(|s| &**s)).unwrap();
             }
-        });
+        })
+        .detach();
 
         Ok(())
     }

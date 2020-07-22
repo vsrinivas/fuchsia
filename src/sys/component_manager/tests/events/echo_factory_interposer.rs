@@ -53,23 +53,25 @@ impl Interposer for EchoFactoryInterposer {
             // Forward the request to the service and get a response
             to_service.request_echo_protocol(service_server_end).await?;
 
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let stream = server_end.into_stream().expect("could not convert into stream");
                 interposer
                     .interpose(stream, proxy_to_service)
                     .await
                     .expect("failed to interpose echo protocol");
-            });
+            })
+            .detach();
 
             let mut tx = {
                 let tx = self.tx.lock().await;
                 tx.clone()
             };
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 while let Some(echo_string) = rx.next().await {
                     tx.send(echo_string).await.expect("local tx/rx channel was closed");
                 }
-            });
+            })
+            .detach();
 
             responder.send()?;
         }

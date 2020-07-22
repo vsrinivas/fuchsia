@@ -44,7 +44,7 @@ fn run_main_event_stream(
     trigger_capability: Arc<TriggerCapability>,
     mut tx: mpsc::UnboundedSender<()>,
 ) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let mut event_stream = EventStream::new(stream);
         let mut capability_request =
             event_stream.expect_exact::<CapabilityRequested>(EventMatcher::new()).await;
@@ -60,14 +60,14 @@ fn run_main_event_stream(
             trigger_capability.serve_async(trigger_stream);
             tx.send(()).await.expect("Could not send response");
         }
-    });
+    }).detach();
 }
 
 fn run_second_event_stream(
     stream: fsys::EventStreamRequestStream,
     mut tx: mpsc::UnboundedSender<()>,
 ) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let mut event_stream = EventStream::new(stream);
         let capability_request =
             event_stream.expect_error::<CapabilityRequested>(EventMatcher::new()).await;
@@ -79,7 +79,8 @@ fn run_second_event_stream(
             }
             _ => panic!("Incorrect event received"),
         }
-    });
+    })
+    .detach();
 }
 
 fn main() -> Result<(), Error> {
@@ -98,9 +99,10 @@ fn main() -> Result<(), Error> {
         });
     fs.take_and_serve_directory_handle()?;
     let fut = async move {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             fs.collect::<()>().await;
-        });
+        })
+        .detach();
         start_trigger_server(receiver, rx).await.expect("failed running trigger_server");
     };
     executor.run_singlethreaded(fut);

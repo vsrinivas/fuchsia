@@ -299,9 +299,10 @@ fn serve_routing_protocol_async(
 ) -> ClientEnd<fsys::RoutingProtocolMarker> {
     let (client_end, stream) = create_request_stream::<fsys::RoutingProtocolMarker>()
         .expect("failed to create request stream for RoutingProtocol");
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         serve_routing_protocol(capability_provider, stream).await;
-    });
+    })
+    .detach();
     client_end
 }
 
@@ -397,7 +398,7 @@ fn maybe_serve_handler_async(event: Event) -> Option<ClientEnd<fsys::HandlerMark
     }
     let (client_end, mut stream) = create_request_stream::<fsys::HandlerMarker>()
         .expect("could not create request stream for handler protocol");
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         // Expect exactly one call to Resume
         let mut out_responder = None;
         if let Some(Ok(fsys::HandlerRequest::Resume { responder })) = stream.next().await {
@@ -410,6 +411,7 @@ fn maybe_serve_handler_async(event: Event) -> Option<ClientEnd<fsys::HandlerMark
                 debug!("failed to respond to Resume request: {:?}", e);
             }
         }
-    });
+    })
+    .detach();
     Some(client_end)
 }

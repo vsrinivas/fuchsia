@@ -75,9 +75,10 @@ impl TriggerCapability {
     }
 
     pub fn serve_async(self: Arc<Self>, request_stream: ftest::TriggerRequestStream) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             self.serve(request_stream).await.expect("TriggerCapability injector failed");
-        });
+        })
+        .detach();
     }
 }
 

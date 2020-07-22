@@ -225,7 +225,7 @@ mod tests {
             model_copy.bind(&m, &BindReason::Root).await.expect("failed to bind 1");
         }
         .remote_handle();
-        fasync::spawn(f);
+        fasync::Task::spawn(f).detach();
         let event = event_stream.wait_until(EventType::Started, vec![].into()).await.unwrap();
         event.resume();
         let event =
@@ -513,7 +513,7 @@ mod tests {
                 model.bind(&m, &BindReason::Root).await
             }
             .remote_handle();
-            fasync::spawn(f);
+            fasync::Task::spawn(f).detach();
             // `b` uses the runner offered by `a`.
             assert_eq!(
                 wait_for_runner_request(&mut receiver).await.resolved_url,

@@ -97,7 +97,7 @@ impl OutDir {
         _relative_path: String,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
             let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
             while let Some(EchoRequest::EchoString { value, responder }) =
@@ -105,6 +105,7 @@ impl OutDir {
             {
                 responder.send(value.as_ref().map(|s| &**s)).unwrap();
             }
-        });
+        })
+        .detach();
     }
 }

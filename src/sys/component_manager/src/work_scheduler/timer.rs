@@ -33,14 +33,15 @@ impl WorkSchedulerTimer {
             Timer::new(Time::from_nanos(next_timeout_monotonic)),
             abort_registration,
         );
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             // Dispatch work only when abortable was not aborted and `WorkScheduler` is still valid.
             if future.await.is_ok() {
                 if let Some(work_scheduler) = weak_work_scheduler.upgrade() {
                     work_scheduler.dispatch_work().await;
                 }
             }
-        });
+        })
+        .detach();
 
         WorkSchedulerTimer { next_timeout_monotonic, abort_handle }
     }

@@ -102,7 +102,7 @@ impl<B: 'static + BuiltinCapability + Sync + Send> CapabilityProvider
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<B::Marker>::new(server_end);
         let stream = server_end.into_stream().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Some(capability) = self.capability.upgrade() {
                 if let Err(err) = capability.serve(stream).await {
                     warn!("{}::open failed: {}", B::NAME, err);
@@ -110,7 +110,8 @@ impl<B: 'static + BuiltinCapability + Sync + Send> CapabilityProvider
             } else {
                 warn!("{} has been dropped", B::NAME);
             }
-        });
+        })
+        .detach();
         Ok(())
     }
 }

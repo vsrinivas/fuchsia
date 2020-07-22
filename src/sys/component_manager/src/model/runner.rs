@@ -134,7 +134,7 @@ fn spawn_null_controller_server(mut request_stream: fcrunner::ComponentControlle
     // Listen to the ComponentController server end and exit after the first
     // one, as this is the contract we have implemented so far. Exiting will
     // cause our handle to the channel to drop and close the channel.
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         while let Ok(Some(request)) = request_stream.try_next().await {
             match request {
                 fcrunner::ComponentControllerRequest::Stop { control_handle: c } => {
@@ -147,7 +147,8 @@ fn spawn_null_controller_server(mut request_stream: fcrunner::ComponentControlle
                 }
             }
         }
-    });
+    })
+    .detach();
 }
 
 /// Wrapper for converting fcomponent::Error into the anyhow::Error type.

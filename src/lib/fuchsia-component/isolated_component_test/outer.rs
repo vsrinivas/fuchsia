@@ -69,12 +69,13 @@ async fn main() -> Result<(), Error> {
     let child_app = AppBuilder::new(CHILD_URL).spawn(env.launcher())?;
 
     // spawn server to respond to child component requests
-    fasync::spawn(fs.for_each_concurrent(None, |req| async {
+    fasync::Task::spawn(fs.for_each_concurrent(None, |req| async {
         match req {
             Services::Exposed(stream) => echo_exposed_server(stream).await,
             Services::Hidden(stream) => echo_hidden_server(stream).await,
         }
-    }));
+    }))
+    .detach();
 
     // verify sibling is running by connecting directly to its service
     let multiply_by_two = sibling.connect_to_service::<EchoExposedBySiblingMarker>()?;

@@ -91,7 +91,7 @@ async fn main() {
         collection: Some("coll".to_string()),
     };
     let (f, destroy_handle) = realm.destroy_child(&mut child_ref).remote_handle();
-    fasync::spawn(f);
+    fasync::Task::spawn(f).detach();
 
     // Wait for the dynamic child to begin deletion
     let event = event_stream

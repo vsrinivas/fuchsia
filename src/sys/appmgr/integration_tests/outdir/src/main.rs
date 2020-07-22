@@ -65,7 +65,7 @@ async fn main() -> Result<(), Error> {
     ));
 
     let (pkgfs_client_end, pkgfs_server_end) = create_endpoints::<fio::NodeMarker>()?;
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let pkg_dir = io_util::open_directory_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE)
             .expect("failed to open /pkg");
         let pkg_dir_2 = io_util::clone_directory(&pkg_dir, fio::CLONE_FLAG_SAME_RIGHTS)
@@ -101,7 +101,8 @@ async fn main() -> Result<(), Error> {
             pfsPath::empty(),
             pkgfs_server_end,
         );
-    });
+    })
+    .detach();
     let pkgfs_c_str = CString::new("/pkgfs").unwrap();
     spawn_actions.push(fdio::SpawnAction::add_namespace_entry(
         &pkgfs_c_str,
@@ -109,7 +110,7 @@ async fn main() -> Result<(), Error> {
     ));
 
     let (svc_for_sys_client_end, svc_for_sys_server_end) = create_endpoints::<fio::NodeMarker>()?;
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let fake_svc_for_sys = pseudo_directory! {};
         fake_svc_for_sys.open(
             ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
@@ -118,7 +119,8 @@ async fn main() -> Result<(), Error> {
             pfsPath::empty(),
             svc_for_sys_server_end,
         );
-    });
+    })
+    .detach();
     let svc_for_sys_c_str = CString::new("/svc_for_sys").unwrap();
     spawn_actions.push(fdio::SpawnAction::add_namespace_entry(
         &svc_for_sys_c_str,

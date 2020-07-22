@@ -237,7 +237,7 @@ impl Action {
     /// `async`.
     pub fn handle(&self, realm: Arc<Realm>) {
         let action = self.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let res = match &action {
                 Action::Start(bind_reason) => start::do_start(&realm, bind_reason).await,
                 Action::MarkDeleting(moniker) => {
@@ -250,7 +250,8 @@ impl Action {
                 Action::Shutdown => shutdown::do_shutdown(realm.clone()).await,
             };
             ActionSet::finish(realm, &action, res).await;
-        });
+        })
+        .detach();
     }
 }
 
@@ -364,7 +365,7 @@ pub mod tests {
         mut responder: mpsc::Sender<Result<(), ModelError>>,
     ) {
         let (mut starter_tx, mut starter_rx) = mpsc::channel(0);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut action_set = realm.lock_actions().await;
 
             // Register action, and get notifications. Use `register_inner` because this test
@@ -387,7 +388,8 @@ pub mod tests {
 
             // If the notification was received successfully then we will get to this point.
             responder.send(res).await.expect("failed to send response");
-        });
+        })
+        .detach();
         starter_rx.next().await.expect("Unable to receive start signal");
     }
 

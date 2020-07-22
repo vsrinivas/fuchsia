@@ -231,11 +231,12 @@ impl WorkSchedulerDelegate {
 
         // Dispatch work items that are due.
         // TODO(fxb/42310): It may be advantageous to spawn a separate task for each dispatcher.
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             for (dispatcher, items) in to_dispatch.into_iter() {
                 let _ = dispatcher.dispatch(items).await;
             }
-        });
+        })
+        .detach();
 
         // Update deadlines on dispatched periodic items.
         for mut item in work_items.iter_mut() {

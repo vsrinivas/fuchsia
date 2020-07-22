@@ -110,7 +110,7 @@ impl SynthesisTask {
         if self.event_infos.is_empty() {
             return;
         }
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             // If we can't find the realm then we can't synthesize events.
             // This isn't necessarily an error as the model or realm might've been
             // destroyed in the intervening time, so we just exit early.
@@ -126,7 +126,8 @@ impl SynthesisTask {
                     }
                 }
             }
-        });
+        })
+        .detach();
     }
 
     /// Performs a depth-first traversal of the realm tree. It adds to the stream a `Running` event

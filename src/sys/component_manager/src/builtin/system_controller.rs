@@ -119,10 +119,11 @@ impl SystemControllerCapabilityProvider {
                 // disappear.
                 SystemControllerRequest::Shutdown { responder } => {
                     let timeout = zx::Duration::from(self.request_timeout);
-                    fasync::spawn(async move {
+                    fasync::Task::spawn(async move {
                         fasync::Timer::new(fasync::Time::after(timeout)).await;
                         panic!("Component manager did not complete shutdown in allowed time.");
-                    });
+                    })
+                    .detach();
                     ActionSet::register(self.model.root_realm.clone(), Action::Shutdown)
                         .await
                         .await
@@ -156,12 +157,13 @@ impl CapabilityProvider for SystemControllerCapabilityProvider {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<SystemControllerMarker>::new(server_end);
         let stream: SystemControllerRequestStream = server_end.into_stream().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let result = self.open_async(stream).await;
             if let Err(e) = result {
                 warn!("SystemController.open failed: {}", e);
             }
-        });
+        })
+        .detach();
 
         Ok(())
     }

@@ -383,7 +383,7 @@ impl ScopedInstance {
 
 impl Drop for ScopedInstance {
     fn drop(&mut self) {
-        fasync::spawn(self.destroy_future.take().unwrap());
+        fasync::Task::spawn(self.destroy_future.take().unwrap()).detach();
     }
 }
 

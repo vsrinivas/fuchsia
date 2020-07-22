@@ -141,11 +141,12 @@ mod tests {
     fn serve_bootargs(test_env: HashMap<String, String>) -> Result<fboot::ArgumentsProxy, Error> {
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fboot::ArgumentsMarker>()?;
         let env = Env::mock_new(test_env);
-        fasync::spawn_local(
+        fasync::Task::local(
             Arguments::new_env(env)
                 .serve(stream)
                 .unwrap_or_else(|e| panic!("Error while serving arguments service: {}", e)),
-        );
+        )
+        .detach();
         Ok(proxy)
     }
 

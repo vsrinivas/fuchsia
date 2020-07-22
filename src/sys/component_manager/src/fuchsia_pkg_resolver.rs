@@ -110,7 +110,7 @@ mod tests {
     impl MockLoader {
         fn start() -> LoaderProxy {
             let (proxy, server): (_, ServerEnd<LoaderMarker>) = endpoints::create_proxy().unwrap();
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 let loader = MockLoader {};
                 let mut stream = server.into_stream().unwrap();
                 while let Some(LoaderRequest::LoadUrl { url, responder }) =
@@ -120,7 +120,8 @@ mod tests {
                     let package = package.as_mut();
                     responder.send(package).expect("responder failed");
                 }
-            });
+            })
+            .detach();
             proxy
         }
 

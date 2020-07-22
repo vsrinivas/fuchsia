@@ -14,7 +14,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().expect("error creating executor");
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn_local(run_worker_service(stream));
+        fasync::Task::local(run_worker_service(stream)).detach();
     });
     fs.take_and_serve_directory_handle().expect("failed to serve outgoing directory");
 
@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
         .context("error connecting to WorkSchedulerControl")?;
     let work_scheduler = connect_to_service::<fsys::WorkSchedulerMarker>()
         .context("error connecting to WorkScheduler")?;
-    fasync::spawn_local(async move {
+    fasync::Task::local(async move {
         work_scheduler_control
             .set_batch_period(1)
             .await
@@ -36,7 +36,8 @@ fn main() -> Result<(), Error> {
             .await
             .expect("connection error scheduling work item")
             .expect("error scheduling work item");
-    });
+    })
+    .detach();
 
     executor.run_singlethreaded(fs.collect::<()>());
 

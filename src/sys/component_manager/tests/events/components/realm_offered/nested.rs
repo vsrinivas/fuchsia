@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
 
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn(run_trigger_service(stream));
+        fasync::Task::spawn(run_trigger_service(stream)).detach();
     });
     fs.take_and_serve_directory_handle()?;
 

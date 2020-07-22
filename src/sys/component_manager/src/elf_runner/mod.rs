@@ -617,14 +617,15 @@ impl Runner for ScopedElfRunner {
                 let (handle, registration) = AbortHandle::new_pair();
 
                 // Spawn a future that watches for the process to exit
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     let _ = fasync::OnSignals::new(
                         &process.as_handle_ref(),
                         zx::Signals::PROCESS_TERMINATED,
                     )
                     .await;
                     handle.abort();
-                });
+                })
+                .detach();
 
                 // Create a future which owns and serves the controller channel
                 // and can be aborted if the process exits. Aborting the
@@ -642,13 +643,14 @@ impl Runner for ScopedElfRunner {
                     registration,
                 );
 
-                fasync::spawn(async {
+                fasync::Task::spawn(async {
                     // TODO(fxb/53413) Currently we don't care whether this was
                     // aborted or completed on its own. In the future we should
                     // set an epitaph on the controller channel if the process
                     // exited.
                     let _ = abortable_future.await;
-                });
+                })
+                .detach();
             }
 
             Ok(None) => {
@@ -689,12 +691,13 @@ impl ProcessLauncherConnector {
         let proxy = if self.use_builtin {
             let (proxy, stream) =
                 fidl::endpoints::create_proxy_and_stream::<fproc::LauncherMarker>()?;
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let result = ProcessLauncher::serve(stream).await;
                 if let Err(e) = result {
                     warn!("ProcessLauncherConnector.connect failed: {}", e);
                 }
-            });
+            })
+            .detach();
             proxy
         } else {
             client::connect_to_service::<fproc::LauncherMarker>()

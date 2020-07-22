@@ -59,7 +59,7 @@ impl FakePkgfs {
         server_end: ServerEnd<DirectoryMarker>,
     ) -> Result<(), Error> {
         let mut stream = server_end.into_stream().expect("failed to create stream");
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
                 match request {
                     DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _ } => {
@@ -80,7 +80,8 @@ impl FakePkgfs {
                     _ => panic!("Fake doesn't support request: {:?}", request),
                 }
             }
-        });
+        })
+        .detach();
         Ok(())
     }
 

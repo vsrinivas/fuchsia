@@ -121,12 +121,13 @@ impl CapabilityProvider for VmexCapabilityProvider {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsec::VmexMarker>::new(server_end);
         let stream: fsec::VmexRequestStream = server_end.into_stream().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let result = self.vmex_service.serve(stream).await;
             if let Err(e) = result {
                 warn!("VmexService.serve failed: {}", e);
             }
-        });
+        })
+        .detach();
 
         Ok(())
     }
@@ -164,11 +165,12 @@ mod tests {
         let root_resource = get_root_resource().await?;
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fsec::VmexMarker>()?;
-        fasync::spawn_local(
+        fasync::Task::local(
             VmexService::new(root_resource)
                 .serve(stream)
                 .unwrap_or_else(|e| panic!("Error while serving vmex service: {}", e)),
-        );
+        )
+        .detach();
         Ok(proxy)
     }
 

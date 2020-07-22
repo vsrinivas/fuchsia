@@ -57,7 +57,7 @@ impl CapabilityReadyNotifier {
         // Don't block the handling on the event on the exposed capabilities being ready
         let this = self.clone();
         let moniker = target_moniker.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             // If we can't find the realm then we can't dispatch any CapabilityReady event,
             // error or otherwise. This isn't necessarily an error as the model or realm might've been
             // destroyed in the intervening time, so we just exit early.
@@ -74,7 +74,8 @@ impl CapabilityReadyNotifier {
 
             this.dispatch_capabilities_ready(outgoing_node_result, expose_decls, &target_realm)
                 .await;
-        });
+        })
+        .detach();
         Ok(())
     }
 

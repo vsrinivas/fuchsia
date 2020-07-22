@@ -66,12 +66,13 @@ impl CapabilityProvider for RealmCapabilityProvider {
             .expect("could not convert channel into stream");
         let scope_moniker = self.scope_moniker.clone();
         let host = self.host.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Err(e) = host.serve(scope_moniker, stream).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
                 warn!("serve_realm failed: {:?}", e);
             }
-        });
+        })
+        .detach();
         Ok(())
     }
 }
@@ -289,12 +290,13 @@ impl RealmCapabilityHost {
             }
         });
         let stream = iter.into_stream().expect("could not convert iterator channel into stream");
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Err(e) = Self::serve_child_iterator(children, stream, batch_size).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
                 warn!("serve_child_iterator failed: {:?}", e);
             }
-        });
+        })
+        .detach();
         Ok(())
     }
 
@@ -442,13 +444,14 @@ mod tests {
             let (realm_proxy, stream) =
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
             {
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     builtin_environment_inner
                         .realm_capability_host
                         .serve(realm_moniker, stream)
                         .await
                         .expect("failed serving realm service");
-                });
+                })
+                .detach();
             }
             RealmCapabilityTest {
                 model,
@@ -653,7 +656,7 @@ mod tests {
         let mut child_ref =
             fsys::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) };
         let (f, destroy_handle) = test.realm_proxy.destroy_child(&mut child_ref).remote_handle();
-        fasync::spawn(f);
+        fasync::Task::spawn(f).detach();
 
         let event = test
             .event_stream()

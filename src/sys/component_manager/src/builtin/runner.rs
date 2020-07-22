@@ -107,14 +107,15 @@ impl CapabilityProvider for RunnerCapabilityProvider {
         let mut stream = ServerEnd::<fcrunner::ComponentRunnerMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             // Keep handling requests until the stream closes.
             while let Ok(Some(request)) = stream.try_next().await {
                 let fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } =
                     request;
                 runner.start(start_info, controller).await;
             }
-        });
+        })
+        .detach();
         Ok(())
     }
 }

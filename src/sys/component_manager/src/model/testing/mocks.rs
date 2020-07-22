@@ -100,7 +100,7 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             match ty {
                 CapabilityType::Protocol => {
-                    fasync::spawn(async move {
+                    fasync::Task::spawn(async move {
                         let server_end: ServerEnd<EchoMarker> =
                             ServerEnd::new(server_end.into_channel());
                         let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
@@ -109,7 +109,8 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
                         {
                             responder.send(value.as_ref().map(|s| &**s)).unwrap();
                         }
-                    });
+                    })
+                    .detach();
                 }
                 CapabilityType::Directory | CapabilityType::Storage => {
                     let sub_dir = pseudo_directory!(
@@ -481,12 +482,13 @@ impl MockController {
                             if let Some(delay) = self.stop_resp.delay {
                                 let delay_copy = delay.clone();
                                 let close_channel = self.stop_resp.close_channel;
-                                fasync::spawn(async move {
+                                fasync::Task::spawn(async move {
                                     fasync::Timer::new(fasync::Time::after(delay_copy)).await;
                                     if close_channel {
                                         c.shutdown();
                                     }
-                                });
+                                })
+                                .detach();
                             } else if self.stop_resp.close_channel {
                                 c.shutdown();
                                 break;
@@ -502,12 +504,13 @@ impl MockController {
                             if let Some(delay) = self.kill_resp.delay {
                                 let delay_copy = delay.clone();
                                 let close_channel = self.kill_resp.close_channel;
-                                fasync::spawn(async move {
+                                fasync::Task::spawn(async move {
                                     fasync::Timer::new(fasync::Time::after(delay_copy)).await;
                                     if close_channel {
                                         c.shutdown();
                                     }
-                                });
+                                })
+                                .detach();
                                 if self.kill_resp.close_channel {
                                     break;
                                 }
@@ -521,9 +524,10 @@ impl MockController {
             },
             registration,
         );
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let _ = fut.await;
-        });
+        })
+        .detach();
         handle
     }
 }

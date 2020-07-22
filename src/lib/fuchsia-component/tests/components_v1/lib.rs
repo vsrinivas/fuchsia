@@ -377,7 +377,7 @@ async fn connect_to_unified_service_member_of_default_instance() -> Result<(), E
             }
         }
     });
-    fasync::spawn(serve_fut);
+    fasync::Task::spawn(serve_fut).detach();
 
     let dir_request =
         dir_proxy.into_channel().expect("failed to extract channel from proxy").into_zx_channel();
@@ -448,8 +448,8 @@ async fn open_remote_directory_files() -> Result<(), Error> {
     let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
     fs.serve_connection(dir_server_end.into_channel())?;
 
-    fuchsia_async::spawn(root.collect::<()>());
-    fuchsia_async::spawn(fs.collect::<()>());
+    fuchsia_async::Task::spawn(root.collect::<()>()).detach();
+    fuchsia_async::Task::spawn(fs.collect::<()>()).detach();
 
     // Open the test file
     let (file_proxy, file_server_end) = create_proxy::<FileMarker>()?;
@@ -495,10 +495,11 @@ async fn open_remote_pseudo_directory_files() -> Result<(), Error> {
     let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
     fs.serve_connection(dir_server_end.into_channel())?;
 
-    fuchsia_async::spawn(async move {
+    fuchsia_async::Task::spawn(async move {
         root.await;
-    });
-    fuchsia_async::spawn(fs.collect::<()>());
+    })
+    .detach();
+    fuchsia_async::Task::spawn(fs.collect::<()>()).detach();
 
     // Open the test file
     let (file_proxy, file_server_end) = create_proxy::<FileMarker>()?;
@@ -523,7 +524,7 @@ async fn open_remote_nested_servicefs_files() -> Result<(), Error> {
     let (nested_proxy, nested_server_end) = create_proxy::<DirectoryMarker>()?;
     nested_fs.dir("temp").dir("folder");
     nested_fs.serve_connection(nested_server_end.into_channel())?;
-    fuchsia_async::spawn(nested_fs.collect::<()>());
+    fuchsia_async::Task::spawn(nested_fs.collect::<()>()).detach();
 
     // Add the remote as "test"
     // "temp/folder" should appear in this directory as "test/folder".
@@ -534,7 +535,7 @@ async fn open_remote_nested_servicefs_files() -> Result<(), Error> {
     let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
     fs.serve_connection(dir_server_end.into_channel())?;
 
-    fuchsia_async::spawn(fs.collect::<()>());
+    fuchsia_async::Task::spawn(fs.collect::<()>()).detach();
 
     // Open and read "test"
     let temp_proxy = io_util::open_directory(&dir_proxy, Path::new("test"), OPEN_RIGHT_READABLE)?;

@@ -22,16 +22,16 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
 
     fs.dir("foo").add_fidl_service(move |stream| {
-        fasync::spawn(run_trigger_service(stream));
+        fasync::Task::spawn(run_trigger_service(stream)).detach();
     });
     fs.dir("qux").add_fidl_service(move |stream| {
-        fasync::spawn(run_trigger_service(stream));
+        fasync::Task::spawn(run_trigger_service(stream)).detach();
     });
     fs.dir("quux").add_fidl_service(move |stream| {
-        fasync::spawn(run_trigger_service(stream));
+        fasync::Task::spawn(run_trigger_service(stream)).detach();
     });
     fs.dir("mar").dir("baz").add_fidl_service(move |stream| {
-        fasync::spawn(run_trigger_service(stream));
+        fasync::Task::spawn(run_trigger_service(stream)).detach();
     });
 
     fs.take_and_serve_directory_handle().expect("failed to serve outgoing directory");

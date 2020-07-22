@@ -60,9 +60,10 @@ fn main() -> Result<(), Error> {
     });
     fs.take_and_serve_directory_handle()?;
     let fut = async move {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             fs.collect::<()>().await;
-        });
+        })
+        .detach();
         start_echo_reporter(receiver).await.expect("failed running echo_reporter");
     };
     executor.run_singlethreaded(fut);

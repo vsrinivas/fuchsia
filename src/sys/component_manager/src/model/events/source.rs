@@ -104,9 +104,10 @@ impl EventSource {
 
     /// Serves a `EventSource` FIDL protocol.
     pub fn serve(self, stream: fsys::BlockingEventSourceRequestStream) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             serve_event_source_sync(self, stream).await;
-        });
+        })
+        .detach();
     }
 }
 

@@ -199,7 +199,7 @@ mod tests {
 
         fn host_dir(server_end: ServerEnd<DirectoryMarker>) {
             let mut stream = server_end.into_stream().expect("failed to create stream");
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 while let Some(request) = stream.try_next().await.unwrap() {
                     match request {
                         DirectoryRequest::Open {
@@ -212,7 +212,8 @@ mod tests {
                         _ => panic!("Fake doesn't support request: {:?}", request),
                     }
                 }
-            });
+            })
+            .detach();
         }
 
         fn handle_open(path: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {

@@ -122,11 +122,12 @@ mod tests {
         let root_resource = get_root_resource().await?;
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fkernel::StatsMarker>()?;
-        fasync::spawn_local(
+        fasync::Task::local(
             KernelStats::new(root_resource)
                 .serve(stream)
                 .unwrap_or_else(|e| panic!("Error while serving kernel stats: {}", e)),
-        );
+        )
+        .detach();
         Ok(proxy)
     }
 

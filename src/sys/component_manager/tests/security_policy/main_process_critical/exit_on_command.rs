@@ -15,9 +15,10 @@ use {
 async fn main() {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn_local(
+        fasync::Task::local(
             run_service(stream).unwrap_or_else(|e| panic!("error running service: {:?}", e)),
-        );
+        )
+        .detach();
     });
     fs.take_and_serve_directory_handle().expect("failed to serve outgoing dir");
     fs.collect::<()>().await;

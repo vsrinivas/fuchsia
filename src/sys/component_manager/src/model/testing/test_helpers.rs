@@ -534,7 +534,7 @@ where
               _relative_path: String,
               server_end: ServerEnd<fidl_fuchsia_io::NodeMarker>| {
             let mut sender = sender.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 // Convert the stream into a channel of the correct service.
                 let server_end: ServerEnd<S> = ServerEnd::new(server_end.into_channel());
                 let mut stream: S::RequestStream = server_end.into_stream().unwrap();
@@ -543,7 +543,8 @@ where
                 while let Ok(Some(request)) = stream.try_next().await {
                     sender.send(request).await.unwrap();
                 }
-            });
+            })
+            .detach();
         },
     ));
     (entry, receiver)
@@ -641,13 +642,14 @@ impl ActionsTest {
         let realm_proxy = if let Some(realm_moniker) = realm_moniker {
             let (realm_proxy, stream) =
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 builtin_environment_inner
                     .realm_capability_host
                     .serve(realm_moniker, stream)
                     .await
                     .expect("failed serving realm service");
-            });
+            })
+            .detach();
             Some(realm_proxy)
         } else {
             None

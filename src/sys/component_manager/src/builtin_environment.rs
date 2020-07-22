@@ -491,9 +491,10 @@ impl BuiltinEnvironment {
             .map_err(|err| ModelError::namespace_creation_failed(err))?;
 
         // Start up ServiceFs
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             service_fs.collect::<()>().await;
-        });
+        })
+        .detach();
         Ok(())
     }
 

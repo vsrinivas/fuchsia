@@ -302,12 +302,13 @@ impl CapabilityProvider for ProcessLauncherCapabilityProvider {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fproc::LauncherMarker>::new(server_end);
         let stream: fproc::LauncherRequestStream = server_end.into_stream().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let result = ProcessLauncher::serve(stream).await;
             if let Err(e) = result {
                 warn!("ProcessLauncher.serve failed: {}", e);
             }
-        });
+        })
+        .detach();
         Ok(())
     }
 }

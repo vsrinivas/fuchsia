@@ -74,7 +74,7 @@ async fn main() -> Result<(), Error> {
     )?;
 
     // spawn server to respond to child component requests
-    fasync::spawn(fs.for_each_concurrent(None, echo_exposed_server));
+    fasync::Task::spawn(fs.for_each_concurrent(None, echo_exposed_server)).detach();
 
     let mut component_stream = child_app.controller().take_event_stream();
     match component_stream

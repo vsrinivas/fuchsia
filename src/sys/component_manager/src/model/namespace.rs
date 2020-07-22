@@ -238,9 +238,10 @@ impl IncomingNamespace {
             // first used, so we must start up a new task here to run the future instead of calling
             // await on it directly. This is wrapped in an async move {.await;}` block to drop
             // the unused return value.
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let _ = future.await;
-            });
+            })
+            .detach();
         }
         Ok(())
     }
@@ -260,7 +261,7 @@ impl IncomingNamespace {
                   server_end: ServerEnd<NodeMarker>| {
                 let use_ = UseDecl::Protocol(use_clone.clone());
                 let realm = realm.clone();
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     let target_realm = match realm.upgrade() {
                         Ok(realm) => realm,
                         Err(e) => {
@@ -290,7 +291,8 @@ impl IncomingNamespace {
                             server_end,
                         );
                     }
-                });
+                })
+                .detach();
             },
         );
 

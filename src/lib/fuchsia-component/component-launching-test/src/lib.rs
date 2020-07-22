@@ -142,13 +142,14 @@ async fn launch_options_set_additional_services() {
 
     let mut fs = ServiceFs::new();
     fs.add_fidl_service_at(fecho::EchoMarker::NAME, |stream: fecho::EchoRequestStream| {
-        fasync::spawn(
+        fasync::Task::spawn(
             serve_echo_stream(stream)
                 .unwrap_or_else(|e| panic!("Error while serving echo service: {}", e)),
-        );
+        )
+        .detach();
     });
     fs.serve_connection(server_chan).unwrap();
-    fasync::spawn(fs.collect());
+    fasync::Task::spawn(fs.collect()).detach();
 
     assert_echo_checker_success_launch_options(launch_options).await;
 }

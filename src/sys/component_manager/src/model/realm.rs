@@ -991,7 +991,7 @@ impl Runtime {
                 },
                 abort_server,
             );
-            fasync::spawn(watcher.unwrap_or_else(|_| ()));
+            fasync::Task::spawn(watcher.unwrap_or_else(|_| ())).detach();
             self.exit_listener = Some(abort_client);
         }
     }
@@ -1677,7 +1677,7 @@ pub mod tests {
             model.bind(&vec![].into(), &BindReason::Root).await.expect("failed to bind")
         }
         .remote_handle();
-        fasync::spawn(f);
+        fasync::Task::spawn(f).detach();
         let discovered_timestamp =
             wait_until_event_get_timestamp(&mut event_stream, EventType::Discovered).await;
         let resolved_timestamp =
