@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/encode_file"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

@@ -34,6 +34,27 @@ package("encode-camera") {
   ]
 }
 
+# Test video encode of from raw video file
+package("encode-file") {
+  testonly = true
+
+  deps = [ "//src/media/codec/examples/encode_file" ]
+
+  binaries = [
+    {
+      name = "encode_file"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("encode_file/meta/encode_file.cmx")
+      dest = "encode_file.cmx"
+    },
+  ]
+}
+
 package("use_media_decoder") {
   testonly = true
 
