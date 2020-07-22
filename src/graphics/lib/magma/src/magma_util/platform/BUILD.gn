@@ -14,16 +14,6 @@ config("tracing") {
   }
 }
 
-source_set("address_range") {
-  public_configs = [ ":platform_include_config" ]
-
-  sources = [ "platform_address_range.h" ]
-
-  deps = [ "zircon:address_range" ]
-
-  allow_circular_includes_from = [ "zircon:address_range" ]
-}
-
 source_set("barriers") {
   public_configs = [ ":platform_include_config" ]
 
@@ -185,20 +175,6 @@ source_set("device") {
   } else if (is_linux) {
     deps = [ "linux:device" ]
   }
-}
-
-source_set("random_header") {
-  public_configs = [ ":platform_include_config" ]
-
-  sources = [ "platform_random.h" ]
-}
-
-group("random") {
-  public_configs = [ ":platform_include_config" ]
-
-  public_deps = [ ":random_header" ]
-
-  deps = [ "zircon:random" ]
 }
 
 source_set("connection_client_header") {

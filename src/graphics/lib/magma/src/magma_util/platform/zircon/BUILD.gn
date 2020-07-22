@@ -4,19 +4,6 @@
 
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
-source_set("address_range") {
-  configs += [ "..:platform_include_config" ]
-
-  sources = [ "zircon_platform_address_range.cc" ]
-
-  deps = [
-    "//src/graphics/lib/magma/src/magma_util:macros",
-    "//zircon/public/lib/zx",
-  ]
-
-  libs = [ "zircon" ]
-}
-
 source_set("buffer") {
   configs += [ "..:platform_include_config" ]
 
@@ -410,11 +397,6 @@ source_set("trace_provider_with_fdio") {
   ]
 
   public_deps = [ "//zircon/public/lib/fit" ]
-}
-
-source_set("random") {
-  deps = [ "..:random_header" ]
-  sources = [ "zircon_platform_random.cc" ]
 }
 
 source_set("pci_driver_gtest") {
