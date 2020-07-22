@@ -24,10 +24,9 @@ constexpr size_t kMebibyte = kKibibyte * 1024;
 
 zx::status<std::unique_ptr<DevicePartitioner>> SherlockPartitioner::Initialize(
     fbl::unique_fd devfs_root, const zx::channel& svc_root, const fbl::unique_fd& block_device) {
-  auto status_sherlock = IsBoard(devfs_root, "sherlock");
-  auto status_luis = IsBoard(devfs_root, "luis");
-  if (status_sherlock.is_error() && status_luis.is_error()) {
-    return status_sherlock.take_error();
+  auto status = IsBoard(devfs_root, "sherlock");
+  if (status.is_error()) {
+    return status.take_error();
   }
 
   auto status_or_gpt =
