@@ -103,12 +103,13 @@ where
 
         // Start listening on the fake for the changes and call the on_change when it comes through.
         let hanging_get_handler_clone = hanging_get_handler.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(updated_data) = on_update_receiver.next().await {
                 let mut handler_lock = hanging_get_handler_clone.lock().await;
                 handler_lock.on_change(updated_data).await;
             }
-        });
+        })
+        .detach();
 
         hanging_get_handler
     }

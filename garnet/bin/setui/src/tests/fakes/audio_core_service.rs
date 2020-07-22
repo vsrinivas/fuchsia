@@ -50,7 +50,7 @@ impl Service for AudioCoreService {
             ServerEnd::<fidl_fuchsia_media::AudioCoreMarker>::new(channel).into_stream()?;
 
         let streams_clone = self.audio_streams.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
@@ -70,7 +70,8 @@ impl Service for AudioCoreService {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         Ok(())
     }
@@ -92,7 +93,7 @@ fn process_volume_control_stream(
     streams: Arc<RwLock<HashMap<AudioRenderUsage, (f32, bool)>>>,
 ) {
     let mut stream = volume_control.into_stream().expect("volume control stream error");
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         while let Some(req) = stream.try_next().await.unwrap() {
             #[allow(unreachable_patterns)]
             match req {
@@ -123,5 +124,6 @@ fn process_volume_control_stream(
                 _ => {}
             }
         }
-    });
+    })
+    .detach();
 }

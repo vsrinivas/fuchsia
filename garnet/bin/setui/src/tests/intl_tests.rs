@@ -45,7 +45,7 @@ async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>
 
             let mut timezone_stream = timezone_stream_result.unwrap();
 
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 while let Some(req) = timezone_stream.try_next().await.unwrap() {
                     #[allow(unreachable_patterns)]
                     match req {
@@ -63,7 +63,8 @@ async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>
                         _ => {}
                     }
                 }
-            });
+            })
+            .detach();
             return Box::pin(async { Ok(()) });
         },
     );

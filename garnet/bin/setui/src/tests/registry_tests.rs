@@ -76,7 +76,7 @@ impl SettingHandler {
         }));
 
         let handler_clone = handler.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(event) = receptor.next().await {
                 match event {
                     MessageEvent::Message(
@@ -94,7 +94,8 @@ impl SettingHandler {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         handler
     }

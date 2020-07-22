@@ -49,7 +49,7 @@ async fn test_agent_event_propagation() {
         Box::pin(async move {
             *publisher_capture.lock().await = Some(context.get_publisher());
 
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 while let Ok((payload, client)) = context.receptor.next_payload().await {
                     if let agent::Payload::Invocation(_) = payload {
                         client
@@ -58,7 +58,8 @@ async fn test_agent_event_propagation() {
                             .ack();
                     }
                 }
-            });
+            })
+            .detach();
         })
     });
 

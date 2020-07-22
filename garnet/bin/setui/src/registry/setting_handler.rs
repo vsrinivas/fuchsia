@@ -122,7 +122,7 @@ impl ClientImpl {
         let mut controller = controller_result.unwrap();
 
         // Process MessageHub requests
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(event) = context.receptor.next().await {
                 let setting_type = client.lock().await.setting_type;
                 match event {
@@ -174,7 +174,8 @@ impl ClientImpl {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         Ok(())
     }

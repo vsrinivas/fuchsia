@@ -97,11 +97,12 @@ fn bind_volume_control(
 
         Ok(())
     };
-    fasync::spawn(
+    fasync::Task::spawn(
         consume_volume_events
             .map_err(|e: fidl::Error| fx_log_err!("Volume event stream failed: {}", e))
             .map(|_| ()),
-    );
+    )
+    .detach();
 
     Some(vol_control_proxy)
 }

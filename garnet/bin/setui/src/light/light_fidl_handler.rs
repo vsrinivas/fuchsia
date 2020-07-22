@@ -99,7 +99,7 @@ async fn process_request(
 ) -> Result<Option<LightRequest>, anyhow::Error> {
     match req {
         LightRequest::SetLightGroupValues { name, state, responder } => {
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let mut res = context
                     .request(
                         SettingType::Light,
@@ -121,7 +121,8 @@ async fn process_request(
                         _ => LightError::Failed,
                     });
                 responder.send(&mut res).log_fidl_response_error(LightMarker::DEBUG_NAME);
-            });
+            })
+            .detach();
         }
         LightRequest::WatchLightGroups { responder } => {
             context.watch(responder, true).await;

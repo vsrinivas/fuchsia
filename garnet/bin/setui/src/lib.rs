@@ -286,7 +286,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         match self.prepare_env(Runtime::Nested(env_name)).await {
             Ok(mut fs) => {
                 let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
-                fasync::spawn(fs.collect());
+                fasync::Task::spawn(fs.collect()).detach();
 
                 Ok(Environment::new(nested_environment))
             }

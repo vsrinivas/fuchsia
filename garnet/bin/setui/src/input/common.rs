@@ -65,13 +65,14 @@ impl<T: Send + Sync + DeviceStorageCompatible + 'static> InputMonitor<T> {
         }));
 
         let monitor_handle_clone = monitor_handle.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             monitor_handle_clone.lock().await.ensure_monitor().await;
 
             while let Some(event) = input_rx.next().await {
                 monitor_handle_clone.lock().await.process_event(event).await;
             }
-        });
+        })
+        .detach();
 
         monitor_handle
     }
@@ -137,7 +138,7 @@ pub async fn monitor_media_buttons(
         return Err(format_err!("presenter service not ready"));
     }
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         while let Some(Ok(media_request)) = stream.next().await {
             // Support future expansion of FIDL
             #[allow(unreachable_patterns)]
@@ -148,7 +149,8 @@ pub async fn monitor_media_buttons(
                 _ => {}
             }
         }
-    });
+    })
+    .detach();
 
     return Ok(());
 }

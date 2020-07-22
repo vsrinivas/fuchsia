@@ -52,7 +52,7 @@ impl Service for HardwarePowerStatecontrolService {
                 .into_stream()?;
 
         let recorded_actions_clone = self.recorded_actions.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
@@ -63,7 +63,8 @@ impl Service for HardwarePowerStatecontrolService {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         Ok(())
     }

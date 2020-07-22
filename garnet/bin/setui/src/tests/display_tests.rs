@@ -46,7 +46,7 @@ async fn setup_display_env() -> DisplayProxy {
 
         let mut manager_stream = manager_stream_result.unwrap();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut stored_brightness_value: f32 = STARTING_BRIGHTNESS;
             let mut auto_brightness_on = false;
 
@@ -78,7 +78,8 @@ async fn setup_display_env() -> DisplayProxy {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         Box::pin(async { Ok(()) })
     };
@@ -252,7 +253,7 @@ async fn test_display_failure() {
                     });
                 }
                 let mut timezone_stream = timezone_stream_result.unwrap();
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     while let Some(req) = timezone_stream.try_next().await.unwrap() {
                         #[allow(unreachable_patterns)]
                         match req {
@@ -264,7 +265,8 @@ async fn test_display_failure() {
                             _ => {}
                         }
                     }
-                });
+                })
+                .detach();
                 return Box::pin(async { Ok(()) });
             }
             _ => Box::pin(async { Err(format_err!("unsupported")) }),

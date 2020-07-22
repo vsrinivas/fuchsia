@@ -117,14 +117,15 @@ mod tests {
     async fn test_read_sensor() {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<SensorMarker>().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
                 if let SensorRequest::GetReport { type_: _, id: _, responder } = request {
                     let data = get_mock_sensor_response();
                     responder.send(0, &data).unwrap();
                 }
             }
-        });
+        })
+        .detach();
 
         let result = read_sensor(&proxy).await;
         match result {

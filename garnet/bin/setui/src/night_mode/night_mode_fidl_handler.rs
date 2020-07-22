@@ -52,7 +52,7 @@ async fn process_request(
     #[allow(unreachable_patterns)]
     match req {
         NightModeRequest::Set { settings, responder } => {
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 request_respond!(
                     context,
                     responder,
@@ -62,7 +62,8 @@ async fn process_request(
                     Err(Error::Failed),
                     NightModeMarker::DEBUG_NAME
                 );
-            });
+            })
+            .detach();
         }
         NightModeRequest::Watch { responder } => {
             context.watch(responder, true).await;

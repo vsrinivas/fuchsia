@@ -147,7 +147,7 @@ async fn process_request(
     match req {
         AudioRequest::Set { settings, responder } => {
             if let Some(request) = to_request(settings) {
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     request_respond!(
                         context,
                         responder,
@@ -157,7 +157,8 @@ async fn process_request(
                         Err(fidl_fuchsia_settings::Error::Failed),
                         AudioMarker::DEBUG_NAME
                     );
-                });
+                })
+                .detach();
             } else {
                 responder
                     .send(&mut Err(Error::Unsupported))

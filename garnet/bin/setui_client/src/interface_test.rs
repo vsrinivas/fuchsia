@@ -235,7 +235,7 @@ macro_rules! create_service  {
         fs.add_fidl_service($setting_type);
         let env = fs.create_nested_environment(ENV_NAME)?;
 
-        fasync::spawn(fs.for_each_concurrent(None, move |connection| {
+        fasync::Task::spawn(fs.for_each_concurrent(None, move |connection| {
             async move {
                 #![allow(unreachable_patterns)]
                 match connection {
@@ -259,7 +259,7 @@ macro_rules! create_service  {
                     }
                 }
             }
-        }));
+        })).detach();
         env
     }};
 }
@@ -414,7 +414,7 @@ async fn validate_light_sensor() -> Result<(), Error> {
     let (display_service, mut stream) =
         fidl::endpoints::create_proxy_and_stream::<DisplayMarker>().unwrap();
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         while let Some(request) = stream.try_next().await.unwrap() {
             match request {
                 DisplayRequest::WatchLightSensor2 { delta: _, responder } => {
@@ -433,7 +433,8 @@ async fn validate_light_sensor() -> Result<(), Error> {
                 _ => {}
             }
         }
-    });
+    })
+    .detach();
 
     display::command(display_service, None, None, true, None).await?;
 

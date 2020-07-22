@@ -189,7 +189,7 @@ impl SwitchboardImpl {
 
         let switchboard_clone = switchboard.clone();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             loop {
                 let registry_receptor = registry_receptor.next().fuse();
                 let switchboard_receptor = switchboard_receptor.next().fuse();
@@ -232,7 +232,7 @@ impl SwitchboardImpl {
                     }
                 }
             }
-        });
+        }).detach();
 
         return Ok(());
     }
@@ -315,7 +315,7 @@ impl SwitchboardImpl {
             )
             .send();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(message_event) = receptor.next().await {
                 // Wait for response
                 if let MessageEvent::Message(
@@ -331,7 +331,8 @@ impl SwitchboardImpl {
                     return;
                 }
             }
-        });
+        })
+        .detach();
     }
 
     async fn notify_registry_listen(&mut self, setting_type: SettingType) {

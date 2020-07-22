@@ -50,13 +50,14 @@ impl Agent {
             switchboard_messenger: messenger_result.unwrap(),
         };
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Ok((payload, client)) = context.receptor.next_payload().await {
                 if let Payload::Invocation(invocation) = payload {
                     client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
                 }
             }
-        });
+        })
+        .detach();
     }
 
     async fn handle(&mut self, invocation: Invocation) -> InvocationResult {
@@ -83,11 +84,12 @@ impl Agent {
             fx_log_err!("Could not set up VolumeChangeHandler");
         }
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             // Watch for bluetooth connections and play sounds on change.
             let bluetooth_connection_active = Arc::new(AtomicBool::new(true));
             watch_bluetooth_connections(common_earcons_params, bluetooth_connection_active);
-        });
+        })
+        .detach();
 
         return Ok(());
     }

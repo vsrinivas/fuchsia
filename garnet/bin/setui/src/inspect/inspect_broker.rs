@@ -59,7 +59,7 @@ impl InspectBroker {
             setting_values: HashMap::new(),
         }));
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(message_event) = receptor.next().await {
                 if let MessageEvent::Message(payload, client) = message_event {
                     match payload {
@@ -103,7 +103,8 @@ impl InspectBroker {
                     }
                 }
             }
-        });
+        })
+        .detach();
 
         return Ok(());
     }

@@ -95,7 +95,7 @@ impl TestAgent {
         let blueprint = Arc::new(scaffold::agent::Blueprint::new(
             scaffold::agent::Generate::Sync(Arc::new(move |mut context: Context| {
                 let agent = agent_clone.clone();
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     while let Ok((payload, client)) = context.receptor.next_payload().await {
                         if let agent::Payload::Invocation(invocation) = payload {
                             client
@@ -106,7 +106,8 @@ impl TestAgent {
                                 .ack();
                         }
                     }
-                });
+                })
+                .detach();
             })),
             Box::leak(id.to_string().into_boxed_str()),
         ));
@@ -169,7 +170,7 @@ async fn test_environment_startup() {
 
     {
         let service_agent = service_agent.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             // Wait for the initialization agent to receive invocation
             if let Some((id, _, tx)) = startup_rx.next().await {
                 // Verify the correct agent was invoked.
@@ -178,10 +179,11 @@ async fn test_environment_startup() {
                 // Ensure the service agent hasn't been invoked
                 assert!(service_agent.lock().await.last_invocation.is_none());
             }
-        });
+        })
+        .detach();
     }
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         // Wait for service agent to receive notification
         if let Some((id, _, tx)) = service_rx.next().await {
             // Verify the correct agent was invoked
@@ -189,7 +191,8 @@ async fn test_environment_startup() {
             // Ensure acknowledging succeeds
             assert!(tx.send(Ok(())).is_ok());
         }
-    });
+    })
+    .detach();
 
     let (_, agent_generate) =
         TestAgent::create(startup_agent_id, LifespanTarget::Initialization, startup_tx);
@@ -225,7 +228,7 @@ async fn test_sequential() {
     let agent_ids =
         create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone()).await;
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         // Process the agent callbacks, making sure they are received in the right
         // order and acknowledging the acks. Note that this is a chain reaction.
         // Processing the first agent is necessary before the second can receive its
@@ -244,7 +247,8 @@ async fn test_sequential() {
                 }
             }
         }
-    });
+    })
+    .detach();
 
     // Ensure lifespan execution completes.
     assert!(authority
@@ -263,7 +267,7 @@ async fn test_simultaneous() {
     let agent_ids =
         create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone()).await;
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         // Ensure that each agent has received the invocation. Note that we are not
         // acknowledging the invocations here. Each agent should be notified
         // regardless of order.
@@ -281,7 +285,8 @@ async fn test_simultaneous() {
         for sender in senders {
             assert!(sender.send(Ok(())).is_ok());
         }
-    });
+    })
+    .detach();
 
     // Execute lifespan non-sequentially.
     assert!(authority
@@ -319,7 +324,7 @@ async fn test_err_handling() {
     .await
     .unwrap();
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         // Ensure the first agent received an invocation, acknowledge with an error.
         if let Some((id, _, tx)) = rx.next().await {
             assert_eq!(agent_1_id, id);
@@ -327,7 +332,8 @@ async fn test_err_handling() {
         } else {
             panic!("did not receive expected response from agent");
         }
-    });
+    })
+    .detach();
 
     // Execute lifespan sequentially. Should fail since agent 2 returns an error.
     assert!(authority

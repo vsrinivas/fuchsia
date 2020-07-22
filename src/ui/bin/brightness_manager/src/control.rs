@@ -300,7 +300,7 @@ impl Control {
         let current_sender_channel = self.current_sender_channel.clone();
         let spline = self.spline.clone();
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        fasync::spawn(
+        fasync::Task::spawn(
             Abortable::new(
                 async move {
                     let max_brightness = {
@@ -334,7 +334,8 @@ impl Control {
                 abort_registration,
             )
             .unwrap_or_else(|_| ()),
-        );
+        )
+        .detach();
         self.auto_brightness_abort_handle = Some(abort_handle);
     }
 
@@ -590,7 +591,7 @@ async fn set_brightness(
         }
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         let backlight = backlight.clone();
-        fasync::spawn(
+        fasync::Task::spawn(
             Abortable::new(
                 async move {
                     set_brightness_impl(value, backlight).await;
@@ -598,7 +599,8 @@ async fn set_brightness(
                 abort_registration,
             )
             .unwrap_or_else(|_task_aborted| ()),
-        );
+        )
+        .detach();
         *set_brightness_abort_handle = Some(abort_handle);
     }
 }

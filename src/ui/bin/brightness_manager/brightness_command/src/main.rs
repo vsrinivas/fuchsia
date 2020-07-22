@@ -217,7 +217,7 @@ mod tests {
         let env = fs.create_salted_nested_environment("brightness_env");
         let auto_brightness = auto_brightness.clone();
         let current_brightness = current_brightness.clone();
-        fasync::spawn(fs.for_each_concurrent(None, move |req| {
+        fasync::Task::spawn(fs.for_each_concurrent(None, move |req| {
             let auto_brightness = auto_brightness.clone();
             let current_brightness = current_brightness.clone();
             async move {
@@ -267,7 +267,8 @@ mod tests {
                     }
                 }
             }
-        }));
+        }))
+        .detach();
         env
     }
 
@@ -405,12 +406,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_watch_max_brightness() -> Result<(), Error> {
         let (client_end, server_end) = create_endpoints::<fio::NodeMarker>()?;
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let fake_dir = pseudo_directory! {
             "000" => directory_broker::DirectoryBroker::new(Box::new(|flags, mode, path, server_end| {
                     let (requests, control_handle) = ServerEnd::<DeviceMarker>::new(server_end.into_channel()).into_stream_and_control_handle().unwrap();
 
-                    fasync::spawn(async move {
+                    fasync::Task::spawn(async move {
                         requests
                             .err_into::<Error>()
                             .try_for_each(|request| {
@@ -427,7 +428,7 @@ mod tests {
                             })
                             .await
                             .unwrap();
-                    });
+                    }).detach();
                 }))
                 };
 
@@ -438,7 +439,7 @@ mod tests {
                 path::Path::empty(),
                 server_end,
             );
-        });
+        }).detach();
         let output = AppBuilder::new(BRIGHTNESS_TEST_PKG_URL)
             .add_handle_to_namespace(
                 "/dev/class/backlight".to_string(),

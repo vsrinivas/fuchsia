@@ -62,7 +62,7 @@ impl Service for InputDeviceRegistryService {
             return Err(format_err!("exiting early"));
         }
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
@@ -80,7 +80,7 @@ impl Service for InputDeviceRegistryService {
                     _ => {}
                 }
             }
-        });
+        }).detach();
 
         Ok(())
     }

@@ -75,9 +75,10 @@ impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
             ActionFuseBuilder::new()
                 .add_action(Box::new(move || {
                     let sentinel = sentinel.clone();
-                    fasync::spawn(async move {
+                    fasync::Task::spawn(async move {
                         sentinel.lock().await.trigger().await;
-                    });
+                    })
+                    .detach();
                 }))
                 .chain_fuses(fuses)
                 .build(),

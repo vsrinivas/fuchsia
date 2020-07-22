@@ -55,7 +55,7 @@ async fn process_request(
     #[allow(unreachable_patterns)]
     match req {
         IntlRequest::Set { settings, responder } => {
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 request_respond!(
                     context,
                     responder,
@@ -65,7 +65,8 @@ async fn process_request(
                     Err(fidl_fuchsia_settings::Error::Failed),
                     IntlMarker::DEBUG_NAME
                 );
-            });
+            })
+            .detach();
         }
         IntlRequest::Watch { responder } => context.watch(responder, true).await,
         _ => {

@@ -90,7 +90,7 @@ async fn process_request(
     #[allow(unreachable_patterns)]
     match req {
         AccessibilityRequest::Set { settings, responder } => {
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 request_respond!(
                     context,
                     responder,
@@ -100,7 +100,8 @@ async fn process_request(
                     Err(fidl_fuchsia_settings::Error::Failed),
                     AccessibilityMarker::DEBUG_NAME
                 );
-            });
+            })
+            .detach();
         }
         AccessibilityRequest::Watch { responder } => {
             context.watch(responder, true).await;

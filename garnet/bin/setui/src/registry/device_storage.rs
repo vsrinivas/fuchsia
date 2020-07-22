@@ -239,7 +239,7 @@ pub mod testing {
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
         let stats = Arc::new(Mutex::new(StashStats::new()));
         let stats_clone = stats.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut stored_value: Option<Value> = None;
             let mut stored_key: Option<String> = None;
 
@@ -273,7 +273,8 @@ pub mod testing {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
         (stash_proxy, stats)
     }
 }
@@ -311,7 +312,7 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let value_to_get = TestStruct { value: VALUE1 };
 
             while let Some(req) = stash_stream.try_next().await.unwrap() {
@@ -327,7 +328,8 @@ mod tests {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
@@ -341,7 +343,7 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(req) = stash_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
@@ -351,7 +353,8 @@ mod tests {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
@@ -366,7 +369,7 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(req) = stash_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
@@ -377,7 +380,8 @@ mod tests {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
@@ -420,7 +424,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
         let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             match stash_stream.next().await.unwrap() {
                 Ok(StoreAccessorRequest::SetValue { key, val, control_handle: _ }) => {
                     assert_eq!(key, "settings_testkey");
@@ -440,7 +444,8 @@ mod tests {
                 } // expected
                 request => panic!("Unexpected request: {:?}", request),
             }
-        });
+        })
+        .detach();
         storage.write(&TestStruct { value: VALUE2 }, true).await.expect("writing shouldn't fail");
     }
 

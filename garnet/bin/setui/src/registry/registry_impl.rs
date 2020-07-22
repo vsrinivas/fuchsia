@@ -114,7 +114,7 @@ impl RegistryImpl {
             active_controller_sender,
         };
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             loop {
                 let controller_fuse = controller_receptor.next().fuse();
                 let registry_fuse = registry_messenger_receptor.next().fuse();
@@ -154,7 +154,8 @@ impl RegistryImpl {
                     }
                 }
             }
-        });
+        })
+        .detach();
         Ok(())
     }
 
@@ -306,7 +307,7 @@ impl RegistryImpl {
                     .send();
 
                 let active_controller_sender_clone = self.active_controller_sender.clone();
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     while let Some(message_event) = receptor.next().await {
                         match message_event {
                             MessageEvent::Message(handler::Payload::Result(result), _) => {
@@ -338,7 +339,8 @@ impl RegistryImpl {
                             _ => {}
                         }
                     }
-                });
+                })
+                .detach();
             }
         }
     }

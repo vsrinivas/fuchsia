@@ -112,7 +112,7 @@ impl Service for BluetoothService {
         let mut bluetooth_stream = ServerEnd::<AccessMarker>::new(channel).into_stream()?;
         let hanging_get_handler = self.hanging_get_handler.clone();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(req) = bluetooth_stream.try_next().await.unwrap() {
                 match req {
                     AccessRequest::WatchPeers { responder } => {
@@ -121,7 +121,8 @@ impl Service for BluetoothService {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         Ok(())
     }

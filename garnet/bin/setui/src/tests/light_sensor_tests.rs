@@ -38,7 +38,7 @@ async fn test_light_sensor() {
         let mut stream = stream_result.unwrap();
 
         let data = get_mock_sensor_response();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
                 if let fidl_fuchsia_hardware_input::DeviceRequest::GetReport {
                     type_: _,
@@ -49,7 +49,8 @@ async fn test_light_sensor() {
                     responder.send(0, &data).unwrap();
                 }
             }
-        });
+        })
+        .detach();
 
         Box::pin(async { Ok(()) })
     };

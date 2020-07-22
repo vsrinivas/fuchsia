@@ -27,7 +27,7 @@ macro_rules! fidl_process_full {
 
             pub fn spawn (switchboard_messenger_factory: switchboard::message::Factory,
                     stream: paste::item!{[<$interface RequestStream>]}) {
-                fasync::spawn_local(async move {
+                fasync::Task::local(async move {
                     let messenger = if let Ok((messenger, _)) = switchboard_messenger_factory.create(MessengerType::Unbound).await {
                         messenger
                     } else {
@@ -49,7 +49,7 @@ macro_rules! fidl_process_full {
                             )
                             .await;)*
                         processor.process().await;
-                });
+                }).detach();
             }
         }
     };

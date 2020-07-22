@@ -88,7 +88,7 @@ pub fn watch_bluetooth_connections(
         common_earcons_params: common_earcons_params.clone(),
         connected_peers: Vec::new(),
     }));
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let access_proxy = match common_earcons_params
             .service_context
             .lock()
@@ -151,25 +151,25 @@ pub fn watch_bluetooth_connections(
                             // TODO(fxb/50246): Add logging for connecting bluetooth peer.
                             let common_earcons_params_clone =
                                 bluetooth_handler.common_earcons_params.clone();
-                            fasync::spawn(async move {
+                            fasync::Task::spawn(async move {
                                 play_bluetooth_sound(
                                     common_earcons_params_clone,
                                     BluetoothSoundType::CONNECTED,
                                 )
                                 .await;
-                            });
+                            }).detach();
                         }
                         if removed_peer_ids.len() > 0 || removed.len() > 0 {
                             // TODO(fxb/50246): Add logging for disconnecting bluetooth peer.
                             let common_earcons_params_clone =
                                 bluetooth_handler.common_earcons_params.clone();
-                            fasync::spawn(async move {
+                            fasync::Task::spawn(async move {
                                 play_bluetooth_sound(
                                     common_earcons_params_clone,
                                     BluetoothSoundType::DISCONNECTED,
                                 )
                                 .await;
-                            });
+                            }).detach();
                         }
                     }
                 }
@@ -182,5 +182,5 @@ pub fn watch_bluetooth_connections(
                 }
             }
         }
-    });
+    }).detach();
 }

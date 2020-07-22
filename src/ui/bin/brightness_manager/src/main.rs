@@ -112,7 +112,7 @@ where
 {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     let receiver = receiver.clone();
-    fasync::spawn(
+    fasync::Task::spawn(
         Abortable::new(
             async move {
                 while let Some(value) = receiver.lock().await.next().await {
@@ -123,7 +123,8 @@ where
             abort_registration,
         )
         .unwrap_or_else(|_| ()),
-    );
+    )
+    .detach();
     abort_handle
 }
 

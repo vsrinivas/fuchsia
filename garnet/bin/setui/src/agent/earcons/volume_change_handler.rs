@@ -78,7 +78,7 @@ impl VolumeChangeHandler {
 
         let (volume_tx, mut volume_rx) = futures::channel::mpsc::unbounded::<SettingResponse>();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut handler = Self {
                 common_earcons_params: params,
                 last_media_user_volume,
@@ -115,7 +115,7 @@ impl VolumeChangeHandler {
                     }
                 }
             }
-        });
+        }).detach();
 
         Ok(())
     }
@@ -232,7 +232,7 @@ impl VolumeChangeHandler {
     fn play_media_volume_sound(&self, volume: Option<f32>) {
         let common_earcons_params = self.common_earcons_params.clone();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             // Connect to the SoundPlayer if not already connected.
             connect_to_sound_player(
                 common_earcons_params.service_context.clone(),
@@ -268,7 +268,8 @@ impl VolumeChangeHandler {
                     .ok();
                 }
             }
-        });
+        })
+        .detach();
     }
 }
 

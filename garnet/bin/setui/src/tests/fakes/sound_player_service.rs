@@ -78,7 +78,7 @@ impl Service for SoundPlayerService {
         let play_counts_clone = self.play_counts.clone();
         let sound_played_listeners = self.sound_played_listeners.clone();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(req) = player_stream.try_next().await.unwrap() {
                 match req {
                     PlayerRequest::AddSoundFromFile { id, file: _file, responder } => {
@@ -95,7 +95,8 @@ impl Service for SoundPlayerService {
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         Ok(())
     }

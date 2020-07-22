@@ -45,13 +45,14 @@ impl RestoreAgent {
             available_components: context.available_components.clone(),
         };
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(event) = context.receptor.next().await {
                 if let MessageEvent::Message(Payload::Invocation(invocation), client) = event {
                     client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
                 }
             }
-        });
+        })
+        .detach();
     }
 
     async fn handle(&mut self, invocation: Invocation) -> InvocationResult {

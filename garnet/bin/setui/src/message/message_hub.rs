@@ -72,7 +72,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
             exit_tx,
         };
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             // Released when exiting scope to signal completion.
             let _scope_fuse = fuse;
 
@@ -99,7 +99,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                     }
                 }
             }
-        });
+        })
+        .detach();
 
         MessengerFactory::new(messenger_tx)
     }

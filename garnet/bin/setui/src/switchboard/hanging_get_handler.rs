@@ -183,7 +183,7 @@ where
 
         {
             let hanging_get_handler_clone = hanging_get_handler.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 while let Some(command) = on_command_receiver.next().await {
                     match command {
                         ListenCommand::Change(setting_type) => {
@@ -196,7 +196,8 @@ where
                         }
                     }
                 }
-            });
+            })
+            .detach();
         }
 
         hanging_get_handler
@@ -256,7 +257,7 @@ where
             let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
             self.listen_exit_tx = Some(exit_tx);
 
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 loop {
                     let receptor_fuse = receptor.next().fuse();
                     futures::pin_mut!(receptor_fuse);
@@ -272,7 +273,7 @@ where
                         }
                     }
                 }
-            });
+            }).detach();
         }
 
         if !controller.on_watch() {
@@ -427,7 +428,7 @@ mod tests {
                 .unwrap();
 
             let switchboard_clone = switchboard.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 while let Ok((payload, client)) = receptor.next_payload().await {
                     let mut switchboard = switchboard_clone.lock().await;
                     match payload {
@@ -447,7 +448,8 @@ mod tests {
                         }
                     }
                 }
-            });
+            })
+            .detach();
 
             switchboard
         }

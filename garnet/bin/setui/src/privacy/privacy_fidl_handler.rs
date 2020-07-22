@@ -60,7 +60,7 @@ async fn process_request(
     #[allow(unreachable_patterns)]
     match req {
         PrivacyRequest::Set { settings, responder } => {
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 request_respond!(
                     context,
                     responder,
@@ -70,7 +70,8 @@ async fn process_request(
                     Err(Error::Failed),
                     PrivacyMarker::DEBUG_NAME
                 );
-            });
+            })
+            .detach();
         }
         PrivacyRequest::Watch { responder } => {
             context.watch(responder, true).await;

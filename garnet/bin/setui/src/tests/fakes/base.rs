@@ -35,7 +35,7 @@ pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
     let shared_handler = Arc::new(Mutex::new(request_handler));
     return Box::new(move |mut context| {
         let handler = shared_handler.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(event) = context.receptor.next().await {
                 match event {
                     MessageEvent::Message(
@@ -56,7 +56,8 @@ pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
                     _ => {}
                 }
             }
-        });
+        })
+        .detach();
 
         Box::pin(async move { Ok(()) })
     });

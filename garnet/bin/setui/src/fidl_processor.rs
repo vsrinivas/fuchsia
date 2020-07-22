@@ -188,9 +188,10 @@ where
 {
     fn drop(&mut self) {
         let hanging_get_handler = self.hanging_get_handler.clone();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             hanging_get_handler.lock().await.close();
-        });
+        })
+        .detach();
     }
 }
 

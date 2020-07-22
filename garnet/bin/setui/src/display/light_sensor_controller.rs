@@ -126,7 +126,7 @@ async fn notify_on_change(
 ) -> AbortHandle {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
 
-    fasync::spawn(
+    fasync::Task::spawn(
         Abortable::new(
             async move {
                 while let Some(value) = change_receiver.next().await {
@@ -137,7 +137,8 @@ async fn notify_on_change(
             abort_registration,
         )
         .unwrap_or_else(|_| ()),
-    );
+    )
+    .detach();
 
     abort_handle
 }
@@ -152,7 +153,7 @@ fn start_light_sensor_scanner(
 ) -> UnboundedReceiver<LightData> {
     let (sender, receiver) = unbounded::<LightData>();
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let mut data = get_sensor_data(&sensor).await;
 
         while !sender.is_closed() {
@@ -167,7 +168,8 @@ fn start_light_sensor_scanner(
 
             fasync::Timer::new(Duration::from_millis(scan_duration_ms).after_now()).await;
         }
-    });
+    })
+    .detach();
     receiver
 }
 
@@ -220,14 +222,15 @@ mod tests {
             Arc::new(RwLock::new([1, 1, 0, 25, 0, 10, 0, 9, 0, 6, 0]));
 
         let data_clone = data.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
                 if let SensorRequest::GetReport { type_: _, id: _, responder } = request {
                     // Taken from actual sensor report
                     responder.send(0, &*data_clone.read()).unwrap();
                 }
             }
-        });
+        })
+        .detach();
         let mut receiver = start_light_sensor_scanner(proxy, 1);
 
         let sleep_duration = zx::Duration::from_millis(5);

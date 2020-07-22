@@ -78,13 +78,14 @@ impl ActionFuse {
     /// Suppresses the action from automatically executing.
     pub fn defuse(handle: ActionFuseHandle) {
         let clone = handle.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut fuse = clone.lock().await;
             fuse.actions.clear();
             for chained_fuse in &fuse.chained_fuses {
                 ActionFuse::defuse(chained_fuse.clone());
             }
-        });
+        })
+        .detach();
     }
 }
 
