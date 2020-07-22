@@ -173,17 +173,18 @@ impl TestEnv {
         let pkg_cache = Arc::new(MockPackageCacheService::new());
         let pkg_cache_clone = Arc::clone(&pkg_cache);
         fs.add_fidl_service(move |stream: PackageCacheRequestStream| {
-            fasync::spawn(
+            fasync::Task::spawn(
                 Arc::clone(&pkg_cache_clone)
                     .run_service(stream)
                     .unwrap_or_else(|e| panic!("error running mock cache service: {:?}", e)),
             )
+            .detach()
         });
 
         let env = fs
             .create_salted_nested_environment("amberctl_env")
             .expect("nested environment to create successfully");
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("package resolver to launch");
 
@@ -334,7 +335,7 @@ impl MockPackageCacheService {
                 }
                 PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
                     let mut stream = iterator.into_stream()?;
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         async move {
                             while let Some(PackageIndexIteratorRequest::Next { responder }) =
                                 stream.try_next().await?
@@ -348,6 +349,7 @@ impl MockPackageCacheService {
                             panic!("error serving base package index: {:?}", e)
                         }),
                     )
+                    .detach()
                 }
             }
         }
@@ -715,17 +717,18 @@ async fn test_system_update_impl(
     let update_manager_clone = update_manager.clone();
     fs.add_fidl_service(move |stream| {
         let update_manager_clone = update_manager_clone.clone();
-        fasync::spawn(
+        fasync::Task::spawn(
             update_manager_clone
                 .run(stream)
                 .unwrap_or_else(|e| panic!("error running mock update manager: {:?}", e)),
         )
+        .detach()
     });
 
     let env = fs
         .create_salted_nested_environment("amberctl_env")
         .expect("nested environment to create successfully");
-    fasync::spawn(fs.collect());
+    fasync::Task::spawn(fs.collect()).detach();
 
     let output = amberctl()
         .arg("system_update")
@@ -774,17 +777,18 @@ async fn test_gc() {
     let space_manager_clone = Arc::clone(&space_manager);
     fs.add_fidl_service(move |stream| {
         let space_manager_clone = Arc::clone(&space_manager_clone);
-        fasync::spawn(
+        fasync::Task::spawn(
             space_manager_clone
                 .run(stream)
                 .unwrap_or_else(|e| panic!("error running mock space manager: {:?}", e)),
         )
+        .detach()
     });
 
     let env = fs
         .create_salted_nested_environment("amberctl_env")
         .expect("nested environment to create successfully");
-    fasync::spawn(fs.collect());
+    fasync::Task::spawn(fs.collect()).detach();
 
     amberctl()
         .arg("gc")

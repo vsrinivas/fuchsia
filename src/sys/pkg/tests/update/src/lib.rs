@@ -54,17 +54,18 @@ impl TestEnv {
         let update_manager_clone = Arc::clone(&update_manager);
         fs.add_fidl_service(move |stream: fidl_update::ManagerRequestStream| {
             let update_manager_clone = Arc::clone(&update_manager_clone);
-            fasync::spawn(
+            fasync::Task::spawn(
                 update_manager_clone
                     .run_service(stream)
                     .unwrap_or_else(|e| panic!("error running update service: {:?}", e)),
             )
+            .detach()
         });
 
         let env = fs
             .create_salted_nested_environment("update_env")
             .expect("nested environment to create successfully");
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         Self { env, update_manager }
     }
@@ -121,7 +122,7 @@ impl MockUpdateManagerService {
                         let proxy = fidl_update::MonitorProxy::new(
                             fasync::Channel::from_channel(monitor.into_channel()).unwrap(),
                         );
-                        fasync::spawn(Self::send_states(proxy, self.states.clone()));
+                        fasync::Task::spawn(Self::send_states(proxy, self.states.clone())).detach();
                     }
                     responder.send(&mut *self.check_now_response.lock()).unwrap();
                 }

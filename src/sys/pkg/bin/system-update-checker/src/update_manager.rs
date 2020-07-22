@@ -123,7 +123,7 @@ where
         node: finspect::Node,
     ) -> Self {
         let (fut, update_monitor) = UpdateMonitor::from_inspect_node(node);
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
         Self {
             monitor: update_monitor,
             updater: SystemInterface::load(
@@ -155,7 +155,7 @@ where
         last_update_storage: Arc<impl LastUpdateStorage + Send + Sync + 'static>,
     ) -> Self {
         let (fut, update_monitor) = UpdateMonitor::new();
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
         Self {
             monitor: update_monitor,
             updater: SystemInterface::new(
@@ -179,7 +179,7 @@ where
         last_known_update_package: Option<Hash>,
     ) -> Self {
         let (fut, update_monitor) = UpdateMonitor::new();
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
         Self {
             monitor: update_monitor,
             updater: SystemInterface::new(
@@ -204,7 +204,7 @@ where
     #[cfg(test)]
     pub fn spawn(self) -> UpdateManagerControlHandle<N> {
         let (ctl, fut) = self.start();
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
         ctl
     }
 

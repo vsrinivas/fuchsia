@@ -47,9 +47,10 @@ impl MockPkgFs {
             &mut std::iter::empty(),
             server,
         );
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             directory_entry.await;
-        });
+        })
+        .detach();
         Self {
             root_dir_proxy: DirectoryProxy::new(client.into_channel().expect("proxy to channel")),
         }
@@ -115,10 +116,11 @@ where
         let (stream, ch) =
             server_end.into_stream_and_control_handle().expect("split file server end");
         let handler = Clone::clone(self);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let fut = (handler.stream_handler)(handler.call_count, stream, ch);
             fut.await;
-        });
+        })
+        .detach();
     }
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)

@@ -143,9 +143,10 @@ mod tests {
         let update_service_clone = update_service.clone();
         let (proxy, stream) =
             create_proxy_and_stream::<ManagerMarker>().expect("create_proxy_and_stream");
-        fasync::spawn(
-            async move { update_service.handle_request_stream(stream).map(|_| ()).await },
-        );
+        fasync::Task::spawn(async move {
+            update_service.handle_request_stream(stream).map(|_| ()).await
+        })
+        .detach();
         (proxy, update_service_clone)
     }
 
@@ -227,7 +228,10 @@ mod tests {
 
         let (proxy1, stream1) =
             create_proxy_and_stream::<ManagerMarker>().expect("create_proxy_and_stream");
-        fasync::spawn(async move { service.handle_request_stream(stream1).map(|_| ()).await });
+        fasync::Task::spawn(
+            async move { service.handle_request_stream(stream1).map(|_| ()).await },
+        )
+        .detach();
 
         let (client_end0, request_stream0) =
             fidl::endpoints::create_request_stream().expect("create_request_stream");
@@ -450,7 +454,10 @@ mod tests {
 
         let (proxy1, stream1) =
             create_proxy_and_stream::<ManagerMarker>().expect("create_proxy_and_stream");
-        fasync::spawn(async move { service.handle_request_stream(stream1).map(|_| ()).await });
+        fasync::Task::spawn(
+            async move { service.handle_request_stream(stream1).map(|_| ()).await },
+        )
+        .detach();
 
         // The first update check is still in progress and blocked, but we'll get an OK
         // since we allow_attaching_to_existing_update_check=true

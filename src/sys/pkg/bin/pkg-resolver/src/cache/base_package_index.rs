@@ -80,7 +80,7 @@ mod tests {
                 })
                 .collect::<Vec<PackageIndexEntry>>();
 
-            fasync::spawn(
+            fasync::Task::spawn(
                 async move {
                     let mut iter = packages.iter_mut();
                     while let Some(request) = stream.try_next().await? {
@@ -94,14 +94,15 @@ mod tests {
                 .unwrap_or_else(|e: fidl::Error| {
                     fx_log_err!("while serving package index iterator: {:?}", e)
                 }),
-            );
+            )
+            .detach();
         }
     }
 
     async fn spawn_pkg_cache(base_package_index: BasePackageIndex) -> PackageCacheProxy {
         let (client, request_stream) = create_proxy_and_stream::<PackageCacheMarker>().unwrap();
         let cache = MockPackageCacheService::new_with_base_packages(Arc::new(base_package_index));
-        fasync::spawn(cache.run_service(request_stream));
+        fasync::Task::spawn(cache.run_service(request_stream)).detach();
         client
     }
 

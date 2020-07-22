@@ -126,7 +126,7 @@ impl RepositoryService {
             .map(|config| config.clone().into())
             .collect::<Vec<FidlRepositoryConfig>>();
 
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let mut iter = results.into_iter();
 
@@ -138,7 +138,8 @@ impl RepositoryService {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("error running list protocol: {:#}", e)),
-        );
+        )
+        .detach();
     }
 }
 

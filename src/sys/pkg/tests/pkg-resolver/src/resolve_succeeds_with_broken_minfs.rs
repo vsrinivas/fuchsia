@@ -61,7 +61,7 @@ where
                     DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                         let stream = object.into_stream().unwrap().cast_stream();
                         mock_filesystem::describe_dir(flags, &stream);
-                        fasync::spawn(Arc::clone(&self).handle_stream(stream));
+                        fasync::Task::spawn(Arc::clone(&self).handle_stream(stream)).detach();
                     }
                     DirectoryRequest::Open { flags, mode, path, object, control_handle } => self
                         .open_handler
@@ -213,7 +213,12 @@ impl OpenRequestHandler for WriteFailOrTempFs {
             Arc::clone(&self.should_fail),
             Arc::clone(&self.fail_count),
         ));
-        fasync::spawn(file_handler.handle_stream(file_requests, file_control_handle, send_onopen));
+        fasync::Task::spawn(file_handler.handle_stream(
+            file_requests,
+            file_control_handle,
+            send_onopen,
+        ))
+        .detach();
     }
 }
 
@@ -361,7 +366,7 @@ impl OpenRequestHandler for RenameFailOrTempFs {
         let files_to_fail_renames = Clone::clone(&self.files_to_fail_renames);
 
         // Handle the directory requests.
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(req) = stream.next().await {
                 match req.unwrap() {
                     DirectoryRequest::GetAttr { responder } => {
@@ -388,7 +393,8 @@ impl OpenRequestHandler for RenameFailOrTempFs {
                     }
                 }
             }
-        });
+        })
+        .detach();
     }
 }
 
@@ -399,7 +405,7 @@ async fn create_testenv_serves_repo<H: OpenRequestHandler + Send + Sync + 'stati
     let directory_handler = Arc::new(DirectoryStreamHandler::new(open_handler));
     let (proxy, stream) =
         fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-    fasync::spawn(directory_handler.handle_stream(stream));
+    fasync::Task::spawn(directory_handler.handle_stream(stream)).detach();
     let env = TestEnvBuilder::new()
         .mounts(
             MountsBuilder::new()

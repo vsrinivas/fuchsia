@@ -148,56 +148,62 @@ impl TestEnvBuilder {
 
             if should_register(Protocol::PackageResolver) {
                 fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         Arc::clone(&resolver)
                             .run_resolver_service(stream)
                             .unwrap_or_else(|e| panic!("error running resolver service: {:?}", e)),
                     )
+                    .detach()
                 });
             }
             if should_register(Protocol::Paver) {
                 fs.add_fidl_service(move |stream| {
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         Arc::clone(&paver_service)
                             .run_paver_service(stream)
                             .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
                     )
+                    .detach()
                 });
             }
             if should_register(Protocol::Reboot) {
                 fs.add_fidl_service(move |stream| {
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         Arc::clone(&reboot_service)
                             .run_reboot_service(stream)
                             .unwrap_or_else(|e| panic!("error running reboot service: {:?}", e)),
                     )
+                    .detach()
                 });
             }
             if should_register(Protocol::PackageCache) {
                 fs.add_fidl_service(move |stream| {
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         Arc::clone(&cache_service)
                             .run_cache_service(stream)
                             .unwrap_or_else(|e| panic!("error running cache service: {:?}", e)),
                     )
+                    .detach()
                 });
             }
             if should_register(Protocol::Cobalt) {
                 fs.add_fidl_service(move |stream| {
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         Arc::clone(&logger_factory)
                             .run_logger_factory(stream)
                             .unwrap_or_else(|e| panic!("error running logger factory: {:?}", e)),
                     )
+                    .detach()
                 });
             }
             if should_register(Protocol::SpaceManager) {
                 fs.add_fidl_service(move |stream| {
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         Arc::clone(&space_service)
                             .run_space_service(stream)
                             .unwrap_or_else(|e| panic!("error running space service: {:?}", e)),
                     )
+                    .detach()
                 });
             }
         }
@@ -205,7 +211,7 @@ impl TestEnvBuilder {
         let env = fs
             .create_salted_nested_environment("systemupdater_env")
             .expect("nested environment to create successfully");
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         TestEnv {
             env,
@@ -590,11 +596,12 @@ impl MockLoggerFactory {
                     eprintln!("TEST: Got CreateLogger request with project_id {:?}", project_id);
                     let mock_logger = Arc::new(MockLogger::new());
                     self.loggers.lock().push(Arc::clone(&mock_logger));
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         mock_logger
                             .run_logger(logger.into_stream()?)
                             .unwrap_or_else(|e| eprintln!("error while running Logger: {:?}", e)),
-                    );
+                    )
+                    .detach();
                     responder.send(fidl_fuchsia_cobalt::Status::Ok)?;
                 }
                 _ => {

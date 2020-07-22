@@ -198,7 +198,7 @@ where
         };
         state_node.set(&state);
         let (monitor_queue_fut, monitor_queue) = EventQueue::new();
-        fasync::spawn_local(monitor_queue_fut);
+        fasync::Task::local(monitor_queue_fut).detach();
         let support_sysconfig =
             std::fs::read_to_string("/config/build-info/board").ok().as_deref() == Some("astro");
         FidlServer {
@@ -675,13 +675,14 @@ mod stub {
                 true,
                 platform_metrics_node,
             );
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 futures::pin_mut!(state_machine);
 
                 while let Some(event) = state_machine.next().await {
                     observer.on_event(event).await;
                 }
-            });
+            })
+            .detach();
 
             fidl
         }
@@ -762,9 +763,10 @@ mod tests {
         service: fn(M::RequestStream) -> IncomingServices,
     ) -> M::Proxy {
         let (proxy, stream) = create_proxy_and_stream::<M>().unwrap();
-        fasync::spawn_local(
+        fasync::Task::local(
             FidlServer::handle_client(fidl, service(stream)).unwrap_or_else(|e| panic!(e)),
-        );
+        )
+        .detach();
         proxy
     }
 

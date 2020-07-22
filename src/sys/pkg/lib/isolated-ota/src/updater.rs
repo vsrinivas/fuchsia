@@ -91,7 +91,7 @@ impl Updater {
             .add_proxy_service_to::<PackageResolverMarker, _>(resolver.directory_request());
 
         let env = fs.create_salted_nested_environment("isolated-ota-updater-env")?;
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let output = updater
             .output(env.launcher())
@@ -280,11 +280,12 @@ pub mod tests {
             let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
             let paver_clone = Arc::clone(&self.paver);
             fs.add_fidl_service(move |stream: PaverRequestStream| {
-                fasync::spawn(
+                fasync::Task::spawn(
                     Arc::clone(&paver_clone)
                         .run_paver_service(stream)
                         .unwrap_or_else(|e| panic!("Failed to run mock paver: {:?}", e)),
-                );
+                )
+                .detach();
             });
 
             let resolver =
@@ -293,7 +294,7 @@ pub mod tests {
                     .expect("Creating resolver");
             let (client, server) = zx::Channel::create().expect("creating channel");
             fs.serve_connection(server).expect("Failed to start mock paver");
-            fasync::spawn(fs.collect());
+            fasync::Task::spawn(fs.collect()).detach();
 
             let output = Updater::launch_with_components(
                 resolver.cache.pkgfs.blobfs.root_dir_handle().expect("getting blobfs root handle"),

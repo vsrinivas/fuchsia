@@ -115,7 +115,7 @@ mod test {
         version_available: Option<String>,
     ) -> UpdateMonitor<FakeStateNotifier> {
         let (fut, mut mms) = UpdateMonitor::<FakeStateNotifier>::new();
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
         version_available.map(|s| mms.set_version_available(s));
         if let Some(update_state) = update_state {
             mms.advance_update_state(update_state).await;
@@ -257,7 +257,7 @@ mod test_inspect {
         let (fut, mut update_monitor) = UpdateMonitor::<FakeStateNotifier>::from_inspect_node(
             inspector.root().create_child("update-monitor"),
         );
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
 
         update_monitor.advance_update_state(State::CheckingForUpdates).await;
 

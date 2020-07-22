@@ -91,7 +91,7 @@ impl RewriteService {
         let state = self.state.clone();
         let mut transaction = state.read().transaction();
 
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 while let Some(request) = stream.try_next().await? {
                     match request {
@@ -144,13 +144,13 @@ impl RewriteService {
             .unwrap_or_else(|e: Error| {
                 fx_log_err!("while serving rewrite rule edit transaction: {:#}", anyhow!(e))
             }),
-        )
+        ).detach()
     }
 
     fn serve_rule_iterator(rules: Vec<Rule>, mut stream: RuleIteratorRequestStream) {
         let mut rules = rules.into_iter().map(|rule| rule.into()).collect::<Vec<_>>();
 
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let mut iter = rules.iter_mut();
                 while let Some(request) = stream.try_next().await? {
@@ -163,7 +163,8 @@ impl RewriteService {
             .unwrap_or_else(|e: fidl::Error| {
                 fx_log_err!("while serving rewrite rule iterator: {:#}", anyhow!(e))
             }),
-        );
+        )
+        .detach();
     }
 }
 

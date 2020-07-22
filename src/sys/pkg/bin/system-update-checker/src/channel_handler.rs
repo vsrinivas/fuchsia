@@ -130,9 +130,10 @@ mod tests {
         let channel_handler = new_test_channel_handler(info_dir);
         let (proxy, stream) =
             create_proxy_and_stream::<ProviderMarker>().expect("create_proxy_and_stream");
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             channel_handler.handle_provider_request_stream(stream).map(|_| ()).await
-        });
+        })
+        .detach();
         proxy
     }
 
@@ -140,9 +141,10 @@ mod tests {
         let channel_handler = new_test_channel_handler(info_dir);
         let (proxy, stream) =
             create_proxy_and_stream::<ChannelControlMarker>().expect("create_proxy_and_stream");
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             channel_handler.handle_control_request_stream(stream).map(|_| ()).await
-        });
+        })
+        .detach();
         proxy
     }
 

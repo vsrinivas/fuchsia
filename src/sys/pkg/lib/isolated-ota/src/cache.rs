@@ -44,7 +44,7 @@ impl Cache {
 
         // We use a salt so the unit tests work as expected.
         let env = fs.create_salted_nested_environment("isolated-ota-env")?;
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let directory = pkg_cache.directory_request().context("getting directory request")?.clone();
         let pkg_cache = pkg_cache.spawn(env.launcher()).context("launching package cache")?;

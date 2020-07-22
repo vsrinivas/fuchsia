@@ -218,7 +218,7 @@ mod test {
     async fn test_get_tuf_config_name_from_vbmeta() {
         // Create a fake service that responds to ArgumentsRequests
         let (proxy, mut stream) = create_proxy_and_stream::<ArgumentsMarker>().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             match stream.next().await.unwrap() {
                 Ok(ArgumentsRequest::GetString { key, responder }) => {
                     assert_eq!(key, "tuf_repo_config", "Unexpected GetString request: {}", key);
@@ -226,7 +226,8 @@ mod test {
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
-        });
+        })
+        .detach();
 
         let tuf_config = get_tuf_config_name_from_vbmeta_impl(proxy).await.unwrap();
 

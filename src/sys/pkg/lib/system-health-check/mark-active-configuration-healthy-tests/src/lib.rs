@@ -38,17 +38,18 @@ impl TestEnv {
         let paver_service_clone = paver_service.clone();
         fs.add_fidl_service(move |stream: PaverRequestStream| {
             let paver_service_clone = paver_service_clone.clone();
-            fasync::spawn(
+            fasync::Task::spawn(
                 paver_service_clone
                     .run_service(stream)
                     .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
             )
+            .detach()
         });
 
         let env = fs
             .create_salted_nested_environment("partition_marker_env")
             .expect("nested environment to create successfully");
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         Self { env }
     }
@@ -156,11 +157,12 @@ impl PaverService for PaverServiceSupportsABR {
                     PaverRequest::FindBootManager { boot_manager, .. } => {
                         self.state.lock().events.push(PaverEvent::FindBootManager);
                         let paver_service_clone = self.clone();
-                        fasync::spawn(
+                        fasync::Task::spawn(
                             paver_service_clone
                                 .run_boot_manager_service(boot_manager.into_stream()?)
                                 .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
-                        );
+                        )
+                        .detach();
                     }
                     req => panic!("unhandled paver request: {:?}", req),
                 }

@@ -56,13 +56,13 @@ impl TestEnv {
         let paver = Arc::new(paver);
         let paver_clone = Arc::clone(&paver);
         fs.add_fidl_service(move |stream: PaverRequestStream| {
-            fasync::spawn(Arc::clone(&paver_clone).run_service(stream));
+            fasync::Task::spawn(Arc::clone(&paver_clone).run_service(stream)).detach();
         });
 
         let env = fs
             .create_salted_nested_environment("system-update-checker_integration_test_env")
             .expect("nested environment to create successfully");
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let system_update_checker = AppBuilder::new(SYSTEM_UPDATE_CHECKER_CMX)
             .add_dir_to_namespace(
@@ -115,10 +115,11 @@ impl MockPaver {
             match req {
                 PaverRequest::FindBootManager { boot_manager, .. } => {
                     let mock_paver_clone = self.clone();
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         mock_paver_clone
                             .run_boot_manager_service(boot_manager.into_stream().unwrap()),
-                    );
+                    )
+                    .detach();
                 }
                 req => println!("mock Paver ignoring request: {:?}", req),
             }

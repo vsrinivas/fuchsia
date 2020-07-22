@@ -53,7 +53,7 @@ async fn main_inner_async() -> Result<(), Error> {
         let pkgfs_ctl = Clone::clone(&pkgfs_ctl);
         move |stream| {
             let cobalt_sender = cobalt_sender.clone();
-            fasync::spawn(
+            fasync::Task::spawn(
                 cache_service::serve(
                     Clone::clone(&pkgfs_versions),
                     Clone::clone(&pkgfs_ctl),
@@ -65,13 +65,15 @@ async fn main_inner_async() -> Result<(), Error> {
                     fx_log_err!("error handling PackageCache connection {:#}", anyhow!(e))
                 }),
             )
+            .detach()
         }
     };
 
     let gc_cb = move |stream| {
-        fasync::spawn(gc_service::serve(Clone::clone(&pkgfs_ctl), stream).unwrap_or_else(|e| {
-            fx_log_err!("error handling SpaceManager connection {:#}", anyhow!(e))
-        }))
+        fasync::Task::spawn(gc_service::serve(Clone::clone(&pkgfs_ctl), stream).unwrap_or_else(
+            |e| fx_log_err!("error handling SpaceManager connection {:#}", anyhow!(e)),
+        ))
+        .detach()
     };
 
     let mut fs = ServiceFs::new();

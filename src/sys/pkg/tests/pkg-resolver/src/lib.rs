@@ -488,7 +488,8 @@ impl MockLoggerFactory {
                     assert_eq!(project_id, cobalt_sw_delivery_registry::PROJECT_ID);
                     let mock_logger = Arc::new(MockLogger::new());
                     self.loggers.lock().push(mock_logger.clone());
-                    fasync::spawn(mock_logger.run_logger(logger.into_stream().unwrap()));
+                    fasync::Task::spawn(mock_logger.run_logger(logger.into_stream().unwrap()))
+                        .detach();
                     let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
                 }
                 _ => {
@@ -556,14 +557,15 @@ impl<P: PkgFs> TestEnv<P> {
         if let Some(boot_arguments_service) = boot_arguments_service {
             let mock_arg_svc = Arc::new(boot_arguments_service);
             fs.add_fidl_service(move |stream: ArgumentsRequestStream| {
-                fasync::spawn(Arc::clone(&mock_arg_svc).run_service(stream));
+                fasync::Task::spawn(Arc::clone(&mock_arg_svc).run_service(stream)).detach();
             });
         }
 
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let logger_factory_clone = Arc::clone(&logger_factory);
         fs.add_fidl_service(move |stream| {
-            fasync::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
+            fasync::Task::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
+                .detach()
         });
 
         let mut salt = [0; 4];
@@ -572,7 +574,7 @@ impl<P: PkgFs> TestEnv<P> {
         let env = fs
             .create_nested_environment(&environment_label)
             .expect("nested environment to create successfully");
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let pkg_cache = pkg_cache.spawn(env.launcher()).expect("package cache to launch");
         let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("package resolver to launch");

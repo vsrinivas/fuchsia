@@ -117,7 +117,8 @@ impl MockLoggerFactory {
                     assert_eq!(project_id, cobalt_sw_delivery_registry::PROJECT_ID);
                     let mock_logger = Arc::new(MockLogger::new());
                     self.loggers.lock().push(mock_logger.clone());
-                    fasync::spawn(mock_logger.run_logger(logger.into_stream().unwrap()));
+                    fasync::Task::spawn(mock_logger.run_logger(logger.into_stream().unwrap()))
+                        .detach();
                     let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
                 }
                 _ => {
@@ -157,7 +158,8 @@ impl<P: PkgFs> TestEnv<P> {
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let logger_factory_clone = Arc::clone(&logger_factory);
         fs.add_fidl_service(move |stream| {
-            fasync::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
+            fasync::Task::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
+                .detach()
         });
 
         let pkg_cache = AppBuilder::new(
@@ -170,7 +172,7 @@ impl<P: PkgFs> TestEnv<P> {
             .create_nested_environment(&nested_environment_label)
             .expect("nested environment to create successfully");
 
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let pkg_cache = pkg_cache.spawn(env.launcher()).expect("pkg_cache to launch");
 

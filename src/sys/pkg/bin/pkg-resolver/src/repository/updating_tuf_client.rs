@@ -166,7 +166,7 @@ where
         }));
 
         if let Some((node, registration)) = auto_client_node_and_registration {
-            fasync::spawn_local(
+            fasync::Task::local(
                 Abortable::new(
                     AutoClient::from_updating_client_and_auto_url(
                         Arc::downgrade(&ret),
@@ -183,7 +183,8 @@ where
                     registration,
                 )
                 .map(|_| ()),
-            );
+            )
+            .detach();
         }
 
         ret

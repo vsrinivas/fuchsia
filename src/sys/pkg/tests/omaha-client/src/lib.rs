@@ -122,36 +122,38 @@ impl TestEnvBuilder {
 
         let paver = Arc::new(self.paver);
         fs.add_fidl_service(move |stream: PaverRequestStream| {
-            fasync::spawn(
+            fasync::Task::spawn(
                 Arc::clone(&paver)
                     .run_paver_service(stream)
                     .unwrap_or_else(|e| panic!("error running paver service: {:#}", anyhow!(e))),
-            );
+            )
+            .detach();
         });
 
         let resolver = Arc::new(MockResolverService::new(None));
         let resolver_clone = resolver.clone();
         fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
             let resolver_clone = resolver_clone.clone();
-            fasync::spawn(
+            fasync::Task::spawn(
                 resolver_clone
                     .run_resolver_service(stream)
                     .unwrap_or_else(|e| panic!("error running resolver service {:?}", e)),
             )
+            .detach()
         });
 
         let cache = Arc::new(MockCache::new());
         let cache_clone = cache.clone();
         fs.add_fidl_service(move |stream: PackageCacheRequestStream| {
             let cache_clone = cache_clone.clone();
-            fasync::spawn(cache_clone.run_cache_service(stream))
+            fasync::Task::spawn(cache_clone.run_cache_service(stream)).detach()
         });
 
         let nested_environment_label = Self::make_nested_environment_label();
         let env = fs
             .create_nested_environment(&nested_environment_label)
             .expect("nested environment to create successfully");
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let omaha_client = AppBuilder::new(OMAHA_CLIENT_CMX)
             .add_dir_to_namespace(

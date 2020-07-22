@@ -100,12 +100,12 @@ impl Resolver {
             .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request());
 
         fs.add_fidl_service(move |stream: ArgumentsRequestStream| {
-            fasync::spawn(Arc::clone(&boot_args).serve(stream))
+            fasync::Task::spawn(Arc::clone(&boot_args).serve(stream)).detach()
         });
 
         // We use a salt so the unit tests work as expected.
         let env = fs.create_salted_nested_environment("isolated-ota-env")?;
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let directory =
             pkg_resolver.directory_request().context("getting directory request")?.clone();

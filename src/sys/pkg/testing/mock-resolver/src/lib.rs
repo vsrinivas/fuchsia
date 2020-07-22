@@ -51,10 +51,11 @@ impl TestPackage {
         // Open the package directory using the directory request given by the client
         // asking to resolve the package, but proxy it through our handler so that we can
         // intercept requests for /meta.
-        fasync::spawn(handle_package_directory_stream(
+        fasync::Task::spawn(handle_package_directory_stream(
             dir_request.into_stream().unwrap(),
             backing_dir_proxy,
-        ));
+        ))
+        .detach();
     }
 }
 
@@ -230,9 +231,10 @@ impl MockResolverService {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
 
-        fasync::spawn(self.run_resolver_service(stream).unwrap_or_else(|e| {
+        fasync::Task::spawn(self.run_resolver_service(stream).unwrap_or_else(|e| {
             panic!("error running package resolver service: {:#}", anyhow!(e))
-        }));
+        }))
+        .detach();
 
         proxy
     }

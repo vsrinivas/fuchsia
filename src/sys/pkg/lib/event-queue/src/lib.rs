@@ -359,7 +359,7 @@ mod tests {
 
     fn start_event_queue() -> ControlHandle<FidlNotifier, String> {
         let (event_queue, handle) = EventQueue::<FidlNotifier, String>::new();
-        fasync::spawn_local(event_queue);
+        fasync::Task::local(event_queue).detach();
         handle
     }
 
@@ -401,7 +401,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_event_queue_simple() {
         let (event_queue, mut handle) = EventQueue::<MpscNotifier, String>::new();
-        fasync::spawn_local(event_queue);
+        fasync::Task::local(event_queue).detach();
         let (sender, mut receiver) = mpsc::channel(1);
         handle.add_client(MpscNotifier { sender }).await.unwrap();
         handle.queue_event("event".into()).await.unwrap();
@@ -471,7 +471,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_event_queue_drop_unresponsive_clients_custom_limit() {
         let (event_queue, mut handle) = EventQueue::<FidlNotifier, String>::with_limit(2);
-        fasync::spawn_local(event_queue);
+        fasync::Task::local(event_queue).detach();
         let mut stream = add_client(&mut handle).await;
 
         handle.queue_event("event1".into()).await.unwrap();
@@ -484,7 +484,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_event_queue_drop_unresponsive_clients_custom_limit_merge() {
         let (event_queue, mut handle) = EventQueue::<FidlNotifier, String>::with_limit(2);
-        fasync::spawn_local(event_queue);
+        fasync::Task::local(event_queue).detach();
         let mut stream = add_client(&mut handle).await;
 
         handle.queue_event("event1".into()).await.unwrap();

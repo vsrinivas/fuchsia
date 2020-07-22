@@ -88,7 +88,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn gc() {
         let (proxy, mut stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             match stream.try_next().await.unwrap().unwrap() {
                 DirectoryRequest::Unlink { path, responder } => {
                     assert_eq!(path, "garbage");
@@ -96,7 +96,8 @@ mod tests {
                 }
                 other => panic!("unexpected request: {:?}", other),
             }
-        });
+        })
+        .detach();
 
         assert_matches!(Client { proxy }.gc().await, Ok(()));
     }
@@ -104,14 +105,15 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn sync() {
         let (proxy, mut stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             match stream.try_next().await.unwrap().unwrap() {
                 DirectoryRequest::Sync { responder } => {
                     responder.send(Status::OK.into_raw()).unwrap();
                 }
                 other => panic!("unexpected request: {:?}", other),
             }
-        });
+        })
+        .detach();
 
         assert_matches!(Client { proxy }.sync().await, Ok(()));
     }

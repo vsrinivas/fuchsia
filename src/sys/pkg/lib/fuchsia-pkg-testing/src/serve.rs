@@ -158,7 +158,7 @@ impl ServedRepositoryBuilder {
             .unwrap_or_else(|e| panic!("error serving repo over http: {}", e))
             .remote_handle();
 
-        fasync::spawn(server);
+        fasync::Task::spawn(server).detach();
 
         Ok(ServedRepository {
             repo: self.repo,

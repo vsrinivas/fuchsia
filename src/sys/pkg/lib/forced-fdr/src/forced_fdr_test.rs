@@ -15,7 +15,7 @@ use {
 };
 
 fn spawn_update_info_with_channel(mut stream: ProviderRequestStream, channel: String) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let req = stream
             .try_next()
             .await
@@ -24,13 +24,14 @@ fn spawn_update_info_with_channel(mut stream: ProviderRequestStream, channel: St
 
         let responder = req.into_get_current().expect("Got unexpected Provider request.");
         responder.send(&channel).expect("Failed to send response");
-    });
+    })
+    .detach();
 }
 
 fn spawn_factory_reset(mut stream: FactoryResetRequestStream) -> Arc<Mutex<i32>> {
     let call_count = Arc::new(Mutex::new(0));
     let ret = call_count.clone();
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let req = stream
             .try_next()
             .await
@@ -41,7 +42,8 @@ fn spawn_factory_reset(mut stream: FactoryResetRequestStream) -> Arc<Mutex<i32>>
         responder.send(0).expect("Failed to send response");
 
         *call_count.lock() += 1;
-    });
+    })
+    .detach();
 
     ret
 }

@@ -75,7 +75,7 @@ impl OmahaServer {
             .serve(make_svc)
             .unwrap_or_else(|e| panic!("error serving omaha server: {}", e));
 
-        fasync::spawn(server);
+        fasync::Task::spawn(server).detach();
 
         Ok(format!("http://{}/", addr))
     }

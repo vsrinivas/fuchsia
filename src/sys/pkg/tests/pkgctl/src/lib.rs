@@ -64,55 +64,60 @@ impl TestEnv {
         let package_resolver_clone = package_resolver.clone();
         fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
             let package_resolver_clone = package_resolver_clone.clone();
-            fasync::spawn(
+            fasync::Task::spawn(
                 package_resolver_clone
                     .run_service(stream)
                     .unwrap_or_else(|e| panic!("error running resolver service: {:?}", e)),
             )
+            .detach()
         });
 
         let package_cache = Arc::new(MockPackageCacheService::new());
         let package_cache_clone = package_cache.clone();
         fs.add_fidl_service(move |stream: PackageCacheRequestStream| {
             let package_cache_clone = package_cache_clone.clone();
-            fasync::spawn(
+            fasync::Task::spawn(
                 package_cache_clone
                     .run_service(stream)
                     .unwrap_or_else(|e| panic!("error running cache service: {:?}", e)),
             )
+            .detach()
         });
 
         let engine = Arc::new(MockEngineService::new());
         let engine_clone = engine.clone();
         fs.add_fidl_service(move |stream: EngineRequestStream| {
             let engine_clone = engine_clone.clone();
-            fasync::spawn(
+            fasync::Task::spawn(
                 engine_clone
                     .run_service(stream)
                     .unwrap_or_else(|e| panic!("error running engine service: {:?}", e)),
             )
+            .detach()
         });
 
         let repository_manager = Arc::new(MockRepositoryManagerService::new());
         let repository_manager_clone = repository_manager.clone();
         fs.add_fidl_service(move |stream: RepositoryManagerRequestStream| {
             let repository_manager_clone = repository_manager_clone.clone();
-            fasync::spawn(
+            fasync::Task::spawn(
                 repository_manager_clone
                     .run_service(stream)
                     .unwrap_or_else(|e| panic!("error running repository service: {:?}", e)),
             )
+            .detach()
         });
 
         let space_manager = Arc::new(MockSpaceManagerService::new());
         let space_manager_clone = space_manager.clone();
         fs.add_fidl_service(move |stream: fidl_space::ManagerRequestStream| {
             let space_manager_clone = space_manager_clone.clone();
-            fasync::spawn(
+            fasync::Task::spawn(
                 space_manager_clone
                     .run_service(stream)
                     .unwrap_or_else(|e| panic!("error running space service: {:?}", e)),
             )
+            .detach()
         });
 
         let _test_dir = TempDir::new().expect("create test tempdir");
@@ -123,7 +128,7 @@ impl TestEnv {
         let env = fs
             .create_salted_nested_environment("pkgctl_env")
             .expect("nested environment to create successfully");
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         Self {
             env,

@@ -165,7 +165,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         let cobalt_sender = cobalt_sender.clone();
         let resolver_service_inspect = Arc::clone(&resolver_service_inspect_state);
         move |stream| {
-            fasync::spawn_local(
+            fasync::Task::local(
                 resolver_service::run_resolver_service(
                     cache.clone(),
                     Arc::clone(&repo_manager),
@@ -179,6 +179,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
                 )
                 .unwrap_or_else(|e| fx_log_err!("failed to spawn_local {:#}", anyhow!(e))),
             )
+            .detach()
         }
     };
 
@@ -187,7 +188,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         let package_fetcher = Arc::clone(&package_fetcher);
         let cobalt_sender = cobalt_sender.clone();
         move |stream| {
-            fasync::spawn_local(
+            fasync::Task::local(
                 resolver_service::run_font_resolver_service(
                     Arc::clone(&font_package_manager),
                     cache.clone(),
@@ -199,28 +200,31 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
                     fx_log_err!("Failed to spawn_local font_resolver_service {:#}", anyhow!(e))
                 }),
             )
+            .detach()
         }
     };
 
     let repo_cb = move |stream| {
         let repo_manager = Arc::clone(&repo_manager);
 
-        fasync::spawn_local(
+        fasync::Task::local(
             async move {
                 let mut repo_service = RepositoryService::new(repo_manager);
                 repo_service.run(stream).await
             }
             .unwrap_or_else(|e| fx_log_err!("error encountered: {:#}", anyhow!(e))),
         )
+        .detach()
     };
 
     let rewrite_cb = move |stream| {
         let mut rewrite_service = RewriteService::new(Arc::clone(&rewrite_manager));
 
-        fasync::spawn_local(
+        fasync::Task::local(
             async move { rewrite_service.handle_client(stream).await }
                 .unwrap_or_else(|e| fx_log_err!("while handling rewrite client {:#}", anyhow!(e))),
         )
+        .detach()
     };
 
     let mut fs = ServiceFs::new();

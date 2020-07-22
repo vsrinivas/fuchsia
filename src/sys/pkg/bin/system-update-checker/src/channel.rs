@@ -444,7 +444,7 @@ mod tests {
         fs.add_fidl_service(move |mut stream: SystemDataUpdaterRequestStream| {
             let chan = chan.clone();
 
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 while let Some(req) = stream.try_next().await.unwrap_or(None) {
                     match req {
                         SystemDataUpdaterRequest::SetSoftwareDistributionInfo {
@@ -458,11 +458,12 @@ mod tests {
                     }
                 }
             })
+            .detach()
         })
         .serve_connection(svc_dir)
         .expect("serve_connection");
 
-        fasync::spawn_local(fs.collect());
+        fasync::Task::local(fs.collect()).detach();
 
         c.run().await;
 
@@ -548,7 +549,7 @@ mod tests {
                         let mut stream: SystemDataUpdaterRequestStream = stream.cast_stream();
 
                         let state = self.state.clone();
-                        fasync::spawn_local(async move {
+                        fasync::Task::local(async move {
                             while let Some(req) = stream.try_next().await.unwrap() {
                                 match req {
                                     SystemDataUpdaterRequest::SetSoftwareDistributionInfo {
@@ -561,7 +562,8 @@ mod tests {
                                     _ => unreachable!(),
                                 }
                             }
-                        });
+                        })
+                        .detach();
                         Ok(proxy)
                     }
                     None => {
@@ -570,7 +572,7 @@ mod tests {
                         let mut stream: SystemDataUpdaterRequestStream = stream.cast_stream();
 
                         let state = self.state.clone();
-                        fasync::spawn_local(async move {
+                        fasync::Task::local(async move {
                             while let Some(req) = stream.try_next().await.unwrap() {
                                 match req {
                                     SystemDataUpdaterRequest::SetSoftwareDistributionInfo {
@@ -585,7 +587,8 @@ mod tests {
                                     _ => unreachable!(),
                                 }
                             }
-                        });
+                        })
+                        .detach();
                         Ok(proxy)
                     }
                 }
@@ -668,7 +671,7 @@ mod tests {
         fs.add_fidl_service(move |mut stream: SystemDataUpdaterRequestStream| {
             let chan = chan.clone();
 
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 while let Some(req) = stream.try_next().await.unwrap_or(None) {
                     match req {
                         SystemDataUpdaterRequest::SetSoftwareDistributionInfo {
@@ -682,11 +685,12 @@ mod tests {
                     }
                 }
             })
+            .detach()
         })
         .serve_connection(svc_dir)
         .expect("serve_connection");
 
-        fasync::spawn_local(fs.collect());
+        fasync::Task::local(fs.collect()).detach();
 
         let mut notify_fut = current_channel_notifier.run().boxed();
         assert_eq!(exec.run_until_stalled(&mut notify_fut), Poll::Pending);
@@ -793,7 +797,7 @@ mod tests {
             let mut stream: EngineRequestStream = stream.cast_stream();
 
             let target = self.target.lock().clone();
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 while let Some(req) = stream.try_next().await.unwrap() {
                     match req {
                         EngineRequest::TestApply { url, responder } => {
@@ -804,7 +808,8 @@ mod tests {
                         _ => unreachable!(),
                     }
                 }
-            });
+            })
+            .detach();
             Ok(proxy)
         }
     }
@@ -833,7 +838,7 @@ mod tests {
             let mut stream: RepositoryManagerRequestStream = stream.cast_stream();
             let channels = self.channels.clone();
 
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 while let Some(req) = stream.try_next().await.unwrap() {
                     match req {
                         RepositoryManagerRequest::List { iterator, control_handle: _ } => {
@@ -850,7 +855,7 @@ mod tests {
                                 })
                                 .collect();
 
-                            fasync::spawn_local(async move {
+                            fasync::Task::local(async move {
                                 let mut iter = repos.into_iter();
 
                                 while let Some(RepositoryIteratorRequest::Next { responder }) =
@@ -858,12 +863,14 @@ mod tests {
                                 {
                                     responder.send(&mut iter.by_ref().take(1)).unwrap();
                                 }
-                            });
+                            })
+                            .detach();
                         }
                         _ => unreachable!(),
                     }
                 }
-            });
+            })
+            .detach();
             Ok(proxy)
         }
     }

@@ -253,15 +253,16 @@ impl TestEnv {
         let mut service_fs = ServiceFs::new();
         let paver_clone = Arc::clone(&self.paver);
         service_fs.add_fidl_service(move |stream: PaverRequestStream| {
-            fasync::spawn(
+            fasync::Task::spawn(
                 Arc::clone(&paver_clone)
                     .run_paver_service(stream)
                     .unwrap_or_else(|e| panic!("Failed to run mock paver: {:?}", e)),
-            );
+            )
+            .detach();
         });
         let (client, server) = zx::Channel::create().expect("creating channel for servicefs");
         service_fs.serve_connection(server).expect("Failed to serve connection");
-        fasync::spawn(service_fs.collect());
+        fasync::Task::spawn(service_fs.collect()).detach();
 
         let result = download_and_apply_update(
             blobfs_handle,
@@ -454,11 +455,12 @@ fn launch_cloned_blobfs(end: ServerEnd<NodeMarker>, flags: u32, parent_flags: u3
     };
     let chan = fidl::AsyncChannel::from_channel(end.into_channel()).expect("cloning blobfs dir");
     let stream = DirectoryAdminRequestStream::from_channel(chan);
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         serve_failing_blobfs(stream, flags)
             .await
             .unwrap_or_else(|e| panic!("Failed to serve cloned blobfs handle: {:?}", e));
-    });
+    })
+    .detach();
 }
 
 async fn serve_failing_blobfs(
@@ -580,11 +582,12 @@ pub async fn test_blobfs_broken() -> Result<(), Error> {
     let stream =
         DirectoryAdminRequestStream::from_channel(fidl::AsyncChannel::from_channel(server)?);
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         serve_failing_blobfs(stream, 0)
             .await
             .unwrap_or_else(|e| panic!("Failed to serve blobfs: {:?}", e));
-    });
+    })
+    .detach();
 
     let result = env.run().await;
 

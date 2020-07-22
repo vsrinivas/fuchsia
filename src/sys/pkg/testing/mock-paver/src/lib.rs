@@ -132,11 +132,12 @@ impl MockPaverService {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<paver::DataSinkMarker>().unwrap();
 
-        fasync::spawn(
+        fasync::Task::spawn(
             Arc::clone(self)
                 .run_data_sink_service(stream)
                 .unwrap_or_else(|e| panic!("error running data sink service: {:#}", anyhow!(e))),
-        );
+        )
+        .detach();
 
         proxy
     }
@@ -146,11 +147,12 @@ impl MockPaverService {
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<paver::BootManagerMarker>().unwrap();
 
-        fasync::spawn(
+        fasync::Task::spawn(
             Arc::clone(self)
                 .run_boot_manager_service(server_end)
                 .unwrap_or_else(|e| panic!("error running boot manager service: {:#}", anyhow!(e))),
-        );
+        )
+        .detach();
 
         proxy
     }
@@ -268,19 +270,21 @@ impl MockPaverService {
             match request {
                 paver::PaverRequest::FindDataSink { data_sink, .. } => {
                     let paver_service_clone = self.clone();
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         paver_service_clone
                             .run_data_sink_service(data_sink.into_stream()?)
                             .unwrap_or_else(|e| panic!("error running data sink service: {:?}", e)),
-                    );
+                    )
+                    .detach();
                 }
                 paver::PaverRequest::FindBootManager { boot_manager, .. } => {
                     let paver_service_clone = self.clone();
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         paver_service_clone.run_boot_manager_service(boot_manager).unwrap_or_else(
                             |e| panic!("error running boot manager service: {:?}", e),
                         ),
-                    );
+                    )
+                    .detach();
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
             }
@@ -316,11 +320,12 @@ pub mod tests {
             let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<paver::PaverMarker>()
                 .expect("Creating paver endpoints");
 
-            fasync::spawn(
+            fasync::Task::spawn(
                 Arc::clone(&paver)
                     .run_paver_service(stream)
                     .unwrap_or_else(|_| panic!("Failed to run paver")),
-            );
+            )
+            .detach();
 
             let (data_sink, server) = fidl::endpoints::create_proxy::<paver::DataSinkMarker>()
                 .expect("Creating data sink endpoints");

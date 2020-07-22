@@ -190,15 +190,16 @@ mod tests {
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
         let paver_clone = Arc::clone(&updater.paver);
         fs.add_fidl_service(move |stream: PaverRequestStream| {
-            fasync::spawn(
+            fasync::Task::spawn(
                 Arc::clone(&paver_clone)
                     .run_paver_service(stream)
                     .unwrap_or_else(|e| panic!("Failed to run mock paver: {:?}", e)),
-            );
+            )
+            .detach();
         });
         let (client, server) = zx::Channel::create().expect("creating channel");
         fs.serve_connection(server).expect("Failed to start mock paver");
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let mut http = MockHttpRequest::empty();
 

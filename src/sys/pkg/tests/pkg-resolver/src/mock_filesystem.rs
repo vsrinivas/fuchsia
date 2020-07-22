@@ -38,7 +38,8 @@ async fn handle_directory_request(req: DirectoryRequest, open_counts: OpenCounte
                 fasync::Channel::from_channel(object.into_channel()).unwrap(),
             );
             describe_dir(flags, &stream);
-            fasync::spawn(handle_directory_request_stream(stream, Arc::clone(&open_counts)));
+            fasync::Task::spawn(handle_directory_request_stream(stream, Arc::clone(&open_counts)))
+                .detach();
         }
         DirectoryRequest::Open {
             flags: _flags,
@@ -65,6 +66,6 @@ pub fn spawn_directory_handler() -> (DirectoryProxy, OpenCounter) {
     let (proxy, stream) =
         fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
     let open_counts = Arc::new(Mutex::new(HashMap::<String, u64>::new()));
-    fasync::spawn(handle_directory_request_stream(stream, Arc::clone(&open_counts)));
+    fasync::Task::spawn(handle_directory_request_stream(stream, Arc::clone(&open_counts))).detach();
     (proxy, open_counts)
 }

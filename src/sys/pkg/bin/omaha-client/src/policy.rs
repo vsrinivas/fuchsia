@@ -951,9 +951,10 @@ mod tests {
         assert_eq!(ui_activity.get().state, State::Unknown);
 
         let (proxy, mut stream) = create_proxy_and_stream::<ProviderMarker>().unwrap();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             watch_ui_activity_impl(&policy_engine.ui_activity, proxy).await.unwrap();
-        });
+        })
+        .detach();
 
         let ProviderRequest::WatchState { listener, control_handle: _ } =
             stream.next().await.unwrap().unwrap();

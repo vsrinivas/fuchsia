@@ -182,7 +182,7 @@ async fn base_package_index(
             meta_far_blob_id: BlobId::from(hash.clone()).into(),
         })
         .collect::<Vec<PackageIndexEntry>>();
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             for chunk in package_entries.chunks_mut(list_chunk_size) {
                 if let Some(PackageIndexIteratorRequest::Next { responder }) =
@@ -205,5 +205,6 @@ async fn base_package_index(
         .unwrap_or_else(|e: anyhow::Error| {
             fx_log_err!("error running BasePackageIndex protocol: {:#}", anyhow!(e))
         }),
-    );
+    )
+    .detach();
 }
