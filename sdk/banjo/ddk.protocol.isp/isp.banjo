@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 library ddk.protocol.isp;
+
 using zx;
-using zircon.device.camera;
-using zircon.device.sysmem;
+using ddk.protocol.camera;
 using ddk.protocol.camerahwaccel;
+using zircon.device.sysmem;
 
 enum StreamType : uint8 {
     INVALID = 0;
@@ -51,7 +52,7 @@ protocol Isp {
     // @Returns: |st| : Protocol over which the flow of frames is controlled.
     CreateOutputStream(zircon.device.sysmem.BufferCollectionInfo_2 buffer_collection,
                        zircon.device.sysmem.ImageFormat_2 image_format,
-                       zircon.device.camera.FrameRate rate, StreamType type,
+                       ddk.protocol.camera.FrameRate rate, StreamType type,
                        ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback)
                             -> (zx.status s, OutputStream st);
 };

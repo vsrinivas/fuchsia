@@ -19,6 +19,13 @@ struct ColorVal {
     uint16 green_b;
 };
 
+/// Encodes frame rate as separate a separate numerator and denominator.
+/// Decoded via frames_per_sec_numerator / frames_per_sec_denominator.
+struct FrameRate {
+    uint32 frames_per_sec_numerator;
+    uint32 frames_per_sec_denominator;
+};
+
 /// Encodes a pair of width and height values.
 /// For example, for use as a representation of frame resolution
 /// where |x| is width and |y| is height.
