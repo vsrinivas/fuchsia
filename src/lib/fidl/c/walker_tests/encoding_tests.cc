@@ -1663,11 +1663,11 @@ bool linearize_and_encode_absent_and_empty_nonnullable_vector_of_uint32() {
   auto status = fidl_linearize_and_encode(&unbounded_nonnullable_vector_of_uint32_message_type,
                                           &message, buf, ArrayCount(buf), nullptr, 0, &actual_bytes,
                                           &actual_handles, &error);
-  auto& result = *reinterpret_cast<unbounded_nonnullable_vector_of_uint32_message_layout*>(buf);
+  auto& result = *reinterpret_cast<decltype(message.inline_struct)*>(buf);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_EQ(result.inline_struct.vector.count, 0);
-  EXPECT_EQ(reinterpret_cast<uintptr_t>(result.inline_struct.vector.data), FIDL_ALLOC_PRESENT);
+  EXPECT_EQ(result.vector.count, 0);
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(result.vector.data), FIDL_ALLOC_PRESENT);
 
   END_TEST;
 }
