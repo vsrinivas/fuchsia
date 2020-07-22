@@ -15,7 +15,7 @@ using fuchsia::accessibility::semantics::Role;
 using fuchsia::accessibility::tts::Utterance;
 using fuchsia::intl::l10n::MessageIds;
 
-static constexpr zx::duration kDefaultDelay = zx::msec(100);
+static constexpr zx::duration kDefaultDelay = zx::msec(40);
 
 // Returns a message that describes a node where Role == BUTTON.
 NodeDescriber::UtteranceAndContext DescribeButton(a11y::i18n::MessageFormatter* formatter) {
