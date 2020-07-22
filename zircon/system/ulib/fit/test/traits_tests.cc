@@ -94,6 +94,7 @@ static_assert(std::is_same_v<Object, Traits::type>, "");
 
 // compile-time test
 namespace lambda_traits {
+[[maybe_unused]]
 auto lambda = [](float, bool) { return 0; };
 using Traits = CallableTraitsTest<decltype(lambda)>::Traits;
 }  // namespace lambda_traits
@@ -142,6 +143,4 @@ static_assert(fit::is_callable<std::function<int(float, bool)>>::value, "");
 
 BEGIN_TEST_CASE(traits_test)
 RUN_TEST(test_callables::arg_capture)
-// suppress -Wunneeded-internal-declaration
-(void)test_callables::lambda_traits::lambda;
 END_TEST_CASE(traits_test)

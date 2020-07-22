@@ -1192,12 +1192,15 @@ static_assert(
     "");
 
 // handler returning lambda...
+[[maybe_unused]]
 auto result_continuation_lambda = [](fit::result<int, double>&) -> fit::result<unsigned, float> {
   return fit::pending();
 };
+[[maybe_unused]]
 auto value_continuation_lambda = [](int&) -> fit::result<unsigned, double> {
   return fit::pending();
 };
+[[maybe_unused]]
 auto error_continuation_lambda = [](double&) -> fit::result<int, float> { return fit::pending(); };
 static_assert(
     std::is_same<fit::result<unsigned, float>, fit::internal::result_handler_invoker<
@@ -1227,7 +1230,9 @@ static_assert(!fit::internal::is_continuation<fit::function<void(fit::context&)>
 static_assert(!fit::internal::is_continuation<fit::function<fit::result<>()>>::value, "");
 static_assert(!fit::internal::is_continuation<void>::value, "");
 
+[[maybe_unused]]
 auto continuation_lambda = [](fit::context&) -> fit::result<> { return fit::pending(); };
+[[maybe_unused]]
 auto invalid_lambda = [] {};
 
 static_assert(fit::internal::is_continuation<decltype(continuation_lambda)>::value, "");
@@ -1311,11 +1316,4 @@ RUN_TEST(box_combinator)
 RUN_TEST(join_combinator)
 RUN_TEST(join_combinator_move_only_result)
 RUN_TEST(join_vector_combinator)
-
-// suppress -Wunneeded-internal-declaration
-(void)handler_invoker_test::result_continuation_lambda;
-(void)handler_invoker_test::value_continuation_lambda;
-(void)handler_invoker_test::error_continuation_lambda;
-(void)is_continuation_test::continuation_lambda;
-(void)is_continuation_test::invalid_lambda;
 END_TEST_CASE(promise_tests)
