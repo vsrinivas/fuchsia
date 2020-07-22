@@ -16,3 +16,4 @@ mod errors;
 pub mod instruction;
 pub mod offline_debugger;
 mod parser_common;
+pub mod test;

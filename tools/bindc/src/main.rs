@@ -4,8 +4,9 @@
 
 //! A Fuchsia Driver Bind Program compiler
 
-use anyhow::{Context, Error};
+use anyhow::{anyhow, Context, Error};
 use bind_debugger::instruction::{Condition, Instruction, InstructionDebug};
+use bind_debugger::test;
 use bind_debugger::{compiler, offline_debugger};
 use std::fmt::Write;
 use std::fs::File;
@@ -69,6 +70,16 @@ enum Command {
         /// This will be used as the input to the bind program debugger.
         #[structopt(short = "d", long = "debug", parse(from_os_str))]
         device_file: PathBuf,
+    },
+    #[structopt(name = "test")]
+    Test {
+        #[structopt(flatten)]
+        options: SharedOptions,
+
+        // TODO(56774): Refer to documentation for bind testing.
+        /// A file containing the test specification.
+        #[structopt(short = "t", long = "test-spec", parse(from_os_str))]
+        test_spec: PathBuf,
     },
 }
 
@@ -138,7 +149,22 @@ fn handle_command(command: Command) -> Result<(), Error> {
             let (instructions, symbol_table) = compiler::compile_to_symbolic(&program, &includes)?;
 
             let device = read_file(&device_file)?;
-            offline_debugger::debug_from_str(&instructions, &symbol_table, &device)?;
+            let binds = offline_debugger::debug_from_str(&instructions, &symbol_table, &device)?;
+            if binds {
+                println!("Driver binds to device.");
+            } else {
+                println!("Driver doesn't bind to device.");
+            }
+            Ok(())
+        }
+        Command::Test { options, test_spec } => {
+            let program = read_file(&options.input)?;
+            let includes = handle_includes(options.include, options.include_file)?;
+            let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
+            let test_spec = read_file(&test_spec)?;
+            if !test::run(&program, &includes, &test_spec)? {
+                return Err(anyhow!("Test failed"));
+            }
             Ok(())
         }
         Command::Compile { options, output, depfile, disable_autobind } => {

@@ -7,6 +7,7 @@ use crate::debugger;
 use crate::dependency_graph::DependencyError;
 use crate::offline_debugger;
 use crate::parser_common::{BindParserError, CompoundIdentifier};
+use crate::test;
 use std::fmt;
 
 pub struct UserError {
@@ -343,6 +344,29 @@ impl From<debugger::DebuggerError> for UserError {
                 None,
                 true,
             ),
+        }
+    }
+}
+
+impl From<test::TestError> for UserError {
+    fn from(error: test::TestError) -> Self {
+        match error {
+            test::TestError::BindParserError(error) => UserError::from(error),
+            test::TestError::DeviceSpecParserError(error) => UserError::from(error),
+            test::TestError::DebuggerError(error) => UserError::from(error),
+            test::TestError::CompilerError(error) => UserError::from(error),
+            test::TestError::InvalidSchema => {
+                UserError::new("E401", "The test specification JSON schema is invalid.", None, true)
+            }
+            test::TestError::InvalidJsonError => UserError::new(
+                "E402",
+                "The test specification is invalid according to the schema.",
+                None,
+                false,
+            ),
+            test::TestError::JsonParserError(error) => {
+                UserError::new("E403", &format!("Failed to parse JSON: {}.", error), None, false)
+            }
         }
     }
 }
