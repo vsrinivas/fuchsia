@@ -5,21 +5,19 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
-#include <sched.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <threads.h>
 #include <time.h>
 #include <unistd.h>
-#include <zircon/compiler.h>
-#include <zircon/listnode.h>
-#include <zircon/types.h>
+
+#include <iostream>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include <fbl/unique_fd.h>
 
@@ -34,7 +32,6 @@ constexpr int kBlockSize = 8192;
 constexpr int kBufferSize = 65536;
 
 class RandomOpTest;
-struct Worker;
 
 unsigned GenerateSeed() {
   struct timespec ts;

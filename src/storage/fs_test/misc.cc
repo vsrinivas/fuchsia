@@ -4,10 +4,6 @@
 
 #include "src/storage/fs_test/misc.h"
 
-#include <dirent.h>
-#include <fcntl.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <unistd.h>
 
 #include <vector>

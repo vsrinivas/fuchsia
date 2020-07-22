@@ -7,6 +7,7 @@
 
 #include <dirent.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 
 #include <string_view>
 

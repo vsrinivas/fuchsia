@@ -4,6 +4,8 @@
 
 #include "src/storage/fs_test/fs_test_fixture.h"
 
+#include <zircon/errors.h>
+
 namespace fs_test {
 
 BaseFilesystemTest::~BaseFilesystemTest() {

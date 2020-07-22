@@ -7,13 +7,15 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/time.h>
 #include <limits.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <fbl/unique_fd.h>
 

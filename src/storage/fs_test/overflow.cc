@@ -6,13 +6,12 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <string>
+#include <string_view>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
 

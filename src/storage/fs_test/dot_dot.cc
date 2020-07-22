@@ -7,11 +7,8 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
-#include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"

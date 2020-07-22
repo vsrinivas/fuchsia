@@ -4,15 +4,22 @@
 
 #include "src/storage/fs_test/fs_test.h"
 
+#include <errno.h>
 #include <fuchsia/fs/cpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/memfs/memfs.h>
+#include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/handle.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <zircon/errors.h>
+
+#include <utility>
 
 #include <fbl/unique_fd.h>
 #include <fs-management/admin.h>

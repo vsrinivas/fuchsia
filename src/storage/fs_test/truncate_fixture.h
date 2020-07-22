@@ -6,15 +6,14 @@
 #define SRC_STORAGE_FS_TEST_TRUNCATE_FIXTURE_H_
 
 #include <stddef.h>
-#include <stdint.h>
 
+#include <string>
 #include <tuple>
-
-#include <gtest/gtest.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
 
 namespace fs_test {
+struct TestFilesystemOptions;
 
 enum class LargeTruncateTestType {
   KeepOpen,

@@ -4,9 +4,18 @@
 
 #include "src/storage/fs_test/truncate_fixture.h"
 
-#include <fbl/unique_fd.h>
+#include <fcntl.h>
+#include <sched.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <zircon/syscalls.h>
 
-#include "src/storage/fs_test/fs_test_fixture.h"
+#include <iostream>
+#include <memory>
+
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_fd.h>
 
 namespace fs_test {
 namespace {

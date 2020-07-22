@@ -6,15 +6,14 @@
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
-#include <limits.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/compiler.h>
-#include <zircon/syscalls.h>
+#include <zircon/errors.h>
 
 #include <iostream>
+#include <string>
+#include <tuple>
 #include <vector>
 
 #include <fbl/unique_fd.h>
@@ -22,7 +21,6 @@
 #include <minfs/format.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
-#include "src/storage/fs_test/misc.h"
 
 namespace fs_test {
 namespace {

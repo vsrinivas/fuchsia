@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <iostream>
 #include <random>
+#include <string>
+#include <vector>
+
+#include <fbl/unique_fd.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
 

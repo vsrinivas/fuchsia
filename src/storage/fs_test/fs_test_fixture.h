@@ -5,6 +5,11 @@
 #ifndef SRC_STORAGE_FS_TEST_FS_TEST_FIXTURE_H_
 #define SRC_STORAGE_FS_TEST_FS_TEST_FIXTURE_H_
 
+#include <zircon/compiler.h>
+
+#include <string>
+#include <string_view>
+
 #include <gtest/gtest.h>
 
 #include "src/storage/fs_test/fs_test.h"

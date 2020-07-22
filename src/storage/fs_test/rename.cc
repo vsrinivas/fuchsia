@@ -7,16 +7,13 @@
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/zx/handle.h>
 #include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <zircon/compiler.h>
+#include <zircon/errors.h>
 
-#include <iterator>
+#include <string_view>
 
 #include <fbl/unique_fd.h>
 

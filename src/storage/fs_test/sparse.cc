@@ -3,17 +3,16 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <iostream>
+#include <tuple>
 #include <vector>
 
 #include <fbl/unique_fd.h>
-#include <minfs/format.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
 

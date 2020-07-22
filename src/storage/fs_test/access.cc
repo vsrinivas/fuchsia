@@ -2,20 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <stdint.h>
+#include <lib/zx/channel.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+#include <zircon/errors.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+
+#include <string>
 
 #include <fbl/unique_fd.h>
 

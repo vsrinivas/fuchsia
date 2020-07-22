@@ -5,15 +5,15 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <sys/stat.h>
 #include <threads.h>
 #include <unistd.h>
-#include <zircon/syscalls.h>
 
 #include <atomic>
+#include <functional>
+#include <tuple>
+#include <vector>
 
 #include <fbl/unique_fd.h>
 

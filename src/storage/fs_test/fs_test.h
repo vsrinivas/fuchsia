@@ -5,11 +5,18 @@
 #ifndef SRC_STORAGE_FS_TEST_FS_TEST_H_
 #define SRC_STORAGE_FS_TEST_FS_TEST_H_
 
+#include <fcntl.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
+#include <stdint.h>
+#include <zircon/compiler.h>
 
+#include <functional>
+#include <limits>
+#include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include <fbl/unique_fd.h>
 #include <fs-management/format.h>

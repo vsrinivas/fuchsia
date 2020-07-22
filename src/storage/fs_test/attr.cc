@@ -4,13 +4,14 @@
 
 #include <fcntl.h>
 #include <lib/fdio/vfs.h>
-#include <math.h>
-#include <stdint.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 #include <zircon/types.h>

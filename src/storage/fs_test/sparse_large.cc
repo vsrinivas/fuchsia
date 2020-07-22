@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <stdint.h>
 #include <unistd.h>
 
 #include <vector>

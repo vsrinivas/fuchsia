@@ -2,28 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
+#include <dirent.h>
 #include <fcntl.h>
-#include <limits.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <optional>
+#include <string>
+#include <tuple>
+#include <vector>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
-#include "src/storage/fs_test/misc.h"
 
 namespace fs_test {
 namespace {

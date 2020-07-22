@@ -3,17 +3,12 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/limits.h>
-#include <limits.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
+#include <string.h>
 #include <unistd.h>
-#include <zircon/syscalls.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <fbl/unique_fd.h>
 

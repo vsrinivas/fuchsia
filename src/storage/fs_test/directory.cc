@@ -4,20 +4,17 @@
 
 #include <assert.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/compiler.h>
 
-#include <iterator>
+#include <string>
 
-#include <fbl/algorithm.h>
+#include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 

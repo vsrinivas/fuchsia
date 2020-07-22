@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <string>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
 

@@ -3,20 +3,18 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/limits.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <thread>
+#include <tuple>
+#include <vector>
 
-#include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"

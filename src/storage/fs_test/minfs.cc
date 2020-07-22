@@ -4,27 +4,31 @@
 
 // Tests for MinFS-specific behavior.
 
-#include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/vfs.h>
+#include <lib/zx/vmo.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/device/vfs.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
-#include <utility>
+#include <algorithm>
+#include <string>
+#include <vector>
 
 #include <fbl/algorithm.h>
+#include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <fvm/format.h>
 #include <minfs/format.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
-#include "src/storage/fs_test/misc.h"
 
 namespace fs_test {
 namespace {
@@ -138,7 +142,8 @@ class MinfsFvmTest : public BaseFilesystemTest {
     fdio_cpp::FdioCaller caller(std::move(fd));
     fuchsia_minfs_Metrics metrics;
     zx_status_t status;
-    zx_status_t fidl_status = fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, &metrics);
+    zx_status_t fidl_status =
+        fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, &metrics);
     if (fidl_status != ZX_OK)
       return zx::error(fidl_status);
     if (status != ZX_OK)
