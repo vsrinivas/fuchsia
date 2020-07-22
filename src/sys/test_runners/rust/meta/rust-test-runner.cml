@@ -21,10 +21,6 @@
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.component.runner.ComponentRunner",
-            from: "self",
-        },
-        {
             runner: "rust_test_runner",
             from: "self",
         },
