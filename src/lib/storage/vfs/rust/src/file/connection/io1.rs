@@ -422,7 +422,7 @@ impl<T: 'static + File> FileConnection<T> {
 
     async fn handle_set_attr(&mut self, flags: u32, attrs: NodeAttributes) -> Status {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return Status::ACCESS_DENIED;
+            return Status::BAD_HANDLE;
         }
 
         match self.file.set_attrs(flags, attrs).await {

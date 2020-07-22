@@ -25,8 +25,8 @@ use {
     anyhow::Error,
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryObject, DirectoryRequest, NodeInfo, NodeMarker, OPEN_FLAG_CREATE,
-        OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryObject, DirectoryRequest, NodeAttributes, NodeInfo, NodeMarker,
+        OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
@@ -171,15 +171,22 @@ impl MutableConnection {
                 })?;
             }
             DerivedDirectoryRequest::SetAttr { flags, attributes, responder } => {
-                let status = match self.base.directory.set_attrs(flags, attributes) {
+                let status = match self.handle_setattr(flags, attributes) {
                     Ok(()) => Status::OK,
                     Err(status) => status,
                 };
-
                 responder.send(status.into_raw())?;
             }
         }
         Ok(ConnectionState::Alive)
+    }
+
+    fn handle_setattr(&mut self, flags: u32, attributes: NodeAttributes) -> Result<(), Status> {
+        if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
+            return Err(Status::BAD_HANDLE);
+        }
+
+        self.base.directory.set_attrs(flags, attributes)
     }
 
     fn handle_unlink<R>(&mut self, path: String, responder: R) -> Result<(), fidl::Error>

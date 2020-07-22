@@ -318,15 +318,20 @@ TEST_P(DirectoryPermissionTest, TestModifyingFileTime) {
 
   // futimens on the read-only clone is not allowed
   ASSERT_LT(futimens(rdonly_fd.get(), ts), 0);
+  ASSERT_EQ(errno, EBADF);
   // utimensat on bar_file is not allowed because the parent is read-only
   ASSERT_LT(utimensat(rdonly_fd.get(), "bar_file", ts, 0), 0);
+  ASSERT_EQ(errno, EACCES);
   // utimensat on sub_dir is not allowed because the parent is read-only
   ASSERT_LT(utimensat(rdonly_fd.get(), "sub_dir", ts, 0), 0);
+  ASSERT_EQ(errno, EACCES);
   ASSERT_LT(utimensat(rdonly_fd.get(), "sub_dir/", ts, 0), 0);
+  ASSERT_EQ(errno, EACCES);
   // futimens on bar_file is not allowed because it requires write access
   int bar_file_fd = openat(rdonly_fd.get(), "bar_file", O_RDONLY, 0644);
   ASSERT_GT(bar_file_fd, 0);
   ASSERT_LT(futimens(bar_file_fd, ts), 0);
+  ASSERT_EQ(errno, EBADF);
   ASSERT_EQ(close(bar_file_fd), 0);
 }
 
