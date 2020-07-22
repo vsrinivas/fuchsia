@@ -45,6 +45,7 @@ driver_module("test-board") {
     "test-i2c.cc",
     "test-power.cc",
     "test-pwm.cc",
+    "test-rpmb.cc",
     "test-spi.cc",
     "test.cc",
   ]
@@ -197,6 +198,25 @@ driver_module("test-pwm") {
   ]
 }
 
+driver_module("test-rpmb") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "test/rpmb.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.rpmb",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 foreach(driver, simple_drivers) {
   driver_module("test-$driver") {
     defines = [ "_ALL_SOURCE" ]
@@ -214,6 +234,7 @@ foreach(driver, simple_drivers) {
       "//sdk/banjo/ddk.protocol.platform.device",
       "//sdk/banjo/ddk.protocol.power",
       "//sdk/banjo/ddk.protocol.pwm",
+      "//sdk/banjo/ddk.protocol.rpmb",
       "//sdk/banjo/ddk.protocol.spi",
       "//src/devices/i2c/lib/device-protocol-i2c",
       "//src/devices/lib/driver",
@@ -234,6 +255,7 @@ isolated_devmgr_unittest_package("platform-bus-test") {
     ":test-i2c",
     ":test-power",
     ":test-pwm",
+    ":test-rpmb",
     ":test-spi",
     "//src/devices/bus/drivers/platform",
     "//src/devices/clock/drivers/clock",

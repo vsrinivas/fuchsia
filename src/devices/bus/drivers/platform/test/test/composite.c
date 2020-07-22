@@ -23,6 +23,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/power.h>
 #include <ddk/protocol/pwm.h>
+#include <ddk/protocol/rpmb.h>
 #include <ddk/protocol/spi.h>
 
 #include "../test-metadata.h"
@@ -47,6 +48,7 @@ enum Fragments_2 {
   FRAGMENT_CHILD4_2,
   FRAGMENT_SPI_2,
   FRAGMENT_PWM_2,
+  FRAGMENT_RPMB_2,
   FRAGMENT_COUNT_2,
 };
 
@@ -493,6 +495,17 @@ static zx_status_t test_pwm(pwm_protocol_t* pwm) {
   return ZX_OK;
 }
 
+static zx_status_t test_rpmb(rpmb_protocol_t* rpmb) {
+  zx_handle_t client, server;
+  zx_status_t status = zx_channel_create(0, &client, &server);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  rpmb_connect_server(rpmb, server);
+  return zx_handle_close(client);
+}
+
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   composite_protocol_t composite;
   zx_status_t status;
@@ -549,6 +562,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   codec_protocol_t codec;
   spi_protocol_t spi;
   pwm_protocol_t pwm;
+  rpmb_protocol_t rpmb;
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
     if (count != FRAGMENT_COUNT_1) {
@@ -639,6 +653,11 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PWM", DRIVER_NAME);
       return status;
     }
+    status = device_get_protocol(fragments[FRAGMENT_RPMB_2], ZX_PROTOCOL_RPMB, &rpmb);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_RPMB", DRIVER_NAME);
+      return status;
+    }
 
     if ((status = test_clock(&clock)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_clock failed: %d", DRIVER_NAME, status);
@@ -654,6 +673,10 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
     if ((status = test_pwm(&pwm)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_pwm failed: %d", DRIVER_NAME, status);
+      return status;
+    }
+    if ((status = test_rpmb(&rpmb)) != ZX_OK) {
+      zxlogf(ERROR, "%s: test_rpmb failed: %d", DRIVER_NAME, status);
       return status;
     }
   }

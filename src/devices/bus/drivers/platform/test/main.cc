@@ -113,6 +113,8 @@ TEST(PbusTest, Enumeration) {
   EXPECT_OK(
       RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:12/test-spi/spi/spi-0-0", &fd));
   EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev-2/composite", &fd), ZX_OK);
+  EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:19/test-rpmb", &fd),
+            ZX_OK);
 
   const int dirfd = devmgr.devfs_root().get();
   struct stat st;
@@ -126,8 +128,8 @@ TEST(PbusTest, Enumeration) {
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:5/test-gpio/gpio-3", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:7/test-clock/clock-1", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5", &st, 0), 0);
-
   EXPECT_EQ(fstatat(dirfd, "composite-dev/composite", &st, 0), 0);
+  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:19/test-rpmb", &st, 0), 0);
 
   // Check that we see multiple entries that begin with "fragment-" for a device that is a
   // fragment of multiple composites

@@ -60,6 +60,9 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_PWM:
       proto->ops = &pwm_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_RPMB:
+      proto->ops = &rpmb_protocol_ops_;
+      return ZX_OK;
     case ZX_PROTOCOL_SPI:
       proto->ops = &spi_protocol_ops_;
       return ZX_OK;
@@ -902,6 +905,16 @@ zx_status_t FragmentProxy::PwmDisable() {
   req.op = PwmOp::DISABLE;
 
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+void FragmentProxy::RpmbConnectServer(zx::channel server) {
+  RpmbProxyRequest req = {};
+  RpmbProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_RPMB;
+  req.op = RpmbOp::CONNECT_SERVER;
+
+  zx_handle_t channel = server.release();
+  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0, nullptr);
 }
 
 zx_status_t FragmentProxy::SpiTransmit(const uint8_t* txdata_list, size_t txdata_count) {

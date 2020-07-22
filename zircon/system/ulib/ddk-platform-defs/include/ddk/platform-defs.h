@@ -268,6 +268,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_AT_MODEM      22
 #define PDEV_DID_TEST_PWM           23
 #define PDEV_DID_TEST_OT_RADIO      24
+#define PDEV_DID_TEST_RPMB          25
 
 // ARM
 #define PDEV_VID_ARM                18

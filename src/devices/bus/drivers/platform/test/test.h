@@ -39,6 +39,7 @@ class TestBoard : public TestBoardType {
   zx_status_t ClockInit();
   zx_status_t AudioCodecInit();
   zx_status_t PwmInit();
+  zx_status_t RpmbInit();
   zx_status_t TestInit();
   int Thread();
 

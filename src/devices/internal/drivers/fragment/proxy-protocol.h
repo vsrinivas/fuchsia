@@ -378,6 +378,20 @@ struct UsbModeSwitchProxyRequest {
   usb_mode_t mode;
 };
 
+// ZX_PROTOCOL_RPMB proxy supprot.
+enum class RpmbOp {
+  CONNECT_SERVER,
+};
+
+struct RpmbProxyRequest {
+  ProxyRequest header;
+  RpmbOp op;
+};
+
+struct RpmbProxyResponse {
+  ProxyResponse header;
+};
+
 }  // namespace fragment
 
 #endif  // SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_PROXY_PROTOCOL_H_

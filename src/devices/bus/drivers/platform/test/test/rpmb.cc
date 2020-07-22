@@ -1,0 +1,69 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <memory>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/rpmb.h>
+
+namespace rpmb {
+
+class TestRpmbDevice;
+using DeviceType = ddk::Device<TestRpmbDevice, ddk::UnbindableNew>;
+
+class TestRpmbDevice : public DeviceType,
+                       public ddk::RpmbProtocol<TestRpmbDevice, ddk::base_protocol> {
+ public:
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
+
+  explicit TestRpmbDevice(zx_device_t* parent) : DeviceType(parent) {}
+
+  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkRelease();
+
+  void RpmbConnectServer(zx::channel server);
+};
+
+zx_status_t TestRpmbDevice::Create(void* ctx, zx_device_t* parent) {
+  auto dev = std::make_unique<TestRpmbDevice>(parent);
+
+  zxlogf(INFO, "TestRpmbDevice::Create");
+
+  auto status = dev->DdkAdd("test-rpmb");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
+    return status;
+  }
+
+  __UNUSED auto ptr = dev.release();
+
+  return ZX_OK;
+}
+
+void TestRpmbDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+
+void TestRpmbDevice::DdkRelease() { delete this; }
+
+void TestRpmbDevice::RpmbConnectServer(zx::channel server) {}
+
+constexpr zx_driver_ops_t driver_ops = []() {
+  zx_driver_ops_t driver_ops = {};
+  driver_ops.version = DRIVER_OPS_VERSION;
+  driver_ops.bind = TestRpmbDevice::Create;
+  return driver_ops;
+}();
+
+}  // namespace rpmb
+
+ZIRCON_DRIVER_BEGIN(test_rpmb, rpmb::driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_RPMB),
+ZIRCON_DRIVER_END(test_rpmb)

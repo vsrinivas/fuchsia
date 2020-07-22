@@ -29,6 +29,7 @@
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/powerimpl.h>
 #include <ddktl/protocol/pwm.h>
+#include <ddktl/protocol/rpmb.h>
 #include <ddktl/protocol/scpi.h>
 #include <ddktl/protocol/sdio.h>
 #include <ddktl/protocol/shareddma.h>
@@ -93,7 +94,8 @@ class Fragment : public FragmentBase {
         camera_sensor_client_(parent, ZX_PROTOCOL_CAMERA_SENSOR),
         gdc_client_(parent, ZX_PROTOCOL_GDC),
         ge2d_client_(parent, ZX_PROTOCOL_GE2D),
-        scpi_client_(parent, ZX_PROTOCOL_SCPI) {}
+        scpi_client_(parent, ZX_PROTOCOL_SCPI),
+        rpmb_client_(parent, ZX_PROTOCOL_RPMB) {}
 
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
@@ -159,6 +161,9 @@ class Fragment : public FragmentBase {
   zx_status_t RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                        uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                        zx::handle* resp_handles, uint32_t* resp_handle_count);
+  zx_status_t RpcRpmb(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                      uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
+                      zx::handle* resp_handles, uint32_t* resp_handle_count);
 
   static void I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
                                   size_t op_count);
@@ -192,6 +197,7 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::GdcProtocolClient, gdc_protocol_t> gdc_client_;
   ProtocolClient<ddk::Ge2dProtocolClient, ge2d_protocol_t> ge2d_client_;
   ProtocolClient<ddk::ScpiProtocolClient, scpi_protocol_t> scpi_client_;
+  ProtocolClient<ddk::RpmbProtocolClient, rpmb_protocol_t> rpmb_client_;
 };
 
 }  // namespace fragment
