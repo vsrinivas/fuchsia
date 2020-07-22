@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"testing"
 	"time"
 
@@ -212,6 +213,92 @@ func TestRun(t *testing.T) {
 
 		check("pass", 0, "pass stdout", "pass stderr")
 		check("fail", 1, "fail stdout", "fail stderr")
+	})
+
+	t.Run("exits early if context canceled during handshake", func(t *testing.T) {
+		accepted := make(chan struct{})
+
+		done := make(chan struct{})
+		defer close(done)
+
+		// Spawn a server goroutine that will accept a connection, but never read
+		// or write to the socket.
+		listener, err := net.Listen("tcp", ":0")
+		if err != nil {
+			t.Fatalf("failed to listen on port: %v", err)
+		}
+		defer listener.Close()
+
+		serverErrs := make(chan error)
+		go func() {
+			conn, err := listener.Accept()
+			if err != nil {
+				serverErrs <- err
+				return
+			}
+
+			close(accepted)
+
+			// Wait for the test to complete before closing the
+			// connection. Otherwise we'll race with the OS
+			// observing the closed connection with the context to
+			// be canceled.
+			<-done
+
+			conn.Close()
+
+		}()
+
+		_, clientConfig, err := genSSHConfig()
+		if err != nil {
+			t.Fatalf("failed to create ssh config: %v", err)
+		}
+
+		// In order to test that we can break out of a stuck client, we
+		// can use either a context.WithCancel or context.WithDeadline.
+		// Since these both have similar cancelation mechanisms, we can
+		// use either to verify we can interrupt the connection. Since
+		// it's picky to pick the right deadline values in a test,
+		// we'll use a context.WithCancel.
+		connectCtx, cancel := context.WithCancel(ctx)
+
+		// Spawn an ssh client goroutine, that will connect to the server, and err
+		// out when the connection is canceled.
+		connectErrs := make(chan error)
+
+		go func() {
+			client, err := connect(connectCtx, listener.Addr(), clientConfig, retry.NoRetries())
+			if client != nil {
+				client.Close()
+			}
+			connectErrs <- err
+		}()
+
+		// Wait for the connection to be accepted.
+		select {
+		case <-time.After(testTimeout):
+			t.Fatalf("server didn't accept the connection in time")
+			return
+		case err := <-serverErrs:
+			if err != nil {
+				t.Errorf("server failed to accept connection: %v", err)
+			}
+		case <-accepted:
+		}
+
+		// Now that we know the connection has been accepted, we can
+		// cancel the context to cause the `connect()` function to err out.
+		cancel()
+
+		// Wait for the connection to be canceled.
+		select {
+		case <-time.After(testTimeout):
+			t.Errorf("canceling the context should cause connect to exit")
+		case err := <-connectErrs:
+			if !errors.Is(err, context.Canceled) {
+				t.Errorf("context was canceled but Run() returned wrong error: %v", err)
+			}
+		}
 	})
 
 	t.Run("exits early if context canceled while creating session", func(t *testing.T) {

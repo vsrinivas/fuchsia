@@ -142,9 +142,25 @@ func (s *sshServer) serveConnection(
 
 // startSSHServer starts an ssh server on localhost, at any available port.
 func startSSHServer(onNewChannel func(ssh.NewChannel), onRequest func(*ssh.Request)) (*sshServer, error) {
+	serverConfig, clientConfig, err := genSSHConfig()
+
+	server := &sshServer{
+		clientConfig: clientConfig,
+		serverConfig: serverConfig,
+		stopping:     make(chan struct{}),
+		onNewChannel: onNewChannel,
+		onRequest:    onRequest,
+	}
+	if err = server.start(); err != nil {
+		return nil, err
+	}
+	return server, nil
+}
+
+func genSSHConfig() (*ssh.ServerConfig, *ssh.ClientConfig, error) {
 	clientPassword, err := genPassword(40)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate password: %w", err)
+		return nil, nil, fmt.Errorf("failed to generate password: %w", err)
 	}
 	serverConfig := &ssh.ServerConfig{
 		MaxAuthTries: 1,
@@ -158,11 +174,11 @@ func startSSHServer(onNewChannel func(ssh.NewChannel), onRequest func(*ssh.Reque
 
 	serverKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, fmt.Errorf("error generating keypair: %w", err)
+		return nil, nil, fmt.Errorf("error generating keypair: %w", err)
 	}
 	signer, err := ssh.NewSignerFromKey(serverKey)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	serverConfig.AddHostKey(signer)
 
@@ -172,17 +188,7 @@ func startSSHServer(onNewChannel func(ssh.NewChannel), onRequest func(*ssh.Reque
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	server := &sshServer{
-		clientConfig: clientConfig,
-		serverConfig: serverConfig,
-		stopping:     make(chan struct{}),
-		onNewChannel: onNewChannel,
-		onRequest:    onRequest,
-	}
-	if err = server.start(); err != nil {
-		return nil, err
-	}
-	return server, nil
+	return serverConfig, clientConfig, nil
 }
 
 func genPassword(length int) (string, error) {

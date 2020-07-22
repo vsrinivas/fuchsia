@@ -94,9 +94,9 @@ func connect(ctx context.Context, addr net.Addr, config *ssh.ClientConfig, backo
 	var netErr net.Error
 	if errors.As(err, &netErr) && netErr.Timeout() {
 		duration := time.Now().Sub(startTime).Truncate(time.Second)
-		return nil, ConnectionError{fmt.Errorf("timed out trying to connect to ssh after %v", duration)}
+		return nil, ConnectionError{fmt.Errorf("timed out trying to connect to ssh after %v: %w", duration, err)}
 	} else if err != nil {
-		return nil, ConnectionError{fmt.Errorf("cannot connect to address %q: %v", addr, err)}
+		return nil, ConnectionError{fmt.Errorf("cannot connect to address %q: %w", addr, err)}
 	}
 
 	return &Conn{
@@ -108,22 +108,56 @@ func connect(ctx context.Context, addr net.Addr, config *ssh.ClientConfig, backo
 }
 
 func connectToSSH(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*ssh.Client, error) {
-	d := net.Dialer{Timeout: config.Timeout}
+	// Update the context with the ssh connection timeout, if specified.
+	if config.Timeout != 0 {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, config.Timeout)
+		defer cancel()
+	}
+
+	d := net.Dialer{}
 	conn, err := d.DialContext(ctx, "tcp", addr.String())
 	if err != nil {
 		return nil, err
 	}
 
 	// We made a TCP connection, now establish an SSH connection over it.
-	clientConn, chans, reqs, err := ssh.NewClientConn(conn, addr.String(), config)
-	if err != nil {
-		if closeErr := conn.Close(); closeErr != nil {
-			return nil, fmt.Errorf(
-				"error closing connection: %v; original error: %w", closeErr, err)
+	//
+	// We can hang if the server accepts a connection but never replies to the
+	// ssh handshake. To handle this case, we'll establish the connection in a
+	// goroutine, and wait for it to complete or the context to be canceled.
+	type result struct {
+		client *ssh.Client
+		err    error
+	}
+
+	ch := make(chan result, 1)
+
+	go func() {
+		clientConn, chans, reqs, err := ssh.NewClientConn(conn, addr.String(), config)
+		if err != nil {
+			if closeErr := conn.Close(); closeErr != nil {
+				err = fmt.Errorf("error closing connection: %v; original error: %w", closeErr, err)
+			}
+			ch <- result{err: err}
+			return
 		}
+
+		ch <- result{client: ssh.NewClient(clientConn, chans, reqs)}
+	}()
+
+	select {
+	case r := <-ch:
+		return r.client, r.err
+	case <-ctx.Done():
+		err = fmt.Errorf("canceled connecting to %s: %w", addr, ctx.Err())
+
+		if closeErr := conn.Close(); closeErr != nil {
+			err = fmt.Errorf("error closing connection: %v; original error: %w", closeErr, err)
+		}
+
 		return nil, err
 	}
-	return ssh.NewClient(clientConn, chans, reqs), nil
 }
 
 func (c *Conn) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writer) (*Session, error) {
