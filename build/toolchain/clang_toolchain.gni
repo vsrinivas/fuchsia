@@ -418,7 +418,7 @@ template("clang_toolchain") {
         unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
       }
       if (invoker.toolchain_os == "mac") {
-        command = "$ld -shared {{ldflags}} -Wl,-install_name,@rpath/\"{{target_output_name}}{{output_extension}}\" -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{libs}} {{solibs}}"
+        command = "$ld -shared {{ldflags}} -Wl,-install_name,@rpath/\"{{target_output_name}}{{output_extension}}\" -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}} {{frameworks}}"
         rspfile_content = "{{inputs_newline}}"
         default_output_extension = ".dylib"
       } else {
@@ -462,7 +462,7 @@ template("clang_toolchain") {
         unstripped_outfile = outfile
       }
       if (invoker.toolchain_os == "mac") {
-        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{libs}} {{solibs}}"
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}} {{frameworks}}"
         rspfile_content = "{{inputs_newline}}"
         default_output_extension = ".dylib"
       } else {
@@ -504,7 +504,7 @@ template("clang_toolchain") {
         unstripped_outfile = "{{output_dir}}/exe.unstripped/{{target_output_name}}{{output_extension}}"
       }
       if (invoker.toolchain_os == "mac") {
-        command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}}"
+        command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}} {{frameworks}}"
         rspfile_content = "{{inputs_newline}}"
       } else {
         command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,--start-group @\"$rspfile\" {{solibs}} -Wl,--end-group {{libs}}"
