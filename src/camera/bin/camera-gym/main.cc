@@ -76,9 +76,9 @@ int main(int argc, char* argv[]) {
 
   camera::StreamCycler::AddCollectionHandler add_collection_handler =
       [&](fuchsia::sysmem::BufferCollectionTokenHandle token,
-          fuchsia::sysmem::ImageFormat_2 image_format) -> uint32_t {
-    auto result =
-        fit::run_single_threaded(collage->AddCollection(std::move(token), image_format, ""));
+          fuchsia::sysmem::ImageFormat_2 image_format, std::string description) -> uint32_t {
+    auto result = fit::run_single_threaded(
+        collage->AddCollection(std::move(token), image_format, description));
     if (result.is_error()) {
       FX_LOGS(FATAL) << "Failed to add collection to collage.";
       return 0;

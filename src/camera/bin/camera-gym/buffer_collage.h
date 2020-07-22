@@ -21,6 +21,18 @@
 
 namespace camera {
 
+struct BitmapImageNode {
+  BitmapImageNode(scenic::Session* session, std::string filename, uint32_t width, uint32_t height);
+  BitmapImageNode() = delete;
+  uint32_t width;
+  uint32_t height;
+  std::unique_ptr<scenic::Memory> memory;
+  std::unique_ptr<scenic::Image> image;
+  std::unique_ptr<scenic::Rectangle> shape;
+  scenic::Material material;
+  scenic::ShapeNode node;
+};
+
 struct CollectionView {
   fuchsia::sysmem::ImageFormat_2 image_format;
   fuchsia::sysmem::BufferCollectionPtr collection;
@@ -31,6 +43,7 @@ struct CollectionView {
   std::unique_ptr<scenic::Mesh> mesh;
   std::unique_ptr<scenic::ShapeNode> node;
   bool visible;
+  std::unique_ptr<BitmapImageNode> description_node;
 };
 
 // This class takes ownership of the display and presents the contents of buffer collections in a
@@ -120,13 +133,7 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   zx::time start_time_;
   bool show_magnify_boxes_ = false;
   bool mute_visible_ = false;
-  struct {
-    std::unique_ptr<scenic::Memory> memory;
-    std::unique_ptr<scenic::Image> image;
-    std::unique_ptr<scenic::Material> material;
-    std::unique_ptr<scenic::Rectangle> shape;
-    std::unique_ptr<scenic::ShapeNode> node;
-  } mute_indicator_;
+  std::unique_ptr<BitmapImageNode> mute_indicator_;
 };
 
 }  // namespace camera

@@ -13,7 +13,7 @@ template("convert_image") {
     outputs = [ output ]
     args = [
       rebase_path(input, root_out_dir),
-      rebase_path(output, root_out_dir)
+      rebase_path(output, root_out_dir),
     ]
   }
 }

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cipd.gni")
 import("//build/package.gni")
 import("//src/camera/bin/camera-gym/assets/convert_image.gni")
 import("//src/camera/debug.gni")
@@ -51,6 +52,27 @@ convert_image("mute_icon") {
   output = "$target_out_dir/mute.bin"
 }
 
+converted_stream_title_files = []
+
+if (internal_access) {
+  stream_title_files = [
+    "c0s0.data",
+    "c0s1.data",
+    "c0s2.data",
+    "c1s0.data",
+    "c1s1.data",
+    "c2s0.data",
+    "c2s1.data",
+  ]
+  foreach(file, stream_title_files) {
+    convert_image(file) {
+      input = "//prebuilt/camera/camera_gym_assets/${file}"
+      output = "$target_out_dir/${file}"
+    }
+    converted_stream_title_files += [ file ]
+  }
+}
+
 package("${name}") {
   deps = [
     ":bin",
@@ -69,6 +91,16 @@ package("${name}") {
       dest = "mute.bin"
     },
   ]
+
+  foreach(file, converted_stream_title_files) {
+    deps += [ ":${file}" ]
+    resources += [
+      {
+        path = "$target_out_dir/${file}"
+        dest = file
+      },
+    ]
+  }
 
   meta = [
     {

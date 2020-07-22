@@ -139,6 +139,10 @@ fit::promise<uint32_t> BufferCollage::AddCollection(
     SetStopOnError(view.image_pipe, "Image Pipe" + oss.str());
     view.image_format = image_format;
     view.visible = false;
+    constexpr uint32_t kTitleWidth = 768;
+    constexpr uint32_t kTitleHeight = 128;
+    view.description_node =
+        std::make_unique<BitmapImageNode>(session_.get(), description, kTitleWidth, kTitleHeight);
 
     // Bind and duplicate the token.
     fuchsia::sysmem::BufferCollectionTokenPtr token_ptr;
@@ -206,6 +210,7 @@ void BufferCollage::RemoveCollection(uint32_t id) {
     auto& collection_view = it->second;
     auto image_pipe_id = collection_view.image_pipe_id;
     view_->DetachChild(*collection_view.node);
+    view_->DetachChild(collection_view.description_node->node);
     session_->ReleaseResource(image_pipe_id);  // De-allocate ImagePipe2 scenic side
     collection_view.collection->Close();
     collection_views_.erase(it);
@@ -442,33 +447,46 @@ void BufferCollage::UpdateLayout() {
   for (auto& [id, view] : collection_views_) {
     if (view.node) {
       view_->DetachChild(*view.node);
+      view_->DetachChild(view.description_node->node);
     }
   }
   uint32_t index = 0;
-  for (auto& [id, view] : collection_views_) {
-    view.material = std::make_unique<scenic::Material>(session_.get());
-    view.material->SetTexture(view.image_pipe_id);
-    if (!view.visible) {
-      view.material->SetColor(32, 32, 32, 255);
-    }
-    auto [element_width, element_height] = ScaleToFit(
-        view.image_format.coded_width, view.image_format.coded_height, cell_width, cell_height);
-    view.mesh = BuildMesh(session_.get(), element_width, element_height, show_magnify_boxes_);
-    view.node = std::make_unique<scenic::ShapeNode>(session_.get());
-    view.node->SetShape(*view.mesh);
-    view.node->SetMaterial(*view.material);
-    auto [x, y] = GetCenter(index++, collection_views_.size());
-    view.node->SetTranslation(view_width * x, view_height * y, 0);
-    // TODO(msandy): Track hidden nodes.
-    if (view_) {
+  // TODO(msandy): Track hidden nodes.
+  if (view_ && view_width > 0 && view_height > 0) {
+    for (auto& [id, view] : collection_views_) {
+      view.material = std::make_unique<scenic::Material>(session_.get());
+      view.material->SetTexture(view.image_pipe_id);
+      if (view.visible) {
+        view.material->SetColor(255, 255, 255, 255);
+        view.description_node->material.SetColor(255, 255, 255, 255);
+      } else {
+        view.material->SetColor(32, 32, 32, 255);
+        view.description_node->material.SetColor(32, 32, 32, 255);
+      }
+      auto [element_width, element_height] = ScaleToFit(
+          view.image_format.coded_width, view.image_format.coded_height, cell_width, cell_height);
+      view.mesh = BuildMesh(session_.get(), element_width, element_height, show_magnify_boxes_);
+      view.node = std::make_unique<scenic::ShapeNode>(session_.get());
+      view.node->SetShape(*view.mesh);
+      view.node->SetMaterial(*view.material);
+      auto [x, y] = GetCenter(index++, collection_views_.size());
+      view.node->SetTranslation(view_width * x, view_height * y, 0);
+      float scale = (element_width - kPadding * 2) / view.description_node->width;
+      view.description_node->node.SetScale(scale, scale, scale);
+      view.description_node->node.SetTranslation(view_width * x,
+                                                 view_height * y + element_height * 0.5f -
+                                                     scale * view.description_node->height * 0.5f -
+                                                     kPadding,
+                                                 -0.5f);
       view_->AddChild(*view.node);
+      view_->AddChild(view.description_node->node);
     }
   }
   if (heartbeat_indicator_.node) {
     heartbeat_indicator_.node->SetTranslation(view_width * 0.5f, view_height, -1.0f);
   }
-  if (mute_indicator_.node) {
-    mute_indicator_.node->SetTranslation(view_width * 0.5f, view_height * 0.5f,
+  if (mute_indicator_) {
+    mute_indicator_->node.SetTranslation(view_width * 0.5f, view_height * 0.5f,
                                          mute_visible_ ? -1.0f : 1.0f);
   }
 }
@@ -520,31 +538,9 @@ void BufferCollage::CreateView(
     view_->AddChild(*heartbeat_indicator_.node);
 
     constexpr uint32_t kMuteIconSize = 64;
-    fsl::SizedVmo svmo;
-    if (!fsl::VmoFromFilename("/pkg/data/mute.bin", &svmo) ||
-        svmo.size() != kMuteIconSize * kMuteIconSize * 4) {
-      FX_LOGS(ERROR) << "Failed to load mute icon.";
-      view_provider_binding_.Close(ZX_ERR_INTERNAL);
-      Stop();
-      return;
-    }
-    mute_indicator_.memory =
-        std::make_unique<scenic::Memory>(session_.get(), std::move(svmo.vmo()), svmo.size(),
-                                         fuchsia::images::MemoryType::HOST_MEMORY);
-    mute_indicator_.image = std::make_unique<scenic::Image>(
-        *mute_indicator_.memory, 0,
-        fuchsia::images::ImageInfo{.width = kMuteIconSize,
-                                   .height = kMuteIconSize,
-                                   .stride = kMuteIconSize * 4,
-                                   .alpha_format = fuchsia::images::AlphaFormat::PREMULTIPLIED});
-    mute_indicator_.material = std::make_unique<scenic::Material>(session_.get());
-    mute_indicator_.material->SetTexture(*mute_indicator_.image);
-    mute_indicator_.shape =
-        std::make_unique<scenic::Rectangle>(session_.get(), kMuteIconSize, kMuteIconSize);
-    mute_indicator_.node = std::make_unique<scenic::ShapeNode>(session_.get());
-    mute_indicator_.node->SetMaterial(*mute_indicator_.material);
-    mute_indicator_.node->SetShape(*mute_indicator_.shape);
-    view_->AddChild(*mute_indicator_.node);
+    mute_indicator_ =
+        std::make_unique<BitmapImageNode>(session_.get(), "mute.bin", kMuteIconSize, kMuteIconSize);
+    view_->AddChild(mute_indicator_->node);
 
     session_->set_on_frame_presented_handler(
         [this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
@@ -562,6 +558,33 @@ void BufferCollage::CreateView(
     session_->Present2(0, 0, [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});
     UpdateLayout();
   });
+}
+
+BitmapImageNode::BitmapImageNode(scenic::Session* session, std::string filename, uint32_t width,
+                                 uint32_t height)
+    : material(session), node(session) {
+  this->width = width;
+  this->height = height;
+  fsl::SizedVmo svmo;
+  const size_t expected_size = width * height * 4;
+  if (!fsl::VmoFromFilename("/pkg/data/" + filename, &svmo)) {
+    // On failure (e.g. due to missing cipd binary), create an empty vmo.
+    zx::vmo vmo;
+    zx::vmo::create(expected_size, 0, &vmo);
+    svmo = fsl::SizedVmo(std::move(vmo), expected_size);
+  }
+  memory = std::make_unique<scenic::Memory>(session, std::move(svmo.vmo()), svmo.size(),
+                                            fuchsia::images::MemoryType::HOST_MEMORY);
+  image = std::make_unique<scenic::Image>(
+      *memory, 0,
+      fuchsia::images::ImageInfo{.width = width,
+                                 .height = height,
+                                 .stride = width * 4,
+                                 .alpha_format = fuchsia::images::AlphaFormat::PREMULTIPLIED});
+  shape = std::make_unique<scenic::Rectangle>(session, width, height);
+  material.SetTexture(*image);
+  node.SetMaterial(material);
+  node.SetShape(*shape);
 }
 
 }  // namespace camera

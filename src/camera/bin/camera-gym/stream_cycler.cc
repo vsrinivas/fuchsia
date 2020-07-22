@@ -9,6 +9,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
+#include <sstream>
+
 #include "src/camera/bin/camera-gym/moving_window.h"
 
 namespace camera {
@@ -28,8 +30,7 @@ static void SetAbortOnError(fidl::InterfacePtr<T>& p, std::string message) {
   });
 }
 
-StreamCycler::StreamCycler()
-    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+StreamCycler::StreamCycler() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   SetAbortOnError(watcher_, "fuchsia.camera3.DeviceWatcher disconnected.");
   SetAbortOnError(allocator_, "fuchsia.sysmem.Allocator disconnected.");
   SetAbortOnError(device_, "fuchsia.camera3.Device disconnected.");
@@ -92,9 +93,9 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
       device_->GetConfigurations(
           [this](std::vector<fuchsia::camera3::Configuration> configurations) {
             configurations_ = std::move(configurations);
-            // Once we have the known camera configurations, default to the first configuration index.
-            // This is automatically chosen in the driver, so we do not need to ask for it. The callback
-            // for WatchCurrentConfiguration() will connect to all streams.
+            // Once we have the known camera configurations, default to the first configuration
+            // index. This is automatically chosen in the driver, so we do not need to ask for it.
+            // The callback for WatchCurrentConfiguration() will connect to all streams.
             device_->WatchCurrentConfiguration(
                 fit::bind_member(this, &StreamCycler::WatchCurrentConfigurationCallback));
           });
@@ -126,7 +127,8 @@ void StreamCycler::WatchCurrentConfigurationCallback(uint32_t config_index) {
 
   // After a specified demo period, set the next stream configuration, which will end up cutting off
   // all existing streams.
-  async::PostDelayedTask(loop_.dispatcher(), [this]() { ForceNextStreamConfiguration(); }, kDemoTime);
+  async::PostDelayedTask(
+      loop_.dispatcher(), [this]() { ForceNextStreamConfiguration(); }, kDemoTime);
 
   // Be ready for configuration changes.
   device_->WatchCurrentConfiguration(
@@ -167,8 +169,10 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
 
     if (add_collection_handler_) {
       auto& stream_info = stream_infos_[stream_index];
+      std::ostringstream oss;
+      oss << "c" << config_index << "s" << stream_index << ".data";
       stream_info.add_collection_handler_returned_value =
-          add_collection_handler_(std::move(token_back), image_format);
+          add_collection_handler_(std::move(token_back), image_format, oss.str());
     } else {
       token_back.BindSync()->Close();
     }
@@ -190,9 +194,7 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
   device_->ConnectToStream(stream_index, std::move(stream_request));
 
   stream.set_error_handler(
-      [this, stream_index](zx_status_t status) {
-        DisconnectStream(stream_index);
-      });
+      [this, stream_index](zx_status_t status) { DisconnectStream(stream_index); });
 }
 
 void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInfo frame_info) {

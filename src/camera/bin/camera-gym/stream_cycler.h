@@ -23,7 +23,7 @@ class StreamCycler {
   static fit::result<std::unique_ptr<StreamCycler>, zx_status_t> Create(
       fuchsia::camera3::DeviceWatcherHandle watcher, fuchsia::sysmem::AllocatorHandle allocator);
   using AddCollectionHandler = fit::function<uint32_t(fuchsia::sysmem::BufferCollectionTokenHandle,
-                                                      fuchsia::sysmem::ImageFormat_2)>;
+                                                      fuchsia::sysmem::ImageFormat_2, std::string)>;
   using RemoveCollectionHandler = fit::function<void(uint32_t)>;
   using ShowBufferHandler = fit::function<void(uint32_t, uint32_t, zx::eventpair)>;
   using MuteStateHandler = fit::function<void(bool)>;
