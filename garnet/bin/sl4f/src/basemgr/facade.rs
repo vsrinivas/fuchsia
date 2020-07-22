@@ -100,7 +100,7 @@ impl BaseManagerFacade {
             Some(config) => {
                 let con_str = config.to_string();
                 let (dir2_server, dir2_client) = zx::Channel::create()?;
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     let mut pkg_dir = pseudo_directory! {"startup.config" => read_only_str(|| Ok(con_str.to_string()))};
                     pkg_dir.open(
                         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
@@ -112,7 +112,7 @@ impl BaseManagerFacade {
                     Ok::<(), Error>(())
                 }.unwrap_or_else(|e: anyhow::Error| fx_log_err!("Psuedo dir stopped serving: {:?}", e)),
 
-                );
+                ).detach();
                 launch_options.add_handle_to_namespace(
                     "/config_override/data".to_string(),
                     dir2_client.into_handle(),

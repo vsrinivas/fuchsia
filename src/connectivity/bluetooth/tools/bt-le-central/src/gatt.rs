@@ -97,7 +97,7 @@ async fn discover_characteristics(
 
     let mut event_stream = svc.take_event_stream();
 
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             while let Some(evt) = event_stream.try_next().await? {
                 match evt {
@@ -115,7 +115,8 @@ async fn discover_characteristics(
             Ok::<(), fidl::Error>(())
         }
         .unwrap_or_else(|e| eprintln!("Failed to listen for RemoteService events {:?}", e)),
-    );
+    )
+    .detach();
 
     Ok(chrcs)
 }

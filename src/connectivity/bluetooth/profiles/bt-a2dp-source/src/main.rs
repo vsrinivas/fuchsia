@@ -228,11 +228,12 @@ impl Peers {
         }
 
         let peer_id = id.clone();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             closed_fut.await;
             fx_log_info!("Detaching closed peer {}", peer_id);
             detached_peer.detach();
-        });
+        })
+        .detach();
         Ok(())
     }
 
@@ -243,7 +244,7 @@ impl Peers {
         let streams = self.streams.as_new();
         let channel_mode = self.channel_mode.clone();
         let controller_pool = self.controller.clone();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             fx_log_info!("Waiting {:?} to connect to discovered peer {}", INITIATOR_DELAY, id);
             fasync::Timer::new(INITIATOR_DELAY.after_now()).await;
             if let Some(peer) = entry.get() {
@@ -287,7 +288,8 @@ impl Peers {
             ) {
                 fx_log_warn!("Error adding control connection for {}: {:?}", id, e);
             }
-        });
+        })
+        .detach();
     }
 
     /// Called when a peer initiates a connection. If it is the first active connection, it creates
@@ -319,12 +321,13 @@ impl Peers {
             None => return,
             Some(peer) => peer,
         };
-        fuchsia_async::spawn_local(async move {
+        fuchsia_async::Task::local(async move {
             if let Err(e) = start_streaming(&weak_peer).await {
                 fx_log_info!("Failed to stream: {:?}", e);
                 weak_peer.detach();
             }
-        });
+        })
+        .detach();
     }
 }
 
@@ -508,7 +511,7 @@ async fn main() -> Result<(), Error> {
         fx_log_warn!("Unable to serve Inspect service directory: {}", e);
     }
 
-    fasync::spawn(fs.collect::<()>());
+    fasync::Task::spawn(fs.collect::<()>()).detach();
 
     let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
         .context("connecting to Bluetooth profile service")?;

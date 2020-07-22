@@ -292,11 +292,12 @@ impl PairingDispatcherHandle {
         let mut channel = self.add_hosts.clone();
         let host_id = id.clone();
         let sent = async move { channel.send((host_id, proxy)).await };
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Err(_) = sent.await {
                 fx_log_info!("Failed to send channel for Host {:?} to pairing delegate", id)
             }
-        });
+        })
+        .detach();
     }
 }
 

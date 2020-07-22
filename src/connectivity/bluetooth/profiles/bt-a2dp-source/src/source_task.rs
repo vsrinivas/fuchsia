@@ -167,13 +167,14 @@ impl MediaTask for ConfiguredSourceTask {
         let _ = self.data_stream_inspect.try_lock().map(|mut l| l.start());
         let (stop_handle, stop_registration) = AbortHandle::new_pair();
         let stream_fut = Abortable::new(stream_fut, stop_registration);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             trace::instant!("bt-a2dp-source", "Media:Start", trace::Scope::Thread);
             match stream_fut.await {
                 Err(_) | Ok(Ok(())) => {}
                 Ok(Err(e)) => fx_log_warn!("ConfiguredSourceTask ended with error: {:?}", e),
             };
-        });
+        })
+        .detach();
         self.stop_sender = Some(stop_handle);
         Ok(())
     }

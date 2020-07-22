@@ -114,7 +114,7 @@ impl MediaSessions {
             let update_fut = future::pending().on_timeout(deadline, move || {
                 media_sessions.inner.write().update_notification_responders();
             });
-            fasync::spawn(update_fut);
+            fasync::Task::spawn(update_fut).detach();
         }
         Ok(())
     }

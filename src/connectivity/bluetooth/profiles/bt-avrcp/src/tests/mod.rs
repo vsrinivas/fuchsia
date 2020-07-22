@@ -43,14 +43,15 @@ fn spawn_peer_manager() -> Result<
     let (peer_manager_proxy, peer_manager_requests) =
         create_proxy_and_stream::<PeerManagerMarker>()?;
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let _ = service::avrcp_client_stream_handler(
             peer_manager_requests,
             client_sender,
             &service::spawn_avrcp_client_controller,
         )
         .await;
-    });
+    })
+    .detach();
 
     Ok((peer_manager, profile_requests, peer_manager_proxy, service_request_receiver))
 }

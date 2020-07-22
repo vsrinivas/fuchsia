@@ -590,11 +590,12 @@ impl ProfileServerFacade {
         let (end_ad_sender, end_ad_receiver) = oneshot::channel::<()>();
         let request_handler_fut =
             Self::monitor_connection_receiver(connect_requests, end_ad_receiver);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Err(e) = request_handler_fut.await {
                 fx_log_err!("Connection receiver handler ended with error: {:?}", e);
             }
-        });
+        })
+        .detach();
 
         let next = self.inner.write().advertisement_count + 1;
         self.inner.write().advertisement_stoppers.insert(next, end_ad_sender);
@@ -674,11 +675,12 @@ impl ProfileServerFacade {
         };
 
         let search_fut = Self::monitor_search_results(result_requests);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             if let Err(e) = search_fut.await {
                 fx_log_err!("Search result handler ended with error: {:?}", e);
             }
-        });
+        })
+        .detach();
 
         Ok(())
     }

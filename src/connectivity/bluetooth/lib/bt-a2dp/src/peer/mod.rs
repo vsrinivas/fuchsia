@@ -249,7 +249,7 @@ impl Peer {
         let id = self.id.clone();
         let peer = Arc::downgrade(&self.inner);
         let disconnect_wakers = Arc::downgrade(&self.closed_wakers);
-        fuchsia_async::spawn_local(async move {
+        fuchsia_async::Task::local(async move {
             while let Some(r) = request_stream.next().await {
                 match r {
                     Err(e) => info!("Request Error on {}: {:?}", id, e),
@@ -273,7 +273,8 @@ impl Peer {
                     waker.wake();
                 }
             });
-        });
+        })
+        .detach();
     }
 
     /// Returns a future that will complete when the peer disconnects.

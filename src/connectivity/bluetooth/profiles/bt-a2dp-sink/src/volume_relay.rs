@@ -219,11 +219,12 @@ where
     F: Future<Output = Result<(), E>> + Send + 'static,
     E: Debug,
 {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         if let Some(e) = future.await.err() {
             fx_log_info!("{} Completed with Error: {:?}", label, e);
         }
-    });
+    })
+    .detach();
 }
 
 async fn connect_avrcp_volume(

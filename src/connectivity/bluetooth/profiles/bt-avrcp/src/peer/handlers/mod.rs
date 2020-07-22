@@ -976,7 +976,7 @@ mod test {
         let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
             .expect("Error creating TargetHandler endpoint");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(Ok(event)) = target_stream.next().await {
                 if stall_responses {
                     fasync::Timer::new(Time::after(Duration::from_millis(2000000))).await;
@@ -1043,7 +1043,8 @@ mod test {
                     }
                 };
             }
-        });
+        })
+        .detach();
 
         target_proxy
     }
@@ -1167,7 +1168,7 @@ mod test {
             .expect("Error creating TargetHandler endpoint");
 
         // spawn a target handler that responds with a large element response
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(Ok(event)) = target_stream.next().await {
                 let _result = match event {
                     TargetHandlerRequest::GetMediaAttributes { responder } => {
@@ -1232,7 +1233,8 @@ mod test {
                     }
                 };
             }
-        });
+        })
+        .detach();
 
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
@@ -1742,7 +1744,7 @@ mod test {
                 .expect("Error creating AbsoluteVolumeHandler endpoint");
         let cmd_handler = create_command_handler(None, Some(volume_proxy));
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(Ok(event)) = volume_stream.next().await {
                 match event {
                     AbsoluteVolumeHandlerRequest::GetCurrentVolume { responder } => {
@@ -1754,7 +1756,8 @@ mod test {
                     _ => panic!("unexpected command"),
                 };
             }
-        });
+        })
+        .detach();
 
         let packet_body: Vec<u8> = [
             0x31, // RegisterNotification

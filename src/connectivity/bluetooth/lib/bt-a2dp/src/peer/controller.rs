@@ -277,11 +277,12 @@ async fn start_control_service(
                     Err(err) => {
                         warn!("Error. Unable to create server endpoint from stream: {:?}.", err);
                     }
-                    Ok(client_stream) => fasync::spawn_local(async move {
+                    Ok(client_stream) => fasync::Task::local(async move {
                         Controller::process_requests(client_stream, peer, peer_id)
                             .await
                             .unwrap_or_else(|e| error!("Requests failed: {:?}", e))
-                    }),
+                    })
+                    .detach(),
                 };
             }
             PeerManagerRequest::ConnectedPeers { responder } => {
@@ -373,10 +374,11 @@ impl ControllerPool {
         if self.inner.lock().set_control_handle(stream.control_handle().clone()) {
             // Spawns the control service task if the control handle hasn't been set.
             let inner = self.inner.clone();
-            fasync::spawn_local(
+            fasync::Task::local(
                 start_control_service(stream, inner)
                     .unwrap_or_else(|e| error!("Error handling requests {:?}", e)),
             )
+            .detach()
         }
     }
 
@@ -486,7 +488,7 @@ mod tests {
         assert_eq!(Ok(()), res.map_err(|e| e.to_string()));
 
         // Spawn task that acts as remote end and replies with simple responses.
-        fasync::spawn(listen_for_avdtp_requests(remote));
+        fasync::Task::spawn(listen_for_avdtp_requests(remote)).detach();
 
         // Discover the streams of the remote peer.
         {

@@ -96,7 +96,7 @@ impl MediaTask for ConfiguredSinkTask {
         let player_fut = Abortable::new(player_fut, stop_registration);
         let cobalt_sender = self.cobalt_sender.clone();
         let codec_type = self.codec_config.codec_type().clone();
-        fuchsia_async::spawn_local(async move {
+        fuchsia_async::Task::local(async move {
             let start_time = fuchsia_async::Time::now();
             trace::instant!("bt-a2dp-sink", "Media:Start", trace::Scope::Thread);
             if let Err(Aborted) = player_fut.await {
@@ -110,7 +110,8 @@ impl MediaTask for ConfiguredSinkTask {
                 &codec_type,
                 (end_time - start_time).into_seconds(),
             );
-        });
+        })
+        .detach();
         self.stop_sender = Some(stop_handle);
         Ok(())
     }

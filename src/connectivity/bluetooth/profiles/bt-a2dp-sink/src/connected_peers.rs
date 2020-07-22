@@ -181,26 +181,28 @@ impl ConnectedPeers {
 
                 if initiator {
                     let weak_peer = self.connected.get(&id).expect("just added");
-                    fuchsia_async::spawn_local(async move {
+                    fuchsia_async::Task::local(async move {
                         if let Err(e) = ConnectedPeers::start_streaming(&weak_peer).await {
                             fx_vlog!(1, "Streaming task ended: {:?}", e);
                             weak_peer.detach();
                         }
-                    });
+                    })
+                    .detach();
                 }
 
                 // Remove the peer when we disconnect.
                 let detached_peer = self.connected.get(&id).expect("just added");
                 let mut descriptors = self.descriptors.clone();
                 let disconnected_id = id.clone();
-                fasync::spawn_local(async move {
+                fasync::Task::local(async move {
                     closed_fut.await;
                     fx_log_info!("Peer {:?} disconnected", detached_peer.key());
                     detached_peer.detach();
                     descriptors.remove(&disconnected_id);
                     // Captures the relay to extend the lifetime until after the peer clooses.
                     drop(avrcp_relay);
-                });
+                })
+                .detach();
             }
         }
     }

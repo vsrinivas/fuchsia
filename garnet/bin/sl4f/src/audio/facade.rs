@@ -342,14 +342,15 @@ impl VirtualOutput {
 
         let (tx, rx) = mpsc::channel(512);
         va_output.add()?;
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let mut worker = OutputWorker::default();
                 worker.run(rx, va_output).await?;
                 Ok::<(), Error>(())
             }
             .unwrap_or_else(|e| eprintln!("Output extraction thread failed: {:?}", e)),
-        );
+        )
+        .detach();
 
         self.output_sender = Some(tx);
         Ok(())
@@ -723,14 +724,15 @@ impl VirtualInput {
         va_input.add()?;
         let (tx, rx) = mpsc::channel(512);
         let active = self.active.clone();
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let mut worker = InputWorker::default();
                 worker.run(rx, va_input, active).await?;
                 Ok::<(), Error>(())
             }
             .unwrap_or_else(|e| eprintln!("Input injection thread failed: {:?}", e)),
-        );
+        )
+        .detach();
 
         self.input_sender = Some(tx);
         Ok(())

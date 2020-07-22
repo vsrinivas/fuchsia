@@ -146,11 +146,12 @@ async fn advertise(
 
     let request_handler_fut =
         connection_receiver(connect_requests, end_ad_receiver, state.clone(), service_id);
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         if let Err(e) = request_handler_fut.await {
             print!("{} ConnectionReceiver ended with error: {:?}", RESET_LINE, e);
         }
-    });
+    })
+    .detach();
 
     Ok(())
 }

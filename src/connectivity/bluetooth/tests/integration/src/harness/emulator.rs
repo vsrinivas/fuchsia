@@ -60,7 +60,7 @@
 ///
 ///     // Start watching advertising events
 ///     let harness = FooHarness::new(...);
-///     fasync::spawn(watch_advertising_states(harness.clone()).unwrap_or_else(|_| ()));
+///     fasync::Task::spawn(watch_advertising_states(harness.clone()).unwrap_or_else(|_| ())).detach();
 ///     let _ = harness.when_satisfied(emulator::expectation::advertising_is_enabled(true)).await?;
 use {
     anyhow::{format_err, Error},
@@ -291,33 +291,36 @@ pub mod expectation {
     where
         S: 'static + EmulatorHarnessState,
     {
-        Predicate::equal(Some(name.to_string()))
-            .over_value(
-            |state: &S| state.as_ref().controller_parameters.as_ref().and_then(|p| p.local_name.as_ref().map(|o| o.to_string())),
+        Predicate::equal(Some(name.to_string())).over_value(
+            |state: &S| {
+                state
+                    .as_ref()
+                    .controller_parameters
+                    .as_ref()
+                    .and_then(|p| p.local_name.as_ref().map(|o| o.to_string()))
+            },
             "controller_parameters.local_name",
-            )
+        )
     }
 
     pub fn device_class_is<S>(device_class: DeviceClass) -> Predicate<S>
     where
         S: 'static + EmulatorHarnessState,
     {
-        Predicate::equal(Some(device_class))
-            .over_value(
+        Predicate::equal(Some(device_class)).over_value(
             |state: &S| state.as_ref().controller_parameters.as_ref().and_then(|p| p.device_class),
             "controller_parameters.device_class",
-            )
+        )
     }
 
     pub fn advertising_is_enabled<S>(enabled: bool) -> Predicate<S>
     where
         S: 'static + EmulatorHarnessState,
     {
-        Predicate::equal(Some(enabled))
-            .over_value(
+        Predicate::equal(Some(enabled)).over_value(
             |state: &S| state.as_ref().advertising_state_changes.last().map(|s| s.enabled),
             "controller_parameters.device_class",
-            )
+        )
     }
 
     pub fn advertising_was_enabled<S>(enabled: bool) -> Predicate<S>

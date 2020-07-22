@@ -74,7 +74,7 @@ impl Drop for DiscoverableRequestToken {
     fn drop(&mut self) {
         if let Some(host) = self.adap.upgrade() {
             let await_response = host.write().set_discoverable(false);
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 if let Err(err) = await_response.await {
                     // TODO(45325) - we should close the host channel if an error is returned
                     fx_log_warn!(
@@ -82,7 +82,8 @@ impl Drop for DiscoverableRequestToken {
                         err
                     );
                 }
-            });
+            })
+            .detach();
         }
     }
 }
@@ -258,7 +259,7 @@ impl HostDispatcherState {
                 // Old pairing dispatcher dropped; this drops all host pairings
                 self.pairing_dispatcher = Some(handle);
                 // Spawn handling of the new pairing requests
-                fasync::spawn(dispatcher.run());
+                fasync::Task::spawn(dispatcher.run()).detach();
             }
             // Old pairing dispatcher dropped; this drops all host pairings
             None => self.pairing_dispatcher = None,
@@ -713,11 +714,12 @@ impl HostDispatcher {
         let gas_channel = self.state.read().gas_channel_sender.clone();
         let gas_proxy =
             generic_access_service::GasProxy::new(gatt_server_proxy, gas_channel).await?;
-        fasync::spawn(gas_proxy.run().map(|r| {
+        fasync::Task::spawn(gas_proxy.run().map(|r| {
             r.unwrap_or_else(|err| {
                 fx_log_warn!("Error passing message through Generic Access proxy: {:?}", err);
             })
-        }));
+        }))
+        .detach();
         Ok(())
     }
 
@@ -785,13 +787,16 @@ impl HostDispatcher {
         self.notify_host_watchers().await;
 
         // Start listening to Host interface events.
-        fasync::spawn(host_device::watch_events(self.clone(), host_device.clone()).map(|r| {
-            r.unwrap_or_else(|err| {
-                fx_log_warn!("Error handling host event: {:?}", err);
-                // TODO(fxb/44180): This should probably remove the bt-host since termination of the
-                // `watch_events` task indicates that it no longer functions properly.
-            })
-        }));
+        fasync::Task::spawn(host_device::watch_events(self.clone(), host_device.clone()).map(
+            |r| {
+                r.unwrap_or_else(|err| {
+                    fx_log_warn!("Error handling host event: {:?}", err);
+                    // TODO(fxb/44180): This should probably remove the bt-host since termination of the
+                    // `watch_events` task indicates that it no longer functions properly.
+                })
+            },
+        ))
+        .detach();
 
         Ok(())
     }

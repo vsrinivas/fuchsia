@@ -49,7 +49,7 @@ async fn close_channel_when_client_dropped() -> Result<(), Error> {
 
     // Send a FIDL request
     let _response = client.is_bluetooth_available();
-    fasync::spawn(_response.map(|_| ()));
+    fasync::Task::spawn(_response.map(|_| ())).detach();
     // Before receiving a response, drop our end of the channel so that the remote end should
     // terminate
     std::mem::drop(client);

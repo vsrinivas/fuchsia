@@ -63,10 +63,11 @@ impl TargetDelegate {
         // We were able to set the target delegate so spawn a task to watch for it
         // to close.
         let inner_ref = self.inner.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let _ = target_handler_event_stream.map(|_| ()).collect::<()>().await;
             inner_ref.lock().target_handler = None;
-        });
+        })
+        .detach();
 
         inner_guard.target_handler = Some(target_handler);
         Ok(())
@@ -86,10 +87,11 @@ impl TargetDelegate {
         // We were able to set the target delegate so spawn a task to watch for it
         // to close.
         let inner_ref = self.inner.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let _ = volume_event_stream.map(|_| ()).collect::<()>().await;
             inner_ref.lock().absolute_volume_handler = None;
-        });
+        })
+        .detach();
 
         inner_guard.absolute_volume_handler = Some(absolute_volume_handler);
         Ok(())

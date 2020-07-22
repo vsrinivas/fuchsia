@@ -137,7 +137,7 @@ fn handle_notification(
 /// Starts a task to attempt an outgoing L2CAP connection to remote's AVRCP control channel.
 /// The control channel should be in `Connecting` state before spawning this task.
 fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let random_delay: zx::Duration =
             zx::Duration::from_nanos(rand::thread_rng().gen_range(
                 MIN_CONNECTION_EST_TIME.into_nanos(),
@@ -204,7 +204,7 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                 }
             }
         }
-    })
+    }).detach()
 }
 
 /// Checks for supported notification on the peer and registers for notifications.
@@ -268,7 +268,7 @@ async fn pump_notifications(peer: Arc<RwLock<RemotePeer>>) {
 /// reset.
 fn start_notifications_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHandle {
     let (handle, registration) = AbortHandle::new_pair();
-    fasync::spawn(
+    fasync::Task::spawn(
         Abortable::new(
             async move {
                 pump_notifications(peer).await;
@@ -276,7 +276,8 @@ fn start_notifications_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHa
             registration,
         )
         .map(|_| ()),
-    );
+    )
+    .detach();
     handle
 }
 
@@ -285,7 +286,7 @@ fn start_notifications_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHa
 /// profile from the peer.
 fn start_control_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHandle {
     let (handle, registration) = AbortHandle::new_pair();
-    fasync::spawn(
+    fasync::Task::spawn(
         Abortable::new(
             async move {
                 process_control_stream(peer).await;
@@ -293,7 +294,8 @@ fn start_control_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortH
             registration,
         )
         .map(|_| ()),
-    );
+    )
+    .detach();
     handle
 }
 
@@ -304,7 +306,7 @@ fn start_control_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortH
 fn start_browse_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHandle {
     let (handle, registration) = AbortHandle::new_pair();
 
-    fasync::spawn(
+    fasync::Task::spawn(
         Abortable::new(
             async move {
                 process_browse_stream(peer).await;
@@ -312,7 +314,8 @@ fn start_browse_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHa
             registration,
         )
         .map(|_| ()),
-    );
+    )
+    .detach();
     handle
 }
 

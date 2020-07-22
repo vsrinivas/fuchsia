@@ -68,12 +68,13 @@ impl TestProfileServer {
         let mut peer_service_fs = ServiceFs::new();
         peer_service_fs.add_fidl_service(move |stream| {
             let mut sender_clone = sender.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 sender_clone
                     .send((id, stream))
                     .await
                     .expect("relaying ProfileRequestStream failed");
-            });
+            })
+            .detach();
         });
 
         let env_name = format!("peer_{}", id);
@@ -88,7 +89,7 @@ impl TestProfileServer {
         let observer = observer.into_proxy()?;
         let mock_peer = MockPeer::new(id, env, Some(observer));
 
-        fasync::spawn(peer_service_fs.collect());
+        fasync::Task::spawn(peer_service_fs.collect()).detach();
 
         // Complete registration by storing the `MockPeer` in the Profile Test Server database.
         {
@@ -330,9 +331,10 @@ impl TestProfileServerInner {
             Entry::Vacant(_) => Err(format_err!("Peer {} not registered.", id)),
             Entry::Occupied(mut entry) => {
                 let component_stream = entry.get_mut().launch_profile(profile_url)?;
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     component_stream.map(|_| ()).collect::<()>().await;
-                });
+                })
+                .detach();
                 Ok(())
             }
         }
@@ -358,7 +360,7 @@ impl TestProfileServerInner {
 
         match res {
             Ok((svc_ids, adv_fut)) => {
-                fasync::spawn(adv_fut);
+                fasync::Task::spawn(adv_fut).detach();
                 self.find_matching_searches(id, svc_ids);
             }
             Err(e) => fx_log_info!("Peer {} error advertising service: {:?}", id, e),
@@ -403,7 +405,7 @@ impl TestProfileServerInner {
             }
             Entry::Occupied(mut entry) => {
                 let search_fut = entry.get_mut().new_search(service_uuid, attr_ids, results);
-                fasync::spawn(search_fut);
+                fasync::Task::spawn(search_fut).detach();
             }
         }
 
@@ -491,7 +493,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn(handle_test_client_connection(test_sender.clone(), stream))
+        fasync::Task::spawn(handle_test_client_connection(test_sender.clone(), stream)).detach()
     });
     fs.take_and_serve_directory_handle()?;
     let mut drive_service_fs = fs.collect::<()>().fuse();

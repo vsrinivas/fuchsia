@@ -261,7 +261,7 @@ impl BluetoothControlFacade {
                 );
             }
         };
-        fasync::spawn(monitor_pairing_delegate_future);
+        fasync::Task::spawn(monitor_pairing_delegate_future).detach();
 
         let fut = async {
             let result = pairing_delegate_fut.await;
@@ -273,7 +273,7 @@ impl BluetoothControlFacade {
                 );
             }
         };
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
 
         Ok(())
     }
@@ -538,7 +538,7 @@ impl BluetoothControlFacade {
                 );
             }
         };
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
         Ok(())
     }
 

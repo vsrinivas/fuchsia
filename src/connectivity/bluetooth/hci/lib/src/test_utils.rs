@@ -122,7 +122,7 @@ impl SnoopSink {
                 inner_clone.lock().await.push(buf.bytes().to_vec());
             }
         };
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
         this
     }
 

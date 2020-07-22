@@ -156,28 +156,31 @@ async fn run() -> Result<(), Error> {
         .add_service_at(CentralMarker::NAME, move |chan| {
             if let Ok(chan) = fasync::Channel::from_channel(chan) {
                 fx_log_info!("Connecting CentralService to Adapter");
-                fasync::spawn(central_hd.clone().request_host_service(chan, LeCentral));
+                fasync::Task::spawn(central_hd.clone().request_host_service(chan, LeCentral))
+                    .detach();
             }
             None
         })
         .add_service_at(PeripheralMarker::NAME, move |chan| {
             if let Ok(chan) = fasync::Channel::from_channel(chan) {
                 fx_log_info!("Connecting Peripheral Service to Adapter");
-                fasync::spawn(peripheral_hd.clone().request_host_service(chan, LePeripheral));
+                fasync::Task::spawn(peripheral_hd.clone().request_host_service(chan, LePeripheral))
+                    .detach();
             }
             None
         })
         .add_service_at(ProfileMarker::NAME, move |chan| {
             if let Ok(chan) = fasync::Channel::from_channel(chan) {
                 fx_log_info!("Connecting Profile Service to Adapter");
-                fasync::spawn(profile_hd.clone().request_host_service(chan, Profile));
+                fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile))
+                    .detach();
             }
             None
         })
         .add_service_at(Server_Marker::NAME, move |chan| {
             if let Ok(chan) = fasync::Channel::from_channel(chan) {
                 fx_log_info!("Connecting Gatt Service to Adapter");
-                fasync::spawn(gatt_hd.clone().request_host_service(chan, LeGatt));
+                fasync::Task::spawn(gatt_hd.clone().request_host_service(chan, LeGatt)).detach();
             }
             None
         })
@@ -189,24 +192,27 @@ async fn run() -> Result<(), Error> {
         // we have a better solution.
         .add_fidl_service(move |request_stream| {
             fx_log_info!("Serving Bootstrap Service");
-            fasync::spawn(
+            fasync::Task::spawn(
                 services::bootstrap::run(bootstrap_hd.clone(), request_stream)
                     .unwrap_or_else(|e| fx_log_warn!("Bootstrap service failed: {:?}", e)),
-            );
+            )
+            .detach();
         })
         .add_fidl_service(move |request_stream| {
             fx_log_info!("Serving Access Service");
-            fasync::spawn(
+            fasync::Task::spawn(
                 services::access::run(access_hd.clone(), request_stream)
                     .unwrap_or_else(|e| fx_log_warn!("Access service failed: {:?}", e)),
-            );
+            )
+            .detach();
         })
         .add_fidl_service(move |request_stream| {
             fx_log_info!("Serving HostWatcher Service");
-            fasync::spawn(
+            fasync::Task::spawn(
                 services::host_watcher::run(hostwatcher_hd.clone(), request_stream)
                     .unwrap_or_else(|e| fx_log_warn!("HostWatcher service failed: {:?}", e)),
-            );
+            )
+            .detach();
         });
     fs.take_and_serve_directory_handle()?;
     let fs_task = fs.collect::<()>().map(Ok);
@@ -224,8 +230,9 @@ async fn run() -> Result<(), Error> {
 
 fn control_service(hd: HostDispatcher, stream: ControlRequestStream) {
     fx_log_info!("Spawning Control Service");
-    fasync::spawn(
+    fasync::Task::spawn(
         services::start_control_service(hd.clone(), stream)
             .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
     )
+    .detach()
 }

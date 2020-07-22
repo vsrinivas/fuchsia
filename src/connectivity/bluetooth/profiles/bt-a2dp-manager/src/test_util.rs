@@ -98,7 +98,8 @@ impl ChildComponent {
                 Ok(DirectoryRequest::Open { object, path, .. })
                     if path == LifecycleMarker::NAME =>
                 {
-                    fasync::spawn(Self::lifecycle_always_ready(object.into_channel()));
+                    fasync::Task::spawn(Self::lifecycle_always_ready(object.into_channel()))
+                        .detach();
                 }
                 _ => unimplemented!("No other request type expected"),
             }
@@ -157,7 +158,7 @@ pub fn mock_launcher() -> (Launcher, LauncherProxy) {
     let launcher = Launcher { launched_components: rx };
 
     let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<LauncherMarker>().unwrap();
-    fasync::spawn(stream.for_each_concurrent(None, move |request| {
+    fasync::Task::spawn(stream.for_each_concurrent(None, move |request| {
         let mut tx = tx.clone();
         async move {
             let fidl_fuchsia_sys::LauncherRequest::CreateComponent {
@@ -169,6 +170,7 @@ pub fn mock_launcher() -> (Launcher, LauncherProxy) {
             let _ = tx.send(child).await;
             execute.await;
         }
-    }));
+    }))
+    .detach();
     (launcher, proxy)
 }

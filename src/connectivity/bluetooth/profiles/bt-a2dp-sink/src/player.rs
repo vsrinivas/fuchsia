@@ -374,11 +374,12 @@ impl Player {
             audio_sink = Box::pin(decoder);
             let (stop_handle, stop_registration) = AbortHandle::new_pair();
             let abortable_task_fut = Abortable::new(decoding_task_fut, stop_registration);
-            fuchsia_async::spawn_local(async move {
+            fuchsia_async::Task::local(async move {
                 if let Err(Aborted) = abortable_task_fut.await {
                     fx_log_info!("Decoder forwarding task completed.");
                 }
-            });
+            })
+            .detach();
             decoder_task = Some(stop_handle);
         }
 

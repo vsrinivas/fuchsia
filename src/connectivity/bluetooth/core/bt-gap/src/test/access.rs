@@ -41,7 +41,7 @@ async fn test_pair() -> Result<(), Error> {
     )?;
 
     // This needs to be processed so we can start up the Access service
-    fasync::spawn(watch_peers_broker.run());
+    fasync::Task::spawn(watch_peers_broker.run()).detach();
 
     let (host_proxy, host_server) = endpoints::create_proxy_and_stream::<HostMarker>()?;
 

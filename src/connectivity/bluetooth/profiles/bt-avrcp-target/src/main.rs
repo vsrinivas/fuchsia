@@ -29,7 +29,7 @@ async fn main() -> Result<(), Error> {
     let lifecycle = ComponentLifecycleServer::spawn();
     fs.dir("svc").add_fidl_service(lifecycle.fidl_service());
     fs.take_and_serve_directory_handle().expect("Unable to serve lifecycle requests");
-    fasync::spawn(fs.collect::<()>());
+    fasync::Task::spawn(fs.collect::<()>()).detach();
 
     // Shared state between AVRCP and MediaSession.
     // The current view of the media world.

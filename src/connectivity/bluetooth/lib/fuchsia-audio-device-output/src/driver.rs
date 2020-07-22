@@ -220,7 +220,7 @@ impl SoftPcmOutput {
 
         let rb = stream.frame_vmo.clone();
         let control = stream.stream_config_stream.control_handle().clone();
-        fasync::spawn(stream.process_requests());
+        fasync::Task::spawn(stream.process_requests()).detach();
         Ok((client, AudioFrameStream::new(rb, min_packet_duration, control)))
     }
 

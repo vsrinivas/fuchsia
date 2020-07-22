@@ -200,14 +200,15 @@ fn handle_client_connection(
     mut sender: mpsc::Sender<AudioModeRequest>,
     mut stream: AudioModeRequestStream,
 ) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         while let Some(request) = stream.next().await {
             match request {
                 Ok(request) => sender.send(request).await.expect("send to handler failed"),
                 Err(e) => syslog::fx_log_err!("Client connection failed: {}", e),
             }
         }
-    });
+    })
+    .detach();
 }
 
 #[fasync::run_singlethreaded]

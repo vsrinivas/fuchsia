@@ -486,7 +486,7 @@ impl GattClientFacade {
         inner.write().central = new_central;
         // Only spawn if a central hadn't been created
         if !central_modified {
-            fasync::spawn(GattClientFacade::listen_central_events(inner.clone()))
+            fasync::Task::spawn(GattClientFacade::listen_central_events(inner.clone())).detach()
         }
     }
 
@@ -570,7 +570,8 @@ impl GattClientFacade {
         self.update_peripheral_id(&identifier, proxy);
         match &self.inner.read().central {
             Some(c) => {
-                let conn_opts = ConnectionOptions { bondable_mode: Some(true), service_filter: None };
+                let conn_opts =
+                    ConnectionOptions { bondable_mode: Some(true), service_filter: None };
                 let status = c.connect_peripheral(&mut identifier, conn_opts, server_end).await?;
                 match status.error {
                     Some(e) => {

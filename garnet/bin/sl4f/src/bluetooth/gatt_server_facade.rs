@@ -622,7 +622,7 @@ impl GattServerFacade {
                     "Failed to create or monitor the gatt service delegate: {:?}", err);
             }
         };
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
         Ok(())
     }
 

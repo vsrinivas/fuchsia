@@ -248,13 +248,14 @@ fn handle_services_found(
         return;
     }
 
-    fasync::spawn_local(connect_after_timeout(
+    fasync::Task::local(connect_after_timeout(
         peer_id.clone(),
         peers.clone(),
         controller_pool.clone(),
         profile_svc,
         channel_mode,
-    ));
+    ))
+    .detach();
 }
 
 /// Parses the ChannelMode from the String argument.
@@ -306,7 +307,7 @@ async fn main() -> Result<(), Error> {
     if let Err(e) = fs.take_and_serve_directory_handle() {
         fx_log_warn!("Unable to serve Inspect service directory: {}", e);
     }
-    fasync::spawn(fs.collect::<()>());
+    fasync::Task::spawn(fs.collect::<()>()).detach();
 
     let abs_vol_relay = volume_relay::VolumeRelay::start();
     if let Err(e) = &abs_vol_relay {
@@ -316,7 +317,7 @@ async fn main() -> Result<(), Error> {
     let cobalt_logger: CobaltSender = {
         let (sender, reporter) =
             CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
-        fasync::spawn(reporter);
+        fasync::Task::spawn(reporter).detach();
         sender
     };
 

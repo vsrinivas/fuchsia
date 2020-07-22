@@ -139,11 +139,12 @@ impl Stash {
     pub fn stub() -> Result<Stash, Error> {
         let inner = StashInner::stub()?;
         let (sender, receiver) = mpsc::channel::<Request>(STASH_MSG_QUEUE_CAPACITY);
-        fasync::spawn(run_stash(receiver, inner).map(|r| {
+        fasync::Task::spawn(run_stash(receiver, inner).map(|r| {
             if let Err(e) = r {
                 fx_log_err!("Error running stash: {}", e);
             }
-        }));
+        }))
+        .detach();
         Ok(Stash(sender))
     }
 }
@@ -405,11 +406,12 @@ pub async fn init_stash(
 
     let inner = StashInner::new(proxy, inspect).await?;
     let (stash, stash_run) = build_stash(inner);
-    fasync::spawn(stash_run.map(|r| {
+    fasync::Task::spawn(stash_run.map(|r| {
         if let Err(e) = r {
             fx_log_err!("Error running stash: {}", e);
         }
-    }));
+    }))
+    .detach();
     Ok(stash)
 }
 

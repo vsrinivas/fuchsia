@@ -34,7 +34,7 @@ impl ComponentLifecycleServer {
         );
         let publisher = broker.new_publisher();
         let registrar = broker.new_registrar();
-        fasync::spawn(broker.run());
+        fasync::Task::spawn(broker.run()).detach();
         Self { publisher, registrar }
     }
 
@@ -46,7 +46,7 @@ impl ComponentLifecycleServer {
         let registrar = self.registrar.clone();
         move |mut stream: LifecycleRequestStream| {
             let mut registrar = registrar.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 if let Ok(mut subscriber) = registrar.new_subscriber().await {
                     while let Some(request) = stream.next().await {
                         match request {
@@ -57,7 +57,8 @@ impl ComponentLifecycleServer {
                         }
                     }
                 }
-            });
+            })
+            .detach();
         }
     }
 

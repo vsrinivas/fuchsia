@@ -175,13 +175,14 @@ impl WebdriverFacadeInternal {
         dev_tools_request_stream: DevToolsListenerRequestStream,
         port_update_sender: mpsc::UnboundedSender<PortUpdateMessage>,
     ) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let dev_tools_listener = DevToolsListener::new(port_update_sender);
             dev_tools_listener
                 .handle_requests_from_stream(dev_tools_request_stream)
                 .await
                 .unwrap_or_else(|_| print!("Error handling DevToolsListener channel!"));
-        });
+        })
+        .detach();
     }
 }
 
@@ -229,13 +230,14 @@ impl DevToolsListener {
         fx_log_info!("Chrome context created");
         let listener_request_stream = listener.into_stream()?;
         let port_update_sender = mpsc::UnboundedSender::clone(&self.port_update_sender);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut per_context_listener = DevToolsPerContextListener::new(port_update_sender);
             per_context_listener
                 .handle_requests_from_stream(listener_request_stream)
                 .await
                 .unwrap_or_else(|_| fx_log_warn!("Error handling DevToolsListener channel!"));
-        });
+        })
+        .detach();
         Ok(())
     }
 }

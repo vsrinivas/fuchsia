@@ -220,11 +220,12 @@ mod tests {
             _local_service_client: local_service_client,
             _gatt_server: gatt_server,
         };
-        fasync::spawn(gas_proxy.run().map(|r| {
+        fasync::Task::spawn(gas_proxy.run().map(|r| {
             r.unwrap_or_else(|err| {
                 fx_log_warn!("Error running Generic Access proxy in task: {:?}", err);
             })
-        }));
+        }))
+        .detach();
         let stash = Stash::stub().expect("Create stash stub");
         let inspector = inspect::Inspector::new();
         let system_inspect = inspector.root().create_child("system");
@@ -251,7 +252,7 @@ mod tests {
         );
 
         let service = GenericAccessService { hd: dispatcher.clone(), generic_access_req_stream };
-        fasync::spawn(service.run());
+        fasync::Task::spawn(service.run()).detach();
         (generic_access_delegate_client, dispatcher)
     }
 
@@ -307,11 +308,12 @@ mod tests {
             _local_service_client: local_service_client,
             _gatt_server: gatt_server,
         };
-        fasync::spawn(gas_proxy.run().map(|r| {
+        fasync::Task::spawn(gas_proxy.run().map(|r| {
             r.unwrap_or_else(|err| {
                 fx_log_warn!("Error running Generic Access proxy in task: {:?}", err);
             })
-        }));
+        }))
+        .detach();
         let _ignored_fut =
             generic_access_delegate_client.on_read_value(GENERIC_ACCESS_APPEARANCE_ID, 0);
         let proxied_request = generic_access_req_stream.next().await.unwrap();

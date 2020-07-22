@@ -30,12 +30,13 @@ async fn main() {
     let proxy_control = Arc::new(TcpProxyControl::new());
     fs.dir("svc").add_fidl_service(move |stream| {
         let proxy_control_clone = proxy_control.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             proxy_control_clone
                 .serve_requests_from_stream(stream)
                 .unwrap_or_else(|e| error!("Error handling TcpProxyControl channel: {:?}", e))
                 .await;
-        });
+        })
+        .detach();
     });
     fs.take_and_serve_directory_handle().unwrap();
     fs.collect::<()>().await;
@@ -90,11 +91,12 @@ impl TcpProxyControl {
         let open_port = tcp_proxy_handle
             .register_client(tcp_proxy_stream)
             .map_err(|_| anyhow!("Error registering channel with new proxy"))?;
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             info!("Forwarding port {:?} to {:?}", open_port, target_port);
             tcp_proxy.serve_proxy_while_open_clients().await;
             info!("Stopped forwarding to port {:?}", target_port);
-        });
+        })
+        .detach();
 
         proxy_handles_lock.insert(target_port, tcp_proxy_handle);
         Ok(open_port)
@@ -209,9 +211,10 @@ mod test {
     fn launch_data_proxy_control() -> TcpProxyControlProxy {
         let control = TcpProxyControl::new();
         let (proxy, stream) = create_proxy_and_stream::<TcpProxyControlMarker>().unwrap();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             control.serve_requests_from_stream(stream).await.unwrap();
-        });
+        })
+        .detach();
         proxy
     }
 
@@ -239,7 +242,7 @@ mod test {
             .executor(fuchsia_hyper::Executor)
             .serve(make_svc)
             .unwrap_or_else(|e| panic!("HTTP server failed! {:?}", e));
-        fasync::spawn(server);
+        fasync::Task::spawn(server).detach();
 
         port
     }
@@ -291,7 +294,7 @@ mod test {
             .map_err(|_| anyhow!("Error on register client"))
             .unwrap();
         let tcp_proxy_fut = tcp_proxy.serve_proxy_while_open_clients().shared();
-        fasync::spawn(tcp_proxy_fut.clone());
+        fasync::Task::spawn(tcp_proxy_fut.clone()).detach();
 
         // test server reachable while proxy is served
         assert_request(proxy_port).await;
@@ -317,7 +320,7 @@ mod test {
             .map_err(|_| anyhow!("Error on register client"))
             .unwrap();
         let tcp_proxy_fut = tcp_proxy.serve_proxy_while_open_clients().shared();
-        fasync::spawn(tcp_proxy_fut.clone());
+        fasync::Task::spawn(tcp_proxy_fut.clone()).detach();
 
         // create second client
         let (tcp_proxy_token_2, tcp_proxy_server_end_2) =

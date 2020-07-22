@@ -387,7 +387,7 @@ mod tests {
     /// Connection requests aren't required to unit test the successful launching of profiles, so
     /// they are ignored.
     fn handle_profile_requests(mut stream: ProfileRequestStream, env: Arc<Mutex<TestEnvironment>>) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(request) = stream.next().await {
                 if let Ok(req) = request {
                     match req {
@@ -405,7 +405,8 @@ mod tests {
                     }
                 }
             }
-        });
+        })
+        .detach();
     }
 
     fn setup_environment(
@@ -424,7 +425,7 @@ mod tests {
             delete_storage_on_death: false,
         };
         let env = service_fs.create_nested_environment_with_options(env_name.as_str(), options)?;
-        fasync::spawn(service_fs.collect());
+        fasync::Task::spawn(service_fs.collect()).detach();
 
         Ok((env, env_vars_clone))
     }

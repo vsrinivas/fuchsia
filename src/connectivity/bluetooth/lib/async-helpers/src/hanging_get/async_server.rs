@@ -49,16 +49,16 @@ pub const DEFAULT_CHANNEL_SIZE: usize = 128;
 ///
 /// // Spawn broker as an async task that will run until there are not any more
 /// // `SubscriptionRegistrar`, `Publisher`, or `Subscriber` objects that can update the system.
-/// fuchsia_async::spawn(broker.run());
+/// fuchsia_async::Task::spawn(broker.run()).detach();
 ///
 /// // Spawn a background task to count sheep
-/// fuchsia_async::spawn(async move {
+/// fuchsia_async::Task::spawn(async move {
 ///     let interval = fuchsia_async::Interval::new(1.second);
 ///     loop {
 ///         interval.next.await();
 ///         publisher.update(|sheep_count| *sheep_count += 1);
 ///     }
-/// });
+/// }).detach();
 ///
 /// // Create a new `ServiceFs` and register SheepCounter fidl service
 /// let mut fs = ServiceFs::new();
@@ -71,11 +71,11 @@ pub const DEFAULT_CHANNEL_SIZE: usize = 128;
 ///     let mut subscriber = registrar.new_subscriber().await.unwrap();
 ///
 ///     // SubscriptionRegistrar requests from this client by registering new observers
-///     fuchsia_async::spawn(async move {
+///     fuchsia_async::Task::spawn(async move {
 ///         while let Some(Ok(SheepCounterWatchCountRequest { responder })) = stream.next().await {
 ///             subscriber.register(responder).await.unwrap();
 ///         }
-///     });
+///     }).detach();
 /// }
 /// ```
 pub struct HangingGetBroker<S, O: Unpin + 'static, F: Fn(&S, O) -> bool> {

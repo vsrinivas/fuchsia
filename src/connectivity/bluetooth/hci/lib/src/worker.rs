@@ -392,7 +392,7 @@ mod tests {
 
         // Handle worker requests in the background, panicking if the `Worker::build` future
         // completes.
-        fasync::spawn_local(worker);
+        fasync::Task::local(worker).detach();
 
         let (cmd, cmd_) = zx::Channel::create().unwrap();
         assert_eq!(control_plane.async_send(Message::OpenCmd(cmd)).await, zx::Status::OK);
@@ -482,7 +482,7 @@ mod tests {
     async fn run_worker_receive_messages() {
         let (mut control_plane, receiver) = ControlPlane::new();
 
-        fasync::spawn_local(run(receiver));
+        fasync::Task::local(run(receiver)).detach();
 
         let (transport, _in, _out) = TestTransport::new();
         assert_eq!(
@@ -522,7 +522,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn run_worker_send_recv_cmd_channel_data() {
         let (mut control_plane, receiver) = ControlPlane::new();
-        fasync::spawn_local(run(receiver));
+        fasync::Task::local(run(receiver)).detach();
 
         let (transport, transport_in, mut transport_out) = TestTransport::new();
         assert_eq!(
@@ -560,7 +560,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn run_worker_send_recv_acl_channel_data() {
         let (mut control_plane, receiver) = ControlPlane::new();
-        fasync::spawn_local(run(receiver));
+        fasync::Task::local(run(receiver)).detach();
 
         let (transport, transport_in, mut transport_out) = TestTransport::new();
         assert_eq!(

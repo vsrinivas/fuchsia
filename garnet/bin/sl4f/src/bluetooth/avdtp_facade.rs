@@ -118,7 +118,7 @@ impl AvdtpFacade {
                 fx_log_err!("Failed to monitor AVDTP event stream.");
             }
         };
-        fasync::spawn(fut);
+        fasync::Task::spawn(fut).detach();
 
         Ok(())
     }

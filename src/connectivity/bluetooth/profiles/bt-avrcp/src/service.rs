@@ -365,7 +365,7 @@ impl TestAvrcpClientController {
 
 /// Spawns a future that facilitates communication between a PeerController and a FIDL client.
 pub fn spawn_avrcp_client_controller(controller: Controller, fidl_stream: ControllerRequestStream) {
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             let mut acc = AvrcpClientController::new(controller, fidl_stream);
             acc.run().await?;
@@ -373,7 +373,8 @@ pub fn spawn_avrcp_client_controller(controller: Controller, fidl_stream: Contro
         }
         .boxed()
         .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-    );
+    )
+    .detach();
 }
 
 /// Spawns a future that facilitates communication between a PeerController and a test FIDL client.
@@ -381,7 +382,7 @@ pub fn spawn_test_avrcp_client_controller(
     controller: Controller,
     fidl_stream: ControllerExtRequestStream,
 ) {
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             let mut acc = TestAvrcpClientController { controller, fidl_stream };
             acc.run().await?;
@@ -389,16 +390,18 @@ pub fn spawn_test_avrcp_client_controller(
         }
         .boxed()
         .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-    );
+    )
+    .detach();
 }
 
 /// Spawns a future that listens and responds to requests for a controller object over FIDL.
 fn spawn_avrcp_client(stream: PeerManagerRequestStream, sender: mpsc::Sender<ServiceRequest>) {
     fx_log_info!("Spawning avrcp client handler");
-    fasync::spawn(
+    fasync::Task::spawn(
         avrcp_client_stream_handler(stream, sender, &spawn_avrcp_client_controller)
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-    );
+    )
+    .detach();
 }
 
 /// Polls the stream for the PeerManager FIDL interface to set target handlers and respond with
@@ -479,10 +482,11 @@ fn spawn_test_avrcp_client(
     sender: mpsc::Sender<ServiceRequest>,
 ) {
     fx_log_info!("Spawning test avrcp client handler");
-    fasync::spawn(
+    fasync::Task::spawn(
         test_avrcp_client_stream_handler(stream, sender, &spawn_test_avrcp_client_controller)
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-    );
+    )
+    .detach();
 }
 
 /// Polls the stream for the PeerManagerExt FIDL interface and responds with new test controller clients.

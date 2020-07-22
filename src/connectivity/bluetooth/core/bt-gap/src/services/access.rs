@@ -156,10 +156,11 @@ async fn handler(
 }
 
 fn watch_stream_for_session<S: Stream + Send + 'static, T: Send + 'static>(stream: S, token: T) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         stream.map(|_| ()).collect::<()>().await;
         // the remote end closed; drop our session token
         mem::drop(token);
         fx_vlog!(1, "ProcedureToken dropped")
-    });
+    })
+    .detach();
 }

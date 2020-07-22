@@ -227,9 +227,9 @@ async fn handle_custom_discovery_requests(
                     .into_stream()
                     .expect("Failed to take session control request stream");
                 if id == Some(MediaSessionId(session_id)) || id.is_none() {
-                    fasync::spawn(handle_accept_control_requests(request_stream));
+                    fasync::Task::spawn(handle_accept_control_requests(request_stream)).detach();
                 } else {
-                    fasync::spawn(handle_reject_control_requests(request_stream));
+                    fasync::Task::spawn(handle_reject_control_requests(request_stream)).detach();
                 }
             }
         }
@@ -258,7 +258,8 @@ async fn setup(
 
     // Spawn the mocked MediaSessions server (sends canned responses).
     let filter_id = if filter { Some(session1_id) } else { None };
-    fasync::spawn(handle_custom_discovery_requests(filter_id, discovery_request_stream));
+    fasync::Task::spawn(handle_custom_discovery_requests(filter_id, discovery_request_stream))
+        .detach();
 
     // Create local state for testing.
     let media_sessions: Arc<MediaSessions> = Arc::new(MediaSessions::create());
@@ -267,16 +268,18 @@ async fn setup(
     assert_eq!(None, media_sessions.get_active_session_id());
 
     // Spawn the AVRCP request task.
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let _ = handle_target_requests(target_request_stream, media_sessions_copy).await;
-    });
+    })
+    .detach();
 
     // Spawn the Media listener task.
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let _ = media_sessions_copy2
             .watch_media_sessions(discovery.clone(), watcher_request_stream)
             .await;
-    });
+    })
+    .detach();
 
     (session1_id, session2_id, watcher_client, target_proxy, media_sessions)
 }

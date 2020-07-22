@@ -196,13 +196,14 @@ pub async fn activate_fake_host(
 
     let hci = Emulator::create_and_publish(name).await?;
 
-        let control_state = control.when_satisfied(
+    let control_state = control
+        .when_satisfied(
             Predicate::<ControlState>::predicate(
-                move |control| control
-                    .hosts
-                    .iter()
-                    .any(|(id, host)| host.address == FAKE_HCI_ADDRESS
-                        && !initial_hosts_.contains(id)),
+                move |control| {
+                    control.hosts.iter().any(|(id, host)| {
+                        host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(id)
+                    })
+                },
                 "At least one fake bt-host device added",
             ),
             timeout_duration(),
@@ -227,10 +228,11 @@ pub async fn activate_fake_host(
 impl ActivatedFakeHost {
     pub async fn new(name: &str) -> Result<ActivatedFakeHost, Error> {
         let control = new_control_harness().await?;
-        fasync::spawn(
+        fasync::Task::spawn(
             handle_control_events(control.clone())
                 .unwrap_or_else(|e| fx_log_err!("Error handling control events: {:?}", e)),
-        );
+        )
+        .detach();
         let (host, hci) = activate_fake_host(control.clone(), name).await?;
         Ok(ActivatedFakeHost { control, host, hci: Some(hci) })
     }

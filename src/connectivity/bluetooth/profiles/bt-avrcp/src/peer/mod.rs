@@ -364,7 +364,7 @@ impl RemotePeerHandle {
         let remote_peer =
             Arc::new(RwLock::new(RemotePeer::new(peer_id, target_delegate, profile_proxy)));
 
-        fasync::spawn(tasks::state_watcher(remote_peer.clone()));
+        fasync::Task::spawn(tasks::state_watcher(remote_peer.clone())).detach();
 
         RemotePeerHandle { peer: remote_peer }
     }

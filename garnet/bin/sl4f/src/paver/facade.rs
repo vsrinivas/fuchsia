@@ -310,9 +310,10 @@ mod tests {
                 PaverRequest::FindBootManager { boot_manager, .. } => {
                     if let Some(mock) = mock {
                         let stream = boot_manager.into_stream().unwrap();
-                        fuchsia_async::spawn(async move {
+                        fuchsia_async::Task::spawn(async move {
                             mock.build(stream).await;
-                        });
+                        })
+                        .detach();
                     } else {
                         boot_manager.close_with_epitaph(Status::NOT_SUPPORTED).unwrap();
                     }
@@ -325,9 +326,10 @@ mod tests {
             self.push(move |req| match req {
                 PaverRequest::FindDataSink { data_sink, .. } => {
                     let stream = data_sink.into_stream().unwrap();
-                    fuchsia_async::spawn(async move {
+                    fuchsia_async::Task::spawn(async move {
                         mock.build(stream).await;
-                    });
+                    })
+                    .detach();
                 }
                 req => panic!("unexpected request: {:?}", req),
             })

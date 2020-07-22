@@ -497,10 +497,11 @@ async fn test_connection_dropped_when_not_connectable(
     // Wait for the connection to get dropped by the stack as it should be rejected when we are not
     // connectable. We assign our own PeerId here for tracking purposes (this is distinct from the
     // PeerId that the Peripheral proxy would report).
-    fasync::spawn(
+    fasync::Task::spawn(
         emulator::watch_peer_connection_states(harness.clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
-    );
+    )
+    .detach();
 
     let _ = harness
         .when_satisfied(
@@ -532,10 +533,11 @@ async fn test_drop_connection(harness: PeripheralHarness) -> Result<(), Error> {
     expect_ok(result, "failed to start advertising")?;
 
     peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
-    fasync::spawn(
+    fasync::Task::spawn(
         emulator::watch_peer_connection_states(harness.clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
-    );
+    )
+    .detach();
 
     let _ = harness
         .when_satisfied(expectation::peripheral_received_connection(), timeout_duration())
@@ -575,10 +577,11 @@ async fn test_connection_handle_closes_on_disconnect(
     expect_ok(result, "failed to start advertising")?;
 
     peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
-    fasync::spawn(
+    fasync::Task::spawn(
         emulator::watch_peer_connection_states(harness.clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
-    );
+    )
+    .detach();
 
     let _ = harness
         .when_satisfied(expectation::peripheral_received_connection(), timeout_duration())

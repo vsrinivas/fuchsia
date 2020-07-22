@@ -160,7 +160,7 @@ mod tests {
                     // repos must be fused b/c the Next() fidl method should return an empty vector
                     // forever after iteration is complete
                     let _: &dyn FusedIterator<Item = _> = &repos;
-                    fuchsia_async::spawn(
+                    fuchsia_async::Task::spawn(
                         async move {
                             while let Some(RepositoryIteratorRequest::Next { responder }) =
                                 stream.try_next().await?
@@ -172,7 +172,8 @@ mod tests {
                         .unwrap_or_else(|e: anyhow::Error| {
                             fx_log_err!("error running list protocol: {:#}", e)
                         }),
-                    );
+                    )
+                    .detach();
                 }
                 req => panic!("unexpected request: {:?}", req),
             })
