@@ -354,7 +354,13 @@ impl LinkSender {
     /// Returns: Ok(Some(n)) to send a packet of length n
     ///          Ok(None) to cleanly indicate link closure
     ///          Err(e) to indicate error
-    pub async fn next_send(&self, frame: &mut [u8]) -> Result<Option<usize>, Error> {
+    pub async fn next_send(&self, mut frame: &mut [u8]) -> Result<Option<usize>, Error> {
+        const MAX_FRAME_LENGTH: usize = 1400;
+        assert!(frame.len() >= MAX_FRAME_LENGTH);
+        if frame.len() > MAX_FRAME_LENGTH {
+            frame = &mut frame[..MAX_FRAME_LENGTH];
+        }
+
         let mut lock = PollMutex::new(&self.routing.gatherer);
         let mut ping_sender = PingSender::new(&self.runner.ping_tracker);
         poll_fn(|ctx| self.poll_next_send(ctx, frame, &mut lock, &mut ping_sender)).await
