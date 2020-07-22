@@ -52,7 +52,7 @@ struct ReadoutConfig {
 /// A sensor can support several different predefined modes.
 /// This structure keeps all necessary information about a mode.
 // TODO(55427): Move non-sensor-specific params out of this struct.
-struct Mode {
+struct OperatingMode {
     /// This mode's index.
     uint8 idx;
     /// This mode's identifying string.
@@ -108,7 +108,7 @@ protocol CameraSensor2 {
     GetSensorId() -> (zx.status s, uint32 id);
 
     /// Retrieve a vector of available modes.
-    GetAvailableModes() -> (zx.status s, vector<Mode> modes);
+    GetAvailableModes() -> (zx.status s, vector<OperatingMode> modes);
     /// Use a specific mode for the initialization sequence.
     SetMode(uint32 mode) -> (zx.status s);
 

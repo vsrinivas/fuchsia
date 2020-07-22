@@ -17,6 +17,7 @@ driver_module("fragment") {
   deps = [
     "//sdk/banjo/ddk.protocol.amlogiccanvas",
     "//sdk/banjo/ddk.protocol.buttons",
+    "//sdk/banjo/ddk.protocol.camera.sensor",
     "//sdk/banjo/ddk.protocol.camerasensor",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.codec",

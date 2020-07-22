@@ -176,6 +176,7 @@ static const zx_bind_inst_t root_match[] = {
 };
 static const zx_bind_inst_t camera_sensor_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CAMERA_SENSOR),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CAMERA_SENSOR2),
 };
 
 static const zx_bind_inst_t amlogiccanvas_match[] = {

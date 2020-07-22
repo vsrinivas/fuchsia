@@ -14,6 +14,7 @@
 
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/camera/sensor.h>
 #include <ddktl/protocol/camerasensor.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/composite.h>
@@ -24,8 +25,7 @@
 namespace camera {
 
 struct SensorCtx {
-  // TODO(braval): Add details for each one of these
-  //               and also remove unused ones.
+  // TODO(55045): Add details for each one of these and also remove unused ones.
   uint32_t again_limit;
   uint32_t int_max;
   uint32_t dgain_limit;
@@ -57,7 +57,8 @@ class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device, ddk::UnbindableNew>;
 
 class Imx227Device : public DeviceType,
-                     public ddk::CameraSensorProtocol<Imx227Device, ddk::base_protocol> {
+                     public ddk::CameraSensorProtocol<Imx227Device, ddk::base_protocol>,
+                     public ddk::CameraSensor2Protocol<Imx227Device> {
  public:
   enum {
     FRAGMENT_PDEV,
@@ -92,7 +93,7 @@ class Imx227Device : public DeviceType,
   // Testing interface will need to use this to check the status of the sensor.
   bool IsSensorInitialized() const { return initialized_; }
 
-  // Methods for ZX_PROTOCOL_CAMERA_SENSOR
+  // |ZX_PROTOCOL_CAMERA_SENSOR|
   zx_status_t CameraSensorInit();
   void CameraSensorDeInit();
   zx_status_t CameraSensorSetMode(uint8_t mode);
@@ -125,6 +126,35 @@ class Imx227Device : public DeviceType,
   //  Returns:
   //    Whether the OTP data was validated successfully.
   static bool OtpValidate(const zx::vmo* vmo);
+
+  // |ZX_PROTOCOL_CAMERA_SENSOR2|
+  zx_status_t CameraSensor2Init();
+  void CameraSensor2DeInit();
+  zx_status_t CameraSensor2GetSensorId(uint32_t* out_id);
+  zx_status_t CameraSensor2GetAvailableModes(operating_mode_t* out_modes_list, size_t modes_count,
+                                             size_t* out_modes_actual);
+  zx_status_t CameraSensor2SetMode(uint32_t mode);
+  zx_status_t CameraSensor2StartStreaming();
+  void CameraSensor2StopStreaming();
+  zx_status_t CameraSensor2GetAnalogGain(float* out_gain);
+  zx_status_t CameraSensor2SetAnalogGain(float gain, float* out_gain);
+  zx_status_t CameraSensor2GetDigitalGain(float* out_gain);
+  zx_status_t CameraSensor2SetDigitalGain(float gain, float* out_gain);
+  zx_status_t CameraSensor2GetIntegrationTime(float* out_int_time);
+  zx_status_t CameraSensor2SetIntegrationTime(float int_time, float* out_int_time);
+  zx_status_t CameraSensor2Update();
+  zx_status_t CameraSensor2GetOtpSize(uint32_t* out_size);
+  zx_status_t CameraSensor2GetOtpData(uint32_t byte_count, uint32_t offset, const uint8_t* buf_list,
+                                      size_t buf_count);
+  zx_status_t CameraSensor2GetTestPatternMode(uint16_t* out_value);
+  zx_status_t CameraSensor2SetTestPatternMode(uint16_t mode);
+  zx_status_t CameraSensor2GetTestPatternData(color_val_t* out_data);
+  zx_status_t CameraSensor2SetTestPatternData(const color_val_t* data);
+  zx_status_t CameraSensor2GetTestCursorData(rect_vals_t* out_data);
+  zx_status_t CameraSensor2SetTestCursorData(const rect_vals_t* data);
+  zx_status_t CameraSensor2GetExtensionValue(uint64_t id, extension_value_data_type_t** out_value);
+  zx_status_t CameraSensor2SetExtensionValue(uint64_t id, const extension_value_data_type_t* value,
+                                             extension_value_data_type_t** out_value);
 
  private:
   // I2C Helpers

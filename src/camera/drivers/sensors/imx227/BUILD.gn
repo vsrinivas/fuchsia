@@ -9,9 +9,11 @@ source_set("source") {
   sources = [
     "imx227.cc",
     "imx227_otp.cc",
+    "imx227_protocol.cc",
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/devices/lib/driver",
     "//zircon/system/ulib/fzl",
   ]
