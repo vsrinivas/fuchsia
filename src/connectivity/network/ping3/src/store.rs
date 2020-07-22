@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use thiserror::Error;
 
@@ -49,11 +50,11 @@ impl SequenceStore {
         SequenceStore {
             next_seq: 0,
             last_seq: std::u16::MAX,
-            start_time: zx::Time::get(zx::ClockId::Monotonic),
+            start_time: fasync::Time::now().into_zx(),
         }
     }
 
-    /// Take a sequence number and timestamp for use in an ICMP echo request.
+    /// Take a sequence number and time offset for use in an ICMP echo request.
     pub fn take(&mut self) -> Result<(u16, zx::Duration), OutOfSequencesError> {
         let seq_num = self.next_seq;
         let (next_seq, overflow) = self.next_seq.overflowing_add(1);
@@ -61,7 +62,8 @@ impl SequenceStore {
         if overflow {
             return Err(OutOfSequencesError);
         }
-        Ok((seq_num, zx::Time::get(zx::ClockId::Monotonic) - self.start_time))
+        let offset_from_start_time = fasync::Time::now().into_zx() - self.start_time;
+        Ok((seq_num, offset_from_start_time))
     }
 
     /// Give the sequence number of an ICMP echo reply back to the store. Returns the latency and
@@ -69,23 +71,23 @@ impl SequenceStore {
     pub fn give(
         &mut self,
         sequence_num: u16,
-        timestamp: Option<zx::Duration>,
+        offset_from_start_time: Option<zx::Duration>,
     ) -> Result<Option<zx::Duration>, GiveError> {
-        let now = zx::Time::get(zx::ClockId::Monotonic);
-        let duration = timestamp.map(|time| now - self.start_time - time);
+        let now = fasync::Time::now().into_zx();
+        let latency = offset_from_start_time.map(|time| now - self.start_time - time);
 
         if sequence_num >= self.next_seq {
-            return Err(GiveError::DoesNotExist(duration));
+            return Err(GiveError::DoesNotExist(latency));
         }
 
         let (expected, _) = self.last_seq.overflowing_add(1);
         if sequence_num == expected {
             self.last_seq = sequence_num;
-            Ok(duration)
+            Ok(latency)
         } else if sequence_num < expected {
-            Err(GiveError::Duplicate(duration))
+            Err(GiveError::Duplicate(latency))
         } else {
-            Err(GiveError::OutOfOrder(duration))
+            Err(GiveError::OutOfOrder(latency))
         }
     }
 }
@@ -94,8 +96,11 @@ impl SequenceStore {
 mod test {
     use super::*;
 
+    const SHORT_DELAY: zx::Duration = zx::Duration::from_nanos(1);
+
     #[test]
     fn take_all() {
+        let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
         for i in 0..std::u16::MAX {
             assert_eq!(s.take().expect("Failed to take").0, i);
@@ -104,6 +109,7 @@ mod test {
 
     #[test]
     fn take_too_much() {
+        let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
         for i in 0..std::u16::MAX {
             assert_eq!(s.take().expect("Failed to take").0, i);
@@ -112,18 +118,8 @@ mod test {
     }
 
     #[test]
-    fn give_duration() {
-        let mut s = SequenceStore::new();
-        let (num, time) = s.take().expect("Failed to take");
-        assert_ne!(time.into_nanos(), 0);
-        assert!(s
-            .give(num, Some(time + zx::Duration::from_nanos(1)))
-            .expect("Failed to give")
-            .is_some());
-    }
-
-    #[test]
     fn give_out_of_order() {
+        let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
         s.take().expect("Failed to take");
         let (n, _) = s.take().expect("Failed to take");
@@ -132,12 +128,14 @@ mod test {
 
     #[test]
     fn give_duplicate() {
+        let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
         s.give(42, None).expect_err("Should not be able to give seq_nums that haven't been given");
     }
 
     #[test]
     fn give_same_number() {
+        let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
         let (num, _) = s.take().expect("Failed to take");
         s.give(num, None).expect("Failed to give");
@@ -145,14 +143,64 @@ mod test {
     }
 
     #[test]
-    fn different_gives_returns_different_instants() {
+    fn give_same_times() {
+        let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
-        let (a, a_time) = s.take().expect("Failed to take");
-        let (b, b_time) = s.take().expect("Failed to take");
-        assert_ne!(a_time, b_time);
 
-        let a_time = s.give(a, Some(a_time + zx::Duration::from_nanos(1))).expect("Failed to give");
-        let b_time = s.give(b, Some(b_time + zx::Duration::from_nanos(1))).expect("Failed to give");
-        assert_ne!(a_time, b_time);
+        let (_, a_time) = s.take().expect("Failed to take");
+        let (_, b_time) = s.take().expect("Failed to take");
+        assert_eq!(a_time, b_time);
+    }
+
+    #[test]
+    fn give_different_times() {
+        let executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
+        let mut s = SequenceStore::new();
+
+        let (_, a_time) = s.take().expect("Failed to take");
+        executor.set_fake_time(executor.now() + SHORT_DELAY);
+        let (_, b_time) = s.take().expect("Failed to take");
+        assert_eq!(b_time - a_time, SHORT_DELAY);
+    }
+
+    #[test]
+    fn give_latency() {
+        let executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
+        let mut s = SequenceStore::new();
+
+        let (a, a_time) = s.take().expect("Failed to take");
+        executor.set_fake_time(executor.now() + SHORT_DELAY);
+
+        let a_latency = s.give(a, Some(a_time)).expect("Failed to give");
+        assert_eq!(a_latency, Some(SHORT_DELAY));
+    }
+
+    #[test]
+    fn give_same_latencies() {
+        let executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
+        let mut s = SequenceStore::new();
+
+        let (a, a_time) = s.take().expect("Failed to take");
+        executor.set_fake_time(executor.now() + SHORT_DELAY);
+        let (b, b_time) = s.take().expect("Failed to take");
+
+        let a_latency = s.give(a, Some(a_time)).expect("Failed to give");
+        executor.set_fake_time(executor.now() + SHORT_DELAY);
+        let b_latency = s.give(b, Some(b_time)).expect("Failed to give");
+        assert_eq!(a_latency, b_latency);
+    }
+
+    #[test]
+    fn give_different_latencies() {
+        let executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
+        let mut s = SequenceStore::new();
+
+        let (a, a_time) = s.take().expect("Failed to take");
+        executor.set_fake_time(executor.now() + SHORT_DELAY);
+        let (b, b_time) = s.take().expect("Failed to take");
+
+        let a_latency = s.give(a, Some(a_time)).expect("Failed to give");
+        let b_latency = s.give(b, Some(b_time)).expect("Failed to give");
+        assert_eq!(a_latency.unwrap() - b_latency.unwrap(), SHORT_DELAY);
     }
 }
