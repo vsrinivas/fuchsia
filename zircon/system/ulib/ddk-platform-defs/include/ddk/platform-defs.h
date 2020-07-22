@@ -215,11 +215,13 @@ __BEGIN_CDECLS
 #define PDEV_PID_TI_LP5024          3
 #define PDEV_PID_TI_LP5030          4
 #define PDEV_PID_TI_LP5036          5
+#define PDEV_PID_TI_TMP112          6
 #define PDEV_DID_TI_BACKLIGHT       1
 #define PDEV_DID_TI_TAS5805         2
 #define PDEV_DID_TI_TAS5782         3
 #define PDEV_DID_TI_TAS2770         4
 #define PDEV_DID_TI_LED             5
+#define PDEV_DID_TI_TEMPERATURE     6
 
 // Test
 #define PDEV_VID_TEST               17

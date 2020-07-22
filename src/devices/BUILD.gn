@@ -36,6 +36,7 @@ group("tests") {
     "serial:tests",
     "shareddma:tests",
     "sysmem:tests",
+    "temperature:tests",
     "testing:tests",
     "tests",
     "tests:tests",
