@@ -11,6 +11,11 @@ using zx;
 /// A Stream represents timing, sequencing, and other camera-specific properties applied to a buffer
 /// collection.
 protocol Stream {
+    /// Gets the properties associated with this stream. The value returned is identical to the one
+    /// corresponding to this stream as returned by |Device.GetConfigurations|.
+    [Transitional]
+    GetProperties() -> (StreamProperties properties);
+
     /// Sets the Stream's crop region to the provided region, with the top-left of the image
     /// represented by (0,0) and the bottom-right of the image represented by (1,1). The resulting
     /// content is subsequently scaled to fill the output buffer. If the implementation does not

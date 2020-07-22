@@ -812,4 +812,30 @@ TEST_F(DeviceTest, HardwareMuteState) {
   RunLoopUntilFailureOr(watch_returned);
 }
 
+TEST_F(DeviceTest, GetProperties) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  bool configs_returned = false;
+  std::vector<fuchsia::camera3::Configuration> configs;
+  device->GetConfigurations([&](std::vector<fuchsia::camera3::Configuration> configurations) {
+    configs = std::move(configurations);
+    configs_returned = true;
+  });
+  RunLoopUntilFailureOr(configs_returned);
+  fuchsia::camera3::StreamPtr stream;
+  device->ConnectToStream(0, stream.NewRequest());
+  bool properties_returned = false;
+  stream->GetProperties([&](fuchsia::camera3::StreamProperties properties) {
+    EXPECT_EQ(properties.supports_crop_region, configs[0].streams[0].supports_crop_region);
+    EXPECT_EQ(properties.frame_rate.numerator, configs[0].streams[0].frame_rate.numerator);
+    EXPECT_EQ(properties.frame_rate.denominator, configs[0].streams[0].frame_rate.denominator);
+    EXPECT_EQ(properties.image_format.coded_width, configs[0].streams[0].image_format.coded_width);
+    EXPECT_EQ(properties.image_format.coded_height,
+              configs[0].streams[0].image_format.coded_height);
+    properties_returned = true;
+  });
+  RunLoopUntilFailureOr(properties_returned);
+}
+
 }  // namespace camera

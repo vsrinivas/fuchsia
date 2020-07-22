@@ -103,6 +103,7 @@ class StreamImpl {
     void OnClientDisconnected(zx_status_t status);
 
     // |fuchsia::camera3::Stream|
+    void GetProperties(GetPropertiesCallback callback) override;
     void SetCropRegion(std::unique_ptr<fuchsia::math::RectF> region) override;
     void WatchCropRegion(WatchCropRegionCallback callback) override;
     void SetResolution(fuchsia::math::Size coded_size) override;

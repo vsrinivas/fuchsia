@@ -81,6 +81,12 @@ void StreamImpl::Client::CloseConnection(zx_status_t status) {
   stream_.PostRemoveClient(id_);
 }
 
+void StreamImpl::Client::GetProperties(GetPropertiesCallback callback) {
+  fuchsia::camera3::StreamProperties properties;
+  stream_.properties_.Clone(&properties);
+  callback(std::move(properties));
+}
+
 void StreamImpl::Client::SetCropRegion(std::unique_ptr<fuchsia::math::RectF> region) {
   if (!stream_.properties_.supports_crop_region) {
     CloseConnection(ZX_ERR_NOT_SUPPORTED);
