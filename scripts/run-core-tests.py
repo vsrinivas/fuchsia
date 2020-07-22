@@ -35,13 +35,15 @@ def main():
     path = [t['path'] for t in tests if t['name'] == 'core-tests']
     if not path:
         print(
-            'Could not find "core-tests" entry in zbi_tests.json.',
+            'Could not find "core-tests" entry in zbi_tests.json. If you '
+            'discover you need to add a --with to fx set, please update '
+            'utest/core/README.md.',
             file=sys.stderr)
         return 1
 
     filter_str = '--gtest_filter=' + (test_filter if test_filter else '*')
     args = [
-        emu_command, '--headless', '-c', filter_str, '-z',
+        emu_command, '--headless', '--experiment-arm64', '-c', filter_str, '-z',
         os.path.join(fuchsia_build_dir, path[0])
     ]
     print('Running: %s' % ' '.join(map(shlex.quote, args)))

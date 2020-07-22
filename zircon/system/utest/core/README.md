@@ -10,7 +10,7 @@ etc.
 ## Example usage
 
 ```
-fx set core.x64 --with-base //bundles/buildbot:bringup  # or arm64
+fx set core.x64   # any of {bringup,core}.{x64,arm64} are fine too.
 fx build
 fx core-tests [gtest-filter]
 ```
