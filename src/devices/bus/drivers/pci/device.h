@@ -178,6 +178,13 @@ class Device : public PciDeviceType,
     ZX_DEBUG_ASSERT(bar_id < bar_count_);
     return bars_[bar_id];
   }
+
+  // A packed version of the BDF addr used for BTI identifiers by the IOMMU implementation.
+  uint32_t packed_addr() const {
+    auto bdf = cfg_->bdf();
+    return static_cast<uint32_t>((bdf.bus_id << 8) | (bdf.device_id << 3) | bdf.function_id);
+  }
+
   // Dump some information about the device
   virtual void Dump() const __TA_EXCLUDES(dev_lock_);
 

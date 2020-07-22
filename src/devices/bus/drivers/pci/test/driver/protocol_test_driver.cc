@@ -500,6 +500,11 @@ TEST_F(PciProtocolTests, MapInterrupt) {
   }
 }
 
+TEST_F(PciProtocolTests, GetBti) {
+  zx::bti bti;
+  ASSERT_STATUS(pci().GetBti(0, &bti), ZX_ERR_NOT_SUPPORTED);
+}
+
 zx_status_t fidl_RunTests(void*, fidl_txn_t* txn) {
   auto* driver = ProtocolTestDriver::GetInstance();
   auto* zxt = zxtest::Runner::GetInstance();

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/vmo.h>
@@ -234,7 +235,22 @@ zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
   return RpcReply(ch, ZX_OK, &handle, handle_cnt);
 }
 
-zx_status_t Device::RpcGetBti(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }
+zx_status_t Device::RpcGetBti(const zx::unowned_channel& ch) {
+  fbl::AutoLock dev_lock(&dev_lock_);
+
+  zx::bti bti;
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  uint32_t handle_cnt = 0;
+  zx_status_t st = bdi_->GetBti(this, request_.bti_index, &bti);
+  if (st == ZX_OK) {
+    handle = bti.release();
+    handle_cnt++;
+  }
+
+  zxlogf(DEBUG, "[%s] GetBti { index = %u, status = %s }\n", cfg_->addr(), request_.bti_index,
+         zx_status_get_string(st));
+  return RpcReply(ch, st, &handle, handle_cnt);
+}
 
 zx_status_t Device::RpcGetDeviceInfo(const zx::unowned_channel& ch) {
   response_.info.vendor_id = vendor_id();

@@ -58,6 +58,12 @@ class Bus : public PciBusType, public BusDeviceInterface {
     return pciroot().AllocateMsi(count, false, msi);
   }
 
+  zx_status_t GetBti(const pci::Device* device, uint32_t index, zx::bti* bti)
+      __TA_EXCLUDES(devices_lock_) final {
+    fbl::AutoLock devices_lock(&devices_lock_);
+    return pciroot().GetBti(device->packed_addr(), index, bti);
+  }
+
  private:
   // Our constructor exists to fulfill the mixin constructors
   Bus(zx_device_t* parent, const pciroot_protocol_t* proto)

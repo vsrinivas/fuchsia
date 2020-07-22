@@ -37,6 +37,11 @@ class FakeBus : public BusDeviceInterface {
     return zx::msi::allocate(*zx::unowned_resource(ZX_HANDLE_INVALID), count, msi);
   }
 
+  zx_status_t GetBti(const pci::Device* /*device*/, uint32_t /*index*/, zx::bti* /*bti*/) final {
+    fbl::AutoLock devices_lock(&devices_lock_);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   pci::Device& get_device(pci_bdf_t bdf) { return *devices_.find(bdf); }
 
   // For use with Devices that need to link to a Bus.
