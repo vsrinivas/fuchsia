@@ -74,6 +74,10 @@ class Bind {
   // be called in a different thread.
   zx_status_t WaitUntilRemove();
 
+  // Blocking wait until SuspendTxn.Reply() is called. Use this if you expect the suspend reply to
+  // be called in a different thread.
+  zx_status_t WaitUntilSuspend();
+
   // Returns the number of times DeviceAddMetadata has been called and the
   // total length of all the data provided.
   void GetMetadataInfo(int* num_calls, size_t* length);
@@ -176,7 +180,7 @@ class Bind {
   bool rebind_called_ = false;
   sync_completion_t remove_called_sync_;
   bool make_visible_called_ = false;
-  bool suspend_complete_called_ = false;
+  sync_completion_t suspend_called_sync_;
   bool resume_complete_called_ = false;
   bool device_open_protocol_session_multibindable_ = false;
 

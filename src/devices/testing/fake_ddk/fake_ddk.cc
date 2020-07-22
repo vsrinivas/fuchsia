@@ -76,6 +76,10 @@ zx_status_t Bind::WaitUntilRemove() {
   return sync_completion_wait_deadline(&remove_called_sync_, zx::time::infinite().get());
 }
 
+zx_status_t Bind::WaitUntilSuspend() {
+  return sync_completion_wait_deadline(&suspend_called_sync_, zx::time::infinite().get());
+}
+
 void Bind::ExpectMetadata(const void* data, size_t data_length) {
   metadata_ = data;
   metadata_length_ = data_length;
@@ -241,7 +245,7 @@ void Bind::DeviceSuspendComplete(zx_device_t* device, zx_status_t status, uint8_
   if (device != kFakeDevice) {
     bad_device_ = true;
   }
-  suspend_complete_called_ = true;
+  sync_completion_signal(&suspend_called_sync_);
   return;
 }
 
