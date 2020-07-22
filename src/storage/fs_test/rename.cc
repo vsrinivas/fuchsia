@@ -246,6 +246,114 @@ TEST_P(RenameTest, At) {
   ASSERT_EQ(rmdir(GetPath("bar").c_str()), 0);
 }
 
+TEST_P(RenameTest, RenameDirOverFileFails) {
+  std::string src_dir = GetPath("a/b/");
+  std::string dst = GetPath("a/c");
+
+  ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(src_dir.c_str(), 0755), 0);
+
+  // Renaming over a file fails.
+  int fd = open(dst.c_str(), O_CREAT | O_RDWR);
+  ASSERT_GT(fd, 0);
+  close(fd);
+
+  ASSERT_EQ(rename(src_dir.c_str(), dst.c_str()), -1);
+  ASSERT_EQ(errno, ENOTDIR);
+  // ... and check with no trailing slash
+  ASSERT_EQ(rename(GetPath("a/b").c_str(), dst.c_str()), -1);
+  ASSERT_EQ(errno, ENOTDIR);
+
+  ASSERT_EQ(unlink(dst.c_str()), 0);
+}
+
+TEST_P(RenameTest, RenameDirOverEmptyDirSucceeds) {
+  std::string src_dir = GetPath("a/b/");
+  std::string dst = GetPath("a/c");
+
+  ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(src_dir.c_str(), 0755), 0);
+
+  ASSERT_EQ(mkdir(dst.c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("a/b/test").c_str(), 0755), 0);
+
+  ASSERT_EQ(rename(src_dir.c_str(), dst.c_str()), 0);
+
+  ExpectedDirectoryEntry contents[] = {
+      {".", DT_DIR},
+      {"test", DT_DIR},
+  };
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(dst.c_str(), contents));
+
+  ASSERT_EQ(rmdir(GetPath("a/c/test").c_str()), 0);
+  ASSERT_EQ(rmdir(dst.c_str()), 0);
+}
+
+// If we try and rename a/b/ when b is a file, the rename should fail.
+TEST_P(RenameTest, RenameFileTrailingSlashFails) {
+  std::string src_dir = GetPath("a/b/");
+  std::string dst = GetPath("a/c");
+  ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
+  int fd = open(GetPath("a/b").c_str(), O_CREAT | O_RDWR);
+  ASSERT_GT(fd, 0);
+  close(fd);
+
+  ASSERT_EQ(rename(src_dir.c_str(), dst.c_str()), -1);
+  ASSERT_EQ(errno, ENOTDIR);
+}
+
+TEST_P(RenameTest, RenameDirOverNonEmptyDirFails) {
+  std::string b_dir = GetPath("a/b/");
+  std::string c_dir = GetPath("a/c/");
+  ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(b_dir.c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(c_dir.c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("a/b/d").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("a/c/e").c_str(), 0755), 0);
+
+  ASSERT_EQ(rename(b_dir.c_str(), c_dir.c_str()), -1);
+  ASSERT_EQ(errno, ENOTEMPTY);
+}
+
+TEST_P(RenameTest, RenameFileOverDirFails) {
+  std::string src = GetPath("a/b");
+  std::string dst = GetPath("a/c/");
+  ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(dst.c_str(), 0755), 0);
+
+  int fd = open(src.c_str(), O_CREAT | O_RDWR);
+  ASSERT_GT(fd, 0);
+  close(fd);
+
+  ASSERT_EQ(rename(src.c_str(), dst.c_str()), -1);
+  ASSERT_EQ(errno, ENOTDIR);
+  ASSERT_EQ(rename(src.c_str(), GetPath("a/c").c_str()), -1);
+  ASSERT_EQ(errno, ENOTDIR);
+}
+
+TEST_P(RenameTest, RenameFileOverNonexistantDirPathFails) {
+  std::string src = GetPath("a/b");
+  std::string dst = GetPath("a/c/");
+  ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
+  int fd = open(src.c_str(), O_CREAT | O_RDWR);
+  ASSERT_GT(fd, 0);
+  close(fd);
+
+  ASSERT_EQ(rename(src.c_str(), dst.c_str()), -1);
+  ASSERT_EQ(errno, ENOTDIR);
+}
+
+TEST_P(RenameTest, RenameFileOverNonexistantFilePathSucceeds) {
+  std::string src = GetPath("a/b");
+  std::string dst = GetPath("a/c");
+  ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
+  int fd = open(src.c_str(), O_CREAT | O_RDWR);
+  ASSERT_GT(fd, 0);
+  close(fd);
+
+  ASSERT_EQ(rename(src.c_str(), dst.c_str()), 0);
+}
+
 // Rename using the raw FIDL interface.
 TEST_P(RenameTest, Raw) {
   ASSERT_EQ(mkdir(GetPath("alpha").c_str(), 0755), 0);

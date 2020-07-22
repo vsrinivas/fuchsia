@@ -320,7 +320,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         }
     }
 
-    fn is_empty(&self) -> io::Result<bool> {
+    pub fn is_empty(&self) -> io::Result<bool> {
         trace!("is_empty");
         // check if directory contains no files
         for r in self.iter() {

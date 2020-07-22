@@ -126,6 +126,46 @@ impl FilesystemRename for FatFilesystem {
         };
 
         let filesystem = self.inner.lock().unwrap();
+
+        // Figure out if src is a directory.
+        let entry = src_dir.find_child(&filesystem, &src_name)?;
+        if entry.is_none() {
+            // No such src (if we don't return NOT_FOUND here, fatfs will return it when we
+            // call rename() later).
+            return Err(Status::NOT_FOUND);
+        }
+        let src_is_dir = entry.unwrap().is_dir();
+        if (dst_path.is_dir() || src_path.is_dir()) && !src_is_dir {
+            // The caller wanted a directory (src or dst), but src is not a directory. This is an error.
+            return Err(Status::NOT_DIR);
+        }
+
+        // Make sure destination is a directory, if needed.
+        if let Some(entry) = dst_dir.find_child(&filesystem, &dst_name)? {
+            if entry.is_dir() {
+                // Try to rename over directory. The src must be a directory, and dst must be empty.
+                let dir = entry.to_dir();
+                if !src_is_dir {
+                    return Err(Status::NOT_DIR);
+                }
+
+                if !dir.is_empty().map_err(fatfs_error_to_status)? {
+                    // Can't rename directory onto non-empty directory.
+                    return Err(Status::NOT_EMPTY);
+                }
+
+                // TODO(fxb/56239) allow this path once we support overwriting.
+                return Err(Status::ALREADY_EXISTS);
+            } else {
+                if src_is_dir {
+                    // We were expecting dst to be a directory, but it wasn't.
+                    return Err(Status::NOT_DIR);
+                }
+                // TODO(fxb/56239) allow this path once we support overwriting.
+                return Err(Status::ALREADY_EXISTS);
+            }
+        }
+
         let src_dir = src_dir.borrow_dir(&filesystem);
         let dst_dir = dst_dir.borrow_dir(&filesystem);
         src_dir.rename(src_name, &dst_dir, dst_name).map_err(fatfs_error_to_status)?;
