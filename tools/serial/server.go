@@ -46,6 +46,10 @@ type ServerOptions struct {
 	// AuxiliaryOutput is an optional serial output sink. It will be closed before
 	// server.Run returns. It is dup'd for each incoming socket.
 	AuxiliaryOutput *os.File
+
+	// StartAtEnd instructs each connection to begin streaming at the end
+	// of the aux file.
+	StartAtEnd bool
 }
 
 // NewServer returns a new server that lives atop the given 'serial' port.
@@ -116,10 +120,12 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 				}
 				defer f.Close()
 
-				_, err = f.Seek(0, io.SeekStart)
-				if err != nil {
-					s.logf("error: serial: seek: %s", err)
-					return
+				if s.StartAtEnd {
+					_, err = f.Seek(0, io.SeekEnd)
+					if err != nil {
+						s.logf("error: serial: seek: %s", err)
+						return
+					}
 				}
 
 				// keep copying until conn is closed
