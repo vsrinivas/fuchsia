@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_QUEUE_H_
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_QUEUE_H_
 
-#include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include <map>
@@ -92,7 +92,7 @@ class Queue {
   CrashServer* crash_server_;
   QueueInfo info_;
 
-  fuchsia::net::ConnectivityPtr connectivity_;
+  fuchsia::netstack::NetstackPtr netstack_;
   // We need to be able to cancel a posted retry task when |this| is destroyed.
   fxl::CancelableClosure network_reconnection_task_;
   backoff::ExponentialBackoff network_reconnection_backoff_;

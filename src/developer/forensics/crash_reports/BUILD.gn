@@ -277,7 +277,7 @@ source_set("queue") {
     ":crash_server",
     ":database",
     ":settings",
-    "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.netstack",
     "//src/developer/forensics/crash_reports/info",
     "//src/lib/backoff",
     "//src/lib/fxl",

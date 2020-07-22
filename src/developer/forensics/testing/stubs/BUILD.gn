@@ -221,7 +221,7 @@ source_set("network_reachability_provider") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.netstack",
   ]
 
   deps = [

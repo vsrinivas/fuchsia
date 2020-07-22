@@ -12,7 +12,18 @@ namespace stubs {
 
 void NetworkReachabilityProvider::TriggerOnNetworkReachable(const bool reachable) {
   FX_CHECK(binding()) << "No client is connected to the stub server yet";
-  binding()->events().OnNetworkReachable(reachable);
+  std::vector<fuchsia::netstack::NetInterface> interfaces;
+  if (reachable) {
+    interfaces.emplace_back(fuchsia::netstack::NetInterface{
+        .flags = fuchsia::netstack::NetInterfaceFlagUp | fuchsia::netstack::NetInterfaceFlagDhcp,
+        .addr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address{
+            .addr = {1},
+        }),
+        .netmask = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address{}),
+        .broadaddr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address{}),
+    });
+  }
+  binding()->events().OnInterfacesChanged(std::move(interfaces));
 }
 
 }  // namespace stubs

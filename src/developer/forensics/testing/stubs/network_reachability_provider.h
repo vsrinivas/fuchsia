@@ -5,8 +5,8 @@
 #ifndef SRC_DEVELOPER_FORENSICS_TESTING_STUBS_NETWORK_REACHABILITY_PROVIDER_H_
 #define SRC_DEVELOPER_FORENSICS_TESTING_STUBS_NETWORK_REACHABILITY_PROVIDER_H_
 
-#include <fuchsia/net/cpp/fidl.h>
-#include <fuchsia/net/cpp/fidl_test_base.h>
+#include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl_test_base.h>
 
 #include "src/developer/forensics/testing/stubs/fidl_server.h"
 
@@ -14,9 +14,8 @@ namespace forensics {
 namespace stubs {
 
 class NetworkReachabilityProvider
-    : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::net, Connectivity) {
+    : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::netstack, Netstack) {
  public:
-  // |fuchsia::net::Connectivity|
   void TriggerOnNetworkReachable(bool reachable);
 };
 

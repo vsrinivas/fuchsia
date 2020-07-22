@@ -205,23 +205,48 @@ void Queue::ProcessAllEveryHour() {
 }
 
 void Queue::ProcessAllOnNetworkReachable() {
-  connectivity_ = services_->Connect<fuchsia::net::Connectivity>();
-  connectivity_.set_error_handler([this](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.net.Connectivity";
+  netstack_ = services_->Connect<fuchsia::netstack::Netstack>();
+  netstack_.set_error_handler([this](zx_status_t status) {
+    FX_PLOGS(ERROR, status) << "Lost connection to " << fuchsia::netstack::Netstack::Name_;
 
     network_reconnection_task_.Reset([this]() mutable { ProcessAllOnNetworkReachable(); });
     async::PostDelayedTask(
         dispatcher_, [cb = network_reconnection_task_.callback()]() { cb(); },
         network_reconnection_backoff_.GetNext());
   });
-  connectivity_.events().OnNetworkReachable = [this](bool reachable) {
-    network_reconnection_backoff_.Reset();
-    if (reachable) {
-      if (ProcessAll() > 0) {
-        FX_LOGS(INFO) << "Processing of pending crash reports queue on network reachable";
+
+  auto isReachable = [](const fuchsia::netstack::NetInterface& interface) {
+    if ((interface.flags &
+         (fuchsia::netstack::NetInterfaceFlagUp | fuchsia::netstack::NetInterfaceFlagDhcp)) == 0) {
+      return false;
+    }
+    auto isZero = [](const uint8_t octet) { return octet == 0; };
+    switch (interface.addr.Which()) {
+      case fuchsia::net::IpAddress::Tag::kIpv4: {
+        const auto& octets = interface.addr.ipv4().addr;
+        return !std::all_of(octets.cbegin(), octets.cend(), isZero);
+      }
+      case fuchsia::net::IpAddress::Tag::kIpv6: {
+        const auto& octets = interface.addr.ipv6().addr;
+        return !std::all_of(octets.cbegin(), octets.cend(), isZero);
+      }
+      case fuchsia::net::IpAddress::Tag::Invalid: {
+        FX_LOGS(ERROR) << "Network interface " << interface.name << " has malformed IP address";
+        return false;
       }
     }
   };
+
+  netstack_.events().OnInterfacesChanged =
+      [this, isReachable](std::vector<fuchsia::netstack::NetInterface> interfaces) {
+        network_reconnection_backoff_.Reset();
+        const bool reachable = std::any_of(interfaces.cbegin(), interfaces.cend(), isReachable);
+        if (reachable) {
+          if (ProcessAll() > 0) {
+            FX_LOGS(INFO) << "Processing of pending crash reports queue on network reachable";
+          }
+        }
+      };
 }
 
 }  // namespace crash_reports
