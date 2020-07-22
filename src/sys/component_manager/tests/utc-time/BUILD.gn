@@ -42,6 +42,10 @@ rustc_binary("consumer_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "consumer.rs" ]
 }
 
 rustc_test("integration_test_bin") {
@@ -61,6 +65,10 @@ rustc_test("integration_test_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "integration_test.rs" ]
 }
 
 fuchsia_component("integration-test-component") {

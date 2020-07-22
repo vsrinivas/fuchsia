@@ -17,6 +17,10 @@ rustc_binary("unbound_child_worker_child_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "unbound_child/worker_child.rs" ]
 }
 
 rustc_binary("unbound_child_worker_sibling_bin") {
@@ -29,6 +33,10 @@ rustc_binary("unbound_child_worker_sibling_bin") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "unbound_child/worker_sibling.rs" ]
 }
 
 rustc_binary("bound_worker_bin") {
@@ -43,4 +51,8 @@ rustc_binary("bound_worker_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "bound/worker.rs" ]
 }

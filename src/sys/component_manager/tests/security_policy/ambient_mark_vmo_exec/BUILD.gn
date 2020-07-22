@@ -29,6 +29,10 @@ rustc_test("security_policy_vmex_integration_test_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "security_policy_vmex_integration_test.rs" ]
 }
 
 fidl("test.policy") {
@@ -48,6 +52,10 @@ rustc_binary("protected_ops_util") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "protected_ops_util.rs" ]
 }
 
 test_package("security-policy-vmex-integration-test") {

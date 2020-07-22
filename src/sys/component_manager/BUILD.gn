@@ -75,12 +75,102 @@ template("component_manager") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+  sources = [
+    "src/builtin/arguments.rs",
+    "src/builtin/capability.rs",
+    "src/builtin/kernel_stats.rs",
+    "src/builtin/log.rs",
+    "src/builtin/mod.rs",
+    "src/builtin/process_launcher.rs",
+    "src/builtin/root_job.rs",
+    "src/builtin/root_resource.rs",
+    "src/builtin/runner.rs",
+    "src/builtin/system_controller.rs",
+    "src/builtin/time.rs",
+    "src/builtin/vmex.rs",
+    "src/builtin_environment.rs",
+    "src/capability.rs",
+    "src/capability_ready_notifier.rs",
+    "src/channel.rs",
+    "src/config.rs",
+    "src/constants.rs",
+    "src/elf_runner/mod.rs",
+    "src/framework.rs",
+    "src/fuchsia_base_pkg_resolver.rs",
+    "src/fuchsia_boot_resolver.rs",
+    "src/fuchsia_pkg_resolver.rs",
+    "src/klog.rs",
+    "src/lib.rs",
+    "src/model/actions/mod.rs",
+    "src/model/actions/shutdown.rs",
+    "src/model/actions/start.rs",
+    "src/model/addable_directory.rs",
+    "src/model/binding.rs",
+    "src/model/dir_tree.rs",
+    "src/model/environment.rs",
+    "src/model/error.rs",
+    "src/model/event_logger.rs",
+    "src/model/events/dispatcher.rs",
+    "src/model/events/error.rs",
+    "src/model/events/event.rs",
+    "src/model/events/filter.rs",
+    "src/model/events/mod.rs",
+    "src/model/events/registry.rs",
+    "src/model/events/running_provider.rs",
+    "src/model/events/serve.rs",
+    "src/model/events/source.rs",
+    "src/model/events/source_factory.rs",
+    "src/model/events/stream.rs",
+    "src/model/events/stream_provider.rs",
+    "src/model/events/synthesizer.rs",
+    "src/model/exposed_dir.rs",
+    "src/model/hooks.rs",
+    "src/model/hub.rs",
+    "src/model/mod.rs",
+    "src/model/model.rs",
+    "src/model/moniker.rs",
+    "src/model/namespace.rs",
+    "src/model/realm.rs",
+    "src/model/resolver.rs",
+    "src/model/rights.rs",
+    "src/model/routing/error.rs",
+    "src/model/routing/mod.rs",
+    "src/model/routing_fns.rs",
+    "src/model/runner.rs",
+    "src/model/storage.rs",
+    "src/model/testing/echo_service.rs",
+    "src/model/testing/mocks.rs",
+    "src/model/testing/mod.rs",
+    "src/model/testing/out_dir.rs",
+    "src/model/testing/routing_test_helpers.rs",
+    "src/model/testing/test_helpers.rs",
+    "src/model/testing/test_hook.rs",
+    "src/model/walk_state.rs",
+    "src/path.rs",
+    "src/root_realm_stop_notifier.rs",
+    "src/startup.rs",
+    "src/work_scheduler/delegate.rs",
+    "src/work_scheduler/dispatcher.rs",
+    "src/work_scheduler/hook.rs",
+    "src/work_scheduler/mod.rs",
+    "src/work_scheduler/timer.rs",
+    "src/work_scheduler/work_item.rs",
+    "src/work_scheduler/work_scheduler.rs",
+  ]
+
   is_test = false
   if (defined(invoker.is_test)) {
     is_test = invoker.is_test
   }
 
   if (is_test) {
+    sources += [
+      "src/model/tests/mod.rs",
+      "src/model/tests/routing.rs",
+      "src/model/tests/storage.rs",
+      "src/work_scheduler/routing_tests.rs",
+    ]
+
     rustc_test(target_name) {
       forward_variables_from(invoker,
                              [
@@ -101,6 +191,8 @@ template("component_manager") {
       # TODO(46841): Fix the leaks and remove this.
       non_rust_deps +=
           [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+      enforce_source_listing = true
     }
   } else {
     rustc_library(target_name) {
@@ -111,6 +203,8 @@ template("component_manager") {
                              ])
       name = "component_manager_lib"
       edition = "2018"
+
+      enforce_source_listing = true
 
       # Only for internal use.
       visibility = [
@@ -165,6 +259,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 # This manifest is consumed by the ZBI rule in //build/images to add component_manager to bootfs.

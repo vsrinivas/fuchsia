@@ -17,4 +17,8 @@ rustc_library("security_policy_test_util") {
     "//src/sys/component_manager/tests:test_utils_lib",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "lib.rs" ]
 }

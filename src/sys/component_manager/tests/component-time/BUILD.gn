@@ -24,6 +24,10 @@ group("tests") {
 
 rustc_test("component-time-test") {
   source_root = "src/test.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "src/test.rs" ]
 }
 
 # Run with `fx test component-v1-time-unittests`.

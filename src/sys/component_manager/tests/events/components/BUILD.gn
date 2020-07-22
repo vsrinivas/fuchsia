@@ -18,6 +18,10 @@ rustc_binary("interpose_echo_looper_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "interpose/echo_looper.rs" ]
 }
 
 rustc_binary("trigger_server_bin") {
@@ -36,6 +40,10 @@ rustc_binary("trigger_server_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "static_event_stream/trigger_server.rs" ]
 }
 
 rustc_binary("trigger_client_bin") {
@@ -54,6 +62,10 @@ rustc_binary("trigger_client_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "static_event_stream/trigger_client.rs" ]
 }
 
 rustc_binary("echo_reporter_bin") {
@@ -72,6 +84,10 @@ rustc_binary("echo_reporter_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "scoped/echo_reporter.rs" ]
 }
 
 rustc_binary("chained_interpose_echo_client_bin") {
@@ -88,6 +104,10 @@ rustc_binary("chained_interpose_echo_client_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "chained_interpose/echo_client.rs" ]
 }
 
 rustc_binary("chained_interpose_echo_factory_bin") {
@@ -104,6 +124,10 @@ rustc_binary("chained_interpose_echo_factory_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "chained_interpose/echo_factory.rs" ]
 }
 
 rustc_binary("nested_reporter_bin") {
@@ -121,6 +145,10 @@ rustc_binary("nested_reporter_bin") {
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "nested/reporter.rs" ]
 }
 
 rustc_binary("resolved_error_reporter_bin") {
@@ -141,6 +169,10 @@ rustc_binary("resolved_error_reporter_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "resolved_error/reporter.rs" ]
 }
 
 rustc_binary("async_reporter_bin") {
@@ -159,6 +191,10 @@ rustc_binary("async_reporter_bin") {
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "async/reporter.rs" ]
 }
 
 rustc_binary("echo_client_for_events_bin") {
@@ -177,6 +213,10 @@ rustc_binary("echo_client_for_events_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "scoped/echo_client.rs" ]
 }
 
 rustc_binary("stub_component_bin") {
@@ -188,6 +228,10 @@ rustc_binary("stub_component_bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "stub/component.rs" ]
 }
 
 rustc_binary("realm_offered_nested") {
@@ -206,6 +250,10 @@ rustc_binary("realm_offered_nested") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "realm_offered/nested.rs" ]
 }
 
 rustc_binary("realm_offered_bin") {
@@ -220,6 +268,10 @@ rustc_binary("realm_offered_bin") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "realm_offered/reporter.rs" ]
 }
 
 rustc_binary("capability_ready_root_bin") {
@@ -241,6 +293,10 @@ rustc_binary("capability_ready_root_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:maplit",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "capability_ready/root.rs" ]
 }
 
 rustc_binary("capability_ready_child_bin") {
@@ -255,6 +311,10 @@ rustc_binary("capability_ready_child_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "capability_ready/child.rs" ]
 }
 
 rustc_binary("synthesis_reporter_bin") {
@@ -272,4 +332,8 @@ rustc_binary("synthesis_reporter_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:regex",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "synthesis/reporter.rs" ]
 }

@@ -24,6 +24,10 @@ rustc_test("elf_runner_test_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "elf_runner_test.rs" ]
 }
 
 rustc_binary("args_reporter") {
@@ -35,6 +39,10 @@ rustc_binary("args_reporter") {
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "args_reporter.rs" ]
 }
 
 test_package("elf-runner-test") {

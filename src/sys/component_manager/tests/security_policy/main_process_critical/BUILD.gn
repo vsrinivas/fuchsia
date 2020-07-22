@@ -26,6 +26,10 @@ rustc_test("security_policy_critical_integration_test_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "security_policy_critical_integration_test.rs" ]
 }
 
 fidl("test.policy") {
@@ -44,6 +48,10 @@ rustc_binary("exit_on_command") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "exit_on_command.rs" ]
 }
 
 test_package("security-policy-critical-integration-test") {
