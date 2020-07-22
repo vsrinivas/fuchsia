@@ -189,6 +189,7 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
     }
   }
   services->AllowParentService("fuchsia.logger.LogSink");
+  services->AllowParentService("fuchsia.tracing.provider.Registry");
   services->AllowParentService(fuchsia::scheduler::ProfileProvider::Name_);
   services->AllowParentService(kIsolatedDevmgrServiceName);
 

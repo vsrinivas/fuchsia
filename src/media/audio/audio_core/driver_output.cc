@@ -151,6 +151,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
       zx::duration output_variance_from_expected_wakeup =
           zx::nsec(output_frames_per_reference_tick.Inverse().Scale(low_water_frames_underflow));
 
+      TRACE_INSTANT("audio", "DriverOutput::UNDERFLOW", TRACE_SCOPE_THREAD);
       FX_LOGS(ERROR) << "OUTPUT UNDERFLOW: Missed mix target by (worst-case, expected) = ("
                      << std::setprecision(4)
                      << static_cast<double>(output_underflow_duration.to_nsecs()) / ZX_MSEC(1)
