@@ -30,6 +30,14 @@ rustc_binary("bin") {
   if (!is_fuchsia) {
     non_rust_deps += [ "//third_party/boringssl" ]
   }
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/host_pipe.rs",
+    "src/main.rs",
+    "src/probe_reports.rs",
+  ]
 }
 
 package("onet") {

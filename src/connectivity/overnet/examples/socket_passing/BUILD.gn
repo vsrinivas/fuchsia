@@ -31,6 +31,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
   ]
   non_rust_deps = [ "//third_party/boringssl" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 package("overnet-socket-passing") {

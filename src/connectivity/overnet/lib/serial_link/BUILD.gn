@@ -28,6 +28,25 @@ rustc_library("serial_link") {
   } else {
     deps += [ "//third_party/rust_crates:async-std" ]
   }
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/descriptor.rs",
+    "src/fragment_io.rs",
+    "src/lib.rs",
+    "src/lossy_text.rs",
+    "src/reassembler.rs",
+    "src/report_skipped.rs",
+    "src/run.rs",
+    "src/test_util.rs",
+  ]
+  inputs = [
+    "//third_party/rust-mirrors/quiche/examples/cert.crt",
+    "//third_party/rust-mirrors/quiche/examples/cert.key",
+    "//third_party/rust-mirrors/quiche/examples/rootca.crt",
+    "src/long_packet.bin",
+  ]
 }
 
 test_package("overnet-serial-link-tests") {

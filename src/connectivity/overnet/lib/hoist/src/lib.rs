@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod fuchsia;
 #[cfg(not(target_os = "fuchsia"))]
 pub mod logger;
+#[cfg(not(target_os = "fuchsia"))]
 mod not_fuchsia;
-
-#[cfg(target_os = "fuchsia")]
-pub use fuchsia::*;
-
 #[cfg(not(target_os = "fuchsia"))]
 pub use not_fuchsia::*;
+
+#[cfg(target_os = "fuchsia")]
+mod fuchsia;
+#[cfg(target_os = "fuchsia")]
+pub use fuchsia::*;
 
 #[cfg(target_os = "fuchsia")]
 pub mod logger {

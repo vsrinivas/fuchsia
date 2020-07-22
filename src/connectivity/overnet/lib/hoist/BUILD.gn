@@ -20,11 +20,23 @@ rustc_library("hoist") {
   ]
   test_deps = [ "//third_party/rust_crates:parking_lot" ]
   non_rust_deps = [ "//third_party/boringssl" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
+
+  inputs = [
+    "//third_party/rust-mirrors/quiche/examples/cert.crt",
+    "//third_party/rust-mirrors/quiche/examples/cert.key",
+    "//third_party/rust-mirrors/quiche/examples/rootca.crt",
+  ]
+
   if (is_fuchsia) {
     deps += [
       "//src/lib/fuchsia-component",
       "//src/lib/syslog/rust:syslog",
     ]
+    sources += [ "src/fuchsia.rs" ]
     test_deps += [ "//src/connectivity/overnet/lib/core" ]
   } else {
     deps += [
@@ -37,6 +49,10 @@ rustc_library("hoist") {
       "//third_party/rust_crates:rand",
       "//third_party/rust_crates:slab",
       "//third_party/rust_crates:tempfile",
+    ]
+    sources += [
+      "src/logger.rs",
+      "src/not_fuchsia.rs",
     ]
   }
 }

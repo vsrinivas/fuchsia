@@ -44,6 +44,10 @@ if (is_host) {
       "//third_party/rust_crates:tempfile",
     ]
     non_rust_deps = [ ":test_commands" ]
+
+    enforce_source_listing = true
+
+    sources = [ "src/main.rs" ]
   }
 }
 
