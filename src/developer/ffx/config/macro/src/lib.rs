@@ -5,7 +5,7 @@
 use proc_macro_hack::proc_macro_hack;
 
 #[proc_macro_hack]
-pub use config_proc_macros::{include_default, include_test_default};
+pub use config_proc_macros::include_default;
 
 #[macro_export]
 macro_rules! ffx_cmd {
@@ -37,46 +37,15 @@ macro_rules! ffx_env {
 }
 
 #[macro_export]
-macro_rules! ffx_defaults {
-    () => {{
-        #[cfg(test)]
-        {
-            false
-        }
-        #[cfg(not(test))]
-        {
-            true
-        }
-    }};
-}
-
-#[macro_export]
 macro_rules! get {
     (str, $key:expr, $default:expr) => {{
-        ffx_config::get_config_str(
-            $key,
-            $default,
-            ffx_config::ffx_cmd!(),
-            ffx_config::ffx_env!(),
-            ffx_config::ffx_defaults!(),
-        )
+        ffx_config::get_config_str($key, $default, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
     }};
     (bool, $key:expr, $default:expr) => {{
-        ffx_config::get_config_bool(
-            $key,
-            $default,
-            ffx_config::ffx_cmd!(),
-            ffx_config::ffx_env!(),
-            ffx_config::ffx_defaults!(),
-        )
+        ffx_config::get_config_bool($key, $default, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
     }};
     ($key:expr) => {
-        ffx_config::get_config(
-            $key,
-            ffx_config::ffx_cmd!(),
-            ffx_config::ffx_env!(),
-            ffx_config::ffx_defaults!(),
-        )
+        ffx_config::get_config($key, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
     };
 }
 
@@ -89,7 +58,6 @@ macro_rules! remove {
             $build_dir,
             ffx_config::ffx_cmd!(),
             ffx_config::ffx_env!(),
-            ffx_config::ffx_defaults!(),
         )
     }};
 }
@@ -104,7 +72,6 @@ macro_rules! set {
             $build_dir,
             ffx_config::ffx_cmd!(),
             ffx_config::ffx_env!(),
-            ffx_config::ffx_defaults!(),
         )
     }};
 }

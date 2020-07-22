@@ -49,14 +49,12 @@ impl Persistent {
         global: Option<R>,
         build: Option<R>,
         user: Option<R>,
-        include_real_default: bool,
     ) -> Result<Self, Error> {
         Ok(Self {
             data: Priority::new(
                 Persistent::open(user)?,
                 Persistent::open(build)?,
                 Persistent::open(global)?,
-                include_real_default,
             ),
         })
     }
@@ -129,7 +127,6 @@ mod test {
             Some(BufReader::new(global_file.as_bytes())),
             Some(BufReader::new(build_file.as_bytes())),
             Some(BufReader::new(user_file.as_bytes())),
-            false,
         )?;
 
         let value = persistent_config.get("name");

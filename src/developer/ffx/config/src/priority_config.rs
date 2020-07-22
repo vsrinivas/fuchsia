@@ -5,7 +5,7 @@
 use {
     crate::api::{ReadConfig, WriteConfig},
     anyhow::{anyhow, Error},
-    config_macros::{include_default, include_test_default},
+    config_macros::include_default,
     ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
 };
@@ -51,15 +51,8 @@ impl<'a> Iterator for PriorityIterator<'a> {
 }
 
 impl Priority {
-    pub(crate) fn new(
-        user: Option<Value>,
-        build: Option<Value>,
-        global: Option<Value>,
-        include_real_default: bool,
-    ) -> Self {
-        let default =
-            if include_real_default { include_default!() } else { include_test_default!() };
-        Self { user, build, global, defaults: default }
+    pub(crate) fn new(user: Option<Value>, build: Option<Value>, global: Option<Value>) -> Self {
+        Self { user, build, global, defaults: include_default!() }
     }
 
     fn iter(&self) -> PriorityIterator<'_> {
@@ -344,10 +337,8 @@ mod test {
 
     #[test]
     fn test_defaults() {
-        let test = Priority::new(None, None, None, false);
+        let test = Priority::new(None, None, None);
         let default_value = test.get("log-enabled");
-        assert_eq!(default_value.unwrap(), Value::Bool(true));
-        let default_socket = test.get("ascendd-socket");
-        assert_eq!(default_socket.unwrap(), Value::String("/tmp/ascendd_for_testing".to_string()));
+        assert_eq!(default_value.unwrap(), Value::Bool(false));
     }
 }

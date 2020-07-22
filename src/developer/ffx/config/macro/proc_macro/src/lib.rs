@@ -14,12 +14,3 @@ pub fn include_default(_input: TokenStream) -> TokenStream {
 
     std::format!("Some(serde_json::json!({}))", default).parse().unwrap()
 }
-
-#[proc_macro_hack]
-pub fn include_test_default(_input: TokenStream) -> TokenStream {
-    // Test deserializing the test_defaults.json file at compile time.
-    let default = include_str!("../../../data/test_defaults.json");
-    let _res: Option<Value> = serde_json::from_str(default).expect("defaults.json is malformed");
-
-    std::format!("Some(serde_json::json!({}))", default).parse().unwrap()
-}

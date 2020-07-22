@@ -1,4 +1,3 @@
 {
-  "log-enabled": false,
-  "ascendd-socket": "/tmp/ascendd"
+  "log-enabled": false
 }

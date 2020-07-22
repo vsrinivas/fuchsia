@@ -4,6 +4,13 @@
 use std::time::Duration;
 
 pub(crate) const DAEMON: &str = "daemon";
+
+#[cfg(not(test))]
+pub(crate) const SOCKET: &str = "/tmp/ascendd";
+
+#[cfg(test)]
+pub(crate) const SOCKET: &str = "/tmp/ascendd_for_testing_only";
+
 pub(crate) const MAX_RETRY_COUNT: u32 = 30;
 
 // Delay between retry attempts to find the RCS.

@@ -82,10 +82,9 @@ impl<'a> Config<'a> {
         environment_variables: &'a HashMap<&'static str, Vec<&'static str>>,
         heuristics: &'a HashMap<&'static str, HeuristicFn>,
         runtime: Ffx,
-        include_real_default: bool,
     ) -> Result<Self, Error> {
         Ok(Self {
-            data: Some(Config::load_persistent_config(env, build_dir, include_real_default)?),
+            data: Some(Config::load_persistent_config(env, build_dir)?),
             environment_variables: EnvironmentVariable::new(environment_variables),
             heuristics: Heuristic::new(heuristics),
             runtime: Runtime::new(runtime),
@@ -113,16 +112,12 @@ impl<'a> Config<'a> {
     fn load_persistent_config(
         env: &Environment,
         build_dir: &Option<String>,
-        include_real_default: bool,
     ) -> Result<FileBacked, Error> {
         match build_dir {
-            Some(b) => FileBacked::load(
-                &env.global,
-                &env.build.as_ref().and_then(|c| c.get(b)),
-                &env.user,
-                include_real_default,
-            ),
-            None => FileBacked::load(&env.global, &None, &env.user, include_real_default),
+            Some(b) => {
+                FileBacked::load(&env.global, &env.build.as_ref().and_then(|c| c.get(b)), &env.user)
+            }
+            None => FileBacked::load(&env.global, &None, &env.user),
         }
     }
 }

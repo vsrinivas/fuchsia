@@ -42,7 +42,6 @@ template("ffx") {
              ":" + suite_name + "_args",
              ":" + suite_name + "_sub_command",
              ":" + suite_name,
-             "//third_party/rust_crates:serde_json",
            ]
     non_rust_deps = [ "//third_party/boringssl" ]
     forward_variables_from(invoker,
