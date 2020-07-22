@@ -10,6 +10,7 @@ pub const PACKAGE_REPO: &str = "package-repo";
 pub const SSH_PUB: &str = "ssh-pub";
 pub const SSH_PRIV: &str = "ssh-priv";
 pub const SSH_PORT: &str = "ssh-port";
+pub const ASCENDD_SOCKET: &str = "ascendd-socket";
 
 // Environment file that keeps track of configuration files
 pub const ENV_FILE: &str = ".ffx_env";

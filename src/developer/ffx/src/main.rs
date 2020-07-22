@@ -16,7 +16,7 @@ use {
 mod logger;
 
 async fn get_daemon_proxy() -> Result<DaemonProxy, Error> {
-    if !is_daemon_running() {
+    if !is_daemon_running().await {
         spawn_daemon().await?;
     }
     Ok(find_and_connect().await?.expect("No daemon found."))
@@ -73,7 +73,9 @@ async fn main() {
 mod test {
     use {
         super::*,
-        ffx_config::{ffx_cmd, ffx_env},
+        ffx_config::constants::{ASCENDD_SOCKET, LOG_ENABLED},
+        ffx_config::{ffx_cmd, ffx_env, get},
+        serde_json::Value,
     };
 
     #[test]
@@ -82,5 +84,17 @@ mod test {
         assert_eq!(ffx_cmd!(), ffx_lib_args::DEFAULT_FFX);
         let env: Result<(), Error> = ffx_env!();
         assert!(env.is_err());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_config_defaults_get() -> Result<(), Error> {
+        // Testing these macros outside of the config library to make sure test values are
+        // returned.
+        assert_eq!(
+            get!(ASCENDD_SOCKET).await?,
+            Some(Value::String("/tmp/ascendd_for_testing".to_string()))
+        );
+        assert_eq!(get!(LOG_ENABLED).await?, Some(Value::Bool(true)));
+        Ok(())
     }
 }

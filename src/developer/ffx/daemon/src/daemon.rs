@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{EVENT_TIMEOUT, SOCKET},
+    crate::constants::EVENT_TIMEOUT,
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::mdns::MdnsTargetFinder,
@@ -11,12 +11,15 @@ use {
     anyhow::{anyhow, Context, Error},
     async_std::task,
     async_trait::async_trait,
+    ffx_config::constants::ASCENDD_SOCKET,
+    ffx_config::get,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
+    std::path::Path,
     std::sync::{Arc, Weak},
     std::time::Duration,
 };
@@ -293,10 +296,13 @@ impl Daemon {
 
                 task::sleep(std::time::Duration::from_millis(10)).await;
 
-                match std::fs::remove_file(SOCKET) {
-                    Ok(()) => {}
-                    Err(e) => log::error!("failed to remove socket file: {}", e),
-                }
+                match get!(ASCENDD_SOCKET).await?.map(|s| {
+                    std::fs::remove_file(Path::new(&s.to_string()))
+                        .map_err(|e| anyhow!("failed to remove socket file: {}", e))
+                }) {
+                    Some(Err(e)) => log::error!("{}", e),
+                    _ => {}
+                };
 
                 // This is not guaranteed to clean all processes all the time,
                 // but is a best-effort for the time being. In the future this
@@ -542,16 +548,17 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
 
-        if std::path::Path::new(SOCKET).is_file() {
-            std::fs::remove_file(SOCKET).unwrap();
+        let path_string = get!(ASCENDD_SOCKET).await?.map(|s| s.to_string()).unwrap();
+        let path = std::path::Path::new(&path_string);
+        if path.is_file() {
+            std::fs::remove_file(path).unwrap();
         }
 
         let mut _ctrl = spawn_daemon_server_with_fake_target("florp", stream).await;
         let r = daemon_proxy.quit().await.unwrap();
-
         assert!(r);
 
-        assert!(!std::path::Path::new(SOCKET).is_file());
+        assert!(!path.is_file());
 
         Ok(())
     }

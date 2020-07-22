@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{DAEMON, MAX_RETRY_COUNT, SOCKET},
+    crate::constants::{DAEMON, MAX_RETRY_COUNT},
     crate::daemon::Daemon,
     anyhow::{Context, Error},
+    ffx_config::constants::ASCENDD_SOCKET,
+    ffx_config::get,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequestStream},
     fidl_fuchsia_overnet::{
@@ -15,6 +17,7 @@ use {
     fuchsia_async::spawn,
     futures::prelude::*,
     std::env,
+    std::path::Path,
     std::process::Command,
 };
 
@@ -107,17 +110,21 @@ async fn exec_server(daemon: Daemon) -> Result<(), Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // start
 
-pub fn is_daemon_running() -> bool {
+pub async fn is_daemon_running() -> bool {
     // Try to connect directly to the socket. This will fail if nothing is listening on the other side
     // (even if the path exists).
-    match std::os::unix::net::UnixStream::connect(SOCKET) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    get!(ASCENDD_SOCKET).await.map_or(false, |s| {
+        s.map_or(false, |s| {
+            match std::os::unix::net::UnixStream::connect(Path::new(&s.to_string())) {
+                Ok(_) => true,
+                Err(_) => false,
+            }
+        })
+    })
 }
 
 pub async fn start() -> Result<(), Error> {
-    if is_daemon_running() {
+    if is_daemon_running().await {
         return Ok(());
     }
     futures::try_join!(onet::run_ascendd(), exec_server(Daemon::new().await?))?;

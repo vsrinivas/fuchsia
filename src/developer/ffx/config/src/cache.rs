@@ -53,8 +53,10 @@ pub(crate) async fn load_config(
     build_dir: &Option<String>,
     ffx: Ffx,
     env: &Result<String, Error>,
+    include_real_default: bool,
 ) -> Result<Arc<RwLock<Config<'static>>>, Error> {
-    load_config_with_instant(build_dir, Instant::now(), &CACHE, ffx, env).await
+    load_config_with_instant(build_dir, Instant::now(), &CACHE, ffx, env, include_real_default)
+        .await
 }
 
 async fn load_config_with_instant(
@@ -63,6 +65,7 @@ async fn load_config_with_instant(
     cache: &Cache,
     ffx: Ffx,
     env: &Result<String, Error>,
+    include_real_default: bool,
 ) -> Result<Arc<RwLock<Config<'static>>>, Error> {
     let cache_hit = read_cache(build_dir, now, cache).await;
     match cache_hit {
@@ -85,6 +88,7 @@ async fn load_config_with_instant(
                                 &ENV_VARS,
                                 &HEURISTICS,
                                 ffx,
+                                include_real_default,
                             )?)),
                         },
                     );
@@ -120,7 +124,7 @@ mod test {
         let env = env();
         let mut futures = Vec::new();
         for _x in 0..tests {
-            futures.push(load_config_with_instant(key, now, cache, cli(), &env));
+            futures.push(load_config_with_instant(key, now, cache, cli(), &env, false));
         }
         let result = join_all(futures).await;
         assert_eq!(tests, result.len());
@@ -206,6 +210,7 @@ mod test {
                 &ENV_VARS,
                 &HEURISTICS,
                 cli(),
+                false,
             )?)),
         };
         assert!(!is_cache_item_expired(&item, now));

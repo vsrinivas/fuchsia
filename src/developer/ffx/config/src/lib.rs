@@ -28,7 +28,7 @@ mod persistent_config;
 mod priority_config;
 mod runtime_config;
 
-pub use config_macros::{ffx_cmd, ffx_env, get, remove, set};
+pub use config_macros::{ffx_cmd, ffx_defaults, ffx_env, get, remove, set};
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -40,8 +40,9 @@ pub async fn get_config(
     name: &str,
     ffx: Ffx,
     env: Result<String, Error>,
+    include_real_default: bool,
 ) -> Result<Option<Value>, Error> {
-    get_config_with_build_dir(name, &None, ffx, env).await
+    get_config_with_build_dir(name, &None, ffx, env, include_real_default).await
 }
 
 pub async fn get_config_with_build_dir(
@@ -49,8 +50,9 @@ pub async fn get_config_with_build_dir(
     build_dir: &Option<String>,
     ffx: Ffx,
     env: Result<String, Error>,
+    include_real_default: bool,
 ) -> Result<Option<Value>, Error> {
-    let config = load_config(build_dir, ffx, &env).await?;
+    let config = load_config(build_dir, ffx, &env, include_real_default).await?;
     let read_guard = config.read().await;
     Ok((*read_guard).get(name))
 }
@@ -60,8 +62,9 @@ pub async fn get_config_str(
     default: &str,
     ffx: Ffx,
     env: Result<String, Error>,
+    include_real_default: bool,
 ) -> String {
-    get_config(name, ffx, env)
+    get_config(name, ffx, env, include_real_default)
         .await
         .unwrap_or(Some(Value::String(default.to_string())))
         .map_or(default.to_string(), |v| v.as_str().unwrap_or(default).to_string())
@@ -72,13 +75,17 @@ pub async fn get_config_bool(
     default: bool,
     ffx: Ffx,
     env: Result<String, Error>,
+    include_real_default: bool,
 ) -> bool {
-    get_config(name, ffx, env).await.unwrap_or(Some(Value::Bool(default))).map_or(default, |v| {
-        v.as_bool().unwrap_or(match v {
-            Value::String(s) => s.parse().unwrap_or(default),
-            _ => default,
+    get_config(name, ffx, env, include_real_default)
+        .await
+        .unwrap_or(Some(Value::Bool(default)))
+        .map_or(default, |v| {
+            v.as_bool().unwrap_or(match v {
+                Value::String(s) => s.parse().unwrap_or(default),
+                _ => default,
+            })
         })
-    })
 }
 
 // TODO: remove dead code allowance when used (if ever)
@@ -88,8 +95,9 @@ pub async fn set_config(
     value: Value,
     ffx: Ffx,
     env: Result<String, Error>,
+    include_real_default: bool,
 ) -> Result<(), Error> {
-    set_config_with_build_dir(level, name, value, &None, ffx, env).await
+    set_config_with_build_dir(level, name, value, &None, ffx, env, include_real_default).await
 }
 
 pub async fn set_config_with_build_dir(
@@ -99,8 +107,9 @@ pub async fn set_config_with_build_dir(
     build_dir: &Option<String>,
     ffx: Ffx,
     env: Result<String, Error>,
+    include_real_default: bool,
 ) -> Result<(), Error> {
-    let config = load_config(&build_dir, ffx, &env).await?;
+    let config = load_config(&build_dir, ffx, &env, include_real_default).await?;
     let mut write_guard = config.write().await;
     (*write_guard).set(&level, &name, value)?;
     save_config(&mut *write_guard, build_dir, env)
@@ -113,8 +122,9 @@ pub async fn remove_config(
     name: &str,
     ffx: Ffx,
     env: Result<String, Error>,
+    include_real_default: bool,
 ) -> Result<(), Error> {
-    remove_config_with_build_dir(level, name, &None, ffx, env).await
+    remove_config_with_build_dir(level, name, &None, ffx, env, include_real_default).await
 }
 
 pub async fn remove_config_with_build_dir(
@@ -123,8 +133,9 @@ pub async fn remove_config_with_build_dir(
     build_dir: &Option<String>,
     ffx: Ffx,
     env: Result<String, Error>,
+    include_real_default: bool,
 ) -> Result<(), Error> {
-    let config = load_config(&build_dir, ffx, &env).await?;
+    let config = load_config(&build_dir, ffx, &env, include_real_default).await?;
     let mut write_guard = config.write().await;
     (*write_guard).remove(&level, &name)?;
     save_config(&mut *write_guard, build_dir, env)

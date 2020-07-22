@@ -67,11 +67,13 @@ impl FileBacked {
         global: &Option<String>,
         build: &Option<&String>,
         user: &Option<String>,
+        include_real_default: bool,
     ) -> Result<Self, Error> {
         let data = Persistent::load(
             FileBacked::reader(global)?,
             FileBacked::reader_from_ref(build)?,
             FileBacked::reader(user)?,
+            include_real_default,
         )?;
         Ok(Self { data })
     }

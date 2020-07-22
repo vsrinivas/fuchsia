@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{self, SOCKET},
+    crate::constants,
     crate::ssh::build_ssh_command,
     crate::target::Target,
     anyhow::anyhow,
     anyhow::{Context, Error},
     async_std::io::prelude::BufReadExt,
     async_std::prelude::StreamExt,
+    ffx_config::constants::ASCENDD_SOCKET,
+    ffx_config::get,
     fidl_fuchsia_overnet::MeshControllerProxyInterface,
     futures::channel::oneshot,
     futures::future::FutureExt,
@@ -221,7 +223,10 @@ impl Drop for HostPipeConnection {
 pub async fn run_ascendd() -> Result<(), Error> {
     log::info!("Starting ascendd");
     ascendd_lib::run_ascendd(
-        ascendd_lib::Opt { sockpath: Some(SOCKET.to_string()), ..Default::default() },
+        ascendd_lib::Opt {
+            sockpath: get!(ASCENDD_SOCKET).await?.map(|s| s.to_string()),
+            ..Default::default()
+        },
         // TODO: this just prints serial output to stdout - ffx probably wants to take a more
         // nuanced approach here.
         Box::new(async_std::io::stdout()),
