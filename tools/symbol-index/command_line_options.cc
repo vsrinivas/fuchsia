@@ -106,17 +106,14 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
     return kHelpIntro + parser.GetHelp();
   }
 
-  std::string err;
-
-  err = options->SetVerb(params[0]);
-  if (!err.empty()) {
+  if (Error err = options->SetVerb(params[0]); !err.empty()) {
     return err;
   }
 
   options->params.resize(params.size() - 1);
   std::copy(params.begin() + 1, params.end(), options->params.begin());
-  err = options->Validate();
-  if (!err.empty()) {
+
+  if (Error err = options->Validate(); !err.empty()) {
     return err;
   }
 

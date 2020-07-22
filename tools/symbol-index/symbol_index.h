@@ -26,7 +26,7 @@ class SymbolIndex {
 
   // Constructs the symbol index from a config file at the given path. If the path is empty, a
   // default one, i.e., ~/.fuchsia/debug/symbol-index, will be used.
-  explicit SymbolIndex(std::string path = "");
+  explicit SymbolIndex(const std::string& path = "");
 
   // Loads the file from disk.  Does nothing if the file does not exists.
   // If any exception happens, the return value will be a non-empty string describing the error.

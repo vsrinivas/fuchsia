@@ -37,11 +37,12 @@ std::string SymbolIndex::Entry::ToString() const {
   return str;
 }
 
-SymbolIndex::SymbolIndex(std::string path) {
+SymbolIndex::SymbolIndex(const std::string& path) {
   if (path.empty()) {
-    path = std::string(std::getenv("HOME")) + "/.fuchsia/debug/symbol-index";
+    file_path_ = std::string(std::getenv("HOME")) + "/.fuchsia/debug/symbol-index";
+  } else {
+    file_path_ = path;
   }
-  file_path_ = path;
 }
 
 // TODO: Split out the parsing into something that takes an input stream for better testing.
