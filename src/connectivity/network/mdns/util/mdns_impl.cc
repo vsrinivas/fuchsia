@@ -65,7 +65,7 @@ void MdnsImpl::Resolve(const std::string& host_name, uint32_t timeout_seconds) {
   std::cout << "resolving " << host_name << "\n";
   EnsureResolver();
   resolver_->ResolveHostName(
-      host_name, timeout_seconds * 1000,
+      host_name, zx::sec(timeout_seconds).get(),
       [this](fuchsia::net::Ipv4AddressPtr v4Address, fuchsia::net::Ipv6AddressPtr v6Address) {
         if (v4Address) {
           std::cout << "IPv4 address: " << *v4Address << "\n";
