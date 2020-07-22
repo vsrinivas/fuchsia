@@ -27,12 +27,12 @@
 #include <optional>
 #include <utility>
 
-#include "bootdata.h"
 #include "bootfs.h"
 #include "loader-service.h"
 #include "option.h"
 #include "userboot-elf.h"
 #include "util.h"
+#include "zbi.h"
 
 namespace {
 
@@ -185,10 +185,10 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
   zx::vmar vmar_self{handles[kVmarRootSelf]};
   handles[kVmarRootSelf] = ZX_HANDLE_INVALID;
 
-  // Locate the first bootfs bootdata section and decompress it.
-  // We need it to load devmgr and libc from.
+  // Locate the ZBI_TYPE_STORAGE_BOOTFS item and decompress it.
+  // We need it to load bootsvc and libc from.
   // Later bootfs sections will be processed by devmgr.
-  zx::vmo bootfs_vmo{bootdata_get_bootfs(log, vmar_self, *zx::unowned_vmo{handles[kZbi]})};
+  zx::vmo bootfs_vmo = GetBootfsFromZbi(log, vmar_self, *zx::unowned_vmo{handles[kZbi]});
 
   zx::process proc;
   {

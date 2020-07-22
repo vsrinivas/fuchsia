@@ -76,7 +76,6 @@ if (current_toolchain == default_toolchain) {
   # userboot is a reentrant DSO (no writable segment) with an entry point.
   loadable_module("userboot") {
     sources = [
-      "bootdata.cc",
       "bootfs.cc",
       "bump_allocator.cc",
       "decompressor.cc",
@@ -86,6 +85,7 @@ if (current_toolchain == default_toolchain) {
       "start.cc",
       "userboot-elf.cc",
       "util.cc",
+      "zbi.cc",
       "zx_panic.cc",
     ]
     defines = [
@@ -102,9 +102,11 @@ if (current_toolchain == default_toolchain) {
       "$zx/system/ulib/fidl",
       "$zx/system/ulib/ldmsg",
       "$zx/system/ulib/processargs",
+      "$zx/system/ulib/zbitl",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zircon-internal",
       "$zx/system/ulib/zx",
+      "$zx/third_party/ulib/musl/src/exit:abort",
       "$zx/third_party/ulib/musl/src/string:minimal_str",
       "$zx/third_party/ulib/musl/src/string:stdmem",
       "$zx/third_party/ulib/zstd:zstd-standalone",

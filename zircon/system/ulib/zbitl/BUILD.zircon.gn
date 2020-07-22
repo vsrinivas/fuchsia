@@ -48,7 +48,10 @@ library("zbitl") {
     ]
 
     if (is_fuchsia) {
-      sources += [ "vmo.cc" ]
+      sources += [
+        "vmo-crc32.cc",
+        "vmo.cc",
+      ]
       deps += [ "$zx/system/ulib/zx" ]
       public_deps += [
         # <lib/zbitl/vmo.h> has #include <lib/zx/vmo.h>.

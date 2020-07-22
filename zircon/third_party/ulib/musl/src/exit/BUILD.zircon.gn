@@ -5,7 +5,6 @@
 source_set("exit") {
   sources = [
     "__cxa_thread_atexit.c",
-    "abort.c",
     "assert.c",
     "at_quick_exit.c",
     "atexit.c",
@@ -13,9 +12,17 @@ source_set("exit") {
     "quick_exit.c",
   ]
   deps = [
+    ":abort",
     "$zx/system/ulib/zircon",
     "$zx/third_party/ulib/musl:musl_internal",
   ]
+
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+}
+
+source_set("abort") {
+  sources = [ "abort.c" ]
+  deps = [ "$zx/system/ulib/zircon" ]
 
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
