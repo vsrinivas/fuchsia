@@ -253,18 +253,19 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
         auto CompileMessage = [&](const flat::Struct& message) -> void {
           std::unique_ptr<coded::MessageType>& coded_message =
               coded_protocol->messages_during_compile[i++];
-          std::vector<coded::StructField>& request_fields = coded_message->fields;
+          std::vector<coded::StructElement>& request_elements = coded_message->elements;
           uint32_t field_num = 0;
           bool is_noop = true;
           for (const auto parameter : FlattenedStructMembers(message, wire_format)) {
             auto coded_parameter_type =
                 CompileType(parameter.type, coded::CodingContext::kOutsideEnvelope, wire_format);
             if (!coded_parameter_type->is_noop) {
-              request_fields.push_back(coded::StructField::Field(
-                  coded_parameter_type, parameter.offset, parameter.padding));
+              request_elements.push_back(
+                  coded::StructField(parameter.offset, coded_parameter_type));
               is_noop = false;
-            } else if (parameter.padding != 0) {
-              request_fields.push_back(coded::StructField::Padding(
+            }
+            if (parameter.padding != 0) {
+              request_elements.push_back(coded::StructPadding::FromLength(
                   parameter.inline_size + parameter.offset, parameter.padding));
               is_noop = false;
             }
@@ -294,7 +295,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
         break;
       coded::StructType* coded_struct =
           static_cast<coded::StructType*>(named_coded_types_[decl->name].get());
-      std::vector<coded::StructField>& struct_fields = coded_struct->fields;
+      std::vector<coded::StructElement>& struct_elements = coded_struct->elements;
       uint32_t field_num = 0;
       bool is_noop = true;
       for (const auto member : FlattenedStructMembers(*struct_decl, wire_format)) {
@@ -302,12 +303,12 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
         auto coded_member_type =
             CompileType(member.type, coded::CodingContext::kOutsideEnvelope, wire_format);
         if (!coded_member_type->is_noop) {
-          struct_fields.push_back(
-              coded::StructField::Field(coded_member_type, member.offset, member.padding));
+          struct_elements.push_back(coded::StructField(member.offset, coded_member_type));
           is_noop = false;
-        } else if (member.padding != 0) {
-          struct_fields.push_back(
-              coded::StructField::Padding(member.inline_size + member.offset, member.padding));
+        }
+        if (member.padding != 0) {
+          struct_elements.push_back(
+              coded::StructPadding::FromLength(member.inline_size + member.offset, member.padding));
           is_noop = false;
         }
         field_num++;
@@ -436,7 +437,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
           std::string message_name = NameMessage(method_name, kind);
           std::string message_qname = NameMessage(method_qname, kind);
           protocol_messages.push_back(std::make_unique<coded::MessageType>(
-              std::move(message_name), std::vector<coded::StructField>(),
+              std::move(message_name), std::vector<coded::StructElement>(),
               message.typeshape(wire_format).InlineSize(), std::move(message_qname)));
         };
         if (method.maybe_request) {
@@ -470,7 +471,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
       named_coded_types_.emplace(
           decl->name,
           std::make_unique<coded::StructType>(
-              std::move(struct_name), std::vector<coded::StructField>(),
+              std::move(struct_name), std::vector<coded::StructElement>(),
               struct_decl->typeshape(wire_format).InlineSize(), NameFlatName(struct_decl->name)));
       break;
     }

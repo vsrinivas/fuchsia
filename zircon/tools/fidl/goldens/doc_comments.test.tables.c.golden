@@ -12,10 +12,10 @@ extern const struct FidlCodedBits test_name_MyBitsTable;
 
 
 extern const struct FidlCodedStruct test_name_InterfaceMethodRequestTable;
-const struct FidlCodedStruct test_name_InterfaceMethodRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/InterfaceMethodRequest"};
+const struct FidlCodedStruct test_name_InterfaceMethodRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="test.name/InterfaceMethodRequest"};
 
 extern const struct FidlCodedStruct test_name_InterfaceOnEventEventTable;
-const struct FidlCodedStruct test_name_InterfaceOnEventEventTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/InterfaceOnEventEvent"};
+const struct FidlCodedStruct test_name_InterfaceOnEventEventTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="test.name/InterfaceOnEventEvent"};
 
 
 static const struct FidlXUnionField Fields15test_name_Union[] = {
@@ -31,7 +31,7 @@ static const struct FidlTableField Fields15test_name_Table[] = {
 };
 const struct FidlCodedTable test_name_TableTable = {.tag=kFidlTypeTable, .fields=Fields15test_name_Table, .field_count=1u, .name="test.name/Table"};
 
-const struct FidlCodedStruct test_name_StructTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=4u, .name="test.name/Struct"};
+const struct FidlCodedStruct test_name_StructTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="test.name/Struct"};
 
 static bool EnumValidatorFor_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
 const struct FidlCodedEnum test_name_MyEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_MyEnum, .name="test.name/MyEnum"};

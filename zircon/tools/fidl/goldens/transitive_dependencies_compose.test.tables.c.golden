@@ -7,12 +7,12 @@ extern const struct FidlCodedStruct bottom_FooTable;
 
 
 extern const struct FidlCodedStruct top_TopGetFooRequestTable;
-const struct FidlCodedStruct top_TopGetFooRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="top/TopGetFooRequest"};
+const struct FidlCodedStruct top_TopGetFooRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="top/TopGetFooRequest"};
 
 extern const struct FidlCodedStruct top_TopGetFooResponseTable;
-static const struct FidlStructField Fields21top_TopGetFooResponse[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=4u}
+static const struct FidlStructElement Fields21top_TopGetFooResponse[] = {
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
 };
-const struct FidlCodedStruct top_TopGetFooResponseTable = {.tag=kFidlTypeStruct, .fields=Fields21top_TopGetFooResponse, .field_count=1u, .size=24u, .name="top/TopGetFooResponse"};
+const struct FidlCodedStruct top_TopGetFooResponseTable = {.tag=kFidlTypeStruct, .elements=Fields21top_TopGetFooResponse, .element_count=1u, .size=24u, .name="top/TopGetFooResponse"};
 
 

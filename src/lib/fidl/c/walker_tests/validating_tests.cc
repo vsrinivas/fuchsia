@@ -1287,6 +1287,7 @@ bool validate_nested_nonnullable_structs_check_padding() {
         fidl_validate(&nested_structs_message_type, &message, kBufferSize, kNumHandles, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    ASSERT_NOT_NULL(error);
     EXPECT_STR_EQ(error, "non-zero padding bytes detected");
   }
 
@@ -1761,68 +1762,20 @@ bool validate_primitives_struct() {
                                                   .type = kFidlCodedPrimitiveSubtype_Float32};
   static const FidlCodedPrimitive kFloat64Type = {.tag = kFidlTypePrimitive,
                                                   .type = kFidlCodedPrimitiveSubtype_Float64};
-  static const struct FidlStructField kFields[] = {
-      {
-          &kBoolType,
-          0u,
-          0u,
-      },
-      {
-          &kInt8Type,
-          1u,
-          0u,
-      },
-      {
-          &kInt16Type,
-          2u,
-          0u,
-      },
-      {
-          &kInt32Type,
-          4u,
-          0u,
-      },
-      {
-          &kInt64Type,
-          8u,
-          0u,
-      },
-      {
-          &kUint8Type,
-          16u,
-          1u,
-      },
-      {
-          &kUint16Type,
-          18u,
-          0u,
-      },
-      {
-          &kUint32Type,
-          20u,
-          0u,
-      },
-      {
-          &kUint64Type,
-          24u,
-          0u,
-      },
-      {
-          &kFloat32Type,
-          32u,
-          4u,
-      },
-      {
-          &kFloat64Type,
-          40u,
-          0u,
-      },
+  static const struct FidlStructElement kFields[] = {
+      FidlStructElement::Field(&kBoolType, 0u),     FidlStructElement::Field(&kInt8Type, 1u),
+      FidlStructElement::Field(&kInt16Type, 2u),    FidlStructElement::Field(&kInt32Type, 4u),
+      FidlStructElement::Field(&kInt64Type, 8u),    FidlStructElement::Field(&kUint8Type, 16u),
+      FidlStructElement::Padding16(16u, 0x00ff),    FidlStructElement::Field(&kUint16Type, 18u),
+      FidlStructElement::Field(&kUint32Type, 20u),  FidlStructElement::Field(&kUint64Type, 24u),
+      FidlStructElement::Field(&kFloat32Type, 32u), FidlStructElement::Padding32(36u, 0xffffffff),
+      FidlStructElement::Field(&kFloat64Type, 40u),
   };
   static const FidlCodedStruct kPrimitiveStructCodingTable = {
       .tag = kFidlTypeStruct,
-      .field_count = 11u,
+      .element_count = ArrayCount(kFields),
       .size = 48u,
-      .fields = kFields,
+      .elements = kFields,
       .name = "fidl.test.coding/PrimitiveStruct",
   };
 

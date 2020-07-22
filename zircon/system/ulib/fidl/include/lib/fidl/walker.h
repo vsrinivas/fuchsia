@@ -364,23 +364,34 @@ template <typename VisitorImpl>
 Result Walker<VisitorImpl>::WalkStruct(const FidlCodedStruct* coded_struct,
                                        Walker<VisitorImpl>::Position position,
                                        OutOfLineDepth depth) {
-  for (uint32_t i = 0; i < coded_struct->field_count; i++) {
-    const FidlStructField& field = coded_struct->fields[i];
-    if (field.type) {
-      // Field has a value.
-      Position field_position = position + field.offset;
-      if (field.padding > 0) {
-        Position padding_position = field_position + TypeSize(field.type);
-        auto status = visitor_->VisitInternalPadding(padding_position, field.padding);
-        FIDL_STATUS_GUARD(status);
+  for (uint32_t i = 0; i < coded_struct->element_count; i++) {
+    const FidlStructElement& element = coded_struct->elements[i];
+    switch (element.element_type) {
+      case kFidlStructElementType_Field: {
+        const FidlStructField& field = element.field;
+        Position field_position = position + field.offset;
+        Result result = WalkInternal(field.field_type, field_position, depth);
+        FIDL_RESULT_GUARD(result);
+        break;
       }
-      Result result = WalkInternal(field.type, field_position, depth);
-      FIDL_RESULT_GUARD(result);
-    } else if (field.padding > 0) {
-      // Field entry is a padding marker, not an actual field.
-      // The field offset is effectively the padding marker.
-      auto status = visitor_->VisitInternalPadding(position + field.padding_offset, field.padding);
-      FIDL_STATUS_GUARD(status);
+      case kFidlStructElementType_Padding64: {
+        const FidlStructPadding& padding = element.padding;
+        auto status = visitor_->VisitInternalPadding(position + padding.offset, padding.mask_64);
+        FIDL_STATUS_GUARD(status);
+        break;
+      }
+      case kFidlStructElementType_Padding32: {
+        const FidlStructPadding& padding = element.padding;
+        auto status = visitor_->VisitInternalPadding(position + padding.offset, padding.mask_32);
+        FIDL_STATUS_GUARD(status);
+        break;
+      }
+      case kFidlStructElementType_Padding16: {
+        const FidlStructPadding& padding = element.padding;
+        auto status = visitor_->VisitInternalPadding(position + padding.offset, padding.mask_16);
+        FIDL_STATUS_GUARD(status);
+        break;
+      }
     }
   }
   return Result::kContinue;

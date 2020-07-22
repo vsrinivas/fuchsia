@@ -196,9 +196,14 @@ class FidlDecoder final
 
   Status VisitVectorOrStringCount(CountPointer ptr) { return Status::kSuccess; }
 
-  Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
-    auto padding_ptr = padding_position.template Get<const uint8_t>();
-    return ValidatePadding(padding_ptr, padding_length);
+  template <typename MaskType>
+  Status VisitInternalPadding(Position padding_position, MaskType mask) {
+    const MaskType* padding_ptr = padding_position.template Get<const MaskType>();
+    if ((*padding_ptr & mask) != 0) {
+      SetError("non-zero padding bytes detected during decoding");
+      return Status::kConstraintViolationError;
+    }
+    return Status::kSuccess;
   }
 
   EnvelopeCheckpoint EnterEnvelope() {

@@ -1507,6 +1507,7 @@ bool decode_nested_nonnullable_structs_check_padding() {
                               ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    ASSERT_NOT_NULL(error);
     EXPECT_STR_EQ(error, "non-zero padding bytes detected during decoding");
   }
 

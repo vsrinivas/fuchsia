@@ -33,15 +33,16 @@ struct unbounded_nonnullable_string_message_layout {
   alignas(FIDL_ALIGNMENT) char data[6];
 };
 
-static const FidlStructField unbounded_nonnullable_string_fields[] = {
-    FidlStructField(&unbounded_nonnullable_string,
-                    offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string), 0),
+static const FidlStructElement unbounded_nonnullable_string_fields[] = {
+    FidlStructElement::Field(
+        &unbounded_nonnullable_string,
+        offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string)),
 };
 
 const FidlCodedStruct unbounded_nonnullable_string_message_type = {
     .tag = kFidlTypeStruct,
-    .field_count = ArrayCount(unbounded_nonnullable_string_fields),
+    .element_count = ArrayCount(unbounded_nonnullable_string_fields),
     .size = sizeof(unbounded_nonnullable_string_inline_data),
-    .fields = unbounded_nonnullable_string_fields,
+    .elements = unbounded_nonnullable_string_fields,
     .name = "unbounded_nonnullable_string_message",
 };
