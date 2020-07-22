@@ -165,8 +165,9 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
   if (dcmd->len > (len - hdr_size)) {
     BRCMF_DBG(SIM, "BCDC total message length (%zd) exceeds buffer size (%u)", dcmd->len + hdr_size,
               len);
-    // The real firmware allows buffer size to be exceeded for iovar get. If it's not an iovar get,
-    // sim firmware should reject TX CTL messages that have an oversized buffer.
+    // The real firmware allows the true buffer size (dcmd->len) to exceed the length of the txctl
+    // itself (len - hdr_size). For an iovar get, we know this is allowed, so the sim firmware
+    // should let such a call through.
     if (dcmd->cmd != BRCMF_C_GET_VAR) {
       return ZX_ERR_INVALID_ARGS;
     }
