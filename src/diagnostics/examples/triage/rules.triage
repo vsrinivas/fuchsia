@@ -1,14 +1,12 @@
 {
-    "metrics": {
-        "always_true": {
-            "Eval": "0 == 0"
-        }
+    eval: {
+        always_true: "0 == 0",
     },
-    "actions": {
-        "always_triggered": {
-            "trigger": "always_true",
-            "print": "Triage is running"
-        }
+    act: {
+        always_triggered: {
+            type: "Warning",
+            trigger: "always_true",
+            print: "Triage is running",
+        },
     },
-    "tests": {}
 }

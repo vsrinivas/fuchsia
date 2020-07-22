@@ -99,6 +99,7 @@ impl ParseResult {
             };
             let ConfigFileSchema { file_actions, file_selectors, file_evals, file_tests } =
                 file_config;
+            // Other code assumes that each name will have an entry in all categories.
             let file_actions = file_actions.unwrap_or_else(|| HashMap::new());
             let file_selectors = file_selectors.unwrap_or_else(|| HashMap::new());
             let file_evals = file_evals.unwrap_or_else(|| HashMap::new());

@@ -134,8 +134,9 @@ string that tells where in the Inspect data to find the value you need.
 
 ```json5
 select: {
+    disk_total: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
     // "global_dat" is an intentional typo to fix later in the codelab.
-    disk_used: "INSPECT:global_dat/storage:root/stats:used_bytes",
+    disk_used: "INSPECT:archivist.cmx:root/data_stats/global_dat/stats:used_bytes",
 }
 ```
 
@@ -197,7 +198,7 @@ act: {
     ...
     "disk_full": {
         "trigger": "disk_percentage > 0.98",
-        "print": "Disk is over 98% full",
+        "print": "Disk reached 98% full",
     },
 }
 ```
@@ -251,16 +252,17 @@ test: {
     is_full: {
         yes: ["disk_full"],
         no: [],
-        inspect: [
-            {
-                moniker: "global_data/storage",
-                payload: {root: {stats: {
-                    total_bytes: 100, used_bytes: 98}}}
-            }
-        ]
+        values: {
+            disk_used: 98,
+            disk_total: 100,
+        }
     }
 }
 ```
+
+The keys in the `values` section should be the names of `eval` or `select`
+entries. The values supplied will override the value that the entry would have
+selected or calculated.
 
 You can also test conditions in which actions should not trigger:
 
@@ -270,13 +272,10 @@ test: {
     not_full: {
         yes: [],
         no: ["disk_full"],
-        inspect: [
-            {
-                moniker: "global_data/storage",
-                payload: {root: {stats: {
-                    total_bytes: 100, used_bytes: 97}}}
-            }
-        ]
+        values: {
+            disk_used: 97,
+            disk_total: 100,
+        }
     }
 }
 ```
@@ -290,7 +289,7 @@ fx triage --config . --data bugreport
 
 Whoops! That should signal an error:
 
-`Test is_full failed: trigger disk98 of action disk_full returned Bool(false), expected true`
+`Test is_full failed: trigger 'disk_percentage > 0.98' of action disk_full returned Bool(false), expected true`
 
 ### Fix your rule
 
@@ -322,7 +321,7 @@ Add a file "product.triage" containing the following:
 ```json5
 {
     eval: {
-        max_widgets: "4",
+        max_components: "4",
     },
 }
 ```
@@ -339,19 +338,19 @@ Add the following entries to the rules.triage file:
 ```json5
 select: {
     ...
-    actual_widgets: "widget_maker.cmx:root:total_widgets",
+    actual_components: "INSPECT:archivist.cmx:root/event_stats:components_started",
 }
 ```
 
-That will extract how many widgets were active in the device.
+That will extract how many components were active in the device.
 
 ```json5
 eval: {
     ...
-    too_many_widgets: "actual_widgets > product::max_widgets",
+    too_many_components: "actual_components > product::max_components",
 ```
 
-That compares the actual widgets with the theoretical maximum for the
+That compares the actual components with the theoretical maximum for the
 product.
 
 Note: To use variable names from another file, combine the file name, two
@@ -362,14 +361,14 @@ Finally, add an action:
 ```json5
 act: {
     ...
-    widget_overflow: {
-        trigger: "too_many_widgets",
-        print: "Too many widgets!",
+    component_overflow: {
+        trigger: "too_many_components",
+        print: "Too many components!",
     },
 }
 ```
 
-Unfortunately, this device tried to use 6 widgets, so this warning should
+Unfortunately, this device tried to use too many components, so this warning should
 trigger when "fx triage" is run.
 
 Note: The `trigger` of an action can also use `file::name` syntax to refer to a
@@ -377,8 +376,16 @@ variable from another file.
 
 In a production environment, several "product.triage" files could be
 maintained in different directories, and Triage could be directed to use any of
-them with the "--config" command line argument. (Future versions of Triage
-may be able to select the correct product file automatically.)
+them with the "--config" command line argument.
+
+#### Tests and namespaces
+
+Tests use only the metrics within the file where the test occurs, plus the
+values supplied by the test. An expression (eval or test trigger) which uses
+namespaced values like "a::b" must have those values supplied by an "a::b" entry
+in the test's values.
+
+Note: Unlike most keys in .triage files, namespaced names must be double-quoted.
 
 ### Details {#details}
 

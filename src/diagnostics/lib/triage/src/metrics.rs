@@ -115,6 +115,10 @@ impl<'a> TrialDataFetcher<'a> {
             None => MetricValue::Missing(format!("Value {} not overridden in test", name)),
         }
     }
+
+    fn has_entry(&self, name: &str) -> bool {
+        self.values.contains_key(name)
+    }
 }
 
 /// The calculated or selected value of a Metric.
@@ -334,16 +338,53 @@ impl<'a> MetricState<'a> {
         MetricState { metrics, fetcher }
     }
 
-    /// Calculate the value of a Metric specified by name and namespace.
-    ///
+    /// Any [name] found in the trial's "values" uses the corresponding value, regardless of
+    /// whether it is a Selector or Eval Metric, and regardless of whether it includes
+    /// a namespace; the string match must be exact.
+    /// If not found in "values" the name must be an Eval metric from the current file.
+    fn metric_value_for_trial(
+        &self,
+        fetcher: &TrialDataFetcher<'_>,
+        namespace: &str,
+        name: &String,
+    ) -> MetricValue {
+        if fetcher.has_entry(name) {
+            return fetcher.fetch(name);
+        }
+        if name.contains("::") {
+            return MetricValue::Missing(format!(
+                "Name {} not in test values and refers outside the file",
+                name
+            ));
+        }
+        match self.metrics.get(namespace) {
+            None => return MetricValue::Missing(format!("BUG! Bad namespace '{}'", namespace)),
+            Some(metric_map) => match metric_map.get(name) {
+                None => {
+                    return MetricValue::Missing(format!(
+                        "Metric '{}' Not Found in '{}'",
+                        name, namespace
+                    ))
+                }
+                Some(metric) => match metric {
+                    Metric::Selector(_) => MetricValue::Missing(format!(
+                        "Selector {} can't be used in tests; please supply a value",
+                        name
+                    )),
+                    Metric::Eval(expression) => self.eval_value(namespace, &expression),
+                },
+            },
+        }
+    }
+
     /// If [name] is of the form "namespace::name" then [namespace] is ignored.
-    /// If [name] is just "name" then [namespace] is used.
-    fn metric_value_by_name(&self, namespace: &str, name: &String) -> MetricValue {
-        // TODO(cphoenix): When historical metrics are added, change semantics to refresh()
-        // TODO(cphoenix): cache values
-        // TODO(cphoenix): Detect infinite cycles/depth.
-        // TODO(cphoenix): Improve the data structure on Metric names. Probably fill in
-        //  namespace during parse.
+    /// If [name] is just "name" then [namespace] is used to look up the Metric.
+    fn metric_value_for_file(
+        &self,
+        fetcher: &FileDataFetcher<'_>,
+        namespace: &str,
+        name: &String,
+    ) -> MetricValue {
         let name_parts = name.split("::").collect::<Vec<_>>();
         let real_namespace: &str;
         let real_name: &str;
@@ -370,13 +411,23 @@ impl<'a> MetricState<'a> {
                     ))
                 }
                 Some(metric) => match metric {
-                    Metric::Selector(selector) => match &self.fetcher {
-                        Fetcher::FileData(fetcher) => fetcher.fetch(selector),
-                        Fetcher::TrialData(fetcher) => fetcher.fetch(name),
-                    },
+                    Metric::Selector(selector) => fetcher.fetch(selector),
                     Metric::Eval(expression) => self.eval_value(real_namespace, &expression),
                 },
             },
+        }
+    }
+
+    /// Calculate the value of a Metric specified by name and namespace.
+    fn metric_value_by_name(&self, namespace: &str, name: &String) -> MetricValue {
+        // TODO(cphoenix): When historical metrics are added, change semantics to refresh()
+        // TODO(cphoenix): cache values
+        // TODO(cphoenix): Detect infinite cycles/depth.
+        // TODO(cphoenix): Improve the data structure on Metric names. Probably fill in
+        //  namespace during parse.
+        match &self.fetcher {
+            Fetcher::FileData(fetcher) => self.metric_value_for_file(fetcher, namespace, name),
+            Fetcher::TrialData(fetcher) => self.metric_value_for_trial(fetcher, namespace, name),
         }
     }
 
@@ -720,9 +771,10 @@ mod test {
         static ref LOCAL_M: HashMap<String, JsonValue> = {
             let mut m = HashMap::new();
             m.insert("foo".to_owned(), JsonValue::try_from(42).unwrap());
+            m.insert("a::b".to_owned(), JsonValue::try_from(7).unwrap());
             m
         };
-        static ref FOO_42_TRIAL_FETCHER: TrialDataFetcher<'static> =
+        static ref FOO_42_AB_7_TRIAL_FETCHER: TrialDataFetcher<'static> =
             TrialDataFetcher::new(&LOCAL_M);
         static ref LOCAL_F: InspectFetcher = {
             let s = r#"[{
@@ -757,8 +809,15 @@ mod test {
 
     #[test]
     fn test_trial_fetch() {
-        assert_eq!(FOO_42_TRIAL_FETCHER.fetch("foo"), MetricValue::Int(42));
-        assert_missing(FOO_42_TRIAL_FETCHER.fetch("oops"), "Trial fetcher found bogus selector");
+        assert!(FOO_42_AB_7_TRIAL_FETCHER.has_entry("foo"));
+        assert!(FOO_42_AB_7_TRIAL_FETCHER.has_entry("a::b"));
+        assert!(!FOO_42_AB_7_TRIAL_FETCHER.has_entry("a:b"));
+        assert!(!FOO_42_AB_7_TRIAL_FETCHER.has_entry("oops"));
+        assert_eq!(FOO_42_AB_7_TRIAL_FETCHER.fetch("foo"), MetricValue::Int(42));
+        assert_missing(
+            FOO_42_AB_7_TRIAL_FETCHER.fetch("oops"),
+            "Trial fetcher found bogus selector",
+        );
     }
 
     #[test]
@@ -767,8 +826,11 @@ mod test {
         file_map.insert("bar".to_owned(), Metric::Selector(BAR_SELECTOR.clone()));
         file_map.insert("bar_plus_one".to_owned(), Metric::Eval("bar+1".to_owned()));
         file_map.insert("oops_plus_one".to_owned(), Metric::Eval("oops+1".to_owned()));
+        let mut other_file_map = HashMap::new();
+        other_file_map.insert("bar".to_owned(), Metric::Eval("42".to_owned()));
         let mut metrics = HashMap::new();
         metrics.insert("bar_file".to_owned(), file_map);
+        metrics.insert("other_file".to_owned(), other_file_map);
         let file_state = MetricState::new(&metrics, Fetcher::FileData(BAR_99_FILE_FETCHER.clone()));
         assert_eq!(
             file_state.metric_value_by_name("bar_file", &"bar_plus_one".to_owned()),
@@ -777,6 +839,34 @@ mod test {
         assert_missing(
             file_state.metric_value_by_name("bar_file", &"oops_plus_one".to_owned()),
             "File found nonexistent name",
+        );
+        assert_eq!(
+            file_state.metric_value_by_name("bar_file", &"bar".to_owned()),
+            MetricValue::Int(99)
+        );
+        assert_eq!(
+            file_state.metric_value_by_name("other_file", &"bar".to_owned()),
+            MetricValue::Int(42)
+        );
+        assert_eq!(
+            file_state.metric_value_by_name("other_file", &"other_file::bar".to_owned()),
+            MetricValue::Int(42)
+        );
+        assert_eq!(
+            file_state.metric_value_by_name("other_file", &"bar_file::bar".to_owned()),
+            MetricValue::Int(99)
+        );
+        assert_missing(
+            file_state.metric_value_by_name("other_file", &"bar_plus_one".to_owned()),
+            "Shouldn't have found bar_plus_one in other_file",
+        );
+        assert_missing(
+            file_state.metric_value_by_name("missing_file", &"bar_plus_one".to_owned()),
+            "Shouldn't have found bar_plus_one in missing_file",
+        );
+        assert_missing(
+            file_state.metric_value_by_name("bar_file", &"other_file::bar_plus_one".to_owned()),
+            "Shouldn't have found other_file::bar_plus_one",
         );
     }
 
@@ -787,17 +877,44 @@ mod test {
         trial_map.insert("foo".to_owned(), Metric::Selector(BAR_SELECTOR.clone()));
         trial_map.insert("foo_plus_one".to_owned(), Metric::Eval("foo+1".to_owned()));
         trial_map.insert("oops_plus_one".to_owned(), Metric::Eval("oops+1".to_owned()));
+        trial_map.insert("ab_plus_one".to_owned(), Metric::Eval("a::b+1".to_owned()));
+        trial_map.insert("ac_plus_one".to_owned(), Metric::Eval("a::c+1".to_owned()));
+        // The file "a" should be completely ignored when testing foo_file.
+        let mut a_map = HashMap::new();
+        a_map.insert("b".to_owned(), Metric::Eval("2".to_owned()));
+        a_map.insert("c".to_owned(), Metric::Eval("3".to_owned()));
+        a_map.insert("foo".to_owned(), Metric::Eval("4".to_owned()));
         let mut metrics = HashMap::new();
         metrics.insert("foo_file".to_owned(), trial_map);
+        metrics.insert("a".to_owned(), a_map);
         let trial_state =
-            MetricState::new(&metrics, Fetcher::TrialData(FOO_42_TRIAL_FETCHER.clone()));
+            MetricState::new(&metrics, Fetcher::TrialData(FOO_42_AB_7_TRIAL_FETCHER.clone()));
+        // foo from values shadows foo selector.
+        assert_eq!(
+            trial_state.metric_value_by_name("foo_file", &"foo".to_owned()),
+            MetricValue::Int(42)
+        );
+        // Value shadowing also works in expressions.
         assert_eq!(
             trial_state.metric_value_by_name("foo_file", &"foo_plus_one".to_owned()),
             MetricValue::Int(43)
         );
+        // foo can shadow eval as well as selector.
+        assert_eq!(trial_state.metric_value_by_name("a", &"foo".to_owned()), MetricValue::Int(42));
+        // A value that's not there should be "Missing" (e.g. not crash)
         assert_missing(
             trial_state.metric_value_by_name("foo_file", &"oops_plus_one".to_owned()),
             "Trial found nonexistent name",
+        );
+        // a::b ignores the "b" in file "a" and uses "a::b" from values.
+        assert_eq!(
+            trial_state.metric_value_by_name("foo_file", &"ab_plus_one".to_owned()),
+            MetricValue::Int(8)
+        );
+        // a::c should return Missing, not look up c in file a.
+        assert_missing(
+            trial_state.metric_value_by_name("foo_file", &"ac_plus_one".to_owned()),
+            "Trial should not have read c from file a",
         );
     }
 }
