@@ -21,6 +21,7 @@ pub mod bonding_data;
 pub mod emulator;
 pub mod host_info;
 mod id;
+pub mod io_capabilities;
 /// Bluetooth LowEnergy types
 pub mod le;
 pub mod pairing_options;

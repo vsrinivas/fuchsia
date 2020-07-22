@@ -4,33 +4,55 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_bluetooth_control::{ControlMarker, PairingDelegateMarker},
+    argh::FromArgs,
+    fidl_fuchsia_bluetooth_sys::{AccessMarker, PairingDelegateMarker},
     fuchsia_async as fasync,
+    fuchsia_bluetooth::types::io_capabilities::{InputCapability, OutputCapability},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx,
 };
 
 mod pairing;
 
-const USAGE: &str = "usage: bt-pairing-tool";
+// Defines all the command line arguments accepted by the tool.
+#[derive(FromArgs)]
+#[argh(description = "CLI pairing delegate")]
+struct Opt {
+    #[argh(
+        option,
+        short = 'i',
+        default = "InputCapability::None",
+        description = "input capability (none, confirmation, keyboard)"
+    )]
+    input: InputCapability,
+    #[argh(
+        option,
+        short = 'o',
+        default = "OutputCapability::None",
+        description = "output capability (none, display)"
+    )]
+    output: OutputCapability,
+}
 
-fn main_res() -> Result<(), Error> {
+fn run(opt: Opt) -> Result<(), Error> {
     let mut exec = fasync::Executor::new().context("Error creating event loop")?;
 
-    let bt_svc = connect_to_service::<ControlMarker>()
-        .context("Failed to connect to bluetooth control interface")?;
+    let access = connect_to_service::<AccessMarker>()
+        .context("Failed to connect to bluetooth access interface")?;
 
     // Setup pairing delegate
     let (delegate_local, delegate_remote) = zx::Channel::create()?;
     let delegate_local = fasync::Channel::from_channel(delegate_local)?;
-    let delegate_ptr = fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
     let pairing_delegate_server = pairing::pairing_delegate(delegate_local);
-    let pair_set = bt_svc.set_pairing_delegate(Some(delegate_ptr));
+    let pairing_delegate_client =
+        fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
 
-    if !exec.run_singlethreaded(pair_set)? {
+    let pair_set =
+        access.set_pairing_delegate(opt.input.into(), opt.output.into(), pairing_delegate_client);
+
+    if let Err(err) = pair_set {
         return Err(format_err!(
-            "Failed to take ownership of Bluetooth Pairing. Another process is likely already managing this."
-        ));
+            "Failed to take ownership of Bluetooth Pairing. Another process is likely already managing this. {}", err));
     };
 
     println!("Now accepting pairing requests.");
@@ -39,16 +61,10 @@ fn main_res() -> Result<(), Error> {
 }
 
 fn main() {
-    // Print help and exit.
-    if let Some(arg) = std::env::args().skip(1).next() {
-        if !(arg == "-h" || arg == "--help") {
-            eprintln!("Invalid command: {}", arg);
-        }
-        eprintln!("{}", USAGE);
-        return;
-    }
+    let opt: Opt = argh::from_env();
+
     // Run tool.
-    if let Err(e) = main_res() {
+    if let Err(e) = run(opt) {
         eprintln!("{}", e);
     }
 }

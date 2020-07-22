@@ -5,11 +5,11 @@
 use {
     anyhow::Error,
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_bluetooth_control::{
+    fidl_fuchsia_bluetooth_sys::{
         PairingDelegateRequest, PairingDelegateRequestStream, PairingMethod,
     },
     fuchsia_async as fasync,
-    fuchsia_bluetooth::error::Error as BtError,
+    fuchsia_bluetooth::types::{Address, PeerId},
     futures::{future, Future, TryFutureExt, TryStreamExt},
     std::io::{self, Read, Write},
 };
@@ -68,37 +68,21 @@ fn prompt_for_consent() -> bool {
     handle_confirm(val)
 }
 
-fn prompt_for_comparison(passkey: Option<String>) -> bool {
-    match passkey {
-        None => {
-            println!("No passkey provided for 'Passkey Comparison'!");
-            false
-        }
-        Some(passkey) => {
-            let msg = format!("Is the passkey '{}' displayed on device? (y/n)", passkey);
-            let val = prompt_for_char(&msg, &['y', 'n']).unwrap_or_else(|err| {
-                eprintln!("Failed to read input: {:#?}", err);
-                'n'
-            });
-            handle_confirm(val)
-        }
-    }
+fn prompt_for_comparison(passkey: u32) -> bool {
+    let msg = format!("Is the passkey '{}' displayed on device? (y/n)", passkey);
+    let val = prompt_for_char(&msg, &['y', 'n']).unwrap_or_else(|err| {
+        eprintln!("Failed to read input: {:#?}", err);
+        'n'
+    });
+    handle_confirm(val)
 }
 
-fn prompt_for_remote_input(passkey: Option<String>) -> bool {
-    match passkey {
-        None => {
-            println!("No passkey provided for 'Passkey Display'!");
-            false
-        }
-        Some(passkey) => {
-            println!("Enter the passkey '{}' on the peer.", passkey);
-            true
-        }
-    }
+fn prompt_for_remote_input(passkey: u32) -> bool {
+    println!("Enter the passkey '{}' on the peer.", passkey);
+    true
 }
 
-fn prompt_for_local_input() -> Option<String> {
+fn prompt_for_local_input() -> Option<u32> {
     print_and_flush!("Enter the passkey displayed on the peer (or nothing to reject): ");
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
@@ -108,7 +92,13 @@ fn prompt_for_local_input() -> Option<String> {
                 None
             } else {
                 println!("Entered: {}", input);
-                Some(input)
+                match input.parse::<u32>() {
+                    Ok(passkey) => Some(passkey),
+                    Err(_) => {
+                        eprintln!("Error: passkey not an integer.");
+                        None
+                    }
+                }
             }
         }
         Err(e) => {
@@ -123,35 +113,36 @@ pub fn pairing_delegate(channel: fasync::Channel) -> impl Future<Output = Result
     stream
         .try_for_each(move |evt| {
             match evt {
-                PairingDelegateRequest::OnPairingComplete {
-                    device_id,
-                    status,
-                    control_handle: _,
-                } => {
+                PairingDelegateRequest::OnPairingComplete { id, success, control_handle: _ } => {
                     println!(
                         "Pairing complete for peer (id: {}, status: {})",
-                        device_id,
-                        match status.error {
-                            None => "success".to_string(),
-                            Some(error) => format!("{}", BtError::from(*error)),
+                        PeerId::from(id),
+                        match success {
+                            true => "success".to_string(),
+                            false => "failure".to_string(),
                         }
                     );
                 }
                 PairingDelegateRequest::OnPairingRequest {
-                    device,
+                    peer,
                     method,
                     displayed_passkey,
                     responder,
                 } => {
+                    let address = match &peer.address {
+                        Some(address) => Address::from(address).to_string(),
+                        None => "Unknown Address".to_string(),
+                    };
+
                     println!(
                         "Pairing request from peer: {}",
-                        match &device.name {
-                            Some(name) => format!("{} ({})", name, &device.address),
-                            None => device.address,
+                        match &peer.name {
+                            Some(name) => format!("{} ({})", name, address),
+                            None => address,
                         }
                     );
 
-                    let (confirm, entered_passkey) = match method {
+                    let (accept, entered_passkey) = match method {
                         PairingMethod::Consent => (prompt_for_consent(), None),
                         PairingMethod::PasskeyComparison => {
                             (prompt_for_comparison(displayed_passkey), None)
@@ -164,14 +155,17 @@ pub fn pairing_delegate(channel: fasync::Channel) -> impl Future<Output = Result
                             passkey => (true, passkey),
                         },
                     };
-                    let _ = responder.send(confirm, entered_passkey.as_ref().map(String::as_ref));
+                    let _ = responder.send(
+                        accept,
+                        match entered_passkey {
+                            Some(passkey) => passkey,
+                            // Passkey value ignored if the method is not PasskeyEntry or PasskeyEntry failed.
+                            None => 0u32,
+                        },
+                    );
                 }
-                PairingDelegateRequest::OnRemoteKeypress {
-                    device_id,
-                    keypress,
-                    control_handle: _,
-                } => {
-                    eprintln!("Device: {} | {:?}", device_id, keypress);
+                PairingDelegateRequest::OnRemoteKeypress { id, keypress, control_handle: _ } => {
+                    eprintln!("Peer: {} | {:?}", PeerId::from(id), keypress);
                 }
             };
             future::ready(Ok(()))
