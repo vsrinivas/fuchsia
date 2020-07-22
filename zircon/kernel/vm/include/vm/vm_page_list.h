@@ -389,6 +389,8 @@ class VmPageList final {
   // Takes the pages and markers in the range [offset, length) out of this page list.
   VmPageSpliceList TakePages(uint64_t offset, uint64_t length);
 
+  uint64_t HeapAllocationBytes() const { return list_.size() * sizeof(VmPageListNode); }
+
   // Allow the implementation to use a one-past-the-end for VmPageListNode offsets,
   // plus to account for skew_.
   static constexpr uint64_t MAX_SIZE =

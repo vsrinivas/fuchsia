@@ -322,6 +322,7 @@ bool VmObjectPaged::DedupZeroPage(vm_page_t* page, uint64_t offset) {
     DEBUG_ASSERT(!list_in_list(&page->queue_node));
     pmm_free_page(page);
     *page_or_marker = VmPageOrMarker::Marker();
+    eviction_event_count_++;
     return true;
   }
   return false;
@@ -3503,6 +3504,7 @@ bool VmObjectPaged::EvictPage(vm_page_t* page, uint64_t offset) {
   vm_page_t* p = page_list_.RemovePage(offset).ReleasePage();
   DEBUG_ASSERT(p == page);
   pmm_page_queues()->Remove(page);
+  eviction_event_count_++;
 
   // |page| is now owned by the caller.
   return true;

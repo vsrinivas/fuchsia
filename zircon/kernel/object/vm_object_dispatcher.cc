@@ -153,6 +153,9 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t ha
   if (vmo->child_type() == VmObject::ChildType::kCowClone) {
     entry.flags |= ZX_INFO_VMO_IS_COW_CLONE;
   }
+  entry.metadata_bytes = vmo->HeapAllocationBytes();
+  // Only events that change committed pages are evictions at the moment.
+  entry.committed_change_events = vmo->EvictedPagedCount();
   return entry;
 }
 
