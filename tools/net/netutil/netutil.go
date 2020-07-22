@@ -12,7 +12,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
-	constants "go.fuchsia.dev/fuchsia/tools/net/netutilconstants"
+	"go.fuchsia.dev/fuchsia/tools/net/netutil/constants"
 )
 
 // GetNodeAddress returns the UDP address corresponding to a given node, specifically

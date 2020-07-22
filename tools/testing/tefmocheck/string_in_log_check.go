@@ -12,7 +12,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
 	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
-	"go.fuchsia.dev/fuchsia/tools/net/netutilconstants"
+	netutilconstants "go.fuchsia.dev/fuchsia/tools/net/netutil/constants"
 	testrunnerconstants "go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 )
 
