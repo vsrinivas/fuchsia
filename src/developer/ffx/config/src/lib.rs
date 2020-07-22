@@ -146,9 +146,17 @@ fn init_env_file(path: &PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
+// This method should not be called from unit tests since it tries to parse CLI params.
 pub fn find_env_file() -> Result<String, Error> {
-    let mut env_path = PathBuf::from(find_env_dir()?);
-    env_path.push(ENV_FILE);
+    let ffx: Ffx = argh::from_env();
+
+    let env_path = if let Some(f) = ffx.environment_file {
+        PathBuf::from(f)
+    } else {
+        let mut path = PathBuf::from(find_env_dir()?);
+        path.push(ENV_FILE);
+        path
+    };
 
     if !env_path.is_file() {
         log::debug!("initializing environment {}", env_path.display());

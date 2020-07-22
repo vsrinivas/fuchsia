@@ -9,8 +9,12 @@ use {argh::FromArgs, ffx_core::ffx_command, ffx_lib_sub_command::Subcommand};
 /// Fuchsia Development Bridge
 pub struct Ffx {
     #[argh(option)]
-    /// configuration information
+    /// runtime configuration information
     pub config: Option<String>,
+
+    #[argh(option)]
+    /// environment file where configuration is initialized
+    pub environment_file: Option<String>,
 
     #[argh(option)]
     /// target selection
@@ -23,6 +27,7 @@ pub struct Ffx {
 pub const DEFAULT_FFX: Ffx = Ffx {
     target: None,
     config: None,
+    environment_file: None,
     subcommand: Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
         subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(
             ffx_daemon_start_args::StartCommand {},

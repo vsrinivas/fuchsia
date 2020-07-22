@@ -176,6 +176,7 @@ mod test {
         Ffx {
             target: None,
             config: Some(test.to_string()),
+            environment_file: None,
             subcommand: Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
                 subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(
                     ffx_daemon_start_args::StartCommand {},
