@@ -2,12 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-case "$(uname -s)" in
-  Darwin)
+case "$(uname -s)-$(uname -m)" in
+  Darwin-x86_64)
     readonly HOST_PLATFORM="mac-x64"
     ;;
-  Linux)
+  Linux-x86_64)
     readonly HOST_PLATFORM="linux-x64"
+    ;;
+  Linux-aarch64)
+    readonly HOST_PLATFORM="linux-arm64"
     ;;
   *)
     echo >&2 "Unknown operating system."
