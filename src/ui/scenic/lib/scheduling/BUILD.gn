@@ -30,6 +30,8 @@ source_set("frame_scheduler") {
     "frame_stats.h",
     "present1_helper.cc",
     "present1_helper.h",
+    "present2_helper.cc",
+    "present2_helper.h",
     "windowed_frame_predictor.cc",
     "windowed_frame_predictor.h",
   ]
