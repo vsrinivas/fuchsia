@@ -11,6 +11,8 @@ use crate::message::base::{
 use crate::message::beacon::Beacon;
 use crate::message::message_builder::MessageBuilder;
 
+use std::convert::identity;
+
 /// MessengerFactory is the artifact of creating a MessageHub. It can be used
 /// to create new messengers.
 #[derive(Clone)]
@@ -34,11 +36,11 @@ impl<P: Payload + 'static, A: Address + 'static> MessengerFactory<P, A> {
             ))
             .ok();
 
-        if let Ok(result) = rx.await {
-            return result;
-        } else {
-            return Err(MessageError::Unexpected);
-        }
+        rx.await.map_err(|_| MessageError::Unexpected).and_then(identity)
+    }
+
+    pub fn delete(&self, signature: Signature<A>) {
+        self.messenger_action_tx.unbounded_send(MessengerAction::DeleteBySignature(signature)).ok();
     }
 }
 
@@ -71,26 +73,19 @@ impl<P: Payload + 'static, A: Address + 'static> MessengerClient<P, A> {
 pub struct Messenger<P: Payload + 'static, A: Address + 'static> {
     fingerprint: Fingerprint<A>,
     action_tx: ActionSender<P, A>,
-    messenger_type: MessengerType<A>,
 }
 
 impl<P: Payload + 'static, A: Address + 'static> Messenger<P, A> {
     pub(super) fn new(
         fingerprint: Fingerprint<A>,
         action_tx: ActionSender<P, A>,
-        messenger_type: MessengerType<A>,
     ) -> Messenger<P, A> {
-        Messenger { fingerprint: fingerprint, action_tx: action_tx, messenger_type: messenger_type }
+        Messenger { fingerprint, action_tx }
     }
 
     /// Returns the identification for this Messenger.
     pub(super) fn get_id(&self) -> MessengerId {
         self.fingerprint.id.clone()
-    }
-
-    /// Returns the type of the Messenger.
-    pub(super) fn get_type(&self) -> MessengerType<A> {
-        self.messenger_type.clone()
     }
 
     /// Forwards the message to the next Messenger. Note that this method is

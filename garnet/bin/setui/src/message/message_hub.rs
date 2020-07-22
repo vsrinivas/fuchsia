@@ -297,11 +297,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                     Signature::Anonymous(id)
                 };
 
-                let messenger = Messenger::new(
-                    Fingerprint { id: id, signature: signature },
-                    self.action_tx.clone(),
-                    messenger_type.clone(),
-                );
+                let messenger =
+                    Messenger::new(Fingerprint { id, signature }, self.action_tx.clone());
 
                 let messenger_clone = messenger.clone();
 
@@ -317,7 +314,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 self.next_id += 1;
                 let (beacon, receptor) =
                     BeaconBuilder::new(messenger.clone()).add_fuse(fuse.clone()).build();
-                self.beacons.insert(id, beacon.clone());
+                self.beacons.insert(id, beacon);
 
                 match messenger_type {
                     MessengerType::Broker => {
@@ -333,28 +330,23 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 responder.send(Ok((MessengerClient::new(messenger, fuse.clone()), receptor))).ok();
             }
             MessengerAction::Delete(messenger) => {
-                let id = messenger.get_id();
-                self.beacons.remove(&id);
-
-                match messenger.get_type() {
-                    MessengerType::Broker => {
-                        if let Some(index) =
-                            self.brokers.iter().position(|broker_id| id == *broker_id)
-                        {
-                            self.brokers.remove(index);
-                        }
-                    }
-                    MessengerType::Addressable(address) => {
-                        self.addresses.remove(&address);
-                    }
-                    MessengerType::Unbound => {
-                        // no special cleanup needed for Unbounded messengers.
-                    }
-                }
-
-                self.check_exit();
+                self.delete_by_signature(messenger.get_signature())
             }
+            MessengerAction::DeleteBySignature(signature) => self.delete_by_signature(signature),
         }
+    }
+
+    fn delete_by_signature(&mut self, signature: Signature<A>) {
+        let id = self.resolve_messenger_id(&signature);
+
+        // These are all safe if the containers don't contain any items matching `id`.
+        self.beacons.remove(&id);
+        self.brokers.retain(|broker_id| id != *broker_id);
+        if let Signature::Address(address) = signature {
+            self.addresses.remove(&address);
+        }
+
+        self.check_exit();
     }
 
     // Translates messenger requests into actions upon the MessageHub.

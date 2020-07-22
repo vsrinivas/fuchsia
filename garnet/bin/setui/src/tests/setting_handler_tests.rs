@@ -340,6 +340,11 @@ async fn test_event_propagation() {
         .ack();
 
     assert_eq!(Some(State::Teardown), event_rx.next().await);
+
+    // Deleting the signature of the messenger ensures the client event loop is stopped.
+    factory.delete(signature);
+
+    assert_eq!(None, event_rx.next().await);
 }
 
 // Test that the controller state is entered [n] times.

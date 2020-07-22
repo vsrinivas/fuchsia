@@ -211,10 +211,12 @@ pub(super) type MessengerActionSender<P, A> = UnboundedSender<MessengerAction<P,
 
 /// Internal representation of possible actions around a messenger.
 pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static> {
-    // Creates a top level messenger
+    /// Creates a top level messenger
     Create(MessengerType<A>, MessengerSender<P, A>, MessengerActionSender<P, A>),
-    // Deletes a given messenger
+    /// Deletes a given messenger
     Delete(Messenger<P, A>),
+    /// Deletes a messenger by its `Signature`
+    DeleteBySignature(Signature<A>),
 }
 
 /// Internal representation for possible actions on a message.

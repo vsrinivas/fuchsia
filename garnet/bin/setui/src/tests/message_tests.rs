@@ -141,6 +141,16 @@ async fn test_messenger_deletion() {
     }
 }
 
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_messenger_deletion_with_fingerprint() {
+    let messenger_factory = num_test::message::create_hub();
+    let address = 1;
+    let (messenger_client, mut receptor) =
+        messenger_factory.create(MessengerType::Addressable(address)).await.unwrap();
+    messenger_factory.delete(messenger_client.get_signature());
+    assert!(receptor.next().await.is_none());
+}
+
 /// Tests basic functionality of the MessageHub, ensuring messages and replies
 /// are properly delivered.
 #[fuchsia_async::run_until_stalled(test)]
