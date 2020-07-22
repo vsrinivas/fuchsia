@@ -846,7 +846,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
 						},
 					},
 				},
@@ -864,12 +864,12 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
 						},
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.ManagedAddress)},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
 						},
 					},
 				},
@@ -886,7 +886,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
 						},
 					},
 				},
@@ -898,7 +898,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
 						},
 					},
 				},
@@ -916,12 +916,12 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
 						},
 						{
 							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
 						},
 					},
 				},

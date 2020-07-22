@@ -272,7 +272,7 @@ func (o *dhcpV6Observation) events() []cobalt.CobaltEvent {
 			res = append(res, cobalt.CobaltEvent{
 				MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
 				EventCodes: []uint32{uint32(code)},
-				Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
+				Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
 			})
 		}
 	}
