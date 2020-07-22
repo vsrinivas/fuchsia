@@ -27,6 +27,20 @@ rustc_binary("bin") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/ctap_device.rs",
+    "src/hid/command.rs",
+    "src/hid/connection.rs",
+    "src/hid/device.rs",
+    "src/hid/message.rs",
+    "src/hid/mod.rs",
+    "src/hid/packet.rs",
+    "src/hid/util.rs",
+    "src/main.rs",
+  ]
 }
 
 package("sktool") {

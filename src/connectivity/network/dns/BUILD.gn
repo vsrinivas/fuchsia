@@ -24,6 +24,17 @@ rustc_library("lib") {
     "//third_party/rust_crates:trust-dns-resolver",
   ]
   test_deps = [ "//third_party/rust_crates:matches" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/async_resolver.rs",
+    "src/lib.rs",
+    "src/policy.rs",
+    "src/tcp.rs",
+    "src/test_util.rs",
+    "src/udp.rs",
+  ]
 }
 
 fuchsia_unittest_package("dns-tests") {
@@ -60,6 +71,10 @@ rustc_binary("bin") {
   ]
 
   test_deps = [ "//src/connectivity/lib/net-declare" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 fuchsia_unittest_package("dns-resolver-tests") {

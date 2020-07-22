@@ -36,6 +36,20 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/constants.rs",
+    "src/error.rs",
+    "src/http.rs",
+    "src/main.rs",
+    "src/oauth.rs",
+    "src/oauth_open_id_connect.rs",
+    "src/open_id_connect.rs",
+    "src/time.rs",
+    "src/web.rs",
+  ]
 }
 
 package("google_auth_provider") {

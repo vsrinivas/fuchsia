@@ -47,6 +47,20 @@ rustc_library("bt-a2dp") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/codec.rs",
+    "src/inspect.rs",
+    "src/lib.rs",
+    "src/media_task.rs",
+    "src/media_types.rs",
+    "src/peer/controller.rs",
+    "src/peer/mod.rs",
+    "src/rtp.rs",
+    "src/stream.rs",
+  ]
 }
 
 test_package("tests") {

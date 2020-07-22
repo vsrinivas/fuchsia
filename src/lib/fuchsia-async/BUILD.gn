@@ -22,10 +22,33 @@ rustc_library("fuchsia-async") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
   ]
+  sources = [
+    "src/atomic_future.rs",
+    "src/handle/mod.rs",
+    "src/lib.rs",
+    "src/net/mod.rs",
+    "src/net/tcp.rs",
+    "src/net/udp.rs",
+    "src/runtime/mod.rs",
+    "src/temp.rs",
+    "src/test_support.rs",
+  ]
   if (is_fuchsia) {
     deps += [
       "//src/lib/zircon/rust:fuchsia-zircon",
       "//third_party/rust_crates:socket2",
+    ]
+    sources += [
+      "src/handle/zircon/channel.rs",
+      "src/handle/zircon/fifo.rs",
+      "src/handle/zircon/mod.rs",
+      "src/handle/zircon/on_signals.rs",
+      "src/handle/zircon/rwhandle.rs",
+      "src/handle/zircon/socket.rs",
+      "src/runtime/fuchsia/executor.rs",
+      "src/runtime/fuchsia/mod.rs",
+      "src/runtime/fuchsia/task.rs",
+      "src/runtime/fuchsia/timer.rs",
     ]
   } else {
     deps += [
@@ -35,8 +58,16 @@ rustc_library("fuchsia-async") {
     if (current_toolchain != unknown_wasm32_toolchain) {
       deps += [ "//third_party/rust_crates:smol" ]
     }
+    sources += [
+      "src/handle/emulated/channel.rs",
+      "src/handle/emulated/mod.rs",
+      "src/handle/emulated/socket.rs",
+      "src/runtime/portable.rs",
+    ]
   }
   test_deps = [ "//third_party/rust_crates:futures-test" ]
+
+  enforce_source_listing = true
 }
 
 rustc_staticlib("fuchsia-async-staticlib") {

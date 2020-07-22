@@ -70,6 +70,32 @@ rustc_binary("bin") {
 
   non_rust_deps =
       [ "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client-c" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/cache.rs",
+    "src/cache/base_package_index.rs",
+    "src/cache/retry.rs",
+    "src/clock.rs",
+    "src/config.rs",
+    "src/experiment.rs",
+    "src/font_package_manager.rs",
+    "src/inspect_util.rs",
+    "src/main.rs",
+    "src/metrics_util.rs",
+    "src/ota_channel.rs",
+    "src/queue/mod.rs",
+    "src/queue/state.rs",
+    "src/repository.rs",
+    "src/repository/updating_tuf_client.rs",
+    "src/repository_manager.rs",
+    "src/repository_service.rs",
+    "src/resolver_service.rs",
+    "src/rewrite_manager.rs",
+    "src/rewrite_service.rs",
+    "src/test_util.rs",
+  ]
 }
 
 # Ensure the contents of this package stay in sync with //src/sys/pkg/tests/amberctl:amberctl-tests

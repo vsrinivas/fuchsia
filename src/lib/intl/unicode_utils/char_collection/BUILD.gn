@@ -19,6 +19,16 @@ rustc_library("char_collection") {
     "//third_party/rust_crates:unic-char-range",
     "//third_party/rust_crates:unic-ucd-block",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/char_collection.rs",
+    "src/conversions.rs",
+    "src/lib.rs",
+    "src/macros.rs",
+    "src/operators.rs",
+  ]
 }
 
 test_package("char_collection_tests") {

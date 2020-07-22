@@ -24,6 +24,13 @@ rustc_binary("dhcpd-cli-bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/args.rs",
+    "src/main.rs",
+  ]
 }
 
 rustc_test("dhcpd-cli-test") {
@@ -37,6 +44,10 @@ rustc_test("dhcpd-cli-test") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 package("dhcpd-cli") {

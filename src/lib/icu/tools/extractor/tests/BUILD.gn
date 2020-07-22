@@ -18,6 +18,10 @@ if (is_host) {
 
     # Must depend directly on these in order to have access to them in CQ
     non_rust_deps = [ ":test_files" ]
+
+    enforce_source_listing = true
+
+    sources = [ "tests.rs" ]
   }
 
   host_test_data("icudtl_dat") {

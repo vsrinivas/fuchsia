@@ -51,6 +51,10 @@ fuchsia_unittest_package("twoplustwo-cpp-unittest") {
 
 rustc_test("twoplustwo_rust") {
   source_root = "two_plus_two.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "two_plus_two.rs" ]
 }
 
 fuchsia_unittest_package("twoplustwo-rust-unittest") {
@@ -60,6 +64,10 @@ fuchsia_unittest_package("twoplustwo-rust-unittest") {
 
 rustc_test("read_file_test") {
   source_root = "read_file.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "read_file.rs" ]
 }
 
 resource("hello_world.txt") {
@@ -89,6 +97,10 @@ rustc_test("echo_client_test") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "echo_client.rs" ]
 }
 
 fuchsia_component("echo-client-test") {

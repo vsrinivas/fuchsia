@@ -28,6 +28,10 @@ rustc_test("fidl_rust_conformance_tests") {
     "//third_party/rust_crates:matches",
   ]
   non_rust_deps = [ ":generate_conformance_test" ]
+
+  enforce_source_listing = true
+
+  sources = [ conformance_test_source ]
 }
 
 unittest_package("fidl-rust-tests") {

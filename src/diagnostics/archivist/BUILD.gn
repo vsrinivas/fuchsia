@@ -78,6 +78,41 @@ rustc_library("lib") {
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/archive/mod.rs",
+    "src/archive_accessor/mod.rs",
+    "src/archivist.rs",
+    "src/configs.rs",
+    "src/constants.rs",
+    "src/data_repository.rs",
+    "src/data_stats.rs",
+    "src/diagnostics.rs",
+    "src/events/core.rs",
+    "src/events/legacy.rs",
+    "src/events/mod.rs",
+    "src/events/stream.rs",
+    "src/events/types.rs",
+    "src/formatter.rs",
+    "src/inspect/mod.rs",
+    "src/lib.rs",
+    "src/lifecycle/mod.rs",
+    "src/logs.rs",
+    "src/logs/buffer.rs",
+    "src/logs/debuglog.rs",
+    "src/logs/error.rs",
+    "src/logs/interest.rs",
+    "src/logs/listener.rs",
+    "src/logs/listener/asbestos.rs",
+    "src/logs/listener/filter.rs",
+    "src/logs/listener/pool.rs",
+    "src/logs/message.rs",
+    "src/logs/socket.rs",
+    "src/logs/stats.rs",
+    "src/types.rs",
+  ]
 }
 
 rustc_binary("bin") {
@@ -106,6 +141,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 package("archivist") {

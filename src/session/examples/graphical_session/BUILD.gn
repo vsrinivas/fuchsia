@@ -40,6 +40,15 @@ rustc_binary("graphical_session_bin") {
     "//third_party/rust_crates:png",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/app.rs",
+    "src/graphics_util.rs",
+    "src/main.rs",
+    "src/view.rs",
+  ]
 }
 
 package("graphical_session") {

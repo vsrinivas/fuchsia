@@ -22,6 +22,18 @@ rustc_library("spinel-rs") {
     # "//src/graphics/lib/compute/spinel",
   ]
   features = [ "spinel-null" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/context.rs",
+    "src/lib.rs",
+    "src/path.rs",
+    "src/path_builder.rs",
+    "src/raster.rs",
+    "src/raster_builder.rs",
+    "src/spinel_sys.rs",
+  ]
 }
 
 unittest_package("spinel-rs-tests") {

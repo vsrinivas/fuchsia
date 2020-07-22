@@ -16,6 +16,10 @@ rustc_library("lib") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 rustc_binary("bin") {

@@ -20,6 +20,13 @@ rustc_library("syslog") {
     "//third_party/rust_crates:tempfile",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/syslog.rs",
+  ]
 }
 
 rustc_library("syslog-listener") {
@@ -40,6 +47,10 @@ rustc_library("syslog-listener") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "syslog-listener/src/lib.rs" ]
 }
 
 group("tests") {

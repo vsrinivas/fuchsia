@@ -52,6 +52,10 @@ rustc_binary("log_tests") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "log_integration_test.rs" ]
 }
 
 rustc_binary("log_emitter") {
@@ -63,4 +67,8 @@ rustc_binary("log_emitter") {
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:log",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "log_emitter_for_test.rs" ]
 }

@@ -24,4 +24,13 @@ rustc_library("fuchsia-cobalt") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/cobalt_event_builder.rs",
+    "src/connector.rs",
+    "src/lib.rs",
+    "src/sender.rs",
+  ]
 }

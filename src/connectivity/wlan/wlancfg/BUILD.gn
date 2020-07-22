@@ -59,6 +59,43 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:void",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/access_point/mod.rs",
+    "src/access_point/state_machine.rs",
+    "src/access_point/types.rs",
+    "src/client/mod.rs",
+    "src/client/network_selection.rs",
+    "src/client/scan.rs",
+    "src/client/state_machine.rs",
+    "src/client/types.rs",
+    "src/config_management/config_manager.rs",
+    "src/config_management/mod.rs",
+    "src/config_management/network_config.rs",
+    "src/config_management/stash.rs",
+    "src/legacy/deprecated_configuration.rs",
+    "src/legacy/device.rs",
+    "src/legacy/known_ess_store.rs",
+    "src/legacy/mod.rs",
+    "src/legacy/shim.rs",
+    "src/main.rs",
+    "src/mode_management/iface_manager.rs",
+    "src/mode_management/mod.rs",
+    "src/mode_management/phy_manager.rs",
+    "src/regulatory_manager.rs",
+    "src/util/fuse_pending.rs",
+    "src/util/future_with_metadata.rs",
+    "src/util/listener/access_point.rs",
+    "src/util/listener/client.rs",
+    "src/util/listener/generic.rs",
+    "src/util/listener/mod.rs",
+    "src/util/logger.rs",
+    "src/util/mod.rs",
+    "src/util/sme_conversion.rs",
+    "src/util/state_machine.rs",
+  ]
 }
 
 package("wlancfg") {

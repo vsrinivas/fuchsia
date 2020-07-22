@@ -25,6 +25,10 @@ rustc_binary("bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:structopt",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 rustc_library("lib") {
@@ -48,6 +52,25 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:valico",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/bind_library.rs",
+    "src/bind_program.rs",
+    "src/c_generation.rs",
+    "src/compiler.rs",
+    "src/debugger.rs",
+    "src/dependency_graph.rs",
+    "src/device_specification.rs",
+    "src/errors.rs",
+    "src/instruction.rs",
+    "src/lib.rs",
+    "src/offline_debugger.rs",
+    "src/parser_common.rs",
+    "src/test.rs",
+  ]
+  inputs = [ "tests_schema.json" ]
 }
 
 test_package("bind_debugger_tests") {

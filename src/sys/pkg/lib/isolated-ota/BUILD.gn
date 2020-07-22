@@ -54,6 +54,21 @@ rustc_library("isolated-ota") {
     "//third_party/rust_crates:openat",
     "//third_party/rust_crates:serde_json",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/cache.rs",
+    "src/lib.rs",
+    "src/omaha.rs",
+    "src/omaha/http_request.rs",
+    "src/omaha/install_plan.rs",
+    "src/omaha/installer.rs",
+    "src/omaha/timer.rs",
+    "src/pkgfs.rs",
+    "src/resolver.rs",
+    "src/updater.rs",
+  ]
 }
 
 # Include blobfs in the build, which comes from Zircon

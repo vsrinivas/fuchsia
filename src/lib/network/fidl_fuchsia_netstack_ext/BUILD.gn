@@ -14,6 +14,10 @@ rustc_library("fidl_fuchsia_netstack_ext") {
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/lib/network/fidl_fuchsia_net_ext",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 unittest_package("fidl-fuchsia-netstack-ext-tests") {

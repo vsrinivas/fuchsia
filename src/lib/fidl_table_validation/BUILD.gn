@@ -11,6 +11,10 @@ rustc_library("fidl_table_validation") {
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 group("tests") {

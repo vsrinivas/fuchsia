@@ -19,4 +19,8 @@ rustc_library("freetype_ffi") {
     # TODO(36315): Remove workaround for Rust host_toolchain
     non_rust_deps = [ "//third_party/freetype2:freetype2_for_rust_host" ]
   }
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }

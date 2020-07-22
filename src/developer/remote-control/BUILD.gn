@@ -60,6 +60,13 @@ rustc_library("lib") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/service_discovery.rs",
+  ]
 }
 
 rustc_binary("bin") {
@@ -82,6 +89,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 test_package("remote-control-lib-tests") {

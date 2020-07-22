@@ -21,6 +21,10 @@ rustc_library("cm_fidl_translator") {
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("cm_fidl_translator_tests") {

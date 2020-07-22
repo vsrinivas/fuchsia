@@ -17,6 +17,13 @@ rustc_binary("bin") {
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:lazy_static",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/main.rs",
+  ]
 }
 
 dart_test("zedmon_client_manual_test") {

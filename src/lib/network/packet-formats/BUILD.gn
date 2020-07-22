@@ -26,6 +26,35 @@ rustc_library("packet-formats") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/arp.rs",
+    "src/error.rs",
+    "src/ethernet.rs",
+    "src/icmp/common.rs",
+    "src/icmp/icmpv4.rs",
+    "src/icmp/icmpv6.rs",
+    "src/icmp/macros.rs",
+    "src/icmp/mld.rs",
+    "src/icmp/mod.rs",
+    "src/icmp/ndp.rs",
+    "src/igmp/messages.rs",
+    "src/igmp/mod.rs",
+    "src/igmp/types.rs",
+    "src/ip.rs",
+    "src/ipv4.rs",
+    "src/ipv6/ext_hdrs.rs",
+    "src/ipv6/mod.rs",
+    "src/lib.rs",
+    "src/macros.rs",
+    "src/tcp.rs",
+    "src/testdata.rs",
+    "src/testutil.rs",
+    "src/udp.rs",
+    "src/utils.rs",
+  ]
 }
 
 rustc_test("packet-formats-lib-test") {
@@ -47,6 +76,37 @@ rustc_test("packet-formats-lib-test") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/arp.rs",
+    "src/error.rs",
+    "src/ethernet.rs",
+    "src/icmp/common.rs",
+    "src/icmp/icmpv4.rs",
+    "src/icmp/icmpv6.rs",
+    "src/icmp/macros.rs",
+    "src/icmp/mld.rs",
+    "src/icmp/mod.rs",
+    "src/icmp/ndp.rs",
+    "src/icmp/testdata.rs",
+    "src/igmp/messages.rs",
+    "src/igmp/mod.rs",
+    "src/igmp/testdata.rs",
+    "src/igmp/types.rs",
+    "src/ip.rs",
+    "src/ipv4.rs",
+    "src/ipv6/ext_hdrs.rs",
+    "src/ipv6/mod.rs",
+    "src/lib.rs",
+    "src/macros.rs",
+    "src/tcp.rs",
+    "src/testdata.rs",
+    "src/testutil.rs",
+    "src/udp.rs",
+    "src/utils.rs",
   ]
 }
 

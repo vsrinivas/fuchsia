@@ -42,6 +42,14 @@ rustc_test("test") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "tests/account.rs",
+    "tests/lib.rs",
+    "tests/prototype.rs",
+  ]
 }
 
 test_package("account_manager_integration_test_pkg") {

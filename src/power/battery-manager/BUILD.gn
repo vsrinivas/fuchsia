@@ -32,6 +32,15 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/battery_manager.rs",
+    "src/battery_simulator.rs",
+    "src/main.rs",
+    "src/power.rs",
+  ]
 }
 
 package("battery-manager") {

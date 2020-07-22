@@ -16,6 +16,10 @@ rustc_library("validating-log-listener") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 group("tests") {

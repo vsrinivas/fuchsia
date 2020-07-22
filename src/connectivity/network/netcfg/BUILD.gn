@@ -52,6 +52,16 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/devices.rs",
+    "src/dhcpv6.rs",
+    "src/dns.rs",
+    "src/main.rs",
+    "src/matchers.rs",
+  ]
 }
 
 fuchsia_component("component") {

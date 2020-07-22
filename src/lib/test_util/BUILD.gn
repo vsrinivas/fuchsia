@@ -11,6 +11,10 @@ rustc_library("test_util") {
   testonly = true
 
   deps = [ "//third_party/rust_crates:lazy_static" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 unittest_package("rust_test_util_tests") {

@@ -32,6 +32,35 @@ rustc_library("wlan-mlme") {
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/akm_algorithm.rs",
+    "src/ap/context.rs",
+    "src/ap/frame_writer/mod.rs",
+    "src/ap/infra_bss.rs",
+    "src/ap/mod.rs",
+    "src/ap/remote_client.rs",
+    "src/auth.rs",
+    "src/block_ack.rs",
+    "src/buffer.rs",
+    "src/client/channel_listener.rs",
+    "src/client/channel_scheduler.rs",
+    "src/client/convert_beacon.rs",
+    "src/client/lost_bss.rs",
+    "src/client/mod.rs",
+    "src/client/scanner.rs",
+    "src/client/state.rs",
+    "src/client/stats.rs",
+    "src/ddk_converter.rs",
+    "src/device.rs",
+    "src/error.rs",
+    "src/key.rs",
+    "src/lib.rs",
+    "src/logger.rs",
+    "src/timer.rs",
+  ]
 }
 
 test_package("wlan-mlme-tests") {

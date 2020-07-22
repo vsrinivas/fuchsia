@@ -23,6 +23,10 @@ rustc_test("driver") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tempfile",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 rustc_binary("echo_service_checker_bin") {
@@ -37,6 +41,10 @@ rustc_binary("echo_service_checker_bin") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/echo_service_checker.rs" ]
 }
 
 rustc_binary("injected_directory_checker_bin") {
@@ -44,6 +52,10 @@ rustc_binary("injected_directory_checker_bin") {
   edition = "2018"
   source_root = "src/injected_directory_checker.rs"
   testonly = true
+
+  enforce_source_listing = true
+
+  sources = [ "src/injected_directory_checker.rs" ]
 }
 
 rustc_binary("stdio_writer_bin") {
@@ -51,6 +63,10 @@ rustc_binary("stdio_writer_bin") {
   edition = "2018"
   source_root = "src/stdio_writer.rs"
   testonly = true
+
+  enforce_source_listing = true
+
+  sources = [ "src/stdio_writer.rs" ]
 }
 
 test_package("component-launching-tests") {

@@ -32,6 +32,10 @@ rustc_binary("bin") {
   ]
 
   test_deps = [ "//src/lib/storage/pseudo-fs" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 package("factoryctl") {

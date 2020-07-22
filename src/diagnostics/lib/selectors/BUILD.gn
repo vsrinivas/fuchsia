@@ -19,6 +19,14 @@ rustc_library("selectors") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/selector_evaluator.rs",
+    "src/selectors.rs",
+  ]
 }
 
 test_package("selectors_tests") {

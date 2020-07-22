@@ -42,6 +42,23 @@ rustc_test("driver") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/board.rs",
+    "src/channel.rs",
+    "src/cobalt_metrics.rs",
+    "src/fetch_packages.rs",
+    "src/history.rs",
+    "src/lib.rs",
+    "src/mode_force_recovery.rs",
+    "src/mode_normal.rs",
+    "src/options.rs",
+    "src/update_package.rs",
+    "src/writes_firmware.rs",
+    "src/writes_images.rs",
+  ]
 }
 
 test_package("system-updater-integration-tests") {

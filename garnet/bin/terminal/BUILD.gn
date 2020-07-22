@@ -53,6 +53,21 @@ rustc_library("lib") {
     "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/app.rs",
+    "src/key_util.rs",
+    "src/lib.rs",
+    "src/pty.rs",
+    "src/terminal_view.rs",
+    "src/ui/mod.rs",
+    "src/ui/terminal_scene.rs",
+    "src/ui/terminal_views.rs",
+  ]
+
+  inputs = [ "//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf" ]
 }
 
 rustc_binary("bin") {
@@ -68,6 +83,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/bin/terminal.rs" ]
 }
 
 package("terminal") {

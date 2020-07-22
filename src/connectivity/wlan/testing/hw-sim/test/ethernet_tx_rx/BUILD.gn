@@ -20,4 +20,8 @@ rustc_test("ethernet_tx_rx") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }

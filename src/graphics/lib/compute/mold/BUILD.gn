@@ -17,6 +17,21 @@ rustc_library("mold") {
     "//third_party/rust_crates:rustc-hash",
   ]
   configs += [ ":mold-performance" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/buffer.rs",
+    "src/composition.rs",
+    "src/layer.rs",
+    "src/lib.rs",
+    "src/path/mod.rs",
+    "src/path/segments.rs",
+    "src/path/transform.rs",
+    "src/point.rs",
+    "src/segment.rs",
+    "src/utils.rs",
+  ]
 }
 
 config("mold-performance") {

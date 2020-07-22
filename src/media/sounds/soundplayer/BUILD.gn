@@ -51,6 +51,15 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/sound_player.rs",
+    "src/sound_player/wav_reader.rs",
+    "src/test.rs",
+  ]
 }
 
 config_data("configs") {

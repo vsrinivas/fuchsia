@@ -28,6 +28,10 @@ rustc_library("fuchsia-criterion") {
   if (local_bench) {
     features = [ "local_bench" ]
   }
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("fuchsia-criterion-tests") {

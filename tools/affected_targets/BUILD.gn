@@ -19,6 +19,16 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/analysis.rs",
+    "src/argument_parsing.rs",
+    "src/files.rs",
+    "src/gn.rs",
+    "src/lib.rs",
+  ]
 }
 
 rustc_binary("affected_targets") {
@@ -26,6 +36,10 @@ rustc_binary("affected_targets") {
   with_unit_tests = true
 
   deps = [ ":lib" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 group("tests") {

@@ -33,6 +33,17 @@ rustc_library("connectivity-testing") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/http_service_util.rs",
+    "src/lib.rs",
+    "src/net_stack_util.rs",
+    "src/wlan_service_util/ap.rs",
+    "src/wlan_service_util/client.rs",
+    "src/wlan_service_util/mod.rs",
+  ]
 }
 
 unittest_package("connectivity-testing-tests") {

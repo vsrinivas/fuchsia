@@ -30,6 +30,10 @@ rustc_fuzzer("toy_example_with_main") {
 rustc_library("helper") {
   source_root = "helper/lib.rs"
   deps = [ "//src/lib/fuzzing/rust:fuzz" ]
+
+  enforce_source_listing = true
+
+  sources = [ "helper/lib.rs" ]
 }
 
 rustc_fuzzer("toy_example_same_name") {

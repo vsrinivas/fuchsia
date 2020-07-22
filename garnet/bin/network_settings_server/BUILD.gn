@@ -16,6 +16,14 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/net_settings_types.rs",
+    "src/server.rs",
+  ]
 }
 
 package("network_settings_server") {

@@ -17,4 +17,8 @@ rustc_library("isolated-driver-manager") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }

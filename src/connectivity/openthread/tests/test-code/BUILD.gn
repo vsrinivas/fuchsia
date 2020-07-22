@@ -13,4 +13,13 @@ rustc_library("test-code") {
     "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/constants.rs",
+    "src/lib.rs",
+    "src/spinel_device_ncp_ver_query.rs",
+    "src/spinel_device_soft_reset.rs",
+  ]
 }

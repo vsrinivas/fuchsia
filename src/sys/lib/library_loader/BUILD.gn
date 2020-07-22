@@ -25,6 +25,10 @@ rustc_library("library_loader") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 # These are some extra files that are included in the test package under lib/config_test, for use in

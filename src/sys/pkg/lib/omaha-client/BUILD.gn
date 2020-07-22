@@ -30,6 +30,44 @@ rustc_library("omaha-client") {
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/clock.rs",
+    "src/common.rs",
+    "src/configuration.rs",
+    "src/http_request.rs",
+    "src/http_request/mock.rs",
+    "src/installer.rs",
+    "src/installer/stub.rs",
+    "src/lib.rs",
+    "src/metrics.rs",
+    "src/metrics/mock.rs",
+    "src/metrics/stub.rs",
+    "src/policy.rs",
+    "src/policy/mock.rs",
+    "src/policy/stub.rs",
+    "src/protocol.rs",
+    "src/protocol/request.rs",
+    "src/protocol/request/tests.rs",
+    "src/protocol/response.rs",
+    "src/protocol/response/tests.rs",
+    "src/request_builder.rs",
+    "src/request_builder/tests.rs",
+    "src/state_machine.rs",
+    "src/state_machine/builder.rs",
+    "src/state_machine/observer.rs",
+    "src/state_machine/update_check.rs",
+    "src/storage.rs",
+    "src/storage/memory.rs",
+    "src/storage/stub.rs",
+    "src/time.rs",
+    "src/time/complex.rs",
+    "src/time/time_source.rs",
+    "src/time/timers.rs",
+    "src/unless.rs",
+  ]
 }
 
 test_package("omaha-client-lib-tests") {

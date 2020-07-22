@@ -32,6 +32,14 @@ rustc_library("streams") {
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/encode.rs",
+    "src/lib.rs",
+    "src/parse.rs",
+  ]
 }
 
 unittest_package("diagnostic_streams_tests") {

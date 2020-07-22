@@ -98,6 +98,26 @@ rustc_binary("font_provider") {
   ]
 
   non_rust_deps = [ "//third_party/freetype2" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/font_service/asset/asset.rs",
+    "src/font_service/asset/cache.rs",
+    "src/font_service/asset/collection.rs",
+    "src/font_service/asset/loader.rs",
+    "src/font_service/asset/mod.rs",
+    "src/font_service/builder.rs",
+    "src/font_service/family.rs",
+    "src/font_service/inspect.rs",
+    "src/font_service/mod.rs",
+    "src/font_service/typeface/collection.rs",
+    "src/font_service/typeface/matcher.rs",
+    "src/font_service/typeface/mod.rs",
+    "src/font_service/typeface/test_util.rs",
+    "src/font_service/typeface/typeface.rs",
+    "src/main.rs",
+  ]
 }
 
 package("pkg") {

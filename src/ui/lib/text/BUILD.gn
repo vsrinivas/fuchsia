@@ -26,4 +26,11 @@ rustc_library("text") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unicode-segmentation",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/text_field_state.rs",
+  ]
 }

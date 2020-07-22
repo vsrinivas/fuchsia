@@ -38,6 +38,36 @@ rustc_binary("bin") {
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/driver/api.rs",
+    "src/driver/clone_ext.rs",
+    "src/driver/driver_state.rs",
+    "src/driver/error_adapter.rs",
+    "src/driver/inbound.rs",
+    "src/driver/init.rs",
+    "src/driver/misc.rs",
+    "src/driver/mod.rs",
+    "src/driver/tasks.rs",
+    "src/driver/tests.rs",
+    "src/flow_window.rs",
+    "src/main.rs",
+    "src/spinel/commands.rs",
+    "src/spinel/device_client.rs",
+    "src/spinel/enums.rs",
+    "src/spinel/frame_handler.rs",
+    "src/spinel/mock/fake_device_client.rs",
+    "src/spinel/mock/mock_device_client.rs",
+    "src/spinel/mock/mod.rs",
+    "src/spinel/mod.rs",
+    "src/spinel/prop_returning.rs",
+    "src/spinel/request_desc.rs",
+    "src/spinel/request_tracker.rs",
+    "src/spinel/response_handler.rs",
+    "src/spinel/types.rs",
+  ]
 }
 
 package("lowpan-spinel-driver") {

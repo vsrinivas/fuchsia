@@ -30,6 +30,10 @@ rustc_binary("inspect_validator_rust_puppet_bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 test_package("inspect_validator_test_rust") {

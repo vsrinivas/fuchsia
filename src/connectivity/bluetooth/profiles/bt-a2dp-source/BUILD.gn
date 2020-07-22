@@ -49,6 +49,16 @@ rustc_binary("bin") {
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/encoding.rs",
+    "src/main.rs",
+    "src/pcm_audio.rs",
+    "src/source_task.rs",
+    "src/sources.rs",
+  ]
 }
 
 package("bt-a2dp-source") {
@@ -112,6 +122,13 @@ rustc_test("integration_tests") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:futures",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/encoding.rs",
+    "src/encoding_integration.rs",
   ]
 }
 

@@ -19,6 +19,10 @@ rustc_library("fs_management") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 generate_manifest("fs_management.manifest") {

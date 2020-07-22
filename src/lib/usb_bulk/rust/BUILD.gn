@@ -17,6 +17,13 @@ rustc_library("lib") {
   # The tests require a zedmon device attached to the host, and should not run
   # in the infrastructure currently.
   test_environments = []
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/usb.rs",
+  ]
 }
 
 group("tests") {

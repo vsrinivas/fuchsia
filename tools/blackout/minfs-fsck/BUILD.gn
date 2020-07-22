@@ -15,6 +15,10 @@ if (host_toolchain == current_toolchain) {
       "//tools/blackout/blackout-host",
     ]
     source_root = "src/host.rs"
+
+    enforce_source_listing = true
+
+    sources = [ "src/host.rs" ]
   }
 }
 
@@ -31,6 +35,10 @@ rustc_binary("minfs-fsck-target-bin") {
     "//tools/blackout/blackout-target",
   ]
   source_root = "src/target.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "src/target.rs" ]
 }
 
 generate_manifest("minfs.manifest") {

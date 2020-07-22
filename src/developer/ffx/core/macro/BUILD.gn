@@ -15,6 +15,10 @@ if (host_toolchain == current_toolchain) {
       ":ffx_core_impl",
       "//third_party/rust_crates:syn",
     ]
+
+    enforce_source_listing = true
+
+    sources = [ "src/lib.rs" ]
   }
 
   #Implementation needs to be seperate for unit tests.
@@ -31,6 +35,10 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:quote",
       "//third_party/rust_crates:syn",
     ]
+
+    enforce_source_listing = true
+
+    sources = [ "src/impl.rs" ]
   }
 }
 

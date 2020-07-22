@@ -49,6 +49,26 @@ rustc_binary("bin") {
 
   # TODO(48460): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/bindings/context.rs",
+    "src/bindings/devices.rs",
+    "src/bindings/ethernet_worker.rs",
+    "src/bindings/icmp/echo.rs",
+    "src/bindings/icmp/mod.rs",
+    "src/bindings/icmp/provider.rs",
+    "src/bindings/integration_tests.rs",
+    "src/bindings/macros.rs",
+    "src/bindings/mod.rs",
+    "src/bindings/socket/mod.rs",
+    "src/bindings/socket/udp.rs",
+    "src/bindings/stack_fidl_worker.rs",
+    "src/bindings/timers.rs",
+    "src/bindings/util.rs",
+    "src/main.rs",
+  ]
 }
 
 fuchsia_component("component") {

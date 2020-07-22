@@ -21,6 +21,14 @@ rustc_library("dns_server_watcher") {
     "//src/lib/network/fidl_fuchsia_net_name_ext",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/stream.rs",
+    "src/test_util.rs",
+  ]
 }
 
 unittest_package("dns-server-watcher-test") {

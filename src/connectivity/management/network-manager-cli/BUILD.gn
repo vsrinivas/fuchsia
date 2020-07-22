@@ -37,6 +37,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 rustc_library("lib") {
@@ -67,6 +71,15 @@ rustc_library("lib") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/cli.rs",
+    "src/lib.rs",
+    "src/opts.rs",
+    "src/printer.rs",
   ]
 }
 

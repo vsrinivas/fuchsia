@@ -20,6 +20,13 @@ rustc_library("mdns") {
     "//src/lib/zerocopy",
     "//third_party/rust_crates:byteorder",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/protocol.rs",
+  ]
 }
 
 group("tests") {

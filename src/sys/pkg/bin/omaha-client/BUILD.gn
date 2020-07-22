@@ -70,6 +70,29 @@ rustc_binary("bin") {
 
   non_rust_deps =
       [ "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client-c" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/channel.rs",
+    "src/cobalt.rs",
+    "src/configuration.rs",
+    "src/fidl.rs",
+    "src/http_request.rs",
+    "src/inspect.rs",
+    "src/inspect/bounded_node.rs",
+    "src/install_plan.rs",
+    "src/installer.rs",
+    "src/main.rs",
+    "src/metrics.rs",
+    "src/observer.rs",
+    "src/observer/platform.rs",
+    "src/policy.rs",
+    "src/storage.rs",
+    "src/storage/stash.rs",
+    "src/temp_installer.rs",
+    "src/timer.rs",
+  ]
 }
 
 package("omaha-client") {

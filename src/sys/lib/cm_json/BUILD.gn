@@ -27,6 +27,15 @@ rustc_library("cm_json") {
   non_rust_deps = [ ":cmx_schema_json" ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/cm.rs",
+    "src/lib.rs",
+  ]
+
+  inputs = [ "cmx_schema.json" ]
 }
 
 test_package("cm_json_tests") {

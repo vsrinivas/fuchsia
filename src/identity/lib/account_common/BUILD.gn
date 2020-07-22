@@ -20,4 +20,12 @@ rustc_library("account_common") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/error.rs",
+    "src/identifiers.rs",
+    "src/lib.rs",
+  ]
 }

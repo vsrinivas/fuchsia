@@ -11,6 +11,10 @@ rustc_test("fidl_table_validation_tests_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("fidl_table_validation_tests") {

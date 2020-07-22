@@ -32,6 +32,24 @@ rustc_binary("bin") {
   ]
 
   non_rust_deps = []
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/context.rs",
+    "src/energy_scan_command.rs",
+    "src/form_command.rs",
+    "src/invocation.rs",
+    "src/join_command.rs",
+    "src/leave_command.rs",
+    "src/list_command.rs",
+    "src/main.rs",
+    "src/mfg_command.rs",
+    "src/network_scan_command.rs",
+    "src/provision_command.rs",
+    "src/reset_command.rs",
+    "src/status_command.rs",
+  ]
 }
 
 package("lowpanctl") {

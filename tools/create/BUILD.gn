@@ -27,6 +27,15 @@ if (host_toolchain == current_toolchain) {
     ]
 
     with_unit_tests = true
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/main.rs",
+      "src/template_helpers.rs",
+      "src/test_util.rs",
+      "src/util.rs",
+    ]
   }
 }
 

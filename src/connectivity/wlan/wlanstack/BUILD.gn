@@ -68,6 +68,28 @@ rustc_binary("bin") {
   ]
 
   test_deps = [ "//src/connectivity/wlan/testing/wlantap-client" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/device.rs",
+    "src/device_watch.rs",
+    "src/future_util.rs",
+    "src/inspect.rs",
+    "src/logger.rs",
+    "src/main.rs",
+    "src/mlme_query_proxy.rs",
+    "src/service.rs",
+    "src/station/ap.rs",
+    "src/station/client.rs",
+    "src/station/mesh.rs",
+    "src/station/mod.rs",
+    "src/stats_scheduler.rs",
+    "src/telemetry/convert.rs",
+    "src/telemetry/mod.rs",
+    "src/watchable_map.rs",
+    "src/watcher_service.rs",
+  ]
 }
 
 package("wlanstack") {

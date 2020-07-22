@@ -20,6 +20,13 @@ rustc_library("fidl_fuchsia_net_stack_ext") {
     "//third_party/rust_crates:thiserror",
   ]
   test_deps = [ "//src/connectivity/lib/net-declare" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/error.rs",
+    "src/lib.rs",
+  ]
 }
 
 unittest_package("fidl-fuchsia-net-stack-ext-tests") {

@@ -17,6 +17,10 @@ rustc_binary("no_suite_service") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "no_suite_service.rs" ]
 }
 
 group("test_data") {

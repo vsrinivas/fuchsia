@@ -19,6 +19,13 @@ rustc_library("offset_string") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unic-char-range",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/conversions.rs",
+    "src/lib.rs",
+  ]
 }
 
 test_package("offset_string_tests") {

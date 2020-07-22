@@ -9,4 +9,8 @@ import("//build/testing/environments.gni")
 rustc_library("fidl_fuchsia_intl_ext") {
   edition = "2018"
   deps = [ "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }

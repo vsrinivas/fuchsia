@@ -27,6 +27,10 @@ rustc_library("fuchsia-hyper") {
     "//third_party/rust_crates:socket2",
     "//third_party/rust_crates:tokio",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("fuchsia-hyper-tests") {

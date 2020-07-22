@@ -55,6 +55,23 @@ rustc_library("fuchsia-pkg-testing") {
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/inspect.rs",
+    "src/lib.rs",
+    "src/package.rs",
+    "src/repo.rs",
+    "src/serve.rs",
+    "src/serve/handler.rs",
+    "src/system_image.rs",
+  ]
+
+  inputs = [
+    "certs/server.rsa",
+    "certs/server.certchain",
+  ]
 }
 
 rustc_test("pkgfs-test") {
@@ -76,6 +93,13 @@ rustc_test("pkgfs-test") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:openat",
     "//third_party/rust_crates:serde_json",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "tests/get_buffer.rs",
+    "tests/pkgfs_test.rs",
   ]
 }
 

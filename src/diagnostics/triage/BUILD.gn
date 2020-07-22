@@ -92,6 +92,14 @@ rustc_library("triage_lib") {
   edition = 2018
 
   deps = lib_deps
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/app.rs",
+    "src/config.rs",
+    "src/lib.rs",
+  ]
 }
 
 rustc_test("triage_lib_test") {
@@ -104,6 +112,16 @@ rustc_test("triage_lib_test") {
            ":triage_bin",
            ":test_data",
          ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/app.rs",
+    "src/config.rs",
+    "src/lib.rs",
+    "src/test.rs",
+    "src/test/integration.rs",
+  ]
 }
 
 rustc_binary("triage_bin") {
@@ -111,6 +129,10 @@ rustc_binary("triage_bin") {
   edition = "2018"
 
   deps = lib_deps + [ ":triage_lib" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 install_host_tools("install") {

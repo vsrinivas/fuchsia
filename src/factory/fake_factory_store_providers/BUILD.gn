@@ -32,6 +32,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 package("fake_factory_store_providers") {
@@ -86,6 +90,10 @@ rustc_test("fake_factory_store_providers_test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "tests/fake_factory_store_providers_test.rs" ]
 }
 
 test_package("fake_factory_store_providers_tests") {

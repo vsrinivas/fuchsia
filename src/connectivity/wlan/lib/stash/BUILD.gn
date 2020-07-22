@@ -20,6 +20,10 @@ rustc_library("wlan-stash") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("wlan-stash-tests") {

@@ -46,6 +46,40 @@ rustc_library("fuchsia-bluetooth") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/assigned_numbers.rs",
+    "src/assigned_numbers/constants.rs",
+    "src/constants.rs",
+    "src/detachable_map.rs",
+    "src/device_watcher.rs",
+    "src/error.rs",
+    "src/expectation.rs",
+    "src/expectation/asynchronous.rs",
+    "src/expectation/host_driver.rs",
+    "src/expectation/peer.rs",
+    "src/expectation/test.rs",
+    "src/hci_emulator.rs",
+    "src/host.rs",
+    "src/inspect.rs",
+    "src/lib.rs",
+    "src/profile.rs",
+    "src/types.rs",
+    "src/types/adapter_info.rs",
+    "src/types/address.rs",
+    "src/types/bonding_data.rs",
+    "src/types/emulator.rs",
+    "src/types/host_info.rs",
+    "src/types/id.rs",
+    "src/types/io_capabilities.rs",
+    "src/types/le.rs",
+    "src/types/pairing_options.rs",
+    "src/types/peer.rs",
+    "src/types/uuid.rs",
+    "src/util.rs",
+  ]
 }
 
 test_package("tests") {

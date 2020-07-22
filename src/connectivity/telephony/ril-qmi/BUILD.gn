@@ -29,6 +29,15 @@ rustc_binary("bin") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/client.rs",
+    "src/errors.rs",
+    "src/main.rs",
+    "src/transport.rs",
+  ]
 }
 
 package("ril-qmi") {

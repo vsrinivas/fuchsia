@@ -46,6 +46,24 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/account.rs",
+    "src/account_handler.rs",
+    "src/auth_provider_supplier.rs",
+    "src/common.rs",
+    "src/fake_account_handler_context.rs",
+    "src/fake_authenticator.rs",
+    "src/inspect.rs",
+    "src/lock_request.rs",
+    "src/main.rs",
+    "src/persona.rs",
+    "src/pre_auth.rs",
+    "src/stored_account.rs",
+    "src/test_util.rs",
+  ]
 }
 
 package("account_handler") {

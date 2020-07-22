@@ -58,6 +58,25 @@ rustc_binary("bin") {
 
   # TODO(54452): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/apply.rs",
+    "src/channel.rs",
+    "src/channel_handler.rs",
+    "src/check.rs",
+    "src/config.rs",
+    "src/connect.rs",
+    "src/errors.rs",
+    "src/last_update_storage.rs",
+    "src/main.rs",
+    "src/poller.rs",
+    "src/rate_limiter.rs",
+    "src/update_manager.rs",
+    "src/update_monitor.rs",
+    "src/update_service.rs",
+  ]
 }
 
 package("system-update-checker") {

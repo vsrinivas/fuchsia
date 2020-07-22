@@ -34,6 +34,39 @@ rustc_library("netstack3-core") {
     "//third_party/rust_crates:rand_xorshift",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/algorithm.rs",
+    "src/context.rs",
+    "src/data_structures/id_map.rs",
+    "src/data_structures/id_map_collection.rs",
+    "src/data_structures/mod.rs",
+    "src/data_structures/token_bucket.rs",
+    "src/device/arp.rs",
+    "src/device/ethernet.rs",
+    "src/device/link.rs",
+    "src/device/mod.rs",
+    "src/device/ndp.rs",
+    "src/error.rs",
+    "src/ip/forwarding.rs",
+    "src/ip/gmp/igmp.rs",
+    "src/ip/gmp/mld.rs",
+    "src/ip/gmp/mod.rs",
+    "src/ip/icmp.rs",
+    "src/ip/ipv6.rs",
+    "src/ip/mod.rs",
+    "src/ip/path_mtu.rs",
+    "src/ip/reassembly.rs",
+    "src/ip/socket.rs",
+    "src/ip/types.rs",
+    "src/lib.rs",
+    "src/macros.rs",
+    "src/socket.rs",
+    "src/transport/mod.rs",
+    "src/transport/udp.rs",
+  ]
 }
 
 rustc_test("netstack3-core_test") {
@@ -61,5 +94,40 @@ rustc_test("netstack3-core_test") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rand_xorshift",
     "//third_party/rust_crates:thiserror",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/algorithm.rs",
+    "src/benchmarks.rs",
+    "src/context.rs",
+    "src/data_structures/id_map.rs",
+    "src/data_structures/id_map_collection.rs",
+    "src/data_structures/mod.rs",
+    "src/data_structures/token_bucket.rs",
+    "src/device/arp.rs",
+    "src/device/ethernet.rs",
+    "src/device/link.rs",
+    "src/device/mod.rs",
+    "src/device/ndp.rs",
+    "src/error.rs",
+    "src/ip/forwarding.rs",
+    "src/ip/gmp/igmp.rs",
+    "src/ip/gmp/mld.rs",
+    "src/ip/gmp/mod.rs",
+    "src/ip/icmp.rs",
+    "src/ip/ipv6.rs",
+    "src/ip/mod.rs",
+    "src/ip/path_mtu.rs",
+    "src/ip/reassembly.rs",
+    "src/ip/socket.rs",
+    "src/ip/types.rs",
+    "src/lib.rs",
+    "src/macros.rs",
+    "src/socket.rs",
+    "src/testutil.rs",
+    "src/transport/mod.rs",
+    "src/transport/udp.rs",
   ]
 }

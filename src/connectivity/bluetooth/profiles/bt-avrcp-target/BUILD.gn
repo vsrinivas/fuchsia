@@ -33,6 +33,20 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/avrcp_handler.rs",
+    "src/main.rs",
+    "src/media/media_sessions.rs",
+    "src/media/media_state.rs",
+    "src/media/media_types.rs",
+    "src/media/mod.rs",
+    "src/tests/mod.rs",
+    "src/types/bounded_queue.rs",
+    "src/types/mod.rs",
+  ]
 }
 
 package("bt-avrcp-target") {

@@ -35,6 +35,37 @@ rustc_library("wlan-rsn") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:time",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/auth/mod.rs",
+    "src/auth/psk.rs",
+    "src/crypto_utils/mod.rs",
+    "src/crypto_utils/nonce.rs",
+    "src/integrity/hmac_md5.rs",
+    "src/integrity/hmac_sha1.rs",
+    "src/integrity/mod.rs",
+    "src/key/exchange/handshake/fourway/authenticator.rs",
+    "src/key/exchange/handshake/fourway/mod.rs",
+    "src/key/exchange/handshake/fourway/supplicant.rs",
+    "src/key/exchange/handshake/group_key/mod.rs",
+    "src/key/exchange/handshake/group_key/supplicant.rs",
+    "src/key/exchange/handshake/mod.rs",
+    "src/key/exchange/mod.rs",
+    "src/key/gtk.rs",
+    "src/key/mod.rs",
+    "src/key/ptk.rs",
+    "src/key_data/kde.rs",
+    "src/key_data/mod.rs",
+    "src/keywrap/aes.rs",
+    "src/keywrap/mod.rs",
+    "src/keywrap/rc4.rs",
+    "src/lib.rs",
+    "src/rsna/esssa.rs",
+    "src/rsna/mod.rs",
+    "src/rsna/test_util.rs",
+  ]
 }
 
 test_package("wlan-rsn-tests") {

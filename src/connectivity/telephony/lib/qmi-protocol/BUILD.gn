@@ -36,6 +36,10 @@ rustc_library("qmi-protocol") {
     "//third_party/rust_crates:thiserror",
   ]
   source_root = "$target_gen_dir/qmi-protocol.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "$target_gen_dir/qmi-protocol.rs" ]
 }
 
 group("tests") {
@@ -53,6 +57,14 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
     ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/ast.rs",
+      "src/codegen.rs",
+      "src/main.rs",
+    ]
   }
 
   rustc_library("qmigen_lib") {
@@ -62,6 +74,14 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
+    ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/ast.rs",
+      "src/codegen.rs",
+      "src/lib.rs",
     ]
   }
 
@@ -74,5 +94,27 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:pretty_assertions",
     ]
     source_root = "tests/codegen_tests.rs"
+
+    enforce_source_listing = true
+
+    sources = [
+      "tests/codegen_tests.rs",
+      "tests/macros.rs",
+      "tests/optional_response.test.rs",
+      "tests/simple_request.test.rs",
+      "tests/simple_response.test.rs",
+      "tests/string_request_decode.test.rs",
+      "tests/subparam_request.test.rs",
+      "tests/subparam_response.test.rs",
+    ]
+
+    inputs = [
+      "tests/subparam_request.test.json",
+      "tests/subparam_response.test.json",
+      "tests/string_request_decode.test.json",
+      "tests/simple_request.test.json",
+      "tests/simple_response.test.json",
+      "tests/optional_response.test.json",
+    ]
   }
 }

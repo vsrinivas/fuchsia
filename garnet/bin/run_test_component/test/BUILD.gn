@@ -63,6 +63,10 @@ rustc_binary("component_to_test_standard_out") {
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:log",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "component_to_test_standard_out.rs" ]
 }
 
 rustc_binary("error_logging_component") {
@@ -74,6 +78,10 @@ rustc_binary("error_logging_component") {
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:log",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "error_logging_component.rs" ]
 }
 
 test_package("run_test_component_test") {

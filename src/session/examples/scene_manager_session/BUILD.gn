@@ -41,6 +41,10 @@ rustc_binary("scene_manager_session_bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 package("scene_manager_session") {

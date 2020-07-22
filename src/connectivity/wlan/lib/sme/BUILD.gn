@@ -40,6 +40,42 @@ rustc_library("wlan-sme") {
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/ap/aid.rs",
+    "src/ap/authenticator.rs",
+    "src/ap/event.rs",
+    "src/ap/mod.rs",
+    "src/ap/remote_client/mod.rs",
+    "src/ap/remote_client/state.rs",
+    "src/ap/rsn.rs",
+    "src/ap/test_utils.rs",
+    "src/capabilities.rs",
+    "src/client/bss.rs",
+    "src/client/capabilities.rs",
+    "src/client/event.rs",
+    "src/client/info/info_reporter.rs",
+    "src/client/info/mod.rs",
+    "src/client/info/stats_collector.rs",
+    "src/client/inspect.rs",
+    "src/client/mod.rs",
+    "src/client/protection.rs",
+    "src/client/rsn.rs",
+    "src/client/scan.rs",
+    "src/client/state/link_state.rs",
+    "src/client/state/mod.rs",
+    "src/client/test_utils.rs",
+    "src/client/wpa.rs",
+    "src/clone_utils.rs",
+    "src/lib.rs",
+    "src/mesh/mod.rs",
+    "src/phy_selection.rs",
+    "src/sink.rs",
+    "src/test_utils.rs",
+    "src/timer.rs",
+  ]
 }
 
 test_package("wlan-sme-tests") {

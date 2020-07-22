@@ -24,6 +24,10 @@ rustc_library("event-queue") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 group("tests") {

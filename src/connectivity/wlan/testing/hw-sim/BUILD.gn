@@ -44,6 +44,18 @@ rustc_library("wlan-hw-sim") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/config.rs",
+    "src/eth_helper.rs",
+    "src/event_handler_helper.rs",
+    "src/lib.rs",
+    "src/test_utils.rs",
+    "src/wlancfg_helper.rs",
+    "src/wlanstack_helper.rs",
+  ]
 }
 
 unittest_package("wlan-hw-sim-lib-tests") {

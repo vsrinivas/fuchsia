@@ -22,4 +22,14 @@ rustc_library("tel_dev") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/at_test_common.rs",
+    "src/component_test.rs",
+    "src/isolated_devmgr.rs",
+    "src/lib.rs",
+    "src/snooper_test.rs",
+  ]
 }

@@ -28,6 +28,14 @@ rustc_binary("bin") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/hci.rs",
+    "src/main.rs",
+    "src/types.rs",
+  ]
 }
 
 package("bt-fct-hci") {

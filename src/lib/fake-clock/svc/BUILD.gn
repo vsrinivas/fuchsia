@@ -24,6 +24,10 @@ rustc_binary("fake_clock_svc") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 package("svc") {

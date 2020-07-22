@@ -35,6 +35,15 @@ rustc_library("manifest") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pretty_assertions",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/serde_ext.rs",
+    "src/v1_to_v2.rs",
+    "src/v2.rs",
+  ]
 }
 
 test_package("manifest_tests") {

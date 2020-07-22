@@ -39,6 +39,16 @@ rustc_binary("bin") {
     "//third_party/rust_crates:splines",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/backlight.rs",
+    "src/control.rs",
+    "src/main.rs",
+    "src/sender_channel.rs",
+    "src/sensor.rs",
+  ]
 }
 
 package("brightness_manager") {

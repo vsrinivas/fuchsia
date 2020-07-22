@@ -37,5 +37,14 @@ if (host_toolchain == current_toolchain) {
     ]
 
     test_deps = []
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/json.rs",
+      "src/lib.rs",
+      "src/message_ids.rs",
+      "src/parser.rs",
+    ]
   }
 }

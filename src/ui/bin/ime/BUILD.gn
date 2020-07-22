@@ -44,6 +44,26 @@ rustc_binary("bin") {
     "//third_party/rust_crates:unicode-normalization",
     "//third_party/rust_crates:unicode-segmentation",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/fidl_helpers.rs",
+    "src/ime_service.rs",
+    "src/index_convert.rs",
+    "src/integration_tests.rs",
+    "src/keyboard/keyboard2.rs",
+    "src/keyboard/keyboard3.rs",
+    "src/keyboard/mod.rs",
+    "src/keyboard/service.rs",
+    "src/legacy_ime/handler.rs",
+    "src/legacy_ime/mod.rs",
+    "src/legacy_ime/position.rs",
+    "src/legacy_ime/state.rs",
+    "src/legacy_ime/tests.rs",
+    "src/main.rs",
+    "src/multiplex.rs",
+  ]
 }
 
 package("ime_service") {
@@ -115,6 +135,10 @@ rustc_test("keyboard_test_bin") {
     "//third_party/rust_crates:thiserror",
   ]
   source_root = "tests/keyboard.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "tests/keyboard.rs" ]
 }
 
 test_package("keyboard_test") {

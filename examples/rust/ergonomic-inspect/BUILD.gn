@@ -11,6 +11,10 @@ rustc_test("ergonomic_inspect_tests") {
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/inspect/rust/fuchsia-inspect-derive",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 test_package("ergonomic-inspect-tests") {

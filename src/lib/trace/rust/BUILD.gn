@@ -15,6 +15,10 @@ rustc_library("trace") {
     "//third_party/rust_crates:libc",
   ]
   non_rust_deps = [ "//zircon/system/ulib/trace-engine" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 unittest_package("rust-trace-test") {
@@ -50,4 +54,8 @@ rustc_library("trace-provider") {
     ":rust-trace-provider",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "trace-provider/src/lib.rs" ]
 }

@@ -28,6 +28,10 @@ rustc_library("mock-resolver") {
     "//garnet/lib/rust/io_util",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("mock-resolver-tests") {

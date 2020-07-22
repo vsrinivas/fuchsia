@@ -26,6 +26,14 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/auth_provider_supplier.rs",
+    "src/main.rs",
+    "src/token_manager_factory.rs",
+  ]
 }
 
 package("token_manager_factory") {

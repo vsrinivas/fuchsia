@@ -27,6 +27,30 @@ rustc_library("mundane") {
 
   # TODO(46762): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/boringssl/abort.rs",
+    "src/boringssl/mod.rs",
+    "src/boringssl/raw.rs",
+    "src/boringssl/wrapper.rs",
+    "src/bytes.rs",
+    "src/hash.rs",
+    "src/hmac.rs",
+    "src/insecure.rs",
+    "src/kdf.rs",
+    "src/lib.rs",
+    "src/macros.rs",
+    "src/password.rs",
+    "src/public/ec/curve.rs",
+    "src/public/ec/mod.rs",
+    "src/public/ed25519.rs",
+    "src/public/mod.rs",
+    "src/public/rsa/bits.rs",
+    "src/public/rsa/mod.rs",
+    "src/util.rs",
+  ]
 }
 
 unittest_package("mundane-tests") {

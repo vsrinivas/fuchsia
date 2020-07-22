@@ -25,6 +25,10 @@ rustc_library("files_async") {
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:tempfile",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("files_async_tests") {

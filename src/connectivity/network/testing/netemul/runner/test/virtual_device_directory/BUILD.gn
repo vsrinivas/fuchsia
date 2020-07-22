@@ -9,6 +9,10 @@ rustc_binary("bin") {
   name = "virtual_device_directory"
   edition = "2018"
   deps = [ "//third_party/rust_crates:anyhow" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 fuchsia_component("virtual_device_directory") {

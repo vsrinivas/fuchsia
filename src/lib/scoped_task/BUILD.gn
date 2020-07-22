@@ -17,6 +17,13 @@ rustc_library("scoped_task") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/zircon.rs",
+  ]
 }
 
 rustc_test("scoped_task_test") {
@@ -30,6 +37,10 @@ rustc_test("scoped_task_test") {
     "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "test/main.rs" ]
 }
 
 rustc_binary("scoped_task_test_spawner") {
@@ -48,6 +59,10 @@ rustc_binary("scoped_task_test_spawner") {
 
   # TODO(54531): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  enforce_source_listing = true
+
+  sources = [ "test/spawner.rs" ]
 }
 
 test_package("scoped-task-tests") {

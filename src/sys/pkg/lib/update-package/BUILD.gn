@@ -36,6 +36,20 @@ rustc_library("update-package") {
     "//third_party/rust_crates:proptest-derive",
     "//third_party/rust_crates:tempfile",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/board.rs",
+    "src/hash.rs",
+    "src/image.rs",
+    "src/images.rs",
+    "src/lib.rs",
+    "src/name.rs",
+    "src/packages.rs",
+    "src/update_mode.rs",
+    "src/util.rs",
+  ]
 }
 
 test_package("update-package-tests") {

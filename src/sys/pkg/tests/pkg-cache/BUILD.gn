@@ -47,6 +47,17 @@ rustc_test("driver") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:tempfile",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/base_pkg_index.rs",
+    "src/cobalt.rs",
+    "src/inspect.rs",
+    "src/lib.rs",
+    "src/space.rs",
+    "src/sync.rs",
+  ]
 }
 
 # Include blobfs in the build, which comes from Zircon

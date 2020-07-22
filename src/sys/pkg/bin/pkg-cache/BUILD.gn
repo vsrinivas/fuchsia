@@ -44,6 +44,16 @@ rustc_binary("bin") {
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:tempfile",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/blob_location.rs",
+    "src/cache_service.rs",
+    "src/gc_service.rs",
+    "src/main.rs",
+    "src/pkgfs_inspect.rs",
+  ]
 }
 
 package("pkg-cache") {

@@ -49,10 +49,18 @@ rustc_test("panic_is_logged") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "panic_is_logged.rs" ]
 }
 
 rustc_binary("panicker") {
   edition = "2018"
   source_root = "panicker.rs"
   deps = [ "//src/lib/syslog/rust:syslog" ]
+
+  enforce_source_listing = true
+
+  sources = [ "panicker.rs" ]
 }

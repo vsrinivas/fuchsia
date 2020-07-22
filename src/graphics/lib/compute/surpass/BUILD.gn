@@ -16,6 +16,22 @@ rustc_library("surpass") {
     "//third_party/rust_crates:rustc-hash",
   ]
   configs += [ ":surpass-performance" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/extend.rs",
+    "src/layer.rs",
+    "src/lib.rs",
+    "src/painter/buffer_layout.rs",
+    "src/painter/mod.rs",
+    "src/point.rs",
+    "src/rasterizer/mod.rs",
+    "src/rasterizer/raster_segment.rs",
+    "src/segment.rs",
+    "src/simd.rs",
+    "src/uninitialized.rs",
+  ]
 }
 
 config("surpass-performance") {

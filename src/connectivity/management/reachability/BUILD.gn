@@ -40,6 +40,14 @@ rustc_binary("bin") {
     "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//third_party/rust_crates:pin-utils",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/eventloop.rs",
+    "src/main.rs",
+    "src/worker.rs",
+  ]
 }
 
 package("reachability") {

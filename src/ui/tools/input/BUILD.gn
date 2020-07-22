@@ -13,4 +13,8 @@ rustc_binary("input") {
     "//src/lib/ui/input-synthesis",
     "//third_party/rust_crates:structopt",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }

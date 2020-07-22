@@ -41,6 +41,19 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/cases.rs",
+    "src/elf/elf_component.rs",
+    "src/elf/mod.rs",
+    "src/elf/server.rs",
+    "src/errors.rs",
+    "src/launch.rs",
+    "src/lib.rs",
+    "src/logs.rs",
+  ]
 }
 
 rustc_library("test_lib") {
@@ -61,6 +74,10 @@ rustc_library("test_lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/test_lib.rs" ]
 }
 
 fuchsia_unittest_package("test-runner-unit-tests") {

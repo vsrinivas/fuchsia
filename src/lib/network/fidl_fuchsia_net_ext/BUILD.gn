@@ -16,6 +16,10 @@ rustc_library("fidl_fuchsia_net_ext") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 unittest_package("fidl-fuchsia-net-ext-tests") {

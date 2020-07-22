@@ -25,6 +25,16 @@ rustc_library("lowpan_driver_common") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/async_condition.rs",
+    "src/dummy_device.rs",
+    "src/lib.rs",
+    "src/lowpan_device.rs",
+    "src/serve_to.rs",
+  ]
 }
 
 unittest_package("lowpan-driver-common-tests") {

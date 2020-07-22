@@ -25,6 +25,14 @@ rustc_test("test_manager_test_bin") {
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
+
+  inputs = [
+    "//src/sys/test_runners/gtest/test_data/sample_tests_golden_events.rsf",
+  ]
 }
 
 package("test_manager_test") {

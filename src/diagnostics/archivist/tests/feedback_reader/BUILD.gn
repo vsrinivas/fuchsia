@@ -29,4 +29,16 @@ rustc_test("feedback_reader_test") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
+
+  inputs = [
+    "configs/client_selectors_dont_overlap_with_static_selectors.json",
+    "configs/archivist_config.json",
+    "configs/static_selectors.cfg",
+    "configs/all_golden.json",
+    "configs/single_value_client_selector.json",
+  ]
 }

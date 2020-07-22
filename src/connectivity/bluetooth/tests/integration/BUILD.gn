@@ -41,4 +41,32 @@ rustc_binary("bt-integration-tests") {
 
   # TODO(46537): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/harness/access.rs",
+    "src/harness/bootstrap.rs",
+    "src/harness/control.rs",
+    "src/harness/emulator.rs",
+    "src/harness/expect.rs",
+    "src/harness/host_driver.rs",
+    "src/harness/host_watcher.rs",
+    "src/harness/inspect.rs",
+    "src/harness/low_energy_central.rs",
+    "src/harness/low_energy_peripheral.rs",
+    "src/harness/mod.rs",
+    "src/harness/profile.rs",
+    "src/main.rs",
+    "src/tests/access.rs",
+    "src/tests/bonding.rs",
+    "src/tests/bootstrap.rs",
+    "src/tests/control.rs",
+    "src/tests/host_driver.rs",
+    "src/tests/inspect.rs",
+    "src/tests/low_energy_central.rs",
+    "src/tests/low_energy_peripheral.rs",
+    "src/tests/mod.rs",
+    "src/tests/profile.rs",
+  ]
 }

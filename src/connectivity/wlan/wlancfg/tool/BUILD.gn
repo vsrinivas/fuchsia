@@ -30,6 +30,14 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:structopt",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/opts.rs",
+    "src/policy.rs",
+  ]
 }
 
 package("donut") {

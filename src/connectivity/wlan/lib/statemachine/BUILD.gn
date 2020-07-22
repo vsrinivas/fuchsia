@@ -15,6 +15,10 @@ rustc_library("wlan-statemachine") {
   deps = [
     "//src/connectivity/wlan/lib/statemachine/macro:wlan-statemachine-macro",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("wlan-statemachine-tests") {

@@ -58,4 +58,41 @@ rustc_library("rust") {
   ]
 
   non_rust_deps = [ ":schemas" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/banjo_library.rs",
+    "src/cc_prebuilt_library.rs",
+    "src/cc_source_library.rs",
+    "src/common.rs",
+    "src/dart_library.rs",
+    "src/data.rs",
+    "src/device_profile.rs",
+    "src/documentation.rs",
+    "src/fidl_library.rs",
+    "src/host_tool.rs",
+    "src/json.rs",
+    "src/lib.rs",
+    "src/loadable_module.rs",
+    "src/manifest.rs",
+    "src/sysroot.rs",
+    "src/testing.rs",
+  ]
+
+  inputs = [
+    "host_tool.json",
+    "dart_library.json",
+    "fidl_library.json",
+    "documentation.json",
+    "cc_source_library.json",
+    "loadable_module.json",
+    "sysroot.json",
+    "cc_prebuilt_library.json",
+    "device_profile.json",
+    "data.json",
+    "manifest.json",
+    "banjo_library.json",
+    "common.json",
+  ]
 }

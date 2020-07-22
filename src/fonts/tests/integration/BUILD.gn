@@ -40,6 +40,23 @@ rustc_test("font_provider_integration_tests_bin") {
 
   # TODO(46719): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/experimental_api/get_typeface_by_id.rs",
+    "src/experimental_api/get_typefaces_by_family.rs",
+    "src/experimental_api/list_typefaces.rs",
+    "src/experimental_api/mod.rs",
+    "src/experimental_api/util/mod.rs",
+    "src/lib.rs",
+    "src/old_api/mod.rs",
+    "src/reviewed_api/ephemeral.rs",
+    "src/reviewed_api/get_font_family_info.rs",
+    "src/reviewed_api/get_typeface.rs",
+    "src/reviewed_api/mod.rs",
+    "src/reviewed_api/util/mod.rs",
+  ]
 }
 
 # Generate arg-specialized manifests for font_provider_integration_test

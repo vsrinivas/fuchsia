@@ -36,6 +36,43 @@ rustc_binary("bin") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/packets/browsing/get_folder_items.rs",
+    "src/packets/browsing/get_total_items.rs",
+    "src/packets/browsing/mod.rs",
+    "src/packets/browsing/set_addressed_player.rs",
+    "src/packets/continuation.rs",
+    "src/packets/get_capabilities.rs",
+    "src/packets/get_element_attributes.rs",
+    "src/packets/get_play_status.rs",
+    "src/packets/mod.rs",
+    "src/packets/notification.rs",
+    "src/packets/player_application_settings/get_attribute_text.rs",
+    "src/packets/player_application_settings/get_current_settings.rs",
+    "src/packets/player_application_settings/get_value_text.rs",
+    "src/packets/player_application_settings/list_settings.rs",
+    "src/packets/player_application_settings/mod.rs",
+    "src/packets/player_application_settings/set_current_settings.rs",
+    "src/packets/rejected.rs",
+    "src/packets/set_absolute_volume.rs",
+    "src/peer/controller.rs",
+    "src/peer/handlers/browse_channel.rs",
+    "src/peer/handlers/decoders.rs",
+    "src/peer/handlers/mod.rs",
+    "src/peer/mod.rs",
+    "src/peer/tasks/mod.rs",
+    "src/peer/tasks/notification_stream.rs",
+    "src/peer_manager/mod.rs",
+    "src/peer_manager/target_delegate.rs",
+    "src/profile.rs",
+    "src/service.rs",
+    "src/tests/mod.rs",
+    "src/types.rs",
+  ]
 }
 
 package("bt-avrcp") {

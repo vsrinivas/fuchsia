@@ -28,6 +28,19 @@ source_set("deps") {
 rustc_library("fidl") {
   edition = "2018"
   deps = [ ":deps" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/client.rs",
+    "src/encoding.rs",
+    "src/endpoints.rs",
+    "src/epitaph.rs",
+    "src/error.rs",
+    "src/handle.rs",
+    "src/lib.rs",
+    "src/server.rs",
+  ]
 }
 
 rustc_test("fidl_rust_lib_tests") {
@@ -36,5 +49,18 @@ rustc_test("fidl_rust_lib_tests") {
     ":deps",
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:matches",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/client.rs",
+    "src/encoding.rs",
+    "src/endpoints.rs",
+    "src/epitaph.rs",
+    "src/error.rs",
+    "src/handle.rs",
+    "src/lib.rs",
+    "src/server.rs",
   ]
 }

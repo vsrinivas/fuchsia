@@ -16,6 +16,10 @@ rustc_macro("net-declare-macros") {
     "//third_party/rust_crates:quote",
     "//third_party/rust_crates:syn",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/macros.rs" ]
 }
 
 rustc_library("net-declare") {
@@ -28,6 +32,10 @@ rustc_library("net-declare") {
   ]
 
   test_deps = [ "//sdk/fidl/fuchsia.net:fuchsia.net-rustc" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 unittest_package("net-declare-tests") {

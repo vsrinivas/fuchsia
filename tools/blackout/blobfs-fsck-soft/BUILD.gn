@@ -26,6 +26,10 @@ if (host_toolchain == current_toolchain) {
         netboot = true
       },
     ]
+
+    enforce_source_listing = true
+
+    sources = [ "src/host.rs" ]
   }
 }
 
@@ -45,6 +49,10 @@ rustc_binary("blobfs-fsck-soft-target-bin") {
     "//tools/blackout/blackout-target",
   ]
   source_root = "src/target.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "src/target.rs" ]
 }
 
 generate_manifest("blobfs.manifest") {

@@ -4,7 +4,6 @@
 
 import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/rust/rustc_macro.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -48,6 +47,21 @@ rustc_library("stream_processor_test_lib") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/buffer_collection_constraints.rs",
+    "src/buffer_set.rs",
+    "src/elementary_stream.rs",
+    "src/input_packet_stream.rs",
+    "src/lib.rs",
+    "src/log_macros.rs",
+    "src/output_validator.rs",
+    "src/stream.rs",
+    "src/stream_runner.rs",
+    "src/test_spec.rs",
+  ]
 }
 
 test_package("stream_processor_lib_test") {
@@ -77,6 +91,10 @@ rustc_library("stream_processor_decoder_factory_lib") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "stream_processor_factories/decoders.rs" ]
 }
 
 rustc_library("stream_processor_encoder_factory_lib") {
@@ -95,6 +113,10 @@ rustc_library("stream_processor_encoder_factory_lib") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "stream_processor_factories/encoders.rs" ]
 }
 
 rustc_test("audio_decoder_test_bin") {
@@ -119,6 +141,14 @@ rustc_test("audio_decoder_test_bin") {
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "audio_decoder_test/lib.rs",
+    "audio_decoder_test/sbc.rs",
+    "audio_decoder_test/test_suite.rs",
   ]
 }
 
@@ -163,6 +193,15 @@ rustc_test("audio_encoder_test_bin") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "audio_encoder_test/lib.rs",
+    "audio_encoder_test/pcm_audio.rs",
+    "audio_encoder_test/test_suite.rs",
+    "audio_encoder_test/timestamp_validator.rs",
+  ]
 }
 
 test_package("audio_encoder_test") {
@@ -196,6 +235,10 @@ rustc_library("video_frame_hasher_lib") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "video_frame_hasher/lib.rs" ]
 }
 
 test_package("video_frame_hasher_test") {
@@ -227,6 +270,10 @@ rustc_library("video_frame_stream_lib") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "video_frame_stream/lib.rs" ]
 }
 
 test_package("video-frame-stream-test") {
@@ -258,6 +305,13 @@ rustc_test("h264_decoder_test_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:thiserror",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "h264_decoder_test/h264.rs",
+    "h264_decoder_test/lib.rs",
   ]
 }
 
@@ -299,6 +353,14 @@ rustc_test("h264_encoder_test_bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "h264_encoder_test/h264.rs",
+    "h264_encoder_test/lib.rs",
+    "h264_encoder_test/test_suite.rs",
+  ]
 }
 
 test_package("h264_encoder_test") {
@@ -333,6 +395,14 @@ rustc_test("h265_encoder_test_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "h265_encoder_test/h265.rs",
+    "h265_encoder_test/lib.rs",
+    "h265_encoder_test/test_suite.rs",
   ]
 }
 

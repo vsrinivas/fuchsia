@@ -29,4 +29,8 @@ rustc_test("fake-qmi-query") {
     "//third_party/rust_crates:thiserror",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }

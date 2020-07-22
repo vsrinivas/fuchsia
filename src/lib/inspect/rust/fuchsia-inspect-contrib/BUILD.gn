@@ -30,6 +30,20 @@ rustc_library("fuchsia-inspect-contrib") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/inspectable/mod.rs",
+    "src/lib.rs",
+    "src/log/impls.rs",
+    "src/log/mod.rs",
+    "src/log/wrappers.rs",
+    "src/nodes/list.rs",
+    "src/nodes/managed.rs",
+    "src/nodes/mod.rs",
+    "src/reader/mod.rs",
+  ]
 }
 
 fuchsia_unittest_package("fuchsia-inspect-contrib-tests") {

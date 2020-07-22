@@ -39,6 +39,27 @@ rustc_library("input") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/fake_input_device_binding.rs",
+    "src/fake_input_handler.rs",
+    "src/focus_listening.rs",
+    "src/ime_handler.rs",
+    "src/input_device.rs",
+    "src/input_handler.rs",
+    "src/input_pipeline.rs",
+    "src/keyboard.rs",
+    "src/lib.rs",
+    "src/mouse.rs",
+    "src/mouse_handler.rs",
+    "src/shortcut_handler.rs",
+    "src/testing_utilities.rs",
+    "src/touch.rs",
+    "src/touch_handler.rs",
+    "src/utils.rs",
+  ]
 }
 
 test_package("input_tests") {

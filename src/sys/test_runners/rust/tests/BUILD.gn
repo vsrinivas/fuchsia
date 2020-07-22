@@ -26,6 +26,10 @@ rustc_test("tests_bin") {
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "main.rs" ]
 }
 
 fuchsia_component("rust_runner_integration_test") {

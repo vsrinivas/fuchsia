@@ -8,6 +8,10 @@ import("//src/sys/build/components.gni")
 rustc_test("test") {
   name = "sample_rust_tests"
   edition = "2018"
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 fuchsia_component("sample-rust-tests") {

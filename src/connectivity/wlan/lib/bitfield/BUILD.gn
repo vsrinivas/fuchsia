@@ -14,4 +14,11 @@ rustc_macro("wlan-bitfield") {
     "//third_party/rust_crates:syn",
     "//third_party/rust_crates:synstructure",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/parse.rs",
+  ]
 }

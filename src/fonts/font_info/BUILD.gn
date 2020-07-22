@@ -27,6 +27,14 @@ rustc_library("font_info") {
       "//src/lib/zircon/rust:fuchsia-zircon",
     ]
   }
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/sources.rs",
+    "src/vmo_stream.rs",
+  ]
 }
 
 rustc_test("font_info_test_bin") {
@@ -42,6 +50,10 @@ rustc_test("font_info_test_bin") {
   if (is_host) {
     non_rust_deps = [ ":test_data" ]
   }
+
+  enforce_source_listing = true
+
+  sources = [ "tests/tests.rs" ]
 }
 
 # Needed for testing on Fuchsia

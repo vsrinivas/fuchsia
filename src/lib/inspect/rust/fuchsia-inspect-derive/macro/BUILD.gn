@@ -18,4 +18,8 @@ rustc_macro("fuchsia-inspect-derive-macro") {
     "//third_party/rust_crates:quote",
     "//third_party/rust_crates:syn",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }

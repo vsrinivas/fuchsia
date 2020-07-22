@@ -30,6 +30,13 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/config.rs",
+    "src/main.rs",
+  ]
 }
 
 package("bt-init") {

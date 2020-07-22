@@ -27,6 +27,13 @@ rustc_library("fuchsia-framebuffer") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/sysmem.rs",
+  ]
 }
 
 unittest_package("fuchsia-framebuffer-tests") {

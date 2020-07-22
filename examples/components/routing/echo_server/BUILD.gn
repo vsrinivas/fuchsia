@@ -15,6 +15,10 @@ rustc_binary("echo_server") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 fuchsia_component("echo_server_component") {

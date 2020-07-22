@@ -59,6 +59,25 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/id.rs",
+    "src/interrupter.rs",
+    "src/main.rs",
+    "src/proxies.rs",
+    "src/proxies/observer.rs",
+    "src/proxies/player.rs",
+    "src/services.rs",
+    "src/services/active_session.rs",
+    "src/services/discovery.rs",
+    "src/services/discovery/filter.rs",
+    "src/services/discovery/watcher.rs",
+    "src/services/publisher.rs",
+    "src/test.rs",
+    "src/test/integration.rs",
+  ]
 }
 
 test_package("mediasession_tests") {

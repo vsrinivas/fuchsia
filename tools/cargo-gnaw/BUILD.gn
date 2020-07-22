@@ -15,6 +15,10 @@ if (is_host) {
       ":cargo-gnaw-lib",
       "//third_party/rust_crates:anyhow",
     ]
+
+    enforce_source_listing = true
+
+    sources = [ "src/main.rs" ]
   }
 
   rustc_library("cargo-gnaw-lib") {
@@ -30,6 +34,24 @@ if (is_host) {
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:toml",
     ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/build.rs",
+      "src/cfg.rs",
+      "src/gn.rs",
+      "src/graph.rs",
+      "src/lib.rs",
+      "src/target.rs",
+      "src/types.rs",
+    ]
+
+    inputs = [
+      "templates/gn_rule.template",
+      "templates/entry_gn_rules.template",
+      "templates/gn_header.template",
+    ]
   }
 
   rustc_test("cargo-gnaw-tests") {
@@ -43,6 +65,24 @@ if (is_host) {
       "//third_party/rust_crates:serde_derive",
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:toml",
+    ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/build.rs",
+      "src/cfg.rs",
+      "src/gn.rs",
+      "src/graph.rs",
+      "src/lib.rs",
+      "src/target.rs",
+      "src/types.rs",
+    ]
+
+    inputs = [
+      "templates/gn_header.template",
+      "templates/gn_rule.template",
+      "templates/entry_gn_rules.template",
     ]
   }
 }

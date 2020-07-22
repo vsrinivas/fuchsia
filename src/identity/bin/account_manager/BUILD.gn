@@ -49,6 +49,24 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/account_event_emitter.rs",
+    "src/account_handler_connection.rs",
+    "src/account_handler_context.rs",
+    "src/account_manager.rs",
+    "src/account_map.rs",
+    "src/authenticator_connection.rs",
+    "src/fake_account_handler_connection.rs",
+    "src/inspect.rs",
+    "src/main.rs",
+    "src/prototype/account_manager_peer.rs",
+    "src/prototype/account_transfer_control.rs",
+    "src/prototype/mod.rs",
+    "src/stored_account_list.rs",
+  ]
 }
 
 package("account_manager") {

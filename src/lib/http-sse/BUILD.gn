@@ -23,6 +23,18 @@ rustc_library("http_sse") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:void",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/client.rs",
+    "src/client_server_tests.rs",
+    "src/event.rs",
+    "src/lib.rs",
+    "src/linealyzer.rs",
+    "src/server.rs",
+    "src/source.rs",
+  ]
 }
 
 test_package("rust-http-sse-tests") {

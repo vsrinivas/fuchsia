@@ -36,6 +36,16 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/eventloop.rs",
+    "src/fidl_worker.rs",
+    "src/main.rs",
+    "src/oir_worker.rs",
+    "src/overnet_worker.rs",
+  ]
 }
 
 resource("device-schema") {

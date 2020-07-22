@@ -15,6 +15,10 @@ rustc_test("driver") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:tempfile",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("far-integration-tests") {

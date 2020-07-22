@@ -15,6 +15,16 @@ rustc_library("packet") {
     "//garnet/lib/rust/never",
     "//src/lib/zerocopy",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/fragmented.rs",
+    "src/lib.rs",
+    "src/records.rs",
+    "src/serialize.rs",
+    "src/util.rs",
+  ]
 }
 
 rustc_test("packet-lib-test") {
@@ -26,6 +36,16 @@ rustc_test("packet-lib-test") {
     "//garnet/lib/rust/never",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:rand",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/fragmented.rs",
+    "src/lib.rs",
+    "src/records.rs",
+    "src/serialize.rs",
+    "src/util.rs",
   ]
 }
 

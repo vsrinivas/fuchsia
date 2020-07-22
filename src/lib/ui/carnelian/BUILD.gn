@@ -69,6 +69,45 @@ rustc_library("carnelian") {
     "//src/graphics/lib/compute/spinel/platforms/vk",
     "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/app.rs",
+    "src/app/strategies.rs",
+    "src/app/strategies/base.rs",
+    "src/app/strategies/framebuffer.rs",
+    "src/app/strategies/scenic.rs",
+    "src/color.rs",
+    "src/drawing.rs",
+    "src/geometry.rs",
+    "src/input.rs",
+    "src/input_ext.rs",
+    "src/lib.rs",
+    "src/message.rs",
+    "src/render/dynamic.rs",
+    "src/render/generic/mod.rs",
+    "src/render/generic/mold/composition.rs",
+    "src/render/generic/mold/context.rs",
+    "src/render/generic/mold/image.rs",
+    "src/render/generic/mold/mod.rs",
+    "src/render/generic/mold/path.rs",
+    "src/render/generic/mold/raster.rs",
+    "src/render/generic/spinel/composition.rs",
+    "src/render/generic/spinel/context.rs",
+    "src/render/generic/spinel/image.rs",
+    "src/render/generic/spinel/mod.rs",
+    "src/render/generic/spinel/path.rs",
+    "src/render/generic/spinel/raster.rs",
+    "src/render/mod.rs",
+    "src/view.rs",
+    "src/view/strategies.rs",
+    "src/view/strategies/base.rs",
+    "src/view/strategies/framebuffer.rs",
+    "src/view/strategies/scenic.rs",
+  ]
+
+  inputs = [ "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf" ]
 }
 
 rustc_binary("button_example") {

@@ -23,6 +23,18 @@ rustc_library("bt-avctp") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/avc/mod.rs",
+    "src/avc/tests.rs",
+    "src/avc/types.rs",
+    "src/avctp/mod.rs",
+    "src/avctp/tests.rs",
+    "src/avctp/types.rs",
+    "src/lib.rs",
+  ]
 }
 
 test_package("tests") {

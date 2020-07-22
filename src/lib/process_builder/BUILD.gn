@@ -44,6 +44,21 @@ rustc_library("process_builder") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/storage/pseudo-fs",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/elf_load.rs",
+    "src/elf_parse.rs",
+    "src/lib.rs",
+    "src/processargs.rs",
+    "src/util.rs",
+  ]
+
+  inputs = [
+    "test/elf_aarch64_file-header.bin",
+    "test/elf_x86-64_file-header.bin",
+  ]
 }
 
 group("tests") {
@@ -73,6 +88,10 @@ rustc_binary("root_job_test_runner") {
 
   # TODO(46556): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  enforce_source_listing = true
+
+  sources = [ "root_job_test_runner/main.rs" ]
 }
 
 fidl("test-util-fidl") {
@@ -101,6 +120,10 @@ rustc_binary("test_util") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "test/test_util.rs" ]
 }
 
 config("static-pie-config") {

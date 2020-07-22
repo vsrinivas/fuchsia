@@ -19,6 +19,16 @@ rustc_library("ppp_packet") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/ipv4.rs",
+    "src/ipv6.rs",
+    "src/lib.rs",
+    "src/link.rs",
+    "src/records.rs",
+  ]
 }
 
 rustc_test("ppp_packet_test_bin") {
@@ -31,6 +41,16 @@ rustc_test("ppp_packet_test_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:thiserror",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/ipv4.rs",
+    "src/ipv6.rs",
+    "src/lib.rs",
+    "src/link.rs",
+    "src/records.rs",
   ]
 }
 

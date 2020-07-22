@@ -18,5 +18,10 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:syn",
     ]
+
+    enforce_source_listing = true
+
+    sources = [ "src/lib.rs" ]
+    inputs = [ "//src/developer/ffx/config/data/defaults.json" ]
   }
 }

@@ -28,6 +28,21 @@ rustc_library("async-helpers") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/component_lifecycle.rs",
+    "src/hanging_get/async_server.rs",
+    "src/hanging_get/error.rs",
+    "src/hanging_get/mod.rs",
+    "src/hanging_get/server.rs",
+    "src/hanging_get/test_util.rs",
+    "src/lib.rs",
+    "src/responding_channel.rs",
+    "src/stream.rs",
+    "src/traits.rs",
+  ]
 }
 
 test_package("async-helpers-tests") {

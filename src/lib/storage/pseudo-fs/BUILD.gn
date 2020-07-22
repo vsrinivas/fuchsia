@@ -29,4 +29,31 @@ rustc_library("pseudo-fs") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:void",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/common.rs",
+    "src/directory/common.rs",
+    "src/directory/connection.rs",
+    "src/directory/controllable.rs",
+    "src/directory/controlled.rs",
+    "src/directory/entry.rs",
+    "src/directory/lazy.rs",
+    "src/directory/mod.rs",
+    "src/directory/simple.rs",
+    "src/directory/test_utils.rs",
+    "src/directory/traversal_position.rs",
+    "src/directory/watchers.rs",
+    "src/file/asynchronous.rs",
+    "src/file/common.rs",
+    "src/file/connection.rs",
+    "src/file/mod.rs",
+    "src/file/simple.rs",
+    "src/file/test_utils.rs",
+    "src/lib.rs",
+    "src/pseudo_directory.rs",
+    "src/test_utils.rs",
+    "src/tree_builder.rs",
+  ]
 }

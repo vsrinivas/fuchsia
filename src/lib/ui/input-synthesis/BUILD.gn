@@ -21,6 +21,15 @@ rustc_library("input-synthesis") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/inverse_keymap.rs",
+    "src/keymaps.rs",
+    "src/lib.rs",
+    "src/usages.rs",
+  ]
 }
 
 unittest_package("input-synthesis-tests") {

@@ -32,6 +32,17 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:slab",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/peer/mod.rs",
+    "src/peer/search.rs",
+    "src/peer/service.rs",
+    "src/profile.rs",
+    "src/types.rs",
+  ]
 }
 
 package("bt-profile-test-server") {

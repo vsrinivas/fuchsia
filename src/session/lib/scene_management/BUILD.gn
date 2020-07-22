@@ -33,6 +33,16 @@ rustc_library("scene_management") {
     "//third_party/rust_crates:png",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/display_metrics.rs",
+    "src/flat_scene_manager.rs",
+    "src/graphics_utils.rs",
+    "src/lib.rs",
+    "src/scene_manager.rs",
+  ]
 }
 
 test_package("scene_management_tests") {

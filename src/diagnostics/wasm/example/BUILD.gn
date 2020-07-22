@@ -36,10 +36,18 @@ rustc_library("lib") {
   configs += [ ":env" ]
 
   deps = [ "//third_party/rust_crates:wasm-bindgen" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 rustc_test("example_lib_tests") {
   edition = "2018"
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 unittest_package("wasm-example-unittests") {

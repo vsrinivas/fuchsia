@@ -16,6 +16,10 @@ rustc_test("cs2_test_bin") {
     "//src/sys/tools/cs2:lib",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "cs2_test.rs" ]
 }
 
 test_package("cs2_test") {

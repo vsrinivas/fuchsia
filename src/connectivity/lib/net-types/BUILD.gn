@@ -21,6 +21,14 @@ rustc_library("net-types") {
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   features = [ "std" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/ethernet.rs",
+    "src/ip.rs",
+    "src/lib.rs",
+  ]
 }
 
 unittest_package("tests") {

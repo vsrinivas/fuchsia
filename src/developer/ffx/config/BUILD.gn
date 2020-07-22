@@ -36,6 +36,26 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:serde_json",
     ]
     non_rust_deps = [ "//third_party/boringssl" ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/api.rs",
+      "src/cache.rs",
+      "src/config.rs",
+      "src/constants.rs",
+      "src/env_var_config.rs",
+      "src/environment.rs",
+      "src/file_backed_config.rs",
+      "src/heuristic_config.rs",
+      "src/heuristic_fns.rs",
+      "src/lib.rs",
+      "src/linux.rs",
+      "src/not_linux.rs",
+      "src/persistent_config.rs",
+      "src/priority_config.rs",
+      "src/runtime_config.rs",
+    ]
   }
 }
 

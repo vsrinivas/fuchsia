@@ -18,6 +18,10 @@ rustc_library("fidl_fuchsia_hardware_ethernet_ext") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 unittest_package("fidl-fuchsia-hardware-ethernet-ext-tests") {

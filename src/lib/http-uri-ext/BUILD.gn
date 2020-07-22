@@ -17,6 +17,10 @@ rustc_library("http-uri-ext") {
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("http-uri-ext-tests") {

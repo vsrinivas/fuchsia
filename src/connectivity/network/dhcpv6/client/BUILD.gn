@@ -35,6 +35,14 @@ rustc_binary("dhcpv6_client") {
     "//src/lib/async-utils",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/client.rs",
+    "src/main.rs",
+    "src/provider.rs",
+  ]
 }
 
 fuchsia_component("component") {

@@ -36,6 +36,10 @@ rustc_library("spinel-rs-sys") {
                 "--compare",
                 rebase_path("spinel.c-api"),
               ])
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 unittest_package("spinel-rs-sys-tests") {

@@ -17,6 +17,10 @@ rustc_binary("formatjson5") {
     "//third_party/rust_crates:json5format",
     "//third_party/rust_crates:structopt",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 sdk_host_tool("formatjson5_sdk") {

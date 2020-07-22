@@ -16,4 +16,17 @@ rustc_binary("rust") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/fidl_assisted/after.rs",
+    "src/fidl_assisted/before.rs",
+    "src/fidl_assisted/mod.rs",
+    "src/main.rs",
+    "src/source_assisted/after.rs",
+    "src/source_assisted/before.rs",
+    "src/source_assisted/during.rs",
+    "src/source_assisted/mod.rs",
+  ]
 }

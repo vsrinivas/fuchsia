@@ -31,10 +31,76 @@ common_deps = [
 # TODO(48539): Fix the leaks and remove this.
 common_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
+common_sources = [
+  "src/common.rs",
+  "src/directory.rs",
+  "src/directory/common.rs",
+  "src/directory/connection.rs",
+  "src/directory/connection/io1.rs",
+  "src/directory/dirents_sink.rs",
+  "src/directory/entry.rs",
+  "src/directory/entry_container.rs",
+  "src/directory/helper.rs",
+  "src/directory/immutable.rs",
+  "src/directory/immutable/connection.rs",
+  "src/directory/immutable/connection/io1.rs",
+  "src/directory/immutable/lazy.rs",
+  "src/directory/immutable/lazy/watchers_task.rs",
+  "src/directory/immutable/simple.rs",
+  "src/directory/mutable.rs",
+  "src/directory/mutable/connection.rs",
+  "src/directory/mutable/connection/io1.rs",
+  "src/directory/mutable/entry_constructor.rs",
+  "src/directory/mutable/simple.rs",
+  "src/directory/read_dirents.rs",
+  "src/directory/simple.rs",
+  "src/directory/test_utils.rs",
+  "src/directory/traversal_position.rs",
+  "src/directory/watchers.rs",
+  "src/directory/watchers/event_producers.rs",
+  "src/directory/watchers/watcher.rs",
+  "src/execution_scope.rs",
+  "src/file.rs",
+  "src/file/common.rs",
+  "src/file/connection.rs",
+  "src/file/connection/io1.rs",
+  "src/file/pcb.rs",
+  "src/file/pcb/asynchronous.rs",
+  "src/file/pcb/connection.rs",
+  "src/file/pcb/connection/io1.rs",
+  "src/file/test_utils.rs",
+  "src/file/vmo.rs",
+  "src/file/vmo/asynchronous.rs",
+  "src/file/vmo/asynchronous/test_utils.rs",
+  "src/file/vmo/connection.rs",
+  "src/file/vmo/connection/io1.rs",
+  "src/filesystem.rs",
+  "src/filesystem/simple.rs",
+  "src/lib.rs",
+  "src/path.rs",
+  "src/pseudo_directory.rs",
+  "src/registry.rs",
+  "src/registry/inode_registry.rs",
+  "src/registry/token_registry.rs",
+  "src/service.rs",
+  "src/service/common.rs",
+  "src/service/connection.rs",
+  "src/service/connection/io1.rs",
+  "src/test_utils.rs",
+  "src/test_utils/assertions.rs",
+  "src/test_utils/node.rs",
+  "src/test_utils/run.rs",
+  "src/tree_builder.rs",
+]
+
 rustc_library("vfs") {
   version = "0.1.0"
   edition = "2018"
   deps = common_deps
+
+  enforce_source_listing = true
+
+  sources = common_sources
 }
 
 # Suppress this lint for the whole compilation unit. Using source-level suppression doesn't work
@@ -57,4 +123,20 @@ rustc_test("vfs_test") {
   # TODO(fxbug.dev/49845): Re-enable these lints.
   # -Dwarnings seems to override -A options that come after it.
   configs += [ ":suppress_lints" ]
+
+  enforce_source_listing = true
+
+  sources = common_sources + [
+              "src/directory/test_utils.rs",
+              "src/directory/immutable/lazy/tests.rs",
+              "src/directory/mutable/simple/tests.rs",
+              "src/directory/immutable/simple/tests.rs",
+              "src/file/pcb/asynchronous/tests.rs",
+              "src/file/vmo/asynchronous/tests.rs",
+              "src/file/test_utils.rs",
+              "src/file/vmo/asynchronous/test_utils.rs",
+              "src/service/tests.rs",
+              "src/service/tests/direct_connection.rs",
+              "src/service/tests/node_reference.rs",
+            ]
 }

@@ -22,6 +22,15 @@ rustc_library("sysconfig-client") {
 
   non_rust_deps =
       [ "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client-c" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/channel.rs",
+    "src/lib.rs",
+    "src/sys.rs",
+    "src/sys_mock.rs",
+  ]
 }
 
 test_package("sysconfig-client-test") {

@@ -50,6 +50,58 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/command_line.rs",
+    "src/commands/list.rs",
+    "src/commands/list_files.rs",
+    "src/commands/mod.rs",
+    "src/commands/selectors.rs",
+    "src/commands/show.rs",
+    "src/commands/show_file.rs",
+    "src/commands/types.rs",
+    "src/commands/utils.rs",
+    "src/constants.rs",
+    "src/location.rs",
+    "src/main.rs",
+    "src/tests/commands.rs",
+    "src/tests/macros.rs",
+    "src/tests/mod.rs",
+    "src/tests/utils.rs",
+    "src/text_formatter.rs",
+    "src/types.rs",
+  ]
+
+  inputs = [
+    "test_data/list_test.json",
+    "test_data/list_no_dups.text",
+    "test_data/list_filter_manifest.text",
+    "test_data/show_all_test.json",
+    "test_data/list_test.text",
+    "test_data/list_with_url.text",
+    "test_data/show_file_vmo.text",
+    "test_data/list_files_cwd.json",
+    "test_data/list_files_cwd.text",
+    "test_data/list_with_url.json",
+    "test_data/selectors_test.json",
+    "test_data/show_all_test.text",
+    "test_data/show_filter_test.text",
+    "test_data/selectors_filter_test.text",
+    "test_data/show_file_test.text",
+    "test_data/show_file_test.json",
+    "test_data/show_test.json",
+    "test_data/selectors_test.text",
+    "test_data/show_file_vmo.json",
+    "test_data/list_files_test.json",
+    "test_data/list_no_dups.json",
+    "test_data/list_filter_manifest.json",
+    "test_data/show_test.text",
+    "test_data/show_filter_test.json",
+    "test_data/list_files_test.text",
+    "test_data/selectors_filter_test.json",
+  ]
 }
 
 package("iquery") {

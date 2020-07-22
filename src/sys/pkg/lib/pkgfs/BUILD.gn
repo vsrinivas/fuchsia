@@ -40,6 +40,19 @@ rustc_library("pkgfs") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/control.rs",
+    "src/install.rs",
+    "src/lib.rs",
+    "src/needs.rs",
+    "src/package.rs",
+    "src/packages.rs",
+    "src/system.rs",
+    "src/versions.rs",
+  ]
 }
 
 # Include blobfs in the build, which comes from Zircon

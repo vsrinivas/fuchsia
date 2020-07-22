@@ -20,6 +20,14 @@ rustc_test("audio_device_tests_bin") {
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/gain.rs",
+    "src/lib.rs",
+    "src/virtual_devices.rs",
+  ]
 }
 
 fuchsia_component("audio-device-tests-component") {

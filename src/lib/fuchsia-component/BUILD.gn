@@ -27,6 +27,16 @@ rustc_library("fuchsia-component") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/client.rs",
+    "src/lib.rs",
+    "src/server/mod.rs",
+    "src/server/service.rs",
+    "src/server/stream_helpers.rs",
+  ]
 }
 
 group("tests") {

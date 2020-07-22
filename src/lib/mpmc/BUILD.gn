@@ -19,6 +19,10 @@ rustc_library("mpmc") {
     "//third_party/rust_crates:crossbeam",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 rustc_test("mpmc_lib_test") {
@@ -29,6 +33,10 @@ rustc_test("mpmc_lib_test") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/test.rs" ]
 }
 
 test_package("mpmc_tests") {

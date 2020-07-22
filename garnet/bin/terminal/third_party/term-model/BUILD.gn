@@ -19,4 +19,30 @@ rustc_library("term-model") {
     "//third_party/rust_crates:unicode-width",
     "//third_party/rust_crates:vte",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/ansi.rs",
+    "src/clipboard.rs",
+    "src/config/colors.rs",
+    "src/config/debug.rs",
+    "src/config/font.rs",
+    "src/config/mod.rs",
+    "src/config/scrolling.rs",
+    "src/config/visual_bell.rs",
+    "src/config/window.rs",
+    "src/event.rs",
+    "src/grid/mod.rs",
+    "src/grid/row.rs",
+    "src/grid/storage.rs",
+    "src/grid/tests.rs",
+    "src/index.rs",
+    "src/lib.rs",
+    "src/message_bar.rs",
+    "src/selection.rs",
+    "src/term/cell.rs",
+    "src/term/color.rs",
+    "src/term/mod.rs",
+  ]
 }

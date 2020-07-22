@@ -22,4 +22,13 @@ rustc_binary("network_manager_e2e_nat") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/device.rs",
+    "src/main.rs",
+    "src/nat_tester.rs",
+    "src/sync_manager.rs",
+  ]
 }

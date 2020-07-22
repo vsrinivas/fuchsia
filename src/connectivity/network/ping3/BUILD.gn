@@ -36,6 +36,17 @@ rustc_binary("bin") {
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/lib/network/fidl_fuchsia_net_stack_ext",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/opt.rs",
+    "src/stats.rs",
+    "src/store.rs",
+    "src/tests/integration_tests.rs",
+    "src/tests/mod.rs",
+  ]
 }
 
 fuchsia_component("ping3-component") {

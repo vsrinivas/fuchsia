@@ -10,6 +10,10 @@ rustc_binary("bin") {
   name = "criterion_bench"
   edition = "2018"
   deps = [ "//src/developer/fuchsia-criterion" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 package("criterion_bench") {

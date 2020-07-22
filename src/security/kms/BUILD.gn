@@ -45,6 +45,25 @@ rustc_binary("bin") {
   ]
 
   non_rust_deps = [ "//zircon/system/ulib/tee-client-api" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/common.rs",
+    "src/crypto_provider/mock_provider.rs",
+    "src/crypto_provider/mod.rs",
+    "src/crypto_provider/mundane_provider.rs",
+    "src/crypto_provider/optee_provider/boringssl_wrapper.rs",
+    "src/crypto_provider/optee_provider/keysafe.rs",
+    "src/crypto_provider/optee_provider/mod.rs",
+    "src/crypto_provider/software_provider.rs",
+    "src/key_manager.rs",
+    "src/kms_asymmetric_key.rs",
+    "src/kms_sealing_key.rs",
+    "src/main.rs",
+    "src/tee/mod.rs",
+    "src/tee/tee_client_api.rs",
+  ]
 }
 
 package("kms") {

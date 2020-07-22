@@ -19,4 +19,8 @@ rustc_binary("echo_client") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }

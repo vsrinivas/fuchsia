@@ -16,4 +16,8 @@ rustc_test("configure_legacy_privacy_off") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }

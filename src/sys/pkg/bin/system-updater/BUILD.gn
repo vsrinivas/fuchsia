@@ -44,6 +44,23 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:proptest",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/args.rs",
+    "src/main.rs",
+    "src/update.rs",
+    "src/update/channel.rs",
+    "src/update/config.rs",
+    "src/update/environment.rs",
+    "src/update/history.rs",
+    "src/update/images.rs",
+    "src/update/metrics.rs",
+    "src/update/paver.rs",
+    "src/update/paver/configuration.rs",
+    "src/update/resolver.rs",
+  ]
 }
 
 package("system-updater") {

@@ -28,6 +28,13 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/test_util.rs",
+  ]
 }
 
 package("bt-a2dp-manager") {

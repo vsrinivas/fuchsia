@@ -26,6 +26,10 @@ rustc_binary("simple_element_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 package("simple_element") {

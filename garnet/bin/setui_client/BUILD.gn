@@ -21,6 +21,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 rustc_library("lib") {
@@ -44,6 +48,23 @@ rustc_library("lib") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/accessibility.rs",
+    "src/audio.rs",
+    "src/device.rs",
+    "src/display.rs",
+    "src/do_not_disturb.rs",
+    "src/input.rs",
+    "src/intl.rs",
+    "src/lib.rs",
+    "src/light.rs",
+    "src/night_mode.rs",
+    "src/privacy.rs",
+    "src/setup.rs",
   ]
 }
 
@@ -94,6 +115,10 @@ rustc_binary("setui_client_interface_test_bin") {
 
   # TODO(49207): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/interface_test.rs" ]
 }
 
 test_package("setui_client_interface_test") {
@@ -115,6 +140,10 @@ rustc_test("setui_client_integration_test") {
     "//third_party/rust_crates:anyhow",
   ]
   source_root = "src/integration_test.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "src/integration_test.rs" ]
 }
 
 fuchsia_component("setui-client-integration-test") {

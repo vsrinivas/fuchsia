@@ -26,6 +26,15 @@ rustc_library("io_util") {
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/directory.rs",
+    "src/file.rs",
+    "src/lib.rs",
+    "src/node.rs",
+  ]
 }
 
 test_package("io_util_tests") {

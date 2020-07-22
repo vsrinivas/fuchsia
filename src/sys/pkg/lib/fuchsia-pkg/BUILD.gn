@@ -28,6 +28,20 @@ rustc_library("fuchsia-pkg") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/build.rs",
+    "src/creation_manifest.rs",
+    "src/errors.rs",
+    "src/lib.rs",
+    "src/meta_contents.rs",
+    "src/meta_package.rs",
+    "src/package_manifest.rs",
+    "src/path.rs",
+    "src/test.rs",
+  ]
 }
 
 test_package("fuchsia-pkg-tests") {

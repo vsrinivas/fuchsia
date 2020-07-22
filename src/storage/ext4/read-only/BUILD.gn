@@ -26,6 +26,15 @@ rustc_library("ext4-read-only") {
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/parser.rs",
+    "src/readers.rs",
+    "src/structs.rs",
+  ]
 }
 
 test_package("ext4-read-only-tests") {

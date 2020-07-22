@@ -18,6 +18,14 @@ rustc_library("system-image") {
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/errors.rs",
+    "src/lib.rs",
+    "src/path_hash_mapping.rs",
+  ]
 }
 
 test_package("system-image-tests") {

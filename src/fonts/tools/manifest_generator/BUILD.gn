@@ -38,6 +38,22 @@ rustc_binary("font_manifest_generator") {
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:tempfile",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/constants.rs",
+    "src/fake_font_info_loader.rs",
+    "src/font_catalog.rs",
+    "src/font_db.rs",
+    "src/font_pkgs.rs",
+    "src/font_sets.rs",
+    "src/generator.rs",
+    "src/main.rs",
+    "src/merge.rs",
+    "src/product_config.rs",
+    "src/serde_ext.rs",
+  ]
 }
 
 if (is_host) {
@@ -55,6 +71,10 @@ if (is_host) {
 
     # Must depend directly on these in order to have access to them in CQ
     non_rust_deps = [ ":test_files" ]
+
+    enforce_source_listing = true
+
+    sources = [ "tests/tests.rs" ]
   }
 
   host_test_data("test_data") {

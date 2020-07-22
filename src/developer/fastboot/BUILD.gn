@@ -19,6 +19,14 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:thiserror",
     ]
     non_rust_deps = [ "//third_party/boringssl" ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/command.rs",
+      "src/lib.rs",
+      "src/reply.rs",
+    ]
   }
 }
 

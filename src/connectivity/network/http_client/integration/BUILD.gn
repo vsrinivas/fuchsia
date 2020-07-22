@@ -33,6 +33,10 @@ rustc_test("test") {
     "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("http_client_integration_test") {

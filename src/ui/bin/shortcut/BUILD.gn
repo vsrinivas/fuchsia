@@ -41,6 +41,13 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/registry.rs",
+  ]
 }
 
 config_data("ui_sysmgr.config") {
@@ -83,6 +90,10 @@ rustc_test("shortcut_test_bin") {
     "//third_party/rust_crates:thiserror",
   ]
   source_root = "tests/tests.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "tests/tests.rs" ]
 }
 
 test_package("shortcut_test") {

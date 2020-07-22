@@ -35,6 +35,10 @@ rustc_binary("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/memfs",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 package("component_manager_for_test_pkg") {

@@ -33,6 +33,14 @@ rustc_binary("bin") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:structopt",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/partition.rs",
+    "src/payload_streamer.rs",
+  ]
 }
 
 bootfs_manifest("installer.manifest") {

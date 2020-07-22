@@ -24,6 +24,16 @@ rustc_library("fuchsia-inspect-node-hierarchy") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/serialization/deserialize.rs",
+    "src/serialization/mod.rs",
+    "src/serialization/serialize.rs",
+    "src/trie.rs",
+  ]
 }
 
 test_package("fuchsia_inspect_node_hierarchy_tests") {

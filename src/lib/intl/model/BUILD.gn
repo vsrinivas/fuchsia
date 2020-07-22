@@ -31,4 +31,8 @@ rustc_library("lib") {
   ]
 
   test_deps = []
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }

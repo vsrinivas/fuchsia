@@ -19,6 +19,10 @@ rustc_test("bin") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 test_package("component_manager_for_test_integration_test") {

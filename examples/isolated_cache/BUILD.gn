@@ -27,6 +27,10 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 package("isolated_cache_example") {

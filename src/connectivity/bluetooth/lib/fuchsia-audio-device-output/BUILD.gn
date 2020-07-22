@@ -33,6 +33,15 @@ rustc_library("fuchsia-audio-device-output") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/driver.rs",
+    "src/frame_vmo.rs",
+    "src/lib.rs",
+    "src/types.rs",
+  ]
 }
 
 test_package("fuchsia-audio-device-output-tests") {

@@ -23,10 +23,36 @@ rustc_library("triage") {
   version = "0.0.1"
 
   deps = lib_deps
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/act.rs",
+    "src/config.rs",
+    "src/config/parse.rs",
+    "src/lib.rs",
+    "src/metrics.rs",
+    "src/metrics/fetch.rs",
+    "src/result_format.rs",
+    "src/validate.rs",
+  ]
 }
 
 rustc_test("triage_unittests") {
   deps = [ ":triage" ] + lib_deps
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/act.rs",
+    "src/config.rs",
+    "src/config/parse.rs",
+    "src/lib.rs",
+    "src/metrics.rs",
+    "src/metrics/fetch.rs",
+    "src/result_format.rs",
+    "src/validate.rs",
+  ]
 }
 
 group("tests") {

@@ -21,6 +21,13 @@ rustc_library("packet-formats-dhcp") {
     "//third_party/rust_crates:uuid",
   ]
   test_deps = [ "//third_party/rust_crates:matches" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/v6.rs",
+  ]
 }
 
 fuchsia_unittest_package("packet-formats-dhcp-test") {

@@ -75,6 +75,17 @@ rustc_binary("bin") {
   ]
 
   features = [ "http_setup_server" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/ota.rs",
+    "src/setup.rs",
+    "src/storage.rs",
+  ]
+
+  inputs = [ "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf" ]
 }
 
 rustc_binary("bin_fdr") {

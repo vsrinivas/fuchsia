@@ -25,6 +25,10 @@ rustc_test("font_provider_smoke_tests_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("font_provider_smoke_tests") {

@@ -18,6 +18,10 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:argh",
     ]
     non_rust_deps = [ "//third_party/boringssl" ]
+
+    enforce_source_listing = true
+
+    sources = [ "src/lib.rs" ]
   }
 }
 

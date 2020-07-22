@@ -30,6 +30,43 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:uuid",
     ]
     test_deps = [ "//third_party/rust_crates:tempfile" ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/engine/dispatcher.rs",
+      "src/engine/hook.rs",
+      "src/engine/manager.rs",
+      "src/engine/mod.rs",
+      "src/engine/plugin.rs",
+      "src/engine/scheduler.rs",
+      "src/lib.rs",
+      "src/model/collector.rs",
+      "src/model/controller.rs",
+      "src/model/error.rs",
+      "src/model/mod.rs",
+      "src/model/model.rs",
+      "src/plugins/components/controllers/component_controllers.rs",
+      "src/plugins/components/controllers/mod.rs",
+      "src/plugins/components/controllers/route_controllers.rs",
+      "src/plugins/components/graph.rs",
+      "src/plugins/components/http.rs",
+      "src/plugins/components/jsons.rs",
+      "src/plugins/components/mod.rs",
+      "src/plugins/components/package_reader.rs",
+      "src/plugins/components/types.rs",
+      "src/plugins/components/util.rs",
+      "src/plugins/health.rs",
+      "src/plugins/management.rs",
+      "src/plugins/mod.rs",
+      "src/rest/mod.rs",
+      "src/rest/service.rs",
+      "src/rest/visualizer.rs",
+      "src/store/embedded.rs",
+      "src/store/error.rs",
+      "src/store/mod.rs",
+      "src/store/store.rs",
+    ]
   }
 
   rustc_binary("bin") {
@@ -47,6 +84,18 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:termion",
       "//third_party/rust_crates:thiserror",
+    ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/app/app.rs",
+      "src/app/builtin.rs",
+      "src/app/error.rs",
+      "src/app/logo.rs",
+      "src/app/mod.rs",
+      "src/app/shell.rs",
+      "src/main.rs",
     ]
   }
 }

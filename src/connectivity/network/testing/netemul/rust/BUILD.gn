@@ -32,4 +32,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:socket2",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }

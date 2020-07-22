@@ -28,6 +28,16 @@ rustc_test("unified_reader_test") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
+
+  inputs = [
+    "configs/archivist_config.json",
+    "configs/all_golden.json",
+    "configs/single_value_client_selector.json",
+  ]
 }
 
 config_data("config") {

@@ -83,6 +83,10 @@ rustc_test("ot-stack-ncp-ver-query-mock") {
     "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+
+  enforce_source_listing = true
+
+  sources = [ "mock-device/ot_stack_ncp_ver_query_mock.rs" ]
 }
 
 rustc_test("ot-stack-soft-reset-mock") {
@@ -97,6 +101,10 @@ rustc_test("ot-stack-soft-reset-mock") {
     "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+
+  enforce_source_listing = true
+
+  sources = [ "mock-device/ot_stack_soft_reset_mock.rs" ]
 }
 
 rustc_test("ot-radio-ncp-ver-query-mock") {
@@ -111,6 +119,10 @@ rustc_test("ot-radio-ncp-ver-query-mock") {
     "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+
+  enforce_source_listing = true
+
+  sources = [ "mock-device/ot_radio_ncp_ver_query_mock.rs" ]
 }
 
 fuchsia_component("ot-radio-ncp-ver-query-mock-component") {

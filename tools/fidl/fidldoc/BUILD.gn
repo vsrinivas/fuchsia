@@ -9,10 +9,48 @@ import("//build/test/test_package.gni")
 import("//build/testing/host_test_data.gni")
 
 if (host_toolchain == current_toolchain) {
+  common_sources = [
+    "src/fidljson.rs",
+    "src/main.rs",
+    "src/simple_logger.rs",
+    "src/templates/html/mod.rs",
+    "src/templates/markdown/mod.rs",
+    "src/templates/mod.rs",
+  ]
+
+  common_inputs = [
+    "src/templates/markdown/partials/header.hbs",
+    "src/templates/markdown/partials/types/filename.hbs",
+    "src/templates/html/interface.hbs",
+    "src/templates/markdown/interface.hbs",
+    "src/templates/markdown/partials/header_dir.hbs",
+    "src/templates/markdown/partials/declarations/tables.hbs",
+    "src/templates/markdown/partials/declarations/enums.hbs",
+    "src/templates/markdown/partials/types/vector.hbs",
+    "src/templates/markdown/partials/declarations/constants.hbs",
+    "src/templates/html/main.hbs",
+    "src/templates/markdown/partials/declarations/type_aliases.hbs",
+    "src/templates/markdown/partials/declarations/protocols.hbs",
+    "src/templates/markdown/partials/types/doc.hbs",
+    "src/templates/markdown/partials/footer.hbs",
+    "src/templates/markdown/partials/declarations/bits.hbs",
+    "src/templates/markdown/partials/declarations/unions.hbs",
+    "src/templates/markdown/main.hbs",
+    "src/templates/markdown/toc.hbs",
+    "src/templates/markdown/partials/types/type.hbs",
+    "src/templates/markdown/partials/declarations/structs.hbs",
+  ]
+
   rustc_binary("fidldoc_bin") {
     name = "fidldoc"
     edition = "2018"
     deps = [ ":rust_crates" ]
+
+    enforce_source_listing = true
+
+    sources = common_sources
+
+    inputs = common_inputs
   }
 
   copy("fidldoc_copy_config") {
@@ -30,6 +68,16 @@ if (host_toolchain == current_toolchain) {
       ":copy_jsonir_goldens",
       ":copy_markdown_goldens",
     ]
+
+    enforce_source_listing = true
+
+    sources = common_sources
+
+    inputs = common_inputs + [
+               "src/templates/markdown/testdata/README.md",
+               "src/templates/markdown/testdata/_toc.yaml",
+               "src/fidldoc.config.json",
+             ]
   }
 
   host_test_data("copy_jsonir_goldens") {

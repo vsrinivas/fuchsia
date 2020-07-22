@@ -18,6 +18,10 @@ rustc_library("parser") {
   ]
 
   test_deps = [ "//sdk/fidl/fuchsia.io:fuchsia.io-rustc" ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("tests") {

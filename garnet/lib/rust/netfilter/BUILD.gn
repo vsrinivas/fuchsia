@@ -20,6 +20,14 @@ rustc_library("netfilter") {
     "//third_party/rust_crates:pest_derive",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/error.rs",
+    "src/lib.rs",
+    "src/parser.rs",
+  ]
 }
 
 test_package("netfilter_tests") {

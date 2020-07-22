@@ -16,4 +16,8 @@ rustc_binary("indef_echo_client") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }

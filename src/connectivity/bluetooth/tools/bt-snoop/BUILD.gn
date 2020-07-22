@@ -37,6 +37,17 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/bounded_queue.rs",
+    "src/main.rs",
+    "src/packet_logs.rs",
+    "src/snooper.rs",
+    "src/subscription_manager.rs",
+    "src/tests.rs",
+  ]
 }
 
 package("bt-snoop") {

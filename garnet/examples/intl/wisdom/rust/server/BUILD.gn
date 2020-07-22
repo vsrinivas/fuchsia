@@ -35,6 +35,13 @@ rustc_binary("intl_wisdom_server_rust") {
     "//third_party/rust_crates:thiserror",
   ]
   non_rust_deps = [ "//third_party/icu" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/wisdom_server_impl.rs",
+  ]
 }
 
 # This is the Fuchsia test package which ensures that the generated tests from

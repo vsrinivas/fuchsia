@@ -22,6 +22,13 @@ rustc_test("audio_loopback_tests_bin") {
     "//src/media/audio/lib/test/hermetic_audio_environment/rust",
     "//third_party/rust_crates:smallvec",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/audio_loopback_test.rs",
+    "src/lib.rs",
+  ]
 }
 
 test_package("audio-loopback-tests") {

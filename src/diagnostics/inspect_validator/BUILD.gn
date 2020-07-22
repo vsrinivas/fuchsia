@@ -49,12 +49,40 @@ rustc_binary("validator_bin") {
   name = "validator"
   edition = "2018"
   deps = validator_deps
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/data.rs",
+    "src/data/fetch.rs",
+    "src/data/scanner.rs",
+    "src/main.rs",
+    "src/metrics.rs",
+    "src/puppet.rs",
+    "src/results.rs",
+    "src/runner.rs",
+    "src/trials.rs",
+  ]
 }
 
 rustc_test("validator_bin_test") {
   edition = "2018"
   source_root = "src/main.rs"
   deps = validator_deps + [ "//src/lib/fuchsia-async" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/data.rs",
+    "src/data/fetch.rs",
+    "src/data/scanner.rs",
+    "src/main.rs",
+    "src/metrics.rs",
+    "src/puppet.rs",
+    "src/results.rs",
+    "src/runner.rs",
+    "src/trials.rs",
+  ]
 }
 
 package("inspect_validator") {

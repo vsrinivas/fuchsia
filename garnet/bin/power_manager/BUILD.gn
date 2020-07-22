@@ -68,6 +68,32 @@ rustc_binary("bin") {
 
   # TODO(47946): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/cpu_control_handler.rs",
+    "src/cpu_stats_handler.rs",
+    "src/crash_report_handler.rs",
+    "src/dev_control_handler.rs",
+    "src/driver_manager_handler.rs",
+    "src/error.rs",
+    "src/main.rs",
+    "src/message.rs",
+    "src/node.rs",
+    "src/power_manager.rs",
+    "src/shutdown_request.rs",
+    "src/shutdown_watcher.rs",
+    "src/system_shutdown_handler.rs",
+    "src/temperature_handler.rs",
+    "src/test/mock_node.rs",
+    "src/test/mod.rs",
+    "src/test/thermal_integration_tests.rs",
+    "src/thermal_limiter.rs",
+    "src/thermal_policy.rs",
+    "src/types.rs",
+    "src/utils.rs",
+  ]
 }
 
 package("power_manager") {

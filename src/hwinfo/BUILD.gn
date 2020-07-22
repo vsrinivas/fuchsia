@@ -35,6 +35,14 @@ rustc_binary("hwinfo_bin") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/config.rs",
+    "src/hwinfo_server.rs",
+    "src/main.rs",
+  ]
 }
 
 hwinfo_config("default_board_config") {
@@ -91,6 +99,10 @@ rustc_test("hwinfo_positive_test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "tests/hwinfo_positive_test.rs" ]
 }
 
 rustc_test("hwinfo_negative_test") {
@@ -107,6 +119,10 @@ rustc_test("hwinfo_negative_test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "tests/hwinfo_negative_test.rs" ]
 }
 
 test_package("hwinfo_positive_tests") {

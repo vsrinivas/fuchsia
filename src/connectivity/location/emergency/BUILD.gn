@@ -44,6 +44,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/main.rs" ]
 }
 
 rustc_library("lib") {
@@ -68,6 +72,14 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/bss_cache.rs",
+    "src/bss_resolver.rs",
+    "src/lib.rs",
   ]
 }
 

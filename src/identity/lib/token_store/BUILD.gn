@@ -17,4 +17,14 @@ rustc_library("token_store") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/file.rs",
+    "src/lib.rs",
+    "src/macros.rs",
+    "src/mem.rs",
+    "src/serializer.rs",
+  ]
 }

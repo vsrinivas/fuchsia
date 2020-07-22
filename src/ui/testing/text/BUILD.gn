@@ -31,6 +31,14 @@ rustc_binary("test_suite") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unicode-segmentation",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/test_helpers.rs",
+    "src/tests.rs",
+  ]
 }
 
 package("text_test_suite") {

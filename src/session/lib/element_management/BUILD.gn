@@ -38,6 +38,10 @@ rustc_library("element_management") {
     "//src/lib/test_util",
     "//third_party/rust_crates:lazy_static",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("element_management_tests") {

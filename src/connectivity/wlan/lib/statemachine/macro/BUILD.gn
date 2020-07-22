@@ -14,4 +14,11 @@ rustc_macro("wlan-statemachine-macro") {
     "//third_party/rust_crates:quote",
     "//third_party/rust_crates:syn",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/lib.rs",
+    "src/statemachine.rs",
+  ]
 }
