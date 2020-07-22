@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_service::{ErrCode, State, WlanMarker},
+    fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_service::{ErrCode, WlanMarker},
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
@@ -60,6 +61,16 @@ async fn connect_with_failed_association() {
         connect_to_service::<WlanMarker>().expect("Failed to connect to wlan service");
     let proxy = helper.proxy();
 
+    let mut update_listener = init_client_listener();
+    let update = get_update_from_client_listener(&mut update_listener).await;
+    assert_eq!(
+        update,
+        fidl_policy::ClientStateSummary {
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            networks: Some(vec![])
+        }
+    );
+
     let mut connect_config = create_connect_config(SSID, "");
     let connect_fut = wlan_service.connect(&mut connect_config);
 
@@ -75,7 +86,33 @@ async fn connect_with_failed_association() {
 
     assert_eq!(error.code, ErrCode::Internal, "connect should fail, but got {:?}", error);
 
+    let expected_network_id = fidl_policy::NetworkIdentifier {
+        ssid: SSID.to_vec(),
+        type_: fidl_policy::SecurityType::None,
+    };
+
+    // The next update the queue should be "Connecting"
+    let update = get_update_from_client_listener(&mut update_listener).await;
+    assert_eq!(
+        update.networks.unwrap(),
+        vec![fidl_policy::NetworkState {
+            id: Some(expected_network_id.clone()),
+            state: Some(fidl_policy::ConnectionState::Connecting),
+            status: None
+        }]
+    );
+
+    // The next update the queue should be "Failed"
+    let update = get_update_from_client_listener(&mut update_listener).await;
+    assert_eq!(
+        update.networks.unwrap(),
+        vec![fidl_policy::NetworkState {
+            id: Some(expected_network_id),
+            state: Some(fidl_policy::ConnectionState::Failed),
+            status: Some(fidl_policy::DisconnectStatus::ConnectionFailed)
+        }]
+    );
+
     let status = wlan_service.status().await.expect("getting wlan status");
-    assert_eq!(status.state, State::Querying);
     assert_eq!(status.current_ap, None);
 }

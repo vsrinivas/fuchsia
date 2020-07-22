@@ -128,3 +128,29 @@ pub async fn start_ap_and_wait_for_confirmation(network_config: NetworkConfigBui
     }
     panic!("update stream ended unexpectedly");
 }
+
+/// Creates a listener update stream for getting status updates.
+pub fn init_client_listener() -> fidl_policy::ClientStateUpdatesRequestStream {
+    let listener = connect_to_service::<fidl_policy::ClientListenerMarker>().unwrap();
+    let (client_end, server_end) =
+        fidl::endpoints::create_endpoints::<fidl_policy::ClientStateUpdatesMarker>().unwrap();
+    listener.get_listener(client_end).unwrap();
+    let listener_stream = server_end.into_stream().unwrap();
+    listener_stream
+}
+
+/// Get the next client update. Will panic if no updates are available.
+pub async fn get_update_from_client_listener(
+    update_listener: &mut fidl_policy::ClientStateUpdatesRequestStream,
+) -> fidl_policy::ClientStateSummary {
+    let update_request = update_listener
+        .next()
+        .await
+        .expect("ClientStateUpdatesRequestStream failed")
+        .expect("ClientStateUpdatesRequestStream received invalid update");
+    let update = update_request.into_on_client_state_update();
+    let (update, responder) = update.expect("Client provider produced invalid update.");
+    // Ack the update.
+    responder.send().expect("failed to ack update");
+    update.into()
+}
