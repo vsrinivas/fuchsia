@@ -425,7 +425,11 @@ TEST_F(DataProviderTest, GetBugreport_NoDataOnEmptyAllowlists) {
   SetUpDataProvider(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
 
   Bugreport bugreport = GetBugreport();
-  EXPECT_TRUE(bugreport.IsEmpty());
+  EXPECT_FALSE(bugreport.has_bugreport());
+  EXPECT_TRUE(bugreport.has_annotations());
+  EXPECT_THAT(bugreport.annotations(), UnorderedElementsAreArray({
+                                           MatchesAnnotation("debug.pool-size", "1"),
+                                       }));
 }
 
 }  // namespace

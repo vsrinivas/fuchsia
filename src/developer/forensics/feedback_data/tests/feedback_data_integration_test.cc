@@ -303,6 +303,7 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckKeys) {
                                            MatchesKey(kAnnotationSystemLastRebootReason),
                                            MatchesKey(kAnnotationSystemLastRebootUptime),
                                            MatchesKey(kAnnotationSystemUpdateChannelCurrent),
+                                           MatchesKey(kAnnotationDebugPoolSize),
                                        }));
 
   ASSERT_TRUE(bugreport.has_bugreport());

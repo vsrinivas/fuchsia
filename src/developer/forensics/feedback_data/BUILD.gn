@@ -95,6 +95,8 @@ source_set("data_provider") {
   public = [ "data_provider.h" ]
 
   sources = [
+    "bugreport_request_manager.cc",
+    "bugreport_request_manager.h",
     "data_provider.cc",
     "data_provider.h",
     "image_conversion.cc",
@@ -106,6 +108,7 @@ source_set("data_provider") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils/cobalt",
+    "//src/lib/timekeeper:system",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

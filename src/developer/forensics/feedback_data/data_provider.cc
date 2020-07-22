@@ -25,6 +25,7 @@
 #include "src/developer/forensics/feedback_data/image_conversion.h"
 #include "src/developer/forensics/utils/archive.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -41,6 +42,9 @@ const zx::duration kDefaultDataTimeout = zx::sec(30);
 // Timeout for requesting the screenshot from Scenic.
 const zx::duration kScreenshotTimeout = zx::sec(10);
 
+// Delta between bugreport requests that can be pooled together.
+const zx::duration kBugreportRequestPoolingDelta = zx::sec(5);
+
 }  // namespace
 
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
@@ -52,7 +56,9 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       integrity_reporter_(integrity_reporter),
       cobalt_(cobalt),
       datastore_(datastore),
-      executor_(dispatcher_) {}
+      executor_(dispatcher_),
+      request_manager_(kBugreportRequestPoolingDelta, std::make_unique<timekeeper::SystemClock>()) {
+}
 
 void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
                                 GetBugreportCallback callback) {
@@ -60,8 +66,14 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
                                    ? zx::duration(params.collection_timeout_per_data())
                                    : kDefaultDataTimeout;
 
-  const uint64_t timer_id = cobalt_->StartTimer();
+  const auto request_reference = request_manager_.Manage(timeout, std::move(callback));
 
+  // The request is managed by an existing reference.
+  if (!request_reference.has_value()) {
+    return;
+  }
+
+  const uint64_t timer_id = cobalt_->StartTimer();
   auto promise =
       ::fit::join_promises(datastore_->GetAnnotations(timeout), datastore_->GetAttachments(timeout))
           .and_then([this](std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
@@ -116,13 +128,14 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
 
             return ::fit::ok(std::move(bugreport));
           })
-          .then([this, callback = std::move(callback), timer_id](::fit::result<Bugreport>& result) {
+          .then([this, request_reference = request_reference.value(),
+                 timer_id](::fit::result<Bugreport>& result) {
             if (result.is_error()) {
               cobalt_->LogElapsedTime(cobalt::BugreportGenerationFlow::kFailure, timer_id);
-              callback(Bugreport());
+              request_manager_.Respond(request_reference, Bugreport());
             } else {
               cobalt_->LogElapsedTime(cobalt::BugreportGenerationFlow::kSuccess, timer_id);
-              callback(result.take_value());
+              request_manager_.Respond(request_reference, result.take_value());
             }
           });
 

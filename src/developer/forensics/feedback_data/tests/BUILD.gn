@@ -29,6 +29,29 @@ executable("board_info_provider_unittest_exe") {
   ]
 }
 
+executable("bugreport_request_manager_unittest_exe") {
+  testonly = true
+
+  sources = [
+    "//src/developer/forensics/feedback_data/bugreport_request_manager.cc",
+    "//src/developer/forensics/feedback_data/bugreport_request_manager.h",
+    "bugreport_request_manager_unittest.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/testing:gmatchers",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/lib/fsl",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("channel_provider_unittest_exe") {
   testonly = true
 
@@ -535,6 +558,14 @@ fuchsia_component("board_info_provider_unittest") {
   deps = [ ":board_info_provider_unittest_exe" ]
 }
 
+fuchsia_component("bugreport_request_manager_unittest") {
+  testonly = true
+
+  manifest = "meta/bugreport_request_manager_unittest.cmx"
+
+  deps = [ ":bugreport_request_manager_unittest_exe" ]
+}
+
 fuchsia_component("channel_provider_unittest") {
   testonly = true
 
@@ -694,6 +725,7 @@ fuchsia_component("system_log_recorder_unittest") {
 fuchsia_test_package("feedback-data-tests") {
   test_components = [
     ":board_info_provider_unittest",
+    ":bugreport_request_manager_unittest",
     ":channel_provider_unittest",
     ":config_unittest",
     ":data_provider_unittest",

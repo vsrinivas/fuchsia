@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/bugreport_request_manager_unittest_exe"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

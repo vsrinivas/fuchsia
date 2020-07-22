@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include "src/developer/forensics/feedback_data/bugreport_request_manager.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
 #include "src/developer/forensics/feedback_data/integrity_reporter.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
@@ -38,6 +39,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   cobalt::Logger* cobalt_;
   Datastore* datastore_;
   async::Executor executor_;
+  BugreportRequestManager request_manager_;
 };
 
 }  // namespace feedback_data
