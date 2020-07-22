@@ -19,14 +19,15 @@ pub fn pretend_scary_listener_is_safe(
     let mut new_requests = new_server.into_stream()?;
     let mut old_listener = listener.into_proxy()?;
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         while let Ok(Some(request)) = new_requests.try_next().await {
             if let Err(why) = bridge_request(&mut old_listener, request) {
                 error!("error bridging old LogListener to LogListenerSafe: {:?}", why);
                 break;
             }
         }
-    });
+    })
+    .detach();
 
     Ok(new_client)
 }

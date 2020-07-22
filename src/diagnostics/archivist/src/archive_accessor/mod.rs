@@ -226,7 +226,7 @@ impl ArchiveAccessor {
         // Self isn't guaranteed to live into the exception handling of the async block. We need to clone self
         // to have a version that can be referenced in the exception handling.
         let errorful_archive_accessor_stats = self.archive_accessor_stats.clone();
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 self.archive_accessor_stats.global_stats.archive_accessor_connections_opened.add(1);
                 while let Some(req) = stream.try_next().await? {
@@ -274,6 +274,7 @@ impl ArchiveAccessor {
                     .add(1);
                 error!("couldn't run archive accessor service: {:?}", e)
             }),
-        );
+        )
+        .detach();
     }
 }

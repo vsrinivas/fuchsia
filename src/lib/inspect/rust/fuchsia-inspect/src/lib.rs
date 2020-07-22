@@ -1864,7 +1864,7 @@ mod tests {
         let env = service_fs.create_nested_environment("test")?;
         let mut app = client::launch(&env.launcher(), TEST_COMPONENT_URL.to_string(), None)?;
 
-        fasync::spawn(service_fs.collect());
+        fasync::Task::spawn(service_fs.collect()).detach();
 
         let mut component_stream = app.controller().take_event_stream();
         match component_stream

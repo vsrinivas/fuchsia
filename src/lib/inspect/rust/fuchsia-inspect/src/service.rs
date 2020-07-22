@@ -51,17 +51,18 @@ pub async fn handle_request_stream(
 /// Spawns a server for the `fuchsia.inspect.Tree` protocol. This protocol returns the VMO
 /// associated with the given tree on `get_content` and allows to open linked trees (lazy nodes).
 pub fn spawn_tree_server(inspector: Inspector, stream: TreeRequestStream) {
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         handle_request_stream(inspector, stream)
             .await
             .unwrap_or_else(|e: Error| fx_log_err!("error running tree server: {:?}", e));
-    });
+    })
+    .detach();
 }
 
 /// Runs a server for the `fuchsia.inspect.TreeNameIterator` protocol. This protocol returns the
 /// given list of values by chunks.
 fn spawn_tree_name_iterator_server(values: Vec<String>, mut stream: TreeNameIteratorRequestStream) {
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             let mut values_iter = values.into_iter().peekable();
             while let Some(request) =
@@ -96,6 +97,7 @@ fn spawn_tree_name_iterator_server(values: Vec<String>, mut stream: TreeNameIter
         }
         .unwrap_or_else(|e: Error| fx_log_err!("error running tree name iterator server: {:?}", e)),
     )
+    .detach()
 }
 
 #[cfg(test)]

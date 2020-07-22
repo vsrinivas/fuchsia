@@ -40,11 +40,12 @@ impl EventStreamServer {
 
 impl EventStreamServer {
     fn spawn(self, stream: fsys::EventStreamRequestStream) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             self.handle_request_stream(stream)
                 .await
                 .unwrap_or_else(|e: Error| error!("failed to run event stream server: {:?}", e));
-        });
+        })
+        .detach();
     }
 
     async fn handle_request_stream(
@@ -249,7 +250,7 @@ pub mod tests {
             unreachable!("This shouldn't be exercised");
         }
         .remote_handle();
-        fasync::spawn(f);
+        fasync::Task::spawn(f).detach();
         (source, stream_client_end_fut)
     }
 }

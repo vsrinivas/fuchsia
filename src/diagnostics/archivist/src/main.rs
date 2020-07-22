@@ -83,9 +83,10 @@ fn main() -> Result<(), Error> {
         .add_event_source("v1", Box::new(legacy_event_provider))
         .add_event_source("v2", Box::new(event_source));
     if let Some(log_server) = log_server {
-        fasync::spawn(
+        fasync::Task::spawn(
             archivist.log_manager().clone().drain_internal_log_sink(log_server, log_name),
-        );
+        )
+        .detach();
     }
 
     if opt.install_controller {
@@ -95,14 +96,17 @@ fn main() -> Result<(), Error> {
     if !opt.disable_log_connector {
         let connector = connect_to_service::<LogConnectorMarker>()?;
         let sender = archivist.log_sender().clone();
-        fasync::spawn(archivist.log_manager().clone().handle_log_connector(connector, sender));
+        fasync::Task::spawn(
+            archivist.log_manager().clone().handle_log_connector(connector, sender),
+        )
+        .detach();
     }
 
     if !opt.disable_klog {
         let debuglog = executor
             .run_singlethreaded(logs::KernelDebugLog::new())
             .context("Failed to read kernel logs")?;
-        fasync::spawn(archivist.log_manager().clone().drain_debuglog(debuglog));
+        fasync::Task::spawn(archivist.log_manager().clone().drain_debuglog(debuglog)).detach();
     }
 
     let startup_handle =

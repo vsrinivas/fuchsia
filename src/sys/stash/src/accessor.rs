@@ -142,7 +142,7 @@ impl Accessor {
             }
         }
 
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
                 let mut stream = ListIteratorRequestStream::from_channel(server_chan);
@@ -170,7 +170,8 @@ impl Accessor {
             .unwrap_or_else(|e: anyhow::Error| {
                 fx_log_err!("error running list prefix interface: {:?}", e)
             }),
-        );
+        )
+        .detach();
     }
 
     /// Given a server endpoint, answers calls to get_next on the endpoint to return key/value
@@ -211,7 +212,7 @@ impl Accessor {
 
         let enable_bytes = self.enable_bytes;
 
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
                 let mut stream = GetIteratorRequestStream::from_channel(server_chan);
@@ -256,7 +257,8 @@ impl Accessor {
             .unwrap_or_else(|e: anyhow::Error| {
                 fx_log_err!("error running get prefix interface: {:?}", e)
             }),
-        );
+        )
+        .detach();
         Ok(())
     }
 

@@ -54,7 +54,7 @@ impl Instance {
 
         let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
 
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let mut stream = StoreAccessorRequestStream::from_channel(server_chan);
                 while let Some(req) = stream.try_next().await? {
@@ -93,7 +93,8 @@ impl Instance {
             .unwrap_or_else(|e: anyhow::Error| {
                 fx_log_err!("error running accessor interface: {:?}", e)
             }),
-        );
+        )
+        .detach();
         Ok(())
     }
 }

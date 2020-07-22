@@ -146,11 +146,12 @@ impl AppWithLogs {
             tags: vec![],
         };
         let (send_logs, recv_logs) = mpsc::unbounded();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             run_log_listener_with_proxy(&log_proxy, send_logs, Some(&mut options), false, None)
                 .await
                 .unwrap();
-        });
+        })
+        .detach();
 
         // start the component
         let dir_req = observer.directory_request().clone();
@@ -164,9 +165,10 @@ impl AppWithLogs {
                 "logged",
             )
             .unwrap();
-        fasync::spawn(Box::pin(async move {
+        fasync::Task::spawn(Box::pin(async move {
             fs.collect::<()>().await;
-        }));
+        }))
+        .detach();
 
         Self { app, observer, recv_logs, env_proxy }
     }

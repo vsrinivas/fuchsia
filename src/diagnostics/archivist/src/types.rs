@@ -555,7 +555,7 @@ pub trait DiagnosticsServer: 'static + Sized + Send + Sync {
         let result_channel = fasync::Channel::from_channel(result_stream.into_channel())?;
         let errorful_server_stats = server_stats.clone();
 
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 server_stats.global_stats.batch_iterator_connections_opened.add(1);
 
@@ -585,7 +585,8 @@ pub trait DiagnosticsServer: 'static + Sized + Send + Sync {
                 errorful_server_stats.global_stats.batch_iterator_connections_closed.add(1);
                 warn!("Error encountered running diagnostics server: {:?}", e);
             }),
-        );
+        )
+        .detach();
         Ok(())
     }
 }
@@ -636,7 +637,7 @@ mod tests {
         let ns = fdio::Namespace::installed().unwrap();
         ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
 
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let (done0, done1) = zx::Channel::create().unwrap();
 
@@ -712,7 +713,7 @@ mod tests {
         let ns = fdio::Namespace::installed().unwrap();
         ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
 
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let (done0, done1) = zx::Channel::create().unwrap();
         let thread_path = path.join("out/diagnostics");

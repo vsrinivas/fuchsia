@@ -16,11 +16,12 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("error creating executor")?;
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             test_manager_lib::run_test_manager(stream)
                 .await
                 .unwrap_or_else(|e| fx_log_warn!("test manager returned error: {:?}", e))
-        });
+        })
+        .detach();
     });
     fs.take_and_serve_directory_handle()?;
     executor.run_singlethreaded(fs.collect::<()>());

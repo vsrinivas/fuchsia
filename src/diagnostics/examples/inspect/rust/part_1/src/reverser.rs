@@ -33,7 +33,7 @@ impl ReverserServer {
     }
 
     pub fn spawn(self, mut stream: ReverserRequestStream) {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Some(request) = stream.try_next().await.expect("serve reverser") {
                 // CODELAB: Add stats about incoming requests.
                 let ReverserRequest::Reverse { input, responder: _ } = request;
@@ -41,7 +41,8 @@ impl ReverserServer {
                 // Yes, this is silly. Just for codelab purposes.
                 fasync::Timer::new(fasync::Time::after(10.hours())).await
             }
-        });
+        })
+        .detach();
     }
 }
 // [END reverser_def]

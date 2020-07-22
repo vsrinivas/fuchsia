@@ -60,11 +60,12 @@ pub async fn run_test_manager(
                 match RunningTest::launch_test(&test_url, suite).await {
                     Ok(test) => {
                         responder.send(&mut Ok(())).map_err(TestManagerError::Response)?;
-                        fasync::spawn(async move {
+                        fasync::Task::spawn(async move {
                             test.serve_controller(controller).await.unwrap_or_else(|e| {
                                 fx_log_err!("serve_controller failed for `{}`: {}", test_url, e)
                             });
-                        });
+                        })
+                        .detach();
                     }
                     Err(e) => {
                         responder.send(&mut Err(e)).map_err(TestManagerError::Response)?;
@@ -83,11 +84,12 @@ struct RunningTest {
 impl Drop for RunningTest {
     fn drop(&mut self) {
         let child = self.child.take();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             Self::destroy_test(child)
                 .await
                 .unwrap_or_else(|e| fx_log_err!("cannot destroy test child  {}", e));
-        });
+        })
+        .detach();
     }
 }
 

@@ -89,7 +89,7 @@ fn launch(
     let mut service_fs = ServiceFs::new();
     let env = service_fs.create_nested_environment(env_label)?;
     let app = client::launch(&env.launcher(), url.into(), None)?;
-    fasync::spawn(service_fs.collect());
+    fasync::Task::spawn(service_fs.collect()).detach();
     Ok((env, app))
 }
 

@@ -283,22 +283,24 @@ where
         ComponentRuntime::new(abortable_handle, suite_server_abortable_handles, job_dup, component);
 
     let resolved_url = url.clone();
-    fasync::spawn_local(async move {
+    fasync::Task::local(async move {
         // as error on abortable will always return Aborted,
         // no need to check that, as it is a valid usecase.
         fut.await.ok();
-    });
+    })
+    .detach();
 
     let server_end = take_server_end(server_end);
     let controller_stream = server_end.into_stream().map_err(|e| {
         ComponentError::Fidl("failed to convert server end to controller".to_owned(), e)
     })?;
     let controller = runner::component::Controller::new(component_runtime, controller_stream);
-    fasync::spawn_local(async move {
+    fasync::Task::local(async move {
         if let Err(e) = controller.serve().await {
             fx_log_err!("test '{}' controller ended with error: {:?}", resolved_url, e);
         }
-    });
+    })
+    .detach();
 
     Ok(())
 }

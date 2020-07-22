@@ -51,7 +51,7 @@ async fn main() -> Result<(), Error> {
         "inspect_rust_codelab",
         args.part,
     );
-    fasync::spawn(fs.collect::<()>());
+    fasync::Task::spawn(fs.collect::<()>()).detach();
 
     env.launch_fizzbuzz()?;
     let reverser = env.launch_reverser()?;

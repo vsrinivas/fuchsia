@@ -266,7 +266,7 @@ mod tests {
         let mut service_fs = ServiceFs::new();
         let env = service_fs.create_nested_environment(env_label)?;
         let app = client::launch(&env.launcher(), TEST_COMPONENT_URL.to_string(), None)?;
-        fasync::spawn(service_fs.collect());
+        fasync::Task::spawn(service_fs.collect()).detach();
         let mut component_stream = app.controller().take_event_stream();
         match component_stream
             .next()
@@ -373,14 +373,14 @@ mod tests {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fdiagnostics::ArchiveAccessorMarker>()
                 .expect("create proxy");
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(request) = stream.try_next().await.expect("stream request") {
                 match request {
                     fdiagnostics::ArchiveAccessorRequest::StreamDiagnostics {
                         result_stream,
                         ..
                     } => {
-                        fasync::spawn(async move {
+                        fasync::Task::spawn(async move {
                             let mut called = false;
                             let mut stream = result_stream.into_stream().expect("into stream");
                             while let Some(req) = stream.try_next().await.expect("stream request") {
@@ -421,11 +421,13 @@ mod tests {
                                     }
                                 }
                             }
-                        });
+                        })
+                        .detach();
                     }
                 }
             }
-        });
+        })
+        .detach();
         return proxy;
     }
 }

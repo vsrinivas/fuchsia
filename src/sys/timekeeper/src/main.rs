@@ -51,7 +51,13 @@ async fn main() -> Result<(), Error> {
     let connectivity_service =
         fuchsia_component::client::connect_to_service::<fnet::ConnectivityMarker>().unwrap();
 
-    fasync::spawn(maintain_utc(utc_clock, notifier.clone(), time_service, connectivity_service));
+    fasync::Task::spawn(maintain_utc(
+        utc_clock,
+        notifier.clone(),
+        time_service,
+        connectivity_service,
+    ))
+    .detach();
 
     fs.dir("svc").add_fidl_service(move |requests: ftime::UtcRequestStream| {
         notifier.handle_request_stream(requests);
@@ -141,7 +147,7 @@ impl Notifier {
     /// Spawns an async task to handle requests on this channel.
     fn handle_request_stream(&self, requests: ftime::UtcRequestStream) {
         let notifier = self.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut counted_requests = requests.enumerate();
             let mut last_seen_state = notifier.0.lock().source;
             while let Some((request_count, Ok(ftime::UtcRequest::WatchState { responder }))) =
@@ -157,7 +163,8 @@ impl Notifier {
                 }
                 last_seen_state = n.source;
             }
-        });
+        })
+        .detach();
     }
 }
 
@@ -247,21 +254,23 @@ mod tests {
         info!("spawning test notifier");
         notifier.handle_request_stream(utc_requests);
 
-        fasync::spawn(maintain_utc(
+        fasync::Task::spawn(maintain_utc(
             Arc::clone(&clock),
             notifier.clone(),
             time_service,
             reachability,
-        ));
+        ))
+        .detach();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(Ok(ftz::TimeServiceRequest::Update { responder, .. })) =
                 time_requests.next().await
             {
                 let () = wait_for_update.next().await.unwrap();
                 responder.send(Some(&mut ftz::UpdatedTime { utc_time: 1024 })).unwrap();
             }
-        });
+        })
+        .detach();
 
         info!("checking that the time source has not been externally initialized yet");
         assert_eq!(utc.watch_state().await.unwrap().source.unwrap(), ftime::UtcSource::Backstop);

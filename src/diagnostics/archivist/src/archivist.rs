@@ -32,7 +32,7 @@ use {
 
 /// Spawns controller sends stop signal.
 fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::Sender<()>) {
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             while let Some(ControllerRequest::Stop { .. }) = stream.try_next().await? {
                 stop_sender.send(()).await.ok();
@@ -45,7 +45,8 @@ fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::
                 error!("error serving controller: {}", e);
             }
         }),
-    );
+    )
+    .detach();
 }
 /// The `Archivist` is responsible for publishing all the services and monitoring component's health.
 /// # All resposibilities:
@@ -125,19 +126,23 @@ impl Archivist {
 
         self.fs
             .dir("svc")
-            .add_fidl_service(move |stream| fasync::spawn(log_manager_1.clone().handle_log(stream)))
+            .add_fidl_service(move |stream| {
+                fasync::Task::spawn(log_manager_1.clone().handle_log(stream)).detach()
+            })
             .add_fidl_service(move |stream| {
                 let source = Arc::new(SourceIdentity::empty());
-                fasync::spawn(log_manager_2.clone().handle_log_sink(
+                fasync::Task::spawn(log_manager_2.clone().handle_log_sink(
                     stream,
                     source,
                     log_sender.clone(),
-                ));
+                ))
+                .detach();
             })
             .add_fidl_service(move |stream| {
-                fasync::spawn(
+                fasync::Task::spawn(
                     log_manager_3.clone().handle_event_stream(stream, log_sender2.clone()),
                 )
+                .detach()
             });
         self
     }
@@ -407,10 +412,11 @@ mod tests {
         let mut archivist = init_archivist();
         archivist.install_logger_services().install_controller_service();
         let (signal_send, signal_recv) = oneshot::channel();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");
             signal_send.send(()).unwrap();
-        });
+        })
+        .detach();
         (directory, signal_recv)
     }
 
@@ -419,9 +425,10 @@ mod tests {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut archivist = init_archivist();
         archivist.install_logger_services();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");
-        });
+        })
+        .detach();
         directory
     }
 
@@ -439,11 +446,12 @@ mod tests {
             tags: vec![],
         };
         let l = Listener { send_logs };
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false, None)
                 .await
                 .unwrap();
-        });
+        })
+        .detach();
 
         recv_logs
     }

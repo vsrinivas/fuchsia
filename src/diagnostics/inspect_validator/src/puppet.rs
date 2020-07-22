@@ -281,7 +281,7 @@ pub(crate) mod tests {
     }
 
     async fn spawn_local_puppet(server_end: ServerEnd<ValidateMarker>) {
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 // Inspector must be remembered so its VMO persists
                 let mut inspector_maybe: Option<Inspector> = None;
@@ -359,6 +359,7 @@ pub(crate) mod tests {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| info!("error running validate interface: {:?}", e)),
-        );
+        )
+        .detach();
     }
 }

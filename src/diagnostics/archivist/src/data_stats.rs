@@ -276,7 +276,7 @@ mod tests {
         let (proxy, server) = create_proxy::<fidl_fuchsia_io::DirectoryAdminMarker>()
             .expect("failed to create proxy");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut stream = server.into_stream().expect("failed to convert to stream");
             while let Some(request) = stream.try_next().await.expect("failed to unwrap request") {
                 match request {
@@ -305,7 +305,8 @@ mod tests {
                     }
                 }
             }
-        });
+        })
+        .detach();
 
         let info =
             get_filesystem_info_from_admin(proxy).await.expect("failed to get filesystem info");
@@ -325,7 +326,7 @@ mod tests {
         let (proxy, server) = create_proxy::<fidl_fuchsia_io::DirectoryAdminMarker>()
             .expect("failed to create proxy");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut stream = server.into_stream().expect("failed to convert to stream");
             while let Some(request) = stream.try_next().await.expect("failed to unwrap request") {
                 match request {
@@ -337,7 +338,8 @@ mod tests {
                     }
                 }
             }
-        });
+        })
+        .detach();
 
         assert_eq!(
             Err("Query returned error".to_string()),

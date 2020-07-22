@@ -116,11 +116,12 @@ mod tests {
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<PayloadStreamMarker>()?;
         let mut stream = server_end.into_stream()?;
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Some(req) = stream.try_next().await.expect("Failed to get request!") {
                 streamer.handle_request(req).await.expect("Failed to handle request!");
             }
-        });
+        })
+        .detach();
 
         return Ok(client_end.into_proxy()?);
     }

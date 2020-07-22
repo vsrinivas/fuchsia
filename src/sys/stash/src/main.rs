@@ -134,7 +134,7 @@ fn stash_server(
     enable_bytes: bool,
     mut stream: StoreRequestStream,
 ) {
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             let mut state = instance::Instance {
                 client_name: None,
@@ -165,7 +165,8 @@ fn stash_server(
             Ok(())
         }
         .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run stash service: {:?}", e)),
-    );
+    )
+    .detach();
 }
 
 #[cfg(test)]

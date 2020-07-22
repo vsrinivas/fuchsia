@@ -86,7 +86,7 @@ impl ReverserServer {
     }
 
     pub fn spawn(self, mut stream: ReverserRequestStream) {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             while let Some(request) = stream.try_next().await.expect("serve reverser") {
                 self.metrics.request_count.add(1);
                 self.metrics.global_request_count.add(1);
@@ -99,7 +99,8 @@ impl ReverserServer {
 
                 self.metrics.response_count.add(1);
             }
-        });
+        })
+        .detach();
     }
 }
 

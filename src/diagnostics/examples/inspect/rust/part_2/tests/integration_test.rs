@@ -42,7 +42,7 @@ impl IntegrationTest {
             "inspect_rust_codelab_integration_tests",
             2,
         );
-        fasync::spawn(fs.collect::<()>());
+        fasync::Task::spawn(fs.collect::<()>()).detach();
         Ok(Self { env, _environment_label: environment_label })
     }
 

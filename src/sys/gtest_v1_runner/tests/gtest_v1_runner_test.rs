@@ -38,7 +38,7 @@ async fn can_launch_test_with_gtest_v1_runner() {
             "env",
         )
         .expect("Cannot launch test client.");
-    fasync::spawn(fs.for_each_concurrent(None, echo_server));
+    fasync::Task::spawn(fs.for_each_concurrent(None, echo_server)).detach();
 
     recv.next().await.expect("client failed to connect to echo service");
 }

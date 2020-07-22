@@ -58,12 +58,13 @@ fn run_listener(tag: &str) -> impl Stream<Item = LogMessage> {
     };
     let (send_logs, recv_logs) = mpsc::unbounded();
     let l = Listener { send_logs };
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let fut = syslog_listener::run_log_listener(l, Some(&mut options), false, None);
         if let Err(e) = fut.await {
             panic!("test fail {:?}", e);
         }
-    });
+    })
+    .detach();
     recv_logs
 }
 
@@ -183,7 +184,7 @@ async fn same_log_sink_simultaneously() {
     // run log listener
     let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let listen = Listener { send_logs };
         let mut options = LogFilterOptions {
             filter_by_pid: true,
@@ -197,7 +198,8 @@ async fn same_log_sink_simultaneously() {
         run_log_listener_with_proxy(&log_proxy, listen, Some(&mut options), false, None)
             .await
             .unwrap();
-    });
+    })
+    .detach();
 
     // connect to controller and call stop
     let controller = observer.connect_to_service::<ControllerMarker>().unwrap();
@@ -256,18 +258,19 @@ async fn same_log_sink_simultaneously_via_connector() {
         LogConnectorMarker::NAME,
         move |mut stream: LogConnectorRequestStream| {
             let mut serverend = serverend.take();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 while let Some(LogConnectorRequest::TakeLogConnectionListener { responder }) =
                     stream.try_next().await.unwrap()
                 {
                     responder.send(serverend.take()).unwrap()
                 }
             })
+            .detach()
         },
     )
     .serve_connection(dir_server)
     .unwrap();
-    fasync::spawn(fs.collect());
+    fasync::Task::spawn(fs.collect()).detach();
 
     // launch observer.cmx
     let launcher = connect_to_service::<LauncherMarker>().unwrap();
@@ -284,7 +287,7 @@ async fn same_log_sink_simultaneously_via_connector() {
     // run log listener
     let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         let listen = Listener { send_logs };
         let mut options = LogFilterOptions {
             filter_by_pid: true,
@@ -298,7 +301,8 @@ async fn same_log_sink_simultaneously_via_connector() {
         run_log_listener_with_proxy(&log_proxy, listen, Some(&mut options), false, None)
             .await
             .unwrap();
-    });
+    })
+    .detach();
 
     // connect to controller and call stop
     let controller = observer.connect_to_service::<ControllerMarker>().unwrap();
@@ -428,17 +432,19 @@ async fn timestamp_sorting_for_batches() {
 async fn dump_from_observer(observer: &App) -> Vec<LogMessage> {
     let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         run_log_listener_with_proxy(&log_proxy, send_logs, None, true, None).await.unwrap();
-    });
+    })
+    .detach();
     recv_logs.collect::<Vec<_>>().await
 }
 
 fn listen_to_observer(observer: &App) -> mpsc::UnboundedReceiver<LogMessage> {
     let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         run_log_listener_with_proxy(&log_proxy, send_logs, None, false, None).await.unwrap();
-    });
+    })
+    .detach();
     recv_logs
 }

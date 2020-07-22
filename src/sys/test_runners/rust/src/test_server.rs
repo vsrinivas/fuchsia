@@ -119,7 +119,7 @@ impl SuiteServer for TestServer {
         let (fut, test_suite_abortable_handle) =
             abortable(self.serve_test_suite(request_stream, weak_test_component.clone()));
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             match fut.await {
                 Ok(result) => {
                     if let Err(e) = result {
@@ -129,7 +129,8 @@ impl SuiteServer for TestServer {
                 Err(e) => error!("server aborted for test {}: {:?}", test_url, e),
             }
             debug!("Done running server for {}.", test_url);
-        });
+        })
+        .detach();
         test_suite_abortable_handle
     }
 }
@@ -624,12 +625,13 @@ mod tests {
 
         let suite_proxy =
             test_suite_client.into_proxy().context("can't convert suite into proxy")?;
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             server
                 .serve_test_suite(test_suite, weak_component)
                 .await
                 .expect("Failed to run test suite")
-        });
+        })
+        .detach();
 
         suite_proxy
             .run(&mut invocations.into_iter().map(|i| i.into()), run_options, run_listener_client)

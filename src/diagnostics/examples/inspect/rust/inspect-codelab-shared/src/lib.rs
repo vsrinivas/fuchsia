@@ -99,7 +99,7 @@ impl CodelabEnvironment {
     }
 
     fn spawn_component_on_terminated_waiter(&self, controller: ComponentControllerProxy) {
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let mut component_events = controller.take_event_stream();
                 while let Some(event) = component_events.try_next().await? {
@@ -124,5 +124,6 @@ impl CodelabEnvironment {
             }
             .unwrap_or_else(|e| fx_log_err!("Error waiting for component: {:?}", e)),
         )
+        .detach()
     }
 }

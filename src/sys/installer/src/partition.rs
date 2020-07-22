@@ -176,14 +176,15 @@ impl Partition {
                     fidl::endpoints::create_endpoints::<PayloadStreamMarker>()?;
                 let mut stream = server_end.into_stream()?;
 
-                fasync::spawn(async move {
+                fasync::Task::spawn(async move {
                     while let Some(req) = stream.try_next().await.expect("Failed to get request!") {
                         payload_stream
                             .handle_request(req)
                             .await
                             .expect("Failed to handle request!");
                     }
-                });
+                })
+                .detach();
                 // Tell the data sink to use our PayloadStream.
                 data_sink.write_volumes(client_end).await?;
             }
@@ -320,10 +321,11 @@ mod tests {
         guid: [u8; 16],
     ) -> Result<PartitionProxy, Error> {
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<PartitionMarker>()?;
-        fasync::spawn_local(
+        fasync::Task::local(
             serve_partition(label, block_size, block_count, guid, stream)
                 .unwrap_or_else(|e| panic!("Error while serving fake block device: {}", e)),
-        );
+        )
+        .detach();
         Ok(proxy)
     }
 

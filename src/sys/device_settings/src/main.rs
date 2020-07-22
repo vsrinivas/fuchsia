@@ -82,7 +82,7 @@ fn spawn_device_settings_server(
     stream: DeviceSettingsManagerRequestStream,
 ) {
     let state = Arc::new(Mutex::new(state));
-    fasync::spawn(
+    fasync::Task::spawn(
         stream
             .try_for_each(move |req| {
                 let state = state.clone();
@@ -168,6 +168,7 @@ fn spawn_device_settings_server(
             .map_ok(|_| ())
             .unwrap_or_else(|e| eprintln!("error running device settings server: {:?}", e)),
     )
+    .detach()
 }
 
 fn main() {

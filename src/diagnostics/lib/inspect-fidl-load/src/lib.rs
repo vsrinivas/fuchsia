@@ -203,7 +203,7 @@ mod tests {
     }
 
     fn spawn_server(mut stream: InspectRequestStream, object_name: String) {
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let object = OBJECTS.get(&object_name).unwrap();
                 while let Some(req) = stream.try_next().await? {
@@ -228,6 +228,7 @@ mod tests {
                 Ok(())
             }
             .unwrap_or_else(|e: Error| eprintln!("error running inspect server: {:?}", e)),
-        );
+        )
+        .detach();
     }
 }

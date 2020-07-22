@@ -274,13 +274,14 @@ fn main() -> Result<(), Error> {
     let state = Arc::new(Mutex::new(State::new()));
     fs.dir("svc").add_fidl_service_at(RunnerMarker::NAME, move |stream| {
         let state = state.clone();
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 run_runner_server(stream, state).await?;
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| fx_log_err!("runner failed: {:?}", e)),
-        );
+        )
+        .detach();
     });
     fs.take_and_serve_directory_handle()?;
     executor.run_singlethreaded(fs.collect::<()>());

@@ -84,7 +84,7 @@ impl ValidatingListener {
         let mut sink_says_done = false;
         let mut all_expected = false;
         let mut outcomes = self.outcomes.take().unwrap();
-        fasync::spawn(self.handle_stream(stream));
+        fasync::Task::spawn(self.handle_stream(stream)).detach();
 
         'observe_outcomes: while let Some(outcome) = outcomes.next().await {
             match outcome {

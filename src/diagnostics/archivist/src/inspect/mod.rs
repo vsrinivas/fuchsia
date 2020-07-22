@@ -504,7 +504,7 @@ mod tests {
         let ns = fdio::Namespace::installed().unwrap();
         ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
 
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let (done0, done1) = zx::Channel::create().unwrap();
 
@@ -580,7 +580,7 @@ mod tests {
         let ns = fdio::Namespace::installed().unwrap();
         ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
 
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let (done0, done1) = zx::Channel::create().unwrap();
         let thread_path = path.join("out/diagnostics");
@@ -662,7 +662,7 @@ mod tests {
         let ns = fdio::Namespace::installed().unwrap();
         ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
 
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
         let (done0, done1) = zx::Channel::create().unwrap();
         let thread_path = path.join("out");
 
@@ -699,7 +699,7 @@ mod tests {
         let ns = fdio::Namespace::installed().unwrap();
         ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
 
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
         let (done0, done1) = zx::Channel::create().unwrap();
         let thread_path = path.join("out");
 
@@ -734,7 +734,7 @@ mod tests {
         let ns = fdio::Namespace::installed().unwrap();
         ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
 
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
         let (done0, done1) = zx::Channel::create().unwrap();
         let thread_path = path.join("out");
 
@@ -848,7 +848,7 @@ mod tests {
         let ns = fdio::Namespace::installed().unwrap();
         ns.bind(path.to_str().unwrap(), h0).unwrap();
 
-        fasync::spawn(fs.collect());
+        fasync::Task::spawn(fs.collect()).detach();
 
         let (done0, done1) = zx::Channel::create().unwrap();
 
@@ -1275,7 +1275,7 @@ mod tests {
             ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
         ) = create_proxy().unwrap();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             reader_server
                 .stream_diagnostics(
                     fidl_fuchsia_diagnostics::StreamMode::Snapshot,
@@ -1284,7 +1284,8 @@ mod tests {
                     server_stats.clone(),
                 )
                 .unwrap();
-        });
+        })
+        .detach();
 
         let mut result_vec: Vec<String> = Vec::new();
         loop {
@@ -1321,7 +1322,7 @@ mod tests {
             ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
         ) = create_proxy().unwrap();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             reader_server
                 .stream_diagnostics(
                     fidl_fuchsia_diagnostics::StreamMode::Snapshot,
@@ -1330,7 +1331,8 @@ mod tests {
                     server_stats.clone(),
                 )
                 .unwrap();
-        });
+        })
+        .detach();
 
         let mut result_vec: Vec<String> = Vec::new();
         let mut batch_counts = Vec::new();

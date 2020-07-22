@@ -53,13 +53,14 @@ impl FizzBuzzServer {
     }
 
     fn spawn(self, stream: FizzBuzzRequestStream) {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             self.metrics.incoming_connection_count.add(1);
             self.handle_request_stream(stream).await.unwrap_or_else(|e| {
                 fx_log_err!("Error handling fizzbuzz request stream: {:?}", e);
             });
             self.metrics.closed_connection_count.add(1);
-        });
+        })
+        .detach();
     }
 
     async fn handle_request_stream(&self, mut stream: FizzBuzzRequestStream) -> Result<(), Error> {

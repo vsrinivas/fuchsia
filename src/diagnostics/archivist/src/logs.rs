@@ -147,11 +147,12 @@ impl LogManager {
                                 .into_stream()
                                 .expect("getting LogSinkRequestStream from serverend");
                             let source = Arc::new(source_identity);
-                            fasync::spawn(self.clone().handle_log_sink(
+                            fasync::Task::spawn(self.clone().handle_log_sink(
                                 stream,
                                 source,
                                 sender.clone(),
                             ))
+                            .detach()
                         }
                     };
                 }
@@ -300,7 +301,7 @@ impl LogManager {
     ) -> Result<(), Error> {
         let identity = Self::source_identity_from_event(&event)?;
         let stream = Self::log_sink_request_stream_from_event(event)?;
-        fasync::spawn(self.clone().handle_log_sink(stream, identity, sender));
+        fasync::Task::spawn(self.clone().handle_log_sink(stream, identity, sender)).detach();
         Ok(())
     }
 
@@ -1200,7 +1201,7 @@ mod tests {
 
             let (log_proxy, log_stream) =
                 fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-            fasync::spawn(log_manager.clone().handle_log(log_stream));
+            fasync::Task::spawn(log_manager.clone().handle_log(log_stream)).detach();
 
             Self { inspector, log_manager, log_proxy }
         }
@@ -1339,11 +1340,12 @@ mod tests {
         ) -> LogSinkProxy {
             let (log_sink_proxy, log_sink_stream) =
                 fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-            fasync::spawn(self.log_manager.clone().handle_log_sink(
+            fasync::Task::spawn(self.log_manager.clone().handle_log_sink(
                 log_sink_stream,
                 self.identity.clone(),
                 log_sender,
-            ));
+            ))
+            .detach();
             log_sink_proxy
         }
     }
@@ -1387,7 +1389,7 @@ mod tests {
                 ))
                 .unwrap();
             let log_manager = self.log_manager.clone();
-            fasync::spawn(log_manager.handle_event_stream(event_stream, log_sender));
+            fasync::Task::spawn(log_manager.handle_event_stream(event_stream, log_sender)).detach();
 
             log_sink_proxy
         }
@@ -1409,7 +1411,10 @@ mod tests {
             let (log_sender, log_receiver) = mpsc::unbounded();
             let log_sink_proxy = log_reader.handle_request(log_sender);
 
-            fasync::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }));
+            fasync::Task::spawn(
+                log_receiver.for_each_concurrent(None, |rx| async move { rx.await }),
+            )
+            .detach();
 
             E::connect(&log_sink_proxy, sout);
 
@@ -1444,8 +1449,8 @@ mod tests {
         let lm = LogManager { inner }.with_inspect(inspector.root(), "log_stats").unwrap();
         let (log_proxy, log_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-        fasync::spawn(lm.clone().handle_log(log_stream));
-        fasync::spawn(lm.drain_debuglog(debug_log));
+        fasync::Task::spawn(lm.clone().handle_log(log_stream)).detach();
+        fasync::Task::spawn(lm.drain_debuglog(debug_log)).detach();
 
         validate_log_stream(expected, log_proxy, None).await;
         inspector

@@ -71,10 +71,11 @@ impl<C: Controllable> Controller<C> {
                     // it in a future and then shut down the control handle
                     // which will knock `serve` out of this loop.
                     let stop_func = self.stop().await;
-                    fasync::spawn(async move {
+                    fasync::Task::spawn(async move {
                         stop_func.await;
                         c.shutdown();
-                    });
+                    })
+                    .detach();
                 }
                 fcrunner::ComponentControllerRequest::Kill { control_handle: c } => {
                     self.kill().await;
@@ -507,12 +508,13 @@ mod tests {
         {
             let (launcher_proxy, server_end) = create_proxy::<fproc::LauncherMarker>()?;
             let (sender, receiver) = oneshot::channel();
-            fasync::spawn_local(async move {
+            fasync::Task::local(async move {
                 let stream = server_end.into_stream().expect("error making stream");
                 run_launcher_service(stream, sender)
                     .await
                     .expect("error running fake launcher service");
-            });
+            })
+            .detach();
             Ok((launcher_proxy, receiver))
         }
 

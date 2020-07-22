@@ -155,11 +155,12 @@ mod tests {
     }
 
     fn spawn_tree_server(name: String, vmos: Arc<TestVmos>, stream: TreeRequestStream) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             handle_request_stream(name, vmos, stream)
                 .await
                 .unwrap_or_else(|e: Error| fx_log_err!("Couldn't run tree server: {:?}", e));
-        });
+        })
+        .detach();
     }
 
     async fn handle_request_stream(
@@ -191,7 +192,7 @@ mod tests {
         values: Vec<String>,
         mut stream: TreeNameIteratorRequestStream,
     ) {
-        fasync::spawn(
+        fasync::Task::spawn(
             async move {
                 let mut values_iter = values.into_iter();
                 while let Some(request) =
@@ -217,6 +218,7 @@ mod tests {
                 fx_log_err!("Failed to running tree name iterator server: {:?}", e)
             }),
         )
+        .detach()
     }
 
     struct TestVmos {

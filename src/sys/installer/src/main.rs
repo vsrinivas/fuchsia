@@ -344,10 +344,11 @@ mod tests {
         let (client, server) = zx::Channel::create()?;
         let client = fidl::AsyncChannel::from_channel(client)?;
         let server = fidl::AsyncChannel::from_channel(server)?;
-        fasync::spawn_local(
+        fasync::Task::local(
             serve_block_device(full_path, block_count, block_size, expect_get_info, server)
                 .unwrap_or_else(|e| panic!("Error while serving fake block device: {}", e)),
-        );
+        )
+        .detach();
         Ok(client)
     }
 

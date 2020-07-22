@@ -20,7 +20,7 @@ use {
 /// `lib_proxy` must have been opened with at minimum OPEN_RIGHT_READABLE and OPEN_RIGHT_EXECUTABLE
 /// rights.
 pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
-    fasync::spawn(
+    fasync::Task::spawn(
         async move {
             let mut search_dirs =
                 vec![io_util::clone_directory(&lib_proxy, fio::CLONE_FLAG_SAME_RIGHTS)?];
@@ -72,7 +72,8 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
             Ok(())
         }
         .unwrap_or_else(|e: Error| warn!("couldn't run library loader service: {}", e)),
-    );
+    )
+    .detach();
 }
 
 /// load_vmo will attempt to open the provided name in `dir_proxy` and return an executable VMO

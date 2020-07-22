@@ -91,7 +91,7 @@ pub trait SuiteServer: Sized + Sync + Send {
                     let mut stream = iterator.into_stream().map_err(SuiteServerError::Stream)?;
                     let tests = self.enumerate_tests(component.unwrap()).await?;
 
-                    fasync::spawn(
+                    fasync::Task::spawn(
                         async move {
                             let mut iter = tests.iter().map(|TestCaseInfo { name, enabled }| {
                                 ftest::Case { name: Some(name.clone()), enabled: Some(*enabled) }
@@ -117,7 +117,8 @@ pub trait SuiteServer: Sized + Sync + Send {
                             Ok(())
                         }
                         .unwrap_or_else(|e: anyhow::Error| error!("error serving tests: {:?}", e)),
-                    );
+                    )
+                    .detach();
                 }
                 ftest::SuiteRequest::Run { tests, options, listener, .. } => {
                     let component = component.upgrade();

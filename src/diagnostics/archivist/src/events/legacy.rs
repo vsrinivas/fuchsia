@@ -40,11 +40,12 @@ impl EventListenerServer {
     }
 
     fn spawn(self, stream: ComponentEventListenerRequestStream) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             self.handle_request_stream(stream).await.unwrap_or_else(|e: Error| {
                 error!("failed to run v1 events processing server: {:?}", e)
             });
-        });
+        })
+        .detach();
     }
 
     async fn handle_request_stream(
@@ -226,7 +227,7 @@ mod tests {
         let (provider, mut request_stream) =
             fidl::endpoints::create_proxy_and_stream::<ComponentEventProviderMarker>().unwrap();
         let (sender, receiver) = oneshot::channel();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             if let Some(request) =
                 request_stream.try_next().await.expect("error running fake provider")
             {
@@ -236,7 +237,8 @@ mod tests {
                     }
                 }
             }
-        });
+        })
+        .detach();
         (provider, receiver)
     }
 }
