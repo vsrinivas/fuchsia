@@ -82,9 +82,6 @@ test("fdio") {
     ":hello-world",
     ":null-namespace-child",
   ]
-
-  # TODO(45177): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("accept-child") {
