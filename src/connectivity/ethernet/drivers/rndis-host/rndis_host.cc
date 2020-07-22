@@ -353,12 +353,7 @@ zx_status_t RndisHost::PrepareDataPacket(usb_request_t* req, const void* data, s
 void RndisHost::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void RndisHost::DdkRelease() {
-  bool should_join;
-  {
-    fbl::AutoLock lock(&mutex_);
-    should_join = thread_started_;
-  }
-  if (should_join) {
+  if (thread_started_) {
     thrd_join(thread_, NULL);
   }
 
@@ -509,6 +504,8 @@ zx_status_t RndisHost::SetDeviceOid(uint32_t oid, const void* data, size_t data_
 }
 
 zx_status_t RndisHost::StartThread() {
+  ZX_DEBUG_ASSERT(init_txn_.has_value());
+
   zx_status_t status = InitializeDevice();
   if (status != ZX_OK) {
     goto fail;
@@ -556,12 +553,12 @@ zx_status_t RndisHost::StartThread() {
     }
   }
 
-  DdkMakeVisible();
+  init_txn_->Reply(ZX_OK);  // This will make the device visible and able to be unbound.
   zxlogf(INFO, "rndishost ready");
   return ZX_OK;
 
 fail:
-  DdkAsyncRemove();
+  init_txn_->Reply(status);  // This will schedule unbinding of the device.
   return status;
 }
 
@@ -590,28 +587,26 @@ zx_status_t RndisHost::AddDevice() {
     ZX_DEBUG_ASSERT(status == ZX_OK);
   }
 
-  fbl::AutoLock lock(&mutex_);
-  status = DdkAdd(ddk::DeviceAddArgs("rndishost")
-                      .set_flags(DEVICE_ADD_INVISIBLE)
-                      .set_proto_id(ZX_PROTOCOL_ETHERNET_IMPL));
+  status = DdkAdd(ddk::DeviceAddArgs("rndishost").set_proto_id(ZX_PROTOCOL_ETHERNET_IMPL));
   if (status != ZX_OK) {
-    lock.release();
     zxlogf(ERROR, "rndishost: failed to create device: %d", status);
     return status;
   }
+  return ZX_OK;
+}
 
+void RndisHost::DdkInit(ddk::InitTxn txn) {
+  init_txn_ = std::move(txn);
   thread_started_ = true;
   int ret = thrd_create_with_name(
       &thread_, [](void* arg) -> int { return static_cast<RndisHost*>(arg)->StartThread(); }, this,
       "rndishost_start_thread");
   if (ret != thrd_success) {
     thread_started_ = false;
-    lock.release();
-    DdkAsyncRemove();
-    return ZX_ERR_NO_RESOURCES;
+    return init_txn_->Reply(ZX_ERR_NO_RESOURCES);
   }
-
-  return ZX_OK;
+  // The thread will reply to |init_txn_| once it is ready to make the device visible
+  // and able to be unbound.
 }
 
 static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {

@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_HOST_RNDIS_HOST_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_HOST_RNDIS_HOST_H_
 
+#include <optional>
+
 #include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
@@ -16,7 +18,7 @@
 
 class RndisHost;
 
-using RndisHostType = ddk::Device<RndisHost, ddk::UnbindableNew>;
+using RndisHostType = ddk::Device<RndisHost, ddk::Initializable, ddk::UnbindableNew>;
 
 class RndisHost : public RndisHostType,
                   public ddk::EthernetImplProtocol<RndisHost, ddk::base_protocol> {
@@ -24,6 +26,7 @@ class RndisHost : public RndisHostType,
   explicit RndisHost(zx_device_t* parent, uint8_t control_intf, uint8_t bulk_in_addr,
                      uint8_t bulk_out_addr, const usb::UsbDevice& usb);
 
+  void DdkInit(ddk::InitTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
@@ -81,6 +84,8 @@ class RndisHost : public RndisHostType,
 
   // Interface to the ethernet layer.
   ethernet_ifc_protocol_t ifc_;
+
+  std::optional<ddk::InitTxn> init_txn_;
 
   thrd_t thread_;
   bool thread_started_ = false;
