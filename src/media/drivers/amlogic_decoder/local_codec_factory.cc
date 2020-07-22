@@ -59,9 +59,9 @@ const CodecAdapterFactory kCodecFactories[] = {
             // the case.
             .split_header_handling = true,
         },
-        false,  // multi_instance
+        true,  // multi_instance
         [](std::mutex& lock, CodecAdapterEvents* events, DeviceCtx* device) {
-          return std::make_unique<CodecAdapterH264>(lock, events, device);
+          return std::make_unique<CodecAdapterH264Multi>(lock, events, device);
         },
     },
     {
