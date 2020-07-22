@@ -12,6 +12,7 @@
 
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
+#include "src/modular/lib/modular_config/modular_config_accessor.h"
 
 namespace modular_testing {
 namespace {
@@ -21,27 +22,30 @@ using SessionContextImplTest = gtest::TestLoopFixture;
 
 TEST_F(SessionContextImplTest, StartSessionmgr) {
   FakeLauncher launcher;
-  std::string url = "test_url_string";
-  fuchsia::modular::session::AppConfig app_config;
-  app_config.set_url(url);
 
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  std::string url = "test_url_string";
+  fuchsia::modular::session::AppConfig sessionmgr_app_config;
+  sessionmgr_app_config.set_url(url);
+
   bool callback_called = false;
   launcher.RegisterComponent(
-      url, [&callback_called](fuchsia::sys::LaunchInfo,
-                              fidl::InterfaceRequest<fuchsia::sys::ComponentController>) {
+      url,
+      [&callback_called](fuchsia::sys::LaunchInfo /* unused */,
+                         fidl::InterfaceRequest<fuchsia::sys::ComponentController> /* unused */) {
         callback_called = true;
       });
 
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto modular_config_accessor = modular::ModularConfigAccessor(modular::DefaultConfig());
+
   modular::SessionContextImpl impl(
-      &launcher, false /* use_random_id */,
-      modular::CloneStruct(app_config) /* sessionmgr_config */,
-      modular::CloneStruct(app_config) /* session_shell_config */,
-      modular::CloneStruct(app_config) /* story_shell_config */,
-      false /* use_session_shell_for_story_shell_factory */, std::move(view_token),
-      nullptr /* additional_services */, zx::channel() /* overridden_config_handle */,
-      [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {} /* get_presentation */,
-      [](modular::SessionContextImpl::ShutDownReason) {} /* done_callback */);
+      &launcher,
+      /*use_random_id=*/false, std::move(sessionmgr_app_config), &modular_config_accessor,
+      std::move(view_token),
+      /*additional_services=*/nullptr,
+      /*get_presentation=*/
+      [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},
+      /*done_callback=*/[](modular::SessionContextImpl::ShutDownReason /* unused */) {});
 
   EXPECT_TRUE(callback_called);
 }
@@ -51,27 +55,28 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
   // the error handler of the sessionmgr_app is invoked. This should invoke the
   // done_callback.
   FakeLauncher launcher;
+
   std::string url = "test_url_string";
-  fuchsia::modular::session::AppConfig app_config;
-  app_config.set_url(url);
+  fuchsia::modular::session::AppConfig sessionmgr_app_config;
+  sessionmgr_app_config.set_url(url);
 
-  launcher.RegisterComponent(url, [](fuchsia::sys::LaunchInfo,
-                                     fidl::InterfaceRequest<fuchsia::sys::ComponentController>) {});
+  launcher.RegisterComponent(
+      url, [](fuchsia::sys::LaunchInfo /* unused */,
+              fidl::InterfaceRequest<fuchsia::sys::ComponentController> /* unused */) {});
 
+  auto modular_config_accessor = modular::ModularConfigAccessor(modular::DefaultConfig());
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
   bool done_callback_called = false;
   modular::SessionContextImpl impl(
       &launcher,
-      /* use_random_id */ false,
-      /* sessionmgr_config= */ modular::CloneStruct(app_config),
-      /* session_shell_config= */ modular::CloneStruct(app_config),
-      /* story_shell_config= */ modular::CloneStruct(app_config),
-      /* use_session_shell_for_story_shell_factory= */ false, std::move(view_token),
-      /* additional_services */ nullptr, zx::channel() /* overridden_config_handle */,
-      /* get_presentation= */
-      [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {},
-      /* done_callback= */
-      [&done_callback_called](modular::SessionContextImpl::ShutDownReason) {
+      /*use_random_id=*/false, std::move(sessionmgr_app_config), &modular_config_accessor,
+      std::move(view_token),
+      /*additional_services=*/nullptr,
+      /*get_presentation=*/
+      [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},
+      /*done_callback=*/
+      [&done_callback_called](modular::SessionContextImpl::ShutDownReason /* unused */) {
         done_callback_called = true;
       });
 

@@ -22,6 +22,7 @@
 #include "src/modular/bin/basemgr/presentation_container.h"
 #include "src/modular/bin/basemgr/session_provider.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/modular_config/modular_config_accessor.h"
 
 namespace modular {
 
@@ -36,15 +37,14 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
                     fuchsia::modular::internal::BasemgrDebug,
                     modular::SessionProvider::Delegate {
  public:
-  // Initializes as BasemgrImpl instance with the given parameters:
+  // Creates a BasemgrImpl instance with the given parameters:
   //
-  // |config| Configs that are parsed from command line. These will be read from
-  // a configuration file with the completion of MF-10. Used to configure
-  // the modular framework environment.
+  // |config_accessor| Contains configuration for starting sessions.
+  //    This is normally read from files in basemgr's /config/data directory.
   // |launcher| Environment service for creating component instances.
   // |presenter| Service to initialize the presentation.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
-  explicit BasemgrImpl(fuchsia::modular::session::ModularConfig config,
+  explicit BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                        std::shared_ptr<sys::ServiceDirectory> incoming_services,
                        std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
                        fuchsia::sys::LauncherPtr launcher,
@@ -75,10 +75,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Starts a new session.
   void StartSession(bool use_random_id);
 
-  // Updates the session shell app config to the active session shell. Done once
-  // on initialization and every time the session shells are swapped.
-  void UpdateSessionShellConfig();
-
   // |BasemgrDebug|
   void RestartSession(RestartSessionCallback on_restart_complete) override;
 
@@ -88,10 +84,8 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |SessionProvider::Delegate|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
 
-  fuchsia::modular::session::ModularConfig config_;
-
-  // Used to configure which session shell component to launch.
-  fuchsia::modular::session::AppConfig session_shell_config_;
+  // Contains basemgr and sessionmgr configuration.
+  modular::ModularConfigAccessor config_accessor_;
 
   // Retained to be used in creating a `SessionProvider`.
   const std::shared_ptr<sys::ServiceDirectory> component_context_services_;
@@ -116,9 +110,9 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
 
-  bool use_random_session_id_{true};
-
   AsyncHolder<SessionProvider> session_provider_;
+
+  std::unique_ptr<intl::IntlPropertyProviderImpl> intl_property_provider_;
 
   enum class State {
     // normal mode of operation

@@ -29,6 +29,20 @@ source_set("modular_config") {
   ]
 }
 
+source_set("modular_config_accessor") {
+  sources = [
+    "modular_config_accessor.cc",
+    "modular_config_accessor.h",
+  ]
+
+  deps = [
+    ":modular_config",
+    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
 source_set("json_xdr") {
   sources = [
     "modular_config_xdr.cc",

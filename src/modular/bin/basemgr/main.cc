@@ -14,24 +14,13 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
-
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/modular_config/modular_config.h"
+#include "src/modular/lib/modular_config/modular_config_accessor.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
-
-namespace {
-#ifdef AUTO_LOGIN_TO_GUEST
-constexpr bool kStableSessionId = true;
-#else
-constexpr bool kStableSessionId = false;
-#endif
-
-}  // namespace
 
 fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatcher_t* dispatcher,
                                                sys::ComponentContext* component_context) {
@@ -42,13 +31,13 @@ fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatc
 };
 
 std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
-    fuchsia::modular::session::ModularConfig& config, sys::ComponentContext* component_context,
+    modular::ModularConfigAccessor config_accessor, sys::ComponentContext* component_context,
     async::Loop* loop) {
-  fit::deferred_action<fit::closure> cobalt_cleanup =
-      SetupCobalt(config.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
+  fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
+      config_accessor.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
 
   return std::make_unique<modular::BasemgrImpl>(
-      std::move(config), component_context->svc(), component_context->outgoing(),
+      std::move(config_accessor), component_context->svc(), component_context->outgoing(),
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
       component_context->svc()->Connect<fuchsia::ui::policy::Presenter>(),
       component_context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>(),
@@ -60,42 +49,34 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
       });
 }
 
+modular::ModularConfigAccessor ReadConfigFromNamespace() {
+  auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
+
+  fuchsia::modular::session::ModularConfig modular_config;
+  modular_config.set_basemgr_config(config_reader.GetBasemgrConfig());
+  modular_config.set_sessionmgr_config(config_reader.GetSessionmgrConfig());
+
+  return modular::ModularConfigAccessor(std::move(modular_config));
+}
+
 int main(int argc, const char** argv) {
   syslog::SetTags({"basemgr"});
 
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  fuchsia::modular::session::ModularConfig modular_config;
-
-  if (argc == 1) {
-    // Read configurations from file if no command line arguments are passed in.
-    // This sets default values for any configurations that aren't specified in
-    // the configuration file.
-    auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
-    modular_config.set_basemgr_config(config_reader.GetBasemgrConfig());
-    modular_config.set_sessionmgr_config(config_reader.GetSessionmgrConfig());
-  } else {
+  if (argc != 1) {
     std::cerr << "basemgr does not support arguments. Please use basemgr_launcher to "
               << "launch basemgr with custom configurations." << std::endl;
     return 1;
   }
 
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> component_context(
       sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
-  // Clients can specify whether a stable session ID is used by setting a
-  // property against base shell in the modular config. Parse the
-  // |auto_login_to_guest| build flag to set the same property.
-  if (kStableSessionId) {
-    FX_LOGS(INFO) << "Requesting stable session ID based on build flag";
-    fuchsia::modular::session::AppConfig override_base_shell;
-    override_base_shell.mutable_args()->push_back("--persist_user");
-    modular_config.mutable_basemgr_config()->mutable_base_shell()->set_app_config(
-        std::move(override_base_shell));
-  }
+  // Read configuration from /config/data
+  auto config_accessor = ReadConfigFromNamespace();
 
-  std::unique_ptr<modular::BasemgrImpl> basemgr_impl =
-      CreateBasemgrImpl(modular_config, component_context.get(), &loop);
+  auto basemgr_impl = CreateBasemgrImpl(std::move(config_accessor), component_context.get(), &loop);
 
   // NOTE: component_controller.events.OnDirectoryReady() is triggered when a
   // component's out directory has mounted. basemgr_launcher uses this signal

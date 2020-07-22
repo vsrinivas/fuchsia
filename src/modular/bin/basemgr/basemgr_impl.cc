@@ -22,14 +22,14 @@ namespace modular {
 using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
 using intl::IntlPropertyProviderImpl;
 
-BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
+BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                          std::shared_ptr<sys::ServiceDirectory> incoming_services,
                          std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
                          fuchsia::sys::LauncherPtr launcher,
                          fuchsia::ui::policy::PresenterPtr presenter,
                          fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                          fit::function<void()> on_shutdown)
-    : config_(std::move(config)),
+    : config_accessor_(std::move(config_accessor)),
       component_context_services_(std::move(incoming_services)),
       outgoing_services_(std::move(outgoing_services)),
       launcher_(std::move(launcher)),
@@ -37,7 +37,12 @@ BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
       device_administrator_(std::move(device_administrator)),
       on_shutdown_(std::move(on_shutdown)),
       session_provider_("SessionProvider") {
-  UpdateSessionShellConfig();
+  intl_property_provider_ = IntlPropertyProviderImpl::Create(component_context_services_);
+  outgoing_services_->AddPublicService(intl_property_provider_->GetHandler());
+
+  outgoing_services_->AddPublicService<fuchsia::modular::Lifecycle>(
+      lifecycle_bindings_.GetHandler(this));
+
   Start();
 }
 
@@ -70,47 +75,25 @@ FuturePtr<> BasemgrImpl::StopScenic() {
 }
 
 void BasemgrImpl::Start() {
-  // Use the default of a random session ID unless the configuration requested persistence.
-  // TODO(fxb/51752): Change base manager config to use a more direct declaration of persistence
-  // and remove the base shell configuration entirely.
-  if (config_.basemgr_config().base_shell().app_config().has_args()) {
-    for (const auto& arg : config_.basemgr_config().base_shell().app_config().args()) {
-      if (arg == "--persist_user") {
-        use_random_session_id_ = false;
-        break;
-      }
-    }
-  }
-
-  fuchsia::modular::session::AppConfig sessionmgr_app_config;
-  sessionmgr_app_config.set_url(modular_config::kSessionmgrUrl);
-
-  fuchsia::modular::session::AppConfig story_shell_config;
-  config_.basemgr_config().story_shell().app_config().Clone(&story_shell_config);
-
-  auto intl_property_provider = IntlPropertyProviderImpl::Create(component_context_services_);
-  outgoing_services_->AddPublicService(intl_property_provider->GetHandler());
-
-  outgoing_services_->AddPublicService<fuchsia::modular::Lifecycle>(
-      lifecycle_bindings_.GetHandler(this));
+  auto use_random_session_id = config_accessor_.use_random_session_id();
 
   outgoing_services_->AddPublicService(process_lifecycle_bindings_.GetHandler(this),
                                        "fuchsia.process.lifecycle.Lifecycle");
 
   session_provider_.reset(new SessionProvider(
-      /* delegate= */ this, launcher_.get(), std::move(device_administrator_),
-      std::move(sessionmgr_app_config), std::move(intl_property_provider), CloneStruct(config_),
+      /* delegate= */ this, launcher_.get(), std::move(device_administrator_), &config_accessor_,
+      intl_property_provider_.get(),
       /* on_zero_sessions= */
-      [this] {
+      [this, use_random_session_id] {
         if (state_ == State::SHUTTING_DOWN) {
           return;
         }
         FX_DLOGS(INFO) << "Re-starting due to session closure";
-        StartSession(use_random_session_id_);
+        StartSession(use_random_session_id);
       }));
 
   ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToBaseMgr);
-  StartSession(use_random_session_id_);
+  StartSession(use_random_session_id);
 }
 
 void BasemgrImpl::Shutdown() {
@@ -154,23 +137,12 @@ void BasemgrImpl::StartSession(bool use_random_id) {
     return;
   }
 
-  // Ownership of the Presenter should be moved to the session shell.
+  // TODO(fxbug.dev/56132): Ownership of the Presenter should be moved to the session shell.
   if (presenter_) {
     presentation_container_ =
         std::make_unique<PresentationContainer>(presenter_.get(), std::move(view_holder_token));
-    presenter_.set_error_handler([this](zx_status_t) { presentation_container_.reset(); });
-  }
-}
-
-void BasemgrImpl::UpdateSessionShellConfig() {
-  auto shell_count = config_.basemgr_config().session_shell_map().size();
-  FX_DCHECK(shell_count > 0);
-
-  config_.basemgr_config().session_shell_map().at(0).config().app_config().Clone(
-      &session_shell_config_);
-  if (shell_count > 1) {
-    FX_LOGS(WARNING) << "More than one session shell config defined, using first in list: "
-                     << session_shell_config_.url();
+    presenter_.set_error_handler(
+        [this](zx_status_t /* unused */) { presentation_container_.reset(); });
   }
 }
 

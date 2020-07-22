@@ -16,6 +16,7 @@
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/bin/basemgr/session_context_impl.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/modular_config/modular_config_accessor.h"
 
 namespace modular {
 
@@ -35,11 +36,10 @@ class SessionProvider {
   //
   // |on_zero_sessions| is invoked when all sessions have been deleted. This is
   // meant to be a callback for BasemgrImpl to start a new session.
-  SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
+  SessionProvider(Delegate* delegate, fuchsia::sys::Launcher* launcher,
                   fuchsia::hardware::power::statecontrol::AdminPtr administrator,
-                  fuchsia::modular::session::AppConfig sessionmgr,
-                  std::unique_ptr<intl::IntlPropertyProviderImpl> intl_property_provider,
-                  fuchsia::modular::session::ModularConfig config,
+                  const modular::ModularConfigAccessor* config_accessor,
+                  intl::IntlPropertyProviderImpl* intl_property_provider,
                   fit::function<void()> on_zero_sessions);
 
   // Starts a new sessionmgr process if there isn't one already. Returns false
@@ -59,10 +59,21 @@ class SessionProvider {
   void RestartSession(fit::function<void()> on_restart_complete);
 
  private:
+  // Returns a a service directory for serving `fuchsia.intl.PropertyProvider` to `sessionmgr`.
+  fuchsia::sys::ServiceListPtr CreateAndServeSessionmgrServices();
+
   Delegate* const delegate_;                // Neither owned nor copied.
   fuchsia::sys::Launcher* const launcher_;  // Not owned.
   fuchsia::hardware::power::statecontrol::AdminPtr administrator_;
-  const fuchsia::modular::session::AppConfig sessionmgr_;
+  const modular::ModularConfigAccessor* const config_accessor_;   // Not owned.
+  intl::IntlPropertyProviderImpl* const intl_property_provider_;  // Not owned.
+  fit::function<void()> on_zero_sessions_;
+
+  std::unique_ptr<SessionContextImpl> session_context_;
+
+  // Service directory from which `fuchsia.intl.PropertyProvider` and others
+  // will be served to child `Sessionmgr`s.
+  vfs::PseudoDir sessionmgr_service_dir_;
 
   // The number of times that session had to be recovered from a crash, during a
   // given timeout. If the count exceed the max retry limit, a device
@@ -71,23 +82,6 @@ class SessionProvider {
 
   // The timestamp of when last crash happened
   zx::time last_crash_time_;
-
-  fit::function<void()> on_zero_sessions_;
-  std::unique_ptr<SessionContextImpl> session_context_;
-
-  // Service directory from which `fuchsia.intl.PropertyProvider` and others
-  // will be served to child `Sessionmgr`s.
-  vfs::PseudoDir sessionmgr_service_dir_;
-  std::unique_ptr<intl::IntlPropertyProviderImpl> intl_property_provider_;
-
-  // A copy of the modular configuration to be served to sessionmgr.
-  fuchsia::modular::session::ModularConfig config_;
-
-  // A directory used to serve configurations to sessionmgr.
-  std::unique_ptr<vfs::PseudoDir> config_dir_;
-
-  // A channel shared with sessionmgr for configurations.
-  zx::channel config_request_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionProvider);
 };

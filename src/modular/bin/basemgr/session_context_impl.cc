@@ -15,7 +15,10 @@
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
+#include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
+#include "src/modular/lib/pseudo_dir/pseudo_dir_utils.h"
 
 namespace modular {
 
@@ -117,13 +120,10 @@ std::string GetStableSessionId() {
 }  // namespace
 
 SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher, bool use_random_id,
-                                       fuchsia::modular::session::AppConfig sessionmgr_config,
-                                       fuchsia::modular::session::AppConfig session_shell_config,
-                                       fuchsia::modular::session::AppConfig story_shell_config,
-                                       bool use_session_shell_for_story_shell_factory,
+                                       fuchsia::modular::session::AppConfig sessionmgr_app_config,
+                                       const modular::ModularConfigAccessor* const config_accessor,
                                        fuchsia::ui::views::ViewToken view_token,
                                        fuchsia::sys::ServiceListPtr additional_services,
-                                       zx::channel config_handle,
                                        GetPresentationCallback get_presentation,
                                        OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
@@ -137,20 +137,21 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher, b
   std::string session_id = use_random_id ? GetRandomSessionId() : GetStableSessionId();
   auto data_origin = GetSessionDirectory(session_id);
 
-  // 1. Create a PseudoDir containing startup.config. This directory will be
-  // injected into sessionmgr's namespace and sessionmgr will read its
-  // configurations from there.
-  auto flat_namespace = MakeConfigNamespace(std::move(config_handle));
+  // 1. Create a PseudoDir containing startup.config. This directory will be injected into
+  // sessionmgr's namespace and sessionmgr will read its configurations from there.
+  auto config_namespace = CreateAndServeConfigNamespace(config_accessor->GetConfigAsJsonString());
 
   // 2. Launch Sessionmgr in the current environment.
   sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher, std::move(sessionmgr_config), data_origin, std::move(additional_services),
-      std::move(flat_namespace));
+      launcher, std::move(sessionmgr_app_config), data_origin, std::move(additional_services),
+      std::move(config_namespace));
 
   // 3. Initialize the Sessionmgr service.
+
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
-  sessionmgr_->Initialize(session_id, std::move(session_shell_config),
-                          std::move(story_shell_config), use_session_shell_for_story_shell_factory,
+  sessionmgr_->Initialize(session_id, CloneStruct(config_accessor->session_shell_app_config()),
+                          CloneStruct(config_accessor->story_shell_app_config()),
+                          config_accessor->use_session_shell_for_story_shell_factory(),
                           session_context_binding_.NewBinding(), std::move(view_token));
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
@@ -168,10 +169,22 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher, b
   });
 }
 
-fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace(zx::channel config_handle) {
+fuchsia::sys::FlatNamespacePtr SessionContextImpl::CreateAndServeConfigNamespace(
+    std::string config_contents) {
+  zx::channel config_request_channel;
+  zx::channel config_dir_channel;
+
+  FX_CHECK(zx::channel::create(0u, &config_request_channel, &config_dir_channel) == ZX_OK);
+
+  // Host the config file in a PseudoDir
+  config_dir_ = modular::MakeFilePathWithContents(modular_config::kStartupConfigFilePath,
+                                                  std::move(config_contents));
+  config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(config_request_channel));
+
   auto flat_namespace = fuchsia::sys::FlatNamespace::New();
   flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
-  flat_namespace->directories.push_back(std::move(config_handle));
+  flat_namespace->directories.push_back(std::move(config_dir_channel));
+
   return flat_namespace;
 }
 

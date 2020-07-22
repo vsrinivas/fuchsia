@@ -9,9 +9,6 @@
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
-#include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
-
-#include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
@@ -22,26 +19,23 @@ namespace modular {
 using intl::IntlPropertyProviderImpl;
 using ShutDownReason = SessionContextImpl::ShutDownReason;
 
-const int kMaxCrashRecoveryLimit = 3;
+static constexpr auto kMaxCrashRecoveryLimit = 3;
 
-const zx::duration kMaxCrashRecoveryDuration = zx::msec(3600 * 1000);  // 1 hour in milliseconds
+static constexpr auto kMaxCrashRecoveryDuration = zx::hour(1);
 
 SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
                                  fuchsia::hardware::power::statecontrol::AdminPtr administrator,
-                                 fuchsia::modular::session::AppConfig sessionmgr,
-                                 std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
-                                 fuchsia::modular::session::ModularConfig config,
+                                 const modular::ModularConfigAccessor* const config_accessor,
+                                 IntlPropertyProviderImpl* const intl_property_provider,
                                  fit::function<void()> on_zero_sessions)
     : delegate_(delegate),
       launcher_(launcher),
       administrator_(std::move(administrator)),
-      sessionmgr_(std::move(sessionmgr)),
-      on_zero_sessions_(std::move(on_zero_sessions)),
-      intl_property_provider_(std::move(intl_property_provider)),
-      config_(std::move(config)) {
+      config_accessor_(config_accessor),
+      intl_property_provider_(intl_property_provider),
+      on_zero_sessions_(std::move(on_zero_sessions)) {
   last_crash_time_ = zx::clock::get_monotonic();
-  // Bind `fuchsia.intl.PropertyProvider` to the implementation instance owned
-  // by this class.
+  // Bind `fuchsia.intl.PropertyProvider` to the implementation instance owned by this class.
   sessionmgr_service_dir_.AddEntry(
       fuchsia::intl::PropertyProvider::Name_,
       std::make_unique<vfs::Service>(intl_property_provider_->GetHandler()));
@@ -54,41 +48,19 @@ bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token, boo
     return false;
   }
 
-  // Set up a service directory for serving `fuchsia.intl.PropertyProvider` to
-  // the `Sessionmgr`.
-  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  sessionmgr_service_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                                dir_handle.NewRequest().TakeChannel());
-  auto services = fuchsia::sys::ServiceList::New();
-  services->names.push_back(fuchsia::intl::PropertyProvider::Name_);
-  services->host_directory = dir_handle.TakeChannel();
+  auto services = CreateAndServeSessionmgrServices();
 
   auto done = [this](SessionContextImpl::ShutDownReason shutdown_reason) {
     OnSessionShutdown(shutdown_reason);
   };
 
-  // Create a config directory
-  // Channel endpoints for hosting an overriden config if using basemgr_launcher.
-  zx::channel client;
-  FX_CHECK(zx::channel::create(0u, &config_request_, &client) == ZX_OK);
-
-  // Host the config file in a PseudoDir
-  auto basemgr = CloneStruct(config_.basemgr_config());
-  auto sessionmgr = CloneStruct(config_.sessionmgr_config());
-  auto config_str = ModularConfigReader::GetConfigAsString(&basemgr, &sessionmgr);
-  auto session_shell =
-      CloneStruct(config_.basemgr_config().session_shell_map().at(0).config().app_config());
-  auto story_shell = CloneStruct(config_.basemgr_config().story_shell().app_config());
-
-  config_dir_ =
-      modular::MakeFilePathWithContents(modular_config::kStartupConfigFilePath, config_str);
-  config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(config_request_));
+  fuchsia::modular::session::AppConfig sessionmgr_app_config;
+  sessionmgr_app_config.set_url(modular_config::kSessionmgrUrl);
 
   // Session context initializes and holds the sessionmgr process.
   session_context_ = std::make_unique<SessionContextImpl>(
-      launcher_, use_random_id, CloneStruct(sessionmgr_), std::move(session_shell),
-      std::move(story_shell), config_.basemgr_config().use_session_shell_for_story_shell_factory(),
-      std::move(view_token), std::move(services), std::move(client),
+      launcher_, use_random_id, std::move(sessionmgr_app_config), config_accessor_,
+      std::move(view_token), std::move(services),
       /* get_presentation= */
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));
@@ -104,8 +76,7 @@ void SessionProvider::Teardown(fit::function<void()> callback) {
     return;
   }
 
-  // Shutdown will execute the given |callback|, then destroy
-  // |session_context_|.
+  // Shutdown will execute the given |callback|, then destroy |session_context_|.
   session_context_->Shutdown(ShutDownReason::CRITICAL_FAILURE, std::move(callback));
 }
 
@@ -151,6 +122,18 @@ void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutd
   };
 
   delete_session_context();
+}
+
+fuchsia::sys::ServiceListPtr SessionProvider::CreateAndServeSessionmgrServices() {
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
+  sessionmgr_service_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                                dir_handle.NewRequest().TakeChannel());
+
+  auto services = fuchsia::sys::ServiceList::New();
+  services->names.push_back(fuchsia::intl::PropertyProvider::Name_);
+  services->host_directory = dir_handle.TakeChannel();
+
+  return services;
 }
 
 }  // namespace modular

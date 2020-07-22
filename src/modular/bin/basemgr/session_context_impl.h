@@ -18,6 +18,7 @@
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
+#include "src/modular/lib/modular_config/modular_config_accessor.h"
 
 namespace modular {
 
@@ -47,13 +48,11 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // |additional_services| are services that will be installed into the
   // Sessionmgr's namespace, including an implementation of
   // `fuchsia.intl.PropertyProvider`.
-  SessionContextImpl(fuchsia::sys::Launcher* const launcher, bool use_random_id,
-                     fuchsia::modular::session::AppConfig sessionmgr_config,
-                     fuchsia::modular::session::AppConfig session_shell_config,
-                     fuchsia::modular::session::AppConfig story_shell_config,
-                     bool use_session_shell_for_story_shell_factory,
+  SessionContextImpl(fuchsia::sys::Launcher* launcher, bool use_random_id,
+                     fuchsia::modular::session::AppConfig sessionmgr_app_config,
+                     const modular::ModularConfigAccessor* config_accessor,
                      fuchsia::ui::views::ViewToken view_token,
-                     fuchsia::sys::ServiceListPtr additional_services, zx::channel config_handle,
+                     fuchsia::sys::ServiceListPtr additional_services,
                      GetPresentationCallback get_presentation,
                      OnSessionShutdownCallback on_session_shutdown);
 
@@ -64,10 +63,12 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   void Shutdown(ShutDownReason reason, fit::function<void()> callback);
 
  private:
-  // Determines where current configurations are being read from, and forwards
-  // that directory into a flat namespace that will be added to sessionmgr's
-  // launch info.
-  fuchsia::sys::FlatNamespacePtr MakeConfigNamespace(zx::channel config_handle);
+  // Creates and serves a PseudoDir that contains a config file with the given contents.
+  //
+  // Returns a FlatNamespace that contains the file inside the overridden Modular config directory.
+  // When sessionmgr is started with this namespace, it can can access the config file at
+  // /config_override/data/startup.config
+  fuchsia::sys::FlatNamespacePtr CreateAndServeConfigNamespace(std::string config_contents);
 
   // |fuchsia::modular::internal::SessionContext|
   void Restart() override;
@@ -83,10 +84,13 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
 
   fidl::Binding<fuchsia::modular::internal::SessionContext> session_context_binding_;
 
-  std::vector<fit::function<void()>> shutdown_callbacks_;
-
   GetPresentationCallback get_presentation_;
   OnSessionShutdownCallback on_session_shutdown_;
+
+  std::vector<fit::function<void()>> shutdown_callbacks_;
+
+  // A directory used to serve the configuration to sessionmgr.
+  std::unique_ptr<vfs::PseudoDir> config_dir_;
 
   fxl::WeakPtrFactory<SessionContextImpl> weak_factory_;
 
