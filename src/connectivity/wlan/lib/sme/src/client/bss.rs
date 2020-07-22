@@ -62,7 +62,7 @@ impl ClientConfig {
         self.is_bss_compatible(left)
             .cmp(&self.is_bss_compatible(right))
             .then(left.get_protection().cmp(&right.get_protection()))
-            .then(get_rx_dbm(left).cmp(&get_rx_dbm(right)))
+            .then(compare_dbm(get_rx_dbm(left), get_rx_dbm(right)))
     }
 
     /// Determines whether a given BSS is compatible with this client SME configuration.
@@ -113,10 +113,17 @@ pub struct BssInfo {
 fn get_rx_dbm(bss: &BssDescription) -> i8 {
     if bss.rcpi_dbmh != 0 {
         (bss.rcpi_dbmh / 2) as i8
-    } else if bss.rssi_dbm != 0 {
-        bss.rssi_dbm
     } else {
-        ::std::i8::MIN
+        bss.rssi_dbm
+    }
+}
+
+fn compare_dbm(left: i8, right: i8) -> Ordering {
+    match (left, right) {
+        (0, 0) => Ordering::Equal,
+        (0, _) => Ordering::Less,
+        (_, 0) => Ordering::Greater,
+        (left, right) => left.cmp(&right),
     }
 }
 
@@ -325,6 +332,18 @@ mod tests {
 
         assert_eq!(2, num_ssid);
     }
+
+    #[test]
+    fn test_compare_dbm() {
+        assert_eq!(compare_dbm(0, -5), Ordering::Less);
+        assert_eq!(compare_dbm(-3, 0), Ordering::Greater);
+        assert_eq!(compare_dbm(0, 0), Ordering::Equal);
+        assert_eq!(compare_dbm(-6, -5), Ordering::Less);
+        assert_eq!(compare_dbm(-3, -4), Ordering::Greater);
+        assert_eq!(compare_dbm(-128, -128), Ordering::Equal);
+    }
+
+    // ======== helper functions below ======== //
 
     fn assert_bss_cmp(
         cfg: &ClientConfig,
