@@ -1,3 +1,6 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 use {
     crate::{
         directory::FatDirectory,
@@ -16,7 +19,7 @@ use {
         cell::UnsafeCell,
         fmt::Debug,
         io::{Read, Seek, Write},
-        sync::Arc,
+        sync::{Arc, RwLock},
     },
     vfs::{
         directory::entry::{DirectoryEntry, EntryInfo},
@@ -61,7 +64,7 @@ fn seek_for_write(file: &mut File<'_>, offset: u64) -> Result<(), Status> {
 /// Represents a single file on the disk.
 pub struct FatFile {
     file: UnsafeCell<FatfsFileRef>,
-    parent: Arc<FatDirectory>,
+    parent: RwLock<Arc<FatDirectory>>,
     filesystem: Arc<FatFilesystem>,
 }
 
@@ -78,18 +81,48 @@ impl FatFile {
         parent: Arc<FatDirectory>,
         filesystem: Arc<FatFilesystem>,
     ) -> Arc<Self> {
-        Arc::new(FatFile { file: UnsafeCell::new(file), parent, filesystem })
+        Arc::new(FatFile { file: UnsafeCell::new(file), parent: RwLock::new(parent), filesystem })
     }
 
     /// Borrow the underlying Fatfs File mutably.
-    fn borrow_file_mut<'a>(&'a self, fs: &'a FatFilesystemInner) -> &'a mut File<'a> {
+    fn borrow_file_mut<'a>(
+        &'a self,
+        fs: &'a FatFilesystemInner,
+    ) -> Result<&'a mut File<'a>, Status> {
         // Safe because the file is protected by the lock on fs.
-        unsafe { self.file.get().as_mut() }.unwrap().borrow_mut(fs)
+        unsafe { self.file.get().as_mut() }.unwrap().borrow_mut(fs).ok_or(Status::UNAVAILABLE)
     }
 
-    fn borrow_file<'a>(&'a self, fs: &'a FatFilesystemInner) -> &'a File<'a> {
+    fn borrow_file<'a>(&'a self, fs: &'a FatFilesystemInner) -> Result<&'a File<'a>, Status> {
         // Safe because the file is protected by the lock on fs.
-        unsafe { self.file.get().as_ref() }.unwrap().borrow(fs)
+        unsafe { self.file.get().as_ref() }.unwrap().borrow(fs).ok_or(Status::UNAVAILABLE)
+    }
+
+    /// Flush to disk and invalidate the reference that's contained within this FatFile.
+    /// Any operations on the file will return Status::UNAVAILABLE until it is re-attached.
+    pub fn detach(&self, fs: &FatFilesystemInner) {
+        // Safe because we hold the fs lock.
+        let file = unsafe { self.file.get().as_mut() }.unwrap();
+        // This causes a flush to disk when the underlying fatfs File is dropped.
+        file.take(fs);
+    }
+
+    /// Attach to the given parent and re-open the underlying `FatfsFileRef` this file represents.
+    pub fn attach(
+        &self,
+        new_parent: Arc<FatDirectory>,
+        name: &str,
+        fs: &FatFilesystemInner,
+    ) -> Result<(), Status> {
+        let mut parent = self.parent.write().unwrap();
+        *parent = new_parent;
+        let entry = parent.find_child(fs, name)?.ok_or(Status::NOT_FOUND)?;
+        // Safe because we have a reference to the FatFilesystem.
+        let file_ref = unsafe { FatfsFileRef::from(entry.to_file()) };
+        // Safe because we hold the fs lock.
+        let file = unsafe { self.file.get().as_mut() }.unwrap();
+        *file = file_ref;
+        Ok(())
     }
 }
 
@@ -117,7 +150,7 @@ impl VfsFile for FatFile {
 
     async fn read_at(&self, offset: u64, count: u64) -> Result<Vec<u8>, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock);
+        let file = self.borrow_file_mut(&fs_lock)?;
 
         let real_offset =
             file.seek(std::io::SeekFrom::Start(offset)).map_err(fatfs_error_to_status)?;
@@ -142,7 +175,7 @@ impl VfsFile for FatFile {
 
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock);
+        let file = self.borrow_file_mut(&fs_lock)?;
         seek_for_write(file, offset)?;
         let mut total_written = 0;
         while total_written < content.len() {
@@ -157,7 +190,7 @@ impl VfsFile for FatFile {
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock);
+        let file = self.borrow_file_mut(&fs_lock)?;
         seek_for_write(file, length)?;
         file.truncate().map_err(fatfs_error_to_status)?;
         Ok(())
@@ -170,7 +203,7 @@ impl VfsFile for FatFile {
 
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file(&fs_lock);
+        let file = self.borrow_file(&fs_lock)?;
         let content_size = file.len() as u64;
         let creation_time = dos_to_unix_time(file.created());
         let modification_time = dos_to_unix_time(file.modified());
@@ -198,7 +231,7 @@ impl VfsFile for FatFile {
     #[allow(deprecated)]
     async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock);
+        let file = self.borrow_file_mut(&fs_lock)?;
 
         let needs_flush = flags
             & (fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME);
@@ -218,7 +251,7 @@ impl VfsFile for FatFile {
 
     async fn get_size(&self) -> Result<u64, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file(&fs_lock);
+        let file = self.borrow_file(&fs_lock)?;
         Ok(file.len() as u64)
     }
 
@@ -228,7 +261,7 @@ impl VfsFile for FatFile {
 
     async fn sync(&self) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock);
+        let file = self.borrow_file_mut(&fs_lock)?;
 
         file.flush().map_err(fatfs_error_to_status)?;
         Ok(())
@@ -272,7 +305,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            directory::FatNode,
+            node::FatNode,
             tests::{TestDiskContents, TestFatDisk},
         },
         fuchsia_async as fasync,

@@ -13,6 +13,7 @@ use {
 mod directory;
 mod file;
 mod filesystem;
+mod node;
 mod refs;
 mod types;
 mod util;

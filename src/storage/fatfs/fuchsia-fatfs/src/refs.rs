@@ -22,8 +22,8 @@ impl FatfsDirRef {
 
     /// Extracts a reference to the wrapped value. The lifetime is restored to
     /// that of _fs.
-    pub fn borrow<'a>(&'a self, _fs: &'a FatFilesystemInner) -> &'a Dir<'a> {
-        self.inner.as_ref().unwrap()
+    pub fn borrow<'a>(&'a self, _fs: &'a FatFilesystemInner) -> Option<&'a Dir<'a>> {
+        self.inner.as_ref()
     }
 
     /// Extracts the wrapped value, restoring its lifetime to that of _fs, and invalidate
@@ -57,18 +57,18 @@ impl FatfsFileRef {
 
     /// Extracts a mutable reference to the wrapped value. The lifetime is restored to
     /// that of _fs.
-    pub fn borrow_mut<'a>(&'a mut self, _fs: &'a FatFilesystemInner) -> &'a mut File<'a> {
+    pub fn borrow_mut<'a>(&'a mut self, _fs: &'a FatFilesystemInner) -> Option<&'a mut File<'a>> {
         // We need to transmute() back to the right lifetime because otherwise rust forces us to
         // return a &'static mut, because it thinks that any references within the file must be to
         // objects with a static lifetime. This isn't the case (because the lifetime is determined
         // by the lock on FatFilesystemInner, which we know is held), so this is safe.
-        unsafe { std::mem::transmute(self.inner.as_mut().unwrap()) }
+        unsafe { std::mem::transmute(self.inner.as_mut()) }
     }
 
     /// Extracts a reference to the wrapped value. The lifetime is restored to that
     /// of _fs.
-    pub fn borrow<'a>(&'a self, _fs: &'a FatFilesystemInner) -> &'a File<'a> {
-        self.inner.as_ref().unwrap()
+    pub fn borrow<'a>(&'a self, _fs: &'a FatFilesystemInner) -> Option<&'a File<'a>> {
+        self.inner.as_ref()
     }
 
     /// Extracts the wrapped value, restoring its lifetime to that of _fs, and invalidate

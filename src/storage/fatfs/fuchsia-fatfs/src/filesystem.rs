@@ -112,18 +112,10 @@ impl FilesystemRename for FatFilesystem {
         let src_name = src_path.peek().unwrap();
         let dst_name = dst_path.peek().unwrap();
 
-        // TODO(simonshields): We currently require there is only one reference to the child.
-        // We should fix this by just moving the Arc<> and updating the parent of the child instead of doing this.
-        match src_dir.cache_get(src_name) {
-            // References to the child still exist, not safe to rename.
-            Some(_) => return Err(Status::UNAVAILABLE),
-            // Not opened by anyone.
-            // TODO(fxb/56009): this is racy - we do not hold the filesystem lock here, so it's
-            // possible that another thread could add the entry to the cache before we acquire the
-            // filesystem lock. More investigation will be required to make sure acquiring the
-            // filesystem lock earlier is safe.
-            None => {}
-        };
+        // Renaming a file to itself is trivial.
+        if Arc::ptr_eq(&src_dir, &dst_dir) && src_name == dst_name {
+            return Ok(());
+        }
 
         let filesystem = self.inner.lock().unwrap();
 
@@ -166,9 +158,40 @@ impl FilesystemRename for FatFilesystem {
             }
         }
 
-        let src_dir = src_dir.borrow_dir(&filesystem);
-        let dst_dir = dst_dir.borrow_dir(&filesystem);
-        src_dir.rename(src_name, &dst_dir, dst_name).map_err(fatfs_error_to_status)?;
+        // We're ready to go: remove the entry from the source cache, and close the reference to
+        // the underlying file (this ensures all pending writes, etc. have been flushed).
+        // We remove the entry with rename() below, and hold the filesystem lock so nothing will
+        // put the entry back in the cache. After renaming we also re-attach the entry to its
+        // parent.
+        let cache_entry = src_dir.remove_child(&filesystem, &src_name);
+
+        // Do the rename.
+        let src_fatfs_dir = src_dir.borrow_dir(&filesystem)?;
+        let dst_fatfs_dir = dst_dir.borrow_dir(&filesystem)?;
+        let result =
+            src_fatfs_dir.rename(src_name, &dst_fatfs_dir, dst_name).map_err(fatfs_error_to_status);
+        if let Err(e) = result {
+            // TODO(fxb/56239): We are potentially serving connections to a node that is no longer
+            // "on" the filesystem at this point.
+            // We need to handle this more gracefully. Ideally we'd change fatfs to make rename
+            // atomic, so there's no risk of this "in-between" state.
+            // Failing that, we should at least make sure that if the src is a directory we
+            // recursively delete all of its children.
+            // For now, we hope that the entry is still there, and if not just give up on it -
+            // the Fat{File,Directory} will return Status::UNAVAILABLE to all requests.
+            if let Some(cache_entry) = cache_entry {
+                src_dir.add_child(&filesystem, src_name.to_owned(), cache_entry)?;
+            }
+            return Err(e);
+        }
+
+        if let Some(cache_entry) = cache_entry {
+            // We just renamed here, and the rename would've failed if there was an
+            // existing entry there.
+            dst_dir
+                .add_child(&filesystem, dst_name.to_owned(), cache_entry)
+                .unwrap_or_else(|e| panic!("Rename failed, but fatfs says it didn't? - {:?}", e));
+        }
         Ok(())
     }
 }
