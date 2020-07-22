@@ -39,9 +39,8 @@ import (
 )
 
 const (
-	netstackTimeout     time.Duration = 1 * time.Minute
-	serialSocketEnvKey                = "FUCHSIA_SERIAL_SOCKET"
-	serialAuxFileEnvKey               = "FUCHSIA_SERIAL_FILE"
+	netstackTimeout    time.Duration = 1 * time.Minute
+	serialSocketEnvKey               = "FUCHSIA_SERIAL_SOCKET"
 )
 
 // Target represents a fuchsia instance.
@@ -201,25 +200,8 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		}
 		eg.Go(func() error {
 			logger.Debugf(ctx, "starting serial collection")
-			// Read and ignore any data from before this task run started.
-			// We need to do this because the serial server starts each
-			// connection at the beginning of the serial log.
-			serialAuxFilePath := os.Getenv(serialAuxFileEnvKey)
-			if serialAuxFilePath == "" {
-				return errors.New("serial mux did not provide aux file path in env")
-			}
-			info, err := os.Stat(serialAuxFilePath)
-			if err != nil {
-				return err
-			}
-			offset := info.Size()
+			// Copy each line from the serial mux to the log file.
 			b := bufio.NewReader(conn)
-			if _, err := io.CopyN(ioutil.Discard, b, offset); err != nil {
-				return err
-			}
-			logger.Debugf(ctx, "forwarding past %d bytes in the serial log file", offset)
-			// Once we're at the right place, copy each line into the
-			// serial log.
 			for {
 				line, err := b.ReadString('\n')
 				if err != nil {
