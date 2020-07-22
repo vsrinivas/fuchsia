@@ -57,6 +57,7 @@ zedboot_binary_patterns = [
   "bin/ps",
   "bin/sh",
   "bin/syscall-check",
+  "bin/threads",
   "bin/umount",
   "bin/unbind",
 

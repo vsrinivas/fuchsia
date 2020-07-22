@@ -169,6 +169,7 @@ zedboot_deps = [
   "//src/storage/fshost",
   "//src/sys/bin/psutils:killall",
   "//src/sys/bin/psutils:ps",
+  "//src/sys/bin/psutils:threads",
   "//src/sys/component_manager:bin",
   "//src/sys/installer:bin",
   "//src/ui/backlight/drivers/ti-lp8556",
