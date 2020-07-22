@@ -175,7 +175,7 @@ function get-device-raw {
   local device=""
   # If DEVICE_NAME was passed in fx -d, use it
   if [[ "${FUCHSIA_DEVICE_NAME+isset}" == "isset" ]]; then
-    if is-remote-workflow-device; then
+    if is-remote-workflow-device && [[ -z "${FX_REMOTE_INVOCATION}" ]]; then
       fx-warn "The -d flag does not work on this end of the remote workflow"
       fx-warn "in order to adjust target devices in teh remote workflow, use"
       fx-warn "-d or fx set-device on the local side of the configuration"
