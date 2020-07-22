@@ -567,8 +567,7 @@ zx_status_t intel_serialio_i2c_set_tx_fifo_threshold(intel_serialio_i2c_device_t
 static void intel_serialio_i2c_unbind(void* ctx) {
   intel_serialio_i2c_device_t* dev = ctx;
   if (dev) {
-    zxlogf(INFO, "intel-i2c: unbind irq_handle %d irq_thread %p", dev->irq_handle,
-           dev->irq_thread);
+    zxlogf(INFO, "intel-i2c: unbind irq_handle %d irq_thread %p", dev->irq_handle, dev->irq_thread);
     if ((dev->irq_handle != ZX_HANDLE_INVALID) && dev->irq_thread) {
       zx_interrupt_destroy(dev->irq_handle);
       thrd_join(dev->irq_thread, NULL);
@@ -807,9 +806,8 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
   // TODO(fxb/56253): Add MMIO_PTR to cast.
   device->regs = (void*)device->mmio.vaddr;
 
-  // set msi irq mode
-  status = pci_set_irq_mode(&pci, ZX_PCIE_IRQ_MODE_LEGACY, 1);
-  if (status < 0) {
+  status = pci_configure_irq_mode(&pci, 1);
+  if (status != ZX_OK) {
     zxlogf(ERROR, "i2c: failed to set irq mode: %d", status);
     goto fail;
   }
