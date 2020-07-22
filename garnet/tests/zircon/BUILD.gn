@@ -5,6 +5,7 @@
 import("//build/config/fuchsia/zircon_images.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
+import("//build/unification/images/common_test_contents.gni")
 
 zircon_extras_manifest("zircon_test_manifest") {
   manifest = "tests"
@@ -14,9 +15,10 @@ zircon_extras_manifest("zircon_test_manifest") {
 package("zircon_tests") {
   __deprecated_system_image = true
   deps = [
-    ":zircon_test_manifest",
-    ":zircon_test_metadata",
-  ]
+           ":zircon_test_manifest",
+           ":zircon_test_metadata",
+           "//build/unification/future/images:legacy_tests",
+         ] + common_test_contents
   extra = get_target_outputs(":zircon_test_manifest")
 }
 

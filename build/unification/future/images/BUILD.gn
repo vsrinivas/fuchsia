@@ -256,8 +256,6 @@ migrated_zbi("bringup") {
   deps += bootfs_manifest_additions
   deps += common_image_contents
   deps += [ "//build/images/bringup:system_package.manifest_args" ]
-  deps += common_test_contents
-  deps += [ ":legacy_tests" ]
   deps += [ ":bringup_devmgr_config" ]
 }
 
