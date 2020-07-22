@@ -16,7 +16,7 @@ mod dhcpv6;
 mod dns;
 mod matchers;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::convert::TryInto as _;
 use std::fs;
 use std::io;
@@ -925,14 +925,15 @@ impl<'a> NetCfg<'a> {
                 return Err(anyhow::anyhow!("multiple WLAN AP interfaces are not supported, have WLAN AP interface with id = {}", id));
             }
 
-            if let Some(state) = self.interface_states.get(&interface_id) {
-                return Err(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a WLAN AP, existing state = {:?}", interface_id, state));
+            match self.interface_states.entry(interface_id) {
+                Entry::Occupied(entry) => {
+                    return Err(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a WLAN AP, existing state = {:?}", entry.key(), entry.get()));
+                }
+                Entry::Vacant(entry) => {
+                    let _: &mut CommonInterfaceState =
+                        entry.insert(CommonInterfaceState::new_wlan_ap());
+                }
             }
-            // We just made sure that we had no state for `interface_id`.
-            matches::assert_matches!(
-                self.interface_states.insert(interface_id, CommonInterfaceState::new_wlan_ap()),
-                None
-            );
 
             info!(
                 "discovered WLAN AP interface with id={}, configuring interface and DHCP server",
@@ -943,14 +944,15 @@ impl<'a> NetCfg<'a> {
                 .configure_wlan_ap_and_dhcp_server(interface_id_u32, config.fidl.name.clone())
                 .await?;
         } else {
-            if let Some(state) = self.interface_states.get(&interface_id) {
-                return Err(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a host, existing state = {:?}", interface_id, state));
+            match self.interface_states.entry(interface_id) {
+                Entry::Occupied(entry) => {
+                    return Err(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a host, existing state = {:?}", entry.key(), entry.get()));
+                }
+                Entry::Vacant(entry) => {
+                    let _: &mut CommonInterfaceState =
+                        entry.insert(CommonInterfaceState::new_host());
+                }
             }
-            // We just made sure that we had no state for `interface_id`.
-            matches::assert_matches!(
-                self.interface_states.insert(interface_id, CommonInterfaceState::new_host()),
-                None
-            );
 
             info!("discovered host interface with id={}, configuring interface", interface_id);
 
@@ -1444,7 +1446,10 @@ mod tests {
 
         // Mock a new interface being discovered by NetCfg (we only need to make NetCfg aware of a
         // NIC with ID `INTERFACE_ID` to test DHCPv6).
-        netcfg.interface_states.insert(INTERFACE_ID.into(), CommonInterfaceState::new_host());
+        matches::assert_matches!(
+            netcfg.interface_states.insert(INTERFACE_ID.into(), CommonInterfaceState::new_host()),
+            None
+        );
 
         // Should start the DHCPv6 client when we get an interface changed event that shows the
         // interface as up with an link-local address.
