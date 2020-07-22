@@ -55,7 +55,6 @@ void AudioRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {
   usage_ = usage;
 }
 
-constexpr auto kRequiredClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
 // If received clock is null, use optimal clock. Otherwise, use this new clock. Fail and disconnect,
 // if the client-submitted clock has insufficient rights (and strip off other rights such as WRITE).
 void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
@@ -74,16 +73,12 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
   zx_status_t status;
   if (ref_clock.is_valid()) {
     // TODO(mpuryear): Client may rate-adjust the clock at any time; we should only use SincSampler
-    //
-    // If ref_clock doesn't have DUPLICATE or READ or TRANSFER rights, return (i.e. shutdown).
-    status = ref_clock.replace(kRequiredClockRights, &ref_clock);
-    if (status != ZX_OK) {
-      FX_PLOGS(WARNING, status) << "Could not set rights on client-submitted reference clock";
-      return;
-    }
-    SetClock(AudioClock::CreateAsCustom(std::move(ref_clock)));
+    status = SetCustomReferenceClock(std::move(ref_clock));
   } else {
-    SetOptimalReferenceClock();
+    status = SetOptimalReferenceClock();
+  }
+  if (status != ZX_OK) {
+    return;
   }
 
   reference_clock_is_set_ = true;

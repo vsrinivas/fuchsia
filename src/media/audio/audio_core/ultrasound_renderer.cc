@@ -25,7 +25,11 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> UltrasoundRenderer::In
     return fit::error(ZX_ERR_BAD_STATE);
   }
 
-  zx::clock reference_clock_out = reference_clock().DuplicateClock();
+  auto result = audio::clock::DuplicateClock(raw_clock());
+  if (!result.is_ok()) {
+    return fit::error(result.error());
+  }
+  zx::clock reference_clock_out = result.take_value();
 
   // Ultrasound renderers require FLOAT samples.
   auto stream_type = format->stream_type();

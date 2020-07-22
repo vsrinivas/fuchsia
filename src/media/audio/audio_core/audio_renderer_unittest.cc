@@ -257,28 +257,59 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
 
 TEST_F(AudioRendererTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(renderer_->reference_clock().is_valid());
+  ASSERT_TRUE(renderer_->raw_clock().is_valid());
 
   clock::testing::VerifyAdvances(fidl_clock);
-  audio_clock_helper::VerifyAdvances(renderer_->reference_clock());
+  clock::testing::VerifyAdvances(renderer_->raw_clock());
 }
 
 TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(renderer_->reference_clock().is_valid());
+  ASSERT_TRUE(renderer_->raw_clock().is_valid());
 
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
 
   // Within audio_core, the default clock is rate-adjustable.
-  audio_clock_helper::VerifyCanBeRateAdjusted(renderer_->reference_clock());
+  clock::testing::VerifyCanBeRateAdjusted(renderer_->raw_clock());
 }
 
 TEST_F(AudioRendererTest, DefaultClockIsClockMonotonic) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(renderer_->reference_clock().is_valid());
+  ASSERT_TRUE(renderer_->raw_clock().is_valid());
 
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
-  audio_clock_helper::VerifyIsSystemMonotonic(renderer_->reference_clock());
+  clock::testing::VerifyIsSystemMonotonic(renderer_->raw_clock());
+}
+
+// The renderer clock is valid, before and after devices are routed.
+TEST_F(AudioRendererTest, ReferenceClockIsCorrectAfterDeviceChange) {
+  auto* renderer_raw = renderer_.get();
+  context().route_graph().AddRenderer(std::move(renderer_));
+  RunLoopUntilIdle();
+
+  auto fidl_clock = GetReferenceClock();
+  ASSERT_TRUE(fidl_clock.is_valid());
+
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  RunLoopUntilIdle();
+  ASSERT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
+
+  auto output = testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                                 &context().link_matrix());
+  context().route_graph().AddDevice(output.get());
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
+  clock::testing::VerifyAdvances(fidl_clock);
+  clock::testing::VerifyIsSystemMonotonic(fidl_clock);
+  clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
+
+  context().route_graph().RemoveDevice(output.get());
+  RunLoopUntilIdle();
+  ASSERT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
+  clock::testing::VerifyAdvances(fidl_clock);
+  clock::testing::VerifyIsSystemMonotonic(fidl_clock);
+  clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
 }
 
 }  // namespace

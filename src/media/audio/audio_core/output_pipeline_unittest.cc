@@ -44,11 +44,9 @@ enum ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 class OutputPipelineTest : public testing::ThreadingModelFixture {
  protected:
   void SetUp() override {
-    client_clock_ = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
-    device_clock_ = AudioClock::CreateAsDeviceStatic(clock::AdjustableCloneOfMonotonic(),
-                                                     AudioClock::kMonotonicDomain);
+    device_clock_ =
+        AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
   }
-
   std::shared_ptr<OutputPipeline> CreateOutputPipeline(
       VolumeCurve volume_curve =
           VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume)) {
@@ -108,6 +106,9 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   zx::time time_until(zx::duration delta) { return zx::time(delta.to_nsecs()); }
   AudioClock SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
                                                   testing::PacketFactory& factory);
+  AudioClock CreateClientClock() {
+    return AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
+  }
 
   void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
     float* floats = reinterpret_cast<float*>(buffer);
@@ -119,7 +120,6 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   void TestOutputPipelineTrim(ClockMode clock_mode);
   void TestDifferentMixRates(ClockMode clock_mode);
 
-  AudioClock client_clock_;
   AudioClock device_clock_;
 };
 
@@ -156,20 +156,23 @@ void OutputPipelineTest::TestOutputPipelineTrim(ClockMode clock_mode) {
   testing::PacketFactory packet_factory3(dispatcher(), kDefaultFormat, PAGE_SIZE);
   testing::PacketFactory packet_factory4(dispatcher(), kDefaultFormat, PAGE_SIZE);
 
-  auto stream1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
-  auto stream2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
-  auto stream3 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+  auto stream1 =
+      std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
+  auto stream2 =
+      std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
+  auto stream3 =
+      std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   std::shared_ptr<PacketQueue> stream4;
 
-  AudioClock custom_audio_clock;
-
   if (clock_mode == ClockMode::SAME) {
-    stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+    stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
-    custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(-3), packet_factory4);
+    AudioClock custom_audio_clock =
+        SetPacketFactoryWithOffsetAudioClock(zx::sec(-3), packet_factory4);
     ASSERT_TRUE(custom_audio_clock.is_valid());
 
-    stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, custom_audio_clock);
+    stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function,
+                                            std::move(custom_audio_clock));
   } else {
     ASSERT_TRUE(clock_mode == ClockMode::RATE_ADJUST) << "Unknown clock mode";
     ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
@@ -556,15 +559,16 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
 
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
   std::shared_ptr<PacketQueue> stream;
-  AudioClock custom_audio_clock;
 
   if (clock_mode == ClockMode::SAME) {
-    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
-    custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(7), packet_factory);
+    AudioClock custom_audio_clock =
+        SetPacketFactoryWithOffsetAudioClock(zx::sec(7), packet_factory);
     ASSERT_TRUE(custom_audio_clock.is_valid());
 
-    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, custom_audio_clock);
+    stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function,
+                                           std::move(custom_audio_clock));
   } else {
     ASSERT_TRUE(clock_mode == ClockMode::RATE_ADJUST) << "Unknown clock mode";
     ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
@@ -725,10 +729,8 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
   ASSERT_TRUE(readonly_clock.is_valid());
   clock::testing::VerifyReadOnlyRights(readonly_clock);
 
-  auto ref_clock =
-      AudioClock::CreateAsDeviceStatic(std::move(readonly_clock), AudioClock::kMonotonicDomain);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, ref_clock);
+                                                       kDefaultTransform, device_clock_);
 
   ASSERT_TRUE(pipeline->reference_clock().is_valid());
   audio_clock_helper::VerifyReadOnlyRights(pipeline->reference_clock());

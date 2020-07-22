@@ -60,7 +60,7 @@ class BaseRenderer : public AudioObject,
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
 
-  AudioClock& reference_clock() { return audio_clock_; }
+  zx::clock& raw_clock() { return raw_clock_; }
 
  protected:
   BaseRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
@@ -92,7 +92,8 @@ class BaseRenderer : public AudioObject,
 
   fidl::Binding<fuchsia::media::AudioRenderer>& binding() { return audio_renderer_binding_; }
 
-  void SetOptimalReferenceClock();
+  zx_status_t SetOptimalReferenceClock();
+  zx_status_t SetCustomReferenceClock(zx::clock ref_clock);
 
   // If custom, audio_core treats this as not-rate-adjustable. If optimal, it will be tuned.
   void SetClock(AudioClock audio_clock) { audio_clock_ = std::move(audio_clock); }
@@ -136,7 +137,11 @@ class BaseRenderer : public AudioObject,
   Packet::Allocator packet_allocator_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
+
   AudioClock audio_clock_;
+  zx::clock raw_clock_;
+  bool client_allows_clock_adjustment_ = true;
+  bool adjustable_clock_is_allocated_ = false;
 };
 
 }  // namespace media::audio

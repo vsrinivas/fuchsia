@@ -40,9 +40,7 @@ FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, std::option
       format_(format),
       usage_(usage),
       packet_factory_(dispatcher, *format, 2 * PAGE_SIZE),
-      link_matrix_(*link_matrix) {
-  ref_clock_ = AudioClock::CreateAsCustom(clock::CloneOfMonotonic());
-}
+      link_matrix_(*link_matrix) {}
 
 void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration,
                                            fit::closure callback) {
@@ -78,7 +76,8 @@ zx::duration FakeAudioRenderer::FindMinLeadTime() {
 
 fit::result<std::shared_ptr<ReadableStream>, zx_status_t> FakeAudioRenderer::InitializeDestLink(
     const AudioObject& dest) {
-  auto queue = std::make_shared<PacketQueue>(*format(), timeline_function_, ref_clock_);
+  auto queue = std::make_shared<PacketQueue>(*format(), timeline_function_,
+                                             AudioClock::CreateAsCustom(clock::CloneOfMonotonic()));
   packet_queues_.insert({&dest, queue});
   return fit::ok(std::move(queue));
 }

@@ -46,16 +46,17 @@ class TapStageTest : public testing::ThreadingModelFixture {
     auto source_timeline_function =
         fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(rate));
 
-    audio_clock_ = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
-
-    packet_queue_ =
-        std::make_shared<PacketQueue>(kDefaultFormat, source_timeline_function, audio_clock_);
+    packet_queue_ = std::make_shared<PacketQueue>(
+        kDefaultFormat, source_timeline_function,
+        AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
     ASSERT_TRUE(packet_queue_);
 
     auto tap_timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(
         TimelineFunction(FractionalFrames<int64_t>(tap_frame_offset_).raw_value(), 0, rate));
+
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(kDefaultFormat, tap_timeline_function,
-                                                            audio_clock_, kRingBufferFrameCount);
+                                                            packet_queue_->reference_clock(),
+                                                            kRingBufferFrameCount);
     ring_buffer_ = std::move(endpoints.reader);
 
     ASSERT_TRUE(ring_buffer_);
@@ -92,8 +93,6 @@ class TapStageTest : public testing::ThreadingModelFixture {
     EXPECT_THAT(arr, Each(FloatEq(expected_sample)));
     buffer->set_is_fully_consumed(release);
   }
-
-  AudioClock audio_clock_;
 
   uint32_t tap_frame_offset_;
   testing::PacketFactory packet_factory_{dispatcher(), kDefaultFormat, 4 * PAGE_SIZE};

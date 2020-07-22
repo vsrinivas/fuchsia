@@ -25,8 +25,6 @@ class PacketQueueTest : public gtest::TestLoopFixture {
     auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
         TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
 
-    audio_clock_ = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
-
     return std::make_unique<PacketQueue>(
         Format::Create({
                            .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
@@ -34,7 +32,8 @@ class PacketQueueTest : public gtest::TestLoopFixture {
                            .frames_per_second = 48000,
                        })
             .take_value(),
-        std::move(one_frame_per_ms), audio_clock_);
+        std::move(one_frame_per_ms),
+        AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
   }
 
   fbl::RefPtr<Packet> CreatePacket(uint32_t payload_buffer_id, int64_t start = 0,
@@ -68,8 +67,6 @@ class PacketQueueTest : public gtest::TestLoopFixture {
   size_t released_packet_count_ = 0;
   std::unordered_map<uint32_t, fbl::RefPtr<RefCountedVmoMapper>> payload_buffers_;
   std::vector<int64_t> released_packets_;
-
-  AudioClock audio_clock_;
 };
 
 TEST_F(PacketQueueTest, PushPacket) {

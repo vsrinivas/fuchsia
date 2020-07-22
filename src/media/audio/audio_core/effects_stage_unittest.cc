@@ -31,10 +31,6 @@ const Format kDefaultFormat =
 
 class EffectsStageTest : public testing::ThreadingModelFixture {
  protected:
-  void SetUp() override {
-    audio_clock_ = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
-  }
-
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
   // is the number of |T| sized elements to skip at the beginning of |ptr|.
   //
@@ -47,8 +43,6 @@ class EffectsStageTest : public testing::ThreadingModelFixture {
 
   testing::TestEffectsModule test_effects_ = testing::TestEffectsModule::Open();
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-
-  AudioClock audio_clock_;
 };
 
 TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
@@ -59,7 +53,9 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
 
-  auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
+  auto stream = std::make_shared<PacketQueue>(
+      kDefaultFormat, timeline_function,
+      AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
   test_effects_.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
@@ -265,7 +261,9 @@ TEST_F(EffectsStageTest, UpdateEffect) {
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
 
-  auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
+  auto stream = std::make_shared<PacketQueue>(
+      kDefaultFormat, timeline_function,
+      AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
   test_effects_.AddEffect("assign_config_size")
@@ -309,7 +307,9 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
-  auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
+  auto stream = std::make_shared<PacketQueue>(
+      kDefaultFormat, timeline_function,
+      AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
 
   // Create the effects stage.
   //
@@ -368,7 +368,9 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
-  auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
+  auto stream = std::make_shared<PacketQueue>(
+      kDefaultFormat, timeline_function,
+      AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
 
   // Create a simple effects stage.
   std::vector<PipelineConfig::Effect> effects;
@@ -408,7 +410,9 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
-  auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, audio_clock_);
+  auto stream = std::make_shared<PacketQueue>(
+      kDefaultFormat, timeline_function,
+      AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
 
   // Create a simple effects stage.
   std::vector<PipelineConfig::Effect> effects;

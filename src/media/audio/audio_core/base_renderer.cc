@@ -67,11 +67,43 @@ void BaseRenderer::Shutdown() {
   payload_buffers_.clear();
 }
 
+// Because a PacketQueue might need to outlive its Renderer, and because (in the future) there could
+// be multiple destinations for a single renderer, we duplicate the raw clock here and send a new
+// AudioClock object to each PacketQueue. If the client is using the optimal clock, then one
+// PacketQueue will receive an AudioClock marked adjustable; otherwise PacketQueues receive
+// AudioClocks that are non-adjustable.
 fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::InitializeDestLink(
     const AudioObject& dest) {
   TRACE_DURATION("audio", "BaseRenderer::InitializeDestLink");
+
+  AudioClock clock_for_packet_queue;
+  if (client_allows_clock_adjustment_ && !adjustable_clock_is_allocated_) {
+    // Retain WRITE, mark AudioClock adjustable, and note that an optimal clock has been provided.
+    zx::clock adjustable_duplicate;
+    auto status = raw_clock().duplicate(ZX_RIGHT_SAME_RIGHTS, &adjustable_duplicate);
+    if (status != ZX_OK) {
+      return fit::error(status);
+    }
+    FX_DCHECK(adjustable_duplicate.is_valid());
+
+    clock_for_packet_queue = AudioClock::CreateAsOptimal(std::move(adjustable_duplicate));
+    adjustable_clock_is_allocated_ = true;
+  } else {
+    // This strips off WRITE rights, which is appropriate for a non-adjustable clock.
+    auto result = audio::clock::DuplicateClock(raw_clock());
+    if (!result.is_ok()) {
+      return fit::error(result.error());
+    }
+
+    zx::clock readable_clock = result.take_value();
+    FX_DCHECK(readable_clock.is_valid());
+
+    clock_for_packet_queue = AudioClock::CreateAsCustom(std::move(readable_clock));
+  }
+
   auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_,
-                                             reference_clock());
+                                             std::move(clock_for_packet_queue));
+
   queue->SetUnderflowReporter([this](zx::duration underflow_duration) {
     REPORT(RendererUnderflow(*this, underflow_duration));
   });
@@ -101,6 +133,11 @@ void BaseRenderer::CleanupDestLink(const AudioObject& dest) {
   // the flush at the end of the mix job when the packet queue buffers are unlocked.
   queue->Flush(PendingFlushToken::Create(context_.threading_model().FidlDomain().dispatcher(),
                                          [self = shared_from_this()] {}));
+  // If this was our one adjustable clock, mark that a new dest link can use it.
+  if (queue->reference_clock().is_adjustable()) {
+    FX_DCHECK(client_allows_clock_adjustment_);
+    adjustable_clock_is_allocated_ = false;
+  }
 }
 
 void BaseRenderer::RecomputeMinLeadTime() {
@@ -494,7 +531,11 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
     // in internal interconnect requirements, but impact should be small since internal lead time
     // factors tend to be small, while external factors can be huge.
 
-    reference_time = reference_clock().Read() + min_lead_time_ + kPaddingForUnspecifiedRefTime;
+    zx::time ref_now;
+    auto status = raw_clock_.read(ref_now.get_address());
+    FX_CHECK(status == ZX_OK) << "Error while reading clock: " << status;
+
+    reference_time = ref_now + min_lead_time_ + kPaddingForUnspecifiedRefTime;
   }
 
   // If no media time was specified, use the first pending packet's media time.
@@ -568,9 +609,11 @@ void BaseRenderer::Pause(PauseCallback callback) {
     return;
   }
 
-  // Update our reference clock to fractional frame transformation, keeping it 1st order continuous.
-  zx_time_t ref_now = reference_clock().Read().get();
+  zx_time_t ref_now;
+  auto status = raw_clock().read(&ref_now);
+  FX_CHECK(status == ZX_OK) << "Error while reading clock: " << status;
 
+  // Update our reference clock to fractional frame transformation, keeping it 1st order continuous.
   pause_time_frac_frames_ =
       FractionalFrames<int64_t>::FromRaw(reference_clock_to_fractional_frames_->Apply(ref_now));
   pause_time_frac_frames_valid_ = true;
@@ -637,15 +680,32 @@ void BaseRenderer::ReportNewMinLeadTime() {
   }
 }
 
-// For now, we supply the optimal clock as the default: we know it is a clone of MONOTONIC.
-// When we switch optimal clock to device clock, the default must still be a clone of MONOTONIC.
-// In long-term, use the optimal clock by default.
-void BaseRenderer::SetOptimalReferenceClock() {
+// Use the optimal clock as the default. This starts as a clone of MONOTONIC.
+zx_status_t BaseRenderer::SetOptimalReferenceClock() {
   TRACE_DURATION("audio", "BaseRenderer::SetOptimalReferenceClock");
 
-  SetClock(AudioClock::CreateAsOptimal(audio::clock::AdjustableCloneOfMonotonic()));
+  raw_clock_ = audio::clock::AdjustableCloneOfMonotonic();
+  if (!raw_clock_.is_valid()) {
+    FX_LOGS(ERROR) << "Default reference clock is not valid";
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-  FX_DCHECK(reference_clock().is_valid()) << "Default reference clock is not valid";
+  client_allows_clock_adjustment_ = true;
+  return ZX_OK;
+}
+
+// Ensure that the clock has appropriate rights.
+// Should also read it here, to ensure everything works?
+zx_status_t BaseRenderer::SetCustomReferenceClock(zx::clock ref_clock) {
+constexpr auto kRequiredClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
+  auto status = ref_clock.replace(kRequiredClockRights, &raw_clock_);
+  if (status != ZX_OK || !raw_clock_.is_valid()) {
+    FX_PLOGS(WARNING, status) << "Could not set rights on client-submitted reference clock";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  client_allows_clock_adjustment_ = false;
+  return ZX_OK;
 }
 
 // Regardless of the source of the reference clock, we can duplicate and return it here.
@@ -656,7 +716,19 @@ void BaseRenderer::GetReferenceClock(GetReferenceClockCallback callback) {
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
-  callback(reference_clock().DuplicateClock());
+  // Regardless of whether raw_clock_ is writable, this strips off the WRITE right.
+  auto result = audio::clock::DuplicateClock(raw_clock_);
+  if (!result.is_ok()) {
+    FX_LOGS(ERROR) << "Could not duplicate reference clock";
+    return;
+  }
+  auto clock = result.take_value();
+  if (!clock.is_valid()) {
+    FX_LOGS(ERROR) << "Duplicate reference clock was invalid";
+    return;
+  }
+
+  callback(std::move(clock));
 
   cleanup.cancel();
 }

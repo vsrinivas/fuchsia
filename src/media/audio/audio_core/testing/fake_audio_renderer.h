@@ -85,8 +85,6 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   LinkMatrix& link_matrix_;
-
-  AudioClock ref_clock_;
 };
 
 }  // namespace media::audio::testing

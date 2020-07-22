@@ -39,11 +39,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
 
  protected:
   void SetUp() {
-    client_clock_ = AudioClock::CreateAsCustom(clock::CloneOfMonotonic());
-
     device_clock_ =
         AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
-
     mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline_function_,
                                             device_clock_);
   }
@@ -65,6 +62,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
     return reinterpret_cast<std::array<T, N>&>(static_cast<T*>(ptr)[offset]);
   }
 
+  AudioClock CreateClientClock() { return AudioClock::CreateAsCustom(clock::CloneOfMonotonic()); }
+
   AudioClock SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
                                                   testing::PacketFactory& factory);
   void TestMixStageTrim(ClockMode clock_mode);
@@ -75,7 +74,6 @@ class MixStageTest : public testing::ThreadingModelFixture {
   std::shared_ptr<MixStage> mix_stage_;
 
   AudioClock device_clock_;
-  AudioClock client_clock_;
 };
 
 // TODO(50004): Add tests to verify we can read from other mix stages with unaligned frames.
@@ -97,10 +95,7 @@ AudioClock MixStageTest::SetPacketFactoryWithOffsetAudioClock(zx::duration clock
       static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
   factory.SeekToFrame(seek_frame);
 
-  auto custom_audio_clock = AudioClock::CreateAsCustom(std::move(custom_clock));
-  EXPECT_TRUE(custom_audio_clock.is_valid());
-
-  return custom_audio_clock;
+  return AudioClock::CreateAsCustom(std::move(custom_clock));
 }
 
 void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
@@ -109,18 +104,19 @@ void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
 
-  AudioClock custom_audio_clock;
   std::shared_ptr<PacketQueue> packet_queue;
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
 
   if (clock_mode == ClockMode::SAME) {
-    packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+    packet_queue =
+        std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
-    custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(-2), packet_factory);
+    AudioClock custom_audio_clock =
+        SetPacketFactoryWithOffsetAudioClock(zx::sec(-2), packet_factory);
     ASSERT_TRUE(custom_audio_clock.is_valid());
 
-    packet_queue =
-        std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, custom_audio_clock);
+    packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function,
+                                                 std::move(custom_audio_clock));
   } else {
     ASSERT_TRUE(clock_mode == ClockMode::RATE_ADJUST) << "Unknown clock mode";
     ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
@@ -177,19 +173,19 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
   testing::PacketFactory packet_factory2(dispatcher(), kDefaultFormat, PAGE_SIZE);
 
   auto packet_queue1 =
-      std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+      std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   std::shared_ptr<PacketQueue> packet_queue2;
 
-  AudioClock custom_audio_clock;
-
   if (clock_mode == ClockMode::SAME) {
-    packet_queue2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+    packet_queue2 =
+        std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
+    AudioClock custom_audio_clock;
     custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(10), packet_factory2);
     ASSERT_TRUE(custom_audio_clock.is_valid());
 
-    packet_queue2 =
-        std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, custom_audio_clock);
+    packet_queue2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function,
+                                                  std::move(custom_audio_clock));
   } else {
     ASSERT_TRUE(clock_mode == ClockMode::RATE_ADJUST) << "Unknown clock mode";
     ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
@@ -300,7 +296,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
 
   // Create a new RingBuffer and add it to our mix stage.
   auto ring_buffer_endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-      kDefaultFormat, timeline_function_, client_clock_, kRingSizeFrames);
+      kDefaultFormat, timeline_function_, device_clock_, kRingSizeFrames);
 
   // We explictly request a SincSampler here to get a non-trivial filter width.
   mix_stage_->AddInput(ring_buffer_endpoints.reader, Mixer::Resampler::WindowedSinc);
@@ -366,16 +362,17 @@ void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
 
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
   std::shared_ptr<PacketQueue> packet_queue;
-  AudioClock custom_audio_clock;
 
   if (clock_mode == ClockMode::SAME) {
-    packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, client_clock_);
+    packet_queue =
+        std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
-    custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(5), packet_factory);
+    AudioClock custom_audio_clock =
+        SetPacketFactoryWithOffsetAudioClock(zx::sec(5), packet_factory);
     ASSERT_TRUE(custom_audio_clock.is_valid());
 
-    packet_queue =
-        std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, custom_audio_clock);
+    packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function,
+                                                 std::move(custom_audio_clock));
   } else {
     ASSERT_TRUE(clock_mode == ClockMode::RATE_ADJUST) << "Unknown clock mode";
     ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
