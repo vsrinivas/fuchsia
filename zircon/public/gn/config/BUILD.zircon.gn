@@ -229,7 +229,7 @@ config("relative_paths") {
   # TODO(BLD-353): After build unification, the definitions in
   # //build/config/BUILD.gn should be sufficient for Zircon.
 
-  if(is_gcc) {
+  if (is_gcc) {
     if (use_goma) {
       # TODO(TC-585): `-fdebug-prefix-map` is also used by Goma to canonicalize
       # build commands, allowing it to reuse compilation results for users running
@@ -262,7 +262,10 @@ config("relative_paths") {
     # on the absolute path of build directory. -fdebug-compilation-dir is
     # designed to address this issue, making both debug info and the compile
     # command itself independent of the absolute path of the build directory.
-    compiler_flags = [ "-fdebug-compilation-dir", "." ]
+    compiler_flags = [
+      "-fdebug-compilation-dir",
+      ".",
+    ]
   }
 
   if (!is_gcc) {
@@ -482,7 +485,7 @@ config("symbol_level") {
   cflags = compiler_flags
   ldflags = compiler_flags
   if (symbol_level > 0 && current_os == "win") {
-    # TODOD: ??? This produces the .pdb file, but it doesn't seem
+    # TODO(55244): This produces the .pdb file, but it doesn't seem
     # to get the DWARF data out of the main output file.
     ldflags += [ "-Wl,/debug:full" ]
   }

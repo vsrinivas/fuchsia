@@ -15,12 +15,6 @@ config("werror") {
   configs = [ "//build/config:werror" ]
 }
 
-config("icf") {
-  # This changes C/C++ semantics and might be incompatible with third-party
-  # code that relies on function pointers comparison.
-  ldflags = [ "-Wl,--icf=all" ]
-}
-
 # ccache, at least in some configurations, caches preprocessed content. This
 # means that by the time the compiler sees it, macros are unrolled. A number
 # of gcc and clang diagnostics are conditioned on whether the source is part

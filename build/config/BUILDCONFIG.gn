@@ -144,6 +144,8 @@ if (current_os == "fuchsia") {
   is_linux = true
 } else if (current_os == "mac") {
   is_mac = true
+} else if (current_os == "win") {
+  is_win = true
 }
 
 # Some library targets may be built as different type depending on the target
@@ -203,9 +205,9 @@ if (is_debug) {
 if (is_fuchsia) {
   default_common_binary_configs += [
     "//build/config/fuchsia:auto_var_init",
-    "//build/config/fuchsia:icf",
     "//build/config/fuchsia:large_rust_stack",
     "//build/config/fuchsia:thread_safety_annotations",
+    "//build/config:icf",
     "//build/config:rust_panic_abort",
 
     # TODO(mcgrathr): Perhaps restrict this to only affected code.
@@ -368,6 +370,8 @@ if (toolchain_variant.with_shared) {
         if (!defined(output_extension)) {
           if (current_os == "mac") {
             output_extension = "dylib"
+          } else if (current_os == "win") {
+            output_extension = "dll"
           } else {
             output_extension = "so"
           }
@@ -453,6 +457,8 @@ if (toolchain_variant.with_shared) {
         if (!defined(output_extension)) {
           if (current_os == "mac") {
             output_extension = "dylib"
+          } else if (current_os == "win") {
+            output_extension = "dll"
           } else {
             output_extension = "so"
           }
@@ -546,7 +552,7 @@ _asan_fuzzer_toolchain_args = {
 
 # Disable identical code folding in fuzzer toolchain variants, since accurate
 # stack traces are most useful under fuzzing than reduced binary sizes.
-_fuzzer_remove_common_configs = [ "//build/config/fuchsia:icf" ]
+_fuzzer_remove_common_configs = [ "//build/config:icf" ]
 
 # Disable warnings about symbols that will be provided by compiler runtimes.
 _fuzzer_remove_shared_configs = [ "//build/config:symbol_no_undefined" ]
@@ -1243,7 +1249,11 @@ template("executable") {
       output_name = target_name
     }
     if (!defined(output_extension)) {
-      output_extension = ""
+      if (current_os == "win") {
+        output_extension = "exe"
+      } else {
+        output_extension = ""
+      }
     }
 
     output_file = "$output_dir/$output_name"
@@ -1364,6 +1374,8 @@ template("loadable_module") {
     if (!defined(output_extension)) {
       if (current_os == "mac") {
         output_extension = "dylib"
+      } else if (current_os == "win") {
+        output_extension = "dll"
       } else {
         output_extension = "so"
       }

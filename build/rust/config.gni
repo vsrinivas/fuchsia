@@ -54,7 +54,8 @@ if (is_fuchsia) {
 
 assert(
     current_os == "mac" || current_os == "linux" || current_os == "fuchsia" ||
-        (current_os == "unknown" && current_cpu == "wasm32"),
+        (current_os == "unknown" && current_cpu == "wasm32") ||
+        current_os == "win",
     "current_os was neither mac, linux, unknown, nor fuchsia")
 assert(
     current_cpu == "x64" || current_cpu == "arm64" || current_cpu == "wasm32")
@@ -62,6 +63,8 @@ if (current_os == "mac") {
   _suffix = "apple-darwin"
 } else if (current_os == "linux") {
   _suffix = "unknown-linux-gnu"
+} else if (current_os == "win") {
+  _suffix = "windows-msvc"
 } else if (current_os == "fuchsia") {
   _suffix = rust_toolchain_triple_suffix
 }

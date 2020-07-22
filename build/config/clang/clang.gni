@@ -30,6 +30,8 @@ if (is_fuchsia) {
   clang_target = "${clang_cpu}-apple-darwin"
 } else if (current_cpu == "wasm32" && current_os == "unknown") {
   clang_target = "${clang_cpu}-unknown-unknown"
+} else if (current_os == "win") {
+  clang_target = "${clang_cpu}-windows-msvc"
 } else {
   assert(false, "OS not supported")
 }

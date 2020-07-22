@@ -168,6 +168,20 @@ config("relative_paths") {
   asmflags = cflags
   ldflags = cflags
 
+  if (current_os == "win") {
+    ldflags += [
+      # This embeds just "name.pdb" in the binary instead of the absolute
+      # path to the PDB file.
+      "-Wl,/pdbaltpath:%_PDB%",
+
+      # This embeds a fake Windows-style absolute path rather than the real
+      # build-time absolute path in the PDB file.  Windows apparently
+      # requires an absolute path here, so we use an arbitrary fake one for
+      # reproducibility.
+      "-Wl,/pdbsourcepath:c:\\src",
+    ]
+  }
+
   rustflags = [
     "--remap-path-prefix",
     rebase_path("//") + "=" + rebase_path("//", root_build_dir),
@@ -221,6 +235,8 @@ config("linker_gc") {
   ldflags = cflags
   if (current_os == "mac") {
     ldflags += [ "-Wl,-dead_strip" ]
+  } else if (current_os == "win") {
+    ldflags += [ "-Wl,/opt:ref" ]
   } else {
     ldflags += [ "-Wl,--gc-sections" ]
   }
@@ -366,6 +382,11 @@ config("default_symbols") {
     configs = [ ":symbols" ]
   } else {
     assert(symbol_level >= 0 && symbol_level <= 2)
+  }
+  if (symbol_level > 0 && current_os == "win") {
+    # TODO(55244): This produces the .pdb file, but it doesn't seem
+    # to get the DWARF data out of the main output file.
+    ldflags = [ "-Wl,/debug:full" ]
   }
 }
 
@@ -538,4 +559,17 @@ config("no_sanitizers") {
     "-fsanitize-coverage=0",
   ]
   configs = [ ":no_stack_protector" ]
+}
+
+# IMPORTANT: Keep the configs below in sync with //zircon/public/gn/config/BUILD.zircon.gn
+# TODO(54322): Remove above comment after build unification.
+
+config("icf") {
+  # This changes C/C++ semantics and might be incompatible with third-party
+  # code that relies on function pointers comparison.
+  if (current_os == "win") {
+    ldflags = [ "-Wl,/opt:icf=all" ]
+  } else {
+    ldflags = [ "-Wl,--icf=all" ]
+  }
 }
