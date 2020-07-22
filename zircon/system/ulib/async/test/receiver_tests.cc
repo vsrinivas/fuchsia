@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-testing/dispatcher_stub.h>
 #include <lib/async/cpp/receiver.h>
 
-#include <lib/async-testing/dispatcher_stub.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -71,9 +71,7 @@ class MethodHarness : public Harness {
   async::ReceiverMethod<Harness, &Harness::Handler> receiver_{this};
 };
 
-bool receiver_set_handler_test() {
-  BEGIN_TEST;
-
+TEST(ReceiverTests, receiver_set_handler_test) {
   {
     async::Receiver receiver;
     EXPECT_FALSE(receiver.has_handler());
@@ -88,14 +86,10 @@ bool receiver_set_handler_test() {
                                 zx_status_t status, const zx_packet_user_t* data) {});
     EXPECT_TRUE(receiver.has_handler());
   }
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool receiver_queue_packet_test() {
-  BEGIN_TEST;
-
+void receiver_queue_packet_test() {
   const zx_packet_user_t dummy_data{};
   MockDispatcher dispatcher;
   Harness harness;
@@ -130,14 +124,10 @@ bool receiver_queue_packet_test() {
   EXPECT_EQ(MockDispatcher::Op::QUEUE_PACKET, dispatcher.last_op);
   EXPECT_EQ(&dummy_data, dispatcher.last_data);
   EXPECT_FALSE(harness.handler_ran);
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool receiver_run_handler_test() {
-  BEGIN_TEST;
-
+void receiver_run_handler_test() {
   const zx_packet_user_t dummy_data{};
   MockDispatcher dispatcher;
   Harness harness;
@@ -158,13 +148,9 @@ bool receiver_run_handler_test() {
   EXPECT_EQ(&harness.receiver(), harness.last_receiver);
   EXPECT_EQ(ZX_OK, harness.last_status);
   EXPECT_EQ(&dummy_data, harness.last_data);
-
-  END_TEST;
 }
 
-bool unsupported_queue_packet_test() {
-  BEGIN_TEST;
-
+TEST(ReceiverTests, unsupported_queue_packet_test) {
   async::DispatcherStub dispatcher;
   async_receiver_t receiver{};
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_queue_packet(&dispatcher, &receiver, nullptr),
@@ -172,17 +158,22 @@ bool unsupported_queue_packet_test() {
   zx_packet_user_t data;
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_queue_packet(&dispatcher, &receiver, &data),
             "valid args with data");
-
-  END_TEST;
 }
 
 }  // namespace
 
-BEGIN_TEST_CASE(receiver_tests)
-RUN_TEST(receiver_set_handler_test)
-RUN_TEST((receiver_queue_packet_test<LambdaHarness>))
-RUN_TEST((receiver_queue_packet_test<MethodHarness>))
-RUN_TEST((receiver_run_handler_test<LambdaHarness>))
-RUN_TEST((receiver_run_handler_test<MethodHarness>))
-RUN_TEST(unsupported_queue_packet_test)
-END_TEST_CASE(receiver_tests)
+TEST(ReceiverTests, receiver_queue_packet_test_LambdaHarness) {
+  receiver_queue_packet_test<LambdaHarness>();
+}
+
+TEST(ReceiverTests, receiver_queue_packet_test_MethodHarness) {
+  receiver_queue_packet_test<MethodHarness>();
+}
+
+TEST(ReceiverTests, receiver_run_handler_test_LambdaHarness) {
+  receiver_run_handler_test<LambdaHarness>();
+}
+
+TEST(ReceiverTests, receiver_run_handler_test_MethodHarness) {
+  receiver_run_handler_test<MethodHarness>();
+}

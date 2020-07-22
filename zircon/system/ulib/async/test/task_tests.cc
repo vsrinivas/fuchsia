@@ -4,7 +4,8 @@
 
 #include <lib/async-testing/dispatcher_stub.h>
 #include <lib/async/cpp/task.h>
-#include <unittest/unittest.h>
+
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -104,9 +105,7 @@ class ClosureMethodHarness : public Harness {
   async::TaskClosureMethod<Harness, &Harness::ClosureHandler> task_{this};
 };
 
-bool task_set_handler_test() {
-  BEGIN_TEST;
-
+TEST(TaskTests, task_set_handler_test) {
   {
     async::Task task;
     EXPECT_FALSE(task.has_handler());
@@ -123,13 +122,9 @@ bool task_set_handler_test() {
     EXPECT_FALSE(task.is_pending());
     EXPECT_EQ(zx::time::infinite().get(), task.last_deadline().get());
   }
-
-  END_TEST;
 }
 
-bool task_closure_set_handler_test() {
-  BEGIN_TEST;
-
+TEST(TaskTests, task_closure_set_handler_test) {
   {
     async::TaskClosure task;
     EXPECT_FALSE(task.has_handler());
@@ -146,14 +141,10 @@ bool task_closure_set_handler_test() {
     EXPECT_FALSE(task.is_pending());
     EXPECT_EQ(zx::time::infinite().get(), task.last_deadline().get());
   }
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool task_post_test() {
-  BEGIN_TEST;
-
+void task_post_test() {
   MockDispatcher dispatcher;
 
   {
@@ -185,14 +176,10 @@ bool task_post_test() {
     EXPECT_FALSE(harness.handler_ran);
   }
   EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool task_post_delayed_test() {
-  BEGIN_TEST;
-
+void task_post_delayed_test() {
   MockDispatcher dispatcher;
 
   {
@@ -224,14 +211,10 @@ bool task_post_delayed_test() {
     EXPECT_FALSE(harness.handler_ran);
   }
   EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool task_post_for_time_test() {
-  BEGIN_TEST;
-
+void task_post_for_time_test() {
   MockDispatcher dispatcher;
 
   {
@@ -263,14 +246,10 @@ bool task_post_for_time_test() {
     EXPECT_FALSE(harness.handler_ran);
   }
   EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool task_cancel_test() {
-  BEGIN_TEST;
-
+void task_cancel_test() {
   MockDispatcher dispatcher;
 
   {
@@ -295,14 +274,10 @@ bool task_cancel_test() {
     EXPECT_FALSE(harness.task().is_pending());
   }
   EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool task_run_handler_test() {
-  BEGIN_TEST;
-
+void task_run_handler_test() {
   MockDispatcher dispatcher;
 
   // success status
@@ -354,55 +329,70 @@ bool task_run_handler_test() {
     EXPECT_FALSE(harness.task().is_pending());
   }
   EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
-
-  END_TEST;
 }
 
-bool unsupported_post_task_test() {
-  BEGIN_TEST;
-
+TEST(TaskTests, unsupported_post_task_test) {
   async::DispatcherStub dispatcher;
   async_task_t task{};
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_post_task(&dispatcher, &task), "valid args");
-
-  END_TEST;
 }
 
-bool unsupported_cancel_task_test() {
-  BEGIN_TEST;
-
+TEST(TaskTests, unsupported_cancel_task_test) {
   async::DispatcherStub dispatcher;
   async_task_t task{};
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_cancel_task(&dispatcher, &task), "valid args");
-
-  END_TEST;
 }
 
 }  // namespace
 
-BEGIN_TEST_CASE(task_tests)
-RUN_TEST(task_set_handler_test)
-RUN_TEST(task_closure_set_handler_test)
-RUN_TEST((task_post_test<LambdaHarness>))
-RUN_TEST((task_post_test<MethodHarness>))
-RUN_TEST((task_post_test<ClosureLambdaHarness>))
-RUN_TEST((task_post_test<ClosureMethodHarness>))
-RUN_TEST((task_post_delayed_test<LambdaHarness>))
-RUN_TEST((task_post_delayed_test<MethodHarness>))
-RUN_TEST((task_post_delayed_test<ClosureLambdaHarness>))
-RUN_TEST((task_post_delayed_test<ClosureMethodHarness>))
-RUN_TEST((task_post_for_time_test<LambdaHarness>))
-RUN_TEST((task_post_for_time_test<MethodHarness>))
-RUN_TEST((task_post_for_time_test<ClosureLambdaHarness>))
-RUN_TEST((task_post_for_time_test<ClosureMethodHarness>))
-RUN_TEST((task_cancel_test<LambdaHarness>))
-RUN_TEST((task_cancel_test<MethodHarness>))
-RUN_TEST((task_cancel_test<ClosureLambdaHarness>))
-RUN_TEST((task_cancel_test<ClosureMethodHarness>))
-RUN_TEST((task_run_handler_test<LambdaHarness>))
-RUN_TEST((task_run_handler_test<MethodHarness>))
-RUN_TEST((task_run_handler_test<ClosureLambdaHarness>))
-RUN_TEST((task_run_handler_test<ClosureMethodHarness>))
-RUN_TEST(unsupported_post_task_test)
-RUN_TEST(unsupported_cancel_task_test)
-END_TEST_CASE(task_tests)
+TEST(TaskTests, task_post_test_LambdaHarness) { task_post_test<LambdaHarness>(); }
+
+TEST(TaskTests, task_post_test_MethodHarness) { task_post_test<MethodHarness>(); }
+
+TEST(TaskTests, task_post_test_ClosureLambdaHarness) { task_post_test<ClosureLambdaHarness>(); }
+
+TEST(TaskTests, task_post_test_ClosureMethodHarness) { task_post_test<ClosureMethodHarness>(); }
+
+TEST(TaskTests, task_post_delayed_test_LambdaHarness) { task_post_delayed_test<LambdaHarness>(); }
+
+TEST(TaskTests, task_post_delayed_test_MethodHarness) { task_post_delayed_test<MethodHarness>(); }
+
+TEST(TaskTests, task_post_delayed_test_ClosureLambdaHarness) {
+  task_post_delayed_test<ClosureLambdaHarness>();
+}
+
+TEST(TaskTests, task_post_delayed_test_ClosureMethodHarness) {
+  task_post_delayed_test<ClosureMethodHarness>();
+}
+
+TEST(TaskTests, task_post_for_time_test_LambdaHarness) { task_post_for_time_test<LambdaHarness>(); }
+
+TEST(TaskTests, task_post_for_time_test_MethodHarness) { task_post_for_time_test<MethodHarness>(); }
+
+TEST(TaskTests, task_post_for_time_test_ClosureLambdaHarness) {
+  task_post_for_time_test<ClosureLambdaHarness>();
+}
+
+TEST(TaskTests, task_post_for_time_test_ClosureMethodHarness) {
+  task_post_for_time_test<ClosureMethodHarness>();
+}
+
+TEST(TaskTests, task_cancel_test_LambdaHarness) { task_cancel_test<LambdaHarness>(); }
+
+TEST(TaskTests, task_cancel_test_MethodHarness) { task_cancel_test<MethodHarness>(); }
+
+TEST(TaskTests, task_cancel_test_ClosureLambdaHarness) { task_cancel_test<ClosureLambdaHarness>(); }
+
+TEST(TaskTests, task_cancel_test_ClosureMethodHarness) { task_cancel_test<ClosureMethodHarness>(); }
+
+TEST(TaskTests, task_run_handler_test_LambdaHarness) { task_run_handler_test<LambdaHarness>(); }
+
+TEST(TaskTests, task_run_handler_test_MethodHarness) { task_run_handler_test<MethodHarness>(); }
+
+TEST(TaskTests, task_run_handler_test_ClosureLambdaHarness) {
+  task_run_handler_test<ClosureLambdaHarness>();
+}
+
+TEST(TaskTests, task_run_handler_test_ClosureMethodHarness) {
+  task_run_handler_test<ClosureMethodHarness>();
+}

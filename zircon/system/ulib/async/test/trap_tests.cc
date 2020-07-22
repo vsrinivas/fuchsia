@@ -4,7 +4,8 @@
 
 #include <lib/async-testing/dispatcher_stub.h>
 #include <lib/async/cpp/trap.h>
-#include <unittest/unittest.h>
+
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -71,9 +72,7 @@ class MethodHarness : public Harness {
   async::GuestBellTrapMethod<Harness, &Harness::Handler> trap_{this};
 };
 
-bool guest_bell_trap_set_handler_test() {
-  BEGIN_TEST;
-
+TEST(TrapTests, guest_bell_trap_set_handler_test) {
   {
     async::GuestBellTrap trap;
     EXPECT_FALSE(trap.has_handler());
@@ -88,14 +87,10 @@ bool guest_bell_trap_set_handler_test() {
                                  zx_status_t status, const zx_packet_guest_bell_t* bell) {});
     EXPECT_TRUE(trap.has_handler());
   }
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool guest_bell_trap_test() {
-  BEGIN_TEST;
-
+void guest_bell_trap_test() {
   MockDispatcher dispatcher;
   Harness harness;
 
@@ -110,14 +105,10 @@ bool guest_bell_trap_test() {
   EXPECT_EQ(&harness.trap(), harness.last_trap);
   EXPECT_EQ(ZX_OK, harness.last_status);
   EXPECT_EQ(&dummy_bell, harness.last_bell);
-
-  END_TEST;
 }
 
 }  // namespace
 
-BEGIN_TEST_CASE(trap_tests)
-RUN_TEST(guest_bell_trap_set_handler_test)
-RUN_TEST((guest_bell_trap_test<LambdaHarness>))
-RUN_TEST((guest_bell_trap_test<MethodHarness>))
-END_TEST_CASE(trap_tests)
+TEST(TrapTests, guest_bell_trap_test_LambdaHarness) { guest_bell_trap_test<LambdaHarness>(); }
+
+TEST(TrapTests, guest_bell_trap_test_MethodHarness) { guest_bell_trap_test<MethodHarness>(); }

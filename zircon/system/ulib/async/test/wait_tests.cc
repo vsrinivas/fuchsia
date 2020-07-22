@@ -5,7 +5,7 @@
 #include <lib/async-testing/dispatcher_stub.h>
 #include <lib/async/cpp/wait.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -131,9 +131,7 @@ class MethodHarness : public Harness {
   async::WaitMethod<Harness, &Harness::Handler> wait_;
 };
 
-bool wait_set_handler_test() {
-  BEGIN_TEST;
-
+TEST(WaitTests, wait_set_handler_test) {
   {
     async::Wait wait;
     EXPECT_FALSE(wait.has_handler());
@@ -151,14 +149,10 @@ bool wait_set_handler_test() {
     EXPECT_TRUE(wait.has_handler());
     EXPECT_FALSE(wait.is_pending());
   }
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool wait_properties_test() {
-  BEGIN_TEST;
-
+void wait_properties_test() {
   Harness harness;
 
   EXPECT_EQ(ZX_HANDLE_INVALID, harness.wait().object());
@@ -172,14 +166,10 @@ bool wait_properties_test() {
   EXPECT_EQ(0, harness.wait().options());
   harness.wait().set_options(dummy_options);
   EXPECT_EQ(dummy_options, harness.wait().options());
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool wait_begin_test() {
-  BEGIN_TEST;
-
+void wait_begin_test() {
   MockDispatcher dispatcher;
 
   {
@@ -214,14 +204,10 @@ bool wait_begin_test() {
     EXPECT_FALSE(harness.handler_ran);
   }
   EXPECT_EQ(MockDispatcher::Op::BEGIN_WAIT, dispatcher.last_op);
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool wait_cancel_test() {
-  BEGIN_TEST;
-
+void wait_cancel_test() {
   MockDispatcher dispatcher;
 
   {
@@ -246,14 +232,10 @@ bool wait_cancel_test() {
     EXPECT_FALSE(harness.wait().is_pending());
   }
   EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
-
-  END_TEST;
 }
 
 template <typename Harness>
-bool wait_run_handler_test() {
-  BEGIN_TEST;
-
+void wait_run_handler_test() {
   MockDispatcher dispatcher;
 
   {
@@ -280,46 +262,46 @@ bool wait_run_handler_test() {
     EXPECT_EQ(harness.wait_retains_handler(), harness.wait_has_handler());
   }
   EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
-
-  END_TEST;
 }
 
-bool unsupported_begin_wait_test() {
-  BEGIN_TEST;
-
+TEST(WaitTests, unsupported_begin_wait_test) {
   async::DispatcherStub dispatcher;
   async_wait_t wait{};
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_begin_wait(&dispatcher, &wait), "valid args");
-
-  END_TEST;
 }
 
-bool unsupported_cancel_wait_test() {
-  BEGIN_TEST;
-
+TEST(WaitTests, unsupported_cancel_wait_test) {
   async::DispatcherStub dispatcher;
   async_wait_t wait{};
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_cancel_wait(&dispatcher, &wait), "valid args");
-
-  END_TEST;
 }
 
 }  // namespace
 
-BEGIN_TEST_CASE(wait_tests)
-RUN_TEST(wait_set_handler_test)
-RUN_TEST((wait_properties_test<LambdaHarness>))
-RUN_TEST((wait_properties_test<LambdaOnceHarness>))
-RUN_TEST((wait_properties_test<MethodHarness>))
-RUN_TEST((wait_begin_test<LambdaHarness>))
-RUN_TEST((wait_begin_test<LambdaOnceHarness>))
-RUN_TEST((wait_begin_test<MethodHarness>))
-RUN_TEST((wait_cancel_test<LambdaHarness>))
-RUN_TEST((wait_cancel_test<LambdaOnceHarness>))
-RUN_TEST((wait_cancel_test<MethodHarness>))
-RUN_TEST((wait_run_handler_test<LambdaHarness>))
-RUN_TEST((wait_run_handler_test<LambdaOnceHarness>))
-RUN_TEST((wait_run_handler_test<MethodHarness>))
-RUN_TEST(unsupported_begin_wait_test)
-RUN_TEST(unsupported_cancel_wait_test)
-END_TEST_CASE(wait_tests)
+TEST(WaitTests, wait_properties_test_LambdaHarness) { wait_properties_test<LambdaHarness>(); }
+
+TEST(WaitTests, wait_properties_test_LambdaOnceHarness) {
+  wait_properties_test<LambdaOnceHarness>();
+}
+
+TEST(WaitTests, wait_properties_test_MethodHarness) { wait_properties_test<MethodHarness>(); }
+
+TEST(WaitTests, wait_begin_test_LambdaHarness) { wait_begin_test<LambdaHarness>(); }
+
+TEST(WaitTests, wait_begin_test_LambdaOnceHarness) { wait_begin_test<LambdaOnceHarness>(); }
+
+TEST(WaitTests, wait_begin_test_MethodHarness) { wait_begin_test<MethodHarness>(); }
+
+TEST(WaitTests, wait_cancel_test_LambdaHarness) { wait_cancel_test<LambdaHarness>(); }
+
+TEST(WaitTests, wait_cancel_test_LambdaOnceHarness) { wait_cancel_test<LambdaOnceHarness>(); }
+
+TEST(WaitTests, wait_cancel_test_MethodHarness) { wait_cancel_test<MethodHarness>(); }
+
+TEST(WaitTests, wait_run_handler_test_LambdaHarness) { wait_run_handler_test<LambdaHarness>(); }
+
+TEST(WaitTests, wait_run_handler_test_LambdaOnceHarness) {
+  wait_run_handler_test<LambdaOnceHarness>();
+}
+
+TEST(WaitTests, wait_run_handler_test_MethodHarness) { wait_run_handler_test<MethodHarness>(); }
