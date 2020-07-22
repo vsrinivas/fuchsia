@@ -53,34 +53,37 @@ fn main() -> Result<(), Error> {
         Arc::new(OauthOpenIdConnect::<_, UtcClock>::new(http_client.clone()));
     fs.dir("svc").add_fidl_service(move |stream| {
         let oauth_open_id_connect_clone = Arc::clone(&oauth_open_id_connect);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             oauth_open_id_connect_clone
                 .handle_requests_from_stream(stream)
                 .await
                 .unwrap_or_else(|e| error!("Error handling OauthOpenIdConnect channel: {:?}", e));
-        });
+        })
+        .detach();
     });
 
     let oauth = Arc::new(Oauth::<_, _, UtcClock>::new(frame_supplier, http_client));
     fs.dir("svc").add_fidl_service(move |stream| {
         let oauth_clone = Arc::clone(&oauth);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             oauth_clone
                 .handle_requests_from_stream(stream)
                 .await
                 .unwrap_or_else(|e| error!("Error handling Oauth channel: {:?}", e));
-        });
+        })
+        .detach();
     });
 
     let open_id_connect = Arc::new(OpenIdConnect::new());
     fs.dir("svc").add_fidl_service(move |stream| {
         let open_id_connect_clone = Arc::clone(&open_id_connect);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             open_id_connect_clone
                 .handle_requests_from_stream(stream)
                 .await
                 .unwrap_or_else(|e| error!("Error handling OpenIdConnect channel: {:?}", e));
-        });
+        })
+        .detach();
     });
 
     fs.take_and_serve_directory_handle()?;

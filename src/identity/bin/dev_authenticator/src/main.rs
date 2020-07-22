@@ -35,13 +35,14 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mechanism = StorageUnlockMechanism::new(mode);
             mechanism
                 .handle_requests_from_stream(stream)
                 .await
                 .unwrap_or_else(|e| error!("Error handling storage unlock stream: {:?}", e));
-        });
+        })
+        .detach();
     });
 
     fs.take_and_serve_directory_handle().expect("Failed to serve directory");

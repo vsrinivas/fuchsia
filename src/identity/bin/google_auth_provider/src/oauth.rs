@@ -480,12 +480,13 @@ mod test {
             http_client.unwrap_or(TestHttpClient::with_error(ApiError::UnsupportedOperation));
 
         let oauth = Oauth::<_, _, FixedClock>::new(frame_supplier, http);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             oauth
                 .handle_requests_from_stream(oauth_request_stream)
                 .await
                 .expect("Error handling AuthProvider channel");
-        });
+        })
+        .detach();
 
         oauth_proxy
     }
@@ -493,7 +494,8 @@ mod test {
     fn get_authentication_ui_context() -> ClientEnd<AuthenticationUiContextMarker> {
         let (client, mut stream) = create_request_stream::<AuthenticationUiContextMarker>()
             .expect("Failed to create authentication UI context stream");
-        fasync::spawn(async move { while let Some(_) = stream.try_next().await.unwrap() {} });
+        fasync::Task::spawn(async move { while let Some(_) = stream.try_next().await.unwrap() {} })
+            .detach();
         client
     }
 

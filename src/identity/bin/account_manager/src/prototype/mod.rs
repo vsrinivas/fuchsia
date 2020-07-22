@@ -32,11 +32,12 @@ pub fn publish_account_transfer_control(fs: &mut ServiceFs<ServiceObj<'_, ()>>) 
     let transfer_control = Arc::new(AccountTransferControl::new());
     fs.dir("svc").dir("debug").add_fidl_service(move |stream| {
         let transfer_control_clone = Arc::clone(&transfer_control);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             transfer_control_clone.handle_requests_from_stream(stream).await.unwrap_or_else(|e| {
                 error!("Error handling AccountTransferControl channel: {:?}", e)
             })
-        });
+        })
+        .detach();
     });
 }
 
@@ -46,11 +47,12 @@ pub fn publish_account_manager_peer_to_overnet() -> Result<(), Error> {
     let (client, stream) = create_request_stream::<ServiceProviderMarker>()?;
     overnet_service_publisher.publish_service(AccountManagerPeerMarker::NAME, client)?;
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         handle_overnet_connection_requests(stream)
             .await
             .unwrap_or_else(|e| error!("Error serving Overnet ServiceProvider: {:?}", e));
-    });
+    })
+    .detach();
     Ok(())
 }
 
@@ -67,12 +69,13 @@ async fn handle_overnet_connection_requests(
         let account_manager_peer_clone = Arc::clone(&account_manager_peer);
         let chan = fasync::Channel::from_channel(chan)?;
         let stream = AccountManagerPeerRequestStream::from_channel(chan);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             account_manager_peer_clone
                 .handle_requests_from_stream(stream)
                 .await
                 .unwrap_or_else(|e| error!("Error serving AccountManagerPeer: {:?}", e));
-        });
+        })
+        .detach();
     }
     Ok(())
 }

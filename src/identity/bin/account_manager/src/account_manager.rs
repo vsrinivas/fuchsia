@@ -442,12 +442,13 @@ mod tests {
         let account_manager_arc = Arc::new(account_manager);
         let account_manager_clone = Arc::clone(&account_manager_arc);
         // TODO(fxb/39745): Migrate off of fuchsia_async::spawn.
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             account_manager_clone
                 .handle_requests_from_stream(request_stream)
                 .await
                 .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
-        });
+        })
+        .detach();
 
         executor
             .run_singlethreaded(test_fn(proxy, account_manager_arc))

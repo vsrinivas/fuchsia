@@ -119,7 +119,7 @@ mod tests {
         server_end: ServerEnd<AccountHandlerContextMarker>,
         mut result: Result<(), fidl_fuchsia_identity_account::Error>,
     ) {
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut request_stream = server_end.into_stream().unwrap();
             // Only respond to the first received message, only when its of the intended type.
             if let Ok(Some(AccountHandlerContextRequest::GetOauth {
@@ -132,7 +132,8 @@ mod tests {
                     responder.send(&mut result).expect("Failed to send test response");
                 }
             }
-        });
+        })
+        .detach();
     }
 
     #[test]

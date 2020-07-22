@@ -115,12 +115,13 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
         }
         fs_for_account_handler.add_fidl_service(move |stream| {
             let context_clone = context.clone();
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 context_clone
                     .handle_requests_from_stream(stream)
                     .await
                     .unwrap_or_else(|err| error!("Error handling AccountHandlerContext: {:?}", err))
-            });
+            })
+            .detach();
         });
         let (env_controller, app) = fs_for_account_handler
             .launch_component_in_nested_environment(
@@ -130,7 +131,7 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
             )
             .context("Failed to start launcher")
             .account_manager_error(ApiError::Resource)?;
-        fasync::spawn(fs_for_account_handler.collect());
+        fasync::Task::spawn(fs_for_account_handler.collect()).detach();
         let proxy = app
             .connect_to_service::<AccountHandlerControlMarker>()
             .context("Failed to connect to AccountHandlerControl")

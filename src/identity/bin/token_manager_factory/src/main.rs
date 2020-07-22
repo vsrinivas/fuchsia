@@ -40,7 +40,8 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {
         let tmf_clone = Arc::clone(&token_manager_factory);
-        fasync::spawn(async move { tmf_clone.handle_requests_from_stream(stream).await });
+        fasync::Task::spawn(async move { tmf_clone.handle_requests_from_stream(stream).await })
+            .detach();
     });
     fs.take_and_serve_directory_handle()?;
 

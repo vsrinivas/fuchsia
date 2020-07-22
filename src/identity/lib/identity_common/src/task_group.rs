@@ -101,7 +101,7 @@ impl TaskGroup {
                 let inner_fn = f(cancel_receiver);
                 let (remote, remote_handle) = inner_fn.remote_handle();
                 tasks.push(remote_handle);
-                fasync::spawn(remote);
+                fasync::Task::spawn(remote).detach();
                 Ok(())
             }
         }

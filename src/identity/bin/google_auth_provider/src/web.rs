@@ -212,11 +212,12 @@ mod test {
     ) -> Result<DefaultStandaloneWebFrame, Error> {
         let (context, _) = create_proxy::<ContextMarker>()?;
         let (frame, frame_server_end) = create_request_stream::<FrameMarker>()?;
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             handle_frame_stream(frame_server_end, events)
                 .await
                 .unwrap_or_else(|e| error!("Error running frame stream: {:?}", e));
-        });
+        })
+        .detach();
         Ok(DefaultStandaloneWebFrame::new(context, frame.into_proxy()?))
     }
 
@@ -227,11 +228,12 @@ mod test {
         if let Some(request) = stream.try_next().await? {
             match request {
                 FrameRequest::SetNavigationEventListener { listener, .. } => {
-                    fasync::spawn(async move {
+                    fasync::Task::spawn(async move {
                         feed_event_requests(listener.unwrap(), events)
                             .await
                             .unwrap_or_else(|e| error!("Error in event sender: {:?}", e));
-                    });
+                    })
+                    .detach();
                 }
                 req => panic!("Unimplemented method {:?} called in test stub", req),
             }

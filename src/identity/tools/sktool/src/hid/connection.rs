@@ -206,13 +206,14 @@ pub mod fidl {
         {
             let (device_proxy, mut stream) = create_proxy_and_stream::<DeviceMarker>()
                 .expect("Failed to create proxy and stream");
-            fasync::spawn(async move {
+            fasync::Task::spawn(async move {
                 let mut req_num = 0u32;
                 while let Some(req) = stream.try_next().await.expect("Failed to read req") {
                     req_num += 1;
                     request_fn(req, req_num)
                 }
-            });
+            })
+            .detach();
             device_proxy
         }
 

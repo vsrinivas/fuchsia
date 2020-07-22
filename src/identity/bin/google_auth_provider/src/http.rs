@@ -255,7 +255,7 @@ mod test {
         let (url_loader_proxy, mut url_loader_stream) =
             create_proxy_and_stream::<UrlLoaderMarker>()
                 .expect("Failed to create URL loader proxy.");
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let req =
                 url_loader_stream.try_next().await.expect("Failed to get request from stream");
             if let Some(UrlLoaderRequest::Start { responder, .. }) = req {
@@ -263,7 +263,8 @@ mod test {
             } else {
                 panic!("Got unexpected URL Loader request.")
             }
-        });
+        })
+        .detach();
         url_loader_proxy
     }
 

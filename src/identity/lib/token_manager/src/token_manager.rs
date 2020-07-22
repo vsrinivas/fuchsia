@@ -545,7 +545,8 @@ mod tests {
     fn create_token_manager_context() -> TokenManagerContext {
         let (ui_context_provider_proxy, mut stream) =
             create_proxy_and_stream::<AuthenticationContextProviderMarker>().unwrap();
-        fasync::spawn(async move { while let Some(_) = stream.try_next().await.unwrap() {} });
+        fasync::Task::spawn(async move { while let Some(_) = stream.try_next().await.unwrap() {} })
+            .detach();
         TokenManagerContext {
             application_url: "APPLICATION_URL".to_string(),
             auth_ui_context_provider: ui_context_provider_proxy,

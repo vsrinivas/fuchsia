@@ -132,9 +132,10 @@ mod test {
             req: vec![TEST_ENROLLMENT_2.clone()],
             resp: Err(ApiError::Unknown),
         });
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             authenticator.handle_requests_from_stream(stream).await.unwrap();
-        });
+        })
+        .detach();
 
         let resp = proxy.enroll().await.unwrap();
         assert_eq!(resp, Ok((TEST_ENROLLMENT_DATA_1.clone(), TEST_PREKEY_MATERIAL.clone())));
@@ -158,9 +159,10 @@ mod test {
             req: vec![TEST_ENROLLMENT_1.clone()],
             resp: Ok(TEST_ATTEMPT_1.clone()),
         });
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             authenticator.handle_requests_from_stream(stream).await.unwrap();
-        });
+        })
+        .detach();
 
         let mut req = vec![TEST_ENROLLMENT_2.clone()];
         let _ = proxy.authenticate(&mut req.iter_mut()).await;
@@ -176,9 +178,10 @@ mod test {
             req: vec![TEST_ENROLLMENT_1.clone()],
             resp: Ok(TEST_ATTEMPT_1.clone()),
         });
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             authenticator.handle_requests_from_stream(stream).await.unwrap();
-        });
+        })
+        .detach();
         let _ = proxy.enroll().await;
     }
 
@@ -188,9 +191,10 @@ mod test {
         let authenticator = FakeAuthenticator::new();
         let (proxy, stream) = create_proxy_and_stream::<StorageUnlockMechanismMarker>().unwrap();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             authenticator.handle_requests_from_stream(stream).await.unwrap();
-        });
+        })
+        .detach();
         let _ = proxy.enroll().await;
     }
 
@@ -204,8 +208,9 @@ mod test {
             req: vec![TEST_ENROLLMENT_1.clone()],
             resp: Ok(TEST_ATTEMPT_1.clone()),
         });
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             authenticator.handle_requests_from_stream(stream).await.unwrap();
-        });
+        })
+        .detach();
     }
 }

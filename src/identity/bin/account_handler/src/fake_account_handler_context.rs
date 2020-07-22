@@ -70,12 +70,13 @@ impl FakeAccountHandlerContext {
                     Some(fake_authenticator) => {
                         let fake_authenticator = Arc::clone(fake_authenticator);
                         let stream = storage_unlock_mechanism.into_stream().unwrap();
-                        fasync::spawn(async move {
+                        fasync::Task::spawn(async move {
                             fake_authenticator
                                 .handle_requests_from_stream(stream)
                                 .await
                                 .expect("Failed handling requests from stream");
-                        });
+                        })
+                        .detach();
                         Ok(())
                     }
                     None => Err(ApiError::NotFound),
@@ -94,12 +95,13 @@ pub fn spawn_context_channel(
 ) -> AccountHandlerContextProxy {
     let (proxy, stream) = create_proxy_and_stream::<AccountHandlerContextMarker>().unwrap();
     let context_clone = Arc::clone(&context);
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         context_clone
             .handle_requests_from_stream(stream)
             .await
             .unwrap_or_else(|err| error!("Error handling FakeAccountHandlerContext: {:?}", err))
-    });
+    })
+    .detach();
     proxy
 }
 

@@ -147,7 +147,7 @@ fn create_account_manager(env: Option<String>) -> Result<NestedAccountManagerPro
         ACCOUNT_MANAGER_URL.clone(),
         Some(ACCOUNT_MANAGER_ARGS.clone()),
     )?;
-    fasync::spawn(service_fs.collect());
+    fasync::Task::spawn(service_fs.collect()).detach();
     let account_manager_proxy = app.connect_to_service::<AccountManagerMarker>()?;
 
     Ok(NestedAccountManagerProxy {

@@ -588,7 +588,7 @@ impl AccountHandler {
         let state_weak = Arc::downgrade(&self.state);
         let inspect_weak = Arc::downgrade(&self.inspect);
         let (sender, receiver) = lock_request::channel();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             match receiver.await {
                 Ok(()) => {
                     if let (Some(state), Some(inspect)) =
@@ -603,7 +603,8 @@ impl AccountHandler {
                     // The sender was dropped, which is on the expected path.
                 }
             }
-        });
+        })
+        .detach();
         Ok(sender)
     }
 

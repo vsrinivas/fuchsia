@@ -90,12 +90,13 @@ fn main() -> Result<(), Error> {
         Arc::new(AccountHandler::new(context, account_id, lifetime, pre_auth_manager, &inspector));
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_handler_clone = Arc::clone(&account_handler);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             account_handler_clone
                 .handle_requests_from_stream(stream)
                 .await
                 .unwrap_or_else(|e| error!("Error handling AccountHandlerControl channel: {:?}", e))
-        });
+        })
+        .detach();
     });
     fs.take_and_serve_directory_handle()?;
 

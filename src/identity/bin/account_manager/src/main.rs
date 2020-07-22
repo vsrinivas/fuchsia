@@ -137,12 +137,13 @@ fn main() -> Result<(), Error> {
 
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_manager_clone = Arc::clone(&account_manager);
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             account_manager_clone
                 .handle_requests_from_stream(stream)
                 .await
                 .unwrap_or_else(|e| error!("Error handling AccountManager channel: {:?}", e))
-        });
+        })
+        .detach();
     });
 
     if options.opt_present(PROTOTYPE_TRANSFER_FLAG) {
