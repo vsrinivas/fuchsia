@@ -22,9 +22,13 @@ impl H264Stream {
         Ok(H264Stream::from(fs::read(filename)?))
     }
 
-    /// Returns an iterator over H264 NALs that does not copy.
-    fn nal_iter(&self) -> impl Iterator<Item = H264Nal<'_>> {
-        H264NalIter { data: &self.data, pos: 0 }
+    /// Returns an iterator over H264 chunks (pictures and anything preceding each picture) that
+    /// does not copy.
+    //
+    // TODO(fxb/13483): Make H264ChunkIter capable of iterating NALs or iterating pictures with any
+    // non-picture NALs in front of each picture prepended (the current behavior).
+    fn chunk_iter(&self) -> impl Iterator<Item = H264Chunk<'_>> {
+        H264ChunkIter::create(&self.data)
     }
 }
 
@@ -48,14 +52,11 @@ impl ElementaryStream for H264Stream {
     }
 
     fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
-        Box::new(self.nal_iter().map(|nal| ElementaryStreamChunk {
+        Box::new(self.chunk_iter().map(|chunk| ElementaryStreamChunk {
             start_access_unit: true,
             known_end_access_unit: true,
-            data: nal.data.to_vec(),
-            significance: match nal.kind {
-                H264NalKind::Picture => Significance::Video(VideoSignificance::Picture),
-                H264NalKind::NotPicture => Significance::Video(VideoSignificance::NotPicture),
-            },
+            data: chunk.data.to_vec(),
+            significance: Significance::Video(VideoSignificance::Picture),
             timestamp: None,
         }))
     }
@@ -102,14 +103,21 @@ pub enum H264NalKind {
 impl H264NalKind {
     const NON_IDR_PICTURE_CODE: u8 = 1;
     const IDR_PICTURE_CODE: u8 = 5;
+    const SPS_CODE: u8 = 7;
+    const PPS_CODE: u8 = 8;
     const SEI_CODE: u8 = 6;
 
     fn from_header(header: u8) -> Self {
-        let kind = header & 0xf;
+        let kind = header & 0x1f;
         if kind == Self::NON_IDR_PICTURE_CODE || kind == Self::IDR_PICTURE_CODE {
             H264NalKind::Picture
-        } else {
+        } else if kind == Self::SPS_CODE || kind == Self::PPS_CODE || kind == Self::SEI_CODE {
             H264NalKind::NotPicture
+        } else {
+            // When assigning a nal_unit_type to "NotPicture" or "Picture", note that NotPicture
+            // NALs are buffered up until a Picture NAL is seen, at which point the buffered
+            // NotPicture(s) + 1 Picture are put in a packet.
+            panic!("Unrecognized nal_unit_type - please add as needed - type: {}", kind);
         }
     }
 }
@@ -151,7 +159,7 @@ impl<'a> H264NalIter<'a> {
         let data = self.data.get(pos..)?;
         data.windows(NAL_SEARCH_SIZE).enumerate().find_map(|(i, candidate)| match candidate {
             [0, 0, 0, 1, h] | [0, 0, 1, h, _] => Some(H264NalStart {
-                pos: i + pos,
+                pos: pos + i,
                 data: data.get(i..).expect("Getting slice starting where we just matched"),
                 kind: H264NalKind::from_header(*h),
             }),
@@ -166,5 +174,57 @@ impl<'a> Iterator for H264NalIter<'a> {
         let nal = self.next_nal(self.pos);
         self.pos += nal.as_ref().map(|n| n.data.len()).unwrap_or(0);
         nal
+    }
+}
+
+pub struct H264Chunk<'a> {
+    pub data: &'a [u8],
+}
+
+struct H264ChunkIter<'a> {
+    nal_iter: H264NalIter<'a>,
+    chunk_start_pos: Option<usize>,
+}
+
+impl<'a> H264ChunkIter<'a> {
+    fn create(data: &'a [u8]) -> H264ChunkIter<'a> {
+        H264ChunkIter { nal_iter: H264NalIter { data: data, pos: 0 }, chunk_start_pos: None }
+    }
+}
+
+impl<'a> Iterator for H264ChunkIter<'a> {
+    type Item = H264Chunk<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let chunk = loop {
+            let maybe_nal = self.nal_iter.next();
+            match maybe_nal {
+                Some(nal) => {
+                    if let None = self.chunk_start_pos {
+                        self.chunk_start_pos = Some(self.nal_iter.pos - nal.data.len());
+                    }
+                    match nal.kind {
+                        H264NalKind::NotPicture => continue,
+                        H264NalKind::Picture => {
+                            break Some(H264Chunk {
+                                data: &self.nal_iter.data
+                                    [self.chunk_start_pos.unwrap()..self.nal_iter.pos],
+                            });
+                        }
+                    }
+                }
+                None => {
+                    if self.chunk_start_pos.expect("Zero NALs?") == self.nal_iter.data.len() {
+                        break None;
+                    } else {
+                        break Some(H264Chunk {
+                            data: &self.nal_iter.data[self.chunk_start_pos.unwrap()..],
+                        });
+                    }
+                }
+            }
+        };
+        *self.chunk_start_pos.as_mut().unwrap() +=
+            chunk.as_ref().map(|c| c.data.len()).unwrap_or(0);
+        chunk
     }
 }
