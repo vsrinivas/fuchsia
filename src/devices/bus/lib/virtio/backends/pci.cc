@@ -2,7 +2,7 @@
 // Use of tag() source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/bus/lib/virtio/backends/pci.h"
+#include "pci.h"
 
 #include <assert.h>
 #include <lib/zx/handle.h>
@@ -38,18 +38,8 @@ zx_status_t PciBackend::Bind() {
   }
 
   // try to set up our IRQ mode
-  uint32_t avail_irqs = 0;
-  zx_pci_irq_mode_t mode = ZX_PCIE_IRQ_MODE_MSI;
-  if ((st = pci_query_irq_mode(&pci_, mode, &avail_irqs)) != ZX_OK || avail_irqs == 0) {
-    mode = ZX_PCIE_IRQ_MODE_LEGACY;
-    if ((st = pci_query_irq_mode(&pci_, mode, &avail_irqs)) != ZX_OK || avail_irqs == 0) {
-      zxlogf(ERROR, "%s: no available IRQs found", tag());
-      return st;
-    }
-  }
-
-  if ((st = pci_set_irq_mode(&pci_, mode, 1)) != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to set irq mode %u", tag(), mode);
+  if ((st = pci_configure_irq_mode(&pci_, 1)) != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to configure irqs: %d", tag(), st);
     return st;
   }
 
