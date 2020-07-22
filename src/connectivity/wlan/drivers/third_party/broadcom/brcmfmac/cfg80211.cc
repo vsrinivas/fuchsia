@@ -4070,7 +4070,7 @@ static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
 }
 static zx_status_t brcmf_notify_ap_started(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                            void* data) {
-  BRCMF_INFO("AP Started Event");
+  BRCMF_DBG(EVENT, "AP Started Event");
   return brcmf_notify_channel_switch(ifp, e, data);
 }
 
@@ -4120,7 +4120,7 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
                                           void* data) {
   struct net_device* ndev = ifp->ndev;
 
-  BRCMF_DBG(CONN, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
+  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
             e->status, e->reason, e->auth_type, e->flags);
 
@@ -4186,7 +4186,7 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
 // AUTH_IND handler. AUTH_IND is meant only for SoftAP IF
 static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
                                                 const struct brcmf_event_msg* e, void* data) {
-  BRCMF_DBG(CONN, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
+  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
             e->status, e->reason, e->auth_type, e->flags);
   ZX_DEBUG_ASSERT(brcmf_is_apmode(ifp->vif));
@@ -4279,7 +4279,7 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
 
 static zx_status_t brcmf_process_link_event(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                             void* data) {
-  BRCMF_DBG(CONN, "event %s (%u), reason %d flags 0x%x\n",
+  BRCMF_DBG(EVENT, "event %s (%u), reason %d flags 0x%x\n",
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
             e->reason, e->flags);
   if (brcmf_is_apmode(ifp->vif)) {
@@ -4345,8 +4345,8 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
 
 static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
                                                     const struct brcmf_event_msg* e, void* data) {
-  BRCMF_ERR("Disassoc event: %d flags: %d reason:%d status: %d", e->event_code, e->flags, e->reason,
-            e->status);
+  BRCMF_DBG(EVENT, "Disassoc event: %d flags: %d reason:%d status: %d", e->event_code, e->flags,
+            e->reason, e->status);
   brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
   if (brcmf_is_apmode(ifp->vif)) {
     struct net_device* ndev = ifp->ndev;
@@ -4419,7 +4419,7 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
   struct brcmf_cfg80211_vif_event* event = &cfg->vif_event;
   struct brcmf_cfg80211_vif* vif;
 
-  BRCMF_DBG(TRACE, "Enter: action %u flags %u ifidx %u bsscfgidx %u", ifevent->action,
+  BRCMF_DBG(EVENT, "Enter: action %u flags %u ifidx %u bsscfgidx %u", ifevent->action,
             ifevent->flags, ifevent->ifidx, ifevent->bsscfgidx);
 
   mtx_lock(&event->vif_event_lock);
