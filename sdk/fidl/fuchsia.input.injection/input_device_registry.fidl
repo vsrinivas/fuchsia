@@ -1,0 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.injection;
+
+using fuchsia.input.report;
+
+/// A protocol used to to inject input devices for testing.
+[Discoverable]
+protocol InputDeviceRegistry {
+    /// Registers an input device represented by `device`.
+    /// On registration, the InputDeviceRegistry starts listening for input reports on the
+    /// InputReportsReader returned by device.GetInputReportsReader().
+    Register(fuchsia.input.report.InputDevice device);
+};

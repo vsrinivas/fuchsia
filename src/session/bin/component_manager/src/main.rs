@@ -13,6 +13,7 @@ use {
         startup,
     },
     fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_input_injection::InputDeviceRegistryMarker,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_session::LauncherMarker,
     fuchsia_component::server::{ServiceFs, ServiceObj},
@@ -117,7 +118,7 @@ async fn main() -> Result<(), Error> {
 
     // Make sure the session manager exposes the `fuchsia.session.Launcher` service.
     assert_eq!(
-        vec![LauncherMarker::DEBUG_NAME],
+        vec![InputDeviceRegistryMarker::DEBUG_NAME, LauncherMarker::DEBUG_NAME],
         test_helpers::list_directory(&expose_dir_proxy).await
     );
 

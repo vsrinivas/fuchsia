@@ -5,17 +5,27 @@
 use {
     crate::input_device,
     crate::input_handler,
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context, Error},
+    fidl_fuchsia_input_injection,
     fidl_fuchsia_io::OPEN_RIGHT_READABLE,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     futures::channel::mpsc::{Receiver, Sender},
+    futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
     io_util::open_directory_in_namespace,
     std::collections::HashMap,
     std::path::PathBuf,
+    std::sync::Arc,
 };
+
+type BoxedInputDeviceBinding = Box<dyn input_device::InputDeviceBinding>;
+
+/// An [`InputDeviceBindingHashMap`] maps an input device to one or more InputDeviceBindings.
+/// It expects filenames of the input devices seen in /dev/class/input-report (ex. "001") or
+/// "injected_device" as keys.
+pub type InputDeviceBindingHashMap = Arc<Mutex<HashMap<String, Vec<BoxedInputDeviceBinding>>>>;
 
 /// An [`InputPipeline`] manages input devices and propagates input events through input handlers.
 ///
@@ -48,10 +58,16 @@ pub struct InputPipeline {
 
     /// A clone of this sender is given to every InputDeviceBinding that this pipeline owns.
     /// Each InputDeviceBinding will send InputEvents to the pipeline through this channel.
-    input_event_sender: Sender<input_device::InputEvent>,
+    pub input_event_sender: Sender<input_device::InputEvent>,
 
     /// Receives InputEvents from all InputDeviceBindings that this pipeline owns.
     input_event_receiver: Receiver<input_device::InputEvent>,
+
+    /// The types of devices this pipeline supports.
+    pub input_device_types: Vec<input_device::InputDeviceType>,
+
+    /// The InputDeviceBindings bound to this pipeline.
+    pub input_device_bindings: InputDeviceBindingHashMap,
 }
 
 impl InputPipeline {
@@ -69,23 +85,32 @@ impl InputPipeline {
         let (input_event_sender, input_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
 
-        let input_pipeline =
-            InputPipeline { input_handlers, input_event_sender, input_event_receiver };
+        let input_pipeline = InputPipeline {
+            input_handlers,
+            input_event_sender,
+            input_event_receiver,
+            input_device_types: device_types,
+            input_device_bindings: Arc::new(Mutex::new(HashMap::new())),
+        };
 
         // Watches the input device directory for new input devices. Creates new InputDeviceBindings
         // that send InputEvents to `input_event_receiver`.
-        let input_event_sender = input_pipeline.input_event_sender.clone();
         let device_watcher = Self::get_device_watcher().await?;
         let dir_proxy =
             open_directory_in_namespace(input_device::INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)?;
+
+        let bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
+
+        let device_types = input_pipeline.input_device_types.clone();
+        let input_event_sender = input_pipeline.input_event_sender.clone();
+        let device_bindings = bindings.clone();
         fasync::Task::spawn(async move {
-            let mut bindings = HashMap::new();
             let _ = Self::watch_for_devices(
                 device_watcher,
                 dir_proxy,
                 device_types,
                 input_event_sender,
-                &mut bindings,
+                device_bindings,
                 false, /* break_on_idle */
             )
             .await;
@@ -144,7 +169,7 @@ impl InputPipeline {
         dir_proxy: fidl_fuchsia_io::DirectoryProxy,
         device_types: Vec<input_device::InputDeviceType>,
         input_event_sender: Sender<input_device::InputEvent>,
-        bindings: &mut HashMap<String, Vec<Box<dyn input_device::InputDeviceBinding>>>,
+        bindings: InputDeviceBindingHashMap,
         break_on_idle: bool,
     ) -> Result<(), Error> {
         while let Some(msg) = device_watcher.try_next().await? {
@@ -158,30 +183,14 @@ impl InputPipeline {
                     WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
                         let device_proxy =
                             input_device::get_device_from_dir_entry_path(&dir_proxy, &pathbuf)?;
-                        // Add a binding if the device is a type being tracked
-                        let mut new_bindings: Vec<Box<dyn input_device::InputDeviceBinding>> =
-                            vec![];
-                        for device_type in &device_types {
-                            if input_device::is_device_type(&device_proxy, *device_type).await {
-                                if let Ok(proxy) = input_device::get_device_from_dir_entry_path(
-                                    &dir_proxy, &pathbuf,
-                                ) {
-                                    if let Ok(binding) = input_device::get_device_binding(
-                                        *device_type,
-                                        proxy,
-                                        input_event_sender.clone(),
-                                    )
-                                    .await
-                                    {
-                                        new_bindings.push(binding);
-                                    }
-                                }
-                            }
-                        }
-
-                        if !new_bindings.is_empty() {
-                            bindings.insert(filename, new_bindings);
-                        }
+                        add_device_bindings(
+                            &device_types,
+                            device_proxy,
+                            &input_event_sender,
+                            &bindings,
+                            filename,
+                        )
+                        .await;
                     }
                     WatchEvent::IDLE => {
                         if break_on_idle {
@@ -195,6 +204,85 @@ impl InputPipeline {
 
         Err(format_err!("Input pipeline stopped watching for new input devices."))
     }
+
+    /// Handles the incoming InputDeviceRegistryRequestStream.
+    ///
+    /// This method will end when the request stream is closed. If the stream closes with an
+    /// error the error will be returned in the Result.
+    ///
+    /// # Parameters
+    /// - `stream`: The stream of InputDeviceRegistryRequests.
+    /// - `device_types`: The types of devices to watch for.
+    /// - `input_event_sender`: The channel new InputDeviceBindings will send InputEvents to.
+    /// - `bindings`: Holds all the InputDeviceBindings associated with the InputPipeline.
+    pub async fn handle_input_device_registry_request_stream(
+        mut stream: fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
+        device_types: &Vec<input_device::InputDeviceType>,
+        input_event_sender: &Sender<input_device::InputEvent>,
+        bindings: &InputDeviceBindingHashMap,
+    ) -> Result<(), Error> {
+        while let Some(request) = stream
+            .try_next()
+            .await
+            .context("Error handling input device registry request stream")?
+        {
+            match request {
+                fidl_fuchsia_input_injection::InputDeviceRegistryRequest::Register {
+                    device,
+                    ..
+                } => {
+                    // Add a binding if the device is a type being tracked
+                    let device_proxy = device.into_proxy().expect("Error getting device proxy.");
+
+                    add_device_bindings(
+                        device_types,
+                        device_proxy,
+                        input_event_sender,
+                        bindings,
+                        "injected_device".to_string(),
+                    )
+                    .await;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// Adds InputDeviceBindings for devices of tracked `device_types` to `bindings`.
+///
+/// # Parameters
+/// - `device_types`: The types of devices to watch for.
+/// - `device_proxy`: A proxy to the input device.
+/// - `input_event_sender`: The channel new InputDeviceBindings will send InputEvents to.
+/// - `bindings`: Holds all the InputDeviceBindings associated with the InputPipeline.
+/// - `device_name`: The device name of the associated bindings.
+async fn add_device_bindings(
+    device_types: &Vec<input_device::InputDeviceType>,
+    device_proxy: fidl_fuchsia_input_report::InputDeviceProxy,
+    input_event_sender: &Sender<input_device::InputEvent>,
+    bindings: &InputDeviceBindingHashMap,
+    device_name: String,
+) {
+    let mut new_bindings: Vec<BoxedInputDeviceBinding> = vec![];
+
+    for device_type in device_types {
+        let proxy = device_proxy.clone();
+        if input_device::is_device_type(&proxy, *device_type).await {
+            if let Ok(binding) =
+                input_device::get_device_binding(*device_type, proxy, input_event_sender.clone())
+                    .await
+            {
+                new_bindings.push(binding);
+            }
+        }
+    }
+
+    if !new_bindings.is_empty() {
+        let mut bindings = bindings.lock().await;
+        bindings.entry(device_name).or_insert(Vec::new()).extend(new_bindings);
+    }
 }
 
 #[cfg(test)]
@@ -206,7 +294,7 @@ mod tests {
         crate::input_device::{self, InputDeviceBinding},
         crate::mouse,
         crate::utils::Position,
-        fidl::endpoints::create_proxy,
+        fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream},
         fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fidl_fuchsia_ui_input as fidl_ui_input, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::channel::mpsc::Sender,
@@ -297,6 +385,8 @@ mod tests {
             input_handlers: vec![Box::new(input_handler)],
             input_event_sender,
             input_event_receiver,
+            input_device_types: vec![],
+            input_device_bindings: Arc::new(Mutex::new(HashMap::new())),
         };
 
         // Send an input event from each device.
@@ -341,6 +431,8 @@ mod tests {
             input_handlers: vec![Box::new(first_input_handler), Box::new(second_input_handler)],
             input_event_sender,
             input_event_receiver,
+            input_device_types: vec![],
+            input_device_bindings: Arc::new(Mutex::new(HashMap::new())),
         };
 
         // Send an input event.
@@ -369,7 +461,7 @@ mod tests {
             "001" => pseudo_fs_service::host(
                 move |mut request_stream: fidl_fuchsia_input_report::InputDeviceRequestStream| {
                     async move {
-                        while count < 1 {
+                        while count < 3 {
                             if let Some(input_device_request) =
                                 request_stream.try_next().await.unwrap()
                             {
@@ -414,19 +506,20 @@ mod tests {
 
         let (input_event_sender, _input_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        let mut bindings = HashMap::new();
+        let bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
 
         let _ = InputPipeline::watch_for_devices(
             device_watcher,
             dir_proxy_for_pipeline,
             vec![input_device::InputDeviceType::Keyboard],
             input_event_sender,
-            &mut bindings,
+            bindings.clone(),
             true, /* break_on_idle */
         )
         .await;
 
         // Assert that one device was found.
+        let bindings = bindings.lock().await;
         assert_eq!(bindings.len(), 1);
     }
 
@@ -485,19 +578,69 @@ mod tests {
 
         let (input_event_sender, _input_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        let mut bindings = HashMap::new();
+        let bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
 
         let _ = InputPipeline::watch_for_devices(
             device_watcher,
             dir_proxy_for_pipeline,
             vec![input_device::InputDeviceType::Mouse],
             input_event_sender,
-            &mut bindings,
+            bindings.clone(),
             true, /* break_on_idle */
         )
         .await;
 
         // Assert that no devices were found.
+        let bindings = bindings.lock().await;
         assert_eq!(bindings.len(), 0);
+    }
+
+    /// Tests that a single keyboard device binding is created for the input device registered
+    /// through InputDeviceRegistry.
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_input_device_registry_request_stream() {
+        let (input_device_registry_proxy, input_device_registry_request_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>()
+                .unwrap();
+        let (input_device_client_end, mut input_device_request_stream) =
+            create_request_stream::<fidl_fuchsia_input_report::InputDeviceMarker>().unwrap();
+
+        let device_types = vec![input_device::InputDeviceType::Keyboard];
+        let (input_event_sender, _input_event_receiver) =
+            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+        let bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
+
+        // Handle input device requests.
+        let mut count: i8 = 0;
+        fasync::spawn(async move {
+            // Register a device.
+            let _ = input_device_registry_proxy.register(input_device_client_end);
+
+            while count < 3 {
+                if let Some(input_device_request) =
+                    input_device_request_stream.try_next().await.unwrap()
+                {
+                    handle_input_device_reqeust(input_device_request);
+                    count += 1;
+                }
+            }
+
+            // End handle_input_device_registry_request_stream() by taking the event stream.
+            input_device_registry_proxy.take_event_stream();
+        });
+
+        // Start listening for InputDeviceRegistryRequests.
+        let bindings_clone = bindings.clone();
+        let _ = InputPipeline::handle_input_device_registry_request_stream(
+            input_device_registry_request_stream,
+            &device_types,
+            &input_event_sender,
+            &bindings_clone,
+        )
+        .await;
+
+        // Assert that a device was registered.
+        let bindings = bindings.lock().await;
+        assert_eq!(bindings.len(), 1);
     }
 }

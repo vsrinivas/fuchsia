@@ -171,5 +171,9 @@
             protocol: "/svc/fuchsia.session.Launcher",
             from: "self",
         },
+        {
+            protocol: "/svc/fuchsia.input.injection.InputDeviceRegistry",
+            from: "self",
+        },
     ],
 }
