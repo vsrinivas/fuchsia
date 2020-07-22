@@ -235,22 +235,6 @@ class Protocol {
       FlexibleFoo s, RequestFlexibleResponseStrictCallback callback) = 0;
 };
 
-class Protocol_RequestEncoder {
- public:
-  static ::fidl::Message RequestStrictResponseFlexible(
-      ::fidl::Encoder* _encoder, StrictFoo* s) {
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, s, 16);
-    return _encoder->GetMessage();
-  }
-  static ::fidl::Message RequestFlexibleResponseStrict(
-      ::fidl::Encoder* _encoder, FlexibleFoo* s) {
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, s, 16);
-    return _encoder->GetMessage();
-  }
-};
-
 class Protocol_RequestDecoder {
  public:
   Protocol_RequestDecoder() = default;
@@ -292,18 +276,38 @@ class Protocol_RequestDecoder {
   virtual void RequestFlexibleResponseStrict(FlexibleFoo s) = 0;
 };
 
-class Protocol_ResponseEncoder {
+class Protocol_RequestEncoder {
  public:
   static ::fidl::Message RequestStrictResponseFlexible(
-      ::fidl::Encoder* _encoder, FlexibleFoo* f) {
+      ::fidl::Encoder* _encoder, StrictFoo* s) {
+    fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, f, 16);
+    ::fidl::Encode(_encoder, s, 16);
+
+    bool needs_response;  // unused
+    fidl_trace(DidHLCPPEncode,
+               Protocol_RequestDecoder::GetType(
+                   internal::kProtocol_RequestStrictResponseFlexible_Ordinal,
+                   &needs_response),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::Message RequestFlexibleResponseStrict(
-      ::fidl::Encoder* _encoder, StrictFoo* f) {
+      ::fidl::Encoder* _encoder, FlexibleFoo* s) {
+    fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, f, 16);
+    ::fidl::Encode(_encoder, s, 16);
+
+    bool needs_response;  // unused
+    fidl_trace(DidHLCPPEncode,
+               Protocol_RequestDecoder::GetType(
+                   internal::kProtocol_RequestFlexibleResponseStrict_Ordinal,
+                   &needs_response),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };
@@ -344,6 +348,36 @@ class Protocol_ResponseDecoder {
   }
   virtual void RequestStrictResponseFlexible(FlexibleFoo f) = 0;
   virtual void RequestFlexibleResponseStrict(StrictFoo f) = 0;
+};
+
+class Protocol_ResponseEncoder {
+ public:
+  static ::fidl::Message RequestStrictResponseFlexible(
+      ::fidl::Encoder* _encoder, FlexibleFoo* f) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, f, 16);
+
+    fidl_trace(DidHLCPPEncode,
+               Protocol_ResponseDecoder::GetType(
+                   internal::kProtocol_RequestStrictResponseFlexible_Ordinal),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  static ::fidl::Message RequestFlexibleResponseStrict(
+      ::fidl::Encoder* _encoder, StrictFoo* f) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, f, 16);
+
+    fidl_trace(DidHLCPPEncode,
+               Protocol_ResponseDecoder::GetType(
+                   internal::kProtocol_RequestFlexibleResponseStrict_Ordinal),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
 };
 
 class Protocol_EventSender {

@@ -107,21 +107,6 @@ class {{ .Name }} {
   {{- end }}
 };
 
-class {{ .RequestEncoderName }} {
- public:
-  {{- range .Methods }}
-    {{- if .HasRequest }}
-  static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Request }}) {
-    _encoder->Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
-    {{- range .Request }}
-    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
-    {{- end }}
-    return _encoder->GetMessage();
-  }
-    {{- end }}
-  {{- end }}
-};
-
 class {{ .RequestDecoderName }} {
  public:
   {{ .RequestDecoderName }}() = default;
@@ -169,20 +154,28 @@ class {{ .RequestDecoderName }} {
   {{- end }}
 };
 
-class {{ .ResponseEncoderName }} {
+class {{ .RequestEncoderName }} {
  public:
+  {{- with $protocol := . }}
   {{- range .Methods }}
-    {{- if .HasResponse }}
-  static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Response }}) {
-    _encoder->Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
-    {{- range .Response }}
+  {{- if .HasRequest }}
+  static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Request }}) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
+
+    {{- range .Request }}
     ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
     {{- end }}
+
+    bool needs_response;  // unused
+    fidl_trace(DidHLCPPEncode, {{ $protocol.RequestDecoderName }}::GetType(internal::{{ .OrdinalName }}, &needs_response), _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
-    {{- end }}
   {{- end }}
-};
+  {{- end }}
+  {{- end }}
+ };
 
 class {{ .ResponseDecoderName }} {
  public:
@@ -226,6 +219,27 @@ class {{ .ResponseDecoderName }} {
     {{- if .HasResponse }}
   virtual void {{ .Name }}({{ template "Params" .Response }}) = 0;
     {{- end }}
+  {{- end }}
+};
+
+class {{ .ResponseEncoderName }} {
+ public:
+  {{- with $protocol := . }}
+  {{- range .Methods }}
+  {{- if .HasResponse }}
+  static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Response }}) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
+
+    {{- range .Response }}
+    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
+    {{- end }}
+
+    fidl_trace(DidHLCPPEncode, {{ $protocol.ResponseDecoderName }}::GetType(internal::{{ .OrdinalName }}), _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  {{- end }}
+  {{- end }}
   {{- end }}
 };
 

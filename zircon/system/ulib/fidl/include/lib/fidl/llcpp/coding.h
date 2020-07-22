@@ -9,6 +9,7 @@
 #include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/trace.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
 
@@ -110,9 +111,14 @@ DecodeResult<FidlType> Decode(EncodedMessage<FidlType> msg) {
   static_assert(IsFidlType<FidlType>::value, "FIDL type required");
   static_assert(FidlType::Type != nullptr, "FidlType should have a coding table");
   DecodeResult<FidlType> result;
+
   // Perform in-place decoding
+  fidl_trace(WillLLCPPDecode, FidlType::Type, msg.bytes().data(), msg.bytes().actual(),
+             msg.handles().actual());
   result.status = fidl_decode(FidlType::Type, msg.bytes().data(), msg.bytes().actual(),
                               msg.handles().data(), msg.handles().actual(), &result.error);
+  fidl_trace(DidLLCPPDecode);
+
   // Clear out |msg| independent of success or failure
   BytePart bytes = msg.ReleaseBytesAndHandles();
   if (result.status == ZX_OK) {
@@ -132,9 +138,14 @@ EncodeResult<FidlType> Encode(DecodedMessage<FidlType> msg) {
   EncodeResult<FidlType> result;
   result.message.bytes() = std::move(msg.bytes_);
   uint32_t actual_handles = 0;
+
+  fidl_trace(WillLLCPPInPlaceEncode);
   result.status = fidl_encode(FidlType::Type, result.message.bytes().data(),
                               result.message.bytes().actual(), result.message.handles().data(),
                               result.message.handles().capacity(), &actual_handles, &result.error);
+  fidl_trace(DidLLCPPInPlaceEncode, FidlType::Type, result.message.bytes().data(),
+             result.message.bytes().actual(), actual_handles);
+
   result.message.handles().set_actual(actual_handles);
   return result;
 }
@@ -147,10 +158,13 @@ EncodeResult<FidlType> LinearizeAndEncode(FidlType* value, BytePart bytes) {
   uint32_t num_bytes_actual;
   uint32_t num_handles_actual;
   result.message.bytes() = std::move(bytes);
+  fidl_trace(WillLLCPPLinearizeAndEncode);
   result.status = fidl_linearize_and_encode(
       FidlType::Type, value, result.message.bytes().data(), result.message.bytes().capacity(),
       result.message.handles().data(), result.message.handles().capacity(), &num_bytes_actual,
       &num_handles_actual, &result.error);
+  fidl_trace(DidLLCPPLinearizeAndEncode, FidlType::Type, result.message.bytes().data(),
+             num_bytes_actual, num_handles_actual);
   if (result.status != ZX_OK) {
     return result;
   }
@@ -189,8 +203,13 @@ DecodeResult<FidlType> DecodeAs(fidl_msg_t* msg) {
 template <typename FidlType>
 zx_status_t Write(const zx::unowned_channel& chan, EncodedMessage<FidlType> encoded_msg) {
   static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
+
+  fidl_trace(WillLLCPPChannelWrite, nullptr /* type */, encoded_msg.bytes().data(),
+             encoded_msg.bytes().actual(), encoded_msg.handles().actual());
   auto status = chan->write(0, encoded_msg.bytes().data(), encoded_msg.bytes().actual(),
                             encoded_msg.handles().data(), encoded_msg.handles().actual());
+  fidl_trace(DidLLCPPChannelWrite);
+
   encoded_msg.ReleaseBytesAndHandles();
   return status;
 }
@@ -257,7 +276,12 @@ EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<Request
                                  .rd_num_bytes = result.message.bytes().capacity(),
                                  .rd_num_handles = result.message.handles().capacity()};
 
+  fidl_trace(WillLLCPPChannelCall, nullptr /* type */, request.bytes().data(),
+             request.bytes().actual(), request.handles().actual());
   result.status = chan->call(0u, deadline, &args, &actual_num_bytes, &actual_num_handles);
+  fidl_trace(DidLLCPPChannelCall, nullptr /* type */, result.message.bytes().data(),
+             actual_num_bytes, actual_num_handles);
+
   request.ReleaseBytesAndHandles();
   if (result.status == ZX_OK) {
     result.message.handles().set_actual(actual_num_handles);

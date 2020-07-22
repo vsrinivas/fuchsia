@@ -318,14 +318,6 @@ class Interface {
   using OnEventCallback = fit::function<void()>;
 };
 
-class Interface_RequestEncoder {
- public:
-  static ::fidl::Message Method(::fidl::Encoder* _encoder) {
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    return _encoder->GetMessage();
-  }
-};
-
 class Interface_RequestDecoder {
  public:
   Interface_RequestDecoder() = default;
@@ -360,10 +352,19 @@ class Interface_RequestDecoder {
   virtual void Method() = 0;
 };
 
-class Interface_ResponseEncoder {
+class Interface_RequestEncoder {
  public:
-  static ::fidl::Message OnEvent(::fidl::Encoder* _encoder) {
+  static ::fidl::Message Method(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    bool needs_response;  // unused
+    fidl_trace(DidHLCPPEncode,
+               Interface_RequestDecoder::GetType(
+                   internal::kInterface_Method_Ordinal, &needs_response),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };
@@ -397,6 +398,21 @@ class Interface_ResponseDecoder {
     return ZX_OK;
   }
   virtual void OnEvent() = 0;
+};
+
+class Interface_ResponseEncoder {
+ public:
+  static ::fidl::Message OnEvent(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    fidl_trace(DidHLCPPEncode,
+               Interface_ResponseDecoder::GetType(
+                   internal::kInterface_OnEvent_Ordinal),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
 };
 
 class Interface_EventSender {

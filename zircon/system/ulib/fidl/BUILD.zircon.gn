@@ -21,6 +21,7 @@ zx_library("fidl_base") {
     "lib/fidl/cpp/message_part.h",
     "lib/fidl/internal.h",
     "lib/fidl/internal_callable_traits.h",
+    "lib/fidl/trace.h",
     "lib/fidl/visitor.h",
     "lib/fidl/walker.h",
   ]

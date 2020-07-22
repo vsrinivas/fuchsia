@@ -33,6 +33,11 @@ class Encoder final {
     return reinterpret_cast<T*>(bytes_.data() + offset);
   }
 
+  template <typename T>
+  const T* GetPtr(size_t offset) const {
+    return reinterpret_cast<const T*>(bytes_.data() + offset);
+  }
+
 #ifdef __Fuchsia__
   void EncodeHandle(zx::object_base* value, size_t offset);
 #endif

@@ -5,6 +5,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/trace.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 
@@ -53,11 +54,14 @@ void SimpleBinding::MessageHandler(async_dispatcher_t* dispatcher, async_wait_t*
           .num_bytes = 0u,
           .num_handles = 0u,
       };
+      fidl_trace(WillLLCPPAsyncChannelRead);
       status = zx_channel_read(wait->object, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
                                ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
       if (status != ZX_OK || msg.num_bytes < sizeof(fidl_message_header_t)) {
         return;
       }
+      fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes, msg.num_bytes,
+                 msg.num_handles);
 
       auto hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
       ChannelTransaction txn(hdr->txid, std::move(binding));

@@ -6,6 +6,7 @@
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/trace.h>
 #include <string.h>
 
 #ifdef __Fuchsia__
@@ -50,26 +51,36 @@ zx_status_t Message::Encode(const fidl_type_t* type, const char** error_msg_out)
 }
 
 zx_status_t Message::Decode(const fidl_type_t* type, const char** error_msg_out) {
+  fidl_trace(WillHLCPPDecode, type, bytes_.data(), bytes_.actual(), handles_.actual());
   zx_status_t status = fidl_decode(type, bytes_.data(), bytes_.actual(), handles_.data(),
                                    handles_.actual(), error_msg_out);
+  fidl_trace(DidHLCPPDecode);
+
   ClearHandlesUnsafe();
   return status;
 }
 
 zx_status_t Message::Validate(const fidl_type_t* v1_type, const char** error_msg_out) const {
-  return fidl_validate(v1_type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
+  fidl_trace(WillHLCPPValidate, v1_type, bytes_.data(), bytes_.actual(), handles_.actual());
+  const zx_status_t status =
+      fidl_validate(v1_type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
+  fidl_trace(DidHLCPPValidate);
+
+  return status;
 }
 
 #ifdef __Fuchsia__
 zx_status_t Message::Read(zx_handle_t channel, uint32_t flags) {
   uint32_t actual_bytes = 0u;
   uint32_t actual_handles = 0u;
+  fidl_trace(WillHLCPPChannelRead);
   zx_status_t status =
       zx_channel_read(channel, flags, bytes_.data(), handles_.data(), bytes_.capacity(),
                       handles_.capacity(), &actual_bytes, &actual_handles);
   if (status != ZX_OK) {
     return status;
   }
+  fidl_trace(DidHLCPPChannelRead, nullptr /* type */, bytes_.data(), actual_bytes, actual_handles);
 
   // Ensure we received enough bytes for the FIDL header.
   if (actual_bytes < sizeof(fidl_message_header_t)) {
@@ -82,8 +93,11 @@ zx_status_t Message::Read(zx_handle_t channel, uint32_t flags) {
 }
 
 zx_status_t Message::Write(zx_handle_t channel, uint32_t flags) {
+  fidl_trace(WillHLCPPChannelWrite, nullptr /* type */, bytes_.data(), bytes_.actual(),
+             handles_.actual());
   zx_status_t status = zx_channel_write(channel, flags, bytes_.data(), bytes_.actual(),
                                         handles_.data(), handles_.actual());
+  fidl_trace(DidHLCPPChannelWrite);
 
   // Handles are cleared by the kernel on either success or failure.
   ClearHandlesUnsafe();

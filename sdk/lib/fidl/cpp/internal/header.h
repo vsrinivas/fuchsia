@@ -48,6 +48,7 @@
 #include "lib/fidl/cpp/coding_traits.h"
 #include "lib/fidl/cpp/enum.h"
 #include "lib/fidl/cpp/internal/logging.h"
+#include "lib/fidl/trace.h"
 
 #ifdef __Fuchsia__
 #include "lib/fidl/cpp/interface_handle.h"

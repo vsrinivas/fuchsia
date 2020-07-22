@@ -62,30 +62,6 @@ class Parent {
   virtual void TakeChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
 };
 
-class Parent_RequestEncoder {
- public:
-  static ::fidl::Message GetChild(::fidl::Encoder* _encoder) {
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    return _encoder->GetMessage();
-  }
-  static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder) {
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    return _encoder->GetMessage();
-  }
-  static ::fidl::Message TakeChild(::fidl::Encoder* _encoder,
-                                   ::fidl::InterfaceHandle<class Child>* c) {
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, c, 16);
-    return _encoder->GetMessage();
-  }
-  static ::fidl::Message TakeChildRequest(::fidl::Encoder* _encoder,
-                                          ::fidl::InterfaceRequest<Child>* r) {
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, r, 16);
-    return _encoder->GetMessage();
-  }
-};
-
 class Parent_RequestDecoder {
  public:
   Parent_RequestDecoder() = default;
@@ -137,18 +113,62 @@ class Parent_RequestDecoder {
   virtual void TakeChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
 };
 
-class Parent_ResponseEncoder {
+class Parent_RequestEncoder {
  public:
-  static ::fidl::Message GetChild(::fidl::Encoder* _encoder,
-                                  ::fidl::InterfaceHandle<class Child>* c) {
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, c, 16);
+  static ::fidl::Message GetChild(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    bool needs_response;  // unused
+    fidl_trace(DidHLCPPEncode,
+               Parent_RequestDecoder::GetType(
+                   internal::kParent_GetChild_Ordinal, &needs_response),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
-  static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder,
-                                         ::fidl::InterfaceRequest<Child>* r) {
+  static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    bool needs_response;  // unused
+    fidl_trace(DidHLCPPEncode,
+               Parent_RequestDecoder::GetType(
+                   internal::kParent_GetChildRequest_Ordinal, &needs_response),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::Message TakeChild(::fidl::Encoder* _encoder,
+                                   ::fidl::InterfaceHandle<class Child>* c) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, c, 16);
+
+    bool needs_response;  // unused
+    fidl_trace(DidHLCPPEncode,
+               Parent_RequestDecoder::GetType(
+                   internal::kParent_TakeChild_Ordinal, &needs_response),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::Message TakeChildRequest(::fidl::Encoder* _encoder,
+                                          ::fidl::InterfaceRequest<Child>* r) {
+    fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, r, 16);
+
+    bool needs_response;  // unused
+    fidl_trace(DidHLCPPEncode,
+               Parent_RequestDecoder::GetType(
+                   internal::kParent_TakeChildRequest_Ordinal, &needs_response),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };
@@ -189,6 +209,36 @@ class Parent_ResponseDecoder {
   }
   virtual void GetChild(::fidl::InterfaceHandle<class Child> c) = 0;
   virtual void GetChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
+};
+
+class Parent_ResponseEncoder {
+ public:
+  static ::fidl::Message GetChild(::fidl::Encoder* _encoder,
+                                  ::fidl::InterfaceHandle<class Child>* c) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, c, 16);
+
+    fidl_trace(
+        DidHLCPPEncode,
+        Parent_ResponseDecoder::GetType(internal::kParent_GetChild_Ordinal),
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder,
+                                         ::fidl::InterfaceRequest<Child>* r) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, r, 16);
+
+    fidl_trace(DidHLCPPEncode,
+               Parent_ResponseDecoder::GetType(
+                   internal::kParent_GetChildRequest_Ordinal),
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
 };
 
 class Parent_EventSender {
@@ -264,10 +314,6 @@ class Child {
   virtual ~Child();
 };
 
-class Child_RequestEncoder {
- public:
-};
-
 class Child_RequestDecoder {
  public:
   Child_RequestDecoder() = default;
@@ -297,7 +343,7 @@ class Child_RequestDecoder {
   }
 };
 
-class Child_ResponseEncoder {
+class Child_RequestEncoder {
  public:
 };
 
@@ -325,6 +371,10 @@ class Child_ResponseDecoder {
     }
     return ZX_OK;
   }
+};
+
+class Child_ResponseEncoder {
+ public:
 };
 
 class Child_EventSender {

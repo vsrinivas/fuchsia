@@ -4,6 +4,7 @@
 
 #include <lib/async/wait.h>
 #include <lib/fidl-async/bind.h>
+#include <lib/fidl/trace.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -33,8 +34,11 @@ static zx_status_t fidl_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
   fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;
   hdr->txid = conn->txid;
   conn->txid = 0u;
-  return zx_channel_write(conn->channel, 0, msg->bytes, msg->num_bytes, msg->handles,
-                          msg->num_handles);
+  fidl_trace(WillCChannelWrite, NULL /* type */, msg->bytes, msg->num_bytes, msg->num_handles);
+  const zx_status_t status = zx_channel_write(conn->channel, 0, msg->bytes, msg->num_bytes,
+                                              msg->handles, msg->num_handles);
+  fidl_trace(DidCChannelWrite);
+  return status;
 }
 
 static void fidl_binding_destroy(fidl_binding_t* binding) {
@@ -59,6 +63,7 @@ static void fidl_message_handler(async_dispatcher_t* dispatcher, async_wait_t* w
           .num_bytes = 0u,
           .num_handles = 0u,
       };
+      fidl_trace(WillCChannelRead);
       status = zx_channel_read(wait->object, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
                                ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
       if (status == ZX_ERR_SHOULD_WAIT) {
@@ -68,6 +73,7 @@ static void fidl_message_handler(async_dispatcher_t* dispatcher, async_wait_t* w
       if (status != ZX_OK || msg.num_bytes < sizeof(fidl_message_header_t)) {
         goto shutdown;
       }
+      fidl_trace(DidCChannelRead, NULL /* type */, msg.bytes, msg.num_bytes, msg.num_handles);
       fidl_message_header_t* hdr = (fidl_message_header_t*)msg.bytes;
       fidl_connection_t conn = {
           .txn.reply = fidl_reply,

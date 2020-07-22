@@ -62,14 +62,6 @@ class SecondProtocol {
   virtual void MethodOnSecond() = 0;
 };
 
-class SecondProtocol_RequestEncoder {
- public:
-  static ::fidl::Message MethodOnSecond(::fidl::Encoder* _encoder) {
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    return _encoder->GetMessage();
-  }
-};
-
 class SecondProtocol_RequestDecoder {
  public:
   SecondProtocol_RequestDecoder() = default;
@@ -104,8 +96,22 @@ class SecondProtocol_RequestDecoder {
   virtual void MethodOnSecond() = 0;
 };
 
-class SecondProtocol_ResponseEncoder {
+class SecondProtocol_RequestEncoder {
  public:
+  static ::fidl::Message MethodOnSecond(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    bool needs_response;  // unused
+    fidl_trace(
+        DidHLCPPEncode,
+        SecondProtocol_RequestDecoder::GetType(
+            internal::kSecondProtocol_MethodOnSecond_Ordinal, &needs_response),
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
 };
 
 class SecondProtocol_ResponseDecoder {
@@ -132,6 +138,10 @@ class SecondProtocol_ResponseDecoder {
     }
     return ZX_OK;
   }
+};
+
+class SecondProtocol_ResponseEncoder {
+ public:
 };
 
 class SecondProtocol_EventSender {
@@ -200,14 +210,6 @@ class FirstProtocol {
   virtual void MethodOnFirst() = 0;
 };
 
-class FirstProtocol_RequestEncoder {
- public:
-  static ::fidl::Message MethodOnFirst(::fidl::Encoder* _encoder) {
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    return _encoder->GetMessage();
-  }
-};
-
 class FirstProtocol_RequestDecoder {
  public:
   FirstProtocol_RequestDecoder() = default;
@@ -242,8 +244,22 @@ class FirstProtocol_RequestDecoder {
   virtual void MethodOnFirst() = 0;
 };
 
-class FirstProtocol_ResponseEncoder {
+class FirstProtocol_RequestEncoder {
  public:
+  static ::fidl::Message MethodOnFirst(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    bool needs_response;  // unused
+    fidl_trace(
+        DidHLCPPEncode,
+        FirstProtocol_RequestDecoder::GetType(
+            internal::kFirstProtocol_MethodOnFirst_Ordinal, &needs_response),
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
 };
 
 class FirstProtocol_ResponseDecoder {
@@ -270,6 +286,10 @@ class FirstProtocol_ResponseDecoder {
     }
     return ZX_OK;
   }
+};
+
+class FirstProtocol_ResponseEncoder {
+ public:
 };
 
 class FirstProtocol_EventSender {

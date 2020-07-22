@@ -188,10 +188,6 @@ class SomeProtocol {
   virtual ~SomeProtocol();
 };
 
-class SomeProtocol_RequestEncoder {
- public:
-};
-
 class SomeProtocol_RequestDecoder {
  public:
   SomeProtocol_RequestDecoder() = default;
@@ -221,7 +217,7 @@ class SomeProtocol_RequestDecoder {
   }
 };
 
-class SomeProtocol_ResponseEncoder {
+class SomeProtocol_RequestEncoder {
  public:
 };
 
@@ -249,6 +245,10 @@ class SomeProtocol_ResponseDecoder {
     }
     return ZX_OK;
   }
+};
+
+class SomeProtocol_ResponseEncoder {
+ public:
 };
 
 class SomeProtocol_EventSender {

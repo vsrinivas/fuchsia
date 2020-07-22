@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "lib/fidl/cpp/internal/logging.h"
+#include "lib/fidl/trace.h"
 
 namespace fidl {
 namespace internal {
@@ -31,7 +32,11 @@ zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
     FIDL_REPORT_ENCODING_ERROR(request, request_type, error_msg);
     return status;
   }
+  fidl_trace(WillHLCPPChannelCall, request_type, request.bytes().data(), request.bytes().actual(),
+             request.handles().actual());
   status = request.Call(channel_.get(), 0, ZX_TIME_INFINITE, response);
+  fidl_trace(DidHLCPPChannelCall, response_type, response->bytes().data(),
+             response->bytes().actual(), response->handles().actual());
   if (status != ZX_OK)
     return status;
   status = response->Decode(response_type, &error_msg);

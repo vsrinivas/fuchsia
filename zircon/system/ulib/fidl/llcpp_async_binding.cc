@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/async/time.h>
+#include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/async_transaction.h>
-#include <lib/fidl/epitaph.h>
+#include <lib/fidl/trace.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
@@ -111,6 +112,7 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
           .num_bytes = 0u,
           .num_handles = 0u,
       };
+      fidl_trace(WillLLCPPAsyncChannelRead);
       status = channel_.read(0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
                              ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
       if (status != ZX_OK || msg.num_bytes < sizeof(fidl_message_header_t)) {
@@ -118,6 +120,8 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
           status = ZX_ERR_INTERNAL;
         return OnUnbind(std::move(keep_alive_), status, UnboundReason::kInternalError);
       }
+      fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes, msg.num_bytes,
+                 msg.num_handles);
 
       // Flag indicating whether this thread still has access to the binding.
       bool binding_released = false;
@@ -193,8 +197,8 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
     // Attempt to add a task to unbind the channel. On failure, the dispatcher was shutdown,
     // and another thread will do the unbinding.
     auto* unbind_task = new UnbindTask{
-      .task = {{ASYNC_STATE_INIT}, &AsyncBinding::OnUnbindTask, async_now(dispatcher_)},
-      .binding = binding
+        .task = {{ASYNC_STATE_INIT}, &AsyncBinding::OnUnbindTask, async_now(dispatcher_)},
+        .binding = binding,
     };
     if (async_post_task(dispatcher_, &unbind_task->task) != ZX_OK) {
       delete unbind_task;
@@ -219,14 +223,14 @@ void AsyncBinding::OnDispatchError(zx_status_t error) {
 std::shared_ptr<AsyncBinding> AsyncBinding::CreateServerBinding(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
-  auto ret = std::shared_ptr<AsyncBinding>(new AsyncBinding(
-      dispatcher, std::move(channel), impl, true, std::move(on_unbound_fn),
-      [dispatch_fn](std::shared_ptr<AsyncBinding>& binding, fidl_msg_t* msg,
-                    bool* binding_released, zx_status_t* status) {
-        auto hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-        AsyncTransaction txn(hdr->txid, dispatch_fn, binding_released, status);
-        txn.Dispatch(std::move(binding), msg);
-      }));
+  auto ret = std::shared_ptr<AsyncBinding>(
+      new AsyncBinding(dispatcher, std::move(channel), impl, true, std::move(on_unbound_fn),
+                       [dispatch_fn](std::shared_ptr<AsyncBinding>& binding, fidl_msg_t* msg,
+                                     bool* binding_released, zx_status_t* status) {
+                         auto hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+                         AsyncTransaction txn(hdr->txid, dispatch_fn, binding_released, status);
+                         txn.Dispatch(std::move(binding), msg);
+                       }));
   ret->keep_alive_ = ret;  // We keep the binding alive until somebody decides to close the channel.
   return ret;
 }
@@ -234,9 +238,9 @@ std::shared_ptr<AsyncBinding> AsyncBinding::CreateServerBinding(
 std::shared_ptr<AsyncBinding> AsyncBinding::CreateClientBinding(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl, DispatchFn dispatch_fn,
     TypeErasedOnUnboundFn on_unbound_fn) {
-  auto ret = std::shared_ptr<AsyncBinding>(new AsyncBinding(
-      dispatcher, std::move(channel), impl, false, std::move(on_unbound_fn),
-      std::move(dispatch_fn)));
+  auto ret = std::shared_ptr<AsyncBinding>(new AsyncBinding(dispatcher, std::move(channel), impl,
+                                                            false, std::move(on_unbound_fn),
+                                                            std::move(dispatch_fn)));
   ret->keep_alive_ = ret;  // Keep the binding alive until an unbind operation or channel error.
   return ret;
 }
