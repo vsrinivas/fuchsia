@@ -260,6 +260,9 @@ func TestNicInfoInspectImpl(t *testing.T) {
 		Name: v.name,
 		Properties: []inspect.Property{
 			{Key: "Name", Value: inspect.PropertyValueWithStr(v.value.Name)},
+			{Key: "NICID", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(v.value.nicid), 10))},
+			{Key: "AdminUp", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.adminUp))},
+			{Key: "LinkOnline", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.linkOnline))},
 			{Key: "Up", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Up))},
 			{Key: "Running", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Running))},
 			{Key: "Loopback", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Loopback))},

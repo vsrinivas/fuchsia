@@ -146,6 +146,7 @@ func TestEndpoint(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			client.SetOnLinkClosed(func() {})
 			defer func() {
 				_ = client.Close()
 				client.Wait()

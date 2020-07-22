@@ -21,7 +21,6 @@ import (
 	"syscall/zx/zxwait"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -1332,7 +1331,7 @@ func (sp *providerImpl) GetInterfaceAddresses(fidl.Context) ([]socket.InterfaceA
 			bits |= C.IFF_LOOPBACK
 		}
 		ifs.mu.Lock()
-		if ifs.mu.state == link.StateStarted {
+		if ifs.IsUpLocked() {
 			bits |= C.IFF_UP
 		}
 		ifs.mu.Unlock()

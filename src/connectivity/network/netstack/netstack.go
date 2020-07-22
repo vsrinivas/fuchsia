@@ -339,12 +339,19 @@ type Netstack struct {
 
 // Each ifState tracks the state of a network interface.
 type ifState struct {
-	ns         *Netstack
+	ns *Netstack
+	// Implements administrative control of link status.
+	//
+	// Non-nil iff the underlying link status can be toggled.
 	controller link.Controller
-	nicid      tcpip.NICID
-	mu         struct {
+	// Implements observation of link status.
+	//
+	// Non-nil iff the underlying link status can be observed.
+	observer link.Observer
+	nicid    tcpip.NICID
+	mu       struct {
 		sync.Mutex
-		state link.State
+		adminUp, linkOnline bool
 		// metric is used by default for routes that originate from this NIC.
 		metric routes.Metric
 		dhcp   struct {
@@ -353,8 +360,7 @@ type ifState struct {
 			running func() bool
 			// cancel must not be nil.
 			cancel context.CancelFunc
-			// Used to restart the DHCP client when we go from link.StateDown to
-			// link.StateStarted.
+			// Used to restart the DHCP client when we go from down to up.
 			enabled bool
 		}
 	}
@@ -373,6 +379,14 @@ type ifState struct {
 	bridgeable *bridge.BridgeableEndpoint
 
 	filterEndpoint *filter.Endpoint
+}
+
+func (ifs *ifState) LinkOnlineLocked() bool {
+	return ifs.observer == nil || ifs.mu.linkOnline
+}
+
+func (ifs *ifState) IsUpLocked() bool {
+	return ifs.mu.adminUp && ifs.LinkOnlineLocked()
 }
 
 // defaultV4Route returns a default IPv4 route through gateway on the specified
@@ -476,7 +490,7 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 		ifs := nicInfo.Context.(*ifState)
 
 		ifs.mu.Lock()
-		enabled := ifs.mu.state == link.StateStarted
+		enabled := ifs.IsUpLocked()
 		ifs.mu.Unlock()
 
 		if metricTracksInterface {
@@ -661,7 +675,7 @@ func (ifs *ifState) setDHCPStatus(name string, enabled bool) {
 	defer ifs.mu.Unlock()
 	ifs.mu.dhcp.enabled = enabled
 	ifs.mu.dhcp.cancel()
-	if ifs.mu.dhcp.enabled && ifs.mu.state == link.StateStarted {
+	if ifs.mu.dhcp.enabled && ifs.IsUpLocked() {
 		ifs.runDHCPLocked(name)
 	}
 }
@@ -696,60 +710,45 @@ func (ifs *ifState) dhcpEnabled() bool {
 	return ifs.mu.dhcp.enabled
 }
 
-func (ifs *ifState) stateChange(s link.State) {
-	name := ifs.ns.name(ifs.nicid)
+func (ifs *ifState) onDownLocked(name string, closed bool) {
+	// Stop DHCP, this triggers the removal of all dynamically obtained configuration (IP, routes,
+	// DNS servers).
+	ifs.mu.dhcp.cancel()
 
-	changed := func() bool {
-		ifs.mu.Lock()
-		defer ifs.mu.Unlock()
+	// Remove DNS servers through ifs.
+	ifs.ns.dnsConfig.RemoveAllServersWithNIC(ifs.nicid)
+	ifs.setDNSServers(nil)
 
-		switch s {
-		case ifs.mu.state:
-			return false
-		case link.StateClosed:
-			syslog.Infof("NIC %s: link.StateClosed", name)
-			fallthrough
-		case link.StateDown:
-			syslog.Infof("NIC %s: link.StateDown", name)
+	if closed {
+		// The interface is removed, force all of its routes to be removed.
+		ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDeleteAll)
+	} else {
+		// The interface is down, disable static routes (dynamic ones are handled
+		// by the cancelled DHCP server).
+		ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDisableStatic)
+	}
 
-			// Stop DHCP, this triggers the removal of all dynamically obtained configuration (IP, routes,
-			// DNS servers).
-			ifs.mu.dhcp.cancel()
+	if err := ifs.ns.DelRoute(ipv6LinkLocalOnLinkRoute(ifs.nicid)); err != nil && err != routes.ErrNoSuchRoute {
+		syslog.Errorf("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
+	}
 
-			// Remove DNS servers through ifs.
-			ifs.ns.dnsConfig.RemoveAllServersWithNIC(ifs.nicid)
-			ifs.setDNSServers(nil)
+	if closed {
+		if err := ifs.ns.stack.RemoveNIC(ifs.nicid); err != nil && err != tcpip.ErrUnknownNICID {
+			syslog.Errorf("error removing NIC %s in stack.Stack: %s", name, err)
+		}
+	} else {
+		if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
+			syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
+		}
+	}
+}
 
-			// TODO(crawshaw): more cleanup to be done here:
-			// 	- remove link endpoint
-			//	- reclaim NICID?
+func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) bool {
+	before := ifs.IsUpLocked()
+	after := adminUp && linkOnline
 
-			if s == link.StateClosed {
-				// The interface is removed, force all of its routes to be removed.
-				ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDeleteAll)
-			} else {
-				// The interface is down, disable static routes (dynamic ones are handled
-				// by the cancelled DHCP server).
-				ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDisableStatic)
-			}
-
-			if err := ifs.ns.DelRoute(ipv6LinkLocalOnLinkRoute(ifs.nicid)); err != nil && err != routes.ErrNoSuchRoute {
-				syslog.Errorf("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
-			}
-
-			if s == link.StateClosed {
-				if err := ifs.ns.stack.RemoveNIC(ifs.nicid); err != nil {
-					syslog.Errorf("error removing NIC %s in stack.Stack: %s", name, err)
-				}
-			} else {
-				if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
-					syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
-				}
-			}
-
-		case link.StateStarted:
-			syslog.Infof("NIC %s: link.StateStarted", name)
-
+	if after != before {
+		if after {
 			if err := ifs.ns.stack.EnableNIC(ifs.nicid); err != nil {
 				syslog.Errorf("error enabling NIC %s in stack.Stack: %s", name, err)
 			}
@@ -786,15 +785,89 @@ func (ifs *ifState) stateChange(s link.State) {
 				true, /* enabled */
 			)
 			ifs.ns.stack.SetRouteTable(ifs.ns.routeTable.GetNetstackTable())
+		} else {
+			ifs.onDownLocked(name, false)
+		}
+	}
+
+	ifs.mu.adminUp = adminUp
+	ifs.mu.linkOnline = linkOnline
+
+	return after != before
+}
+
+func (ifs *ifState) onLinkOnlineChanged(linkOnline bool) {
+	name := ifs.ns.name(ifs.nicid)
+
+	ifs.mu.Lock()
+	changed := ifs.stateChangeLocked(name, ifs.mu.adminUp, linkOnline)
+	ifs.mu.Unlock()
+	_ = syslog.Infof("NIC %s: observed linkOnline=%t interfacesChanged=%t", name, linkOnline, changed)
+	if changed {
+		ifs.ns.onInterfacesChanged()
+	}
+}
+
+func (ifs *ifState) setState(enabled bool) error {
+	name := ifs.ns.name(ifs.nicid)
+
+	changed, err := func() (bool, error) {
+		ifs.mu.Lock()
+		defer ifs.mu.Unlock()
+
+		if ifs.mu.adminUp == enabled {
+			return false, nil
 		}
 
-		ifs.mu.state = s
-		return true
+		if controller := ifs.controller; controller != nil {
+			fn := controller.Down
+			if enabled {
+				fn = controller.Up
+			}
+			if err := fn(); err != nil {
+				return false, err
+			}
+		}
+
+		return ifs.stateChangeLocked(name, enabled, ifs.LinkOnlineLocked()), nil
 	}()
+	if err != nil {
+		_ = syslog.Infof("NIC %s: setting adminUp=%t failed: %s", name, enabled, err)
+		return err
+	}
+	_ = syslog.Infof("NIC %s: set linkOnline=%t interfacesChanged=%t", name, enabled, changed)
 
 	if changed {
 		ifs.ns.onInterfacesChanged()
 	}
+
+	return nil
+}
+
+func (ifs *ifState) Up() error {
+	return ifs.setState(true)
+}
+
+func (ifs *ifState) Down() error {
+	return ifs.setState(false)
+}
+
+func (ifs *ifState) Remove() {
+	name := ifs.ns.name(ifs.nicid)
+
+	_ = syslog.Infof("NIC %s: removing...", name)
+
+	ifs.mu.Lock()
+	ifs.onDownLocked(name, true)
+	ifs.mu.Unlock()
+
+	_ = syslog.Infof("NIC %s: waiting for endpoint cleanup...", name)
+
+	ifs.endpoint.Wait()
+
+	_ = syslog.Infof("NIC %s: removed", name)
+
+	ifs.ns.onInterfacesChanged()
 }
 
 var nameProviderErrorLogged uint32 = 0
@@ -825,15 +898,21 @@ func (ns *Netstack) getDeviceName() string {
 // TODO(stijlist): figure out a way to make it impossible to accidentally
 // enable DHCP on loopback interfaces.
 func (ns *Netstack) addLoopback() error {
-	ifs, err := ns.addEndpoint(func(tcpip.NICID) string {
-		return "lo"
-	}, loopback.New(), link.NewLoopbackController(), false, defaultInterfaceMetric, true /* enabled */)
+	ifs, err := ns.addEndpoint(
+		func(tcpip.NICID) string {
+			return "lo"
+		},
+		loopback.New(),
+		nil,   /* controller */
+		nil,   /* observer */
+		false, /* doFilter */
+		defaultInterfaceMetric,
+	)
 	if err != nil {
 		return err
 	}
 
 	ifs.mu.Lock()
-	ifs.mu.state = link.StateStarted
 	nicid := ifs.nicid
 	ifs.mu.Unlock()
 
@@ -878,6 +957,10 @@ func (ns *Netstack) addLoopback() error {
 		return fmt.Errorf("loopback: adding routes failed: %w", err)
 	}
 
+	if err := ifs.Up(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -889,16 +972,25 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 			panic("NIC known by netstack not in interface table")
 		}
 		ifs := nicInfo.Context.(*ifState)
-		if err := ifs.controller.SetPromiscuousMode(true); err != nil {
-			return nil, err
+		if controller := ifs.controller; controller != nil {
+			if err := controller.SetPromiscuousMode(true); err != nil {
+				return nil, err
+			}
 		}
 		links = append(links, ifs.bridgeable)
 	}
 
 	b := bridge.New(links)
-	return ns.addEndpoint(func(nicid tcpip.NICID) string {
-		return fmt.Sprintf("br%d", nicid)
-	}, b, b, false, defaultInterfaceMetric, false /* enabled */)
+	return ns.addEndpoint(
+		func(nicid tcpip.NICID) string {
+			return fmt.Sprintf("br%d", nicid)
+		},
+		b,
+		b,
+		nil,   /* observer */
+		false, /* doFilter */
+		defaultInterfaceMetric,
+	)
 }
 
 func makeEndpointName(prefix, config_name string) func(nicid tcpip.NICID) string {
@@ -916,34 +1008,38 @@ func (ns *Netstack) addEth(topopath string, config netstack.InterfaceConfig, dev
 		return nil, err
 	}
 
-	return ns.addEndpoint(makeEndpointName("eth", config.Name), eth.NewLinkEndpoint(client), client, true, routes.Metric(config.Metric), false /* enabled */)
+	return ns.addEndpoint(
+		makeEndpointName("eth", config.Name),
+		eth.NewLinkEndpoint(client),
+		client,
+		client,
+		true, /* doFilter */
+		routes.Metric(config.Metric),
+	)
 }
 
 // addEndpoint creates a new NIC with stack.Stack.
-//
-// If enabled is false, the NIC will initially be disabled. This is desirable
-// when the underlying device or the newly created NIC needs to be further
-// configured (with IP addresses, routes, etc.) before it is brought up and
-// starts handling packets.
 func (ns *Netstack) addEndpoint(
 	nameFn func(nicid tcpip.NICID) string,
 	ep stack.LinkEndpoint,
 	controller link.Controller,
+	observer link.Observer,
 	doFilter bool,
 	metric routes.Metric,
-	enabled bool,
 ) (*ifState, error) {
 	ifs := &ifState{
 		ns:         ns,
 		controller: controller,
+		observer:   observer,
+	}
+	if observer != nil {
+		observer.SetOnLinkClosed(ifs.Remove)
+		observer.SetOnLinkOnlineChanged(ifs.onLinkOnlineChanged)
 	}
 
-	ifs.mu.state = link.StateUnknown
 	ifs.mu.metric = metric
 	ifs.mu.dhcp.running = func() bool { return false }
 	ifs.mu.dhcp.cancel = func() {}
-
-	ifs.controller.SetOnStateChange(ifs.stateChange)
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
@@ -965,7 +1061,7 @@ func (ns *Netstack) addEndpoint(
 	ns.mu.Unlock()
 
 	name := nameFn(ifs.nicid)
-	if err := ns.stack.CreateNICWithOptions(ifs.nicid, ep, stack.NICOptions{Name: name, Context: ifs, Disabled: !enabled}); err != nil {
+	if err := ns.stack.CreateNICWithOptions(ifs.nicid, ep, stack.NICOptions{Name: name, Context: ifs, Disabled: true}); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %w", name, WrapTcpIpError(err))
 	}
 
@@ -1040,7 +1136,8 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 		info := ifStateInfo{
 			NICInfo:     ni,
 			nicid:       ifs.nicid,
-			state:       ifs.mu.state,
+			adminUp:     ifs.mu.adminUp,
+			linkOnline:  ifs.LinkOnlineLocked(),
 			dnsServers:  dnsServers,
 			dhcpEnabled: ifs.mu.dhcp.enabled,
 		}

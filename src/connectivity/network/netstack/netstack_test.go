@@ -25,7 +25,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
@@ -122,38 +121,38 @@ func TestStackNICEnableDisable(t *testing.T) {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = true, want = false", ifs.nicid)
 	}
 
-	getLinkState := func() link.State {
+	isUp := func() bool {
 		ifs.mu.Lock()
 		defer ifs.mu.Unlock()
-		return ifs.mu.state
+		return ifs.IsUpLocked()
 	}
 
-	if got, want := getLinkState(), link.StateUnknown; got != want {
-		t.Fatalf("got ifs.mu.state = %s, want %s", got, want)
+	if isUp() {
+		t.Fatal("got initial link state up, want down")
 	}
 
 	// Bringing the link up should enable the NIC in stack.Stack.
-	if err := ifs.controller.Up(); err != nil {
-		t.Fatal("ifs.controller.Up(): ", err)
+	if err := ifs.Up(); err != nil {
+		t.Fatal("ifs.Up(): ", err)
 	}
 	if enabled := ns.stack.CheckNIC(ifs.nicid); !enabled {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = false, want = true", ifs.nicid)
 	}
 
-	if got, want := getLinkState(), link.StateStarted; got != want {
-		t.Fatalf("got ifs.mu.state = %s, want %s", got, want)
+	if !isUp() {
+		t.Fatal("got post-up link state down, want up")
 	}
 
 	// Bringing the link down should disable the NIC in stack.Stack.
-	if err := ifs.controller.Down(); err != nil {
-		t.Fatal("ifs.controller.Down(): ", err)
+	if err := ifs.Down(); err != nil {
+		t.Fatal("ifs.Down(): ", err)
 	}
 	if enabled := ns.stack.CheckNIC(ifs.nicid); enabled {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = true, want = false", ifs.nicid)
 	}
 
-	if got, want := getLinkState(), link.StateDown; got != want {
-		t.Fatalf("got ifs.mu.state = %s, want %s", got, want)
+	if isUp() {
+		t.Fatal("got post-down link state up, want down")
 	}
 }
 
@@ -162,9 +161,16 @@ func TestStackNICEnableDisable(t *testing.T) {
 func TestStackNICRemove(t *testing.T) {
 	ns := newNetstack(t)
 
-	var ep noopEndpoint
+	var obs noopObserver
 
-	ifs, err := ns.addEndpoint(func(tcpip.NICID) string { return t.Name() }, &ep, &noopController{}, false, 0, false)
+	ifs, err := ns.addEndpoint(
+		func(tcpip.NICID) string { return t.Name() },
+		&noopEndpoint{},
+		&noopController{},
+		&obs,
+		true, /* doFilter */
+		0,    /* metric */
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,9 +191,8 @@ func TestStackNICRemove(t *testing.T) {
 	}
 
 	// Closing the link should remove the NIC from stack.Stack.
-	if err := ifs.controller.Close(); err != nil {
-		t.Fatal("ifs.controller.Close(): ", err)
-	}
+	obs.onLinkClosed()
+
 	if enabled := ns.stack.CheckNIC(ifs.nicid); enabled {
 		t.Errorf("got ns.stack.CheckNIC(%d) = false, want = true", ifs.nicid)
 	}
@@ -199,7 +204,7 @@ func TestStackNICRemove(t *testing.T) {
 	}
 
 	// Wait for the controller to stop and free up its resources.
-	ep.Wait()
+	ifs.endpoint.Wait()
 }
 
 func containsRoute(rs []tcpip.Route, r tcpip.Route) bool {
@@ -395,7 +400,14 @@ func TestNotStartedByDefault(t *testing.T) {
 	controller := noopController{
 		onUp: func() { startCalled = true },
 	}
-	if _, err := ns.addEndpoint(func(tcpip.NICID) string { return t.Name() }, &noopEndpoint{}, &controller, false, 0, false); err != nil {
+	if _, err := ns.addEndpoint(
+		func(tcpip.NICID) string { return t.Name() },
+		&noopEndpoint{},
+		&controller,
+		nil,  /* observer */
+		true, /* doFilter */
+		0,    /* metric */
+	); err != nil {
 		t.Fatal(err)
 	}
 
@@ -491,12 +503,19 @@ func TestIpv6LinkLocalAddr(t *testing.T) {
 	ep := noopEndpoint{
 		linkAddress: tcpip.LinkAddress([]byte{2, 3, 4, 5, 6, 7}),
 	}
-	ifs, err := ns.addEndpoint(func(tcpip.NICID) string { return t.Name() }, &ep, &noopController{}, false, 0, false)
+	ifs, err := ns.addEndpoint(
+		func(tcpip.NICID) string { return t.Name() },
+		&ep,
+		&noopController{},
+		nil,  /* observer */
+		true, /* doFilter */
+		0,    /* metric */
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs.controller.Up(); err != nil {
-		t.Fatal("ifs.controller.Up(): ", err)
+	if err := ifs.Up(); err != nil {
+		t.Fatal("ifs.Up(): ", err)
 	}
 
 	want := tcpip.ProtocolAddress{
@@ -540,7 +559,14 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 	ep := noopEndpoint{
 		linkAddress: tcpip.LinkAddress([]byte{2, 3, 4, 5, 6, 7}),
 	}
-	ifs, err := ns.addEndpoint(func(tcpip.NICID) string { return t.Name() }, &ep, &noopController{}, false, 0, false)
+	ifs, err := ns.addEndpoint(
+		func(tcpip.NICID) string { return t.Name() },
+		&ep,
+		&noopController{},
+		nil,  /* observer */
+		true, /* doFilter */
+		0,    /* metric */
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -555,7 +581,7 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 
 	// Bringing the ethernet device up should result in the link-local
 	// route being added.
-	if err := ifs.controller.Up(); err != nil {
+	if err := ifs.Up(); err != nil {
 		t.Fatalf("eth.Up(): %s", err)
 	}
 	rt = ns.stack.GetRouteTable()
@@ -565,7 +591,7 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 
 	// Bringing the ethernet device down should result in the link-local
 	// route being removed.
-	if err := ifs.controller.Down(); err != nil {
+	if err := ifs.Down(); err != nil {
 		t.Fatalf("eth.Down(): %s", err)
 	}
 	rt = ns.stack.GetRouteTable()
@@ -660,20 +686,14 @@ func TestStaticIPConfiguration(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			stateChange := make(chan link.State, 1)
-			ifs.controller.SetOnStateChange(func(s link.State) {
-				stateChange <- s
-				ifs.stateChange(s)
+			defer ifs.Remove()
+
+			onlineChanged := make(chan bool, 1)
+			ifs.observer.SetOnLinkOnlineChanged(func(linkOnline bool) {
+				onlineChanged <- linkOnline
+				ifs.onLinkOnlineChanged(linkOnline)
 			})
-			defer func() {
-				if err := ifs.controller.Close(); err != nil {
-					t.Errorf("ifs.controller.Close() = %s", err)
-				}
-				if got, want := <-stateChange, link.StateClosed; got != want {
-					t.Errorf("got state = %s, want %s", got, want)
-				}
-				close(stateChange)
-			}()
+
 			name := ifs.ns.name(ifs.nicid)
 			result := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr)
 			if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
@@ -692,11 +712,8 @@ func TestStaticIPConfiguration(t *testing.T) {
 			}
 			ifs.mu.Unlock()
 
-			if err := ifs.controller.Down(); err != nil {
+			if err := ifs.Down(); err != nil {
 				t.Fatal(err)
-			}
-			if got, want := <-stateChange, link.StateDown; got != want {
-				t.Errorf("got state = %s, want %s", got, want)
 			}
 
 			ifs.mu.Lock()
@@ -708,11 +725,11 @@ func TestStaticIPConfiguration(t *testing.T) {
 			}
 			ifs.mu.Unlock()
 
-			if err := ifs.controller.Up(); err != nil {
+			if err := ifs.Up(); err != nil {
 				t.Fatal(err)
 			}
-			if got, want := <-stateChange, link.StateStarted; got != want {
-				t.Errorf("got state = %s, want %s", got, want)
+			if got, want := <-onlineChanged; got != want {
+				t.Errorf("got state = %t, want %t", got, want)
 			}
 
 			ifs.mu.Lock()
@@ -787,14 +804,10 @@ func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispa
 		dnsConfig: dns.MakeServersConfig(),
 	}
 	t.Cleanup(func() {
-		nicInfos := ns.stack.NICInfo()
-		for id, nic := range nicInfos {
-			if ifs, ok := nic.Context.(*ifState); ok {
-				if err := ifs.controller.Close(); err != nil {
-					t.Errorf("failed to close controller for NIC %d: %s", id, err)
-				}
-				ifs.endpoint.Wait()
-			}
+		for _, nic := range ns.stack.NICInfo() {
+			ifs := nic.Context.(*ifState)
+			ifs.Remove()
+			ifs.endpoint.Wait()
 		}
 	})
 	return ns
@@ -880,12 +893,19 @@ func TestListInterfaceAddresses(t *testing.T) {
 	ep := noopEndpoint{
 		linkAddress: tcpip.LinkAddress([]byte{2, 3, 4, 5, 6, 7}),
 	}
-	ifState, err := ns.addEndpoint(func(tcpip.NICID) string { return t.Name() }, &ep, &noopController{}, false, 0, false)
+	ifState, err := ns.addEndpoint(
+		func(tcpip.NICID) string { return t.Name() },
+		&ep,
+		&noopController{},
+		nil,  /* observer */
+		true, /* doFilter */
+		0,    /* metric */
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifState.controller.Up(); err != nil {
-		t.Fatal("ifState.controller.Up(): ", err)
+	if err := ifState.Up(); err != nil {
+		t.Fatal("ifState.Up(): ", err)
 	}
 
 	waitForDAD := func(addr tcpip.Address) {

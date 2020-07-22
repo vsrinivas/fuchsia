@@ -43,11 +43,12 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 	ifs.mu.Lock()
 	defer ifs.mu.Unlock()
 
-	// TODO(fxbug.dev/52383): distinguish between enabled and link up.
 	administrativeStatus := stack.AdministrativeStatusDisabled
-	physicalStatus := stack.PhysicalStatusDown
-	if ifs.mu.state == link.StateStarted {
+	if ifs.mu.adminUp {
 		administrativeStatus = stack.AdministrativeStatusEnabled
+	}
+	physicalStatus := stack.PhysicalStatusDown
+	if ifs.LinkOnlineLocked() {
 		physicalStatus = stack.PhysicalStatusUp
 	}
 
@@ -108,9 +109,12 @@ func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 
 func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.DeviceDefinition) stack.StackAddInterfaceResult {
 
-	var namePrefix string
-	var ep tcpipstack.LinkEndpoint
-	var controller link.Controller
+	var (
+		namePrefix string
+		ep         tcpipstack.LinkEndpoint
+		controller link.Controller
+		observer   link.Observer
+	)
 
 	switch device.Which() {
 	case stack.DeviceDefinitionEthernet:
@@ -123,6 +127,7 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 		}
 		ep = eth.NewLinkEndpoint(client)
 		controller = client
+		observer = client
 		namePrefix = "eth"
 	case stack.DeviceDefinitionIp:
 		client, err := netdevice.NewClient(context.Background(), &device.Ip, &netdevice.SimpleSessionConfigFactory{
@@ -134,13 +139,21 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 		}
 		ep = client
 		controller = client
+		observer = client
 		namePrefix = "ip"
 	default:
 		_ = syslog.Errorf("unsupported device definition: %d", device.Which())
 		return stack.StackAddInterfaceResultWithErr(stack.ErrorInvalidArgs)
 	}
 
-	ifs, err := ns.addEndpoint(makeEndpointName(namePrefix, config.GetNameWithDefault("")), ep, controller, true /* doFilter */, routes.Metric(config.GetMetricWithDefault(0)), false /* enabled */)
+	ifs, err := ns.addEndpoint(
+		makeEndpointName(namePrefix, config.GetNameWithDefault("")),
+		ep,
+		controller,
+		observer,
+		true, /* doFilter */
+		routes.Metric(config.GetMetricWithDefault(0)),
+	)
 	if err != nil {
 		var tcpipError TcpIpError
 		if errors.As(err, &tcpipError) {
@@ -155,20 +168,13 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResult {
 	var result stack.StackDelEthernetInterfaceResult
 
-	nicInfo, ok := ns.stack.NICInfo()[tcpip.NICID(id)]
-	if !ok {
+	if nicInfo, ok := ns.stack.NICInfo()[tcpip.NICID(id)]; ok {
+		nicInfo.Context.(*ifState).Remove()
+		result.SetResponse(stack.StackDelEthernetInterfaceResponse{})
+	} else {
 		result.SetErr(stack.ErrorNotFound)
-		return result
 	}
 
-	ifs := nicInfo.Context.(*ifState)
-	if err := ifs.controller.Close(); err != nil {
-		syslog.Errorf("ifs.controller.Close() failed (NIC: %d): %v", id, err)
-		result.SetErr(stack.ErrorInternal)
-		return result
-	}
-
-	result.SetResponse(stack.StackDelEthernetInterfaceResponse{})
 	return result
 }
 
@@ -196,9 +202,8 @@ func (ns *Netstack) enableInterface(id uint64) stack.StackEnableInterfaceResult 
 		return result
 	}
 
-	ifs := nicInfo.Context.(*ifState)
-	if err := ifs.controller.Up(); err != nil {
-		syslog.Errorf("ifs.controller.Up() failed (NIC %d): %s", id, err)
+	if err := nicInfo.Context.(*ifState).Up(); err != nil {
+		_ = syslog.Errorf("ifs.Up() failed (NIC %d): %s", id, err)
 		result.SetErr(stack.ErrorInternal)
 		return result
 	}
@@ -216,9 +221,8 @@ func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceResul
 		return result
 	}
 
-	ifs := nicInfo.Context.(*ifState)
-	if err := ifs.controller.Down(); err != nil {
-		syslog.Errorf("ifs.controller.Down() failed (NIC %d): %s", id, err)
+	if err := nicInfo.Context.(*ifState).Down(); err != nil {
+		_ = syslog.Errorf("ifs.Down() failed (NIC %d): %s", id, err)
 		result.SetErr(stack.ErrorInternal)
 		return result
 	}
@@ -433,40 +437,44 @@ func (ni *stackImpl) DelForwardingEntry(_ fidl.Context, subnet net.Subnet) (stac
 }
 
 func (ni *stackImpl) EnablePacketFilter(_ fidl.Context, id uint64) (stack.StackEnablePacketFilterResult, error) {
-	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
-
 	var result stack.StackEnablePacketFilterResult
+
+	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
 	if !ok {
 		result.SetErr(stack.ErrorNotFound)
 		return result, nil
 	}
 
-	ifs := nicInfo.Context.(*ifState)
-	if ifs.filterEndpoint == nil {
+	filter := nicInfo.Context.(*ifState).filterEndpoint
+	if filter == nil {
 		result.SetErr(stack.ErrorNotSupported)
-	} else {
-		ifs.filterEndpoint.Enable()
-		result.SetResponse(stack.StackEnablePacketFilterResponse{})
+		return result, nil
 	}
+
+	filter.Enable()
+
+	result.SetResponse(stack.StackEnablePacketFilterResponse{})
 	return result, nil
 }
 
 func (ni *stackImpl) DisablePacketFilter(_ fidl.Context, id uint64) (stack.StackDisablePacketFilterResult, error) {
-	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
-
 	var result stack.StackDisablePacketFilterResult
+
+	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
 	if !ok {
 		result.SetErr(stack.ErrorNotFound)
 		return result, nil
 	}
 
-	ifs := nicInfo.Context.(*ifState)
-	if ifs.filterEndpoint == nil {
+	filter := nicInfo.Context.(*ifState).filterEndpoint
+	if filter == nil {
 		result.SetErr(stack.ErrorNotSupported)
-	} else {
-		ifs.filterEndpoint.Disable()
-		result.SetResponse(stack.StackDisablePacketFilterResponse{})
+		return result, nil
 	}
+
+	filter.Disable()
+
+	result.SetResponse(stack.StackDisablePacketFilterResponse{})
 	return result, nil
 }
 

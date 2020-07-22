@@ -12,6 +12,8 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
+var _ stack.LinkEndpoint = (*noopEndpoint)(nil)
+
 type noopEndpoint struct {
 	linkAddress tcpip.LinkAddress
 	attached    chan struct{}
@@ -49,7 +51,9 @@ func (ep *noopEndpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	if dispatcher != nil {
 		ep.attached = make(chan struct{})
 	} else {
-		close(ep.attached)
+		if ch := ep.attached; ch != nil {
+			close(ch)
+		}
 		ep.attached = nil
 	}
 }
@@ -64,41 +68,49 @@ func (ep *noopEndpoint) Wait() {
 	}
 }
 
+var _ link.Controller = (*noopController)(nil)
+
 type noopController struct {
-	onUp                 func()
-	onStateChange        func(link.State)
-	onSetPromiscuousMode func(bool)
+	onUp func()
 }
 
 func (n *noopController) Up() error {
 	if fn := n.onUp; fn != nil {
 		fn()
 	}
-	n.onStateChange(link.StateStarted)
 	return nil
 }
 
-func (n *noopController) Down() error {
-	n.onStateChange(link.StateDown)
+func (*noopController) Down() error {
 	return nil
 }
 
-func (n *noopController) Close() error {
-	n.onStateChange(link.StateClosed)
+func (*noopController) SetPromiscuousMode(v bool) error {
 	return nil
 }
 
-func (n *noopController) SetOnStateChange(fn func(link.State)) {
-	n.onStateChange = fn
+var _ link.Observer = (*noopObserver)(nil)
+
+type noopObserver struct {
+	onLinkClosed        func()
+	onLinkOnlineChanged func(bool)
 }
 
-func (ep *noopController) SetPromiscuousMode(v bool) error {
-	if fn := ep.onSetPromiscuousMode; fn != nil {
-		fn(v)
-	}
-	return nil
+func (n *noopObserver) SetOnLinkClosed(fn func()) {
+	n.onLinkClosed = fn
+}
+
+func (n *noopObserver) SetOnLinkOnlineChanged(fn func(bool)) {
+	n.onLinkOnlineChanged = fn
 }
 
 func addNoopEndpoint(ns *Netstack, name string) (*ifState, error) {
-	return ns.addEndpoint(makeEndpointName("test", name), &noopEndpoint{}, &noopController{}, true, 0, false)
+	return ns.addEndpoint(
+		makeEndpointName("test", name),
+		&noopEndpoint{},
+		&noopController{},
+		nil,  /* observer */
+		true, /* doFilter */
+		0,    /* metric */
+	)
 }

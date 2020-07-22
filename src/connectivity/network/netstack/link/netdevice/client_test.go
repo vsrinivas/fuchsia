@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -267,10 +266,14 @@ func TestWritePacket(t *testing.T) {
 	ctx := context.Background()
 
 	tunDev, client := createTunClientPair(t, ctx)
+
+	client.SetOnLinkClosed(func() {})
+	client.SetOnLinkOnlineChanged(func(bool) {})
+
 	linkEndpoint := eth.NewLinkEndpoint(client)
 
-	ch := make(dispatcherChan, 1)
-	linkEndpoint.Attach(&ch)
+	dispatcher := make(dispatcherChan)
+	linkEndpoint.Attach(&dispatcher)
 
 	if err := client.Up(); err != nil {
 		t.Fatalf("failed to start client %s", err)
@@ -332,14 +335,18 @@ func TestReceivePacket(t *testing.T) {
 	ctx := context.Background()
 
 	tunDev, client := createTunClientPair(t, ctx)
+
+	client.SetOnLinkClosed(func() {})
+	client.SetOnLinkOnlineChanged(func(bool) {})
+
 	linkEndpoint := eth.NewLinkEndpoint(client)
 
 	if err := client.Up(); err != nil {
 		t.Fatalf("failed to start client %s", err)
 	}
 
-	ch := make(dispatcherChan, 1)
-	linkEndpoint.Attach(&ch)
+	dispatcher := make(dispatcherChan, 1)
+	linkEndpoint.Attach(&dispatcher)
 
 	tunMac := getTunMac()
 	otherMac := getOtherMac()
@@ -370,7 +377,7 @@ func TestReceivePacket(t *testing.T) {
 	send(header.EthernetMinimumSize - 1)
 	select {
 	case <-time.After(200 * time.Millisecond):
-	case args := <-ch:
+	case args := <-dispatcher:
 		t.Fatalf("unexpected packet received: %v", args)
 	}
 
@@ -384,7 +391,7 @@ func TestReceivePacket(t *testing.T) {
 		len(pktPayload),
 	} {
 		send(header.EthernetMinimumSize + extra)
-		args := <-ch
+		args := <-dispatcher
 		if diff := cmp.Diff(args, DeliverNetworkPacketArgs{
 			SrcLinkAddr: tcpip.LinkAddress(otherMac.Octets[:]),
 			DstLinkAddr: tcpip.LinkAddress(tunMac.Octets[:]),
@@ -493,41 +500,45 @@ func TestStateChange(t *testing.T) {
 
 	tunDev, client := createTunClientPair(t, ctx)
 
-	ch := make(chan link.State, 1)
-	client.SetOnStateChange(func(linkState link.State) {
-		ch <- linkState
+	closed := make(chan struct{})
+	client.SetOnLinkClosed(func() { close(closed) })
+
+	defer func() {
+		// Close and expect callback to fire.
+		if err := client.Close(); err != nil {
+			t.Fatalf("failed to close client: %s", err)
+		}
+		<-closed
+	}()
+
+	ch := make(chan bool, 1)
+	client.SetOnLinkOnlineChanged(func(linkOnline bool) {
+		ch <- linkOnline
 	})
 
-	if err := client.Up(); err != nil {
-		t.Fatalf("failed to start client %s", err)
-	}
+	dispatcher := make(dispatcherChan)
+	client.Attach(&dispatcher)
 
 	// First link state should be Started, because  we set tunDev to online by
 	// default.
-	if linkState := <-ch; linkState != link.StateStarted {
-		t.Errorf("bad initial link state %v, expected %v", linkState, link.StateStarted)
+	if !<-ch {
+		t.Error("initial link state down, want up")
 	}
 
 	// Set offline and expect link state Down.
 	if err := tunDev.SetOnline(ctx, false); err != nil {
 		t.Fatalf("failed to set device online: %s", err)
 	}
-	if linkState := <-ch; linkState != link.StateDown {
-		t.Errorf("bad link state after setting offline %v, expected %v", linkState, link.StateDown)
+	if <-ch {
+		t.Error("post-down link state up, want down")
 	}
 
 	// Set online and expect link state Started again.
 	if err := tunDev.SetOnline(ctx, true); err != nil {
 		t.Fatalf("failed to set device offline: %s", err)
 	}
-	if linkState := <-ch; linkState != link.StateStarted {
-		t.Errorf("bad link state after setting offline %v, expected %v", linkState, link.StateDown)
-	}
-
-	// Close and expect link state Closed.
-	client.Close()
-	if linkState := <-ch; linkState != link.StateClosed {
-		t.Fatalf("bad link state after closing %v, expected %v", linkState, link.StateClosed)
+	if !<-ch {
+		t.Error("post-up link state down, want up")
 	}
 }
 
@@ -536,21 +547,18 @@ func TestDestroyDeviceCausesClose(t *testing.T) {
 
 	tunDev, client := createTunClientPair(t, ctx)
 
-	ch := make(chan link.State, 1)
-	client.SetOnStateChange(func(linkState link.State) {
-		ch <- linkState
-	})
+	closed := make(chan struct{})
+	client.SetOnLinkClosed(func() { close(closed) })
+	client.SetOnLinkOnlineChanged(func(bool) {})
 
-	dispatcher := make(dispatcherChan, 1)
+	dispatcher := make(dispatcherChan)
 	client.Attach(&dispatcher)
 
-	// Close and expect link state Closed.
+	// Close and expect callback to fire.
 	if err := tunDev.Close(); err != nil {
 		t.Fatalf("tunDev.Close() failed: %s", err)
 	}
-	if linkState := <-ch; linkState != link.StateClosed {
-		t.Fatalf("bad link state after closing %v, expected %v", linkState, link.StateClosed)
-	}
+	<-closed
 }
 
 func TestCreationFailsIBadFrameType(t *testing.T) {
@@ -605,6 +613,11 @@ func TestPairExchangePackets(t *testing.T) {
 		}
 	})
 
+	for _, client := range []*Client{lClient, rClient} {
+		client.SetOnLinkClosed(func() {})
+		client.SetOnLinkOnlineChanged(func(bool) {})
+	}
+
 	lDispatcher := make(dispatcherChan, 1)
 	rDispatcher := make(dispatcherChan, 1)
 	lClient.Attach(&lDispatcher)
@@ -618,20 +631,26 @@ func TestPairExchangePackets(t *testing.T) {
 		t.Fatalf("failed to start right client: %s", err)
 	}
 
-	watcher, err := lClient.GetStatusWatcher(ctx)
+	req, watcher, err := network.NewStatusWatcherWithCtxInterfaceRequest()
 	if err != nil {
-		t.Fatalf("failed to create watcher: %s", err)
+		t.Fatalf("failed to create status watcher request: %s", err)
 	}
 	t.Cleanup(func() {
 		if err := watcher.Close(); err != nil {
-			t.Errorf("watcher.CLose() failed: %s", err)
+			t.Errorf("watcher.Close() failed: %s", err)
 		}
 	})
-	state := link.StateDown
-	for state != link.StateStarted {
-		state, _, err = watcher.getStatus(ctx)
+	if err := lClient.device.GetStatusWatcher(ctx, req, network.MaxStatusBuffer); err != nil {
+		t.Fatalf("failed to get status watcher: %s", err)
+	}
+
+	for {
+		status, err := watcher.WatchStatus(context.Background())
 		if err != nil {
 			t.Fatalf("failed to get status: %s", err)
+		}
+		if status.GetFlags()&network.StatusFlagsOnline != 0 {
+			break
 		}
 	}
 

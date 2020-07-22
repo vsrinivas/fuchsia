@@ -13,7 +13,6 @@ import (
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -191,13 +190,13 @@ var _ inspectInner = (*nicInfoMapInspectImpl)(nil)
 // Picking info to inspect from ifState in netstack.
 type ifStateInfo struct {
 	stack.NICInfo
-	nicid       tcpip.NICID
-	state       link.State
-	dnsServers  []tcpip.Address
-	dhcpEnabled bool
-	dhcpInfo    dhcp.Info
-	dhcpStats   *dhcp.Stats
-	client      *eth.Client
+	nicid               tcpip.NICID
+	adminUp, linkOnline bool
+	dnsServers          []tcpip.Address
+	dhcpEnabled         bool
+	dhcpInfo            dhcp.Info
+	dhcpStats           *dhcp.Stats
+	client              *eth.Client
 }
 
 type nicInfoMapInspectImpl struct {
@@ -246,6 +245,9 @@ func (impl *nicInfoInspectImpl) ReadData() inspect.Object {
 		Name: impl.name,
 		Properties: []inspect.Property{
 			{Key: "Name", Value: inspect.PropertyValueWithStr(impl.value.Name)},
+			{Key: "NICID", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.nicid), 10))},
+			{Key: "AdminUp", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.adminUp))},
+			{Key: "LinkOnline", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.linkOnline))},
 			{Key: "Up", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Flags.Up))},
 			{Key: "Running", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Flags.Running))},
 			{Key: "Loopback", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Flags.Loopback))},

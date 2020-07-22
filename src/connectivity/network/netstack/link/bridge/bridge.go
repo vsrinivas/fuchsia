@@ -12,7 +12,6 @@ import (
 	"math"
 	"sort"
 	"strings"
-	"sync"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 
@@ -32,10 +31,6 @@ type Endpoint struct {
 	capabilities    stack.LinkEndpointCapabilities
 	maxHeaderLength uint16
 	linkAddress     tcpip.LinkAddress
-	mu              struct {
-		sync.Mutex
-		onStateChange func(link.State)
-	}
 }
 
 // New creates a new link from a list of BridgeableEndpoints that bridges
@@ -91,15 +86,6 @@ func (ep *Endpoint) Up() error {
 	for _, l := range ep.links {
 		l.SetBridge(ep)
 	}
-
-	ep.mu.Lock()
-	onStateChange := ep.mu.onStateChange
-	ep.mu.Unlock()
-
-	if onStateChange != nil {
-		onStateChange(link.StateStarted)
-	}
-
 	return nil
 }
 
@@ -115,15 +101,6 @@ func (ep *Endpoint) Down() error {
 	for _, l := range ep.links {
 		l.SetBridge(nil)
 	}
-
-	ep.mu.Lock()
-	onStateChange := ep.mu.onStateChange
-	ep.mu.Unlock()
-
-	if onStateChange != nil {
-		onStateChange(link.StateDown)
-	}
-
 	return nil
 }
 
@@ -139,23 +116,7 @@ func (ep *Endpoint) Close() error {
 	for _, l := range ep.links {
 		l.SetBridge(nil)
 	}
-
-	ep.mu.Lock()
-	onStateChange := ep.mu.onStateChange
-	ep.mu.Unlock()
-
-	if onStateChange != nil {
-		onStateChange(link.StateClosed)
-	}
-
 	return nil
-}
-
-func (ep *Endpoint) SetOnStateChange(f func(link.State)) {
-	ep.mu.Lock()
-	defer ep.mu.Unlock()
-
-	ep.mu.onStateChange = f
 }
 
 // SetPromiscuousMode on a bridge is a no-op, since all of the constituent

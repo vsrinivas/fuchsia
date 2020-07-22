@@ -4,56 +4,13 @@
 
 package link
 
-type State int
-
-// TODO(fxbug.dev/52383): distinguish between enabled and link up.
-const (
-	StateUnknown State = iota
-	StateStarted
-	StateDown
-	StateClosed
-)
-
 type Controller interface {
 	Up() error
 	Down() error
-	Close() error
-	SetOnStateChange(func(State))
-
 	SetPromiscuousMode(bool) error
 }
 
-func NewLoopbackController() Controller {
-	return &loopbackController{}
-}
-
-var _ Controller = (*loopbackController)(nil)
-
-type loopbackController struct {
-	onStateChange func(State)
-}
-
-func (c *loopbackController) Up() error {
-	if f := c.onStateChange; f != nil {
-		f(StateStarted)
-	}
-	return nil
-}
-func (c *loopbackController) Down() error {
-	if f := c.onStateChange; f != nil {
-		f(StateDown)
-	}
-	return nil
-}
-func (c *loopbackController) Close() error {
-	if f := c.onStateChange; f != nil {
-		f(StateClosed)
-	}
-	return nil
-}
-func (c *loopbackController) SetOnStateChange(f func(State)) {
-	c.onStateChange = f
-}
-func (c *loopbackController) SetPromiscuousMode(bool) error {
-	return nil
+type Observer interface {
+	SetOnLinkClosed(func())
+	SetOnLinkOnlineChanged(func(bool))
 }

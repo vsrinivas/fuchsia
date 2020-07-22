@@ -39,35 +39,9 @@ const minEthernetBufferSize = 60
 
 type bufferDescriptor = C.buffer_descriptor_t
 
-// Helper struct wrapping a fuchsia.hardware.network/StatusWatcher.
-type statusWatcher struct {
-	iface *network.StatusWatcherWithCtxInterface
-}
-
-// getStatus performs the hanging get on
-// fuchsia.hardware.network/StatusWatcher.WatchStatus and returns when a new
-// link state and MTU are observed.
-func (w *statusWatcher) getStatus(ctx context.Context) (link.State, uint32, error) {
-	status, err := w.iface.WatchStatus(ctx)
-	if err != nil {
-		return link.StateUnknown, 0, err
-	}
-	state := link.StateUnknown
-	if status.FlagsPresent {
-		if status.Flags&network.StatusFlagsOnline != 0 {
-			state = link.StateStarted
-		} else {
-			state = link.StateDown
-		}
-	}
-	return state, status.Mtu, nil
-}
-
-func (w *statusWatcher) Close() error {
-	return w.iface.Close()
-}
-
 var _ link.Controller = (*Client)(nil)
+var _ link.Observer = (*Client)(nil)
+
 var _ stack.LinkEndpoint = (*Client)(nil)
 var _ stack.GSOEndpoint = (*Client)(nil)
 
@@ -83,26 +57,19 @@ type Client struct {
 	session *network.SessionWithCtxInterface
 	info    network.Info
 	config  SessionConfig
+	watcher *network.StatusWatcherWithCtxInterface
 
 	data        fifo.MappedVMO
 	descriptors fifo.MappedVMO
 
 	handler netdevice.Handler
 
-	admin struct {
-		mu struct {
-			sync.Mutex
-			up      bool
-			closed  bool
-			watcher *statusWatcher
-		}
-		watcherWg sync.WaitGroup
-	}
-
 	state struct {
 		mu struct {
 			sync.Mutex
-			stateFunc func(link.State)
+			closed              bool
+			onLinkClosed        func()
+			onLinkOnlineChanged func(bool)
 		}
 	}
 
@@ -207,15 +174,10 @@ func (c *Client) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
 func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	c.dispatcher = dispatcher
 
-	// dispatcher may be nil when the NIC in stack.Stack is being removed.
-	if dispatcher == nil {
-		return
-	}
-
 	detachWithError := func(reason error) {
-		c.admin.mu.Lock()
-		closed := c.admin.mu.closed
-		c.admin.mu.Unlock()
+		c.state.mu.Lock()
+		closed := c.state.mu.closed
+		c.state.mu.Unlock()
 		if closed {
 			return
 		}
@@ -227,6 +189,33 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			_ = syslog.WarnTf(tag, "closed device: %s", reason)
 		}
 	}
+
+	// dispatcher may be nil when the NIC in stack.Stack is being removed.
+	if dispatcher == nil {
+		detachWithError(fmt.Errorf("RemoveNIC"))
+		return
+	}
+
+	c.dispatcherWg.Add(1)
+	go func() {
+		defer c.dispatcherWg.Done()
+		for {
+			status, err := c.watcher.WatchStatus(context.Background())
+			if err != nil {
+				detachWithError(fmt.Errorf("watcher loop: %w", err))
+				return
+			}
+			if status.HasMtu() {
+				c.mtu.mu.Lock()
+				c.mtu.mu.value = status.GetMtu()
+				c.mtu.mu.Unlock()
+			}
+			c.state.mu.Lock()
+			fn := c.state.mu.onLinkOnlineChanged
+			c.state.mu.Unlock()
+			fn(status.HasFlags() && status.GetFlags()&network.StatusFlagsOnline != 0)
+		}
+	}()
 
 	c.dispatcherWg.Add(1)
 	go func() {
@@ -253,8 +242,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			descriptor := c.getDescriptor(*descriptorIndex)
 			data := c.getDescriptorData(descriptor)
 			view := buffer.NewView(len(data))
-
-			copy(view, data)
+			view = view[:copy(view, data)]
 
 			var protocolNumber tcpip.NetworkProtocolNumber
 			switch network.FrameType(descriptor.frame_type) {
@@ -283,6 +271,10 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		if err := multierr.Combine(c.data.Close(), c.descriptors.Close()); err != nil {
 			_ = syslog.WarnTf(tag, "failed to close mapped VMOs: %s", err)
 		}
+		c.state.mu.Lock()
+		fn := c.state.mu.onLinkClosed
+		c.state.mu.Unlock()
+		fn()
 	}()
 }
 
@@ -300,99 +292,23 @@ func (c *Client) GSOMaxSize() uint32 {
 	return math.MaxUint32
 }
 
-func (c *Client) changeState(fn func() (link.State, error)) error {
-	c.state.mu.Lock()
-	defer c.state.mu.Unlock()
-	s, err := fn()
-	if err != nil {
-		return err
-	}
-
-	if stateFunc := c.state.mu.stateFunc; stateFunc != nil {
-		stateFunc(s)
-	}
-	return nil
-}
-
 func (c *Client) Up() error {
-	c.admin.mu.Lock()
-	defer c.admin.mu.Unlock()
-
-	if c.admin.mu.up {
-		return nil
-	}
-
-	watcher, err := c.GetStatusWatcher(context.Background())
-	if err != nil {
-		return err
-	}
-	state, mtu, err := watcher.getStatus(context.Background())
-	if err != nil {
-		return err
-	}
-	// Initialize MTU.
-	// NOTE: Network Device allows for MTU to change dynamically during
-	// runtime. For now, assume the MTU will not change.
-	c.mtu.mu.Lock()
-	c.mtu.mu.value = mtu
-	c.mtu.mu.Unlock()
-	c.admin.mu.watcher = watcher
-	initialState := state
-
-	if err := c.changeState(func() (link.State, error) {
-		if err := c.session.SetPaused(context.Background(), false); err != nil {
-			return link.StateUnknown, err
-		}
-		return initialState, nil
-	}); err != nil {
-		return err
-	}
-
-	c.admin.watcherWg.Add(1)
-	go func() {
-		defer c.admin.watcherWg.Done()
-		for {
-			linkState, _, err := watcher.getStatus(context.Background())
-			if err != nil {
-				_ = syslog.WarnTf(tag, "watcher loop ended: %s", err)
-				return
-			}
-			if err := c.changeState(func() (link.State, error) {
-				return linkState, nil
-			}); err != nil {
-				_ = syslog.ErrorTf(tag, "watcher failed to report new state: %s", err)
-			}
-		}
-	}()
-	c.admin.mu.up = true
-	return nil
+	return c.session.SetPaused(context.Background(), false)
 }
 
 func (c *Client) Down() error {
-	c.admin.mu.Lock()
-	defer c.admin.mu.Unlock()
-	if !c.admin.mu.up {
-		return nil
-	}
-
-	if c.admin.mu.watcher != nil {
-		_ = c.admin.mu.watcher.Close()
-		c.admin.watcherWg.Wait()
-	}
-	c.admin.mu.watcher = nil
-
-	return c.changeState(func() (link.State, error) {
-		if err := c.session.SetPaused(context.Background(), true); err != nil {
-			return link.StateUnknown, err
-		}
-		c.admin.mu.up = false
-		return link.StateDown, nil
-	})
+	return c.session.SetPaused(context.Background(), true)
 }
 
-func (c *Client) SetOnStateChange(f func(link.State)) {
+func (c *Client) SetOnLinkClosed(f func()) {
 	c.state.mu.Lock()
-	c.state.mu.stateFunc = f
+	c.state.mu.onLinkClosed = f
+	c.state.mu.Unlock()
+}
+
+func (c *Client) SetOnLinkOnlineChanged(f func(bool)) {
+	c.state.mu.Lock()
+	c.state.mu.onLinkOnlineChanged = f
 	c.state.mu.Unlock()
 }
 
@@ -402,45 +318,25 @@ func (c *Client) SetPromiscuousMode(bool) error {
 
 // Closes the client and disposes of all its resources.
 func (c *Client) Close() error {
-	c.admin.mu.Lock()
-	defer c.admin.mu.Unlock()
-	if c.admin.mu.closed {
+	c.state.mu.Lock()
+	defer c.state.mu.Unlock()
+	if c.state.mu.closed {
 		return nil
 	}
-	c.admin.mu.closed = true
+	c.state.mu.closed = true
 	c.handler.DetachTx()
 
-	err := multierr.Combine(
+	return multierr.Combine(
 		c.device.Close(),
 		// Session also has a Close method, make sure we're calling the ChannelProxy
 		// one.
 		((*fidl.ChannelProxy)(c.session)).Close(),
 		c.handler.RxFifo.Close(),
 		c.handler.TxFifo.Close(),
+		c.watcher.Close(),
 		// Additional cleanup is performed by the watcher goroutine spawned in
 		// Attach once all the io loops are done.
 	)
-	if c.admin.mu.watcher != nil {
-		err = multierr.Append(err, c.admin.mu.watcher.Close())
-		c.admin.watcherWg.Wait()
-		c.admin.mu.watcher = nil
-	}
-	return multierr.Append(err, c.changeState(func() (link.State, error) {
-		return link.StateClosed, nil
-	}))
-}
-
-// GetStatusWatcher creates a new StatusWatcher interface instance attached to
-// the client's device.
-func (c *Client) GetStatusWatcher(ctx context.Context) (*statusWatcher, error) {
-	req, watcher, err := network.NewStatusWatcherWithCtxInterfaceRequest()
-	if err != nil {
-		return nil, err
-	}
-	if err := c.device.GetStatusWatcher(ctx, req, network.MaxStatusBuffer); err != nil {
-		return nil, err
-	}
-	return &statusWatcher{iface: watcher}, nil
 }
 
 // getDescriptor returns the shared memory representing the descriptor indexed
@@ -495,6 +391,7 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 
 	mappedDescVmo, descVmo, err := fifo.NewMappedVMO(totalDescriptors*config.DescriptorLength, "fuchsia.hardware.network.Device/data")
 	if err != nil {
+		_ = mappedDataVmo.Close()
 		return nil, fmt.Errorf("failed to create descriptors VMO: %w", err)
 	}
 
@@ -520,11 +417,25 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		return nil, &zx.Error{Status: zx.Status(sessionResult.Err), Text: "fuchsia.hardware.network/Device.OpenSession"}
 	}
 
+	req, watcher, err := network.NewStatusWatcherWithCtxInterfaceRequest()
+	if err != nil {
+		_ = mappedDataVmo.Close()
+		_ = mappedDescVmo.Close()
+		return nil, fmt.Errorf("failed to create status watcher request: %w", err)
+	}
+	if err := dev.GetStatusWatcher(ctx, req, network.MaxStatusBuffer); err != nil {
+		_ = mappedDataVmo.Close()
+		_ = mappedDescVmo.Close()
+		_ = watcher.Close()
+		return nil, fmt.Errorf("failed to create get status watcher: %w", err)
+	}
+
 	c := &Client{
 		device:      dev,
 		session:     &sessionResult.Response.Session,
 		info:        deviceInfo,
 		config:      config,
+		watcher:     watcher,
 		data:        mappedDataVmo,
 		descriptors: mappedDescVmo,
 		handler: netdevice.Handler{

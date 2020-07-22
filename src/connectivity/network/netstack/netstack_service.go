@@ -14,7 +14,6 @@ import (
 	"syscall/zx/zxwait"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
@@ -76,7 +75,7 @@ func (ns *Netstack) getNetInterfaces2() []netstack.NetInterface2 {
 
 		var flags uint32
 		ifs.mu.Lock()
-		if ifs.mu.state == link.StateStarted {
+		if ifs.IsUpLocked() {
 			flags |= netstack.NetInterfaceFlagUp
 		}
 		if ifs.mu.dhcp.enabled {
@@ -338,25 +337,12 @@ func (ni *netstackImpl) BridgeInterfaces(_ fidl.Context, nicids []uint32) (netst
 }
 
 func (ni *netstackImpl) SetInterfaceStatus(_ fidl.Context, nicid uint32, enabled bool) error {
-	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(nicid)]
-	if !ok {
-		// Returning a non-nil error here would close the channel to the client.
-		return nil
-	}
-	ifs := nicInfo.Context.(*ifState)
-
-	var err error
-	var op string
-	if enabled {
-		err = ifs.controller.Up()
-		op = "Up()"
+	if nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(nicid)]; ok {
+		if err := nicInfo.Context.(*ifState).setState(enabled); err != nil {
+			_ = syslog.Errorf("(NIC %d).setState(enabled=%t): %s", nicid, enabled, err)
+		}
 	} else {
-		err = ifs.controller.Down()
-		op = "Down()"
-	}
-
-	if err != nil {
-		syslog.Infof("(NIC %d).controller.%s = %s", nicid, op, err)
+		_ = syslog.Errorf("(NIC %d).setState(enabled=%t): not found", nicid, enabled)
 	}
 	return nil
 }

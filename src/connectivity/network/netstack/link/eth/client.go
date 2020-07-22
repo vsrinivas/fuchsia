@@ -63,6 +63,7 @@ func (iob *IOBuffer) BufferFromEntry(e eth.FifoEntry) Buffer {
 }
 
 var _ link.Controller = (*Client)(nil)
+var _ link.Observer = (*Client)(nil)
 
 var _ stack.LinkEndpoint = (*Client)(nil)
 var _ stack.GSOEndpoint = (*Client)(nil)
@@ -85,8 +86,9 @@ type Client struct {
 
 	mu struct {
 		sync.Mutex
-		closed    bool
-		stateFunc func(link.State)
+		closed              bool
+		onLinkClosed        func()
+		onLinkOnlineChanged func(bool)
 	}
 
 	handler eth.Handler
@@ -170,20 +172,6 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 	return c, nil
 }
 
-func (c *Client) detachWithError(cause error) {
-	c.mu.Lock()
-	closed := c.mu.closed
-	c.mu.Unlock()
-	if closed {
-		return
-	}
-	if err := c.Close(); err != nil {
-		_ = syslog.WarnTf(tag, "error closing device on detach (caused by %s): %s", cause, err)
-	} else {
-		_ = syslog.WarnTf(tag, "closed device due to %s", cause)
-	}
-}
-
 func (c *Client) MTU() uint32 { return c.Info.Mtu }
 
 func (c *Client) Capabilities() stack.LinkEndpointCapabilities {
@@ -234,8 +222,23 @@ func (c *Client) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
 func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	c.dispatcher = dispatcher
 
+	detachWithError := func(cause error) {
+		c.mu.Lock()
+		closed := c.mu.closed
+		c.mu.Unlock()
+		if closed {
+			return
+		}
+		if err := c.Close(); err != nil {
+			_ = syslog.WarnTf(tag, "error closing device on detach (caused by %s): %s", cause, err)
+		} else {
+			_ = syslog.WarnTf(tag, "closed device due to %s", cause)
+		}
+	}
+
 	// dispatcher may be nil when the NIC in stack.Stack is being removed.
 	if dispatcher == nil {
+		detachWithError(fmt.Errorf("RemoveNIC"))
 		return
 	}
 
@@ -243,7 +246,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		defer c.wg.Done()
 		if err := c.handler.TxReceiverLoop(); err != nil {
-			c.detachWithError(fmt.Errorf("TX read loop error: %w", err))
+			detachWithError(fmt.Errorf("TX read loop error: %w", err))
 		}
 	}()
 
@@ -251,7 +254,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		defer c.wg.Done()
 		if err := c.handler.TxSenderLoop(); err != nil {
-			c.detachWithError(fmt.Errorf("TX write loop error: %w", err))
+			detachWithError(fmt.Errorf("TX write loop error: %w", err))
 		}
 	}()
 
@@ -269,22 +272,18 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			entry.SetLength(bufferSize)
 		}, zx.Signals(ethernet.SignalStatus), func() {
 			// Process ethernetStatusSignal.
-			if err := c.changeState(func() (link.State, error) {
-				status, err := c.device.GetStatus(context.Background())
-				if err != nil {
-					return link.StateUnknown, err
-				}
-				_ = syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s", status)
-				state := link.StateStarted
-				if status&ethernet.DeviceStatusOnline == 0 {
-					state = link.StateDown
-				}
-				return state, nil
-			}); err != nil {
-				_ = syslog.WarnTf(tag, "status error: %s", err)
+			status, err := c.device.GetStatus(context.Background())
+			if err != nil {
+				_ = syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() error = %s", err)
+				return
 			}
+			_ = syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s", status)
+			c.mu.Lock()
+			fn := c.mu.onLinkOnlineChanged
+			c.mu.Unlock()
+			fn(status&ethernet.DeviceStatusOnline != 0)
 		}); err != nil {
-			c.detachWithError(fmt.Errorf("RX loop error: %w", err))
+			detachWithError(fmt.Errorf("RX loop error: %w", err))
 		}
 	}()
 
@@ -295,6 +294,10 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		if err := c.iob.Close(); err != nil {
 			_ = syslog.WarnTf(tag, "failed to close IO buffer: %s", err)
 		}
+		c.mu.Lock()
+		fn := c.mu.onLinkClosed
+		c.mu.Unlock()
+		fn()
 	}()
 }
 
@@ -320,9 +323,15 @@ func checkStatus(status int32, text string) error {
 	return nil
 }
 
-func (c *Client) SetOnStateChange(f func(link.State)) {
+func (c *Client) SetOnLinkClosed(f func()) {
 	c.mu.Lock()
-	c.mu.stateFunc = f
+	c.mu.onLinkClosed = f
+	c.mu.Unlock()
+}
+
+func (c *Client) SetOnLinkOnlineChanged(f func(bool)) {
+	c.mu.Lock()
+	c.mu.onLinkOnlineChanged = f
 	c.mu.Unlock()
 }
 
@@ -334,22 +343,8 @@ func (c *Client) Filepath() string {
 	return c.filepath
 }
 
-func (c *Client) changeState(fn func() (link.State, error)) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	s, err := fn()
-	if err != nil {
-		return err
-	}
-	if stateFunc := c.mu.stateFunc; stateFunc != nil {
-		stateFunc(s)
-	}
-	return nil
-}
-
 // Up enables the interface.
 func (c *Client) Up() error {
-	_ = syslog.VLogTf(syslog.TraceVerbosity, tag, "client Up")
 	if status, err := c.device.Start(context.Background()); err != nil {
 		return err
 	} else if err := checkStatus(status, "Start"); err != nil {
@@ -360,12 +355,7 @@ func (c *Client) Up() error {
 
 // Down disables the interface.
 func (c *Client) Down() error {
-	return c.changeState(func() (link.State, error) {
-		if err := c.device.Stop(context.Background()); err != nil {
-			return link.StateUnknown, err
-		}
-		return link.StateDown, nil
-	})
+	return c.device.Stop(context.Background())
 }
 
 // Close closes a Client, releasing any held resources.
@@ -378,31 +368,29 @@ func (c *Client) Close() error {
 		return nil
 	}
 	c.handler.DetachTx()
-	return c.changeState(func() (link.State, error) {
-		if err := c.device.Stop(context.Background()); err != nil {
-			_ = syslog.WarnTf(tag, "fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.topopath, err)
-		}
+	if err := c.device.Stop(context.Background()); err != nil {
+		_ = syslog.WarnTf(tag, "fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.topopath, err)
+	}
 
-		if iface, ok := c.device.(*ethernet.DeviceWithCtxInterface); ok {
-			if err := iface.Close(); err != nil {
-				_ = syslog.WarnTf(tag, "failed to close device handle: %s", err)
-			}
-		} else {
-			_ = syslog.WarnTf(tag, "can't close device interface of type %T", c.device)
+	if iface, ok := c.device.(*ethernet.DeviceWithCtxInterface); ok {
+		if err := iface.Close(); err != nil {
+			_ = syslog.WarnTf(tag, "failed to close device handle: %s", err)
 		}
+	} else {
+		_ = syslog.WarnTf(tag, "can't close device interface of type %T", c.device)
+	}
 
-		if err := c.handler.TxFifo.Close(); err != nil {
-			_ = syslog.WarnTf(tag, "failed to close tx fifo: %s", err)
-		}
-		if err := c.handler.RxFifo.Close(); err != nil {
-			_ = syslog.WarnTf(tag, "failed to close rx fifo: %s", err)
-		}
+	if err := c.handler.TxFifo.Close(); err != nil {
+		_ = syslog.WarnTf(tag, "failed to close tx fifo: %s", err)
+	}
+	if err := c.handler.RxFifo.Close(); err != nil {
+		_ = syslog.WarnTf(tag, "failed to close rx fifo: %s", err)
+	}
 
-		// Additional cleanup is performed by the watcher goroutine spawned in
-		// Attach once all the io loops are done.
+	// Additional cleanup is performed by the watcher goroutine spawned in
+	// Attach once all the io loops are done.
 
-		return link.StateClosed, nil
-	})
+	return nil
 }
 
 func (c *Client) SetPromiscuousMode(enabled bool) error {
