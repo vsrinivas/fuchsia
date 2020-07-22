@@ -160,7 +160,9 @@ fn start_light_sensor_scanner(
 
             if data != new_data {
                 data = new_data;
-                sender.unbounded_send(data.clone()).unwrap();
+                if sender.unbounded_send(data.clone()).is_err() {
+                    break;
+                }
             }
 
             fasync::Timer::new(Duration::from_millis(scan_duration_ms).after_now()).await;
@@ -184,6 +186,7 @@ mod tests {
     use crate::switchboard::base::SettingType;
     use fidl_fuchsia_hardware_input::DeviceRequest as SensorRequest;
     use futures::channel::mpsc::UnboundedSender;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
@@ -245,6 +248,48 @@ mod tests {
         // Make sure we don't panic after receiver closes
         let sleep_duration = zx::Duration::from_millis(5);
         fasync::Timer::new(sleep_duration.after_now()).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_light_sensor_scanner_scope() {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<SensorMarker>().unwrap();
+        let mut receiver = start_light_sensor_scanner(proxy, 1);
+
+        let completed = Arc::new(AtomicBool::new(false));
+        let completed_clone = completed.clone();
+        fasync::spawn(async move {
+            let mut counter: u8 = 0;
+            let mut data = [1, 1, 0, 25, 0, 10, 0, 9, 0, 6, 0];
+            while let Some(request) = stream.try_next().await.unwrap() {
+                if let SensorRequest::GetReport { type_: _, id: _, responder } = request {
+                    // Taken from actual sensor report
+                    counter += 1;
+
+                    // Close the receiver on the second request (once in the
+                    // loop)
+                    let should_close_receiver = counter == 2;
+
+                    if should_close_receiver {
+                        receiver.close();
+                    }
+
+                    // Trigger a change.
+                    {
+                        data[3] += 1;
+                    }
+                    responder.send(0, &data).unwrap();
+
+                    if should_close_receiver {
+                        completed_clone.swap(true, Ordering::Relaxed);
+                    }
+                }
+            }
+        });
+
+        fasync::Timer::new(zx::Duration::from_millis(5).after_now()).await;
+        // Allow multiple iterations
+        assert!(completed.load(Ordering::Relaxed));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
