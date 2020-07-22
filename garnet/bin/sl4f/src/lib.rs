@@ -40,6 +40,7 @@ pub mod scenic;
 pub mod server;
 pub mod setui;
 pub mod sysinfo;
+pub mod temperature;
 pub mod tiles;
 pub mod traceutil;
 pub mod tracing;

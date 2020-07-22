@@ -126,6 +126,9 @@ use crate::setui::facade::SetUiFacade;
 // SysInfo related includes
 use crate::sysinfo::facade::SysInfoFacade;
 
+// Temperature related includes
+use crate::temperature::facade::TemperatureFacade;
+
 // Tiles related includes
 use crate::tiles::facade::TilesFacade;
 
@@ -227,6 +230,7 @@ impl Sl4f {
                 "scenic_facade" => ScenicFacade::new(),
                 "setui_facade" => SetUiFacade::new(),
                 "sysinfo_facade" => SysInfoFacade::new(),
+                "temperature_facade" => TemperatureFacade::new(),
                 "tiles_facade" => TilesFacade::new(),
                 "traceutil_facade" => TraceutilFacade::new(),
                 "tracing_facade" => TracingFacade::new(),

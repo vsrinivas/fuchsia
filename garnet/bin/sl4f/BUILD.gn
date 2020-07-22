@@ -39,6 +39,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c-rustc",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
+    "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature-rustc",
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",

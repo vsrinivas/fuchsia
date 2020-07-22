@@ -9,6 +9,7 @@
             "class/i2c",
             "class/input-report",
             "class/light",
+            "class/temperature",
             "class/wlanphy",
             "ft5726-touch",
             "svc/fuchsia.kernel.Stats",
