@@ -25,10 +25,7 @@ async fn basic_work_scheduler_test() {
     let event = event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await;
     event.resume().await.unwrap();
 
-    let dispatched_event = work_scheduler_dispatch_reporter
-        .wait_for_dispatched(std::time::Duration::from_secs(10))
-        .await
-        .unwrap();
+    let dispatched_event = work_scheduler_dispatch_reporter.wait_for_dispatched().await;
     assert_eq!(DispatchedEvent::new("TEST".to_string()), dispatched_event);
 }
 
@@ -59,9 +56,6 @@ async fn unbound_work_scheduler_test() {
     // We no longer need to track `StartInstance` events.
     drop(event_stream);
 
-    let dispatched_event = work_scheduler_dispatch_reporter
-        .wait_for_dispatched(std::time::Duration::from_secs(10))
-        .await
-        .unwrap();
+    let dispatched_event = work_scheduler_dispatch_reporter.wait_for_dispatched().await;
     assert_eq!(DispatchedEvent::new("TEST".to_string()), dispatched_event);
 }

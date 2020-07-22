@@ -5,53 +5,20 @@
 use {
     async_trait::async_trait,
     fidl_fuchsia_test_workscheduler as fws,
-    fuchsia_async::{Time, Timer},
-    futures::{
-        channel::*,
-        future::{select_all, BoxFuture},
-        lock::Mutex,
-        sink::SinkExt,
-        StreamExt,
-    },
-    std::{
-        convert::TryInto,
-        error::Error,
-        fmt::{self as fmt, Display, Formatter},
-        sync::Arc,
-        time::Duration,
-    },
+    futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
+    std::sync::Arc,
     test_utils_lib::events::Injector,
 };
-
-#[derive(Debug)]
-pub struct Timeout(Duration);
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DispatchedEvent {
     work_id: String,
 }
 
-impl Display for Timeout {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "Operation timed out (timeout={})", self.0.as_nanos())
-    }
-}
-
-impl Error for Timeout {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
-}
-
 impl DispatchedEvent {
     pub fn new(work_id: String) -> Self {
         Self { work_id }
     }
-}
-
-enum DispatchTimeout {
-    Dispatched(DispatchedEvent),
-    Timeout(Timeout),
 }
 
 pub struct WorkSchedulerDispatchReporter {
@@ -65,27 +32,9 @@ impl WorkSchedulerDispatchReporter {
         Arc::new(Self { dispatched_tx: tx, dispatched_rx: Mutex::new(rx) })
     }
 
-    pub async fn wait_for_dispatched(&self, timeout: Duration) -> Result<DispatchedEvent, Timeout> {
-        let timer = Box::pin(Self::wait_for(timeout)) as BoxFuture<'_, DispatchTimeout>;
-        let dispatched_event = Box::pin(self.get_dispatched()) as BoxFuture<'_, DispatchTimeout>;
-        let (result, _, _) = select_all(vec![timer, dispatched_event]).await;
-        match result {
-            DispatchTimeout::Dispatched(dispatched_event) => Ok(dispatched_event),
-            DispatchTimeout::Timeout(timeout) => Err(timeout),
-        }
-    }
-
-    async fn wait_for(timeout: Duration) -> DispatchTimeout {
-        let now = Time::now().into_nanos();
-        let delta: i64 = timeout.as_nanos().try_into().unwrap();
-        let timer = Timer::new(Time::from_nanos(now + delta));
-        let _ = timer.await;
-        DispatchTimeout::Timeout(Timeout(timeout))
-    }
-
-    async fn get_dispatched(&self) -> DispatchTimeout {
+    pub async fn wait_for_dispatched(&self) -> DispatchedEvent {
         let mut rx = self.dispatched_rx.lock().await;
-        DispatchTimeout::Dispatched(rx.next().await.unwrap())
+        rx.next().await.unwrap()
     }
 }
 
