@@ -47,6 +47,7 @@ Options:
                          under the same path.
    --device_vid_pid_did=[dev_vid:dev_pid:dev_did]: adding a device with hex dev_vid, dev_pid
                                                    and dev_did. May be informed multiple times.
+   --enable_block_watcher: Enable block watcher.
    --help: displays this help page.
 
 Note: isolated_devmgr runs as a component, so all paths must be relative to the component's
@@ -132,6 +133,8 @@ int main(int argc, const char** argv) {
         Usage();
         return status;
       }
+    } else if (opt.name == "enable_block_watcher") {
+      args.disable_block_watcher = false;
     } else if (opt.name == "help") {
       Usage();
       return ISO_DEV_MGR_RET_OK;
