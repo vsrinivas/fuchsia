@@ -18,8 +18,8 @@
 
 namespace wlan::brcmfmac {
 
-using ::testing::IsEmpty;
 using ::testing::NotNull;
+using ::testing::SizeIs;
 
 // Some default AP and association request values
 constexpr wlan_channel_t kDefaultChannel = {
@@ -402,11 +402,45 @@ TEST_F(AssocTest, StatsQueryReqTest) {
   EXPECT_EQ(client_mlme_stats.tx_frame.drop.name, "Bad");
   EXPECT_EQ(client_mlme_stats.tx_frame.drop.count, tx_drop);
 
-  // Per-antenna histograms are empty (for now).
-  EXPECT_THAT(client_mlme_stats.noise_floor_histograms, IsEmpty());
-  EXPECT_THAT(client_mlme_stats.rssi_histograms, IsEmpty());
-  EXPECT_THAT(client_mlme_stats.rx_rate_index_histograms, IsEmpty());
-  EXPECT_THAT(client_mlme_stats.snr_histograms, IsEmpty());
+  // Sim firmware returns these fake values for per-antenna histograms.
+  const auto& expected_hist_scope = fuchsia::wlan::stats::HistScope::PER_ANTENNA;
+  const auto& expected_antenna_freq = fuchsia::wlan::stats::AntennaFreq::ANTENNA_2_G;
+  const uint8_t expected_antenna_index = 0;
+  const uint8_t expected_snr_index = 60;
+  const uint8_t expected_snr_num_frames = 50;
+  // TODO(fxb/29698) Test all bucket values when sim firmware fully supports wstats_counters.
+  // Sim firmware populates only SNR buckets, probably due to the discrepancies between the iovar
+  // get handling between real and sim firmware (e.g. fxr/404141). When wstats_counters is fully
+  // supported in sim firmware we can test for the expected noise floor, RSSI, and rate buckets.
+
+  ASSERT_THAT(client_mlme_stats.noise_floor_histograms, SizeIs(1));
+  EXPECT_EQ(client_mlme_stats.noise_floor_histograms[0].hist_scope, expected_hist_scope);
+  ASSERT_THAT(client_mlme_stats.noise_floor_histograms[0].antenna_id, NotNull());
+  EXPECT_EQ(client_mlme_stats.noise_floor_histograms[0].antenna_id->freq, expected_antenna_freq);
+  EXPECT_EQ(client_mlme_stats.noise_floor_histograms[0].antenna_id->index, expected_antenna_index);
+
+  ASSERT_THAT(client_mlme_stats.rssi_histograms, SizeIs(1));
+  EXPECT_EQ(client_mlme_stats.rssi_histograms[0].hist_scope, expected_hist_scope);
+  ASSERT_THAT(client_mlme_stats.rssi_histograms[0].antenna_id, NotNull());
+  EXPECT_EQ(client_mlme_stats.rssi_histograms[0].antenna_id->freq, expected_antenna_freq);
+  EXPECT_EQ(client_mlme_stats.rssi_histograms[0].antenna_id->index, expected_antenna_index);
+
+  ASSERT_THAT(client_mlme_stats.rx_rate_index_histograms, SizeIs(1));
+  EXPECT_EQ(client_mlme_stats.rx_rate_index_histograms[0].hist_scope, expected_hist_scope);
+  ASSERT_THAT(client_mlme_stats.rx_rate_index_histograms[0].antenna_id, NotNull());
+  EXPECT_EQ(client_mlme_stats.rx_rate_index_histograms[0].antenna_id->freq, expected_antenna_freq);
+  EXPECT_EQ(client_mlme_stats.rx_rate_index_histograms[0].antenna_id->index,
+            expected_antenna_index);
+
+  ASSERT_THAT(client_mlme_stats.snr_histograms, SizeIs(1));
+  EXPECT_EQ(client_mlme_stats.snr_histograms[0].hist_scope, expected_hist_scope);
+  ASSERT_THAT(client_mlme_stats.snr_histograms[0].antenna_id, NotNull());
+  EXPECT_EQ(client_mlme_stats.snr_histograms[0].antenna_id->freq, expected_antenna_freq);
+  EXPECT_EQ(client_mlme_stats.snr_histograms[0].antenna_id->index, expected_antenna_index);
+  ASSERT_THAT(client_mlme_stats.snr_histograms[0].snr_samples, SizeIs(1));
+  EXPECT_EQ(client_mlme_stats.snr_histograms[0].snr_samples[0].bucket_index, expected_snr_index);
+  EXPECT_EQ(client_mlme_stats.snr_histograms[0].snr_samples[0].num_samples,
+            expected_snr_num_frames);
 }
 
 void AssocTest::AssocErrorInject() {

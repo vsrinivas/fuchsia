@@ -51,6 +51,19 @@ uint8_t ConvertAssocResultCode(::fuchsia::wlan::mlme::AssociateResultCodes code)
 ::fuchsia::wlan::mlme::MacRole ConvertMacRole(wlan_info_mac_role_t role);
 void ConvertBandCapabilities(::fuchsia::wlan::mlme::BandCapabilities* fidl_band,
                              const wlanif_band_capabilities_t& band);
+// Convert a Banjo noise floor histogram into FIDL.
+void ConvertNoiseFloorHistogram(::fuchsia::wlan::stats::NoiseFloorHistogram* fidl_stats,
+                                const wlanif_noise_floor_histogram_t& stats);
+// Convert a Banjo received rate index histogram into FIDL.
+void ConvertRxRateIndexHistogram(::fuchsia::wlan::stats::RxRateIndexHistogram* fidl_stats,
+                                 const wlanif_rx_rate_index_histogram_t& stats);
+// Convert a Banjo received signal strength indicator (RSSI) histogram into FIDL.
+void ConvertRssiHistogram(::fuchsia::wlan::stats::RssiHistogram* fidl_stats,
+                          const wlanif_rssi_histogram_t& stats);
+// Convert a Banjo signal to noise ratio (SNR) histogram into FIDL.
+void ConvertSnrHistogram(::fuchsia::wlan::stats::SnrHistogram* fidl_stats,
+                         const wlanif_snr_histogram_t& stats);
+
 void ConvertIfaceStats(::fuchsia::wlan::stats::IfaceStats* fidl_stats, const wlanif_stats_t& stats);
 uint32_t ConvertMgmtCaptureFlags(::fuchsia::wlan::mlme::MgmtFrameCaptureFlags fidl_flags);
 ::fuchsia::wlan::mlme::MgmtFrameCaptureFlags ConvertMgmtCaptureFlags(uint32_t ddk_flags);

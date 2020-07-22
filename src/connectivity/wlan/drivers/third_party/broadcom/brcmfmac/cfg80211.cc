@@ -20,9 +20,11 @@
 
 #include <stdlib.h>
 #include <threads.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <algorithm>
+#include <vector>
 
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/metadata.h>
@@ -50,6 +52,7 @@
 #include "netbuf.h"
 #include "pno.h"
 #include "proto.h"
+#include "third_party/bcmdhd/crossdriver/dhd.h"
 #include "workqueue.h"
 
 #define BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS 320
@@ -3791,6 +3794,186 @@ fail_pbuf:
   free(pbuf);
 }
 
+namespace {
+
+zx_status_t brcmf_convert_antenna_id(const histograms_report_t& histograms_report,
+                                     wlanif_antenna_id_t* out_antenna_id) {
+  switch (histograms_report.antennaid.freq) {
+    case ANTENNA_2G:
+      out_antenna_id->freq = WLANIF_ANTENNA_FREQ_ANTENNA_2_G;
+      break;
+    case ANTENNA_5G:
+      out_antenna_id->freq = WLANIF_ANTENNA_FREQ_ANTENNA_5_G;
+      break;
+    default:
+      return ZX_ERR_OUT_OF_RANGE;
+  }
+  out_antenna_id->index = histograms_report.antennaid.idx;
+  return ZX_OK;
+}
+
+void brcmf_get_noise_floor_samples(const histograms_report_t& histograms_report,
+                                   std::vector<wlanif_hist_bucket_t>* out_noise_floor_samples,
+                                   uint64_t* out_invalid_samples) {
+  for (size_t i = 0; i < WLANIF_MAX_NOISE_FLOOR_SAMPLES; ++i) {
+    wlanif_hist_bucket_t bucket;
+    bucket.bucket_index = i;
+    bucket.num_samples = histograms_report.rxnoiseflr[i];
+    out_noise_floor_samples->push_back(bucket);
+  }
+  // rxnoiseflr has an extra bucket. If there is anything in it, it is invalid.
+  *out_invalid_samples = histograms_report.rxsnr[255];
+}
+
+void brcmf_get_rssi_samples(const histograms_report_t& histograms_report,
+                            std::vector<wlanif_hist_bucket_t>* out_rssi_samples,
+                            uint64_t* out_invalid_samples) {
+  for (size_t i = 0; i < WLANIF_MAX_RSSI_SAMPLES; ++i) {
+    wlanif_hist_bucket_t bucket;
+    bucket.bucket_index = i;
+    bucket.num_samples = histograms_report.rxrssi[i];
+    out_rssi_samples->push_back(bucket);
+  }
+  // rxrssi has an extra bucket. If there is anything in it, it is invalid.
+  *out_invalid_samples = histograms_report.rxrssi[255];
+}
+
+void brcmf_get_snr_samples(const histograms_report_t& histograms_report,
+                           std::vector<wlanif_hist_bucket_t>* out_snr_samples,
+                           uint64_t* out_invalid_samples) {
+  for (size_t i = 0; i < WLANIF_MAX_SNR_SAMPLES; ++i) {
+    wlanif_hist_bucket_t bucket;
+    bucket.bucket_index = i;
+    bucket.num_samples = histograms_report.rxsnr[i];
+    out_snr_samples->push_back(bucket);
+  }
+  // rxsnr does not have any indices that should be considered invalid buckets.
+  *out_invalid_samples = 0;
+}
+
+void brcmf_get_rx_rate_index_samples(const histograms_report_t& histograms_report,
+                                     std::vector<wlanif_hist_bucket_t>* out_rx_rate_index_samples,
+                                     uint64_t* out_invalid_samples) {
+  uint32_t rxrate[WLANIF_MAX_RX_RATE_INDEX_SAMPLES];
+  brcmu_set_rx_rate_index_hist_rx11ac(histograms_report.rx11ac, rxrate);
+  brcmu_set_rx_rate_index_hist_rx11b(histograms_report.rx11b, rxrate);
+  brcmu_set_rx_rate_index_hist_rx11g(histograms_report.rx11g, rxrate);
+  brcmu_set_rx_rate_index_hist_rx11n(histograms_report.rx11n, rxrate);
+  for (uint8_t i = 0; i < WLANIF_MAX_RX_RATE_INDEX_SAMPLES; ++i) {
+    wlanif_hist_bucket_t bucket;
+    bucket.bucket_index = i;
+    bucket.num_samples = rxrate[i];
+    out_rx_rate_index_samples->push_back(bucket);
+  }
+  // rxrate does not have any indices that should be considered invalid buckets.
+  *out_invalid_samples = 0;
+}
+
+void brcmf_convert_histograms_report_noise_floor(const histograms_report_t& histograms_report,
+                                                 const wlanif_antenna_id_t& antenna_id,
+                                                 wlanif_noise_floor_histogram_t* out_hist,
+                                                 std::vector<wlanif_hist_bucket_t>* out_samples) {
+  out_hist->antenna_id = antenna_id;
+  out_hist->hist_scope = WLANIF_HIST_SCOPE_PER_ANTENNA;
+  brcmf_get_noise_floor_samples(histograms_report, out_samples, &out_hist->invalid_samples);
+  out_hist->noise_floor_samples_count = out_samples->size();
+  out_hist->noise_floor_samples_list = out_samples->data();
+}
+
+void brcmf_convert_histograms_report_rx_rate_index(const histograms_report_t& histograms_report,
+                                                   const wlanif_antenna_id_t& antenna_id,
+                                                   wlanif_rx_rate_index_histogram_t* out_hist,
+                                                   std::vector<wlanif_hist_bucket_t>* out_samples) {
+  out_hist->antenna_id = antenna_id;
+  out_hist->hist_scope = WLANIF_HIST_SCOPE_PER_ANTENNA;
+  brcmf_get_rx_rate_index_samples(histograms_report, out_samples, &out_hist->invalid_samples);
+  out_hist->rx_rate_index_samples_count = out_samples->size();
+  out_hist->rx_rate_index_samples_list = out_samples->data();
+}
+
+void brcmf_convert_histograms_report_rssi(const histograms_report_t& histograms_report,
+                                          const wlanif_antenna_id_t& antenna_id,
+                                          wlanif_rssi_histogram_t* out_hist,
+                                          std::vector<wlanif_hist_bucket_t>* out_samples) {
+  out_hist->antenna_id = antenna_id;
+  out_hist->hist_scope = WLANIF_HIST_SCOPE_PER_ANTENNA;
+  brcmf_get_rssi_samples(histograms_report, out_samples, &out_hist->invalid_samples);
+  out_hist->rssi_samples_count = out_samples->size();
+  out_hist->rssi_samples_list = out_samples->data();
+}
+
+void brcmf_convert_histograms_report_snr(const histograms_report_t& histograms_report,
+                                         const wlanif_antenna_id_t& antenna_id,
+                                         wlanif_snr_histogram_t* out_hist,
+                                         std::vector<wlanif_hist_bucket_t>* out_samples) {
+  out_hist->antenna_id = antenna_id;
+  out_hist->hist_scope = WLANIF_HIST_SCOPE_PER_ANTENNA;
+  brcmf_get_snr_samples(histograms_report, out_samples, &out_hist->invalid_samples);
+  out_hist->snr_samples_count = out_samples->size();
+  out_hist->snr_samples_list = out_samples->data();
+}
+
+zx_status_t brcmf_get_histograms_report(brcmf_if* ifp, histograms_report_t* out_report) {
+  if (ifp == nullptr) {
+    BRCMF_ERR("Invalid interface\n");
+    return ZX_ERR_INTERNAL;
+  }
+  if (out_report == nullptr) {
+    BRCMF_ERR("Invalid histograms_report_t pointer\n");
+    return ZX_ERR_INTERNAL;
+  }
+
+  int32_t wstats_fw_err = 0;
+  wl_wstats_cnt_t wl_stats_cnt;
+  std::memset(&wl_stats_cnt, 0, sizeof(wl_wstats_cnt_t));
+  const auto wstats_counters_status = brcmf_fil_iovar_data_get(
+      ifp, "wstats_counters", &wl_stats_cnt, sizeof(wl_wstats_cnt_t), &wstats_fw_err);
+  if (wstats_counters_status != ZX_OK) {
+    BRCMF_ERR("Failed to get wstats_counters: %s, fw err %s",
+              zx_status_get_string(wstats_counters_status), brcmf_fil_get_errstr(wstats_fw_err));
+    return wstats_counters_status;
+  }
+
+  uint32_t chanspec = 0;
+  int32_t chanspec_fw_err = 0;
+  const auto chanspec_status =
+      brcmf_fil_iovar_int_get(ifp, "chanspec", &chanspec, &chanspec_fw_err);
+  if (chanspec_status != ZX_OK) {
+    BRCMF_ERR("Failed to get chanspec: %s, fw err %s", zx_status_get_string(chanspec_status),
+              brcmf_fil_get_errstr(chanspec_fw_err));
+    return chanspec_status;
+  }
+
+  uint32_t version;
+  int32_t version_fw_err = 0;
+  const auto version_status =
+      brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_VERSION, &version, &version_fw_err);
+  if (version_status != ZX_OK) {
+    BRCMF_ERR("Failed to get version: %s, fw err %s", zx_status_get_string(version_status),
+              brcmf_fil_get_errstr(version_fw_err));
+    return version_status;
+  }
+
+  uint32_t rxchain = 0;
+  int32_t rxchain_fw_err = 0;
+  const auto rxchain_status = brcmf_fil_iovar_int_get(ifp, "rxchain", &rxchain, &rxchain_fw_err);
+  if (rxchain_status != ZX_OK) {
+    BRCMF_ERR("Failed to get rxchain: %s, fw err %s", zx_status_get_string(rxchain_status),
+              brcmf_fil_get_errstr(rxchain_fw_err));
+    return rxchain_status;
+  }
+
+  const bool get_histograms_success =
+      get_histograms(wl_stats_cnt, static_cast<chanspec_t>(chanspec), version, rxchain, out_report);
+  if (get_histograms_success) {
+    return ZX_OK;
+  }
+  BRCMF_ERR("Failed to get per-antenna metrics\n");
+  return ZX_ERR_INTERNAL;
+}
+
+}  // namespace
+
 void brcmf_if_stats_query_req(net_device* ndev) {
   struct wireless_dev* wdev = ndev_to_wdev(ndev);
   wlanif_stats_query_response_t response = {};
@@ -3798,6 +3981,14 @@ void brcmf_if_stats_query_req(net_device* ndev) {
   int32_t fw_err;
 
   BRCMF_DBG(TRACE, "Enter");
+
+  // Will hold per-antenna samples for each histogram type.
+  std::vector<wlanif_hist_bucket_t> noise_floor_samples, rssi_samples, rx_rate_index_samples,
+      snr_samples;
+  std::vector<wlanif_noise_floor_histogram_t> noise_floor_histograms;
+  std::vector<wlanif_rssi_histogram_t> rssi_histograms;
+  std::vector<wlanif_rx_rate_index_histogram_t> rx_rate_index_histograms;
+  std::vector<wlanif_snr_histogram_t> snr_histograms;
 
   // TODO(cphoenix): Fill in all the stats fields.
   switch (wdev->iftype) {
@@ -3850,6 +4041,46 @@ void brcmf_if_stats_query_req(net_device* ndev) {
         mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_list =
             ndev->stats.rssi_buckets.data();
         mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_count = RSSI_HISTOGRAM_LEN;
+
+        // Detailed histograms populated from wstats_counters iovar.
+        histograms_report_t histograms_report;
+        const auto hist_status = brcmf_get_histograms_report(ifp, &histograms_report);
+        if (hist_status != ZX_OK) {
+          BRCMF_ERR("Could not get histograms: %s\n", zx_status_get_string(hist_status));
+          break;
+        }
+        wlanif_antenna_id_t antenna_id;
+        const auto antenna_id_status = brcmf_convert_antenna_id(histograms_report, &antenna_id);
+        if (antenna_id_status != ZX_OK) {
+          BRCMF_ERR("Invalid antenna ID, freq: %d idx: %d\n", histograms_report.antennaid.freq,
+                    histograms_report.antennaid.idx);
+          return;
+        }
+        noise_floor_histograms.resize(1);
+        brcmf_convert_histograms_report_noise_floor(
+            histograms_report, antenna_id, &noise_floor_histograms[0], &noise_floor_samples);
+        rx_rate_index_histograms.resize(1);
+        brcmf_convert_histograms_report_rx_rate_index(
+            histograms_report, antenna_id, &rx_rate_index_histograms[0], &rx_rate_index_samples);
+        rssi_histograms.resize(1);
+        brcmf_convert_histograms_report_rssi(histograms_report, antenna_id, &rssi_histograms[0],
+                                             &rssi_samples);
+        snr_histograms.resize(1);
+        brcmf_convert_histograms_report_snr(histograms_report, antenna_id, &snr_histograms[0],
+                                            &snr_samples);
+
+        mlme_stats->stats.client_mlme_stats.noise_floor_histograms_count =
+            noise_floor_histograms.size();
+        mlme_stats->stats.client_mlme_stats.noise_floor_histograms_list =
+            noise_floor_histograms.data();
+        mlme_stats->stats.client_mlme_stats.rssi_histograms_count = rssi_histograms.size();
+        mlme_stats->stats.client_mlme_stats.rssi_histograms_list = rssi_histograms.data();
+        mlme_stats->stats.client_mlme_stats.rx_rate_index_histograms_count =
+            rx_rate_index_histograms.size();
+        mlme_stats->stats.client_mlme_stats.rx_rate_index_histograms_list =
+            rx_rate_index_histograms.data();
+        mlme_stats->stats.client_mlme_stats.snr_histograms_count = snr_histograms.size();
+        mlme_stats->stats.client_mlme_stats.snr_histograms_list = snr_histograms.data();
       } else {
         response.stats.mlme_stats_list = nullptr;
         response.stats.mlme_stats_count = 0;

@@ -8,11 +8,15 @@
 
 #include <algorithm>
 #include <bitset>
+#include <memory>
 
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/band.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
+
+#include "ddk/protocol/wlanif.h"
+#include "fuchsia/wlan/stats/cpp/fidl.h"
 
 namespace wlanif {
 
@@ -871,6 +875,108 @@ void ConvertRssiStats(wlan_stats::RssiStats* fidl_stats, const wlanif_rssi_stats
   fidl_stats->hist.assign(stats.hist_list, stats.hist_list + stats.hist_count);
 }
 
+namespace {
+
+// Convert a Banjo antenna ID to a FIDL antenna ID (in a unique_ptr).
+std::unique_ptr<wlan_stats::AntennaId> ConvertAntennaId(
+    const wlanif_antenna_id_t& impl_antenna_id) {
+  auto fidl_antenna_id = std::make_unique<wlan_stats::AntennaId>();
+  if (impl_antenna_id.freq == WLANIF_ANTENNA_FREQ_ANTENNA_5_G) {
+    fidl_antenna_id->freq = wlan_stats::AntennaFreq::ANTENNA_5_G;
+  } else {
+    fidl_antenna_id->freq = wlan_stats::AntennaFreq::ANTENNA_2_G;
+  }
+  fidl_antenna_id->index = impl_antenna_id.index;
+  return fidl_antenna_id;
+}
+
+}  // namespace
+
+void ConvertNoiseFloorHistogram(wlan_stats::NoiseFloorHistogram* fidl_stats,
+                                const wlanif_noise_floor_histogram_t& stats) {
+  if (stats.hist_scope == WLANIF_HIST_SCOPE_PER_ANTENNA) {
+    fidl_stats->hist_scope = wlan_stats::HistScope::PER_ANTENNA;
+    fidl_stats->antenna_id = ConvertAntennaId(stats.antenna_id);
+  } else {
+    fidl_stats->hist_scope = wlan_stats::HistScope::STATION;
+  }
+  for (size_t i = 0; i < stats.noise_floor_samples_count; ++i) {
+    const auto& bucket = stats.noise_floor_samples_list[i];
+    if (bucket.num_samples == 0) {
+      // To keep the FIDL histogram compact, we don't add empty buckets.
+      continue;
+    }
+    wlan_stats::HistBucket fidl_bucket;
+    fidl_bucket.bucket_index = bucket.bucket_index;
+    fidl_bucket.num_samples = bucket.num_samples;
+    fidl_stats->noise_floor_samples.push_back(fidl_bucket);
+  }
+  fidl_stats->invalid_samples = stats.invalid_samples;
+}
+
+void ConvertRxRateIndexHistogram(wlan_stats::RxRateIndexHistogram* fidl_stats,
+                                 const wlanif_rx_rate_index_histogram_t& stats) {
+  if (stats.hist_scope == WLANIF_HIST_SCOPE_PER_ANTENNA) {
+    fidl_stats->hist_scope = wlan_stats::HistScope::PER_ANTENNA;
+    fidl_stats->antenna_id = ConvertAntennaId(stats.antenna_id);
+  } else {
+    fidl_stats->hist_scope = wlan_stats::HistScope::STATION;
+  }
+  for (size_t i = 0; i < stats.rx_rate_index_samples_count; ++i) {
+    const auto& bucket = stats.rx_rate_index_samples_list[i];
+    if (bucket.num_samples == 0) {
+      continue;
+    }
+    wlan_stats::HistBucket fidl_bucket;
+    fidl_bucket.bucket_index = bucket.bucket_index;
+    fidl_bucket.num_samples = bucket.num_samples;
+    fidl_stats->rx_rate_index_samples.push_back(fidl_bucket);
+  }
+  fidl_stats->invalid_samples = stats.invalid_samples;
+}
+
+void ConvertRssiHistogram(wlan_stats::RssiHistogram* fidl_stats,
+                          const wlanif_rssi_histogram_t& stats) {
+  if (stats.hist_scope == WLANIF_HIST_SCOPE_PER_ANTENNA) {
+    fidl_stats->hist_scope = wlan_stats::HistScope::PER_ANTENNA;
+    fidl_stats->antenna_id = ConvertAntennaId(stats.antenna_id);
+  } else {
+    fidl_stats->hist_scope = wlan_stats::HistScope::STATION;
+  }
+  for (size_t i = 0; i < stats.rssi_samples_count; ++i) {
+    const auto& bucket = stats.rssi_samples_list[i];
+    if (bucket.num_samples == 0) {
+      continue;
+    }
+    wlan_stats::HistBucket fidl_bucket;
+    fidl_bucket.bucket_index = bucket.bucket_index;
+    fidl_bucket.num_samples = bucket.num_samples;
+    fidl_stats->rssi_samples.push_back(fidl_bucket);
+  }
+  fidl_stats->invalid_samples = stats.invalid_samples;
+}
+
+void ConvertSnrHistogram(wlan_stats::SnrHistogram* fidl_stats,
+                         const wlanif_snr_histogram_t& stats) {
+  if (stats.hist_scope == WLANIF_HIST_SCOPE_PER_ANTENNA) {
+    fidl_stats->hist_scope = wlan_stats::HistScope::PER_ANTENNA;
+    fidl_stats->antenna_id = ConvertAntennaId(stats.antenna_id);
+  } else {
+    fidl_stats->hist_scope = wlan_stats::HistScope::STATION;
+  }
+  for (size_t i = 0; i < stats.snr_samples_count; ++i) {
+    const auto& bucket = stats.snr_samples_list[i];
+    if (bucket.num_samples == 0) {
+      continue;
+    }
+    wlan_stats::HistBucket fidl_bucket;
+    fidl_bucket.bucket_index = bucket.bucket_index;
+    fidl_bucket.num_samples = bucket.num_samples;
+    fidl_stats->snr_samples.push_back(fidl_bucket);
+  }
+  fidl_stats->invalid_samples = stats.invalid_samples;
+}
+
 wlan_stats::ClientMlmeStats BuildClientMlmeStats(const wlanif_client_mlme_stats_t& client_stats) {
   wlan_stats::ClientMlmeStats fidl_client_stats;
 
@@ -882,6 +988,26 @@ wlan_stats::ClientMlmeStats BuildClientMlmeStats(const wlanif_client_mlme_stats_
 
   ConvertRssiStats(&fidl_client_stats.assoc_data_rssi, client_stats.assoc_data_rssi);
   ConvertRssiStats(&fidl_client_stats.beacon_rssi, client_stats.beacon_rssi);
+
+  fidl_client_stats.noise_floor_histograms.resize(client_stats.noise_floor_histograms_count);
+  for (size_t i = 0; i < client_stats.noise_floor_histograms_count; ++i) {
+    ConvertNoiseFloorHistogram(&fidl_client_stats.noise_floor_histograms[i],
+                               client_stats.noise_floor_histograms_list[i]);
+  }
+  fidl_client_stats.rssi_histograms.resize(client_stats.rssi_histograms_count);
+  for (size_t i = 0; i < client_stats.rssi_histograms_count; ++i) {
+    ConvertRssiHistogram(&fidl_client_stats.rssi_histograms[i],
+                         client_stats.rssi_histograms_list[i]);
+  }
+  fidl_client_stats.rx_rate_index_histograms.resize(client_stats.rx_rate_index_histograms_count);
+  for (size_t i = 0; i < client_stats.rx_rate_index_histograms_count; ++i) {
+    ConvertRxRateIndexHistogram(&fidl_client_stats.rx_rate_index_histograms[i],
+                                client_stats.rx_rate_index_histograms_list[i]);
+  }
+  fidl_client_stats.snr_histograms.resize(client_stats.snr_histograms_count);
+  for (size_t i = 0; i < client_stats.snr_histograms_count; ++i) {
+    ConvertSnrHistogram(&fidl_client_stats.snr_histograms[i], client_stats.snr_histograms_list[i]);
+  }
 
   return fidl_client_stats;
 }
