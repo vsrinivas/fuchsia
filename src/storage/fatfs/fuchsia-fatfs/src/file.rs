@@ -26,6 +26,38 @@ use {
     },
 };
 
+fn extend(file: &mut File<'_>, mut current: u64, target: u64) -> Result<(), Status> {
+    let zeros = vec![0; 8192];
+    while current < target {
+        let to_do = (std::cmp::min(target, (current + 8192) / 8192 * 8192) - current) as usize;
+        let written = file.write(&zeros[..to_do]).map_err(fatfs_error_to_status)? as u64;
+        if written == 0 {
+            return Err(Status::IO);
+        }
+        current += written;
+    }
+    Ok(())
+}
+
+fn seek_for_write(file: &mut File<'_>, offset: u64) -> Result<(), Status> {
+    if offset > fatfs::MAX_FILE_SIZE as u64 {
+        return Err(Status::INVALID_ARGS);
+    }
+    let real_offset = file.seek(std::io::SeekFrom::Start(offset)).map_err(fatfs_error_to_status)?;
+    if real_offset == offset {
+        return Ok(());
+    }
+    assert!(real_offset < offset);
+    let result = extend(file, real_offset, offset);
+    if let Err(e) = result {
+        // Return the file to its original size.
+        file.seek(std::io::SeekFrom::Start(real_offset)).map_err(fatfs_error_to_status)?;
+        file.truncate().map_err(fatfs_error_to_status)?;
+        return Err(e);
+    }
+    Ok(())
+}
+
 /// Represents a single file on the disk.
 pub struct FatFile {
     file: UnsafeCell<FatfsFileRef>,
@@ -87,42 +119,52 @@ impl VfsFile for FatFile {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file_mut(&fs_lock);
 
-        file.seek(std::io::SeekFrom::Start(offset)).map_err(fatfs_error_to_status)?;
+        let real_offset =
+            file.seek(std::io::SeekFrom::Start(offset)).map_err(fatfs_error_to_status)?;
+        // Technically, we don't need to do this because the read should return zero bytes later,
+        // but it's better to be explicit.
+        if real_offset != offset {
+            return Ok(Vec::new());
+        }
         let mut result = Vec::with_capacity(count as usize);
         result.resize(count as usize, 0);
-        let size = file.read(&mut result).map_err(fatfs_error_to_status)?;
-        result.truncate(size);
+        let mut total_read = 0;
+        while total_read < count as usize {
+            let read = file.read(&mut result[total_read..]).map_err(fatfs_error_to_status)?;
+            if read == 0 {
+                break;
+            }
+            total_read += read;
+        }
+        result.truncate(total_read);
         Ok(result)
     }
 
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file_mut(&fs_lock);
-
-        let real_offset =
-            file.seek(std::io::SeekFrom::Start(offset)).map_err(fatfs_error_to_status)?;
-        if real_offset < offset {
-            // TODO(fxb/56006): emulate sparse file support by padding with null bytes.
-            return Err(Status::INVALID_ARGS);
+        seek_for_write(file, offset)?;
+        let mut total_written = 0;
+        while total_written < content.len() {
+            let written = file.write(&content[total_written..]).map_err(fatfs_error_to_status)?;
+            if written == 0 {
+                break;
+            }
+            total_written += written;
         }
-        let size = file.write(content).map_err(fatfs_error_to_status)?;
-        Ok(size as u64)
+        Ok(total_written as u64)
     }
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file_mut(&fs_lock);
-
-        let offset = file.seek(std::io::SeekFrom::Start(length)).map_err(fatfs_error_to_status)?;
-        if offset < length {
-            // TODO(fxb/56006): emulate sparse file support by padding with null bytes.
-            return Err(Status::INVALID_ARGS);
-        }
+        seek_for_write(file, length)?;
         file.truncate().map_err(fatfs_error_to_status)?;
         Ok(())
     }
 
     async fn get_buffer(&self, _mode: SharingMode, _flags: u32) -> Result<Option<Buffer>, Status> {
+        // Not supported, so return None.
         Ok(None)
     }
 

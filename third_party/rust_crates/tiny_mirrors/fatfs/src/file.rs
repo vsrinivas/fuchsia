@@ -8,7 +8,7 @@ use crate::dir_entry::DirEntryEditor;
 use crate::fs::{FileSystem, ReadWriteSeek};
 use crate::time::{Date, DateTime, TimeProvider};
 
-const MAX_FILE_SIZE: u32 = core::u32::MAX;
+pub const MAX_FILE_SIZE: u32 = core::u32::MAX;
 
 /// A FAT filesystem file object used for reading and writing data.
 ///
