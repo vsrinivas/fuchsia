@@ -1771,6 +1771,35 @@ LogicalBufferCollection::Allocate() {
   }
   ZX_DEBUG_ASSERT(min_size_bytes <= std::numeric_limits<uint32_t>::max());
 
+  if (settings.has_image_format_constraints()) {
+    const llcpp::fuchsia::sysmem2::ImageFormatConstraints& image_format_constraints =
+        settings.image_format_constraints();
+    node_.CreateUint("pixel_format",
+                     static_cast<uint64_t>(image_format_constraints.pixel_format().type()),
+                     &vmo_properties_);
+    if (image_format_constraints.pixel_format().has_format_modifier_value()) {
+      node_.CreateUint("pixel_format_modifier",
+                       image_format_constraints.pixel_format().format_modifier_value(),
+                       &vmo_properties_);
+    }
+    if (image_format_constraints.min_coded_width() > 0) {
+      node_.CreateUint("min_coded_width", image_format_constraints.min_coded_width(),
+                       &vmo_properties_);
+    }
+    if (image_format_constraints.min_coded_height() > 0) {
+      node_.CreateUint("min_coded_height", image_format_constraints.min_coded_height(),
+                       &vmo_properties_);
+    }
+    if (image_format_constraints.required_max_coded_width() > 0) {
+      node_.CreateUint("required_max_coded_width",
+                       image_format_constraints.required_max_coded_width(), &vmo_properties_);
+    }
+    if (image_format_constraints.required_max_coded_height() > 0) {
+      node_.CreateUint("required_max_coded_height",
+                       image_format_constraints.required_max_coded_height(), &vmo_properties_);
+    }
+  }
+
   // Now that min_size_bytes accounts for any ImageFormatConstraints, we can just allocate
   // min_size_bytes buffers.
   //
