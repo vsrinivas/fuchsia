@@ -122,6 +122,16 @@ test("use_h264_multi_decoder_stream_switching_test") {
   deps = [ ":use_media_decoder_source_set" ]
 }
 
+test("use_h264_multi_decoder_concurrent_stream_switching_test") {
+  testonly = true
+
+  output_name = "use_h264_multi_decoder_concurrent_stream_switching_test"
+
+  sources = [ "test/use_h264_multi_decoder_concurrent_stream_switching_test.cc" ]
+
+  deps = [ ":use_media_decoder_source_set" ]
+}
+
 test("use_h264_decoder_secure_output_test") {
   testonly = true
 

@@ -564,7 +564,10 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
         uint64_t stream_lifetime_ordinal = kStreamLifetimeOrdinal;
         uint64_t input_frame_pts_counter = 0;
         uint32_t frames_queued = 0;
-        for (uint32_t loop_ordinal = 0; loop_ordinal < loop_stream_count; loop_ordinal++) {
+        for (uint32_t loop_ordinal = 0; loop_ordinal < loop_stream_count; ++loop_ordinal, stream_lifetime_ordinal += 2) {
+if (stream_lifetime_ordinal % keep_stream_modulo != 1) {
+  continue;
+}
           switch (format) {
             case Format::kH264:
             case Format::kH264Multi:
@@ -609,8 +612,6 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
                 in_stream->ResetToStart(zx::deadline_after(kInStreamDeadlineDuration));
             ZX_ASSERT(status == ZX_OK);
           }
-
-          stream_lifetime_ordinal += 2;
         }
         VLOGF("in_thread done");
       });

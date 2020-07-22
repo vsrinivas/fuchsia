@@ -38,6 +38,8 @@ namespace {
 constexpr uint32_t kMaxPeekBytes = 8 * 1024 * 1024;
 constexpr uint64_t kMaxBufferBytes = 8 * 1024 * 1024;
 
+std::mutex tags_lock;
+
 }  // namespace
 
 int use_video_decoder_test(std::string input_file_path, int expected_frame_count,
@@ -51,7 +53,10 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   }
   test_params->Validate();
 
-  syslog::SetTags({"use_video_decoder_test"});
+  {
+    std::lock_guard<std::mutex> lock(tags_lock);
+    syslog::SetTags({"use_video_decoder_test"});
+  }
 
   async::Loop fidl_loop(&kAsyncLoopConfigAttachToCurrentThread);
   thrd_t fidl_thread;
@@ -135,7 +140,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   for (size_t i = 0; i < timestamps.size(); i++) {
     if (!timestamps[i].first) {
       printf("A frame had !has_timstamp_ish - frame_index: %lu\n", i);
-      exit(-1);
+      return -1;
     }
     int64_t output_frame_index = i;
     int64_t timestamp_ish = timestamps[i].second;
@@ -145,14 +150,14 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
           "degree of re-ordering - frame_index: %lu timestamp_ish: "
           "%lu\n",
           i, timestamps[i].second);
-      exit(-1);
+      return -1;
     }
     if (expected_timestamps.find(timestamps[i].second) == expected_timestamps.end()) {
       printf(
           "A frame had timestamp_ish not in the expected set (or duplicated) - "
           "frame_index: %lu timestamp_ish: %lu\n",
           i, timestamps[i].second);
-      exit(-1);
+      return -1;
     }
     expected_timestamps.erase(timestamps[i].second);
   }
@@ -161,7 +166,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
     for (uint64_t timestamp : expected_timestamps) {
       printf("missing timestamp: %lu\n", timestamp);
     }
-    exit(-1);
+    return -1;
   }
 
   if (got_output_data) {
@@ -178,14 +183,14 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
     if (strcmp(actual_sha256, golden_sha256.c_str())) {
       printf("The sha256 doesn't match - expected: %s actual: %s\n", golden_sha256.c_str(),
              actual_sha256);
-      exit(-1);
+      return -1;
     }
     printf("The computed sha256 matches golden sha256.  Yay!\nPASS\n");
   } else if (is_secure_output) {
     printf("Can't check output data sha256 because output is secure.\nPASS.\n");
   } else {
     printf("No output data received");
-    exit(-1);
+    return -1;
   }
 
   fidl_loop.Quit();

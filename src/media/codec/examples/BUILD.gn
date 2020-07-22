@@ -221,6 +221,38 @@ package("use-h264-multi-decoder-stream-switching-test") {
   ]
 }
 
+# Test amlogic-video multi-instance h264 decode with stream switching.
+package("use-h264-multi-decoder-concurrent-stream-switching-test") {
+  testonly = true
+
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_concurrent_stream_switching_test" ]
+
+  meta = [
+    {
+      path = rebase_path(
+              "use_media_decoder/meta/use_h264_multi_decoder_concurrent_stream_switching_test.cmx")
+      dest = "use_h264_multi_decoder_concurrent_stream_switching_test.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      # Should pass when run on VIM2, astro, sherlock, or QEMU.
+      name = "use_h264_multi_decoder_concurrent_stream_switching_test"
+
+      environments = [ astro_env, sherlock_env ]
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
+      dest = "bear.h264"
+    },
+  ]
+}
+
 package("use_h264_decoder_secure_output_test") {
   testonly = true
 
