@@ -47,14 +47,7 @@ class BlobfsCreator : public FsCreator {
   // A comparison function used to quickly compare MerkleInfo.
   struct DigestCompare {
     inline bool operator()(const blobfs::MerkleInfo& lhs, const blobfs::MerkleInfo& rhs) const {
-      const uint8_t* lhs_bytes = lhs.digest.get();
-      const uint8_t* rhs_bytes = rhs.digest.get();
-      for (size_t i = 0; i < digest::kSha256Length; i++) {
-        if (lhs_bytes[i] < rhs_bytes[i]) {
-          return true;
-        }
-      }
-      return false;
+      return memcmp(lhs.digest.get(), rhs.digest.get(), digest::kSha256Length) < 0;
     }
   };
 

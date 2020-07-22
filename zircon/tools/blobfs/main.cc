@@ -188,7 +188,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
   // digest, and then by reshuffling the vector to exclude duplicates.
   std::sort(merkle_list_.begin(), merkle_list_.end(), DigestCompare());
   auto compare = [](const blobfs::MerkleInfo& lhs, const blobfs::MerkleInfo& rhs) {
-    return lhs.digest == rhs.digest;
+    return memcmp(lhs.digest.get(), rhs.digest.get(), digest::kSha256Length) == 0;
   };
   auto it = std::unique(merkle_list_.begin(), merkle_list_.end(), compare);
   merkle_list_.resize(std::distance(merkle_list_.begin(), it));
