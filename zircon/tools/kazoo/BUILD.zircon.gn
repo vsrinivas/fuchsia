@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/host_tool_action.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/vdso/vdso.gni")
 
@@ -17,6 +16,8 @@ if (defined(zx)) {
     import("//build/unification/zx_host_tool.gni")
     import("//build/unification/zx_library.gni")
     import("//build/unification/zx_test.gni")
+  } else {
+    import("$zx/public/gn/host_tool_action.gni")
   }
 
   config("kazoo_config") {

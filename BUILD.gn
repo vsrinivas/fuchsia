@@ -88,6 +88,10 @@ foreach(selector, select_variant) {
   }
 }
 
+if (current_os == "mac") {
+  import("//build/config/mac/mac_sdk.gni")
+}
+
 # Separate block because zircon_* declared above are used in the default.
 declare_args() {
   # [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -110,6 +114,9 @@ declare_args() {
       # dependencies on toolchain updates only if it knows it's using the
       # prebuilt.
       clang_tool_dir = rebase_path(clang_prefix, "", root_build_dir)
+    }
+    if (current_os == "mac") {
+      mac_sdk_path = mac_sdk_path
     }
     variants = zircon_variants
     if (optimize == "none" || optimize == "sanitizer" ||
