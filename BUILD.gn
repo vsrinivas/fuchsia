@@ -713,7 +713,6 @@ group("additional_cache_packages") {
 
 group("additional_universe_packages") {
   testonly = true
-  testonly = true
   visibility = [ "//build/images:universe_packages" ]
   public_deps = universe_package_labels
 }
