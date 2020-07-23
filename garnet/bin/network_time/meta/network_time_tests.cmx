@@ -1,12 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
-            "system-services": [
-                "fuchsia.net.Connectivity",
-                "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack",
-                "fuchsia.posix.socket.Provider"
-            ]
+            "injected-services": {
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+            }
         }
     },
     "program": {
@@ -18,7 +15,6 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider"
         ]
     }
