@@ -20,6 +20,7 @@ cobalt::EventType DetermineCobaltEventType(uint32_t metric_id, uint32_t event_co
     case MetricIDForEventCode(cobalt::BugreportGenerationFlow::kUnknown):
       return cobalt::EventType::kTimeElapsed;
     case MetricIDForEventCode(cobalt::UploadAttemptState::kUnknown):
+    case MetricIDForEventCode(cobalt::PreviousBootEncodingVersion::kUnknown):
       return cobalt::EventType::kCount;
     case MetricIDForEventCode(cobalt::LegacyRebootReason::kOOM):
     case MetricIDForEventCode(cobalt::CrashState::kUnknown):

@@ -98,6 +98,20 @@ enum class RebootReasonWriteResult {
   kFailure = cobalt_registry::RebootReasonPersistDurationUsecsMetricDimensionWriteResult::Failure,
 };
 
+enum class PreviousBootEncodingVersion {
+  kUnknown =
+      cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::Unknown,
+  kV_01 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V01,
+  kV_02 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V02,
+  kV_03 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V03,
+  kV_04 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V04,
+  kV_05 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V05,
+};
+
+inline constexpr uint32_t MetricIDForEventCode(const PreviousBootEncodingVersion version) {
+  return cobalt_registry::kPreviousBootLogCompressionRatioMetricId;
+}
+
 inline constexpr uint32_t MetricIDForEventCode(const RebootReasonWriteResult write_result) {
   return cobalt_registry::kRebootReasonPersistDurationUsecsMetricId;
 }
@@ -166,6 +180,10 @@ enum class EventType {
   kTimeElapsed,
   kMultidimensionalOccurrence,
 };
+
+inline constexpr EventType EventTypeForEventCode(const PreviousBootEncodingVersion version) {
+  return EventType::kCount;
+}
 
 inline constexpr EventType EventTypeForEventCode(const RebootReasonWriteResult write_result) {
   return EventType::kTimeElapsed;
