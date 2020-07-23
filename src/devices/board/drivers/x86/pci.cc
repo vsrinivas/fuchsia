@@ -138,9 +138,10 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
   zxlogf(DEBUG, "ACPI range modification: %sing %s %016lx %016lx", add_range ? "add" : "subtract",
          is_mmio ? "MMIO" : "PIO", base, len);
   if (add_range) {
-    status = alloc->AddRegion({.base = base, .size = len}, true);
+    status = alloc->AddRegion({.base = base, .size = len}, RegionAllocator::AllowOverlap::Yes);
   } else {
-    status = alloc->SubtractRegion({.base = base, .size = len}, true);
+    status =
+        alloc->SubtractRegion({.base = base, .size = len}, RegionAllocator::AllowIncomplete::Yes);
   }
 
   if (status != ZX_OK) {
