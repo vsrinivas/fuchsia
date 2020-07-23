@@ -25,26 +25,25 @@
 static zx_status_t pl061_gpio_config_in(void* ctx, uint32_t index, uint32_t flags) {
   pl061_gpios_t* gpios = ctx;
   index -= gpios->gpio_start;
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile uint8_t* regs = (void*)gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
+  MMIO_PTR volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
   uint8_t bit = 1 << (index % GPIOS_PER_PAGE);
 
   mtx_lock(&gpios->lock);
-  uint8_t dir = readb(regs + GPIODIR);
+  uint8_t dir = MmioRead8(regs + GPIODIR);
   dir &= ~bit;
-  writeb(dir, regs + GPIODIR);
+  MmioWrite8(dir, regs + GPIODIR);
 
   /* TODO(voydanoff) this should move to a gpio_get_interrupt callback
-      uint8_t trigger = readb(regs + GPIOIS);
+      uint8_t trigger = MmioRead8(regs + GPIOIS);
       if ((flags & GPIO_TRIGGER_MASK) == GPIO_TRIGGER_LEVEL) {
           trigger |= bit;
       } else {
           trigger &= ~bit;
       }
-      writeb(trigger, regs + GPIOIS);
+      MmioRead8(trigger, regs + GPIOIS);
 
-      uint8_t be = readb(regs + GPIOIBE);
-      uint8_t iev = readb(regs + GPIOIEV);
+      uint8_t be = MmioRead8(regs + GPIOIBE);
+      uint8_t iev = MmioRead8(regs + GPIOIEV);
 
       if ((flags & GPIO_TRIGGER_MASK) == GPIO_TRIGGER_EDGE && (flags & GPIO_TRIGGER_RISING)
           && (flags & GPIO_TRIGGER_FALLING)) {
@@ -59,8 +58,8 @@ static zx_status_t pl061_gpio_config_in(void* ctx, uint32_t index, uint32_t flag
           iev &= ~bit;
        }
 
-      writeb(be, regs + GPIOIBE);
-      writeb(iev, regs + GPIOIEV);
+      MmioWrite8(be, regs + GPIOIBE);
+      MmioWrite8(iev, regs + GPIOIEV);
   */
 
   // TODO(voydanoff) Implement GPIO_PULL_* flags
@@ -72,18 +71,17 @@ static zx_status_t pl061_gpio_config_in(void* ctx, uint32_t index, uint32_t flag
 static zx_status_t pl061_gpio_config_out(void* ctx, uint32_t index, uint8_t initial_value) {
   pl061_gpios_t* gpios = ctx;
   index -= gpios->gpio_start;
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile uint8_t* regs = (void*)gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
+  MMIO_PTR volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
   uint8_t bit = 1 << (index % GPIOS_PER_PAGE);
 
   mtx_lock(&gpios->lock);
   // write value first
-  writeb((initial_value ? bit : 0), regs + GPIODATA(bit));
+  MmioWrite8((initial_value ? bit : 0), regs + GPIODATA(bit));
 
   // then set direction to OUT
-  uint8_t dir = readb(regs + GPIODIR);
+  uint8_t dir = MmioRead8(regs + GPIODIR);
   dir |= bit;
-  writeb(dir, regs + GPIODIR);
+  MmioWrite8(dir, regs + GPIODIR);
 
   mtx_unlock(&gpios->lock);
   return ZX_OK;
@@ -96,22 +94,20 @@ static zx_status_t pl061_gpio_set_alt_function(void* ctx, uint32_t index, uint64
 static zx_status_t pl061_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
   pl061_gpios_t* gpios = ctx;
   index -= gpios->gpio_start;
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile uint8_t* regs = (void*)gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
+  MMIO_PTR volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
   uint8_t bit = 1 << (index % GPIOS_PER_PAGE);
 
-  *out_value = !!(readb(regs + GPIODATA(bit)) & bit);
+  *out_value = !!(MmioRead8(regs + GPIODATA(bit)) & bit);
   return ZX_OK;
 }
 
 static zx_status_t pl061_gpio_write(void* ctx, uint32_t index, uint8_t value) {
   pl061_gpios_t* gpios = ctx;
   index -= gpios->gpio_start;
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile uint8_t* regs = (void*)gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
+  MMIO_PTR volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (index / GPIOS_PER_PAGE);
   uint8_t bit = 1 << (index % GPIOS_PER_PAGE);
 
-  writeb((value ? bit : 0), regs + GPIODATA(bit));
+  MmioWrite8((value ? bit : 0), regs + GPIODATA(bit));
   return ZX_OK;
 }
 
