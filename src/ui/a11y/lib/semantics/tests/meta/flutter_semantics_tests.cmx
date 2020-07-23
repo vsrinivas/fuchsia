@@ -5,7 +5,6 @@
                 "fuchsia.accessibility.ColorTransform": "fuchsia-pkg://fuchsia.com/a11y_manager#meta/a11y_manager.cmx",
                 "fuchsia.accessibility.Magnifier": "fuchsia-pkg://fuchsia.com/a11y_manager#meta/a11y_manager.cmx",
                 "fuchsia.fonts.Provider": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx",
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                 "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
                 "fuchsia.ui.input.ImeVisibilityService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
                 "fuchsia.ui.input.InputDeviceRegistry": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
@@ -15,6 +14,9 @@
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
             },
             "system-services": [
+                "fuchsia.net.NameLookup",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader"
             ]
@@ -32,6 +34,8 @@
             "fuchsia.accessibility.Magnifier",
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
+            "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",

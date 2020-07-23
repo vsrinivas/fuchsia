@@ -188,12 +188,32 @@ To inject additional services, you can add a `injected-services` clause to the m
 `fx test` will start `component_url1` and `component_url2` and the
 test will have access to `service_name1` and `service_name2`. Note that this makes the injected services available in the test environment, but the test component still needs to "use" them by including the service in its `sandbox > services`.
 
+
+### Network access
+
+Currently we cannot run an instance of netstack inside a hermetic environment,
+because it conflicts with the real netstack.  If your test needs to talk to
+netstack, it may only talk to the real netstack outside the test environment. To
+enable this workaround you need to allow some system services:
+
+```json
+"facets": {
+  "fuchsia.test": {
+    "system-services": [
+      "fuchsia.device.NameProvider",
+      "fuchsia.net.Connectivity",
+      "fuchsia.net.stack.Stack",
+      "fuchsia.netstack.Netstack",
+      "fuchsia.net.NameLookup",
+      "fuchsia.posix.socket.Provider",
+    ]
+  }
+}
+```
+
 ### Other system services
 
-There are some services that cannot be faked or mocked. You can connect to real
-system versions of these services by mentioning these services in
-`system-services`. Services that cannot be faked are listed
-[here](/garnet/bin/run_test_component/test_metadata.cc).
+There are some services, such as network, that cannot be faked or mocked. However, you can connect to real system versions of these services by mentioning these services in `system-services`. Services that cannot be faked are listed [here](/garnet/bin/run_test_component/test_metadata.cc).
 
 Test can only list allowlisted system services under `"system-services"` as
 demonstrated above.

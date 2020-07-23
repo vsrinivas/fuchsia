@@ -10,6 +10,10 @@
 #include <fuchsia/hardware/pty/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/net/stack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
 #include <fuchsia/sys/test/cpp/fidl.h>
@@ -57,6 +61,11 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::kernel::Counter::Name_,
     fuchsia::kernel::Stats::Name_,
     fuchsia::media::AudioCore::Name_,
+    fuchsia::net::Connectivity::Name_,
+    fuchsia::net::NameLookup::Name_,
+    fuchsia::net::stack::Stack::Name_,
+    fuchsia::netstack::Netstack::Name_,
+    fuchsia::posix::socket::Provider::Name_,
     fuchsia::scheduler::ProfileProvider::Name_,
     fuchsia::sys::internal::CrashIntrospect::Name_,
     fuchsia::sys::internal::Introspect::Name_,
@@ -116,13 +125,13 @@ bool TestMetadata::ParseFromString(const std::string& cmx_data, const std::strin
       json_parser_.ReportError(Substitute("'$0' in 'facets' should be an object.", kFuchsiaTest));
       return false;
     }
-    auto system_services = fuchsia_test.FindMember(kSystemServices);
-    if (system_services != fuchsia_test.MemberEnd()) {
-      if (!system_services->value.IsArray()) {
+    auto allow_network_services = fuchsia_test.FindMember(kSystemServices);
+    if (allow_network_services != fuchsia_test.MemberEnd()) {
+      if (!allow_network_services->value.IsArray()) {
         json_parser_.ReportError(
             Substitute("'$0' in '$1' should be a string array.", kSystemServices, kFuchsiaTest));
       } else {
-        const auto& array = system_services->value.GetArray();
+        const auto& array = allow_network_services->value.GetArray();
         std::all_of(array.begin(), array.end(), [&](const rapidjson::Value& val) {
           if (!val.IsString()) {
             json_parser_.ReportError(Substitute("'$0' in '$1' should be a string array.",

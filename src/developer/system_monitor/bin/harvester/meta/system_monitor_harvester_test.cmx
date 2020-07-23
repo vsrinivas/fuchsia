@@ -20,7 +20,9 @@
             "fuchsia.boot.RootJob",
             "fuchsia.boot.RootJobForInspect",
             "fuchsia.boot.RootResource",
-            "fuchsia.kernel.Stats"
+            "fuchsia.kernel.Stats",
+            "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider"
         ]
     }
 }

@@ -7,6 +7,9 @@
 #include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/device/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
+#include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/net/stack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/sys/test/cpp/fidl.h>
@@ -151,7 +154,7 @@ TEST_F(TestMetadataTest, InvalidSystemServicesType) {
   json = CreateManifestJson(R"(
   "facets": {
     "fuchsia.test": {
-      "system-services": [ "fuchsia.device.NameProvider", "invalid_service" ]
+      "system-services": [ "fuchsia.netstack.Netstack", "invalid_service" ]
     }
   })");
   ExpectFailedParse(json, "'system-services' cannot contain 'invalid_service'.");
@@ -242,6 +245,9 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
         "fuchsia.boot.WriteOnlyLog",
         "fuchsia.device.NameProvider",
         "fuchsia.kernel.Counter",
+        "fuchsia.net.Connectivity",
+        "fuchsia.net.stack.Stack",
+        "fuchsia.netstack.Netstack",
         "fuchsia.scheduler.ProfileProvider",
         "fuchsia.sys.test.CacheControl",
         "fuchsia.sysmem.Allocator",
@@ -255,15 +261,35 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
   {
     TestMetadata tm;
     EXPECT_TRUE(ParseFrom(&tm, json));
-    EXPECT_THAT(tm.system_services(),
-                ::testing::ElementsAre(
-                    fuchsia::boot::FactoryItems::Name_, fuchsia::boot::ReadOnlyLog::Name_,
-                    fuchsia::boot::RootJob::Name_, fuchsia::boot::RootResource::Name_,
-                    fuchsia::boot::WriteOnlyLog::Name_, fuchsia::device::NameProvider::Name_,
-                    fuchsia::kernel::Counter::Name_, fuchsia::scheduler::ProfileProvider::Name_,
-                    fuchsia::sys::test::CacheControl::Name_, fuchsia::sysmem::Allocator::Name_,
-                    fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::policy::Presenter::Name_,
-                    fuchsia::vulkan::loader::Loader::Name_));
+    EXPECT_EQ(tm.system_services().size(), 16u);
+    EXPECT_THAT(
+        tm.system_services(),
+        ::testing::ElementsAre(
+            fuchsia::boot::FactoryItems::Name_, fuchsia::boot::ReadOnlyLog::Name_,
+            fuchsia::boot::RootJob::Name_, fuchsia::boot::RootResource::Name_,
+            fuchsia::boot::WriteOnlyLog::Name_, fuchsia::device::NameProvider::Name_,
+            fuchsia::kernel::Counter::Name_, fuchsia::net::Connectivity::Name_,
+            fuchsia::net::stack::Stack::Name_, fuchsia::netstack::Netstack::Name_,
+            fuchsia::scheduler::ProfileProvider::Name_, fuchsia::sys::test::CacheControl::Name_,
+            fuchsia::sysmem::Allocator::Name_, fuchsia::ui::scenic::Scenic::Name_,
+            fuchsia::ui::policy::Presenter::Name_, fuchsia::vulkan::loader::Loader::Name_));
+  }
+
+  json = CreateManifestJson(R"(
+  "facets": {
+    "fuchsia.test": {
+      "system-services": [
+        "fuchsia.net.Connectivity",
+        "fuchsia.netstack.Netstack"
+      ]
+    }
+  })");
+  {
+    TestMetadata tm;
+    EXPECT_TRUE(ParseFrom(&tm, json));
+    EXPECT_EQ(tm.system_services().size(), 2u);
+    EXPECT_THAT(tm.system_services(), ::testing::ElementsAre(fuchsia::net::Connectivity::Name_,
+                                                             fuchsia::netstack::Netstack::Name_));
   }
 }
 
