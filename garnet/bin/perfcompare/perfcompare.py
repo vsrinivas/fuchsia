@@ -162,6 +162,12 @@ class Stats(object):
         return self._offset * 2 / self._mean
 
 
+def StatsFormatConfidenceInterval(stats):
+    if stats is None:
+        return '-'
+    return stats.FormatConfidenceInterval()
+
+
 def ReadJsonFile(filename):
     with open(filename, 'r') as fh:
         return json.load(fh)
@@ -298,6 +304,25 @@ def FormatTable(heading_row, rows, out_fh):
         out_fh.write('\n')
 
 
+def CompareIntervals(stats_before, stats_after):
+    assert stats_before is not None or stats_after is not None
+    if stats_before is None:
+        return 'added', '-'
+    if stats_after is None:
+        return 'removed', '-'
+    # Using a ">" comparison rather than ">=" ensures that if the intervals
+    # are equal and zero-width, they are treated as "no_sig_diff".
+    if stats_after.interval[0] > stats_before.interval[1]:
+        result = 'slower'
+    elif stats_after.interval[1] < stats_before.interval[0]:
+        result = 'faster'
+    else:
+        result = 'no_sig_diff'
+    factor_range = FormatFactorRange(stats_before.interval,
+                                     stats_after.interval)
+    return result, factor_range
+
+
 def ComparePerf(args, out_fh):
     results_maps = [
         StatsFromMultiBootDataset(MultiBootDataset(dir_path))
@@ -320,10 +345,8 @@ def ComparePerf(args, out_fh):
         for label in sorted(labels):
             row = [label]
             for results_map in results_maps:
-                if label in results_map:
-                    row.append(results_map[label].FormatConfidenceInterval())
-                else:
-                    row.append('-')
+                row.append(
+                    StatsFormatConfidenceInterval(results_map.get(label)))
             rows.append(row)
         FormatTable(heading_row, rows, out_fh)
         return
@@ -340,34 +363,12 @@ def ComparePerf(args, out_fh):
     all_rows = []
     diff_rows = []
     for label in sorted(labels):
-        if label not in results_maps[0]:
-            result = 'added'
-            factor_range = '-'
-            before_range = '-'
-            after_range = results_maps[1][label].FormatConfidenceInterval()
-        elif label not in results_maps[1]:
-            result = 'removed'
-            factor_range = '-'
-            before_range = results_maps[0][label].FormatConfidenceInterval()
-            after_range = '-'
-        else:
-            stats = [results_map[label] for results_map in results_maps]
-            interval_before = stats[0].interval
-            interval_after = stats[1].interval
-            # Using a ">" comparison rather than ">=" ensures that if the
-            # intervals are equal and zero-width, they are treated as
-            # "no_sig_diff".
-            if interval_after[0] > interval_before[1]:
-                result = 'slower'
-            elif interval_after[1] < interval_before[0]:
-                result = 'faster'
-            else:
-                result = 'no_sig_diff'
-            before_range = stats[0].FormatConfidenceInterval()
-            after_range = stats[1].FormatConfidenceInterval()
-            factor_range = FormatFactorRange(interval_before, interval_after)
+        stats = [results_map.get(label) for results_map in results_maps]
+        result, factor_range = CompareIntervals(stats[0], stats[1])
         counts[result] += 1
-        row = [label, result, factor_range, before_range, after_range]
+        row = [label, result, factor_range,
+               StatsFormatConfidenceInterval(stats[0]),
+               StatsFormatConfidenceInterval(stats[1])]
         all_rows.append(row)
         if result != 'no_sig_diff':
             diff_rows.append(row)
