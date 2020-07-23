@@ -1024,12 +1024,12 @@ bool encode_absent_nullable_string() {
   auto status =
       encode_helper<mode>(&unbounded_nullable_string_message_type, &message, buf, ArrayCount(buf),
                           nullptr, 0, &actual_bytes, &actual_handles, &error);
-  auto& result = *reinterpret_cast<unbounded_nullable_string_message_layout*>(buf);
+  auto& result = *reinterpret_cast<decltype(message.inline_struct)*>(buf);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, error);
   EXPECT_EQ(actual_handles, 0u);
-  EXPECT_EQ(reinterpret_cast<uint64_t>(result.inline_struct.string.data), FIDL_ALLOC_ABSENT);
+  EXPECT_EQ(reinterpret_cast<uint64_t>(result.string.data), FIDL_ALLOC_ABSENT);
 
   END_TEST;
 }
