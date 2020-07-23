@@ -335,9 +335,10 @@ class PerfCompareTest(TempDirTestCase):
         self.assertEquals(perfcompare.Mean(values), 10.0)
         self.assertEquals(stddev_val, 5.0)
         # Check error cases.
-        self.assertRaises(lambda: perfcompare.Mean([]))
-        self.assertRaises(lambda: perfcompare.MeanAndStddev([]))
-        self.assertRaises(lambda: perfcompare.MeanAndStddev([100]))
+        self.assertRaises(AssertionError, lambda: perfcompare.Mean([]))
+        self.assertRaises(AssertionError, lambda: perfcompare.MeanAndStddev([]))
+        self.assertRaises(AssertionError,
+                          lambda: perfcompare.MeanAndStddev([100]))
 
     # Check that data written using the golden file helper reads back
     # the same.
@@ -350,7 +351,8 @@ class PerfCompareTest(TempDirTestCase):
         reader = GoldenDataInput(temp_file)
         reader.AssertCaseEq('a_key', 'a_value')
         reader.AssertCaseEq('b_key', 'line 1\n' 'line 2\n')
-        self.assertRaises(lambda: reader.AssertCaseEq('a_key', 'other_value'))
+        self.assertRaises(AssertionError,
+                          lambda: reader.AssertCaseEq('a_key', 'other_value'))
 
     def test_comparison_no_change(self):
         before_dir = self.ExampleDataDir()
