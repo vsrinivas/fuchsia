@@ -18,35 +18,23 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 
 }  // namespace
-template <>
-SimpleProtocol::ResultOf::Add_Impl<SimpleProtocol::AddResponse>::Add_Impl(
-    ::zx::unowned_channel _client_end, int32_t a, int32_t b) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(AddRequest)];
-  auto& _request = *new (_request_buffer) AddRequest(0, a, b);
-
-  auto _encoded = ::fidl::internal::LinearizedAndEncoded<AddRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<AddRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(SimpleProtocol::InPlace::Add(std::move(_client_end),
-                                                std::move(_encoded_request),
-                                                Super::response_buffer()));
+SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b) {
+  AddOwnedRequest _request(0, a, b);
+  _request.GetFidlMessage().Call(
+      AddResponse::Type, _client, bytes_,
+      AddResponse::PrimarySize + AddResponse::MaxOutOfLine);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 SimpleProtocol::ResultOf::Add SimpleProtocol::SyncClient::Add(int32_t a,
                                                               int32_t b) {
-  return ResultOf::Add(::zx::unowned_channel(this->channel_), a, b);
+  return ResultOf::Add(this->channel().get(), a, b);
 }
 
 SimpleProtocol::ResultOf::Add SimpleProtocol::Call::Add(
     ::zx::unowned_channel _client_end, int32_t a, int32_t b) {
-  return ResultOf::Add(std::move(_client_end), a, b);
+  return ResultOf::Add(_client_end->get(), a, b);
 }
 
 template <>
@@ -122,9 +110,10 @@ SimpleProtocol::UnownedResultOf::Add SimpleProtocol::Call::Add(
 SimpleProtocol::ResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(int32_t a,
                                                                    int32_t b) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::Add(_binding->channel(), a, b);
+    return ResultOf::Add(_binding->handle(), a, b);
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return SimpleProtocol::ResultOf::Add(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 SimpleProtocol::UnownedResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(

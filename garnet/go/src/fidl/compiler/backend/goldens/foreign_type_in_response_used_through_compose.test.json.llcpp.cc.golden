@@ -15,33 +15,21 @@ extern "C" const fidl_type_t top_TopGetFooRequestTable;
 extern "C" const fidl_type_t top_TopGetFooResponseTable;
 
 }  // namespace
-template <>
-Top::ResultOf::GetFoo_Impl<Top::GetFooResponse>::GetFoo_Impl(
-    ::zx::unowned_channel _client_end) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetFooRequest)];
-  auto& _request = *new (_request_buffer) GetFooRequest(0);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<GetFooRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<GetFooRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(
-      Top::InPlace::GetFoo(std::move(_client_end), Super::response_buffer()));
+Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client) {
+  GetFooOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(
+      GetFooResponse::Type, _client, bytes_,
+      GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Top::ResultOf::GetFoo Top::SyncClient::GetFoo() {
-  return ResultOf::GetFoo(::zx::unowned_channel(this->channel_));
+  return ResultOf::GetFoo(this->channel().get());
 }
 
 Top::ResultOf::GetFoo Top::Call::GetFoo(::zx::unowned_channel _client_end) {
-  return ResultOf::GetFoo(std::move(_client_end));
+  return ResultOf::GetFoo(_client_end->get());
 }
 
 template <>
@@ -96,9 +84,10 @@ Top::UnownedResultOf::GetFoo Top::Call::GetFoo(
 
 Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::GetFoo(_binding->channel());
+    return ResultOf::GetFoo(_binding->handle());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return Top::ResultOf::GetFoo(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 Top::UnownedResultOf::GetFoo Top::ClientImpl::GetFoo_Sync(

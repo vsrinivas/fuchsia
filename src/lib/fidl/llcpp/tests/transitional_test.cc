@@ -74,7 +74,8 @@ TEST_F(TransitionalTest, CallUnimplementedMethod) {
   auto client = TakeClient();
   auto result = client.UnimplementedMethod();
   EXPECT_FALSE(result.ok());
-  EXPECT_EQ(result.error(), nullptr) << result.error();
+  EXPECT_EQ(std::string("failed writing to the underlying transport"), result.error())
+      << result.error();
   ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED) << zx_status_get_string(result.status());
 }
 

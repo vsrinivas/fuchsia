@@ -37,22 +37,23 @@ const ClientSyncMethods = `
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::{{ .Name }}(_binding->channel()
+    return ResultOf::{{ .Name }}(_binding->handle()
       {{- template "CommaPassthroughMessageParams" .Request -}}
     );
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}(
+    ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
   {{- else }}
-::fidl::StatusAndError {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}(
+::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::{{ .Name }}(_binding->channel()
+    auto _res = ResultOf::{{ .Name }}(_binding->handle()
       {{- template "CommaPassthroughMessageParams" .Request -}}
     );
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
   {{- end }}
 {{- end }}

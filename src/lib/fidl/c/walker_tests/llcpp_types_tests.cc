@@ -476,27 +476,6 @@ bool NonnullableChannelMessage::MakeDecodedMessageHelper(
   END_HELPER;
 }
 
-// Manually define the OwnedSyncCallBase type for NonnullableChannelMessage for the
-// OwningSyncCallWithHandlesTest below.
-// This is similar to the llcpp codegen output.
-template <>
-class MySyncCall<NonnullableChannelMessage>
-    : private fidl::internal::OwnedSyncCallBase<NonnullableChannelMessage> {
-  using Super = fidl::internal::OwnedSyncCallBase<NonnullableChannelMessage>;
-
- public:
-  explicit MySyncCall(zx::channel* out_channel) {
-    fidl::DecodedMessage<NonnullableChannelMessage> decoded_message;
-    EXPECT_TRUE(NonnullableChannelMessage::MakeDecodedMessageHelper(Super::response_buffer(),
-                                                                    &decoded_message, out_channel));
-    Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
-  }
-  ~MySyncCall() = default;
-  using Super::error;
-  using Super::status;
-  using Super::Unwrap;
-};
-
 // Helper to populate a OwnedSyncCallBase<InlinePODStruct> with a decoded message,
 // as if receiving a FIDL reply.
 bool InlinePODStruct::MakeDecodedMessageHelper(
@@ -519,32 +498,6 @@ bool InlinePODStruct::MakeDecodedMessageHelper(
 
   END_HELPER;
 }
-
-// Manually define the OwnedSyncCallBase type for InlinePODStruct for the
-// OwningSyncCallWithPODTest below.
-// This is similar to the llcpp codegen output.
-template <>
-class MySyncCall<InlinePODStruct> : private fidl::internal::OwnedSyncCallBase<InlinePODStruct> {
-  using Super = fidl::internal::OwnedSyncCallBase<InlinePODStruct>;
-
- public:
-  explicit MySyncCall(uint64_t payload) {
-    fidl::DecodedMessage<InlinePODStruct> decoded_message;
-    EXPECT_TRUE(InlinePODStruct::MakeDecodedMessageHelper(Super::response_buffer(), payload,
-                                                          &decoded_message));
-    Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
-  }
-
-  // Constructs a failed OwnedSyncCallBase.
-  MySyncCall(zx_status_t status, const char* error) {
-    Super::SetFailure(fidl::EncodeResult<InlinePODStruct>(status, error));
-  }
-
-  ~MySyncCall() = default;
-  using Super::error;
-  using Super::status;
-  using Super::Unwrap;
-};
 
 // Helper to populate a OwnedSyncCallBase<OutOfLineMessage> with a decoded message,
 // as if receiving a FIDL reply.
@@ -578,26 +531,6 @@ bool OutOfLineMessage::MakeDecodedMessageHelper(
   END_HELPER;
 }
 
-// Manually define the OwnedSyncCallBase type for OutOfLineMessage for the
-// OwningSyncCallWithOutOfLineTest below.
-// This is similar to the llcpp codegen output.
-template <>
-class MySyncCall<OutOfLineMessage> : private fidl::internal::OwnedSyncCallBase<OutOfLineMessage> {
-  using Super = fidl::internal::OwnedSyncCallBase<OutOfLineMessage>;
-
- public:
-  explicit MySyncCall(std::optional<uint64_t> optional_field) {
-    fidl::DecodedMessage<OutOfLineMessage> decoded_message;
-    EXPECT_TRUE(OutOfLineMessage::MakeDecodedMessageHelper(Super::response_buffer(), optional_field,
-                                                           &decoded_message));
-    Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
-  }
-  ~MySyncCall() = default;
-  using Super::error;
-  using Super::status;
-  using Super::Unwrap;
-};
-
 // Helper to populate a OwnedSyncCallBase<LargeStruct> with a decoded message,
 // as if receiving a FIDL reply.
 bool LargeStruct::MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
@@ -622,72 +555,6 @@ bool LargeStruct::MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
   }
 
   END_HELPER;
-}
-
-// Manually define the OwnedSyncCallBase type for LargeStruct, for the OwningSyncCallHeapTest below.
-// This is similar to the llcpp codegen output.
-template <>
-class MySyncCall<LargeStruct> : private fidl::internal::OwnedSyncCallBase<LargeStruct> {
-  using Super = fidl::internal::OwnedSyncCallBase<LargeStruct>;
-
- public:
-  explicit MySyncCall(uint64_t fill) {
-    fidl::DecodedMessage<LargeStruct> decoded_message;
-    EXPECT_TRUE(
-        LargeStruct::MakeDecodedMessageHelper(Super::response_buffer(), fill, &decoded_message));
-    Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
-  }
-
-  ~MySyncCall() = default;
-  using Super::error;
-  using Super::status;
-  using Super::Unwrap;
-};
-
-// Test that in the case of stack-allocated response, handles are correctly
-// closed.
-bool OwningSyncCallWithHandlesTest() {
-  BEGIN_TEST;
-
-  zx::channel peer_1;
-  {
-    MySyncCall<NonnullableChannelMessage> sync_call_1(&peer_1);
-    ASSERT_TRUE(HelperExpectPeerValid(peer_1));
-    ASSERT_EQ(sync_call_1.status(), ZX_OK);
-    ASSERT_EQ(sync_call_1.error(), nullptr);
-  }
-
-  ASSERT_TRUE(HelperExpectPeerInvalid(peer_1));
-
-  END_TEST;
-}
-
-bool OwningSyncCallBasicTest() {
-  BEGIN_TEST;
-
-  MySyncCall<OutOfLineMessage> sync_call_1(std::nullopt);
-  ASSERT_EQ(sync_call_1.status(), ZX_OK);
-  ASSERT_EQ(sync_call_1.error(), nullptr);
-  ASSERT_NULL(sync_call_1.Unwrap()->optional);
-
-  MySyncCall<OutOfLineMessage> sync_call_2(0xABCDABCD);
-  ASSERT_EQ(sync_call_2.status(), ZX_OK);
-  ASSERT_EQ(sync_call_2.error(), nullptr);
-  ASSERT_NONNULL(sync_call_2.Unwrap()->optional);
-  ASSERT_EQ(sync_call_2.Unwrap()->optional->payload, 0xABCDABCD);
-
-  END_TEST;
-}
-
-// Test the |OwnedSyncCallBase| holds failure during encode/decode etc correctly.
-bool OwningSyncCallFailureTest() {
-  BEGIN_TEST;
-
-  MySyncCall<InlinePODStruct> failed_call(ZX_ERR_INVALID_ARGS, "err");
-  ASSERT_EQ(failed_call.status(), ZX_ERR_INVALID_ARGS);
-  ASSERT_STR_EQ(failed_call.error(), "err");
-
-  END_TEST;
 }
 
 bool UnownedSyncCallTest() {
@@ -755,9 +622,6 @@ RUN_NAMED_TEST("fidl::internal::AlignedBuffer alignment on stack",
                UninitializedBufferStackAllocationAlignmentTest)
 RUN_NAMED_TEST("fidl::internal::AlignedBuffer alignment on heap",
                UninitializedBufferHeapAllocationAlignmentTest)
-RUN_NAMED_TEST("OwnedSyncCallBase handle closing test]", OwningSyncCallWithHandlesTest)
-RUN_NAMED_TEST("OwnedSyncCallBase constructor initialization test", OwningSyncCallBasicTest)
-RUN_NAMED_TEST("OwnedSyncCallBase when call failed", OwningSyncCallFailureTest)
 RUN_NAMED_TEST("Unowned OwnedSyncCallBase std::move", UnownedSyncCallTest)
 RUN_NAMED_TEST("ResponseStorage allocation strategy", ResponseStorageAllocationStrategyTest)
 END_TEST_CASE(llcpp_types_tests)

@@ -16,35 +16,22 @@ extern "C" const fidl_type_t example_ExampleProtocolMethodRequestTable;
 extern "C" const fidl_type_t example_ExampleProtocolMethodResponseTable;
 
 }  // namespace
-
-ExampleProtocol::ResultOf::Method_Impl::Method_Impl(
-    ::zx::unowned_channel _client_end, ::llcpp::exampleusing::Empty& arg) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
-  auto& _request = *new (_request_buffer) MethodRequest(0, arg);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<MethodRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<MethodRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(ExampleProtocol::InPlace::Method(
-      std::move(_client_end), std::move(_encoded_request)));
+ExampleProtocol::ResultOf::Method::Method(zx_handle_t _client,
+                                          ::llcpp::exampleusing::Empty& arg) {
+  MethodOwnedRequest _request(0, arg);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 ExampleProtocol::ResultOf::Method ExampleProtocol::SyncClient::Method(
     ::llcpp::exampleusing::Empty arg) {
-  return ResultOf::Method(::zx::unowned_channel(this->channel_), arg);
+  return ResultOf::Method(this->channel().get(), arg);
 }
 
 ExampleProtocol::ResultOf::Method ExampleProtocol::Call::Method(
     ::zx::unowned_channel _client_end, ::llcpp::exampleusing::Empty arg) {
-  return ResultOf::Method(std::move(_client_end), arg);
+  return ResultOf::Method(_client_end->get(), arg);
 }
 
 ExampleProtocol::UnownedResultOf::Method_Impl::Method_Impl(
@@ -110,13 +97,13 @@ ExampleProtocol::UnownedResultOf::Method ExampleProtocol::Call::Method(
   }
 }
 
-::fidl::StatusAndError ExampleProtocol::ClientImpl::Method(
+::fidl::Result ExampleProtocol::ClientImpl::Method(
     ::llcpp::exampleusing::Empty arg) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::Method(_binding->channel(), arg);
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res = ResultOf::Method(_binding->handle(), arg);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 ::fidl::StatusAndError ExampleProtocol::ClientImpl::Method(

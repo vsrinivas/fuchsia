@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_ASYNC_CPP_ASYNC_BIND_INTERNAL_H_
-#define LIB_FIDL_ASYNC_CPP_ASYNC_BIND_INTERNAL_H_
+#ifndef LIB_FIDL_LLCPP_ASYNC_BINDING_H_
+#define LIB_FIDL_LLCPP_ASYNC_BINDING_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
@@ -43,13 +43,15 @@ class AsyncBinding : private async_wait_t {
   // an internal error like not being able to write to the channel occur).
   // The binding is destroyed once no more references are held, including the one returned by
   // this static method.
-  static std::shared_ptr<AsyncBinding> CreateServerBinding(
-      async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-      TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
+  static std::shared_ptr<AsyncBinding> CreateServerBinding(async_dispatcher_t* dispatcher,
+                                                           zx::channel channel, void* impl,
+                                                           TypeErasedServerDispatchFn dispatch_fn,
+                                                           TypeErasedOnUnboundFn on_unbound_fn);
 
-  static std::shared_ptr<AsyncBinding> CreateClientBinding(
-      async_dispatcher_t* dispatcher, zx::channel channel, void* impl, DispatchFn dispatch_fn,
-      TypeErasedOnUnboundFn on_unbound_fn);
+  static std::shared_ptr<AsyncBinding> CreateClientBinding(async_dispatcher_t* dispatcher,
+                                                           zx::channel channel, void* impl,
+                                                           DispatchFn dispatch_fn,
+                                                           TypeErasedOnUnboundFn on_unbound_fn);
 
   // Sends an epitaph if required. If an unbound hook was provided, posts a task to the dispatcher
   // to execute it.
@@ -77,6 +79,7 @@ class AsyncBinding : private async_wait_t {
   }
 
   zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
+  zx_handle_t handle() const { return channel_.get(); }
 
  protected:
   AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl, bool is_server,
@@ -137,4 +140,4 @@ class AsyncBinding : private async_wait_t {
 }  // namespace internal
 }  // namespace fidl
 
-#endif  // LIB_FIDL_ASYNC_CPP_ASYNC_BIND_INTERNAL_H_
+#endif  // LIB_FIDL_LLCPP_ASYNC_BINDING_H_

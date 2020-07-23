@@ -284,33 +284,35 @@ type Method struct {
 	NameInLowerSnakeCase string
 	Ordinal              uint64
 	// The name of a constant that defines the ordinal value.
-	OrdinalName          string
-	HasRequest           bool
-	Request              []Parameter
-	RequestSize          int
-	RequestTypeName      string
-	RequestMaxHandles    int
-	RequestMaxOutOfLine  int
-	RequestPadding       bool
-	RequestFlexible      bool
-	RequestHasPointer    bool
-	RequestIsResource    bool
-	HasResponse          bool
-	Response             []Parameter
-	ResponseSize         int
-	ResponseTypeName     string
-	ResponseMaxHandles   int
-	ResponseMaxOutOfLine int
-	ResponsePadding      bool
-	ResponseFlexible     bool
-	ResponseHasPointer   bool
-	ResponseIsResource   bool
-	CallbackType         string
-	ResponseHandlerType  string
-	ResponderType        string
-	Transitional         bool
-	Result               *Result
-	LLProps              LLProps
+	OrdinalName             string
+	HasRequest              bool
+	Request                 []Parameter
+	RequestSize             int
+	RequestTypeName         string
+	RequestMaxHandles       int
+	RequestMaxOutOfLine     int
+	RequestSentMaxSize      int
+	RequestPadding          bool
+	RequestFlexible         bool
+	RequestHasPointer       bool
+	RequestIsResource       bool
+	HasResponse             bool
+	Response                []Parameter
+	ResponseSize            int
+	ResponseTypeName        string
+	ResponseMaxHandles      int
+	ResponseMaxOutOfLine    int
+	ResponseReceivedMaxSize int
+	ResponsePadding         bool
+	ResponseFlexible        bool
+	ResponseHasPointer      bool
+	ResponseIsResource      bool
+	CallbackType            string
+	ResponseHandlerType     string
+	ResponderType           string
+	Transitional            bool
+	Result                  *Result
+	LLProps                 LLProps
 }
 
 // LLContextProps contain context-dependent properties of a method specific to llcpp.
@@ -1075,37 +1077,46 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 			result = c.resultForUnion[v.Response[0].Type.Identifier]
 		}
 
+		var computedResponseReceivedMaxSize int
+		if v.ResponseTypeShapeV1.HasFlexibleEnvelope {
+			computedResponseReceivedMaxSize = (1 << 32) - 1
+		} else {
+			computedResponseReceivedMaxSize = v.ResponseTypeShapeV1.InlineSize + v.ResponseTypeShapeV1.MaxOutOfLine
+		}
+
 		m := Method{
-			Attributes:           v.Attributes,
-			Name:                 name,
-			NameInLowerSnakeCase: common.ToSnakeCase(name),
-			Ordinal:              v.Ordinal,
-			OrdinalName:          fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
-			HasRequest:           v.HasRequest,
-			Request:              c.compileParameterArray(v.Request),
-			RequestSize:          v.RequestTypeShapeV1.InlineSize,
-			RequestTypeName:      fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
-			RequestMaxHandles:    v.RequestTypeShapeV1.MaxHandles,
-			RequestMaxOutOfLine:  v.RequestTypeShapeV1.MaxOutOfLine,
-			RequestPadding:       v.RequestTypeShapeV1.HasPadding,
-			RequestFlexible:      v.RequestTypeShapeV1.HasFlexibleEnvelope,
-			RequestHasPointer:    v.RequestTypeShapeV1.Depth > 0,
-			RequestIsResource:    v.RequestTypeShapeV1.IsResource,
-			HasResponse:          v.HasResponse,
-			Response:             c.compileParameterArray(v.Response),
-			ResponseSize:         v.ResponseTypeShapeV1.InlineSize,
-			ResponseTypeName:     fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
-			ResponseMaxHandles:   v.ResponseTypeShapeV1.MaxHandles,
-			ResponseMaxOutOfLine: v.ResponseTypeShapeV1.MaxOutOfLine,
-			ResponsePadding:      v.ResponseTypeShapeV1.HasPadding,
-			ResponseFlexible:     v.ResponseTypeShapeV1.HasFlexibleEnvelope,
-			ResponseHasPointer:   v.ResponseTypeShapeV1.Depth > 0,
-			ResponseIsResource:   v.ResponseTypeShapeV1.IsResource,
-			CallbackType:         callbackType,
-			ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
-			ResponderType:        fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
-			Transitional:         v.IsTransitional(),
-			Result:               result,
+			Attributes:              v.Attributes,
+			Name:                    name,
+			NameInLowerSnakeCase:    common.ToSnakeCase(name),
+			Ordinal:                 v.Ordinal,
+			OrdinalName:             fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
+			HasRequest:              v.HasRequest,
+			Request:                 c.compileParameterArray(v.Request),
+			RequestSize:             v.RequestTypeShapeV1.InlineSize,
+			RequestTypeName:         fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
+			RequestMaxHandles:       v.RequestTypeShapeV1.MaxHandles,
+			RequestMaxOutOfLine:     v.RequestTypeShapeV1.MaxOutOfLine,
+			RequestSentMaxSize:      v.RequestTypeShapeV1.InlineSize + v.RequestTypeShapeV1.MaxOutOfLine,
+			RequestPadding:          v.RequestTypeShapeV1.HasPadding,
+			RequestFlexible:         v.RequestTypeShapeV1.HasFlexibleEnvelope,
+			RequestHasPointer:       v.RequestTypeShapeV1.Depth > 0,
+			RequestIsResource:       v.RequestTypeShapeV1.IsResource,
+			HasResponse:             v.HasResponse,
+			Response:                c.compileParameterArray(v.Response),
+			ResponseSize:            v.ResponseTypeShapeV1.InlineSize,
+			ResponseTypeName:        fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
+			ResponseMaxHandles:      v.ResponseTypeShapeV1.MaxHandles,
+			ResponseMaxOutOfLine:    v.ResponseTypeShapeV1.MaxOutOfLine,
+			ResponseReceivedMaxSize: computedResponseReceivedMaxSize,
+			ResponsePadding:         v.ResponseTypeShapeV1.HasPadding,
+			ResponseFlexible:        v.ResponseTypeShapeV1.HasFlexibleEnvelope,
+			ResponseHasPointer:      v.ResponseTypeShapeV1.Depth > 0,
+			ResponseIsResource:      v.ResponseTypeShapeV1.IsResource,
+			CallbackType:            callbackType,
+			ResponseHandlerType:     fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
+			ResponderType:           fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
+			Transitional:            v.IsTransitional(),
+			Result:                  result,
 		}
 
 		m.LLProps = m.NewLLProps(r, v.RequestTypeShapeV1, v.ResponseTypeShapeV1)

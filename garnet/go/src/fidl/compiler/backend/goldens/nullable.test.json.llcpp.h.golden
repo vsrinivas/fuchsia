@@ -13,6 +13,8 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -311,30 +313,39 @@ class SimpleProtocol final {
   class ResultOf final {
     ResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class Add_Impl final
-        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-
-     public:
-      Add_Impl(::zx::unowned_channel _client_end, int32_t a, int32_t b);
-      ~Add_Impl() = default;
-      Add_Impl(Add_Impl&& other) = default;
-      Add_Impl& operator=(Add_Impl&& other) = default;
-      Add_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using Add = Add_Impl<AddResponse>;
+    class Add final : public ::fidl::Result {
+     public:
+      explicit Add(zx_handle_t _client, int32_t a, int32_t b);
+      explicit Add(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      Add(Add&&) = delete;
+      Add(const Add&) = delete;
+      Add* operator=(Add&&) = delete;
+      Add* operator=(const Add&) = delete;
+      ~Add() = default;
+
+      AddResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<AddResponse*>(bytes_);
+      }
+      const AddResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const AddResponse*>(bytes_);
+      }
+
+      AddResponse& value() { return *Unwrap(); }
+      const AddResponse& value() const { return *Unwrap(); }
+
+      AddResponse* operator->() { return &value(); }
+      const AddResponse* operator->() const { return &value(); }
+
+      AddResponse& operator*() { return value(); }
+      const AddResponse& operator*() const { return value(); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[AddResponse::PrimarySize + AddResponse::MaxOutOfLine];
+    };
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -368,6 +379,58 @@ class SimpleProtocol final {
 
    public:
     using Add = Add_Impl<AddResponse>;
+  };
+
+  class AddUnownedRequest final {
+   public:
+    AddUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+                      int32_t a, int32_t b)
+        : message_(_bytes, _byte_size, sizeof(AddRequest), nullptr, 0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(AddRequest)];
+      auto& _request = *new (_request_buffer) AddRequest(_txid, a, b);
+      message_.LinearizeAndEncode(AddRequest::Type, &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    AddRequest& Message() {
+      return *reinterpret_cast<AddRequest*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class AddOwnedRequest final {
+   public:
+    explicit AddOwnedRequest(zx_txid_t _txid, int32_t a, int32_t b)
+        : message_(bytes_, sizeof(bytes_), _txid, a, b) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[AddRequest::PrimarySize + AddRequest::MaxOutOfLine];
+    AddUnownedRequest message_;
   };
 
   class SyncClient final {

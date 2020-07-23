@@ -29,34 +29,22 @@ extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestResponseTable;
 
 }  // namespace
-template <>
-Parent::ResultOf::GetChild_Impl<Parent::GetChildResponse>::GetChild_Impl(
-    ::zx::unowned_channel _client_end) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetChildRequest)];
-  auto& _request = *new (_request_buffer) GetChildRequest(0);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<GetChildRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<GetChildRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(Parent::InPlace::GetChild(std::move(_client_end),
-                                             Super::response_buffer()));
+Parent::ResultOf::GetChild::GetChild(zx_handle_t _client) {
+  GetChildOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(
+      GetChildResponse::Type, _client, bytes_,
+      GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Parent::ResultOf::GetChild Parent::SyncClient::GetChild() {
-  return ResultOf::GetChild(::zx::unowned_channel(this->channel_));
+  return ResultOf::GetChild(this->channel().get());
 }
 
 Parent::ResultOf::GetChild Parent::Call::GetChild(
     ::zx::unowned_channel _client_end) {
-  return ResultOf::GetChild(std::move(_client_end));
+  return ResultOf::GetChild(_client_end->get());
 }
 
 template <>
@@ -109,34 +97,22 @@ Parent::UnownedResultOf::GetChild Parent::Call::GetChild(
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
-template <>
-Parent::ResultOf::GetChildRequest_Impl<Parent::GetChildRequestResponse>::
-    GetChildRequest_Impl(::zx::unowned_channel _client_end) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetChildRequestRequest)];
-  auto& _request = *new (_request_buffer) GetChildRequestRequest(0);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<GetChildRequestRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<GetChildRequestRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(Parent::InPlace::GetChildRequest(std::move(_client_end),
-                                                    Super::response_buffer()));
+Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client) {
+  GetChildRequestOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(GetChildRequestResponse::Type, _client, bytes_,
+                                 GetChildRequestResponse::PrimarySize +
+                                     GetChildRequestResponse::MaxOutOfLine);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Parent::ResultOf::GetChildRequest Parent::SyncClient::GetChildRequest() {
-  return ResultOf::GetChildRequest(::zx::unowned_channel(this->channel_));
+  return ResultOf::GetChildRequest(this->channel().get());
 }
 
 Parent::ResultOf::GetChildRequest Parent::Call::GetChildRequest(
     ::zx::unowned_channel _client_end) {
-  return ResultOf::GetChildRequest(std::move(_client_end));
+  return ResultOf::GetChildRequest(_client_end->get());
 }
 
 template <>
@@ -195,33 +171,20 @@ Parent::InPlace::GetChildRequest(::zx::unowned_channel _client_end,
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
-Parent::ResultOf::TakeChild_Impl::TakeChild_Impl(
-    ::zx::unowned_channel _client_end, ::zx::channel& c) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(TakeChildRequest)];
-  auto& _request = *new (_request_buffer) TakeChildRequest(0, c);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<TakeChildRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<TakeChildRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(Parent::InPlace::TakeChild(std::move(_client_end),
-                                              std::move(_encoded_request)));
+Parent::ResultOf::TakeChild::TakeChild(zx_handle_t _client, ::zx::channel& c) {
+  TakeChildOwnedRequest _request(0, c);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Parent::ResultOf::TakeChild Parent::SyncClient::TakeChild(::zx::channel c) {
-  return ResultOf::TakeChild(::zx::unowned_channel(this->channel_), c);
+  return ResultOf::TakeChild(this->channel().get(), c);
 }
 
 Parent::ResultOf::TakeChild Parent::Call::TakeChild(
     ::zx::unowned_channel _client_end, ::zx::channel c) {
-  return ResultOf::TakeChild(std::move(_client_end), c);
+  return ResultOf::TakeChild(_client_end->get(), c);
 }
 
 Parent::UnownedResultOf::TakeChild_Impl::TakeChild_Impl(
@@ -287,35 +250,22 @@ Parent::UnownedResultOf::TakeChild Parent::Call::TakeChild(
   }
 }
 
-Parent::ResultOf::TakeChildRequest_Impl::TakeChildRequest_Impl(
-    ::zx::unowned_channel _client_end, ::zx::channel& r) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(TakeChildRequestRequest)];
-  auto& _request = *new (_request_buffer) TakeChildRequestRequest(0, r);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<TakeChildRequestRequest>(
-          &_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<TakeChildRequestRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(Parent::InPlace::TakeChildRequest(
-      std::move(_client_end), std::move(_encoded_request)));
+Parent::ResultOf::TakeChildRequest::TakeChildRequest(zx_handle_t _client,
+                                                     ::zx::channel& r) {
+  TakeChildRequestOwnedRequest _request(0, r);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Parent::ResultOf::TakeChildRequest Parent::SyncClient::TakeChildRequest(
     ::zx::channel r) {
-  return ResultOf::TakeChildRequest(::zx::unowned_channel(this->channel_), r);
+  return ResultOf::TakeChildRequest(this->channel().get(), r);
 }
 
 Parent::ResultOf::TakeChildRequest Parent::Call::TakeChildRequest(
     ::zx::unowned_channel _client_end, ::zx::channel r) {
-  return ResultOf::TakeChildRequest(std::move(_client_end), r);
+  return ResultOf::TakeChildRequest(_client_end->get(), r);
 }
 
 Parent::UnownedResultOf::TakeChildRequest_Impl::TakeChildRequest_Impl(
@@ -386,9 +336,10 @@ Parent::UnownedResultOf::TakeChildRequest Parent::Call::TakeChildRequest(
 
 Parent::ResultOf::GetChild Parent::ClientImpl::GetChild_Sync() {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::GetChild(_binding->channel());
+    return ResultOf::GetChild(_binding->handle());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return Parent::ResultOf::GetChild(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 Parent::UnownedResultOf::GetChild Parent::ClientImpl::GetChild_Sync(
@@ -458,9 +409,10 @@ Parent::UnownedResultOf::GetChild Parent::ClientImpl::GetChild_Sync(
 
 Parent::ResultOf::GetChildRequest Parent::ClientImpl::GetChildRequest_Sync() {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::GetChildRequest(_binding->channel());
+    return ResultOf::GetChildRequest(_binding->handle());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return Parent::ResultOf::GetChildRequest(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 Parent::UnownedResultOf::GetChildRequest
@@ -528,12 +480,12 @@ Parent::ClientImpl::GetChildRequest_Sync(::fidl::BytePart _response_buffer) {
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::StatusAndError Parent::ClientImpl::TakeChild(::zx::channel c) {
+::fidl::Result Parent::ClientImpl::TakeChild(::zx::channel c) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::TakeChild(_binding->channel(), c);
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res = ResultOf::TakeChild(_binding->handle(), c);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 ::fidl::StatusAndError Parent::ClientImpl::TakeChild(
@@ -546,12 +498,12 @@ Parent::ClientImpl::GetChildRequest_Sync(::fidl::BytePart _response_buffer) {
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::StatusAndError Parent::ClientImpl::TakeChildRequest(::zx::channel r) {
+::fidl::Result Parent::ClientImpl::TakeChildRequest(::zx::channel r) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::TakeChildRequest(_binding->channel(), r);
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res = ResultOf::TakeChildRequest(_binding->handle(), r);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 ::fidl::StatusAndError Parent::ClientImpl::TakeChildRequest(

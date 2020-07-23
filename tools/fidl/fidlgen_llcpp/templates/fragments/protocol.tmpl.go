@@ -95,6 +95,30 @@ class {{ .Name }};
 {{- end }}
 {{- end }}
 
+{{- define "RequestSentSize"}}
+  {{- if gt .RequestSentMaxSize 65536 -}}
+  ZX_CHANNEL_MAX_MSG_BYTES
+  {{- else -}}
+  {{ .Name }}Request::PrimarySize + {{ .Name }}Request::MaxOutOfLine
+  {{- end -}}
+{{- end }}
+
+{{- define "ResponseReceivedSize"}}
+  {{- if gt .ResponseReceivedMaxSize 65536 -}}
+  ZX_CHANNEL_MAX_MSG_BYTES
+  {{- else -}}
+  {{ .Name }}Response::PrimarySize + {{ .Name }}Response::MaxOutOfLine
+  {{- end -}}
+{{- end }}
+
+{{- define "ResponseReceivedByteAccess" }}
+  {{- if gt .ResponseReceivedMaxSize 512 -}}
+  bytes_->data()
+  {{- else -}}
+  bytes_
+  {{- end -}}
+{{- end }}
+
 {{- define "ProtocolDeclaration" }}
 {{- $protocol := . }}
 {{ "" }}
@@ -227,39 +251,57 @@ class {{ .Name }} final {
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
-   private:
+   public:
     {{- range FilterMethodsWithoutReqs .Methods -}}
     {{- if .HasResponse -}}
 {{ "" }}
-    template <typename ResponseType>
     {{- end }}
-    class {{ .Name }}_Impl final : private ::fidl::internal::{{ if .HasResponse -}} OwnedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }} {
-      using Super = ::fidl::internal::{{ if .HasResponse -}} OwnedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }};
+    class {{ .Name }} final : public ::fidl::Result {
      public:
-      {{ .Name }}_Impl(::zx::unowned_channel _client_end {{- template "CommaMessagePrototype" .Request }});
-      ~{{ .Name }}_Impl() = default;
-      {{ .Name }}_Impl({{ .Name }}_Impl&& other) = default;
-      {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;
-    {{ .Name }}_Impl(::fidl::internal::StatusAndError&& other) : Super(std::move(other)) {}
-      using Super::status;
-      using Super::error;
-      using Super::ok;
+      explicit {{ .Name }}(zx_handle_t _client {{- template "CommaMessagePrototype" .Request }});
+      explicit {{ .Name }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      {{ .Name }}({{ .Name }}&&) = delete;
+      {{ .Name }}(const {{ .Name }}&) = delete;
+      {{ .Name }}* operator=({{ .Name }}&&) = delete;
+      {{ .Name }}* operator=(const {{ .Name }}&) = delete;
+      {{- if and .HasResponse .ResponseIsResource }}
+      ~{{ .Name }}() {
+        fidl_close_handles({{ .Name }}Response::Type, {{- template "ResponseReceivedByteAccess" . }}, nullptr);
+      }
+      {{- else }}
+      ~{{ .Name }}() = default;
+      {{- end }}
       {{- if .HasResponse }}
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
+
+      {{ .Name }}Response* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<{{ .Name }}Response*>({{- template "ResponseReceivedByteAccess" . }});
+      }
+      const {{ .Name }}Response* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const {{ .Name }}Response*>({{- template "ResponseReceivedByteAccess" . }});
+      }
+
+      {{ .Name }}Response& value() { return *Unwrap(); }
+      const {{ .Name }}Response& value() const { return *Unwrap(); }
+
+      {{ .Name }}Response* operator->() { return &value(); }
+      const {{ .Name }}Response* operator->() const { return &value(); }
+
+      {{ .Name }}Response& operator*() { return value(); }
+      const {{ .Name }}Response& operator*() const { return value(); }
+      {{- end }}
+
+     private:
+      {{- if .HasResponse }}
+        {{- if gt .ResponseReceivedMaxSize 512 }}
+        std::unique_ptr<::fidl::internal::AlignedBuffer<{{ template "ResponseReceivedSize" . }}>> bytes_;
+        {{- else }}
+        FIDL_ALIGNDECL
+        uint8_t bytes_[{{ .Name }}Response::PrimarySize + {{ .Name }}Response::MaxOutOfLine];
+        {{- end }}
       {{- end }}
     };
-    {{- end }}
-
-   public:
-    {{- range FilterMethodsWithoutReqs .Methods -}}
-      {{- if .HasResponse }}
-    using {{ .Name }} = {{ .Name }}_Impl<{{ .Name }}Response>;
-      {{- else }}
-    using {{ .Name }} = {{ .Name }}_Impl;
-      {{- end }}
     {{- end }}
   };
 
@@ -302,6 +344,90 @@ class {{ .Name }} final {
       {{- end }}
     {{- end }}
   };
+
+  {{ range .Methods }}
+    {{ if .HasRequest }}
+
+  class {{ .Name }}UnownedRequest final {
+   public:
+    {{ .Name }}UnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid
+      {{- template "CommaMessagePrototype" .Request }})
+        : message_(_bytes, _byte_size, sizeof({{ .Name }}Request),
+    {{- if gt .RequestMaxHandles 0 }}
+      handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Request::MaxNumHandles), 0
+    {{- else }}
+      nullptr, 0, 0
+    {{- end }}
+      ) {
+  {{- if .LLProps.LinearizeRequest }}
+  {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
+        FIDL_ALIGNDECL {{ .Name }}Request _request(_txid  {{- template "CommaPassthroughMessageParams" .Request }});
+  {{- else }}
+  {{/* tracking_ptrs won't free allocated memory because destructors aren't called.
+  This is ok because there are no tracking_ptrs, since LinearizeResponse is true when
+  there are pointers in the object. */}}
+        // Destructors can't be called because it will lead to handle double close
+        // (here and in fidl::Encode).
+        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof({{ .Name }}Request)];
+        auto& _request = *new (_request_buffer) {{ .Name }}Request(_txid
+        {{- template "CommaPassthroughMessageParams" .Request -}}
+        );
+  {{- end }}
+        message_.LinearizeAndEncode({{ .Name }}Request::Type, &_request);
+      }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    {{ .Name }}Request& Message() { return *reinterpret_cast<{{ .Name }}Request*>(message_.bytes().data()); }
+
+    {{- if gt .RequestMaxHandles 0 }}
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Request::MaxNumHandles)];
+    {{- end }}
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class {{ .Name }}OwnedRequest final {
+   public:
+    explicit {{ .Name }}OwnedRequest(zx_txid_t _txid
+      {{- template "CommaMessagePrototype" .Request }})
+        {{- if gt .RequestSentMaxSize 512 -}}
+      : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" .}}>>()),
+        message_(bytes_->data(), {{- template "RequestSentSize" .}}, _txid
+        {{- else }}
+        : message_(bytes_, sizeof(bytes_), _txid
+        {{- end }}
+        {{- template "CommaPassthroughMessageParams" .Request }}) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    {{- if gt .RequestSentMaxSize 512 }}
+    std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" .}}>> bytes_;
+    {{- else }}
+    FIDL_ALIGNDECL
+    uint8_t bytes_[{{ .Name }}Request::PrimarySize + {{ .Name }}Request::MaxOutOfLine];
+    {{- end }}
+    {{ .Name }}UnownedRequest message_;
+  };
+    {{ end }}
+  {{ end }}
 
   class SyncClient final {
    public:

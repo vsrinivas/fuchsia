@@ -13,6 +13,8 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -2517,65 +2519,128 @@ class TestProtocol final {
   class ResultOf final {
     ResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class StrictXUnionHenceResponseMayBeStackAllocated_Impl final
-        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-
-     public:
-      StrictXUnionHenceResponseMayBeStackAllocated_Impl(
-          ::zx::unowned_channel _client_end);
-      ~StrictXUnionHenceResponseMayBeStackAllocated_Impl() = default;
-      StrictXUnionHenceResponseMayBeStackAllocated_Impl(
-          StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
-      StrictXUnionHenceResponseMayBeStackAllocated_Impl& operator=(
-          StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
-      StrictXUnionHenceResponseMayBeStackAllocated_Impl(
-          ::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl final
-        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-
-     public:
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(
-          ::zx::unowned_channel _client_end);
-      ~FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl() = default;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(
-          FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl&& other) =
-          default;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl& operator=(
-          FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl&& other) =
-          default;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(
-          ::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using StrictXUnionHenceResponseMayBeStackAllocated =
-        StrictXUnionHenceResponseMayBeStackAllocated_Impl<
-            StrictXUnionHenceResponseMayBeStackAllocatedResponse>;
-    using FlexibleXUnionHenceResponseMustBeHeapAllocated =
-        FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl<
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>;
+    class StrictXUnionHenceResponseMayBeStackAllocated final
+        : public ::fidl::Result {
+     public:
+      explicit StrictXUnionHenceResponseMayBeStackAllocated(
+          zx_handle_t _client);
+      explicit StrictXUnionHenceResponseMayBeStackAllocated(
+          const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      StrictXUnionHenceResponseMayBeStackAllocated(
+          StrictXUnionHenceResponseMayBeStackAllocated&&) = delete;
+      StrictXUnionHenceResponseMayBeStackAllocated(
+          const StrictXUnionHenceResponseMayBeStackAllocated&) = delete;
+      StrictXUnionHenceResponseMayBeStackAllocated* operator=(
+          StrictXUnionHenceResponseMayBeStackAllocated&&) = delete;
+      StrictXUnionHenceResponseMayBeStackAllocated* operator=(
+          const StrictXUnionHenceResponseMayBeStackAllocated&) = delete;
+      ~StrictXUnionHenceResponseMayBeStackAllocated() = default;
+
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(bytes_);
+      }
+      const StrictXUnionHenceResponseMayBeStackAllocatedResponse* Unwrap()
+          const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            const StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(
+            bytes_);
+      }
+
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse& value() {
+        return *Unwrap();
+      }
+      const StrictXUnionHenceResponseMayBeStackAllocatedResponse& value()
+          const {
+        return *Unwrap();
+      }
+
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse* operator->() {
+        return &value();
+      }
+      const StrictXUnionHenceResponseMayBeStackAllocatedResponse* operator->()
+          const {
+        return &value();
+      }
+
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse& operator*() {
+        return value();
+      }
+      const StrictXUnionHenceResponseMayBeStackAllocatedResponse& operator*()
+          const {
+        return value();
+      }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_
+          [StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize +
+           StrictXUnionHenceResponseMayBeStackAllocatedResponse::MaxOutOfLine];
+    };
+    class FlexibleXUnionHenceResponseMustBeHeapAllocated final
+        : public ::fidl::Result {
+     public:
+      explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          zx_handle_t _client);
+      explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          FlexibleXUnionHenceResponseMustBeHeapAllocated&&) = delete;
+      FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          const FlexibleXUnionHenceResponseMustBeHeapAllocated&) = delete;
+      FlexibleXUnionHenceResponseMustBeHeapAllocated* operator=(
+          FlexibleXUnionHenceResponseMustBeHeapAllocated&&) = delete;
+      FlexibleXUnionHenceResponseMustBeHeapAllocated* operator=(
+          const FlexibleXUnionHenceResponseMustBeHeapAllocated&) = delete;
+      ~FlexibleXUnionHenceResponseMustBeHeapAllocated() = default;
+
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
+            bytes_->data());
+      }
+      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* Unwrap()
+          const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
+            bytes_->data());
+      }
+
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value() {
+        return *Unwrap();
+      }
+      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value()
+          const {
+        return *Unwrap();
+      }
+
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* operator->() {
+        return &value();
+      }
+      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* operator->()
+          const {
+        return &value();
+      }
+
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& operator*() {
+        return value();
+      }
+      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& operator*()
+          const {
+        return value();
+      }
+
+     private:
+      std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+          bytes_;
+    };
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -2642,6 +2707,134 @@ class TestProtocol final {
     using FlexibleXUnionHenceResponseMustBeHeapAllocated =
         FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl<
             FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>;
+  };
+
+  class StrictXUnionHenceResponseMayBeStackAllocatedUnownedRequest final {
+   public:
+    StrictXUnionHenceResponseMayBeStackAllocatedUnownedRequest(
+        uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid)
+        : message_(_bytes, _byte_size,
+                   sizeof(StrictXUnionHenceResponseMayBeStackAllocatedRequest),
+                   nullptr, 0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(
+          StrictXUnionHenceResponseMayBeStackAllocatedRequest)];
+      auto& _request =
+          *new (_request_buffer)
+              StrictXUnionHenceResponseMayBeStackAllocatedRequest(_txid);
+      message_.LinearizeAndEncode(
+          StrictXUnionHenceResponseMayBeStackAllocatedRequest::Type, &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    StrictXUnionHenceResponseMayBeStackAllocatedRequest& Message() {
+      return *reinterpret_cast<
+          StrictXUnionHenceResponseMayBeStackAllocatedRequest*>(
+          message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest final {
+   public:
+    explicit StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest(
+        zx_txid_t _txid)
+        : message_(bytes_, sizeof(bytes_), _txid) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_
+        [StrictXUnionHenceResponseMayBeStackAllocatedRequest::PrimarySize +
+         StrictXUnionHenceResponseMayBeStackAllocatedRequest::MaxOutOfLine];
+    StrictXUnionHenceResponseMayBeStackAllocatedUnownedRequest message_;
+  };
+
+  class FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedRequest final {
+   public:
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedRequest(
+        uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid)
+        : message_(
+              _bytes, _byte_size,
+              sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest),
+              nullptr, 0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest)];
+      auto& _request =
+          *new (_request_buffer)
+              FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(_txid);
+      message_.LinearizeAndEncode(
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::Type,
+          &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest& Message() {
+      return *reinterpret_cast<
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest*>(
+          message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest final {
+   public:
+    explicit FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest(
+        zx_txid_t _txid)
+        : message_(bytes_, sizeof(bytes_), _txid) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_
+        [FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::PrimarySize +
+         FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::MaxOutOfLine];
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedRequest message_;
   };
 
   class SyncClient final {

@@ -28,35 +28,22 @@ extern "C" const fidl_type_t
     fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
 
 }  // namespace
-
-EmptyProtocol::ResultOf::Send_Impl::Send_Impl(
-    ::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::Empty& e) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendRequest)];
-  auto& _request = *new (_request_buffer) SendRequest(0, e);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<SendRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<SendRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(EmptyProtocol::InPlace::Send(std::move(_client_end),
-                                                std::move(_encoded_request)));
+EmptyProtocol::ResultOf::Send::Send(zx_handle_t _client,
+                                    ::llcpp::fidl::test::json::Empty& e) {
+  SendOwnedRequest _request(0, e);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 EmptyProtocol::ResultOf::Send EmptyProtocol::SyncClient::Send(
     ::llcpp::fidl::test::json::Empty e) {
-  return ResultOf::Send(::zx::unowned_channel(this->channel_), e);
+  return ResultOf::Send(this->channel().get(), e);
 }
 
 EmptyProtocol::ResultOf::Send EmptyProtocol::Call::Send(
     ::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::Empty e) {
-  return ResultOf::Send(std::move(_client_end), e);
+  return ResultOf::Send(_client_end->get(), e);
 }
 
 EmptyProtocol::UnownedResultOf::Send_Impl::Send_Impl(
@@ -121,38 +108,24 @@ EmptyProtocol::UnownedResultOf::Send EmptyProtocol::Call::Send(
   }
 }
 
-template <>
-EmptyProtocol::ResultOf::SendAndReceive_Impl<
-    EmptyProtocol::SendAndReceiveResponse>::
-    SendAndReceive_Impl(::zx::unowned_channel _client_end,
-                        ::llcpp::fidl::test::json::Empty& e) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendAndReceiveRequest)];
-  auto& _request = *new (_request_buffer) SendAndReceiveRequest(0, e);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<SendAndReceiveRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<SendAndReceiveRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(EmptyProtocol::InPlace::SendAndReceive(
-      std::move(_client_end), std::move(_encoded_request),
-      Super::response_buffer()));
+EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
+    zx_handle_t _client, ::llcpp::fidl::test::json::Empty& e) {
+  SendAndReceiveOwnedRequest _request(0, e);
+  _request.GetFidlMessage().Call(SendAndReceiveResponse::Type, _client, bytes_,
+                                 SendAndReceiveResponse::PrimarySize +
+                                     SendAndReceiveResponse::MaxOutOfLine);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 EmptyProtocol::ResultOf::SendAndReceive
 EmptyProtocol::SyncClient::SendAndReceive(::llcpp::fidl::test::json::Empty e) {
-  return ResultOf::SendAndReceive(::zx::unowned_channel(this->channel_), e);
+  return ResultOf::SendAndReceive(this->channel().get(), e);
 }
 
 EmptyProtocol::ResultOf::SendAndReceive EmptyProtocol::Call::SendAndReceive(
     ::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::Empty e) {
-  return ResultOf::SendAndReceive(std::move(_client_end), e);
+  return ResultOf::SendAndReceive(_client_end->get(), e);
 }
 
 template <>
@@ -237,13 +210,13 @@ EmptyProtocol::InPlace::SendAndReceive(
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
-::fidl::StatusAndError EmptyProtocol::ClientImpl::Send(
+::fidl::Result EmptyProtocol::ClientImpl::Send(
     ::llcpp::fidl::test::json::Empty e) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::Send(_binding->channel(), e);
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res = ResultOf::Send(_binding->handle(), e);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 ::fidl::StatusAndError EmptyProtocol::ClientImpl::Send(
@@ -260,9 +233,10 @@ EmptyProtocol::ResultOf::SendAndReceive
 EmptyProtocol::ClientImpl::SendAndReceive_Sync(
     ::llcpp::fidl::test::json::Empty e) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::SendAndReceive(_binding->channel(), e);
+    return ResultOf::SendAndReceive(_binding->handle(), e);
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return EmptyProtocol::ResultOf::SendAndReceive(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 EmptyProtocol::UnownedResultOf::SendAndReceive

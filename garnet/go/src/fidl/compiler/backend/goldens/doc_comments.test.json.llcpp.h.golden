@@ -13,6 +13,8 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -450,24 +452,19 @@ class Interface final {
   class ResultOf final {
     ResultOf() = delete;
 
-   private:
-    class Method_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      Method_Impl(::zx::unowned_channel _client_end);
-      ~Method_Impl() = default;
-      Method_Impl(Method_Impl&& other) = default;
-      Method_Impl& operator=(Method_Impl&& other) = default;
-      Method_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-
    public:
-    using Method = Method_Impl;
+    class Method final : public ::fidl::Result {
+     public:
+      explicit Method(zx_handle_t _client);
+      explicit Method(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      Method(Method&&) = delete;
+      Method(const Method&) = delete;
+      Method* operator=(Method&&) = delete;
+      Method* operator=(const Method&) = delete;
+      ~Method() = default;
+
+     private:
+    };
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -493,6 +490,57 @@ class Interface final {
 
    public:
     using Method = Method_Impl;
+  };
+
+  class MethodUnownedRequest final {
+   public:
+    MethodUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid)
+        : message_(_bytes, _byte_size, sizeof(MethodRequest), nullptr, 0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
+      auto& _request = *new (_request_buffer) MethodRequest(_txid);
+      message_.LinearizeAndEncode(MethodRequest::Type, &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    MethodRequest& Message() {
+      return *reinterpret_cast<MethodRequest*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class MethodOwnedRequest final {
+   public:
+    explicit MethodOwnedRequest(zx_txid_t _txid)
+        : message_(bytes_, sizeof(bytes_), _txid) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[MethodRequest::PrimarySize + MethodRequest::MaxOutOfLine];
+    MethodUnownedRequest message_;
   };
 
   class SyncClient final {
@@ -757,7 +805,7 @@ class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
   // method comment #3
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::StatusAndError Method();
+  ::fidl::Result Method();
 
  private:
   friend class ::fidl::Client<Interface>;

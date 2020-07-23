@@ -26,51 +26,28 @@ const SyncRequestManaged = `
 {{- end }}
 
 {{- define "SyncRequestManagedMethodDefinition" }}
-{{ if .HasResponse -}} template <> {{- end }}
-{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}_Impl {{- if .HasResponse -}} <{{ .LLProps.ProtocolName }}::{{ .Name }}Response> {{- end }}::{{ .Name }}_Impl(
-  ::zx::unowned_channel _client_end {{- template "CommaMessagePrototype" .Request }}) {
-
-  {{- if .LLProps.LinearizeRequest }}
-  {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
-  {{ .Name }}Request _request(0
-  {{- template "CommaPassthroughMessageParams" .Request -}}
-  );
-  {{- else }}
-  {{/* tracking_ptrs won't free allocated memory because destructors aren't called.
-  This is ok because there are no tracking_ptrs, since LinearizeResponse is true when
-  there are pointers in the object. */}}
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof({{ .Name }}Request)];
-  auto& _request = *new (_request_buffer) {{ .Name }}Request(0
-  {{- template "CommaPassthroughMessageParams" .Request -}}
-  );
-  {{- end }}
-
-  auto _encoded = ::fidl::internal::LinearizedAndEncoded<{{ .Name }}Request>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<{{ .Name }}Request> _encoded_request = std::move(_encode_result.message);
-
+{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
+  zx_handle_t _client {{- template "CommaMessagePrototype" .Request }})
+    {{- if gt .ResponseReceivedMaxSize 512 -}}
+  : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{ template "ResponseReceivedSize" . }}>>())
+    {{- end }}
+   {
+  {{ .Name }}OwnedRequest _request(0
+    {{- template "CommaPassthroughMessageParams" .Request -}});
   {{- if .HasResponse }}
-  Super::SetResult(
-      {{ .LLProps.ProtocolName }}::InPlace::{{ .Name }}(std::move(_client_end)
-      {{- if .Request }}, std::move(_encoded_request){{ end -}}
-      , Super::response_buffer()));
+  _request.GetFidlMessage().Call({{ .Name }}Response::Type, _client,
+                                 {{- template "ResponseReceivedByteAccess" . }},
+                                 {{ template "ResponseReceivedSize" . }});
   {{- else }}
-  Super::operator=(
-      {{ .LLProps.ProtocolName }}::InPlace::{{ .Name }}(std::move(_client_end)
-      {{- if .Request }}, std::move(_encoded_request){{ end -}}
-  ));
+  _request.GetFidlMessage().Write(_client);
   {{- end }}
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::SyncClient::{{ .Name }}(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
-    return ResultOf::{{ .Name }}(::zx::unowned_channel(this->channel_)
+    return ResultOf::{{ .Name }}(this->channel().get()
     {{- template "CommaPassthroughMessageParams" .Request -}}
   );
 }
@@ -79,7 +56,7 @@ const SyncRequestManaged = `
 {{- define "StaticCallSyncRequestManagedMethodDefinition" }}
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::Call::{{ .Name }}(
   {{- template "StaticCallSyncRequestManagedMethodArguments" . }}) {
-  return ResultOf::{{ .Name }}(std::move(_client_end)
+  return ResultOf::{{ .Name }}(_client_end->get()
     {{- template "CommaPassthroughMessageParams" .Request -}}
   );
 }

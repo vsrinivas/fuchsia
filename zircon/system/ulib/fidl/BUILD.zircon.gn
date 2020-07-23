@@ -87,6 +87,8 @@ zx_library("fidl-llcpp") {
     "lib/fidl/llcpp/encoded_message.h",
     "lib/fidl/llcpp/linearization_buffer.h",
     "lib/fidl/llcpp/linearized_and_encoded.h",
+    "lib/fidl/llcpp/message.h",
+    "lib/fidl/llcpp/result.h",
     "lib/fidl/llcpp/aligned.h",
     "lib/fidl/llcpp/response_storage.h",
     "lib/fidl/llcpp/sync_call.h",
@@ -109,6 +111,7 @@ zx_library("fidl-llcpp") {
     "llcpp_async_transaction.cc",
     "llcpp_client_base.cc",
     "llcpp_coding.c",
+    "llcpp_message.cc",
     "llcpp_transaction.cc",
   ]
   public_deps = [

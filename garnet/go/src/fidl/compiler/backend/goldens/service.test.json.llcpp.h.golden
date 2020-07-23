@@ -13,6 +13,8 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -72,24 +74,20 @@ class SecondProtocol final {
   class ResultOf final {
     ResultOf() = delete;
 
-   private:
-    class MethodOnSecond_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      MethodOnSecond_Impl(::zx::unowned_channel _client_end);
-      ~MethodOnSecond_Impl() = default;
-      MethodOnSecond_Impl(MethodOnSecond_Impl&& other) = default;
-      MethodOnSecond_Impl& operator=(MethodOnSecond_Impl&& other) = default;
-      MethodOnSecond_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-
    public:
-    using MethodOnSecond = MethodOnSecond_Impl;
+    class MethodOnSecond final : public ::fidl::Result {
+     public:
+      explicit MethodOnSecond(zx_handle_t _client);
+      explicit MethodOnSecond(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      MethodOnSecond(MethodOnSecond&&) = delete;
+      MethodOnSecond(const MethodOnSecond&) = delete;
+      MethodOnSecond* operator=(MethodOnSecond&&) = delete;
+      MethodOnSecond* operator=(const MethodOnSecond&) = delete;
+      ~MethodOnSecond() = default;
+
+     private:
+    };
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -115,6 +113,60 @@ class SecondProtocol final {
 
    public:
     using MethodOnSecond = MethodOnSecond_Impl;
+  };
+
+  class MethodOnSecondUnownedRequest final {
+   public:
+    MethodOnSecondUnownedRequest(uint8_t* _bytes, uint32_t _byte_size,
+                                 zx_txid_t _txid)
+        : message_(_bytes, _byte_size, sizeof(MethodOnSecondRequest), nullptr,
+                   0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnSecondRequest)];
+      auto& _request = *new (_request_buffer) MethodOnSecondRequest(_txid);
+      message_.LinearizeAndEncode(MethodOnSecondRequest::Type, &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    MethodOnSecondRequest& Message() {
+      return *reinterpret_cast<MethodOnSecondRequest*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class MethodOnSecondOwnedRequest final {
+   public:
+    explicit MethodOnSecondOwnedRequest(zx_txid_t _txid)
+        : message_(bytes_, sizeof(bytes_), _txid) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[MethodOnSecondRequest::PrimarySize +
+                   MethodOnSecondRequest::MaxOutOfLine];
+    MethodOnSecondUnownedRequest message_;
   };
 
   class SyncClient final {
@@ -234,24 +286,20 @@ class FirstProtocol final {
   class ResultOf final {
     ResultOf() = delete;
 
-   private:
-    class MethodOnFirst_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      MethodOnFirst_Impl(::zx::unowned_channel _client_end);
-      ~MethodOnFirst_Impl() = default;
-      MethodOnFirst_Impl(MethodOnFirst_Impl&& other) = default;
-      MethodOnFirst_Impl& operator=(MethodOnFirst_Impl&& other) = default;
-      MethodOnFirst_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-
    public:
-    using MethodOnFirst = MethodOnFirst_Impl;
+    class MethodOnFirst final : public ::fidl::Result {
+     public:
+      explicit MethodOnFirst(zx_handle_t _client);
+      explicit MethodOnFirst(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      MethodOnFirst(MethodOnFirst&&) = delete;
+      MethodOnFirst(const MethodOnFirst&) = delete;
+      MethodOnFirst* operator=(MethodOnFirst&&) = delete;
+      MethodOnFirst* operator=(const MethodOnFirst&) = delete;
+      ~MethodOnFirst() = default;
+
+     private:
+    };
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -277,6 +325,60 @@ class FirstProtocol final {
 
    public:
     using MethodOnFirst = MethodOnFirst_Impl;
+  };
+
+  class MethodOnFirstUnownedRequest final {
+   public:
+    MethodOnFirstUnownedRequest(uint8_t* _bytes, uint32_t _byte_size,
+                                zx_txid_t _txid)
+        : message_(_bytes, _byte_size, sizeof(MethodOnFirstRequest), nullptr, 0,
+                   0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnFirstRequest)];
+      auto& _request = *new (_request_buffer) MethodOnFirstRequest(_txid);
+      message_.LinearizeAndEncode(MethodOnFirstRequest::Type, &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    MethodOnFirstRequest& Message() {
+      return *reinterpret_cast<MethodOnFirstRequest*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class MethodOnFirstOwnedRequest final {
+   public:
+    explicit MethodOnFirstOwnedRequest(zx_txid_t _txid)
+        : message_(bytes_, sizeof(bytes_), _txid) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[MethodOnFirstRequest::PrimarySize +
+                   MethodOnFirstRequest::MaxOutOfLine];
+    MethodOnFirstUnownedRequest message_;
   };
 
   class SyncClient final {
@@ -702,7 +804,7 @@ class SecondProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::StatusAndError MethodOnSecond();
+  ::fidl::Result MethodOnSecond();
 
  private:
   friend class ::fidl::Client<SecondProtocol>;
@@ -737,7 +839,7 @@ class FirstProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::StatusAndError MethodOnFirst();
+  ::fidl::Result MethodOnFirst();
 
  private:
   friend class ::fidl::Client<FirstProtocol>;

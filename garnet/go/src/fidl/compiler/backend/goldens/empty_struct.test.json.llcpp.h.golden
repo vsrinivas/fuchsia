@@ -13,6 +13,8 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -179,47 +181,54 @@ class EmptyProtocol final {
   class ResultOf final {
     ResultOf() = delete;
 
-   private:
-    class Send_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      Send_Impl(::zx::unowned_channel _client_end,
-                ::llcpp::fidl::test::json::Empty& e);
-      ~Send_Impl() = default;
-      Send_Impl(Send_Impl&& other) = default;
-      Send_Impl& operator=(Send_Impl&& other) = default;
-      Send_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-    template <typename ResponseType>
-    class SendAndReceive_Impl final
-        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-
-     public:
-      SendAndReceive_Impl(::zx::unowned_channel _client_end,
-                          ::llcpp::fidl::test::json::Empty& e);
-      ~SendAndReceive_Impl() = default;
-      SendAndReceive_Impl(SendAndReceive_Impl&& other) = default;
-      SendAndReceive_Impl& operator=(SendAndReceive_Impl&& other) = default;
-      SendAndReceive_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using Send = Send_Impl;
-    using SendAndReceive = SendAndReceive_Impl<SendAndReceiveResponse>;
+    class Send final : public ::fidl::Result {
+     public:
+      explicit Send(zx_handle_t _client, ::llcpp::fidl::test::json::Empty& e);
+      explicit Send(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      Send(Send&&) = delete;
+      Send(const Send&) = delete;
+      Send* operator=(Send&&) = delete;
+      Send* operator=(const Send&) = delete;
+      ~Send() = default;
+
+     private:
+    };
+    class SendAndReceive final : public ::fidl::Result {
+     public:
+      explicit SendAndReceive(zx_handle_t _client,
+                              ::llcpp::fidl::test::json::Empty& e);
+      explicit SendAndReceive(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      SendAndReceive(SendAndReceive&&) = delete;
+      SendAndReceive(const SendAndReceive&) = delete;
+      SendAndReceive* operator=(SendAndReceive&&) = delete;
+      SendAndReceive* operator=(const SendAndReceive&) = delete;
+      ~SendAndReceive() = default;
+
+      SendAndReceiveResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<SendAndReceiveResponse*>(bytes_);
+      }
+      const SendAndReceiveResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const SendAndReceiveResponse*>(bytes_);
+      }
+
+      SendAndReceiveResponse& value() { return *Unwrap(); }
+      const SendAndReceiveResponse& value() const { return *Unwrap(); }
+
+      SendAndReceiveResponse* operator->() { return &value(); }
+      const SendAndReceiveResponse* operator->() const { return &value(); }
+
+      SendAndReceiveResponse& operator*() { return value(); }
+      const SendAndReceiveResponse& operator*() const { return value(); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[SendAndReceiveResponse::PrimarySize +
+                     SendAndReceiveResponse::MaxOutOfLine];
+    };
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -271,6 +280,115 @@ class EmptyProtocol final {
    public:
     using Send = Send_Impl;
     using SendAndReceive = SendAndReceive_Impl<SendAndReceiveResponse>;
+  };
+
+  class SendUnownedRequest final {
+   public:
+    SendUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+                       ::llcpp::fidl::test::json::Empty& e)
+        : message_(_bytes, _byte_size, sizeof(SendRequest), nullptr, 0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendRequest)];
+      auto& _request = *new (_request_buffer) SendRequest(_txid, e);
+      message_.LinearizeAndEncode(SendRequest::Type, &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    SendRequest& Message() {
+      return *reinterpret_cast<SendRequest*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class SendOwnedRequest final {
+   public:
+    explicit SendOwnedRequest(zx_txid_t _txid,
+                              ::llcpp::fidl::test::json::Empty& e)
+        : message_(bytes_, sizeof(bytes_), _txid, e) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[SendRequest::PrimarySize + SendRequest::MaxOutOfLine];
+    SendUnownedRequest message_;
+  };
+
+  class SendAndReceiveUnownedRequest final {
+   public:
+    SendAndReceiveUnownedRequest(uint8_t* _bytes, uint32_t _byte_size,
+                                 zx_txid_t _txid,
+                                 ::llcpp::fidl::test::json::Empty& e)
+        : message_(_bytes, _byte_size, sizeof(SendAndReceiveRequest), nullptr,
+                   0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendAndReceiveRequest)];
+      auto& _request = *new (_request_buffer) SendAndReceiveRequest(_txid, e);
+      message_.LinearizeAndEncode(SendAndReceiveRequest::Type, &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    SendAndReceiveRequest& Message() {
+      return *reinterpret_cast<SendAndReceiveRequest*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class SendAndReceiveOwnedRequest final {
+   public:
+    explicit SendAndReceiveOwnedRequest(zx_txid_t _txid,
+                                        ::llcpp::fidl::test::json::Empty& e)
+        : message_(bytes_, sizeof(bytes_), _txid, e) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[SendAndReceiveRequest::PrimarySize +
+                   SendAndReceiveRequest::MaxOutOfLine];
+    SendAndReceiveUnownedRequest message_;
   };
 
   class SyncClient final {
@@ -561,7 +679,7 @@ class EmptyProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::StatusAndError Send(::llcpp::fidl::test::json::Empty e);
+  ::fidl::Result Send(::llcpp::fidl::test::json::Empty e);
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.

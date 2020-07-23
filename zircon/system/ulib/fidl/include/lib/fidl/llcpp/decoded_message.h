@@ -62,6 +62,8 @@ class DecodedMessage final {
 
   ~DecodedMessage() { CloseHandles(); }
 
+  BytePart& bytes() { return bytes_; }
+
   // Keeps track of a new buffer region with caller-managed memory.
   // The buffer region is assumed to contain a linearized FIDL message with valid pointers.
   // This does not take ownership of that buffer region.

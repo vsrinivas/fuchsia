@@ -62,7 +62,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
   //{{ . }}
     {{- end }}
   // {{- if .HasResponse }} Synchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. {{- end }}{{ template "ClientAllocationComment" . }}
-  {{ if .HasResponse }}ResultOf::{{ .Name }}{{ else }}::fidl::StatusAndError{{ end }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}({{ template "SyncRequestManagedMethodArguments" . }});
+  {{ if .HasResponse }}ResultOf::{{ .Name }}{{ else }}::fidl::Result{{ end }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}({{ template "SyncRequestManagedMethodArguments" . }});
     {{- if or .Request .Response }}
 {{ "" }}
       {{- range .DocComments }}

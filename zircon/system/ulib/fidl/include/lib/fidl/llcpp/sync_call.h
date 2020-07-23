@@ -54,6 +54,11 @@ class StatusAndError : public FromFailureMixin<StatusAndError> {
     error_ = failure.error;
   }
 
+  void SetStatus(zx_status_t status, const char* error) {
+    status_ = status;
+    error_ = error;
+  }
+
   zx_status_t status_ = ZX_ERR_INTERNAL;
   const char* error_ = nullptr;
 };
@@ -71,6 +76,7 @@ class SyncCallBase : private StatusAndError {
 
   using StatusAndError::error;
   using StatusAndError::ok;
+  using StatusAndError::SetStatus;
   using StatusAndError::status;
 
   // Convenience accessor for the FIDL response message pointer.
@@ -107,6 +113,8 @@ class SyncCallBase : private StatusAndError {
   ResponseType& operator*() { return value(); }
   const ResponseType& operator*() const { return value(); }
 
+  BytePart& bytes() { return message_.bytes(); }
+
  protected:
   SyncCallBase() = default;
   ~SyncCallBase() = default;
@@ -130,62 +138,6 @@ class SyncCallBase : private StatusAndError {
 
  private:
   fidl::DecodedMessage<ResponseType> message_;
-};
-
-// Base class representing the result of a two-way FIDL call, with ownership of the response buffer.
-// It is always inherited by generated code performing the call. Do not instantiate manually.
-// Types returned by the managed flavor will inherit from this class.
-//
-// Holds a |DecodedMessage<ResponseType>| in addition to providing status() and error().
-// If status() is ZX_OK, Unwrap() returns a valid decoded message of type ResponseType.
-// If status() is ZX_OK, value() returns a valid decoded message of type ResponseType.
-// Otherwise, error() contains a human-readable string for debugging purposes.
-//
-// Note: this class does not add new members on top of |SyncCallBase|.
-template <typename ResponseType>
-class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
-  using Super = SyncCallBase<ResponseType>;
-  using ResponseStorageType = ResponseStorage<ResponseType>;
-
- public:
-  OwnedSyncCallBase(const OwnedSyncCallBase&) = delete;
-  OwnedSyncCallBase& operator=(const OwnedSyncCallBase&) = delete;
-  OwnedSyncCallBase(OwnedSyncCallBase&& other) = delete;
-  OwnedSyncCallBase& operator=(OwnedSyncCallBase&& other) = delete;
-
-  OwnedSyncCallBase(StatusAndError&& other) : SyncCallBase<ResponseType>(std::move(other)) {}
-
-  using Super::error;
-  using Super::ok;
-  using Super::status;
-  using Super::Unwrap;
-  using Super::value;
-  using Super::operator->;
-  using Super::operator*;
-
- protected:
-  OwnedSyncCallBase() = default;
-  ~OwnedSyncCallBase() {
-    // Before handing over to the member and super class destructor, release the ownership
-    // decoded message has on the storage first, to prevent use-after-free.
-    Super::decoded_message().Reset(fidl::BytePart());
-  }
-
-  fidl::BytePart response_buffer() { return response_storage_.buffer(); }
-
-  using Super::SetFailure;
-
-  // Initialize ourself from the DecodeResult corresponding to the response.
-  // Invariant: the address of the response message must equal to that of our managed buffer.
-  void SetResult(fidl::DecodeResult<ResponseType> decode_result) {
-    ZX_ASSERT(decode_result.message.message() ==
-                  reinterpret_cast<ResponseType*>(response_buffer().data()) ||
-              !decode_result.message.is_valid());
-    Super::SetResult(std::move(decode_result));
-  }
-
- private:
-  ResponseStorageType response_storage_;
 };
 
 // Class representing the result of a two-way FIDL call, without ownership of the response buffers.

@@ -18,34 +18,20 @@ extern "C" const fidl_type_t fidl_test_json_ParentFirstRequestTable;
 extern "C" const fidl_type_t fidl_test_json_ParentFirstResponseTable;
 
 }  // namespace
-
-Parent::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
-                                         ::zx::channel& request) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
-  auto& _request = *new (_request_buffer) FirstRequest(0, request);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<FirstRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<FirstRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(Parent::InPlace::First(std::move(_client_end),
-                                          std::move(_encoded_request)));
+Parent::ResultOf::First::First(zx_handle_t _client, ::zx::channel& request) {
+  FirstOwnedRequest _request(0, request);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Parent::ResultOf::First Parent::SyncClient::First(::zx::channel request) {
-  return ResultOf::First(::zx::unowned_channel(this->channel_), request);
+  return ResultOf::First(this->channel().get(), request);
 }
 
 Parent::ResultOf::First Parent::Call::First(::zx::unowned_channel _client_end,
                                             ::zx::channel request) {
-  return ResultOf::First(std::move(_client_end), request);
+  return ResultOf::First(_client_end->get(), request);
 }
 
 Parent::UnownedResultOf::First_Impl::First_Impl(
@@ -111,12 +97,12 @@ Parent::UnownedResultOf::First Parent::Call::First(
   }
 }
 
-::fidl::StatusAndError Parent::ClientImpl::First(::zx::channel request) {
+::fidl::Result Parent::ClientImpl::First(::zx::channel request) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::First(_binding->channel(), request);
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res = ResultOf::First(_binding->handle(), request);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 ::fidl::StatusAndError Parent::ClientImpl::First(
@@ -183,34 +169,20 @@ extern "C" const fidl_type_t fidl_test_json_ChildSecondRequestTable;
 extern "C" const fidl_type_t fidl_test_json_ChildSecondResponseTable;
 
 }  // namespace
-
-Child::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
-                                        ::zx::channel& request) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
-  auto& _request = *new (_request_buffer) FirstRequest(0, request);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<FirstRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<FirstRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(Child::InPlace::First(std::move(_client_end),
-                                         std::move(_encoded_request)));
+Child::ResultOf::First::First(zx_handle_t _client, ::zx::channel& request) {
+  FirstOwnedRequest _request(0, request);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Child::ResultOf::First Child::SyncClient::First(::zx::channel request) {
-  return ResultOf::First(::zx::unowned_channel(this->channel_), request);
+  return ResultOf::First(this->channel().get(), request);
 }
 
 Child::ResultOf::First Child::Call::First(::zx::unowned_channel _client_end,
                                           ::zx::channel request) {
-  return ResultOf::First(std::move(_client_end), request);
+  return ResultOf::First(_client_end->get(), request);
 }
 
 Child::UnownedResultOf::First_Impl::First_Impl(
@@ -276,33 +248,20 @@ Child::UnownedResultOf::First Child::Call::First(
   }
 }
 
-Child::ResultOf::Second_Impl::Second_Impl(::zx::unowned_channel _client_end,
-                                          ::zx::channel& request) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)];
-  auto& _request = *new (_request_buffer) SecondRequest(0, request);
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<SecondRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<SecondRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(Child::InPlace::Second(std::move(_client_end),
-                                          std::move(_encoded_request)));
+Child::ResultOf::Second::Second(zx_handle_t _client, ::zx::channel& request) {
+  SecondOwnedRequest _request(0, request);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Child::ResultOf::Second Child::SyncClient::Second(::zx::channel request) {
-  return ResultOf::Second(::zx::unowned_channel(this->channel_), request);
+  return ResultOf::Second(this->channel().get(), request);
 }
 
 Child::ResultOf::Second Child::Call::Second(::zx::unowned_channel _client_end,
                                             ::zx::channel request) {
-  return ResultOf::Second(std::move(_client_end), request);
+  return ResultOf::Second(_client_end->get(), request);
 }
 
 Child::UnownedResultOf::Second_Impl::Second_Impl(
@@ -369,12 +328,12 @@ Child::UnownedResultOf::Second Child::Call::Second(
   }
 }
 
-::fidl::StatusAndError Child::ClientImpl::First(::zx::channel request) {
+::fidl::Result Child::ClientImpl::First(::zx::channel request) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::First(_binding->channel(), request);
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res = ResultOf::First(_binding->handle(), request);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 ::fidl::StatusAndError Child::ClientImpl::First(
@@ -387,12 +346,12 @@ Child::UnownedResultOf::Second Child::Call::Second(
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::StatusAndError Child::ClientImpl::Second(::zx::channel request) {
+::fidl::Result Child::ClientImpl::Second(::zx::channel request) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = ResultOf::Second(_binding->channel(), request);
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res = ResultOf::Second(_binding->handle(), request);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 ::fidl::StatusAndError Child::ClientImpl::Second(

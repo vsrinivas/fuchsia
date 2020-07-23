@@ -26,31 +26,22 @@ extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;
 extern "C" const fidl_type_t fidl_test_json_ExamplefooResponseTable;
 
 }  // namespace
-template <>
-Example::ResultOf::foo_Impl<Example::fooResponse>::foo_Impl(
-    ::zx::unowned_channel _client_end, const ::fidl::StringView& s) {
-  fooRequest _request(0, s);
-
-  auto _encoded = ::fidl::internal::LinearizedAndEncoded<fooRequest>(&_request);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<fooRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(Example::InPlace::foo(std::move(_client_end),
-                                         std::move(_encoded_request),
-                                         Super::response_buffer()));
+Example::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
+  fooOwnedRequest _request(0, s);
+  _request.GetFidlMessage().Call(
+      fooResponse::Type, _client, bytes_,
+      fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Example::ResultOf::foo Example::SyncClient::foo(::fidl::StringView s) {
-  return ResultOf::foo(::zx::unowned_channel(this->channel_), s);
+  return ResultOf::foo(this->channel().get(), s);
 }
 
 Example::ResultOf::foo Example::Call::foo(::zx::unowned_channel _client_end,
                                           ::fidl::StringView s) {
-  return ResultOf::foo(std::move(_client_end), s);
+  return ResultOf::foo(_client_end->get(), s);
 }
 
 template <>
@@ -122,9 +113,10 @@ Example::UnownedResultOf::foo Example::Call::foo(
 
 Example::ResultOf::foo Example::ClientImpl::foo_Sync(::fidl::StringView s) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return ResultOf::foo(_binding->channel(), s);
+    return ResultOf::foo(_binding->handle(), s);
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return Example::ResultOf::foo(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 Example::UnownedResultOf::foo Example::ClientImpl::foo_Sync(

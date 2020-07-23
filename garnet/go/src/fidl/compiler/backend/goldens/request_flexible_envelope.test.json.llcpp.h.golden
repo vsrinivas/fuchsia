@@ -13,6 +13,8 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -381,63 +383,97 @@ class Protocol final {
   class ResultOf final {
     ResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class RequestStrictResponseFlexible_Impl final
-        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-
-     public:
-      RequestStrictResponseFlexible_Impl(
-          ::zx::unowned_channel _client_end,
-          ::llcpp::fidl::test::json::StrictFoo& s);
-      ~RequestStrictResponseFlexible_Impl() = default;
-      RequestStrictResponseFlexible_Impl(
-          RequestStrictResponseFlexible_Impl&& other) = default;
-      RequestStrictResponseFlexible_Impl& operator=(
-          RequestStrictResponseFlexible_Impl&& other) = default;
-      RequestStrictResponseFlexible_Impl(
-          ::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class RequestFlexibleResponseStrict_Impl final
-        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-
-     public:
-      RequestFlexibleResponseStrict_Impl(
-          ::zx::unowned_channel _client_end,
-          ::llcpp::fidl::test::json::FlexibleFoo& s);
-      ~RequestFlexibleResponseStrict_Impl() = default;
-      RequestFlexibleResponseStrict_Impl(
-          RequestFlexibleResponseStrict_Impl&& other) = default;
-      RequestFlexibleResponseStrict_Impl& operator=(
-          RequestFlexibleResponseStrict_Impl&& other) = default;
-      RequestFlexibleResponseStrict_Impl(
-          ::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using RequestStrictResponseFlexible = RequestStrictResponseFlexible_Impl<
-        RequestStrictResponseFlexibleResponse>;
-    using RequestFlexibleResponseStrict = RequestFlexibleResponseStrict_Impl<
-        RequestFlexibleResponseStrictResponse>;
+    class RequestStrictResponseFlexible final : public ::fidl::Result {
+     public:
+      explicit RequestStrictResponseFlexible(
+          zx_handle_t _client, ::llcpp::fidl::test::json::StrictFoo& s);
+      explicit RequestStrictResponseFlexible(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      RequestStrictResponseFlexible(RequestStrictResponseFlexible&&) = delete;
+      RequestStrictResponseFlexible(const RequestStrictResponseFlexible&) =
+          delete;
+      RequestStrictResponseFlexible* operator=(
+          RequestStrictResponseFlexible&&) = delete;
+      RequestStrictResponseFlexible* operator=(
+          const RequestStrictResponseFlexible&) = delete;
+      ~RequestStrictResponseFlexible() = default;
+
+      RequestStrictResponseFlexibleResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<RequestStrictResponseFlexibleResponse*>(
+            bytes_->data());
+      }
+      const RequestStrictResponseFlexibleResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const RequestStrictResponseFlexibleResponse*>(
+            bytes_->data());
+      }
+
+      RequestStrictResponseFlexibleResponse& value() { return *Unwrap(); }
+      const RequestStrictResponseFlexibleResponse& value() const {
+        return *Unwrap();
+      }
+
+      RequestStrictResponseFlexibleResponse* operator->() { return &value(); }
+      const RequestStrictResponseFlexibleResponse* operator->() const {
+        return &value();
+      }
+
+      RequestStrictResponseFlexibleResponse& operator*() { return value(); }
+      const RequestStrictResponseFlexibleResponse& operator*() const {
+        return value();
+      }
+
+     private:
+      std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+          bytes_;
+    };
+    class RequestFlexibleResponseStrict final : public ::fidl::Result {
+     public:
+      explicit RequestFlexibleResponseStrict(
+          zx_handle_t _client, ::llcpp::fidl::test::json::FlexibleFoo& s);
+      explicit RequestFlexibleResponseStrict(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      RequestFlexibleResponseStrict(RequestFlexibleResponseStrict&&) = delete;
+      RequestFlexibleResponseStrict(const RequestFlexibleResponseStrict&) =
+          delete;
+      RequestFlexibleResponseStrict* operator=(
+          RequestFlexibleResponseStrict&&) = delete;
+      RequestFlexibleResponseStrict* operator=(
+          const RequestFlexibleResponseStrict&) = delete;
+      ~RequestFlexibleResponseStrict() = default;
+
+      RequestFlexibleResponseStrictResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<RequestFlexibleResponseStrictResponse*>(
+            bytes_->data());
+      }
+      const RequestFlexibleResponseStrictResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const RequestFlexibleResponseStrictResponse*>(
+            bytes_->data());
+      }
+
+      RequestFlexibleResponseStrictResponse& value() { return *Unwrap(); }
+      const RequestFlexibleResponseStrictResponse& value() const {
+        return *Unwrap();
+      }
+
+      RequestFlexibleResponseStrictResponse* operator->() { return &value(); }
+      const RequestFlexibleResponseStrictResponse* operator->() const {
+        return &value();
+      }
+
+      RequestFlexibleResponseStrictResponse& operator*() { return value(); }
+      const RequestFlexibleResponseStrictResponse& operator*() const {
+        return value();
+      }
+
+     private:
+      std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+          bytes_;
+    };
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -504,6 +540,120 @@ class Protocol final {
         RequestStrictResponseFlexibleResponse>;
     using RequestFlexibleResponseStrict = RequestFlexibleResponseStrict_Impl<
         RequestFlexibleResponseStrictResponse>;
+  };
+
+  class RequestStrictResponseFlexibleUnownedRequest final {
+   public:
+    RequestStrictResponseFlexibleUnownedRequest(
+        uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+        ::llcpp::fidl::test::json::StrictFoo& s)
+        : message_(_bytes, _byte_size,
+                   sizeof(RequestStrictResponseFlexibleRequest), nullptr, 0,
+                   0) {
+      FIDL_ALIGNDECL RequestStrictResponseFlexibleRequest _request(_txid, s);
+      message_.LinearizeAndEncode(RequestStrictResponseFlexibleRequest::Type,
+                                  &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    RequestStrictResponseFlexibleRequest& Message() {
+      return *reinterpret_cast<RequestStrictResponseFlexibleRequest*>(
+          message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class RequestStrictResponseFlexibleOwnedRequest final {
+   public:
+    explicit RequestStrictResponseFlexibleOwnedRequest(
+        zx_txid_t _txid, ::llcpp::fidl::test::json::StrictFoo& s)
+        : bytes_(std::make_unique<
+                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
+          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+        bytes_;
+    RequestStrictResponseFlexibleUnownedRequest message_;
+  };
+
+  class RequestFlexibleResponseStrictUnownedRequest final {
+   public:
+    RequestFlexibleResponseStrictUnownedRequest(
+        uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+        ::llcpp::fidl::test::json::FlexibleFoo& s)
+        : message_(_bytes, _byte_size,
+                   sizeof(RequestFlexibleResponseStrictRequest), nullptr, 0,
+                   0) {
+      FIDL_ALIGNDECL RequestFlexibleResponseStrictRequest _request(_txid, s);
+      message_.LinearizeAndEncode(RequestFlexibleResponseStrictRequest::Type,
+                                  &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    RequestFlexibleResponseStrictRequest& Message() {
+      return *reinterpret_cast<RequestFlexibleResponseStrictRequest*>(
+          message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class RequestFlexibleResponseStrictOwnedRequest final {
+   public:
+    explicit RequestFlexibleResponseStrictOwnedRequest(
+        zx_txid_t _txid, ::llcpp::fidl::test::json::FlexibleFoo& s)
+        : bytes_(std::make_unique<
+                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
+          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+        bytes_;
+    RequestFlexibleResponseStrictUnownedRequest message_;
   };
 
   class SyncClient final {

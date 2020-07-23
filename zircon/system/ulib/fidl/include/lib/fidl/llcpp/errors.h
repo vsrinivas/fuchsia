@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_ASYNC_CPP_ERRORS_H_
-#define LIB_FIDL_ASYNC_CPP_ERRORS_H_
+#ifndef LIB_FIDL_LLCPP_ERRORS_H_
+#define LIB_FIDL_LLCPP_ERRORS_H_
 
 namespace fidl {
 
@@ -13,4 +13,4 @@ constexpr char kErrorChannelUnbound[] = "failed outgoing operation on unbound ch
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_ASYNC_CPP_ERRORS_H_
+#endif  // LIB_FIDL_LLCPP_ERRORS_H_

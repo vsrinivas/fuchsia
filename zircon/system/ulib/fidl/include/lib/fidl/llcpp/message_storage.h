@@ -21,10 +21,11 @@ template <uint32_t kSize>
 struct AlignedBuffer {
   AlignedBuffer() {}
 
-  fidl::BytePart view() { return fidl::BytePart(data, kSize); }
+  fidl::BytePart view() { return fidl::BytePart(data_, kSize); }
+  uint8_t* data() { return data_; }
 
  private:
-  FIDL_ALIGNDECL uint8_t data[kSize];
+  FIDL_ALIGNDECL uint8_t data_[kSize];
 };
 
 static_assert(alignof(std::max_align_t) % FIDL_ALIGNMENT == 0,

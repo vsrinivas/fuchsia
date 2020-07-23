@@ -13,6 +13,8 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -75,24 +77,19 @@ class Parent final {
   class ResultOf final {
     ResultOf() = delete;
 
-   private:
-    class First_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      First_Impl(::zx::unowned_channel _client_end, ::zx::channel& request);
-      ~First_Impl() = default;
-      First_Impl(First_Impl&& other) = default;
-      First_Impl& operator=(First_Impl&& other) = default;
-      First_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-
    public:
-    using First = First_Impl;
+    class First final : public ::fidl::Result {
+     public:
+      explicit First(zx_handle_t _client, ::zx::channel& request);
+      explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      First(First&&) = delete;
+      First(const First&) = delete;
+      First* operator=(First&&) = delete;
+      First* operator=(const First&) = delete;
+      ~First() = default;
+
+     private:
+    };
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -119,6 +116,63 @@ class Parent final {
 
    public:
     using First = First_Impl;
+  };
+
+  class FirstUnownedRequest final {
+   public:
+    FirstUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+                        ::zx::channel& request)
+        : message_(
+              _bytes, _byte_size, sizeof(FirstRequest), handles_,
+              std::min(ZX_CHANNEL_MAX_MSG_HANDLES, FirstRequest::MaxNumHandles),
+              0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
+      auto& _request = *new (_request_buffer) FirstRequest(_txid, request);
+      message_.LinearizeAndEncode(FirstRequest::Type, &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FirstRequest& Message() {
+      return *reinterpret_cast<FirstRequest*>(message_.bytes().data());
+    }
+    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                                  FirstRequest::MaxNumHandles)];
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class FirstOwnedRequest final {
+   public:
+    explicit FirstOwnedRequest(zx_txid_t _txid, ::zx::channel& request)
+        : message_(bytes_, sizeof(bytes_), _txid, request) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[FirstRequest::PrimarySize + FirstRequest::MaxOutOfLine];
+    FirstUnownedRequest message_;
   };
 
   class SyncClient final {
@@ -290,39 +344,31 @@ class Child final {
   class ResultOf final {
     ResultOf() = delete;
 
-   private:
-    class First_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      First_Impl(::zx::unowned_channel _client_end, ::zx::channel& request);
-      ~First_Impl() = default;
-      First_Impl(First_Impl&& other) = default;
-      First_Impl& operator=(First_Impl&& other) = default;
-      First_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-    class Second_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      Second_Impl(::zx::unowned_channel _client_end, ::zx::channel& request);
-      ~Second_Impl() = default;
-      Second_Impl(Second_Impl&& other) = default;
-      Second_Impl& operator=(Second_Impl&& other) = default;
-      Second_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-
    public:
-    using First = First_Impl;
-    using Second = Second_Impl;
+    class First final : public ::fidl::Result {
+     public:
+      explicit First(zx_handle_t _client, ::zx::channel& request);
+      explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      First(First&&) = delete;
+      First(const First&) = delete;
+      First* operator=(First&&) = delete;
+      First* operator=(const First&) = delete;
+      ~First() = default;
+
+     private:
+    };
+    class Second final : public ::fidl::Result {
+     public:
+      explicit Second(zx_handle_t _client, ::zx::channel& request);
+      explicit Second(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      Second(Second&&) = delete;
+      Second(const Second&) = delete;
+      Second* operator=(Second&&) = delete;
+      Second* operator=(const Second&) = delete;
+      ~Second() = default;
+
+     private:
+    };
   };
 
   // Collection of return types of FIDL calls in this protocol,
@@ -365,6 +411,120 @@ class Child final {
    public:
     using First = First_Impl;
     using Second = Second_Impl;
+  };
+
+  class FirstUnownedRequest final {
+   public:
+    FirstUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+                        ::zx::channel& request)
+        : message_(
+              _bytes, _byte_size, sizeof(FirstRequest), handles_,
+              std::min(ZX_CHANNEL_MAX_MSG_HANDLES, FirstRequest::MaxNumHandles),
+              0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
+      auto& _request = *new (_request_buffer) FirstRequest(_txid, request);
+      message_.LinearizeAndEncode(FirstRequest::Type, &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FirstRequest& Message() {
+      return *reinterpret_cast<FirstRequest*>(message_.bytes().data());
+    }
+    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                                  FirstRequest::MaxNumHandles)];
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class FirstOwnedRequest final {
+   public:
+    explicit FirstOwnedRequest(zx_txid_t _txid, ::zx::channel& request)
+        : message_(bytes_, sizeof(bytes_), _txid, request) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[FirstRequest::PrimarySize + FirstRequest::MaxOutOfLine];
+    FirstUnownedRequest message_;
+  };
+
+  class SecondUnownedRequest final {
+   public:
+    SecondUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+                         ::zx::channel& request)
+        : message_(_bytes, _byte_size, sizeof(SecondRequest), handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                            SecondRequest::MaxNumHandles),
+                   0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)];
+      auto& _request = *new (_request_buffer) SecondRequest(_txid, request);
+      message_.LinearizeAndEncode(SecondRequest::Type, &_request);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    SecondRequest& Message() {
+      return *reinterpret_cast<SecondRequest*>(message_.bytes().data());
+    }
+    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                                  SecondRequest::MaxNumHandles)];
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class SecondOwnedRequest final {
+   public:
+    explicit SecondOwnedRequest(zx_txid_t _txid, ::zx::channel& request)
+        : message_(bytes_, sizeof(bytes_), _txid, request) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[SecondRequest::PrimarySize + SecondRequest::MaxOutOfLine];
+    SecondUnownedRequest message_;
   };
 
   class SyncClient final {
@@ -556,7 +716,7 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::StatusAndError First(::zx::channel request);
+  ::fidl::Result First(::zx::channel request);
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
@@ -596,7 +756,7 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::StatusAndError First(::zx::channel request);
+  ::fidl::Result First(::zx::channel request);
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
@@ -605,7 +765,7 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::StatusAndError Second(::zx::channel request);
+  ::fidl::Result Second(::zx::channel request);
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
