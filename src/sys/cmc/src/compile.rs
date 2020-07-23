@@ -116,17 +116,18 @@ pub fn translate_program(program: &Map<String, Value>) -> Result<Map<String, Val
 fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
-        if let Some(p) = use_.service() {
+        if let Some(n) = use_.service() {
             let source = extract_use_source(use_)?;
-            let target_path = one_target_capability_id(use_, use_)?.extract_path()?;
+            let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
+                .extract_path()?;
             out_uses.push(cm::Use::Service(cm::UseService {
                 source,
-                source_path: p.clone(),
+                source_name: n.clone(),
                 target_path,
             }));
         } else if let Some(p) = use_.protocol() {
             let source = extract_use_source(use_)?;
-            let target_ids = all_target_capability_ids(use_, use_)
+            let target_ids = all_target_capability_ids(use_, use_, cml::RoutingClauseType::Use)
                 .ok_or_else(|| Error::internal("no capability"))?;
             let source_ids = p.to_vec();
             for target_id in target_ids {
@@ -145,7 +146,8 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             }
         } else if let Some(p) = use_.directory() {
             let source = extract_use_source(use_)?;
-            let target_path = one_target_capability_id(use_, use_)?.extract_path()?;
+            let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
+                .extract_path()?;
             let rights = extract_use_rights(use_)?;
             let subdir = extract_use_subdir(use_);
             out_uses.push(cm::Use::Directory(cm::UseDirectory {
@@ -156,22 +158,23 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 subdir,
             }));
         } else if let Some(s) = use_.storage_type() {
-            let target_path = match all_target_capability_ids(use_, use_) {
-                Some(OneOrMany::One(target_id)) => {
-                    let target_path = target_id.extract_path()?;
-                    Ok(Some(target_path))
-                }
-                Some(OneOrMany::Many(_)) => {
-                    Err(Error::internal(format!("expecting one capability, but multiple provided")))
-                }
-                None => Ok(None),
-            }?;
+            let target_path =
+                match all_target_capability_ids(use_, use_, cml::RoutingClauseType::Use) {
+                    Some(OneOrMany::One(target_id)) => {
+                        let target_path = target_id.extract_path()?;
+                        Ok(Some(target_path))
+                    }
+                    Some(OneOrMany::Many(_)) => Err(Error::internal(format!(
+                        "expecting one capability, but multiple provided"
+                    ))),
+                    None => Ok(None),
+                }?;
             out_uses.push(cm::Use::Storage(cm::UseStorage { type_: s.clone(), target_path }));
         } else if let Some(n) = use_.runner() {
             out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: n.clone() }))
         } else if let Some(n) = use_.event() {
             let source = extract_use_event_source(use_)?;
-            let target_ids = all_target_capability_ids(use_, use_)
+            let target_ids = all_target_capability_ids(use_, use_, cml::RoutingClauseType::Use)
                 .ok_or_else(|| Error::internal("no capability"))?;
             let source_ids = n.to_vec();
             for target_id in target_ids {
@@ -192,7 +195,8 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 }));
             }
         } else if let Some(p) = use_.event_stream() {
-            let target_path = one_target_capability_id(use_, use_)?.extract_path()?;
+            let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
+                .extract_path()?;
             out_uses.push(cm::Use::EventStream(cm::UseEventStream {
                 target_path,
                 events: p.to_vec().into_iter().cloned().collect(),
@@ -210,22 +214,25 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let target = extract_expose_target(expose)?;
-        if let Some(p) = expose.service() {
+        if let Some(n) = expose.service() {
             let sources = extract_all_expose_sources(expose)?;
-            let target_path = one_target_capability_id(expose, expose)?.extract_path()?;
+            let target_name =
+                one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
+                    .extract_name()?;
             for source in sources {
                 out_exposes.push(cm::Expose::Service(cm::ExposeService {
                     source,
-                    source_path: p.clone(),
-                    target_path: target_path.clone(),
+                    source_name: n.clone(),
+                    target_name: target_name.clone(),
                     target: target.clone(),
                 }))
             }
         } else if let Some(p) = expose.protocol() {
             let source = extract_single_expose_source(expose)?;
             let source_ids: Vec<_> = p.to_vec();
-            let target_ids = all_target_capability_ids(expose, expose)
-                .ok_or_else(|| Error::internal("no capability"))?;
+            let target_ids =
+                all_target_capability_ids(expose, expose, cml::RoutingClauseType::Expose)
+                    .ok_or_else(|| Error::internal("no capability"))?;
             for target_id in target_ids {
                 let target_path = target_id.extract_path()?;
                 // When multiple source paths are provided, there is no way to alias each one, so
@@ -243,7 +250,9 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
             }
         } else if let Some(p) = expose.directory() {
             let source = extract_single_expose_source(expose)?;
-            let target_path = one_target_capability_id(expose, expose)?.extract_path()?;
+            let target_path =
+                one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
+                    .extract_path()?;
             let rights = extract_expose_rights(expose)?;
             let subdir = extract_expose_subdir(expose);
             out_exposes.push(cm::Expose::Directory(cm::ExposeDirectory {
@@ -256,7 +265,9 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
             }))
         } else if let Some(n) = expose.runner() {
             let source = extract_single_expose_source(expose)?;
-            let target_name = one_target_capability_id(expose, expose)?.extract_name()?;
+            let target_name =
+                one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
+                    .extract_name()?;
             out_exposes.push(cm::Expose::Runner(cm::ExposeRunner {
                 source,
                 source_name: n.clone(),
@@ -265,7 +276,9 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
             }))
         } else if let Some(n) = expose.resolver() {
             let source = extract_single_expose_source(expose)?;
-            let target_name = one_target_capability_id(expose, expose)?.extract_name()?;
+            let target_name =
+                one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
+                    .extract_name()?;
             out_exposes.push(cm::Expose::Resolver(cm::ExposeResolver {
                 source,
                 source_name: n.clone(),
@@ -287,17 +300,17 @@ fn translate_offer(
 ) -> Result<Vec<cm::Offer>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
-        if let Some(p) = offer.service() {
+        if let Some(n) = offer.service() {
             let sources = extract_all_offer_sources(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
-                let target_path = target_id.extract_path()?;
+                let target_name = target_id.extract_name()?;
                 for source in &sources {
                     out_offers.push(cm::Offer::Service(cm::OfferService {
-                        source_path: p.clone(),
+                        source_name: n.clone(),
                         source: source.clone(),
                         target: target.clone(),
-                        target_path: target_path.clone(),
+                        target_name: target_name.clone(),
                     }));
                 }
             }
@@ -696,7 +709,7 @@ fn extract_all_targets_for_each_child(
 ) -> Result<Vec<(cm::Ref, cml::NameOrPath)>, Error> {
     let mut out_targets = vec![];
 
-    let target_ids = all_target_capability_ids(in_obj, in_obj)
+    let target_ids = all_target_capability_ids(in_obj, in_obj, cml::RoutingClauseType::Offer)
         .ok_or_else(|| Error::internal("no capability".to_string()))?;
 
     // Validate the "to" references.
@@ -711,17 +724,31 @@ fn extract_all_targets_for_each_child(
 }
 
 /// Return the target paths (or names) specified in the given capability.
-fn all_target_capability_ids<T, U>(in_obj: &T, to_obj: &U) -> Option<OneOrMany<cml::NameOrPath>>
+fn all_target_capability_ids<T, U>(
+    in_obj: &T,
+    to_obj: &U,
+    clause_type: cml::RoutingClauseType,
+) -> Option<OneOrMany<cml::NameOrPath>>
 where
     T: cml::CapabilityClause,
-    U: cml::AsClause,
+    U: cml::AsClause + cml::PathClause,
 {
     if let Some(as_) = to_obj.r#as() {
         // We've already validated that when `as` is specified, only 1 source id exists.
         Some(OneOrMany::One(as_.clone()))
     } else {
-        if let Some(p) = in_obj.service() {
-            Some(OneOrMany::One(cml::NameOrPath::Path(p.clone())))
+        if let Some(n) = in_obj.service() {
+            if let cml::RoutingClauseType::Use = clause_type {
+                if let Some(path) = to_obj.path() {
+                    Some(OneOrMany::One(cml::NameOrPath::Path(path.clone())))
+                } else {
+                    Some(OneOrMany::One(cml::NameOrPath::Path(
+                        format!("/svc/{}", n).parse().unwrap(),
+                    )))
+                }
+            } else {
+                Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
+            }
         } else if let Some(p) = in_obj.protocol() {
             Some(match p {
                 OneOrMany::One(p) => OneOrMany::One(cml::NameOrPath::Path(p.clone())),
@@ -732,12 +759,12 @@ where
             })
         } else if let Some(p) = in_obj.directory() {
             Some(OneOrMany::One(cml::NameOrPath::Path(p.clone())))
-        } else if let Some(p) = in_obj.storage() {
-            Some(OneOrMany::One(cml::NameOrPath::Name(p.clone())))
-        } else if let Some(p) = in_obj.runner() {
-            Some(OneOrMany::One(cml::NameOrPath::Name(p.clone())))
-        } else if let Some(p) = in_obj.resolver() {
-            Some(OneOrMany::One(cml::NameOrPath::Name(p.clone())))
+        } else if let Some(n) = in_obj.storage() {
+            Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
+        } else if let Some(n) = in_obj.runner() {
+            Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
+        } else if let Some(n) = in_obj.resolver() {
+            Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
         } else if let Some(OneOrMany::One(event)) = in_obj.event() {
             Some(OneOrMany::One(cml::NameOrPath::Name(event.clone())))
         } else if let Some(OneOrMany::Many(events)) = in_obj.event() {
@@ -755,12 +782,16 @@ where
 }
 
 // Return the single name or path specified in the given capability.
-fn one_target_capability_id<T, U>(in_obj: &T, to_obj: &U) -> Result<cml::NameOrPath, Error>
+fn one_target_capability_id<T, U>(
+    in_obj: &T,
+    to_obj: &U,
+    clause_type: cml::RoutingClauseType,
+) -> Result<cml::NameOrPath, Error>
 where
     T: cml::CapabilityClause,
-    U: cml::AsClause,
+    U: cml::AsClause + cml::PathClause,
 {
-    match all_target_capability_ids(in_obj, to_obj) {
+    match all_target_capability_ids(in_obj, to_obj, clause_type) {
         Some(OneOrMany::One(target_id)) => Ok(target_id),
         Some(OneOrMany::Many(_)) => {
             Err(Error::internal("expecting one capability, but multiple provided"))
@@ -886,8 +917,8 @@ mod tests {
         test_compile_use => {
             input = json!({
                 "use": [
-                    { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                    { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                    { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
+                    { "service": "fuchsia.sys2.Realm", "from": "framework" },
                     { "protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "protocol": "/svc/fuchsia.sys2.LegacyRealm", "from": "framework" },
                     { "directory": "/data/assets", "rights" : ["read_bytes"]},
@@ -918,7 +949,7 @@ mod tests {
                 "source": {
                     "parent": {}
                 },
-                "source_path": "/fonts/CoolFonts",
+                "source_name": "CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
             }
         },
@@ -927,7 +958,7 @@ mod tests {
                 "source": {
                     "framework": {}
                 },
-                "source_path": "/svc/fuchsia.sys2.Realm",
+                "source_name": "fuchsia.sys2.Realm",
                 "target_path": "/svc/fuchsia.sys2.Realm"
             }
         },
@@ -1045,19 +1076,19 @@ mod tests {
             input = json!({
                 "expose": [
                     {
-                      "service": "/loggers/fuchsia.logger.Log",
-                      "from": "#logger",
-                      "as": "/svc/fuchsia.logger.Log"
+                        "service": "fuchsia.logger.Log",
+                        "from": "#logger",
+                        "as": "fuchsia.logger.Log2",
                     },
                     {
-                      "service": "/svc/my.service.Service",
-                      "from": ["#logger", "self"],
+                        "service": "my.service.Service",
+                        "from": ["#logger", "self"],
                     },
                     {
-                      "protocol": "/loggers/fuchsia.logger.LegacyLog",
-                      "from": "#logger",
-                      "as": "/svc/fuchsia.logger.LegacyLog",
-                      "to": "parent"
+                        "protocol": "/loggers/fuchsia.logger.LegacyLog",
+                        "from": "#logger",
+                        "as": "/svc/fuchsia.logger.LegacyLog",
+                        "to": "parent"
                     },
                     {
                         "protocol": [ "/A", "/B" ],
@@ -1075,6 +1106,9 @@ mod tests {
                     { "runner": "web", "from": "#logger", "to": "parent", "as": "web-rename" },
                     { "resolver": "my_resolver", "from": "#logger", "to": "parent", "as": "pkg_resolver" }
                 ],
+                "capabilities": [
+                    { "service": "my.service.Service" },
+                ],
                 "children": [
                     {
                         "name": "logger",
@@ -1091,8 +1125,8 @@ mod tests {
                         "name": "logger"
                     }
                 },
-                "source_path": "/loggers/fuchsia.logger.Log",
-                "target_path": "/svc/fuchsia.logger.Log",
+                "source_name": "fuchsia.logger.Log",
+                "target_name": "fuchsia.logger.Log2",
                 "target": "parent"
             }
         },
@@ -1103,8 +1137,8 @@ mod tests {
                         "name": "logger"
                     }
                 },
-                "source_path": "/svc/my.service.Service",
-                "target_path": "/svc/my.service.Service",
+                "source_name": "my.service.Service",
+                "target_name": "my.service.Service",
                 "target": "parent"
             }
         },
@@ -1113,8 +1147,8 @@ mod tests {
                 "source": {
                     "self": {}
                 },
-                "source_path": "/svc/my.service.Service",
-                "target_path": "/svc/my.service.Service",
+                "source_name": "my.service.Service",
+                "target_name": "my.service.Service",
                 "target": "parent"
             }
         },
@@ -1212,6 +1246,14 @@ mod tests {
             }
         }
     ],
+    "capabilities": [
+        {
+            "service": {
+                "name": "my.service.Service",
+                "source_path": "/svc/my.service.Service"
+            }
+        }
+    ],
     "children": [
         {
             "name": "logger",
@@ -1226,18 +1268,18 @@ mod tests {
             input = json!({
                 "offer": [
                     {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "service": "fuchsia.logger.Log",
                         "from": "#logger",
                         "to": [ "#netstack" ]
                     },
                     {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "service": "fuchsia.logger.Log",
                         "from": "#logger",
                         "to": [ "#modular" ],
-                        "as": "/svc/fuchsia.logger.SysLog",
+                        "as": "fuchsia.logger.Log2",
                     },
                     {
-                        "service": "/svc/my.service.Service",
+                        "service": "my.service.Service",
                         "from": ["#logger", "self"],
                         "to": [ "#netstack" ]
                     },
@@ -1348,6 +1390,7 @@ mod tests {
                     },
                 ],
                 "capabilities": [
+                    { "service": "my.service.Service" },
                     {
                         "storage": "logger-storage",
                         "path": "/minfs",
@@ -1364,13 +1407,13 @@ mod tests {
                         "name": "logger"
                     }
                 },
-                "source_path": "/svc/fuchsia.logger.Log",
+                "source_name": "fuchsia.logger.Log",
                 "target": {
                     "child": {
                         "name": "netstack"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.Log"
+                "target_name": "fuchsia.logger.Log"
             }
         },
         {
@@ -1380,13 +1423,13 @@ mod tests {
                         "name": "logger"
                     }
                 },
-                "source_path": "/svc/fuchsia.logger.Log",
+                "source_name": "fuchsia.logger.Log",
                 "target": {
                     "collection": {
                         "name": "modular"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.SysLog"
+                "target_name": "fuchsia.logger.Log2"
             }
         },
         {
@@ -1396,13 +1439,13 @@ mod tests {
                         "name": "logger"
                     }
                 },
-                "source_path": "/svc/my.service.Service",
+                "source_name": "my.service.Service",
                 "target": {
                     "child": {
                         "name": "netstack"
                     }
                 },
-                "target_path": "/svc/my.service.Service"
+                "target_name": "my.service.Service"
             }
         },
         {
@@ -1410,13 +1453,13 @@ mod tests {
                 "source": {
                     "self": {}
                 },
-                "source_path": "/svc/my.service.Service",
+                "source_name": "my.service.Service",
                 "target": {
                     "child": {
                         "name": "netstack"
                     }
                 },
-                "target_path": "/svc/my.service.Service"
+                "target_name": "my.service.Service"
             }
         },
         {
@@ -1668,6 +1711,12 @@ mod tests {
         }
     ],
     "capabilities": [
+        {
+            "service": {
+                "name": "my.service.Service",
+                "source_path": "/svc/my.service.Service"
+            }
+        },
         {
             "storage": {
                 "name": "logger-storage",
@@ -2025,7 +2074,7 @@ mod tests {
                     "binary": "bin/app",
                 },
                 "use": [
-                    { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                    { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                     { "protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "protocol": [ "/fonts/ReallyGoodFonts", "/fonts/IWouldNeverUseTheseFonts"]},
                     { "runner": "elf" },
@@ -2035,7 +2084,7 @@ mod tests {
                 ],
                 "offer": [
                     {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "service": "fuchsia.logger.Log",
                         "from": "#logger",
                         "to": [ "#netstack", "#modular" ]
                     },
@@ -2090,7 +2139,7 @@ mod tests {
                 "source": {
                     "parent": {}
                 },
-                "source_path": "/fonts/CoolFonts",
+                "source_name": "CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
             }
         },
@@ -2154,13 +2203,13 @@ mod tests {
                         "name": "logger"
                     }
                 },
-                "source_path": "/svc/fuchsia.logger.Log",
+                "source_name": "fuchsia.logger.Log",
                 "target": {
                     "child": {
                         "name": "netstack"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.Log"
+                "target_name": "fuchsia.logger.Log"
             }
         },
         {
@@ -2170,13 +2219,13 @@ mod tests {
                         "name": "logger"
                     }
                 },
-                "source_path": "/svc/fuchsia.logger.Log",
+                "source_name": "fuchsia.logger.Log",
                 "target": {
                     "collection": {
                         "name": "modular"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.Log"
+                "target_name": "fuchsia.logger.Log"
             }
         },
         {
@@ -2261,12 +2310,12 @@ mod tests {
     fn test_compile_compact() {
         let input = json!({
             "use": [
-                { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                 { "protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
                 { "directory": "/data/assets", "rights": ["read_bytes"] }
             ]
         });
-        let output = r#"{"uses":[{"service":{"source":{"parent":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"protocol":{"source":{"parent":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"parent":{}},"source_path":"/data/assets","target_path":"/data/assets","rights":["read_bytes"]}}]}"#;
+        let output = r#"{"uses":[{"service":{"source":{"parent":{}},"source_name":"CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"protocol":{"source":{"parent":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"parent":{}},"source_path":"/data/assets","target_path":"/data/assets","rights":["read_bytes"]}}]}"#;
         compile_test(input, &output, false);
     }
 

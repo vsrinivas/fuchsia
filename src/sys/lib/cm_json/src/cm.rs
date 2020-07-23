@@ -218,8 +218,8 @@ pub enum Use {
 pub struct UseService {
     /// Used service source.
     pub source: Ref,
-    /// Used service source path.
-    pub source_path: Path,
+    /// Used service source name.
+    pub source_name: Name,
     /// Used service target path.
     pub target_path: Path,
 }
@@ -331,8 +331,8 @@ pub enum Expose {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ExposeService {
     pub source: Ref,
-    pub source_path: Path,
-    pub target_path: Path,
+    pub source_name: Name,
+    pub target_name: Name,
     pub target: ExposeTarget,
 }
 
@@ -405,9 +405,9 @@ pub enum Offer {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferService {
     pub source: Ref,
-    pub source_path: Path,
+    pub source_name: Name,
     pub target: Ref,
-    pub target_path: Path,
+    pub target_name: Name,
 }
 
 /// Offered service protocol capability. See [`OfferProtocolDecl`].

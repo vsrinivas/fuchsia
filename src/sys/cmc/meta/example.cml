@@ -19,6 +19,10 @@
     ],
     capabilities: [
         {
+            service: "fuchsia.logger.Log",
+            path: "/svc/fuchsia.logger.Log",
+        },
+        {
             storage: "minfs",
             from: "parent",
             path: "/data",
@@ -35,10 +39,7 @@
     ],
     use: [
         { runner: "elf" },
-        {
-            service: "/fonts/CoolFonts",
-            as: "/svc/fuchsia.fonts.Provider",
-        },
+        { service: "fuchsia.fonts.Provider" },
         {
             protocol: "/fonts/LegacyCoolFonts",
             as: "/svc/fuchsia.fonts.LegacyProvider",
@@ -72,7 +73,7 @@
     ],
     offer: [
         {
-            service: "/svc/fuchsia.logger.Log",
+            service: "fuchsia.logger.Log",
             from: "#logger",
             to: [ "#modular" ],
         },
@@ -90,9 +91,8 @@
     ],
     expose: [
         {
-            service: "/loggers/fuchsia.logger.Log",
+            service: "fuchsia.logger.Log",
             from: "#logger",
-            as: "/svc/fuchsia.logger.Log",
         },
         {
             protocol: "/loggers/fuchsia.logger.LegacyLog",

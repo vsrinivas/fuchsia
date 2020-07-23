@@ -121,7 +121,7 @@ impl CmInto<fsys::UseServiceDecl> for cm::UseService {
     fn cm_into(self) -> Result<fsys::UseServiceDecl, Error> {
         Ok(fsys::UseServiceDecl {
             source: Some(self.source.cm_into()?),
-            source_path: Some(self.source_path.into()),
+            source_name: Some(self.source_name.into()),
             target_path: Some(self.target_path.into()),
         })
     }
@@ -187,8 +187,8 @@ impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
     fn cm_into(self) -> Result<fsys::ExposeServiceDecl, Error> {
         Ok(fsys::ExposeServiceDecl {
             source: Some(self.source.cm_into()?),
-            source_path: Some(self.source_path.into()),
-            target_path: Some(self.target_path.into()),
+            source_name: Some(self.source_name.into()),
+            target_name: Some(self.target_name.into()),
             target: Some(self.target.cm_into()?),
         })
     }
@@ -247,9 +247,9 @@ impl CmInto<fsys::OfferServiceDecl> for cm::OfferService {
     fn cm_into(self) -> Result<fsys::OfferServiceDecl, Error> {
         Ok(fsys::OfferServiceDecl {
             source: Some(self.source.cm_into()?),
-            source_path: Some(self.source_path.into()),
+            source_name: Some(self.source_name.into()),
             target: Some(self.target.cm_into()?),
-            target_path: Some(self.target_path.into()),
+            target_name: Some(self.target_name.into()),
         })
     }
 }
@@ -770,7 +770,7 @@ mod tests {
                             "source": {
                                 "parent": {}
                             },
-                            "source_path": "/fonts/CoolFonts",
+                            "source_name": "fuchsia.fonts.Provider",
                             "target_path": "/svc/fuchsia.fonts.Provider"
                         }
                     },
@@ -779,7 +779,7 @@ mod tests {
                             "source": {
                                 "framework": {}
                             },
-                            "source_path": "/svc/fuchsia.sys2.Realm",
+                            "source_name": "fuchsia.sys2.Realm",
                             "target_path": "/svc/fuchsia.sys2.Realm"
                         }
                     },
@@ -866,12 +866,12 @@ mod tests {
                 let uses = vec![
                     fsys::UseDecl::Service(fsys::UseServiceDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_path: Some("/fonts/CoolFonts".to_string()),
+                        source_name: Some("fuchsia.fonts.Provider".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                     }),
                     fsys::UseDecl::Service(fsys::UseServiceDecl {
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                        source_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                        source_name: Some("fuchsia.sys2.Realm".to_string()),
                         target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
                     }),
                     fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
@@ -942,8 +942,8 @@ mod tests {
                                     "name": "logger"
                                 }
                             },
-                            "source_path": "/loggers/fuchsia.logger.Log1",
-                            "target_path": "/svc/fuchsia.logger.Log",
+                            "source_name": "fuchsia.logger.Log1",
+                            "target_name": "fuchsia.logger.Log",
                             "target": "parent"
                         }
                     },
@@ -952,8 +952,8 @@ mod tests {
                             "source": {
                                 "self": {}
                             },
-                            "source_path": "/loggers/fuchsia.logger.Log2",
-                            "target_path": "/svc/fuchsia.logger.Log",
+                            "source_name": "fuchsia.netstack.Netstack",
+                            "target_name": "fuchsia.netstack.Netstack",
                             "target": "parent"
                         }
                     },
@@ -1019,6 +1019,14 @@ mod tests {
                         }
                     },
                 ],
+                "capabilities": [
+                    {
+                        "service": {
+                            "name": "fuchsia.netstack.Netstack",
+                            "source_path": "/svc/fuchsia.netstack.Netstack"
+                        }
+                    }
+                ],
                 "children": [
                     {
                         "name": "logger",
@@ -1030,18 +1038,18 @@ mod tests {
             output = {
                 let exposes = vec![
                     fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
-                        source_path: Some("/loggers/fuchsia.logger.Log1".to_string()),
+                        source_name: Some("fuchsia.logger.Log1".to_string()),
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                         target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     }),
                     fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
-                        source_path: Some("/loggers/fuchsia.logger.Log2".to_string()),
+                        source_name: Some("fuchsia.netstack.Netstack".to_string()),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target_name: Some("fuchsia.netstack.Netstack".to_string()),
                         target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     }),
                     fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
@@ -1091,6 +1099,12 @@ mod tests {
                         target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     }),
                 ];
+                let capabilities = vec![
+                    fsys::CapabilityDecl::Service(fsys::ServiceDecl {
+                        name: Some("fuchsia.netstack.Netstack".to_string()),
+                        source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                    }),
+                ];
                 let children = vec![
                     fsys::ChildDecl{
                         name: Some("logger".to_string()),
@@ -1101,6 +1115,7 @@ mod tests {
                 ];
                 let mut decl = new_component_decl();
                 decl.exposes = Some(exposes);
+                decl.capabilities = Some(capabilities);
                 decl.children = Some(children);
                 decl
             },
@@ -1145,13 +1160,13 @@ mod tests {
                             "source": {
                                 "self": {}
                             },
-                            "source_path": "/svc/fuchsia.netstack.Netstack",
+                            "source_name": "fuchsia.netstack.Netstack",
                             "target": {
                                 "child": {
                                     "name": "logger"
                                 }
                             },
-                            "target_path": "/svc/fuchsia.netstack.Netstack"
+                            "target_name": "fuchsia.netstack.Netstack"
                         }
                     },
                     {
@@ -1161,27 +1176,27 @@ mod tests {
                                     "name": "logger"
                                 }
                             },
-                            "source_path": "/svc/fuchsia.logger.Log1",
+                            "source_name": "fuchsia.logger.Log1",
                             "target": {
                                 "collection": {
                                     "name": "modular"
                                 }
                             },
-                            "target_path": "/svc/fuchsia.logger.Log"
+                            "target_name": "fuchsia.logger.Log"
                         }
                     },
                     {
                         "service": {
                             "source": {
-                                "self": {}
+                                "parent": {}
                             },
-                            "source_path": "/svc/fuchsia.logger.Log2",
+                            "source_name": "fuchsia.logger.Log2",
                             "target": {
                                 "collection": {
                                     "name": "modular"
                                 }
                             },
-                            "target_path": "/svc/fuchsia.logger.Log"
+                            "target_name": "fuchsia.logger.Log"
                         }
                     },
                     {
@@ -1320,6 +1335,12 @@ mod tests {
                 ],
                 "capabilities": [
                     {
+                        "service": {
+                            "name": "fuchsia.netstack.Netstack",
+                            "source_path": "/svc/fuchsia.netstack.Netstack",
+                        }
+                    },
+                    {
                         "storage": {
                             "name": "memfs",
                             "source": {
@@ -1379,37 +1400,37 @@ mod tests {
                     }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                        source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                        source_name: Some("fuchsia.netstack.Netstack".to_string()),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef {
                                name: "logger".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                        target_name: Some("fuchsia.netstack.Netstack".to_string()),
                     }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("/svc/fuchsia.logger.Log1".to_string()),
+                        source_name: Some("fuchsia.logger.Log1".to_string()),
                         target: Some(fsys::Ref::Collection(
                            fsys::CollectionRef {
                                name: "modular".to_string(),
                            }
                         )),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                     }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                        source_path: Some("/svc/fuchsia.logger.Log2".to_string()),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("fuchsia.logger.Log2".to_string()),
                         target: Some(fsys::Ref::Collection(
                            fsys::CollectionRef {
                                name: "modular".to_string(),
                            }
                         )),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                     }),
                     fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
@@ -1510,6 +1531,10 @@ mod tests {
                     }),
                 ];
                 let capabilities = vec![
+                    fsys::CapabilityDecl::Service(fsys::ServiceDecl {
+                        name: Some("fuchsia.netstack.Netstack".to_string()),
+                        source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                    }),
                     fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                         name: Some("memfs".to_string()),
                         source_path: Some("/memfs".to_string()),
@@ -1833,8 +1858,8 @@ mod tests {
                             "source": {
                                 "parent": {}
                             },
-                            "source_path": "/fonts/CoolFonts",
-                            "target_path": "/svc/fuchsia.fonts.Provider",
+                            "source_name": "fuchsia.fonts.Provider",
+                            "target_path": "/svc/fuchsia.fonts.Provider"
                         }
                     }
                 ],
@@ -1859,17 +1884,41 @@ mod tests {
                                     "name": "logger"
                                 }
                             },
-                            "source_path": "/svc/fuchsia.logger.Log",
+                            "source_name": "fuchsia.logger.Log",
                             "target": {
                                 "child": {
                                     "name": "netstack"
                                 }
                             },
-                            "target_path": "/svc/fuchsia.logger.Log"
+                            "target_name": "fuchsia.logger.Log"
                         }
                     }
                 ],
                 "capabilities": [
+                    {
+                        "service": {
+                            "name": "fuchsia.netstack.Netstack",
+                            "source_path": "/svc/fuchsia.netstack.Netstack"
+                        }
+                    },
+                    {
+                        "storage": {
+                            "name": "memfs",
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/memfs"
+                        }
+                    },
+                    {
+                        "runner": {
+                            "name": "elf",
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/elf"
+                        }
+                    },
                     {
                         "resolver": {
                             "name": "pkg_resolver",
@@ -1925,7 +1974,7 @@ mod tests {
                 let uses = vec![
                     fsys::UseDecl::Service(fsys::UseServiceDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_path: Some("/fonts/CoolFonts".to_string()),
+                        source_name: Some("fuchsia.fonts.Provider".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                     }),
                 ];
@@ -1945,14 +1994,14 @@ mod tests {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        source_name: Some("fuchsia.logger.Log".to_string()),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef {
                                name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                     }),
                 ];
                 let children = vec![
@@ -1987,6 +2036,20 @@ mod tests {
                     },
                 ]};
                 let capabilities = vec![
+                    fsys::CapabilityDecl::Service(fsys::ServiceDecl {
+                        name: Some("fuchsia.netstack.Netstack".to_string()),
+                        source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                    }),
+                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
+                        name: Some("memfs".to_string()),
+                        source_path: Some("/memfs".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
+                    }),
+                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
+                        name: Some("elf".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
+                        source_path: Some("/elf".to_string()),
+                    }),
                     fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
                         name: Some("pkg_resolver".to_string()),
                         source_path: Some("/resolver".to_string()),

@@ -14,7 +14,7 @@
                 "source": {
                     "parent": {}
                 },
-                "source_path": "/fonts/CoolFonts",
+                "source_name": "fuchsia.fonts.Provider",
                 "target_path": "/svc/fuchsia.fonts.Provider"
             }
         },
@@ -88,8 +88,8 @@
                         "name": "logger"
                     }
                 },
-                "source_path": "/loggers/fuchsia.logger.Log",
-                "target_path": "/svc/fuchsia.logger.Log",
+                "source_name": "fuchsia.logger.Log",
+                "target_name": "fuchsia.logger.Log",
                 "target": "parent"
             }
         },
@@ -135,13 +135,13 @@
                         "name": "logger"
                     }
                 },
-                "source_path": "/svc/fuchsia.logger.Log",
+                "source_name": "fuchsia.logger.Log",
                 "target": {
                     "collection": {
                         "name": "modular"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.Log"
+                "target_name": "fuchsia.logger.Log"
             }
         },
         {
@@ -178,6 +178,12 @@
         }
     ],
     "capabilities": [
+        {
+            "service": {
+                "name": "fuchsia.logger.Log",
+                "source_path": "/svc/fuchsia.logger.Log"
+            }
+        },
         {
             "storage": {
                 "name": "minfs",

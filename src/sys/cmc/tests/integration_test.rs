@@ -34,7 +34,7 @@ fn main() {
             UseDecl::Runner(UseRunnerDecl { source_name: Some("elf".to_string()) }),
             UseDecl::Service(UseServiceDecl {
                 source: Some(Ref::Parent(ParentRef {})),
-                source_path: Some("/fonts/CoolFonts".to_string()),
+                source_name: Some("fuchsia.fonts.Provider".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
             }),
             UseDecl::Protocol(UseProtocolDecl {
@@ -85,8 +85,8 @@ fn main() {
         let exposes = vec![
             ExposeDecl::Service(ExposeServiceDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
-                source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
-                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                source_name: Some("fuchsia.logger.Log".to_string()),
+                target_name: Some("fuchsia.logger.Log".to_string()),
                 target: Some(Ref::Parent(ParentRef {})),
             }),
             ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -116,9 +116,9 @@ fn main() {
         let offers = vec![
             OfferDecl::Service(OfferServiceDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
-                source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                source_name: Some("fuchsia.logger.Log".to_string()),
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
-                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                target_name: Some("fuchsia.logger.Log".to_string()),
             }),
             OfferDecl::Protocol(OfferProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
@@ -136,6 +136,10 @@ fn main() {
             }),
         ];
         let capabilities = vec![
+            CapabilityDecl::Service(ServiceDecl {
+                name: Some("fuchsia.logger.Log".to_string()),
+                source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+            }),
             CapabilityDecl::Storage(StorageDecl {
                 name: Some("minfs".to_string()),
                 source: Some(Ref::Parent(ParentRef {})),

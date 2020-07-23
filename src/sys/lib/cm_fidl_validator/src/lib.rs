@@ -47,8 +47,6 @@ pub enum Error {
     InvalidCapability(DeclField, String),
     #[error("\"{1}\" is referenced in {0} but it does not appear in runners")]
     InvalidRunner(DeclField, String),
-    #[error("\"{1}\" is referenced in {0} but it does not appear in resolvers")]
-    InvalidResolver(DeclField, String),
     #[error("\"{1}\" is referenced in {0} but it does not appear in events")]
     InvalidEventStream(DeclField, String),
     #[error("{0} specifies multiple runners")]
@@ -429,27 +427,48 @@ impl<'a> ValidationContext<'a> {
     fn validate_use_decl(&mut self, use_: &'a fsys::UseDecl) {
         match use_ {
             fsys::UseDecl::Service(u) => {
-                self.validate_use_fields(
+                self.validate_source(u.source.as_ref(), "UseServiceDecl", "source");
+                check_name(
+                    u.source_name.as_ref(),
                     "UseServiceDecl",
-                    u.source.as_ref(),
-                    u.source_path.as_ref(),
+                    "source_name",
+                    &mut self.errors,
+                );
+                check_path(
                     u.target_path.as_ref(),
+                    "UseServiceDecl",
+                    "target_path",
+                    &mut self.errors,
                 );
             }
             fsys::UseDecl::Protocol(u) => {
-                self.validate_use_fields(
-                    "UseProtocolDecl",
-                    u.source.as_ref(),
+                self.validate_source(u.source.as_ref(), "UseProtocolDecl", "source");
+                check_path(
                     u.source_path.as_ref(),
+                    "UseProtocolDecl",
+                    "source_path",
+                    &mut self.errors,
+                );
+                check_path(
                     u.target_path.as_ref(),
+                    "UseProtocolDecl",
+                    "target_path",
+                    &mut self.errors,
                 );
             }
             fsys::UseDecl::Directory(u) => {
-                self.validate_use_fields(
-                    "UseDirectoryDecl",
-                    u.source.as_ref(),
+                self.validate_source(u.source.as_ref(), "UseDirectoryDecl", "source");
+                check_path(
                     u.source_path.as_ref(),
+                    "UseDirectoryDecl",
+                    "source_path",
+                    &mut self.errors,
+                );
+                check_path(
                     u.target_path.as_ref(),
+                    "UseDirectoryDecl",
+                    "target_path",
+                    &mut self.errors,
                 );
                 if u.rights.is_none() {
                     self.errors.push(Error::missing_field("UseDirectoryDecl", "rights"));
@@ -649,18 +668,6 @@ impl<'a> ValidationContext<'a> {
                 }
             }
         }
-    }
-
-    fn validate_use_fields(
-        &mut self,
-        decl: &str,
-        source: Option<&fsys::Ref>,
-        source_path: Option<&String>,
-        target_path: Option<&String>,
-    ) {
-        self.validate_source(source, decl, "source");
-        check_path(source_path, decl, "source_path", &mut self.errors);
-        check_path(target_path, decl, "target_path", &mut self.errors);
     }
 
     fn validate_source(&mut self, source: Option<&fsys::Ref>, decl: &str, field: &str) {
@@ -960,15 +967,23 @@ impl<'a> ValidationContext<'a> {
     ) {
         match expose {
             fsys::ExposeDecl::Service(e) => {
-                self.validate_expose_fields_with_path(
-                    "ExposeServiceDecl",
+                let decl = "ExposeServiceDecl";
+                self.validate_expose_fields_with_name(
+                    decl,
                     AllowableIds::Many,
                     e.source.as_ref(),
-                    e.source_path.as_ref(),
-                    e.target_path.as_ref(),
+                    e.source_name.as_ref(),
+                    e.target_name.as_ref(),
                     e.target.as_ref(),
-                    prev_target_paths,
+                    prev_target_names,
                 );
+                // If the expose source is `self`, ensure we have a corresponding ServiceDecl.
+                // TODO: Consider bringing this bit into validate_expose_fields_with_name.
+                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&e.source, &e.source_name) {
+                    if !self.all_services.contains(&name as &str) {
+                        self.errors.push(Error::invalid_capability(decl, "source", name));
+                    }
+                }
             }
             fsys::ExposeDecl::Protocol(e) => {
                 self.validate_expose_fields_with_path(
@@ -1066,7 +1081,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_expose_fields_with_path(
         &mut self,
         decl: &str,
-        allowable_ids: AllowableIds,
+        allowable_paths: AllowableIds,
         source: Option<&fsys::Ref>,
         source_path: Option<&String>,
         target_path: Option<&'a String>,
@@ -1109,8 +1124,8 @@ impl<'a> ValidationContext<'a> {
             // TODO: This logic needs to pair the target path with the target before concluding
             // there's a duplicate.
             let target_path = target_path.unwrap();
-            if let Some(prev_state) = prev_child_target_paths.insert(target_path, allowable_ids) {
-                if prev_state == AllowableIds::One || prev_state != allowable_ids {
+            if let Some(prev_state) = prev_child_target_paths.insert(target_path, allowable_paths) {
+                if prev_state == AllowableIds::One || prev_state != allowable_paths {
                     self.errors.push(Error::duplicate_field(decl, "target_path", target_path));
                 }
             }
@@ -1188,14 +1203,22 @@ impl<'a> ValidationContext<'a> {
     fn validate_offers_decl(&mut self, offer: &'a fsys::OfferDecl) {
         match offer {
             fsys::OfferDecl::Service(o) => {
-                self.validate_offer_fields_with_path(
-                    "OfferServiceDecl",
+                let decl = "OfferServiceDecl";
+                self.validate_offer_fields_with_name(
+                    decl,
                     AllowableIds::Many,
                     o.source.as_ref(),
-                    o.source_path.as_ref(),
+                    o.source_name.as_ref(),
                     o.target.as_ref(),
-                    o.target_path.as_ref(),
+                    o.target_name.as_ref(),
                 );
+                // If the offer source is `self`, ensure we have a corresponding ServiceDecl.
+                // TODO: Consider bringing this bit into validate_offer_fields_with_name
+                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
+                    if !self.all_services.contains(&name as &str) {
+                        self.errors.push(Error::invalid_field(decl, "source"));
+                    }
+                }
                 self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
             }
             fsys::OfferDecl::Protocol(o) => {
@@ -1334,7 +1357,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_offer_fields_with_path(
         &mut self,
         decl: &str,
-        allowable_ids: AllowableIds,
+        allowable_paths: AllowableIds,
         source: Option<&fsys::Ref>,
         source_path: Option<&String>,
         target: Option<&'a fsys::Ref>,
@@ -1351,10 +1374,10 @@ impl<'a> ValidationContext<'a> {
         check_path(source_path, decl, "source_path", &mut self.errors);
         match target {
             Some(fsys::Ref::Child(c)) => {
-                self.validate_target_child_with_path(decl, allowable_ids, c, source, target_path);
+                self.validate_target_child_with_path(decl, allowable_paths, c, source, target_path);
             }
             Some(fsys::Ref::Collection(c)) => {
-                self.validate_target_collection_with_path(decl, allowable_ids, c, target_path);
+                self.validate_target_collection_with_path(decl, allowable_paths, c, target_path);
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, "target"));
@@ -1526,7 +1549,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_target_child_with_path(
         &mut self,
         decl: &str,
-        allowable_ids: AllowableIds,
+        allowable_paths: AllowableIds,
         child: &'a fsys::ChildRef,
         source: Option<&fsys::Ref>,
         target_path: Option<&'a String>,
@@ -1537,8 +1560,8 @@ impl<'a> ValidationContext<'a> {
         if let Some(target_path) = target_path {
             let paths_for_target =
                 self.target_paths.entry(TargetId::Component(&child.name)).or_insert(HashMap::new());
-            if let Some(prev_state) = paths_for_target.insert(target_path, allowable_ids) {
-                if prev_state == AllowableIds::One || prev_state != allowable_ids {
+            if let Some(prev_state) = paths_for_target.insert(target_path, allowable_paths) {
+                if prev_state == AllowableIds::One || prev_state != allowable_paths {
                     self.errors.push(Error::duplicate_field(
                         decl,
                         "target_path",
@@ -1594,7 +1617,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_target_collection_with_path(
         &mut self,
         decl: &str,
-        allowable_ids: AllowableIds,
+        allowable_paths: AllowableIds,
         collection: &'a fsys::CollectionRef,
         target_path: Option<&'a String>,
     ) {
@@ -1606,8 +1629,8 @@ impl<'a> ValidationContext<'a> {
                 .target_paths
                 .entry(TargetId::Collection(&collection.name))
                 .or_insert(HashMap::new());
-            if let Some(prev_state) = paths_for_target.insert(target_path, allowable_ids) {
-                if prev_state == AllowableIds::One || prev_state != allowable_ids {
+            if let Some(prev_state) = paths_for_target.insert(target_path, allowable_paths) {
+                if prev_state == AllowableIds::One || prev_state != allowable_paths {
                     self.errors.push(Error::duplicate_field(
                         decl,
                         "target_path",
@@ -2302,7 +2325,7 @@ mod tests {
                     }),
                     UseDecl::Service(UseServiceDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_path: Some("/space".to_string()),
+                        source_name: Some("space".to_string()),
                         target_path: Some("/foo/bar/baz/fuchsia.logger.Log".to_string()),
                     }),
                 ]);
@@ -2329,7 +2352,7 @@ mod tests {
                 decl.uses = Some(vec![
                     UseDecl::Service(UseServiceDecl {
                         source: None,
-                        source_path: None,
+                        source_name: None,
                         target_path: None,
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
@@ -2370,7 +2393,7 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::missing_field("UseServiceDecl", "source"),
-                Error::missing_field("UseServiceDecl", "source_path"),
+                Error::missing_field("UseServiceDecl", "source_name"),
                 Error::missing_field("UseServiceDecl", "target_path"),
                 Error::missing_field("UseProtocolDecl", "source"),
                 Error::missing_field("UseProtocolDecl", "source_path"),
@@ -2395,7 +2418,7 @@ mod tests {
                 decl.uses = Some(vec![
                     UseDecl::Service(UseServiceDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                        source_path: Some("foo/".to_string()),
+                        source_name: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
                     }),
                 ]);
@@ -2403,7 +2426,7 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_field("UseServiceDecl", "source"),
-                Error::invalid_field("UseServiceDecl", "source_path"),
+                Error::invalid_field("UseServiceDecl", "source_name"),
                 Error::invalid_field("UseServiceDecl", "target_path"),
             ])),
         },
@@ -2516,7 +2539,7 @@ mod tests {
                 decl.uses = Some(vec![
                     UseDecl::Service(UseServiceDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        source_name: Some(format!("{}", "a".repeat(101))),
                         target_path: Some(format!("/s/{}", "b".repeat(1024))),
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
@@ -2548,7 +2571,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::field_too_long("UseServiceDecl", "source_path"),
+                Error::field_too_long("UseServiceDecl", "source_name"),
                 Error::field_too_long("UseServiceDecl", "target_path"),
                 Error::field_too_long("UseProtocolDecl", "source_path"),
                 Error::field_too_long("UseProtocolDecl", "target_path"),
@@ -2566,12 +2589,12 @@ mod tests {
                 decl.uses = Some(vec![
                     UseDecl::Service(UseServiceDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_path: Some("/foo".to_string()),
+                        source_name: Some("foo".to_string()),
                         target_path: Some("/bar".to_string()),
                     }),
                     UseDecl::Service(UseServiceDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_path: Some("/space".to_string()),
+                        source_name: Some("space".to_string()),
                         target_path: Some("/bar".to_string()),
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
@@ -2603,8 +2626,8 @@ mod tests {
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: None,
-                        source_path: None,
-                        target_path: None,
+                        source_name: None,
+                        target_name: None,
                         target: None,
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -2639,8 +2662,8 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::missing_field("ExposeServiceDecl", "source"),
                 Error::missing_field("ExposeServiceDecl", "target"),
-                Error::missing_field("ExposeServiceDecl", "source_path"),
-                Error::missing_field("ExposeServiceDecl", "target_path"),
+                Error::missing_field("ExposeServiceDecl", "source_name"),
+                Error::missing_field("ExposeServiceDecl", "target_name"),
                 Error::missing_field("ExposeProtocolDecl", "source"),
                 Error::missing_field("ExposeProtocolDecl", "target"),
                 Error::missing_field("ExposeProtocolDecl", "source_path"),
@@ -2668,8 +2691,8 @@ mod tests {
                             name: "logger".to_string(),
                             collection: Some("modular".to_string()),
                         })),
-                        source_path: Some("/svc/logger".to_string()),
-                        target_path: Some("/svc/logger".to_string()),
+                        source_name: Some("logger".to_string()),
+                        target_name: Some("logger".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -2749,8 +2772,8 @@ mod tests {
                             name: "^bad".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("foo/".to_string()),
-                        target_path: Some("/".to_string()),
+                        source_name: Some("foo/".to_string()),
+                        target_name: Some("/".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -2796,8 +2819,8 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_field("ExposeServiceDecl", "source.child.name"),
-                Error::invalid_field("ExposeServiceDecl", "source_path"),
-                Error::invalid_field("ExposeServiceDecl", "target_path"),
+                Error::invalid_field("ExposeServiceDecl", "source_name"),
+                Error::invalid_field("ExposeServiceDecl", "target_name"),
                 Error::invalid_field("ExposeProtocolDecl", "source.child.name"),
                 Error::invalid_field("ExposeProtocolDecl", "source_path"),
                 Error::invalid_field("ExposeProtocolDecl", "target_path"),
@@ -2825,8 +2848,8 @@ mod tests {
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: None,
-                        source_path: Some("/a".to_string()),
-                        target_path: Some("/b".to_string()),
+                        source_name: Some("a".to_string()),
+                        target_name: Some("b".to_string()),
                         target: None,
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -2853,15 +2876,15 @@ mod tests {
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
-                        source_name: Some("a".to_string()),
-                        target: Some(Ref::Framework(FrameworkRef {})),
-                        target_name: Some("b".to_string()),
-                    }),
-                    ExposeDecl::Resolver(ExposeResolverDecl {
-                        source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
                         source_name: Some("c".to_string()),
                         target: Some(Ref::Framework(FrameworkRef {})),
                         target_name: Some("d".to_string()),
+                    }),
+                    ExposeDecl::Resolver(ExposeResolverDecl {
+                        source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
+                        source_name: Some("e".to_string()),
+                        target: Some(Ref::Framework(FrameworkRef {})),
+                        target_name: Some("f".to_string()),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2902,8 +2925,8 @@ mod tests {
                             name: "b".repeat(101),
                             collection: None,
                         })),
-                        source_path: Some(format!("/{}", "a".repeat(1024))),
-                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                        source_name: Some(format!("{}", "a".repeat(1025))),
+                        target_name: Some(format!("{}", "b".repeat(1025))),
                         target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -2949,8 +2972,8 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::field_too_long("ExposeServiceDecl", "source.child.name"),
-                Error::field_too_long("ExposeServiceDecl", "source_path"),
-                Error::field_too_long("ExposeServiceDecl", "target_path"),
+                Error::field_too_long("ExposeServiceDecl", "source_name"),
+                Error::field_too_long("ExposeServiceDecl", "target_name"),
                 Error::field_too_long("ExposeProtocolDecl", "source.child.name"),
                 Error::field_too_long("ExposeProtocolDecl", "source_path"),
                 Error::field_too_long("ExposeProtocolDecl", "target_path"),
@@ -2974,8 +2997,8 @@ mod tests {
                             name: "netstack".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        source_name: Some("fuchsia.logger.Log".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -3031,6 +3054,18 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("netstack".to_string()),
+                        target_name: Some("fuchsia.net.Stack".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("netstack2".to_string()),
+                        target_name: Some("fuchsia.net.Stack".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                    }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
@@ -3039,12 +3074,6 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
-                    ExposeDecl::Service(ExposeServiceDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/svc/logger2".to_string()),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        target: Some(Ref::Parent(ParentRef {})),
-                    }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger3".to_string()),
@@ -3052,18 +3081,6 @@ mod tests {
                         target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                    }),
-                    ExposeDecl::Service(ExposeServiceDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/svc/netstack".to_string()),
-                        target_path: Some("/svc/fuchsia.net.Stack".to_string()),
-                        target: Some(Ref::Parent(ParentRef {})),
-                    }),
-                    ExposeDecl::Service(ExposeServiceDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/svc/netstack2".to_string()),
-                        target_path: Some("/svc/fuchsia.net.Stack".to_string()),
-                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -3091,6 +3108,14 @@ mod tests {
                     }),
                 ]);
                 decl.capabilities = Some(vec![
+                    CapabilityDecl::Service(ServiceDecl {
+                        name: Some("netstack".to_string()),
+                        source_path: Some("/path".to_string()),
+                    }),
+                    CapabilityDecl::Service(ServiceDecl {
+                        name: Some("netstack2".to_string()),
+                        source_path: Some("/path".to_string()),
+                    }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("source_elf".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
@@ -3104,8 +3129,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::duplicate_field("ExposeServiceDecl", "target_path",
-                                       "/svc/fuchsia.logger.Log"),
+                // Duplicate services are allowed.
                 Error::duplicate_field("ExposeDirectoryDecl", "target_path",
                                        "/svc/fuchsia.logger.Log"),
                 Error::duplicate_field("ExposeRunnerDecl", "target_name",
@@ -3113,10 +3137,17 @@ mod tests {
                 Error::duplicate_field("ExposeResolverDecl", "target_name", "pkg"),
             ])),
         },
+        // TODO: Add analogous test for offer
         test_validate_exposes_invalid_capability_from_self => {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("fuchsia.netstack.Netstack".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                        target_name: Some("foo".to_string()),
+                    }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_elf".to_string()),
@@ -3133,6 +3164,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::invalid_capability("ExposeServiceDecl", "source", "fuchsia.netstack.Netstack"),
                 Error::invalid_capability("ExposeRunnerDecl", "source", "source_elf"),
                 Error::invalid_capability("ExposeResolverDecl", "source", "source_pkg"),
             ])),
@@ -3164,9 +3196,9 @@ mod tests {
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
                         source: None,
-                        source_path: None,
+                        source_name: None,
                         target: None,
-                        target_path: None,
+                        target_name: None,
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: None,
@@ -3207,9 +3239,9 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::missing_field("OfferServiceDecl", "source"),
-                Error::missing_field("OfferServiceDecl", "source_path"),
+                Error::missing_field("OfferServiceDecl", "source_name"),
                 Error::missing_field("OfferServiceDecl", "target"),
-                Error::missing_field("OfferServiceDecl", "target_path"),
+                Error::missing_field("OfferServiceDecl", "target_name"),
                 Error::missing_field("OfferProtocolDecl", "source"),
                 Error::missing_field("OfferProtocolDecl", "source_path"),
                 Error::missing_field("OfferProtocolDecl", "target"),
@@ -3242,24 +3274,24 @@ mod tests {
                             name: "a".repeat(101),
                             collection: None,
                         })),
-                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        source_name: Some(format!("{}", "a".repeat(101))),
                         target: Some(Ref::Child(
                            ChildRef {
                                name: "b".repeat(101),
                                collection: None,
                            }
                         )),
-                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                        target_name: Some(format!("{}", "b".repeat(101))),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(Ref::Self_(SelfRef {})),
-                        source_path: Some("/a".to_string()),
+                        source: Some(Ref::Parent(ParentRef {})),
+                        source_name: Some("a".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef {
                                name: "b".repeat(101),
                            }
                         )),
-                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                        target_name: Some(format!("{}", "b".repeat(101))),
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3375,11 +3407,11 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::field_too_long("OfferServiceDecl", "source.child.name"),
-                Error::field_too_long("OfferServiceDecl", "source_path"),
+                Error::field_too_long("OfferServiceDecl", "source_name"),
                 Error::field_too_long("OfferServiceDecl", "target.child.name"),
-                Error::field_too_long("OfferServiceDecl", "target_path"),
+                Error::field_too_long("OfferServiceDecl", "target_name"),
                 Error::field_too_long("OfferServiceDecl", "target.collection.name"),
-                Error::field_too_long("OfferServiceDecl", "target_path"),
+                Error::field_too_long("OfferServiceDecl", "target_name"),
                 Error::field_too_long("OfferProtocolDecl", "source.child.name"),
                 Error::field_too_long("OfferProtocolDecl", "source_path"),
                 Error::field_too_long("OfferProtocolDecl", "target.child.name"),
@@ -3440,14 +3472,14 @@ mod tests {
                             name: "logger".to_string(),
                             collection: Some("modular".to_string()),
                         })),
-                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        source_name: Some("fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Child(
                             ChildRef {
                                 name: "netstack".to_string(),
                                 collection: Some("modular".to_string()),
                             }
                         )),
-                        target_path: Some("/data/realm_assets".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3545,12 +3577,12 @@ mod tests {
                             name: "^bad".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("foo/".to_string()),
+                        source_name: Some("foo/".to_string()),
                         target: Some(Ref::Child(ChildRef {
                             name: "%bad".to_string(),
                             collection: None,
                         })),
-                        target_path: Some("/".to_string()),
+                        target_name: Some("/".to_string()),
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3619,9 +3651,9 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_field("OfferServiceDecl", "source.child.name"),
-                Error::invalid_field("OfferServiceDecl", "source_path"),
+                Error::invalid_field("OfferServiceDecl", "source_name"),
                 Error::invalid_field("OfferServiceDecl", "target.child.name"),
-                Error::invalid_field("OfferServiceDecl", "target_path"),
+                Error::invalid_field("OfferServiceDecl", "target_name"),
                 Error::invalid_field("OfferProtocolDecl", "source.child.name"),
                 Error::invalid_field("OfferProtocolDecl", "source_path"),
                 Error::invalid_field("OfferProtocolDecl", "target.child.name"),
@@ -3653,14 +3685,14 @@ mod tests {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("/svc/logger".to_string()),
+                        source_name: Some("logger".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
                                name: "logger".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/svc/logger".to_string()),
+                        target_name: Some("logger".to_string()),
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3788,14 +3820,14 @@ mod tests {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        source_name: Some("fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
                                name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/data/realm_assets".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3861,31 +3893,31 @@ mod tests {
                 Error::invalid_child("OfferDirectoryDecl", "source", "logger"),
             ])),
         },
-        test_validate_offers_target_duplicate_path => {
+        test_validate_offers_target => {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/svc/logger".to_string()),
+                        source: Some(Ref::Parent(ParentRef{})),
+                        source_name: Some("logger".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
                                name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/svc/logger".to_string()),
+                        source: Some(Ref::Parent(ParentRef{})),
+                        source_name: Some("logger2".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
                                name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -3897,14 +3929,6 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::Strong),
-                    }),
-                    OfferDecl::Service(OfferServiceDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/data/assets".to_string()),
-                        target: Some(Ref::Collection(
-                           CollectionRef { name: "modular".to_string() }
-                        )),
-                        target_path: Some("/data".to_string()),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -3980,7 +4004,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::duplicate_field("OfferServiceDecl", "target_path", "/data"),
+                // Duplicate services are allowed.
                 Error::duplicate_field("OfferDirectoryDecl", "target_path", "/data"),
                 Error::duplicate_field("OfferRunnerDecl", "target_name", "duplicated"),
                 Error::duplicate_field("OfferResolverDecl", "target_name", "duplicated"),
@@ -3992,23 +4016,23 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/svc/logger".to_string()),
+                        source: Some(Ref::Parent(ParentRef{})),
+                        source_name: Some("logger".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
                                name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/svc/logger".to_string()),
+                        source: Some(Ref::Parent(ParentRef{})),
+                        source_name: Some("logger".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string(), }
                         )),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -4584,14 +4608,14 @@ mod tests {
                         name: "b".to_string(),
                         collection: None,
                     })),
-                    source_path: Some("/svc/thing".to_string()),
+                    source_name: Some("thing".to_string()),
                     target: Some(Ref::Child(
                        ChildRef {
                            name: "a".to_string(),
                            collection: None,
                        }
                     )),
-                    target_path: Some("/svc/thing".to_string()),
+                    target_name: Some("thing".to_string()),
                 })]);
                 decl
             },
@@ -5001,8 +5025,8 @@ mod tests {
             offer_decl = OfferServiceDecl {
                 source: None,  // Filled by macro
                 target: None,  // Filled by macro
-                source_path: Some(format!("/thing")),
-                target_path: Some(format!("/thing")),
+                source_name: Some(format!("thing")),
+                target_name: Some(format!("thing")),
             },
         },
         test_validate_offers_runner_dependency_cycle => {

@@ -30,11 +30,9 @@ table UseServiceDecl {
     /// be `parent` or `framework`.
     1: Ref source;
 
-    /// Path identifying the service, by which it was presented to this
+    /// Name identifying the service, by which it was presented to this
     /// component.
-    ///
-    /// Must be an absolute path starting with /.
-    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    2: fuchsia.component.name source_name;
 
     /// The path where the capability should be installed in the component's
     /// namespace.

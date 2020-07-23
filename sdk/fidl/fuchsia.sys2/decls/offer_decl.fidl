@@ -42,18 +42,14 @@ table OfferServiceDecl {
     /// `parent`, `self`, or `child`.
     1: Ref source;
 
-    /// Path identifying the service being offered.
-    ///
-    /// Must be an absolute path starting with /.
-    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    /// Name identifying the service being offered.
+    2: fuchsia.component.name source_name;
 
     /// Reference to the target. Must be `child` or `collection`.
     3: Ref target;
 
-    /// The path under which the capability is being offered.
-    ///
-    /// Must be an absolute path starting with /.
-    4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    /// The name under which the capability is being offered.
+    4: fuchsia.component.name target_name;
 };
 
 /// Declares a protocol offered by a component to one of its children,

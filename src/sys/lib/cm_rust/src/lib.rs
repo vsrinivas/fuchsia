@@ -185,15 +185,15 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
         // FIDL to native, we aggregate the declarations by target.
         let mut exposes = vec![];
         if let Some(e) = self.exposes {
-            let mut services: HashMap<(ExposeTarget, CapabilityPath), Vec<_>> = HashMap::new();
+            let mut services: HashMap<(ExposeTarget, CapabilityName), Vec<_>> = HashMap::new();
             for expose in e.into_iter() {
                 match expose {
                     fsys::ExposeDecl::Service(s) => services
-                        .entry((s.target.fidl_into_native(), s.target_path.fidl_into_native()))
+                        .entry((s.target.fidl_into_native(), s.target_name.fidl_into_native()))
                         .or_default()
                         .push(ServiceSource::<ExposeServiceSource> {
                             source: s.source.fidl_into_native(),
-                            source_path: s.source_path.fidl_into_native(),
+                            source_name: s.source_name.fidl_into_native(),
                         }),
                     fsys::ExposeDecl::Protocol(ls) => {
                         exposes.push(ExposeDecl::Protocol(ls.fidl_into_native()))
@@ -210,25 +210,25 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::ExposeDecl::__UnknownVariant { .. } => panic!("invalid variant"),
                 }
             }
-            for ((target, target_path), sources) in services.into_iter() {
+            for ((target, target_name), sources) in services.into_iter() {
                 exposes.push(ExposeDecl::Service(ExposeServiceDecl {
                     sources,
                     target,
-                    target_path,
+                    target_name,
                 }))
             }
         }
         let mut offers = vec![];
         if let Some(o) = self.offers {
-            let mut services: HashMap<(OfferTarget, CapabilityPath), Vec<_>> = HashMap::new();
+            let mut services: HashMap<(OfferTarget, CapabilityName), Vec<_>> = HashMap::new();
             for offer in o.into_iter() {
                 match offer {
                     fsys::OfferDecl::Service(s) => services
-                        .entry((s.target.fidl_into_native(), s.target_path.fidl_into_native()))
+                        .entry((s.target.fidl_into_native(), s.target_name.fidl_into_native()))
                         .or_default()
                         .push(ServiceSource::<OfferServiceSource> {
                             source: s.source.fidl_into_native(),
-                            source_path: s.source_path.fidl_into_native(),
+                            source_name: s.source_name.fidl_into_native(),
                         }),
                     fsys::OfferDecl::Protocol(ls) => {
                         offers.push(OfferDecl::Protocol(ls.fidl_into_native()))
@@ -251,8 +251,8 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::OfferDecl::__UnknownVariant { .. } => panic!("invalid variant"),
                 }
             }
-            for ((target, target_path), sources) in services.into_iter() {
-                offers.push(OfferDecl::Service(OfferServiceDecl { sources, target, target_path }))
+            for ((target, target_name), sources) in services.into_iter() {
+                offers.push(OfferDecl::Service(OfferServiceDecl { sources, target, target_name }))
             }
         }
         ComponentDecl {
@@ -280,9 +280,9 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                     for es in s.sources.into_iter() {
                         exposes.push(fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                             source: es.source.native_into_fidl(),
-                            source_path: es.source_path.native_into_fidl(),
+                            source_name: es.source_name.native_into_fidl(),
                             target: s.target.clone().native_into_fidl(),
-                            target_path: s.target_path.clone().native_into_fidl(),
+                            target_name: s.target_name.clone().native_into_fidl(),
                         }))
                     }
                 }
@@ -307,9 +307,9 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                     for os in s.sources.into_iter() {
                         offers.push(fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                             source: os.source.native_into_fidl(),
-                            source_path: os.source_path.native_into_fidl(),
+                            source_name: os.source_name.native_into_fidl(),
                             target: s.target.clone().native_into_fidl(),
-                            target_path: s.target_path.clone().native_into_fidl(),
+                            target_name: s.target_name.clone().native_into_fidl(),
                         }))
                     }
                 }
@@ -455,7 +455,7 @@ pub enum ExposeDecl {
 pub struct ExposeServiceDecl {
     pub sources: Vec<ServiceSource<ExposeServiceSource>>,
     pub target: ExposeTarget,
-    pub target_path: CapabilityPath,
+    pub target_name: CapabilityName,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -473,7 +473,7 @@ pub enum OfferDecl {
 pub struct OfferServiceDecl {
     pub sources: Vec<ServiceSource<OfferServiceSource>>,
     pub target: OfferTarget,
-    pub target_path: CapabilityPath,
+    pub target_name: CapabilityName,
 }
 
 fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
@@ -489,7 +489,7 @@ fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
 fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::UseServiceDecl,
 {
     source: UseSource,
-    source_path: CapabilityPath,
+    source_name: CapabilityName,
     target_path: CapabilityPath,
 });
 fidl_into_struct!(UseProtocolDecl, UseProtocolDecl, fsys::UseProtocolDecl, fsys::UseProtocolDecl,
@@ -1193,8 +1193,8 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ExposeTarget {
 pub struct ServiceSource<T> {
     /// The provider of the service, relative to a component.
     pub source: T,
-    /// The path at which the service is accessible.
-    pub source_path: CapabilityPath,
+    /// The name of the service.
+    pub source_name: CapabilityName,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1772,7 +1772,7 @@ mod tests {
                uses: Some(vec![
                    fsys::UseDecl::Service(fsys::UseServiceDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_path: Some("/svc/netstack".to_string()),
+                       source_name: Some("netstack".to_string()),
                        target_path: Some("/svc/mynetstack".to_string()),
                    }),
                    fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
@@ -1856,8 +1856,8 @@ mod tests {
                            name: "netstack".to_string(),
                            collection: None,
                        })),
-                       source_path: Some("/svc/netstack1".to_string()),
-                       target_path: Some("/svc/mynetstack".to_string()),
+                       source_name: Some("netstack1".to_string()),
+                       target_name: Some("mynetstack".to_string()),
                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                    }),
                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
@@ -1865,8 +1865,8 @@ mod tests {
                            name: "netstack".to_string(),
                            collection: None,
                        })),
-                       source_path: Some("/svc/netstack2".to_string()),
-                       target_path: Some("/svc/mynetstack".to_string()),
+                       source_name: Some("netstack2".to_string()),
+                       target_name: Some("mynetstack".to_string()),
                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                    }),
                ]),
@@ -1946,25 +1946,25 @@ mod tests {
                    }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_path: Some("/svc/netstack1".to_string()),
+                       source_name: Some("netstack1".to_string()),
                        target: Some(fsys::Ref::Child(
                           fsys::ChildRef {
                               name: "echo".to_string(),
                               collection: None,
                           }
                        )),
-                       target_path: Some("/svc/mynetstack".to_string()),
+                       target_name: Some("mynetstack".to_string()),
                    }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_path: Some("/svc/netstack2".to_string()),
+                       source_name: Some("netstack2".to_string()),
                        target: Some(fsys::Ref::Child(
                           fsys::ChildRef {
                               name: "echo".to_string(),
                               collection: None,
                           }
                        )),
-                       target_path: Some("/svc/mynetstack".to_string()),
+                       target_name: Some("mynetstack".to_string()),
                    }),
                ]),
                capabilities: Some(vec![
@@ -2067,7 +2067,7 @@ mod tests {
                     uses: vec![
                         UseDecl::Service(UseServiceDecl {
                             source: UseSource::Parent,
-                            source_path: "/svc/netstack".try_into().unwrap(),
+                            source_name: "netstack".try_into().unwrap(),
                             target_path: "/svc/mynetstack".try_into().unwrap(),
                         }),
                         UseDecl::Protocol(UseProtocolDecl {
@@ -2125,14 +2125,14 @@ mod tests {
                             sources: vec![
                                 ServiceSource::<ExposeServiceSource> {
                                     source: ExposeServiceSource::Child("netstack".to_string()),
-                                    source_path: "/svc/netstack1".try_into().unwrap(),
+                                    source_name: "netstack1".try_into().unwrap(),
                                 },
                                 ServiceSource::<ExposeServiceSource> {
                                     source: ExposeServiceSource::Child("netstack".to_string()),
-                                    source_path: "/svc/netstack2".try_into().unwrap(),
+                                    source_name: "netstack2".try_into().unwrap(),
                                 },
                             ],
-                            target_path: "/svc/mynetstack".try_into().unwrap(),
+                            target_name: "mynetstack".try_into().unwrap(),
                             target: ExposeTarget::Parent,
                         }),
                     ],
@@ -2182,15 +2182,15 @@ mod tests {
                             sources: vec![
                                 ServiceSource::<OfferServiceSource> {
                                     source: OfferServiceSource::Parent,
-                                    source_path: "/svc/netstack1".try_into().unwrap(),
+                                    source_name: "netstack1".try_into().unwrap(),
                                 },
                                 ServiceSource::<OfferServiceSource> {
                                     source: OfferServiceSource::Parent,
-                                    source_path: "/svc/netstack2".try_into().unwrap(),
+                                    source_name: "netstack2".try_into().unwrap(),
                                 },
                             ],
                             target: OfferTarget::Child("echo".to_string()),
-                            target_path: "/svc/mynetstack".try_into().unwrap(),
+                            target_name: "mynetstack".try_into().unwrap(),
                         }),
                     ],
                     capabilities: vec![

@@ -99,7 +99,7 @@ impl fmt::Display for CapabilitySource {
 /// namespace.
 #[derive(Clone, Debug)]
 pub enum InternalCapability {
-    Service(CapabilityPath),
+    Service(CapabilityName),
     Protocol(CapabilityPath),
     Directory(CapabilityPath),
     Runner(CapabilityName),
@@ -127,20 +127,20 @@ impl InternalCapability {
 
     pub fn path(&self) -> Option<&CapabilityPath> {
         match self {
-            InternalCapability::Service(source_path) => Some(&source_path),
             InternalCapability::Protocol(source_path) => Some(&source_path),
             InternalCapability::Directory(source_path) => Some(&source_path),
-            InternalCapability::Runner(_) | InternalCapability::Event(_) => None,
+            InternalCapability::Runner(_)
+            | InternalCapability::Event(_)
+            | InternalCapability::Service(_) => None,
         }
     }
 
     pub fn name(&self) -> Option<&CapabilityName> {
         match self {
+            InternalCapability::Service(name) => Some(&name),
             InternalCapability::Runner(name) => Some(&name),
             InternalCapability::Event(name) => Some(&name),
-            InternalCapability::Service(_)
-            | InternalCapability::Protocol(_)
-            | InternalCapability::Directory(_) => None,
+            InternalCapability::Protocol(_) | InternalCapability::Directory(_) => None,
         }
     }
 
@@ -154,7 +154,7 @@ impl InternalCapability {
     pub fn builtin_from_use_decl(decl: &UseDecl) -> Result<Self, Error> {
         match decl {
             UseDecl::Service(s) if s.source == UseSource::Parent => {
-                Ok(InternalCapability::Service(s.source_path.clone()))
+                Ok(InternalCapability::Service(s.source_name.clone()))
             }
             UseDecl::Protocol(s) if s.source == UseSource::Parent => {
                 Ok(InternalCapability::Protocol(s.source_path.clone()))
@@ -201,7 +201,7 @@ impl InternalCapability {
     pub fn framework_from_use_decl(decl: &UseDecl) -> Result<Self, Error> {
         match decl {
             UseDecl::Service(s) if s.source == UseSource::Framework => {
-                Ok(InternalCapability::Service(s.source_path.clone()))
+                Ok(InternalCapability::Service(s.source_name.clone()))
             }
             UseDecl::Protocol(s) if s.source == UseSource::Framework => {
                 Ok(InternalCapability::Protocol(s.source_path.clone()))
@@ -481,19 +481,19 @@ impl ComponentCapability {
         &self,
         decl: &'a ComponentDecl,
     ) -> Vec<&'a ExposeServiceDecl> {
-        let paths: HashSet<_> = match self {
+        let names: HashSet<_> = match self {
             ComponentCapability::Offer(OfferDecl::Service(parent_offer)) => {
-                parent_offer.sources.iter().map(|s| &s.source_path).collect()
+                parent_offer.sources.iter().map(|s| &s.source_name).collect()
             }
             ComponentCapability::Expose(ExposeDecl::Service(parent_expose)) => {
-                parent_expose.sources.iter().map(|s| &s.source_path).collect()
+                parent_expose.sources.iter().map(|s| &s.source_name).collect()
             }
             _ => panic!("Expected an offer or expose of a service capability, found: {:?}", self),
         };
         decl.exposes
             .iter()
             .filter_map(|expose| match expose {
-                ExposeDecl::Service(expose) if paths.contains(&expose.target_path) => Some(expose),
+                ExposeDecl::Service(expose) if names.contains(&expose.target_name) => Some(expose),
                 _ => None,
             })
             .collect()
@@ -635,12 +635,12 @@ impl ComponentCapability {
         decl: &'a ComponentDecl,
         child_moniker: &ChildMoniker,
     ) -> Vec<&'a OfferServiceDecl> {
-        let paths: HashSet<_> = match self {
+        let names: HashSet<_> = match self {
             ComponentCapability::Use(UseDecl::Service(child_use)) => {
-                vec![&child_use.source_path].into_iter().collect()
+                vec![&child_use.source_name].into_iter().collect()
             }
             ComponentCapability::Offer(OfferDecl::Service(child_offer)) => {
-                child_offer.sources.iter().map(|s| &s.source_path).collect()
+                child_offer.sources.iter().map(|s| &s.source_name).collect()
             }
             _ => panic!("Expected a use or offer of a service capability, found: {:?}", self),
         };
@@ -650,9 +650,9 @@ impl ComponentCapability {
                 OfferDecl::Service(offer)
                     if Self::is_offer_service_match(
                         child_moniker,
-                        &paths,
+                        &names,
                         &offer.target,
-                        &offer.target_path,
+                        &offer.target_name,
                     ) =>
                 {
                     Some(offer)
@@ -670,11 +670,11 @@ impl ComponentCapability {
 
     fn is_offer_service_match(
         child_moniker: &ChildMoniker,
-        paths: &HashSet<&CapabilityPath>,
+        names: &HashSet<&CapabilityName>,
         target: &OfferTarget,
-        target_path: &CapabilityPath,
+        target_name: &CapabilityName,
     ) -> bool {
-        paths.contains(target_path) && target_matches_moniker(target, child_moniker)
+        names.contains(target_name) && target_matches_moniker(target, child_moniker)
     }
 
     fn is_offer_protocol_or_directory_match(
@@ -746,54 +746,30 @@ mod tests {
     fn find_expose_service_sources() {
         let capability = ComponentCapability::Expose(ExposeDecl::Service(ExposeServiceDecl {
             sources: vec![
+                ServiceSource { source: ExposeServiceSource::Self_, source_name: "net".into() },
+                ServiceSource { source: ExposeServiceSource::Self_, source_name: "log".into() },
                 ServiceSource {
                     source: ExposeServiceSource::Self_,
-                    source_path: CapabilityPath {
-                        dirname: "/svc".to_string(),
-                        basename: "net".to_string(),
-                    },
-                },
-                ServiceSource {
-                    source: ExposeServiceSource::Self_,
-                    source_path: CapabilityPath {
-                        dirname: "/svc".to_string(),
-                        basename: "log".to_string(),
-                    },
-                },
-                ServiceSource {
-                    source: ExposeServiceSource::Self_,
-                    source_path: CapabilityPath {
-                        dirname: "/svc".to_string(),
-                        basename: "unmatched-source".to_string(),
-                    },
+                    source_name: "unmatched-source".into(),
                 },
             ],
             target: ExposeTarget::Parent,
-            target_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+            target_name: "".into(),
         }));
         let net_service = ExposeServiceDecl {
             sources: vec![],
             target: ExposeTarget::Parent,
-            target_path: CapabilityPath {
-                dirname: "/svc".to_string(),
-                basename: "net".to_string(),
-            },
+            target_name: "net".into(),
         };
         let log_service = ExposeServiceDecl {
             sources: vec![],
             target: ExposeTarget::Parent,
-            target_path: CapabilityPath {
-                dirname: "/svc".to_string(),
-                basename: "log".to_string(),
-            },
+            target_name: "log".into(),
         };
         let unmatched_service = ExposeServiceDecl {
             sources: vec![],
             target: ExposeTarget::Parent,
-            target_path: CapabilityPath {
-                dirname: "/svc".to_string(),
-                basename: "unmatched-target".to_string(),
-            },
+            target_name: "unmatched-target".into(),
         };
         let decl = ComponentDecl {
             exposes: vec![
@@ -823,54 +799,30 @@ mod tests {
     fn find_offer_service_sources() {
         let capability = ComponentCapability::Offer(OfferDecl::Service(OfferServiceDecl {
             sources: vec![
+                ServiceSource { source: OfferServiceSource::Self_, source_name: "net".into() },
+                ServiceSource { source: OfferServiceSource::Self_, source_name: "log".into() },
                 ServiceSource {
                     source: OfferServiceSource::Self_,
-                    source_path: CapabilityPath {
-                        dirname: "/svc".to_string(),
-                        basename: "net".to_string(),
-                    },
-                },
-                ServiceSource {
-                    source: OfferServiceSource::Self_,
-                    source_path: CapabilityPath {
-                        dirname: "/svc".to_string(),
-                        basename: "log".to_string(),
-                    },
-                },
-                ServiceSource {
-                    source: OfferServiceSource::Self_,
-                    source_path: CapabilityPath {
-                        dirname: "/svc".to_string(),
-                        basename: "unmatched-source".to_string(),
-                    },
+                    source_name: "unmatched-source".into(),
                 },
             ],
             target: OfferTarget::Child("".to_string()),
-            target_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+            target_name: "".into(),
         }));
         let net_service = OfferServiceDecl {
             sources: vec![],
             target: OfferTarget::Child("child".to_string()),
-            target_path: CapabilityPath {
-                dirname: "/svc".to_string(),
-                basename: "net".to_string(),
-            },
+            target_name: "net".into(),
         };
         let log_service = OfferServiceDecl {
             sources: vec![],
             target: OfferTarget::Child("child".to_string()),
-            target_path: CapabilityPath {
-                dirname: "/svc".to_string(),
-                basename: "log".to_string(),
-            },
+            target_name: "log".into(),
         };
         let unmatched_service = OfferServiceDecl {
             sources: vec![],
             target: OfferTarget::Child("child".to_string()),
-            target_path: CapabilityPath {
-                dirname: "/svc".to_string(),
-                basename: "unmatched-target".to_string(),
-            },
+            target_name: "unmatched-target".into(),
         };
         let decl = ComponentDecl {
             offers: vec![
@@ -890,7 +842,7 @@ mod tests {
         // Parents offers runner named "elf" to "child".
         let parent_decl = ComponentDecl {
             offers: vec![
-                // Offer as "elf" to child "child".
+                // Offer as "elf" to chilr_d "child".
                 OfferDecl::Runner(cm_rust::OfferRunnerDecl {
                     source: cm_rust::OfferRunnerSource::Self_,
                     source_name: "source".into(),

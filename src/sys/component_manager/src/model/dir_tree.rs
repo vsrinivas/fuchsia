@@ -91,15 +91,17 @@ impl DirTree {
         expose: &ExposeDecl,
     ) {
         let path = match expose {
-            cm_rust::ExposeDecl::Service(d) => &d.target_path,
-            cm_rust::ExposeDecl::Protocol(d) => &d.target_path,
-            cm_rust::ExposeDecl::Directory(d) => &d.target_path,
+            cm_rust::ExposeDecl::Service(d) => {
+                d.target_name.to_string().parse().expect("couldn't parse name as path")
+            }
+            cm_rust::ExposeDecl::Protocol(d) => d.target_path.clone(),
+            cm_rust::ExposeDecl::Directory(d) => d.target_path.clone(),
             cm_rust::ExposeDecl::Runner(_) | cm_rust::ExposeDecl::Resolver(_) => {
                 // Runners and resolvers do not add directory entries.
                 return;
             }
         };
-        let tree = self.to_directory_node(path);
+        let tree = self.to_directory_node(&path);
         let routing_fn = routing_factory(realm, expose.clone());
         tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
     }

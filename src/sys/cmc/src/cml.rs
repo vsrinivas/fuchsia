@@ -626,12 +626,13 @@ pub struct Capability {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Use {
-    pub service: Option<Path>,
+    pub service: Option<Name>,
     pub protocol: Option<OneOrMany<Path>>,
     pub directory: Option<Path>,
     pub storage: Option<StorageType>,
     pub runner: Option<Name>,
     pub from: Option<UseFromRef>,
+    pub path: Option<Path>,
     pub r#as: Option<NameOrPath>,
     pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
@@ -643,7 +644,7 @@ pub struct Use {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Expose {
-    pub service: Option<Path>,
+    pub service: Option<Name>,
     pub protocol: Option<OneOrMany<Path>>,
     pub directory: Option<Path>,
     pub runner: Option<Name>,
@@ -658,7 +659,7 @@ pub struct Expose {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Offer {
-    pub service: Option<Path>,
+    pub service: Option<Name>,
     pub protocol: Option<OneOrMany<Path>>,
     pub directory: Option<Path>,
     pub storage: Option<StorageType>,
@@ -696,8 +697,19 @@ pub trait FromClause {
     fn from_(&self) -> OneOrMany<AnyRef<'_>>;
 }
 
+/// Type for generic functions that need to adjust their behavior based on the type of clause
+/// provided.
+// TODO: Refactor the methods that use this so they don't require this, probably by breaking
+// them up.
+pub enum RoutingClauseType {
+    Capability,
+    Use,
+    Offer,
+    Expose,
+}
+
 pub trait CapabilityClause {
-    fn service(&self) -> Option<Path>;
+    fn service(&self) -> &Option<Name>;
     fn protocol(&self) -> &Option<OneOrMany<Path>>;
     fn directory(&self) -> &Option<Path>;
     fn storage(&self) -> &Option<Name>;
@@ -730,9 +742,8 @@ pub trait FilterClause {
 }
 
 impl CapabilityClause for Capability {
-    fn service(&self) -> Option<Path> {
-        // TODO: Once service capabilites are integrated with use/offer/expose, return the name
-        self.service.as_ref().map(|s| format!("/svc/{}", s).parse().unwrap())
+    fn service(&self) -> &Option<Name> {
+        &self.service
     }
     fn protocol(&self) -> &Option<OneOrMany<Path>> {
         &None
@@ -798,8 +809,8 @@ impl FilterClause for Capability {
 }
 
 impl CapabilityClause for Use {
-    fn service(&self) -> Option<Path> {
-        self.service.clone()
+    fn service(&self) -> &Option<Name> {
+        &self.service
     }
     fn protocol(&self) -> &Option<OneOrMany<Path>> {
         &self.protocol
@@ -866,7 +877,7 @@ impl AsClause for Use {
 
 impl PathClause for Use {
     fn path(&self) -> Option<&Path> {
-        None
+        self.path.as_ref()
     }
 }
 
@@ -877,8 +888,8 @@ impl FromClause for Expose {
 }
 
 impl CapabilityClause for Expose {
-    fn service(&self) -> Option<Path> {
-        self.service.clone()
+    fn service(&self) -> &Option<Name> {
+        &self.service
     }
     // TODO(340156): Only OneOrMany::One protocol is supported for now. Teach `expose` rules to accept
     // `Many` protocols.
@@ -954,8 +965,8 @@ impl FromClause for Offer {
 }
 
 impl CapabilityClause for Offer {
-    fn service(&self) -> Option<Path> {
-        self.service.clone()
+    fn service(&self) -> &Option<Name> {
+        &self.service
     }
     fn protocol(&self) -> &Option<OneOrMany<Path>> {
         &self.protocol

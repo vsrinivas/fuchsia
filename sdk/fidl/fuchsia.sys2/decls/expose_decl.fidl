@@ -27,20 +27,16 @@ table ExposeServiceDecl {
     /// be `self` or `child`.
     1: Ref source;
 
-    /// Path identifying the service, by which it was presented to this
+    /// Name identifying the service, by which it was presented to this
     /// component.
-    ///
-    /// Must be an absolute path starting with /.
-    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    2: fuchsia.component.name source_name;
 
     /// The destination to which the service is exposed: either the component's realm or the
     /// framework.
     3: Ref target;
 
-    /// The path by which the capability is being exposed.
-    ///
-    /// Must be an absolute path starting with /.
-    4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    /// The name by which the capability is being exposed.
+    4: fuchsia.component.name target_name;
 };
 
 /// Declares a protocol exposed to a component's containing realm, such as

@@ -163,7 +163,9 @@ struct ValidationContext<'a> {
 /// namespace they are in.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 enum CapabilityId {
-    Service(cml::Path),
+    Service(cml::Name),
+    // A service in a `use` declaration has a target path in the component's namespace.
+    UsedService(cml::Path),
     Protocol(cml::Path),
     Directory(cml::Path),
     Storage(cml::Name),
@@ -179,6 +181,7 @@ impl CapabilityId {
     pub fn type_str(&self) -> &'static str {
         match self {
             CapabilityId::Service(_) => "service",
+            CapabilityId::UsedService(_) => "service",
             CapabilityId::Protocol(_) => "protocol",
             CapabilityId::Directory(_) => "directory",
             CapabilityId::Storage(_) => "storage",
@@ -193,8 +196,8 @@ impl CapabilityId {
     /// Return the directory containing the capability.
     pub fn get_dir_path(&self) -> Option<&Path> {
         match self {
-            CapabilityId::Service(p) => Path::new(p.as_str()).parent(),
             CapabilityId::Directory(p) => Some(Path::new(p.as_str())),
+            CapabilityId::UsedService(p) => Path::new(p.as_str()).parent(),
             CapabilityId::Protocol(p) => Path::new(p.as_str()).parent(),
             _ => None,
         }
@@ -208,16 +211,29 @@ impl CapabilityId {
     ///
     /// When multiple capability identifiers are specified, the target names are the same as the
     /// source names.
-    pub fn from_clause<T>(clause: &T) -> Result<Vec<CapabilityId>, Error>
+    pub fn from_clause<T>(
+        clause: &T,
+        clause_type: cml::RoutingClauseType,
+    ) -> Result<Vec<CapabilityId>, Error>
     where
-        T: cml::CapabilityClause + cml::AsClause + cml::FilterClause + fmt::Debug,
+        T: cml::CapabilityClause + cml::AsClause + cml::PathClause + cml::FilterClause + fmt::Debug,
     {
         // For directory/service/runner types, return the source name,
         // using the "as" clause to rename if neccessary.
         // TODO: Validate that exactly one of these is set.
         let alias = clause.r#as();
-        if let Some(p) = clause.service().as_ref() {
-            return Ok(vec![CapabilityId::Service(cml::alias_or_path(alias, p)?)]);
+        let path = clause.path();
+        if let Some(n) = clause.service().as_ref() {
+            return match (clause_type, path) {
+                (cml::RoutingClauseType::Use, Some(path)) => {
+                    Ok(vec![CapabilityId::UsedService(path.clone())])
+                }
+                (cml::RoutingClauseType::Use, None) => {
+                    let path: cml::Path = format!("/svc/{}", n).parse().unwrap();
+                    Ok(vec![CapabilityId::UsedService(path)])
+                }
+                _ => Ok(vec![CapabilityId::Service(cml::alias_or_name(alias, n)?)]),
+            };
         } else if let Some(OneOrMany::One(protocol)) = clause.protocol().as_ref() {
             return Ok(vec![CapabilityId::Protocol(cml::alias_or_path(alias, protocol)?)]);
         } else if let Some(OneOrMany::Many(protocols)) = clause.protocol().as_ref() {
@@ -297,11 +313,12 @@ impl fmt::Display for CapabilityId {
     /// Return the string ID of this clause.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            CapabilityId::Storage(n)
+            CapabilityId::Service(n)
+            | CapabilityId::Storage(n)
             | CapabilityId::Runner(n)
             | CapabilityId::Resolver(n)
             | CapabilityId::Event(n) => n.as_str(),
-            CapabilityId::Service(p)
+            CapabilityId::UsedService(p)
             | CapabilityId::Protocol(p)
             | CapabilityId::Directory(p)
             | CapabilityId::EventStream(p) => p.as_str(),
@@ -502,7 +519,8 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Disallow multiple capability ids of the same name.
-        let capability_ids = CapabilityId::from_clause(capability)?;
+        let capability_ids =
+            CapabilityId::from_clause(capability, cml::RoutingClauseType::Capability)?;
         for capability_id in capability_ids {
             if used_ids.insert(capability_id.to_string(), capability_id.clone()).is_some() {
                 return Err(Error::validate(format!(
@@ -520,6 +538,12 @@ impl<'a> ValidationContext<'a> {
         use_: &'a cml::Use,
         used_ids: &mut HashMap<String, CapabilityId>,
     ) -> Result<(), Error> {
+        match (&use_.service, &use_.r#as) {
+            (Some(_), Some(_)) => {
+                Err(Error::validate("\"as\" field cannot be used with \"service\""))
+            }
+            _ => Ok(()),
+        }?;
         match (&use_.runner, &use_.r#as) {
             (Some(_), Some(_)) => {
                 Err(Error::validate("\"as\" field cannot be used with \"runner\""))
@@ -564,7 +588,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Disallow multiple capability ids of the same name.
-        let capability_ids = CapabilityId::from_clause(use_)?;
+        let capability_ids = CapabilityId::from_clause(use_, cml::RoutingClauseType::Use)?;
         for capability_id in capability_ids {
             if used_ids.insert(capability_id.to_string(), capability_id.clone()).is_some() {
                 return Err(Error::validate(format!(
@@ -670,6 +694,19 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Ensure that services exposed from self are defined in `services`.
+        if let Some(service_name) = &expose.service {
+            // Services can only have a single `from` clause.
+            if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
+                if !self.all_services.contains(service_name) {
+                    return Err(Error::validate(format!(
+                       "Service \"{}\" is exposed from self, so it must be declared in \"services\"",
+                       service_name
+                   )));
+                }
+            }
+        }
+
         // TODO: We should be checking runners here
 
         // Ensure that resolvers exposed from self are defined in `resolvers`.
@@ -685,7 +722,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure we haven't already exposed an entity of the same name.
-        let capability_ids = CapabilityId::from_clause(expose)?;
+        let capability_ids = CapabilityId::from_clause(expose, cml::RoutingClauseType::Expose)?;
         for capability_id in capability_ids {
             if used_ids.insert(capability_id.to_string(), capability_id.clone()).is_some() {
                 return Err(Error::validate(format!(
@@ -725,6 +762,20 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Ensure that services offered from self are defined in `services`.
+        if let Some(service_name) = &offer.service {
+            // Services can only have a single `from` clause.
+            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                if !self.all_services.contains(service_name) {
+                    return Err(Error::validate(format!(
+                        "Service \"{}\" is offered from self, so it must be declared in \
+                       \"services\"",
+                        service_name
+                    )));
+                }
+            }
+        }
+
         // TODO: We should be checking runners here
 
         // Ensure that resolvers offered from self are defined in `resolvers`.
@@ -755,7 +806,7 @@ impl<'a> ValidationContext<'a> {
         }?;
 
         // Validate every target of this offer.
-        let target_cap_ids = CapabilityId::from_clause(offer)?;
+        let target_cap_ids = CapabilityId::from_clause(offer, cml::RoutingClauseType::Offer)?;
         for to in &offer.to.0 {
             // Ensure the "to" value is a child.
             let to_target = match to {
@@ -1188,7 +1239,7 @@ mod tests {
         let input = r##"{
             "expose": [
                 // Here are some services to expose.
-                { "service": "/loggers/fuchsia.logger.Log", "from": "#logger" },
+                { "service": "fuchsia.logger.Log", "from": "#logger", },
                 { "directory": "/volumes/blobfs", "from": "self", "rights": ["rw*"]},
             ],
             "children": [
@@ -1222,8 +1273,8 @@ mod tests {
         test_cml_use(
             json!({
                 "use": [
-                  { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                  { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                  { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
+                  { "service": "fuchsia.sys2.Realm", "from": "framework" },
                   { "protocol": "/fonts/CoolFonts", "as": "/svc/MyFonts" },
                   { "protocol": "/svc/fuchsia.test.hub.HubReport", "from": "framework" },
                   { "protocol": ["/svc/fuchsia.ui.scenic.Scenic", "/svc/fuchsia.net.Connectivity"] },
@@ -1283,6 +1334,12 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with storage type \"meta\""
         ),
+        test_cml_use_as_with_service(
+            json!({
+                "use": [ { "service": "foo", "as": "xxx" } ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"service\""
+        ),
         test_cml_use_as_with_runner(
             json!({
                 "use": [ { "runner": "elf", "as": "xxx" } ]
@@ -1314,22 +1371,14 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `protocol` is supplied."
         ),
-        test_cml_use_bad_duplicate_targets(
+        test_cml_use_bad_duplicate_target_paths(
             json!({
                 "use": [
-                  { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
-                  { "protocol": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                  { "protocol": "/svc/fuchsia.sys2.Realm" },
+                  { "service": "fuchsia.sys2.Realm" },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target protocol"
-        ),
-        test_cml_use_bad_duplicate_protocol(
-            json!({
-                "use": [
-                  { "protocol": ["/svc/fuchsia.sys2.Realm", "/svc/fuchsia.sys2.Realm"] },
-                ],
-            }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: array with duplicate element, expected a path or nonempty array of paths, with unique elements"
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target service"
         ),
         test_cml_use_empty_protocols(
             json!({
@@ -1362,7 +1411,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `runner`, `from`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`"
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `runner`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`"
         ),
 
         test_cml_use_disallows_nested_dirs(
@@ -1374,6 +1423,15 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/foo/bar/baz\" is a prefix of \"use\" target directory \"/foo/bar\""
         ),
+        test_cml_use_disallows_common_prefixes_service(
+            json!({
+                "use": [
+                    { "directory": "/foo/bar", "rights": [ "r*" ] },
+                    { "service": "fuchsia", "path": "/foo/bar/fuchsia" },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "service \"/foo/bar/fuchsia\" is a prefix of \"use\" target directory \"/foo/bar\""
+        ),
         test_cml_use_disallows_common_prefixes_protocol(
             json!({
                 "use": [
@@ -1382,15 +1440,6 @@ mod tests {
                 ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "protocol \"/foo/bar/fuchsia.2\" is a prefix of \"use\" target directory \"/foo/bar\""
-        ),
-        test_cml_use_disallows_common_prefixes_service(
-            json!({
-                "use": [
-                    { "directory": "/foo/bar", "rights": [ "r*" ] },
-                    { "service": "/foo/bar/baz/fuchsia.logger.Log" },
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "service \"/foo/bar/baz/fuchsia.logger.Log\" is a prefix of \"use\" target directory \"/foo/bar\""
         ),
         test_cml_use_disallows_filter_on_non_events(
             json!({
@@ -1468,9 +1517,13 @@ mod tests {
             json!({
                 "expose": [
                     {
-                        "service": "/loggers/fuchsia.logger.Log",
+                        "service": "fuchsia.fonts.Provider",
+                        "from": "self",
+                    },
+                    {
+                        "service": "fuchsia.logger.Log",
                         "from": "#logger",
-                        "as": "/svc/logger"
+                        "as": "logger"
                     },
                     {
                         "protocol": "/svc/A",
@@ -1490,11 +1543,14 @@ mod tests {
                     { "runner": "elf", "from": "#logger",  },
                     { "resolver": "pkg_resolver", "from": "#logger" },
                 ],
+                "capabilities": [
+                    { "service": "fuchsia.fonts.Provider" },
+                ],
                 "children": [
                     {
                         "name": "logger",
                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
-                    }
+                    },
                 ]
             }),
             Ok(())
@@ -1503,30 +1559,36 @@ mod tests {
             json!({
                 "expose": [
                     {
-                        "service": "/loggers/fuchsia.logger.Log",
+                        "service": "fuchsia.logger.Log",
                         "from": [ "#logger", "self" ],
                     },
+                ],
+                "capabilities": [
+                    { "service": "fuchsia.logger.Log" },
                 ],
                 "children": [
                     {
                         "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
-                    }
-                ]
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                ],
             }),
             Ok(())
         ),
         test_cml_expose_all_valid_chars(
             json!({
                 "expose": [
-                    { "service": "/loggers/fuchsia.logger.Log", "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-." }
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-.",
+                    },
                 ],
                 "children": [
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-.",
                         "url": "https://www.google.com/gmail"
-                    }
-                ]
+                    },
+                ],
             }),
             Ok(())
         ),
@@ -1539,31 +1601,48 @@ mod tests {
         test_cml_expose_missing_from(
             json!({
                 "expose": [
-                    { "service": "/loggers/fuchsia.logger.Log", "from": "#missing" }
-                ]
+                    { "service": "fuchsia.logger.Log", "from": "#missing" },
+                ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#missing\" does not appear in \"children\""
         ),
-        test_cml_expose_duplicate_target_paths(
+        test_cml_expose_duplicate_target_names(
             json!({
                 "expose": [
-                    { "service": "/fonts/CoolFonts", "from": "self" },
-                    { "service": "/svc/logger", "from": "#logger", "as": "/thing" },
-                    { "directory": "/thing", "from": "self" , "rights": ["rx*"] }
+                    { "service": "logger", "from": "#logger", "as": "thing" },
+                    { "service": "thing", "from": "self" },
+                ],
+                "capabilities": [
+                    { "service": "thing" },
                 ],
                 "children": [
                     {
                         "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
-                    }
-                ]
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"thing\" is a duplicate \"expose\" target service for \"parent\""
+        ),
+        test_cml_expose_duplicate_target_paths(
+            json!({
+                "expose": [
+                    { "protocol": "/svc/logger", "from": "#logger", "as": "/thing" },
+                    { "directory": "/thing", "from": "self" , "rights": ["rx*"] },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"expose\" target directory for \"parent\""
         ),
         test_cml_expose_invalid_multiple_from(
             json!({
                     "expose": [ {
-                        "protocol": "/svc/fuchsua.logger.Log",
+                        "protocol": "/svc/fuchsia.logger.Log",
                         "from": [ "self", "#logger" ],
                     } ],
                     "children": [
@@ -1654,7 +1733,25 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "`subdir` is not supported for expose to framework. Directly expose the subdirectory instead."),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "`subdir` is not supported for expose to framework. Directly expose the subdirectory instead."
+        ),
+        test_cml_expose_service_from_self(
+            json!({
+                "expose": [
+                    {
+                        "service": "pkg_service",
+                        "from": "self",
+                    },
+                ],
+                "capabilities": [
+                    {
+                        "service": "pkg_service",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                    },
+                ]
+            }),
+            Ok(())
+        ),
         test_cml_expose_resolver_from_self(
             json!({
                 "expose": [
@@ -1671,6 +1768,17 @@ mod tests {
                 ]
             }),
             Ok(())
+        ),
+        test_cml_expose_service_from_self_missing(
+            json!({
+                "expose": [
+                    {
+                        "service": "pkg_service",
+                        "from": "self",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"pkg_service\" is exposed from self, so it must be declared in \"services\""
         ),
         test_cml_expose_resolver_from_self_missing(
             json!({
@@ -1720,14 +1828,19 @@ mod tests {
             json!({
                 "offer": [
                     {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "service": "fuchsia.logger.Log",
                         "from": "#logger",
                         "to": [ "#echo_server", "#modular" ],
-                        "as": "/svc/fuchsia.logger.SysLog"
+                        "as": "fuchsia.logger.SysLog"
                     },
                     {
-                        "service": "/svc/fuchsia.fonts.Provider",
+                        "service": "fuchsia.fonts.Provider",
                         "from": "parent",
+                        "to": [ "#echo_server" ]
+                    },
+                    {
+                        "service": "fuchsia.net.Netstack",
+                        "from": "self",
                         "to": [ "#echo_server" ]
                     },
                     {
@@ -1807,6 +1920,7 @@ mod tests {
                     },
                 ],
                 "capabilities": [
+                    { "service": "fuchsia.net.Netstack" },
                     {
                         "storage": "minfs",
                         "from": "parent",
@@ -1820,8 +1934,8 @@ mod tests {
             json!({
                 "offer": [
                     {
-                        "service": "/loggers/fuchsia.logger.Log",
-                        "from": [ "#logger", "self" ],
+                        "service": "fuchsia.logger.Log",
+                        "from": [ "#logger", "parent" ],
                         "to": [ "#echo_server" ],
                     },
                 ],
@@ -1833,8 +1947,8 @@ mod tests {
                     {
                         "name": "echo_server",
                         "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
-                    }
-                ]
+                    },
+                ],
             }),
             Ok(())
         ),
@@ -1842,7 +1956,7 @@ mod tests {
             json!({
                 "offer": [
                     {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "service": "fuchsia.logger.Log",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
                         "to": [ "#abcdefghijklmnopqrstuvwxyz0123456789_-to" ],
                     },
@@ -1882,7 +1996,7 @@ mod tests {
             json!({
                     "offer": [
                         {
-                            "service": "/svc/fuchsia.logger.Log",
+                            "service": "fuchsia.logger.Log",
                             "from": "#missing",
                             "to": [ "#echo_server" ],
                         },
@@ -1917,7 +2031,7 @@ mod tests {
         test_cml_offer_bad_from(
             json!({
                     "offer": [ {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "service": "fuchsia.logger.Log",
                         "from": "#invalid@",
                         "to": [ "#echo_server" ],
                     } ]
@@ -1962,7 +2076,7 @@ mod tests {
         test_cml_offer_empty_targets(
             json!({
                 "offer": [ {
-                    "service": "/svc/fuchsia.logger.Log",
+                    "service": "fuchsia.logger.Log",
                     "from": "#logger",
                     "to": []
                 } ]
@@ -1972,7 +2086,7 @@ mod tests {
         test_cml_offer_duplicate_targets(
             json!({
                 "offer": [ {
-                    "service": "/svc/fuchsia.logger.Log",
+                    "service": "fuchsia.logger.Log",
                     "from": "#logger",
                     "to": ["#a", "#a"]
                 } ]
@@ -1982,9 +2096,9 @@ mod tests {
         test_cml_offer_target_missing_props(
             json!({
                 "offer": [ {
-                    "service": "/svc/fuchsia.logger.Log",
+                    "service": "fuchsia.logger.Log",
                     "from": "#logger",
-                    "as": "/svc/fuchsia.logger.SysLog",
+                    "as": "fuchsia.logger.SysLog",
                 } ]
             }),
             Err(Error::Parse { err, .. }) if &err == "missing field `to`"
@@ -1992,7 +2106,7 @@ mod tests {
         test_cml_offer_target_missing_to(
             json!({
                 "offer": [ {
-                    "service": "/snvc/fuchsia.logger.Log",
+                    "service": "fuchsia.logger.Log",
                     "from": "#logger",
                     "to": [ "#missing" ],
                 } ],
@@ -2006,10 +2120,10 @@ mod tests {
         test_cml_offer_target_bad_to(
             json!({
                 "offer": [ {
-                    "service": "/svc/fuchsia.logger.Log",
+                    "service": "fuchsia.logger.Log",
                     "from": "#logger",
                     "to": [ "self" ],
-                    "as": "/svc/fuchsia.logger.SysLog",
+                    "as": "fuchsia.logger.SysLog",
                 } ]
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""
@@ -2030,10 +2144,10 @@ mod tests {
         test_cml_offer_target_equals_from(
             json!({
                 "offer": [ {
-                    "service": "/svc/fuchsia.logger.Log",
+                    "service": "fuchsia.logger.Log",
                     "from": "#logger",
                     "to": [ "#logger" ],
-                    "as": "/svc/fuchsia.logger.SysLog",
+                    "as": "fuchsia.logger.SysLog",
                 } ],
                 "children": [ {
                     "name": "logger", "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
@@ -2060,17 +2174,48 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Storage offer target \"#logger\" is same as source"
         ),
+        test_cml_offer_duplicate_target_names(
+            json!({
+                "offer": [
+                    {
+                        "service": "logger",
+                        "from": "#logger",
+                        "to": [ "#echo_server" ],
+                        "as": "thing"
+                    },
+                    {
+                        "service": "thing",
+                        "from": "self",
+                        "to": [ "#echo_server" ],
+                    },
+                ],
+                "capabilities": [
+                    { "service": "thing" },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                    {
+                        "name": "echo_server",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"thing\" is a duplicate \"offer\" target service for \"#echo_server\""
+        ),
         test_cml_offer_duplicate_target_paths(
             json!({
                 "offer": [
                     {
-                        "service": "/svc/logger",
+                        "protocol": "/svc/logger",
                         "from": "self",
                         "to": [ "#echo_server" ],
                         "as": "/thing"
                     },
                     {
-                        "service": "/svc/logger",
+                        "protocol": "/svc/logger",
                         "from": "self",
                         "to": [ "#scenic" ],
                     },
@@ -2179,9 +2324,14 @@ mod tests {
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path with no leading `/` and non-empty segments"
         ),
-        test_cml_offer_resolver_from_self(
+        test_cml_offer_from_self(
             json!({
                 "offer": [
+                    {
+                        "service": "fuchsia.fonts.Resolver",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
                     {
                         "resolver": "pkg_resolver",
                         "from": "self",
@@ -2196,12 +2346,33 @@ mod tests {
                 ],
                 "capabilities": [
                     {
+                        "service": "fuchsia.fonts.Resolver",
+                    },
+                    {
                         "resolver": "pkg_resolver",
                         "path": "/svc/fuchsia.sys2.ComponentResolver",
                     },
                 ]
             }),
             Ok(())
+        ),
+        test_cml_offer_service_from_self_missing(
+            json!({
+                "offer": [
+                    {
+                        "service": "fuchsia.fonts.Resolver",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"fuchsia.fonts.Resolver\" is offered from self, so it must be declared in \"services\""
         ),
         test_cml_offer_resolver_from_self_missing(
             json!({
@@ -2224,15 +2395,15 @@ mod tests {
         test_cml_offer_dependency_on_wrong_type(
             json!({
                     "offer": [ {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "service": "fuchsia.logger.Log",
                         "from": "parent",
                         "to": [ "#echo_server" ],
-                        "dependency": "strong"
+                        "dependency": "strong",
                     } ],
                     "children": [ {
-                            "name": "echo_server",
-                            "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
-                    } ]
+                        "name": "echo_server",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                    } ],
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Dependency can only be provided for protocol and directory capabilities"
         ),
@@ -2251,7 +2422,7 @@ mod tests {
                             "to": [ "#c" ],
                         },
                         {
-                            "service": "/dev/ethernet",
+                            "service": "ethernet",
                             "from": "#c",
                             "to": [ "#a" ],
                         },
@@ -2697,6 +2868,7 @@ mod tests {
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"capabilities\" source \"#missing\" does not appear in \"children\""
         ),
+
 
         // environments
         test_cml_environments(
@@ -3203,42 +3375,42 @@ mod tests {
         test_cml_path_invalid_empty(
             json!({
                 "use": [
-                  { "service": "" },
+                  { "protocol": "" },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a non-empty path no more than 1024 characters in length"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a path or nonempty array of paths, with unique elements"
         ),
         test_cml_path_invalid_root(
             json!({
                 "use": [
-                  { "service": "/" },
+                  { "protocol": "/" },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path with leading `/` and non-empty segments"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path or nonempty array of paths, with unique elements"
         ),
         test_cml_path_invalid_absolute_is_relative(
             json!({
                 "use": [
-                  { "service": "foo/bar" },
+                  { "protocol": "foo/bar" },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"foo/bar\", expected a path with leading `/` and non-empty segments"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"foo/bar\", expected a path or nonempty array of paths, with unique elements"
         ),
         test_cml_path_invalid_trailing(
             json!({
                 "use": [
-                  { "service": "/foo/bar/" },
+                  { "protocol": "/foo/bar/" },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/foo/bar/\", expected a path with leading `/` and non-empty segments"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/foo/bar/\", expected a path or nonempty array of paths, with unique elements"
         ),
         test_cml_path_too_long(
             json!({
                 "use": [
-                  { "service": format!("/{}", "a".repeat(1024)) },
+                  { "protocol": format!("/{}", "a".repeat(1024)) },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 1025, expected a non-empty path no more than 1024 characters in length"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 1025, expected a path or nonempty array of paths, with unique elements"
         ),
         test_cml_relative_path(
             json!({
@@ -3773,62 +3945,132 @@ mod tests {
         }
     }
 
+    fn empty_use() -> cml::Use {
+        cml::Use {
+            service: None,
+            protocol: None,
+            directory: None,
+            storage: None,
+            runner: None,
+            from: None,
+            path: None,
+            r#as: None,
+            rights: None,
+            subdir: None,
+            event: None,
+            event_stream: None,
+            filter: None,
+        }
+    }
+
     #[test]
     fn test_capability_id() -> Result<(), Error> {
         // Simple tests.
         assert_eq!(
-            CapabilityId::from_clause(&cml::Offer {
-                service: Some("/a".parse().unwrap()),
-                ..empty_offer()
-            })?,
-            vec![CapabilityId::Service("/a".parse().unwrap())]
+            CapabilityId::from_clause(
+                &cml::Offer { service: Some("a".parse().unwrap()), ..empty_offer() },
+                cml::RoutingClauseType::Offer
+            )?,
+            vec![CapabilityId::Service("a".parse().unwrap())]
         );
         assert_eq!(
-            CapabilityId::from_clause(&cml::Offer {
-                protocol: Some(OneOrMany::One("/a".parse().unwrap())),
-                ..empty_offer()
-            })?,
+            CapabilityId::from_clause(
+                &cml::Offer {
+                    protocol: Some(OneOrMany::One("/a".parse().unwrap())),
+                    ..empty_offer()
+                },
+                cml::RoutingClauseType::Offer
+            )?,
             vec![CapabilityId::Protocol("/a".parse().unwrap())]
         );
         assert_eq!(
-            CapabilityId::from_clause(&cml::Offer {
-                protocol: Some(
-                    OneOrMany::Many(vec!["/a".parse().unwrap(), "/b".parse().unwrap()],)
-                ),
-                ..empty_offer()
-            })?,
+            CapabilityId::from_clause(
+                &cml::Use { service: Some("a".parse().unwrap()), ..empty_use() },
+                cml::RoutingClauseType::Use
+            )?,
+            vec![CapabilityId::UsedService("/svc/a".parse().unwrap())]
+        );
+        assert_eq!(
+            CapabilityId::from_clause(
+                &cml::Use {
+                    service: Some("a".parse().unwrap()),
+                    path: Some("/b".parse().unwrap()),
+                    ..empty_use()
+                },
+                cml::RoutingClauseType::Use
+            )?,
+            vec![CapabilityId::UsedService("/b".parse().unwrap())]
+        );
+        assert_eq!(
+            CapabilityId::from_clause(
+                &cml::Offer {
+                    protocol: Some(OneOrMany::One("/a".parse().unwrap())),
+                    ..empty_offer()
+                },
+                cml::RoutingClauseType::Offer
+            )?,
+            vec![CapabilityId::Protocol("/a".parse().unwrap())]
+        );
+        assert_eq!(
+            CapabilityId::from_clause(
+                &cml::Offer {
+                    protocol: Some(OneOrMany::Many(vec![
+                        "/a".parse().unwrap(),
+                        "/b".parse().unwrap()
+                    ],)),
+                    ..empty_offer()
+                },
+                cml::RoutingClauseType::Offer
+            )?,
             vec![
                 CapabilityId::Protocol("/a".parse().unwrap()),
                 CapabilityId::Protocol("/b".parse().unwrap())
             ]
         );
         assert_eq!(
-            CapabilityId::from_clause(&cml::Offer {
-                directory: Some("/a".parse().unwrap()),
-                ..empty_offer()
-            })?,
+            CapabilityId::from_clause(
+                &cml::Offer { directory: Some("/a".parse().unwrap()), ..empty_offer() },
+                cml::RoutingClauseType::Offer
+            )?,
             vec![CapabilityId::Directory("/a".parse().unwrap())]
         );
         assert_eq!(
-            CapabilityId::from_clause(&cml::Offer {
-                storage: Some(cml::StorageType::Cache),
-                ..empty_offer()
-            })?,
+            CapabilityId::from_clause(
+                &cml::Offer { storage: Some(cml::StorageType::Cache), ..empty_offer() },
+                cml::RoutingClauseType::Offer
+            )?,
             vec![CapabilityId::StorageType(cml::StorageType::Cache)],
         );
 
         // "as" aliasing.
         assert_eq!(
-            CapabilityId::from_clause(&cml::Offer {
-                service: Some("/a".parse().unwrap()),
-                r#as: Some("/b".parse().unwrap()),
-                ..empty_offer()
-            })?,
-            vec![CapabilityId::Service("/b".parse().unwrap())]
+            CapabilityId::from_clause(
+                &cml::Offer {
+                    service: Some("a".parse().unwrap()),
+                    r#as: Some("b".parse().unwrap()),
+                    ..empty_offer()
+                },
+                cml::RoutingClauseType::Offer
+            )?,
+            vec![CapabilityId::Service("b".parse().unwrap())]
+        );
+        assert_eq!(
+            CapabilityId::from_clause(
+                &cml::Offer {
+                    protocol: Some(OneOrMany::One("/a".parse().unwrap())),
+                    r#as: Some("/b".parse().unwrap()),
+                    ..empty_offer()
+                },
+                cml::RoutingClauseType::Offer
+            )?,
+            vec![CapabilityId::Protocol("/b".parse().unwrap())]
         );
 
         // Error case.
-        assert_matches!(CapabilityId::from_clause(&empty_offer()), Err(_));
+        assert_matches!(
+            CapabilityId::from_clause(&empty_offer(), cml::RoutingClauseType::Offer),
+            Err(_)
+        );
 
         Ok(())
     }
