@@ -417,8 +417,12 @@ config("optimize_speed") {
 }
 
 config("optimize_sanitizer") {
-  # TODO(51509): Probably should use a different default.
-  configs = [ ":optimize_default" ]
+  # Instrumentation adds overhead that is greatly improved by optimization.
+  # -O1 is well-tested with the instrumentation modes and does not degrade the
+  # comprehensibility of backtraces produced by sanitizer failures.
+  cflags = [ "-O1" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=1" ]
 }
 
 config("optimize_profile") {
