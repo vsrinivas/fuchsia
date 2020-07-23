@@ -603,23 +603,22 @@ zx_status_t PlatformBus::Init() {
       {BIND_PLATFORM_DEV_VID, 0, board_info_.vid},
       {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
   };
-  status = DdkAdd(ddk::DeviceAddArgs("platform").set_flags(DEVICE_ADD_INVISIBLE).set_props(props));
-  if (status != ZX_OK) {
-    return status;
-  }
+  return DdkAdd(ddk::DeviceAddArgs("platform").set_props(props));
+}
+
+void PlatformBus::DdkInit(ddk::InitTxn txn) {
   fbl::Array<uint8_t> board_data;
-  status = GetBootItem(ZBI_TYPE_DRV_BOARD_PRIVATE, 0, &board_data);
+  zx_status_t status = GetBootItem(ZBI_TYPE_DRV_BOARD_PRIVATE, 0, &board_data);
   if (status != ZX_OK) {
-    return status;
+    return txn.Reply(status);
   }
   if (board_data) {
     status = DdkAddMetadata(DEVICE_METADATA_BOARD_PRIVATE, board_data.data(), board_data.size());
     if (status != ZX_OK) {
-      return status;
+      return txn.Reply(status);
     }
   }
-  DdkMakeVisible();
-  return ZX_OK;
+  return txn.Reply(ZX_OK);  // This will make the device visible and able to be unbound.
 }
 
 zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name, const char* args,

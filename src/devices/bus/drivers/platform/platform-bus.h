@@ -37,7 +37,8 @@
 namespace platform_bus {
 
 class PlatformBus;
-using PlatformBusType = ddk::Device<PlatformBus, ddk::GetProtocolable, ddk::Messageable>;
+using PlatformBusType =
+    ddk::Device<PlatformBus, ddk::GetProtocolable, ddk::Initializable, ddk::Messageable>;
 
 // This is the main class for the platform bus driver.
 class PlatformBus : public PlatformBusType,
@@ -49,6 +50,7 @@ class PlatformBus : public PlatformBusType,
 
   // Device protocol implementation.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
+  void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
@@ -59,8 +61,7 @@ class PlatformBus : public PlatformBusType,
   zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info);
   zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
   zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info);
-  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
-                                     const device_fragment_t* fragments_list,
+  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev, const device_fragment_t* fragments_list,
                                      size_t fragments_count, uint32_t coresident_device_index);
 
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin);
