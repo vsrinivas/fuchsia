@@ -14,6 +14,7 @@ executable("gesture_recognizers_tests") {
     "one_finger_drag_recognizer_test.cc",
     "one_finger_n_tap_recognizer_test.cc",
     "swipe_recognizer_test.cc",
+    "two_finger_n_tap_recognizer_test.cc",
   ]
 
   deps = [

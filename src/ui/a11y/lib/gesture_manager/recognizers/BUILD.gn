@@ -14,6 +14,8 @@ source_set("recognizers") {
     "one_finger_n_tap_recognizer.h",
     "swipe_recognizer_base.cc",
     "swipe_recognizer_base.h",
+    "two_finger_n_tap_recognizer.cc",
+    "two_finger_n_tap_recognizer.h",
   ]
 
   public_deps = [
