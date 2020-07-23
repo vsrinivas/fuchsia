@@ -186,8 +186,7 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   }
 
   if (rdma_channel < 0) {
-    DISP_ERROR("Could not find any available RDMA channels!\n");
-    Dump();
+    DISP_SPEW("Could not find any available RDMA channels!\n");
     rdma_allocation_failures_.Add(1);
     return;
   }
