@@ -425,7 +425,7 @@ group("tests") {
     ":crash-reports-tests",
 
     # To run the Crashpad tests.
-    "//third_party/crashpad:crashpad_test",
+    "//third_party/crashpad:tests",
 
     # Packages for the components that we are injecting in the integration tests.
     "//src/cobalt/bin/testing/mock_cobalt",
