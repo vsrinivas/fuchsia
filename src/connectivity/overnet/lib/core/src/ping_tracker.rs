@@ -137,8 +137,11 @@ impl State {
             self.round_trip_time.push(Some(Duration::from_micros(mean as u64))).await;
         }
         if !self.send_ping {
-            self.timeout = Some(self.last_ping_sent + self.ping_spacing);
-            self.wake_on_change_timeout.take().map(|w| w.wake());
+            let new_timeout = Some(self.last_ping_sent + self.ping_spacing);
+            if new_timeout != self.timeout {
+                self.timeout = new_timeout;
+                self.wake_on_change_timeout.take().map(|w| w.wake());
+            }
         }
         Ok(())
     }
@@ -221,6 +224,7 @@ async fn ping_pong(state: Arc<Mutex<State>>) -> Result<(), Error> {
                     Either::Right(_) => {
                         let mut state = state_lock.lock().await;
                         state.timeout = None;
+                        timeout_fut = timer_for_timeout(None);
                         state.garbage_collect();
                         state.send_ping = true;
                         state.on_send_ping_pong.take().map(|w| w.wake());
@@ -331,7 +335,7 @@ mod test {
     use futures::task::noop_waker;
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn published_mean_updates() {
+    async fn published_mean_updates(run: usize) {
         crate::test_util::init();
         let (pt, mut rtt_obs) = PingTracker::new();
         let pt_run = pt.run();
@@ -339,26 +343,26 @@ mod test {
             pt_run.await.unwrap();
         });
         loop {
-            log::info!("published_mean_updates: send ping");
+            log::info!("published_mean_updates[{}]: send ping", run);
             let mut ping_sender = PingSender::new(&pt);
             let (ping, pong) = ping_sender.poll(&mut Context::from_waker(&noop_waker()));
             assert_eq!(pong, None);
             if ping.is_none() {
-                log::info!("published_mean_updates: got none for ping, retry");
+                log::info!("published_mean_updates[{}]: got none for ping, retry", run);
                 drop(ping_sender);
-                futures::pending!();
+                Timer::new(Duration::from_millis(10)).await;
                 continue;
             }
             assert_eq!(ping, Some(1));
             break;
         }
-        log::info!("published_mean_updates: wait for second observation");
+        log::info!("published_mean_updates[{}]: wait for second observation", run);
         assert_eq!(rtt_obs.next().await, Some(None));
-        log::info!("published_mean_updates: sleep some");
+        log::info!("published_mean_updates[{}]: sleep some", run);
         Timer::new(Duration::from_secs(1)).await;
-        log::info!("published_mean_updates: publish pong");
+        log::info!("published_mean_updates[{}]: publish pong", run);
         pt.got_pong(Pong { id: 1, queue_time: 100 }).await;
-        log::info!("published_mean_updates: wait for third observation");
+        log::info!("published_mean_updates[{}]: wait for third observation", run);
         let next = rtt_obs.next().await;
         assert_ne!(next, None);
         assert_ne!(next, Some(None));
