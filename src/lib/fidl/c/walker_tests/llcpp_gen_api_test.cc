@@ -43,14 +43,14 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
   ASSERT_OK(loop.StartThread());
   fidl::Client<Example> client(std::move(local), loop.dispatcher());
 
-  constexpr char data[] = "TwoWay() sync managed";
+  static constexpr char data[] = "TwoWay() sync managed";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, sizeof(data)));
   ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
   auto result = client->TwoWay(fidl::StringView(data, sizeof(data)),
-                               [data, &done](fidl::StringView out) {
+                               [&done](fidl::StringView out) {
                                  ASSERT_EQ(sizeof(data), out.size());
                                  EXPECT_EQ(0, strncmp(out.data(), data, sizeof(data)));
                                  sync_completion_signal(&done);
@@ -90,7 +90,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
   ASSERT_OK(loop.StartThread());
   fidl::Client<Example> client(std::move(local), loop.dispatcher());
 
-  constexpr char data[] = "TwoWay() sync caller-allocated";
+  static constexpr char data[] = "TwoWay() sync caller-allocated";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, sizeof(data)));
   ASSERT_TRUE(server_binding.is_ok());
@@ -112,10 +112,10 @@ TEST(GenAPITestCase, EventManaged) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  constexpr char data[] = "OnEvent() managed";
+  static constexpr char data[] = "OnEvent() managed";
   sync_completion_t done;
   Example::AsyncEventHandlers handlers {
-    .on_event = [data, &done](fidl::StringView out) {
+    .on_event = [&done](fidl::StringView out) {
       ASSERT_EQ(sizeof(data), out.size());
       EXPECT_EQ(0, strncmp(out.data(), data, sizeof(data)));
       sync_completion_signal(&done);
@@ -141,10 +141,10 @@ TEST(GenAPITestCase, EventInPlace) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  constexpr char data[] = "OnEvent() in-place";
+  static constexpr char data[] = "OnEvent() in-place";
   sync_completion_t done;
   Example::AsyncEventHandlers handlers {
-    .on_event = [data, &done](fidl::DecodedMessage<Example::OnEventResponse> msg) {
+    .on_event = [&done](fidl::DecodedMessage<Example::OnEventResponse> msg) {
       auto& out = msg.message()->out;
       ASSERT_EQ(sizeof(data), out.size());
       EXPECT_EQ(0, strncmp(out.data(), data, sizeof(data)));
@@ -180,7 +180,7 @@ TEST(GenAPITestCase, EventNotHandled) {
       };
   fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
-  constexpr char data[] = "OnEvent() unhandled";
+  static constexpr char data[] = "OnEvent() unhandled";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, sizeof(data)));
   ASSERT_TRUE(server_binding.is_ok());
