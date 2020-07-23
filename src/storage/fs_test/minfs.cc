@@ -376,9 +376,9 @@ TEST_F(MinfsFvmTest, FullOperations) {
 
   // Attempt to remount. Without block reservation, an additional block from the previously
   // failed write will still be incorrectly allocated, causing fsck to fail.
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Fsck().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // Re-open files.
   mnt_fd = fs().GetRootFd();
@@ -443,9 +443,9 @@ TEST_F(MinfsFvmTest, FullOperations) {
   ASSERT_EQ(s.st_size % minfs::kMinfsBlockSize, 0);
   truncate_size = s.st_size - minfs::kMinfsBlockSize;
   ASSERT_EQ(ftruncate(big_fd.get(), truncate_size), 0);
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Fsck().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // Re-open files.
   mnt_fd = fs().GetRootFd();
@@ -489,8 +489,8 @@ TEST_F(MinfsFvmTest, FullOperations) {
   ASSERT_EQ(s.st_size % minfs::kMinfsBlockSize, 0);
   truncate_size = s.st_size - minfs::kMinfsBlockSize;
   ASSERT_EQ(ftruncate(big_fd.get(), truncate_size), 0);
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   mnt_fd = fs().GetRootFd();
   ASSERT_EQ(unlinkat(mnt_fd.get(), big_path, 0), 0);
@@ -538,7 +538,7 @@ TEST_P(MinfsTest, UnlinkFail) {
 
   // Put the ramdisk to sleep and close all the fds. This will cause file purge to fail,
   // and all unlinked files will be left intact (on disk).
-  ASSERT_EQ(fs().GetRamDisk()->SleepAfter(0).status_value(), 0);
+  ASSERT_EQ(fs().GetRamDisk()->SleepAfter(0).status_value(), ZX_OK);
 
   // The ram-disk is asleep but since no transactions have been processed, the writeback state has
   // not been updated. The first file we close will appear to succeed.
@@ -565,9 +565,9 @@ TEST_P(MinfsTest, UnlinkFail) {
   ASSERT_EQ(current_blocks, original_blocks);
 
   // Remount Minfs, which should cause leftover unlinked files to be removed.
-  ASSERT_EQ(fs().GetRamDisk()->Wake().status_value(), 0);
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  ASSERT_EQ(fs().GetRamDisk()->Wake().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // Check that the block count has been reverted to the value before any files were added.
   ASSERT_NO_FATAL_FAILURE(GetFreeBlocks(fs(), &current_blocks));

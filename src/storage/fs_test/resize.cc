@@ -102,9 +102,9 @@ TEST_P(MaxInodeTest, UseAllInodes) {
 
   if (ShouldRemount()) {
     std::cerr << "Unmounting, Verifying, Re-mounting..." << std::endl;
-    EXPECT_EQ(fs().Unmount().status_value(), 0);
-    EXPECT_EQ(fs().Fsck().status_value(), 0);
-    EXPECT_EQ(fs().Mount().status_value(), 0);
+    EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+    EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+    EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
   }
 
   size_t directory_count = d;
@@ -168,9 +168,9 @@ TEST_P(MaxDataTest, UseAllData) {
 
   if (ShouldRemount()) {
     std::cerr << "Unmounting, Verifying, Re-mounting..." << std::endl;
-    EXPECT_EQ(fs().Unmount().status_value(), 0);
-    EXPECT_EQ(fs().Fsck().status_value(), 0);
-    EXPECT_EQ(fs().Mount().status_value(), 0);
+    EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+    EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+    EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
   }
 
   size_t file_count = f;

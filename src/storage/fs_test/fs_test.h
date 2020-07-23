@@ -75,6 +75,7 @@ class Filesystem {
     bool supports_resize = false;
     uint64_t max_file_size = std::numeric_limits<uint64_t>::max();
     bool in_memory = false;
+    bool is_case_sensitive = true;
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
@@ -110,6 +111,7 @@ class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
         .supports_resize = true,
         .max_file_size = minfs::kMinfsMaxFileSize,
         .in_memory = false,
+        .is_case_sensitive = true,
     };
     return traits;
   }
@@ -129,6 +131,7 @@ class MemfsFilesystem : public FilesystemImpl<MemfsFilesystem> {
         .supports_resize = false,
         .max_file_size = 512 * 1024 * 1024,
         .in_memory = true,
+        .is_case_sensitive = true,
     };
     return traits;
   }
@@ -148,6 +151,7 @@ class FatFilesystem : public FilesystemImpl<FatFilesystem> {
         .supports_resize = false,
         .max_file_size = 4'294'967'295,
         .in_memory = false,
+        .is_case_sensitive = false,
     };
     return traits;
   }

@@ -123,6 +123,23 @@ fuchsia_component("basic-tests") {
   ]
 }
 
+test("case_sensitivity_tests") {
+  sources = [ "case_sensitivity.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_component("case-sensitivity-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/case-sensitivity-tests.cml"
+  deps = [
+    ":case_sensitivity_tests",
+    ":manifests",
+  ]
+}
+
 test("clone_tests") {
   sources = [ "clone.cc" ]
   deps = [
@@ -544,6 +561,7 @@ fuchsia_test_package("fs-tests") {
     ":append-tests",
     ":attr-tests",
     ":basic-tests",
+    ":case-sensitivity-tests",
     ":clone-tests",
     ":directory-tests",
     ":dot-dot-tests",
@@ -670,6 +688,7 @@ action("manifests") {
     "$target_gen_dir/append-tests.cml",
     "$target_gen_dir/attr-tests.cml",
     "$target_gen_dir/basic-tests.cml",
+    "$target_gen_dir/case-sensitivity-tests.cml",
     "$target_gen_dir/clone-tests.cml",
     "$target_gen_dir/directory-large-tests.cml",
     "$target_gen_dir/directory-tests.cml",

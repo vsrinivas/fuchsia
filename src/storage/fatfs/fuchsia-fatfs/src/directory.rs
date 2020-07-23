@@ -21,9 +21,12 @@ use {
     fuchsia_zircon::Status,
     std::{
         any::Any,
+        borrow::Borrow,
         cell::UnsafeCell,
+        cmp::PartialEq,
         collections::HashMap,
         fmt::Debug,
+        hash::{Hash, Hasher},
         sync::{Arc, RwLock},
     },
     vfs::{
@@ -46,8 +49,75 @@ struct FatDirectoryData {
     /// We keep a cache of `FatDirectory`/`FatFile`s to ensure
     /// there is only ever one canonical version of each. This means
     /// we can use the reference count in the Arc<> to make sure rename, etc. operations are safe.
-    // TODO(fxb/55292): handle case insensitivity.
-    children: HashMap<String, WeakFatNode>,
+    children: HashMap<InsensitiveString, WeakFatNode>,
+}
+
+// Whilst it's tempting to use the unicase crate, at time of writing, it had its own case tables,
+// which might not match Rust's built-in tables (which is what fatfs uses).  It's important what we
+// do here is consistent with the fatfs crate.  It would be nice if that were consistent with other
+// implementations, but it probably isn't the end of the world if it isn't since we shouldn't have
+// clients using obscure ranges of Unicode.
+struct InsensitiveString(String);
+
+impl Hash for InsensitiveString {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        for c in self.0.chars().flat_map(|c| c.to_uppercase()) {
+            hasher.write_u32(c as u32);
+        }
+    }
+}
+
+impl PartialEq for InsensitiveString {
+    fn eq(&self, other: &Self) -> bool {
+        self.0
+            .chars()
+            .flat_map(|c| c.to_uppercase())
+            .eq(other.0.chars().flat_map(|c| c.to_uppercase()))
+    }
+}
+
+impl Eq for InsensitiveString {}
+
+// A trait that allows us to find entries in our hash table using &str.
+trait InsensitiveStringRef {
+    fn as_str(&self) -> &str;
+}
+
+impl<'a> Borrow<dyn InsensitiveStringRef + 'a> for InsensitiveString {
+    fn borrow(&self) -> &(dyn InsensitiveStringRef + 'a) {
+        self
+    }
+}
+
+impl<'a> Eq for (dyn InsensitiveStringRef + 'a) {}
+
+impl<'a> PartialEq for (dyn InsensitiveStringRef + 'a) {
+    fn eq(&self, other: &dyn InsensitiveStringRef) -> bool {
+        self.as_str()
+            .chars()
+            .flat_map(|c| c.to_uppercase())
+            .eq(other.as_str().chars().flat_map(|c| c.to_uppercase()))
+    }
+}
+
+impl<'a> Hash for (dyn InsensitiveStringRef + 'a) {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        for c in self.as_str().chars().flat_map(|c| c.to_uppercase()) {
+            hasher.write_u32(c as u32);
+        }
+    }
+}
+
+impl InsensitiveStringRef for &str {
+    fn as_str(&self) -> &str {
+        self
+    }
+}
+
+impl InsensitiveStringRef for InsensitiveString {
+    fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 /// This wraps a directory on the FAT volume.
@@ -109,20 +179,22 @@ impl FatDirectory {
         let dir = self.borrow_dir(fs)?;
         for entry in dir.iter().into_iter() {
             let entry = entry?;
-            if &entry.file_name() == name {
+            if entry.eq_name(name) {
                 return Ok(Some(entry));
             }
         }
         Ok(None)
     }
 
-    /// Remove and detach a child node from this FatDirectory, returning it if it exists in the cache.
-    /// The caller must ensure that the corresponding filesystem entry is removed to prevent the
-    /// item being added back to the cache, and must later attach() the returned node somewhere.
+    /// Remove and detach a child node from this FatDirectory, returning it if it exists in the
+    /// cache.  The caller must ensure that the corresponding filesystem entry is removed to prevent
+    /// the item being added back to the cache, and must later attach() the returned node somewhere.
     pub fn remove_child(&self, fs: &FatFilesystemInner, name: &str) -> Option<FatNode> {
         let node = {
             let mut data = self.data.write().unwrap();
-            data.children.remove(name).and_then(|entry| entry.upgrade())
+            data.children
+                .remove(&name as &dyn InsensitiveStringRef)
+                .and_then(|entry| entry.upgrade())
         };
         if let Some(node) = node {
             node.detach(fs);
@@ -146,7 +218,7 @@ impl FatDirectory {
         // interest in serving more connections to a file that doesn't exist.
         let mut data = self.data.write().unwrap();
         assert!(
-            data.children.insert(name, child.downgrade()).is_none(),
+            data.children.insert(InsensitiveString(name), child.downgrade()).is_none(),
             "conflicting cache entries with the same name"
         );
         Ok(())
@@ -157,7 +229,7 @@ impl FatDirectory {
         // Note that we don't remove an entry even if its Arc<> has
         // gone away, to allow us to use the read-only lock here and avoid races.
         let data = self.data.read().unwrap();
-        data.children.get(name).map(|entry| entry.upgrade()).flatten()
+        data.children.get(&name as &dyn InsensitiveStringRef).and_then(|entry| entry.upgrade())
     }
 
     /// Flush to disk and invalidate the reference that's contained within this FatDir.
@@ -280,10 +352,10 @@ impl FatDirectory {
         // we check `children` for a valid entry once again. If one exists, we throw away the one
         // we made and return the entry that was added.
         let mut data = self.data.write().unwrap();
-        match data.children.get(name).map(|v| v.upgrade()).flatten() {
+        match data.children.get(&name as &dyn InsensitiveStringRef).and_then(|v| v.upgrade()) {
             Some(existing_node) => Ok(existing_node),
             None => {
-                data.children.insert(name.to_owned(), node.downgrade());
+                data.children.insert(InsensitiveString(name.to_owned()), node.downgrade());
                 Ok(node)
             }
         }

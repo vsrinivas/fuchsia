@@ -49,9 +49,9 @@ TEST_P(PersistTest, Simple) {
     }
   }
 
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Fsck().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // The files should still exist when we remount
   for (ssize_t i = std::size(paths) - 1; i >= 0; i--) {
@@ -62,9 +62,9 @@ TEST_P(PersistTest, Simple) {
     }
   }
 
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Fsck().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // But they should stay deleted!
   for (ssize_t i = std::size(paths) - 1; i >= 0; i--) {
@@ -78,9 +78,9 @@ TEST_P(PersistTest, Simple) {
 
 TEST_P(PersistTest, RapidRemount) {
   for (size_t i = 0; i < 10; i++) {
-    ASSERT_EQ(fs().Unmount().status_value(), 0);
-    ASSERT_EQ(fs().Fsck().status_value(), 0);
-    ASSERT_EQ(fs().Mount().status_value(), 0);
+    ASSERT_EQ(fs().Unmount().status_value(), ZX_OK);
+    ASSERT_EQ(fs().Fsck().status_value(), ZX_OK);
+    ASSERT_EQ(fs().Mount().status_value(), ZX_OK);
   }
 }
 
@@ -117,9 +117,9 @@ TEST_P(PersistWithDataTest, ReadsReturnWrittenDataAfterRemount) {
     ASSERT_EQ(fsync(fd.get()), 0);
   }
 
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Fsck().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // Read files
   for (size_t i = 0; i < std::size(files); i++) {
@@ -139,18 +139,18 @@ TEST_P(PersistWithDataTest, ReadsReturnWrittenDataAfterRemount) {
     }
   }
 
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Fsck().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // Delete all files
   for (size_t i = 0; i < std::size(files); i++) {
     ASSERT_EQ(unlink(files[i].c_str()), 0);
   }
 
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Fsck().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // Files should stay deleted
 
@@ -211,9 +211,9 @@ TEST_P(PersistRenameLoopTest, MultipleRenamesCorrectAfterRemount) {
     src[0] = 'a' + char_index;
   }
 
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Fsck().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // Check that the target only exists in ONE directory
   bool target_found = false;
@@ -236,9 +236,9 @@ TEST_P(PersistRenameLoopTest, MultipleRenamesCorrectAfterRemount) {
   }
   ASSERT_TRUE(target_found);
 
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Fsck().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // Clean up
 

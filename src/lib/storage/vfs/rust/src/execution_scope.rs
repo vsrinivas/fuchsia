@@ -24,12 +24,12 @@ use crate::{
 use {
     futures::{
         channel::oneshot,
-        select,
+        future::FutureObj,
         task::{self, Context, Poll, Spawn},
         Future, FutureExt,
     },
     parking_lot::Mutex,
-    pin_utils::unsafe_pinned,
+    pin_project::pin_project,
     slab::Slab,
     std::{ops::Drop, pin::Pin, sync::Arc},
 };
@@ -103,7 +103,7 @@ impl ExecutionScope {
     where
         Task: Future<Output = ()> + Send + 'static,
     {
-        Executor::run_abort_any_time(self.executor.clone(), Box::pin(task))
+        Executor::run_abort_any_time(self.executor.clone(), task)
     }
 
     /// Sends a `task` to be executed in this execution scope.  This is very similar to
@@ -127,10 +127,8 @@ impl ExecutionScope {
         Constructor: FnOnce(oneshot::Receiver<()>) -> Task + 'static,
         Task: Future<Output = ()> + Send + 'static,
     {
-        Executor::run_abort_with_shutdown(
-            self.executor.clone(),
-            Box::new(|shutdown| Box::pin(constructor(shutdown))),
-        )
+        let (sender, receiver) = oneshot::channel();
+        Executor::run_abort_with_shutdown(self.executor.clone(), constructor(receiver), sender)
     }
 
     pub fn token_registry(&self) -> Option<Arc<dyn TokenRegistry + Send + Sync>> {
@@ -219,93 +217,62 @@ impl ExecutionScopeParams {
     }
 }
 
-type FutureConstructorWithArg<ArgT> =
-    Box<dyn FnOnce(ArgT) -> Pin<Box<dyn Future<Output = ()> + Send>>>;
-
-struct RemoveFromRunning<Wrapped>
-where
-    Wrapped: Future<Output = ()> + Send,
-{
-    id: usize,
-    executor: Arc<Mutex<Executor>>,
-    task: Wrapped,
+// A future that completes when either of two futures completes.
+#[pin_project]
+struct FirstToFinish<A, B> {
+    #[pin]
+    first: A,
+    #[pin]
+    second: B,
 }
 
-impl<Wrapped> RemoveFromRunning<Wrapped>
-where
-    Wrapped: Future<Output = ()> + Send,
-{
-    // unsafe: `RemoveFromRunning::drop` does not move the `task` value.  `RemoveFromRunning` also
-    // does not implement `Unpin`.  `task` is not `#[repr(packed)]`.
-    unsafe_pinned!(task: Wrapped);
-
-    fn new(id: usize, executor: Arc<Mutex<Executor>>, task: Wrapped) -> Self {
-        RemoveFromRunning { id, executor, task }
-    }
-}
-
-impl<Wrapped> Future for RemoveFromRunning<Wrapped>
-where
-    Wrapped: Future<Output = ()> + Send,
-{
+impl<A: Future, B: Future> Future for FirstToFinish<A, B> {
     type Output = ();
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        self.as_mut().task().poll_unpin(cx)
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        let this = self.project();
+        if let Poll::Ready(_) = this.first.poll(cx) {
+            Poll::Ready(())
+        } else if let Poll::Ready(_) = this.second.poll(cx) {
+            Poll::Ready(())
+        } else {
+            Poll::Pending
+        }
     }
 }
 
-impl<Wrapped> Drop for RemoveFromRunning<Wrapped>
+trait OrFuture
 where
-    Wrapped: Future<Output = ()> + Send,
+    Self: Sized,
 {
-    fn drop(&mut self) {
-        self.executor.lock().task_did_finish(self.id);
+    fn or<B: Future>(self, second: B) -> FirstToFinish<Self, B> {
+        FirstToFinish { first: self, second }
     }
 }
+
+impl<A> OrFuture for A {}
 
 impl Executor {
-    fn run_abort_any_time(
+    fn run_abort_any_time<F: 'static + Future<Output = ()> + Send>(
         executor: Arc<Mutex<Executor>>,
-        task: Pin<Box<dyn Future<Output = ()> + Send>>,
+        task: F,
     ) -> Result<(), SpawnError> {
-        Self::run_abort_with_shutdown(
-            executor,
-            Box::new(move |stop_receiver| {
-                // We need a future that would complete when either `task` or `stop_receiver`
-                // complete.  If there would be a combinator, similar to `join` that would do that,
-                // this whole block is unnecessary.  But I could not find anything sutable in
-                // `futures-rs`.
-                Box::pin(async move {
-                    let mut task = task.fuse();
-                    let mut stop_receiver = stop_receiver.fuse();
-                    loop {
-                        select! {
-                            () = task => {
-                                break;
-                            },
-                            _ = stop_receiver => {
-                                break;
-                            },
-                        };
-                    }
-                })
-            }),
-        )
+        let (sender, receiver) = oneshot::channel();
+        Self::run_abort_with_shutdown(executor, task.or(receiver), sender)
     }
 
-    fn run_abort_with_shutdown(
+    fn run_abort_with_shutdown<F: 'static + Future + Send>(
         executor: Arc<Mutex<Executor>>,
-        constructor: FutureConstructorWithArg<oneshot::Receiver<()>>,
+        task: F,
+        shutdown: oneshot::Sender<()>,
     ) -> Result<(), SpawnError> {
         let mut this = executor.lock();
 
-        let (stop_sender, stop_receiver) = oneshot::channel();
-        let task_id = this.running.insert(Some(stop_sender));
-        let task = constructor(stop_receiver);
-        let task = RemoveFromRunning::new(task_id, executor.clone(), task);
-
-        match this.upstream.spawn_obj(Box::pin(task).into()) {
+        let task_id = this.running.insert(Some(shutdown));
+        let executor_clone = executor.clone();
+        let task =
+            task.then(move |_| async move { executor_clone.lock().task_did_finish(task_id) });
+        match this.upstream.spawn_obj(FutureObj::new(task.boxed())) {
             Ok(()) => Ok(()),
             Err(err) => {
                 this.task_did_finish(task_id);
@@ -316,29 +283,18 @@ impl Executor {
 
     fn shutdown(&mut self) {
         for (_key, task) in self.running.iter_mut() {
-            let sender = match task.take() {
-                None => {
-                    // As the task removal is processed by the task itself, we may see cases when
-                    // we have already sent the stop message, but the task did not remove its
-                    // entry from the list just yet.  There is a race condition with the task
-                    // shutdown process.  Shutdown happens in one thread, while task execution - in
-                    // another.  So, we need to tolerate "double" removal either here, or in the
-                    // task shutdown code.  Making the task shutodwn code responsible from removing
-                    // itself from the `running` list seems a bit cleaner.
-                    continue;
-                }
-                Some(sender) => sender,
-            };
-
-            if sender.send(()).is_ok() {
-                continue;
+            // As the task removal is processed by the task itself, we may see cases when we have
+            // already sent the stop message, but the task did not remove its entry from the list
+            // just yet.  There is a race condition with the task shutdown process.  Shutdown
+            // happens in one thread, while task execution - in another.  So, we need to tolerate
+            // "double" removal either here, or in the task shutdown code.  Making the task shutodwn
+            // code responsible from removing itself from the `running` list seems a bit cleaner.
+            if let Some(sender) = task.take() {
+                // If the task is in the process of finishing by itself, there's a small window
+                // where the receiver could have been dropped before the task has been removed from
+                // the running list, so ignore errors here.
+                let _ = sender.send(());
             }
-
-            // Receiver should only be destroyed after the sender has been removed from the running
-            // tasks list.  So, an `Err` here is a logical error.  But crashing here is also not
-            // very helpful, except in a controlled environment, so there seems to be little reason
-            // to assert in non-debug mode.
-            debug_assert!(false, "Execution scope has an entry that it can not communicate with.");
         }
     }
 

@@ -33,7 +33,7 @@ void CheckDirectoryContents(DIR* dir, fbl::Span<const ExpectedDirectoryEntry> en
       ++seen_iter;
     }
 
-    ASSERT_TRUE(found) << "Saw an unexpected dirent";
+    ASSERT_TRUE(found) << "Saw an unexpected dirent: " << de->d_name;
   }
 
   ASSERT_EQ(readdir(dir), nullptr) << "There exists an entry we didn't expect to see";

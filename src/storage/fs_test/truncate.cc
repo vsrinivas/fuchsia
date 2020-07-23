@@ -124,7 +124,8 @@ TEST_P(SparseTruncateTest, PartialBlockSparse) {
     fbl::unique_fd fd(open(GetPath("truncate-sparse").c_str(), O_CREAT | O_RDWR));
     ASSERT_TRUE(fd);
     ASSERT_EQ(lseek(fd.get(), write_off, SEEK_SET), write_off);
-    ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
+    ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)))
+        << "errno=" << errno << ", write_off=" << write_off;
     ASSERT_EQ(ftruncate(fd.get(), write_off + 2 * kBlockSize), 0);
     ASSERT_EQ(ftruncate(fd.get(), write_off + kBlockSize + kBlockSize / 2), 0);
     ASSERT_EQ(ftruncate(fd.get(), write_off + kBlockSize / 2), 0);

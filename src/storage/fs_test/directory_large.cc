@@ -38,9 +38,9 @@ TEST_P(DirectoryMaxTest, Max) {
     }
   }
 
-  EXPECT_EQ(fs().Unmount().status_value(), 0);
-  EXPECT_EQ(fs().Fsck().status_value(), 0);
-  EXPECT_EQ(fs().Mount().status_value(), 0);
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // Unlink all those files
   for (i -= 1; i >= 0; i--) {

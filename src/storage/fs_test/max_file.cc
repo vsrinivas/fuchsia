@@ -99,8 +99,8 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
   // Try closing, re-opening, and verifying the file
   ASSERT_EQ(close(fd.release()), 0);
   if (ShouldRemount()) {
-    EXPECT_EQ(fs().Unmount().status_value(), 0);
-    EXPECT_EQ(fs().Mount().status_value(), 0);
+    EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+    EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
   }
   fd.reset(open(GetPath("bigfile").c_str(), O_RDWR, 0644));
   ASSERT_TRUE(fd);
@@ -186,8 +186,8 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
   ASSERT_EQ(close(fda.release()), 0);
   ASSERT_EQ(close(fdb.release()), 0);
   if (ShouldRemount()) {
-    EXPECT_EQ(fs().Unmount().status_value(), 0);
-    EXPECT_EQ(fs().Mount().status_value(), 0);
+    EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+    EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
   }
   fda.reset(open(GetPath("bigfile-A").c_str(), O_RDWR, 0644));
   fdb.reset(open(GetPath("bigfile-B").c_str(), O_RDWR, 0644));

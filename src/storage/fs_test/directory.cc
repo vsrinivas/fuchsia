@@ -153,8 +153,8 @@ TEST_P(DirectoryTest, TestDirectoryCoalesceLargeRecord) {
   // fsck.
   if (fs().GetTraits().can_unmount) {
     ASSERT_EQ(close(dirfd.release()), 0);
-    EXPECT_EQ(fs().Unmount().status_value(), 0);
-    EXPECT_EQ(fs().Mount().status_value(), 0);
+    EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+    EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
     dirfd.reset(open(GetPath("coalesce_lr").c_str(), O_RDONLY | O_DIRECTORY));
     ASSERT_GT(dirfd.get(), 0);
   }

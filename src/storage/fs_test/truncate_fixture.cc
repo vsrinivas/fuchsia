@@ -69,9 +69,9 @@ void CheckedTruncate(TestFilesystem& fs, bool remount, const char* filename, uin
 
   if (remount) {
     ASSERT_EQ(close(fd.release()), 0);
-    EXPECT_EQ(fs.Unmount().status_value(), 0);
-    EXPECT_EQ(fs.Fsck().status_value(), 0);
-    EXPECT_EQ(fs.Mount().status_value(), 0);
+    EXPECT_EQ(fs.Unmount().status_value(), ZX_OK);
+    EXPECT_EQ(fs.Fsck().status_value(), ZX_OK);
+    EXPECT_EQ(fs.Mount().status_value(), ZX_OK);
     ASSERT_EQ(stat(filename, &st), 0);
     ASSERT_EQ(st.st_size, new_len);
     fd.reset(open(filename, O_RDWR, 0644));
