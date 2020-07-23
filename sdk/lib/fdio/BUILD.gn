@@ -59,6 +59,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
     shared = true
     sources = [
       "bsdsocket.cc",
+      "errno.cc",
       "event.cc",
       "fd.cc",
       "fdio.cc",

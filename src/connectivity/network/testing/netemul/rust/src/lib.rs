@@ -352,7 +352,7 @@ impl<'a> TestEnvironment<'a> {
             )
             .await
             .context("failed to call socket")?
-            .map_err(std::io::Error::from_raw_os_error)
+            .map_err(|e| std::io::Error::from_raw_os_error(e.into_primitive()))
             .context("failed to create socket")?;
 
         Ok(fdio::create_fd(sock.into()).context("failed to create fd")?)

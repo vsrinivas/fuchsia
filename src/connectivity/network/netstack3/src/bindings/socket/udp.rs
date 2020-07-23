@@ -13,6 +13,7 @@ use anyhow::{format_err, Error};
 use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl::AsyncChannel;
 use fidl_fuchsia_io::{self as fio, NodeInfo, NodeMarker};
+use fidl_fuchsia_posix::Errno;
 use fidl_fuchsia_posix_socket::{
     self as psocket, DatagramSocketRequest, DatagramSocketRequestStream,
 };
@@ -222,7 +223,7 @@ pub(super) fn spawn_worker<C>(
     ctx: C,
     events: psocket::DatagramSocketRequestStream,
     properties: SocketWorkerProperties,
-) -> Result<(), libc::c_int>
+) -> Result<(), Errno>
 where
     C: UdpStackContext<Ipv4> + UdpStackContext<Ipv6>,
     C::Dispatcher:
@@ -243,8 +244,8 @@ where
         ctx: C,
         properties: SocketWorkerProperties,
         events: psocket::DatagramSocketRequestStream,
-    ) -> Result<(), libc::c_int> {
-        let (local_event, peer_event) = zx::EventPair::create().map_err(|_| libc::ENOBUFS)?;
+    ) -> Result<(), Errno> {
+        let (local_event, peer_event) = zx::EventPair::create().map_err(|_| Errno::Enobufs)?;
         // signal peer that OUTGOING is available.
         // TODO(brunodalbo): We're currently not enforcing any sort of
         // flow-control for outgoing UDP datagrams. That'll get fixed once we
@@ -330,7 +331,7 @@ where
                     || more_rights_than_original
                 {
                     send_on_open(zx::sys::ZX_ERR_INVALID_ARGS, None);
-                    worker.make_handler().await.close().unwrap();
+                    let () = worker.make_handler().await.close();
                     return Ok(());
                 }
 
@@ -385,10 +386,8 @@ where
                             self.clone_spawn(flags, object, cloned_worker);
                         }
                         psocket::DatagramSocketRequest::Close { responder } => {
-                            responder_send!(
-                                responder,
-                                self.make_handler().await.close().err().unwrap_or(0i32)
-                            );
+                            let () = self.make_handler().await.close();
+                            responder_send!(responder, zx::Status::OK.into_raw());
                             return Ok(());
                         }
                         psocket::DatagramSocketRequest::Sync { responder } => {
@@ -438,7 +437,7 @@ where
                             responder,
                         } => {
                             warn!("UDP setsockopt {} {} not implemented", level, optname);
-                            responder_send!(responder, &mut Err(libc::ENOPROTOOPT))
+                            responder_send!(responder, &mut Err(Errno::Enoprotoopt))
                         }
                         psocket::DatagramSocketRequest::GetSockOpt {
                             level,
@@ -446,7 +445,7 @@ where
                             responder,
                         } => {
                             warn!("UDP getsockopt {} {} not implemented", level, optname);
-                            responder_send!(responder, &mut Err(libc::ENOPROTOOPT))
+                            responder_send!(responder, &mut Err(Errno::Enoprotoopt))
                         }
 
                         DatagramSocketRequest::Shutdown { how, responder } => {
@@ -510,14 +509,14 @@ where
                     }
                 }
                 Err(err) => {
-                    self.make_handler().await.close().unwrap();
+                    let () = self.make_handler().await.close();
                     return Err(err);
                 }
             }
         }
         // The loop breaks as the client side of the channel has been dropped, need
         // to treat that as an implicit close request as well.
-        self.make_handler().await.close().unwrap();
+        let () = self.make_handler().await.close();
         Ok(())
     }
 }
@@ -579,14 +578,14 @@ where
     /// Handles a [POSIX socket connect request].
     ///
     /// [POSIX socket connect request]: psocket::DatagramSocketRequest::Connect
-    fn connect(mut self, addr: Vec<u8>) -> Result<(), libc::c_int> {
-        let sockaddr = I::SocketAddress::parse(addr.as_slice()).ok_or(libc::EFAULT)?;
+    fn connect(mut self, addr: Vec<u8>) -> Result<(), Errno> {
+        let sockaddr = I::SocketAddress::parse(addr.as_slice()).ok_or(Errno::Efault)?;
         trace!("connect UDP sockaddr: {:?}", sockaddr);
         if sockaddr.family() != I::SocketAddress::FAMILY {
-            return Err(libc::EAFNOSUPPORT);
+            return Err(Errno::Eafnosupport);
         }
-        let remote_port = sockaddr.get_specified_port().ok_or(libc::ECONNREFUSED)?;
-        let remote_addr = sockaddr.get_specified_addr().ok_or(libc::EINVAL)?;
+        let remote_port = sockaddr.get_specified_port().ok_or(Errno::Econnrefused)?;
+        let remote_addr = sockaddr.get_specified_addr().ok_or(Errno::Einval)?;
 
         let (local_addr, local_port) = match self.get_state().info.state {
             SocketState::Unbound => {
@@ -629,14 +628,14 @@ where
     /// Handles a [POSIX socket bind request].
     ///
     /// [POSIX socket bind request]: psocket::DatagramSocketRequest::Bind
-    fn bind(mut self, addr: Vec<u8>) -> Result<(), libc::c_int> {
-        let sockaddr = I::SocketAddress::parse(addr.as_slice()).ok_or(libc::EFAULT)?;
+    fn bind(mut self, addr: Vec<u8>) -> Result<(), Errno> {
+        let sockaddr = I::SocketAddress::parse(addr.as_slice()).ok_or(Errno::Efault)?;
         trace!("bind UDP sockaddr: {:?}", sockaddr);
         if sockaddr.family() != I::SocketAddress::FAMILY {
-            return Err(libc::EAFNOSUPPORT);
+            return Err(Errno::Eafnosupport);
         }
         if self.get_state().info.state.is_bound() {
-            return Err(libc::EALREADY);
+            return Err(Errno::Ealready);
         }
         let local_addr = sockaddr.get_specified_addr();
         let local_port = sockaddr.get_specified_port();
@@ -653,10 +652,10 @@ where
     /// Handles a [POSIX socket get_sock_name request].
     ///
     /// [POSIX socket get_sock_name request]: psocket::DatagramSocketRequest::GetSockName
-    fn get_sock_name(self) -> Result<Vec<u8>, libc::c_int> {
+    fn get_sock_name(self) -> Result<Vec<u8>, Errno> {
         match self.get_state().info.state {
             SocketState::Unbound { .. } => {
-                return Err(libc::ENOTSOCK);
+                return Err(Errno::Enotsock);
             }
             SocketState::BoundConnect { conn_id, .. } => {
                 let info = get_udp_conn_info(self.ctx.deref(), conn_id);
@@ -676,13 +675,13 @@ where
     /// Handles a [POSIX socket get_peer_name request].
     ///
     /// [POSIX socket get_peer_name request]: psocket::DatagramSocketRequest::GetPeerName
-    fn get_peer_name(self) -> Result<Vec<u8>, libc::c_int> {
+    fn get_peer_name(self) -> Result<Vec<u8>, Errno> {
         match self.get_state().info.state {
             SocketState::Unbound { .. } => {
-                return Err(libc::ENOTSOCK);
+                return Err(Errno::Enotsock);
             }
             SocketState::BoundListen { .. } => {
-                return Err(libc::ENOTCONN);
+                return Err(Errno::Enotconn);
             }
             SocketState::BoundConnect { conn_id, .. } => {
                 let info = get_udp_conn_info(self.ctx.deref(), conn_id);
@@ -710,7 +709,7 @@ where
         self.get_state_mut().info.state = SocketState::Unbound;
     }
 
-    fn close(mut self) -> Result<(), libc::c_int> {
+    fn close(mut self) {
         let inner = self.get_state_mut();
         if inner.ref_count == 1 {
             // always make sure the socket is closed with core.
@@ -722,14 +721,13 @@ where
         } else {
             inner.ref_count -= 1;
         }
-        Ok(())
     }
 
     fn recv_msg(
         &mut self,
         addr_len: usize,
         data_len: usize,
-    ) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, u32), libc::c_int> {
+    ) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, u32), Errno> {
         let () = self.need_rights(fio::OPEN_RIGHT_READABLE)?;
         let state = self.get_state_mut();
         let available = if let Some(front) = state.available_data.pop_front() {
@@ -741,7 +739,7 @@ where
                     return Ok((Vec::new(), Vec::new(), Vec::new(), 0));
                 }
             }
-            return Err(libc::EWOULDBLOCK);
+            return Err(Errno::Eagain);
         };
         let addr = if addr_len != 0 {
             let mut v = I::SocketAddress::new_vec(available.source_addr, available.source_port);
@@ -763,16 +761,16 @@ where
         Ok((addr, data, Vec::new(), truncated.try_into().unwrap_or(std::u32::MAX)))
     }
 
-    fn send_msg(&mut self, addr: Vec<u8>, data: Vec<u8>) -> Result<i64, libc::c_int> {
+    fn send_msg(&mut self, addr: Vec<u8>, data: Vec<u8>) -> Result<i64, Errno> {
         let () = self.need_rights(fio::OPEN_RIGHT_WRITABLE)?;
         let remote = if addr.is_empty() {
             None
         } else {
-            let addr = I::SocketAddress::parse(&addr[..]).ok_or(libc::EINVAL)?;
+            let addr = I::SocketAddress::parse(&addr[..]).ok_or(Errno::Einval)?;
             Some(
                 addr.get_specified_addr()
                     .and_then(|a| addr.get_specified_port().map(|p| (a, p)))
-                    .ok_or(libc::EINVAL)?,
+                    .ok_or(Errno::Einval)?,
             )
         };
         let len = data.len() as i64;
@@ -781,11 +779,11 @@ where
             SocketState::Unbound => {
                 // TODO(brunodalbo) if destination address is set, we should
                 // auto-bind here (check POSIX compliance).
-                Err(libc::EDESTADDRREQ)
+                Err(Errno::Edestaddrreq)
             }
             SocketState::BoundConnect { conn_id, shutdown_write, .. } => {
                 if shutdown_write {
-                    return Err(libc::EPIPE);
+                    return Err(Errno::Epipe);
                 }
                 match remote {
                     Some((addr, port)) => {
@@ -820,13 +818,13 @@ where
                     body,
                 )
                 .map_err(IntoErrno::into_errno),
-                None => Err(libc::EDESTADDRREQ),
+                None => Err(Errno::Edestaddrreq),
             },
         }
         .map(|()| len)
     }
 
-    fn shutdown(mut self, how: i16) -> Result<(), libc::c_int> {
+    fn shutdown(mut self, how: i16) -> Result<(), Errno> {
         // Only "connected" UDP sockets can be shutdown.
         if let SocketState::BoundConnect { ref mut shutdown_read, ref mut shutdown_write, .. } =
             self.get_state_mut().info.state
@@ -845,7 +843,7 @@ where
                     *shutdown_write = true;
                 }
                 _ => {
-                    return Err(libc::EINVAL);
+                    return Err(Errno::Einval);
                 }
             }
             // We have to unblock waiting readers.
@@ -860,14 +858,14 @@ where
             }
             return Ok(());
         }
-        Err(libc::ENOTCONN)
+        Err(Errno::Enotconn)
     }
 
     /// Tests if we have sufficient rights as required; if we don't, then
     /// an error is returned.
-    fn need_rights(&self, required: u32) -> Result<(), libc::c_int> {
+    fn need_rights(&self, required: u32) -> Result<(), Errno> {
         if self.rights & required == 0 {
-            return Err(libc::EPERM);
+            return Err(Errno::Eperm);
         }
         Ok(())
     }
@@ -937,7 +935,7 @@ mod tests {
         // pass bad SockAddr struct (too small to be parsed):
         let addr = [1_u8, 2, 3, 4];
         let res = proxy.connect(&addr).await.unwrap().expect_err("connect fails");
-        assert_eq!(res, libc::EFAULT);
+        assert_eq!(res, Errno::Efault);
 
         // pass a bad family:
         let addr = A::create_for_test(SockAddrTestOptions {
@@ -946,7 +944,7 @@ mod tests {
             bad_address: false,
         });
         let res = proxy.connect(&addr).await.unwrap().expect_err("connect fails");
-        assert_eq!(res, libc::EAFNOSUPPORT);
+        assert_eq!(res, Errno::Eafnosupport);
 
         // pass an unspecified remote address:
         let addr = A::create_for_test(SockAddrTestOptions {
@@ -955,7 +953,7 @@ mod tests {
             bad_address: true,
         });
         let res = proxy.connect(&addr).await.unwrap().expect_err("connect fails");
-        assert_eq!(res, libc::EINVAL);
+        assert_eq!(res, Errno::Einval);
 
         // pass a bad port:
         let addr = A::create_for_test(SockAddrTestOptions {
@@ -964,12 +962,12 @@ mod tests {
             bad_address: false,
         });
         let res = proxy.connect(&addr).await.unwrap().expect_err("connect fails");
-        assert_eq!(res, libc::ECONNREFUSED);
+        assert_eq!(res, Errno::Econnrefused);
 
         // pass an unreachable address (tests error forwarding from `udp_connect`):
         let addr = A::create(A::UNREACHABLE_ADDR, 1010);
         let res = proxy.connect(&addr).await.unwrap().expect_err("connect fails");
-        assert_eq!(res, libc::ENETUNREACH);
+        assert_eq!(res, Errno::Enetunreach);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1012,7 +1010,7 @@ mod tests {
         // can't bind again (to another port)
         let addr = A::create(A::LOCAL_ADDR, 201);
         let res = socket.bind(&addr).await.unwrap().expect_err("bind fails");
-        assert_eq!(res, libc::EALREADY);
+        assert_eq!(res, Errno::Ealready);
 
         // can bind another socket to a different port:
         let socket = get_socket::<A>(stack).await;
@@ -1082,11 +1080,11 @@ mod tests {
         // Verify that Alice has no local or peer addresses bound
         assert_eq!(
             alice_socket.get_sock_name().await.unwrap().expect_err("alice getsockname fails"),
-            libc::ENOTSOCK
+            Errno::Enotsock
         );
         assert_eq!(
             alice_socket.get_peer_name().await.unwrap().expect_err("alice getpeername fails"),
-            libc::ENOTSOCK
+            Errno::Enotsock
         );
 
         // Setup Alice as a server, bound to LOCAL_ADDR:200
@@ -1102,7 +1100,7 @@ mod tests {
         );
         assert_eq!(
             alice_socket.get_peer_name().await.unwrap().expect_err("alice getpeername should fail"),
-            libc::ENOTCONN
+            Errno::Enotconn
         );
 
         // check that alice has no data to read, and it'd block waiting for
@@ -1113,7 +1111,7 @@ mod tests {
                 .await
                 .unwrap()
                 .expect_err("Reading from alice should fail"),
-            libc::EWOULDBLOCK
+            Errno::Eagain
         );
         assert_eq!(
             alice_events
@@ -1141,7 +1139,7 @@ mod tests {
                 .await
                 .unwrap()
                 .expect_err("get peer name should fail before connected"),
-            libc::ENOTCONN
+            Errno::Enotconn
         );
 
         // Connect Bob to Alice on LOCAL_ADDR:200
@@ -1336,7 +1334,7 @@ mod tests {
                 .await
                 .unwrap()
                 .expect_err("Reading from bob should fail"),
-            libc::EWOULDBLOCK
+            Errno::Eagain
         );
 
         {
@@ -1358,7 +1356,7 @@ mod tests {
                     .await
                     .unwrap()
                     .expect_err("should not send_msg on a readonly socket"),
-                libc::EPERM,
+                Errno::Eperm,
             );
 
             assert_eq!(
@@ -1367,7 +1365,7 @@ mod tests {
                     .await
                     .unwrap()
                     .expect_err("should not recv_msg on a writeonly socket"),
-                libc::EPERM,
+                Errno::Eperm,
             );
 
             assert_eq!(
@@ -1615,7 +1613,7 @@ mod tests {
                 .await
                 .unwrap()
                 .expect_err("should not shutdown an unconnected socket"),
-            libc::ENOTCONN,
+            Errno::Enotconn,
         );
         socket.bind(&local).await.unwrap().expect("failed to bind");
         assert_eq!(
@@ -1624,11 +1622,11 @@ mod tests {
                 .await
                 .unwrap()
                 .expect_err("should not shutdown an unconnected socket"),
-            libc::ENOTCONN,
+            Errno::Enotconn,
         );
         socket.connect(&remote).await.unwrap().expect("failed to connect");
 
-        assert_eq!(socket.shutdown(42).await.unwrap().expect_err("invalid args"), libc::EINVAL);
+        assert_eq!(socket.shutdown(42).await.unwrap().expect_err("invalid args"), Errno::Einval);
 
         // Cannot send
         let body = "Hello".as_bytes();
@@ -1639,7 +1637,7 @@ mod tests {
                 .await
                 .unwrap()
                 .expect_err("writing to an already-shutdown socket should fail"),
-            libc::EPIPE,
+            Errno::Epipe,
         );
         let invalid_addr = A::create(A::REMOTE_ADDR, 0);
         assert_eq!(
@@ -1650,7 +1648,7 @@ mod tests {
                 .expect_err(
                 "writing to an invalid address (port 0) should fail with EINVAL instead of EPIPE"
             ),
-            libc::EINVAL,
+            Errno::Einval,
         );
 
         let (e1, e2) = zx::EventPair::create().unwrap();

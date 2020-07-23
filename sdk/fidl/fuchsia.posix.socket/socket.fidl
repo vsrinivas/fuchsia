@@ -6,6 +6,7 @@ library fuchsia.posix.socket;
 
 using fuchsia.io;
 using fuchsia.net;
+using fuchsia.posix;
 using zx;
 
 /// Chosen to match `sizeof(struct sockaddr_storage)`.
@@ -38,17 +39,17 @@ protocol BaseSocket {
     compose fuchsia.io.Node;
 
     /// Sets the local address used for the socket.
-    Bind(sockaddr addr) -> () error int32;
+    Bind(sockaddr addr) -> () error fuchsia.posix.Errno;
     /// Initiates a connection to a remote address.
-    Connect(sockaddr addr) -> () error int32;
+    Connect(sockaddr addr) -> () error fuchsia.posix.Errno;
     /// Retrieves the local socket address.
-    GetSockName() -> (sockaddr addr) error int32;
+    GetSockName() -> (sockaddr addr) error fuchsia.posix.Errno;
     /// Retrieves the remote socket address.
-    GetPeerName() -> (sockaddr addr) error int32;
+    GetPeerName() -> (sockaddr addr) error fuchsia.posix.Errno;
     /// Sets the value of a socket option.
-    SetSockOpt(int16 level, int16 optname, sockopt optval) -> () error int32;
+    SetSockOpt(int16 level, int16 optname, sockopt optval) -> () error fuchsia.posix.Errno;
     /// Retrieves the value of a socket option.
-    GetSockOpt(int16 level, int16 optname) -> (sockopt optval) error int32;
+    GetSockOpt(int16 level, int16 optname) -> (sockopt optval) error fuchsia.posix.Errno;
 };
 
 /// A datagram socket.
@@ -61,13 +62,13 @@ protocol DatagramSocket {
     compose BaseSocket;
 
     /// Shuts down part of the socket.
-    Shutdown(int16 how) -> () error int32;
+    Shutdown(int16 how) -> () error fuchsia.posix.Errno;
     /// Receives a message from the socket.
-    RecvMsg(uint32 addr_len, uint32 data_len, uint32 control_len, int16 flags) -> (sockaddr addr, bytes data, bytes control, uint32 truncated) error int32;
+    RecvMsg(uint32 addr_len, uint32 data_len, uint32 control_len, int16 flags) -> (sockaddr addr, bytes data, bytes control, uint32 truncated) error fuchsia.posix.Errno;
     /// Sends a message on the socket.
-    SendMsg(sockaddr addr, vector<bytes>:MAX data, bytes control, int16 flags) -> (int64 len) error int32;
+    SendMsg(sockaddr addr, vector<bytes>:MAX data, bytes control, int16 flags) -> (int64 len) error fuchsia.posix.Errno;
     /// Sends a message on the socket.
-    SendMsg2(sockaddr addr, bytes:MAX data, bytes control, int16 flags) -> (int64 len) error int32;
+    SendMsg2(sockaddr addr, bytes:MAX data, bytes control, int16 flags) -> (int64 len) error fuchsia.posix.Errno;
 };
 
 /// A stream socket.
@@ -83,9 +84,9 @@ protocol StreamSocket {
 
     /// Begins listening for new incoming connections. At most `backlog` connections will be
     /// buffered.
-    Listen(int16 backlog) -> () error int32;
+    Listen(int16 backlog) -> () error fuchsia.posix.Errno;
     /// Accepts a buffered incoming connection.
-    Accept(int16 flags) -> (StreamSocket s) error int32;
+    Accept(int16 flags) -> (StreamSocket s) error fuchsia.posix.Errno;
 };
 
 /// Holds information about an interface and its addresses.
@@ -104,8 +105,8 @@ table InterfaceAddresses {
 /// Provider implements the POSIX sockets API.
 [Discoverable]
 protocol Provider {
-    /// Requests a socket with the specified parameters. Error values are defined in errno.h.
-    Socket2(int16 domain, int16 type, int16 protocol) -> (BaseSocket s) error int32;
+    /// Requests a socket with the specified parameters.
+    Socket2(int16 domain, int16 type, int16 protocol) -> (BaseSocket s) error fuchsia.posix.Errno;
 
     /// Looks up an interface by its index and returns its name. Returns `ZX_ERR_NOT_FOUND` if the
     /// specified index doesn't exist.

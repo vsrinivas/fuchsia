@@ -26,6 +26,7 @@ import (
 
 	"fidl/fuchsia/io"
 	fidlnet "fidl/fuchsia/net"
+	"fidl/fuchsia/posix"
 	"fidl/fuchsia/posix/socket"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -488,7 +489,7 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
 }
 
-func (eps *endpointWithSocket) Accept(fidl.Context) (int32, *endpointWithSocket, error) {
+func (eps *endpointWithSocket) Accept(fidl.Context) (posix.Errno, *endpointWithSocket, error) {
 	ep, wq, err := eps.endpoint.ep.Accept()
 	if err != nil {
 		return tcpipErrorToCode(err), nil, nil
@@ -1119,7 +1120,7 @@ var _ socket.ProviderWithCtx = (*providerImpl)(nil)
 // Highest two bits modify the socket type.
 const sockTypesMask = 0x7fff &^ (C.SOCK_CLOEXEC | C.SOCK_NONBLOCK)
 
-func toTransProto(typ, protocol int16) (int32, tcpip.TransportProtocolNumber) {
+func toTransProto(typ, protocol int16) (posix.Errno, tcpip.TransportProtocolNumber) {
 	switch typ & sockTypesMask {
 	case C.SOCK_STREAM:
 		switch protocol {
@@ -1136,19 +1137,19 @@ func toTransProto(typ, protocol int16) (int32, tcpip.TransportProtocolNumber) {
 			return 0, icmp.ProtocolNumber6
 		}
 	}
-	return C.EPROTONOSUPPORT, 0
+	return posix.ErrnoEprotonosupport, 0
 }
 
-func toNetProto(domain int16) (int32, tcpip.NetworkProtocolNumber) {
+func toNetProto(domain int16) (posix.Errno, tcpip.NetworkProtocolNumber) {
 	switch domain {
 	case C.AF_INET:
 		return 0, ipv4.ProtocolNumber
 	case C.AF_INET6:
 		return 0, ipv6.ProtocolNumber
 	case C.AF_PACKET:
-		return C.EPERM, 0
+		return posix.ErrnoEperm, 0
 	default:
-		return C.EPFNOSUPPORT, 0
+		return posix.ErrnoEpfnosupport, 0
 	}
 }
 
@@ -1347,7 +1348,7 @@ func (sp *providerImpl) GetInterfaceAddresses(fidl.Context) ([]socket.InterfaceA
 	return resultInfos, nil
 }
 
-func tcpipErrorToCode(err *tcpip.Error) int32 {
+func tcpipErrorToCode(err *tcpip.Error) posix.Errno {
 	if err != tcpip.ErrConnectStarted {
 		if pc, file, line, ok := runtime.Caller(1); ok {
 			if i := strings.LastIndexByte(file, '/'); i != -1 {
@@ -1360,79 +1361,79 @@ func tcpipErrorToCode(err *tcpip.Error) int32 {
 	}
 	switch err {
 	case tcpip.ErrUnknownProtocol:
-		return C.EINVAL
+		return posix.ErrnoEinval
 	case tcpip.ErrUnknownNICID:
-		return C.EINVAL
+		return posix.ErrnoEinval
 	case tcpip.ErrUnknownDevice:
-		return C.ENODEV
+		return posix.ErrnoEnodev
 	case tcpip.ErrUnknownProtocolOption:
-		return C.ENOPROTOOPT
+		return posix.ErrnoEnoprotoopt
 	case tcpip.ErrDuplicateNICID:
-		return C.EEXIST
+		return posix.ErrnoEexist
 	case tcpip.ErrDuplicateAddress:
-		return C.EEXIST
+		return posix.ErrnoEexist
 	case tcpip.ErrNoRoute:
-		return C.EHOSTUNREACH
+		return posix.ErrnoEhostunreach
 	case tcpip.ErrBadLinkEndpoint:
-		return C.EINVAL
+		return posix.ErrnoEinval
 	case tcpip.ErrAlreadyBound:
-		return C.EINVAL
+		return posix.ErrnoEinval
 	case tcpip.ErrInvalidEndpointState:
-		return C.EINVAL
+		return posix.ErrnoEinval
 	case tcpip.ErrAlreadyConnecting:
-		return C.EALREADY
+		return posix.ErrnoEalready
 	case tcpip.ErrAlreadyConnected:
-		return C.EISCONN
+		return posix.ErrnoEisconn
 	case tcpip.ErrNoPortAvailable:
-		return C.EAGAIN
+		return posix.ErrnoEagain
 	case tcpip.ErrPortInUse:
-		return C.EADDRINUSE
+		return posix.ErrnoEaddrinuse
 	case tcpip.ErrBadLocalAddress:
-		return C.EADDRNOTAVAIL
+		return posix.ErrnoEaddrnotavail
 	case tcpip.ErrClosedForSend:
-		return C.EPIPE
+		return posix.ErrnoEpipe
 	case tcpip.ErrClosedForReceive:
-		return C.EAGAIN
+		return posix.ErrnoEagain
 	case tcpip.ErrWouldBlock:
-		return C.EWOULDBLOCK
+		return posix.Ewouldblock
 	case tcpip.ErrConnectionRefused:
-		return C.ECONNREFUSED
+		return posix.ErrnoEconnrefused
 	case tcpip.ErrTimeout:
-		return C.ETIMEDOUT
+		return posix.ErrnoEtimedout
 	case tcpip.ErrAborted:
-		return C.EPIPE
+		return posix.ErrnoEpipe
 	case tcpip.ErrConnectStarted:
-		return C.EINPROGRESS
+		return posix.ErrnoEinprogress
 	case tcpip.ErrDestinationRequired:
-		return C.EDESTADDRREQ
+		return posix.ErrnoEdestaddrreq
 	case tcpip.ErrNotSupported:
-		return C.EOPNOTSUPP
+		return posix.ErrnoEopnotsupp
 	case tcpip.ErrQueueSizeNotSupported:
-		return C.ENOTTY
+		return posix.ErrnoEnotty
 	case tcpip.ErrNotConnected:
-		return C.ENOTCONN
+		return posix.ErrnoEnotconn
 	case tcpip.ErrConnectionReset:
-		return C.ECONNRESET
+		return posix.ErrnoEconnreset
 	case tcpip.ErrConnectionAborted:
-		return C.ECONNABORTED
+		return posix.ErrnoEconnaborted
 	case tcpip.ErrNoSuchFile:
-		return C.ENOENT
+		return posix.ErrnoEnoent
 	case tcpip.ErrInvalidOptionValue:
-		return C.EINVAL
+		return posix.ErrnoEinval
 	case tcpip.ErrNoLinkAddress:
-		return C.EHOSTDOWN
+		return posix.ErrnoEhostdown
 	case tcpip.ErrBadAddress:
-		return C.EFAULT
+		return posix.ErrnoEfault
 	case tcpip.ErrNetworkUnreachable:
-		return C.ENETUNREACH
+		return posix.ErrnoEnetunreach
 	case tcpip.ErrMessageTooLong:
-		return C.EMSGSIZE
+		return posix.ErrnoEmsgsize
 	case tcpip.ErrNoBufferSpace:
-		return C.ENOBUFS
+		return posix.ErrnoEnobufs
 	case tcpip.ErrBroadcastDisabled, tcpip.ErrNotPermitted:
-		return C.EACCES
+		return posix.ErrnoEacces
 	case tcpip.ErrAddressFamilyNotSupported:
-		return C.EAFNOSUPPORT
+		return posix.ErrnoEafnosupport
 	default:
 		panic(fmt.Sprintf("unknown error %v", err))
 	}

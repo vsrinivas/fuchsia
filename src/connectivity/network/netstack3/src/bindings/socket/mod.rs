@@ -11,6 +11,7 @@ use std::num::NonZeroU16;
 
 use byteorder::{NativeEndian, NetworkEndian};
 use fidl::endpoints::{ClientEnd, RequestStream};
+use fidl_fuchsia_posix::Errno;
 use fidl_fuchsia_posix_socket as psocket;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -118,7 +119,7 @@ where
         transport: TransProto,
         channel: fasync::Channel,
         properties: SocketWorkerProperties,
-    ) -> Result<(), libc::c_int> {
+    ) -> Result<(), Errno> {
         match transport {
             TransProto::Udp => udp::spawn_worker(
                 net_proto,
@@ -126,7 +127,7 @@ where
                 psocket::DatagramSocketRequestStream::from_channel(channel),
                 properties,
             ),
-            _ => Err(libc::EAFNOSUPPORT),
+            _ => Err(Errno::Eafnosupport),
         }
     }
 
@@ -155,16 +156,16 @@ where
         &self,
         domain: i16,
         sock_type: i16,
-    ) -> Result<ClientEnd<psocket::BaseSocketMarker>, libc::c_int> {
+    ) -> Result<ClientEnd<psocket::BaseSocketMarker>, Errno> {
         let nonblock = i32::from(sock_type) & libc::SOCK_NONBLOCK != 0;
         let sock_type = i32::from(sock_type) & !(libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC);
 
-        let net_proto = get_domain_ip_version(domain).ok_or(libc::EAFNOSUPPORT)?;
+        let net_proto = get_domain_ip_version(domain).ok_or(Errno::Eafnosupport)?;
         let trans_proto = match sock_type {
             libc::SOCK_DGRAM => TransProto::Udp,
             libc::SOCK_STREAM => TransProto::Tcp,
             _ => {
-                return Err(libc::EAFNOSUPPORT);
+                return Err(Errno::Eafnosupport);
             }
         };
 
@@ -179,7 +180,7 @@ where
             )
             .map(|()| ClientEnd::<psocket::BaseSocketMarker>::new(c1))
         } else {
-            Err(libc::ENOBUFS)
+            Err(Errno::Enobufs)
         }
     }
 }
@@ -496,34 +497,34 @@ mod testutil {
     }
 }
 
-/// Trait expressing the conversion of error types into `libc::c_int` errno-like errors for the
-/// POSIX-lite wrappers.
+/// Trait expressing the conversion of error types into
+/// [`fidl_fuchsia_posix::Errno`] errors for the POSIX-lite wrappers.
 trait IntoErrno {
     /// Returns the most equivalent POSIX error code for `self`.
-    fn into_errno(self) -> libc::c_int;
+    fn into_errno(self) -> Errno;
 }
 
 impl IntoErrno for LocalAddressError {
-    fn into_errno(self) -> libc::c_int {
+    fn into_errno(self) -> Errno {
         match self {
             LocalAddressError::CannotBindToAddress
-            | LocalAddressError::FailedToAllocateLocalPort => libc::EADDRNOTAVAIL,
-            LocalAddressError::AddressMismatch => libc::EINVAL,
-            LocalAddressError::AddressInUse => libc::EADDRINUSE,
+            | LocalAddressError::FailedToAllocateLocalPort => Errno::Eaddrnotavail,
+            LocalAddressError::AddressMismatch => Errno::Einval,
+            LocalAddressError::AddressInUse => Errno::Eaddrinuse,
         }
     }
 }
 
 impl IntoErrno for RemoteAddressError {
-    fn into_errno(self) -> libc::c_int {
+    fn into_errno(self) -> Errno {
         match self {
-            RemoteAddressError::NoRoute => libc::ENETUNREACH,
+            RemoteAddressError::NoRoute => Errno::Enetunreach,
         }
     }
 }
 
 impl IntoErrno for SocketError {
-    fn into_errno(self) -> libc::c_int {
+    fn into_errno(self) -> Errno {
         match self {
             SocketError::Remote(e) => e.into_errno(),
             SocketError::Local(e) => e.into_errno(),
@@ -532,9 +533,9 @@ impl IntoErrno for SocketError {
 }
 
 impl IntoErrno for UdpSendError {
-    fn into_errno(self) -> libc::c_int {
+    fn into_errno(self) -> Errno {
         match self {
-            UdpSendError::Unknown => libc::EIO,
+            UdpSendError::Unknown => Errno::Eio,
             UdpSendError::Local(l) => l.into_errno(),
             UdpSendError::Remote(r) => r.into_errno(),
         }
@@ -542,15 +543,15 @@ impl IntoErrno for UdpSendError {
 }
 
 impl IntoErrno for NetstackError {
-    fn into_errno(self) -> libc::c_int {
+    fn into_errno(self) -> Errno {
         match self {
-            NetstackError::Parse(_) => libc::EINVAL,
-            NetstackError::Exists => libc::EALREADY,
-            NetstackError::NotFound => libc::EFAULT,
+            NetstackError::Parse(_) => Errno::Einval,
+            NetstackError::Exists => Errno::Ealready,
+            NetstackError::NotFound => Errno::Efault,
             NetstackError::SendUdp(s) => s.into_errno(),
             NetstackError::Connect(c) => c.into_errno(),
-            NetstackError::NoRoute => libc::EHOSTUNREACH,
-            NetstackError::Mtu => libc::EMSGSIZE,
+            NetstackError::NoRoute => Errno::Ehostunreach,
+            NetstackError::Mtu => Errno::Emsgsize,
         }
     }
 }

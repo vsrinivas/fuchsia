@@ -75,7 +75,7 @@ int socket(int domain, int type, int protocol) {
   }
   auto& socket_response = socket_result.Unwrap()->result;
   if (socket_response.is_err()) {
-    return ERRNO(socket_response.err());
+    return ERRNO(static_cast<int>(socket_response.err()));
   }
   fdio_t* io;
   status = fdio_from_channel(std::move(socket_response.mutable_response().s), &io);
