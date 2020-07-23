@@ -31,7 +31,7 @@ typedef struct {
 
 typedef struct aml_hiu_dev {
   mmio_buffer_t mmio;
-  uint8_t* regs_vaddr;
+  MMIO_PTR uint8_t* regs_vaddr;
 } aml_hiu_dev_t;
 
 typedef struct aml_pll_dev {
@@ -54,7 +54,7 @@ zx_status_t s905d2_hiu_init(aml_hiu_dev_t* device);
     Initializes the aml_hiu_dev_t struct assuming the register block is already
     mapped
 */
-zx_status_t s905d2_hiu_init_etc(aml_hiu_dev_t* device, uint8_t* hiubase);
+zx_status_t s905d2_hiu_init_etc(aml_hiu_dev_t* device, MMIO_PTR uint8_t* hiubase);
 
 /*
     Initializes the selected pll. This resetting the pll and writing initial

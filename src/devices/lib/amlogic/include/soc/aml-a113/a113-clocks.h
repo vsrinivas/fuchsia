@@ -7,7 +7,7 @@
 
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/platform/bus.h>
-#include <hw/reg.h>
+#include <mmio-ptr/mmio-ptr.h>
 
 #define SDM_FRACTIONALITY ((uint32_t)16384)
 #define A113_FIXED_PLL_RATE ((uint32_t)2000000000)
@@ -20,15 +20,15 @@
 
 typedef struct {
   mmio_buffer_t mmio;
-  uint32_t *regs_vaddr;
+  MMIO_PTR uint32_t *regs_vaddr;
 } a113_clk_dev_t;
 
 static inline uint32_t a113_clk_get_reg(a113_clk_dev_t *dev, uint32_t offset) {
-  return readl(dev->regs_vaddr + offset);
+  return MmioRead32(dev->regs_vaddr + offset);
 }
 
 static inline uint32_t a113_clk_set_reg(a113_clk_dev_t *dev, uint32_t offset, uint32_t value) {
-  writel(value, dev->regs_vaddr + offset);
+  MmioWrite32(value, dev->regs_vaddr + offset);
   return a113_clk_get_reg(dev, offset);
 }
 

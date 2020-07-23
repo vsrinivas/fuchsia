@@ -15,11 +15,11 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 static inline uint32_t hiu_clk_get_reg(aml_hiu_dev_t* dev, uint32_t offset) {
-  return readl(dev->regs_vaddr + offset);
+  return MmioRead32((MMIO_PTR uint32_t*)(dev->regs_vaddr + offset));
 }
 
 static inline uint32_t hiu_clk_set_reg(aml_hiu_dev_t* dev, uint32_t offset, uint32_t value) {
-  writel(value, dev->regs_vaddr + offset);
+  MmioWrite32(value, (MMIO_PTR uint32_t*)(dev->regs_vaddr + offset));
   return hiu_clk_get_reg(dev, offset);
 }
 
@@ -52,13 +52,12 @@ zx_status_t s905d2_hiu_init(aml_hiu_dev_t* device) {
     zxlogf(ERROR, "%s: mmio_buffer_init_physical failed %d", __func__, status);
     return status;
   }
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  device->regs_vaddr = (void*)device->mmio.vaddr;
+  device->regs_vaddr = device->mmio.vaddr;
 
   return ZX_OK;
 }
 
-zx_status_t s905d2_hiu_init_etc(aml_hiu_dev_t* device, uint8_t* hiubase) {
+zx_status_t s905d2_hiu_init_etc(aml_hiu_dev_t* device, MMIO_PTR uint8_t* hiubase) {
   memset(device, 0, sizeof(*device));
 
   device->mmio.vmo = ZX_HANDLE_INVALID;

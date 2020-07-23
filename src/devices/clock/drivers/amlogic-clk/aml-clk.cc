@@ -521,8 +521,7 @@ zx_status_t AmlClock::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 void AmlClock::InitHiu() {
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  s905d2_hiu_init_etc(&hiudev_, static_cast<uint8_t*>((void*)hiu_mmio_.get()));
+  s905d2_hiu_init_etc(&hiudev_, static_cast<MMIO_PTR uint8_t*>(hiu_mmio_.get()));
   for (unsigned int pllnum = 0; pllnum < HIU_PLL_COUNT; pllnum++) {
     const hhi_plls_t pll = static_cast<hhi_plls_t>(pllnum);
     s905d2_pll_init_etc(&hiudev_, &plldev_[pllnum], pll);
