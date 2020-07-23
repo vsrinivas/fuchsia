@@ -32,7 +32,7 @@ pub enum AgentError {
 }
 
 /// Identification for the agent used for logging purposes.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Descriptor {
     Component(&'static str),
 }

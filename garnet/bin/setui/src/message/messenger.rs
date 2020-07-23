@@ -53,7 +53,7 @@ pub struct MessengerClient<P: Payload + 'static, A: Address + 'static> {
 
 impl<P: Payload + 'static, A: Address + 'static> MessengerClient<P, A> {
     pub(super) fn new(messenger: Messenger<P, A>, fuse: ActionFuseHandle) -> MessengerClient<P, A> {
-        MessengerClient { messenger: messenger, fuse: fuse }
+        MessengerClient { messenger, fuse }
     }
 
     /// Creates a MessageBuilder for a new message with the specified payload
@@ -85,7 +85,7 @@ impl<P: Payload + 'static, A: Address + 'static> Messenger<P, A> {
 
     /// Returns the identification for this Messenger.
     pub(super) fn get_id(&self) -> MessengerId {
-        self.fingerprint.id.clone()
+        self.fingerprint.id
     }
 
     /// Forwards the message to the next Messenger. Note that this method is

@@ -146,12 +146,10 @@ impl SettingHandlerFactory for FakeFactory {
     ) -> Option<handler::message::Signature> {
         let existing_count = self.get_request_count(setting_type);
 
-        if let Some(signature) = self.handlers.get(&setting_type) {
+        self.handlers.get(&setting_type).copied().map(|signature| {
             self.request_counts.insert(setting_type, existing_count + 1);
-            return Some(signature.clone());
-        } else {
-            return None;
-        }
+            signature
+        })
     }
 }
 

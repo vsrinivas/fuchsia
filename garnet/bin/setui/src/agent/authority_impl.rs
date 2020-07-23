@@ -70,7 +70,7 @@ impl AuthorityImpl {
     ) -> Result<(), Error> {
         let mut pending_receptors = Vec::new();
 
-        for signature in &self.agent_signatures {
+        for &signature in &self.agent_signatures {
             let mut receptor = self
                 .messenger
                 .message(
@@ -78,7 +78,7 @@ impl AuthorityImpl {
                         lifespan: lifespan.clone(),
                         service_context: service_context.clone(),
                     }),
-                    Audience::Messenger(signature.clone()),
+                    Audience::Messenger(signature),
                 )
                 .send();
 

@@ -4,7 +4,7 @@
 
 use chrono::{offset::TimeZone, DateTime, Utc};
 
-#[derive(PartialEq, Clone, Debug, Eq, Hash)]
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {}
 
 /// Macro for defining a message hub with no addressable messengers

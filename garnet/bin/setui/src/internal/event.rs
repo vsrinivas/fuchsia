@@ -22,7 +22,7 @@ pub enum Event {
     Restore(restore::Event),
 }
 
-#[derive(PartialEq, Clone, Debug, Eq, Hash)]
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
     Agent(agent::base::Descriptor),
 }

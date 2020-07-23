@@ -304,7 +304,7 @@ async fn test_event_propagation() {
     messenger
         .message(
             Payload::Command(Command::ChangeState(State::Startup)),
-            Audience::Messenger(signature.clone()),
+            Audience::Messenger(signature),
         )
         .send()
         .ack();
@@ -314,7 +314,7 @@ async fn test_event_propagation() {
     messenger
         .message(
             Payload::Command(Command::ChangeState(State::Listen)),
-            Audience::Messenger(signature.clone()),
+            Audience::Messenger(signature),
         )
         .send()
         .ack();
@@ -324,7 +324,7 @@ async fn test_event_propagation() {
     messenger
         .message(
             Payload::Command(Command::ChangeState(State::EndListen)),
-            Audience::Messenger(signature.clone()),
+            Audience::Messenger(signature),
         )
         .send()
         .ack();
@@ -334,7 +334,7 @@ async fn test_event_propagation() {
     messenger
         .message(
             Payload::Command(Command::ChangeState(State::Teardown)),
-            Audience::Messenger(signature.clone()),
+            Audience::Messenger(signature),
         )
         .send()
         .ack();
@@ -373,10 +373,7 @@ async fn verify_controller_state(state: State, n: u8) {
         .expect("Unable to create ClientImpl");
 
     messenger
-        .message(
-            Payload::Command(Command::ChangeState(state)),
-            Audience::Messenger(signature.clone()),
-        )
+        .message(Payload::Command(Command::ChangeState(state)), Audience::Messenger(signature))
         .send()
         .ack();
 

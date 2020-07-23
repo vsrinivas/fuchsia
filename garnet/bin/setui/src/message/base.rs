@@ -71,7 +71,7 @@ pub enum Audience<A> {
 
 /// An identifier that can be used to send messages directly to a Messenger.
 /// Included with Message instances.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Signature<A> {
     // Messenger at a given address.
     Address(A),
@@ -80,7 +80,7 @@ pub enum Signature<A> {
     Anonymous(MessengerId),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Fingerprint<A> {
     pub id: MessengerId,
     pub signature: Signature<A>,

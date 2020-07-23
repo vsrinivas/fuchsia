@@ -64,7 +64,7 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
                 let mut controller_receptor = controller_messenger_client
                     .message(
                         Payload::Command(Command::ChangeState(State::Startup)),
-                        Audience::Messenger(signature.clone()),
+                        Audience::Messenger(signature),
                     )
                     .send();
 

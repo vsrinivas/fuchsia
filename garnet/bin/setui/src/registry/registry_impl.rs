@@ -198,12 +198,9 @@ impl RegistryImpl {
             }
         }
 
-        // HashMap returns a reference, we need a value here.
-        if let Some(controller_state) = self.active_controllers.get(&setting_type) {
-            return Some(controller_state.signature.clone());
-        } else {
-            return None;
-        }
+        self.active_controllers
+            .get(&setting_type)
+            .map(|controller_state| controller_state.signature)
     }
 
     /// Notifies proper sink in the case the notification listener count is
@@ -226,7 +223,7 @@ impl RegistryImpl {
             controller_state.has_active_listener = false;
 
             let signature = if controller_state.pending_requests_empty() {
-                self.active_controllers.remove(&setting_type).map(|cs| cs.signature.clone())
+                self.active_controllers.remove(&setting_type).map(|cs| cs.signature)
             } else {
                 None
             };
@@ -243,7 +240,7 @@ impl RegistryImpl {
         self.controller_messenger_client
             .message(
                 handler::Payload::Command(Command::ChangeState(state)),
-                Audience::Messenger(handler_signature.clone()),
+                Audience::Messenger(handler_signature),
             )
             .send()
             .ack();
@@ -302,7 +299,7 @@ impl RegistryImpl {
                     .controller_messenger_client
                     .message(
                         handler::Payload::Command(Command::HandleRequest(request.clone())),
-                        Audience::Messenger(signature.clone()),
+                        Audience::Messenger(signature),
                     )
                     .send();
 
@@ -366,7 +363,7 @@ impl RegistryImpl {
                     return;
                 }
 
-                controller_state.signature.clone()
+                controller_state.signature
             }
             None => {
                 fx_log_err!(
@@ -400,7 +397,7 @@ impl RegistryImpl {
             .controller_messenger_client
             .message(
                 handler::Payload::Command(Command::ChangeState(State::Teardown)),
-                Audience::Messenger(signature.clone()),
+                Audience::Messenger(signature),
             )
             .send();
 

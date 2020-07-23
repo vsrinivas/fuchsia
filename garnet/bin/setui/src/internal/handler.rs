@@ -8,7 +8,7 @@ use crate::switchboard::base::{SettingResponseResult, SettingType};
 use std::fmt::Debug;
 
 // Registry addresses senders by the type they service.
-#[derive(PartialEq, Clone, Debug, Eq, Hash)]
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
     Registry,
     Handler(usize),

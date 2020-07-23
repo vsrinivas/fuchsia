@@ -5,7 +5,7 @@
 use crate::message_hub_definition;
 use crate::switchboard::base::{SettingRequest, SettingResponseResult, SettingType};
 
-#[derive(PartialEq, Clone, Debug, Eq, Hash)]
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
     Switchboard,
 }
