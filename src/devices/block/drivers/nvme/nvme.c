@@ -82,8 +82,8 @@ typedef struct {
   mtx_t lock;
 
   // io queue doorbell registers
-  void* io_sq_tail_db;
-  void* io_cq_head_db;
+  MMIO_PTR void* io_sq_tail_db;
+  MMIO_PTR void* io_cq_head_db;
 
   nvme_cpl_t* io_cq;
   nvme_cmd_t* io_sq;
@@ -115,8 +115,8 @@ typedef struct {
   block_info_t info;
 
   // admin queue doorbell registers
-  void* io_admin_sq_tail_db;
-  void* io_admin_cq_head_db;
+  MMIO_PTR void* io_admin_sq_tail_db;
+  MMIO_PTR void* io_admin_cq_head_db;
 
   // admin queues and state
   nvme_cpl_t* admin_cq;
@@ -191,7 +191,7 @@ static zx_status_t nvme_admin_cq_get(nvme_device_t* nvme, nvme_cpl_t* cpl) {
   nvme->admin_sq_head = cpl->sq_head;
 
   // ring the doorbell
-  writel(next, nvme->io_admin_cq_head_db);
+  MmioWrite32(next, nvme->io_admin_cq_head_db);
   return ZX_OK;
 }
 
@@ -207,7 +207,7 @@ static zx_status_t nvme_admin_sq_put(nvme_device_t* nvme, nvme_cmd_t* cmd) {
   nvme->admin_sq_tail = next;
 
   // ring the doorbell
-  writel(next, nvme->io_admin_sq_tail_db);
+  MmioWrite32(next, nvme->io_admin_sq_tail_db);
   return ZX_OK;
 }
 
@@ -230,7 +230,7 @@ static zx_status_t nvme_io_cq_get(nvme_device_t* nvme, nvme_cpl_t* cpl) {
 
 static void nvme_io_cq_ack(nvme_device_t* nvme) {
   // ring the doorbell
-  writel(nvme->io_cq_head, nvme->io_cq_head_db);
+  MmioWrite32(nvme->io_cq_head, nvme->io_cq_head_db);
 }
 
 static zx_status_t nvme_io_sq_put(nvme_device_t* nvme, nvme_cmd_t* cmd) {
@@ -245,7 +245,7 @@ static zx_status_t nvme_io_sq_put(nvme_device_t* nvme, nvme_cmd_t* cmd) {
   nvme->io_sq_tail = next;
 
   // ring the doorbell
-  writel(next, nvme->io_sq_tail_db);
+  MmioWrite32(next, nvme->io_sq_tail_db);
   return ZX_OK;
 }
 
@@ -764,10 +764,8 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   zxlogf(INFO, "nvme: controller ready. (after %u ms)", WAIT_MS - ms_remain);
 
   // registers and buffers for admin queues
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  nvme->io_admin_sq_tail_db = (void*)nvme->mmio.vaddr + NVME_REG_SQnTDBL(0, cap);
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  nvme->io_admin_cq_head_db = (void*)nvme->mmio.vaddr + NVME_REG_CQnHDBL(0, cap);
+  nvme->io_admin_sq_tail_db = nvme->mmio.vaddr + NVME_REG_SQnTDBL(0, cap);
+  nvme->io_admin_cq_head_db = nvme->mmio.vaddr + NVME_REG_CQnHDBL(0, cap);
 
   nvme->admin_sq = nvme->iob.virt + PAGE_SIZE * IDX_ADMIN_SQ;
   nvme->admin_sq_head = 0;
@@ -778,10 +776,8 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   nvme->admin_cq_toggle = 1;
 
   // registers and buffers for IO queues
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  nvme->io_sq_tail_db = (void*)nvme->mmio.vaddr + NVME_REG_SQnTDBL(1, cap);
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  nvme->io_cq_head_db = (void*)nvme->mmio.vaddr + NVME_REG_CQnHDBL(1, cap);
+  nvme->io_sq_tail_db = nvme->mmio.vaddr + NVME_REG_SQnTDBL(1, cap);
+  nvme->io_cq_head_db = nvme->mmio.vaddr + NVME_REG_CQnHDBL(1, cap);
 
   nvme->io_sq = nvme->iob.virt + PAGE_SIZE * IDX_IO_SQ;
   nvme->io_sq_head = 0;
