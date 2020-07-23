@@ -39,9 +39,13 @@ struct CollectionView {
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   fuchsia::images::ImagePipe2Ptr image_pipe;
   uint32_t image_pipe_id;
+  fuchsia::math::RectF view_region;
   std::unique_ptr<scenic::Material> material;
   std::unique_ptr<scenic::Mesh> mesh;
   std::unique_ptr<scenic::ShapeNode> node;
+  std::unique_ptr<scenic::Material> highlight_material;
+  std::unique_ptr<scenic::Mesh> highlight_mesh;
+  std::unique_ptr<scenic::ShapeNode> highlight_node;
   bool visible;
   std::unique_ptr<BitmapImageNode> description_node;
 };
@@ -76,9 +80,9 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
 
   // Updates the view to show the given |buffer_index| in for the given |collection_id|'s node.
   // Holds |release_fence| until the buffer is no longer needed, then closes the handle. If
-  // non-null, |subregion| specifies what sub-region of the buffer to display.
+  // non-null, |subregion| specifies what sub-region of the buffer to highlight.
   void PostShowBuffer(uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,
-                      std::optional<fuchsia::math::Rect> subregion);
+                      std::optional<fuchsia::math::RectF> subregion);
 
   // Updates the view to show or hide a collection with the given |id|.
   void PostSetCollectionVisibility(uint32_t id, bool visible);
@@ -101,7 +105,7 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
 
   // See PostShowBuffer.
   void ShowBuffer(uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,
-                  std::optional<fuchsia::math::Rect> subregion);
+                  std::optional<fuchsia::math::RectF> subregion);
 
   // Repositions scenic nodes to fit all collections on the screen.
   void UpdateLayout();

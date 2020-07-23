@@ -11,6 +11,7 @@
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
 
+#include "fuchsia/math/cpp/fidl.h"
 #include "src/camera/bin/camera-gym/moving_window.h"
 
 namespace camera {
@@ -25,7 +26,8 @@ class StreamCycler {
   using AddCollectionHandler = fit::function<uint32_t(fuchsia::sysmem::BufferCollectionTokenHandle,
                                                       fuchsia::sysmem::ImageFormat_2, std::string)>;
   using RemoveCollectionHandler = fit::function<void(uint32_t)>;
-  using ShowBufferHandler = fit::function<void(uint32_t, uint32_t, zx::eventpair)>;
+  using ShowBufferHandler =
+      fit::function<void(uint32_t, uint32_t, zx::eventpair, std::optional<fuchsia::math::RectF>)>;
   using MuteStateHandler = fit::function<void(bool)>;
   // Registers handlers that are called when the cycler adds or removes a buffer collection. The
   // value returned by |on_add_collection| will be subsequently passed to |on_remove_collection|.
@@ -88,6 +90,9 @@ class StreamCycler {
     fuchsia::camera3::StreamPtr stream;
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
     uint32_t add_collection_handler_returned_value;
+    std::optional<uint32_t>
+        source_highlight;  // Stream on which to highlight this stream's crop region.
+    std::optional<fuchsia::math::RectF> highlight;
   };
   std::map<uint32_t, StreamInfo> stream_infos_;
 };

@@ -92,15 +92,16 @@ int main(int argc, char* argv[]) {
     collage->RemoveCollection(id);
   };
 
-  camera::StreamCycler::ShowBufferHandler show_buffer_handler = [&](uint32_t collection_id,
-                                                                    uint32_t buffer_index,
-                                                                    zx::eventpair release_fence) {
-    collage->PostShowBuffer(collection_id, buffer_index, std::move(release_fence), std::nullopt);
-    if (!device_muted) {
-      // Only make the collection visible after we have shown an unmuted frame.
-      collage->PostSetCollectionVisibility(collection_id, true);
-    }
-  };
+  camera::StreamCycler::ShowBufferHandler show_buffer_handler =
+      [&](uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,
+          std::optional<fuchsia::math::RectF> subregion) {
+        collage->PostShowBuffer(collection_id, buffer_index, std::move(release_fence),
+                                std::move(subregion));
+        if (!device_muted) {
+          // Only make the collection visible after we have shown an unmuted frame.
+          collage->PostSetCollectionVisibility(collection_id, true);
+        }
+      };
 
   camera::StreamCycler::MuteStateHandler mute_handler = [&](bool muted) {
     collage->PostSetMuteIconVisibility(muted);

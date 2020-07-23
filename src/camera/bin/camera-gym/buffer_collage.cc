@@ -210,6 +210,7 @@ void BufferCollage::RemoveCollection(uint32_t id) {
     auto& collection_view = it->second;
     auto image_pipe_id = collection_view.image_pipe_id;
     view_->DetachChild(*collection_view.node);
+    view_->DetachChild(*collection_view.highlight_node);
     view_->DetachChild(collection_view.description_node->node);
     session_->ReleaseResource(image_pipe_id);  // De-allocate ImagePipe2 scenic side
     collection_view.collection->Close();
@@ -220,7 +221,7 @@ void BufferCollage::RemoveCollection(uint32_t id) {
 
 void BufferCollage::PostShowBuffer(uint32_t collection_id, uint32_t buffer_index,
                                    zx::eventpair release_fence,
-                                   std::optional<fuchsia::math::Rect> subregion) {
+                                   std::optional<fuchsia::math::RectF> subregion) {
   async::PostTask(loop_.dispatcher(), [=, release_fence = std::move(release_fence)]() mutable {
     ShowBuffer(collection_id, buffer_index, std::move(release_fence), subregion);
   });
@@ -285,22 +286,29 @@ void BufferCollage::SetStopOnError(fidl::InterfacePtr<T>& p, std::string name) {
 
 void BufferCollage::ShowBuffer(uint32_t collection_id, uint32_t buffer_index,
                                zx::eventpair release_fence,
-                               std::optional<fuchsia::math::Rect> subregion) {
-  if (subregion) {
-    FX_LOGS(ERROR) << "Subregion is not yet supported.";
-    Stop();
-    return;
-  }
+                               std::optional<fuchsia::math::RectF> subregion) {
   auto it = collection_views_.find(collection_id);
   if (it == collection_views_.end()) {
     FX_LOGS(ERROR) << "Invalid collection ID " << collection_id << ".";
     Stop();
     return;
   }
-  if (buffer_index >= it->second.buffers.buffer_count) {
+  auto& view = it->second;
+  if (buffer_index >= view.buffers.buffer_count) {
     FX_LOGS(ERROR) << "Invalid buffer index " << buffer_index << ".";
     Stop();
     return;
+  }
+
+  if (subregion) {
+    view.highlight_node->SetScale(subregion->width * view.view_region.width,
+                                  subregion->height * view.view_region.height, 0);
+    view.highlight_node->SetTranslation(view.view_region.x + subregion->x * view.view_region.width,
+                                        view.view_region.y + subregion->y * view.view_region.height,
+                                        -0.1f);
+  } else {
+    view.highlight_node->SetScale(1, 1, 0);
+    view.highlight_node->SetTranslation(0, 0, 1);
   }
 
   auto result = MakeEventBridge(loop_.dispatcher(), std::move(release_fence));
@@ -428,6 +436,98 @@ static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float w
   return mesh;
 }
 
+// Builds a "bracketing" mesh shape in the bounds 0..1 comprised of four copies of the
+// following:
+//
+// |----------| = kSpan
+// |---| = kWeight
+//  __________
+// |         /
+// |    ____/
+// |   |
+// |   |
+// |  /
+// |./
+
+static std::unique_ptr<scenic::Mesh> BuildHighlightMesh(scenic::Session* session) {
+  auto mesh = std::make_unique<scenic::Mesh>(session);
+
+  auto format = scenic::NewMeshVertexFormat(fuchsia::ui::gfx::ValueType::kVector3,
+                                            fuchsia::ui::gfx::ValueType::kNone,
+                                            fuchsia::ui::gfx::ValueType::kVector2);
+  constexpr float kWeight = 0.02f;
+  constexpr float kSpan = 0.2f;
+
+  // clang-format off
+  std::vector<std::array<float, 2>> vertices {
+    { 0,               0 },
+    { kSpan,           0 },
+    { kSpan - kWeight, kWeight },
+    { kWeight,         kWeight},
+    { kWeight,         kSpan - kWeight},
+    { 0,               kSpan },
+  };
+  std::vector<std::array<uint32_t, 3>> triangles {
+    { 0, 1, 2 },
+    { 0, 2, 3 },
+    { 0, 3, 4 },
+    { 0, 4, 5 },
+  };
+  // clang-format on
+
+  auto append_mesh = [&](std::vector<float>& vb, std::vector<uint32_t>& ib, bool flip_horizontal,
+                         bool flip_vertical) {
+    uint32_t base_index = vb.size() / 5;
+    bool flip_chirality =
+        (flip_horizontal && !flip_vertical) || (flip_vertical && !flip_horizontal);
+    for (auto& vertex : vertices) {
+      float x = flip_horizontal ? 1 - vertex[0] : vertex[0];
+      float y = flip_vertical ? 1 - vertex[1] : vertex[1];
+      vb.push_back(x);
+      vb.push_back(y);
+      vb.push_back(0);
+      vb.push_back(x);
+      vb.push_back(y);
+    }
+    for (auto& triangle : triangles) {
+      uint32_t a = triangle[0];
+      uint32_t b = flip_chirality ? triangle[2] : triangle[1];
+      uint32_t c = flip_chirality ? triangle[1] : triangle[2];
+      ib.push_back(base_index + a);
+      ib.push_back(base_index + b);
+      ib.push_back(base_index + c);
+    }
+  };
+  std::vector<float> vb;
+  std::vector<uint32_t> ib;
+  append_mesh(vb, ib, false, false);  // top-left
+  append_mesh(vb, ib, true, false);   // top-right
+  append_mesh(vb, ib, false, true);   // bottom-left
+  append_mesh(vb, ib, true, true);    // bottom-right
+
+  zx::vmo vb_vmo;
+  size_t vb_size = vb.size() * sizeof(vb[0]);
+  ZX_ASSERT(zx::vmo::create(vb_size, 0, &vb_vmo) == ZX_OK);
+  ZX_ASSERT(vb_vmo.write(vb.data(), 0, vb_size) == ZX_OK);
+  scenic::Memory vb_mem(session, std::move(vb_vmo), vb_size,
+                        fuchsia::images::MemoryType::HOST_MEMORY);
+  scenic::Buffer scenic_vb(vb_mem, 0, vb_size);
+
+  zx::vmo ib_vmo;
+  size_t ib_size = ib.size() * sizeof(ib[0]);
+  ZX_ASSERT(zx::vmo::create(ib_size, 0, &ib_vmo) == ZX_OK);
+  ZX_ASSERT(ib_vmo.write(ib.data(), 0, ib_size) == ZX_OK);
+  scenic::Memory ib_mem(session, std::move(ib_vmo), ib_size,
+                        fuchsia::images::MemoryType::HOST_MEMORY);
+  scenic::Buffer scenic_ib(ib_mem, 0, ib_size);
+  std::array<float, 3> aabb_min{0, 0, 0};
+  std::array<float, 3> aabb_max{1, 1, 0};
+  mesh->BindBuffers(scenic_ib, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0, ib.size(), scenic_vb,
+                    format, 0, vb.size(), aabb_min, aabb_max);
+
+  return mesh;
+}
+
 void BufferCollage::UpdateLayout() {
   // TODO(49070): resolve constraints even if node is not visible
   // There is no intrinsic need to present the views prior to extents being known.
@@ -447,6 +547,7 @@ void BufferCollage::UpdateLayout() {
   for (auto& [id, view] : collection_views_) {
     if (view.node) {
       view_->DetachChild(*view.node);
+      view_->DetachChild(*view.highlight_node);
       view_->DetachChild(view.description_node->node);
     }
   }
@@ -456,11 +557,15 @@ void BufferCollage::UpdateLayout() {
     for (auto& [id, view] : collection_views_) {
       view.material = std::make_unique<scenic::Material>(session_.get());
       view.material->SetTexture(view.image_pipe_id);
+      view.highlight_material = std::make_unique<scenic::Material>(session_.get());
+      view.highlight_material->SetColor(0xED, 0x1D, 0x7F, 0xFF);
       if (view.visible) {
         view.material->SetColor(255, 255, 255, 255);
+        view.highlight_material->SetColor(0xED, 0x1D, 0x7F, 0xFF);
         view.description_node->material.SetColor(255, 255, 255, 255);
       } else {
         view.material->SetColor(32, 32, 32, 255);
+        view.highlight_material->SetColor(32, 32, 32, 255);
         view.description_node->material.SetColor(32, 32, 32, 255);
       }
       auto [element_width, element_height] =
@@ -470,11 +575,20 @@ void BufferCollage::UpdateLayout() {
                          static_cast<float>(view.image_format.pixel_aspect_ratio_height),
                      cell_width, cell_height);
       view.mesh = BuildMesh(session_.get(), element_width, element_height, show_magnify_boxes_);
+      view.highlight_mesh = BuildHighlightMesh(session_.get());
       view.node = std::make_unique<scenic::ShapeNode>(session_.get());
+      view.highlight_node = std::make_unique<scenic::ShapeNode>(session_.get());
       view.node->SetShape(*view.mesh);
+      view.highlight_node->SetShape(*view.highlight_mesh);
       view.node->SetMaterial(*view.material);
+      view.highlight_node->SetMaterial(*view.highlight_material);
       auto [x, y] = GetCenter(index++, collection_views_.size());
       view.node->SetTranslation(view_width * x, view_height * y, 0);
+      view.highlight_node->SetTranslation(0, 0, 1.0f);
+      view.view_region.width = element_width;
+      view.view_region.height = element_height;
+      view.view_region.x = view_width * x - element_width * 0.5f;
+      view.view_region.y = view_height * y - element_height * 0.5f;
       float scale = (element_width - kPadding * 2) / view.description_node->width;
       view.description_node->node.SetScale(scale, scale, scale);
       view.description_node->node.SetTranslation(view_width * x,
@@ -483,6 +597,7 @@ void BufferCollage::UpdateLayout() {
                                                      kPadding,
                                                  -0.5f);
       view_->AddChild(*view.node);
+      view_->AddChild(*view.highlight_node);
       view_->AddChild(view.description_node->node);
     }
   }

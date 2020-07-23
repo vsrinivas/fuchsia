@@ -157,6 +157,9 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
   stream_infos_.emplace(stream_index, std::move(new_stream_info));
   auto& stream = stream_infos_[stream_index].stream;
   auto stream_request = stream.NewRequest(loop_.dispatcher());
+  if (config_index == 1 || config_index == 2) {
+    stream_infos_[stream_index].source_highlight = 0;
+  }
 
   // Allocate buffer collection
   fuchsia::sysmem::BufferCollectionTokenHandle token_orig;
@@ -201,7 +204,7 @@ void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInf
   auto& stream_info = stream_infos_[stream_index];
   if (show_buffer_handler_) {
     show_buffer_handler_(stream_info.add_collection_handler_returned_value, frame_info.buffer_index,
-                         std::move(frame_info.release_fence));
+                         std::move(frame_info.release_fence), stream_info.highlight);
   } else {
     frame_info.release_fence.reset();
   }
@@ -218,8 +221,11 @@ void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInf
     ++count;
     if (count >= limit) {
       count = 0;
-      auto region = std::make_unique<fuchsia::math::RectF>(moving_window_.NextWindow());
-      stream->SetCropRegion(std::move(region));
+      auto region = moving_window_.NextWindow();
+      stream->SetCropRegion(std::make_unique<fuchsia::math::RectF>(region));
+      if (stream_infos_[stream_index].source_highlight) {
+        stream_infos_[stream_infos_[stream_index].source_highlight.value()].highlight = region;
+      }
     }
   }
 
