@@ -521,7 +521,7 @@ void MediaApp::GetClockAndStart() {
              (min_lead_time_ >= kRealDeviceMinLeadTime ? "Received" : "Awaiting"));
     }
 
-    if (min_lead_time_ >= kRealDeviceMinLeadTime) {
+    if (min_lead_time_ >= kRealDeviceMinLeadTime && !playing()) {
       Play();
     }
   });
@@ -613,10 +613,17 @@ void MediaApp::Play() {
       printf("Play callback(ref %s, media %s) at ref_now %s : mono_now %s\n\n",
              actual_ref_str.c_str(), actual_media_str.c_str(), ref_now_str.c_str(),
              mono_now_str.c_str());
+
+      reference_start_time_ = zx::time(actual_ref_start);
     }
   };
 
   audio_renderer_->Play(reference_start_time_.get(), media_start_pts, play_completion_func);
+  set_playing();
+  // Online mode uses this when determining when to send each packet. To keep packets flowing until
+  // we receive the callback with the exact start time, set a sooner one here.
+  reference_start_time_ = ref_now;
+
   if (online_) {
     target_online_send_packet_ref_time_ = ref_now;
     ScheduleNextSendPacket();
@@ -856,7 +863,8 @@ void MediaApp::ScheduleNextSendPacket() {
     return;
   }
 
-  target_online_send_packet_ref_time_ += online_send_packet_ref_period_;
+  target_online_send_packet_ref_time_ =
+      reference_start_time_ + (online_send_packet_ref_period_ * num_packets_sent_) - min_lead_time_;
   auto mono_time_result = audio::clock::MonotonicTimeFromReferenceTime(
       reference_clock_, target_online_send_packet_ref_time_);
   CLI_CHECK(mono_time_result.is_ok(), "Could not convert ref_time to mono_time");
@@ -985,7 +993,7 @@ void MediaApp::SetAudioRendererEvents() {
              (reference_clock_.is_valid() ? "Received" : "Awaiting"));
     }
 
-    if (min_lead_time_ >= kRealDeviceMinLeadTime && reference_clock_.is_valid()) {
+    if (min_lead_time_ >= kRealDeviceMinLeadTime && reference_clock_.is_valid() && !playing()) {
       Play();
     }
   };

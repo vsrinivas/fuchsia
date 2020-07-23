@@ -99,6 +99,9 @@ class MediaApp {
   void set_online(bool online) { online_ = online; }
   void set_verbose(bool verbose) { verbose_ = verbose; }
 
+  bool playing() const { return playing_; }
+  void set_playing() { playing_ = true; }
+
   void Run(sys::ComponentContext* app_context);
 
  private:
@@ -230,6 +233,7 @@ class MediaApp {
 
   bool ultrasound_ = false;
   bool verbose_;
+  bool playing_ = false;
 };
 
 }  // namespace media::tools
