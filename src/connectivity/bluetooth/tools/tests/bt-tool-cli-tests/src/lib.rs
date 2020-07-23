@@ -121,7 +121,7 @@ fn avrcp_controller_help_string() {
     reader.read_line(&mut ret).expect("Unable to read stdout");
     reader.read_line(&mut ret).expect("Unable to read stdout");
 
-    assert!(ret.contains("Fuchsia Bluetooth Team"));
+    assert!(ret.contains("Usage: "), "found: {}", ret);
     assert!(ret.contains("Bluetooth AVRCP Controller CLI"));
 }
 

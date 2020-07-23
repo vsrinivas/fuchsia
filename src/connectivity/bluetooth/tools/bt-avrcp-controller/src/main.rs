@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    argh::FromArgs,
     fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_bluetooth_avrcp::{
@@ -24,7 +25,6 @@ use {
     pin_utils::pin_mut,
     rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor},
     std::thread,
-    structopt::StructOpt,
 };
 
 use crate::commands::{avc_match_string, Cmd, CmdHelper, ReplControl};
@@ -37,14 +37,11 @@ static PROMPT: &str = "\x1b[34mavrcp>\x1b[0m ";
 static CLEAR_LINE: &str = "\x1b[2K";
 
 /// Define the command line arguments that the tool accepts.
-#[derive(StructOpt)]
-#[structopt(
-    version = "0.2.0",
-    author = "Fuchsia Bluetooth Team",
-    about = "Bluetooth AVRCP Controller CLI"
-)]
-struct Opt {
-    #[structopt(help = "Target Device ID")]
+#[derive(FromArgs)]
+#[argh(description = "Bluetooth AVRCP Controller CLI")]
+struct Options {
+    /// target device id.
+    #[argh(positional)]
     device: String,
 }
 
@@ -390,7 +387,7 @@ async fn run_repl<'a>(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let opt = Opt::from_args();
+    let opt: Options = argh::from_env();
 
     let device_id = &opt.device.replace("-", "").to_lowercase();
 
