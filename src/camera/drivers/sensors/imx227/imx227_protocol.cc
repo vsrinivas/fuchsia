@@ -143,12 +143,12 @@ zx_status_t Imx227Device::CameraSensor2SetTestPatternData(const color_val_t* dat
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Imx227Device::CameraSensor2GetTestCursorData(rect_vals_t* out_data) {
+zx_status_t Imx227Device::CameraSensor2GetTestCursorData(rect_t* out_data) {
   FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Imx227Device::CameraSensor2SetTestCursorData(const rect_vals_t* data) {
+zx_status_t Imx227Device::CameraSensor2SetTestCursorData(const rect_t* data) {
   FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }

@@ -154,8 +154,8 @@ class Imx227Device : public DeviceType,
   zx_status_t CameraSensor2SetTestPatternMode(uint16_t mode);
   zx_status_t CameraSensor2GetTestPatternData(color_val_t* out_data);
   zx_status_t CameraSensor2SetTestPatternData(const color_val_t* data);
-  zx_status_t CameraSensor2GetTestCursorData(rect_vals_t* out_data);
-  zx_status_t CameraSensor2SetTestCursorData(const rect_vals_t* data);
+  zx_status_t CameraSensor2GetTestCursorData(rect_t* out_data);
+  zx_status_t CameraSensor2SetTestCursorData(const rect_t* data);
   zx_status_t CameraSensor2GetExtensionValue(uint64_t id, extension_value_data_type_t** out_value);
   zx_status_t CameraSensor2SetExtensionValue(uint64_t id, const extension_value_data_type_t* value,
                                              extension_value_data_type_t** out_value);

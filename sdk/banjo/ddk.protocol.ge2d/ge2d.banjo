@@ -5,6 +5,7 @@
 library ddk.protocol.ge2d;
 using zx;
 using zircon.device.sysmem;
+using ddk.protocol.camera;
 using ddk.protocol.camerahwaccel;
 
 enum Ge2dRotation : uint8 {
@@ -15,16 +16,9 @@ enum Ge2dRotation : uint8 {
     MAX = 4;
 };
 
-struct Rect {
-    uint32 x;
-    uint32 y;
-    uint32 width;
-    uint32 height;
-};
-
 struct ResizeInfo {
     // TODO (jsasinowski): Determine if this is a src or dst rect & document accordingly.
-    Rect crop; // Initially this will be the same size as the canvas.
+    ddk.protocol.camera.Rect crop; // Initially this will be the same size as the canvas.
     // Rotation is needed for video playback
     Ge2dRotation output_rotation;
 };
@@ -124,5 +118,5 @@ protocol Ge2d {
 
     // Sets/Changes the crop rectangle (on a Resize Task). Typically called when
     // the camera controller is notified by Smart Framing to crop and resize.
-    SetCropRect(uint32 task_index, Rect crop);
+    SetCropRect(uint32 task_index, ddk.protocol.camera.Rect crop);
 };

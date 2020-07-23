@@ -42,11 +42,9 @@ struct MinMaxConstraints {
 };
 
 /// Encodes information to represent a rectangle on a grid.
-// TODO(55419): Overrides ddk.protocol.ge2d struct.
-//              Consolidate here and rename to just `Rect`.
-struct RectVals {
-    uint32 x_pos;
-    uint32 y_pos;
+struct Rect {
+    uint32 x;
+    uint32 y;
     uint32 width;
     uint32 height;
 };

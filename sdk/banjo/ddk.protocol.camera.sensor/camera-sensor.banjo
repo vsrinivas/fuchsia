@@ -47,7 +47,7 @@ struct ReadoutConfig {
     /// Describes sampling parameters for the y plane.
     SamplingParams sampling_y;
     /// The x and y offset as well as the width and height for cropping.
-    ddk.protocol.camera.RectVals scaler_crop;
+    ddk.protocol.camera.Rect scaler_crop;
 };
 
 /// A sensor can support several different predefined modes.
@@ -172,9 +172,9 @@ protocol CameraSensor2 {
     SetTestPatternData(ddk.protocol.camera.ColorVal data) -> (zx.status s);
 
     /// Retrieves the test cursor data being used.
-    GetTestCursorData() -> (zx.status s, ddk.protocol.camera.RectVals data);
+    GetTestCursorData() -> (zx.status s, ddk.protocol.camera.Rect data);
     /// Changes the sensor's cursor-related parameters.
-    SetTestCursorData(ddk.protocol.camera.RectVals data) -> (zx.status s);
+    SetTestCursorData(ddk.protocol.camera.Rect data) -> (zx.status s);
 
     // Other Capabilities
 
