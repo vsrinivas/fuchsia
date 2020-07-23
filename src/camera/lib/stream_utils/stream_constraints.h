@@ -36,7 +36,8 @@ struct StreamConstraints {
   StreamConstraints(){};
   StreamConstraints(fuchsia::camera2::CameraStreamType type) : stream_type_(type) {}
 
-  void AddImageFormat(uint32_t width, uint32_t height, fuchsia::sysmem::PixelFormatType format);
+  void AddImageFormat(uint32_t width, uint32_t height, fuchsia::sysmem::PixelFormatType format,
+                      uint32_t original_width = 0, uint32_t original_height = 0);
 
   void set_contiguous(bool flag) { contiguous_ = flag; }
   void set_bytes_per_row_divisor(uint32_t bytes_per_row_divisor) {
@@ -47,7 +48,9 @@ struct StreamConstraints {
   }
 
   static fuchsia::sysmem::ImageFormat_2 MakeImageFormat(uint32_t width, uint32_t height,
-                                                        fuchsia::sysmem::PixelFormatType format);
+                                                        fuchsia::sysmem::PixelFormatType format,
+                                                        uint32_t original_width = 0,
+                                                        uint32_t original_height = 0);
 
   void set_frames_per_second(uint32_t frames_per_second) { frames_per_second_ = frames_per_second; }
 

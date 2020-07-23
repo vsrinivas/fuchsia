@@ -58,9 +58,9 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig(bool extended_fov) {
                                : kVideoStreamType;
 
   StreamConstraints stream(stream_properties);
-  stream.AddImageFormat(kVideoWidth, kVideoHeight, kFramePixelFormat);
-  stream.AddImageFormat(kVideoWidth1, kVideoHeight1, kFramePixelFormat);
-  stream.AddImageFormat(kVideoWidth2, kVideoHeight2, kFramePixelFormat);
+  stream.AddImageFormat(kVideoWidth, kVideoHeight, kFramePixelFormat, kGdcFRWidth, kGdcFRHeight);
+  stream.AddImageFormat(kVideoWidth1, kVideoHeight1, kFramePixelFormat, kGdcFRWidth, kGdcFRHeight);
+  stream.AddImageFormat(kVideoWidth2, kVideoHeight2, kFramePixelFormat, kGdcFRWidth, kGdcFRHeight);
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kVideoFrameRate);

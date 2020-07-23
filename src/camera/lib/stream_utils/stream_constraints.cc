@@ -8,6 +8,7 @@
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/affine/ratio.h>
 #include <lib/image-format/image_format.h>
 
 #include <algorithm>
@@ -69,11 +70,33 @@ static fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(fuchsia::sysmem::PixelFo
 
 // Make an ImageFormat_2 struct with default values except for width, height and format.
 fuchsia::sysmem::ImageFormat_2 StreamConstraints::MakeImageFormat(
-    uint32_t width, uint32_t height, fuchsia::sysmem::PixelFormatType format) {
+    uint32_t width, uint32_t height, fuchsia::sysmem::PixelFormatType format,
+    uint32_t original_width, uint32_t original_height) {
   fuchsia::sysmem::PixelFormat pixel_format = {.type = format, .has_format_modifier = false};
   fuchsia_sysmem_PixelFormat pixel_format_c = ConvertPixelFormatToC(pixel_format);
   uint32_t bytes_per_row = ImageFormatStrideBytesPerWidthPixel(&pixel_format_c) * width;
-
+  if (width == 0 || height == 0) {
+    width = 1;
+    height = 1;
+  }
+  if (original_width == 0) {
+    original_width = width;
+  }
+  if (original_height == 0) {
+    original_height = height;
+  }
+  // Calculate the reduced fraction for the rational value (original_ratio / format_ratio).
+  // Equivalent to (original_width / original_height) / (width / height)
+  //             = (original_width * height) / (original_height * width)
+  auto pixel_aspect_ratio_width = static_cast<uint64_t>(original_width) * height;
+  auto pixel_aspect_ratio_height = static_cast<uint64_t>(original_height) * width;
+  affine::Ratio::Reduce(&pixel_aspect_ratio_width, &pixel_aspect_ratio_height);
+  // Round and truncate values that are still too large to fit in the format struct.
+  while (pixel_aspect_ratio_width > std::numeric_limits<uint32_t>::max() ||
+         pixel_aspect_ratio_height > std::numeric_limits<uint32_t>::max()) {
+    pixel_aspect_ratio_width = (pixel_aspect_ratio_width + (1u << 31)) >> 1;
+    pixel_aspect_ratio_height = (pixel_aspect_ratio_height + (1u << 31)) >> 1;
+  }
   return {
       .pixel_format = {.type = format, .has_format_modifier = false},
       .coded_width = width,
@@ -83,12 +106,15 @@ fuchsia::sysmem::ImageFormat_2 StreamConstraints::MakeImageFormat(
       .display_height = height,
       .layers = 1,
       .color_space = {.type = fuchsia::sysmem::ColorSpaceType::REC601_PAL},
+      .pixel_aspect_ratio_width = static_cast<uint32_t>(pixel_aspect_ratio_width),
+      .pixel_aspect_ratio_height = static_cast<uint32_t>(pixel_aspect_ratio_height),
   };
 }
 
 void StreamConstraints::AddImageFormat(uint32_t width, uint32_t height,
-                                       fuchsia::sysmem::PixelFormatType format) {
-  formats_.push_back(MakeImageFormat(width, height, format));
+                                       fuchsia::sysmem::PixelFormatType format,
+                                       uint32_t original_width, uint32_t original_height) {
+  formats_.push_back(MakeImageFormat(width, height, format, original_width, original_height));
 }
 
 fuchsia::sysmem::BufferCollectionConstraints StreamConstraints::MakeBufferCollectionConstraints()

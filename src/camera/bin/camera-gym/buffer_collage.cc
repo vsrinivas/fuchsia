@@ -463,8 +463,12 @@ void BufferCollage::UpdateLayout() {
         view.material->SetColor(32, 32, 32, 255);
         view.description_node->material.SetColor(32, 32, 32, 255);
       }
-      auto [element_width, element_height] = ScaleToFit(
-          view.image_format.coded_width, view.image_format.coded_height, cell_width, cell_height);
+      auto [element_width, element_height] =
+          ScaleToFit(view.image_format.coded_width *
+                         static_cast<float>(view.image_format.pixel_aspect_ratio_width),
+                     view.image_format.coded_height *
+                         static_cast<float>(view.image_format.pixel_aspect_ratio_height),
+                     cell_width, cell_height);
       view.mesh = BuildMesh(session_.get(), element_width, element_height, show_magnify_boxes_);
       view.node = std::make_unique<scenic::ShapeNode>(session_.get());
       view.node->SetShape(*view.mesh);
