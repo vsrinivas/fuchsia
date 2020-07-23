@@ -167,8 +167,6 @@ static constexpr const char* deprecated_services[] = {
     ::llcpp::fuchsia::posix::socket::Provider::Name,
     // Legacy interface for netstack, defined in //sdk/fidl/.
     "fuchsia.netstack.Netstack",
-    // Routing control.
-    "fuchsia.net.routing.Routing",
     // New interface for netstack, defined in //zircon/system/fidl/
     "fuchsia.net.stack.Stack",
     // Network troubleshooting is needed from serial console.
