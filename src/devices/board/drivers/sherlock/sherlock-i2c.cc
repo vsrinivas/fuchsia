@@ -46,7 +46,7 @@ static const pbus_irq_t i2c_irqs[] = {
     },
 };
 
-static const i2c_channel_t i2c_channels[] = {
+static i2c_channel_t i2c_channels[] = {
     // Backlight I2C
     {
         .bus_id = SHERLOCK_I2C_3,
@@ -140,7 +140,14 @@ zx_status_t Sherlock::I2cInit() {
   gpio_impl_.SetAltFunction(T931_GPIOA(14), 2);
   gpio_impl_.SetAltFunction(T931_GPIOA(15), 2);
 
-  zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
+  // Camera sensor for Luis
+  pdev_board_info_t info;
+  zx_status_t status = pbus_.GetBoardInfo(&info);
+  if (status == ZX_OK && info.pid == PDEV_PID_LUIS) {
+      i2c_channels[5].address = 0x1a;
+  }
+
+  status = pbus_.DeviceAdd(&i2c_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

@@ -210,7 +210,8 @@ static const device_fragment_t ge2d_fragments[] = {
 static const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_3),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x36),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x36), // sherlock
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x1a), // luis
 };
 static const zx_bind_inst_t gpio_reset_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
