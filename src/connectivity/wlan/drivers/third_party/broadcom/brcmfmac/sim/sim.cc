@@ -126,6 +126,7 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
   status = brcmf_bus_started(drvr);
   if (status != ZX_OK) {
     BRCMF_ERR("Failed to start (simulated) bus");
+    brcmf_proto_bcdc_detach(drvr);
     return status;
   }
 
