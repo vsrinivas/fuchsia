@@ -155,6 +155,7 @@ void Pipe::SetEvent(zx::event event, SetEventCompleter::Sync completer) {
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Pipe::SetEvent() failed to transfer observed signals: %d", kTag, status);
     completer.Close(status);
+    return;
   }
 
   event_ = std::move(event);
