@@ -89,7 +89,7 @@ foreach(selector, select_variant) {
   }
 }
 
-if (current_os == "mac") {
+if (host_os == "mac") {
   import("//build/config/mac/mac_sdk.gni")
 }
 
@@ -116,7 +116,7 @@ declare_args() {
       # prebuilt.
       clang_tool_dir = rebase_path(clang_prefix, "", root_build_dir)
     }
-    if (current_os == "mac") {
+    if (host_os == "mac") {
       mac_sdk_path = mac_sdk_path
     }
     variants = zircon_variants
