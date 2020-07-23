@@ -20,16 +20,16 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
-	testsharder "go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
+	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	tap "go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
-	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
-	testrunner "go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/tap"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
 )
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.

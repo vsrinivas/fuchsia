@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
+	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"

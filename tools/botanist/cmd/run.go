@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+	"go.fuchsia.dev/fuchsia/tools/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
-	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"

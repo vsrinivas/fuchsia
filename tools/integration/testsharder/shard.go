@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 // Shard represents a set of tests with a common execution environment.

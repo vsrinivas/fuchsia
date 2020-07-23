@@ -7,12 +7,12 @@ import("//build/go/go_library.gni")
 import("//build/host.gni")
 
 go_library("make-efi_lib") {
-  name = "make-efi"
+  name = "go.fuchsia.dev/fuchsia/tools/make-efi"
   deps = [ "//garnet/go/src/thinfs:thinfs_lib" ]
 }
 
 go_binary("make-efi") {
-  gopackage = "make-efi"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/make-efi"
 
   deps = [ ":make-efi_lib" ]
 }

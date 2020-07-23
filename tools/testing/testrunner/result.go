@@ -6,9 +6,10 @@
 package testrunner
 
 import (
-	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 // TestResult is the result of executing a test.

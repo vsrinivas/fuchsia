@@ -7,7 +7,7 @@ package covargs
 import (
 	"context"
 
-	"go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
+	"go.fuchsia.dev/fuchsia/tools/debug/symbolize"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )

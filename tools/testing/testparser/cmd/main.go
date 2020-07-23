@@ -12,7 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 func usage() {

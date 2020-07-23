@@ -8,20 +8,20 @@ import (
 	"flag"
 	"fmt"
 
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/lib"
+	checklicenses "go.fuchsia.dev/fuchsia/tools/check-licenses"
 )
 
 const configFile = "tools/check-licenses/config/config.json"
 
 func main() {
-	var config lib.Config
+	var config checklicenses.Config
 	configJson := flag.String("config", configFile, "Location of config.json")
 	if err := config.Init(configJson); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 	flag.StringVar(&config.Target, "target", config.Target, "Options: {all, <target>}")
-	if err := lib.Walk(&config); err != nil {
+	if err := checklicenses.Walk(&config); err != nil {
 		fmt.Println(err.Error())
 	}
 }

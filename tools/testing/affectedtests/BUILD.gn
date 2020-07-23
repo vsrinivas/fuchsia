@@ -8,7 +8,7 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_binary("affectedtests") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/affectedtests/main"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/affectedtests/cmd"
   deps = [
     ":lib",
     ":main",
@@ -16,13 +16,13 @@ go_binary("affectedtests") {
 }
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/affectedtests/lib"
-  source_dir = "lib"
+  name = "go.fuchsia.dev/fuchsia/tools/testing/affectedtests"
   deps = [ "//tools/build" ]
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/affectedtests/main"
+  name = "go.fuchsia.dev/fuchsia/tools/testing/affectedtests/cmd"
+  source_dir = "cmd"
   deps = [ "//tools/build" ]
 }
 
@@ -36,7 +36,7 @@ if (is_host) {
 
   go_test("test") {
     output_name = "affectedtests_tests"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/affectedtests/lib" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/affectedtests" ]
     args = [
       "--test_data_dir",
       rebase_path(_testdata_path, root_out_dir),

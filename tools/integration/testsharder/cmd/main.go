@@ -12,8 +12,8 @@ import (
 	"os"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
-	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
+	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 )
 

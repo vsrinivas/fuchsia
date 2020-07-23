@@ -7,7 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("botanist_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/botanist/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/botanist"
   deps = [
     ":constants",
     "//src/sys/pkg/lib/repo",
@@ -63,7 +63,7 @@ go_binary("botanist") {
 }
 
 go_test("botanist_lib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist" ]
   deps = [ ":botanist_lib" ]
 }
 

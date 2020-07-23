@@ -4,7 +4,7 @@
 
 package testsharder
 
-import "go.fuchsia.dev/fuchsia/tools/build/lib"
+import "go.fuchsia.dev/fuchsia/tools/build"
 
 // Test is a struct used to hold information about a build.Test and the number
 // of times to run it.

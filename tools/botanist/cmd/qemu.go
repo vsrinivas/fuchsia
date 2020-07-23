@@ -10,7 +10,7 @@ import (
 	"fmt"
 
 	"github.com/google/subcommands"
-	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"

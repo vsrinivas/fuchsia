@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	"go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
-	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/tap"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
 )
 
 func TestRecordingOfOutputs(t *testing.T) {

@@ -7,12 +7,23 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 
+go_library("lib") {
+  name = "go.fuchsia.dev/fuchsia/tools/fuzz"
+  deps = [
+    "//third_party/golibs:github.com/golang/glog",
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//third_party/golibs:github.com/pkg/sftp",
+    "//third_party/golibs:golang.org/x/crypto",
+    "//tools/qemu",
+  ]
+}
+
 # This tool can only be built on the host
 if (is_host) {
   go_library("main") {
     name = "main"
-    source_dir = "."
-    deps = [ "lib" ]
+    source_dir = "cmd"
+    deps = [ ":lib" ]
   }
 
   go_binary("undercoat") {
@@ -21,9 +32,9 @@ if (is_host) {
   }
 
   go_test("undercoat_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fuzz/lib" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fuzz" ]
     args = [ "-test.short" ]  # exclude end-to-end
-    deps = [ "lib" ]
+    deps = [ ":lib" ]
   }
 
   group("tests") {

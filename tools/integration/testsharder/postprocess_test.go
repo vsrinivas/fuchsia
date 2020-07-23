@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 func makeTest(id int, os string) Test {

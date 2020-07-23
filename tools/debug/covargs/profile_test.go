@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
-	"go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
+	"go.fuchsia.dev/fuchsia/tools/debug/symbolize"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 

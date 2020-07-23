@@ -19,7 +19,7 @@ go_library("llvm_api") {
 }
 
 go_library("covargs_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/covargs/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/debug/covargs"
   deps = [
     ":codecoverage_api",
     ":llvm_api",
@@ -53,7 +53,7 @@ go_binary("covargs") {
 }
 
 go_test("covargs_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/covargs/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/covargs" ]
   deps = [
     ":codecoverage_api",
     ":covargs_lib",

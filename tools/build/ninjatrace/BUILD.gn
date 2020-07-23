@@ -6,12 +6,12 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/build/lib/ninjatrace/cmd"
+  name = "go.fuchsia.dev/fuchsia/tools/build/ninjatrace/cmd"
   source_dir = "cmd"
   deps = [ "//tools/build/ninjalog" ]
 }
 
 go_binary("ninjatrace") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/build/lib/ninjatrace/cmd"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/build/ninjatrace/cmd"
   deps = [ ":main" ]
 }

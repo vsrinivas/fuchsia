@@ -13,7 +13,7 @@ import (
 	"os"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	tefmocheck "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/tefmocheck"
 )
 
 func usage() {

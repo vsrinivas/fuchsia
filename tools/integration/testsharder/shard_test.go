@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 // Note that just printing a list of shard pointers will print a list of memory addresses,

@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	breakpad "go.fuchsia.dev/fuchsia/tools/debug/breakpad/lib"
+	"go.fuchsia.dev/fuchsia/tools/debug/breakpad"
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 )
 

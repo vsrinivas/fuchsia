@@ -7,7 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/testing/testrunner"
   deps = [ "//tools/testing/runtests" ]
 }
 
@@ -17,7 +17,7 @@ go_library("constants") {
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd"
   source_dir = "cmd"
   deps = [
     ":constants",
@@ -41,13 +41,13 @@ go_library("main") {
 }
 
 go_binary("testrunner") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/lib"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd"
   deps = [ ":main" ]
 }
 
 go_test("tests") {
   output_name = "testrunner_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd" ]
   deps = [
     ":main",
     "//third_party/golibs:github.com/google/go-cmp",

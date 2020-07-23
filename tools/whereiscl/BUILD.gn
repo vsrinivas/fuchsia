@@ -8,14 +8,13 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/whereiscl/lib"
-  source_dir = "lib"
+  name = "go.fuchsia.dev/fuchsia/tools/whereiscl"
   deps = [ ":netutil" ]
 }
 
 go_library("main") {
   name = "main"
-  source_dir = "."
+  source_dir = "cmd"
   deps = [ ":lib" ]
 }
 
@@ -40,7 +39,7 @@ go_library("testhelper") {
 }
 
 go_test("whereiscl_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/whereiscl/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/whereiscl" ]
   deps = [
     ":lib",
     ":testhelper",

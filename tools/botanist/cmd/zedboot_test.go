@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 )
 

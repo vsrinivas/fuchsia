@@ -13,7 +13,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 // Implements binModules

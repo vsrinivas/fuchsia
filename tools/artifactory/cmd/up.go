@@ -24,8 +24,8 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/google/subcommands"
-	artifactory "go.fuchsia.dev/fuchsia/tools/artifactory/lib"
-	build "go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/artifactory"
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 )

@@ -6,7 +6,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("tap") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/testing/tap"
   deps = [ ":tokenizer" ]
 }
 
@@ -16,7 +16,7 @@ go_library("tokenizer") {
 }
 
 go_test("tap_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/tap/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/tap" ]
   deps = [
     ":tap",
     "//third_party/golibs:github.com/go-yaml/yaml",

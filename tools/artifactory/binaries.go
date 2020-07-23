@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 

@@ -37,7 +37,7 @@ go_library("main") {
 }
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/artifactory/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/artifactory"
   deps = [
     "//tools/build",
     "//tools/lib/logger",
@@ -46,7 +46,7 @@ go_library("lib") {
 }
 
 go_test("artifactory_lib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/artifactory/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/artifactory" ]
   deps = [ ":lib" ]
 }
 

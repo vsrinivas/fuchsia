@@ -8,7 +8,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 // BuildAPIModuleUploads returns a set of Uploads corresponding to the

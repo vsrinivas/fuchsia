@@ -8,7 +8,7 @@ package runtests
 import (
 	"time"
 
-	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 // TestResult is the exit result of a test.

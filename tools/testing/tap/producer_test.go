@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-yaml/yaml"
-	"go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/tap"
 )
 
 func ExampleProducer_single_test() {

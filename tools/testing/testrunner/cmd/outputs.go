@@ -15,8 +15,8 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	"go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
-	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/tap"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
 )
 
 // testOutput manages the test runner's output drivers. Upon completion, if tar output is

@@ -7,7 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("symbolize_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/debug/symbolize"
   deps = [
     "//third_party/golibs:cloud.google.com/go/storage",
     "//tools/debug/elflib",
@@ -31,7 +31,7 @@ go_binary("symbolize") {
 }
 
 go_test("symbolize_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/symbolize" ]
   deps = [ ":symbolize_lib" ]
   non_go_deps = [ "//tools/debug/symbolize/testdata" ]
 }

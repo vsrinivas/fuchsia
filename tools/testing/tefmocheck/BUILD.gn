@@ -7,7 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck"
   deps = [
     "//tools/bootserver:bootserverconstants",
     "//tools/botanist:constants",
@@ -17,7 +17,7 @@ go_library("lib") {
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd"
   source_dir = "cmd"
   deps = [
     ":lib",
@@ -26,7 +26,7 @@ go_library("main") {
 }
 
 go_binary("tefmocheck") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd/lib"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd"
   deps = [ ":main" ]
 
   # Needed to support cross-compilation. The infra recipes always needs this
@@ -36,7 +36,7 @@ go_binary("tefmocheck") {
 
 go_test("main_tests") {
   output_name = "tefmocheck_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd" ]
   deps = [
     ":main",
     "//third_party/golibs:github.com/google/go-cmp",
@@ -46,7 +46,7 @@ go_test("main_tests") {
 
 go_test("lib_tests") {
   output_name = "tefmocheck_lib_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck" ]
   deps = [
     ":lib",
     "//third_party/golibs:github.com/google/go-cmp",

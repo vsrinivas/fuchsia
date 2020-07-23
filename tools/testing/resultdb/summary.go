@@ -16,7 +16,7 @@ import (
 	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 // ParseSummary unmarshalls the summary.json file content into runtests.TestSummary struct.

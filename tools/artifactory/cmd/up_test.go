@@ -16,7 +16,7 @@ import (
 	"sync"
 	"testing"
 
-	artifactory "go.fuchsia.dev/fuchsia/tools/artifactory/lib"
+	"go.fuchsia.dev/fuchsia/tools/artifactory"
 )
 
 const (

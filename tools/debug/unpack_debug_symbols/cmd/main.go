@@ -235,7 +235,7 @@ func produceSymbols(ctx context.Context, inputBuildIDDir string, br *runner.Batc
 		out := filepath.Join(buildIDDirOut, ref.BuildID[:2], ref.BuildID[2:]+".sym")
 		logger.Tracef(ctx, "spun up dump_syms for %s", out)
 		if err := runDumpSyms(ctx, br, ref.Filepath, out); err != nil {
-			return nil, fmt.Errorf("while calling dump_syms for %s: %v", err)
+			return nil, fmt.Errorf("while calling dump_syms for %s: %v", ref.Filepath, err)
 		}
 		outs = append(outs, binaryRef{ref, out})
 	}

@@ -31,7 +31,7 @@ func TestGetLUCICtx(t *testing.T) {
 	os.Setenv("LUCI_CONTEXT", luciCtx)
 	ctx, err := resultSinkCtx()
 	if err != nil {
-		t.Errorf("Cannot parse LUCI_CONTEXT.")
+		t.Errorf("Cannot parse LUCI_CONTEXT: %v", err)
 	}
 	if ctx.ResultSinkAddr != "result.sink" {
 		t.Errorf("Incorrect value parsed for result_sink address. Got %s", ctx.ResultSinkAddr)

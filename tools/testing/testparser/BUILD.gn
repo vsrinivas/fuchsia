@@ -7,7 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("testparser") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/testing/testparser"
 }
 
 group("tests") {
@@ -21,24 +21,24 @@ group("tests") {
 
 go_test("test") {
   output_name = "testparser_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testparser" ]
   deps = [ ":testparser" ]
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/testparser/cmd/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/testing/testparser/cmd"
   source_dir = "cmd"
   deps = [ ":testparser" ]
 }
 
 go_binary("testparser_cmd") {
   output_name = "testparser"
-  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/testparser/cmd/lib"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/testparser/cmd"
   deps = [ ":main" ]
 }
 
 go_test("testparser_cmd_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testparser/cmd/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testparser/cmd" ]
   deps = [
     ":main",
     "//third_party/golibs:github.com/google/go-cmp",

@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 func deepCopy(x, y interface{}) error {

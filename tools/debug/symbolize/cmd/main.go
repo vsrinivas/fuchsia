@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	symbolize "go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
+	"go.fuchsia.dev/fuchsia/tools/debug/symbolize"
 	"go.fuchsia.dev/fuchsia/tools/lib/cache"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"

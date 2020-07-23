@@ -4,7 +4,7 @@
 
 package testsharder
 
-import "go.fuchsia.dev/fuchsia/tools/build/lib"
+import "go.fuchsia.dev/fuchsia/tools/build"
 
 // Exactly one entry in the durations file will have this as its test_name field. The
 // durations specified by this entry will be applied to any tests that aren't

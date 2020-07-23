@@ -14,8 +14,8 @@ import (
 	"net"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
-	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
+	"go.fuchsia.dev/fuchsia/tools/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"

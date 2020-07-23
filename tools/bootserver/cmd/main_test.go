@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+	"go.fuchsia.dev/fuchsia/tools/bootserver"
 )
 
 func TestPopulateReaders(t *testing.T) {

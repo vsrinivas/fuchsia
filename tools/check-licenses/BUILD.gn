@@ -29,12 +29,11 @@ go_library("templates") {
 }
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/check-licenses/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/check-licenses"
   deps = [
     ":templates",
     "//tools/lib/logger",
   ]
-  source_dir = "lib"
 }
 
 go_library("golden") {
@@ -62,7 +61,7 @@ go_test("check-licenses_main_tests") {
 }
 
 go_test("check-licenses_lib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses" ]
   deps = [ ":lib" ]
 }
 

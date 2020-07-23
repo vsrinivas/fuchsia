@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 // ValidateTests validates a list of test specs against a list of available test platforms.
