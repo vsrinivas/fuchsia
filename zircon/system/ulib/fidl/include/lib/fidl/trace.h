@@ -116,6 +116,15 @@ typedef struct fidl_trace_tag {
       .type = type_,                                                   \
   })
 
+#ifndef FIDL_TRACE_LEVEL
+// The build system is generally expected to define FIDL_TRACE_LEVEL for
+// anything that uses FIDL, but this may not be possible if e.g. the Fuchsia SDK
+// being used with other build systems. If FIDL_TRACE_LEVEL isn't defined, it's
+// reasonable to assume that tracing isn't wanted.
+#define FIDL_TRACE_LEVEL 0
+#endif
+
+#if FIDL_TRACE_LEVEL == 0
 static inline void fidl_trace_impl(const fidl_trace_t trace_info) {
   // This function is explicitly a no-op. Note that current compilers completely
   // elide a call to this with any level of optimization (-O1, -O2, -Os etc), for
@@ -124,6 +133,11 @@ static inline void fidl_trace_impl(const fidl_trace_t trace_info) {
   // Future implementations will replace this fidl_trace_impl() function with a
   // version that may record the trace (e.g. via the Fuchsia Tracing System).
 }
+#elif FIDL_TRACE_LEVEL == 1
+#error Userspace FIDL tracing is not implemented yet. See <https://fuchsia-review.googlesource.com/c/fuchsia/+/408449> for more context.
+#else
+#error Unknown FIDL_TRACE_LEVEL.
+#endif  // FIDL_TRACE_LEVEL
 
 __END_CDECLS
 

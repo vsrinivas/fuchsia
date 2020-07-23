@@ -1,0 +1,10 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # This mirrors the fidl_trace_level GN variable in //build/fidl/args.gni to
+  # the ZN build. See that file for more information about what this variable
+  # does.
+  zx_fidl_trace_level = 0
+}

@@ -1,0 +1,9 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # 0 = Disable FIDL userspace tracing (default).
+  # 1 = Enable FIDL userspace tracing.
+  fidl_trace_level = 0
+}

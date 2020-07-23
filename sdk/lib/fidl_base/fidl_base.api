@@ -7,7 +7,7 @@
   "pkg/fidl_base/include/lib/fidl/cpp/message_part.h": "efcc7af2c309ed28a5758810e95843fb",
   "pkg/fidl_base/include/lib/fidl/internal.h": "ebb75b0e8426d5d7658b949387cce822",
   "pkg/fidl_base/include/lib/fidl/internal_callable_traits.h": "a18e97bafa2f7e388422a7e721d6421d",
-  "pkg/fidl_base/include/lib/fidl/trace.h": "7c48762b860bac0fa6f839bb8221c075",
+  "pkg/fidl_base/include/lib/fidl/trace.h": "e09267956b6b3d136e28f6ab0a85932a",
   "pkg/fidl_base/include/lib/fidl/txn_header.h": "116078f3450d0a37a8b86677a222bf6c",
   "pkg/fidl_base/include/lib/fidl/visitor.h": "c824994cda5ec04e4fecdd4638e28f20",
   "pkg/fidl_base/include/lib/fidl/walker.h": "b8086d75cd1f573b63f44ace288856eb"

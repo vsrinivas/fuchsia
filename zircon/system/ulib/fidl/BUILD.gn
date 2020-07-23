@@ -1,0 +1,14 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file exists so that the GN build can access fidl-tracing-config. Search
+# for "fidl_base" in //build/zircon/zircon_library.gni for more information.
+
+import("//build/fidl/args.gni")
+
+# This config must be kept in sync with :fidl-tracing-config in
+# BUILD.zircon.gn.
+config("fidl-tracing-config") {
+  defines = [ "FIDL_TRACE_LEVEL=$fidl_trace_level" ]
+}

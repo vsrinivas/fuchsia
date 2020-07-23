@@ -308,6 +308,15 @@ template("zircon_library") {
       ]
     }
 
+    # The fidl_base library uses all_dependent_configs, which is not normally
+    # propagated from the ZN build to the GN build. Doing so generally for all
+    # libraries is an onerous task, and fidl_base is the only library that uses
+    # it, so there's a localized case here for it.
+    if (library == "fidl_base") {
+      all_dependent_configs =
+          [ "//zircon/system/ulib/fidl:fidl-tracing-config" ]
+    }
+
     # Tests migrated from the Zircon build depend on libraries exposed in
     # //zircon/public/lib. However, these tests cannot be marked as "testonly"
     # for legacy reasons (in short: the -many- targets that transitively depend

@@ -2,8 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fidl/params.gni")
+
 declare_args() {
   fidl_write_v1_wireformat = false
+}
+
+config("fidl-tracing-config") {
+  defines = [ "FIDL_TRACE_LEVEL=$zx_fidl_trace_level" ]
 }
 
 # Base library used by both Fuchsia and host
@@ -25,6 +31,7 @@ zx_library("fidl_base") {
     "lib/fidl/visitor.h",
     "lib/fidl/walker.h",
   ]
+
   sources = [
     "builder.cc",
     "decoding.cc",
@@ -46,6 +53,8 @@ zx_library("fidl_base") {
   if (fidl_write_v1_wireformat) {
     defines = [ "FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT" ]
   }
+
+  all_dependent_configs = [ ":fidl-tracing-config" ]
 }
 
 zx_library("fidl") {
