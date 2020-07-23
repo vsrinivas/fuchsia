@@ -47,7 +47,12 @@ struct x86_64_context_switch_frame {
   uint64_t rip;
 };
 
-void x86_64_context_switch(vaddr_t* oldsp, vaddr_t newsp);
+void x86_64_context_switch(vaddr_t* oldsp, vaddr_t newsp
+#if __has_feature(safe_stack)
+                           ,
+                           vaddr_t* old_unsafe_sp, vaddr_t new_unsafe_sp
+#endif
+);
 void x86_uspace_entry(const x86_iframe_t* iframe) __NO_RETURN;
 
 void x86_syscall(void);

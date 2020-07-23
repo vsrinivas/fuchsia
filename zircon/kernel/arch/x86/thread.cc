@@ -94,8 +94,7 @@ void* arch_thread_get_blocked_fp(Thread* t) {
   return (void*)frame->rbp;
 }
 
-__NO_SAFESTACK static void x86_context_switch_spec_mitigations(Thread* oldthread,
-                                                               Thread* newthread) {
+static void x86_context_switch_spec_mitigations(Thread* oldthread, Thread* newthread) {
   // Spectre V2: Overwrite the Return Address Stack to ensure its not poisoned
   // Only overwrite/fill if the prior thread was a user thread or if we're on CPUs vulnerable to
   // RSB underflow attacks.
@@ -123,7 +122,6 @@ __NO_SAFESTACK static void x86_context_switch_spec_mitigations(Thread* oldthread
   }
 }
 
-__NO_SAFESTACK
 __attribute__((target("fsgsbase"))) static void x86_segment_selector_save_state(Thread* thread) {
   // Save the user fs_base and gs_base.  The new rdfsbase instruction is much faster than reading
   // the MSR, so use the former when available.
@@ -140,7 +138,6 @@ __attribute__((target("fsgsbase"))) static void x86_segment_selector_save_state(
   }
 }
 
-__NO_SAFESTACK
 __attribute__((target("fsgsbase"))) static void x86_segment_selector_restore_state(Thread* thread) {
   set_ds(0);
   set_es(0);
@@ -168,7 +165,7 @@ __attribute__((target("fsgsbase"))) static void x86_segment_selector_restore_sta
   }
 }
 
-__NO_SAFESTACK __attribute__((target("fsgsbase"))) static void x86_segment_selector_context_switch(
+__attribute__((target("fsgsbase"))) static void x86_segment_selector_context_switch(
     Thread* oldthread, Thread* newthread) {
   // Save the user fs_base register value.  The new rdfsbase instruction is much faster than reading
   // the MSR, so use the former in preference.
@@ -253,8 +250,7 @@ static void x86_debug_restore_state(Thread* thread) {
 // this function does not use fsgsbase instructions directly, it calls
 // |x86_segment_selector_context_switch|, which does.  By adding the attribute here, we enable the
 // compiler to inline |x86_segment_selector_context_switch| into this function.
-__NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(Thread* oldthread,
-                                                                            Thread* newthread) {
+__attribute__((target("fsgsbase"))) void arch_context_switch(Thread* oldthread, Thread* newthread) {
   // set the tss SP0 value to point at the top of our stack
   x86_set_tss_sp(newthread->stack().top());
 
@@ -271,23 +267,23 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(Thre
     x86_segment_selector_restore_state(newthread);
   }
 
-#if __has_feature(safe_stack)
-  oldthread->arch().unsafe_sp = x86_read_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET);
-  x86_write_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET, newthread->arch().unsafe_sp);
-#endif
-
   x86_context_switch_spec_mitigations(oldthread, newthread);
 
-  x86_64_context_switch(&oldthread->arch().sp, newthread->arch().sp);
+  x86_64_context_switch(&oldthread->arch().sp, newthread->arch().sp
+#if __has_feature(safe_stack)
+                        ,
+                        &oldthread->arch().unsafe_sp, newthread->arch().unsafe_sp
+#endif
+  );
 }
 
-__NO_SAFESTACK void arch_save_user_state(Thread* thread) {
+void arch_save_user_state(Thread* thread) {
   x86_extended_register_save_state(thread->arch().extended_register_state);
   // Not saving debug state because the arch_thread_t's debug state is authoritative.
   x86_segment_selector_save_state(thread);
 }
 
-__NO_SAFESTACK void arch_restore_user_state(Thread* thread) {
+void arch_restore_user_state(Thread* thread) {
   x86_segment_selector_restore_state(thread);
   x86_debug_restore_state(thread);
   x86_extended_register_restore_state(thread->arch().extended_register_state);

@@ -7,8 +7,10 @@
 
 #include <asm.h>
 #include <arch/defines.h>
+#include <zircon/compiler.h>
+#include <zircon/tls.h>
 
-/* void x86_64_context_switch(uint64_t *oldsp, uint64_t newsp) */
+// void x86_64_context_switch(uint64_t *oldsp, uint64_t newsp, uint64_t* old_unsafe_sp, uint64_t new_unsafe_sp)
 FUNCTION(x86_64_context_switch)
     /* save the old context and restore the new */
     /* This layout should match struct x86_64_context_switch_frame */
@@ -18,6 +20,12 @@ FUNCTION(x86_64_context_switch)
     push_reg %r13
     push_reg %r14
     push_reg %r15
+
+#if __has_feature(safe_stack)
+    movq %gs:ZX_TLS_UNSAFE_SP_OFFSET, %rax
+    movq %rcx, %gs:ZX_TLS_UNSAFE_SP_OFFSET
+    movq %rax, (%rdx)
+#endif
 
     movq %rsp,(%rdi)
     movq %rsi,%rsp
