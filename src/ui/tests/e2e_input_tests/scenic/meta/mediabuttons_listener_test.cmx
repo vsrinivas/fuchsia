@@ -21,6 +21,7 @@
             "shell-commands"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Environment",
