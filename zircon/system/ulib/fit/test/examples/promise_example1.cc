@@ -4,10 +4,10 @@
 
 #include "promise_example1.h"
 
-#include <string>
-
 #include <lib/fit/promise.h>
 #include <lib/fit/single_threaded_executor.h>
+
+#include <string>
 
 #include "utils.h"
 

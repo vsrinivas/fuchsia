@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_FIT_UNITTEST_UTILS_H_
-#define ZIRCON_SYSTEM_UTEST_FIT_UNITTEST_UTILS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_FIT_TEST_UNITTEST_UTILS_H_
+#define ZIRCON_SYSTEM_ULIB_FIT_TEST_UNITTEST_UTILS_H_
 
 #include <stdlib.h>
 
@@ -26,4 +26,4 @@
     }                                                                                              \
   } while (0)
 
-#endif  // ZIRCON_SYSTEM_UTEST_FIT_UNITTEST_UTILS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_FIT_TEST_UNITTEST_UTILS_H_

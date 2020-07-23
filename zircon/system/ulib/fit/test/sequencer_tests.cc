@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/bridge.h>
+#include <lib/fit/sequencer.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <unistd.h>
 
 #include <string>
 #include <thread>
 
-#include <lib/fit/bridge.h>
-#include <lib/fit/sequencer.h>
-#include <lib/fit/single_threaded_executor.h>
 #include <unittest/unittest.h>
 
 namespace {

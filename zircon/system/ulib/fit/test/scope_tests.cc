@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
-
-#include <thread>
-
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/scope.h>
 #include <lib/fit/single_threaded_executor.h>
+#include <unistd.h>
+
+#include <thread>
+
 #include <unittest/unittest.h>
 
 #include "unittest_utils.h"

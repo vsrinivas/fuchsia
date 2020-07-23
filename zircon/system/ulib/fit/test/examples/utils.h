@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_FIT_EXAMPLES_UTILS_H_
-#define ZIRCON_SYSTEM_UTEST_FIT_EXAMPLES_UTILS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_FIT_TEST_EXAMPLES_UTILS_H_
+#define ZIRCON_SYSTEM_ULIB_FIT_TEST_EXAMPLES_UTILS_H_
 
 #include <lib/fit/promise.h>
 
@@ -19,4 +19,4 @@ void resume_in_a_little_while(fit::suspended_task task);
 
 }  // namespace utils
 
-#endif  // ZIRCON_SYSTEM_UTEST_FIT_EXAMPLES_UTILS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_FIT_TEST_EXAMPLES_UTILS_H_

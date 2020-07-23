@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/bridge.h>
+#include <lib/fit/promise.h>
+#include <lib/fit/single_threaded_executor.h>
+
 #include <future>
 #include <string>
 #include <thread>
 #include <tuple>
 
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/single_threaded_executor.h>
 #include <unittest/unittest.h>
 
 #include "unittest_utils.h"

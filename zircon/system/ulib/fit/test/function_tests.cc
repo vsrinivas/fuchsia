@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fit/function.h>
+
 #include <unittest/unittest.h>
 
 namespace {

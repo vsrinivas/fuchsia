@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-
 #include <lib/fit/string_view.h>
 
 #include <cstring>

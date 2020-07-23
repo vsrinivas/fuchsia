@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fit/utility_internal.h>
+
 #include <unittest/unittest.h>
 
 namespace {
@@ -114,18 +115,23 @@ struct comparable_c {};
 struct not_bool {};
 
 // A and B are comparable to themselves and each other.
-[[maybe_unused]]
-constexpr bool operator==(const comparable_a&, const comparable_a&) { return true; }
-[[maybe_unused]]
-constexpr bool operator==(const comparable_b&, const comparable_b&) { return true; }
-[[maybe_unused]]
-constexpr bool operator==(const comparable_a&, const comparable_b&) { return true; }
-[[maybe_unused]]
-constexpr bool operator==(const comparable_b&, const comparable_a&) { return true; }
+[[maybe_unused]] constexpr bool operator==(const comparable_a&, const comparable_a&) {
+  return true;
+}
+[[maybe_unused]] constexpr bool operator==(const comparable_b&, const comparable_b&) {
+  return true;
+}
+[[maybe_unused]] constexpr bool operator==(const comparable_a&, const comparable_b&) {
+  return true;
+}
+[[maybe_unused]] constexpr bool operator==(const comparable_b&, const comparable_a&) {
+  return true;
+}
 
 // C is comparable with itself but the result is not convertible to bool.
-[[maybe_unused]]
-constexpr not_bool operator==(const comparable_c&, const comparable_c&) { return {}; }
+[[maybe_unused]] constexpr not_bool operator==(const comparable_c&, const comparable_c&) {
+  return {};
+}
 
 static_assert(is_comparable(comparable_a{}, comparable_a{}), "");
 static_assert(is_comparable(comparable_b{}, comparable_b{}), "");

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fit/result.h>
+
 #include <unittest/unittest.h>
 
 namespace {

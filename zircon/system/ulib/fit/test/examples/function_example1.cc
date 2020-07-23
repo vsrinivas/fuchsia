@@ -4,9 +4,9 @@
 
 #include "function_example1.h"
 
-#include <vector>
-
 #include <lib/fit/function.h>
+
+#include <vector>
 
 // This example demonstrates using fit::function to implement a higher order
 // function called a left-fold.  |fold()| recursively combines elements in a

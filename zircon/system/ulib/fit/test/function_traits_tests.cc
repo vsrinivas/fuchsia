@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <functional>
-
 #include <lib/fit/function.h>
 #include <lib/fit/function_traits.h>
+
+#include <functional>
+
 #include <unittest/unittest.h>
 
 namespace {

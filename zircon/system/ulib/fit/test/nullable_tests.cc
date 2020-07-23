@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/nullable.h>
+
 #include <memory>
 
-#include <lib/fit/nullable.h>
 #include <unittest/unittest.h>
 
 namespace {

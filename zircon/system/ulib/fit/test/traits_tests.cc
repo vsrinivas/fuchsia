@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <functional>
-
 #include <lib/fit/function.h>
 #include <lib/fit/traits.h>
+
+#include <functional>
+
 #include <unittest/unittest.h>
 
 namespace {
@@ -94,8 +95,7 @@ static_assert(std::is_same_v<Object, Traits::type>, "");
 
 // compile-time test
 namespace lambda_traits {
-[[maybe_unused]]
-auto lambda = [](float, bool) { return 0; };
+[[maybe_unused]] auto lambda = [](float, bool) { return 0; };
 using Traits = CallableTraitsTest<decltype(lambda)>::Traits;
 }  // namespace lambda_traits
 

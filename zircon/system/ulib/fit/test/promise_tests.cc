@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <functional>
-
 #include <lib/fit/promise.h>
 #include <lib/fit/single_threaded_executor.h>
+
+#include <functional>
+
 #include <unittest/unittest.h>
 
 #include "examples/utils.h"
@@ -1192,16 +1193,14 @@ static_assert(
     "");
 
 // handler returning lambda...
-[[maybe_unused]]
-auto result_continuation_lambda = [](fit::result<int, double>&) -> fit::result<unsigned, float> {
+[[maybe_unused]] auto result_continuation_lambda =
+    [](fit::result<int, double>&) -> fit::result<unsigned, float> { return fit::pending(); };
+[[maybe_unused]] auto value_continuation_lambda = [](int&) -> fit::result<unsigned, double> {
   return fit::pending();
 };
-[[maybe_unused]]
-auto value_continuation_lambda = [](int&) -> fit::result<unsigned, double> {
+[[maybe_unused]] auto error_continuation_lambda = [](double&) -> fit::result<int, float> {
   return fit::pending();
 };
-[[maybe_unused]]
-auto error_continuation_lambda = [](double&) -> fit::result<int, float> { return fit::pending(); };
 static_assert(
     std::is_same<fit::result<unsigned, float>, fit::internal::result_handler_invoker<
                                                    decltype(result_continuation_lambda),
@@ -1230,10 +1229,10 @@ static_assert(!fit::internal::is_continuation<fit::function<void(fit::context&)>
 static_assert(!fit::internal::is_continuation<fit::function<fit::result<>()>>::value, "");
 static_assert(!fit::internal::is_continuation<void>::value, "");
 
-[[maybe_unused]]
-auto continuation_lambda = [](fit::context&) -> fit::result<> { return fit::pending(); };
-[[maybe_unused]]
-auto invalid_lambda = [] {};
+[[maybe_unused]] auto continuation_lambda = [](fit::context&) -> fit::result<> {
+  return fit::pending();
+};
+[[maybe_unused]] auto invalid_lambda = [] {};
 
 static_assert(fit::internal::is_continuation<decltype(continuation_lambda)>::value, "");
 static_assert(!fit::internal::is_continuation<decltype(invalid_lambda)>::value, "");

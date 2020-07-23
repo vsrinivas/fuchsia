@@ -12,6 +12,7 @@
 // So that we get our implementation of fit::optional, not std::optional even on C++17
 #define FORCE_FIT_OPTIONAL
 #include <lib/fit/optional.h>
+
 #include <unittest/unittest.h>
 
 #include "unittest_utils.h"

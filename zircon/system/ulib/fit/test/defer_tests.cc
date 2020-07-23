@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <functional>
-#include <memory>
-
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fit/nullable.h>
+
+#include <functional>
+#include <memory>
+
 #include <unittest/unittest.h>
 
 #include "unittest_utils.h"

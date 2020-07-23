@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <thread>
-
 #include <lib/fit/defer.h>
 #include <lib/fit/single_threaded_executor.h>
+
+#include <thread>
+
 #include <unittest/unittest.h>
 
 #include "unittest_utils.h"
@@ -118,8 +119,7 @@ bool suspending_and_resuming_tasks() {
   END_TEST;
 }
 
-[[maybe_unused]]
-bool abandoning_tasks() {
+[[maybe_unused]] bool abandoning_tasks() {
   BEGIN_TEST;
 
   fit::single_threaded_executor executor;

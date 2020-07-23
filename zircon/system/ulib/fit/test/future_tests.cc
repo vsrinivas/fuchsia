@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fit/promise.h>
+
 #include <unittest/unittest.h>
 
 #include "unittest_utils.h"

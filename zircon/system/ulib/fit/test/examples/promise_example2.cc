@@ -4,12 +4,12 @@
 
 #include "promise_example2.h"
 
+#include <lib/fit/promise.h>
+#include <lib/fit/single_threaded_executor.h>
+
 #include <algorithm>
 #include <memory>
 #include <string>
-
-#include <lib/fit/promise.h>
-#include <lib/fit/single_threaded_executor.h>
 
 #include "utils.h"
 
