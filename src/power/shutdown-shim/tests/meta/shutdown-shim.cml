@@ -1,6 +1,7 @@
 {
     program: {
         binary: "bin/shutdown-shim",
+        lifecycle: { stop_event: "notify" },
     },
     use: [
         { runner: "elf" },

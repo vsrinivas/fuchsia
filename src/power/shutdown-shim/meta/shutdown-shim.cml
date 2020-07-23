@@ -2,6 +2,7 @@
     program: {
         binary: "bin/shutdown-shim",
         main_process_critical: "true",
+        lifecycle: { stop_event: "notify" },
     },
     use: [
         { runner: "elf" },

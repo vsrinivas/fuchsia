@@ -12,7 +12,9 @@ use {
     fuchsia_component::{client as fclient, server as fserver},
     fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_zircon as zx,
-    futures::{channel::mpsc, lock::Mutex, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{
+        channel::mpsc, channel::oneshot, lock::Mutex, StreamExt, TryFutureExt, TryStreamExt,
+    },
     std::sync::Arc,
 };
 
@@ -117,6 +119,7 @@ async fn run_device_manager_system_state_transition(
 async fn run_sys2_system_controller(
     send_signals: mpsc::UnboundedSender<Signal>,
     mut stream: fsys::SystemControllerRequestStream,
+    ignored_responders: Arc<Mutex<Vec<fsys::SystemControllerShutdownResponder>>>,
 ) {
     fx_log_info!("new connection to {}", fsys::SystemControllerMarker::NAME);
     async move {
@@ -124,7 +127,9 @@ async fn run_sys2_system_controller(
             Some(fsys::SystemControllerRequest::Shutdown { responder }) => {
                 fx_log_info!("Shutdown called");
                 send_signals.unbounded_send(Signal::Sys2Shutdown)?;
-                responder.send()?;
+                // The shim should never observe this call returning, as it only returns once all
+                // components are shut down, which includes the shim.
+                ignored_responders.lock().await.push(responder);
             }
             _ => (),
         }
@@ -181,10 +186,6 @@ async fn run_power_manager_present_test(
     let res = recv_signals.next().await;
     assert_eq!(res, Some(Signal::Statecontrol(Admin::Poweroff)));
 
-    shim_statecontrol.mexec().await?.unwrap();
-    let res = recv_signals.next().await;
-    assert_eq!(res, Some(Signal::Statecontrol(Admin::Mexec)));
-
     shim_statecontrol.suspend_to_ram().await?.unwrap();
     let res = recv_signals.next().await;
     assert_eq!(res, Some(Signal::Statecontrol(Admin::SuspendToRam)));
@@ -237,6 +238,31 @@ async fn run_power_manager_missing_test(
         );
     }
 
+    {
+        let (shutdown_shim, shim_statecontrol) =
+            setup_shim("shutdown-shim-statecontrol-missing").await?;
+
+        let (send_mexec_returned, recv_mexec_returned) = oneshot::channel();
+        fasync::spawn(async move {
+            shim_statecontrol.mexec().await.unwrap().unwrap();
+            send_mexec_returned.send(()).expect("failed to send that mexec returned");
+        });
+        assert_eq!(
+            recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
+            vec![
+                Signal::DeviceManager(fdevicemanager::SystemPowerState::SystemPowerStateMexec),
+                Signal::Sys2Shutdown,
+            ]
+        );
+
+        // Dropping the shutdown_shim will cause the shim to be destroyed, which will trigger its
+        // stop event, which the shim watches for to know when to return for an mexec
+        drop(shutdown_shim);
+
+        // Mexec should actually return the call when it's done
+        let _ = recv_mexec_returned.await;
+    }
+
     // Report that the test is finished
     responder.send()?;
     fx_log_info!("PowerManagerMissing succeeded");
@@ -283,6 +309,31 @@ async fn run_power_manager_not_present_test(
                 Signal::Sys2Shutdown,
             ]
         );
+    }
+
+    {
+        let (shutdown_shim, shim_statecontrol) =
+            setup_shim("shutdown-shim-statecontrol-not-present").await?;
+
+        let (send_mexec_returned, recv_mexec_returned) = oneshot::channel();
+        fasync::spawn(async move {
+            shim_statecontrol.mexec().await.unwrap().unwrap();
+            send_mexec_returned.send(()).expect("failed to send that mexec returned");
+        });
+        assert_eq!(
+            recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
+            vec![
+                Signal::DeviceManager(fdevicemanager::SystemPowerState::SystemPowerStateMexec),
+                Signal::Sys2Shutdown,
+            ]
+        );
+
+        // Dropping the shutdown_shim will cause the shim to be destroyed, which will trigger its
+        // stop event, which the shim watches for to know when to return for an mexec
+        drop(shutdown_shim);
+
+        // Mexec should actually return the call when it's done
+        let _ = recv_mexec_returned.await;
     }
 
     // Report that the test is finished
@@ -342,8 +393,14 @@ async fn main() -> Result<(), Error> {
         .detach();
     });
     let send_sys2_signals = send_signals.clone();
+    let ignored_responders = Arc::new(Mutex::new(vec![]));
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::Task::spawn(run_sys2_system_controller(send_sys2_signals.clone(), stream)).detach();
+        fasync::Task::spawn(run_sys2_system_controller(
+            send_sys2_signals.clone(),
+            stream,
+            ignored_responders.clone(),
+        ))
+        .detach();
     });
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::spawn(run_tests(stream, recv_signals.clone())).detach();
