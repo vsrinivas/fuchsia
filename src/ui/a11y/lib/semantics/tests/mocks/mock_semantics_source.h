@@ -37,12 +37,14 @@ class MockSemanticsSource : public a11y::SemanticsSource {
                                                                  uint32_t node_id) const override;
 
   // |SemanticsSource|
-  const fuchsia::accessibility::semantics::Node* GetNextNode(zx_koid_t koid,
-                                                             uint32_t node_id) const override;
+  const fuchsia::accessibility::semantics::Node* GetNextNode(
+      zx_koid_t koid, uint32_t node_id,
+      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const override;
 
   // |SemanticsSource|
-  const fuchsia::accessibility::semantics::Node* GetPreviousNode(zx_koid_t koid,
-                                                                 uint32_t node_id) const override;
+  const fuchsia::accessibility::semantics::Node* GetPreviousNode(
+      zx_koid_t koid, uint32_t node_id,
+      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const override;
 
   // Sets result of hit test on view corresponding to |koid|.
   void SetHitTestResult(zx_koid_t koid, fuchsia::accessibility::semantics::Hit hit_test_result);

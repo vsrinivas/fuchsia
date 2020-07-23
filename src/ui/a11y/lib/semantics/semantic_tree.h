@@ -78,14 +78,17 @@ class SemanticTree {
   // Returns the node with |node_id|, nullptr otherwise.
   const fuchsia::accessibility::semantics::Node* GetNode(const uint32_t node_id) const;
 
-  // Returns the next describable node (in depth first manner) from the node with |node_id|, or
-  // nullptr if none exists.
-  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(const uint32_t node_id) const;
+  // Returns the next node for which |filter| returns true (in depth first manner) from the node
+  // with |node_id|, or nullptr if none exists.
+  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(
+      const uint32_t node_id,
+      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const;
 
-  // Returns the previous describable node (in depth first manner) from the node with |node_id|, or
-  // nullptr if none exists.
+  // Returns the previous node for which |filter| returns true (in depth first manner) from the node
+  // with |node_id|, or nullptr if none exists.
   virtual const fuchsia::accessibility::semantics::Node* GetPreviousNode(
-      const uint32_t node_id) const;
+      const uint32_t node_id,
+      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const;
 
   // Returns the parent node of the node with |node_id| if found, nullptr otherwise.
   virtual const fuchsia::accessibility::semantics::Node* GetParentNode(

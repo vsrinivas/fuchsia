@@ -63,12 +63,14 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                                                                  uint32_t node_id) const override;
 
   // |SemanticsSource|
-  const fuchsia::accessibility::semantics::Node* GetNextNode(zx_koid_t koid,
-                                                             uint32_t node_id) const override;
+  const fuchsia::accessibility::semantics::Node* GetNextNode(
+      zx_koid_t koid, uint32_t node_id,
+      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const override;
 
   // |SemanticsSource|
-  const fuchsia::accessibility::semantics::Node* GetPreviousNode(zx_koid_t koid,
-                                                                 uint32_t node_id) const override;
+  const fuchsia::accessibility::semantics::Node* GetPreviousNode(
+      zx_koid_t koid, uint32_t node_id,
+      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const override;
 
   // |FocusHighlightManager|
   void ClearHighlight() override;

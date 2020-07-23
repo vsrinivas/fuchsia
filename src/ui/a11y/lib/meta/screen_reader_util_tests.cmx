@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/screen_reader_util_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

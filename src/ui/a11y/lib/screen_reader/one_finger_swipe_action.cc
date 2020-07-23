@@ -10,6 +10,7 @@
 
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
+#include "src/ui/a11y/lib/screen_reader/util/util.h"
 
 namespace a11y {
 OneFingerSwipeAction::OneFingerSwipeAction(ActionContext* action_context,
@@ -32,12 +33,18 @@ void OneFingerSwipeAction::Run(ActionData process_data) {
   const fuchsia::accessibility::semantics::Node* new_node;
   switch (action_type_) {
     case kNextAction:
-      new_node = action_context_->semantics_source->GetNextNode(a11y_focus->view_ref_koid,
-                                                                a11y_focus->node_id);
+      new_node = action_context_->semantics_source->GetNextNode(
+          a11y_focus->view_ref_koid, a11y_focus->node_id,
+          [](const fuchsia::accessibility::semantics::Node* node) {
+            return NodeIsDescribable(node);
+          });
       break;
     case kPreviousAction:
-      new_node = action_context_->semantics_source->GetPreviousNode(a11y_focus->view_ref_koid,
-                                                                    a11y_focus->node_id);
+      new_node = action_context_->semantics_source->GetPreviousNode(
+          a11y_focus->view_ref_koid, a11y_focus->node_id,
+          [](const fuchsia::accessibility::semantics::Node* node) {
+            return NodeIsDescribable(node);
+          });
       break;
     default:
       new_node = nullptr;

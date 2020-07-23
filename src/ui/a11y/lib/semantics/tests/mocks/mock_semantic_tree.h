@@ -15,13 +15,16 @@ class MockSemanticTree : public a11y::SemanticTree {
 
   // Returns previous_node.
   const fuchsia::accessibility::semantics::Node* GetPreviousNode(
-      const uint32_t node_id) const override;
+      uint32_t node_id,
+      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const override;
 
   // Function for setting results for GetPreviousNode().
   void SetPreviousNode(fuchsia::accessibility::semantics::Node* node);
 
   // Returns next_node.
-  const fuchsia::accessibility::semantics::Node* GetNextNode(const uint32_t node_id) const override;
+  const fuchsia::accessibility::semantics::Node* GetNextNode(
+      uint32_t node_id,
+      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const override;
 
   // Function for setting results for GetNextNode().
   void SetNextNode(fuchsia::accessibility::semantics::Node* node);

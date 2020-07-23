@@ -13,6 +13,7 @@ group("lib") {
     "magnifier",
     "screen_reader",
     "screen_reader/focus",
+    "screen_reader/util",
     "semantics",
     "tts",
     "view",
@@ -40,6 +41,7 @@ test_package("a11y_lib_tests") {
     "screen_reader/focus/tests",
     "screen_reader/i18n/tests",
     "screen_reader/tests",
+    "screen_reader/util/tests",
     "semantics/tests:unit",
     "tts/tests",
     "view/tests",
@@ -122,6 +124,10 @@ test_package("a11y_lib_tests") {
     },
     {
       name = "screen_reader_tests"
+      environments = basic_envs
+    },
+    {
+      name = "screen_reader_util_tests"
       environments = basic_envs
     },
     {

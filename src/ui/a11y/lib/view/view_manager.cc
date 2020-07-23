@@ -149,8 +149,9 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetSemanticNode(
   return tree_weak_ptr->GetNode(node_id);
 }
 
-const fuchsia::accessibility::semantics::Node* ViewManager::GetNextNode(zx_koid_t koid,
-                                                                        uint32_t node_id) const {
+const fuchsia::accessibility::semantics::Node* ViewManager::GetNextNode(
+    zx_koid_t koid, uint32_t node_id,
+    fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
   auto tree_weak_ptr = GetTreeByKoid(koid);
 
   if (!tree_weak_ptr) {
@@ -158,11 +159,12 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetNextNode(zx_koid_
     return nullptr;
   }
 
-  return tree_weak_ptr->GetNextNode(node_id);
+  return tree_weak_ptr->GetNextNode(node_id, std::move(filter));
 }
 
 const fuchsia::accessibility::semantics::Node* ViewManager::GetPreviousNode(
-    zx_koid_t koid, uint32_t node_id) const {
+    zx_koid_t koid, uint32_t node_id,
+    fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
   auto tree_weak_ptr = GetTreeByKoid(koid);
 
   if (!tree_weak_ptr) {
@@ -170,7 +172,7 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetPreviousNode(
     return nullptr;
   }
 
-  return tree_weak_ptr->GetPreviousNode(node_id);
+  return tree_weak_ptr->GetPreviousNode(node_id, std::move(filter));
 }
 
 void ViewManager::ClearHighlight() {

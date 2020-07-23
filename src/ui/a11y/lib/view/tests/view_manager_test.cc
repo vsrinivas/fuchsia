@@ -215,8 +215,12 @@ TEST_F(ViewManagerTest, SemanticsSourceGetNeighboringNodes) {
   node_updates.emplace_back(CreateTestNode(3u, "test_label_3"));
   ApplyNodeUpdates(std::move(node_updates));
 
-  const auto next_node = view_manager_->GetNextNode(semantic_provider_->koid(), 2u);
-  const auto previous_node = view_manager_->GetPreviousNode(semantic_provider_->koid(), 2u);
+  const auto next_node = view_manager_->GetNextNode(
+      semantic_provider_->koid(), 2u,
+      [](const fuchsia::accessibility::semantics::Node* node) { return true; });
+  const auto previous_node = view_manager_->GetPreviousNode(
+      semantic_provider_->koid(), 2u,
+      [](const fuchsia::accessibility::semantics::Node* node) { return true; });
 
   EXPECT_TRUE(next_node);
   EXPECT_EQ(next_node->node_id(), 3u);

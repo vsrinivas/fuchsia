@@ -166,7 +166,9 @@ const Node* SemanticTree::GetNode(const uint32_t node_id) const {
   return &it->second;
 }
 
-const Node* SemanticTree::GetNextNode(const uint32_t node_id) const {
+const Node* SemanticTree::GetNextNode(
+    const uint32_t node_id,
+    fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
   if (nodes_.find(node_id) == nodes_.end()) {
     return nullptr;
   }
@@ -187,7 +189,7 @@ const Node* SemanticTree::GetNextNode(const uint32_t node_id) const {
 
     auto current_node = GetNode(current_node_id);
 
-    if (found_node && NodeIsDescribable(current_node)) {
+    if (found_node && filter(current_node)) {
       return current_node;
     }
 
@@ -210,7 +212,9 @@ const Node* SemanticTree::GetNextNode(const uint32_t node_id) const {
   return nullptr;
 }
 
-const Node* SemanticTree::GetPreviousNode(const uint32_t node_id) const {
+const Node* SemanticTree::GetPreviousNode(
+    const uint32_t node_id,
+    fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
   if (nodes_.find(node_id) == nodes_.end()) {
     return nullptr;
   }
@@ -220,14 +224,14 @@ const Node* SemanticTree::GetPreviousNode(const uint32_t node_id) const {
   // Start traversal from the root node.
   nodes_to_visit.push(kRootNodeId);
 
-  const Node* previous_describable_node = nullptr;
+  const Node* previous_returnable_node = nullptr;
 
   while (!nodes_to_visit.empty()) {
     auto current_node_id = nodes_to_visit.top();
     nodes_to_visit.pop();
 
     if (current_node_id == node_id) {
-      return previous_describable_node;
+      return previous_returnable_node;
     }
 
     FX_DCHECK(nodes_.find(current_node_id) != nodes_.end())
@@ -235,8 +239,8 @@ const Node* SemanticTree::GetPreviousNode(const uint32_t node_id) const {
 
     auto current_node = GetNode(current_node_id);
 
-    if (NodeIsDescribable(current_node)) {
-      previous_describable_node = current_node;
+    if (filter(current_node)) {
+      previous_returnable_node = current_node;
     }
 
     if (!current_node->has_child_ids() || current_node->child_ids().empty()) {
