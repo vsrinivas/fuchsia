@@ -32,13 +32,13 @@ type U32 = zerocopy::U32<NetworkEndian>;
 /// A DHCPv6 packet parsing error.
 #[allow(missing_docs)]
 #[derive(Debug, Error, PartialEq)]
-pub enum Dhcpv6ParseError {
+pub enum ParseError {
     #[error("invalid message type: {}", _0)]
-    InvalidDhcpv6MessageType(u8),
+    InvalidMessageType(u8),
     #[error("invalid option code: {}", _0)]
     InvalidOpCode(u16),
     #[error("invalid option length {} for option code {:?}", _1, _0)]
-    InvalidOpLen(Dhcpv6OptionCode, usize),
+    InvalidOpLen(OptionCode, usize),
     #[error("buffer exhausted while more byts are expected")]
     BufferExhausted,
     #[error("failed to parse domain {:?}", _0)]
@@ -51,7 +51,7 @@ pub enum Dhcpv6ParseError {
 #[allow(missing_docs)]
 #[derive(Debug, PartialEq, FromPrimitive, AsBytes, Copy, Clone)]
 #[repr(u8)]
-pub enum Dhcpv6MessageType {
+pub enum MessageType {
     Solicit = 1,
     Advertise = 2,
     Request = 3,
@@ -67,18 +67,17 @@ pub enum Dhcpv6MessageType {
     RelayRepl = 13,
 }
 
-impl From<Dhcpv6MessageType> for u8 {
-    fn from(t: Dhcpv6MessageType) -> u8 {
+impl From<MessageType> for u8 {
+    fn from(t: MessageType) -> u8 {
         t as u8
     }
 }
 
-impl TryFrom<u8> for Dhcpv6MessageType {
-    type Error = Dhcpv6ParseError;
+impl TryFrom<u8> for MessageType {
+    type Error = ParseError;
 
-    fn try_from(b: u8) -> Result<Dhcpv6MessageType, Dhcpv6ParseError> {
-        <Self as num_traits::FromPrimitive>::from_u8(b)
-            .ok_or(Dhcpv6ParseError::InvalidDhcpv6MessageType(b))
+    fn try_from(b: u8) -> Result<MessageType, ParseError> {
+        <Self as num_traits::FromPrimitive>::from_u8(b).ok_or(ParseError::InvalidMessageType(b))
     }
 }
 
@@ -91,7 +90,7 @@ impl TryFrom<u8> for Dhcpv6MessageType {
 #[allow(missing_docs)]
 #[derive(Debug, PartialEq, FromPrimitive, Clone, Copy)]
 #[repr(u8)]
-pub enum Dhcpv6OptionCode {
+pub enum OptionCode {
     // TODO(jayzhuang): add more option codes.
     ClientId = 1,
     ServerId = 2,
@@ -103,17 +102,17 @@ pub enum Dhcpv6OptionCode {
     InformationRefreshTime = 32,
 }
 
-impl From<Dhcpv6OptionCode> for u16 {
-    fn from(code: Dhcpv6OptionCode) -> u16 {
+impl From<OptionCode> for u16 {
+    fn from(code: OptionCode) -> u16 {
         code as u16
     }
 }
 
-impl TryFrom<u16> for Dhcpv6OptionCode {
-    type Error = Dhcpv6ParseError;
+impl TryFrom<u16> for OptionCode {
+    type Error = ParseError;
 
-    fn try_from(n: u16) -> Result<Dhcpv6OptionCode, Dhcpv6ParseError> {
-        <Self as num_traits::FromPrimitive>::from_u16(n).ok_or(Dhcpv6ParseError::InvalidOpCode(n))
+    fn try_from(n: u16) -> Result<OptionCode, ParseError> {
+        <Self as num_traits::FromPrimitive>::from_u16(n).ok_or(ParseError::InvalidOpCode(n))
     }
 }
 
@@ -125,7 +124,7 @@ impl TryFrom<u16> for Dhcpv6OptionCode {
 /// [options]: https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2
 #[allow(missing_docs)]
 #[derive(Debug, PartialEq)]
-pub enum Dhcpv6Option<'a> {
+pub enum DhcpOption<'a> {
     // TODO(jayzhuang): add more options.
     // https://tools.ietf.org/html/rfc8415#section-21.2
     ClientId(&'a Duid),
@@ -134,7 +133,7 @@ pub enum Dhcpv6Option<'a> {
     // https://tools.ietf.org/html/rfc8415#section-21.7
     // TODO(jayzhuang): add validation, not all option codes can present in ORO.
     // See https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2
-    Oro(Vec<Dhcpv6OptionCode>),
+    Oro(Vec<OptionCode>),
     // https://tools.ietf.org/html/rfc8415#section-21.8
     Preference(u8),
     // https://tools.ietf.org/html/rfc8415#section-21.9
@@ -155,7 +154,7 @@ mod checked {
     use packet::BufferViewMut;
     use zerocopy::ByteSliceMut;
 
-    use super::Dhcpv6ParseError;
+    use super::ParseError;
 
     /// A checked domain that can only be created through the provided constructor.
     #[derive(Debug, PartialEq)]
@@ -165,18 +164,18 @@ mod checked {
     }
 
     impl FromStr for Domain {
-        type Err = Dhcpv6ParseError;
+        type Err = ParseError;
 
         /// Constructs a `Domain` from a string.
         ///
         /// See `<Domain as TryFrom<String>>::try_from`.
-        fn from_str(s: &str) -> Result<Self, Dhcpv6ParseError> {
+        fn from_str(s: &str) -> Result<Self, ParseError> {
             Self::try_from(s.to_string())
         }
     }
 
     impl TryFrom<String> for Domain {
-        type Error = Dhcpv6ParseError;
+        type Error = ParseError;
 
         /// Constructs a `Domain` from a string.
         ///
@@ -185,9 +184,8 @@ mod checked {
         /// If the string is not a valid domain following the definition in [RFC 1035].
         ///
         /// [RFC 1035]: https://tools.ietf.org/html/rfc1035
-        fn try_from(domain: String) -> Result<Self, Dhcpv6ParseError> {
-            let builder =
-                DomainBuilder::from_str(&domain).map_err(Dhcpv6ParseError::DomainParseError)?;
+        fn try_from(domain: String) -> Result<Self, ParseError> {
+            let builder = DomainBuilder::from_str(&domain).map_err(ParseError::DomainParseError)?;
             Ok(Domain { domain, builder })
         }
     }
@@ -209,46 +207,46 @@ mod checked {
 type Duid = [u8];
 
 macro_rules! option_to_code {
-    ($option:ident, $(Dhcpv6Option::$variant:tt($($v:tt)*)),*) => {
+    ($option:ident, $(DhcpOption::$variant:tt($($v:tt)*)),*) => {
         match $option {
-            $(Dhcpv6Option::$variant($($v)*)=>Dhcpv6OptionCode::$variant,)*
+            $(DhcpOption::$variant($($v)*)=>OptionCode::$variant,)*
         }
     }
 }
 
-impl Dhcpv6Option<'_> {
+impl DhcpOption<'_> {
     /// A helper function that returns the corresponding option code for the calling option.
-    fn code(&self) -> Dhcpv6OptionCode {
+    fn code(&self) -> OptionCode {
         option_to_code!(
             self,
-            Dhcpv6Option::ClientId(_),
-            Dhcpv6Option::ServerId(_),
-            Dhcpv6Option::Oro(_),
-            Dhcpv6Option::Preference(_),
-            Dhcpv6Option::ElapsedTime(_),
-            Dhcpv6Option::InformationRefreshTime(_),
-            Dhcpv6Option::DnsServers(_),
-            Dhcpv6Option::DomainList(_)
+            DhcpOption::ClientId(_),
+            DhcpOption::ServerId(_),
+            DhcpOption::Oro(_),
+            DhcpOption::Preference(_),
+            DhcpOption::ElapsedTime(_),
+            DhcpOption::InformationRefreshTime(_),
+            DhcpOption::DnsServers(_),
+            DhcpOption::DomainList(_)
         )
     }
 }
 
-/// An implementation of `RecordsImpl` for `Dhcpv6Option`.
+/// An implementation of `RecordsImpl` for `DhcpOption`.
 #[derive(Debug)]
-struct Dhcpv6OptionsImpl;
+struct DhcpOptionsImpl;
 
-impl RecordsImplLayout for Dhcpv6OptionsImpl {
+impl RecordsImplLayout for DhcpOptionsImpl {
     type Context = ();
 
-    type Error = Dhcpv6ParseError;
+    type Error = ParseError;
 }
 
-impl<'a> RecordsImpl<'a> for Dhcpv6OptionsImpl {
-    type Record = Dhcpv6Option<'a>;
+impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
+    type Record = DhcpOption<'a>;
 
     /// Tries to parse an option from the beginning of the input buffer. Returns the parsed
-    /// `Dhcpv6Option` and the remaining buffer. If the buffer is malformed, returns a
-    /// `Dhcpv6ParseError`. Option format as defined in [RFC 8415, Section 21.1]:
+    /// `DhcpOption` and the remaining buffer. If the buffer is malformed, returns a
+    /// `ParseError`. Option format as defined in [RFC 8415, Section 21.1]:
     ///
     /// [RFC 8415, Section 21.1]: https://tools.ietf.org/html/rfc8415#section-21.1
     fn parse_with_context<BV: BufferView<&'a [u8]>>(
@@ -259,48 +257,41 @@ impl<'a> RecordsImpl<'a> for Dhcpv6OptionsImpl {
             return Ok(ParsedRecord::Done);
         }
 
-        let opt_code = data.take_obj_front::<U16>().ok_or(Dhcpv6ParseError::BufferExhausted)?.get();
-        let opt_len = usize::from(
-            data.take_obj_front::<U16>().ok_or(Dhcpv6ParseError::BufferExhausted)?.get(),
-        );
-        let mut opt_val = data.take_front(opt_len).ok_or(Dhcpv6ParseError::BufferExhausted)?;
+        let opt_code = data.take_obj_front::<U16>().ok_or(ParseError::BufferExhausted)?.get();
+        let opt_len =
+            usize::from(data.take_obj_front::<U16>().ok_or(ParseError::BufferExhausted)?.get());
+        let mut opt_val = data.take_front(opt_len).ok_or(ParseError::BufferExhausted)?;
 
-        let opt = match Dhcpv6OptionCode::try_from(opt_code)? {
-            Dhcpv6OptionCode::ClientId => Ok(Dhcpv6Option::ClientId(opt_val)),
-            Dhcpv6OptionCode::ServerId => Ok(Dhcpv6Option::ServerId(opt_val)),
-            Dhcpv6OptionCode::Oro => match opt_len % 2 {
-                0 => Ok(Dhcpv6Option::Oro(
+        let opt = match OptionCode::try_from(opt_code)? {
+            OptionCode::ClientId => Ok(DhcpOption::ClientId(opt_val)),
+            OptionCode::ServerId => Ok(DhcpOption::ServerId(opt_val)),
+            OptionCode::Oro => match opt_len % 2 {
+                0 => Ok(DhcpOption::Oro(
                     opt_val
                         .chunks(2)
-                        .map(|opt| Dhcpv6OptionCode::try_from(NetworkEndian::read_u16(opt)))
-                        .collect::<Result<Vec<Dhcpv6OptionCode>, Dhcpv6ParseError>>()?,
+                        .map(|opt| OptionCode::try_from(NetworkEndian::read_u16(opt)))
+                        .collect::<Result<Vec<OptionCode>, ParseError>>()?,
                 )),
-                _ => Err(Dhcpv6ParseError::InvalidOpLen(Dhcpv6OptionCode::Oro, opt_len)),
+                _ => Err(ParseError::InvalidOpLen(OptionCode::Oro, opt_len)),
             },
-            Dhcpv6OptionCode::Preference => match opt_val {
-                &[b] => Ok(Dhcpv6Option::Preference(b)),
-                _ => {
-                    Err(Dhcpv6ParseError::InvalidOpLen(Dhcpv6OptionCode::Preference, opt_val.len()))
-                }
+            OptionCode::Preference => match opt_val {
+                &[b] => Ok(DhcpOption::Preference(b)),
+                _ => Err(ParseError::InvalidOpLen(OptionCode::Preference, opt_val.len())),
             },
-            Dhcpv6OptionCode::ElapsedTime => match opt_val {
-                &[b0, b1] => Ok(Dhcpv6Option::ElapsedTime(u16::from_be_bytes([b0, b1]))),
-                _ => Err(Dhcpv6ParseError::InvalidOpLen(
-                    Dhcpv6OptionCode::ElapsedTime,
-                    opt_val.len(),
-                )),
+            OptionCode::ElapsedTime => match opt_val {
+                &[b0, b1] => Ok(DhcpOption::ElapsedTime(u16::from_be_bytes([b0, b1]))),
+                _ => Err(ParseError::InvalidOpLen(OptionCode::ElapsedTime, opt_val.len())),
             },
-            Dhcpv6OptionCode::InformationRefreshTime => match opt_val {
+            OptionCode::InformationRefreshTime => match opt_val {
                 &[b0, b1, b2, b3] => {
-                    Ok(Dhcpv6Option::InformationRefreshTime(u32::from_be_bytes([b0, b1, b2, b3])))
+                    Ok(DhcpOption::InformationRefreshTime(u32::from_be_bytes([b0, b1, b2, b3])))
                 }
-                _ => Err(Dhcpv6ParseError::InvalidOpLen(
-                    Dhcpv6OptionCode::InformationRefreshTime,
-                    opt_val.len(),
-                )),
+                _ => {
+                    Err(ParseError::InvalidOpLen(OptionCode::InformationRefreshTime, opt_val.len()))
+                }
             },
-            Dhcpv6OptionCode::DnsServers => match opt_len % 16 {
-                0 => Ok(Dhcpv6Option::DnsServers(
+            OptionCode::DnsServers => match opt_len % 16 {
+                0 => Ok(DhcpOption::DnsServers(
                     opt_val
                         .chunks(16)
                         .map(|opt| {
@@ -310,19 +301,19 @@ impl<'a> RecordsImpl<'a> for Dhcpv6OptionsImpl {
                         })
                         .collect::<Vec<Ipv6Addr>>(),
                 )),
-                _ => Err(Dhcpv6ParseError::InvalidOpLen(Dhcpv6OptionCode::DnsServers, opt_len)),
+                _ => Err(ParseError::InvalidOpLen(OptionCode::DnsServers, opt_len)),
             },
-            Dhcpv6OptionCode::DomainList => {
+            OptionCode::DomainList => {
                 let mut opt_val = &mut opt_val;
                 let mut domains = Vec::new();
                 while opt_val.len() > 0 {
                     domains.push(checked::Domain::try_from(
                         Domain::parse(&mut opt_val, None)
-                            .map_err(Dhcpv6ParseError::DomainParseError)?
+                            .map_err(ParseError::DomainParseError)?
                             .to_string(),
                     )?);
                 }
-                Ok(Dhcpv6Option::DomainList(domains))
+                Ok(DhcpOption::DomainList(domains))
             }
         }?;
 
@@ -344,8 +335,8 @@ fn duid_uuid() -> [u8; 18] {
     duid
 }
 
-impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
-    type Record = Dhcpv6Option<'a>;
+impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
+    type Record = DhcpOption<'a>;
 
     /// Calculates the serialized length of the option based on option format defined in
     /// [RFC 8415, Section 21.1].
@@ -356,17 +347,17 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
     /// [RFC 8415, Section 21.1]: https://tools.ietf.org/html/rfc8415#section-21.1
     fn record_length(opt: &Self::Record) -> usize {
         4 + match opt {
-            Dhcpv6Option::ClientId(duid) | Dhcpv6Option::ServerId(duid) => {
+            DhcpOption::ClientId(duid) | DhcpOption::ServerId(duid) => {
                 u16::try_from(duid.len()).unwrap_or(18) as usize
             }
-            Dhcpv6Option::Oro(opts) => u16::try_from(2 * opts.len()).unwrap_or(0) as usize,
-            Dhcpv6Option::Preference(_) => 1,
-            Dhcpv6Option::ElapsedTime(_) => 2,
-            Dhcpv6Option::InformationRefreshTime(_) => 4,
-            Dhcpv6Option::DnsServers(recursive_name_servers) => {
+            DhcpOption::Oro(opts) => u16::try_from(2 * opts.len()).unwrap_or(0) as usize,
+            DhcpOption::Preference(_) => 1,
+            DhcpOption::ElapsedTime(_) => 2,
+            DhcpOption::InformationRefreshTime(_) => 4,
+            DhcpOption::DnsServers(recursive_name_servers) => {
                 u16::try_from(16 * recursive_name_servers.len()).unwrap_or(0) as usize
             }
-            Dhcpv6Option::DomainList(domains) => {
+            DhcpOption::DomainList(domains) => {
                 u16::try_from(domains.iter().fold(0, |tot, domain| tot + domain.bytes_len()))
                     .unwrap_or(0) as usize
             }
@@ -391,7 +382,7 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
         let () = buf.write_obj_front(&U16::new(opt.code().into())).expect("buffer is too small");
 
         match opt {
-            Dhcpv6Option::ClientId(duid) | Dhcpv6Option::ServerId(duid) => {
+            DhcpOption::ClientId(duid) | DhcpOption::ServerId(duid) => {
                 let uuid = duid_uuid();
                 let (duid, len) = u16::try_from(duid.len()).map_or_else(
                     |_: std::num::TryFromIntError| {
@@ -404,7 +395,7 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
                 let () = buf.write_obj_front(duid).expect("buffer is too small");
             }
-            Dhcpv6Option::Oro(requested_opts) => {
+            DhcpOption::Oro(requested_opts) => {
                 let empty = Vec::new();
                 let (requested_opts, len) = u16::try_from(2 * requested_opts.len()).map_or_else(
                     |_: std::num::TryFromIntError| {
@@ -428,22 +419,22 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
                     )
                     .expect("buffer is too small");
             }
-            Dhcpv6Option::Preference(pref_val) => {
+            DhcpOption::Preference(pref_val) => {
                 let () = buf.write_obj_front(&U16::new(1)).expect("buffer is too small");
                 let () = buf.write_obj_front(pref_val).expect("buffer is too small");
             }
-            Dhcpv6Option::ElapsedTime(elapsed_time) => {
+            DhcpOption::ElapsedTime(elapsed_time) => {
                 let () = buf.write_obj_front(&U16::new(2)).expect("buffer is too small");
                 let () =
                     buf.write_obj_front(&U16::new(*elapsed_time)).expect("buffer is too small");
             }
-            Dhcpv6Option::InformationRefreshTime(information_refresh_time) => {
+            DhcpOption::InformationRefreshTime(information_refresh_time) => {
                 let () = buf.write_obj_front(&U16::new(4)).expect("buffer is too small");
                 let () = buf
                     .write_obj_front(&U32::new(*information_refresh_time))
                     .expect("buffer is too smal");
             }
-            Dhcpv6Option::DnsServers(recursive_name_servers) => {
+            DhcpOption::DnsServers(recursive_name_servers) => {
                 let empty = Vec::new();
                 let (recursive_name_servers, len) =
                     u16::try_from(16 * recursive_name_servers.len()).map_or_else(
@@ -460,7 +451,7 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
                         buf.write_obj_front(&server_addr.octets()).expect("buffer is too small");
                 })
             }
-            Dhcpv6Option::DomainList(domains) => {
+            DhcpOption::DomainList(domains) => {
                 let empty = Vec::new();
                 let (domains, len) =
                     u16::try_from(domains.iter().fold(0, |tot, domain| tot + domain.bytes_len()))
@@ -490,15 +481,15 @@ type TransactionId = [u8; 3];
 ///
 /// [RFC 8415, Section 8]: https://tools.ietf.org/html/rfc8415#section-8
 #[derive(Debug)]
-pub struct Dhcpv6Message<'a, B> {
-    msg_type: Dhcpv6MessageType,
+pub struct Message<'a, B> {
+    msg_type: MessageType,
     transaction_id: &'a TransactionId,
-    options: Records<B, Dhcpv6OptionsImpl>,
+    options: Records<B, DhcpOptionsImpl>,
 }
 
-impl<'a, B: ByteSlice> Dhcpv6Message<'a, B> {
+impl<'a, B: ByteSlice> Message<'a, B> {
     /// Returns the message type.
-    pub fn msg_type(&self) -> Dhcpv6MessageType {
+    pub fn msg_type(&self) -> MessageType {
         self.msg_type
     }
 
@@ -508,13 +499,13 @@ impl<'a, B: ByteSlice> Dhcpv6Message<'a, B> {
     }
 
     /// Returns an iterator over the options.
-    pub fn options<'b: 'a>(&'b self) -> impl 'b + Iterator<Item = Dhcpv6Option<'a>> {
+    pub fn options<'b: 'a>(&'b self) -> impl 'b + Iterator<Item = DhcpOption<'a>> {
         self.options.iter()
     }
 }
 
-impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Dhcpv6Message<'a, B> {
-    type Error = Dhcpv6ParseError;
+impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Message<'a, B> {
+    type Error = ParseError;
 
     fn parse_metadata(&self) -> ParseMetadata {
         let Self { msg_type, transaction_id, options } = self;
@@ -525,42 +516,35 @@ impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Dhcpv6Message<'a, B> {
         )
     }
 
-    fn parse<BV: BufferView<B>>(mut buf: BV, _args: ()) -> Result<Self, Dhcpv6ParseError> {
-        let msg_type = Dhcpv6MessageType::try_from(
-            buf.take_byte_front().ok_or(Dhcpv6ParseError::BufferExhausted)?,
-        )?;
-        let transaction_id = buf
-            .take_obj_front::<TransactionId>()
-            .ok_or(Dhcpv6ParseError::BufferExhausted)?
-            .into_ref();
-        let options = Records::<_, Dhcpv6OptionsImpl>::parse(buf.take_rest_front())?;
-        Ok(Dhcpv6Message { msg_type, transaction_id, options })
+    fn parse<BV: BufferView<B>>(mut buf: BV, _args: ()) -> Result<Self, ParseError> {
+        let msg_type =
+            MessageType::try_from(buf.take_byte_front().ok_or(ParseError::BufferExhausted)?)?;
+        let transaction_id =
+            buf.take_obj_front::<TransactionId>().ok_or(ParseError::BufferExhausted)?.into_ref();
+        let options = Records::<_, DhcpOptionsImpl>::parse(buf.take_rest_front())?;
+        Ok(Message { msg_type, transaction_id, options })
     }
 }
 
 /// A `DHCPv6Message` builder.
-pub struct Dhcpv6MessageBuilder<'a> {
-    msg_type: Dhcpv6MessageType,
+pub struct MessageBuilder<'a> {
+    msg_type: MessageType,
     transaction_id: TransactionId,
-    options: RecordsSerializer<'a, Dhcpv6OptionsImpl, Dhcpv6Option<'a>, Iter<'a, Dhcpv6Option<'a>>>,
+    options: RecordsSerializer<'a, DhcpOptionsImpl, DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
 }
 
-impl<'a> Dhcpv6MessageBuilder<'a> {
-    /// Returns a new `Dhcpv6MessageBuilder`.
+impl<'a> MessageBuilder<'a> {
+    /// Returns a new `MessageBuilder`.
     pub fn new(
-        msg_type: Dhcpv6MessageType,
+        msg_type: MessageType,
         transaction_id: TransactionId,
-        options: &'a [Dhcpv6Option<'a>],
-    ) -> Dhcpv6MessageBuilder<'a> {
-        Dhcpv6MessageBuilder {
-            msg_type,
-            transaction_id,
-            options: RecordsSerializer::new(options.iter()),
-        }
+        options: &'a [DhcpOption<'a>],
+    ) -> MessageBuilder<'a> {
+        MessageBuilder { msg_type, transaction_id, options: RecordsSerializer::new(options.iter()) }
     }
 }
 
-impl InnerPacketBuilder for Dhcpv6MessageBuilder<'_> {
+impl InnerPacketBuilder for MessageBuilder<'_> {
     /// Calculates the serialized length of the DHCPv6 message based on format defined in
     /// [RFC 8415, Section 8].
     ///
@@ -592,7 +576,7 @@ mod tests {
     use {super::*, matches::assert_matches, std::str::FromStr};
 
     fn test_buf_with_no_options() -> Vec<u8> {
-        let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &[]);
+        let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &[]);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
         buf
@@ -601,23 +585,23 @@ mod tests {
     #[test]
     fn test_message_serialization() {
         let options = [
-            Dhcpv6Option::ClientId(&[4, 5, 6]),
-            Dhcpv6Option::ServerId(&[8]),
-            Dhcpv6Option::Oro(vec![Dhcpv6OptionCode::ClientId, Dhcpv6OptionCode::ServerId]),
-            Dhcpv6Option::Preference(42),
-            Dhcpv6Option::ElapsedTime(3600),
-            Dhcpv6Option::InformationRefreshTime(86400),
-            Dhcpv6Option::DnsServers(vec![
+            DhcpOption::ClientId(&[4, 5, 6]),
+            DhcpOption::ServerId(&[8]),
+            DhcpOption::Oro(vec![OptionCode::ClientId, OptionCode::ServerId]),
+            DhcpOption::Preference(42),
+            DhcpOption::ElapsedTime(3600),
+            DhcpOption::InformationRefreshTime(86400),
+            DhcpOption::DnsServers(vec![
                 Ipv6Addr::from([0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215]),
                 Ipv6Addr::from([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]),
             ]),
-            Dhcpv6Option::DomainList(vec![
+            DhcpOption::DomainList(vec![
                 checked::Domain::from_str("fuchsia.dev").expect("failed to construct test domain"),
                 checked::Domain::from_str("www.google.com")
                     .expect("failed to construct test domain"),
             ]),
         ];
-        let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &options);
+        let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
 
         let () = builder.serialize(&mut buf);
@@ -650,26 +634,26 @@ mod tests {
     #[test]
     fn test_message_serialization_parsing_roundtrip() {
         let options = [
-            Dhcpv6Option::ClientId(&[4, 5, 6]),
-            Dhcpv6Option::ServerId(&[8]),
-            Dhcpv6Option::Oro(vec![Dhcpv6OptionCode::ClientId, Dhcpv6OptionCode::ServerId]),
-            Dhcpv6Option::Preference(42),
-            Dhcpv6Option::ElapsedTime(3600),
-            Dhcpv6Option::InformationRefreshTime(86400),
-            Dhcpv6Option::DnsServers(vec![Ipv6Addr::from(0 as u128)]),
-            Dhcpv6Option::DomainList(vec![
+            DhcpOption::ClientId(&[4, 5, 6]),
+            DhcpOption::ServerId(&[8]),
+            DhcpOption::Oro(vec![OptionCode::ClientId, OptionCode::ServerId]),
+            DhcpOption::Preference(42),
+            DhcpOption::ElapsedTime(3600),
+            DhcpOption::InformationRefreshTime(86400),
+            DhcpOption::DnsServers(vec![Ipv6Addr::from(0 as u128)]),
+            DhcpOption::DomainList(vec![
                 checked::Domain::from_str("fuchsia.dev").expect("failed to construct test domain"),
                 checked::Domain::from_str("www.google.com")
                     .expect("failed to construct test domain"),
             ]),
         ];
-        let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &options);
+        let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
 
         let mut buf = &buf[..];
-        let msg = Dhcpv6Message::parse(&mut buf, ()).expect("parse should succeed");
-        assert_eq!(msg.msg_type, Dhcpv6MessageType::Solicit);
+        let msg = Message::parse(&mut buf, ()).expect("parse should succeed");
+        assert_eq!(msg.msg_type, MessageType::Solicit);
         assert_eq!(msg.transaction_id, &[1, 2, 3]);
         let got_options: Vec<_> = msg.options.iter().collect();
         assert_eq!(got_options, options);
@@ -677,8 +661,8 @@ mod tests {
 
     #[test]
     fn test_message_serialization_duid_too_long() {
-        let options = [Dhcpv6Option::ClientId(&[0u8; (u16::MAX as usize) + 1])];
-        let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &options);
+        let options = [DhcpOption::ClientId(&[0u8; (u16::MAX as usize) + 1])];
+        let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
 
@@ -694,14 +678,13 @@ mod tests {
 
         // Make sure the buffer is still parsable.
         let mut buf = &buf[..];
-        let _ = Dhcpv6Message::parse(&mut buf, ()).expect("parse should succeed");
+        let _ = Message::parse(&mut buf, ()).expect("parse should succeed");
     }
 
     #[test]
     fn test_message_serialization_oro_too_long() {
-        let options =
-            [Dhcpv6Option::Oro(vec![Dhcpv6OptionCode::Preference; (u16::MAX as usize) + 1])];
-        let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &options);
+        let options = [DhcpOption::Oro(vec![OptionCode::Preference; (u16::MAX as usize) + 1])];
+        let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
 
@@ -716,49 +699,40 @@ mod tests {
 
         // Make sure the buffer is still parsable.
         let mut buf = &buf[..];
-        let _ = Dhcpv6Message::parse(&mut buf, ()).expect("parse should succeed");
+        let _ = Message::parse(&mut buf, ()).expect("parse should succeed");
     }
 
     #[test]
     fn test_option_serialization_parsing_roundtrip() {
         let mut buf = [0u8; 6];
-        let option = Dhcpv6Option::ElapsedTime(42);
+        let option = DhcpOption::ElapsedTime(42);
 
-        let () = <Dhcpv6OptionsImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
+        let () = <DhcpOptionsImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
         assert_eq!(buf, [0, 8, 0, 2, 0, 42]);
 
-        let options = Records::<_, Dhcpv6OptionsImpl>::parse_with_context(&buf[..], ()).unwrap();
-        let options: Vec<Dhcpv6Option<'_>> = options.iter().collect();
+        let options = Records::<_, DhcpOptionsImpl>::parse_with_context(&buf[..], ()).unwrap();
+        let options: Vec<DhcpOption<'_>> = options.iter().collect();
         assert_eq!(options.len(), 1);
-        assert_eq!(options[0], Dhcpv6Option::ElapsedTime(42));
+        assert_eq!(options[0], DhcpOption::ElapsedTime(42));
     }
 
     #[test]
     fn test_buffer_too_short() {
         let buf = [];
-        assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::BufferExhausted)
-        );
+        assert_matches!(Message::parse(&mut &buf[..], ()), Err(ParseError::BufferExhausted));
 
         let buf = [
             1, // valid message type
             0, // transaction id is too short
         ];
-        assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::BufferExhausted)
-        );
+        assert_matches!(Message::parse(&mut &buf[..], ()), Err(ParseError::BufferExhausted));
 
         let buf = [
             1, // valid message type
             1, 2, 3, // valid transaction id
             0, // option code is too short
         ];
-        assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::BufferExhausted)
-        );
+        assert_matches!(Message::parse(&mut &buf[..], ()), Err(ParseError::BufferExhausted));
 
         let buf = [
             1, // valid message type
@@ -766,10 +740,7 @@ mod tests {
             0, 1, // valid option code
             0, // option length is too short
         ];
-        assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::BufferExhausted)
-        );
+        assert_matches!(Message::parse(&mut &buf[..], ()), Err(ParseError::BufferExhausted));
 
         // option value too short
         let buf = [
@@ -779,10 +750,7 @@ mod tests {
             0, 100, // valid option length
             1, 2, // option value is too short
         ];
-        assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::BufferExhausted)
-        );
+        assert_matches!(Message::parse(&mut &buf[..], ()), Err(ParseError::BufferExhausted));
     }
 
     #[test]
@@ -790,10 +758,7 @@ mod tests {
         let mut buf = test_buf_with_no_options();
         // 0 is an invalid message type.
         buf[0] = 0;
-        assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::InvalidDhcpv6MessageType(0))
-        );
+        assert_matches!(Message::parse(&mut &buf[..], ()), Err(ParseError::InvalidMessageType(0)));
     }
 
     #[test]
@@ -804,10 +769,7 @@ mod tests {
             0, 1, // valid opt length
             0, // valid opt value
         ]);
-        assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::InvalidOpCode(0))
-        );
+        assert_matches!(Message::parse(&mut &buf[..], ()), Err(ParseError::InvalidOpCode(0)));
     }
 
     // Oro must have a even option length, according to [RFC 8415, Section 21.7].
@@ -822,8 +784,8 @@ mod tests {
             0,
         ]);
         assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::InvalidOpLen(Dhcpv6OptionCode::Oro, 1))
+            Message::parse(&mut &buf[..], ()),
+            Err(ParseError::InvalidOpLen(OptionCode::Oro, 1))
         );
     }
 
@@ -839,8 +801,8 @@ mod tests {
             0, 0,
         ]);
         assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::InvalidOpLen(Dhcpv6OptionCode::Preference, 2))
+            Message::parse(&mut &buf[..], ()),
+            Err(ParseError::InvalidOpLen(OptionCode::Preference, 2))
         );
     }
 
@@ -856,8 +818,8 @@ mod tests {
             0, 0, 0,
         ]);
         assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::InvalidOpLen(Dhcpv6OptionCode::ElapsedTime, 3))
+            Message::parse(&mut &buf[..], ()),
+            Err(ParseError::InvalidOpLen(OptionCode::ElapsedTime, 3))
         );
     }
 
@@ -873,8 +835,8 @@ mod tests {
             0, 0, 0,
         ]);
         assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::InvalidOpLen(Dhcpv6OptionCode::InformationRefreshTime, 3))
+            Message::parse(&mut &buf[..], ()),
+            Err(ParseError::InvalidOpLen(OptionCode::InformationRefreshTime, 3))
         );
     }
 
@@ -890,8 +852,8 @@ mod tests {
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
         ]);
         assert_matches!(
-            Dhcpv6Message::parse(&mut &buf[..], ()),
-            Err(Dhcpv6ParseError::InvalidOpLen(Dhcpv6OptionCode::DnsServers, 17))
+            Message::parse(&mut &buf[..], ()),
+            Err(ParseError::InvalidOpLen(OptionCode::DnsServers, 17))
         );
     }
 }

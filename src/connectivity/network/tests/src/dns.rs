@@ -31,7 +31,7 @@ use packet_formats::ip::IpProto;
 use packet_formats::ipv6::Ipv6PacketBuilder;
 use packet_formats::testutil::parse_ip_packet_in_ethernet_frame;
 use packet_formats::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
-use packet_formats_dhcp::v6::*;
+use packet_formats_dhcp::v6;
 
 use crate::constants::{eth as eth_consts, ipv6 as ipv6_consts};
 use crate::environments::{KnownServices, Manager, NetCfg, Netstack2, TestSandboxExt as _};
@@ -291,20 +291,20 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
 
                     // We only care about DHCPv6 messages.
                     let mut body = udp.body();
-                    let msg = match Dhcpv6Message::parse(&mut body, ()) {
+                    let msg = match v6::Message::parse(&mut body, ()) {
                         Ok(o) => o,
                         Err(_) => return None,
                     };
 
                     // We only care about DHCPv6 information requests.
-                    if msg.msg_type() != Dhcpv6MessageType::InformationRequest {
+                    if msg.msg_type() != v6::MessageType::InformationRequest {
                         return None;
                     }
 
                     // We only care about DHCPv6 information requests for DNS servers.
                     for opt in msg.options() {
-                        if let Dhcpv6Option::Oro(codes) = opt {
-                            if !codes.contains(&Dhcpv6OptionCode::DnsServers) {
+                        if let v6::DhcpOption::Oro(codes) = opt {
+                            if !codes.contains(&v6::OptionCode::DnsServers) {
                                 return None;
                             }
                         }
@@ -345,10 +345,10 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
 
     // Send the DHCPv6 reply.
     let options = [
-        Dhcpv6Option::ServerId(&[]),
-        Dhcpv6Option::DnsServers(vec![std::net::Ipv6Addr::from(DHCPV6_DNS_SERVER.addr)]),
+        v6::DhcpOption::ServerId(&[]),
+        v6::DhcpOption::DnsServers(vec![std::net::Ipv6Addr::from(DHCPV6_DNS_SERVER.addr)]),
     ];
-    let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Reply, tx_id, &options);
+    let builder = v6::MessageBuilder::new(v6::MessageType::Reply, tx_id, &options);
     let ser = builder
         .into_serializer()
         .encapsulate(UdpPacketBuilder::new(
