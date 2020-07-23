@@ -209,7 +209,7 @@ std::shared_ptr<AddressSlotMapping> AddressManager::AllocateMappingForAddressSpa
 
 std::shared_ptr<AddressSlotMapping> AddressManager::AssignToSlot(
     std::shared_ptr<MsdArmConnection> connection, uint32_t slot_number) {
-  DLOG("Assigning connection %p to slot %d\n", connection.get(), slot_number);
+  DLOG("Assigning connection %p to slot %d", connection.get(), slot_number);
   AddressSlot& slot = address_slots_[slot_number];
   HardwareSlot& hardware_slot = *registers_[slot_number];
   std::lock_guard<std::mutex> lock(hardware_slot.lock);
@@ -276,7 +276,7 @@ void AddressManager::HardwareSlot::WaitForMmuIdle(magma::RegisterIo* io) {
 
   uint32_t status = status_reg.ReadFrom(io).reg_value();
   if (status)
-    MAGMA_LOG(WARNING, "Wait for MMU %d to idle timed out with status 0x%x\n",
+    MAGMA_LOG(WARNING, "Wait for MMU %d to idle timed out with status 0x%x",
               registers.address_space(), status);
 }
 

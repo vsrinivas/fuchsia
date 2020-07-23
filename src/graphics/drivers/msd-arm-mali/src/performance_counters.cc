@@ -17,11 +17,11 @@ constexpr uint32_t kPerfBufferStartOffset = PAGE_SIZE;
 
 bool PerformanceCounters::Enable() {
   if (counter_state_ != PerformanceCounterState::kDisabled) {
-    MAGMA_LOG(WARNING, "Can't enable performance counters from state %d\n",
+    MAGMA_LOG(WARNING, "Can't enable performance counters from state %d",
               static_cast<int>(counter_state_));
     return false;
   }
-  MAGMA_LOG(INFO, "Enabling performance counters\n");
+  MAGMA_LOG(INFO, "Enabling performance counters");
   if (!connection_) {
     auto connection = MsdArmConnection::Create(0xffffffff, owner_->connection_owner());
     if (!connection) {
@@ -47,7 +47,7 @@ bool PerformanceCounters::Enable() {
     // Keep mapped on the CPU forever.
     void* cpu_map;
     if (!buffer->platform_buffer()->MapCpu(&cpu_map)) {
-      return DRETF(false, "Failed to map perf counter buffer\n");
+      return DRETF(false, "Failed to map perf counter buffer");
     }
     buffer->platform_buffer()->CleanCache(0, kPerfBufferSize, true);
     connection_ = connection;
@@ -95,11 +95,11 @@ bool PerformanceCounters::Enable() {
 
 bool PerformanceCounters::TriggerRead(bool keep_enabled) {
   if (counter_state_ != PerformanceCounterState::kEnabled) {
-    MAGMA_LOG(WARNING, "Can't trigger performance counters from state %d\n",
+    MAGMA_LOG(WARNING, "Can't trigger performance counters from state %d",
               static_cast<int>(counter_state_));
     return false;
   }
-  MAGMA_LOG(INFO, "Triggering performance counter read\n");
+  MAGMA_LOG(INFO, "Triggering performance counter read");
   last_perf_base_ =
       registers::PerformanceCounterBase::Get().ReadFrom(owner_->register_io()).reg_value();
   owner_->register_io()->Write32(registers::GpuCommand::kOffset,
@@ -112,7 +112,7 @@ bool PerformanceCounters::TriggerRead(bool keep_enabled) {
 std::vector<uint32_t> PerformanceCounters::ReadCompleted(uint64_t* duration_ms_out) {
   std::vector<uint32_t> output;
   if (counter_state_ != PerformanceCounterState::kTriggered) {
-    DLOG("Can't trigger performance counters from state %d\n", static_cast<int>(counter_state_));
+    DLOG("Can't trigger performance counters from state %d", static_cast<int>(counter_state_));
     return output;
   }
   uint64_t new_base =

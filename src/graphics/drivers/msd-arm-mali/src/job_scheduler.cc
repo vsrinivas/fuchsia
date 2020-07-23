@@ -429,7 +429,7 @@ void JobScheduler::HandleTimedOutAtoms() {
         }
       }
       if (want_to_preempt) {
-        DLOG("Preempting atom gpu addr: %lx\n", atom->gpu_address());
+        DLOG("Preempting atom gpu addr: %lx", atom->gpu_address());
         atom->set_soft_stopped(true);
         atom->set_preempted(true);
         // If the atom's soft-stopped its current state will be saved in the job chain

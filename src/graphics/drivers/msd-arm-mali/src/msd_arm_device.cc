@@ -255,7 +255,7 @@ void MsdArmDevice::DeregisterConnection() {
 void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
 
 void MsdArmDevice::OutputHangMessage() {
-  MAGMA_LOG(WARNING, "Possible GPU hang\n");
+  MAGMA_LOG(WARNING, "Possible GPU hang");
   ProcessDumpStatusToLog();
 }
 
@@ -377,7 +377,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
     auto irq_status = registers::GpuIrqFlags::GetStatus().ReadFrom(register_io_.get());
 
     if (!irq_status.reg_value()) {
-      MAGMA_LOG(WARNING, "Got unexpected GPU IRQ with no flags set\n");
+      MAGMA_LOG(WARNING, "Got unexpected GPU IRQ with no flags set");
     }
 
     auto clear_flags = registers::GpuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
@@ -409,7 +409,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
     }
 
     if (irq_status.reg_value()) {
-      MAGMA_LOG(WARNING, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
+      MAGMA_LOG(WARNING, "Got unexpected GPU IRQ %d", irq_status.reg_value());
       uint64_t fault_addr =
           registers::GpuFaultAddress::Get().ReadFrom(register_io_.get()).reg_value();
       {
@@ -419,7 +419,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
           if (locked) {
             uint64_t virtual_address;
             if (locked->GetVirtualAddressFromPhysical(fault_addr, &virtual_address))
-              MAGMA_LOG(WARNING, "Client %lx has VA %lx mapped to PA %lx\n", locked->client_id(),
+              MAGMA_LOG(WARNING, "Client %lx has VA %lx mapped to PA %lx", locked->client_id(),
                         virtual_address, fault_addr);
           }
         }
@@ -450,9 +450,9 @@ magma::Status MsdArmDevice::ProcessPerfCounterSampleCompleted() {
   uint64_t duration_ms = 0;
   std::vector<uint32_t> perf_result = perf_counters_->ReadCompleted(&duration_ms);
 
-  MAGMA_LOG(INFO, "Performance counter read complete, duration %lu ms:\n", duration_ms);
+  MAGMA_LOG(INFO, "Performance counter read complete, duration %lu ms:", duration_ms);
   for (uint32_t i = 0; i < perf_result.size(); ++i) {
-    MAGMA_LOG(INFO, "Performance counter %d: %u\n", i, perf_result[i]);
+    MAGMA_LOG(INFO, "Performance counter %d: %u", i, perf_result[i]);
   }
   return MAGMA_STATUS_OK;
 }
@@ -554,7 +554,7 @@ magma::Status MsdArmDevice::ProcessJobInterrupt(uint64_t time) {
 
       // Soft stopping isn't counted as an actual failure.
       if (result != kArmMaliResultSoftStopped && !dumped_on_failure) {
-        MAGMA_LOG(WARNING, "Got failed slot bitmask %x with result code %x\n",
+        MAGMA_LOG(WARNING, "Got failed slot bitmask %x with result code %x",
                   irq_status.failed_slots().get(), raw_result);
         ProcessDumpStatusToLog();
         dumped_on_failure = true;
@@ -579,7 +579,7 @@ magma::Status MsdArmDevice::ProcessJobInterrupt(uint64_t time) {
 
 magma::Status MsdArmDevice::ProcessMmuInterrupt() {
   auto irq_status = registers::MmuIrqFlags::GetStatus().ReadFrom(register_io_.get());
-  DLOG("Received MMU IRQ status 0x%x\n", irq_status.reg_value());
+  DLOG("Received MMU IRQ status 0x%x", irq_status.reg_value());
 
   uint32_t faulted_slots = irq_status.pf_flags().get() | irq_status.bf_flags().get();
   while (faulted_slots) {
@@ -596,7 +596,7 @@ magma::Status MsdArmDevice::ProcessMmuInterrupt() {
     {
       auto mapping = address_manager_->GetMappingForSlot(slot);
       if (!mapping) {
-        MAGMA_LOG(WARNING, "Fault on idle slot %d\n", slot);
+        MAGMA_LOG(WARNING, "Fault on idle slot %d", slot);
       } else {
         connection = mapping->connection();
       }
@@ -607,16 +607,16 @@ magma::Status MsdArmDevice::ProcessMmuInterrupt() {
       bool kill_context = true;
       if (irq_status.bf_flags().get() & (1 << slot)) {
         MAGMA_LOG(WARNING,
-                  "Bus fault at address 0x%lx on slot %d, client id: %ld, context count: %ld\n",
+                  "Bus fault at address 0x%lx on slot %d, client id: %ld, context count: %ld",
                   address, slot, connection->client_id(), connection->context_count());
       } else {
         if (connection->PageInMemory(address)) {
-          DLOG("Paged in address %lx\n", address);
+          DLOG("Paged in address %lx", address);
           kill_context = false;
         } else {
           MAGMA_LOG(
               WARNING,
-              "Failed to page in address 0x%lx on slot %d, client id: %ld, context count: %ld\n",
+              "Failed to page in address 0x%lx on slot %d, client id: %ld, context count: %ld",
               address, slot, connection->client_id(), connection->context_count());
         }
       }
@@ -919,27 +919,27 @@ static std::string InterpretMmuFaultStatus(uint32_t status) {
   }
   uint32_t source_id = status >> kSourceIdShift;
   const char* exception_type = ExceptionTypeToString(status & kExceptionTypeMask);
-  return fbl::StringPrintf("  Fault source_id %d, access type \"%s\", exception type: \"%s\"\n",
+  return fbl::StringPrintf("  Fault source_id %d, access type \"%s\", exception type: \"%s\"",
                            source_id, access_type, exception_type)
       .c_str();
 }
 
 void MsdArmDevice::FormatDump(DumpState& dump_state, std::vector<std::string>* dump_string) {
-  dump_string->push_back("Core power states\n");
+  dump_string->push_back("Core power states");
   for (auto& state : dump_state.power_states) {
-    dump_string->push_back(fbl::StringPrintf("Core type %s state %s bitmap: 0x%lx\n",
-                                             state.core_type, state.status_type, state.bitmask)
+    dump_string->push_back(fbl::StringPrintf("Core type %s state %s bitmap: 0x%lx", state.core_type,
+                                             state.status_type, state.bitmask)
                                .c_str());
   }
-  dump_string->push_back(fbl::StringPrintf("Total ms %" PRIu64 " Active ms %" PRIu64 "\n",
+  dump_string->push_back(fbl::StringPrintf("Total ms %" PRIu64 " Active ms %" PRIu64,
                                            dump_state.total_time_ms, dump_state.active_time_ms)
                              .c_str());
-  dump_string->push_back(fbl::StringPrintf("Gpu fault status 0x%x, address 0x%lx\n",
+  dump_string->push_back(fbl::StringPrintf("Gpu fault status 0x%x, address 0x%lx",
                                            dump_state.gpu_fault_status,
                                            dump_state.gpu_fault_address)
                              .c_str());
-  dump_string->push_back(fbl::StringPrintf("Gpu status 0x%x\n", dump_state.gpu_status).c_str());
-  dump_string->push_back(fbl::StringPrintf("Gpu cycle count %ld, timestamp %ld\n",
+  dump_string->push_back(fbl::StringPrintf("Gpu status 0x%x", dump_state.gpu_status).c_str());
+  dump_string->push_back(fbl::StringPrintf("Gpu cycle count %ld, timestamp %ld",
                                            dump_state.cycle_count, dump_state.timestamp)
                              .c_str());
 
@@ -983,14 +983,14 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::vector<std::string>* d
   for (size_t i = 0; i < dump_state.job_slot_status.size(); i++) {
     auto* status = &dump_state.job_slot_status[i];
     dump_string->push_back(
-        fbl::StringPrintf("Job slot %zu status 0x%x head 0x%lx tail 0x%lx config 0x%x\n", i,
+        fbl::StringPrintf("Job slot %zu status 0x%x head 0x%lx tail 0x%lx config 0x%x", i,
                           status->status, status->head, status->tail, status->config)
             .c_str());
   }
   for (size_t i = 0; i < dump_state.address_space_status.size(); i++) {
     auto* status = &dump_state.address_space_status[i];
     dump_string->push_back(
-        fbl::StringPrintf("AS %zu status 0x%x fault status 0x%x fault address 0x%lx\n", i,
+        fbl::StringPrintf("AS %zu status 0x%x fault status 0x%x fault address 0x%lx", i,
                           status->status, status->fault_status, status->fault_address)
             .c_str());
     dump_string->push_back(InterpretMmuFaultStatus(status->fault_status));
@@ -1113,7 +1113,7 @@ void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) {
   TRACE_DURATION("magma", "AtomCompleted", "address", atom->gpu_address());
   TRACE_FLOW_END("magma", "atom", atom->trace_nonce());
 
-  DLOG("Completed job atom: 0x%lx\n", atom->gpu_address());
+  DLOG("Completed job atom: 0x%lx", atom->gpu_address());
   address_manager_->AtomFinished(atom);
   if (atom->using_cycle_counter()) {
     DASSERT(atom->require_cycle_counter());
@@ -1140,13 +1140,13 @@ void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) {
 void MsdArmDevice::HardStopAtom(MsdArmAtom* atom) {
   DASSERT(atom->hard_stopped());
   registers::JobSlotRegisters slot(atom->slot());
-  DLOG("Hard stopping atom slot %d\n", atom->slot());
+  DLOG("Hard stopping atom slot %d", atom->slot());
   slot.Command().FromValue(registers::JobSlotCommand::kCommandHardStop).WriteTo(register_io_.get());
 }
 
 void MsdArmDevice::SoftStopAtom(MsdArmAtom* atom) {
   registers::JobSlotRegisters slot(atom->slot());
-  DLOG("Soft stopping atom slot %d\n", atom->slot());
+  DLOG("Soft stopping atom slot %d", atom->slot());
   slot.Command().FromValue(registers::JobSlotCommand::kCommandSoftStop).WriteTo(register_io_.get());
 }
 
@@ -1243,12 +1243,12 @@ void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, magma::Regist
   const uint32_t kGpuIdTGOX = 0x7212;
   uint32_t gpu_product_id = features->gpu_id.product_id().get();
   if (gpu_product_id == kGpuIdTGOX) {
-    DLOG("Enabling TLS hashing\n");
+    DLOG("Enabling TLS hashing");
     shader_config.tls_hashing_enable().set(1);
   }
 
   if (0x750 <= gpu_product_id && gpu_product_id <= 0x880) {
-    DLOG("Enabling LS attr types\n");
+    DLOG("Enabling LS attr types");
     // This seems necessary for geometry shaders to work with non-indexed draws with point and
     // line lists on T8xx and T7xx.
     shader_config.ls_allow_attr_types().set(1);
@@ -1297,7 +1297,7 @@ bool MsdArmDevice::ExitProtectedMode() {
 }
 
 bool MsdArmDevice::ResetDevice() {
-  DLOG("Resetting device protected mode\n");
+  DLOG("Resetting device protected mode");
   // Reset semaphore shouldn't already be signaled.
   DASSERT(!reset_semaphore_->Wait(0));
 

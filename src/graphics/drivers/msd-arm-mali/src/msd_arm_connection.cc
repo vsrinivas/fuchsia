@@ -66,7 +66,7 @@ bool MsdArmConnection::ExecuteAtom(
   if (flags & kAtomFlagSoftware) {
     if (flags != kAtomFlagSemaphoreSet && flags != kAtomFlagSemaphoreReset &&
         flags != kAtomFlagSemaphoreWait && flags != kAtomFlagSemaphoreWaitAndReset) {
-      MAGMA_LOG(WARNING, "Client %" PRIu64 ": Invalid soft atom flags 0x%x\n", client_id_, flags);
+      MAGMA_LOG(WARNING, "Client %" PRIu64 ": Invalid soft atom flags 0x%x", client_id_, flags);
       return false;
     }
     if (semaphores->empty()) {
@@ -80,15 +80,14 @@ bool MsdArmConnection::ExecuteAtom(
   } else {
     uint32_t slot = flags & kAtomFlagRequireFragmentShader ? 0 : 1;
     if (slot == 0 && (flags & (kAtomFlagRequireComputeShader | kAtomFlagRequireTiler))) {
-      MAGMA_LOG(WARNING, "Client %" PRIu64 ": Invalid atom flags 0x%x\n", client_id_, flags);
+      MAGMA_LOG(WARNING, "Client %" PRIu64 ": Invalid atom flags 0x%x", client_id_, flags);
       return false;
     }
 #if defined(ENABLE_PROTECTED_DEBUG_SWAP_MODE)
     flags ^= kAtomFlagProtected;
 #endif
     if ((flags & kAtomFlagProtected) && !owner_->IsProtectedModeSupported()) {
-      MAGMA_LOG(WARNING,
-                "Client %" PRIu64 ": Attempting to use protected mode when not supported\n",
+      MAGMA_LOG(WARNING, "Client %" PRIu64 ": Attempting to use protected mode when not supported",
                 client_id_);
       return false;
     }
@@ -228,7 +227,7 @@ static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
       ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE |
         MAGMA_GPU_MAP_FLAG_GROWABLE | kMagmaArmMaliGpuMapFlagInnerShareable |
         kMagmaArmMaliGpuMapFlagBothShareable | kMagmaArmMaliGpuMapFlagProtected))
-    return DRETF(false, "Unsupported map flags %lx\n", mapping_flags);
+    return DRETF(false, "Unsupported map flags %lx", mapping_flags);
 
   if (flags_out)
     *flags_out = access_flags;
