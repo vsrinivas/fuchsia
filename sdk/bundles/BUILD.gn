@@ -23,6 +23,7 @@ group("tools") {
     "//src/chromium:web_runner",
     "//src/connectivity/network/dhcpd-cli",
     "//src/connectivity/network/mdns/bundles:utils",
+    "//src/connectivity/network/net-cli:net-cli-transitional",
     "//src/connectivity/network/netstack:tools",
     "//src/connectivity/wlan:tools",
     "//src/dart",

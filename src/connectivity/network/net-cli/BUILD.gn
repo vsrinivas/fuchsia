@@ -48,7 +48,11 @@ rustc_binary("bin") {
   ]
 }
 
-package("net-cli") {
+group("net-cli") {
+}
+
+# TODO(36075): rename to net-cli once net-cli is no longer directly referenced out of tree
+package("net-cli-transitional") {
   deps = [
     ":bin",
     "//build/validate:non_production_tag",

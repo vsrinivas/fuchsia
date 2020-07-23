@@ -34,7 +34,6 @@ base_package_labels += [
   "//src/connectivity/management/network-manager-cli",
   "//src/connectivity/network/dhcp:dhcpd",
   "//src/connectivity/network/mdns/bundles:utils",
-  "//src/connectivity/network/net-cli",
   "//src/connectivity/network/netstack3",
   "//src/connectivity/network/netstack:tools",
   "//src/connectivity/wlan:packages",
