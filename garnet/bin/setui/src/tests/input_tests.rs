@@ -211,6 +211,7 @@ async fn test_restore() {
 }
 
 // Test to ensure mic input change events are received.
+// TODO(fxb/41006): Add a request.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_bringup_without_input_registry() {
     let service_registry = ServiceRegistry::create();

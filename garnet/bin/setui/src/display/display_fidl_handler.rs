@@ -150,7 +150,6 @@ async fn process_sensor_request(
         context
             .watch_with_change_fn(
                 // Bucket watch requests to the nearest 0.01.
-                // TODO(fxb/55112): this might be just an integer
                 format!("{:.2}", delta),
                 Box::new(move |old_data: &LightSensorData, new_data: &LightSensorData| {
                     if let (Some(old_lux), Some(new_lux)) =
@@ -198,7 +197,6 @@ async fn process_sensor_request_2(
         context
             .watch_with_change_fn(
                 // Bucket watch requests to the nearest 0.01.
-                // TODO(fxb/55112): this might be just an integer
                 format!("{:.2}", delta),
                 Box::new(move |old_data: &LightSensorData, new_data: &LightSensorData| {
                     if let (Some(old_lux), Some(new_lux)) =

@@ -79,7 +79,7 @@ async fn process_request(
     return Ok(None);
 }
 
-// TODO(fxb/55692): Remove when clients are ported to watch.
+// TODO(fxb/55719): Remove when clients are ported to watch.
 async fn process_request_2(
     context: RequestContext<IntlSettings, IntlWatch2Responder>,
     req: IntlRequest,

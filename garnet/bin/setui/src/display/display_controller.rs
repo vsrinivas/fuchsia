@@ -42,9 +42,7 @@ impl controller::Handle for DisplayController {
         #[allow(unreachable_patterns)]
         match request {
             SettingRequest::Restore => {
-                // Load and set value
-                // TODO(fxb/35004): Listen to changes using hanging
-                // get as well
+                // Load and set value.
                 Some(store_brightness(self.client.read().await, &self.client).await)
             }
             SettingRequest::SetBrightness(brightness_value) => {

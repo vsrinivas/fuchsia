@@ -43,7 +43,6 @@ impl controller::Handle for AccessibilityController {
     async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
         match request {
             SettingRequest::Get => {
-                // TODO(fxb/52060): Figure out how to report persistent storage epitaphs.
                 Some(Ok(Some(SettingResponse::Accessibility(self.client.read().await))))
             }
             SettingRequest::SetAccessibilityInfo(info) => Some(

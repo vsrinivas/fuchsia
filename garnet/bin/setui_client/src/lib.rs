@@ -525,7 +525,6 @@ fn str_to_audio_source(src: &str) -> Result<fidl_fuchsia_settings::AudioStreamSe
     }
 }
 
-// TODO(go/fxb/36262): Refactor tests out of lib
 #[cfg(test)]
 mod tests {
     use super::*;

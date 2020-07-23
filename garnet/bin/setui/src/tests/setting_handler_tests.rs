@@ -399,7 +399,6 @@ async fn test_teardown_state() {
 }
 
 /// Empty controller that handles no commands or events.
-/// TODO(fxb/50217): Clean up test controllers.
 struct StubController {}
 
 impl StubController {
