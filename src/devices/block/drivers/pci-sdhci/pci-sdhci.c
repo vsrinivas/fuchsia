@@ -24,7 +24,7 @@ typedef struct pci_sdhci_device {
   zx_device_t* zxdev;
   pci_protocol_t pci;
 
-  volatile uint8_t* regs;
+  MMIO_PTR volatile uint8_t* regs;
   mmio_buffer_t mmio;
   zx_handle_t bti_handle;
 } pci_sdhci_device_t;
@@ -60,8 +60,7 @@ static zx_status_t pci_sdhci_get_mmio(void* ctx, zx_handle_t* out, zx_off_t* out
       printf("pci-sdhci: error %d mapping register window\n", status);
       return status;
     }
-    // TODO(fxb/56253): Add MMIO_PTR to cast.
-    dev->regs = (void*)dev->mmio.vaddr;
+    dev->regs = dev->mmio.vaddr;
   }
   *out_offset = dev->mmio.offset;
   return zx_handle_duplicate(dev->mmio.vmo, ZX_RIGHT_SAME_RIGHTS, out);
@@ -90,14 +89,15 @@ static void pci_sdhci_hw_reset(void* ctx) {
   if (!dev->regs) {
     return;
   }
-  volatile uint32_t* const ctrl1 = (volatile uint32_t*)(dev->regs + HOST_CONTROL1_OFFSET);
-  uint32_t val = *ctrl1;
+  MMIO_PTR volatile uint32_t* const ctrl1 =
+      (MMIO_PTR volatile uint32_t*)(dev->regs + HOST_CONTROL1_OFFSET);
+  uint32_t val = MmioRead32(ctrl1);
   val |= SDHCI_EMMC_HW_RESET;
-  *ctrl1 = val;
+  MmioWrite32(val, ctrl1);
   // minimum is 1us but wait 9us for good measure
   zx_nanosleep(zx_deadline_after(ZX_USEC(9)));
   val &= ~SDHCI_EMMC_HW_RESET;
-  *ctrl1 = val;
+  MmioWrite32(val, ctrl1);
   // minimum is 200us but wait 300us for good measure
   zx_nanosleep(zx_deadline_after(ZX_USEC(300)));
 }
