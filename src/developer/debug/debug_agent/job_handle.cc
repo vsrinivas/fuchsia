@@ -6,6 +6,18 @@
 
 namespace debug_agent {
 
+std::unique_ptr<JobHandle> JobHandle::FindJob(zx_koid_t job_koid) const {
+  if (GetKoid() == job_koid)
+    return Duplicate();
+
+  for (const auto& job : GetChildJobs()) {
+    if (auto found = job->FindJob(job_koid))
+      return found;
+  }
+
+  return nullptr;
+}
+
 std::unique_ptr<ProcessHandle> JobHandle::FindProcess(zx_koid_t process_koid) const {
   // Search direct process descendents of this job.
   for (auto& proc : GetChildProcesses()) {

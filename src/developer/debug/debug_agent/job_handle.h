@@ -18,6 +18,9 @@ class JobHandle {
  public:
   virtual ~JobHandle() = default;
 
+  // Creates a copy of this job handle.
+  virtual std::unique_ptr<JobHandle> Duplicate() const = 0;
+
   // Access to the underlying native job object. This is for porting purposes, ideally this object
   // would encapsulate all details about the job for testing purposes and this getter would be
   // removed. In testing situations, the returned value may be an empty object,
@@ -32,11 +35,12 @@ class JobHandle {
   virtual std::vector<std::unique_ptr<JobHandle>> GetChildJobs() const = 0;
   virtual std::vector<std::unique_ptr<ProcessHandle>> GetChildProcesses() const = 0;
 
-  // Recursively searches the job tree from this job and returns a handle to the process with the
-  // given koid. Returns an empty pointer if the process was not found. This can also happen if the
-  // debug_agent doesn't have permission to see it.
+  // Recursively searches the job tree from this job/process and returns a handle to it. Returns a
+  // null pointer if the job/process was not found. This can also happen if the debug_agent doesn't
+  // have permission to see it.
   //
   // This is not virtual because it can be implemented entirely in terms of the virtual interface.
+  std::unique_ptr<JobHandle> FindJob(zx_koid_t job_koid) const;
   std::unique_ptr<ProcessHandle> FindProcess(zx_koid_t process_koid) const;
 };
 

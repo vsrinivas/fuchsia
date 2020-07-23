@@ -20,9 +20,7 @@
 #include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/exception_handle.h"
-#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
-#include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
@@ -86,10 +84,8 @@ DebugAgent::DebugAgent(std::unique_ptr<SystemInterface> system_interface,
     : system_interface_(std::move(system_interface)),
       services_(services),
       limbo_provider_(std::move(providers.limbo_provider)),
-      object_provider_(std::move(providers.object_provider)),
       weak_factory_(this) {
   FX_DCHECK(limbo_provider_);
-  FX_DCHECK(object_provider_);
 
   // Set a callback to the limbo_provider to let us know when new processes enter the limbo.
   limbo_provider_->set_on_enter_limbo([agent = GetWeakPtr()](const LimboProvider::Record& record) {
@@ -304,7 +300,7 @@ void DebugAgent::OnModules(const debug_ipc::ModulesRequest& request,
 
 void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                                debug_ipc::ProcessTreeReply* reply) {
-  GetProcessTree(&reply->root, *object_provider_);
+  reply->root = system_interface_->GetProcessTree();
 }
 
 void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
@@ -588,16 +584,18 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
     return;
   }
 
-  // All other attach types are variants of job attaches, find the KOID.
-  zx_koid_t job_koid = 0;
+  // All other attach types are variants of job attaches.
+  std::unique_ptr<JobHandle> job;
   if (request.type == debug_ipc::TaskType::kJob) {
-    job_koid = request.koid;
+    job = system_interface_->GetJob(request.koid);
   } else if (request.type == debug_ipc::TaskType::kComponentRoot) {
-    job_koid = object_provider_->GetComponentJobKoid();
-    attached_root_job_koid_ = job_koid;
+    job = system_interface_->GetComponentRootJob();
+    if (job)
+      attached_root_job_koid_ = job->GetKoid();
   } else if (request.type == debug_ipc::TaskType::kSystemRoot) {
-    job_koid = object_provider_->GetRootJobKoid();
-    attached_root_job_koid_ = job_koid;
+    job = system_interface_->GetRootJob();
+    if (job)
+      attached_root_job_koid_ = job->GetKoid();
   } else {
     FX_LOGS(WARNING) << "Got bad debugger attach request type, ignoring.";
     return;
@@ -607,14 +605,16 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
   reply.status = ZX_ERR_NOT_FOUND;
 
   // Don't return early since we always need to send the reply, even on fail.
-  zx::job job = object_provider_->GetJobFromKoid(job_koid);
-  if (job.is_valid()) {
-    reply.name = object_provider_->NameForObject(job);
-    reply.koid = job_koid;
-    reply.status = AddDebuggedJob(std::make_unique<ZirconJobHandle>(std::move(job)));
-  }
+  if (job) {
+    DEBUG_LOG(Agent) << "Attaching to job " << job->GetKoid() << ": "
+                     << zx_status_get_string(reply.status);
 
-  DEBUG_LOG(Agent) << "Attaching to job " << job_koid << ": " << zx_status_get_string(reply.status);
+    reply.name = job->GetName();
+    reply.koid = job->GetKoid();
+    reply.status = AddDebuggedJob(std::move(job));
+  } else {
+    DEBUG_LOG(Agent) << "Failed to attach to job.";
+  }
 
   // Send the reply.
   debug_ipc::MessageWriter writer;
@@ -729,38 +729,31 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   reply->inferior_type = debug_ipc::InferiorType::kBinary;
   DEBUG_LOG(Process) << "Launching binary " << request.argv.front();
 
-  BinaryLauncher launcher(services_);
-
-  reply->status = launcher.Setup(request.argv);
+  std::unique_ptr<BinaryLauncher> launcher = system_interface_->GetLauncher();
+  reply->status = launcher->Setup(request.argv);
   if (reply->status != ZX_OK)
     return;
 
-  // TODO(brettw) replace this with when the launcher uses ProcessHandles.
-  //   auto process_handle = std::make_unique<ZirconProcessHandle>(std::move(process));
-  zx::process process = launcher.GetProcess();
-  zx_koid_t process_koid = object_provider_->KoidForObject(process);
+  DebuggedProcessCreateInfo create_info(launcher->GetProcess());
+  create_info.out = launcher->ReleaseStdout();
+  create_info.err = launcher->ReleaseStderr();
 
-  DebuggedProcessCreateInfo create_info(std::make_unique<ZirconProcessHandle>(std::move(process)));
-  create_info.out = launcher.ReleaseStdout();
-  create_info.err = launcher.ReleaseStderr();
-
+  // The DebuggedProcess must be attached to the new process' exception port before actually
+  // Starting the process to avoid racing with the program initialization.
   DebuggedProcess* new_process = nullptr;
-  zx_status_t status = AddDebuggedProcess(std::move(create_info), &new_process);
-  if (status != ZX_OK) {
-    reply->status = status;
+  reply->status = AddDebuggedProcess(std::move(create_info), &new_process);
+  if (reply->status != ZX_OK)
     return;
-  }
 
-  reply->status = launcher.Start();
+  reply->status = launcher->Start();
   if (reply->status != ZX_OK) {
-    RemoveDebuggedProcess(process_koid);
+    RemoveDebuggedProcess(new_process->koid());
     return;
   }
 
   // Success, fill out the reply.
-  reply->process_id = process_koid;
-  reply->process_name = object_provider_->NameForObject(process);
-  reply->status = ZX_OK;
+  reply->process_id = new_process->koid();
+  reply->process_name = new_process->process_handle().GetName();
 }
 
 void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,

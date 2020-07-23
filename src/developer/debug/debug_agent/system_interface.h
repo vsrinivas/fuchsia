@@ -5,10 +5,16 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SYSTEM_INTERFACE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SYSTEM_INTERFACE_H_
 
+#include <memory>
+#include <vector>
+
 #include "src/developer/debug/debug_agent/job_handle.h"
 #include "src/developer/debug/debug_agent/process_handle.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
+
+class BinaryLauncher;
 
 // Abstract interface that represents the system. This is eqivalent to ProcessHandle for processes
 // but for the system (for which there's not a clearly owned handle).
@@ -16,13 +22,36 @@ class SystemInterface {
  public:
   virtual ~SystemInterface() = default;
 
-  // The root job may be invalid if there was an error connecting.
-  const JobHandle& GetRootJob() const { return const_cast<SystemInterface*>(this)->GetRootJob(); }
-  virtual JobHandle& GetRootJob() = 0;
+  // Returns a pointer to a job owned by this object (the root job is queried frequently). Returns
+  // null if the root job was not available.
+  virtual std::unique_ptr<JobHandle> GetRootJob() const = 0;
 
-  // Returns a handle to the process with the given koid. Returns an empty pointer if the process
-  // was not found. This can also happen if the debug_agent doesn't have permission to see it.
-  virtual std::unique_ptr<ProcessHandle> GetProcess(zx_koid_t process_koid) const = 0;
+  // The component job is the one that the component manager uses for launched components. Returns
+  // null if there was an error finding it or getting its handle.
+  //
+  // TODO(bug 56725) this function currently always returns null.
+  virtual std::unique_ptr<JobHandle> GetComponentRootJob() const = 0;
+
+  // Creates a BinaryLauncher. This is a creator for a launcher instead of
+  //   std::unique_ptr<ProcessHandle> LaunchProcess(...);
+  // because the launch on Fuchsia requires two steps with possibly some caller-specific logic in
+  // between.
+  //
+  // If this requires mocking in the future, we should probably make the BinaryLauncher an abstract
+  // interface that can itself be mocked.
+  virtual std::unique_ptr<BinaryLauncher> GetLauncher() const = 0;
+
+  // Non-virtual helpers ---------------------------------------------------------------------------
+  //
+  // These all use the virtual interface above to implement their functionality.
+
+  // Collects the process tree starting from the given job handle.
+  debug_ipc::ProcessTreeRecord GetProcessTree() const;
+
+  // Returns a handle to the job/process with the given koid. Returns an empty pointer if it was not
+  // found. This can also happen if the debug_agent doesn't have permission to see it.
+  std::unique_ptr<JobHandle> GetJob(zx_koid_t job_koid) const;
+  std::unique_ptr<ProcessHandle> GetProcess(zx_koid_t process_koid) const;
 };
 
 }  // namespace debug_agent

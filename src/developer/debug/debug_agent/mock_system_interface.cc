@@ -6,8 +6,16 @@
 
 namespace debug_agent {
 
-std::unique_ptr<ProcessHandle> MockSystemInterface::GetProcess(zx_koid_t process_koid) const {
-  return root_job_.FindProcess(process_koid);
+std::unique_ptr<JobHandle> MockSystemInterface::GetRootJob() const {
+  return std::make_unique<MockJobHandle>(root_job_);
+}
+
+std::unique_ptr<JobHandle> MockSystemInterface::GetComponentRootJob() const { return nullptr; }
+
+std::unique_ptr<BinaryLauncher> MockSystemInterface::GetLauncher() const {
+  // Unimplemented in this mock.
+  FX_NOTREACHED();
+  return nullptr;
 }
 
 }  // namespace debug_agent

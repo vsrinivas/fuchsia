@@ -17,6 +17,8 @@
 
 namespace debug_agent {
 
+class ProcessHandle;
+
 // This class is designed to help two-phase process creation, where a process
 // needs to be setup, but before starting it that process needs to be
 // registered with the exception handler.
@@ -40,9 +42,8 @@ class BinaryLauncher {
   zx::socket ReleaseStdout();
   zx::socket ReleaseStderr();
 
-  // Accessor for a copy of the process handle, valid between Setup() and
-  // Start().
-  zx::process GetProcess() const;
+  // Accessor for a copy of the process handle, valid between Setup() and Start().
+  std::unique_ptr<ProcessHandle> GetProcess() const;
 
   // Completes process launching.
   zx_status_t Start();

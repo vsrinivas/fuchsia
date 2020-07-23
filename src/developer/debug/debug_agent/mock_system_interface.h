@@ -17,8 +17,9 @@ class MockSystemInterface final : public SystemInterface {
   explicit MockSystemInterface(MockJobHandle root_job) : root_job_(std::move(root_job)) {}
 
   // SystemInterface implementation:
-  JobHandle& GetRootJob() override { return root_job_; }
-  std::unique_ptr<ProcessHandle> GetProcess(zx_koid_t process_koid) const override;
+  std::unique_ptr<JobHandle> GetRootJob() const override;
+  std::unique_ptr<JobHandle> GetComponentRootJob() const override;
+  std::unique_ptr<BinaryLauncher> GetLauncher() const override;
 
  private:
   MockJobHandle root_job_;

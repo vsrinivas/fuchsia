@@ -12,8 +12,11 @@ namespace debug_agent {
 class ZirconJobHandle final : public JobHandle {
  public:
   explicit ZirconJobHandle(zx::job j);
+  ZirconJobHandle(const ZirconJobHandle& other);
+  ZirconJobHandle(ZirconJobHandle&& other) = default;
 
   // JobHandle implementation.
+  std::unique_ptr<JobHandle> Duplicate() const override;
   const zx::job& GetNativeHandle() const override { return job_; }
   zx::job& GetNativeHandle() override { return job_; }
   zx_koid_t GetKoid() const override { return job_koid_; }

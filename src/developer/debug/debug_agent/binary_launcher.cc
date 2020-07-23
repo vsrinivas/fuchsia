@@ -9,7 +9,7 @@
 #include <lib/fdio/io.h>
 #include <zircon/processargs.h>
 
-#include "src/developer/debug/debug_agent/object_provider.h"
+#include "src/developer/debug/debug_agent/zircon_process_handle.h"
 
 namespace debug_agent {
 
@@ -33,10 +33,10 @@ zx_status_t BinaryLauncher::Setup(const std::vector<std::string>& argv) {
   return builder_.Prepare(nullptr);
 }
 
-zx::process BinaryLauncher::GetProcess() const {
+std::unique_ptr<ProcessHandle> BinaryLauncher::GetProcess() const {
   zx::process process;
   builder_.data().process.duplicate(ZX_RIGHT_SAME_RIGHTS, &process);
-  return process;
+  return std::make_unique<ZirconProcessHandle>(std::move(process));
 }
 
 zx_status_t BinaryLauncher::Start() { return builder_.Start(nullptr); }

@@ -17,6 +17,10 @@ MockJobHandle::MockJobHandle(zx_koid_t koid, std::string name)
   FX_DCHECK(!null_handle_);
 }
 
+std::unique_ptr<JobHandle> MockJobHandle::Duplicate() const {
+  return std::make_unique<MockJobHandle>(*this);
+}
+
 std::vector<std::unique_ptr<JobHandle>> MockJobHandle::GetChildJobs() const {
   // Need to return a unique set of objects every time so make copies.
   std::vector<std::unique_ptr<JobHandle>> result;

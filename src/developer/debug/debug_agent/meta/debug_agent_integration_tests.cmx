@@ -13,6 +13,7 @@
         "services": [
             "fuchsia.boot.RootJob",
             "fuchsia.exception.ProcessLimbo",
+            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
         ]
     }

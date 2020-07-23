@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zx/process.h>
+#include "src/developer/debug/debug_agent/system_interface.h"
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/debug_agent/object_provider.h"
-#include "src/developer/debug/debug_agent/system_info.h"
+#include "src/developer/debug/debug_agent/zircon_job_handle.h"
+#include "src/developer/debug/debug_agent/zircon_system_interface.h"
+#include "src/developer/debug/debug_agent/zircon_utils.h"
 
 namespace debug_agent {
 
@@ -29,21 +30,19 @@ bool FindProcess(const debug_ipc::ProcessTreeRecord& record, const std::string& 
 }  // namespace
 
 TEST(SystemInfo, GetProcessTree) {
-  ObjectProvider object_provider;
+  ZirconSystemInterface system_interface;
 
-  debug_ipc::ProcessTreeRecord root;
-  zx_status_t status = GetProcessTree(&root, object_provider);
-  ASSERT_EQ(ZX_OK, status);
+  debug_ipc::ProcessTreeRecord root = system_interface.GetProcessTree();
 
   // The root node should be a job with some children.
   EXPECT_EQ(debug_ipc::ProcessTreeRecord::Type::kJob, root.type);
   EXPECT_FALSE(root.children.empty());
 
   // Compute our own process name and koid.
-  zx_handle_t self = zx_process_self();
-  std::string self_name = object_provider.NameForObject(self);
+  auto self = zx::process::self();
+  std::string self_name = zircon::NameForObject(*self);
   EXPECT_FALSE(self_name.empty());
-  zx_koid_t self_koid = object_provider.KoidForObject(self);
+  zx_koid_t self_koid = zircon::KoidForObject(*self);
   ASSERT_NE(0u, self_koid);
 
   // Our name and koid should be somewhere in the tree.

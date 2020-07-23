@@ -72,7 +72,6 @@ class DebuggedProcess : public ProcessHandleObserver {
   uint64_t dl_debug_addr() const { return dl_debug_addr_; }
 
   // Returns true on success. On failure, the object may not be used further.
-  // |object_provider| gives a view of the Zircon process tree. Can be overriden for test purposes.
   zx_status_t Init();
 
   // IPC handlers.

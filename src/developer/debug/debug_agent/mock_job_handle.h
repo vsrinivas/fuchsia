@@ -22,6 +22,7 @@ class MockJobHandle final : public JobHandle {
   }
 
   // JobHandle implementation.
+  std::unique_ptr<JobHandle> Duplicate() const override;
   const zx::job& GetNativeHandle() const override { return null_handle_; }
   zx::job& GetNativeHandle() override { return null_handle_; }
   zx_koid_t GetKoid() const override { return job_koid_; }

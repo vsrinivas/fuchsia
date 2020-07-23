@@ -9,6 +9,8 @@
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/lib/files/file.h"
+
 namespace debug_agent {
 namespace zircon {
 
@@ -65,6 +67,28 @@ zx::job GetRootJob() {
     return zx::job();
   }
   return root_job;
+}
+
+// The hub writes the job it uses to create components in a special file.
+//
+// This is note quite correct. This code actually returns the job that contains the debug agent
+// itself, which is usually the right thing because the debug agent normally runs in the component
+// root.
+//
+// TODO: Find the correct job even when the debug agent is run from elsewhere.
+zx_koid_t GetComponentRootJobKoid() {
+  // TODO(bug 56725) this function seems to no longer work and the job-id file is not found.
+  std::string koid_str;
+  bool file_read = files::ReadFileToString("/hub/job-id", &koid_str);
+  if (!file_read)
+    return ZX_KOID_INVALID;
+
+  char* end = NULL;
+  uint64_t koid = strtoul(koid_str.c_str(), &end, 10);
+  if (*end)
+    return ZX_KOID_INVALID;
+
+  return koid;
 }
 
 std::vector<zx_koid_t> GetChildKoids(const zx::object_base& parent, uint32_t child_kind) {

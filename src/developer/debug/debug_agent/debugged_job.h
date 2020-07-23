@@ -53,6 +53,7 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
       std::set<std::unique_ptr<ProcessHandle>, CompareProcessHandleByKoid>;
 
   // Caller must call Init immediately after construction and delete the object if that fails.
+  // The ProcessStartHandler pointer must outlive this class.
   DebuggedJob(ProcessStartHandler* handler, std::unique_ptr<JobHandle> job_handle);
   virtual ~DebuggedJob();
 

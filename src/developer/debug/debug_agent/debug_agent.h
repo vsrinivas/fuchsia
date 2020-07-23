@@ -18,7 +18,6 @@
 #include "src/developer/debug/debug_agent/debugged_job.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/limbo_provider.h"
-#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/remote_api.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/lib/fxl/macros.h"
@@ -35,7 +34,6 @@ struct SystemProviders {
   static SystemProviders CreateDefaults(std::shared_ptr<sys::ServiceDirectory> services);
 
   std::shared_ptr<LimboProvider> limbo_provider;
-  std::shared_ptr<ObjectProvider> object_provider = std::make_shared<ObjectProvider>();
 };
 
 // Main state and control for the debug agent.
@@ -48,14 +46,13 @@ class DebugAgent : public RemoteAPI,
   // The stream must outlive this class. It will be used to send data to the
   // client. It will not be read (that's the job of the provider of the
   // RemoteAPI).
-  //
-  // |object_provider| provides a view into the Zircon process tree.
-  // Can be overriden for test purposes.
   explicit DebugAgent(std::unique_ptr<SystemInterface> system_interface,
                       std::shared_ptr<sys::ServiceDirectory> services, SystemProviders providers);
   ~DebugAgent();
 
   fxl::WeakPtr<DebugAgent> GetWeakPtr();
+
+  SystemInterface& system_interface() { return *system_interface_; }
 
   // Connects the debug agent to a stream buffer.
   // The buffer can be disconnected and the debug agent will remain intact until the moment a new
@@ -71,6 +68,7 @@ class DebugAgent : public RemoteAPI,
 
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
+  // ProcessStartHandler implementation.
   void OnProcessStart(const std::string& filter, std::unique_ptr<ProcessHandle> process) override;
 
   void InjectProcessForTest(std::unique_ptr<DebuggedProcess> process);
@@ -223,7 +221,6 @@ class DebugAgent : public RemoteAPI,
   AgentConfiguration configuration_;
 
   std::shared_ptr<LimboProvider> limbo_provider_;
-  std::shared_ptr<ObjectProvider> object_provider_;
 
   fxl::WeakPtrFactory<DebugAgent> weak_factory_;
 

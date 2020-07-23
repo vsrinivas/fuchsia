@@ -7,7 +7,6 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/debug_agent/process_handle.h"
-#include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/shared/component_utils.h"
 #include "src/developer/debug/shared/logging/logging.h"

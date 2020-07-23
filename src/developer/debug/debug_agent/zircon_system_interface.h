@@ -7,21 +7,26 @@
 
 #include <memory>
 
+#include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
 
 namespace debug_agent {
+
+class BinaryLauncher;
 
 class ZirconSystemInterface final : public SystemInterface {
  public:
   explicit ZirconSystemInterface();
 
   // SystemInterface implementation:
-  JobHandle& GetRootJob() override { return root_job_; }
-  std::unique_ptr<ProcessHandle> GetProcess(zx_koid_t process_koid) const override;
+  std::unique_ptr<JobHandle> GetRootJob() const override;
+  std::unique_ptr<JobHandle> GetComponentRootJob() const override;
+  std::unique_ptr<BinaryLauncher> GetLauncher() const override;
 
  private:
   ZirconJobHandle root_job_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
 };
 
 }  // namespace debug_agent

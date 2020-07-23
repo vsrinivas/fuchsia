@@ -12,6 +12,14 @@ namespace debug_agent {
 ZirconJobHandle::ZirconJobHandle(zx::job j)
     : job_koid_(zircon::KoidForObject(j)), job_(std::move(j)) {}
 
+ZirconJobHandle::ZirconJobHandle(const ZirconJobHandle& other) : job_koid_(other.job_koid_) {
+  other.job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_);
+}
+
+std::unique_ptr<JobHandle> ZirconJobHandle::Duplicate() const {
+  return std::make_unique<ZirconJobHandle>(*this);
+}
+
 std::string ZirconJobHandle::GetName() const { return zircon::NameForObject(job_); }
 
 std::vector<std::unique_ptr<JobHandle>> ZirconJobHandle::GetChildJobs() const {
