@@ -77,7 +77,8 @@ bool ResumeIfBacktraceRequest(const zx::thread& thread, const zx::exception& exc
 
 void HandOffException(
     zx::exception exception, const zx_exception_info_t& info,
-    const std::unique_ptr<fidl::Client<llcpp::fuchsia::exception::Handler>>& exception_handler) {
+    const std::unique_ptr<fidl::Client<llcpp::fuchsia::exception::Handler>>& exception_handler,
+    async::Loop* loop) {
   zx::process process;
   if (const zx_status_t status = exception.get_process(&process); status != ZX_OK) {
     LogError("failed to get exception process", info, status);
@@ -114,6 +115,13 @@ void HandOffException(
     exception_info.process_koid = info.pid;
     exception_info.thread_koid = info.tid;
     exception_info.type = static_cast<llcpp::fuchsia::exception::ExceptionType>(info.type);
+
+    // Run the loop before handing off the exception to give queued tasks a chance to execute. The
+    // loop is run here to minimize the chance of |exception_handler| becoming unbound after the
+    // loop has been run.
+    if (const zx_status_t status = loop->RunUntilIdle(); status != ZX_OK) {
+      LogError("failed to run async loop", status);
+    }
 
     if (const auto result =
             (*exception_handler)->OnException(std::move(exception), exception_info, [] {});
@@ -203,11 +211,7 @@ int crash_svc(void* arg) {
       continue;
     }
 
-    // Run the loop before handing off the exception to give queued tasks a chance to execute.
-    if (const zx_status_t status = loop.RunUntilIdle(); status != ZX_OK) {
-      LogError("failed to run async loop", status);
-    }
-    HandOffException(std::move(exception), info, exception_handler);
+    HandOffException(std::move(exception), info, exception_handler, &loop);
   }
 
   loop.Shutdown();
