@@ -8,12 +8,6 @@ declare_args() {
   # When set as a GN argument, requires that sysmgr_config_warn_override be set
   # to true to avoid build failures. See that flag's documentation for details.
   use_netstack3 = false
-
-  # If true, enables DHCPv6.
-  #
-  # When set as a GN argument, requires that sysmgr_config_warn_override be set
-  # to true to avoid build failures. See that flag's documentation for details.
-  use_dhcpv6 = false
 }
 
 group("config") {
@@ -29,14 +23,9 @@ group("config") {
     ]
   }
 
-  if (use_dhcpv6) {
-    deps += [
-      "dhcpv6/client",
-      "dhcpv6/client/sysmgr:config",
-    ]
-  }
-
   deps += [
+    "dhcpv6/client",
+    "dhcpv6/client/sysmgr:config",
     "dns:dns-resolver",
     "dns/sysmgr:config",
   ]
