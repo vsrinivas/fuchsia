@@ -58,7 +58,7 @@ static_assert(std::is_same_v<int (*)(float, bool), Traits::type>);
 
 // compile-time test
 namespace lambda_traits {
-auto lambda = [](float, bool) { return 0; };
+[[maybe_unused]] auto lambda = [](float, bool) { return 0; };
 using Traits = TraitsTest<decltype(lambda)>::Traits;
 }  // namespace lambda_traits
 
@@ -90,6 +90,4 @@ using Traits = FunctorTraitsTest<std::function<int(float, bool)>>;
 
 BEGIN_TEST_CASE(function_traits_tests)
 RUN_TEST(arg_capture)
-// suppress -Wunneeded-internal-declaration
-(void)lambda_traits::lambda;
 END_TEST_CASE(function_traits_tests)
