@@ -56,35 +56,39 @@ zx_status_t DwPcie::ProgramOutboundAtu(const uint32_t index, const uint32_t type
   // Each ATU region has its own bank of registers at this offset from the
   // DBI base
   const size_t bank_offset = (0x3 << 20) | (index << 9);
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile uint8_t* atu_base = reinterpret_cast<volatile uint8_t*>((void*)dbi_.get()) + bank_offset;
+  MMIO_PTR volatile uint8_t* atu_base =
+      reinterpret_cast<MMIO_PTR volatile uint8_t*>(dbi_.get()) + bank_offset;
 
-  volatile atu_ctrl_regs_t* regs = reinterpret_cast<volatile atu_ctrl_regs_t*>(atu_base);
+  MMIO_PTR volatile atu_ctrl_regs_t* regs =
+      reinterpret_cast<MMIO_PTR volatile atu_ctrl_regs_t*>(atu_base);
 
   // Memory transactions that are in the following range will get translated
   // to PCI bus transactions:
   //
   // [cpu_addr, cpu_addr + size - 1]
-  regs->unroll_lower_base = lo32(cpu_addr);
-  regs->unroll_upper_base = hi32(cpu_addr);
+  MmioWrite32(lo32(cpu_addr), &regs->unroll_lower_base);
+  MmioWrite32(hi32(cpu_addr), &regs->unroll_upper_base);
 
-  regs->unroll_limit = lo32(cpu_addr + size - 1);
+  MmioWrite32(lo32(cpu_addr + size - 1), &regs->unroll_limit);
 
   // Target of the transactions above.
-  regs->unroll_lower_target = lo32(pci_addr);
-  regs->unroll_upper_target = hi32(pci_addr);
+  MmioWrite32(lo32(pci_addr), &regs->unroll_lower_target);
+  MmioWrite32(hi32(pci_addr), &regs->unroll_upper_target);
 
   // Region Ctrl 1 contains a number of fields. The Low 5 bits of the field
   // indicate the type of transaction to dispatch onto the PCIe bus.
-  regs->region_ctrl1 = type;
+  MmioWrite32(type, &regs->region_ctrl1);
 
   // Each region can individually be marked as Enabled or Disabled.
-  regs->region_ctrl2 |= kAtuRegionCtrlEnable;
-  regs->region_ctrl2 |= kAtuCfgShiftMode;
+  auto temp = MmioRead32(&regs->region_ctrl2);
+  temp |= kAtuRegionCtrlEnable;
+  MmioWrite32(temp, &regs->region_ctrl2);
+  temp |= kAtuCfgShiftMode;
+  MmioWrite32(temp, &regs->region_ctrl2);
 
   // Wait for the enable to take effect.
   for (unsigned int i = 0; i < kAtuProgramRetries; ++i) {
-    if (regs->region_ctrl2 & kAtuRegionCtrlEnable) {
+    if (MmioRead32(&regs->region_ctrl2) & kAtuRegionCtrlEnable) {
       return ZX_OK;
     }
 
