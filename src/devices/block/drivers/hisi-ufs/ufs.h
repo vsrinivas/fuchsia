@@ -433,7 +433,7 @@ typedef struct {
 
 typedef struct {
   const char* name;
-  zx_status_t (*link_startup)(volatile void* regs, uint8_t status);
+  zx_status_t (*link_startup)(MMIO_PTR volatile void* regs, uint8_t status);
 } ufs_hba_variant_ops_t;
 
 // UFS Host bus adaptor
@@ -509,11 +509,11 @@ static inline void dbg_dump_buffer(uint8_t* buf, uint32_t len, const char* name)
 static inline void dbg_dump_buffer(uint8_t* buf, uint32_t len, const char* name) {}
 #endif
 
-zx_status_t ufshc_send_uic_command(volatile void* regs, uint32_t command, uint32_t arg1,
+zx_status_t ufshc_send_uic_command(MMIO_PTR volatile void* regs, uint32_t command, uint32_t arg1,
                                    uint32_t arg3);
-uint32_t ufshc_uic_cmd_read(volatile void* regs, uint32_t command, uint32_t arg1);
-void ufshc_disable_auto_h8(volatile void* regs);
-void ufshc_check_h8(volatile void* regs);
+uint32_t ufshc_uic_cmd_read(MMIO_PTR volatile void* regs, uint32_t command, uint32_t arg1);
+void ufshc_disable_auto_h8(MMIO_PTR volatile void* regs);
+void ufshc_check_h8(MMIO_PTR volatile void* regs);
 zx_status_t ufshc_init(ufshc_dev_t* dev, ufs_hba_variant_ops_t* ufs_hi3660_vops);
 zx_status_t ufs_create_worker_thread(ufshc_dev_t* dev);
 

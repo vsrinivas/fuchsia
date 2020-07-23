@@ -49,13 +49,13 @@ static void ufs_get_cmd(uint8_t opcode, uint32_t lba, uint32_t size, uint8_t* cm
   };
 }
 
-zx_status_t ufshc_send_uic_command(volatile void* regs, uint32_t command, uint32_t arg1,
+zx_status_t ufshc_send_uic_command(MMIO_PTR volatile void* regs, uint32_t command, uint32_t arg1,
                                    uint32_t arg3) {
   uint32_t reg_val;
 
   zx_time_t deadline = zx_clock_get_monotonic() + ZX_MSEC(100);
   while (true) {
-    if (readl(regs + REG_CONTROLLER_STATUS) & UFS_HCS_UCRDY)
+    if (MmioRead32(regs + REG_CONTROLLER_STATUS) & UFS_HCS_UCRDY)
       break;
 
     if (zx_clock_get_monotonic() > deadline) {
@@ -65,15 +65,15 @@ zx_status_t ufshc_send_uic_command(volatile void* regs, uint32_t command, uint32
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
   }
 
-  writel(UFS_IS_UCCS_BIT | UFS_IS_UE_BIT, regs + REG_INTERRUPT_STATUS);
-  writel(arg1, regs + REG_UIC_COMMAND_ARG_1);
-  writel(0x0, regs + REG_UIC_COMMAND_ARG_2);
-  writel(arg3, regs + REG_UIC_COMMAND_ARG_3);
-  writel(command & 0xFF, regs + REG_UIC_COMMAND);
+  MmioWrite32(UFS_IS_UCCS_BIT | UFS_IS_UE_BIT, regs + REG_INTERRUPT_STATUS);
+  MmioWrite32(arg1, regs + REG_UIC_COMMAND_ARG_1);
+  MmioWrite32(0x0, regs + REG_UIC_COMMAND_ARG_2);
+  MmioWrite32(arg3, regs + REG_UIC_COMMAND_ARG_3);
+  MmioWrite32(command & 0xFF, regs + REG_UIC_COMMAND);
 
   deadline = zx_clock_get_monotonic() + ZX_MSEC(500);
   while (true) {
-    if (readl(regs + REG_INTERRUPT_STATUS) & UFS_IS_UCCS_BIT)
+    if (MmioRead32(regs + REG_INTERRUPT_STATUS) & UFS_IS_UCCS_BIT)
       break;
 
     if (zx_clock_get_monotonic() > deadline) {
@@ -84,15 +84,15 @@ zx_status_t ufshc_send_uic_command(volatile void* regs, uint32_t command, uint32
   }
 
   // clear interrupt status
-  writel(UFS_IS_UCCS_BIT, regs + REG_INTERRUPT_STATUS);
+  MmioWrite32(UFS_IS_UCCS_BIT, regs + REG_INTERRUPT_STATUS);
 
-  reg_val = readl(regs + REG_UIC_COMMAND_ARG_2) & 0xFF;
+  reg_val = MmioRead32(regs + REG_UIC_COMMAND_ARG_2) & 0xFF;
   if (reg_val) {
     UFS_ERROR("Response ERROR!\n");
     return ZX_ERR_BAD_STATE;
   }
 
-  reg_val = readl(regs + REG_INTERRUPT_STATUS) & UFS_IS_UE_BIT;
+  reg_val = MmioRead32(regs + REG_INTERRUPT_STATUS) & UFS_IS_UE_BIT;
   if (reg_val) {
     UFS_ERROR("UFS_IS_UE_BIT ERROR!\n");
     return ZX_ERR_BAD_STATE;
@@ -101,13 +101,13 @@ zx_status_t ufshc_send_uic_command(volatile void* regs, uint32_t command, uint32
   return ZX_OK;
 }
 
-uint32_t ufshc_uic_cmd_read(volatile void* regs, uint32_t command, uint32_t arg1) {
+uint32_t ufshc_uic_cmd_read(MMIO_PTR volatile void* regs, uint32_t command, uint32_t arg1) {
   ufshc_send_uic_command(regs, command, arg1, 0);
   // Get UIC result
-  return (readl(regs + REG_UIC_COMMAND_ARG_3));
+  return (MmioRead32(regs + REG_UIC_COMMAND_ARG_3));
 }
 
-void ufshc_check_h8(volatile void* regs) {
+void ufshc_check_h8(MMIO_PTR volatile void* regs) {
   uint32_t tx_fsm_val_0;
   uint32_t tx_fsm_val_1;
   uint32_t i;
@@ -135,12 +135,12 @@ void ufshc_check_h8(volatile void* regs) {
     UFS_WARN("MPHY TX_FSM state wait H8 timeout!\n");
 }
 
-void ufshc_disable_auto_h8(volatile void* regs) {
+void ufshc_disable_auto_h8(MMIO_PTR volatile void* regs) {
   uint32_t reg_val;
 
-  reg_val = readl(regs + REG_CONTROLLER_AHIT);
+  reg_val = MmioRead32(regs + REG_CONTROLLER_AHIT);
   reg_val = reg_val & (~UFS_AHT_AH8ITV_MASK);
-  writel(reg_val, regs + REG_CONTROLLER_AHIT);
+  MmioWrite32(reg_val, regs + REG_CONTROLLER_AHIT);
 }
 
 static void ufshc_flush_and_invalidate_descs(ufs_hba_t* hba) {
@@ -292,12 +292,12 @@ static void ufs_create_query_upiu(ufs_hba_t* hba, uint8_t opcode, uint8_t query_
   hba->outstanding_xfer_reqs |= (1 << free_slot);
 }
 
-static zx_status_t ufshc_wait_for_active(volatile void* regs, const uint32_t mask,
+static zx_status_t ufshc_wait_for_active(MMIO_PTR volatile void* regs, const uint32_t mask,
                                          zx_time_t timeout) {
   zx_time_t deadline = zx_clock_get_monotonic() + timeout;
 
   while (true) {
-    uint32_t reg_value = readl(regs + REG_CONTROLLER_ENABLE);
+    uint32_t reg_value = MmioRead32(regs + REG_CONTROLLER_ENABLE);
     if ((reg_value & mask) == 1) {
       UFS_DBG("UFS HC controller is active.\n");
       break;
@@ -314,7 +314,7 @@ static zx_status_t ufshc_wait_for_active(volatile void* regs, const uint32_t mas
   return ZX_OK;
 }
 
-static zx_status_t ufshc_pre_link_startup(ufs_hba_t* hba, volatile void* regs) {
+static zx_status_t ufshc_pre_link_startup(ufs_hba_t* hba, MMIO_PTR volatile void* regs) {
   if (hba && hba->vops && hba->vops->link_startup) {
     return hba->vops->link_startup(regs, PRE_CHANGE);
   }
@@ -322,7 +322,7 @@ static zx_status_t ufshc_pre_link_startup(ufs_hba_t* hba, volatile void* regs) {
   return ZX_OK;
 }
 
-static zx_status_t ufshc_post_link_startup(ufs_hba_t* hba, volatile void* regs) {
+static zx_status_t ufshc_post_link_startup(ufs_hba_t* hba, MMIO_PTR volatile void* regs) {
   if (hba && hba->vops && hba->vops->link_startup) {
     return hba->vops->link_startup(regs, POST_CHANGE);
   }
@@ -330,40 +330,40 @@ static zx_status_t ufshc_post_link_startup(ufs_hba_t* hba, volatile void* regs) 
   return ZX_OK;
 }
 
-static inline void ufshc_reg_read_clear(volatile void* regs) {
-  readl(regs + REG_UIC_ERROR_CODE_PHY_ADAPTER_LAYER);
+static inline void ufshc_reg_read_clear(MMIO_PTR volatile void* regs) {
+  MmioRead32(regs + REG_UIC_ERROR_CODE_PHY_ADAPTER_LAYER);
   // DME Error PA Ind
   ufshc_uic_cmd_read(regs, DME_GET, UPRO_ERR_PA_IND);
 }
 
-static zx_status_t ufshc_link_startup(volatile void* regs) {
+static zx_status_t ufshc_link_startup(MMIO_PTR volatile void* regs) {
   int32_t retry = 4;
   uint32_t i;
 
-  writel(0xFFFFFFFF, regs + REG_INTERRUPT_STATUS);
+  MmioWrite32(0xFFFFFFFF, regs + REG_INTERRUPT_STATUS);
   while (retry-- > 0) {
-    if (readl(regs + REG_INTERRUPT_STATUS) & UFS_IS_UCCS_BIT)
-      writel(UFS_IS_UCCS_BIT, regs + REG_INTERRUPT_STATUS);
+    if (MmioRead32(regs + REG_INTERRUPT_STATUS) & UFS_IS_UCCS_BIT)
+      MmioWrite32(UFS_IS_UCCS_BIT, regs + REG_INTERRUPT_STATUS);
 
     // UFS link startup begin
-    writel(0, regs + REG_UIC_COMMAND_ARG_1);
-    writel(0, regs + REG_UIC_COMMAND_ARG_2);
-    writel(0, regs + REG_UIC_COMMAND_ARG_3);
-    writel(UIC_LINK_STARTUP_CMD & 0xFF, regs + REG_UIC_COMMAND);
+    MmioWrite32(0, regs + REG_UIC_COMMAND_ARG_1);
+    MmioWrite32(0, regs + REG_UIC_COMMAND_ARG_2);
+    MmioWrite32(0, regs + REG_UIC_COMMAND_ARG_3);
+    MmioWrite32(UIC_LINK_STARTUP_CMD & 0xFF, regs + REG_UIC_COMMAND);
 
     for (i = 0; i <= LINK_STARTUP_UCCS_RETRY_COUNT; i++) {
-      if (readl(regs + REG_INTERRUPT_STATUS) & UFS_IS_UCCS_BIT) {
-        writel(UFS_IS_UCCS_BIT, regs + REG_INTERRUPT_STATUS);
+      if (MmioRead32(regs + REG_INTERRUPT_STATUS) & UFS_IS_UCCS_BIT) {
+        MmioWrite32(UFS_IS_UCCS_BIT, regs + REG_INTERRUPT_STATUS);
         UFS_DBG("UFS HC Link INT status OK.\n");
         break;
       }
       zx_nanosleep(zx_deadline_after(ZX_MSEC(2)));
     }
 
-    if (readl(regs + REG_CONTROLLER_STATUS) & UFS_HCS_DP_BIT) {
-      writel(UFS_IS_UE_BIT, regs + REG_INTERRUPT_STATUS);
-      if (readl(regs + REG_CONTROLLER_STATUS) & UFS_IS_ULSS_BIT)
-        writel(UFS_IS_ULSS_BIT, regs + REG_INTERRUPT_STATUS);
+    if (MmioRead32(regs + REG_CONTROLLER_STATUS) & UFS_HCS_DP_BIT) {
+      MmioWrite32(UFS_IS_UE_BIT, regs + REG_INTERRUPT_STATUS);
+      if (MmioRead32(regs + REG_CONTROLLER_STATUS) & UFS_IS_ULSS_BIT)
+        MmioWrite32(UFS_IS_ULSS_BIT, regs + REG_INTERRUPT_STATUS);
       UFS_DBG("UFS HC link_startup startup OK.\n");
 
       ufshc_reg_read_clear(regs);
@@ -497,8 +497,7 @@ static void ufshc_memory_configure(ufshc_dev_t* dev) {
 
 static zx_status_t ufshc_configure_descs(ufshc_dev_t* dev) {
   ufs_hba_t* hba = &dev->ufs_hba;
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile void* ufshc_regs = (void*)dev->ufshc_mmio.vaddr;
+  MMIO_PTR volatile void* ufshc_regs = dev->ufshc_mmio.vaddr;
   zx_paddr_t tfr_desc_phys = io_buffer_phys(&hba->utrl_dma_buf);
   zx_paddr_t req_desc_phys = io_buffer_phys(&hba->utmrl_dma_buf);
   zx_status_t status;
@@ -509,17 +508,17 @@ static zx_status_t ufshc_configure_descs(ufshc_dev_t* dev) {
   }
 
   // Configure UTRL and UTMRL base addr registers
-  writel(LOWER_32_BITS(tfr_desc_phys), ufshc_regs + REG_UTP_TRANSFER_REQ_LIST_BASE_L);
-  writel(UPPER_32_BITS(tfr_desc_phys), ufshc_regs + REG_UTP_TRANSFER_REQ_LIST_BASE_H);
+  MmioWrite32(LOWER_32_BITS(tfr_desc_phys), ufshc_regs + REG_UTP_TRANSFER_REQ_LIST_BASE_L);
+  MmioWrite32(UPPER_32_BITS(tfr_desc_phys), ufshc_regs + REG_UTP_TRANSFER_REQ_LIST_BASE_H);
 
-  writel(LOWER_32_BITS(req_desc_phys), ufshc_regs + REG_UTP_TASK_REQ_LIST_BASE_L);
-  writel(UPPER_32_BITS(req_desc_phys), ufshc_regs + REG_UTP_TASK_REQ_LIST_BASE_H);
+  MmioWrite32(LOWER_32_BITS(req_desc_phys), ufshc_regs + REG_UTP_TASK_REQ_LIST_BASE_L);
+  MmioWrite32(UPPER_32_BITS(req_desc_phys), ufshc_regs + REG_UTP_TASK_REQ_LIST_BASE_H);
 
-  writel(UFS_UTP_RUN_BIT, ufshc_regs + REG_UTP_TRANSFER_REQ_LIST_RUN_STOP);
-  writel(UFS_UTP_RUN_BIT, ufshc_regs + REG_UTP_TASK_REQ_LIST_RUN_STOP);
+  MmioWrite32(UFS_UTP_RUN_BIT, ufshc_regs + REG_UTP_TRANSFER_REQ_LIST_RUN_STOP);
+  MmioWrite32(UFS_UTP_RUN_BIT, ufshc_regs + REG_UTP_TASK_REQ_LIST_RUN_STOP);
 
   // Enable auto H8
-  writel(UFS_AHT_AH8ITV_MASK, ufshc_regs + REG_CONTROLLER_AHIT);
+  MmioWrite32(UFS_AHT_AH8ITV_MASK, ufshc_regs + REG_CONTROLLER_AHIT);
 
   return status;
 }
@@ -527,8 +526,7 @@ static zx_status_t ufshc_configure_descs(ufshc_dev_t* dev) {
 static zx_status_t ufshc_drv_init(ufshc_dev_t* dev) {
   zx_status_t status;
   ufs_hba_t* hba = &dev->ufs_hba;
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
+  MMIO_PTR volatile void* regs = dev->ufshc_mmio.vaddr;
 
   // Allocate memory for host memory space
   status = ufshc_memory_alloc(dev);
@@ -561,22 +559,22 @@ static uint8_t ufshc_get_xfer_free_slot(ufs_hba_t* hba) {
 }
 
 static zx_status_t ufshc_wait_for_cmd_completion(ufs_hba_t* hba, uint32_t free_slot_mask,
-                                                 volatile void* regs) {
+                                                 MMIO_PTR volatile void* regs) {
   zx_time_t timeout = hba->timeout;
   zx_time_t deadline = zx_clock_get_monotonic() + timeout;
   uint32_t reg_val;
 
-  writel(free_slot_mask, regs + REG_UTP_TRANSFER_REQ_DOOR_BELL);
+  MmioWrite32(free_slot_mask, regs + REG_UTP_TRANSFER_REQ_DOOR_BELL);
 
   // Wait for Doorbell to clear
   for (;;) {
-    reg_val = readl(regs + REG_UTP_TRANSFER_REQ_DOOR_BELL);
+    reg_val = MmioRead32(regs + REG_UTP_TRANSFER_REQ_DOOR_BELL);
     if ((reg_val & free_slot_mask) == 0)
       break;
     if (zx_clock_get_monotonic() > deadline) {
-      reg_val = readl(regs + REG_UTP_TRANSFER_REQ_DOOR_BELL);
+      reg_val = MmioRead32(regs + REG_UTP_TRANSFER_REQ_DOOR_BELL);
       UFS_ERROR("UTRD Doorbell timeout: 0x%x for slot#0x%x \n", reg_val, free_slot_mask);
-      writel(~free_slot_mask, regs + REG_UTP_TRANSFER_REQ_DOOR_BELL);
+      MmioWrite32(~free_slot_mask, regs + REG_UTP_TRANSFER_REQ_DOOR_BELL);
 
       // Release xfer request
       hba->outstanding_xfer_reqs &= ~free_slot_mask;
@@ -698,8 +696,7 @@ static zx_status_t ufshc_query_dev_desc(ufshc_dev_t* dev, uint8_t opcode, uint8_
   ufs_utp_resp_upiu_t* resp_upiu;
   zx_status_t status;
   ufs_hba_t* hba = &dev->ufs_hba;
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
+  MMIO_PTR volatile void* regs = dev->ufshc_mmio.vaddr;
   uint8_t* tmp_buf;
 
   status = ufs_get_query_func(opcode, &query_func);
@@ -813,7 +810,7 @@ static zx_status_t ufshc_get_device_info(ufshc_dev_t* dev) {
   return ZX_OK;
 }
 
-static zx_status_t ufshc_send_nop_out_cmd(ufs_hba_t* hba, volatile void* regs) {
+static zx_status_t ufshc_send_nop_out_cmd(ufs_hba_t* hba, MMIO_PTR volatile void* regs) {
   uint32_t i;
   uint8_t free_slot;
   zx_status_t status = ZX_OK;
@@ -844,8 +841,7 @@ static zx_status_t ufshc_send_nop_out_cmd(ufs_hba_t* hba, volatile void* regs) {
 
 static zx_status_t ufshc_do_flag_opn(ufshc_dev_t* dev, uint8_t opcode, uint8_t flag,
                                      uint8_t* flag_res) {
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
+  MMIO_PTR volatile void* regs = dev->ufshc_mmio.vaddr;
   ufs_hba_t* hba = &dev->ufs_hba;
   uint8_t ret_val[4];
   uint8_t free_slot;
@@ -910,8 +906,7 @@ static zx_status_t ufshc_complete_dev_init(ufshc_dev_t* dev) {
 
 static zx_status_t ufshc_device_init(ufshc_dev_t* dev) {
   ufs_hba_t* hba = &dev->ufs_hba;
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
+  MMIO_PTR volatile void* regs = dev->ufshc_mmio.vaddr;
   zx_status_t status;
 
   status = ufshc_send_nop_out_cmd(hba, regs);
@@ -926,12 +921,11 @@ static void ufshc_config_init(ufs_hba_t* ufs_hba) { ufs_hba->timeout = ZX_SEC(5)
 
 static zx_status_t ufshc_enable(ufshc_dev_t* dev) {
   int32_t retry = 3;
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
+  MMIO_PTR volatile void* regs = dev->ufshc_mmio.vaddr;
   zx_status_t status = ZX_OK;
 
   do {
-    writel(CONTROLLER_ENABLE, regs + REG_CONTROLLER_ENABLE);
+    MmioWrite32(CONTROLLER_ENABLE, regs + REG_CONTROLLER_ENABLE);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
     // wait for the host controller to complete initialization
     if ((status = ufshc_wait_for_active(regs, CONTROLLER_ENABLE, ZX_SEC(1))) == ZX_OK)
@@ -944,8 +938,8 @@ static zx_status_t ufshc_enable(ufshc_dev_t* dev) {
   return status;
 }
 
-static inline void ufshc_read_capabilities(ufs_hba_t* hba, volatile void* regs) {
-  hba->caps = readl(regs + REG_CONTROLLER_CAPABILITIES);
+static inline void ufshc_read_capabilities(ufs_hba_t* hba, MMIO_PTR volatile void* regs) {
+  hba->caps = MmioRead32(regs + REG_CONTROLLER_CAPABILITIES);
 
   // nutrs and nutmrs are 0 based values
   hba->nutrs = (hba->caps & MASK_TRANSFER_REQUESTS_SLOTS) + 1;
@@ -953,14 +947,13 @@ static inline void ufshc_read_capabilities(ufs_hba_t* hba, volatile void* regs) 
   UFS_DBG("ufshcd_capabilities hba->nutrs=%d hba->nutmrs=%d.\n", hba->nutrs, hba->nutmrs);
 }
 
-static inline void ufshc_get_ufs_version(ufs_hba_t* hba, volatile void* regs) {
-  hba->ufs_version = readl(regs + REG_UFS_VERSION);
+static inline void ufshc_get_ufs_version(ufs_hba_t* hba, MMIO_PTR volatile void* regs) {
+  hba->ufs_version = MmioRead32(regs + REG_UFS_VERSION);
   UFS_DBG("hba->ufs_version=%u.\n", hba->ufs_version);
 }
 
 static zx_status_t ufshc_host_init(ufshc_dev_t* dev) {
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
+  MMIO_PTR volatile void* regs = dev->ufshc_mmio.vaddr;
   ufs_hba_t* hba = &dev->ufs_hba;
   zx_status_t status;
 
@@ -998,8 +991,7 @@ static void ufshc_release(ufshc_dev_t* dev) {
 static zx_status_t ufs_send_scsi_cmd(ufshc_dev_t* dev, uint8_t lun, uint8_t opcode, uint64_t lba,
                                      enum dma_direction dirn, uint32_t size) {
   ufs_hba_t* hba = &dev->ufs_hba;
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  volatile void* regs = (void*)dev->ufshc_mmio.vaddr;
+  MMIO_PTR volatile void* regs = dev->ufshc_mmio.vaddr;
   zx_status_t status;
   uint8_t free_slot;
 

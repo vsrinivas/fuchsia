@@ -62,7 +62,7 @@ static ufs_cfg_attr_t hi3660_ufs_postlink_calib_attr[] = {
     {0, 0},
 };
 
-static void mphy_hi3660_attr_write(volatile void* regs, uint16_t addr, uint16_t val) {
+static void mphy_hi3660_attr_write(MMIO_PTR volatile void* regs, uint16_t addr, uint16_t val) {
   ufshc_send_uic_command(regs, DME_SET, MPHY_ATTR_DEMPH_ADDR_MSB, (addr & 0xFF00) >> 8);
   ufshc_send_uic_command(regs, DME_SET, MPHY_ATTR_DEMPH_ADDR_LSB, (addr & 0xFF));
   ufshc_send_uic_command(regs, DME_SET, MPHY_ATTR_DEMPH_VAL_MSB, (val & 0xFF00) >> 8);
@@ -70,21 +70,21 @@ static void mphy_hi3660_attr_write(volatile void* regs, uint16_t addr, uint16_t 
   ufshc_send_uic_command(regs, DME_SET, MPHY_ATTR_DEMPH_CTRL, 1);
 }
 
-static void mphy_hi3660_config_equalizer(volatile void* regs) {
+static void mphy_hi3660_config_equalizer(MMIO_PTR volatile void* regs) {
   mphy_hi3660_attr_write(regs, MPHY_ATTR_DEMPH_ADDR1, MPHY_ATTR_DEMPH_VAL1);
   mphy_hi3660_attr_write(regs, MPHY_ATTR_DEMPH_ADDR2, MPHY_ATTR_DEMPH_VAL1);
   mphy_hi3660_attr_write(regs, MPHY_ATTR_DEMPH_ADDR3, MPHY_ATTR_DEMPH_VAL2);
   mphy_hi3660_attr_write(regs, MPHY_ATTR_DEMPH_ADDR4, MPHY_ATTR_DEMPH_VAL2);
 }
 
-static zx_status_t mphy_hi3660_pre_link_startup(volatile void* regs) {
+static zx_status_t mphy_hi3660_pre_link_startup(MMIO_PTR volatile void* regs) {
   zx_status_t status;
   uint32_t reg_val;
 
   ufshc_check_h8(regs);
 
   // When chip status is normal
-  writel(UFS_HCLKDIV_NORMAL_VAL, regs + REG_UFS_HCLKDIV_OFF);
+  MmioWrite32(UFS_HCLKDIV_NORMAL_VAL, regs + REG_UFS_HCLKDIV_OFF);
 
   ufshc_disable_auto_h8(regs);
 
@@ -108,7 +108,7 @@ static zx_status_t mphy_hi3660_pre_link_startup(volatile void* regs) {
   return ZX_OK;
 }
 
-static zx_status_t ufs_hi3660_calibrate(volatile void* regs, ufs_cfg_attr_t* cfg) {
+static zx_status_t ufs_hi3660_calibrate(MMIO_PTR volatile void* regs, ufs_cfg_attr_t* cfg) {
   uint32_t i;
   zx_status_t status = ZX_OK;
 
@@ -123,7 +123,7 @@ static zx_status_t ufs_hi3660_calibrate(volatile void* regs, ufs_cfg_attr_t* cfg
   return status;
 }
 
-static zx_status_t ufs_hi3660_pre_link_startup(volatile void* regs) {
+static zx_status_t ufs_hi3660_pre_link_startup(MMIO_PTR volatile void* regs) {
   zx_status_t status;
   ufs_cfg_attr_t* cfg = hi3660_ufs_calib_of_rateb;
 
@@ -140,7 +140,7 @@ static zx_status_t ufs_hi3660_pre_link_startup(volatile void* regs) {
   return status;
 }
 
-static zx_status_t ufs_hi3660_post_link_startup(volatile void* regs) {
+static zx_status_t ufs_hi3660_post_link_startup(MMIO_PTR volatile void* regs) {
   zx_status_t status = ZX_OK;
   uint32_t i = 0;
 
@@ -154,7 +154,7 @@ static zx_status_t ufs_hi3660_post_link_startup(volatile void* regs) {
   return status;
 }
 
-static zx_status_t ufs_hi3660_link_startup(volatile void* regs, uint8_t status) {
+static zx_status_t ufs_hi3660_link_startup(MMIO_PTR volatile void* regs, uint8_t status) {
   zx_status_t ret = 0;
 
   switch (status) {
