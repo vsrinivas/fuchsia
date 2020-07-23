@@ -4,6 +4,9 @@
 
 library fuchsia.net;
 
+/// A unique interface identifier;
+using interface_id = uint64;
+
 /// Ipv4Address is expressed in network byte order, so the most significant byte
 /// ("127" in the address "127.0.0.1") will be at index 0.
 struct Ipv4Address {

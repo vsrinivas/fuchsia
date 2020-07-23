@@ -51,7 +51,7 @@ struct InterfaceInfo {
     /// An opaque identifier for the interface, assigned by the stack.
     /// This identifier will never be 0, and will not be reused even if the device is removed and
     /// subsequently re-added. It is not stable across netstack instances.
-    uint64 id;
+    fuchsia.net.interface_id id;
 
     /// All info of an interface except the interface name.
     InterfaceProperties properties;
@@ -93,7 +93,7 @@ struct InterfaceProperties {
 /// of the next hop in the route.
 union ForwardingDestination {
     /// The opaque identifier of the device to which packets should be forwarded.
-    1: uint64 device_id;
+    1: fuchsia.net.interface_id device_id;
 
     /// The IP address of the next hop, used to look up the next forwarding entry.
     2: fuchsia.net.IpAddress next_hop;
@@ -110,7 +110,7 @@ struct ForwardingEntry {
 
 struct InterfaceStatusChange {
     /// The opaque identifier of the device that had its status change.
-    uint64 id;
+    fuchsia.net.interface_id id;
 
     /// The new status.
     InterfaceStatus status;
@@ -164,34 +164,34 @@ table InterfaceConfig {
 protocol Stack {
     /// Add an Ethernet interface to the network stack. On success, returns the identifier assigned
     /// by the stack for use in subsequent calls.
-    AddEthernetInterface(device_path topological_path, fuchsia.hardware.ethernet.Device device) -> (uint64 id) error Error;
+    AddEthernetInterface(device_path topological_path, fuchsia.hardware.ethernet.Device device) -> (fuchsia.net.interface_id id) error Error;
 
     /// Add a new interface to the network stack backed by the provided `DeviceDefinition`. On
     /// success, returns the identifier assigned by the stack for use in subsequent calls.
-    AddInterface(InterfaceConfig config, DeviceDefinition device) -> (uint64 id) error Error;
+    AddInterface(InterfaceConfig config, DeviceDefinition device) -> (fuchsia.net.interface_id id) error Error;
 
     /// Remove an Ethernet interface from the network stack.
-    DelEthernetInterface(uint64 id) -> () error Error;
+    DelEthernetInterface(fuchsia.net.interface_id id) -> () error Error;
 
     /// List all the interfaces available in the network stack.
     ListInterfaces() -> (interface_list ifs);
 
     /// Retrieve info about a specific interface.
-    GetInterfaceInfo(uint64 id) -> (InterfaceInfo info) error Error;
+    GetInterfaceInfo(fuchsia.net.interface_id id) -> (InterfaceInfo info) error Error;
 
     /// Enable the interface. Packets may be processed by the stack after this call is processed.
-    EnableInterface(uint64 id) -> () error Error;
+    EnableInterface(fuchsia.net.interface_id id) -> () error Error;
 
     /// Disable the interface. The stack will no longer process packets after this call.
-    DisableInterface(uint64 id) -> () error Error;
+    DisableInterface(fuchsia.net.interface_id id) -> () error Error;
 
     /// Add an address to the interface. If the interface already has an address of a given type that
     /// does not allow duplicates, this method will return an error.
-    AddInterfaceAddress(uint64 id, fuchsia.net.Subnet addr) -> () error Error;
+    AddInterfaceAddress(fuchsia.net.interface_id id, fuchsia.net.Subnet addr) -> () error Error;
 
     /// Remove the address from the interface. If the address is not assigned to the interface, an
     /// error is returned.
-    DelInterfaceAddress(uint64 id, fuchsia.net.Subnet addr) -> () error Error;
+    DelInterfaceAddress(fuchsia.net.interface_id id, fuchsia.net.Subnet addr) -> () error Error;
 
     /// List all the entries in the forwarding table for the network stack.
     // TODO(fxbug.dev/38528): This is unbounded for now, until we change the API to allow for
@@ -208,10 +208,10 @@ protocol Stack {
     DelForwardingEntry(fuchsia.net.Subnet subnet) -> () error Error;
 
     /// Enable the packet filter on a specific interface.
-    EnablePacketFilter(uint64 id) -> () error Error;
+    EnablePacketFilter(fuchsia.net.interface_id id) -> () error Error;
 
     /// Disable the packet filter on a specific interface.
-    DisablePacketFilter(uint64 id) -> () error Error;
+    DisablePacketFilter(fuchsia.net.interface_id id) -> () error Error;
 
     /// Enable IP Forwarding.
     EnableIpForwarding() -> ();
