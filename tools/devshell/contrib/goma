@@ -58,6 +58,7 @@ set -e
 
 readonly GOMA_AUTH="$PREBUILT_GOMA_DIR/goma_auth.py"
 readonly GOMA_CTL="$PREBUILT_GOMA_DIR/goma_ctl.py"
+readonly GOMACC="$PREBUILT_GOMA_DIR/gomacc"
 readonly GOMA_HTTP2_PROXY="$PREBUILT_GOMA_DIR/http_proxy"
 readonly GOMA_HTTP2_PROXY_PORT="8199"
 # The URL of the backend cannot be read from prebuilt. Hard-code it for now.
@@ -86,6 +87,10 @@ function main {
       use_http2=false
       shift
       ;;
+    --disable-local-cache)
+      use_local_cache=false
+      shift
+      ;;
     --kill)
       kill-goma
       return 0
@@ -106,6 +111,15 @@ function main {
     "$GOMA_CTL" update_hook
     return 0
   fi
+  goma_tmp_dir=""
+  if $use_local_cache; then
+    goma_tmp_dir=$("$GOMACC" tmp_dir)/goma_cache
+    echo "*** Using Goma local output cache at \`$goma_tmp_dir\`"
+    echo "*** If you experience cache errors, please run: "
+    echo "*** \`fx goma --kill && fx goma --disable-local-cache\`"
+    echo "*** to restart goma without local caching."
+  fi
+
   if $use_http2; then
     if [[ -n "$GOMA_SERVER_HOST" ]]; then
       BACKEND_URL=$GOMA_SERVER_HOST
@@ -116,9 +130,9 @@ function main {
     echo "*** If you experiencing instability, please run: "
     echo "*** \`fx goma --kill && fx goma --disable-http2\`"
     echo "*** to restart goma without HTTP2 proxy."
-    GOMA_SERVER_HOST=127.0.0.1 GOMA_SERVER_PORT="$GOMA_HTTP2_PROXY_PORT" GOMA_USE_SSL=false "$GOMA_CTL" ensure_start
+    GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" GOMA_SERVER_HOST=127.0.0.1 GOMA_SERVER_PORT="$GOMA_HTTP2_PROXY_PORT" GOMA_USE_SSL=false "$GOMA_CTL" ensure_start
   else
-    "$GOMA_CTL" ensure_start
+    GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" "$GOMA_CTL" ensure_start
   fi
 }
 
