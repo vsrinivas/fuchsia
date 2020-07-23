@@ -23,8 +23,8 @@
 #define QEMU_VGA_VID (0x1234)
 #define QEMU_VGA_DID (0x1111)
 
-#define bochs_vbe_dispi_read(base, reg) pcie_read16(base + (0x500 + (reg << 1)))
-#define bochs_vbe_dispi_write(base, reg, val) pcie_write16(base + (0x500 + (reg << 1)), val)
+#define bochs_vbe_dispi_read(base, reg) MmioRead16(base + (0x500 + (reg << 1)))
+#define bochs_vbe_dispi_write(base, reg, val) MmioWrite16(val, base + (0x500 + (reg << 1)))
 
 #define BOCHS_VBE_DISPI_ID 0x0
 #define BOCHS_VBE_DISPI_XRES 0x1
@@ -48,7 +48,8 @@ static int zx_display_format_to_bpp(zx_pixel_format_t format) {
   }
 }
 
-static void set_hw_mode(void* regs, uint16_t width, uint16_t height, zx_pixel_format_t format) {
+static void set_hw_mode(MMIO_PTR void* regs, uint16_t width, uint16_t height,
+                        zx_pixel_format_t format) {
   zxlogf(TRACE, "id: 0x%x", bochs_vbe_dispi_read(regs, BOCHS_VBE_DISPI_ID));
 
   int bpp = zx_display_format_to_bpp(format);
@@ -94,8 +95,7 @@ static zx_status_t bochs_vbe_bind(void* ctx, zx_device_t* dev) {
     return status;
   }
 
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  set_hw_mode((void*)mmio.vaddr, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_FORMAT);
+  set_hw_mode(mmio.vaddr, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_FORMAT);
 
   mmio_buffer_release(&mmio);
 
