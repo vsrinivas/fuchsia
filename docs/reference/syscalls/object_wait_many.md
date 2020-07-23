@@ -86,8 +86,9 @@ have **ZX_RIGHT_WAIT** and may not be waited upon.
 **ZX_ERR_CANCELED**  One or more of the provided *handles* was invalidated
 (e.g., closed) during the wait.
 
-**ZX_ERR_TIMED_OUT**  The specified deadline passed before any of the specified signals are
-observed on any of the specified handles.
+**ZX_ERR_TIMED_OUT**  The specified deadline passed before any of the specified
+signals are observed on any of the specified handles. Note that calls with a
+*count* of 0 will still wait until *deadline* has passed before returning.
 
 **ZX_ERR_NOT_SUPPORTED**  One of the *items* contains a handle that cannot
 be waited one (for example, a Port handle).
