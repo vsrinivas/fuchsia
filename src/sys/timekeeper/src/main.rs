@@ -7,6 +7,7 @@
 //! `timekeeper` is responsible for external time synchronization in Fuchsia.
 
 use {
+    crate::diagnostics::CobaltMetrics,
     anyhow::{Context as _, Error},
     chrono::prelude::*,
     fidl_fuchsia_deprecatedtimezone as ftz, fidl_fuchsia_net as fnet, fidl_fuchsia_time as ftime,
@@ -17,6 +18,7 @@ use {
     log::{debug, error, info, warn},
     parking_lot::Mutex,
     std::sync::Arc,
+    time_metrics_registry::{self, TimeMetricDimensionEventType},
 };
 
 mod diagnostics;
@@ -39,9 +41,11 @@ async fn main() -> Result<(), Error> {
     diagnostics::init(Arc::clone(&utc_clock));
     let mut fs = ServiceFs::new();
 
-    info!("diagnostics initialized, connecting notifier to servicefs.");
+    info!("diagnostics initialized, serving on servicefs");
     diagnostics::INSPECTOR.serve(&mut fs)?;
 
+    info!("initializing Cobalt");
+    let cobalt = diagnostics::CobaltMetrics::new();
     let source = initial_utc_source(&*utc_clock);
     let notifier = Notifier::new(source);
 
@@ -56,9 +60,11 @@ async fn main() -> Result<(), Error> {
         notifier.clone(),
         time_service,
         connectivity_service,
+        cobalt,
     ))
     .detach();
 
+    info!("serving notifier on servicefs");
     fs.dir("svc").add_fidl_service(move |requests: ftime::UtcRequestStream| {
         notifier.handle_request_stream(requests);
     });
@@ -89,7 +95,18 @@ async fn maintain_utc(
     notifs: Notifier,
     time_service: ftz::TimeServiceProxy,
     connectivity: fnet::ConnectivityProxy,
+    mut cobalt: CobaltMetrics,
 ) {
+    info!("record the state at initialization.");
+    match initial_utc_source(&*utc_clock) {
+        ftime::UtcSource::Backstop => {
+            cobalt.log_lifecycle_event(TimeMetricDimensionEventType::InitializedBeforeUtcStart)
+        }
+        ftime::UtcSource::External => {
+            cobalt.log_lifecycle_event(TimeMetricDimensionEventType::InitializedAfterUtcStart)
+        }
+    }
+
     info!("waiting for network connectivity before attempting network time sync...");
     let mut conn_events = connectivity.take_event_stream();
     loop {
@@ -117,7 +134,11 @@ async fn maintain_utc(
                     "CF-884:monotonic_before={}:utc={}:monotonic_after={}",
                     monotonic_before, utc_now, monotonic_after,
                 );
-                notifs.0.lock().set_source(ftime::UtcSource::External, monotonic_before);
+                if notifs.0.lock().set_source(ftime::UtcSource::External, monotonic_before) {
+                    cobalt.log_lifecycle_event(
+                        TimeMetricDimensionEventType::StartedUtcFromTimeSource,
+                    );
+                }
                 break;
             }
             Ok(None) => {
@@ -194,8 +215,8 @@ impl NotifyInner {
     }
 
     /// Increases the revision counter by 1 and notifies any clients waiting on updates from
-    /// previous revisions.
-    fn set_source(&mut self, source: ftime::UtcSource, update_time: i64) {
+    /// previous revisions, returning true iff the source changed as a result of the call.
+    fn set_source(&mut self, source: ftime::UtcSource, update_time: i64) -> bool {
         if self.source != source {
             self.source = source;
             let clients = std::mem::replace(&mut self.clients, vec![]);
@@ -203,8 +224,10 @@ impl NotifyInner {
             for responder in clients {
                 self.reply(responder, update_time);
             }
+            true
         } else {
             info!("received UTC source update but the actual source didn't change.");
+            false
         }
     }
 }
@@ -215,6 +238,7 @@ mod tests {
     use {
         super::*,
         chrono::{offset::TimeZone, NaiveDate},
+        fidl_fuchsia_cobalt::{CobaltEvent, Event, EventPayload},
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
         fuchsia_zircon as zx,
         matches::assert_matches,
@@ -235,6 +259,7 @@ mod tests {
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
         diagnostics::init(Arc::clone(&clock));
+        let (cobalt_metrics, mut cobalt_receiver) = CobaltMetrics::new_mock();
         info!("starting single notification test");
 
         let (utc, utc_requests) =
@@ -259,6 +284,7 @@ mod tests {
             notifier.clone(),
             time_service,
             reachability,
+            cobalt_metrics,
         ))
         .detach();
 
@@ -271,6 +297,17 @@ mod tests {
             }
         })
         .detach();
+
+        info!("checking that the initial state was logged to Cobalt");
+        assert_eq!(
+            cobalt_receiver.next().await,
+            Some(CobaltEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
+                event_codes: vec![TimeMetricDimensionEventType::InitializedBeforeUtcStart as u32],
+                component: None,
+                payload: EventPayload::Event(Event),
+            })
+        );
 
         info!("checking that the time source has not been externally initialized yet");
         assert_eq!(utc.watch_state().await.unwrap().source.unwrap(), ftime::UtcSource::Backstop);
@@ -293,6 +330,17 @@ mod tests {
         info!("waiting for time source update");
         assert_eq!(hanging.await.unwrap().source.unwrap(), ftime::UtcSource::External);
         assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
+
+        info!("checking that the started clock was logged to Cobalt");
+        assert_eq!(
+            cobalt_receiver.next().await,
+            Some(CobaltEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
+                event_codes: vec![TimeMetricDimensionEventType::StartedUtcFromTimeSource as u32],
+                component: None,
+                payload: EventPayload::Event(Event),
+            })
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
