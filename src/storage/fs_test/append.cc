@@ -121,7 +121,7 @@ TEST_P(AppendTest, AppendOnClone) {
 
   const std::string append_clone = GetPath("append_clone");
   fbl::unique_fd fd(open(append_clone.c_str(), O_RDWR | O_CREAT | O_APPEND));
-  ASSERT_TRUE(fd);
+  ASSERT_TRUE(fd) << strerror(errno);
   // Verify the file was originally opened as append.
   ASSERT_NO_FATAL_FAILURE(verify_append(fd, Append));
 

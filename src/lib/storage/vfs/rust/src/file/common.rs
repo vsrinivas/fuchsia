@@ -42,6 +42,7 @@ pub fn new_connection_validate_flags(
     mode: u32,
     mut readable: bool,
     mut writable: bool,
+    append_allowed: bool,
 ) -> Result<u32, Status> {
     // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_FILE when the
     // target is a pseudo file.
@@ -75,7 +76,8 @@ pub fn new_connection_validate_flags(
         | OPEN_FLAG_CREATE
         | OPEN_FLAG_CREATE_IF_ABSENT
         | if readable { OPEN_RIGHT_READABLE } else { 0 }
-        | if writable { OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE } else { 0 };
+        | if writable { OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE } else { 0 }
+        | if writable && append_allowed { OPEN_FLAG_APPEND } else { 0 };
 
     let prohibited_flags = (0 | if readable {
             OPEN_FLAG_TRUNCATE
@@ -124,7 +126,9 @@ mod tests {
 
     macro_rules! ncvf_ok {
         ($flags:expr, $mode:expr, $readable:expr, $writable:expr, $expected_new_flags:expr $(,)*) => {{
-            let res = new_connection_validate_flags($flags, $mode, $readable, $writable);
+            let res = new_connection_validate_flags(
+                $flags, $mode, $readable, $writable, /*append_allowed=*/ false,
+            );
             match res {
                 Ok(new_flags) => assert_eq!(
                     $expected_new_flags, new_flags,
@@ -140,7 +144,9 @@ mod tests {
 
     macro_rules! ncvf_err {
         ($flags:expr, $mode:expr, $readable:expr, $writable:expr, $expected_status:expr $(,)*) => {{
-            let res = new_connection_validate_flags($flags, $mode, $readable, $writable);
+            let res = new_connection_validate_flags(
+                $flags, $mode, $readable, $writable, /*append_allowed=*/ false,
+            );
             match res {
                 Ok(new_flags) => panic!(
                     "new_connection_validate_flags should have failed.  \

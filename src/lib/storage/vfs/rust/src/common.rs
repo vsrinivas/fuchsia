@@ -8,13 +8,22 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeMarker, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
 };
 
 /// Set of known rights.
 const FS_RIGHTS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_ADMIN;
+
+/// Flags visible to GetFlags. These are flags that have meaning after the open call; all other
+/// flags are only significant at open time.
+pub const GET_FLAGS_VISIBLE: u32 = OPEN_RIGHT_READABLE
+    | OPEN_RIGHT_WRITABLE
+    | OPEN_RIGHT_ADMIN
+    | OPEN_RIGHT_EXECUTABLE
+    | OPEN_FLAG_APPEND;
 
 /// Returns true if the rights flags in `flags` do not exceed those in `parent_flags`.
 pub fn stricter_or_same_rights(parent_flags: u32, flags: u32) -> bool {

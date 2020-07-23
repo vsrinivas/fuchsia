@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::{inherit_rights_for_clone, send_on_open_with_error},
+    common::{inherit_rights_for_clone, send_on_open_with_error, GET_FLAGS_VISIBLE},
     execution_scope::ExecutionScope,
     file::{
         common::{
@@ -24,10 +24,7 @@ use {
         VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fidl_fuchsia_mem::Buffer,
-    fuchsia_zircon::{
-        sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
-        Status,
-    },
+    fuchsia_zircon::{sys::ZX_OK, Status},
     futures::stream::StreamExt,
     static_assertions::assert_eq_size,
     std::sync::Arc,
@@ -124,7 +121,9 @@ impl<T: 'static + File> FileConnection<T> {
         readable: bool,
         writable: bool,
     ) {
-        let flags = match new_connection_validate_flags(flags, mode, readable, writable) {
+        let flags = match new_connection_validate_flags(
+            flags, mode, readable, writable, /*append_allowed=*/ true,
+        ) {
             Ok(updated) => updated,
             Err(status) => {
                 send_on_open_with_error(flags, server_end, status);
@@ -145,11 +144,6 @@ impl<T: 'static + File> FileConnection<T> {
                 send_on_open_with_error(flags, server_end, status);
                 return;
             }
-        }
-
-        if flags & OPEN_FLAG_APPEND != 0 {
-            send_on_open_with_error(flags, server_end, Status::NOT_SUPPORTED);
-            return;
         }
 
         let (requests, control_handle) =
@@ -285,20 +279,18 @@ impl<T: 'static + File> FileConnection<T> {
                 responder.send(status.into_raw())?;
             }
             FileRequest::GetFlags { responder } => {
-                responder.send(ZX_OK, self.flags)?;
+                responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
             FileRequest::NodeGetFlags { responder } => {
-                responder.send(ZX_OK, self.flags)?;
+                responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            FileRequest::SetFlags { flags: _, responder } => {
-                // TODO: Support OPEN_FLAG_APPEND?  It is the only flag that is allowed to be set
-                // via this call according to the io.fidl. It would be nice to have that explicitly
-                // encoded in the API instead, I guess.
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            FileRequest::SetFlags { flags, responder } => {
+                self.flags = (self.flags & !OPEN_FLAG_APPEND) | (flags & OPEN_FLAG_APPEND);
+                responder.send(ZX_OK)?;
             }
-            FileRequest::NodeSetFlags { flags: _, responder } => {
-                // TODO: same as SetFlags.
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            FileRequest::NodeSetFlags { flags, responder } => {
+                self.flags = (self.flags & !OPEN_FLAG_APPEND) | (flags & OPEN_FLAG_APPEND);
+                responder.send(ZX_OK)?;
             }
             FileRequest::GetBuffer { flags, responder } => {
                 let (status, mut buffer) = self.handle_get_buffer(flags).await;
@@ -370,10 +362,24 @@ impl<T: 'static + File> FileConnection<T> {
     }
 
     async fn handle_write(&mut self, content: &[u8]) -> (Status, u64) {
-        let (status, actual) = self.handle_write_at(self.seek, content).await;
-        assert_eq_size!(usize, u64);
-        self.seek += actual;
-        (status, actual)
+        if self.flags & OPEN_RIGHT_WRITABLE == 0 {
+            return (Status::BAD_HANDLE, 0);
+        }
+
+        if self.flags & OPEN_FLAG_APPEND != 0 {
+            match self.file.append(content).await {
+                Ok((bytes, offset)) => {
+                    self.seek = offset;
+                    (Status::OK, bytes)
+                }
+                Err(e) => (e, 0),
+            }
+        } else {
+            let (status, actual) = self.handle_write_at(self.seek, content).await;
+            assert_eq_size!(usize, u64);
+            self.seek += actual;
+            (status, actual)
+        }
     }
 
     async fn handle_write_at(&mut self, offset: u64, content: &[u8]) -> (Status, u64) {
@@ -509,6 +515,7 @@ mod tests {
         Init { flags: u32 },
         ReadAt { offset: u64, count: u64 },
         WriteAt { offset: u64, content: Vec<u8> },
+        Append { content: Vec<u8> },
         Truncate { length: u64 },
         GetBuffer { mode: SharingMode, flags: u32 },
         GetSize,
@@ -571,6 +578,12 @@ mod tests {
             self.handle_operation(FileOperation::WriteAt { offset, content: content.to_vec() })?;
 
             Ok(content.len() as u64)
+        }
+
+        async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
+            self.handle_operation(FileOperation::Append { content: content.to_vec() })?;
+
+            Ok((content.len() as u64, self.file_size + content.len() as u64))
         }
 
         async fn truncate(&self, length: u64) -> Result<(), Status> {
@@ -793,15 +806,21 @@ mod tests {
     async fn test_getflags() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE,
         );
         let (status, flags) = env.proxy.get_flags().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
+        // OPEN_FLAG_TRUNCATE should get stripped because it only applies at open time.
         assert_eq!(flags, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
             *events,
-            vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE },]
+            vec![
+                FileOperation::Init {
+                    flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE
+                },
+                FileOperation::Truncate { length: 0 }
+            ]
         );
     }
 
@@ -980,8 +999,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_flags() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
-        let status = env.proxy.set_flags(0).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::NOT_SUPPORTED);
+        let status = env.proxy.set_flags(OPEN_FLAG_APPEND).await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+        let (status, flags) = env.proxy.get_flags().await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(flags, OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1057,6 +1079,29 @@ mod tests {
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_WRITABLE },
                 FileOperation::WriteAt { offset: 10, content: data.to_vec() },
+            ]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_append() {
+        let env = init_mock_file(
+            Box::new(always_succeed_callback),
+            OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND,
+        );
+        let data = "Hello, world!".as_bytes();
+        let (status, count) = env.proxy.write(data).await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(count, data.len() as u64);
+        let (status, offset) = env.proxy.seek(0, SeekOrigin::Current).await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(offset, MOCK_FILE_SIZE + data.len() as u64);
+        let events = env.file.operations.lock().unwrap();
+        assert_eq!(
+            *events,
+            vec![
+                FileOperation::Init { flags: OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND },
+                FileOperation::Append { content: data.to_vec() },
             ]
         );
     }

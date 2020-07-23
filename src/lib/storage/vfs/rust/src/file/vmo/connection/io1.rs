@@ -5,7 +5,7 @@
 //! Implementation of an individual connection to a file.
 
 use crate::{
-    common::{inherit_rights_for_clone, send_on_open_with_error},
+    common::{inherit_rights_for_clone, send_on_open_with_error, GET_FLAGS_VISIBLE},
     execution_scope::ExecutionScope,
     file::common::{
         new_connection_validate_flags, POSIX_READ_ONLY_PROTECTION_ATTRIBUTES,
@@ -147,7 +147,9 @@ impl FileConnection {
         writable: bool,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        let flags = match new_connection_validate_flags(flags, mode, readable, writable) {
+        let flags = match new_connection_validate_flags(
+            flags, mode, readable, writable, /*append_allowed=*/ false,
+        ) {
             Ok(updated) => updated,
             Err(status) => {
                 send_on_open_with_error(flags, server_end, status);
@@ -435,7 +437,7 @@ impl FileConnection {
                 self.handle_truncate(length, |status| responder.send(status.into_raw())).await?;
             }
             FileRequest::GetFlags { responder } => {
-                responder.send(ZX_OK, self.flags)?;
+                responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
             FileRequest::SetFlags { flags: _, responder } => {
                 // TODO: Support OPEN_FLAG_APPEND?  It is the only flag that is allowed to be set

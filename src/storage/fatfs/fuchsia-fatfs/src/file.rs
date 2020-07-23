@@ -124,6 +124,32 @@ impl FatFile {
         *file = file_ref;
         Ok(())
     }
+
+    async fn write_or_append(
+        &self,
+        offset: Option<u64>,
+        content: &[u8],
+    ) -> Result<(u64, u64), Status> {
+        let fs_lock = self.filesystem.lock().unwrap();
+        let file = self.borrow_file_mut(&fs_lock)?;
+        let mut file_offset = match offset {
+            Some(offset) => {
+                seek_for_write(file, offset)?;
+                offset
+            }
+            None => file.seek(std::io::SeekFrom::End(0)).map_err(fatfs_error_to_status)?,
+        };
+        let mut total_written = 0;
+        while total_written < content.len() {
+            let written = file.write(&content[total_written..]).map_err(fatfs_error_to_status)?;
+            if written == 0 {
+                break;
+            }
+            total_written += written;
+            file_offset += written as u64;
+        }
+        Ok((total_written as u64, file_offset))
+    }
 }
 
 impl Debug for FatFile {
@@ -174,18 +200,11 @@ impl VfsFile for FatFile {
     }
 
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
-        let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock)?;
-        seek_for_write(file, offset)?;
-        let mut total_written = 0;
-        while total_written < content.len() {
-            let written = file.write(&content[total_written..]).map_err(fatfs_error_to_status)?;
-            if written == 0 {
-                break;
-            }
-            total_written += written;
-        }
-        Ok(total_written as u64)
+        self.write_or_append(Some(offset), content).await.map(|r| r.0)
+    }
+
+    async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
+        self.write_or_append(None, content).await
     }
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {

@@ -39,6 +39,12 @@ pub trait File: Sync + Send {
     /// written.
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status>;
 
+    /// Appends |content| returning, if successful, the number of bytes written, and the file offset
+    /// after writing.  Implementations should make the writes atomic, so in the event that multiple
+    /// requests to append are in-flight, it should appear that the two writes are applied in
+    /// sequence.
+    async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status>;
+
     /// Truncate the file to |length|.
     async fn truncate(&self, length: u64) -> Result<(), Status>;
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::{inherit_rights_for_clone, send_on_open_with_error},
+    common::{inherit_rights_for_clone, send_on_open_with_error, GET_FLAGS_VISIBLE},
     directory::{
         common::{check_child_connection_flags, POSIX_DIRECTORY_PROTECTION_ATTRIBUTES},
         entry::DirectoryEntry,
@@ -329,7 +329,7 @@ where
                 responder.send(status, &mut attrs)?;
             }
             BaseDirectoryRequest::GetFlags { responder } => {
-                responder.send(ZX_OK, self.flags)?;
+                responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
             BaseDirectoryRequest::SetFlags { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
