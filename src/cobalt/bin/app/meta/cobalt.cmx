@@ -18,7 +18,8 @@
             "fuchsia.settings.Privacy",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.time.Utc",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.activity.Provider"
         ]
     }
 }
