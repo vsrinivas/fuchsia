@@ -13,7 +13,7 @@
 #include <utility>
 
 #include <fidl/test/spaceship/c/fidl.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -93,9 +93,7 @@ class SpaceShip {
   }
 };
 
-bool spaceship_test(void) {
-  BEGIN_TEST;
-
+TEST(SpaceshipTestsCpp, spaceship_test) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "");
@@ -192,8 +190,6 @@ bool spaceship_test(void) {
   ASSERT_EQ(ZX_OK, zx_handle_close(client.release()));
 
   async_loop_destroy(loop);
-
-  END_TEST;
 }
 
 // A variant of spaceship which responds to requests asynchronously.
@@ -275,9 +271,7 @@ class AsyncSpaceShip : public SpaceShip {
   fidl::AsyncTransaction async_txn_;
 };
 
-bool spaceship_async_test(void) {
-  BEGIN_TEST;
-
+TEST(SpaceshipTestsCpp, spaceship_async_test) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "");
@@ -320,8 +314,6 @@ bool spaceship_async_test(void) {
   ASSERT_EQ(ZX_OK, zx_handle_close(client.release()));
 
   async_loop_destroy(loop);
-
-  END_TEST;
 }
 
 // These classes represents a compile-time check:
@@ -377,8 +369,3 @@ class Derived : public SpaceShip {
 };
 
 }  // namespace
-
-BEGIN_TEST_CASE(spaceship_tests_cpp)
-RUN_NAMED_TEST("fidl.test.spaceship.SpaceShip test", spaceship_test)
-RUN_NAMED_TEST("fidl.test.spaceship.SpaceShip async test", spaceship_async_test)
-END_TEST_CASE(spaceship_tests_cpp)

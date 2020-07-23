@@ -10,7 +10,7 @@
 #include <zircon/syscalls.h>
 
 #include <ldmsg/ldmsg.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 static bool g_server_done = false;
 
@@ -22,7 +22,7 @@ static zx_status_t ldsvc_Done(void* ctx) {
 static zx_status_t ldsvc_LoadObject(void* ctx, const char* object_name_data,
                                     size_t object_name_size, fidl_txn_t* txn) {
   size_t len = strlen("object name");
-  ASSERT_EQ(len, object_name_size, "");
+  EXPECT_EQ(len, object_name_size, "");
   EXPECT_EQ(0, memcmp(object_name_data, "object name", len), "");
   zx_handle_t event = ZX_HANDLE_INVALID;
   EXPECT_EQ(ZX_OK, zx_event_create(0, &event), "");
@@ -32,7 +32,7 @@ static zx_status_t ldsvc_LoadObject(void* ctx, const char* object_name_data,
 static zx_status_t ldsvc_Config(void* ctx, const char* config_data, size_t config_size,
                                 fidl_txn_t* txn) {
   size_t len = strlen("my config");
-  ASSERT_EQ(len, config_size, "");
+  EXPECT_EQ(len, config_size, "");
   EXPECT_EQ(0, memcmp(config_data, "my config", len), "");
   return fuchsia_ldsvc_LoaderConfig_reply(txn, 44);
 }
@@ -68,10 +68,10 @@ static zx_status_t ldsvc_server_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
                           msg->num_handles);
 }
 
-static int ldsvc_server(void* ctx) {
+static void ldsvc_server(zx_handle_t channel_handle) {
   ldsvc_connection_t conn = {
       .txn.reply = ldsvc_server_reply,
-      .channel = *(zx_handle_t*)ctx,
+      .channel = channel_handle,
       .reply_count = 0u,
   };
   zx_status_t status = ZX_OK;
@@ -108,18 +108,20 @@ static int ldsvc_server(void* ctx) {
   }
 
   zx_handle_close(conn.channel);
+}
+
+static int ldsvc_server_wrapper(void* ctx) {
+  ldsvc_server(*(zx_handle_t*)ctx);
   return 0;
 }
 
-static bool loader_test(void) {
-  BEGIN_TEST;
-
+TEST(LdsvcTests, loader_test) {
   zx_handle_t client, server;
   zx_status_t status = zx_channel_create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "");
 
   thrd_t thread;
-  int rv = thrd_create(&thread, ldsvc_server, &server);
+  int rv = thrd_create(&thread, ldsvc_server_wrapper, &server);
   ASSERT_EQ(thrd_success, rv, "");
 
   {
@@ -156,8 +158,6 @@ static bool loader_test(void) {
   int result = 0;
   rv = thrd_join(thread, &result);
   ASSERT_EQ(thrd_success, rv, "");
-
-  END_TEST;
 }
 
 // This doesn't really need to be a separate test.  But for documentation: we
@@ -166,15 +166,13 @@ static bool loader_test(void) {
 //
 // If you need to make a change in how ordinals are calculated, first change
 // GenOrdinal, then change LDMSG_*, and then change Ordinal.
-static bool ordinals_are_consistent(void) {
-  BEGIN_TEST;
+TEST(LdsvcTests, ordinals_are_consistent) {
   static_assert(LDMSG_OP_DONE == fuchsia_ldsvc_LoaderDoneOrdinal, "Done ordinals need to match");
   static_assert(LDMSG_OP_LOAD_OBJECT == fuchsia_ldsvc_LoaderLoadObjectOrdinal,
                 "LoadObject ordinals need to match");
   static_assert(LDMSG_OP_CONFIG == fuchsia_ldsvc_LoaderConfigOrdinal,
                 "Config ordinals need to match");
   static_assert(LDMSG_OP_CLONE == fuchsia_ldsvc_LoaderCloneOrdinal, "Clone ordinals need to match");
-  END_TEST;
 }
 
 // Assumes that the ordinal_value is an interface method that takes a single
@@ -194,12 +192,12 @@ static void check_string_round_trip(uint64_t ordinal_value, const fidl_type_t* t
   zx_status_t res = fidl_decode(table, (void*)&req, (uint32_t)req_len_out, NULL, 0, &err_msg);
   EXPECT_EQ(ZX_OK, res, "result of fidl_decode incorrect");
   EXPECT_EQ(0, strcmp(req.common.string.data, data), "data not decoded correctly");
-  EXPECT_EQ(err_msg, NULL, err_msg);
+  EXPECT_EQ(err_msg, NULL, "%s", err_msg);
   uint32_t out_actual_handles;
   res = fidl_encode(table, (void*)&req, (uint32_t)req_len_out, NULL, 0, &out_actual_handles,
                     &err_msg);
   EXPECT_EQ(ZX_OK, res, "Encoding failure");
-  EXPECT_EQ(err_msg, NULL, err_msg);
+  EXPECT_EQ(err_msg, NULL, "%s", err_msg);
   size_t len_out;
   const char* data_out;
   ldmsg_req_decode(&req, req_len_out, &data_out, &len_out);
@@ -209,8 +207,7 @@ static void check_string_round_trip(uint64_t ordinal_value, const fidl_type_t* t
 
 // Checks that the ldmsg encoder and decoder behave consistently with the C
 // binding's default encoder and decoder.
-static bool ldmsg_functions_are_consistent(void) {
-  BEGIN_TEST;
+TEST(LdsvcTests, ldmsg_functions_are_consistent) {
   {
     ldmsg_req_t done_req;
     memset(&done_req, 0xba, sizeof(done_req));
@@ -222,7 +219,7 @@ static bool ldmsg_functions_are_consistent(void) {
     zx_status_t res = fidl_decode(&fuchsia_ldsvc_LoaderDoneRequestTable, (void*)&done_req,
                                   (uint32_t)req_len_out, NULL, 0, &err_msg);
     EXPECT_EQ(ZX_OK, res, "fidl_decode return value not ZX_OK");
-    EXPECT_EQ(err_msg, NULL, err_msg);
+    EXPECT_EQ(err_msg, NULL, "%s", err_msg);
     // Don't bother with the round-trip here because there is no data to
     // encode.
   }
@@ -231,7 +228,6 @@ static bool ldmsg_functions_are_consistent(void) {
                           &fuchsia_ldsvc_LoaderLoadObjectRequestTable);
   check_string_round_trip(fuchsia_ldsvc_LoaderConfigOrdinal,
                           &fuchsia_ldsvc_LoaderConfigRequestTable);
-  END_TEST;
 }
 
 static zx_status_t validate_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
@@ -239,9 +235,7 @@ static zx_status_t validate_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
   return ZX_OK;
 }
 
-static bool replies_are_consistent(void) {
-  BEGIN_TEST;
-
+TEST(LdsvcTests, replies_are_consistent) {
   fidl_txn_t txn = {
       .reply = validate_reply,
   };
@@ -254,13 +248,4 @@ static bool replies_are_consistent(void) {
   ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderClone_reply(&txn, 45), "");
 
   zx_handle_close(event);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(ldsvc_tests)
-RUN_NAMED_TEST("fuchsia.ldsvc.Loader test", loader_test)
-RUN_NAMED_TEST("fuchsia.ldsvc.Loader ordinals", ordinals_are_consistent)
-RUN_NAMED_TEST("fuchsia.ldsvc.Loader requests are the same as FIDL", ldmsg_functions_are_consistent)
-RUN_NAMED_TEST("fuchsia.ldsvc.Loader replies are the same as FIDL", replies_are_consistent)
-END_TEST_CASE(ldsvc_tests);

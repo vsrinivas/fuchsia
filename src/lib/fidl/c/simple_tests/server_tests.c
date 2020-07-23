@@ -10,7 +10,7 @@
 #include <zircon/types.h>
 
 #include <fidl/test/echo/c/fidl.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 static int kContext = 42;
 static size_t g_echo_call_count = 0u;
@@ -26,9 +26,7 @@ static zx_status_t echo(void* ctx, zx_handle_t process, zx_handle_t thread, fidl
   return ZX_OK;
 }
 
-static bool dispatch_test(void) {
-  BEGIN_TEST;
-
+TEST(ServerTests, dispatch_test) {
   fidl_test_echo_Echo_ops_t ops = {
       .Echo = echo,
   };
@@ -107,8 +105,6 @@ static bool dispatch_test(void) {
   zx_handle_close_many(handles, 2);
   zx_handle_close(canary0);
   zx_handle_close(canary1);
-
-  END_TEST;
 }
 
 typedef struct my_connection {
@@ -127,9 +123,7 @@ static zx_status_t reply_handler(fidl_txn_t* txn, const fidl_msg_t* msg) {
   return ZX_OK;
 }
 
-static bool reply_test(void) {
-  BEGIN_TEST;
-
+TEST(ServerTests, reply_test) {
   my_connection_t conn;
   conn.txn.reply = reply_handler;
   conn.count = 0u;
@@ -137,8 +131,6 @@ static bool reply_test(void) {
   zx_status_t status = fidl_test_echo_EchoEcho_reply(&conn.txn, ZX_OK);
   ASSERT_EQ(ZX_OK, status, "");
   EXPECT_EQ(1u, conn.count, "");
-
-  END_TEST;
 }
 
 static zx_status_t return_async(void* ctx, zx_handle_t process, zx_handle_t thread,
@@ -148,9 +140,7 @@ static zx_status_t return_async(void* ctx, zx_handle_t process, zx_handle_t thre
   return ZX_ERR_ASYNC;
 }
 
-static bool error_test(void) {
-  BEGIN_TEST;
-
+TEST(ServerTests, error_test) {
   fidl_test_echo_Echo_ops_t ops = {
       .Echo = return_async,
   };
@@ -177,13 +167,9 @@ static bool error_test(void) {
   ASSERT_EQ(ZX_OK, status, "");
   status = fidl_test_echo_Echo_try_dispatch(NULL, &txn, &msg, &ops);
   ASSERT_EQ(ZX_ERR_ASYNC, status, "");
-
-  END_TEST;
 }
 
-static bool incompatible_magic_test(void) {
-  BEGIN_TEST;
-
+TEST(ServerTests, incompatible_magic_test) {
   fidl_test_echo_Echo_ops_t ops = {
       .Echo = return_async,
   };
@@ -211,13 +197,4 @@ static bool incompatible_magic_test(void) {
   ASSERT_EQ(ZX_OK, status, "");
   status = fidl_test_echo_Echo_try_dispatch(NULL, &txn, &msg, &ops);
   ASSERT_EQ(ZX_ERR_PROTOCOL_NOT_SUPPORTED, status, "");
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(server_tests)
-RUN_NAMED_TEST("fidl.test.echo.Echo dispatch test", dispatch_test)
-RUN_NAMED_TEST("fidl.test.echo.Echo reply test", reply_test)
-RUN_NAMED_TEST("fidl.test.echo.Echo error test", error_test)
-RUN_NAMED_TEST("fidl.test.echo.Echo incompatible magic test", incompatible_magic_test)
-END_TEST_CASE(server_tests);

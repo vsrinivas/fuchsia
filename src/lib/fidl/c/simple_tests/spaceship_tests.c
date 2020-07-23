@@ -10,7 +10,7 @@
 #include <zircon/syscalls.h>
 
 #include <fidl/test/spaceship/c/fidl.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 static zx_status_t SpaceShip_AdjustHeading(void* ctx, const uint32_t* stars_data,
                                            size_t stars_count, fidl_txn_t* txn) {
@@ -75,9 +75,7 @@ static const fidl_test_spaceship_SpaceShip_ops_t kOps = {
     .ScanForTensorLifeforms = SpaceShip_ScanForTensorLifeforms,
 };
 
-static bool spaceship_test(void) {
-  BEGIN_TEST;
-
+TEST(SpaceshipTests, spaceship_test) {
   zx_handle_t client, server;
   zx_status_t status = zx_channel_create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "");
@@ -179,10 +177,4 @@ static bool spaceship_test(void) {
   ASSERT_EQ(ZX_OK, zx_handle_close(client), "");
 
   async_loop_destroy(loop);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(spaceship_tests)
-RUN_NAMED_TEST("fidl.test.spaceship.SpaceShip test", spaceship_test)
-END_TEST_CASE(spaceship_tests);
