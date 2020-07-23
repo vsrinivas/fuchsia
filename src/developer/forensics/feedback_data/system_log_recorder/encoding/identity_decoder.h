@@ -8,6 +8,7 @@
 #include <string>
 
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/decoder.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -18,6 +19,8 @@ class IdentityDecoder : public Decoder {
   IdentityDecoder(){};
 
   virtual ~IdentityDecoder(){};
+
+  virtual EncodingVersion GetEncodingVersion() const { return EncodingVersion::kIdentity; }
 
   // |Decoder|
   virtual std::string Decode(const std::string& block) { return block; }

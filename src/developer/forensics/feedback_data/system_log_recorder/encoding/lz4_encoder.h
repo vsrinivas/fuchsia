@@ -12,6 +12,7 @@
 
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/encoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/ring_buffer.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -26,6 +27,8 @@ class Lz4Encoder : public Encoder {
   Lz4Encoder();
 
   virtual ~Lz4Encoder();
+
+  virtual EncodingVersion GetEncodingVersion() const { return EncodingVersion::kLz4; }
 
   // |Encoder|
   virtual std::string Encode(const std::string& data);

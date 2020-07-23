@@ -7,22 +7,30 @@
 ###############################################################################
 source_set("decoder") {
   sources = [ "decoder.h" ]
+  public_deps = [ ":version" ]
 }
 
 source_set("encoder") {
   sources = [ "encoder.h" ]
+  public_deps = [ ":version" ]
 }
 
 source_set("identity_decoder") {
   sources = [ "identity_decoder.h" ]
 
-  deps = [ ":decoder" ]
+  public_deps = [
+    ":decoder",
+    ":version",
+  ]
 }
 
 source_set("identity_encoder") {
   sources = [ "identity_encoder.h" ]
 
-  public_deps = [ ":encoder" ]
+  public_deps = [
+    ":encoder",
+    ":version",
+  ]
 }
 
 source_set("lz4_decoder") {
@@ -32,10 +40,13 @@ source_set("lz4_decoder") {
     "lz4_utils.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/lz4" ]
+  public_deps = [
+    ":decoder",
+    ":version",
+    "//zircon/public/lib/lz4",
+  ]
 
   deps = [
-    ":decoder",
     ":lz4_utils",
     ":ring_buffer",
     "//src/lib/fxl",
@@ -49,10 +60,13 @@ source_set("lz4_encoder") {
     "lz4_utils.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/lz4" ]
+  public_deps = [
+    ":encoder",
+    ":version",
+    "//zircon/public/lib/lz4",
+  ]
 
   deps = [
-    ":encoder",
     ":lz4_utils",
     ":ring_buffer",
     "//sdk/lib/syslog/cpp",
@@ -87,4 +101,13 @@ source_set("ring_buffer") {
     ":lz4_utils",
     "//sdk/lib/syslog/cpp",
   ]
+}
+
+source_set("version") {
+  sources = [
+    "version.cc",
+    "version.h",
+  ]
+
+  public_deps = [ "//src/developer/forensics/utils/cobalt" ]
 }

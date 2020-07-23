@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
+
 namespace forensics {
 namespace feedback_data {
 namespace system_log_recorder {
@@ -17,6 +19,8 @@ namespace system_log_recorder {
 class Decoder {
  public:
   virtual ~Decoder(){};
+
+  virtual EncodingVersion GetEncodingVersion() const = 0;
 
   virtual std::string Decode(const std::string& block) = 0;
 };

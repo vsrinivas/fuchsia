@@ -11,6 +11,7 @@
 
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/decoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/ring_buffer.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -30,6 +31,8 @@ class Lz4Decoder : public Decoder {
   Lz4Decoder();
 
   virtual ~Lz4Decoder();
+
+  virtual EncodingVersion GetEncodingVersion() const { return EncodingVersion::kLz4; }
 
   // |Decoder|
   virtual std::string Decode(const std::string& block);

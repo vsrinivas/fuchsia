@@ -19,9 +19,11 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/identity_decoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/identity_encoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/forensics/testing/stubs/logger.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/log_format.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -48,6 +50,7 @@ class EncoderStub : public Encoder {
  public:
   EncoderStub() {}
   virtual ~EncoderStub() {}
+  virtual EncodingVersion GetEncodingVersion() const { return EncodingVersion::kForTesting; }
   virtual std::string Encode(const std::string& msg) {
     input_.back() += msg;
     return msg;
@@ -63,12 +66,21 @@ class Decoder2x : public Decoder {
  public:
   Decoder2x() {}
   virtual ~Decoder2x() {}
+  virtual EncodingVersion GetEncodingVersion() const { return EncodingVersion::kForTesting; }
   virtual std::string Decode(const std::string& msg) { return msg + msg; }
   virtual void Reset() {}
 };
 
 std::unique_ptr<Encoder> MakeIdentityEncoder() {
   return std::unique_ptr<Encoder>(new IdentityEncoder());
+}
+
+TEST(Encoding, VerifyProductionEncoderDecoderVersion) {
+  // Verify that the production decoder and encoder always have the same version.
+  ProductionEncoder encoder;
+  ProductionDecoder decoder;
+
+  EXPECT_EQ(encoder.GetEncodingVersion(), decoder.GetEncodingVersion());
 }
 
 TEST(LogMessageStoreTest, VerifyBlock) {
