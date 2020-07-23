@@ -107,6 +107,16 @@ class VmObjectPaged final : public VmObject {
     page_attribution_user_id_ = user_id;
   }
 
+  uint64_t HeapAllocationBytes() const override {
+    Guard<Mutex> guard{&lock_};
+    return page_list_.HeapAllocationBytes();
+  }
+
+  uint64_t EvictedPagedCount() const override {
+    Guard<Mutex> guard{&lock_};
+    return eviction_event_count_;
+  }
+
   size_t AttributedPagesInRange(uint64_t offset, uint64_t len) const override;
 
   zx_status_t CommitRange(uint64_t offset, uint64_t len) override {
@@ -474,6 +484,9 @@ class VmObjectPaged final : public VmObject {
   // contributes n to this count. However, this does not include pages pinned when creating
   // a contiguous vmo.
   uint64_t pinned_page_count_ TA_GUARDED(lock_) = 0;
+
+  // Count eviction events so that we can report them to the user.
+  uint64_t eviction_event_count_ TA_GUARDED(lock_) = 0;
 
   // The page source, if any.
   const fbl::RefPtr<PageSource> page_source_;

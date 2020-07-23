@@ -2047,6 +2047,7 @@ static bool vmo_eviction_test() {
   EXPECT_TRUE(vmo2->EvictPage(page2, 0));
   EXPECT_EQ(0u, vmo2->AttributedPages());
   pmm_free_page(page2);
+  EXPECT_GT(vmo2->EvictedPagedCount(), 0u);
 
   // Pinned pages should not be evictable.
   status = vmo->CommitRangePinned(0, PAGE_SIZE);

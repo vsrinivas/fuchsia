@@ -89,6 +89,55 @@ class SimpleJobEnumerator final : public JobEnumerator {
   size_t avail_ = 0;
 };
 
+template <typename T>
+inline T VmoInfoToVersion(const zx_info_vmo_t& vmo);
+
+template <>
+inline zx_info_vmo_t VmoInfoToVersion(const zx_info_vmo_t& vmo) {
+  return vmo;
+}
+
+template <>
+inline zx_info_vmo_v1_t VmoInfoToVersion(const zx_info_vmo_t& vmo) {
+  zx_info_vmo_v1_t vmo_v1 = {};
+  vmo_v1.koid = vmo.koid;
+  memcpy(vmo_v1.name, vmo.name, sizeof(vmo.name));
+  vmo_v1.size_bytes = vmo.size_bytes;
+  vmo_v1.parent_koid = vmo.parent_koid;
+  vmo_v1.num_children = vmo.num_children;
+  vmo_v1.num_mappings = vmo.num_mappings;
+  vmo_v1.share_count = vmo.share_count;
+  vmo_v1.flags = vmo.flags;
+  vmo_v1.committed_bytes = vmo.committed_bytes;
+  vmo_v1.handle_rights = vmo.handle_rights;
+  vmo_v1.cache_policy = vmo.cache_policy;
+  return vmo_v1;
+}
+
+// Specialize the VmoInfoWriter to work for any T that is a subset of zx_info_vmo_t. This is
+// currently true for v1 and v2 (v2 being the current version). Being a subset the full
+// zx_info_vmo_t can just be casted and copied.
+template <typename T>
+class SubsetVmoInfoWriter : public VmoInfoWriter {
+ public:
+  SubsetVmoInfoWriter(user_out_ptr<T> out) : out_(out) {}
+  ~SubsetVmoInfoWriter() = default;
+  zx_status_t Write(const zx_info_vmo_t& vmo, size_t offset) override {
+    T versioned_vmo = VmoInfoToVersion<T>(vmo);
+    return out_.element_offset(offset + base_offset_).copy_to_user(versioned_vmo);
+  }
+  UserCopyCaptureFaultsResult WriteCaptureFaults(const zx_info_vmo_t& vmo, size_t offset) override {
+    T versioned_vmo = VmoInfoToVersion<T>(vmo);
+    return out_.element_offset(offset + base_offset_).copy_to_user_capture_faults(versioned_vmo);
+  }
+  void AddOffset(size_t offset) override { base_offset_ += offset; }
+
+ private:
+  static_assert(sizeof(T) <= sizeof(zx_info_vmo_t));
+  user_out_ptr<T> out_;
+  size_t base_offset_ = 0;
+};
+
 // Copies a single record, |src_record|, into the user buffer |dst_buffer| of size
 // |dst_buffer_size|.
 //
@@ -383,16 +432,25 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       }
       return status;
     }
+    case ZX_INFO_PROCESS_VMOS_V1:
     case ZX_INFO_PROCESS_VMOS: {
       fbl::RefPtr<ProcessDispatcher> process;
       zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
       if (status != ZX_OK)
         return status;
 
-      auto vmos = _buffer.reinterpret<zx_info_vmo_t>();
-      size_t count = buffer_size / sizeof(zx_info_vmo_t);
+      size_t count = 0;
       size_t avail = 0;
-      status = process->GetVmos(up->aspace().get(), vmos, count, &count, &avail);
+
+      if (topic == ZX_INFO_PROCESS_VMOS_V1) {
+        SubsetVmoInfoWriter<zx_info_vmo_v1_t> writer{_buffer.reinterpret<zx_info_vmo_v1_t>()};
+        count = buffer_size / sizeof(zx_info_vmo_v1_t);
+        status = process->GetVmos(up->aspace().get(), writer, count, &count, &avail);
+      } else {
+        SubsetVmoInfoWriter<zx_info_vmo_t> writer{_buffer.reinterpret<zx_info_vmo_t>()};
+        count = buffer_size / sizeof(zx_info_vmo_t);
+        status = process->GetVmos(up->aspace().get(), writer, count, &count, &avail);
+      }
 
       if (_actual) {
         zx_status_t status = _actual.copy_to_user(count);
@@ -406,6 +464,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       }
       return status;
     }
+    case ZX_INFO_VMO_V1:
     case ZX_INFO_VMO: {
       // lookup the dispatcher from handle
       fbl::RefPtr<VmObjectDispatcher> vmo;
@@ -413,7 +472,13 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       if (status != ZX_OK)
         return status;
       zx_info_vmo_t entry = vmo->GetVmoInfo();
-      return single_record_result(_buffer, buffer_size, _actual, _avail, entry);
+      if (topic == ZX_INFO_VMO_V1) {
+        zx_info_vmo_v1_t versioned_vmo = VmoInfoToVersion<zx_info_vmo_v1_t>(entry);
+        // The V1 layout is a subset of V2
+        return single_record_result(_buffer, buffer_size, _actual, _avail, versioned_vmo);
+      } else {
+        return single_record_result(_buffer, buffer_size, _actual, _avail, entry);
+      }
     }
     case ZX_INFO_VMAR: {
       fbl::RefPtr<VmAddressRegionDispatcher> vmar;

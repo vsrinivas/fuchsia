@@ -220,7 +220,22 @@ VALIDATE_FIELD_OFFSET_SIZE(zx_info_timer_t, options, 0, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_timer_t, deadline, 8, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_timer_t, slack, 16, 8);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_vmo_t, 104, 8);
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_vmo_t, 120, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, koid, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, name, 8, 32);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, size_bytes, 40, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, parent_koid, 48, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, num_children, 56, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, num_mappings, 64, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, share_count, 72, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, flags, 80, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, committed_bytes, 88, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, handle_rights, 96, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, cache_policy, 100, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, metadata_bytes, 104, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, committed_change_events, 112, 8);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_vmo_v1_t, 104, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, koid, 0, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, name, 8, 32);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_vmo_t, size_bytes, 40, 8);

@@ -645,8 +645,8 @@ zx_status_t ProcessDispatcher::GetAspaceMaps(VmAspace* current_aspace,
   return GetVmAspaceMaps(current_aspace, aspace_, maps, max, actual, available);
 }
 
-zx_status_t ProcessDispatcher::GetVmos(VmAspace* current_aspace, user_out_ptr<zx_info_vmo_t> vmos,
-                                       size_t max, size_t* actual_out, size_t* available_out) {
+zx_status_t ProcessDispatcher::GetVmos(VmAspace* current_aspace, VmoInfoWriter& vmos, size_t max,
+                                       size_t* actual_out, size_t* available_out) {
   {
     Guard<Mutex> guard{get_lock()};
     if (state_ != State::RUNNING) {
@@ -664,8 +664,8 @@ zx_status_t ProcessDispatcher::GetVmos(VmAspace* current_aspace, user_out_ptr<zx
   size_t actual2 = 0;
   size_t available2 = 0;
   DEBUG_ASSERT(max >= actual);
-  s = GetVmAspaceVmos(current_aspace, aspace_, vmos.element_offset(actual), max - actual, &actual2,
-                      &available2);
+  vmos.AddOffset(actual);
+  s = GetVmAspaceVmos(current_aspace, aspace_, vmos, max - actual, &actual2, &available2);
   if (s != ZX_OK) {
     return s;
   }
