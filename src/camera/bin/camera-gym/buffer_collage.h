@@ -46,7 +46,8 @@ struct CollectionView {
   std::unique_ptr<scenic::Material> highlight_material;
   std::unique_ptr<scenic::Mesh> highlight_mesh;
   std::unique_ptr<scenic::ShapeNode> highlight_node;
-  bool visible;
+  bool has_content = false;
+  bool darkened = true;
   std::unique_ptr<BitmapImageNode> description_node;
 };
 

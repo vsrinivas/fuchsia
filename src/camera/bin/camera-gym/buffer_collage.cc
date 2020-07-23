@@ -138,7 +138,6 @@ fit::promise<uint32_t> BufferCollage::AddCollection(
     SetStopOnError(view.collection, "Collection" + oss.str());
     SetStopOnError(view.image_pipe, "Image Pipe" + oss.str());
     view.image_format = image_format;
-    view.visible = false;
     constexpr uint32_t kTitleWidth = 768;
     constexpr uint32_t kTitleHeight = 128;
     view.description_node =
@@ -228,6 +227,7 @@ void BufferCollage::PostShowBuffer(uint32_t collection_id, uint32_t buffer_index
 }
 
 void BufferCollage::PostSetCollectionVisibility(uint32_t id, bool visible) {
+  bool darkened = !visible;
   async::PostTask(loop_.dispatcher(), [=] {
     auto it = collection_views_.find(id);
     if (it == collection_views_.end()) {
@@ -236,8 +236,8 @@ void BufferCollage::PostSetCollectionVisibility(uint32_t id, bool visible) {
       return;
     }
     auto& view = it->second;
-    if (view.visible != visible) {
-      view.visible = visible;
+    if (view.darkened != darkened) {
+      view.darkened = darkened;
       UpdateLayout();
     }
   });
@@ -322,6 +322,7 @@ void BufferCollage::ShowBuffer(uint32_t collection_id, uint32_t buffer_index,
   it->second.image_pipe->PresentImage(buffer_index + 1, zx::clock::get_monotonic().get(), {},
                                       std::move(scenic_fences),
                                       [](fuchsia::images::PresentationInfo info) {});
+  it->second.has_content = true;
 }
 
 // Calculate the grid size needed to fit |n| elements by alternately adding rows and columns.
@@ -559,14 +560,15 @@ void BufferCollage::UpdateLayout() {
       view.material->SetTexture(view.image_pipe_id);
       view.highlight_material = std::make_unique<scenic::Material>(session_.get());
       view.highlight_material->SetColor(0xED, 0x1D, 0x7F, 0xFF);
-      if (view.visible) {
-        view.material->SetColor(255, 255, 255, 255);
-        view.highlight_material->SetColor(0xED, 0x1D, 0x7F, 0xFF);
-        view.description_node->material.SetColor(255, 255, 255, 255);
-      } else {
+      if (!view.has_content) {
+        view.material->SetColor(0, 0, 0, 0);
+        view.description_node->material.SetColor(0, 0, 0, 0);
+      } else if (view.darkened) {
         view.material->SetColor(32, 32, 32, 255);
-        view.highlight_material->SetColor(32, 32, 32, 255);
         view.description_node->material.SetColor(32, 32, 32, 255);
+      } else {
+        view.material->SetColor(255, 255, 255, 255);
+        view.description_node->material.SetColor(255, 255, 255, 255);
       }
       auto [element_width, element_height] =
           ScaleToFit(view.image_format.coded_width *
