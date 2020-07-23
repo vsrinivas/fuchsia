@@ -17,15 +17,15 @@ constexpr float kMinimumHeight = 0.100;
 MovingWindow::MovingWindow() {
   // Initialize position.
   curr_window_.left   = 0.000;
-  curr_window_.right  = 0.500;
+  curr_window_.right  = 0.400;
   curr_window_.top    = 0.000;
-  curr_window_.bottom = 0.500;
+  curr_window_.bottom = 0.400;
 
   // Initialize motion vectors.
-  left_inc_   = 0.010;
-  right_inc_  = 0.020;
-  top_inc_    = 0.005;
-  bottom_inc_ = 0.010;
+  left_inc_   = 0.0050;
+  right_inc_  = 0.0050;
+  top_inc_    = 0.0025;
+  bottom_inc_ = 0.0025;
 }
 
 MovingWindow::~MovingWindow() {}
