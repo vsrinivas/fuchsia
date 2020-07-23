@@ -32,7 +32,7 @@ typedef struct pl031_regs {
 typedef struct pl031 {
   zx_device_t* parent;
   mmio_buffer_t mmio;
-  pl031_regs_t* regs;
+  MMIO_PTR pl031_regs_t* regs;
 } pl031_t;
 
 static zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
@@ -45,7 +45,7 @@ static zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
 static zx_status_t pl031_rtc_get(void* ctx, fuchsia_hardware_rtc_Time* rtc) {
   ZX_DEBUG_ASSERT(ctx);
   pl031_t* context = ctx;
-  seconds_to_rtc(context->regs->dr, rtc);
+  seconds_to_rtc(MmioRead32(&context->regs->dr), rtc);
   return ZX_OK;
 }
 
@@ -58,7 +58,7 @@ static zx_status_t pl031_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc
   }
 
   pl031_t* context = ctx;
-  context->regs->lr = seconds_since_epoch(rtc);
+  MmioWrite32(seconds_since_epoch(rtc), &context->regs->lr);
 
   zx_status_t status = set_utc_offset(rtc);
   if (status != ZX_OK) {
@@ -113,8 +113,7 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "pl031_rtc: bind failed to pdev_map_mmio.");
     goto error_return;
   }
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  pl031->regs = (void*)pl031->mmio.vaddr;
+  pl031->regs = pl031->mmio.vaddr;
 
   pl031->parent = parent;
 
