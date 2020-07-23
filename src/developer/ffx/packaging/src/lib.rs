@@ -102,66 +102,74 @@ fn build_package(
 #[cfg(test)]
 mod test {
     use crate::repository::Repository;
-    use anyhow::Error;
-    use std::fs;
-    use std::io;
+    use anyhow::Result;
+    use ffx_packaging_args::BuildCommand;
+    use std::{fs, io};
 
     #[test]
-    fn test_build() -> Result<(), Error> {
-        let tmp_dir = tempfile::TempDir::new()?;
-        let tmp_path = tmp_dir.path();
-        let repo = Repository::new(tmp_path.into(), tmp_path.join("blobs"));
+    fn test_build() -> Result<()> {
+        let (tmpdir, repo) = make_test_repo()?;
+        let tmp = tmpdir.path();
         fs::write(
-            tmp_path.join("foo.cmx"),
+            tmp.join("foo.cmx"),
             r#"{
-            "program": {
-                "binary": "bin/foo"
-            }
-        }"#,
+                "program": {
+                    "binary": "bin/foo"
+                }
+            }"#,
         )?;
-        fs::write(tmp_path.join("foo"), "")?;
-        fs::write(tmp_path.join("entries.rsp"), "bin/foo=foo")?;
+        fs::write(tmp.join("foo"), "")?;
+        fs::write(tmp.join("entries.rsp"), "bin/foo=foo")?;
         let mut stdout = io::Cursor::new(vec![]);
         crate::cmd_package_build(
-            ffx_packaging_args::BuildCommand {
+            BuildCommand {
                 entries: vec![
                     "meta/foo.cmx=foo.cmx".into(),
-                    format!("@{}", tmp_path.join("entries.rsp").to_string_lossy()),
+                    format!("@{}", tmp.join("entries.rsp").to_string_lossy()),
                 ],
-                source_dir: Some(tmp_path.to_str().unwrap().into()),
+                source_dir: Some(tmp.to_str().unwrap().into()),
             },
             &mut stdout,
             &repo,
         )?;
 
-        assert_eq!(
-            stdout.get_ref().as_slice(),
-            "a5cad0a8391e1df27704c569e203461872724e648bdc4a887ac8736a7120daef\n".as_bytes()
-        );
-        for blob_dirent in tmp_path.join("blobs").read_dir()? {
-            let blob_dirent = blob_dirent?;
-            let hash =
-                fuchsia_merkle::MerkleTree::from_reader(fs::File::open(blob_dirent.path())?)?
-                    .root();
-            assert_eq!(hash.to_string().as_str(), blob_dirent.file_name());
-        }
+        // These hashes should not change unless the package input changes
+        let blob_hashes = [
+            "01f9a5aa102a75f1f9e034f9ed3f57c0351bd3962ae283d9f58ec0c66b3ee486", // meta.far
+            "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b", // bin/foo
+        ];
+        assert_eq!(stdout.get_ref().as_slice(), format!("{}\n", blob_hashes[0]).as_bytes());
+        validate_blobs(&tmp, &blob_hashes)?;
         Ok(())
     }
 
     #[test]
-    fn test_manifest_syntax_error() -> Result<(), Error> {
-        let tmp_dir = tempfile::TempDir::new()?;
-        let tmp_path = tmp_dir.path();
-        let repo = Repository::new(tmp_path.into(), tmp_path.join("blobs"));
+    fn test_manifest_syntax_error() -> Result<()> {
+        let (_tmpdir, repo) = make_test_repo()?;
         let res = crate::cmd_package_build(
-            ffx_packaging_args::BuildCommand {
-                entries: vec!["bad entry".into()],
-                source_dir: None,
-            },
+            BuildCommand { entries: vec!["bad entry".into()], source_dir: None },
             &mut std::io::stdout(),
             &repo,
         );
         assert!(res.is_err());
+        Ok(())
+    }
+
+    fn make_test_repo() -> Result<(tempfile::TempDir, Repository)> {
+        let tmp_dir = tempfile::TempDir::new()?;
+        let tmp_path = tmp_dir.path();
+        let repo = Repository::new(tmp_path.into(), tmp_path.join("blobs"));
+        Ok((tmp_dir, repo))
+    }
+
+    fn validate_blobs<'a>(tmp: &std::path::Path, blob_hashes: &[&str]) -> Result<()> {
+        let blobs_dir = tmp.join("blobs");
+        for blob_hash in blob_hashes {
+            let blob = blobs_dir.join(blob_hash);
+            println!("{:?}", blob);
+            let hash = fuchsia_merkle::MerkleTree::from_reader(fs::File::open(blob)?)?.root();
+            assert_eq!(hash.to_string(), *blob_hash);
+        }
         Ok(())
     }
 }

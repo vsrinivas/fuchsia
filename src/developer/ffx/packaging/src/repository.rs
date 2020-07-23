@@ -49,7 +49,7 @@ impl Repository {
 
     pub async fn default_repo() -> Repository {
         let repo_dir: path::PathBuf = get!(str, PACKAGE_REPO, "").await.into();
-        Repository::new(repo_dir.clone(), repo_dir)
+        Repository::new(repo_dir.clone(), repo_dir.join("blobs"))
     }
 
     pub fn blobs(&self) -> &BlobsDir {
