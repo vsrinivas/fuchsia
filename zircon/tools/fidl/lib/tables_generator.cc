@@ -106,8 +106,6 @@ void EmitArraySeparator(std::ostream* file, size_t indent_level) {
 
 void EmitArrayEnd(std::ostream* file) { *file << "}"; }
 
-void Emit(std::ostream* file, uint16_t value) { *file << value << "u"; }
-
 void Emit(std::ostream* file, uint32_t value) { *file << value << "u"; }
 
 void Emit(std::ostream* file, uint64_t value) { *file << value << "ul"; }
@@ -191,20 +189,20 @@ void TablesGenerator::Generate(const coded::BitsType& bits_type) {
 void TablesGenerator::Generate(const coded::StructType& struct_type) {
   std::string fields_array_name = NameFields(struct_type.coded_name);
 
-  if (!struct_type.elements.empty()) {
-    Emit(&tables_file_, "static const struct FidlStructElement ");
+  if (!struct_type.fields.empty()) {
+    Emit(&tables_file_, "static const struct FidlStructField ");
     Emit(&tables_file_, fields_array_name);
     Emit(&tables_file_, "[] = ");
-    GenerateArray(struct_type.elements);
+    GenerateArray(struct_type.fields);
     Emit(&tables_file_, ";\n");
   }
 
   Emit(&tables_file_, "const struct FidlCodedStruct ");
   Emit(&tables_file_, NameTable(struct_type.coded_name));
-  Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .elements=");
-  Emit(&tables_file_, struct_type.elements.empty() ? "NULL" : fields_array_name);
-  Emit(&tables_file_, ", .element_count=");
-  Emit(&tables_file_, static_cast<uint32_t>(struct_type.elements.size()));
+  Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .fields=");
+  Emit(&tables_file_, struct_type.fields.empty() ? "NULL" : fields_array_name);
+  Emit(&tables_file_, ", .field_count=");
+  Emit(&tables_file_, static_cast<uint32_t>(struct_type.fields.size()));
   Emit(&tables_file_, ", .size=");
   Emit(&tables_file_, struct_type.size);
   Emit(&tables_file_, ", .name=\"");
@@ -274,20 +272,20 @@ void TablesGenerator::Generate(const coded::MessageType& message_type) {
   Emit(&tables_file_, ";\n");
 
   std::string fields_array_name = NameFields(message_type.coded_name);
-  if (!message_type.elements.empty()) {
-    Emit(&tables_file_, "static const struct FidlStructElement ");
+  if (!message_type.fields.empty()) {
+    Emit(&tables_file_, "static const struct FidlStructField ");
     Emit(&tables_file_, fields_array_name);
     Emit(&tables_file_, "[] = ");
-    GenerateArray(message_type.elements);
+    GenerateArray(message_type.fields);
     Emit(&tables_file_, ";\n");
   }
 
   Emit(&tables_file_, "const struct FidlCodedStruct ");
   Emit(&tables_file_, NameTable(message_type.coded_name));
-  Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .elements=");
-  Emit(&tables_file_, message_type.elements.empty() ? "NULL" : fields_array_name);
-  Emit(&tables_file_, ", .element_count=");
-  Emit(&tables_file_, static_cast<uint32_t>(message_type.elements.size()));
+  Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .fields=");
+  Emit(&tables_file_, message_type.fields.empty() ? "NULL" : fields_array_name);
+  Emit(&tables_file_, ", .field_count=");
+  Emit(&tables_file_, static_cast<uint32_t>(message_type.fields.size()));
   Emit(&tables_file_, ", .size=");
   Emit(&tables_file_, message_type.size);
   Emit(&tables_file_, ", .name=\"");
@@ -381,57 +379,19 @@ void TablesGenerator::Generate(const coded::Type* type, CastToFidlType cast_to_f
 }
 
 void TablesGenerator::Generate(const coded::StructField& field) {
-  Emit(&tables_file_, "/*FidlStructField*/{.element_type=");
-  Emit(&tables_file_, "kFidlStructElementType_Field");
-  Emit(&tables_file_, ", ");
-  Emit(&tables_file_, ".offset=");
-  Emit(&tables_file_, field.offset);
-  Emit(&tables_file_, ", ");
-  Emit(&tables_file_, ".field_type=");
+  Emit(&tables_file_, "/*FidlStructField*/{.type=");
   Generate(field.type);
-  Emit(&tables_file_, "}");
-}
-
-void TablesGenerator::Generate(const coded::StructPadding& padding) {
-  Emit(&tables_file_, "/*FidlStructPadding*/{.offset=");
-  Emit(&tables_file_, padding.offset);
   Emit(&tables_file_, ", ");
-  if (std::holds_alternative<uint64_t>(padding.mask)) {
-    Emit(&tables_file_, ".element_type=");
-    Emit(&tables_file_, "kFidlStructElementType_Padding64");
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, ".mask_64=");
-    Emit(&tables_file_, std::get<uint64_t>(padding.mask));
-  } else if (std::holds_alternative<uint32_t>(padding.mask)) {
-    Emit(&tables_file_, ".element_type=");
-    Emit(&tables_file_, "kFidlStructElementType_Padding32");
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, ".mask_32=");
-    Emit(&tables_file_, std::get<uint32_t>(padding.mask));
-  } else if (std::holds_alternative<uint16_t>(padding.mask)) {
-    Emit(&tables_file_, ".element_type=");
-    Emit(&tables_file_, "kFidlStructElementType_Padding16");
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, ".mask_16=");
-    Emit(&tables_file_, std::get<uint16_t>(padding.mask));
+  if (field.type) {
+    Emit(&tables_file_, ".offset=");
+    Emit(&tables_file_, field.offset);
   } else {
-    assert(false && "invalid mask variant");
+    Emit(&tables_file_, ".padding_offset=");
+    Emit(&tables_file_, field.padding_offset);
   }
+  Emit(&tables_file_, ", .padding=");
+  Emit(&tables_file_, field.padding);
   Emit(&tables_file_, "}");
-}
-
-void TablesGenerator::Generate(const coded::StructElement& element) {
-  if (std::holds_alternative<const coded::StructField>(element)) {
-    Emit(&tables_file_, "/*FidlStructPadding*/{.field=");
-    Generate(std::get<const coded::StructField>(element));
-    Emit(&tables_file_, "}");
-  } else if (std::holds_alternative<const coded::StructPadding>(element)) {
-    Emit(&tables_file_, "/*FidlStructPadding*/{.padding=");
-    Generate(std::get<const coded::StructPadding>(element));
-    Emit(&tables_file_, "}");
-  } else {
-    assert(false && "invalid StructElement variant");
-  }
 }
 
 void TablesGenerator::Generate(const coded::TableField& field) {

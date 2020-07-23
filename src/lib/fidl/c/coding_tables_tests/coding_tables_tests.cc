@@ -13,13 +13,10 @@ TEST(SomeStruct, CodingTable) {
   const FidlCodedStruct& some_struct_table = type.coded_struct();
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingSomeStructRequest", some_struct_table.name);
   // Every field (including primitives without padding) has a coding table generated for it.
-  ASSERT_EQ(2, some_struct_table.element_count);
-  ASSERT_EQ(kFidlStructElementType_Field, some_struct_table.elements[0].element_type);
-  EXPECT_EQ(&fidl_internal_kBoolTable, some_struct_table.elements[0].field.field_type);
-  EXPECT_EQ(16, some_struct_table.elements[0].field.offset);
-  ASSERT_EQ(kFidlStructElementType_Padding32, some_struct_table.elements[1].element_type);
-  EXPECT_EQ(16, some_struct_table.elements[1].padding.offset);
-  EXPECT_EQ(0xffffff00, some_struct_table.elements[1].padding.mask_32);
+  ASSERT_EQ(1, some_struct_table.field_count);
+  EXPECT_EQ(&fidl_internal_kBoolTable, some_struct_table.fields[0].type);
+  EXPECT_EQ(16, some_struct_table.fields[0].offset);
+  EXPECT_EQ(3, some_struct_table.fields[0].padding);
 }
 
 TEST(StructWithSomeFieldsRemoved, CodingTable) {
@@ -31,41 +28,39 @@ TEST(StructWithSomeFieldsRemoved, CodingTable) {
       "fidl.test.example.codingtables/CodingStructWithSomeFieldsRemovedFromCodingTablesRequest",
       coded_struct.name);
 
-  ASSERT_EQ(6, coded_struct.element_count);
+  ASSERT_EQ(5, coded_struct.field_count);
 
-  ASSERT_EQ(kFidlStructElementType_Padding64, coded_struct.elements[0].element_type);
-  EXPECT_EQ(16, coded_struct.elements[0].padding.offset);
-  EXPECT_EQ(0xffffffffffffff00ull, coded_struct.elements[0].padding.mask_64);
+  EXPECT_NULL(coded_struct.fields[0].type);
+  EXPECT_EQ(17, coded_struct.fields[0].padding_offset);
+  EXPECT_EQ(7, coded_struct.fields[0].padding);
 
-  ASSERT_EQ(kFidlStructElementType_Padding64, coded_struct.elements[1].element_type);
-  EXPECT_EQ(32, coded_struct.elements[1].padding.offset);
-  EXPECT_EQ(0xffffffffff000000ull, coded_struct.elements[1].padding.mask_64);
+  EXPECT_NULL(coded_struct.fields[1].type);
+  EXPECT_EQ(35, coded_struct.fields[1].padding_offset);
+  EXPECT_EQ(5, coded_struct.fields[1].padding);
 
-  ASSERT_EQ(kFidlStructElementType_Padding16, coded_struct.elements[2].element_type);
-  EXPECT_EQ(48, coded_struct.elements[2].padding.offset);
-  EXPECT_EQ(0xff00, coded_struct.elements[2].padding.mask_16);
+  EXPECT_NULL(coded_struct.fields[2].type);
+  EXPECT_EQ(49, coded_struct.fields[2].offset);
+  EXPECT_EQ(1, coded_struct.fields[2].padding);
 
-  ASSERT_EQ(kFidlStructElementType_Field, coded_struct.elements[3].element_type);
-  EXPECT_EQ(&fidl_internal_kBoolTable,
-            coded_struct.elements[3].field.field_type->coded_array().element);
-  EXPECT_EQ(54, coded_struct.elements[3].field.offset);
+  EXPECT_EQ(&fidl_internal_kBoolTable, coded_struct.fields[3].type->coded_array().element);
+  EXPECT_EQ(54, coded_struct.fields[3].padding_offset);
+  EXPECT_EQ(1, coded_struct.fields[3].padding);
 
-  ASSERT_EQ(kFidlStructElementType_Padding16, coded_struct.elements[4].element_type);
-  EXPECT_EQ(54, coded_struct.elements[4].padding.offset);
-  EXPECT_EQ(0xff00, coded_struct.elements[4].padding.mask_16);
+  EXPECT_NULL(coded_struct.fields[4].type);
+  EXPECT_EQ(58, coded_struct.fields[4].padding_offset);
+  EXPECT_EQ(6, coded_struct.fields[4].padding);
 }
 
 TEST(MyXUnion, CodingTableWhenNullable) {
   const fidl_type& type = fidl_test_example_codingtables_CodingMyXUnionRequestTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
   const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(1, request_struct.element_count);
+  ASSERT_EQ(1, request_struct.field_count);
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyXUnionRequest", request_struct.name);
-  ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].element_type);
-  const FidlStructField& my_xunion_field = request_struct.elements[0].field;
+  const FidlStructField& my_xunion_field = request_struct.fields[0];
   ASSERT_EQ(16, my_xunion_field.offset);
 
-  const fidl_type& my_xunion_type = *my_xunion_field.field_type;
+  const fidl_type& my_xunion_type = *my_xunion_field.type;
   ASSERT_EQ(kFidlTypeXUnion, my_xunion_type.type_tag());
   const FidlCodedXUnion& my_xunion_table = my_xunion_type.coded_xunion();
 
@@ -87,14 +82,13 @@ TEST(MyStrictXUnion, CodingTableWhenNullable) {
   const fidl_type& type = fidl_test_example_codingtables_CodingMyStrictXUnionRequestTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
   const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(1, request_struct.element_count);
+  ASSERT_EQ(1, request_struct.field_count);
 
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyStrictXUnionRequest", request_struct.name);
-  ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].element_type);
-  const FidlStructField& my_strict_xunion_field = request_struct.elements[0].field;
+  const FidlStructField& my_strict_xunion_field = request_struct.fields[0];
   ASSERT_EQ(16, my_strict_xunion_field.offset);
 
-  const fidl_type& my_strict_xunion_type = *my_strict_xunion_field.field_type;
+  const fidl_type& my_strict_xunion_type = *my_strict_xunion_field.type;
   ASSERT_EQ(kFidlTypeXUnion, my_strict_xunion_type.type_tag());
   const FidlCodedXUnion& my_strict_xunion_table = my_strict_xunion_type.coded_xunion();
 
@@ -116,12 +110,11 @@ TEST(MyTable, CodingTable) {
   const fidl_type& type = fidl_test_example_codingtables_CodingVectorOfMyTableRequestTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
   const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(1, request_struct.element_count);
+  ASSERT_EQ(1, request_struct.field_count);
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingVectorOfMyTableRequest", request_struct.name);
-  ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].element_type);
-  const FidlStructField& vector_of_my_table_field = request_struct.elements[0].field;
+  const FidlStructField& vector_of_my_table_field = request_struct.fields[0];
   ASSERT_EQ(16, vector_of_my_table_field.offset);
-  const fidl_type& vector_of_my_table_type = *vector_of_my_table_field.field_type;
+  const fidl_type& vector_of_my_table_type = *vector_of_my_table_field.type;
   ASSERT_EQ(kFidlTypeVector, vector_of_my_table_type.type_tag());
   const FidlCodedVector& table_vector = vector_of_my_table_type.coded_vector();
 
@@ -153,13 +146,12 @@ TEST(MyXUnion, CodingTableWhenNonnullable) {
   const fidl_type& type = fidl_test_example_codingtables_CodingVectorOfMyXUnionRequestTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
   const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(1, request_struct.element_count);
+  ASSERT_EQ(1, request_struct.field_count);
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingVectorOfMyXUnionRequest",
                 request_struct.name);
-  ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].element_type);
-  const FidlStructField& vector_of_my_xunion_field = request_struct.elements[0].field;
+  const FidlStructField& vector_of_my_xunion_field = request_struct.fields[0];
   ASSERT_EQ(16, vector_of_my_xunion_field.offset);
-  const fidl_type& vector_of_my_xunion_type = *vector_of_my_xunion_field.field_type;
+  const fidl_type& vector_of_my_xunion_type = *vector_of_my_xunion_field.type;
   ASSERT_EQ(kFidlTypeVector, vector_of_my_xunion_type.type_tag());
   const FidlCodedVector& xunion_vector = vector_of_my_xunion_type.coded_vector();
 
@@ -176,13 +168,12 @@ TEST(MyStrictXUnion, CodingTableWhenNonnullable) {
   const fidl_type& type = fidl_test_example_codingtables_CodingVectorOfMyStrictXUnionRequestTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
   const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(1, request_struct.element_count);
+  ASSERT_EQ(1, request_struct.field_count);
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingVectorOfMyStrictXUnionRequest",
                 request_struct.name);
-  ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].element_type);
-  const FidlStructField& vector_of_my_xunion_field = request_struct.elements[0].field;
+  const FidlStructField& vector_of_my_xunion_field = request_struct.fields[0];
   ASSERT_EQ(16, vector_of_my_xunion_field.offset);
-  const fidl_type& vector_of_my_xunion_type = *vector_of_my_xunion_field.field_type;
+  const fidl_type& vector_of_my_xunion_type = *vector_of_my_xunion_field.type;
   ASSERT_EQ(kFidlTypeVector, vector_of_my_xunion_type.type_tag());
   const FidlCodedVector& xunion_vector = vector_of_my_xunion_type.coded_vector();
 
@@ -199,39 +190,29 @@ TEST(MyBits, CodingTable) {
   const fidl_type& type = fidl_test_example_codingtables_CodingMyBitsRequestTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
   const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(2, request_struct.element_count);
+  ASSERT_EQ(1, request_struct.field_count);
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyBitsRequest", request_struct.name);
-  ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].element_type);
-  const FidlStructField& my_bits_field = request_struct.elements[0].field;
+  const FidlStructField& my_bits_field = request_struct.fields[0];
   ASSERT_EQ(16, my_bits_field.offset);
-  const fidl_type& my_bits_type = *my_bits_field.field_type;
+  const fidl_type& my_bits_type = *my_bits_field.type;
   ASSERT_EQ(kFidlTypeBits, my_bits_type.type_tag());
   const FidlCodedBits& my_bits_table = my_bits_type.coded_bits();
   ASSERT_EQ(kFidlCodedPrimitiveSubtype_Uint8, my_bits_table.underlying_type);
   ASSERT_EQ(0x1u | 0x10u, my_bits_table.mask);
-
-  ASSERT_EQ(kFidlStructElementType_Padding64, request_struct.elements[1].element_type);
-  ASSERT_EQ(16, request_struct.elements[1].padding.offset);
-  ASSERT_EQ(0xffffffffffffff00, request_struct.elements[1].padding.mask_64);
 }
 
 TEST(MyEnum, CodingTable) {
   const fidl_type& type = fidl_test_example_codingtables_CodingMyEnumRequestTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
   const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(2, request_struct.element_count);
+  ASSERT_EQ(1, request_struct.field_count);
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyEnumRequest", request_struct.name);
-  ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].element_type);
-  const FidlStructField& my_enum_field = request_struct.elements[0].field;
+  const FidlStructField& my_enum_field = request_struct.fields[0];
   ASSERT_EQ(16, my_enum_field.offset);
-  const fidl_type& my_enum_type = *my_enum_field.field_type;
+  const fidl_type& my_enum_type = *my_enum_field.type;
   ASSERT_EQ(kFidlTypeEnum, my_enum_type.type_tag());
   const FidlCodedEnum& my_enum_table = my_enum_type.coded_enum();
   ASSERT_EQ(kFidlCodedPrimitiveSubtype_Uint32, my_enum_table.underlying_type);
-
-  ASSERT_EQ(kFidlStructElementType_Padding32, request_struct.elements[1].element_type);
-  ASSERT_EQ(20, request_struct.elements[1].padding.offset);
-  ASSERT_EQ(0xffffffff, request_struct.elements[1].padding.mask_32);
 }
 
 // This ensures that the number collision tests compile. (See FIDL-448).
@@ -244,18 +225,17 @@ TEST(NumberCollision, CodingTable) {
   const FidlCodedStruct& number_collision_table = type.coded_struct();
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingNumberCollisionRequest",
                 number_collision_table.name);
-  ASSERT_EQ(5, number_collision_table.element_count);
+  ASSERT_EQ(5, number_collision_table.field_count);
 }
 
 TEST(ForeignXUnions, CodingTable) {
   const fidl_type& req_type = fidl_test_example_codingtables_CodingForeignXUnionsRequestTable;
   ASSERT_EQ(kFidlTypeStruct, req_type.type_tag());
   const FidlCodedStruct& request_struct = req_type.coded_struct();
-  ASSERT_EQ(1, request_struct.element_count);
+  ASSERT_EQ(1, request_struct.field_count);
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingForeignXUnionsRequest", request_struct.name);
-  ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].element_type);
-  const FidlStructField& tx_field = request_struct.elements[0].field;
-  const fidl_type& tx_type = *tx_field.field_type;
+  const FidlStructField& tx_field = request_struct.fields[0];
+  const fidl_type& tx_type = *tx_field.type;
   ASSERT_EQ(kFidlTypeXUnion, tx_type.type_tag());
   const FidlCodedXUnion& tx_table = tx_type.coded_xunion();
   ASSERT_STR_EQ("fidl.test.example.codingtablesdeps/MyXUnionA", tx_table.name);
@@ -265,12 +245,11 @@ TEST(ForeignXUnions, CodingTable) {
   const fidl_type& resp_type = fidl_test_example_codingtables_CodingForeignXUnionsResponseTable;
   ASSERT_EQ(kFidlTypeStruct, resp_type.type_tag());
   const FidlCodedStruct& response_struct = resp_type.coded_struct();
-  ASSERT_EQ(1, response_struct.element_count);
+  ASSERT_EQ(1, response_struct.field_count);
   ASSERT_STR_EQ("fidl.test.example.codingtables/CodingForeignXUnionsResponse",
                 response_struct.name);
-  ASSERT_EQ(kFidlStructElementType_Field, response_struct.elements[0].element_type);
-  const FidlStructField& rx_field = response_struct.elements[0].field;
-  const fidl_type& rx_type = *rx_field.field_type;
+  const FidlStructField& rx_field = response_struct.fields[0];
+  const fidl_type& rx_type = *rx_field.type;
   ASSERT_EQ(kFidlTypeXUnion, rx_type.type_tag());
   const FidlCodedXUnion& rx_table = rx_type.coded_xunion();
   ASSERT_STR_EQ("fidl.test.example.codingtablesdeps/MyXUnionA", rx_table.name);

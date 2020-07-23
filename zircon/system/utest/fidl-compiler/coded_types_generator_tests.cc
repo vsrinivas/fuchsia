@@ -11,15 +11,6 @@
 
 namespace {
 
-const fidl::coded::StructField& field(const fidl::coded::StructElement& element) {
-  assert(std::holds_alternative<const fidl::coded::StructField>(element));
-  return std::get<const fidl::coded::StructField>(element);
-}
-const fidl::coded::StructPadding& padding(const fidl::coded::StructElement& element) {
-  assert(std::holds_alternative<const fidl::coded::StructPadding>(element));
-  return std::get<const fidl::coded::StructPadding>(element);
-}
-
 TEST(CodedTypesGeneratorTests, CodedTypesOfArrays) {
   TestLibrary library(R"FIDL(
 library example;
@@ -90,7 +81,7 @@ struct Vectors {
   EXPECT_TRUE(type_some_struct->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_some_struct->kind);
   auto type_some_struct_struct = static_cast<const fidl::coded::StructType*>(type_some_struct);
-  ASSERT_EQ(0, type_some_struct_struct->elements.size());
+  ASSERT_EQ(0, type_some_struct_struct->fields.size());
   EXPECT_STR_EQ("example/SomeStruct", type_some_struct_struct->qname.c_str());
   EXPECT_NULL(type_some_struct_struct->maybe_reference_type);
   EXPECT_EQ(1, type_some_struct_struct->size);
@@ -150,13 +141,11 @@ protocol UseOfProtocol {
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
   EXPECT_STR_EQ("example/UseOfProtocolCallRequest", type1_message->qname.c_str());
-  EXPECT_EQ(2, type1_message->elements.size());
+  EXPECT_EQ(1, type1_message->fields.size());
 
-  EXPECT_EQ(16, field(type1_message->elements.at(0)).offset);
-  EXPECT_EQ(type0, field(type1_message->elements.at(0)).type);
-
-  EXPECT_EQ(20, padding(type1_message->elements.at(1)).offset);
-  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type1_message->elements.at(1)).mask));
+  auto type1_message_field0 = type1_message->fields.at(0);
+  EXPECT_EQ(16, type1_message_field0.offset);
+  EXPECT_EQ(type0, type1_message_field0.type);
 }
 
 TEST(CodedTypesGeneratorTests, CodedTypesOfRequestOfProtocol) {
@@ -190,12 +179,11 @@ protocol UseOfRequestOfProtocol {
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
   EXPECT_STR_EQ("example/UseOfRequestOfProtocolCallRequest", type1_message->qname.c_str());
-  EXPECT_EQ(2, type1_message->elements.size());
+  EXPECT_EQ(1, type1_message->fields.size());
 
-  EXPECT_EQ(16, field(type1_message->elements.at(0)).offset);
-  EXPECT_EQ(type0, field(type1_message->elements.at(0)).type);
-  EXPECT_EQ(20, padding(type1_message->elements.at(1)).offset);
-  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type1_message->elements.at(1)).mask));
+  auto type1_message_field0 = type1_message->fields.at(0);
+  EXPECT_EQ(16, type1_message_field0.offset);
+  EXPECT_EQ(type0, type1_message_field0.type);
 }
 
 // The code between |CodedTypesOfUnions| and |CodedTypesOfNullableUnions| is now very similar
@@ -374,8 +362,7 @@ struct MyStruct {
 
   auto struct_name = fidl::flat::Name::Key(library.library(), "MyStruct");
   auto struct_type = static_cast<const fidl::coded::StructType*>(gen.CodedTypeFor(struct_name));
-  auto handle_type =
-      static_cast<const fidl::coded::HandleType*>(field(struct_type->elements[0]).type);
+  auto handle_type = static_cast<const fidl::coded::HandleType*>(struct_type->fields[0].type);
 
   ASSERT_EQ(fidl::types::HandleSubtype::kVmo, handle_type->subtype);
   ASSERT_EQ(1, handle_type->rights);
@@ -427,27 +414,23 @@ struct Complex {
   EXPECT_STR_EQ("example_BoolAndInt32", type_bool_and_int32->coded_name.c_str());
   auto type_bool_and_int32_struct =
       static_cast<const fidl::coded::StructType*>(type_bool_and_int32);
-  ASSERT_EQ(type_bool_and_int32_struct->elements.size(), 2);
-  EXPECT_EQ(field(type_bool_and_int32_struct->elements[0]).type->kind,
-            fidl::coded::Type::Kind::kPrimitive);
-  EXPECT_EQ(field(type_bool_and_int32_struct->elements[0]).offset, 0);
-  EXPECT_EQ(padding(type_bool_and_int32_struct->elements[1]).offset, 0);
-  EXPECT_EQ(std::get<uint32_t>(padding(type_bool_and_int32_struct->elements[1]).mask), 0xffffff00);
+  ASSERT_EQ(type_bool_and_int32_struct->fields.size(), 1);
+  EXPECT_EQ(type_bool_and_int32_struct->fields[0].type->kind, fidl::coded::Type::Kind::kPrimitive);
+  EXPECT_EQ(type_bool_and_int32_struct->fields[0].offset, 0);
+  EXPECT_EQ(type_bool_and_int32_struct->fields[0].padding, 3);
 
   auto name_complex = fidl::flat::Name::Key(library.library(), "Complex");
   auto type_complex = gen.CodedTypeFor(name_complex);
   ASSERT_NOT_NULL(type_complex);
   EXPECT_STR_EQ("example_Complex", type_complex->coded_name.c_str());
   auto type_complex_struct = static_cast<const fidl::coded::StructType*>(type_complex);
-  ASSERT_EQ(type_complex_struct->elements.size(), 3);
-  EXPECT_EQ(field(type_complex_struct->elements[0]).type->kind,
-            fidl::coded::Type::Kind::kPrimitive);
-  EXPECT_EQ(field(type_complex_struct->elements[0]).offset, 4);
-  EXPECT_EQ(padding(type_complex_struct->elements[1]).offset, 4);
-  EXPECT_EQ(std::get<uint32_t>(padding(type_complex_struct->elements[1]).mask), 0xffffff00);
-  EXPECT_EQ(padding(type_complex_struct->elements[2]).offset, 16);
-  EXPECT_EQ(std::get<uint64_t>(padding(type_complex_struct->elements[2]).mask),
-            0xffffffffffff0000ull);
+  ASSERT_EQ(type_complex_struct->fields.size(), 2);
+  EXPECT_EQ(type_complex_struct->fields[0].type->kind, fidl::coded::Type::Kind::kPrimitive);
+  EXPECT_EQ(type_complex_struct->fields[0].offset, 4);
+  EXPECT_EQ(type_complex_struct->fields[0].padding, 3);
+  EXPECT_EQ(type_complex_struct->fields[1].type, nullptr);
+  EXPECT_EQ(type_complex_struct->fields[1].offset, 18);
+  EXPECT_EQ(type_complex_struct->fields[1].padding, 6);
 }
 
 TEST(CodedTypesGeneratorTests, CodedTypesOfMultilevelNestedStructs) {
@@ -486,33 +469,40 @@ struct Level2 {
   auto type_level0 = gen.CodedTypeFor(name_level0);
   ASSERT_NOT_NULL(type_level0);
   auto struct_level0 = static_cast<const fidl::coded::StructType*>(type_level0);
-  ASSERT_EQ(struct_level0->elements.size(), 2);
-  EXPECT_EQ(padding(struct_level0->elements[0]).offset, 0);
-  EXPECT_EQ(std::get<uint32_t>(padding(struct_level0->elements[0]).mask), 0xffffff00);
-  EXPECT_EQ(padding(struct_level0->elements[1]).offset, 8);
-  EXPECT_EQ(std::get<uint32_t>(padding(struct_level0->elements[1]).mask), 0xffffff00);
+  ASSERT_EQ(struct_level0->fields.size(), 2);
+  EXPECT_NULL(struct_level0->fields[0].type);
+  EXPECT_EQ(struct_level0->fields[0].offset, 1);
+  EXPECT_EQ(struct_level0->fields[0].padding, 3);
+  EXPECT_NULL(struct_level0->fields[1].type);
+  EXPECT_EQ(struct_level0->fields[1].offset, 9);
+  EXPECT_EQ(struct_level0->fields[1].padding, 3);
 
   auto name_level1 = fidl::flat::Name::Key(library.library(), "Level1");
   auto type_level1 = gen.CodedTypeFor(name_level1);
   ASSERT_NOT_NULL(type_level1);
   auto struct_level1 = static_cast<const fidl::coded::StructType*>(type_level1);
-  ASSERT_EQ(struct_level1->elements.size(), 2);
-  EXPECT_EQ(padding(struct_level1->elements[0]).offset, 0);
-  EXPECT_EQ(std::get<uint32_t>(padding(struct_level1->elements[0]).mask), 0xffffff00);
-  EXPECT_EQ(padding(struct_level1->elements[1]).offset, 8);
-  EXPECT_EQ(std::get<uint64_t>(padding(struct_level1->elements[1]).mask), 0xffffffffffffff00);
+  ASSERT_EQ(struct_level1->fields.size(), 2);
+  EXPECT_NULL(struct_level1->fields[0].type);
+  EXPECT_EQ(struct_level1->fields[0].offset, 1);
+  EXPECT_EQ(struct_level1->fields[0].padding, 3);
+  EXPECT_NULL(struct_level1->fields[1].type);
+  EXPECT_EQ(struct_level1->fields[1].offset, 9);
+  EXPECT_EQ(struct_level1->fields[1].padding, 7);
 
   auto name_level2 = fidl::flat::Name::Key(library.library(), "Level2");
   auto type_level2 = gen.CodedTypeFor(name_level2);
   ASSERT_NOT_NULL(type_level2);
   auto struct_level2 = static_cast<const fidl::coded::StructType*>(type_level2);
-  ASSERT_EQ(struct_level2->elements.size(), 3);
-  EXPECT_EQ(padding(struct_level2->elements[0]).offset, 0);
-  EXPECT_EQ(std::get<uint32_t>(padding(struct_level2->elements[0]).mask), 0xffffff00);
-  EXPECT_EQ(padding(struct_level2->elements[1]).offset, 8);
-  EXPECT_EQ(std::get<uint64_t>(padding(struct_level2->elements[1]).mask), 0xffffffffffffff00);
-  EXPECT_EQ(padding(struct_level2->elements[2]).offset, 24);
-  EXPECT_EQ(std::get<uint64_t>(padding(struct_level2->elements[2]).mask), 0xffffffffffffff00);
+  ASSERT_EQ(struct_level2->fields.size(), 3);
+  EXPECT_NULL(struct_level2->fields[0].type);
+  EXPECT_EQ(struct_level2->fields[0].offset, 1);
+  EXPECT_EQ(struct_level2->fields[0].padding, 3);
+  EXPECT_NULL(struct_level2->fields[1].type);
+  EXPECT_EQ(struct_level2->fields[1].offset, 9);
+  EXPECT_EQ(struct_level2->fields[1].padding, 7);
+  EXPECT_NULL(struct_level2->fields[2].type);
+  EXPECT_EQ(struct_level2->fields[2].offset, 25);
+  EXPECT_EQ(struct_level2->fields[2].padding, 7);
 }
 
 TEST(CodedTypesGeneratorTests, CodedTypesOfRecursiveOptionalStructs) {
@@ -540,24 +530,24 @@ struct TwoLevelRecursiveOptionalStructB {
   auto type_one_level = gen.CodedTypeFor(name_one_level);
   ASSERT_NOT_NULL(type_one_level);
   auto struct_one_level = static_cast<const fidl::coded::StructType*>(type_one_level);
-  ASSERT_EQ(struct_one_level->elements.size(), 1);
-  EXPECT_EQ(field(struct_one_level->elements[0]).type->kind,
-            fidl::coded::Type::Kind::kStructPointer);
-  ASSERT_SUBSTR(field(struct_one_level->elements[0]).type->coded_name.c_str(),
+  ASSERT_EQ(struct_one_level->fields.size(), 1);
+  EXPECT_EQ(struct_one_level->fields[0].type->kind, fidl::coded::Type::Kind::kStructPointer);
+  ASSERT_SUBSTR(struct_one_level->fields[0].type->coded_name.c_str(),
                 "OneLevelRecursiveOptionalStruct");
-  EXPECT_EQ(field(struct_one_level->elements[0]).offset, 0);
+  EXPECT_EQ(struct_one_level->fields[0].offset, 0);
+  EXPECT_EQ(struct_one_level->fields[0].padding, 0);
 
   auto name_two_level_b =
       fidl::flat::Name::Key(library.library(), "TwoLevelRecursiveOptionalStructB");
   auto type_two_level_b = gen.CodedTypeFor(name_two_level_b);
   ASSERT_NOT_NULL(type_two_level_b);
   auto struct_two_level_b = static_cast<const fidl::coded::StructType*>(type_two_level_b);
-  ASSERT_EQ(struct_two_level_b->elements.size(), 1);
-  EXPECT_EQ(field(struct_two_level_b->elements[0]).type->kind,
-            fidl::coded::Type::Kind::kStructPointer);
-  ASSERT_SUBSTR(field(struct_two_level_b->elements[0]).type->coded_name.c_str(),
+  ASSERT_EQ(struct_two_level_b->fields.size(), 1);
+  EXPECT_EQ(struct_two_level_b->fields[0].type->kind, fidl::coded::Type::Kind::kStructPointer);
+  ASSERT_SUBSTR(struct_two_level_b->fields[0].type->coded_name.c_str(),
                 "TwoLevelRecursiveOptionalStructA");
-  EXPECT_EQ(field(struct_two_level_b->elements[0]).offset, 0);
+  EXPECT_EQ(struct_two_level_b->fields[0].offset, 0);
+  EXPECT_EQ(struct_two_level_b->fields[0].padding, 0);
 
   // TwoLevelRecursiveOptionalStructA will be equivalent to TwoLevelRecursiveOptionalStructB
   // because of flattening.
@@ -566,12 +556,12 @@ struct TwoLevelRecursiveOptionalStructB {
   auto type_two_level_a = gen.CodedTypeFor(name_two_level_a);
   ASSERT_NOT_NULL(type_two_level_a);
   auto struct_two_level_a = static_cast<const fidl::coded::StructType*>(type_two_level_a);
-  ASSERT_EQ(struct_two_level_a->elements.size(), 1);
-  EXPECT_EQ(field(struct_two_level_a->elements[0]).type->kind,
-            fidl::coded::Type::Kind::kStructPointer);
-  ASSERT_SUBSTR(field(struct_two_level_a->elements[0]).type->coded_name.c_str(),
+  ASSERT_EQ(struct_two_level_a->fields.size(), 1);
+  EXPECT_EQ(struct_two_level_a->fields[0].type->kind, fidl::coded::Type::Kind::kStructPointer);
+  ASSERT_SUBSTR(struct_two_level_a->fields[0].type->coded_name.c_str(),
                 "TwoLevelRecursiveOptionalStructA");
-  EXPECT_EQ(field(struct_two_level_a->elements[0]).offset, 0);
+  EXPECT_EQ(struct_two_level_a->fields[0].offset, 0);
+  EXPECT_EQ(struct_two_level_a->fields[0].padding, 0);
 }
 
 TEST(CodedTypesGeneratorTests, CodedTypesOfReusedStructs) {
@@ -599,22 +589,22 @@ struct OuterStruct {
   auto type_inner_struct = gen.CodedTypeFor(name_inner_struct);
   ASSERT_NOT_NULL(type_inner_struct);
   auto struct_inner_struct = static_cast<const fidl::coded::StructType*>(type_inner_struct);
-  ASSERT_EQ(struct_inner_struct->elements.size(), 1);
-  EXPECT_EQ(padding(struct_inner_struct->elements[0]).offset, 0);
-  ASSERT_TRUE(std::get<uint16_t>(padding(struct_inner_struct->elements[0]).mask));
-  EXPECT_EQ(std::get<uint16_t>(padding(struct_inner_struct->elements[0]).mask), 0xff00);
+  ASSERT_EQ(struct_inner_struct->fields.size(), 1);
+  EXPECT_NULL(struct_inner_struct->fields[0].type);
+  EXPECT_EQ(struct_inner_struct->fields[0].offset, 1);
+  EXPECT_EQ(struct_inner_struct->fields[0].padding, 1);
 
   auto name_outer_struct = fidl::flat::Name::Key(library.library(), "OuterStruct");
   auto type_outer_struct = gen.CodedTypeFor(name_outer_struct);
   ASSERT_NOT_NULL(type_outer_struct);
   auto struct_outer_struct = static_cast<const fidl::coded::StructType*>(type_outer_struct);
-  ASSERT_EQ(struct_outer_struct->elements.size(), 2);
-  EXPECT_EQ(padding(struct_outer_struct->elements[0]).offset, 0);
-  ASSERT_TRUE(std::get<uint16_t>(padding(struct_outer_struct->elements[0]).mask));
-  EXPECT_EQ(std::get<uint16_t>(padding(struct_outer_struct->elements[0]).mask), 0xff00);
-  EXPECT_EQ(padding(struct_outer_struct->elements[1]).offset, 4);
-  ASSERT_TRUE(std::get<uint16_t>(padding(struct_outer_struct->elements[1]).mask));
-  EXPECT_EQ(std::get<uint16_t>(padding(struct_outer_struct->elements[1]).mask), 0xff00);
+  ASSERT_EQ(struct_outer_struct->fields.size(), 2);
+  EXPECT_NULL(struct_outer_struct->fields[0].type);
+  EXPECT_EQ(struct_outer_struct->fields[0].offset, 1);
+  EXPECT_EQ(struct_outer_struct->fields[0].padding, 1);
+  EXPECT_NULL(struct_outer_struct->fields[1].type);
+  EXPECT_EQ(struct_outer_struct->fields[1].offset, 5);
+  EXPECT_EQ(struct_outer_struct->fields[1].padding, 1);
 }
 
 TEST(CodedTypesGeneratorTests, CodedTypesOfOptionals) {
@@ -647,17 +637,22 @@ struct OuterStruct {
   auto type_outer_struct = gen.CodedTypeFor(name_outer_struct);
   ASSERT_NOT_NULL(type_outer_struct);
   auto struct_outer_struct = static_cast<const fidl::coded::StructType*>(type_outer_struct);
-  ASSERT_EQ(struct_outer_struct->elements.size(), 5);
-  EXPECT_EQ(padding(struct_outer_struct->elements[0]).offset, 0);
-  EXPECT_EQ(std::get<uint16_t>(padding(struct_outer_struct->elements[0]).mask), 0xff00);
-  EXPECT_EQ(field(struct_outer_struct->elements[1]).type->kind, fidl::coded::Type::Kind::kHandle);
-  EXPECT_EQ(field(struct_outer_struct->elements[1]).offset, 4);
-  EXPECT_EQ(field(struct_outer_struct->elements[2]).type->kind, fidl::coded::Type::Kind::kXUnion);
-  EXPECT_EQ(field(struct_outer_struct->elements[2]).offset, 8);
-  EXPECT_EQ(padding(struct_outer_struct->elements[3]).offset, 32);
-  EXPECT_EQ(std::get<uint16_t>(padding(struct_outer_struct->elements[3]).mask), 0xff00);
-  EXPECT_EQ(padding(struct_outer_struct->elements[4]).offset, 36);
-  EXPECT_EQ(std::get<uint32_t>(padding(struct_outer_struct->elements[4]).mask), 0xffffffff);
+  ASSERT_EQ(struct_outer_struct->fields.size(), 5);
+  EXPECT_NULL(struct_outer_struct->fields[0].type);
+  EXPECT_EQ(struct_outer_struct->fields[0].offset, 1);
+  EXPECT_EQ(struct_outer_struct->fields[0].padding, 1);
+  EXPECT_EQ(struct_outer_struct->fields[1].type->kind, fidl::coded::Type::Kind::kHandle);
+  EXPECT_EQ(struct_outer_struct->fields[1].offset, 4);
+  EXPECT_EQ(struct_outer_struct->fields[1].padding, 0);
+  EXPECT_EQ(struct_outer_struct->fields[2].type->kind, fidl::coded::Type::Kind::kXUnion);
+  EXPECT_EQ(struct_outer_struct->fields[2].offset, 8);
+  EXPECT_EQ(struct_outer_struct->fields[2].padding, 0);
+  EXPECT_NULL(struct_outer_struct->fields[3].type);
+  EXPECT_EQ(struct_outer_struct->fields[3].offset, 33);
+  EXPECT_EQ(struct_outer_struct->fields[3].padding, 1);
+  EXPECT_NULL(struct_outer_struct->fields[4].type);
+  EXPECT_EQ(struct_outer_struct->fields[4].offset, 36);
+  EXPECT_EQ(struct_outer_struct->fields[4].padding, 4);
 }
 
 TEST(CodedTypesGeneratorTests, CodedTypesOfTables) {

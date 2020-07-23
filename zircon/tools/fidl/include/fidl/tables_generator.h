@@ -67,8 +67,6 @@ class TablesGenerator {
   };
   void Generate(const coded::Type* type, CastToFidlType cast_to_fidl_type = CastToFidlType::kCast);
   void Generate(const coded::StructField& field);
-  void Generate(const coded::StructPadding& padding);
-  void Generate(const coded::StructElement& element);
   void Generate(const coded::TableField& field);
   void Generate(const coded::XUnionField& field);
 

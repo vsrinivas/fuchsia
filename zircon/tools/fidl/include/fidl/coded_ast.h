@@ -10,7 +10,6 @@
 #include <cassert>
 #include <memory>
 #include <string>
-#include <variant>
 #include <vector>
 
 #include "types.h"
@@ -45,50 +44,25 @@ struct Type;
 struct StructType;
 
 struct StructField {
-  StructField(uint32_t offset, const Type* type) : offset(offset), type(type) {}
-
-  const uint32_t offset;
-  const Type* type;
-};
-
-struct StructPadding {
-  StructPadding(uint32_t offset, std::variant<uint16_t, uint32_t, uint64_t> mask)
-      : offset(offset), mask(mask) {}
-
-  // TODO(bprosnitz) This computes a mask for a single padding segment.
-  // It is inefficient if multiple padding segments can be covered by a single mask.
-  // (e.g. struct{uint8, uint16, uint8, uint16} has two padding segments but can
-  // be covered by a single uint64 mask)
-  static StructPadding FromLength(uint32_t offset, uint32_t length) {
-    assert(length != 0 && "padding shouldn't be created for zero-length offsets");
-    if (length <= 2) {
-      return StructPadding(offset & ~1, BuildMask<uint16_t>(offset & 1, length));
-    } else if (length <= 4) {
-      return StructPadding(offset & ~3, BuildMask<uint32_t>(offset & 3, length));
-    } else if (length < 8) {
-      return StructPadding(offset & ~7, BuildMask<uint64_t>(offset & 7, length));
-    } else {
-      assert(false && "length should be < 8");
-    }
-    __builtin_unreachable();
+  static StructField Field(const Type* type, uint32_t offset, uint32_t padding) {
+    return StructField(type, offset, padding);
   }
 
-  const uint32_t offset;
-  const std::variant<uint16_t, uint32_t, uint64_t> mask;
+  static StructField Padding(uint32_t padding_offset, uint32_t padding) {
+    return StructField(nullptr, padding_offset, padding);
+  }
+
+  const Type* type;
+  union {
+    const uint32_t offset;
+    const uint32_t padding_offset;
+  };
+  const uint32_t padding;
 
  private:
-  template <typename MaskType>
-  static MaskType BuildMask(uint32_t offset, uint32_t length) {
-    MaskType mask = 0;
-    uint8_t* bytes = reinterpret_cast<uint8_t*>(&mask);
-    for (uint32_t i = offset; i < offset + length; i++) {
-      bytes[i] = 0xff;
-    }
-    return mask;
-  }
+  StructField(const Type* type, uint32_t offset, uint32_t padding)
+      : type(type), offset(offset), padding(padding) {}
 };
-
-using StructElement = std::variant<const StructField, const StructPadding>;
 
 struct TableField {
   TableField(const Type* type, uint32_t ordinal) : type(type), ordinal(ordinal) {}
@@ -209,13 +183,12 @@ struct RequestHandleType : public Type {
 struct StructPointerType;
 
 struct StructType : public Type {
-  StructType(std::string name, std::vector<StructElement> elements, uint32_t size,
-             std::string qname)
+  StructType(std::string name, std::vector<StructField> fields, uint32_t size, std::string qname)
       : Type(Kind::kStruct, std::move(name), size, true, false),
-        elements(std::move(elements)),
+        fields(std::move(fields)),
         qname(std::move(qname)) {}
 
-  std::vector<StructElement> elements;
+  std::vector<StructField> fields;
   std::string qname;
   StructPointerType* maybe_reference_type = nullptr;
 };
@@ -257,13 +230,12 @@ struct XUnionType : public Type {
 };
 
 struct MessageType : public Type {
-  MessageType(std::string name, std::vector<StructElement> elements, uint32_t size,
-              std::string qname)
+  MessageType(std::string name, std::vector<StructField> fields, uint32_t size, std::string qname)
       : Type(Kind::kMessage, std::move(name), size, true, false),
-        elements(std::move(elements)),
+        fields(std::move(fields)),
         qname(std::move(qname)) {}
 
-  std::vector<StructElement> elements;
+  std::vector<StructField> fields;
   std::string qname;
 };
 

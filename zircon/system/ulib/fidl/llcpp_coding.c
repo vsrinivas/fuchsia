@@ -10,8 +10,8 @@ extern const struct FidlCodedStruct _llcpp_coding_AnyZeroArgMessageTable;
 
 const struct FidlCodedStruct _llcpp_coding_AnyZeroArgMessageTable = {
     .tag = kFidlTypeStruct,
-    .element_count = 0u,
+    .field_count = 0u,
     .size = 16u,
-    .elements = NULL,
+    .fields = NULL,
     .name = "AnyZeroArgMessage",
 };

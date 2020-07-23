@@ -53,8 +53,7 @@ class NoOpVisitor final
 
   Status VisitVectorOrStringCount(CountPointer ptr) { return Status::kSuccess; }
 
-  template <typename MaskType>
-  Status VisitInternalPadding(Position padding_position, MaskType padding_mask) {
+  Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
     return Status::kSuccess;
   }
 

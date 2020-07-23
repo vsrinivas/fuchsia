@@ -35,15 +35,13 @@ static const struct FidlTableField Fields25test_name_TableWithHandle[] = {
 };
 const struct FidlCodedTable test_name_TableWithHandleTable = {.tag=kFidlTypeTable, .fields=Fields25test_name_TableWithHandle, .field_count=1u, .name="test.name/TableWithHandle"};
 
-static const struct FidlStructElement Fields24test_name_HandlesInTypes[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=0u, .field_type=(fidl_type_t*)(&HandlevmononnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=8u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable20HandlevmononnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=24u, .field_type=(fidl_type_t*)(&Array20_20HandlevmononnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=44u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=48u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable30Array20_20HandlevmononnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=64u, .field_type=(fidl_type_t*)(&test_name_TableWithHandleTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=80u, .field_type=(fidl_type_t*)(&test_name_UnionWithHandleTable)}}
+static const struct FidlStructField Fields24test_name_HandlesInTypes[] = {
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable), .offset=0u, .padding=4u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector4294967295nonnullable20HandlevmononnullableTable), .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Array20_20HandlevmononnullableTable), .offset=24u, .padding=4u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector4294967295nonnullable30Array20_20HandlevmononnullableTable), .offset=48u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&test_name_TableWithHandleTable), .offset=64u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&test_name_UnionWithHandleTable), .offset=80u, .padding=0u}
 };
-const struct FidlCodedStruct test_name_HandlesInTypesTable = {.tag=kFidlTypeStruct, .elements=Fields24test_name_HandlesInTypes, .element_count=8u, .size=104u, .name="test.name/HandlesInTypes"};
+const struct FidlCodedStruct test_name_HandlesInTypesTable = {.tag=kFidlTypeStruct, .fields=Fields24test_name_HandlesInTypes, .field_count=6u, .size=104u, .name="test.name/HandlesInTypes"};
 

@@ -51,15 +51,14 @@ const FidlCodedHandle NonnullableChannelType = {
     .handle_subtype = ZX_OBJ_TYPE_CHANNEL,
     .handle_rights = 0,
 };
-const FidlStructElement NonnullableChannelMessageFields[] = {
-    FidlStructElement::Field(&NonnullableChannelType, offsetof(NonnullableChannelMessage, channel)),
-    FidlStructElement::Padding32(offsetof(NonnullableChannelMessage, channel) + 4, 0xffffffff),
+const FidlStructField NonnullableChannelMessageFields[] = {
+    FidlStructField(&NonnullableChannelType, offsetof(NonnullableChannelMessage, channel), 4),
 };
 const FidlCodedStruct NonnullableChannelMessageType = {
     .tag = kFidlTypeStruct,
-    .element_count = 2,
+    .field_count = 1,
     .size = sizeof(NonnullableChannelMessage),
-    .elements = NonnullableChannelMessageFields,
+    .fields = NonnullableChannelMessageFields,
     .name = "NonnullableChannelMessage",
 };
 
@@ -86,12 +85,12 @@ struct InlinePODStruct {
 };
 
 // Full-width primitives do not need coding tables.
-const FidlStructElement InlinePODStructStructFields[] = {};
+const FidlStructField InlinePODStructStructFields[] = {};
 const FidlCodedStruct InlinePODStructType = {
     .tag = kFidlTypeStruct,
-    .element_count = 0,
+    .field_count = 0,
     .size = sizeof(InlinePODStruct),
-    .elements = InlinePODStructStructFields,
+    .fields = InlinePODStructStructFields,
     .name = "InlinePODStruct",
 };
 
@@ -124,14 +123,14 @@ const FidlCodedStructPointer OptionalPointerType = {
     .tag = kFidlTypeStructPointer,
     .struct_type = &InlinePODStructType.coded_struct(),
 };
-const FidlStructElement OutOfLineMessageTypeFields[] = {
-    FidlStructElement::Field(&OptionalPointerType, offsetof(OutOfLineMessage, optional)),
+const FidlStructField OutOfLineMessageTypeFields[] = {
+    FidlStructField(&OptionalPointerType, offsetof(OutOfLineMessage, optional), 0),
 };
 const FidlCodedStruct OutOfLineMessageType = {
     .tag = kFidlTypeStruct,
-    .element_count = 1,
+    .field_count = 1,
     .size = sizeof(OutOfLineMessage),
-    .elements = OutOfLineMessageTypeFields,
+    .fields = OutOfLineMessageTypeFields,
     .name = "OutOfLineMessage",
 };
 
@@ -159,12 +158,12 @@ struct LargeStruct {
 };
 
 // Full-width primitives do not need coding tables.
-const FidlStructElement LargeStructStructFields[] = {};
+const FidlStructField LargeStructStructFields[] = {};
 const FidlCodedStruct LargeStructType = {
     .tag = kFidlTypeStruct,
-    .element_count = 0,
+    .field_count = 0,
     .size = sizeof(LargeStruct),
-    .elements = LargeStructStructFields,
+    .fields = LargeStructStructFields,
     .name = "LargeStruct",
 };
 

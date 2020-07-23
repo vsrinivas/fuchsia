@@ -6,41 +6,37 @@
 
 
 extern const struct FidlCodedStruct test_name_ParentGetChildRequestTable;
-const struct FidlCodedStruct test_name_ParentGetChildRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="test.name/ParentGetChildRequest"};
+const struct FidlCodedStruct test_name_ParentGetChildRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/ParentGetChildRequest"};
 
 static const struct FidlCodedHandle Protocol15test_name_ChildnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
 
 extern const struct FidlCodedStruct test_name_ParentGetChildResponseTable;
-static const struct FidlStructElement Fields32test_name_ParentGetChildResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&Protocol15test_name_ChildnonnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+static const struct FidlStructField Fields32test_name_ParentGetChildResponse[] = {
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Protocol15test_name_ChildnonnullableTable), .offset=16u, .padding=4u}
 };
-const struct FidlCodedStruct test_name_ParentGetChildResponseTable = {.tag=kFidlTypeStruct, .elements=Fields32test_name_ParentGetChildResponse, .element_count=2u, .size=24u, .name="test.name/ParentGetChildResponse"};
+const struct FidlCodedStruct test_name_ParentGetChildResponseTable = {.tag=kFidlTypeStruct, .fields=Fields32test_name_ParentGetChildResponse, .field_count=1u, .size=24u, .name="test.name/ParentGetChildResponse"};
 
 extern const struct FidlCodedStruct test_name_ParentGetChildRequestRequestTable;
-const struct FidlCodedStruct test_name_ParentGetChildRequestRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="test.name/ParentGetChildRequestRequest"};
+const struct FidlCodedStruct test_name_ParentGetChildRequestRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/ParentGetChildRequestRequest"};
 
 static const struct FidlCodedHandle Request15test_name_ChildnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
 
 extern const struct FidlCodedStruct test_name_ParentGetChildRequestResponseTable;
-static const struct FidlStructElement Fields39test_name_ParentGetChildRequestResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&Request15test_name_ChildnonnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+static const struct FidlStructField Fields39test_name_ParentGetChildRequestResponse[] = {
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Request15test_name_ChildnonnullableTable), .offset=16u, .padding=4u}
 };
-const struct FidlCodedStruct test_name_ParentGetChildRequestResponseTable = {.tag=kFidlTypeStruct, .elements=Fields39test_name_ParentGetChildRequestResponse, .element_count=2u, .size=24u, .name="test.name/ParentGetChildRequestResponse"};
+const struct FidlCodedStruct test_name_ParentGetChildRequestResponseTable = {.tag=kFidlTypeStruct, .fields=Fields39test_name_ParentGetChildRequestResponse, .field_count=1u, .size=24u, .name="test.name/ParentGetChildRequestResponse"};
 
 extern const struct FidlCodedStruct test_name_ParentTakeChildRequestTable;
-static const struct FidlStructElement Fields32test_name_ParentTakeChildRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&Protocol15test_name_ChildnonnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+static const struct FidlStructField Fields32test_name_ParentTakeChildRequest[] = {
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Protocol15test_name_ChildnonnullableTable), .offset=16u, .padding=4u}
 };
-const struct FidlCodedStruct test_name_ParentTakeChildRequestTable = {.tag=kFidlTypeStruct, .elements=Fields32test_name_ParentTakeChildRequest, .element_count=2u, .size=24u, .name="test.name/ParentTakeChildRequest"};
+const struct FidlCodedStruct test_name_ParentTakeChildRequestTable = {.tag=kFidlTypeStruct, .fields=Fields32test_name_ParentTakeChildRequest, .field_count=1u, .size=24u, .name="test.name/ParentTakeChildRequest"};
 
 extern const struct FidlCodedStruct test_name_ParentTakeChildRequestRequestTable;
-static const struct FidlStructElement Fields39test_name_ParentTakeChildRequestRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&Request15test_name_ChildnonnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+static const struct FidlStructField Fields39test_name_ParentTakeChildRequestRequest[] = {
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Request15test_name_ChildnonnullableTable), .offset=16u, .padding=4u}
 };
-const struct FidlCodedStruct test_name_ParentTakeChildRequestRequestTable = {.tag=kFidlTypeStruct, .elements=Fields39test_name_ParentTakeChildRequestRequest, .element_count=2u, .size=24u, .name="test.name/ParentTakeChildRequestRequest"};
+const struct FidlCodedStruct test_name_ParentTakeChildRequestRequestTable = {.tag=kFidlTypeStruct, .fields=Fields39test_name_ParentTakeChildRequestRequest, .field_count=1u, .size=24u, .name="test.name/ParentTakeChildRequestRequest"};
 
 

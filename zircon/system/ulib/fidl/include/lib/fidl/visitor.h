@@ -144,13 +144,19 @@ class Visitor {
   // Visit a vector or string count. The count pointer will be mutable if the visitor is mutating.
   Status VisitVectorOrStringCount(CountPointer ptr) { __builtin_unreachable(); }
 
- public:
-  template <typename MaskType>
-  Status VisitInternalPadding(Position offset, MaskType mask) {
+  // Visit a region of padding bytes within message objects. They may be between members of a
+  // struct, from after the last member to the end of the struct, or from after a union variant
+  // to the end of a union. They should be zero on the wire.
+  //
+  // N.B. A different type of paddings exist between out-of-line message objects, which are always
+  // aligned to |FIDL_ALIGNMENT|. They should be handled accordingly as part of |VisitPointer|.
+  //
+  // |padding_position| Position of the start of the padding region.
+  // |padding_length|   Size of the padding region. It is always positive.
+  Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
     __builtin_unreachable();
   }
 
- private:
   // Called when the walker encounters an envelope. The envelope may be empty or unknown.
   //
   // The visitor can return a checkpoint of its current state that is untouched by the walker
@@ -203,18 +209,9 @@ constexpr bool CheckVisitorInterface() {
   static_assert(
       internal::SameInterface<decltype(&Visitor::VisitHandle), decltype(&ImplSubType::VisitHandle)>,
       "Incorrect/missing VisitHandle");
-  static_assert(
-      internal::SameInterface<decltype(&Visitor::template VisitInternalPadding<uint64_t>),
-                              decltype(&ImplSubType::template VisitInternalPadding<uint64_t>)>,
-      "Incorrect/missing VisitInternalPadding<uint64_t>");
-  static_assert(
-      internal::SameInterface<decltype(&Visitor::template VisitInternalPadding<uint32_t>),
-                              decltype(&ImplSubType::template VisitInternalPadding<uint32_t>)>,
-      "Incorrect/missing VisitInternalPadding<uint32_t>");
-  static_assert(
-      internal::SameInterface<decltype(&Visitor::template VisitInternalPadding<uint16_t>),
-                              decltype(&ImplSubType::template VisitInternalPadding<uint16_t>)>,
-      "Incorrect/missing VisitInternalPadding<uint16_t>");
+  static_assert(internal::SameInterface<decltype(&Visitor::VisitInternalPadding),
+                                        decltype(&ImplSubType::VisitInternalPadding)>,
+                "Incorrect/missing VisitInternalPadding");
   static_assert(internal::SameInterface<decltype(&Visitor::EnterEnvelope),
                                         decltype(&ImplSubType::EnterEnvelope)>,
                 "Incorrect/missing EnterEnvelope");
