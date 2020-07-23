@@ -26,10 +26,9 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher
                                                   const char* service_name,
                                                   zx_handle_t service_request) {
   fidl::OnUnboundFn<OtStackApp::LowpanSpinelDeviceFidlImpl> on_unbound =
-      [](LowpanSpinelDeviceFidlImpl*, fidl::UnboundReason reason, zx_status_t,
-         zx::channel channel) {
+      [](LowpanSpinelDeviceFidlImpl*, fidl::UnbindInfo info, zx::channel channel) {
         FX_LOGS(INFO) << "channel handle " << channel.get() << " unbound with reason "
-                      << static_cast<uint32_t>(reason);
+                      << static_cast<uint32_t>(info.reason);
       };
   auto res =
       fidl::BindServer(dispatcher, zx::channel(service_request), this, std::move(on_unbound));

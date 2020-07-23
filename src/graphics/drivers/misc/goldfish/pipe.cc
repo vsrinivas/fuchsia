@@ -102,10 +102,9 @@ void Pipe::Init() {
 
 void Pipe::Bind(zx::channel server_request) {
   using PipeInterface = llcpp::fuchsia::hardware::goldfish::Pipe::Interface;
-  auto on_unbound = [this](PipeInterface* interface, fidl::UnboundReason reason, zx_status_t status,
-                           zx::channel) {
-    if (reason == fidl::UnboundReason::kInternalError) {
-      zxlogf(ERROR, "[%s] Pipe error: %d\n", kTag, status);
+  auto on_unbound = [this](PipeInterface*, fidl::UnbindInfo info, zx::channel) {
+    if (info.reason != fidl::UnbindInfo::kClose && info.reason != fidl::UnbindInfo::kUnbind) {
+      zxlogf(ERROR, "[%s] Pipe error: %d\n", kTag, info.status);
     }
     if (on_close_) {
       on_close_(this);

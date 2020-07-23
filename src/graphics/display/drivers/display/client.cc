@@ -1433,14 +1433,13 @@ zx_status_t Client::Init(zx::channel server_channel) {
 
   server_handle_ = server_channel.get();
 
-  fidl::OnUnboundFn<Client> cb = [](Client* client, fidl::UnboundReason reason, zx_status_t status,
-                                    zx::channel ch) {
+  fidl::OnUnboundFn<Client> cb = [](Client* client, fidl::UnbindInfo info, zx::channel ch) {
     sync_completion_signal(client->fidl_unbound());
     // DdkRelease will cancel the FIDL binding before destroying the client. Therefore, we should
     // TearDown() so that no further tasks are scheduled on the controller loop.
-    switch (reason) {
-      case fidl::UnboundReason::kUnbind:
-      case fidl::UnboundReason::kClose:
+    switch (info.reason) {
+      case fidl::UnbindInfo::kUnbind:
+      case fidl::UnbindInfo::kClose:
         break;
       default:
         client->TearDown();

@@ -225,7 +225,7 @@ class ButtonsNotifyInterface : public Buttons::Interface {
     id_ = id;
 
     fidl::OnUnboundFn<ButtonsNotifyInterface> unbound =
-        [this](ButtonsNotifyInterface*, fidl::UnboundReason, zx_status_t, zx::channel) {
+        [this](ButtonsNotifyInterface*, fidl::UnbindInfo, zx::channel) {
           device_->ClosingChannel(id_);
         };
     auto res = fidl::BindServer(dispatcher, std::move(chan), this, std::move(unbound));

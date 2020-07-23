@@ -85,7 +85,7 @@ Interface::ResultOf::Method Interface::Call::Method(
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-zx_status_t Interface::ClientImpl::Dispatch(
+std::optional<::fidl::UnbindInfo> Interface::ClientImpl::Dispatch(
     fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
@@ -93,23 +93,29 @@ zx_status_t Interface::ClientImpl::Dispatch(
     case kInterface_OnEvent_Ordinal: {
       auto result = ::fidl::DecodeAs<OnEventResponse>(msg);
       if (result.status != ZX_OK) {
-        return result.status;
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
+                                  result.status};
       }
-      if (!handlers_.on_event) return ZX_ERR_NOT_SUPPORTED;
+      if (!handlers_.on_event)
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_NOT_SUPPORTED};
       handlers_.on_event();
       break;
     }
     case kFidlOrdinalEpitaph:
-      if (context) return ZX_ERR_INVALID_ARGS;
-      ::fidl::internal::ClientBase::Close(
-          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
-      break;
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context)
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_INVALID_ARGS};
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
+                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
       if (context) context->OnError();
-      return ZX_ERR_NOT_SUPPORTED;
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                ZX_ERR_NOT_SUPPORTED};
   }
-  return ZX_OK;
+  return {};
 }
 
 zx_status_t Interface::SyncClient::HandleEvents(
@@ -193,23 +199,13 @@ zx_status_t Interface::Call::HandleEvents(::zx::unowned_channel client_end,
 
 bool Interface::TryDispatch(Interface* impl, fidl_msg_t* msg,
                             ::fidl::Transaction* txn) {
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_INVALID_ARGS);
-    return true;
-  }
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    txn->Close(status);
-    return true;
-  }
   switch (hdr->ordinal) {
     case kInterface_Method_Ordinal: {
       auto result = ::fidl::DecodeAs<MethodRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       impl->Method(Interface::MethodCompleter::Sync(txn));
@@ -226,7 +222,8 @@ bool Interface::Dispatch(Interface* impl, fidl_msg_t* msg,
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return found;
 }

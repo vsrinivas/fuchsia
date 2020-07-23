@@ -18,9 +18,9 @@ zx_status_t SystemStateManager::Create(async_dispatcher_t* dispatcher, Coordinat
   // We would need to reboot in that case.
   fidl::OnUnboundFn<device_manager_fidl::SystemStateTransition::Interface> unbound_fn(
       [](device_manager_fidl::SystemStateTransition::Interface* sys_state_manager,
-         fidl::UnboundReason reason, zx_status_t, zx::channel) {
+         fidl::UnbindInfo info, zx::channel) {
         LOGF(ERROR, "system state transition channel with power manager got unbound:%d",
-             static_cast<uint32_t>(reason));
+             static_cast<uint32_t>(info.reason));
         SystemStateManager* system_state_manager =
             static_cast<SystemStateManager*>(sys_state_manager);
         Coordinator* dev_coord = system_state_manager->dev_coord_;

@@ -9,6 +9,7 @@
 #include <lib/async/task.h>
 #include <lib/async/wait.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/types.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
 #include <lib/sync/completion.h>
@@ -16,33 +17,17 @@
 #include <zircon/fidl.h>
 
 #include <mutex>
+#include <optional>
 
 namespace fidl {
 
-// Reason for unbinding the channel. Accompanied in the channel unbound callback by a zx_status_t
-// status argument.
-enum class UnboundReason {
-  // The user invoked Unbind(). Status is ZX_OK.
-  kUnbind,
-  // Server only. The user invoked Close(epitaph) on a BindingRef or Completer and the epitaph was
-  // sent. Status is the status from sending the epitaph.
-  kClose,
-  // The channel peer was closed. For a server, status is ZX_ERR_PEER_CLOSED. For a client, status
-  // is the epitaph. If no epitaph was sent, the behavior is equivalent to having received a
-  // ZX_ERR_PEER_CLOSED epitaph.
-  kPeerClosed,
-  // An unexpected channel read/write error or dispatcher error occurred. Accompanying status is the
-  // error code.
-  kInternalError,
-};
-
 template <typename Interface>
-using OnUnboundFn = fit::callback<void(Interface*, UnboundReason, zx_status_t, zx::channel)>;
+using OnUnboundFn = fit::callback<void(Interface*, UnbindInfo, zx::channel)>;
 
 namespace internal {
 
 using TypeErasedServerDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
-using TypeErasedOnUnboundFn = fit::callback<void(void*, UnboundReason, zx_status_t, zx::channel)>;
+using TypeErasedOnUnboundFn = fit::callback<void(void*, UnbindInfo, zx::channel)>;
 
 class AsyncTransaction;
 class ClientBase;
@@ -50,7 +35,7 @@ class ClientBase;
 class AsyncBinding : private async_wait_t {
  public:
   using DispatchFn =
-      fit::function<void(std::shared_ptr<AsyncBinding>&, fidl_msg_t*, bool*, zx_status_t*)>;
+      fit::function<std::optional<UnbindInfo>(std::shared_ptr<AsyncBinding>&, fidl_msg_t*, bool*)>;
 
   // Creates a binding that remains bound until either it is explicitly unbound via |Unbind|,
   // a peer close is received in the channel from the remote end, or all transactions generated
@@ -75,12 +60,20 @@ class AsyncBinding : private async_wait_t {
   zx_status_t EnableNextDispatch() __TA_EXCLUDES(lock_);
 
   void Unbind(std::shared_ptr<AsyncBinding>&& calling_ref) __TA_EXCLUDES(lock_) {
-    UnbindInternal(std::move(calling_ref), nullptr);
+    UnbindInternal(std::move(calling_ref), {UnbindInfo::kUnbind, ZX_OK});
   }
 
   void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph)
       __TA_EXCLUDES(lock_) {
-    UnbindInternal(std::move(calling_ref), &epitaph);
+    ZX_ASSERT(is_server_);
+    UnbindInternal(std::move(calling_ref), {UnbindInfo::kClose, epitaph});
+  }
+
+  void InternalError(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo error)
+      __TA_EXCLUDES(lock_) {
+    if (error.status == ZX_ERR_PEER_CLOSED)
+      error.reason = UnbindInfo::kPeerClosed;
+    UnbindInternal(std::move(calling_ref), error);
   }
 
   zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
@@ -107,25 +100,21 @@ class AsyncBinding : private async_wait_t {
     static_assert(offsetof(UnbindTask, task) == 0, "Cast async_task_t* to UnbindTask*.");
     auto* unbind_task = reinterpret_cast<UnbindTask*>(task);
     if (auto binding = unbind_task->binding.lock())
-      binding->OnUnbind(std::move(binding), ZX_OK, UnboundReason::kUnbind);
+      binding->OnUnbind(std::move(binding), {UnbindInfo::kUnbind, ZX_OK});
     delete unbind_task;
   }
 
   void MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) __TA_EXCLUDES(lock_);
 
   // Used by both Close() and Unbind().
-  void UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t* epitaph)
+  void UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info)
       __TA_EXCLUDES(lock_);
 
   // Triggered by explicit Unbind(), channel peer closed, or other channel/dispatcher error in the
   // context of a dispatcher thread with exclusive ownership of the internal binding reference. If
   // the binding is still bound, waits for all other references to be released, sends the epitaph
   // (except for Unbind()), and invokes the error handler if specified. `calling_ref` is released.
-  void OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t status,
-                UnboundReason reason) __TA_EXCLUDES(lock_);
-
-  // Invokes OnUnbind() with the appropriate arguments based on the status.
-  void OnDispatchError(zx_status_t error);
+  void OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) __TA_EXCLUDES(lock_);
 
   async_dispatcher_t* dispatcher_ = nullptr;
   zx::channel channel_ = {};
@@ -138,10 +127,7 @@ class AsyncBinding : private async_wait_t {
   zx::channel* out_channel_ = nullptr;
 
   std::mutex lock_;
-  struct {
-    UnboundReason reason;
-    zx_status_t status;
-  } unbind_info_ __TA_GUARDED(lock_) = {UnboundReason::kUnbind, ZX_OK};
+  UnbindInfo unbind_info_ __TA_GUARDED(lock_) = {UnbindInfo::kUnbind, ZX_OK};
   bool unbind_ __TA_GUARDED(lock_) = false;
   bool begun_ __TA_GUARDED(lock_) = false;
   bool sync_unbind_ __TA_GUARDED(lock_) = false;

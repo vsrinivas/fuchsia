@@ -28,11 +28,12 @@ class Transaction : public fidl::Transaction {
 
   std::unique_ptr<fidl::Transaction> TakeOwnership() override { ZX_ASSERT(false); }
 
-  void Reply(fidl::Message message) override {
+  zx_status_t Reply(fidl::Message message) override {
     if (wait_ && signal_) {
       sync_completion_signal(signal_);
       sync_completion_wait(wait_, ZX_TIME_INFINITE);
     }
+    return ZX_OK;
   }
 
   void Close(zx_status_t epitaph) override {}

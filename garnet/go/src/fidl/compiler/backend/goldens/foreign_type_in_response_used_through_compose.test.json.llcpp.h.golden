@@ -219,6 +219,16 @@ class Top final {
       void Reply(::fidl::BytePart _buffer, ::llcpp::bottom::Foo foo);
       void Reply(::fidl::DecodedMessage<GetFooResponse> params);
 
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(::llcpp::bottom::Foo foo);
+      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer,
+                                  ::llcpp::bottom::Foo foo);
+      zx_status_t ReplyWithStatus(
+          ::fidl::DecodedMessage<GetFooResponse> params);
+
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
@@ -323,8 +333,8 @@ class Top::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  zx_status_t Dispatch(fidl_msg_t* msg,
-                       ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> Dispatch(
+      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
 };

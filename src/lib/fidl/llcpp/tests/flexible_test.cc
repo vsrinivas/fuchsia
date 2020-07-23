@@ -45,7 +45,7 @@ class RewriteTransaction : public fidl::Transaction {
     ZX_ASSERT_MSG(false, "Transaction::Close called with epitaph %d", epitaph);
   }
 
-  void Reply(fidl::Message indicator_msg) override {
+  zx_status_t Reply(fidl::Message indicator_msg) override {
     ZX_ASSERT(txid_ != 0);
     ZX_ASSERT(indicator_msg.bytes().actual() >=
               sizeof(test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse));
@@ -168,6 +168,7 @@ class RewriteTransaction : public fidl::Transaction {
     zx_status_t status = channel_->write(0, real_msg.bytes, real_msg.num_bytes, real_msg.handles,
                                          real_msg.num_handles);
     ZX_ASSERT(status == ZX_OK);
+    return ZX_OK;
   }
 
   RewriteTransaction(zx_txid_t txid, zx::unowned_channel channel)

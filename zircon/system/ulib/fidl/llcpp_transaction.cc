@@ -55,15 +55,26 @@ std::unique_ptr<Transaction> CompleterBase::TakeOwnership() {
   return clone;
 }
 
-void CompleterBase::SendReply(Message msg) {
+zx_status_t CompleterBase::SendReply(Message msg) {
   ScopedLock lock(lock_);
   EnsureHasTransaction(&lock);
   if (unlikely(!needs_to_reply_)) {
     lock.release();  // Avoid crashing on death tests.
     ZX_PANIC("Repeated or unexpected Reply.");
   }
-  transaction_->Reply(std::move(msg));
+  auto status = transaction_->Reply(std::move(msg));
   needs_to_reply_ = false;
+  if (status != ZX_OK)
+    transaction_->InternalError({UnbindInfo::kChannelError, status});
+  return status;
+}
+
+void CompleterBase::InternalError(UnbindInfo error) {
+  ScopedLock lock(lock_);
+  EnsureHasTransaction(&lock);
+  transaction_->InternalError(error);
+  // NOTE: The transaction is not dropped as the user has not explicitly Close()d the completer.
+  // As such, Drop() would panic if invoked here.
 }
 
 void CompleterBase::EnsureHasTransaction(ScopedLock* lock) {

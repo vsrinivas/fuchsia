@@ -373,6 +373,20 @@ class Example final {
       void ReplySuccess(::fidl::BytePart _buffer, int64_t y);
       void Reply(::fidl::DecodedMessage<fooResponse> params);
 
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(
+          ::llcpp::fidl::test::json::Example_foo_Result result);
+      zx_status_t ReplySuccessWithStatus(int64_t y);
+      zx_status_t ReplyErrorWithStatus(uint32_t error);
+      zx_status_t ReplyWithStatus(
+          ::fidl::BytePart _buffer,
+          ::llcpp::fidl::test::json::Example_foo_Result result);
+      zx_status_t ReplySuccessWithStatus(::fidl::BytePart _buffer, int64_t y);
+      zx_status_t ReplyWithStatus(::fidl::DecodedMessage<fooResponse> params);
+
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
@@ -509,8 +523,8 @@ class Example::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  zx_status_t Dispatch(fidl_msg_t* msg,
-                       ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> Dispatch(
+      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
 };

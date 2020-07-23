@@ -129,30 +129,20 @@ Parent::UnownedResultOf::First Parent::Call::First(
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-zx_status_t Parent::ClientImpl::Dispatch(fidl_msg_t*,
-                                         ::fidl::internal::ResponseContext*) {
-  return ZX_OK;
+std::optional<::fidl::UnbindInfo> Parent::ClientImpl::Dispatch(
+    fidl_msg_t*, ::fidl::internal::ResponseContext*) {
+  return {};
 }
 
 bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
                          ::fidl::Transaction* txn) {
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_INVALID_ARGS);
-    return true;
-  }
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    txn->Close(status);
-    return true;
-  }
   switch (hdr->ordinal) {
     case kParent_First_Ordinal: {
       auto result = ::fidl::DecodeAs<FirstRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -171,7 +161,8 @@ bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return found;
 }
@@ -414,30 +405,20 @@ Child::UnownedResultOf::Second Child::Call::Second(
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-zx_status_t Child::ClientImpl::Dispatch(fidl_msg_t*,
-                                        ::fidl::internal::ResponseContext*) {
-  return ZX_OK;
+std::optional<::fidl::UnbindInfo> Child::ClientImpl::Dispatch(
+    fidl_msg_t*, ::fidl::internal::ResponseContext*) {
+  return {};
 }
 
 bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
                         ::fidl::Transaction* txn) {
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_INVALID_ARGS);
-    return true;
-  }
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    txn->Close(status);
-    return true;
-  }
   switch (hdr->ordinal) {
     case kChild_First_Ordinal: {
       auto result = ::fidl::DecodeAs<FirstRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -448,7 +429,7 @@ bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
     case kChild_Second_Ordinal: {
       auto result = ::fidl::DecodeAs<SecondRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -467,7 +448,8 @@ bool Child::Dispatch(Interface* impl, fidl_msg_t* msg,
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return found;
 }

@@ -471,7 +471,7 @@ Protocol::ClientImpl::RequestFlexibleResponseStrict_Sync(
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-zx_status_t Protocol::ClientImpl::Dispatch(
+std::optional<::fidl::UnbindInfo> Protocol::ClientImpl::Dispatch(
     fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
@@ -481,7 +481,8 @@ zx_status_t Protocol::ClientImpl::Dispatch(
           ::fidl::DecodeAs<RequestStrictResponseFlexibleResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
-        return result.status;
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
+                                  result.status};
       }
       static_cast<RequestStrictResponseFlexibleResponseContext*>(context)
           ->OnReply(std::move(result.message));
@@ -492,44 +493,38 @@ zx_status_t Protocol::ClientImpl::Dispatch(
           ::fidl::DecodeAs<RequestFlexibleResponseStrictResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
-        return result.status;
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
+                                  result.status};
       }
       static_cast<RequestFlexibleResponseStrictResponseContext*>(context)
           ->OnReply(std::move(result.message));
       break;
     }
     case kFidlOrdinalEpitaph:
-      if (context) return ZX_ERR_INVALID_ARGS;
-      ::fidl::internal::ClientBase::Close(
-          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
-      break;
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context)
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_INVALID_ARGS};
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
+                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
       if (context) context->OnError();
-      return ZX_ERR_NOT_SUPPORTED;
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                ZX_ERR_NOT_SUPPORTED};
   }
-  return ZX_OK;
+  return {};
 }
 
 bool Protocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                            ::fidl::Transaction* txn) {
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_INVALID_ARGS);
-    return true;
-  }
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    txn->Close(status);
-    return true;
-  }
   switch (hdr->ordinal) {
     case kProtocol_RequestStrictResponseFlexible_Ordinal: {
       auto result = ::fidl::DecodeAs<RequestStrictResponseFlexibleRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -541,7 +536,7 @@ bool Protocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     case kProtocol_RequestFlexibleResponseStrict_Ordinal: {
       auto result = ::fidl::DecodeAs<RequestFlexibleResponseStrictRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -561,89 +556,130 @@ bool Protocol::Dispatch(Interface* impl, fidl_msg_t* msg,
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return found;
 }
 
-void Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
-    ::llcpp::fidl::test::json::FlexibleFoo f) {
+zx_status_t Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::
+    ReplyWithStatus(::llcpp::fidl::test::json::FlexibleFoo f) {
   RequestStrictResponseFlexibleResponse _response{f};
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<
       RequestStrictResponseFlexibleResponse>(&_response);
   auto& _encode_result = _encoded.result();
   if (_encode_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
+    return _encode_result.status;
   }
-  CompleterBase::SendReply(std::move(_encode_result.message));
+  return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
 void Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
-    ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::FlexibleFoo f) {
+    ::llcpp::fidl::test::json::FlexibleFoo f) {
+  ReplyWithStatus(std::move(f));
+}
+
+zx_status_t Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::
+    ReplyWithStatus(::fidl::BytePart _buffer,
+                    ::llcpp::fidl::test::json::FlexibleFoo f) {
   if (_buffer.capacity() < RequestStrictResponseFlexibleResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
   RequestStrictResponseFlexibleResponse _response{f};
   auto _encode_result =
       ::fidl::LinearizeAndEncode<RequestStrictResponseFlexibleResponse>(
           &_response, std::move(_buffer));
   if (_encode_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
+    return _encode_result.status;
   }
-  CompleterBase::SendReply(std::move(_encode_result.message));
+  return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
 void Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
-    ::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse> params) {
+    ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::FlexibleFoo f) {
+  ReplyWithStatus(std::move(_buffer), std::move(f));
+}
+
+zx_status_t Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::
+    ReplyWithStatus(
+        ::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse> params) {
   ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
                   kFidlWireFormatMagicNumberInitial);
   ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
                   kProtocol_RequestStrictResponseFlexible_Ordinal);
-  CompleterBase::SendReply(std::move(params));
+  return CompleterBase::SendReply(std::move(params));
 }
 
-void Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
-    ::llcpp::fidl::test::json::StrictFoo f) {
+void Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
+    ::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse> params) {
+  ReplyWithStatus(std::move(params));
+}
+
+zx_status_t Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::
+    ReplyWithStatus(::llcpp::fidl::test::json::StrictFoo f) {
   RequestFlexibleResponseStrictResponse _response{f};
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<
       RequestFlexibleResponseStrictResponse>(&_response);
   auto& _encode_result = _encoded.result();
   if (_encode_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
+    return _encode_result.status;
   }
-  CompleterBase::SendReply(std::move(_encode_result.message));
+  return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
 void Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
-    ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::StrictFoo f) {
+    ::llcpp::fidl::test::json::StrictFoo f) {
+  ReplyWithStatus(std::move(f));
+}
+
+zx_status_t Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::
+    ReplyWithStatus(::fidl::BytePart _buffer,
+                    ::llcpp::fidl::test::json::StrictFoo f) {
   if (_buffer.capacity() < RequestFlexibleResponseStrictResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
   RequestFlexibleResponseStrictResponse _response{f};
   auto _encode_result =
       ::fidl::LinearizeAndEncode<RequestFlexibleResponseStrictResponse>(
           &_response, std::move(_buffer));
   if (_encode_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
+    return _encode_result.status;
   }
-  CompleterBase::SendReply(std::move(_encode_result.message));
+  return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
 void Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
-    ::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse> params) {
+    ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::StrictFoo f) {
+  ReplyWithStatus(std::move(_buffer), std::move(f));
+}
+
+zx_status_t Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::
+    ReplyWithStatus(
+        ::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse> params) {
   ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
                   kFidlWireFormatMagicNumberInitial);
   ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
                   kProtocol_RequestFlexibleResponseStrict_Ordinal);
-  CompleterBase::SendReply(std::move(params));
+  return CompleterBase::SendReply(std::move(params));
+}
+
+void Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
+    ::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse> params) {
+  ReplyWithStatus(std::move(params));
 }
 
 void Protocol::RequestStrictResponseFlexibleRequest::_InitHeader(

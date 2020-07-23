@@ -42,7 +42,7 @@ class FidlTransaction final : public ::fidl::Transaction {
     return *this;
   }
 
-  void Reply(fidl::Message msg) final;
+  zx_status_t Reply(fidl::Message msg) final;
 
   void Close(zx_status_t epitaph) final;
 

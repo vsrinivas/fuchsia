@@ -714,8 +714,8 @@ class SecondProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  zx_status_t Dispatch(fidl_msg_t* msg,
-                       ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> Dispatch(
+      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
 };
@@ -749,8 +749,8 @@ class FirstProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  zx_status_t Dispatch(fidl_msg_t* msg,
-                       ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> Dispatch(
+      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
 };

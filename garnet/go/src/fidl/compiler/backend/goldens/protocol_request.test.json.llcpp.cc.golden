@@ -564,7 +564,7 @@ Parent::ClientImpl::GetChildRequest_Sync(::fidl::BytePart _response_buffer) {
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-zx_status_t Parent::ClientImpl::Dispatch(
+std::optional<::fidl::UnbindInfo> Parent::ClientImpl::Dispatch(
     fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
@@ -573,7 +573,8 @@ zx_status_t Parent::ClientImpl::Dispatch(
       auto result = ::fidl::DecodeAs<GetChildResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
-        return result.status;
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
+                                  result.status};
       }
       static_cast<GetChildResponseContext*>(context)->OnReply(
           std::move(result.message));
@@ -583,44 +584,38 @@ zx_status_t Parent::ClientImpl::Dispatch(
       auto result = ::fidl::DecodeAs<GetChildRequestResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
-        return result.status;
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
+                                  result.status};
       }
       static_cast<GetChildRequestResponseContext*>(context)->OnReply(
           std::move(result.message));
       break;
     }
     case kFidlOrdinalEpitaph:
-      if (context) return ZX_ERR_INVALID_ARGS;
-      ::fidl::internal::ClientBase::Close(
-          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
-      break;
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context)
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_INVALID_ARGS};
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
+                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
       if (context) context->OnError();
-      return ZX_ERR_NOT_SUPPORTED;
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                ZX_ERR_NOT_SUPPORTED};
   }
-  return ZX_OK;
+  return {};
 }
 
 bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
                          ::fidl::Transaction* txn) {
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_INVALID_ARGS);
-    return true;
-  }
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    txn->Close(status);
-    return true;
-  }
   switch (hdr->ordinal) {
     case kParent_GetChild_Ordinal: {
       auto result = ::fidl::DecodeAs<GetChildRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       impl->GetChild(Interface::GetChildCompleter::Sync(txn));
@@ -629,7 +624,7 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
     case kParent_GetChildRequest_Ordinal: {
       auto result = ::fidl::DecodeAs<GetChildRequestRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       impl->GetChildRequest(Interface::GetChildRequestCompleter::Sync(txn));
@@ -638,7 +633,7 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
     case kParent_TakeChild_Ordinal: {
       auto result = ::fidl::DecodeAs<TakeChildRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -649,7 +644,7 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
     case kParent_TakeChildRequest_Ordinal: {
       auto result = ::fidl::DecodeAs<TakeChildRequestRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -668,12 +663,14 @@ bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return found;
 }
 
-void Parent::Interface::GetChildCompleterBase::Reply(::zx::channel c) {
+zx_status_t Parent::Interface::GetChildCompleterBase::ReplyWithStatus(
+    ::zx::channel c) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildResponse)];
@@ -683,33 +680,50 @@ void Parent::Interface::GetChildCompleterBase::Reply(::zx::channel c) {
       ::fidl::internal::LinearizedAndEncoded<GetChildResponse>(&_response);
   auto& _encode_result = _encoded.result();
   if (_encode_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
+    return _encode_result.status;
   }
-  CompleterBase::SendReply(std::move(_encode_result.message));
+  return CompleterBase::SendReply(std::move(_encode_result.message));
+}
+
+void Parent::Interface::GetChildCompleterBase::Reply(::zx::channel c) {
+  ReplyWithStatus(std::move(c));
+}
+
+zx_status_t Parent::Interface::GetChildCompleterBase::ReplyWithStatus(
+    ::fidl::BytePart _buffer, ::zx::channel c) {
+  if (_buffer.capacity() < GetChildResponse::PrimarySize) {
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  new (_buffer.data()) GetChildResponse{c};
+  _buffer.set_actual(sizeof(GetChildResponse));
+  return CompleterBase::SendReply(
+      ::fidl::DecodedMessage<GetChildResponse>(std::move(_buffer)));
 }
 
 void Parent::Interface::GetChildCompleterBase::Reply(::fidl::BytePart _buffer,
                                                      ::zx::channel c) {
-  if (_buffer.capacity() < GetChildResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  new (_buffer.data()) GetChildResponse{c};
-  _buffer.set_actual(sizeof(GetChildResponse));
-  CompleterBase::SendReply(
-      ::fidl::DecodedMessage<GetChildResponse>(std::move(_buffer)));
+  ReplyWithStatus(std::move(_buffer), std::move(c));
 }
 
-void Parent::Interface::GetChildCompleterBase::Reply(
+zx_status_t Parent::Interface::GetChildCompleterBase::ReplyWithStatus(
     ::fidl::DecodedMessage<GetChildResponse> params) {
   ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
                   kFidlWireFormatMagicNumberInitial);
   ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == kParent_GetChild_Ordinal);
-  CompleterBase::SendReply(std::move(params));
+  return CompleterBase::SendReply(std::move(params));
 }
 
-void Parent::Interface::GetChildRequestCompleterBase::Reply(::zx::channel r) {
+void Parent::Interface::GetChildCompleterBase::Reply(
+    ::fidl::DecodedMessage<GetChildResponse> params) {
+  ReplyWithStatus(std::move(params));
+}
+
+zx_status_t Parent::Interface::GetChildRequestCompleterBase::ReplyWithStatus(
+    ::zx::channel r) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildRequestResponse)];
@@ -720,31 +734,47 @@ void Parent::Interface::GetChildRequestCompleterBase::Reply(::zx::channel r) {
           &_response);
   auto& _encode_result = _encoded.result();
   if (_encode_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
+    return _encode_result.status;
   }
-  CompleterBase::SendReply(std::move(_encode_result.message));
+  return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void Parent::Interface::GetChildRequestCompleterBase::Reply(
+void Parent::Interface::GetChildRequestCompleterBase::Reply(::zx::channel r) {
+  ReplyWithStatus(std::move(r));
+}
+
+zx_status_t Parent::Interface::GetChildRequestCompleterBase::ReplyWithStatus(
     ::fidl::BytePart _buffer, ::zx::channel r) {
   if (_buffer.capacity() < GetChildRequestResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
   new (_buffer.data()) GetChildRequestResponse{r};
   _buffer.set_actual(sizeof(GetChildRequestResponse));
-  CompleterBase::SendReply(
+  return CompleterBase::SendReply(
       ::fidl::DecodedMessage<GetChildRequestResponse>(std::move(_buffer)));
 }
 
 void Parent::Interface::GetChildRequestCompleterBase::Reply(
+    ::fidl::BytePart _buffer, ::zx::channel r) {
+  ReplyWithStatus(std::move(_buffer), std::move(r));
+}
+
+zx_status_t Parent::Interface::GetChildRequestCompleterBase::ReplyWithStatus(
     ::fidl::DecodedMessage<GetChildRequestResponse> params) {
   ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
                   kFidlWireFormatMagicNumberInitial);
   ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
                   kParent_GetChildRequest_Ordinal);
-  CompleterBase::SendReply(std::move(params));
+  return CompleterBase::SendReply(std::move(params));
+}
+
+void Parent::Interface::GetChildRequestCompleterBase::Reply(
+    ::fidl::DecodedMessage<GetChildRequestResponse> params) {
+  ReplyWithStatus(std::move(params));
 }
 
 void Parent::GetChildRequest::_InitHeader(zx_txid_t _txid) {
@@ -773,9 +803,9 @@ void Parent::TakeChildRequestRequest::_InitHeader(zx_txid_t _txid) {
 
 namespace {}  // namespace
 
-zx_status_t Child::ClientImpl::Dispatch(fidl_msg_t*,
-                                        ::fidl::internal::ResponseContext*) {
-  return ZX_OK;
+std::optional<::fidl::UnbindInfo> Child::ClientImpl::Dispatch(
+    fidl_msg_t*, ::fidl::internal::ResponseContext*) {
+  return {};
 }
 
 }  // namespace name

@@ -25,7 +25,7 @@ class DevmgrFidlTxn : public fidl::Transaction {
           This provides Devmgr with the correct status value.\n");
   }
 
-  void Reply(fidl::Message message) override {
+  zx_status_t Reply(fidl::Message message) override {
     ZX_ASSERT_MSG(txid_, "DevmgrFidlTxn must have its transaction id set.\n");
     const fidl_msg_t msg{
         .bytes = message.bytes().data(),
@@ -40,6 +40,7 @@ class DevmgrFidlTxn : public fidl::Transaction {
 
     // We have now transferred ownership of the message's handles over the channel.
     message.ClearHandlesUnsafe();
+    return status_;
   }
 
   void Close(zx_status_t close_status) override {

@@ -190,7 +190,7 @@ super::UnownedResultOf::foo super::ClientImpl::foo_Sync(
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-zx_status_t super::ClientImpl::Dispatch(
+std::optional<::fidl::UnbindInfo> super::ClientImpl::Dispatch(
     fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
@@ -199,44 +199,38 @@ zx_status_t super::ClientImpl::Dispatch(
       auto result = ::fidl::DecodeAs<fooResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
-        return result.status;
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
+                                  result.status};
       }
       static_cast<fooResponseContext*>(context)->OnReply(
           std::move(result.message));
       break;
     }
     case kFidlOrdinalEpitaph:
-      if (context) return ZX_ERR_INVALID_ARGS;
-      ::fidl::internal::ClientBase::Close(
-          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
-      break;
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context)
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_INVALID_ARGS};
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
+                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
       if (context) context->OnError();
-      return ZX_ERR_NOT_SUPPORTED;
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                ZX_ERR_NOT_SUPPORTED};
   }
-  return ZX_OK;
+  return {};
 }
 
 bool super::TryDispatch(Interface* impl, fidl_msg_t* msg,
                         ::fidl::Transaction* txn) {
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_INVALID_ARGS);
-    return true;
-  }
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    txn->Close(status);
-    return true;
-  }
   switch (hdr->ordinal) {
     case ksuper_foo_Ordinal: {
       auto result = ::fidl::DecodeAs<fooRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -254,12 +248,13 @@ bool super::Dispatch(Interface* impl, fidl_msg_t* msg,
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return found;
 }
 
-void super::Interface::fooCompleterBase::Reply(int64_t y) {
+zx_status_t super::Interface::fooCompleterBase::ReplyWithStatus(int64_t y) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
@@ -269,30 +264,46 @@ void super::Interface::fooCompleterBase::Reply(int64_t y) {
       ::fidl::internal::LinearizedAndEncoded<fooResponse>(&_response);
   auto& _encode_result = _encoded.result();
   if (_encode_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
+    return _encode_result.status;
   }
-  CompleterBase::SendReply(std::move(_encode_result.message));
+  return CompleterBase::SendReply(std::move(_encode_result.message));
+}
+
+void super::Interface::fooCompleterBase::Reply(int64_t y) {
+  ReplyWithStatus(std::move(y));
+}
+
+zx_status_t super::Interface::fooCompleterBase::ReplyWithStatus(
+    ::fidl::BytePart _buffer, int64_t y) {
+  if (_buffer.capacity() < fooResponse::PrimarySize) {
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  new (_buffer.data()) fooResponse{y};
+  _buffer.set_actual(sizeof(fooResponse));
+  return CompleterBase::SendReply(
+      ::fidl::DecodedMessage<fooResponse>(std::move(_buffer)));
 }
 
 void super::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
                                                int64_t y) {
-  if (_buffer.capacity() < fooResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  new (_buffer.data()) fooResponse{y};
-  _buffer.set_actual(sizeof(fooResponse));
-  CompleterBase::SendReply(
-      ::fidl::DecodedMessage<fooResponse>(std::move(_buffer)));
+  ReplyWithStatus(std::move(_buffer), std::move(y));
 }
 
-void super::Interface::fooCompleterBase::Reply(
+zx_status_t super::Interface::fooCompleterBase::ReplyWithStatus(
     ::fidl::DecodedMessage<fooResponse> params) {
   ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
                   kFidlWireFormatMagicNumberInitial);
   ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == ksuper_foo_Ordinal);
-  CompleterBase::SendReply(std::move(params));
+  return CompleterBase::SendReply(std::move(params));
+}
+
+void super::Interface::fooCompleterBase::Reply(
+    ::fidl::DecodedMessage<fooResponse> params) {
+  ReplyWithStatus(std::move(params));
 }
 
 void super::fooRequest::_InitHeader(zx_txid_t _txid) {
@@ -484,7 +495,7 @@ sub::UnownedResultOf::foo sub::ClientImpl::foo_Sync(
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-zx_status_t sub::ClientImpl::Dispatch(
+std::optional<::fidl::UnbindInfo> sub::ClientImpl::Dispatch(
     fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
@@ -493,44 +504,38 @@ zx_status_t sub::ClientImpl::Dispatch(
       auto result = ::fidl::DecodeAs<fooResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
-        return result.status;
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
+                                  result.status};
       }
       static_cast<fooResponseContext*>(context)->OnReply(
           std::move(result.message));
       break;
     }
     case kFidlOrdinalEpitaph:
-      if (context) return ZX_ERR_INVALID_ARGS;
-      ::fidl::internal::ClientBase::Close(
-          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
-      break;
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context)
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_INVALID_ARGS};
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
+                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
       if (context) context->OnError();
-      return ZX_ERR_NOT_SUPPORTED;
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                ZX_ERR_NOT_SUPPORTED};
   }
-  return ZX_OK;
+  return {};
 }
 
 bool sub::TryDispatch(Interface* impl, fidl_msg_t* msg,
                       ::fidl::Transaction* txn) {
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_INVALID_ARGS);
-    return true;
-  }
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    txn->Close(status);
-    return true;
-  }
   switch (hdr->ordinal) {
     case ksub_foo_Ordinal: {
       auto result = ::fidl::DecodeAs<fooRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -547,12 +552,13 @@ bool sub::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return found;
 }
 
-void sub::Interface::fooCompleterBase::Reply(int64_t y) {
+zx_status_t sub::Interface::fooCompleterBase::ReplyWithStatus(int64_t y) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
@@ -562,30 +568,46 @@ void sub::Interface::fooCompleterBase::Reply(int64_t y) {
       ::fidl::internal::LinearizedAndEncoded<fooResponse>(&_response);
   auto& _encode_result = _encoded.result();
   if (_encode_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
+    return _encode_result.status;
   }
-  CompleterBase::SendReply(std::move(_encode_result.message));
+  return CompleterBase::SendReply(std::move(_encode_result.message));
+}
+
+void sub::Interface::fooCompleterBase::Reply(int64_t y) {
+  ReplyWithStatus(std::move(y));
+}
+
+zx_status_t sub::Interface::fooCompleterBase::ReplyWithStatus(
+    ::fidl::BytePart _buffer, int64_t y) {
+  if (_buffer.capacity() < fooResponse::PrimarySize) {
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  new (_buffer.data()) fooResponse{y};
+  _buffer.set_actual(sizeof(fooResponse));
+  return CompleterBase::SendReply(
+      ::fidl::DecodedMessage<fooResponse>(std::move(_buffer)));
 }
 
 void sub::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
                                              int64_t y) {
-  if (_buffer.capacity() < fooResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  new (_buffer.data()) fooResponse{y};
-  _buffer.set_actual(sizeof(fooResponse));
-  CompleterBase::SendReply(
-      ::fidl::DecodedMessage<fooResponse>(std::move(_buffer)));
+  ReplyWithStatus(std::move(_buffer), std::move(y));
 }
 
-void sub::Interface::fooCompleterBase::Reply(
+zx_status_t sub::Interface::fooCompleterBase::ReplyWithStatus(
     ::fidl::DecodedMessage<fooResponse> params) {
   ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
                   kFidlWireFormatMagicNumberInitial);
   ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == ksub_foo_Ordinal);
-  CompleterBase::SendReply(std::move(params));
+  return CompleterBase::SendReply(std::move(params));
+}
+
+void sub::Interface::fooCompleterBase::Reply(
+    ::fidl::DecodedMessage<fooResponse> params) {
+  ReplyWithStatus(std::move(params));
 }
 
 void sub::fooRequest::_InitHeader(zx_txid_t _txid) {

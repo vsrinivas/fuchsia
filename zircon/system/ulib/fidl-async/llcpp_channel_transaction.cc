@@ -15,22 +15,17 @@ void ChannelTransaction::Dispatch(fidl_msg_t msg) {
   binding_->dispatch_fn_(binding_->interface_, &msg, this);
 }
 
-void ChannelTransaction::Reply(fidl::Message msg) {
+zx_status_t ChannelTransaction::Reply(fidl::Message msg) {
   ZX_ASSERT(txid_ != 0);
-  if (msg.bytes().actual() < sizeof(fidl_message_header_t)) {
-    Close(ZX_ERR_INVALID_ARGS);
-    return;
-  }
+  ZX_ASSERT(msg.bytes().actual() >= sizeof(fidl_message_header_t));
   auto hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes().data());
   hdr->txid = txid_;
   txid_ = 0;
   auto status = binding_->channel()->write(0, msg.bytes().data(), msg.bytes().actual(),
                                            msg.handles().data(), msg.handles().actual());
-  if (status != ZX_OK) {
-    Close(status);
-  }
   // release ownership on handles, which have been consumed by channel write.
   msg.ClearHandlesUnsafe();
+  return status;
 }
 
 void ChannelTransaction::Close(zx_status_t epitaph) {

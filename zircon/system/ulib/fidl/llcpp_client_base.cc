@@ -36,18 +36,11 @@ void ClientBase::Unbind() {
     binding->Unbind(std::move(binding));
 }
 
-void ClientBase::Close(zx_status_t epitaph) {
-  if (auto binding = binding_.lock())
-    binding->Close(std::move(binding), epitaph);
-}
-
 ClientBase::ClientBase(zx::channel channel, async_dispatcher_t* dispatcher,
                        TypeErasedOnUnboundFn on_unbound)
     : binding_(AsyncBinding::CreateClientBinding(
           dispatcher, std::move(channel), this,
-          [this](std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*, zx_status_t* status) {
-            *status = Dispatch(msg);
-          },
+          [this](std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*) { return Dispatch(msg); },
           std::move(on_unbound))) {}
 
 zx_status_t ClientBase::Bind() {
@@ -79,15 +72,8 @@ void ClientBase::ForgetAsyncTxn(ResponseContext* context) {
   list_delete(static_cast<list_node_t*>(context));
 }
 
-zx_status_t ClientBase::Dispatch(fidl_msg_t* msg) {
+std::optional<UnbindInfo> ClientBase::Dispatch(fidl_msg_t* msg) {
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-
-  // Check the message header. If invalid, return and trigger unbinding.
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    fprintf(stderr, "%s: Received message with invalid header.\n", __func__);
-    return status;
-  }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.
   ResponseContext* context = nullptr;
@@ -105,7 +91,7 @@ zx_status_t ClientBase::Dispatch(fidl_msg_t* msg) {
     // If there was no associated context, log the unknown txid and exit.
     if (!context) {
       fprintf(stderr, "%s: Received response for unknown txid %u.\n", __func__, hdr->txid);
-      return ZX_ERR_NOT_FOUND;
+      return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_FOUND};
     }
   }
 

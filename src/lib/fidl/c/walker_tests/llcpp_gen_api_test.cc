@@ -173,10 +173,9 @@ TEST(GenAPITestCase, EventNotHandled) {
   ASSERT_OK(loop.StartThread());
 
   sync_completion_t done;
-  fidl::OnClientUnboundFn on_unbound =
-      [&done](fidl::UnboundReason reason, zx_status_t status, zx::channel) {
-        EXPECT_EQ(fidl::UnboundReason::kInternalError, reason);
-        EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+  fidl::OnClientUnboundFn on_unbound = [&done](fidl::UnbindInfo info, zx::channel) {
+        EXPECT_EQ(fidl::UnbindInfo::kUnexpectedMessage, info.reason);
+        EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, info.status);
         sync_completion_signal(&done);
       };
   fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
@@ -204,10 +203,9 @@ TEST(GenAPITestCase, Epitaph) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  fidl::OnClientUnboundFn on_unbound = [&](fidl::UnboundReason reason, zx_status_t status,
-                                           zx::channel channel) {
-                                         EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
-                                         EXPECT_EQ(ZX_ERR_BAD_STATE, status);
+  fidl::OnClientUnboundFn on_unbound = [&](fidl::UnbindInfo info, zx::channel channel) {
+                                         EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+                                         EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
                                          EXPECT_EQ(local_handle, channel.get());
                                          sync_completion_signal(&unbound);
                                        };
@@ -216,6 +214,84 @@ TEST(GenAPITestCase, Epitaph) {
   // Send an epitaph and wait for on_unbound to run.
   ASSERT_OK(fidl_epitaph_write(remote.get(), ZX_ERR_BAD_STATE));
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+}
+
+TEST(GenAPITestCase, UnbindInfoEncodeError) {
+  class ErrorServer : public Example::Interface {
+   public:
+    explicit ErrorServer() {}
+
+    void TwoWay(fidl::StringView in, TwoWayCompleter::Sync completer) override {
+      // Fail to send the reply due to an encoding error (the buffer is too
+      // small).
+      fidl::BytePart empty;
+      EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
+                completer.ReplyWithStatus(std::move(empty), std::move(in)));
+      completer.Close(ZX_OK);  // This should not panic.
+    }
+
+    void OneWay(fidl::StringView, OneWayCompleter::Sync) override {}
+  };
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+  fidl::Client<Example> client(std::move(local), loop.dispatcher());
+
+  sync_completion_t done;
+  fidl::OnUnboundFn<ErrorServer> on_unbound =
+      [&done](ErrorServer*, fidl::UnbindInfo info, zx::channel) {
+        EXPECT_EQ(fidl::UnbindInfo::kEncodeError, info.reason);
+        EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, info.status);
+        sync_completion_signal(&done);
+      };
+  auto server = std::make_unique<ErrorServer>();
+  auto server_binding =
+      fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
+  ASSERT_TRUE(server_binding.is_ok());
+
+  // Make a synchronous call which should fail as a result of the server end closing.
+  auto result = client->TwoWay_Sync(fidl::StringView("", 0));
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
+
+  // Wait for the unbound handler to run.
+  ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+}
+
+TEST(GenAPITestCase, UnbindInfoDecodeError) {
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  sync_completion_t done;
+  Example::AsyncEventHandlers handlers {
+    .on_event = [&done](fidl::StringView out) {
+      FAIL();
+      sync_completion_signal(&done);
+    }
+  };
+  fidl::OnClientUnboundFn on_unbound = [&done](fidl::UnbindInfo info, zx::channel) {
+    EXPECT_EQ(fidl::UnbindInfo::kDecodeError, info.reason);
+    sync_completion_signal(&done);
+  };
+  fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(on_unbound),
+                               std::move(handlers));
+
+  // Set up an Example.OnEvent() message but send it without the payload. This should trigger a
+  // decoding error.
+  Example::OnEventResponse resp{ fidl::StringView("", 0) };
+  auto encoded = fidl::internal::LinearizedAndEncoded<Example::OnEventResponse>(&resp);
+  auto& encode_result = encoded.result();
+  ASSERT_OK(encode_result.status);
+  ASSERT_OK(remote.write(0, encode_result.message.bytes().data(), sizeof(fidl_message_header_t),
+                         nullptr, 0));
+
+  ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }
 
 }  // namespace

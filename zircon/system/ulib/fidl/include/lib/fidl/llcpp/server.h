@@ -179,9 +179,8 @@ fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServe
     OnUnboundFn<Interface> on_unbound) {
   return internal::TypeErasedBindServer<typename Interface::_Outer>(
       dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch,
-      [fn = std::move(on_unbound)](void* impl, UnboundReason reason, zx_status_t status,
-                                   zx::channel channel) mutable {
-        fn(static_cast<Interface*>(impl), reason, status, std::move(channel));
+      [fn = std::move(on_unbound)](void* impl, UnbindInfo info, zx::channel channel) mutable {
+        fn(static_cast<Interface*>(impl), info, std::move(channel));
       });
 }
 
@@ -196,7 +195,7 @@ fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServe
   Interface* impl_raw = impl.get();
   return internal::TypeErasedBindServer<typename Interface::_Outer>(
       dispatcher, std::move(channel), impl_raw, &Interface::_Outer::TypeErasedDispatch,
-      [intf = std::move(impl)](void*, UnboundReason, zx_status_t, zx::channel) {});
+      [intf = std::move(impl)](void*, UnbindInfo, zx::channel) {});
 }
 
 

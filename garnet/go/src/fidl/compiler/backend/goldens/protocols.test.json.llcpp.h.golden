@@ -813,6 +813,15 @@ class Transitional final {
       void Reply(::fidl::BytePart _buffer, int64_t y);
       void Reply(::fidl::DecodedMessage<RequestResponse> params);
 
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(int64_t y);
+      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer, int64_t y);
+      zx_status_t ReplyWithStatus(
+          ::fidl::DecodedMessage<RequestResponse> params);
+
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
@@ -1340,6 +1349,15 @@ class ChannelProtocol final {
       void Reply(::fidl::BytePart _buffer, int64_t result);
       void Reply(::fidl::DecodedMessage<MethodBResponse> params);
 
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(int64_t result);
+      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer, int64_t result);
+      zx_status_t ReplyWithStatus(
+          ::fidl::DecodedMessage<MethodBResponse> params);
+
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
@@ -1354,6 +1372,15 @@ class ChannelProtocol final {
       void Reply(::zx::socket b);
       void Reply(::fidl::BytePart _buffer, ::zx::socket b);
       void Reply(::fidl::DecodedMessage<MutateSocketResponse> params);
+
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(::zx::socket b);
+      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer, ::zx::socket b);
+      zx_status_t ReplyWithStatus(
+          ::fidl::DecodedMessage<MutateSocketResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -2244,6 +2271,12 @@ class WithAndWithoutRequestResponse final {
      public:
       void Reply();
 
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus();
+
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
@@ -2259,6 +2292,16 @@ class WithAndWithoutRequestResponse final {
       void Reply(::fidl::StringView ret);
       void Reply(::fidl::BytePart _buffer, ::fidl::StringView ret);
       void Reply(::fidl::DecodedMessage<NoRequestWithResponseResponse> params);
+
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(::fidl::StringView ret);
+      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer,
+                                  ::fidl::StringView ret);
+      zx_status_t ReplyWithStatus(
+          ::fidl::DecodedMessage<NoRequestWithResponseResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -2280,6 +2323,12 @@ class WithAndWithoutRequestResponse final {
      public:
       void Reply();
 
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus();
+
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
@@ -2296,6 +2345,16 @@ class WithAndWithoutRequestResponse final {
       void Reply(::fidl::StringView ret);
       void Reply(::fidl::BytePart _buffer, ::fidl::StringView ret);
       void Reply(
+          ::fidl::DecodedMessage<WithRequestWithResponseResponse> params);
+
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(::fidl::StringView ret);
+      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer,
+                                  ::fidl::StringView ret);
+      zx_status_t ReplyWithStatus(
           ::fidl::DecodedMessage<WithRequestWithResponseResponse> params);
 
      protected:
@@ -2780,6 +2839,22 @@ class WithErrorSyntax final {
                         int64_t c);
       void Reply(::fidl::DecodedMessage<ResponseAsStructResponse> params);
 
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(
+          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
+      zx_status_t ReplySuccessWithStatus(int64_t a, int64_t b, int64_t c);
+      zx_status_t ReplyErrorWithStatus(uint32_t error);
+      zx_status_t ReplyWithStatus(
+          ::fidl::BytePart _buffer,
+          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
+      zx_status_t ReplySuccessWithStatus(::fidl::BytePart _buffer, int64_t a,
+                                         int64_t b, int64_t c);
+      zx_status_t ReplyWithStatus(
+          ::fidl::DecodedMessage<ResponseAsStructResponse> params);
+
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
@@ -2802,6 +2877,21 @@ class WithErrorSyntax final {
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params);
 
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
+      zx_status_t ReplySuccessWithStatus();
+      zx_status_t ReplyErrorWithStatus(uint32_t error);
+      zx_status_t ReplyWithStatus(
+          ::fidl::BytePart _buffer,
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
+      zx_status_t ReplySuccessWithStatus(::fidl::BytePart _buffer);
+      zx_status_t ReplyWithStatus(
+          ::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params);
+
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
@@ -2823,6 +2913,21 @@ class WithErrorSyntax final {
           ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ErrorAsEnumResponse> params);
+
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
+      zx_status_t ReplySuccessWithStatus();
+      zx_status_t ReplyErrorWithStatus(ErrorEnun error);
+      zx_status_t ReplyWithStatus(
+          ::fidl::BytePart _buffer,
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
+      zx_status_t ReplySuccessWithStatus(::fidl::BytePart _buffer);
+      zx_status_t ReplyWithStatus(
+          ::fidl::DecodedMessage<ErrorAsEnumResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3368,8 +3473,8 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  zx_status_t Dispatch(fidl_msg_t* msg,
-                       ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> Dispatch(
+      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
 };
@@ -3491,8 +3596,8 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  zx_status_t Dispatch(fidl_msg_t* msg,
-                       ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> Dispatch(
+      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
 };
@@ -3695,8 +3800,8 @@ class WithAndWithoutRequestResponse::ClientImpl final
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  zx_status_t Dispatch(fidl_msg_t* msg,
-                       ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> Dispatch(
+      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
 };
@@ -3848,8 +3953,8 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  zx_status_t Dispatch(fidl_msg_t* msg,
-                       ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> Dispatch(
+      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
 };

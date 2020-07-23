@@ -137,7 +137,10 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyShortMessage) {
   {
     auto txn = GetNextInflightTransaction();
     ASSERT_EQ(inflight_transactions(), 1);
-    txn->Reply({});
+    fidl_message_header_t header;
+    txn->Reply(fidl::Message{fidl::BytePart{reinterpret_cast<uint8_t*>(&header), sizeof(header),
+                                            sizeof(header)},
+                             {}});
     // Count drops when the transaction object is destroyed
     ASSERT_EQ(inflight_transactions(), 1);
   }
@@ -216,11 +219,16 @@ TEST_F(TransactionCountingTest, MultipleTransactionsInflight) {
 
   ASSERT_EQ(inflight_transactions(), 2);
 
-  txn1->Reply({});
+  fidl_message_header_t header;
+  txn1->Reply(fidl::Message{fidl::BytePart{reinterpret_cast<uint8_t*>(&header), sizeof(header),
+                                           sizeof(header)},
+                            {}});
   txn1.reset();
   ASSERT_EQ(inflight_transactions(), 1);
 
-  txn2->Reply({});
+  txn2->Reply(fidl::Message{fidl::BytePart{reinterpret_cast<uint8_t*>(&header), sizeof(header),
+                                           sizeof(header)},
+                            {}});
   txn2.reset();
   ASSERT_EQ(inflight_transactions(), 0);
 }

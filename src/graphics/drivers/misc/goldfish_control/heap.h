@@ -48,7 +48,7 @@ class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_
   // This constructor is for internal use only. Use |Heap::Create()| instead.
   Heap(Control* control);
 
-  void OnClose(fidl::UnboundReason reason, zx_status_t status, zx::channel channel);
+  void OnClose(fidl::UnbindInfo info, zx::channel channel);
 
   Control* control_;
 

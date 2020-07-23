@@ -343,7 +343,7 @@ EmptyProtocol::ClientImpl::SendAndReceive_Sync(
   return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-zx_status_t EmptyProtocol::ClientImpl::Dispatch(
+std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::Dispatch(
     fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
@@ -351,10 +351,13 @@ zx_status_t EmptyProtocol::ClientImpl::Dispatch(
     case kEmptyProtocol_Receive_Ordinal: {
       auto result = ::fidl::DecodeAs<ReceiveResponse>(msg);
       if (result.status != ZX_OK) {
-        return result.status;
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
+                                  result.status};
       }
       if (auto* managed = std::get_if<0>(&handlers_.receive)) {
-        if (!(*managed)) return ZX_ERR_NOT_SUPPORTED;
+        if (!(*managed))
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                    ZX_ERR_NOT_SUPPORTED};
         auto message = result.message.message();
         (*managed)(std::move(message->e));
       } else {
@@ -366,23 +369,27 @@ zx_status_t EmptyProtocol::ClientImpl::Dispatch(
       auto result = ::fidl::DecodeAs<SendAndReceiveResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
-        return result.status;
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
+                                  result.status};
       }
       static_cast<SendAndReceiveResponseContext*>(context)->OnReply(
           std::move(result.message));
       break;
     }
     case kFidlOrdinalEpitaph:
-      if (context) return ZX_ERR_INVALID_ARGS;
-      ::fidl::internal::ClientBase::Close(
-          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
-      break;
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context)
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_INVALID_ARGS};
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
+                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
       if (context) context->OnError();
-      return ZX_ERR_NOT_SUPPORTED;
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                ZX_ERR_NOT_SUPPORTED};
   }
-  return ZX_OK;
+  return {};
 }
 
 zx_status_t EmptyProtocol::SyncClient::HandleEvents(
@@ -467,23 +474,13 @@ zx_status_t EmptyProtocol::Call::HandleEvents(
 
 bool EmptyProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                 ::fidl::Transaction* txn) {
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_INVALID_ARGS);
-    return true;
-  }
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    txn->Close(status);
-    return true;
-  }
   switch (hdr->ordinal) {
     case kEmptyProtocol_Send_Ordinal: {
       auto result = ::fidl::DecodeAs<SendRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -493,7 +490,7 @@ bool EmptyProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     case kEmptyProtocol_SendAndReceive_Ordinal: {
       auto result = ::fidl::DecodeAs<SendAndReceiveRequest>(msg);
       if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
         return true;
       }
       auto message = result.message.message();
@@ -512,7 +509,8 @@ bool EmptyProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return found;
 }
@@ -556,7 +554,8 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
-void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
+zx_status_t
+EmptyProtocol::Interface::SendAndReceiveCompleterBase::ReplyWithStatus(
     ::llcpp::fidl::test::json::Empty e) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
@@ -568,31 +567,50 @@ void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
           &_response);
   auto& _encode_result = _encoded.result();
   if (_encode_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
+    return _encode_result.status;
   }
-  CompleterBase::SendReply(std::move(_encode_result.message));
+  return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
 void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
+    ::llcpp::fidl::test::json::Empty e) {
+  ReplyWithStatus(std::move(e));
+}
+
+zx_status_t
+EmptyProtocol::Interface::SendAndReceiveCompleterBase::ReplyWithStatus(
     ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::Empty e) {
   if (_buffer.capacity() < SendAndReceiveResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
+    CompleterBase::InternalError(
+        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
   new (_buffer.data()) SendAndReceiveResponse{e};
   _buffer.set_actual(sizeof(SendAndReceiveResponse));
-  CompleterBase::SendReply(
+  return CompleterBase::SendReply(
       ::fidl::DecodedMessage<SendAndReceiveResponse>(std::move(_buffer)));
 }
 
 void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
+    ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::Empty e) {
+  ReplyWithStatus(std::move(_buffer), std::move(e));
+}
+
+zx_status_t
+EmptyProtocol::Interface::SendAndReceiveCompleterBase::ReplyWithStatus(
     ::fidl::DecodedMessage<SendAndReceiveResponse> params) {
   ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
                   kFidlWireFormatMagicNumberInitial);
   ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
                   kEmptyProtocol_SendAndReceive_Ordinal);
-  CompleterBase::SendReply(std::move(params));
+  return CompleterBase::SendReply(std::move(params));
+}
+
+void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
+    ::fidl::DecodedMessage<SendAndReceiveResponse> params) {
+  ReplyWithStatus(std::move(params));
 }
 
 void EmptyProtocol::SendRequest::_InitHeader(zx_txid_t _txid) {

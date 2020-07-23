@@ -120,7 +120,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   zx_status_t Init(netdev::Fifos* out);
   zx_status_t Bind(zx::channel channel);
   void StopTxThread();
-  void OnUnbind(fidl::UnboundReason reason, zx::channel channel);
+  void OnUnbind(fidl::UnbindInfo::Reason reason, zx::channel channel);
   int Thread();
   // Fetch tx descriptors from the FIFO and queue them in the parent `DeviceInterface`'s TxQueue.
   zx_status_t FetchTx();

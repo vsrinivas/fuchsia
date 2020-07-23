@@ -85,10 +85,6 @@ class ClientBase {
   // dispatcher thread if provided.
   void Unbind();
 
-  // Must only be called from the message handler on a dispatcher thread having received an epitaph
-  // from the server. Like Unbind(), except that the epitaph is forwarded to on_unbound.
-  void Close(zx_status_t epitaph);
-
   // Stores the given asynchronous transaction response context, setting the txid field.
   void PrepareAsyncTxn(ResponseContext* context);
 
@@ -107,11 +103,11 @@ class ClientBase {
 
   // Generated client dispatch function. If the ResponseContext* is non-null, the message is a
   // response to an asynchronous transaction. Otherwise, it is an event.
-  virtual zx_status_t Dispatch(fidl_msg_t* msg, ResponseContext* context) = 0;
+  virtual std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg, ResponseContext* context) = 0;
 
  private:
   // Dispatch function invoked by AsyncBinding on incoming message. Invokes the virtual Dispatch().
-  zx_status_t Dispatch(fidl_msg_t* msg);
+  std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg);
 
   // Weak reference to the internal binding state.
   std::weak_ptr<AsyncBinding> binding_;

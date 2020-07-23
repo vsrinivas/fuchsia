@@ -4,6 +4,7 @@
 
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/trace.h>
 #include <lib/zx/channel.h>
@@ -57,7 +58,15 @@ void SimpleBinding::MessageHandler(async_dispatcher_t* dispatcher, async_wait_t*
       fidl_trace(WillLLCPPAsyncChannelRead);
       status = zx_channel_read(wait->object, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
                                ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
-      if (status != ZX_OK || msg.num_bytes < sizeof(fidl_message_header_t)) {
+      if (status != ZX_OK)
+        return;
+
+      // Do basic validation on the message.
+      status = msg.num_bytes < sizeof(fidl_message_header_t)
+          ? ZX_ERR_INVALID_ARGS
+          : fidl_validate_txn_header(reinterpret_cast<fidl_message_header_t*>(msg.bytes));
+      if (status != ZX_OK) {
+        zx_handle_close_many(msg.handles, msg.num_handles);
         return;
       }
       fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes, msg.num_bytes,

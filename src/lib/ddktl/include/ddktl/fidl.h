@@ -122,7 +122,7 @@ class DdkTransaction : public fidl::Transaction {
   }
 
  protected:
-  void Reply(fidl::Message msg) final {
+  zx_status_t Reply(fidl::Message msg) final {
     if (!closed_) {
       const fidl_msg_t fidl_msg{
           .bytes = msg.bytes().data(),
@@ -134,6 +134,7 @@ class DdkTransaction : public fidl::Transaction {
       status_ = connection_.Txn()->reply(connection_.Txn(), &fidl_msg);
     }
     msg.ClearHandlesUnsafe();
+    return closed_ ? ZX_ERR_CANCELED : status_;
   }
 
   void Close(zx_status_t epitaph) final {

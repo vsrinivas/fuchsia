@@ -2754,6 +2754,20 @@ class TestProtocol final {
                  StrictXUnionHenceResponseMayBeStackAllocatedResponse>
                      params);
 
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(
+          ::llcpp::fidl::test::json::StrictBoundedXUnion xu);
+      zx_status_t ReplyWithStatus(
+          ::fidl::BytePart _buffer,
+          ::llcpp::fidl::test::json::StrictBoundedXUnion xu);
+      zx_status_t ReplyWithStatus(
+          ::fidl::DecodedMessage<
+              StrictXUnionHenceResponseMayBeStackAllocatedResponse>
+              params);
+
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
@@ -2775,6 +2789,20 @@ class TestProtocol final {
       void Reply(::fidl::DecodedMessage<
                  FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
                      params);
+
+      // The following APIs are identical to the above APIs except that they
+      // propagate up any internal error status on failure. On failure,
+      // unbinding is still triggered with the cause of the failure propagated
+      // to the unbinding hook if possible.
+      zx_status_t ReplyWithStatus(
+          ::llcpp::fidl::test::json::OlderSimpleUnion xu);
+      zx_status_t ReplyWithStatus(
+          ::fidl::BytePart _buffer,
+          ::llcpp::fidl::test::json::OlderSimpleUnion xu);
+      zx_status_t ReplyWithStatus(
+          ::fidl::DecodedMessage<
+              FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
+              params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3176,8 +3204,8 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  zx_status_t Dispatch(fidl_msg_t* msg,
-                       ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> Dispatch(
+      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
 };

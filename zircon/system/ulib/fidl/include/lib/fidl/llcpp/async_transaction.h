@@ -25,12 +25,11 @@ namespace internal {
 class AsyncTransaction final : public Transaction {
  public:
   explicit AsyncTransaction(zx_txid_t txid, TypeErasedServerDispatchFn dispatch_fn,
-                            bool* binding_released, zx_status_t* resume_status)
+                            bool* binding_released)
       : Transaction(),
         txid_(txid),
         dispatch_fn_(dispatch_fn),
-        binding_released_(binding_released),
-        resume_status_(resume_status) {}
+        binding_released_(binding_released) {}
 
   AsyncTransaction(AsyncTransaction&& other) noexcept : Transaction(std::move(other)) {
     if (this != &other) {
@@ -48,18 +47,20 @@ class AsyncTransaction final : public Transaction {
 
   virtual ~AsyncTransaction() { ZX_ASSERT(!owned_binding_); }
 
-  void Reply(fidl::Message msg) final;
+  zx_status_t Reply(fidl::Message msg) final;
 
   void EnableNextDispatch() final;
 
   void Close(zx_status_t epitaph) final;
+
+  void InternalError(UnbindInfo error) final;
 
   std::unique_ptr<Transaction> TakeOwnership() final;
 
  private:
   friend fidl::internal::AsyncBinding;
 
-  void Dispatch(std::shared_ptr<AsyncBinding>&& binding, fidl_msg_t* msg);
+  std::optional<UnbindInfo> Dispatch(std::shared_ptr<AsyncBinding>&& binding, fidl_msg_t* msg);
 
   void MoveImpl(AsyncTransaction&& other) noexcept {
     txid_ = other.txid_;
@@ -68,8 +69,6 @@ class AsyncTransaction final : public Transaction {
     unowned_binding_ = std::move(other.unowned_binding_);
     binding_released_ = other.binding_released_;
     other.binding_released_ = nullptr;
-    resume_status_ = other.resume_status_;
-    other.resume_status_ = nullptr;
   }
 
   zx_txid_t txid_ = 0;
@@ -83,7 +82,7 @@ class AsyncTransaction final : public Transaction {
   std::weak_ptr<AsyncBinding> unowned_binding_ = {};
   TypeErasedServerDispatchFn dispatch_fn_ = {};
   bool* binding_released_ = nullptr;
-  zx_status_t* resume_status_ = nullptr;
+  std::optional<UnbindInfo> unbind_info_;
   bool* moved_ = nullptr;
 };
 

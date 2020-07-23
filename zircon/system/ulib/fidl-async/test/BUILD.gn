@@ -30,10 +30,7 @@ test("fidl-async-test") {
       configs -= fdio_config
     }
   }
-  sources = [
-    "llcpp_bind_test.cc",
-    "llcpp_channel_transaction_test.cc",
-  ]
+  sources = [ "llcpp_bind_test.cc" ]
   deps = [
     ":fidl.test.simple_llcpp",
     "//sdk/lib/fdio",

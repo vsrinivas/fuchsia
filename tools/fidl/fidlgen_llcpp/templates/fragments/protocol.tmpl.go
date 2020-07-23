@@ -430,6 +430,22 @@ class {{ .Name }} final {
       void {{ template "ReplyInPlaceMethodSignature" . }};
           {{- end }}
 
+      // The following APIs are identical to the above APIs except that they propagate up any
+      // internal error status on failure. On failure, unbinding is still triggered with the cause
+      // of the failure propagated to the unbinding hook if possible.
+      zx_status_t {{ template "ReplyWithStatusCFlavorMethodSignature" . }};
+          {{- if .Result }}
+      zx_status_t {{ template "ReplyWithStatusCFlavorResultSuccessMethodSignature" . }};
+      zx_status_t {{ template "ReplyWithStatusCFlavorResultErrorMethodSignature" . }};
+          {{- end }}
+          {{- if .Response }}
+      zx_status_t {{ template "ReplyWithStatusCallerAllocateMethodSignature" . }};
+            {{- if .Result }}
+      zx_status_t {{ template "ReplyWithStatusCallerAllocateResultSuccessMethodSignature" . }};
+            {{- end }}
+      zx_status_t {{ template "ReplyWithStatusInPlaceMethodSignature" . }};
+          {{- end }}
+
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };

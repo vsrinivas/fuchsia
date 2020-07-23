@@ -75,9 +75,8 @@ void Heap::Bind(zx::channel server_request) {
   async::PostTask(loop_.dispatcher(), [server_handle, this] {
     auto result = fidl::BindServer<HeapInterface>(
         loop_.dispatcher(), zx::channel(server_handle), static_cast<HeapInterface*>(this),
-        [](HeapInterface* interface, fidl::UnboundReason reason, zx_status_t status,
-           zx::channel channel) {
-          static_cast<Heap*>(interface)->OnClose(reason, status, std::move(channel));
+        [](HeapInterface* interface, fidl::UnbindInfo info, zx::channel channel) {
+          static_cast<Heap*>(interface)->OnClose(info, std::move(channel));
         });
     if (!result.is_ok()) {
       zxlogf(ERROR, "[%s] Cannot bind to channel: status: %d", kTag, result.error());
@@ -86,11 +85,11 @@ void Heap::Bind(zx::channel server_request) {
   });
 }
 
-void Heap::OnClose(fidl::UnboundReason reason, zx_status_t status, zx::channel channel) {
-  if (reason == fidl::UnboundReason::kInternalError) {
-    zxlogf(ERROR, "[%s] Channel internal error: status: %d", kTag, status);
-  } else if (reason == fidl::UnboundReason::kPeerClosed) {
-    zxlogf(INFO, "[%s] Client closed Heap connection: epitaph: %d", kTag, status);
+void Heap::OnClose(fidl::UnbindInfo info, zx::channel channel) {
+  if (info.reason == fidl::UnbindInfo::kPeerClosed) {
+    zxlogf(INFO, "[%s] Client closed Heap connection: epitaph: %d", kTag, info.status);
+  } else if (info.reason != fidl::UnbindInfo::kUnbind && info.reason != fidl::UnbindInfo::kClose) {
+    zxlogf(ERROR, "[%s] Channel internal error: status: %d", kTag, info.status);
   }
 
   control_->RemoveHeap(this);

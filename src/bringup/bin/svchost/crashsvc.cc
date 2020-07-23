@@ -145,26 +145,25 @@ void MakeExceptionHandlerClient(
     return;
   }
 
-  fidl::OnClientUnboundFn on_unbound = [dispatcher, exception_handler_svc, client](
-                                           fidl::UnboundReason reason, zx_status_t status,
-                                           zx::channel channel) {
-    // If the unbind was not an error, don't reconnect and stop sending exceptions to
-    // fuchsia.exception.Handler. This should only happen in tests.
-    if (status == ZX_OK || status == ZX_ERR_CANCELED) {
-      *client = nullptr;
-      return;
-    }
+  fidl::OnClientUnboundFn on_unbound =
+      [dispatcher, exception_handler_svc, client](fidl::UnbindInfo info, zx::channel channel) {
+        // If the unbind was not an error, don't reconnect and stop sending exceptions to
+        // fuchsia.exception.Handler. This should only happen in tests.
+        if (info.status == ZX_OK || info.status == ZX_ERR_CANCELED) {
+          *client = nullptr;
+          return;
+        }
 
-    LogError("Lost connection to fuchsia.exception.Handler", status);
+        LogError("Lost connection to fuchsia.exception.Handler", info.status);
 
-    // Immediately attempt to reconnect to fuchsia.exception.Handler. An exponential backoff is not
-    // used because a reconnection loop will only ever happen if the build does not contain a server
-    // for the protocol and crashsvc is configured to use the exception handling server.
-    //
-    // TODO(56491): figure out a way to detect if the process holding the other end of |channel|
-    // has crashed and stop sending exceptions to it.
-    MakeExceptionHandlerClient(std::move(channel), dispatcher, exception_handler_svc, client);
-  };
+        // Immediately attempt to reconnect to fuchsia.exception.Handler. An exponential backoff is not
+        // used because a reconnection loop will only ever happen if the build does not contain a server
+        // for the protocol and crashsvc is configured to use the exception handling server.
+        //
+        // TODO(56491): figure out a way to detect if the process holding the other end of |channel|
+        // has crashed and stop sending exceptions to it.
+        MakeExceptionHandlerClient(std::move(channel), dispatcher, exception_handler_svc, client);
+      };
 
   *client = std::make_unique<fidl::Client<llcpp::fuchsia::exception::Handler>>(
       std::move(channel), dispatcher, std::move(on_unbound));

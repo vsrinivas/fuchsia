@@ -61,8 +61,8 @@ void InputReportInstance::GetInputReportsReader(zx::channel req,
 
   // Invoked when the channel is closed or on any binding-related error.
   fidl::OnUnboundFn<llcpp::fuchsia::input::report::InputReportsReader::Interface> unbound_fn(
-      [](llcpp::fuchsia::input::report::InputReportsReader::Interface* dev, fidl::UnboundReason,
-         zx_status_t, zx::channel) {
+      [](llcpp::fuchsia::input::report::InputReportsReader::Interface* dev, fidl::UnbindInfo,
+         zx::channel) {
         auto* device = static_cast<InputReportsReader*>(dev)->instance_;
         fbl::AutoLock lock(&device->report_lock_);
 

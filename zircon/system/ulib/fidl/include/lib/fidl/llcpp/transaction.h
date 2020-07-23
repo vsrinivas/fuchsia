@@ -10,6 +10,7 @@
 #include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/types.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
@@ -47,7 +48,7 @@ namespace fidl {
 //         DriverRpcTransaction& operator=(DriverRpcTransaction&& other) noexcept;
 //
 //     protected:
-//         void Reply(fidl::Message msg) final { /* Send to another driver etc. */ }
+//         zx_status_t Reply(fidl::Message msg) final { /* Send to another driver etc. */ }
 //         void Close(zx_status_t epitaph) final { /* Send epitaph and close down transport. */ }
 //
 //         std::unique_ptr<Transaction> TakeOwnership() final {
@@ -83,10 +84,16 @@ class Transaction {
   // Called at most once for a two-way FIDL method, to reply to a two-way call.
   // Never called in case of a one-way call.
   // Implementation must fill in the correct transaction ID.
-  virtual void Reply(fidl::Message message) = 0;
+  virtual zx_status_t Reply(fidl::Message message) = 0;
 
   // Should send an epitaph and then close the underlying transport e.g. channel.
   virtual void Close(zx_status_t epitaph) = 0;
+
+  // Implementations which support a user-specified unbound hook should propagate `error` to that
+  // hook. Otherwise, by default, InternalError() just closes the connection to the client.
+  virtual void InternalError(UnbindInfo error) {
+    Close(ZX_ERR_PEER_CLOSED);
+  }
 
   // Resumes the asynchronous wait on the underlying channel. This allows at least one more
   // dispatcher thread to enter the message handler for this binding in parallel.
@@ -133,22 +140,25 @@ class CompleterBase {
 
   // Encode and write |decoded_msg| as the reply.
   template <typename FidlType>
-  void SendReply(DecodedMessage<FidlType> decoded_msg) {
+  zx_status_t SendReply(DecodedMessage<FidlType> decoded_msg) {
     static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
     EncodeResult<FidlType> encode_result = fidl::Encode(std::move(decoded_msg));
     if (encode_result.status != ZX_OK) {
-      Close(ZX_ERR_INTERNAL);
-      return;
+      InternalError({UnbindInfo::kEncodeError, encode_result.status});
+      return encode_result.status;
     }
-    SendReply(std::move(encode_result.message));
+    return SendReply(std::move(encode_result.message));
   }
 
   // Write |encoded_msg| as the reply.
   template <typename FidlType>
-  void SendReply(EncodedMessage<FidlType> encoded_msg) {
+  zx_status_t SendReply(EncodedMessage<FidlType> encoded_msg) {
     static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
-    SendReply(encoded_msg.ToAnyMessage());
+    return SendReply(encoded_msg.ToAnyMessage());
   }
+
+  // Invokes transaction_.InternalError().
+  void InternalError(UnbindInfo error);
 
   // Move the contents of |transaction_| to heap and return it.
   std::unique_ptr<Transaction> TakeOwnership();
@@ -176,7 +186,7 @@ class CompleterBase {
     bool released_ = false;
   };
 
-  void SendReply(Message msg);
+  zx_status_t SendReply(Message msg);
 
   void EnsureHasTransaction(ScopedLock* lock);
 

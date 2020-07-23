@@ -12,9 +12,9 @@ namespace handles {
 
 namespace {}  // namespace
 
-zx_status_t SomeProtocol::ClientImpl::Dispatch(
+std::optional<::fidl::UnbindInfo> SomeProtocol::ClientImpl::Dispatch(
     fidl_msg_t*, ::fidl::internal::ResponseContext*) {
-  return ZX_OK;
+  return {};
 }
 
 }  // namespace handles

@@ -81,7 +81,8 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
       : ::fidl::internal::ClientBase(std::move(client_end), dispatcher, std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  zx_status_t Dispatch(fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> Dispatch(fidl_msg_t* msg,
+                                             ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
 };
@@ -89,7 +90,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
 
 {{- define "ClientDispatchDefinition" }}
 {{- if FilterMethodsWithoutResps .Methods }}
-zx_status_t {{ .Name }}::ClientImpl::Dispatch(
+std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::Dispatch(
     fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -100,22 +101,24 @@ zx_status_t {{ .Name }}::ClientImpl::Dispatch(
       if (result.status != ZX_OK) {
         {{- if .HasRequest }}
         context->OnError();
-	{{- end }}
-        return result.status;
+        {{- end }}
+	return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, result.status};
       }
       {{- if .HasRequest }}
       static_cast<{{ .Name }}ResponseContext*>(context)->OnReply({{- if .Response -}} std::move(result.message) {{- end -}});
       {{- else }}
         {{- if .Response }}
       if (auto* managed = std::get_if<0>(&handlers_.{{ .NameInLowerSnakeCase }})) {
-        if (!(*managed)) return ZX_ERR_NOT_SUPPORTED;
+        if (!(*managed))
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
         auto message = result.message.message();
         (*managed)({{ template "SyncEventHandlerMoveParams" .Response }});
       } else {
         std::get<1>(handlers_.{{ .NameInLowerSnakeCase }})(std::move(result.message));
       }
         {{- else }}
-      if (!handlers_.{{ .NameInLowerSnakeCase }}) return ZX_ERR_NOT_SUPPORTED;
+      if (!handlers_.{{ .NameInLowerSnakeCase }})
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
       handlers_.{{ .NameInLowerSnakeCase }}();
 	{{- end }}
       {{- end }}
@@ -123,19 +126,21 @@ zx_status_t {{ .Name }}::ClientImpl::Dispatch(
     }
   {{- end }}
     case kFidlOrdinalEpitaph:
-      if (context) return ZX_ERR_INVALID_ARGS;
-      ::fidl::internal::ClientBase::Close(reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
-      break;
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context)
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_INVALID_ARGS};
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
+                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
       if (context) context->OnError();
-      return ZX_ERR_NOT_SUPPORTED;
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
   }
-  return ZX_OK;
+  return {};
 }
 {{- else }}
-zx_status_t {{ .Name }}::ClientImpl::Dispatch(fidl_msg_t*, ::fidl::internal::ResponseContext*) {
-  return ZX_OK;
+std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::Dispatch(fidl_msg_t*, ::fidl::internal::ResponseContext*) {
+  return {};
 }
 {{- end }}
 {{- end }}

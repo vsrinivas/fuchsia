@@ -74,17 +74,14 @@ class TestProtocol {
 
     // For responses, find and remove the entry for the matching txid. For events, increment the
     // event count.
-    zx_status_t Dispatch(fidl_msg_t* msg, internal::ResponseContext* context) {
+    std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg, internal::ResponseContext* context) {
       auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
       EXPECT_EQ(!hdr->txid, !context);  // hdr->txid == 0 iff context == nullptr.
-      if (!hdr->txid != !context) {
-        return ZX_OK;  // This is a failure, but let the test continue.
-      }
+      if (!hdr->txid != !context)
+        return {};  // This is a failure, but let the test continue.
       // On epitaph, invoke Close() on the binding.
-      if (hdr->ordinal == kFidlOrdinalEpitaph) {
-        internal::ClientBase::Close(reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
-        return ZX_OK;
-      }
+      if (hdr->ordinal == kFidlOrdinalEpitaph)
+        return UnbindInfo{UnbindInfo::kPeerClosed, reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
       std::unique_lock lock(lock_);
       if (hdr->txid) {
         auto txid_it = txids_.find(hdr->txid);
@@ -95,7 +92,7 @@ class TestProtocol {
       } else {
         event_count_++;
       }
-      return ZX_OK;
+      return {};
     }
 
     std::mutex lock_;
@@ -120,10 +117,9 @@ TEST(ClientBindingTestCase, AsyncTxn) {
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
-                                     zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
-                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    EXPECT_EQ(0, client->GetTxidCount());
                                    sync_completion_signal(&unbound);
@@ -154,10 +150,9 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
-                                     zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
-                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    EXPECT_EQ(0, client->GetTxidCount());
                                    sync_completion_signal(&unbound);
@@ -214,10 +209,9 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
-                                     zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnboundReason::kInternalError, reason);
-                                   EXPECT_EQ(ZX_ERR_NOT_FOUND, status);
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnbindInfo::kUnexpectedMessage, info.reason);
+                                   EXPECT_EQ(ZX_ERR_NOT_FOUND, info.status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    EXPECT_EQ(0, client->GetTxidCount());
                                    sync_completion_signal(&unbound);
@@ -244,9 +238,9 @@ TEST(ClientBindingTestCase, Events) {
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status, zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
-                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    EXPECT_EQ(10, client->GetEventCount());  // Expect 10 events.
                                    sync_completion_signal(&unbound);
@@ -279,10 +273,9 @@ TEST(ClientBindingTestCase, Unbind) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
-                                     zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
-                                   EXPECT_OK(status);
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+                                   EXPECT_OK(info.status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    sync_completion_signal(&unbound);
                                  };
@@ -302,10 +295,9 @@ TEST(ClientBindingTestCase, UnbindOnDestroy) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
-                                     zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
-                                   EXPECT_OK(status);
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+                                   EXPECT_OK(info.status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    sync_completion_signal(&unbound);
                                  };
@@ -326,10 +318,9 @@ TEST(ClientBindingTestCase, BindingRefPreventsUnbind) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
-                                     zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
-                                   EXPECT_OK(status);
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+                                   EXPECT_OK(info.status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    sync_completion_signal(&unbound);
                                  };
@@ -383,10 +374,9 @@ TEST(ClientBindingTestCase, Epitaph) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
-                                     zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
-                                   EXPECT_EQ(ZX_ERR_BAD_STATE, status);
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+                                   EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    sync_completion_signal(&unbound);
                                  };
@@ -406,11 +396,10 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
-                                     zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
+  OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
                                    // No epitaph is equivalent to ZX_ERR_PEER_CLOSED epitaph.
-                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    sync_completion_signal(&unbound);
                                  };
