@@ -122,7 +122,7 @@ static void x86_context_switch_spec_mitigations(Thread* oldthread, Thread* newth
   }
 }
 
-__attribute__((target("fsgsbase"))) static void x86_segment_selector_save_state(Thread* thread) {
+static void x86_segment_selector_save_state(Thread* thread) {
   // Save the user fs_base and gs_base.  The new rdfsbase instruction is much faster than reading
   // the MSR, so use the former when available.
   if (likely(g_x86_feature_fsgsbase)) {
@@ -138,7 +138,7 @@ __attribute__((target("fsgsbase"))) static void x86_segment_selector_save_state(
   }
 }
 
-__attribute__((target("fsgsbase"))) static void x86_segment_selector_restore_state(Thread* thread) {
+static void x86_segment_selector_restore_state(Thread* thread) {
   set_ds(0);
   set_es(0);
   set_fs(0);
@@ -165,8 +165,7 @@ __attribute__((target("fsgsbase"))) static void x86_segment_selector_restore_sta
   }
 }
 
-__attribute__((target("fsgsbase"))) static void x86_segment_selector_context_switch(
-    Thread* oldthread, Thread* newthread) {
+static void x86_segment_selector_context_switch(Thread* oldthread, Thread* newthread) {
   // Save the user fs_base register value.  The new rdfsbase instruction is much faster than reading
   // the MSR, so use the former in preference.
   if (likely(g_x86_feature_fsgsbase)) {
@@ -250,7 +249,7 @@ static void x86_debug_restore_state(Thread* thread) {
 // this function does not use fsgsbase instructions directly, it calls
 // |x86_segment_selector_context_switch|, which does.  By adding the attribute here, we enable the
 // compiler to inline |x86_segment_selector_context_switch| into this function.
-__attribute__((target("fsgsbase"))) void arch_context_switch(Thread* oldthread, Thread* newthread) {
+void arch_context_switch(Thread* oldthread, Thread* newthread) {
   // set the tss SP0 value to point at the top of our stack
   x86_set_tss_sp(newthread->stack().top());
 

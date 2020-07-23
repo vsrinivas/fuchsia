@@ -13,6 +13,9 @@ config("abi") {
   cflags = [
     "-mno-red-zone",
 
+    # context switch routines conditionally use these instructions.
+    "-mfsgsbase",
+
     # Hard disable floating point in the kernel.
     "-msoft-float",
     "-mno-mmx",
