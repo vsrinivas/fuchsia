@@ -18,6 +18,7 @@
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/dlfcn.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -488,6 +489,12 @@ static zx_status_t handle_interp(launchpad_t* lp, zx_handle_t vmo, const char* i
   zx_status_t status = setup_loader_svc(lp);
   if (status != ZX_OK)
     return status;
+
+  // Don't send null terminator in LoadObject call; FIDL strings are not null-terminated.
+  if (interp[interp_len] != '\0') {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  interp_len--;
 
   zx_handle_t interp_vmo;
   status = loader_svc_rpc(lp->special_handles[HND_LDSVC_LOADER], LDMSG_OP_LOAD_OBJECT, interp,

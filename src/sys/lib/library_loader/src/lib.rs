@@ -33,9 +33,6 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
                         control_handle.shutdown();
                     }
                     LoaderRequest::LoadObject { object_name, responder } => {
-                        // TODO(ZX-3392): The name provided by the client here has a null byte at
-                        // the end, which doesn't work from here on out (io.fidl doesn't like it).
-                        let object_name = object_name.trim_matches(char::from(0)).to_string();
                         let mut errors = vec![];
                         for dir_proxy in &search_dirs {
                             match load_vmo(dir_proxy, &object_name).await {

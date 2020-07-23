@@ -73,6 +73,7 @@ mod processargs;
 mod util;
 
 use {
+    anyhow::{anyhow, Context},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io as fio, fidl_fuchsia_ldsvc as fldsvc,
     fuchsia_async::{self as fasync, TimeoutExt},
@@ -772,9 +773,14 @@ async fn get_dynamic_linker<'a>(
     executable
         .read(&mut interp[..], interp_hdr.offset as u64)
         .map_err(|s| ProcessBuilderError::GenericStatus("Failed to read from VMO", s))?;
-    let interp_str = std::str::from_utf8(&interp).map_err(|e| {
-        ProcessBuilderError::Internal("Interp header contained invalid UTF8", e.into())
-    })?;
+    // Trim null terminator included in filesz.
+    match interp.pop() {
+        Some(b'\0') => Ok(()),
+        _ => Err(ProcessBuilderError::InvalidInterpHeader(anyhow!("Missing null terminator"))),
+    }?;
+    let interp_str = std::str::from_utf8(&interp)
+        .context("Invalid UTF8")
+        .map_err(ProcessBuilderError::InvalidInterpHeader)?;
 
     // Retrieve the dynamic linker as a VMO from fuchsia.ldsvc.Loader
     const LDSO_LOAD_TIMEOUT_SEC: i64 = 10;
@@ -886,19 +892,21 @@ pub enum ProcessBuilderError {
     #[error("Failed to start process: {}", _0)]
     ProcessStart(zx::Status),
     #[error("Failed to parse ELF: {}", _0)]
-    ElfParse(elf_parse::ElfParseError),
+    ElfParse(#[from] elf_parse::ElfParseError),
     #[error("Failed to load ELF: {}", _0)]
-    ElfLoad(elf_load::ElfLoadError),
+    ElfLoad(#[from] elf_load::ElfLoadError),
     #[error("{}", _0)]
-    Processargs(processargs::ProcessargsError),
+    Processargs(#[from] processargs::ProcessargsError),
     #[error("{}: {}", _0, _1)]
     GenericStatus(&'static str, zx::Status),
     #[error("{}: {}", _0, _1)]
-    Internal(&'static str, anyhow::Error),
+    Internal(&'static str, #[source] anyhow::Error),
+    #[error("Invalid PT_INTERP header: {}", _0)]
+    InvalidInterpHeader(#[source] anyhow::Error),
     #[error("Failed to build process with dynamic ELF, missing fuchsia.ldsvc.Loader handle")]
     LoaderMissing(),
     #[error("Failed to load dynamic linker from fuchsia.ldsvc.Loader: {}", _0)]
-    LoadDynamicLinker(fidl::Error),
+    LoadDynamicLinker(#[source] fidl::Error),
     #[error("Timed out loading dynamic linker from fuchsia.ldsvc.Loader")]
     LoadDynamicLinkerTimeout(),
     #[error("Failed to write bootstrap message to channel: {}", _0)]
@@ -911,7 +919,9 @@ impl ProcessBuilderError {
     /// Returns an appropriate zx::Status code for the given error.
     pub fn as_zx_status(&self) -> zx::Status {
         match self {
-            ProcessBuilderError::InvalidArg(_) => zx::Status::INVALID_ARGS,
+            ProcessBuilderError::InvalidArg(_)
+            | ProcessBuilderError::InvalidInterpHeader(_)
+            | ProcessBuilderError::LoaderMissing() => zx::Status::INVALID_ARGS,
             ProcessBuilderError::BadHandle(_) => zx::Status::BAD_HANDLE,
             ProcessBuilderError::CreateProcess(s)
             | ProcessBuilderError::CreateThread(s)
@@ -923,28 +933,9 @@ impl ProcessBuilderError {
             ProcessBuilderError::ElfLoad(e) => e.as_zx_status(),
             ProcessBuilderError::Processargs(e) => e.as_zx_status(),
             ProcessBuilderError::Internal(_, _) => zx::Status::INTERNAL,
-            ProcessBuilderError::LoaderMissing() => zx::Status::INVALID_ARGS,
             ProcessBuilderError::LoadDynamicLinker(_) => zx::Status::NOT_FOUND,
             ProcessBuilderError::LoadDynamicLinkerTimeout() => zx::Status::TIMED_OUT,
         }
-    }
-}
-
-impl From<elf_parse::ElfParseError> for ProcessBuilderError {
-    fn from(err: elf_parse::ElfParseError) -> Self {
-        ProcessBuilderError::ElfParse(err)
-    }
-}
-
-impl From<elf_load::ElfLoadError> for ProcessBuilderError {
-    fn from(err: elf_load::ElfLoadError) -> Self {
-        ProcessBuilderError::ElfLoad(err)
-    }
-}
-
-impl From<processargs::ProcessargsError> for ProcessBuilderError {
-    fn from(err: processargs::ProcessargsError) -> Self {
-        ProcessBuilderError::Processargs(err)
     }
 }
 
@@ -952,7 +943,7 @@ impl From<processargs::ProcessargsError> for ProcessBuilderError {
 mod tests {
     use {
         super::*,
-        anyhow::{format_err, Context as _, Error},
+        anyhow::Error,
         fidl::endpoints::{Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
@@ -1425,14 +1416,14 @@ mod tests {
     fn parse_handle_info_from_message(message: &zx::MessageBuf) -> Result<Vec<HandleInfo>, Error> {
         let bytes = message.bytes();
         let header = LayoutVerified::<&[u8], processargs::MessageHeader>::new_from_prefix(bytes)
-            .ok_or(format_err!("Failed to parse processargs header"))?
+            .ok_or(anyhow!("Failed to parse processargs header"))?
             .0;
 
         let offset = header.handle_info_off as usize;
         let len = mem::size_of::<u32>() * message.n_handles();
         let info_bytes = &bytes[offset..offset + len];
         let raw_info = LayoutVerified::<&[u8], [u32]>::new_slice(info_bytes)
-            .ok_or(format_err!("Failed to parse raw handle info"))?;
+            .ok_or(anyhow!("Failed to parse raw handle info"))?;
 
         Ok(raw_info.iter().map(|raw| HandleInfo::try_from(*raw)).collect::<Result<_, _>>()?)
     }
