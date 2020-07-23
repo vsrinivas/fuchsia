@@ -85,6 +85,17 @@ TEST_fx-set-with-base() {
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'host_labels+=[]'
 }
 
+# ensure that "fx set product.board --with-cache ..." calls gn with the expected args
+TEST_fx-set-with-cache() {
+  local output="$(${fx} set myproduct.myboard --no-goma --with-cache "//bundles:tests")"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'cache_package_labels+=["//bundles:tests"'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'universe_package_labels+=[]'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'host_labels+=[]'
+}
+
 # ensure that "fx set product.board --with-host ..." calls gn with the expected args
 TEST_fx-set-with-host() {
   local output="$(${fx} set myproduct.myboard --no-goma --with-host "//bundles:tests")"

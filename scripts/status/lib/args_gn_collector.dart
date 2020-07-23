@@ -27,6 +27,10 @@ class GNStatusParser {
       'Base packages',
       '--with-base argument of `fx set`'
     ],
+    'cache_package_labels': [
+      'Cache packages',
+      '--with-cache argument of `fx set`'
+    ],
     'host_labels': ['Host labels', '--with-host argument of `fx set`'],
   };
 

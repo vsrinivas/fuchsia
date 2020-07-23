@@ -89,16 +89,26 @@
 ##                         separated by a slash (e.g. `--variant asan/my_test`)
 ##                         for the latter.
 ##   --with GNLABEL        Labels of additional packages to include in the
-##                         universe of available packages. These packages can
-##                         be run ephemerally. Multiple labels can be provided
-##                         delimited by commas or the --with argument can be
-##                         provided multiple times.
+##                         'universe' set of available packages. These packages
+##                         can be run ephemerally. Multiple labels can be
+##                         provided delimited by commas or the --with argument
+##                         can be provided multiple times.
 ##   --with-base GNLABEL   Labels of additional packages to include in the
-##                         base set of packages. These packages are included in
+##                         'base' set of packages. These packages are included in
 ##                         the system image and can be updated only with an OTA.
 ##                         Multiple labels can be provided delimited by commas
 ##                         or the --with-base argument can be provided multiple
 ##                         times.
+##   --with-cache GNLABEL  Labels of additional packages to include in the
+##                         'cache' set of packages. These packages are made
+##                         available on disk immediately after paving and in
+##                         factory flows. These packages are not updated with
+##                         an OTA, but are instead updated ephemerally. This
+##                         cache of software can be evicted by the system if
+##                         storage pressure arises or other policies indicate.
+##                         Multiple labels can be provided delimited by commas
+##                         or the --with-cache argument can be provided
+##                         multiple times.
 ##   --with-host GNLABEL   Labels of additional host-only targets to be
 ##                         produced by the build. Multiple labels can be
 ##                         provided delimited by commas or the --with-host
@@ -186,6 +196,7 @@ function main {
   local -a gn_switches=(--check=system --export-rust-project --export-compile-commands=default)
   local gn_after_args=""
   local base_packages=()
+  local cache_packages=()
   local universe_packages=()
   local host_labels=()
   local auto_dir_variants=
@@ -213,6 +224,23 @@ function main {
           return 1
         fi
         IFS=, base_packages+=("$2")
+        shift
+        ;;
+      --with-cache)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+
+        # deny list for very specific packages that are
+        # deprecated_system_image=true. This list should not grow.
+        case "$2" in
+        *tests/zircon:zircon_tests)
+          fx-error "zircon tests are deprecated_system_image and must be given to --with-base"
+          return 1;;
+        esac
+
+        IFS=, cache_packages+=("$2")
         shift
         ;;
       --with)
@@ -426,7 +454,12 @@ base_package_labels+=["
   gn_args+="]
 
 # See: fx args --list=cache_package_labels
-cache_package_labels+=[]
+cache_package_labels+=["
+
+  for package in ${cache_packages[@]}; do
+    gn_args+="\"${package}\","
+  done
+  gn_args+="]
 
 # See: fx args --list=universe_package_labels
 universe_package_labels+=["
