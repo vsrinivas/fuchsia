@@ -346,8 +346,8 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
       .ExpectWriteStop({kBacklightBrightnessMsbReg, 0x13});
 
   auto absolute_result_2 = backlight_client.SetStateAbsolute({true, 87.5});
-  EXPECT_TRUE(absolute_result_1.ok());
-  EXPECT_FALSE(absolute_result_1.value().result.is_err());
+  EXPECT_TRUE(absolute_result_2.ok());
+  EXPECT_FALSE(absolute_result_2.value().result.is_err());
 
   ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
   ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
