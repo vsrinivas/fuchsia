@@ -100,6 +100,8 @@ class Bind {
 
   zx::channel& FidlClient() { return fidl_.local(); }
 
+  bool remove_called() const { return remove_called_; }
+
  protected:
   // Internal fake implementations of DDK functionality.
   //
