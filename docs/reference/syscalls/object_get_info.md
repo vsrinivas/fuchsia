@@ -438,15 +438,6 @@ typedef struct zx_info_vmo {
 
     // VMO mapping cache policy. One of ZX_CACHE_POLICY_*
     uint32_t cache_policy;
-
-    // Amount of kernel memory, in bytes, allocated to track metadata
-    // associated with this VMO.
-    uint64_t metadata_bytes;
-
-    // Running counter of the number of times the kernel, without user request,
-    // performed actions on this VMO that would have caused |committed_bytes| to
-    // report a different value.
-    uint64_t committed_change_events;
 } zx_info_vmo_t;
 ```
 
@@ -737,15 +728,6 @@ typedef struct zx_info_vmo {
 
     // VMO mapping cache policy. One of ZX_CACHE_POLICY_*
     uint32_t cache_policy;
-
-    // Amount of kernel memory, in bytes, allocated to track metadata
-    // associated with this VMO.
-    uint64_t metadata_bytes;
-
-    // Running counter of the number of times the kernel, without user request,
-    // performed actions on this VMO that would have caused |committed_bytes| to
-    // report a different value.
-    uint64_t committed_change_events;
 } zx_info_vmo_t;
 ```
 

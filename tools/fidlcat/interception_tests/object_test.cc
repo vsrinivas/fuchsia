@@ -1146,7 +1146,7 @@ OBJECT_GET_INFO_VMO_DISPLAY_TEST(
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_VMO\x1B[0m, "
-    "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m120\x1B[0m)\n"
+    "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m104\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_vmo_t\x1B[0m = {\n"
     "      koid: \x1B[32mzx_koid_t\x1B[0m = \x1B[31m4252\x1B[0m\n"
@@ -1161,8 +1161,6 @@ OBJECT_GET_INFO_VMO_DISPLAY_TEST(
     "      committed_bytes: \x1B[32muint64\x1B[0m = \x1B[34m4096\x1B[0m\n"
     "      handle_rights: \x1B[32mzx_rights_t\x1B[0m = \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
     "      cache_policy: \x1B[32mzx_cache_policy_t\x1B[0m = \x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
-    "      metadata_bytes: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
-    "      committed_change_events: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
     "    }\n");
 
 #define OBJECT_GET_INFO_SOCKET_DISPLAY_TEST_CONTENT(result, expected)                             \
@@ -1467,7 +1465,7 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_PROCESS_VMOS\x1B[0m, "
-    "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m240\x1B[0m)\n"
+    "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m208\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize_t\x1B[0m = \x1B[34m2\x1B[0m/\x1B[34m2\x1B[0m)\n"
     "    info: vector<\x1B[32mzx_info_vmo_t\x1B[0m> =  [\n"
@@ -1485,8 +1483,6 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
     "        handle_rights: \x1B[32mzx_rights_t\x1B[0m = \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
     "        cache_policy: \x1B[32mzx_cache_policy_t\x1B[0m = "
     "\x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
-    "        metadata_bytes: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
-    "        committed_change_events: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
     "      },\n"
     "      {\n"
     "        koid: \x1B[32mzx_koid_t\x1B[0m = \x1B[31m5242\x1B[0m\n"
@@ -1502,8 +1498,6 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
     "        handle_rights: \x1B[32mzx_rights_t\x1B[0m = \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
     "        cache_policy: \x1B[32mzx_cache_policy_t\x1B[0m = "
     "\x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
-    "        metadata_bytes: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
-    "        committed_change_events: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
     "      }\n"
     "    ]\n");
 

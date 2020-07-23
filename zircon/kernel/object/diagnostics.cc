@@ -601,10 +601,12 @@ template <typename ENTRY, typename IMPL, bool EnumerateVmar, bool EnumerateMappi
           size_t FirstEntry>
 class RestartableVmEnumerator {
  public:
+  // NOTE: Code outside of the syscall layer should not typically know about
+  // user_ptrs; do not use this pattern as an example.
   // max is the total number of elements that entries can support, with FirstEntry being the first
   // of these entries that this enumerator will store to. This means we can write at most
   // max-FirstEntry entries.
-  RestartableVmEnumerator(size_t max) : max_(max) {}
+  RestartableVmEnumerator(user_out_ptr<ENTRY> entries, size_t max) : entries_(entries), max_(max) {}
 
   zx_status_t Enumerate(VmAspace* target) {
     nelem_ = FirstEntry;
@@ -622,7 +624,7 @@ class RestartableVmEnumerator {
     Enumerator enumerator{this};
     while (!target->EnumerateChildren(&enumerator)) {
       DEBUG_ASSERT(nelem_ < max_);
-      zx_status_t result = WriteEntry(entry_, nelem_);
+      zx_status_t result = entries_.element_offset(nelem_).copy_to_user(entry_);
       if (result != ZX_OK) {
         return result;
       }
@@ -639,11 +641,6 @@ class RestartableVmEnumerator {
 
   size_t nelem() const { return nelem_; }
   size_t available() const { return available_; }
-
- protected:
-  virtual zx_status_t WriteEntry(const ENTRY& entry, size_t offset) = 0;
-  virtual UserCopyCaptureFaultsResult WriteEntryCaptureFaults(const ENTRY& entry,
-                                                              size_t offset) = 0;
 
  private:
   class Enumerator : public VmEnumerator {
@@ -699,7 +696,8 @@ class RestartableVmEnumerator {
     }
     ktl::forward<F>(make_entry)();
 
-    UserCopyCaptureFaultsResult res = WriteEntryCaptureFaults(entry_, nelem_);
+    UserCopyCaptureFaultsResult res =
+        entries_.element_offset(nelem_).copy_to_user_capture_faults(entry_);
     if (res.status != ZX_OK) {
       // This entry will get written out by the main loop, so return false to break all the way out.
       faults_++;
@@ -710,6 +708,7 @@ class RestartableVmEnumerator {
     return true;
   }
 
+  const user_out_ptr<ENTRY> entries_;
   const size_t max_;
 
   // Use a single ENTRY stashed here and pass it by reference anywhere as this can be a large
@@ -736,7 +735,7 @@ class VmMapBuilder final
   // NOTE: Code outside of the syscall layer should not typically know about
   // user_ptrs; do not use this pattern as an example.
   VmMapBuilder(user_out_ptr<zx_info_maps_t> maps, size_t max)
-      : RestartableVmEnumerator(max), entries_(maps) {}
+      : RestartableVmEnumerator(maps, max) {}
 
   static void MakeVmarEntry(const VmAddressRegion* vmar, uint depth, zx_info_maps_t* entry) {
     *entry = {};
@@ -762,15 +761,6 @@ class VmMapBuilder final
     u->committed_pages = vmo->AttributedPagesInRange(map->object_offset(), map->size());
     u->vmo_offset = map->object_offset();
   }
-
- protected:
-  zx_status_t WriteEntry(const zx_info_maps_t& entry, size_t offset) {
-    return entries_.element_offset(offset).copy_to_user(entry);
-  }
-  UserCopyCaptureFaultsResult WriteEntryCaptureFaults(const zx_info_maps_t& entry, size_t offset) {
-    return entries_.element_offset(offset).copy_to_user_capture_faults(entry);
-  }
-  const user_out_ptr<zx_info_maps_t> entries_;
 };
 }  // namespace
 
@@ -816,8 +806,8 @@ class AspaceVmoEnumerator final
  public:
   // NOTE: Code outside of the syscall layer should not typically know about
   // user_ptrs; do not use this pattern as an example.
-  AspaceVmoEnumerator(VmoInfoWriter& vmos, size_t max)
-      : RestartableVmEnumerator(max), vmos_(vmos) {}
+  AspaceVmoEnumerator(user_out_ptr<zx_info_vmo_t> vmos, size_t max)
+      : RestartableVmEnumerator(vmos, max) {}
 
   static void MakeMappingEntry(const VmMapping* map, const VmAddressRegion* vmar, uint depth,
                                zx_info_vmo_t* entry) {
@@ -828,22 +818,14 @@ class AspaceVmoEnumerator final
                             /*is_handle=*/false,
                             /*handle_rights=*/0);
   }
-
- protected:
-  zx_status_t WriteEntry(const zx_info_vmo_t& entry, size_t offset) {
-    return vmos_.Write(entry, offset);
-  }
-  UserCopyCaptureFaultsResult WriteEntryCaptureFaults(const zx_info_vmo_t& entry, size_t offset) {
-    return vmos_.WriteCaptureFaults(entry, offset);
-  }
-  VmoInfoWriter& vmos_;
 };
 }  // namespace
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
 zx_status_t GetVmAspaceVmos(VmAspace* current_aspace, fbl::RefPtr<VmAspace> target_aspace,
-                            VmoInfoWriter& vmos, size_t max, size_t* actual, size_t* available) {
+                            user_out_ptr<zx_info_vmo_t> vmos, size_t max, size_t* actual,
+                            size_t* available) {
   DEBUG_ASSERT(target_aspace != nullptr);
   DEBUG_ASSERT(actual != nullptr);
   DEBUG_ASSERT(available != nullptr);
@@ -867,7 +849,7 @@ zx_status_t GetVmAspaceVmos(VmAspace* current_aspace, fbl::RefPtr<VmAspace> targ
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-zx_status_t GetProcessVmos(ProcessDispatcher* process, VmoInfoWriter& vmos, size_t max,
+zx_status_t GetProcessVmos(ProcessDispatcher* process, user_out_ptr<zx_info_vmo_t> vmos, size_t max,
                            size_t* actual_out, size_t* available_out) {
   DEBUG_ASSERT(process != nullptr);
   DEBUG_ASSERT(actual_out != nullptr);
@@ -887,7 +869,7 @@ zx_status_t GetProcessVmos(ProcessDispatcher* process, VmoInfoWriter& vmos, size
         if (actual < max) {
           zx_info_vmo_t entry = VmoToInfoEntry(vmod->vmo().get(),
                                                /*is_handle=*/true, rights);
-          if (vmos.Write(entry, actual) != ZX_OK) {
+          if (vmos.copy_array_to_user(&entry, 1, actual) != ZX_OK) {
             return ZX_ERR_INVALID_ARGS;
           }
           actual++;

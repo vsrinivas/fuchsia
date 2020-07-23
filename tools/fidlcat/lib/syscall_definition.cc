@@ -876,10 +876,6 @@ class ZxInfoVmo : public Class<zx_info_vmo_t> {
   static uint64_t committed_bytes(const zx_info_vmo_t* from) { return from->committed_bytes; }
   static zx_rights_t handle_rights(const zx_info_vmo_t* from) { return from->handle_rights; }
   static uint32_t cache_policy(const zx_info_vmo_t* from) { return from->cache_policy; }
-  static uint64_t metadata_bytes(const zx_info_vmo_t* from) { return from->metadata_bytes; }
-  static uint64_t committed_change_events(const zx_info_vmo_t* from) {
-    return from->committed_change_events;
-  }
 
  private:
   ZxInfoVmo() : Class("zx_info_vmo_t") {
@@ -905,10 +901,6 @@ class ZxInfoVmo : public Class<zx_info_vmo_t> {
         "handle_rights", SyscallType::kRights, handle_rights));
     AddField(std::make_unique<ClassField<zx_info_vmo_t, uint32_t>>(
         "cache_policy", SyscallType::kCachePolicy, cache_policy));
-    AddField(std::make_unique<ClassField<zx_info_vmo_t, uint64_t>>(
-        "metadata_bytes", SyscallType::kUint64, metadata_bytes));
-    AddField(std::make_unique<ClassField<zx_info_vmo_t, uint64_t>>(
-        "committed_change_events", SyscallType::kUint64, committed_change_events));
   }
   ZxInfoVmo(const ZxInfoVmo&) = delete;
   ZxInfoVmo& operator=(const ZxInfoVmo&) = delete;

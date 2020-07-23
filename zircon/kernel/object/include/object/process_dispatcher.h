@@ -33,7 +33,6 @@
 #include <vm/vm_aspace.h>
 
 class JobDispatcher;
-class VmoInfoWriter;
 
 namespace internal {
 // Tag for a ProcessDispatcher's parent JobDispatcher's raw job list.
@@ -248,8 +247,8 @@ class ProcessDispatcher final
   // user_ptrs; do not use this pattern as an example.
   zx_status_t GetAspaceMaps(VmAspace* current_aspace, user_out_ptr<zx_info_maps_t> maps, size_t max,
                             size_t* actual, size_t* available) const;
-  zx_status_t GetVmos(VmAspace* current_aspace, VmoInfoWriter& vmos, size_t max, size_t* actual,
-                      size_t* available);
+  zx_status_t GetVmos(VmAspace* current_aspace, user_out_ptr<zx_info_vmo_t> vmos, size_t max,
+                      size_t* actual, size_t* available);
   zx_status_t GetThreads(fbl::Array<zx_koid_t>* threads) const;
   zx_status_t SetCriticalToJob(fbl::RefPtr<JobDispatcher> critical_to_job, bool retcode_nonzero);
 

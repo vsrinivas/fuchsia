@@ -12,9 +12,6 @@ __BEGIN_CDECLS
 // ask clang format not to mess up the indentation:
 // clang-format off
 
-// Help macro for building versioned topics. Version is the upper 4 bits and starts counting at 0.
-#define __ZX_INFO_TOPIC(t, v) ((zx_object_info_topic_t) ((t) | ((v) << 28)))
-
 // Valid topics for zx_object_get_info.
 typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_NONE                    ((zx_object_info_topic_t)  0u)
@@ -29,8 +26,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_THREAD_EXCEPTION_REPORT ((zx_object_info_topic_t) 11u) // zx_exception_report_t[1]
 #define ZX_INFO_TASK_STATS              ((zx_object_info_topic_t) 12u) // zx_info_task_stats_t[1]
 #define ZX_INFO_PROCESS_MAPS            ((zx_object_info_topic_t) 13u) // zx_info_maps_t[n]
-#define ZX_INFO_PROCESS_VMOS_V1         __ZX_INFO_TOPIC(14u, 0)        // zx_info_vmo_t[n]
-#define ZX_INFO_PROCESS_VMOS            __ZX_INFO_TOPIC(14u, 1)        // zx_info_vmo_t[n]
+#define ZX_INFO_PROCESS_VMOS            ((zx_object_info_topic_t) 14u) // zx_info_vmo_t[n]
 #define ZX_INFO_THREAD_STATS            ((zx_object_info_topic_t) 15u) // zx_info_thread_stats_t[1]
 #define ZX_INFO_CPU_STATS               ((zx_object_info_topic_t) 16u) // zx_info_cpu_stats_t[n]
 #define ZX_INFO_KMEM_STATS              ((zx_object_info_topic_t) 17u) // zx_info_kmem_stats_t[1]
@@ -39,8 +35,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_BTI                     ((zx_object_info_topic_t) 20u) // zx_info_bti_t[1]
 #define ZX_INFO_PROCESS_HANDLE_STATS    ((zx_object_info_topic_t) 21u) // zx_info_process_handle_stats_t[1]
 #define ZX_INFO_SOCKET                  ((zx_object_info_topic_t) 22u) // zx_info_socket_t[1]
-#define ZX_INFO_VMO_V1                  __ZX_INFO_TOPIC(23u, 0)        // zx_info_vmo_t[1]
-#define ZX_INFO_VMO                     __ZX_INFO_TOPIC(23u, 1)        // zx_info_vmo_t[1]
+#define ZX_INFO_VMO                     ((zx_object_info_topic_t) 23u) // zx_info_vmo_t[1]
 #define ZX_INFO_JOB                     ((zx_object_info_topic_t) 24u) // zx_info_job_t[1]
 #define ZX_INFO_TIMER                   ((zx_object_info_topic_t) 25u) // zx_info_timer_t[1]
 #define ZX_INFO_STREAM                  ((zx_object_info_topic_t) 26u) // zx_info_stream_t[1]
@@ -479,31 +474,7 @@ typedef struct zx_info_vmo {
 
     // VMO mapping cache policy. One of ZX_CACHE_POLICY_*
     uint32_t cache_policy;
-
-    // Amount of kernel memory, in bytes, allocated to track metadata
-    // associated with this VMO.
-    uint64_t metadata_bytes;
-
-    // Running counter of the number of times the kernel, without user request,
-    // performed actions on this VMO that would have caused |committed_bytes| to
-    // report a different value.
-    uint64_t committed_change_events;
 } zx_info_vmo_t;
-
-typedef struct zx_info_vmo_v1 {
-    zx_koid_t koid;
-    char name[ZX_MAX_NAME_LEN];
-    uint64_t size_bytes;
-    zx_koid_t parent_koid;
-    size_t num_children;
-    size_t num_mappings;
-    size_t share_count;
-    uint32_t flags;
-    uint8_t padding1[4];
-    uint64_t committed_bytes;
-    zx_rights_t handle_rights;
-    uint32_t cache_policy;
-} zx_info_vmo_v1_t;
 
 typedef struct zx_info_guest_stats {
     uint32_t cpu_number;

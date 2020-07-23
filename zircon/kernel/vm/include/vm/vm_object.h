@@ -223,12 +223,6 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
   enum ChildType { kNotChild, kCowClone, kSlice };
   virtual ChildType child_type() const = 0;
 
-  virtual uint64_t HeapAllocationBytes() const { return 0; }
-
-  // Number of pages that have been evicted over the lifetime of this VMO. Evicted counts for any
-  // decommit style event such as user pager eviction or zero page merging.
-  virtual uint64_t EvictedPagedCount() const { return 0; }
-
   // Get a pointer to the page structure and/or physical address at the specified offset.
   // valid flags are VMM_PF_FLAG_*.
   //

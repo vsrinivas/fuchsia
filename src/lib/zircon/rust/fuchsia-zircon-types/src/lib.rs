@@ -679,11 +679,6 @@ pub struct zx_packet_guest_mem_t {
     pub default_operand_size: u8,
 }
 
-// Helper for constructing topics that have been versioned.
-const fn info_topic(topic: u32, version: u32) -> u32 {
-    (version << 28) | topic
-}
-
 multiconst!(zx_object_info_topic_t, [
     ZX_INFO_NONE                       = 0;
     ZX_INFO_HANDLE_VALID               = 1;
@@ -697,7 +692,7 @@ multiconst!(zx_object_info_topic_t, [
     ZX_INFO_THREAD_EXCEPTION_REPORT    = 11; // zx_exception_report_t[1]
     ZX_INFO_TASK_STATS                 = 12; // zx_info_task_stats_t[1]
     ZX_INFO_PROCESS_MAPS               = 13; // zx_info_maps_t[n]
-    ZX_INFO_PROCESS_VMOS               = info_topic(14, 1); // zx_info_vmo_t[n]
+    ZX_INFO_PROCESS_VMOS               = 14; // zx_info_vmo_t[n]
     ZX_INFO_THREAD_STATS               = 15; // zx_info_thread_stats_t[1]
     ZX_INFO_CPU_STATS                  = 16; // zx_info_cpu_stats_t[n]
     ZX_INFO_KMEM_STATS                 = 17; // zx_info_kmem_stats_t[1]
@@ -706,7 +701,7 @@ multiconst!(zx_object_info_topic_t, [
     ZX_INFO_BTI                        = 20; // zx_info_bti_t[1]
     ZX_INFO_PROCESS_HANDLE_STATS       = 21; // zx_info_process_handle_stats_t[1]
     ZX_INFO_SOCKET                     = 22; // zx_info_socket_t[1]
-    ZX_INFO_VMO                        = info_topic(23, 1); // zx_info_vmo_t[1]
+    ZX_INFO_VMO                        = 23; // zx_info_vmo_t[1]
     ZX_INFO_JOB                        = 24; // zx_info_job_t[1]
 ]);
 
@@ -847,8 +842,6 @@ pub struct zx_info_vmo_t {
     pub committed_bytes: u64,
     pub handle_rights: zx_rights_t,
     pub cache_policy: u32,
-    pub metadata_bytes: u64,
-    pub committed_change_events: u64,
 }
 
 struct_decl_macro! {

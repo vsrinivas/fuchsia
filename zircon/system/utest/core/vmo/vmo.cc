@@ -1538,44 +1538,4 @@ TEST(VmoTestCase, DecommitChildSliceTests) {
   }
 }
 
-TEST(VmoTestCase, MetadataBytes) {
-  zx::vmo vmo;
-  EXPECT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
-
-  // Until we use the VMO we expect metadata to be zero
-  zx_info_vmo_t info;
-  EXPECT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
-
-  EXPECT_EQ(info.metadata_bytes, 0);
-
-  // This is a paged VMO so once we do something to commit a page we expect non-zero metadata.
-  EXPECT_OK(vmo.write(&info, 0, sizeof(info)));
-  EXPECT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
-
-  EXPECT_NE(info.metadata_bytes, 0);
-}
-
-TEST(VmoTestCase, V1Info) {
-  zx::vmo vmo;
-  EXPECT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
-
-  // Check that the old info can be queried and makes sense
-  zx_info_vmo_v1_t v1info;
-  zx_info_vmo_t info;
-  EXPECT_OK(vmo.get_info(ZX_INFO_VMO_V1, &v1info, sizeof(v1info), nullptr, nullptr));
-  EXPECT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
-
-  // Check a subset of the fields that we expect to be stable and non-racy between the two different
-  // get_info invocations.
-  EXPECT_EQ(v1info.koid, info.koid);
-  EXPECT_EQ(v1info.size_bytes, info.size_bytes);
-  EXPECT_EQ(v1info.parent_koid, info.parent_koid);
-  EXPECT_EQ(v1info.num_children, info.num_children);
-  EXPECT_EQ(v1info.num_mappings, info.num_mappings);
-  EXPECT_EQ(v1info.share_count, info.share_count);
-  EXPECT_EQ(v1info.flags, info.flags);
-  EXPECT_EQ(v1info.handle_rights, info.handle_rights);
-  EXPECT_EQ(v1info.cache_policy, info.cache_policy);
-}
-
 }  // namespace
