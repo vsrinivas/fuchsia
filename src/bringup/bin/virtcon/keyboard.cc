@@ -131,8 +131,7 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
       keyboard_report_builder.build();
   report_builder.set_keyboard(fidl::unowned_ptr(&keyboard_report));
 
-  llcpp::fuchsia::input::report::InputDevice::ResultOf::SendOutputReport result =
-      keyboard_client_->SendOutputReport(report_builder.build());
+  keyboard_client_->SendOutputReport(report_builder.build());
 }
 
 // returns true if key was pressed and none were released
