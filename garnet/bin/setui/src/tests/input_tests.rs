@@ -29,6 +29,7 @@ use {
 };
 
 const DEFAULT_INPUT_INFO: InputInfo = InputInfo { microphone: Microphone { muted: false } };
+const DEFAULT_MIC_STATE: bool = false;
 const ENV_NAME: &str = "settings_service_input_test_environment";
 const CONTEXT_ID: u64 = 0;
 
@@ -211,13 +212,15 @@ async fn test_restore() {
 }
 
 // Test to ensure mic input change events are received.
-// TODO(fxb/41006): Add a request.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_bringup_without_input_registry() {
     let service_registry = ServiceRegistry::create();
     let (env, _) = create_environment(service_registry).await;
+
     // At this point we should not crash.
-    assert!(env.connect_to_service::<InputMarker>().is_ok());
+    let input_proxy = env.connect_to_service::<InputMarker>().expect("Connected to service");
+
+    get_and_check_mic_mute(&input_proxy, DEFAULT_MIC_STATE).await;
 }
 
 // Test that cloning works.
