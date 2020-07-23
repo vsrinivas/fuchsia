@@ -47,7 +47,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
 
-        fuchsia_async::spawn(async move {
+        fuchsia_async::Task::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     DaemonRequest::EchoString { value, responder } => {
@@ -62,7 +62,8 @@ mod test {
                 // if more are made.
                 break;
             }
-        });
+        })
+        .detach();
 
         proxy
     }

@@ -100,7 +100,7 @@ mod test {
     };
 
     fn setup_fake_daemon_service(mut stream: DaemonRequestStream) {
-        fuchsia_async::spawn(async move {
+        fuchsia_async::Task::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     DaemonRequest::EchoString { value, responder } => {
@@ -112,13 +112,14 @@ mod test {
                 // made.
                 break;
             }
-        });
+        })
+        .detach();
     }
 
     fn setup_fake_remote_server(connect_chan: bool) -> RemoteControlProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
-        fuchsia_async::spawn(async move {
+        fuchsia_async::Task::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     RemoteControlRequest::Connect { selector: _, service_chan, responder } => {
@@ -139,7 +140,8 @@ mod test {
                     _ => assert!(false, format!("got unexpected {:?}", req)),
                 }
             }
-        });
+        })
+        .detach();
 
         proxy
     }

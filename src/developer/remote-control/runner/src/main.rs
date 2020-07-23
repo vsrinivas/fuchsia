@@ -105,7 +105,7 @@ mod test {
             return proxy;
         }
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(RemoteControlRequest::IdentifyHost { responder }) => {
@@ -119,7 +119,8 @@ mod test {
                     _ => assert!(false),
                 }
             }
-        });
+        })
+        .detach();
 
         proxy
     }

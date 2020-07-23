@@ -27,7 +27,7 @@ async fn exec_server() -> Result<(), Error> {
     let sc1 = service.clone();
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |req| {
-        fasync::spawn_local(sc1.clone().serve_stream(req).map(|_| ()));
+        fasync::Task::local(sc1.clone().serve_stream(req).map(|_| ())).detach();
     });
 
     fs.take_and_serve_directory_handle()?;

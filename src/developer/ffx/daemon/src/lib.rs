@@ -12,7 +12,7 @@ use {
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
     fidl_fuchsia_overnet_protocol::NodeId,
-    fuchsia_async::spawn,
+    fuchsia_async::Task,
     futures::prelude::*,
     std::env,
     std::process::Command,
@@ -94,12 +94,13 @@ async fn exec_server(daemon: Daemon) -> Result<(), Error> {
         let chan =
             fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
         let daemon_clone = daemon.clone();
-        spawn(async move {
+        Task::spawn(async move {
             daemon_clone
                 .handle_requests_from_stream(DaemonRequestStream::from_channel(chan))
                 .await
                 .unwrap_or_else(|err| panic!("fatal error handling request: {:?}", err));
-        });
+        })
+        .detach();
     }
     Ok(())
 }

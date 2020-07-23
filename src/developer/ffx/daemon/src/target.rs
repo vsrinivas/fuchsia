@@ -728,7 +728,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
-        fuchsia_async::spawn(async move {
+        fuchsia_async::Task::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     rcs::RemoteControlRequest::IdentifyHost { responder } => {
@@ -759,7 +759,8 @@ mod test {
                     _ => assert!(false),
                 }
             }
-        });
+        })
+        .detach();
 
         proxy
     }

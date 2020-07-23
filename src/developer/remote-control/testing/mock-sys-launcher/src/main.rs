@@ -25,9 +25,10 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             run_launcher_service(stream).await.expect("Failed to run mock launcher.")
-        });
+        })
+        .detach();
     });
     fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;

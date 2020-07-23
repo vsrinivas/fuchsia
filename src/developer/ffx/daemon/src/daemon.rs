@@ -117,7 +117,7 @@ impl Daemon {
     }
 
     pub fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
-        fuchsia_async::spawn(async move {
+        fuchsia_async::Task::spawn(async move {
             loop {
                 let fastboot_devices = ffx_fastboot::find_devices();
                 for dev in fastboot_devices {
@@ -135,11 +135,12 @@ impl Daemon {
                 // Sleep
                 task::sleep(std::time::Duration::from_secs(3)).await;
             }
-        });
+        })
+        .detach();
     }
 
     pub fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
-        fuchsia_async::spawn(async move {
+        fuchsia_async::Task::spawn(async move {
             loop {
                 let svc = match hoist::connect_as_service_consumer() {
                     Ok(svc) => svc,
@@ -179,7 +180,8 @@ impl Daemon {
                     task::sleep(Duration::from_millis(100)).await;
                 }
             }
-        });
+        })
+        .detach();
     }
 
     /// Attempts to get at most one target. If the target_selector is empty and there is only one
@@ -417,7 +419,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
-        fuchsia_async::spawn(async move {
+        fuchsia_async::Task::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     rcs::RemoteControlRequest::IdentifyHost { responder } => {
@@ -438,7 +440,8 @@ mod test {
                     _ => assert!(false),
                 }
             }
-        });
+        })
+        .detach();
 
         proxy
     }

@@ -38,11 +38,12 @@ impl Io1RequestLoggerFactory {
         let (logged_client, logged_server) = fidl::endpoints::create_proxy::<io::DirectoryMarker>()
             .expect("unable to create endpoints");
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let stream =
                 server_end.into_stream().expect("Could not convert directory request to stream.");
             logger.log_requests(stream, logged_client).await;
-        });
+        })
+        .detach();
 
         logged_server
     }

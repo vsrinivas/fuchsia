@@ -210,7 +210,7 @@ mod tests {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fdevice::NameProviderMarker>().unwrap();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fdevice::NameProviderRequest::GetDeviceName { responder }) => {
@@ -219,7 +219,8 @@ mod tests {
                     _ => assert!(false),
                 }
             }
-        });
+        })
+        .detach();
 
         proxy
     }
@@ -228,7 +229,7 @@ mod tests {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::StackMarker>().unwrap();
 
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fnetstack::StackRequest::ListInterfaces { responder }) => {
@@ -264,7 +265,8 @@ mod tests {
                     _ => assert!(false),
                 }
             }
-        });
+        })
+        .detach();
 
         proxy
     }
@@ -281,9 +283,10 @@ mod tests {
 
         let (rcs_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<rcs::RemoteControlMarker>().unwrap();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             service.serve_stream(stream).await.unwrap();
-        });
+        })
+        .detach();
 
         return rcs_proxy;
     }

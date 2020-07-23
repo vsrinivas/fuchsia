@@ -319,11 +319,12 @@ mod test {
         F: FnMut(Request<T>) -> Fut + 'static + std::marker::Send,
         Fut: Future<Output = ()> + 'static + std::marker::Send,
     {
-        fasync::spawn(
+        fasync::Task::spawn(
             stream
                 .try_for_each(move |r| f(r).map(Ok))
                 .unwrap_or_else(|e| panic!(format!("failed to handle request: {:?}", e))),
-        );
+        )
+        .detach();
     }
 
     fn setup_responsive_daemon_server() -> DaemonProxy {
