@@ -48,6 +48,7 @@ if (!is_fuchsia) {
       "src/model/model.rs",
       "src/plugins/components/controllers/component_controllers.rs",
       "src/plugins/components/controllers/mod.rs",
+      "src/plugins/components/controllers/package_controllers.rs",
       "src/plugins/components/controllers/route_controllers.rs",
       "src/plugins/components/graph.rs",
       "src/plugins/components/http.rs",

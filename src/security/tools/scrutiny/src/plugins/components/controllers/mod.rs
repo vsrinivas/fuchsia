@@ -3,4 +3,5 @@
 // found in the LICENSE file.
 
 pub mod component_controllers;
+pub mod package_controllers;
 pub mod route_controllers;

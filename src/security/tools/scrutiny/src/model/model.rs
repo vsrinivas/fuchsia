@@ -10,6 +10,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json,
     std::boxed::Box,
+    std::collections::HashMap,
     std::sync::RwLock,
 };
 
@@ -19,6 +20,7 @@ use {
 /// that is expected by the application.
 pub struct DataModel {
     components: RwLock<Vec<Component>>,
+    packages: RwLock<Vec<Package>>,
     manifests: RwLock<Vec<Manifest>>,
     routes: RwLock<Vec<Route>>,
     store: RwLock<Box<dyn Store>>,
@@ -35,6 +37,14 @@ impl DataModel {
             let collection = guard.read().unwrap();
             for (_index, component) in collection.iter() {
                 components.push(serde_json::from_value(component.clone())?);
+            }
+        }
+
+        let mut packages = Vec::new();
+        if let Ok(guard) = store.write().unwrap().get("packages") {
+            let collection = guard.read().unwrap();
+            for (_index, package) in collection.iter() {
+                packages.push(serde_json::from_value(package.clone())?);
             }
         }
 
@@ -56,6 +66,7 @@ impl DataModel {
 
         Ok(Self {
             components: RwLock::new(components),
+            packages: RwLock::new(packages),
             manifests: RwLock::new(manifests),
             routes: RwLock::new(routes),
             store,
@@ -65,7 +76,7 @@ impl DataModel {
     /// Verifies the underlying data model is running the correct current
     /// schema.
     fn setup_schema(mut store: Box<dyn Store>) -> Result<RwLock<Box<dyn Store>>> {
-        let collection_names = vec!["components", "manifests", "routes"];
+        let collection_names = vec!["components", "packages", "manifests", "routes"];
 
         if let Ok(collection) = store.get("scrutiny") {
             let scrutiny: Scrutiny =
@@ -113,6 +124,10 @@ impl DataModel {
         &self.components
     }
 
+    pub fn packages(&self) -> &RwLock<Vec<Package>> {
+        &self.packages
+    }
+
     pub fn manifests(&self) -> &RwLock<Vec<Manifest>> {
         &self.manifests
     }
@@ -127,6 +142,12 @@ impl DataModel {
             for component in self.components.read().unwrap().iter() {
                 collection
                     .insert(component.id.to_string(), serde_json::to_value(component).unwrap())?;
+            }
+        }
+        if let Ok(mut collection) = store.get("packages").unwrap().write() {
+            for package in self.packages.read().unwrap().iter() {
+                collection
+                    .insert(package.url.to_string(), serde_json::to_value(package).unwrap())?;
             }
         }
         if let Ok(mut collection) = store.get("routes").unwrap().write() {
@@ -177,6 +198,16 @@ pub struct Component {
     pub url: String,
     pub version: i32,
     pub inferred: bool,
+}
+
+/// Defines a fuchsia package. Each package has a unique url. This provides an
+/// expanded meta/contents so you can see all of the files defined in this
+/// package.
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+pub struct Package {
+    pub url: String,
+    pub merkle: String,
+    pub contents: HashMap<String, String>,
 }
 
 /// A component instance is a specific instantiation of a component. These

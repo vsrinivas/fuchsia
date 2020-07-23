@@ -7,10 +7,10 @@ use {
         engine::hook::PluginHooks,
         engine::plugin::{Plugin, PluginDescriptor},
         model::collector::DataCollector,
-        model::model::{Component, DataModel, Manifest, Route},
+        model::model::{Component, DataModel, Manifest, Package, Route},
         plugins::components::{
-            controllers::component_controllers::*, controllers::route_controllers::*,
-            http::HttpGetter, package_reader::*, types::*, util,
+            controllers::component_controllers::*, controllers::package_controllers::*,
+            controllers::route_controllers::*, http::HttpGetter, package_reader::*, types::*, util,
         },
     },
     anyhow::{anyhow, Result},
@@ -43,6 +43,7 @@ plugin!(
             "/component/used" => ComponentUsedGraphController::default(),
             "/component/raw_manifest" => RawManifestGraphController::default(),
             "/component/manifest/sandbox" => ComponentSandboxGraphController::default(),
+            "/packages" => PackagesGraphController::default(),
             "/routes" => RoutesGraphController::default(),
         }
     ),
@@ -185,26 +186,29 @@ impl PackageDataCollector {
         served_pkgs: Vec<PackageDefinition>,
         _builtin_pkgs: Vec<PackageDefinition>,
         mut service_map: ServiceMapping,
-    ) -> Result<(HashMap<String, Component>, Vec<Manifest>, Vec<Route>)> {
+    ) -> Result<(HashMap<String, Component>, Vec<Package>, Vec<Manifest>, Vec<Route>)> {
         let mut components: HashMap<String, Component> = HashMap::new();
+        let mut packages: Vec<Package> = Vec::new();
         let mut manifests: Vec<Manifest> = Vec::new();
         let mut routes: Vec<Route> = Vec::new();
 
         // Iterate through all served packages, for each cmx they define, create a node.
-        let mut idx = 0; // TODO(arkay) Do we want a consistent id generated? Or even a random id?
+        let mut idx = 0;
         for pkg in served_pkgs.iter() {
+            let package = Package {
+                url: pkg.url.clone(),
+                merkle: pkg.merkle.clone(),
+                contents: pkg.contents.clone(),
+            };
+            packages.push(package);
+
             for (path, cm) in &pkg.cms {
                 if path.starts_with("meta/") && path.ends_with(".cmx") {
                     idx += 1;
                     let url = format!("{}#{}", pkg.url, path);
                     components.insert(
                         url.clone(),
-                        Component {
-                            id: idx,
-                            url: url.clone(),
-                            version: 0, // FIXME: Is this the version of the cmx? It doesn't seem to be defined anywhere.
-                            inferred: false,
-                        },
+                        Component { id: idx, url: url.clone(), version: 0, inferred: false },
                     );
 
                     let mani = {
@@ -301,7 +305,7 @@ impl PackageDataCollector {
             routes.len()
         );
 
-        Ok((components, manifests, routes))
+        Ok((components, packages, manifests, routes))
     }
 }
 
@@ -322,16 +326,22 @@ impl DataCollector for PackageDataCollector {
             builtin_packages.len()
         );
 
-        let (components, mut manifests, mut routes) =
+        let (components, mut packages, mut manifests, mut routes) =
             PackageDataCollector::build_model(served_packages, builtin_packages, services)?;
         let mut model_comps = model.components().write().unwrap();
         model_comps.clear();
         for (_, val) in components.into_iter() {
             model_comps.push(val);
         }
+
+        let mut model_packages = model.packages().write().unwrap();
+        model_packages.clear();
+        model_packages.append(&mut packages);
+
         let mut model_manifests = model.manifests().write().unwrap();
         model_manifests.clear();
         model_manifests.append(&mut manifests);
+
         let mut model_routes = model.routes().write().unwrap();
         model_routes.clear();
         model_routes.append(&mut routes);
@@ -694,12 +704,13 @@ mod tests {
         let builtins = Vec::new();
         let services = HashMap::new();
 
-        let (components, manifests, routes) =
+        let (components, packages, manifests, routes) =
             PackageDataCollector::build_model(served, builtins, services).unwrap();
 
         assert_eq!(2, components.len());
         assert_eq!(1, manifests.len());
         assert_eq!(1, routes.len());
+        assert_eq!(1, packages.len());
         assert_eq!((1, 1), count_defined_inferred(components)); // 1 real, 1 inferred
     }
 
@@ -719,12 +730,13 @@ mod tests {
             String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
         );
 
-        let (components, manifests, routes) =
+        let (components, packages, manifests, routes) =
             PackageDataCollector::build_model(served, builtins, services).unwrap();
 
         assert_eq!(2, components.len());
         assert_eq!(1, manifests.len());
         assert_eq!(1, routes.len());
+        assert_eq!(1, packages.len());
         assert_eq!((1, 1), count_defined_inferred(components)); // 1 real, 1 inferred
     }
 
@@ -743,12 +755,13 @@ mod tests {
         let builtins = Vec::new();
         let services = HashMap::new();
 
-        let (components, manifests, routes) =
+        let (components, packages, manifests, routes) =
             PackageDataCollector::build_model(served, builtins, services).unwrap();
 
         assert_eq!(0, components.len());
         assert_eq!(0, manifests.len());
         assert_eq!(0, routes.len());
+        assert_eq!(1, packages.len());
         assert_eq!((0, 0), count_defined_inferred(components)); // 0 real, 0 inferred
     }
 
@@ -768,12 +781,13 @@ mod tests {
         let builtins = Vec::new();
         let services = HashMap::new();
 
-        let (components, manifests, routes) =
+        let (components, packages, manifests, routes) =
             PackageDataCollector::build_model(served, builtins, services).unwrap();
 
         assert_eq!(3, components.len());
         assert_eq!(2, manifests.len());
         assert_eq!(2, routes.len());
+        assert_eq!(2, packages.len());
         assert_eq!((2, 1), count_defined_inferred(components)); // 2 real, 1 inferred
     }
 
@@ -798,12 +812,13 @@ mod tests {
             String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
         );
 
-        let (components, manifests, routes) =
+        let (components, packages, manifests, routes) =
             PackageDataCollector::build_model(served, builtins, services).unwrap();
 
         assert_eq!(2, components.len());
         assert_eq!(2, manifests.len());
         assert_eq!(1, routes.len());
+        assert_eq!(2, packages.len());
         assert_eq!((2, 0), count_defined_inferred(components)); // 2 real, 0 inferred
     }
 
