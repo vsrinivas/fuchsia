@@ -16,19 +16,10 @@ Handler::Handler(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(services), weak_factory_(this) {}
 
 void Handler::Handle(zx::exception exception, fit::closure callback) {
-  exception_ = std::move(exception);
-  callback_ = [this, callback = std::move(callback)] {
-    // |exception| is reset when |callback_| executes because when sysmgr.cmx crashes, it will take
-    // down with it the Forensics components once the process is killed. So exceptions.cmx should
-    // hold on to the exception (preventing a single-threaded process to be killed) until it gets a
-    // signal from crash_reports.cmx that the report is either uploaded or stored (so that if
-    // crash_reports.cmx gets restarted, the report is not lost).
-    exception_.reset();
-    callback();
-  };
+  callback_ = std::move(callback);
 
   std::string process_name;
-  zx::vmo minidump_vmo = GenerateMinidumpVMO(exception_, &process_name);
+  zx::vmo minidump_vmo = GenerateMinidumpVMO(exception, &process_name);
 
   builder_.SetProcessName(process_name);
   if (minidump_vmo.is_valid()) {
@@ -47,7 +38,7 @@ void Handler::Handle(zx::exception exception, fit::closure callback) {
   using fuchsia::sys::internal::Introspect_FindComponentByProcessKoid_Result;
 
   zx::process process;
-  if (const zx_status_t status = exception_.get_process(&process); status != ZX_OK) {
+  if (const zx_status_t status = exception.get_process(&process); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to get process";
     FileCrashReport();
     return;
@@ -61,7 +52,12 @@ void Handler::Handle(zx::exception exception, fit::closure callback) {
   }
 
   introspect_connection_->FindComponentByProcessKoid(
-      process_koid, [handler = GetWeakPtr()](Introspect_FindComponentByProcessKoid_Result result) {
+      process_koid,
+      // |exception| is moved into the call back to keep it alive until after the component
+      // information of the crashed process has been collected or has failed to be collected,
+      // otherwise the kernel would terminate the process.
+      [handler = GetWeakPtr(),
+       exception = std::move(exception)](Introspect_FindComponentByProcessKoid_Result result) {
         if (!handler)
           return;
 
