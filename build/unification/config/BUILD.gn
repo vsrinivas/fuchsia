@@ -20,8 +20,6 @@ config("zircon-migrated") {
   cflags = compiler_flags + [
              "-fno-omit-frame-pointer",
              "-fno-common",
-             "-UNDEBUG",
-             "-U_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
            ]
 
   cflags_c = [
