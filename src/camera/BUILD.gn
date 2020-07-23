@@ -51,6 +51,7 @@ test_package("camera_tests") {
     "//src/camera/drivers/controller/test",
     "//src/camera/drivers/hw_accel/gdc/test",
     "//src/camera/drivers/hw_accel/ge2d/test",
+    "//src/camera/drivers/sensors/imx227/test",
     "//src/camera/drivers/test_utils/test:button_checker_test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
     "//src/camera/lib/fake_camera/test",
@@ -152,6 +153,11 @@ test_package("camera_tests") {
       manifest =
           "//src/camera/lib/hanging_get_helper/test/hanging_get_helper_test.cmx"
       environments = basic_envs
+    },
+    {
+      name = "imx227_test"
+      manifest = "drivers/sensors/imx227/test/meta/imx227_test.cmx"
+      environments = [ sherlock_env ]
     },
 
     # Put additional camera tests here

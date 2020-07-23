@@ -13,18 +13,20 @@ source_set("source") {
   ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.camera",
+    "//sdk/banjo/ddk.protocol.camera.sensor",
+    "//sdk/banjo/ddk.protocol.camerasensor",
+    "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.mipicsi",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/lib/syslog/cpp",
     "//src/devices/lib/driver",
     "//zircon/system/ulib/fzl",
   ]
 
   public_deps = [
-    "//sdk/banjo/ddk.protocol.camera.sensor",
-    "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.mipicsi",
-    "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//zircon/public/lib/zx",

@@ -24,6 +24,10 @@
 
 namespace camera {
 
+inline const uint8_t kByteShift = 8;
+inline const uint16_t kSensorModelIdReg = 0x0016;
+inline const uint16_t kSensorModelIdDefault = 0x0227;
+
 struct SensorCtx {
   // TODO(55045): Add details for each one of these and also remove unused ones.
   uint32_t again_limit;
@@ -156,6 +160,18 @@ class Imx227Device : public DeviceType,
   zx_status_t CameraSensor2SetExtensionValue(uint64_t id, const extension_value_data_type_t* value,
                                              extension_value_data_type_t** out_value);
 
+ protected:
+  // Protocols
+  ddk::I2cChannel i2c_;
+  ddk::GpioProtocolClient gpio_vana_enable_;
+  ddk::GpioProtocolClient gpio_vdig_enable_;
+  ddk::GpioProtocolClient gpio_cam_rst_;
+  ddk::ClockProtocolClient clk24_;
+  ddk::MipiCsiProtocolClient mipi_;
+
+  // Other
+  zx_status_t InitPdev();
+
  private:
   // I2C Helpers
   // Returns ZX_OK and an uint16_t value if the read succeeds.
@@ -168,7 +184,6 @@ class Imx227Device : public DeviceType,
   zx_status_t Write8(uint16_t addr, uint8_t val) __TA_REQUIRES(lock_);
 
   // Other
-  zx_status_t InitPdev();
   zx_status_t InitSensor(uint8_t idx) __TA_REQUIRES(lock_);
   void HwInit() __TA_REQUIRES(lock_);
   void HwDeInit() __TA_REQUIRES(lock_);
@@ -178,14 +193,7 @@ class Imx227Device : public DeviceType,
 
   // Sensor Context
   SensorCtx ctx_ __TA_GUARDED(lock_);
-
-  // Protocols
-  ddk::I2cChannel i2c_;
-  ddk::GpioProtocolClient gpio_vana_enable_;
-  ddk::GpioProtocolClient gpio_vdig_enable_;
-  ddk::GpioProtocolClient gpio_cam_rst_;
-  ddk::ClockProtocolClient clk24_;
-  ddk::MipiCsiProtocolClient mipi_;
+  uint8_t mode_;
 
   // Sensor Status
   bool initialized_ = false;

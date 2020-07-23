@@ -28,11 +28,9 @@ namespace camera {
 
 namespace {
 
-constexpr uint16_t kSensorModelIdReg = 0x0016;
 constexpr uint16_t kModeSelectReg = 0x0100;
 constexpr uint16_t kFrameLengthLinesReg = 0x0340;
 constexpr uint16_t kLineLengthPckReg = 0x0342;
-constexpr uint8_t kByteShift = 8;
 constexpr uint8_t kRaw10Bits = 10;
 constexpr uint8_t kRaw12Bits = 12;
 constexpr uint8_t kByteMask = 0xFF;
@@ -45,6 +43,7 @@ constexpr uint32_t kMasterClock = 288000000;
 constexpr uint32_t kMaxIntegrationTime =
     0x15BC;  // Max allowed for 30fps = 2782 (dec)=0x0ADE (hex) 15fps = 5564 (dec)=0x15BC (hex).
 constexpr uint16_t kEndOfSequence = 0x0000;
+
 }  // namespace
 
 // Gets the register value from the sequence table.
@@ -119,12 +118,12 @@ zx_status_t Imx227Device::InitPdev() {
 fit::result<uint16_t, zx_status_t> Imx227Device::Read16(uint16_t addr) {
   auto result = Read8(addr);
   if (result.is_error()) {
-    return fit::error(result.error());
+    return result.take_error_result();
   }
   auto upper_byte = result.value();
   result = Read8(addr + 1);
   if (result.is_error()) {
-    return fit::error(result.error());
+    return result.take_error_result();
   }
   auto lower_byte = result.value();
   uint16_t reg_value = upper_byte << kByteShift | lower_byte;

@@ -4,22 +4,58 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <ddk/protocol/camerasensor.h>
+#include <ddk/debug.h>
+
+#include "ddk/protocol/camera.h"
 #include "imx227.h"
+#include "src/camera/drivers/sensors/imx227/imx227_guid.h"
+#include "src/camera/drivers/sensors/imx227/imx227_seq.h"
 
 namespace camera {
+
+namespace {
+// Extension Values
+const int32_t kLog2GainShift = 18;
+const int32_t kSensorExpNumber = 1;
+const uint32_t kMasterClock = 288000000;
+}  // namespace
 
 // |ZX_PROTOCOL_CAMERA_SENSOR2|
 
 zx_status_t Imx227Device::CameraSensor2Init() {
-  FX_NOTIMPLEMENTED();
-  return ZX_ERR_NOT_SUPPORTED;
+  std::lock_guard guard(lock_);
+
+  HwInit();
+
+  initialized_ = true;
+  return ZX_OK;
 }
 
-void Imx227Device::CameraSensor2DeInit() { FX_NOTIMPLEMENTED(); }
+void Imx227Device::CameraSensor2DeInit() {
+  std::lock_guard guard(lock_);
+  mipi_.DeInit();
+  HwDeInit();
+  // The reference code has this sleep. It is most likely needed for the clock to stabalize.
+  // There is no other way to tell whether the sensor has successfully powered down.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+
+  ctx_.streaming_flag = false;
+  initialized_ = false;
+}
 
 zx_status_t Imx227Device::CameraSensor2GetSensorId(uint32_t* out_id) {
-  FX_NOTIMPLEMENTED();
-  return ZX_ERR_NOT_SUPPORTED;
+  std::lock_guard guard(lock_);
+  auto result = Read16(kSensorModelIdReg);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+  if (result.value() != kSensorModelIdDefault) {
+    zxlogf(ERROR, "Sensor not online, read %d instead", result.value());
+    return ZX_ERR_INTERNAL;
+  }
+  *out_id = result.take_value();
+  return ZX_OK;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetAvailableModes(operating_mode_t* out_modes_list,
@@ -119,8 +155,62 @@ zx_status_t Imx227Device::CameraSensor2SetTestCursorData(const rect_vals_t* data
 
 zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
                                                          extension_value_data_type_t** out_value) {
-  FX_NOTIMPLEMENTED();
-  return ZX_ERR_NOT_SUPPORTED;
+  std::lock_guard guard(lock_);
+
+  switch (id) {
+    case TOTAL_RESOLUTION:
+      (*out_value)->resolution_value = dimensions_t { .x = static_cast<float>(ctx_.HMAX), .y = static_cast<float>(ctx_.VMAX) };
+      break;
+    case ACTIVE_RESOLUTION: {
+      // TODO(55178): Remove this conversion.
+      auto res = supported_modes[mode_].resolution;
+      (*out_value)->resolution_value =
+          dimensions_t { .x = static_cast<float>(res.width), .y = static_cast<float>(res.height) };
+      break;
+    }
+    case PIXELS_PER_LINE:
+      (*out_value)->uint_value = ctx_.HMAX;
+      break;
+    case AGAIN_LOG2_MAX:
+    case DGAIN_LOG2_MAX:
+      (*out_value)->int_value = 3 << kLog2GainShift;
+      break;
+    case AGAIN_ACCURACY:
+      (*out_value)->int_value = 1 << kLog2GainShift;
+      break;
+    case INT_TIME_MIN:
+      (*out_value)->uint_value = ctx_.int_time_min;
+      break;
+    case INT_TIME_MAX:
+    case INT_TIME_LONG_MAX:
+    case INT_TIME_LIMIT:
+      (*out_value)->uint_value = ctx_.int_time_limit;
+      break;
+    case DAY_LIGHT_INT_TIME_MAX:
+      break;
+    case INT_TIME_APPLY_DELAY:
+      (*out_value)->int_value = 2;
+      break;
+    case ISP_EXPOSURE_CHANNEL_DELAY:
+      (*out_value)->int_value = 0;
+      break;
+    case X_OFFSET:
+    case Y_OFFSET:
+      break;
+    case LINES_PER_SECOND:
+      (*out_value)->uint_value = kMasterClock / ctx_.HMAX;
+      break;
+    case SENSOR_EXP_NUMBER:
+      (*out_value)->int_value = kSensorExpNumber;
+      break;
+    case MODE:
+      (*out_value)->uint_value = mode_;
+      break;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t Imx227Device::CameraSensor2SetExtensionValue(uint64_t id,
