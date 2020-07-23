@@ -34,8 +34,9 @@ constexpr const char kIsolatedDevmgrServiceName[] = "fuchsia.media.AudioTestDevm
 
 std::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
     std::string url, std::shared_ptr<sys::ServiceDirectory> services,
-    std::string config_data_path = "") {
-  return [url, services = std::move(services), config_data_path] {
+    std::string config_data_path = "",
+    std::vector<std::string> arguments = std::vector<std::string>()) {
+  return [url, services = std::move(services), config_data_path, arguments] {
     zx::channel devfs = services->Connect<fuchsia::io::Directory>(kIsolatedDevmgrServiceName)
                             .Unbind()
                             .TakeChannel();
@@ -44,6 +45,10 @@ std::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
     launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
     launch_info.flat_namespace->paths.push_back("/dev");
     launch_info.flat_namespace->directories.push_back(std::move(devfs));
+
+    if (!arguments.empty()) {
+      launch_info.arguments = arguments;
+    }
 
     zx::channel config_data;
     if (config_data_path != "") {
@@ -155,7 +160,8 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
           .type = kAudioCoreComponent,
           .url = audio_core_url,
           .launch_info = LaunchInfoWithIsolatedDevmgrForUrl(audio_core_url, real_services,
-                                                            options_.audio_core_config_data_path),
+                                                            options_.audio_core_config_data_path,
+                                                            options_.audio_core_arguments),
           .service_names =
               {
                   fuchsia::media::ActivityReporter::Name_,

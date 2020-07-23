@@ -33,20 +33,23 @@ class AudioCapturerTest : public HermeticAudioTest {
     HermeticAudioTest::TearDown();
   }
 
-  void SetFormat() {
-    audio_capturer_->SetPcmStreamType(
-        media::CreateAudioStreamType(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 16000));
+  void SetFormat(size_t frames_per_second = 16000) {
+    auto t = media::CreateAudioStreamType(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                                          frames_per_second);
+    format_ = Format::Create(t).take_value();
+    audio_capturer_->SetPcmStreamType(t);
   }
 
-  void SetUpPayloadBuffer() {
+  void SetUpPayloadBuffer(size_t num_frames = 16000) {
     zx::vmo audio_capturer_vmo;
 
-    auto status = zx::vmo::create(16000 * sizeof(int16_t), 0, &audio_capturer_vmo);
+    auto status = zx::vmo::create(num_frames * sizeof(int16_t), 0, &audio_capturer_vmo);
     ASSERT_EQ(status, ZX_OK) << "Failed to create payload buffer";
 
     audio_capturer_->AddPayloadBuffer(0, std::move(audio_capturer_vmo));
   }
 
+  std::optional<Format> format_;
   fuchsia::media::AudioCapturerPtr audio_capturer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
 };
@@ -95,9 +98,9 @@ class AudioCapturerClockTest : public AudioCapturerTest {
 
 // TODO(mpuryear): test -> OnEndOfStream();
 // Also proper sequence vis-a-vis other completion and disconnect callbacks
-
-// TODO(mpuryear): test ReleasePacket(StreamPacket packet);
 // Also negative testing: malformed or non-submitted packet, before started
+//
+// Also capture StreamPacket flags
 
 // DiscardAllPackets waits to deliver its completion callback until all packets have returned.
 TEST_F(AudioCapturerTest, DiscardAll_ReturnsAfterAllPackets) {

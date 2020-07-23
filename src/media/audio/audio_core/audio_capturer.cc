@@ -169,7 +169,7 @@ void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
     ReportStart();
   }
   if (state == State::OperatingSync) {
-    if (has_pending_capture_buffers()) {
+    if (has_pending_packets()) {
       ReportStart();
     }
   }

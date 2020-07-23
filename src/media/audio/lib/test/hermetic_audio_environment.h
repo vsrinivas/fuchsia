@@ -31,6 +31,7 @@ class HermeticAudioEnvironment {
   struct Options {
     std::string audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-for-test";
     std::string audio_core_config_data_path = "";
+    std::vector<std::string> audio_core_arguments;
   };
   HermeticAudioEnvironment(Options options);
   ~HermeticAudioEnvironment();

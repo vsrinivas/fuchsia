@@ -10,7 +10,9 @@
 #include <lib/trace-provider/provider.h>
 #endif
 
+#include "src/lib/fxl/command_line.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
+#include "src/media/audio/audio_core/base_capturer.h"
 #include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
 #include "src/media/audio/audio_core/profile_provider.h"
@@ -68,4 +70,8 @@ static int StartAudioCore() {
 
 }  // namespace media::audio
 
-int main(int argc, const char** argv) { media::audio::StartAudioCore(); }
+int main(int argc, const char** argv) {
+  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
+  media::audio::BaseCapturer::SetMustReleasePackets(cl.HasOption("captures-must-release-packets"));
+  media::audio::StartAudioCore();
+}

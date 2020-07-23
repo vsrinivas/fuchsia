@@ -20,10 +20,10 @@
 
 #include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/capture_packet_queue.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
-#include "src/media/audio/audio_core/pending_capture_buffer.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/usage_settings.h"
@@ -34,6 +34,16 @@ namespace media::audio {
 class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
  public:
   AudioClock& reference_clock() { return audio_clock_; }
+
+  // TODO(43507): This is a temporary flag to ease the transition. This will be exposed as a command
+  // line flag for audio_core. This has no effect in DynamicallyAllocated mode.
+  //
+  // When false (the default), packets are automatically recycled after each call to Push.
+  // This gives equivalent behavior to the "current" code, i.e., before the bug fix.
+  // Otherwise, packets must be explicitly recycle.
+  //
+  // Eventually this flag will be deleted and the behavior will be hardcoded to "true".
+  static void SetMustReleasePackets(bool b) { must_release_packets_ = b; }
 
  protected:
   using RouteGraphRemover = void (RouteGraph::*)(const AudioObject&);
@@ -106,9 +116,9 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   };
   State capture_state() const { return state_.load(); }
 
-  bool has_pending_capture_buffers() {
-    std::lock_guard<std::mutex> pending_lock(pending_lock_);
-    return !pending_capture_buffers_.is_empty();
+  bool has_pending_packets() {
+    auto pq = packet_queue();
+    return pq && pq->PendingSize() > 0;
   }
   bool IsOperating();
 
@@ -147,8 +157,6 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
                         zx::duration overflow_duration);
   void PartialOverflowOccurred(FractionalFrames<int64_t> source_offset, int64_t mix_offset);
 
-  using PcbList = ::fbl::SizedDoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
-
   // |fuchsia::media::AudioCapturer|
   void GetStreamType(GetStreamTypeCallback cbk) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) final;
@@ -166,17 +174,15 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   // Methods used by capture/mixer thread(s). Must be called from mix_domain.
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void DoStopAsyncCapture() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool QueueNextAsyncPendingBuffer() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token())
-      FXL_LOCKS_EXCLUDED(pending_lock_);
   void ShutdownFromMixDomain() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  // Thunk to send finished buffers back to the user, and to finish an async
+  // Thunk to send ready packets back to the user, and to finish an async
   // mode stop operation.
   void FinishAsyncStopThunk() FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void FinishBuffersThunk() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
-  // Helper function used to return a set of pending capture buffers to a user.
-  void FinishBuffers(const PcbList& finished_buffers) FXL_LOCKS_EXCLUDED(mix_domain_->token());
+  // Helper function used to return a set of ready packets to a user.
+  void FinishBuffers() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   fit::promise<> Cleanup() FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void CleanupFromMixThread() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
@@ -207,18 +213,47 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
 
   // Shared buffer state
   fzl::VmoMapper payload_buf_;
-  uint32_t payload_buf_frames_ = 0;
 
   WakeupEvent mix_wakeup_;
-  zx::time finish_buffers_signal_time_ FXL_GUARDED_BY(pending_lock_){0};
-  WakeupEvent finish_buffers_wakeup_;
+  WakeupEvent ready_packets_wakeup_;
   async::TaskClosureMethod<BaseCapturer, &BaseCapturer::MixTimerThunk> mix_timer_
       FXL_GUARDED_BY(mix_domain_->token()){this};
 
-  // Queues of capture buffers from the client: waiting to be filled, or waiting to be returned.
-  std::mutex pending_lock_;
-  PcbList pending_capture_buffers_ FXL_GUARDED_BY(pending_lock_);
-  PcbList finished_capture_buffers_ FXL_GUARDED_BY(pending_lock_);
+  // Queue of pending and ready packets.
+  //
+  // Concurrency notes: Initially this is nullptr. When we transition to state OperatingSync
+  // or OperatingAsync, we create a new queue and start mixing. Later, in response to a FIDL
+  // call, we might change operating modes from Sync -> Async or visa versa. To do this, we
+  // create a new queue, but as this happens, the mixer may be concurrently mixing on the old
+  // queue. We use a shared_ptr to ensure that the mixer can hold a valid reference for the
+  // duration of the mix operation, even in the presence of a concurrent mode switch.
+  //
+  // To illustrate:
+  //
+  //   fidl_thread {
+  //     // Switch from sync -> async.
+  //     packet_queue()->DiscardPendingPackets();
+  //     set_packet_queue_(CapturePacketQueue::CreatePreallocated(...));
+  //   }
+  //   mixer_thread {
+  //     auto pq = packet_queue();
+  //     auto state = pq->NextMixerJob();
+  //     // ... FIDL thread might run here ...
+  //     auto status = pq->FinishMixerJob(state);
+  //     // ... will have status == Discarded ...
+  //   }
+  //
+  std::mutex packet_queue_lock_;
+  std::shared_ptr<CapturePacketQueue> packet_queue_ FXL_GUARDED_BY(packet_queue_lock_);
+
+  std::shared_ptr<CapturePacketQueue> packet_queue() {
+    std::lock_guard<std::mutex> lock(packet_queue_lock_);
+    return packet_queue_;
+  }
+  void set_packet_queue(std::shared_ptr<CapturePacketQueue> pq) {
+    std::lock_guard<std::mutex> lock(packet_queue_lock_);
+    packet_queue_ = pq;
+  }
 
   // Intermediate mixing buffer and output producer
   std::unique_ptr<OutputProducer> output_producer_;
@@ -230,8 +265,6 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   int64_t frame_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
 
-  uint32_t async_frames_per_packet_;
-  uint32_t async_next_frame_offset_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
   StopAsyncCaptureCallback pending_async_stop_cbk_;
 
   // for glitch-debugging purposes
@@ -241,6 +274,9 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   std::shared_ptr<MixStage> mix_stage_;
 
   AudioClock audio_clock_;
+
+  // TODO(43507): This is a temporary flag.
+  static bool must_release_packets_;
 };
 
 }  // namespace media::audio

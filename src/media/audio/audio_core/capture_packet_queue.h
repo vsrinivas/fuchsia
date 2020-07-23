@@ -7,6 +7,7 @@
 
 #include <lib/fit/result.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <deque>
 #include <memory>
@@ -22,80 +23,169 @@
 
 namespace media::audio {
 
+// This queue has two states:
+//
+// Initially, a packet is pushed onto a "pending" queue. The mixer will write to the first
+// packet in the pending queue, and once the mixer is done, it will move that packet to the
+// "ready" queue, meaning the packet is now ready to be sent to the client. The FIDL loop
+// will pop packets from the ready queue as they become available.
+//
+// Packets are pushed onto the pending queue in one of two ways:
+//
+//   1. For preallocated queues, the pending queue is prepopulated automatically. After
+//      a packet is popped from the ready queue, it can be added back to the pending queue
+//      by Recycle().
+//
+//   2. For dynamically allocated queues, packets must be explicitly pushed onto the
+//      pending queue, and once the packet is popped from the ready queue, the caller
+//      takes permanent ownership.
+//
 // This class is thread safe.
 class CapturePacketQueue {
  public:
   using CaptureAtCallback = fuchsia::media::AudioCapturer::CaptureAtCallback;
   using StreamPacket = fuchsia::media::StreamPacket;
 
-  struct Packet;
+  class Packet;
   using AllocatorTraits = ::fbl::SlabAllocatorTraits<fbl::RefPtr<Packet>>;
   using Allocator = fbl::SlabAllocator<AllocatorTraits>;
 
-  struct Packet : public fbl::SlabAllocated<AllocatorTraits>, public fbl::RefCounted<Packet> {
-    StreamPacket stream_packet;
-    void* buffer_start;
-    void* buffer_end;
-    CaptureAtCallback callback;
+  // This class is thread safe.
+  class Packet : public fbl::SlabAllocated<AllocatorTraits>, public fbl::RefCounted<Packet> {
+   public:
+    Packet(CaptureAtCallback cb, size_t nf, size_t pbo, char* pbs)
+        : callback_(std::move(cb)),
+          num_frames_(nf),
+          payload_buffer_offset_(pbo),
+          payload_buffer_start_(pbs) {}
+
+    const CaptureAtCallback& callback() const { return callback_; }
+    const StreamPacket& stream_packet() const {
+      FX_CHECK(ready_.load());
+      return stream_packet_;
+    }
+    zx::duration time_since_ready() const {
+      FX_CHECK(ready_.load());
+      return zx::clock::get_monotonic() - ready_time_;
+    }
+
+   private:
+    friend class CapturePacketQueue;
+    void Reset() FXL_EXCLUSIVE_LOCKS_REQUIRED(&CapturePacketQueue::mutex_) {
+      state_ = State();
+      ready_.store(false);
+    }
+
+    const CaptureAtCallback callback_;
+    const size_t num_frames_;
+    const size_t payload_buffer_offset_;
+    char* const payload_buffer_start_;
+
+    // This state is updated during mixing.
+    struct State {
+      int64_t capture_timestamp = fuchsia::media::NO_TIMESTAMP;
+      uint32_t flags = 0;
+      size_t filled_frames = 0;
+    };
+    State state_ FXL_GUARDED_BY(&CapturePacketQueue::mutex_);
+
+    // These are set when the packet is moved from the pending queue to the ready queue.
+    StreamPacket stream_packet_;
+    zx::time ready_time_;
+    std::atomic<bool> ready_;
   };
 
   // Create a packet queue where all available packets are preallocated. To use payload_buffer
-  // as a ring buffer, ensure that packets are released in the same order they are popped.
+  // as a ring buffer, ensure that packets are recycled in the same order they are popped.
   // It is illegal to call Push on the returned packet queue.
-  static fit::result<std::unique_ptr<CapturePacketQueue>, std::string> CreatePreallocated(
+  static fit::result<std::shared_ptr<CapturePacketQueue>, std::string> CreatePreallocated(
       const fzl::VmoMapper& payload_buffer, const Format& format, size_t frames_per_packet);
 
   // Create a packet queue where all packets will be dynamically allocated by Push.
-  // It is illegal to call Release on packets returned from this queue.
-  static fit::result<std::unique_ptr<CapturePacketQueue>, std::string> CreateDynamicallyAllocated(
+  // It is illegal to call Recycle on packets returned from this queue.
+  static std::shared_ptr<CapturePacketQueue> CreateDynamicallyAllocated(
       const fzl::VmoMapper& payload_buffer, const Format& format);
 
-  // Number of pending packets.
-  bool empty() const { return size() == 0; }
-  size_t size() const;
+  // Report whether the pending and ready queues are both empty.
+  bool empty() const;
 
-  // Access to the front of the pending packet queue.
-  // Front returns the first packet without removing it, while Pop removes it.
-  // The queue must not be empty.
-  fbl::RefPtr<Packet> Front() const;
-  fbl::RefPtr<Packet> Pop();
+  // Report the number of pending and ready packets.
+  size_t PendingSize() const;
+  size_t ReadySize() const;
 
-  // Pop all packets from the queue.
-  // Equivalent to repeatedly calling Pop() until size() == 0.
-  std::vector<fbl::RefPtr<Packet>> PopAll();
+  // Start mixing the packet at the front of the mix queue.
+  // Returns nullopt if the queue is empty.
+  //
+  // The returned PacketMixState object contains bookkeeping information about the mix.
+  // The caller should update this state as necessary and pass that final updated state
+  // to FinishMixerJob once this mix operation is ready. If the mix operation only partially
+  // fills the packet, then the next call to NextMixerJob will return the same state that
+  // was passed to FinishMixerJob (except with an updated mix_target).
+  //
+  // For example, a typical usage might look like:
+  //
+  //   while (true) {
+  //     auto mix_state = pq->NextMixerJob();
+  //     if (mix_state.capture_timestamp == NO_TIMESTAMP) {
+  //       mix_state.capture_timestamp = current_timestamp;
+  //     }
+  //     if (mix_state.rames > max_mix_frames) {
+  //       mix_state.frames = max_mix_frames;
+  //     }
+  //     mix(mix_state.target, state.mix_frames);
+  //     pq->FinishMixerJob(state);
+  //   }
+  //
+  struct PacketMixState {
+    fbl::RefPtr<Packet> packet;
+    int64_t capture_timestamp = fuchsia::media::NO_TIMESTAMP;
+    uint32_t flags = 0;
+    void* target = nullptr;
+    size_t frames = 0;
+  };
+  std::optional<PacketMixState> NextMixerJob();
 
-  // Push a packet onto the the end of the queue.
+  // Complete the job started by the last call to NextMixerJob().
+  enum class PacketMixStatus {
+    // If the packet was fully mixed, it will be moved from the pending queue to
+    // the back of the ready queue.
+    Done,
+    // If the packet was only partially mixed, we expect another call to NextMixerJob.
+    // The packet will be left at the front of the pending queue.
+    Partial,
+    // If the packet was discarded by a concurrent call to DiscardPendingPackets,
+    // the packet will be left alone.
+    Discarded,
+  };
+  PacketMixStatus FinishMixerJob(const PacketMixState& state);
+
+  // Atomically move all packets from the pending queue to the ready queue.
+  void DiscardPendingPackets();
+
+  // Pop a packet from the ready queue. Returns nullptr if the ready queue is empty.
+  fbl::RefPtr<Packet> PopReady();
+
+  // Push a packet onto the the end of the pending queue.
   // The queue must have been created with CreateDynamicallyAllocated.
   // Returns an error if the packet is malformed.
-  fit::result<void, std::string> Push(size_t offset_frames, size_t num_frames,
-                                      CaptureAtCallback callback);
+  fit::result<void, std::string> PushPending(size_t offset_frames, size_t num_frames,
+                                             CaptureAtCallback callback);
 
-  // Release a packet back onto the queue. The packet must have been previously
+  // Recycle a packet back onto the queue. The packet must have been previously
   // returned by Pop and the queue must have been created with CreatePreallocated.
   // Returns an error if stream_packet was not in flight.
-  fit::result<void, std::string> Release(const StreamPacket& stream_packet);
-
-  // TODO(43507): This is a temporary flag to ease the transition. This will be exposed as a command
-  // line flag for audio_core. This has no effect in DynamicallyAllocated mode.
-  //
-  // When false (the default), packets are automatically released after each call to Push.
-  // This gives equivalent behavior to the "current" code, i.e., before the bug fix.
-  // Otherwise, packets must be explicitly released.
-  //
-  // Eventually this flag will be deleted and the behavior will be hardcoded to "true".
-  static void SetMustReleasePackets(bool b) { must_release_packets_ = b; }
+  fit::result<void, std::string> Recycle(const StreamPacket& stream_packet);
 
  private:
   enum class Mode { Preallocated, DynamicallyAllocated };
-  static bool must_release_packets_;
 
  public:
   // This needs to be public for std::make_unique.
   CapturePacketQueue(Mode mode, const fzl::VmoMapper& payload_buffer, const Format& format);
 
  private:
-  fbl::RefPtr<Packet> Alloc(size_t frame_offset, size_t num_frames);
-  fbl::RefPtr<Packet> PopLocked() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  fbl::RefPtr<Packet> Alloc(size_t frame_offset, size_t num_frames, CaptureAtCallback callback);
+  void PopPendingLocked() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   const Mode mode_;
   const fzl::VmoMapper& payload_buffer_;
@@ -105,11 +195,12 @@ class CapturePacketQueue {
   Allocator allocator_;
   mutable std::mutex mutex_;
 
-  // List of packets ready to be used as capture buffers.
+  // Pending and ready queues.
   std::deque<fbl::RefPtr<Packet>> pending_ FXL_GUARDED_BY(mutex_);
+  std::deque<fbl::RefPtr<Packet>> ready_ FXL_GUARDED_BY(mutex_);
 
-  // Mapping from payload_offset to packet, where each packet is currently in use.
-  // These packets will be returned to the pending list by Release().
+  // Mapping from payload_offset to packet, for packets that have been popped from ready_.
+  // These packets will be returned to pending_ by Recycle().
   // For mode_ == Preallocated only.
   std::unordered_map<uint64_t, fbl::RefPtr<Packet>> inflight_ FXL_GUARDED_BY(mutex_);
 };

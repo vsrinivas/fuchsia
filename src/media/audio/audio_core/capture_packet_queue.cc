@@ -13,15 +13,13 @@
 using Packet = media::audio::CapturePacketQueue::Packet;
 
 // The maximum number of slabs per each capture queue. Allow enough slabs so
-// we can allocate ~500 packets. At 10ms per packet, that is ~5s of audio.
+// we can allocate ~1000 packets. At 10ms per packet, that is ~10s of audio.
 static const size_t kMaxSlabs = static_cast<size_t>(
-    ceil(500.0 / (static_cast<double>(fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE) / sizeof(Packet))));
+    ceil(1000.0 / (static_cast<double>(fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE) / sizeof(Packet))));
 static const size_t kMaxPackets =
     (kMaxSlabs * fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE) / sizeof(Packet);
 
 namespace media::audio {
-
-bool CapturePacketQueue::must_release_packets_ = false;
 
 CapturePacketQueue::CapturePacketQueue(Mode mode, const fzl::VmoMapper& payload_buffer,
                                        const Format& format)
@@ -31,10 +29,10 @@ CapturePacketQueue::CapturePacketQueue(Mode mode, const fzl::VmoMapper& payload_
       format_(format),
       allocator_(kMaxSlabs, true) {}
 
-fit::result<std::unique_ptr<CapturePacketQueue>, std::string>
+fit::result<std::shared_ptr<CapturePacketQueue>, std::string>
 CapturePacketQueue::CreatePreallocated(const fzl::VmoMapper& payload_buffer, const Format& format,
                                        size_t frames_per_packet) {
-  auto out = std::make_unique<CapturePacketQueue>(Mode::Preallocated, payload_buffer, format);
+  auto out = std::make_shared<CapturePacketQueue>(Mode::Preallocated, payload_buffer, format);
 
   // Locking is not strictly necessary here, but it makes the lock analysis simpler.
   std::lock_guard<std::mutex> lock(out->mutex_);
@@ -55,8 +53,9 @@ CapturePacketQueue::CreatePreallocated(const fzl::VmoMapper& payload_buffer, con
   }
 
   // Pre-allocate every packet.
-  for (size_t frame = 0; frame < out->payload_buffer_frames_; frame += frames_per_packet) {
-    auto p = out->Alloc(frame, frames_per_packet);
+  for (size_t frame = 0; frame + frames_per_packet <= out->payload_buffer_frames_;
+       frame += frames_per_packet) {
+    auto p = out->Alloc(frame, frames_per_packet, nullptr);
     if (!p) {
       return fit::error(fxl::StringPrintf(
           "packet queue is too large; exceeded limit after %lu packets", kMaxPackets));
@@ -67,72 +66,113 @@ CapturePacketQueue::CreatePreallocated(const fzl::VmoMapper& payload_buffer, con
   return fit::ok(std::move(out));
 }
 
-fit::result<std::unique_ptr<CapturePacketQueue>, std::string>
-CapturePacketQueue::CreateDynamicallyAllocated(const fzl::VmoMapper& payload_buffer,
-                                               const Format& format) {
-  return fit::ok(
-      std::make_unique<CapturePacketQueue>(Mode::DynamicallyAllocated, payload_buffer, format));
+std::shared_ptr<CapturePacketQueue> CapturePacketQueue::CreateDynamicallyAllocated(
+    const fzl::VmoMapper& payload_buffer, const Format& format) {
+  return std::make_shared<CapturePacketQueue>(Mode::DynamicallyAllocated, payload_buffer, format);
 }
 
-fbl::RefPtr<Packet> CapturePacketQueue::Alloc(size_t offset_frames, size_t num_frames) {
-  auto p = allocator_.New();
-  p->stream_packet = {
-      .payload_buffer_id = 0,
-      .payload_offset = offset_frames * format_.bytes_per_frame(),
-      .payload_size = num_frames * format_.bytes_per_frame(),
-  };
-  auto start = static_cast<char*>(payload_buffer_.start());
-  p->buffer_start = start + p->stream_packet.payload_offset;
-  p->buffer_end = start + p->stream_packet.payload_offset + p->stream_packet.payload_size;
-  return p;
+fbl::RefPtr<Packet> CapturePacketQueue::Alloc(size_t offset_frames, size_t num_frames,
+                                              CaptureAtCallback callback) {
+  size_t payload_offset = offset_frames * format_.bytes_per_frame();
+  char* payload_start = static_cast<char*>(payload_buffer_.start()) + payload_offset;
+  return allocator_.New(std::move(callback), num_frames, payload_offset, payload_start);
 }
 
-size_t CapturePacketQueue::size() const {
+bool CapturePacketQueue::empty() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return pending_.empty() && ready_.empty();
+}
+
+size_t CapturePacketQueue::PendingSize() const {
   std::lock_guard<std::mutex> lock(mutex_);
   return pending_.size();
 }
 
-fbl::RefPtr<CapturePacketQueue::Packet> CapturePacketQueue::Front() const {
+size_t CapturePacketQueue::ReadySize() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  FX_CHECK(!pending_.empty());
-  return pending_.front();
+  return ready_.size();
 }
 
-fbl::RefPtr<CapturePacketQueue::Packet> CapturePacketQueue::Pop() {
-  TRACE_INSTANT("audio", "CapturePacketQueue::Pop", TRACE_SCOPE_PROCESS);
+std::optional<CapturePacketQueue::PacketMixState> CapturePacketQueue::NextMixerJob() {
+  TRACE_INSTANT("audio", "CapturePacketQueue::NextMixerJob", TRACE_SCOPE_PROCESS);
   std::lock_guard<std::mutex> lock(mutex_);
-  FX_CHECK(!pending_.empty());
-  return PopLocked();
-}
-
-std::vector<fbl::RefPtr<CapturePacketQueue::Packet>> CapturePacketQueue::PopAll() {
-  TRACE_INSTANT("audio", "CapturePacketQueue::PopAll", TRACE_SCOPE_PROCESS);
-  std::lock_guard<std::mutex> lock(mutex_);
-  std::vector<fbl::RefPtr<Packet>> out;
-  while (!pending_.empty()) {
-    out.push_back(PopLocked());
+  if (pending_.empty()) {
+    return std::nullopt;
   }
-  return out;
+  auto p = pending_.front();
+  return PacketMixState{
+      .packet = p,
+      .capture_timestamp = p->state_.capture_timestamp,
+      .flags = p->state_.flags,
+      .target = p->payload_buffer_start_ + p->state_.filled_frames * format_.bytes_per_frame(),
+      .frames = p->num_frames_ - p->state_.filled_frames,
+  };
 }
 
-fbl::RefPtr<CapturePacketQueue::Packet> CapturePacketQueue::PopLocked() {
+CapturePacketQueue::PacketMixStatus CapturePacketQueue::FinishMixerJob(
+    const PacketMixState& state) {
+  TRACE_INSTANT("audio", "CapturePacketQueue::FinishMixerJob", TRACE_SCOPE_PROCESS);
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (pending_.empty() || pending_.front() != state.packet) {
+    return PacketMixStatus::Discarded;
+  }
+  auto& p = state.packet;
+  p->state_.capture_timestamp = state.capture_timestamp;
+  p->state_.flags = state.flags;
+  p->state_.filled_frames += state.frames;
+  if (p->state_.filled_frames < p->num_frames_) {
+    return PacketMixStatus::Partial;
+  }
+  PopPendingLocked();
+  return PacketMixStatus::Done;
+}
+
+void CapturePacketQueue::DiscardPendingPackets() {
+  TRACE_INSTANT("audio", "CapturePacketQueue::DiscardPendingPackets", TRACE_SCOPE_PROCESS);
+  std::lock_guard<std::mutex> lock(mutex_);
+  while (!pending_.empty()) {
+    PopPendingLocked();
+  }
+}
+
+void CapturePacketQueue::PopPendingLocked() {
   // Caller must acquire the lock.
   auto p = pending_.front();
+
+  // Now that this packet is ready, create the final StreamPacket.
+  auto& pkt = p->stream_packet_;
+  pkt.pts = p->state_.capture_timestamp;
+  pkt.flags = p->state_.flags;
+  pkt.payload_buffer_id = 0u;
+  pkt.payload_offset = p->payload_buffer_offset_;
+  pkt.payload_size = p->state_.filled_frames * format_.bytes_per_frame();
+
+  // Move to the ready queue.
   pending_.pop_front();
+  ready_.push_back(p);
+  p->ready_time_ = zx::clock::get_monotonic();
+  p->ready_.store(true);
+}
+
+fbl::RefPtr<CapturePacketQueue::Packet> CapturePacketQueue::PopReady() {
+  TRACE_INSTANT("audio", "CapturePacketQueue::PopReady", TRACE_SCOPE_PROCESS);
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (ready_.empty()) {
+    return nullptr;
+  }
+  auto p = ready_.front();
+  ready_.pop_front();
   if (mode_ == Mode::Preallocated) {
-    // In preallocated mode, we always retain at least one reference to every packet.
-    if (must_release_packets_) {
-      inflight_[p->stream_packet.payload_offset] = p;
-    } else {
-      pending_.push_back(p);
-    }
+    // In preallocated mode, we retain a reference so the packet can be recycled.
+    inflight_[p->stream_packet_.payload_offset] = p;
   }
   return p;
 }
 
-fit::result<void, std::string> CapturePacketQueue::Push(size_t offset_frames, size_t num_frames,
-                                                        CaptureAtCallback callback) {
-  TRACE_INSTANT("audio", "CapturePacketQueue::Push", TRACE_SCOPE_PROCESS);
+fit::result<void, std::string> CapturePacketQueue::PushPending(size_t offset_frames,
+                                                               size_t num_frames,
+                                                               CaptureAtCallback callback) {
+  TRACE_INSTANT("audio", "CapturePacketQueue::PushPending", TRACE_SCOPE_PROCESS);
   FX_CHECK(mode_ == Mode::DynamicallyAllocated);
 
   // Buffers submitted by clients must exist entirely within the shared payload buffer, and must
@@ -145,24 +185,20 @@ fit::result<void, std::string> CapturePacketQueue::Push(size_t offset_frames, si
                           offset_frames, num_frames, payload_buffer_frames_));
   }
 
-  auto p = Alloc(offset_frames, num_frames);
+  auto p = Alloc(offset_frames, num_frames, std::move(callback));
   if (!p) {
     return fit::error(fxl::StringPrintf(
         "packet queue is too large; exceeded limit after %lu packets", kMaxPackets));
   }
-  p->callback = std::move(callback);
 
   std::lock_guard<std::mutex> lock(mutex_);
   pending_.push_back(p);
   return fit::ok();
 }
 
-fit::result<void, std::string> CapturePacketQueue::Release(const StreamPacket& stream_packet) {
-  TRACE_INSTANT("audio", "CapturePacketQueue::Release", TRACE_SCOPE_PROCESS);
+fit::result<void, std::string> CapturePacketQueue::Recycle(const StreamPacket& stream_packet) {
+  TRACE_INSTANT("audio", "CapturePacketQueue::Recycle", TRACE_SCOPE_PROCESS);
   FX_CHECK(mode_ == Mode::Preallocated);
-  if (!must_release_packets_) {
-    return fit::ok();
-  }
 
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = inflight_.find(stream_packet.payload_offset);
@@ -171,19 +207,21 @@ fit::result<void, std::string> CapturePacketQueue::Release(const StreamPacket& s
         fxl::StringPrintf("could not release unknown packet with payload_offset = %lu",
                           stream_packet.payload_offset));
   }
-  if (it->second->stream_packet.payload_buffer_id != stream_packet.payload_buffer_id ||
-      it->second->stream_packet.payload_offset != stream_packet.payload_offset ||
-      it->second->stream_packet.payload_size != stream_packet.payload_size) {
+  auto p = it->second;
+  if (p->stream_packet_.payload_buffer_id != stream_packet.payload_buffer_id ||
+      p->stream_packet_.payload_offset != stream_packet.payload_offset ||
+      p->stream_packet_.payload_size != stream_packet.payload_size) {
     return fit::error(fxl::StringPrintf(
         "could not release packet with payload { buffer_id = %u, offset = %lu, size = %lu }, "
         "expected packet with payload { buffer_id = %u, offset = %lu, size = %lu }",
         stream_packet.payload_buffer_id, stream_packet.payload_offset, stream_packet.payload_size,
-        it->second->stream_packet.payload_buffer_id, it->second->stream_packet.payload_offset,
-        it->second->stream_packet.payload_size));
+        p->stream_packet_.payload_buffer_id, p->stream_packet_.payload_offset,
+        p->stream_packet_.payload_size));
   }
 
   // Move from inflight to pending.
-  pending_.push_back(it->second);
+  p->Reset();
+  pending_.push_back(p);
   inflight_.erase(it);
   return fit::ok();
 }
