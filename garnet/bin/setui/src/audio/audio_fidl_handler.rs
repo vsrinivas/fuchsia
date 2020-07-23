@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 use {
     crate::fidl_hanging_get_responder,
-    crate::fidl_hanging_get_responder_no_imports,
     crate::fidl_process,
     crate::fidl_processor::RequestContext,
     crate::request_respond,
@@ -22,13 +21,12 @@ use {
     futures::prelude::*,
 };
 
-fidl_hanging_get_responder!(AudioSettings, AudioWatchResponder, AudioMarker::DEBUG_NAME);
-
-// TODO(fxb/55692): Remove when clients are ported to watch.
-fidl_hanging_get_responder_no_imports!(
+fidl_hanging_get_responder!(
+    AudioMarker,
+    AudioSettings,
+    AudioWatchResponder,
     AudioSettings,
     AudioWatch2Responder,
-    AudioMarker::DEBUG_NAME
 );
 
 impl From<SettingResponse> for AudioSettings {

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 use {
     crate::fidl_hanging_get_responder,
-    crate::fidl_hanging_get_responder_no_imports,
     crate::fidl_process,
     crate::fidl_processor::RequestContext,
     crate::request_respond,
@@ -19,26 +18,16 @@ use {
     futures::prelude::*,
 };
 
-fidl_hanging_get_responder!(DisplaySettings, DisplayWatchResponder, DisplayMarker::DEBUG_NAME);
-
-// TODO(fxb/55692): Remove when clients are ported to watch.
-fidl_hanging_get_responder_no_imports!(
+fidl_hanging_get_responder!(
+    DisplayMarker,
+    DisplaySettings,
+    DisplayWatchResponder,
     DisplaySettings,
     DisplayWatch2Responder,
-    DisplayMarker::DEBUG_NAME
-);
-
-// TODO(fxb/55692): Remove when clients are ported to watch.
-fidl_hanging_get_responder_no_imports!(
     LightSensorData,
     DisplayWatchLightSensor2Responder,
-    DisplayMarker::DEBUG_NAME
-);
-
-fidl_hanging_get_responder_no_imports!(
     LightSensorData,
     DisplayWatchLightSensorResponder,
-    DisplayMarker::DEBUG_NAME
 );
 
 impl From<SettingResponse> for LightSensorData {

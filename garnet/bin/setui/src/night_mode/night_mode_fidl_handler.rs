@@ -17,11 +17,7 @@ use crate::request_respond;
 use crate::switchboard::base::{NightModeInfo, SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
-fidl_hanging_get_responder!(
-    NightModeSettings,
-    NightModeWatchResponder,
-    NightModeMarker::DEBUG_NAME
-);
+fidl_hanging_get_responder!(NightModeMarker, NightModeSettings, NightModeWatchResponder,);
 
 impl From<SettingResponse> for NightModeSettings {
     fn from(response: SettingResponse) -> Self {

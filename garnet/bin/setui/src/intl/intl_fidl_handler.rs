@@ -9,17 +9,19 @@ use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
-use crate::fidl_hanging_get_responder_no_imports;
 use crate::fidl_process;
 use crate::fidl_processor::RequestContext;
 use crate::request_respond;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
-fidl_hanging_get_responder!(IntlSettings, IntlWatchResponder, IntlMarker::DEBUG_NAME);
-
-// TODO(fxb/55692): Remove when clients are ported to watch.
-fidl_hanging_get_responder_no_imports!(IntlSettings, IntlWatch2Responder, IntlMarker::DEBUG_NAME);
+fidl_hanging_get_responder!(
+    IntlMarker,
+    IntlSettings,
+    IntlWatchResponder,
+    IntlSettings,
+    IntlWatch2Responder,
+);
 
 impl From<SettingResponse> for IntlSettings {
     fn from(response: SettingResponse) -> Self {

@@ -16,7 +16,7 @@ use {
     futures::prelude::*,
 };
 
-fidl_hanging_get_responder!(InputDeviceSettings, InputWatchResponder, InputMarker::DEBUG_NAME);
+fidl_hanging_get_responder!(InputMarker, InputDeviceSettings, InputWatchResponder);
 
 impl From<SettingResponse> for InputDeviceSettings {
     fn from(response: SettingResponse) -> Self {

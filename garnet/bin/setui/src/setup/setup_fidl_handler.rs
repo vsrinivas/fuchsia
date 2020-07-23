@@ -15,7 +15,7 @@ use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 use std::convert::TryFrom;
 
-fidl_hanging_get_responder!(SetupSettings, SetupWatchResponder, SetupMarker::DEBUG_NAME);
+fidl_hanging_get_responder!(SetupMarker, SetupSettings, SetupWatchResponder);
 
 impl TryFrom<SetupSettings> for SettingRequest {
     type Error = &'static str;

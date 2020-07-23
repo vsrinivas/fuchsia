@@ -14,11 +14,7 @@ use {
     futures::FutureExt,
 };
 
-fidl_hanging_get_responder!(
-    DoNotDisturbSettings,
-    DoNotDisturbWatchResponder,
-    DoNotDisturbMarker::DEBUG_NAME
-);
+fidl_hanging_get_responder!(DoNotDisturbMarker, DoNotDisturbSettings, DoNotDisturbWatchResponder,);
 
 impl From<SettingResponse> for DoNotDisturbSettings {
     fn from(response: SettingResponse) -> Self {

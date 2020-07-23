@@ -12,19 +12,17 @@ use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
-use crate::fidl_hanging_get_responder_no_imports;
 use crate::fidl_processor::RequestContext;
 use crate::request_respond;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
-fidl_hanging_get_responder!(PrivacySettings, PrivacyWatchResponder, PrivacyMarker::DEBUG_NAME);
-
-// TODO(fxb/55692): Remove when clients are ported to watch.
-fidl_hanging_get_responder_no_imports!(
+fidl_hanging_get_responder!(
+    PrivacyMarker,
+    PrivacySettings,
+    PrivacyWatchResponder,
     PrivacySettings,
     PrivacyWatch2Responder,
-    PrivacyMarker::DEBUG_NAME
 );
 
 impl From<SettingResponse> for PrivacySettings {

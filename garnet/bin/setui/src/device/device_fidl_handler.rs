@@ -9,7 +9,7 @@ use {
     futures::FutureExt,
 };
 
-fidl_hanging_get_responder!(DeviceSettings, DeviceWatchResponder, DeviceMarker::DEBUG_NAME);
+fidl_hanging_get_responder!(DeviceMarker, DeviceSettings, DeviceWatchResponder);
 
 impl From<SettingResponse> for DeviceSettings {
     fn from(response: SettingResponse) -> Self {
