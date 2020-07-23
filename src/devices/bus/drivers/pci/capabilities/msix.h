@@ -115,8 +115,7 @@ class MsixCapability : public Capability {
       zxlogf(ERROR, "[%s] Couldn't map MSI-X table: %d", addr(), st);
       return st;
     }
-    // TODO(fxb/56253): Add MMIO_PTR to cast.
-    table_ = static_cast<MsixTable*>((void*)table_mmio_->get());
+    table_ = static_cast<MMIO_PTR MsixTable*>(table_mmio_->get());
 
     st = ddk::MmioBuffer::Create(pba_offset_, pba_bytes, std::move(pba_vmo),
                                  ZX_CACHE_POLICY_UNCACHED_DEVICE, &pba_mmio_);
@@ -124,8 +123,7 @@ class MsixCapability : public Capability {
       zxlogf(ERROR, "[%s] Couldn't map MSI-X pba: %d", addr(), st);
       return st;
     }
-    // TODO(fxb/56253): Add MMIO_PTR to cast.
-    pba_ = static_cast<uint64_t*>((void*)pba_mmio_->get());
+    pba_ = static_cast<MMIO_PTR uint64_t*>(pba_mmio_->get());
     return ZX_OK;
   }
 
@@ -145,8 +143,8 @@ class MsixCapability : public Capability {
   // to know until runtime.
   std::optional<ddk::MmioBuffer> table_mmio_;
   std::optional<ddk::MmioBuffer> pba_mmio_;
-  MsixTable* table_;
-  uint64_t* pba_;
+  MMIO_PTR MsixTable* table_;
+  MMIO_PTR uint64_t* pba_;
   // Registers for capability configuration and control.
   const PciReg16 ctrl_;
   const PciReg32 table_reg_;
