@@ -103,9 +103,17 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
     return;
   }
 
+  if (frame_waiters_.find(info.buffer_id) != frame_waiters_.end()) {
+    FX_LOGS(WARNING) << "Driver sent a frame that was already in use (ID = " << info.buffer_id
+                     << "). This frame will not be sent to clients.";
+    legacy_stream_->ReleaseFrame(info.buffer_id);
+    return;
+  }
+
   if (!info.metadata.has_timestamp()) {
     FX_LOGS(WARNING)
         << "Driver sent a frame without a timestamp. This frame will not be sent to clients.";
+    legacy_stream_->ReleaseFrame(info.buffer_id);
     return;
   }
 
@@ -284,7 +292,7 @@ void StreamImpl::PostSetCropRegion(uint32_t id, std::unique_ptr<fuchsia::math::R
           }
           legacy_stream_->SetRegionOfInterest(x_min, y_min, x_max, y_max, [](zx_status_t status) {
             // TODO(50908): Make this an error once RegionOfInterest support is known at init time.
-            //FX_PLOGS(WARNING, status) << "Stream does not support crop region.";
+            // FX_PLOGS(WARNING, status) << "Stream does not support crop region.";
           });
         }
         current_crop_region_ = std::move(region);
