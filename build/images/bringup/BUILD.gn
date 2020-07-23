@@ -3,13 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/board.gni")
-import("//build/config/fuchsia/zbi.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
 import("//build/images/bootfs_manifest_additions.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
-import("//build/images/ta.gni")
+import("//build/unification/future/images/devmgr_config.gni")
+import("//build/unification/images/common_image_contents.gni")
+import("//build/unification/zbi/migrated_zbi.gni")
 
 assert(current_toolchain == target_toolchain)
 
@@ -50,43 +51,24 @@ action("devmgr_config.txt") {
   }
 }
 
-additional_manifests = []
-foreach(label, bootfs_manifest_additions) {
-  target_dir = get_label_info(label, "target_out_dir")
-  target_name = get_label_info(label, "name")
-  additional_manifests += [ target_dir + "/" + target_name ]
+devmgr_config("devmgr_config") {
+  label = ":devmgr_config.txt"
 }
 
-zbi("bringup") {
+migrated_zbi("bringup") {
   testonly = true
 
+  output_dir = root_out_dir
+
   deps = [
-           ":boot.manifest",
-           ":devmgr_config.txt",
-         ] + bootfs_manifest_additions
-
-  boot_manifest_outputs = get_target_outputs(":boot.manifest")
-  inputs = [ boot_manifest_outputs[0] ] + [ zircon_kernel_zbi ] +
-           additional_manifests
-
-  manifest = [
-    {
-      outputs = [ "config/devmgr" ]
-      sources = get_target_outputs(":devmgr_config.txt")
-    },
+    ":devmgr_config",
+    ":system_package.manifest_args",
+    "//build/unification/future/images:fuchsia_kernel_cmdline",
+    "//build/unification/future/images:ta",
+    "//build/unification/zbi:kernel",
   ]
-  foreach(ta_uuid, fuchsia_ta_uuids) {
-    manifest += [
-      {
-        outputs = [ "lib/firmware/${ta_uuid}${ta_dest_suffix}" ]
-        sources = [ rebase_path("${ta_path}/${ta_uuid}${ta_src_suffix}") ]
-      },
-    ]
-  }
-
-  cmdline = kernel_cmdline_args + board_kernel_cmdline_args
-  cmdline_inputs = kernel_cmdline_files
-  manifest += bootfs_extra
+  deps += bootfs_manifest_additions
+  deps += common_image_contents
 
   metadata = {
     images = [
