@@ -32,6 +32,7 @@ PT_DYNAMIC = 2
 PT_INTERP = 3
 PT_NOTE = 4
 PT_GNU_RELRO = 0x6474e552
+PF_X = 1
 PF_W = 2
 DT_NEEDED = 1
 DT_PLTRELSZ = 2
@@ -309,6 +310,7 @@ elf_sizes = namedtuple(
         'rela',                     # DT_RELASZ (+ DT_PLTRELSZ if matching)
         'relr',                     # DT_RELRSZ
         'relro',                    # PT_GNU_RELRO p_memsz
+        'code',                     # executable segment p_filesz
         'data',                     # writable segment p_filesz
         'bss',                      # writable segment p_memsz past p_filesz
     ])
@@ -557,9 +559,17 @@ def get_elf_info(filename, match_notes=False):
             return file_end - start
         return mem_end - file_end
 
+    def gen_executable_segments():
+        return (phdr for phdr in phdrs
+                if phdr.p_type == PT_LOAD and (phdr.p_flags & PF_X) != 0)
+
     def gen_writable_segments():
         return (phdr for phdr in phdrs
                 if phdr.p_type == PT_LOAD and (phdr.p_flags & PF_W) != 0)
+
+    def get_code_size():
+        return sum(get_segment_size(phdr, file=True, mem=False)
+                   for phdr in gen_executable_segments())
 
     def get_data_size():
         return sum(get_segment_size(phdr, file=True, mem=False)
@@ -680,6 +690,7 @@ def get_elf_info(filename, match_notes=False):
                 filename,
                 elf_sizes(file=filesize,
                           memory=get_memory_size(),
+                          code=get_code_size(),
                           relro=get_relro_size(),
                           data=get_data_size(),
                           bss=get_bss_size(),
