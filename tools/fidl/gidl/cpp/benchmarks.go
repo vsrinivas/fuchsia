@@ -75,13 +75,13 @@ type benchmarkTmplInput struct {
 }
 
 // Generate generates High-Level C++ benchmarks.
-func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) ([]byte, map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	files := map[string][]byte{}
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
-			return nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
+			return nil, nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
@@ -101,11 +101,11 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, e
 			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
 			EnableEchoCallBenchmark:  gidlBenchmark.EnableEchoCallBenchmark,
 		}); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		files[benchmarkName("_"+gidlBenchmark.Name)] = buf.Bytes()
 	}
-	return files, nil
+	return nil, files, nil
 }
 
 func benchmarkTypeFromValue(value gidlir.Value) string {

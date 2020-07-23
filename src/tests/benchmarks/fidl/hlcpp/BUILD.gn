@@ -8,9 +8,8 @@ import("//build/testing/environments.gni")
 import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
-gidl_cpp("benchmark_suite_hlcpp") {
+gidl_cpp_benchmarks("benchmark_suite_hlcpp") {
   testonly = true
-  type = "benchmark"
   inputs = benchmark_suite_gidl_files
   fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
   deps = [

@@ -158,13 +158,13 @@ type benchmark struct {
 }
 
 // GenerateBenchmarks generates Dart benchmarks.
-func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) ([]byte, map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	var benchmarks []benchmark
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
-			return nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
+			return nil, nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
 		value := visit(gidlBenchmark.Value, decl)
 		valueType := typeName(decl)
@@ -180,7 +180,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, e
 	}
 	var buf bytes.Buffer
 	err := benchmarkTmpl.Execute(&buf, input)
-	return map[string][]byte{"": buf.Bytes()}, err
+	return buf.Bytes(), nil, err
 }
 
 func benchmarkName(gidlName string) string {

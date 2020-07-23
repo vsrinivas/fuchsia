@@ -41,21 +41,34 @@ template("gidl") {
   assert(defined(invoker.language))
 
   # Output filename used to generate the output paths in the gidl tool.
-  assert(defined(invoker.output))
+  assert(defined(invoker.output) || defined(invoker.all_outputs))
   assert(defined(invoker.type))
   assert(defined(invoker.fidl))
   assert(defined(invoker.inputs))
-  num_output_files = "1"
-  if (defined(invoker.num_output_files)) {
-    num_output_files = invoker.num_output_files
+  num_extra_output_files = "0"
+  if (defined(invoker.num_extra_output_files)) {
+    num_extra_output_files = invoker.num_extra_output_files
   }
 
   # All output targets.
   all_outputs = []
+  output_args = []
   if (defined(invoker.all_outputs)) {
+    # Extra file pattern is a string including "[NUM]" that will be replaced with
+    # a file number when generating multiple files
+    assert(defined(invoker.extra_file_pattern))
     all_outputs = invoker.all_outputs
-  } else {
-    all_outputs = [ invoker.output ]
+    output_args += [
+      "-extra-file-pattern",
+      rebase_path(invoker.extra_file_pattern),
+    ]
+  }
+  if (defined(invoker.output)) {
+    all_outputs += [ invoker.output ]
+    output_args += [
+      "-out",
+      rebase_path(invoker.output),
+    ]
   }
 
   fidl_target =
@@ -65,19 +78,17 @@ template("gidl") {
 
   compiled_action(target_name) {
     tool = "//tools/fidl/gidl:gidl"
-    args = [
+    args = output_args + [
              "-type",
              invoker.type,
              "-language",
              invoker.language,
              "-json",
              rebase_path(json_file),
-             "-out",
-             rebase_path(invoker.output),
 
              # TODO(fxb/52371) It should not be necessary to specify number of generated files.
-             "-num-output-files",
-             num_output_files,
+             "-num-extra-output-files",
+             num_extra_output_files,
            ] + rebase_path(invoker.inputs)
     inputs = invoker.inputs
     outputs = all_outputs
@@ -86,18 +97,59 @@ template("gidl") {
   }
 }
 
-template("gidl_source_set") {
+template("gidl_single_file_source_set") {
   assert(defined(invoker.type))
   assert(defined(invoker.fidl))
   assert(defined(invoker.inputs))
   assert(defined(invoker.language))
   assert(!defined(invoker.sources))
 
-  generated_file = "${target_gen_dir}/gidl_generated_${target_name}.cc"
+  fidl_bindings = get_label_info(invoker.fidl, "dir") + ":" +
+                  get_label_info(invoker.fidl, "name")
+  if (defined(invoker.bindings_suffix)) {
+    fidl_bindings = fidl_bindings + invoker.bindings_suffix
+  }
+
+  output_filename = "${target_gen_dir}/gidl_generated_${target_name}.cc"
+
+  gidl_target = "${target_name}_gidl"
+  gidl(gidl_target) {
+    type = invoker.type
+    language = invoker.language
+    output = output_filename
+    fidl = invoker.fidl
+    inputs = invoker.inputs
+    forward_variables_from(invoker, [ "testonly" ])
+  }
+
+  source_set(target_name) {
+    sources = [ output_filename ]
+    deps = [
+      ":${gidl_target}",
+      fidl_bindings,
+    ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "fidl",
+                             "deps",
+                           ])
+  }
+}
+
+template("gidl_multiple_file_source_set") {
+  assert(defined(invoker.type))
+  assert(defined(invoker.fidl))
+  assert(defined(invoker.inputs))
+  assert(defined(invoker.language))
+  assert(!defined(invoker.sources))
 
   # TODO(fxb/52371) Generate output filename list on the fly.
   source_files = [
-    "${target_gen_dir}/gidl_generated_${target_name}.cc",
+    "${target_gen_dir}/gidl_generated_${target_name}1.cc",
     "${target_gen_dir}/gidl_generated_${target_name}2.cc",
     "${target_gen_dir}/gidl_generated_${target_name}3.cc",
     "${target_gen_dir}/gidl_generated_${target_name}4.cc",
@@ -233,15 +285,17 @@ template("gidl_source_set") {
     fidl_bindings = fidl_bindings + invoker.bindings_suffix
   }
 
+  extra_file_pattern = "${target_gen_dir}/gidl_generated_${target_name}[NUM].cc"
+
   gidl_target = "${target_name}_gidl"
   gidl(gidl_target) {
     type = invoker.type
     language = invoker.language
-    output = generated_file
     all_outputs = source_files
     fidl = invoker.fidl
     inputs = invoker.inputs
-    num_output_files = "128"
+    num_extra_output_files = "128"
+    extra_file_pattern = extra_file_pattern
     forward_variables_from(invoker, [ "testonly" ])
   }
 
@@ -263,31 +317,52 @@ template("gidl_source_set") {
   }
 }
 
-template("gidl_cpp") {
-  gidl_source_set(target_name) {
+template("gidl_cpp_conformance") {
+  gidl_single_file_source_set(target_name) {
+    type = "conformance"
     language = "cpp"
     forward_variables_from(invoker, "*")
   }
 }
 
-template("gidl_llcpp") {
-  gidl_source_set(target_name) {
+template("gidl_llcpp_conformance") {
+  gidl_single_file_source_set(target_name) {
+    type = "conformance"
     language = "llcpp"
     bindings_suffix = "_llcpp"
     forward_variables_from(invoker, "*")
   }
 }
 
-template("gidl_walker") {
-  gidl_source_set(target_name) {
+template("gidl_cpp_benchmarks") {
+  gidl_multiple_file_source_set(target_name) {
+    type = "benchmark"
+    language = "cpp"
+    forward_variables_from(invoker, "*")
+  }
+}
+
+template("gidl_llcpp_benchmarks") {
+  gidl_multiple_file_source_set(target_name) {
+    type = "benchmark"
+    language = "llcpp"
+    bindings_suffix = "_llcpp"
+    forward_variables_from(invoker, "*")
+  }
+}
+
+template("gidl_walker_benchmarks") {
+  gidl_multiple_file_source_set(target_name) {
+    type = "benchmark"
     language = "walker"
     bindings_suffix = "_llcpp"
     forward_variables_from(invoker, "*")
   }
 }
 
-template("gidl_reference") {
-  gidl_source_set(target_name) {
+template("gidl_reference_benchmarks") {
+  gidl_multiple_file_source_set(target_name) {
+    type = "benchmark"
     language = "reference"
     bindings_suffix = "_llcpp"
     forward_variables_from(invoker, "*")

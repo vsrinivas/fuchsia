@@ -17,6 +17,7 @@ import (
 )
 
 var benchmarkTmpl = template.Must(template.New("benchmarkTmpls").Parse(`
+#![allow(unused_imports)]
 use {
 	fidl::{
 		encoding::{Context, Decodable, Decoder, Encoder, with_tls_coding_bufs},
@@ -28,9 +29,9 @@ use {
 	fuchsia_zircon as zx,
 };
 
-// ALL_BENCHMARKS is used by src/tests/benchmarks/fidl/rust/src/main.rs.
-pub const ALL_BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }}] = [
-{{- range .Benchmarks }}
+// BENCHMARKS is aggregated into ALL_BENCHMARKS by lib.rs and ultimately used by
+// src/tests/benchmarks/fidl/rust/src/main.rs.
+pub const BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }}] = [
 	("Builder/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_builder),
 	("Encode/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_encode),
 	("Decode/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_decode),
@@ -40,12 +41,10 @@ pub const ALL_BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }
 	{{ if .EnableEchoCallBenchmark }}
 	("EchoCall/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_echo_call),
 	{{- end -}}
-{{- end }}
 ];
 
 const V1_CONTEXT: &Context = &Context {};
 
-{{ range .Benchmarks }}
 fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
 	b.iter(|| {
 		{{ .Value }}
@@ -156,53 +155,71 @@ fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
 	BatchSize::SmallInput);
 }
 {{- end -}}
-{{ end }}
 `))
-
-type benchmarkTmplInput struct {
-	NumBenchmarks int
-	Benchmarks    []benchmark
-}
 
 type benchmark struct {
 	Name, ChromeperfPath, Value, ValueType            string
+	NumBenchmarks                                     int
 	EnableSendEventBenchmark, EnableEchoCallBenchmark bool
 }
 
+var libTmpl = template.Must(template.New("libTmpls").Parse(`
+use fuchsia_criterion::criterion::Bencher;
+
+{{ range .ModuleNames }}
+mod {{ . }};
+{{ end }}
+
+pub const ALL_BENCHMARKS: [&'static[(&'static str, fn(&mut Bencher))]; {{ len .ModuleNames }}] = [
+	{{ range .ModuleNames }}
+		&{{ . }}::BENCHMARKS,
+	{{ end }}
+];`))
+
+type lib struct {
+	ModuleNames []string
+}
+
 // GenerateBenchmarks generates Rust benchmarks.
-func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) ([]byte, map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
-	var benchmarks []benchmark
-	nBenchmarks := 0
+	files := map[string][]byte{}
+	l := lib{}
+	var numModules int
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
-			return nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
+			return nil, nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
 		value := visit(gidlBenchmark.Value, decl)
-		benchmarks = append(benchmarks, benchmark{
-			Name:                     benchmarkName(gidlBenchmark.Name),
-			ChromeperfPath:           gidlBenchmark.Name,
-			Value:                    value,
-			ValueType:                declName(decl),
-			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
-			EnableEchoCallBenchmark:  gidlBenchmark.EnableEchoCallBenchmark,
-		})
-		nBenchmarks += 3
+		nBenchmarks := 3
 		if gidlBenchmark.EnableSendEventBenchmark {
 			nBenchmarks++
 		}
 		if gidlBenchmark.EnableEchoCallBenchmark {
 			nBenchmarks++
 		}
+		var buf bytes.Buffer
+		if err := benchmarkTmpl.Execute(&buf, benchmark{
+			Name:                     benchmarkName(gidlBenchmark.Name),
+			NumBenchmarks:            nBenchmarks,
+			ChromeperfPath:           gidlBenchmark.Name,
+			Value:                    value,
+			ValueType:                declName(decl),
+			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
+			EnableEchoCallBenchmark:  gidlBenchmark.EnableEchoCallBenchmark,
+		}); err != nil {
+			return nil, nil, err
+		}
+		files[benchmarkName("_"+gidlBenchmark.Name)] = buf.Bytes()
+		numModules++
+		l.ModuleNames = append(l.ModuleNames, fmt.Sprintf("gidl_generated_benchmark_suite_rust%d", numModules))
 	}
-	input := benchmarkTmplInput{
-		NumBenchmarks: nBenchmarks,
-		Benchmarks:    benchmarks,
+	var libBuf bytes.Buffer
+	if err := libTmpl.Execute(&libBuf, l); err != nil {
+		return nil, nil, err
 	}
-	var buf bytes.Buffer
-	err := benchmarkTmpl.Execute(&buf, input)
-	return map[string][]byte{"": buf.Bytes()}, err
+	return libBuf.Bytes(), files, nil
 }
 
 func benchmarkName(gidlName string) string {

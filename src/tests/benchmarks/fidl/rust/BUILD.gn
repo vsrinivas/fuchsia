@@ -8,22 +8,160 @@ import("//build/test/test_package.gni")
 import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
-gidl_rust_out_file = "$target_gen_dir/src/lib.rs"
+# TODO(fxb/52371) Generate output filename list on the fly.
+all_outputs = [
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust1.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust2.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust3.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust4.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust5.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust6.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust7.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust8.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust9.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust10.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust11.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust12.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust13.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust14.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust15.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust16.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust17.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust18.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust19.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust20.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust21.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust22.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust23.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust24.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust25.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust26.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust27.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust28.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust29.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust30.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust31.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust32.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust33.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust34.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust35.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust36.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust37.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust38.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust39.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust40.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust41.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust42.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust43.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust44.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust45.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust46.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust47.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust48.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust49.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust50.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust51.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust52.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust53.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust54.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust55.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust56.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust57.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust58.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust59.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust60.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust61.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust62.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust63.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust64.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust65.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust66.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust67.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust68.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust69.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust70.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust71.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust72.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust73.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust74.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust75.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust76.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust77.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust78.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust79.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust80.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust81.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust82.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust83.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust84.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust85.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust86.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust87.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust88.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust89.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust90.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust91.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust92.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust93.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust94.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust95.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust96.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust97.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust98.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust99.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust100.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust101.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust102.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust103.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust104.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust105.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust106.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust107.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust108.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust109.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust110.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust111.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust112.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust113.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust114.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust115.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust116.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust117.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust118.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust119.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust120.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust121.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust122.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust123.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust124.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust125.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust126.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust127.rs",
+  "${target_gen_dir}/src/gidl_generated_benchmark_suite_rust128.rs",
+]
+
+lib_outfile = "$target_gen_dir/src/lib.rs"
+extra_file_pattern =
+    "$target_gen_dir/src/gidl_generated_benchmark_suite_rust[NUM].rs"
 
 gidl("benchmark_suite_rust") {
   testonly = true
   type = "benchmark"
   language = "rust"
   inputs = benchmark_suite_gidl_files
+
+  output = lib_outfile
+  num_extra_output_files = "128"
+  extra_file_pattern = extra_file_pattern
+
   fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
-  output = gidl_rust_out_file
 }
 
 rustc_library("benchmark_suite_rust_lib") {
   testonly = true
   name = "benchmark_suite"
   edition = "2018"
-  source_root = gidl_rust_out_file
+  source_root = "$target_gen_dir/src/lib.rs"
 
   deps = [
     "//src/developer/fuchsia-criterion",
@@ -36,7 +174,7 @@ rustc_library("benchmark_suite_rust_lib") {
 
   enforce_source_listing = true
 
-  sources = [ gidl_rust_out_file ]
+  sources = all_outputs + [ lib_outfile ]
 }
 
 rustc_binary("rust_fidl_microbenchmarks_bin") {

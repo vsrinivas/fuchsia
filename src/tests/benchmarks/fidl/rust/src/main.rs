@@ -12,10 +12,15 @@ use {
 fn main() {
     // TODO(fxb/52171): Do not use Criterion.
     let all = &benchmark_suite::ALL_BENCHMARKS;
-    let (first_label, first_function) = all[0];
+    let (first_label, first_function) = all[0][0];
     let mut benchmark = Benchmark::new(wall_time_label(first_label), first_function);
-    for (label, function) in &all[1..] {
+    for (label, function) in &all[0][1..] {
         benchmark = benchmark.with_function(wall_time_label(label), function);
+    }
+    for v in &all[1..] {
+        for (label, function) in v.iter() {
+            benchmark = benchmark.with_function(wall_time_label(label), function);
+        }
     }
 
     // FuchsiaCriterion is a wrapper around Criterion. To configure the inner

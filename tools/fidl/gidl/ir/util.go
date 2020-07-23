@@ -88,7 +88,7 @@ func ValidateAllType(input All, generatorType string) {
 	case "benchmark":
 		forbid(input.EncodeSuccess, input.DecodeSuccess, input.EncodeFailure, input.DecodeFailure)
 	default:
-		panic("unknown case")
+		panic("unknown case: expected 'conformance' or 'benchmark'")
 	}
 }
 
