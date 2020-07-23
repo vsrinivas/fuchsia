@@ -678,7 +678,9 @@ pub mod capability_util {
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
-                    Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+                    Err(fidl::Error::ClientChannelClosed {
+                        status: zx::Status::UNAVAILABLE, ..
+                    })
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
@@ -744,7 +746,9 @@ pub mod capability_util {
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
-                    Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+                    Err(fidl::Error::ClientChannelClosed {
+                        status: zx::Status::UNAVAILABLE, ..
+                    })
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
@@ -871,7 +875,9 @@ pub mod capability_util {
                 let epitaph = echo_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
-                    Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+                    Err(fidl::Error::ClientChannelClosed {
+                        status: zx::Status::UNAVAILABLE, ..
+                    })
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
@@ -934,7 +940,9 @@ pub mod capability_util {
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
-                    Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+                    Err(fidl::Error::ClientChannelClosed {
+                        status: zx::Status::UNAVAILABLE, ..
+                    })
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
@@ -967,7 +975,9 @@ pub mod capability_util {
                 let epitaph = echo_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
-                    Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+                    Err(fidl::Error::ClientChannelClosed {
+                        status: zx::Status::UNAVAILABLE, ..
+                    })
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {

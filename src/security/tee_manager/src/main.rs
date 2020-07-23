@@ -205,7 +205,7 @@ mod tests {
 
     fn is_closed_with_status(error: Error, status: Status) -> bool {
         match error {
-            Error::ClientChannelClosed(s) => s == status,
+            Error::ClientChannelClosed { status: s, .. } => s == status,
             _ => false,
         }
     }

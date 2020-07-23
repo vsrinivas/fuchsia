@@ -74,7 +74,8 @@ impl ::std::ops::Deref for Super_Proxy {
 impl Super_Proxy {
     /// Create a new Proxy for Super_
     pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-        Self { client: fidl::client::Client::new(channel) }
+        let service_name = <Super_Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, service_name) }
     }
 
     /// Attempt to convert the Proxy back into a channel.
@@ -521,7 +522,8 @@ impl ::std::ops::Deref for SubProxy {
 impl SubProxy {
     /// Create a new Proxy for Sub
     pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-        Self { client: fidl::client::Client::new(channel) }
+        let service_name = <SubMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, service_name) }
     }
 
     /// Attempt to convert the Proxy back into a channel.

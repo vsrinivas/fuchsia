@@ -92,7 +92,7 @@ pub enum Error {
     UnknownOrdinal {
         /// The unknown ordinal.
         ordinal: u64,
-        /// The name of the service for which the message was intented.
+        /// The name of the service for which the message was intended.
         service_name: &'static str,
     },
 
@@ -137,8 +137,14 @@ pub enum Error {
 
     /// A FIDL client's channel was closed. Contains an epitaph if one was sent by the server, or
     /// `zx_status::Status::PEER_CLOSED` otherwise.
-    #[error("A FIDL client's channel was closed: {}", _0)]
-    ClientChannelClosed(#[source] zx_status::Status),
+    #[error("A FIDL client's channel to the service {} was closed: {}", service_name, status)]
+    ClientChannelClosed {
+        /// The epitaph or `zx_status::Status::PEER_CLOSED`.
+        #[source]
+        status: zx_status::Status,
+        /// The name of the service at the other end of the channel.
+        service_name: &'static str,
+    },
 
     /// There was an error creating a channel to be used for a FIDL client-server pair.
     #[error(
@@ -173,7 +179,7 @@ impl Error {
         match self {
             Error::ClientRead(zx_status::Status::PEER_CLOSED)
             | Error::ClientWrite(zx_status::Status::PEER_CLOSED)
-            | Error::ClientChannelClosed(_)
+            | Error::ClientChannelClosed { .. }
             | Error::ServerRequestRead(zx_status::Status::PEER_CLOSED)
             | Error::ServerResponseWrite(zx_status::Status::PEER_CLOSED)
             | Error::ServerEpitaphWrite(zx_status::Status::PEER_CLOSED) => true,

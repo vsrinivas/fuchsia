@@ -116,7 +116,9 @@ impl Updater {
         proxy.find_boot_manager(remote).context("finding boot manager")?;
 
         let result = boot_manager.query_active_configuration().await;
-        if let Err(fidl::Error::ClientChannelClosed(zx::Status::NOT_SUPPORTED)) = result {
+        if let Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_SUPPORTED, .. }) =
+            result
+        {
             // board does not actually support ABR, so return.
             println!("ABR not supported, not configuring slots.");
             return Ok(());

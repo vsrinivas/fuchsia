@@ -152,7 +152,7 @@ mod test {
             // After cancellation is sent stream should be closed
             assert_matches!(
                 km_proxy.delete_key_singleton("key-singleton").await,
-                Err(fidl::Error::ClientChannelClosed(zx::Status::PEER_CLOSED))
+                Err(fidl::Error::ClientChannelClosed { status: zx::Status::PEER_CLOSED, .. })
             );
 
             Result::<(), anyhow::Error>::Ok(())

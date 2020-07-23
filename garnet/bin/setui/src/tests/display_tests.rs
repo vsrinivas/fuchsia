@@ -21,6 +21,7 @@ use {
     futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::prelude::*,
+    matches::assert_matches,
     std::sync::Arc,
 };
 
@@ -293,9 +294,5 @@ async fn test_channel_failure_watch() {
     let display_proxy =
         create_display_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = display_proxy.watch().await;
-    assert!(result.is_err());
-    assert_eq!(
-        ClientChannelClosed(Status::INTERNAL).to_string(),
-        result.err().unwrap().to_string()
-    );
+    assert_matches!(result, Err(ClientChannelClosed { status: Status::INTERNAL, .. }));
 }

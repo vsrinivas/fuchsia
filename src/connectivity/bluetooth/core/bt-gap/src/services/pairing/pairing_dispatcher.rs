@@ -401,7 +401,7 @@ mod test {
             let result =
                 proxy.on_pairing_request((&peer).into(), sys::PairingMethod::Consent, 0).await;
             // Our channel should have been closed as the responder was dropped
-            assert_matches!(result, Err(fidl::Error::ClientChannelClosed(_)));
+            assert_matches!(result, Err(fidl::Error::ClientChannelClosed { .. }));
             // Now close the dispatcher so the test will finish
             std::mem::drop(handle);
         };

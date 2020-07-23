@@ -33,7 +33,7 @@ async fn set_active_configuration_healthy_impl() -> Result<(), anyhow::Error> {
                 status
             ));
         }
-        Err(fidl::Error::ClientChannelClosed(Status::NOT_SUPPORTED)) => {
+        Err(fidl::Error::ClientChannelClosed { status: Status::NOT_SUPPORTED, .. }) => {
             fx_log_info!("ABR not supported");
             return Ok(());
         }

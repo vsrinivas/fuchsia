@@ -73,6 +73,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//third_party/rust_crates:matches" ]
+
   enforce_source_listing = true
 
   sources = [

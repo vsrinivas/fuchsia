@@ -122,7 +122,7 @@ async fn test_prototype_interface_not_exposed() -> Result<(), Error> {
             .await
             .unwrap_err()
         {
-            fidl::Error::ClientChannelClosed(zx::Status::PEER_CLOSED) => (),
+            fidl::Error::ClientChannelClosed { status: zx::Status::PEER_CLOSED, .. } => (),
             e => panic!("Expected ClientChannelClosed error but got {:?}", e),
         }
 

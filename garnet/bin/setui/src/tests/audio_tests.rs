@@ -25,6 +25,7 @@ use {
     fuchsia_component::server::NestedEnvironment,
     fuchsia_zircon::Status,
     futures::lock::Mutex,
+    matches::assert_matches,
     std::sync::Arc,
 };
 
@@ -443,9 +444,5 @@ async fn test_persisted_values_applied_at_start() {
 async fn test_channel_failure_watch() {
     let audio_proxy = create_audio_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = audio_proxy.watch().await;
-    assert!(result.is_err());
-    assert_eq!(
-        ClientChannelClosed(Status::INTERNAL).to_string(),
-        result.err().unwrap().to_string()
-    );
+    assert_matches!(result, Err(ClientChannelClosed { status: Status::INTERNAL, .. }));
 }

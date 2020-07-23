@@ -52,12 +52,12 @@ impl PaverFacade {
         match boot_manager.query_active_configuration().await {
             Ok(Ok(config)) => Ok(QueryActiveConfigurationResult::Success(config.into())),
             Ok(Err(err)) => bail!("unexpected failure status: {}", err),
-            Err(fidl::Error::ClientChannelClosed(Status::NOT_SUPPORTED)) => {
+            Err(fidl::Error::ClientChannelClosed { status: Status::NOT_SUPPORTED, .. }) => {
                 Ok(QueryActiveConfigurationResult::NotSupported)
             }
             // FIXME(44102) The Rust fidl bindings don't seem to be handling epitaphs correctly, so
             // also treat the channel closing as the device doesn't support ABR.
-            Err(fidl::Error::ClientChannelClosed(Status::PEER_CLOSED)) => {
+            Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. }) => {
                 fx_log_err!("channel to boot manager closed, assuming device does not support ABR");
                 Ok(QueryActiveConfigurationResult::NotSupported)
             }
@@ -84,7 +84,7 @@ impl PaverFacade {
         match boot_manager.query_configuration_status(args.configuration.into()).await {
             Ok(Ok(status)) => Ok(QueryConfigurationStatusResult::Success(status.into())),
             Ok(Err(err)) => bail!("unexpected failure status: {}", err),
-            Err(fidl::Error::ClientChannelClosed(Status::NOT_SUPPORTED)) => {
+            Err(fidl::Error::ClientChannelClosed { status: Status::NOT_SUPPORTED, .. }) => {
                 Ok(QueryConfigurationStatusResult::NotSupported)
             }
             Err(err) => bail!("unexpected failure status: {}", err),

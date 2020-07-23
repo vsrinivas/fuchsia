@@ -12,6 +12,7 @@ use {
     fidl_fuchsia_settings::{PrivacyMarker, PrivacyProxy},
     fuchsia_zircon::Status,
     futures::lock::Mutex,
+    matches::assert_matches,
     std::sync::Arc,
 };
 
@@ -79,9 +80,5 @@ async fn test_privacy() {
 async fn test_channel_failure_watch() {
     let privacy_service = create_privacy_test_env_with_failures().await;
     let result = privacy_service.watch().await;
-    assert!(result.is_err());
-    assert_eq!(
-        ClientChannelClosed(Status::INTERNAL).to_string(),
-        result.err().unwrap().to_string()
-    );
+    assert_matches!(result, Err(ClientChannelClosed { status: Status::INTERNAL, .. }));
 }

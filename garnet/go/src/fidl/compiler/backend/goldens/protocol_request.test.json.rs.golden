@@ -68,7 +68,8 @@ impl ::std::ops::Deref for ChildProxy {
 impl ChildProxy {
     /// Create a new Proxy for Child
     pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-        Self { client: fidl::client::Client::new(channel) }
+        let service_name = <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, service_name) }
     }
 
     /// Attempt to convert the Proxy back into a channel.
@@ -388,7 +389,8 @@ impl ::std::ops::Deref for ParentProxy {
 impl ParentProxy {
     /// Create a new Proxy for Parent
     pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-        Self { client: fidl::client::Client::new(channel) }
+        let service_name = <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, service_name) }
     }
 
     /// Attempt to convert the Proxy back into a channel.

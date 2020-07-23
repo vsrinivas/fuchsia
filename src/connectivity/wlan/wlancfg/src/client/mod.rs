@@ -1719,7 +1719,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Err(fidl::Error::ClientChannelClosed(zx::Status::ALREADY_BOUND)))
+            Poll::Ready(Err(fidl::Error::ClientChannelClosed {status: zx::Status::ALREADY_BOUND, .. }))
         );
 
         // Drop first controller. A new controller can now take control.

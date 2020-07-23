@@ -563,7 +563,9 @@ mod test {
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
                 format!(
-                    "{}{} A FIDL client's channel was closed: PEER_CLOSED",
+                    // TODO(jwing): Print error on a new line so that this
+                    // doesn't have to match the entire error message.
+                    "{}{} A FIDL client's channel to the service fuchsia.developer.bridge.Daemon was closed: PEER_CLOSED",
                     LISTING_TARGETS, FAILED_WITH_ERROR
                 ),
                 String::default(),

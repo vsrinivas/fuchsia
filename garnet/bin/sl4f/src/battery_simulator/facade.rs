@@ -233,7 +233,7 @@ impl BatterySimulatorFacade {
         match self.inner.read().proxy.clone() {
             Some(p) => match p.get_battery_info().await {
                 Ok(battery_info) => Ok(Some(battery_info)),
-                Err(fidl::Error::ClientChannelClosed(Status::PEER_CLOSED)) => {
+                Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. }) => {
                     fx_log_warn!("Battery Simulator not available.");
                     Ok(None)
                 }
@@ -252,7 +252,7 @@ impl BatterySimulatorFacade {
         match self.inner.read().proxy.clone() {
             Some(p) => match p.is_simulating().await {
                 Ok(simulation_state) => Ok(Some(simulation_state)),
-                Err(fidl::Error::ClientChannelClosed(Status::PEER_CLOSED)) => {
+                Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. }) => {
                     fx_log_warn!("Battery Simulator not available.");
                     Ok(None)
                 }

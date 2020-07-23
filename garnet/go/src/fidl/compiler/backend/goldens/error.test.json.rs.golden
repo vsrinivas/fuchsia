@@ -102,7 +102,8 @@ impl ::std::ops::Deref for ExampleProxy {
 impl ExampleProxy {
     /// Create a new Proxy for Example
     pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-        Self { client: fidl::client::Client::new(channel) }
+        let service_name = <ExampleMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, service_name) }
     }
 
     /// Attempt to convert the Proxy back into a channel.

@@ -17,6 +17,7 @@ use {
     futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::prelude::*,
+    matches::assert_matches,
     std::sync::Arc,
 };
 
@@ -243,9 +244,5 @@ async fn test_intl_invalid_timezone() {
 async fn test_channel_failure_watch() {
     let intl_service = create_intl_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = intl_service.watch().await;
-    assert!(result.is_err());
-    assert_eq!(
-        ClientChannelClosed(Status::INTERNAL).to_string(),
-        result.err().unwrap().to_string()
-    );
+    assert_matches!(result, Err(ClientChannelClosed { status: Status::INTERNAL, .. }));
 }

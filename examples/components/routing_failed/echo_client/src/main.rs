@@ -31,9 +31,12 @@ async fn main() {
     assert_matches!(
         err,
         fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)
-            | fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE)
+            | fidl::Error::ClientChannelClosed { status: zx::Status::UNAVAILABLE, .. }
     );
-    assert_matches!(epitaph, Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE)));
+    assert_matches!(
+        epitaph,
+        Err(fidl::Error::ClientChannelClosed { status: zx::Status::UNAVAILABLE, .. })
+    );
 
     // The `echo2` channel should be closed because routing succeeded but the runner failed to
     // start the component. The channel won't have an epitaph set; the runner closes the source
@@ -56,7 +59,7 @@ async fn main() {
     assert_matches!(
         err,
         fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)
-            | fidl::Error::ClientChannelClosed(zx::Status::PEER_CLOSED)
+            | fidl::Error::ClientChannelClosed { status: zx::Status::PEER_CLOSED, .. }
     );
     assert_matches!(echo2.take_event_stream().next().await, None);
 }

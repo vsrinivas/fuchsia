@@ -242,7 +242,7 @@ mod tests {
                 .err()
                 .unwrap();
             assert_matches!(actual,
-                fidl::Error::ClientChannelClosed(status) if status == zx::Status::UNAVAILABLE
+                fidl::Error::ClientChannelClosed { status: zx::Status::UNAVAILABLE, .. }
             );
         }
 

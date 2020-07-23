@@ -556,11 +556,11 @@ mod tests {
 
         assert_matches!(
             caller1_res,
-            Err(fidl::Error::ClientChannelClosed(zx::Status::PEER_CLOSED))
+            Err(fidl::Error::ClientChannelClosed { status: zx::Status::PEER_CLOSED, .. })
         );
         assert_matches!(
             caller2_res,
-            Err(fidl::Error::ClientChannelClosed(zx::Status::PEER_CLOSED))
+            Err(fidl::Error::ClientChannelClosed { status: zx::Status::PEER_CLOSED, .. })
         );
         assert!(client_res
             .expect_err("client should fail with double watch error")
@@ -639,7 +639,7 @@ mod tests {
             // `INVALID_ARGS`.
             assert_matches!(
                 client_end.into_proxy().expect("failed to create test proxy").watch_servers().await,
-                Err(fidl::Error::ClientChannelClosed(zx::Status::INVALID_ARGS))
+                Err(fidl::Error::ClientChannelClosed { status: zx::Status::INVALID_ARGS, .. })
             );
         }
     }

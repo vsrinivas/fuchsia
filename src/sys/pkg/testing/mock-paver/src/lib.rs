@@ -417,7 +417,10 @@ pub mod tests {
             MockPaverForTest::new(|p| p.boot_manager_close_with_epitaph(zx::Status::NOT_SUPPORTED));
 
         let result = paver.boot_manager.query_active_configuration().await;
-        assert_matches!(result, Err(fidl::Error::ClientChannelClosed(zx::Status::NOT_SUPPORTED)));
+        assert_matches!(
+            result,
+            Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_SUPPORTED, .. })
+        );
         Ok(())
     }
 }

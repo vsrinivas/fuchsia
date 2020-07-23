@@ -170,9 +170,11 @@ call on it, if the call is awaited on. For example:
 let res = echo.echo_string(Some("Hippos rule!")).await;
 match res {
     Ok(_) => { info!("Call succeeded!"); }
-    Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) |
-    Err(fidl::Error::ClientChannelClosed(_)) => {
+    Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) => {
         error!("Channel was closed");
+    }
+    Err(fidl::Error::ClientChannelClosed { status, service_name } => {
+        error!("Channel to service {} was closed with status: {}", service_name, status);
     }
     Err(e) => {
         error!("Unexpected error: {}", e);
@@ -201,9 +203,11 @@ match res {
 let res = echo_resp.get_result().await;
 match res {
     Ok(_) => { info!("GetResult succeeded!"); }
-    Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) |
-    Err(fidl::Error::ClientChannelClosed(_)) => {
+    Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) => {
         error!("EchoResponder channel was closed");
+    }
+    Err(fidl::Error::ClientChannelClosed { status, service_name } => {
+        error!("Channel to service {} was closed with status: {}", service_name, status);
     }
     Err(e) => {
         error!("Unexpected error: {}", e);
@@ -223,7 +227,7 @@ match stream.next().await {
     Some(m) => {
         info!("Received message other than epitaph or peer closed: {:?}", m);
     }
-    Some(Err(fidl::Error::ClientChannelClosed(status))) => {
+    Some(Err(fidl::Error::ClientChannelClosed { status, .. })) => {
         info!("Echo channel was closed with epitaph, probably due to \
               failed routing: {}", status);
     }

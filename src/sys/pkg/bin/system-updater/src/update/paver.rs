@@ -210,7 +210,7 @@ async fn paver_query_active_configuration(
         Ok(Err(status)) => {
             Err(anyhow!("query_active_configuration responded with {}", Status::from_raw(status)))
         }
-        Err(fidl::Error::ClientChannelClosed(Status::NOT_SUPPORTED)) => {
+        Err(fidl::Error::ClientChannelClosed { status: Status::NOT_SUPPORTED, .. }) => {
             fx_log_warn!("device does not support ABR. Kernel image updates will not be atomic.");
             Ok(ActiveConfiguration::NotSupported)
         }

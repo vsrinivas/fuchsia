@@ -419,7 +419,7 @@ mod tests {
         assert_matches!(err, Err(ComponentError::InvalidStartInfo(_)));
         assert_matches!(
             client_controller.take_event_stream().next().await,
-            Some(Err(fidl::Error::ClientChannelClosed(zx::Status::INVALID_ARGS)))
+            Some(Err(fidl::Error::ClientChannelClosed { status: zx::Status::INVALID_ARGS, .. }))
         );
     }
 

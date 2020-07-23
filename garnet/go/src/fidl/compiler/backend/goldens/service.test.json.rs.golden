@@ -73,7 +73,8 @@ impl ::std::ops::Deref for FirstProtocolProxy {
 impl FirstProtocolProxy {
     /// Create a new Proxy for FirstProtocol
     pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-        Self { client: fidl::client::Client::new(channel) }
+        let service_name = <FirstProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, service_name) }
     }
 
     /// Attempt to convert the Proxy back into a channel.
@@ -414,7 +415,8 @@ impl ::std::ops::Deref for SecondProtocolProxy {
 impl SecondProtocolProxy {
     /// Create a new Proxy for SecondProtocol
     pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-        Self { client: fidl::client::Client::new(channel) }
+        let service_name = <SecondProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, service_name) }
     }
 
     /// Attempt to convert the Proxy back into a channel.

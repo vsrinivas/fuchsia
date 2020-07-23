@@ -503,7 +503,7 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
         // Could get `ClientWrite` or `ClientChannelClosed` error depending on whether the request
         // was sent before or after the channel was closed.
         fidl::Error::ClientWrite(zx_status::Status::PEER_CLOSED)
-        | fidl::Error::ClientChannelClosed(_) => anyhow::anyhow!(
+        | fidl::Error::ClientChannelClosed { .. } => anyhow::anyhow!(
             "The test protocol was closed. This may mean `fuchsia.test.Suite` was not \
             configured correctly. Refer to \
             //docs/development/components/troubleshooting.md#troubleshoot-test"
