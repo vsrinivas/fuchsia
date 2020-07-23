@@ -16,9 +16,12 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <hw/reg.h>
 
 #include "intel-i2c-controller.h"
+
+#define RMWREG32(addr, startbit, width, val)                                                      \
+  MmioWrite32((MmioRead32(addr) & ~(((1 << (width)) - 1) << (startbit))) | ((val) << (startbit)), \
+              (addr))
 
 // Time out after 2 seconds.
 static const zx_duration_t timeout_ns = ZX_SEC(2);
@@ -45,19 +48,19 @@ static const zx_duration_t timeout_ns = ZX_SEC(2);
 // Implement the functionality of the i2c subordinate devices.
 
 static int bus_is_idle(intel_serialio_i2c_device_t* controller) {
-  uint32_t i2c_sta = readl(&controller->regs->i2c_sta);
+  uint32_t i2c_sta = MmioRead32(&controller->regs->i2c_sta);
   return !(i2c_sta & (0x1 << I2C_STA_CA)) && (i2c_sta & (0x1 << I2C_STA_TFCE));
 }
 
 static int stop_detected(intel_serialio_i2c_device_t* controller) {
-  return (readl(&controller->regs->raw_intr_stat) & (0x1 << INTR_STOP_DETECTION));
+  return (MmioRead32(&controller->regs->raw_intr_stat) & (0x1 << INTR_STOP_DETECTION));
 }
 
 static uint32_t rx_fifo_level(intel_serialio_i2c_device_t* controller) {
-  return readl(&controller->regs->rxflr) & 0x1ff;
+  return MmioRead32(&controller->regs->rxflr) & 0x1ff;
 }
 static int rx_fifo_empty(intel_serialio_i2c_device_t* controller) {
-  return !(readl(&controller->regs->i2c_sta) & (0x1 << I2C_STA_RFNE));
+  return !(MmioRead32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_RFNE));
 }
 
 // Thread safety analysis cannot see the control flow through the
@@ -101,7 +104,7 @@ zx_status_t intel_serialio_i2c_subordinate_transfer(
 
   // Set the target adress value and width.
   RMWREG32(&controller->regs->ctl, CTL_ADDRESSING_MODE, 1, ctl_addr_mode_bit);
-  writel((tar_add_addr_mode_bit << TAR_ADD_WIDTH) | (subordinate->chip_address << TAR_ADD_IC_TAR),
+  MmioWrite32((tar_add_addr_mode_bit << TAR_ADD_WIDTH) | (subordinate->chip_address << TAR_ADD_IC_TAR),
          &controller->regs->tar_add);
 
   // Enable the controller.
@@ -128,7 +131,7 @@ zx_status_t intel_serialio_i2c_subordinate_transfer(
       switch (segments->type) {
         case fuchsia_hardware_i2c_SegmentType_WRITE:
           // Wait if the TX FIFO is full
-          if (!(readl(&controller->regs->i2c_sta) & (0x1 << I2C_STA_TFNF))) {
+          if (!(MmioRead32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_TFNF))) {
             status =
                 intel_serialio_i2c_wait_for_tx_empty(controller, zx_deadline_after(timeout_ns));
             if (status != ZX_OK) {
@@ -232,7 +235,7 @@ zx_status_t intel_serialio_i2c_subordinate_transfer(
   }
 
   // Read the data_cmd register to pull data out of the RX FIFO.
-  if (!DO_UNTIL(rx_fifo_empty(controller), readl(&controller->regs->data_cmd), 0)) {
+  if (!DO_UNTIL(rx_fifo_empty(controller), MmioRead32(&controller->regs->data_cmd), 0)) {
     status = ZX_ERR_TIMED_OUT;
     goto transfer_finish_1;
   }

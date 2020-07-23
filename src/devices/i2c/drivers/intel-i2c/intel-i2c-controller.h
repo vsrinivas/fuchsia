@@ -133,8 +133,8 @@ typedef struct intel_serialio_i2c_device {
   zx_device_t* zxdev;
   zx_device_t* pcidev;
 
-  intel_serialio_i2c_regs* regs;
-  volatile uint32_t* soft_reset;
+  MMIO_PTR intel_serialio_i2c_regs* regs;
+  MMIO_PTR volatile uint32_t* soft_reset;
 
   mmio_buffer_t mmio;
 
