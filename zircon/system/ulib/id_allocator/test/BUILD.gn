@@ -26,8 +26,8 @@ test("id_allocator-test") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/id_allocator",
-    "//zircon/system/ulib/unittest",
   ]
 }
 
