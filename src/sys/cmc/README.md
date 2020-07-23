@@ -12,12 +12,11 @@ systems.
 
 ## Building
 
-To add this project to your build, append `--with //src/sys/cmc` to the
-`fx set` invocation.
+This project is already included in host builds and should be included in any `fx set`.
 
 ## Running
 
-cmc is available at `host_x64/cmc` in the build output path after an `fx build`
+cmc is available at `$OUT_DIR/host_x64/cmc` in the build output path after an `fx build`
 invocation.
 
 ```
