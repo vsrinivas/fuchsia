@@ -52,8 +52,6 @@ class FakeBus : public Bus {
   virtual zx_status_t InterruptWait() override;
   virtual void InterruptCancel() override;
 
-  virtual void* mmio() override { return nullptr; }
-
   // Test control functions.
 
   // Cause calls to Configure() to return an error.

@@ -33,9 +33,6 @@ class PciBus : public Bus {
   virtual zx_status_t InterruptWait() override;
   virtual void InterruptCancel() override;
 
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
-  virtual void* mmio() override { return (void*)mmio_->get(); }
-
  private:
   pci_protocol_t pci_;
   std::optional<ddk::MmioBuffer> mmio_;

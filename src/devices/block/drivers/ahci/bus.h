@@ -47,10 +47,6 @@ class Bus {
   // Cancel a pending interrupt wait.
   virtual void InterruptCancel() = 0;
 
-  // Get a pointer to the virtual mapping of the mmio region.
-  // Ownership is retained by the bus, pointer is valid until bus is destroyed.
-  virtual void* mmio() = 0;
-
   // Non-virtual functions.
 
   // Wait until all bits in |mask| are cleared in |reg| or timeout expires.
