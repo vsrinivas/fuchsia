@@ -120,12 +120,9 @@ if (have_prebuilt_libvulkan) {
     sources = [ prebuilt_libvulkan_goldfish_path ]
     outputs = [ "$libvulkan_gen_path/libvulkan_goldfish.so" ]
 
-    # TODO(fxb/55650): Remove this once goldfish no longer depends on the
-    # library.
     deps = [
-      # libc.so.1 is needed by async-default.
+      # ld.so.1 is needed by libvulkan_goldfish.
       "//build/unification/lib/sysroot",
-      "//zircon/system/ulib/async-default",
     ]
   }
 }
