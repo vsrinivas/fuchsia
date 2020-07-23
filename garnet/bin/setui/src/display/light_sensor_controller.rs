@@ -261,7 +261,7 @@ mod tests {
 
         let completed = Arc::new(AtomicBool::new(false));
         let completed_clone = completed.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let mut counter: u8 = 0;
             let mut data = [1, 1, 0, 25, 0, 10, 0, 9, 0, 6, 0];
             while let Some(request) = stream.try_next().await.unwrap() {
@@ -288,7 +288,8 @@ mod tests {
                     }
                 }
             }
-        });
+        })
+        .detach();
 
         fasync::Timer::new(zx::Duration::from_millis(5).after_now()).await;
         // Allow multiple iterations

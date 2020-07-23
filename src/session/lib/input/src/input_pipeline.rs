@@ -612,7 +612,7 @@ mod tests {
 
         // Handle input device requests.
         let mut count: i8 = 0;
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             // Register a device.
             let _ = input_device_registry_proxy.register(input_device_client_end);
 
@@ -627,7 +627,8 @@ mod tests {
 
             // End handle_input_device_registry_request_stream() by taking the event stream.
             input_device_registry_proxy.take_event_stream();
-        });
+        })
+        .detach();
 
         // Start listening for InputDeviceRegistryRequests.
         let bindings_clone = bindings.clone();

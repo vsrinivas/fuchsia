@@ -240,7 +240,7 @@ impl ReaderServer {
     ) -> Receiver<PopulatedInspectDataContainer> {
         let (mut sender, receiver) = channel(constants::MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER);
         let global_stats = self.inspect_reader_server_stats.global_stats.clone();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             for fut in inspect_batch.into_iter().map(move |inspect_data_packet| {
                 let attempted_relative_moniker = inspect_data_packet.relative_moniker.clone();
                 let attempted_inspect_matcher = inspect_data_packet.inspect_matcher.clone();
@@ -273,7 +273,8 @@ impl ReaderServer {
                     break;
                 }
             }
-        });
+        })
+        .detach();
         receiver
     }
 
