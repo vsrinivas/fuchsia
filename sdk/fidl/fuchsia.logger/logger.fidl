@@ -87,7 +87,7 @@ struct LogInterestSelector {
 const uint8 MAX_TAGS_PER_LOG_MESSAGE = 5;
 
 /// Max byte size for message payload.
-const uint32 MAX_DATAGRAM_LEN_BYTES = 2032;
+const uint32 MAX_DATAGRAM_LEN_BYTES = 32768;
 
 struct LogMessage {
     uint64 pid;

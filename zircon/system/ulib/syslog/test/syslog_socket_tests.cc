@@ -161,7 +161,7 @@ TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimit) {
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag", "gtag2"};
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 2));
-  char msg[2048] = {0};
+  char msg[FX_LOG_MAX_DATAGRAM_LEN + 4 + 12] = {0};
   memset(msg, 'a', sizeof(msg) - 1);
   FX_LOGF(INFO, "tag", "%s", msg);
   fx_log_packet_t packet;
@@ -179,7 +179,7 @@ TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimitForPreprocessedMsg) {
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag", "gtag2"};
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 2));
-  char msg[2048] = {0};
+  char msg[FX_LOG_MAX_DATAGRAM_LEN + 4 + 12] = {0};
   memset(msg, 'a', sizeof(msg) - 1);
   msg[0] = '%';
   msg[1] = 's';

@@ -19,7 +19,9 @@ group("test") {
   testonly = true
   deps = [
     ":syslog",
+    ":syslog-package",
     ":syslog-static",
+    ":syslog-static-package",
   ]
 }
 

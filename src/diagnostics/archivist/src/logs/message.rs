@@ -5,7 +5,7 @@ use super::buffer::Accounted;
 use super::error::StreamError;
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostic_streams::{Severity as StreamSeverity, Value};
-use fidl_fuchsia_logger::{LogLevelFilter, LogMessage};
+use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
 use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
 use fuchsia_zircon as zx;
 use libc::{c_char, c_int};
@@ -14,7 +14,7 @@ use std::{convert::TryFrom, fmt::Write, iter::FromIterator, mem, str};
 pub const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
 pub const MIN_PACKET_SIZE: usize = METADATA_SIZE + 1;
 
-pub const MAX_DATAGRAM_LEN: usize = 2032;
+pub const MAX_DATAGRAM_LEN: usize = MAX_DATAGRAM_LEN_BYTES as _;
 pub const MAX_TAGS: usize = 5;
 pub const MAX_TAG_LEN: usize = 64;
 

@@ -10,10 +10,8 @@
 #include <lib/syslog/logger.h>
 #include <zircon/types.h>
 
-// Defines max length for storing log_metadata, tags and msgbuffer.
-// TODO(anmittal): Increase it when zircon sockets are able to support a higher
-// buffer.
-#define FX_LOG_MAX_DATAGRAM_LEN (2032)
+// Defines max length for storing log_metadata, tags and msgbuffer, redefined from logger.fidl.
+#define FX_LOG_MAX_DATAGRAM_LEN 32768
 
 typedef struct fx_log_metadata {
   zx_koid_t pid;

@@ -14,10 +14,8 @@
 extern "C" {
 #endif
 
-// Defines max length for storing log_metadata, tags and msgbuffer.
-// TODO(anmittal): Increase it when zircon sockets are able to support a higher
-// buffer.
-#define LOG_MAX_DATAGRAM_LEN (2032)
+// Defines max length for storing log_metadata, tags and msgbuffer, redefined from logger.fidl.
+#define LOG_MAX_DATAGRAM_LEN 32768
 
 typedef struct log_metadata {
   zx_koid_t pid;
