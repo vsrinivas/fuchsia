@@ -32,7 +32,6 @@ config("zircon-migrated") {
     "-Wconversion",
     "-Wno-sign-conversion",
     "-ftemplate-backtrace-limit=0",
-    "-fno-threadsafe-statics",
   ]
 
   ldflags = compiler_flags
