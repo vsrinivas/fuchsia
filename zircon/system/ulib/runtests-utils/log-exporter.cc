@@ -217,7 +217,8 @@ zx_status_t LogExporter::Log(fidl::Message message) {
 
 zx_status_t LogExporter::LogMany(fidl::Message message) {
   const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(&fuchsia_logger_LogListenerSafeLogManyRequestTable, &error_msg);
+  zx_status_t status =
+      message.Decode(&fuchsia_logger_LogListenerSafeLogManyRequestTable, &error_msg);
   if (status != ZX_OK) {
     fprintf(stderr, "log-listener: error: LogMany: %s\n", error_msg);
     return status;
@@ -262,7 +263,8 @@ std::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
   fbl::String syslog_path_str = fbl::String(syslog_path.data());
   FILE* syslog_file = fopen(syslog_path_str.c_str(), "w");
   if (syslog_file == nullptr) {
-    fprintf(stderr, "Error: Could not open syslog file: %s.\n", syslog_path_str.c_str());
+    fprintf(stderr, "Error: Could not open syslog file '%s': %s\n", syslog_path_str.c_str(),
+            strerror(errno));
     *error = OPEN_FILE;
     return nullptr;
   }
