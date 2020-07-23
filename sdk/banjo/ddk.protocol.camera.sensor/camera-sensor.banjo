@@ -7,15 +7,16 @@ library ddk.protocol.camera.sensor;
 using ddk.protocol.camera;
 using zx;
 
-const uint32 EXTENSION_VALUE_DATA_BYTE_ARRAY_LEN = 32;
+const uint32 EXTENSION_VALUE_ARRAY_LEN = 32;
 
 /// A type used to distinguish extension parameters.
 union ExtensionValueDataType {
     int32 int_value;
     uint32 uint_value;
-    array<uint8>:EXTENSION_VALUE_DATA_BYTE_ARRAY_LEN byte_array_value;
+    array<uint8>:EXTENSION_VALUE_ARRAY_LEN byte_array_value;
     ddk.protocol.camera.Dimensions resolution_value;
     ddk.protocol.camera.MinMaxConstraints constraints_value;
+    array<FrameRateInfo>:EXTENSION_VALUE_ARRAY_LEN frame_rate_info_value;
 };
 
 enum PixelType : uint8 {
@@ -82,13 +83,20 @@ struct OperatingMode {
     ReadoutConfig readout;
 };
 
+/// This structure maps the sensor's frame rates to coarse max integration time.
+struct FrameRateInfo  {
+    ddk.protocol.camera.FrameRate frame_rate;
+    uint32 max_coarse_integration_time;
+};
+
 /// Exposes a product-agnostic interface to the camera's sensor.
 /// Allows clients to get and set sensor constraints, sensor mode,
 /// and its dynamic operating state.
 ///
 /// Most methods provide a `zx.status` return value. This can be:
 ///    ZX_OK                      - The operation was successful.
-///    ZX_ERR_INTERNAL            - The sensor has not been initialized.
+///    ZX_ERR_INTERNAL            - The sensor has not been initialized or has encountered an
+///                                 otherwise unspecified error.
 ///    ZX_ERR_NOT_SUPPORTED       - The operation is not supported on the current device.
 ///    ZX_ERR_INVALID_ARGS        - Invalid args for this operation.
 ///    ZX_ERR_OUT_OF_RANGE        - Args fall outside of min/max constraints.
