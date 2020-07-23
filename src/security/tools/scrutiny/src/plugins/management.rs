@@ -103,6 +103,7 @@ struct ModelStatsController {}
 #[derive(Serialize, Deserialize)]
 struct ModelStats {
     components: usize,
+    packages: usize,
     manifests: usize,
     routes: usize,
 }
@@ -111,6 +112,7 @@ impl DataController for ModelStatsController {
     fn query(&self, model: Arc<DataModel>, _query: Value) -> Result<Value> {
         let stats = ModelStats {
             components: model.components().read().unwrap().len(),
+            packages: model.packages().read().unwrap().len(),
             manifests: model.manifests().read().unwrap().len(),
             routes: model.routes().read().unwrap().len(),
         };
@@ -246,6 +248,7 @@ mod tests {
         let response = model_stats.query(model.clone(), json!("")).unwrap();
         let stats: ModelStats = serde_json::from_value(response).unwrap();
         assert_eq!(stats.components, 1);
+        assert_eq!(stats.packages, 0);
         assert_eq!(stats.routes, 0);
         assert_eq!(stats.manifests, 0);
     }
