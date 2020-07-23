@@ -274,6 +274,11 @@ zx_status_t OpteeClient::DdkClose(uint32_t flags) {
 
 void OpteeClient::DdkRelease() { delete this; }
 
+void OpteeClient::DdkSuspend(ddk::SuspendTxn txn) {
+  Shutdown();
+  txn.Reply(ZX_OK, txn.requested_state());
+}
+
 void OpteeClient::DdkUnbindNew(ddk::UnbindTxn txn) { Shutdown(); }
 
 void OpteeClient::Shutdown() {

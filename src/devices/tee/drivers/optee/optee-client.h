@@ -23,6 +23,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
 
+#include "ddktl/suspend-txn.h"
 #include "optee-controller.h"
 
 namespace optee {
@@ -32,7 +33,7 @@ namespace fuchsia_tee = ::llcpp::fuchsia::tee;
 class OpteeClient;
 
 using OpteeClientBase =
-    ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable, ddk::UnbindableNew>;
+    ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable, ddk::Suspendable, ddk::UnbindableNew>;
 using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 
 // The Optee driver allows for simultaneous access from different processes. The OpteeClient object
@@ -59,6 +60,7 @@ class OpteeClient : public OpteeClientBase,
 
   zx_status_t DdkClose(uint32_t flags);
   void DdkRelease();
+  void DdkSuspend(ddk::SuspendTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

@@ -35,8 +35,8 @@ class OpteeClient;
 class OpteeDeviceInfo;
 
 class OpteeController;
-using OpteeControllerBase =
-    ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::UnbindableNew>;
+using OpteeControllerBase = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable,
+                                        ddk::Suspendable, ddk::UnbindableNew>;
 class OpteeController : public OpteeControllerBase,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
                         public fuchsia_hardware_tee::DeviceConnector::Interface {
@@ -53,6 +53,7 @@ class OpteeController : public OpteeControllerBase,
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkOpen(zx_device_t** out_dev, uint32_t flags);
+  void DdkSuspend(ddk::SuspendTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
@@ -84,6 +85,9 @@ class OpteeController : public OpteeControllerBase,
 
   const GetOsRevisionResult& os_revision() const { return os_revision_; }
 
+  // Should only be used for testing.
+  const zx::pmt& pmt() const { return pmt_; }
+
  private:
   zx_status_t ValidateApiUid() const;
   zx_status_t ValidateApiRevision() const;
@@ -97,6 +101,8 @@ class OpteeController : public OpteeControllerBase,
   zx::resource secure_monitor_;
   uint32_t secure_world_capabilities_ = 0;
   GetOsRevisionResult os_revision_;
+  zx::bti bti_;
+  zx::pmt pmt_;
   std::unique_ptr<SharedMemoryManager> shared_memory_manager_;
 };
 

@@ -4,6 +4,44 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+source_set("optee_lib") {
+  sources = [
+    "optee-client.cc",
+    "optee-controller.cc",
+    "optee-device-info.cc",
+    "optee-message.cc",
+    "optee-util.cc",
+    "shared-memory.cc",
+  ]
+
+  public_deps = [
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_llcpp",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/region-alloc",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
+  ]
+
+  deps = [
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/ddk.protocol.tee",
+    "//sdk/fidl/fuchsia.tee:fuchsia.tee_llcpp",
+    "//sdk/fidl/fuchsia.tee.manager:fuchsia.tee.manager_llcpp",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl-utils",
+  ]
+}
 
 driver_module("optee") {
   defines = [ "_ALL_SOURCE" ]
@@ -13,41 +51,12 @@ driver_module("optee") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  sources = [
-    "optee-client.cc",
-    "optee-controller.cc",
-    "optee-device-info.cc",
-    "optee-message.cc",
-    "optee-util.cc",
-    "shared-memory.cc",
-  ]
-  deps = [
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sysmem",
-    "//sdk/banjo/ddk.protocol.tee",
-    "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_llcpp",
-    "//sdk/fidl/fuchsia.tee:fuchsia.tee_llcpp",
-    "//sdk/fidl/fuchsia.tee.manager:fuchsia.tee.manager_llcpp",
-    "//src/devices/bus/lib/device-protocol-platform-device",
-    "//src/devices/lib/driver",
-    "//src/devices/lib/mmio",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/region-alloc",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
-  ]
+  deps = [ ":optee_lib" ]
 }
 
 group("test") {
   testonly = true
-  deps = [ ":optee-message-test" ]
+  deps = [ ":optee-unittest" ]
 }
 
 test("optee-message-test") {
@@ -60,33 +69,39 @@ test("optee-message-test") {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
   output_name = "optee-message-test"
-  sources = [
-    "optee-client.cc",
-    "optee-controller.cc",
-    "optee-device-info.cc",
-    "optee-message.cc",
-    "optee-util.cc",
-    "shared-memory.cc",
-    "test/optee-message-test.cc",
+  include_dirs = [ "." ]
+  sources = [ "test/optee-message-test.cc" ]
+  deps = [
+    ":optee_lib",
+    "//zircon/public/lib/zxtest",
   ]
+}
+
+test("optee-controller-test") {
+  sources = [ "test/optee-controller-test.cc" ]
   include_dirs = [ "." ]
   deps = [
+    ":optee_lib",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.sysmem",
-    "//sdk/banjo/ddk.protocol.tee",
-    "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_llcpp",
-    "//sdk/fidl/fuchsia.tee:fuchsia.tee_llcpp",
-    "//sdk/lib/fdio",
-    "//src/devices/bus/lib/device-protocol-platform-device",
-    "//src/devices/lib/driver",
-    "//src/devices/lib/mmio",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/fidl",
-    "//zircon/public/lib/region-alloc",
-    "//zircon/public/lib/zircon-internal",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake-resource",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
+  ]
+}
+
+unittest_package("optee-unittest") {
+  deps = [
+    ":optee-controller-test",
+    ":optee-message-test",
+  ]
+  tests = [
+    {
+      name = "optee-message-test"
+    },
+    {
+      name = "optee-controller-test"
+    },
   ]
 }

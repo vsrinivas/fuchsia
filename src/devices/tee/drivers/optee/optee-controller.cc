@@ -21,6 +21,7 @@
 #include <fbl/auto_lock.h>
 #include <tee-client-api/tee-client-types.h>
 
+#include "ddktl/suspend-txn.h"
 #include "optee-client.h"
 #include "optee-device-info.h"
 #include "optee-util.h"
@@ -124,20 +125,33 @@ zx_status_t OpteeController::ExchangeCapabilities() {
 }
 
 zx_status_t OpteeController::InitializeSharedMemory() {
-  zx_paddr_t shared_mem_start;
-  size_t shared_mem_size;
-  zx_status_t status = DiscoverSharedMemoryConfig(&shared_mem_start, &shared_mem_size);
+  // The Trusted OS and Rich OS share a dedicated portion of RAM to send messages back and forth. To
+  // discover the memory region to use, we ask the platform device for a MMIO representing the TEE's
+  // entire dedicated memory region and query the TEE to discover which section of that should be
+  // used as the shared memory. The rest of the TEE's memory region is secure.
 
+  static constexpr uint32_t kTeeBtiIndex = 0;
+  zx_status_t status = pdev_get_bti(&pdev_proto_, kTeeBtiIndex, bti_.reset_and_get_address());
   if (status != ZX_OK) {
-    LOG(ERROR, "unable to discover shared memory configuration");
+    LOG(ERROR, "unable to get bti");
     return status;
   }
 
-  static constexpr uint32_t kTeeBtiIndex = 0;
-  zx::bti bti;
-  status = pdev_get_bti(&pdev_proto_, kTeeBtiIndex, bti.reset_and_get_address());
+  // The TEE BTI will be pinned to get the physical address of the shared memory region between the
+  // Rich OS and the Trusted OS. This memory region is not used for DMA and only used for message
+  // exchange between the two "worlds." As the TEE is not distinct hardware, but rather the CPU
+  // operating in a different EL, it cannot be accessing the shared memory region at this time. The
+  // Trusted OS can never execute any code unless we explicitly call into it via SMC, and it can
+  // only run code during that SMC call. Once the call returns, the Trusted OS is no longer
+  // executing any code and will not until the next time we explicitly call into it. The physical
+  // addresses acquired from the BTI pinning are only used within the context of the OP-TEE
+  // CallWithArgs SMC calls.
+  //
+  // As the Trusted OS cannot be actively accessing this memory region, it is safe to release from
+  // quarantine.
+  status = bti_.release_quarantine();
   if (status != ZX_OK) {
-    LOG(ERROR, "unable to get bti");
+    LOG(ERROR, "could not release quarantine bti - %d", status);
     return status;
   }
 
@@ -154,8 +168,8 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   // Briefly pin the first page of this VMO to determine the secure world's base physical address.
   zx_paddr_t mmio_vmo_paddr;
   zx::pmt pmt;
-  status = bti.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, *zx::unowned_vmo(mmio_dev.vmo),
-                   /*offset=*/0, ZX_PAGE_SIZE, &mmio_vmo_paddr, /*num_addrs=*/1, &pmt);
+  status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, *zx::unowned_vmo(mmio_dev.vmo),
+                    /*offset=*/0, ZX_PAGE_SIZE, &mmio_vmo_paddr, /*num_addrs=*/1, &pmt);
   if (status != ZX_OK) {
     LOG(ERROR, "unable to pin secure world memory");
     return status;
@@ -164,25 +178,47 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   status = pmt.unpin();
   ZX_DEBUG_ASSERT(status == ZX_OK);
 
-  zx_paddr_t sw_base_paddr = mmio_vmo_paddr + mmio_dev.offset;
-  size_t sw_size = mmio_dev.size;
-  if (shared_mem_start < sw_base_paddr ||
-      (shared_mem_start + shared_mem_size) > (sw_base_paddr + sw_size)) {
+  zx_paddr_t secure_world_paddr = mmio_vmo_paddr + mmio_dev.offset;
+  size_t secure_world_size = mmio_dev.size;
+
+  // Now that we have the TEE's entire memory range, query the TEE to see which region of it we
+  // should use.
+  zx_paddr_t shared_mem_paddr;
+  size_t shared_mem_size;
+  status = DiscoverSharedMemoryConfig(&shared_mem_paddr, &shared_mem_size);
+
+  if (status != ZX_OK) {
+    LOG(ERROR, "unable to discover shared memory configuration");
+    return status;
+  }
+
+  if (shared_mem_paddr < secure_world_paddr ||
+      (shared_mem_paddr + shared_mem_size) > (secure_world_paddr + secure_world_size)) {
     LOG(ERROR, "shared memory outside of secure world range");
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  // Map and pin the just the shared memory region of the secure world memory.
   mmio_buffer_t mmio;
-  size_t vmo_relative_offset = shared_mem_start - mmio_vmo_paddr;
-  status = mmio_buffer_init(&mmio, vmo_relative_offset, shared_mem_size, mmio_dev.vmo,
+  zx_off_t shared_mem_offset = shared_mem_paddr - mmio_vmo_paddr;
+  status = mmio_buffer_init(&mmio, shared_mem_offset, shared_mem_size, mmio_dev.vmo,
                             ZX_CACHE_POLICY_CACHED);
   if (status != ZX_OK) {
     LOG(ERROR, "unable to map secure world memory");
     return status;
   }
 
-  status = SharedMemoryManager::Create(shared_mem_start, shared_mem_size, ddk::MmioBuffer(mmio),
-                                       std::move(bti), &shared_memory_manager_);
+  mmio_pinned_buffer_t pinned_mmio;
+  status = mmio_buffer_pin(&mmio, bti_.get(), &pinned_mmio);
+  if (status != ZX_OK) {
+    LOG(ERROR, "unable to pin secure world memory: %d", status);
+    return status;
+  }
+
+  // Take ownership of the PMT so that we can explicitly unpin.
+  pmt_ = zx::pmt(pinned_mmio.pmt);
+  status = SharedMemoryManager::Create(ddk::MmioBuffer(mmio), pinned_mmio.paddr,
+                                       &shared_memory_manager_);
 
   if (status != ZX_OK) {
     LOG(ERROR, "unable to initialize SharedMemoryManager");
@@ -316,6 +352,14 @@ zx_status_t OpteeController::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 zx_status_t OpteeController::DdkOpen(zx_device_t** out_dev, uint32_t flags) {
   // Do not set out_dev because this Controller will handle the FIDL messages
   return ZX_OK;
+}
+
+void OpteeController::DdkSuspend(ddk::SuspendTxn txn) {
+  // All operations should have been halted when the child devices were suspended.
+  shared_memory_manager_ = nullptr;
+  zx_status_t status = pmt_.unpin();
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+  txn.Reply(ZX_OK, txn.requested_state());
 }
 
 void OpteeController::DdkUnbindNew(ddk::UnbindTxn txn) {
