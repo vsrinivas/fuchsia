@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/msd_vsi_vip_integration_tests"
+    },
+    "sandbox": {
+        "features": [
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

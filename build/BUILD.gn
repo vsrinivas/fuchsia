@@ -334,7 +334,7 @@ group("deprecated_package_underscore") {
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
     "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_integration_tests",
     "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",
-    "//src/graphics/lib/magma/gnbuild/magma-vsl-gc:msd_vsl_gc_nonhardware_tests",
+    "//src/graphics/lib/magma/gnbuild/magma-vsi-vip:msd_vsi_vip_nonhardware_tests",
     "//src/graphics/lib/magma/tests/icd_strip:test_icd_strip",
     "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file",
     "//src/graphics/lib/magma/tests:magma_abi_conformance_tests",

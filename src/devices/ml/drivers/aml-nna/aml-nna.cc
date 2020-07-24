@@ -122,8 +122,7 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV},
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
       {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
-      // TODO(fxb/53525): may want to rename this. This is to match the current msd-vsl-gc driver.
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GPU_VSL_GC},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_VSI_VIP},
   };
 
   status = device->DdkAdd(ddk::DeviceAddArgs("aml-nna").set_props(props));

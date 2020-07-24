@@ -1,0 +1,66 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+executable("nonhardware_tests") {
+  testonly = true
+  output_name = "msd-vsi-vip-nonhardware-tests"
+
+  sources = [
+    "test_address_space.cc",
+    "test_connection.cc",
+    "test_context.cc",
+    "test_page_table_slot_allocator.cc",
+    "test_ringbuffer.cc",
+  ]
+
+  deps = [
+    "//src/graphics/drivers/msd-vsi-vip/src",
+    "//src/graphics/lib/magma/src/magma_util:mapped_batch",
+    "//src/graphics/lib/magma/src/sys_driver:sys_driver",
+    "//src/graphics/lib/magma/tests/helper:logger_init_helper",
+    "//src/graphics/lib/magma/tests/mock:bus_mapper",
+    "//src/graphics/lib/magma/tests/mock:mmio",
+    "//src/lib/ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# These tests require a graphics device to run.
+# They can be run inside the test build of the driver.
+source_set("hardware_tests") {
+  testonly = true
+
+  include_dirs = [ "//third_party/etnaviv_gpu_tests/src/" ]
+
+  sources = [
+    "//third_party/etnaviv_gpu_tests/src/etnaviv_cl_test_gc7000.c",
+    "test_command_buffer.cc",
+    "test_device.cc",
+    "test_device_dump.cc",
+    "test_events.cc",
+    "test_exec.cc",
+    "test_fault_recovery.cc",
+    "test_memory_write.cc",
+  ]
+
+  deps = [
+    "../../src",
+    "//src/graphics/lib/magma/src/magma_util:mapped_batch",
+    "//src/graphics/lib/magma/tests/helper:platform_device_helper",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+test_package("msd-vsi-vip-nonhardware-tests") {
+  deps = [ ":nonhardware_tests" ]
+
+  tests = [
+    {
+      name = "msd-vsi-vip-nonhardware-tests"
+    },
+  ]
+}

@@ -6,7 +6,7 @@ import("//boards/arm64.gni")
 
 board_name = "vim3"
 
-board_package_labels += [ "//garnet/packages/prod:magma-vsl-gc" ]
+board_package_labels += [ "//garnet/packages/prod:magma-vsi-vip" ]
 
 # partitions for fx flash to flash
 zircon_a_partition = "zircon-a"

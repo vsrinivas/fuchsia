@@ -1,0 +1,65 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+test("test_magma_vsi_exec_bin") {
+  sources = [
+    "//third_party/etnaviv_gpu_tests/src/etnaviv_cl_test_gc7000.c",
+    "test_magma_vsi.h",
+    "test_magma_vsi_execute_command.cc",
+  ]
+
+  include_dirs = [ "//third_party/etnaviv_gpu_tests/src/" ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/graphics/lib/magma/src/libmagma",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test_package("test-magma-vsi-exec") {
+  deps = [ ":test_magma_vsi_exec_bin" ]
+
+  tests = [
+    {
+      name = "test_magma_vsi_exec_bin"
+      manifest = "meta/test_magma_vsi_exec.cmx"
+      environments = [ sherlock_env ]
+    },
+  ]
+}
+
+test("msd_vsi_vip_integration_tests") {
+  sources = [ "test_vsi_query.cc" ]
+
+  deps = [
+    "//src/graphics/drivers/msd-vsi-vip/include",
+    "//src/graphics/lib/magma/src/libmagma",
+    "//src/graphics/lib/magma/tests/helper:test_device_helper",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+test_package("msd-vsi-vip-integration-tests") {
+  deps = [ ":msd_vsi_vip_integration_tests" ]
+
+  tests = [
+    {
+      name = "msd_vsi_vip_integration_tests"
+      environments = [ sherlock_env ]
+    },
+  ]
+}
+
+group("integration") {
+  testonly = true
+  deps = [
+    ":msd-vsi-vip-integration-tests",
+    ":test-magma-vsi-exec",
+  ]
+}

@@ -358,7 +358,7 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/msd-vsl-gc-nonhardware-tests#meta/msd-vsl-gc-nonhardware-tests.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/msd-vsi-vip-nonhardware-tests#meta/msd-vsi-vip-nonhardware-tests.cmx",
          "max_severity": "ERROR"
       },
       {
@@ -370,7 +370,7 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/msd_vsl_gc_nonhardware_tests#meta/msd_vsl_gc_nonhardware_tests.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/msd_vsi_vip_nonhardware_tests#meta/msd_vsi_vip_nonhardware_tests.cmx",
          "max_severity": "ERROR"
       },
       {

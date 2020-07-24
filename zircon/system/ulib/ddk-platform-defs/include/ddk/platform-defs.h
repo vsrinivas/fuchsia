@@ -24,7 +24,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_DW_I2C             0x09   // Designware I2C
 #define PDEV_DID_DW_PCIE            0x0A  // Designware PCIe
 #define PDEV_DID_LED2472G           0x0B  // RPi Sense Hat LED2472G
-#define PDEV_DID_GPU_VSL_GC         0x0C  // Verisilicon GC series GPU
+#define PDEV_DID_VSI_VIP            0x0C  // Verisilicon VIP
 // 0x0D unused
 #define PDEV_DID_OPTEE                  0x0E  // OP-TEE OS Driver
 #define PDEV_DID_RTC_FALLBACK           0x0F  // Synthetic RTC device
