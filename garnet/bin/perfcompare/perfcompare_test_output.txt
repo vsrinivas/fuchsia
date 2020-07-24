@@ -128,6 +128,39 @@ fuchsia.example: ClockGetTimeExample  slower            1.031-1.104    1492 +/- 
 fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78 ns  1975 +/- 78 ns
 
 
+### display_single_boot_single_dataset
+Test case                             Mean
+------------------------------------  ------------
+fuchsia.example: ClockGetTimeExample  991.7777 ns
+fuchsia.example: SecondExample        1975.3331 ns
+
+
+### display_single_boot_two_datasets
+Summary counts:
+  2 test cases in total
+  0 test cases had no significant difference (no_sig_diff)
+  1 test case cannot be compared because we have point estimates only
+  0 test cases got faster
+  0 test cases got slower
+  0 test cases added
+  1 test case removed
+
+
+Results from test cases with differences:
+
+Test case                       Improve/regress?  Factor change  Mean before   Mean after
+------------------------------  ----------------  -------------  ------------  ----------
+fuchsia.example: SecondExample  removed           -              1975.3331 ns  -
+
+
+Results from all test cases:
+
+Test case                             Improve/regress?  Factor change  Mean before   Mean after
+------------------------------------  ----------------  -------------  ------------  ------------
+fuchsia.example: ClockGetTimeExample  point_estimate    -              991.7777 ns   1991.7777 ns
+fuchsia.example: SecondExample        removed           -              1975.3331 ns  -
+
+
 ### display_single_dataset
 Test case                             Mean
 ------------------------------------  --------------

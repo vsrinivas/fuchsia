@@ -102,12 +102,14 @@ def Mean(values):
 
 # Returns the mean and standard deviation of a sample.  This applies
 # Bessel's correction to the calculation of the standard deviation.
+#
+# If the sample contains only a single value, this returns None for the
+# standard deviation, because we cannot estimate the standard deviation
+# with Bessel's correction in that case.
 def MeanAndStddev(values):
-    if len(values) <= 1:
-        raise AssertionError(
-            "Sample size of %d is too small to calculate standard deviation "
-            "with Bessel's correction" % len(values))
     mean_val = Mean(values)
+    if len(values) == 1:
+        return mean_val, None
     sum_of_squares = 0.0
     for val in values:
         diff = val - mean_val
@@ -145,20 +147,28 @@ class Stats(object):
         self._unit = unit
         sample_size = len(values)
         mean, stddev = MeanAndStddev(values)
-        offset = (-scipy.stats.t.ppf(ALPHA / 2, sample_size - 1)
-                  * stddev / math.sqrt(sample_size))
         self._mean = mean
-        self._offset = offset
-        # Confidence interval for the mean.
-        self.interval = (mean - offset, mean + offset)
+        if stddev is None:
+            self._offset = None
+            self.interval = None
+        else:
+            self._offset = (-scipy.stats.t.ppf(ALPHA / 2, sample_size - 1)
+                            * stddev / math.sqrt(sample_size))
+            # Confidence interval for the mean.
+            self.interval = (mean - self._offset, mean + self._offset)
 
     def FormatConfidenceInterval(self):
+        if self._offset is None:
+            # Point estimate only: We cannot calculate a confidence
+            # interval because the sample only contained a single value.
+            return '%s %s' % (self._mean, self._unit)
         return '%s %s' % (FormatConfidenceInterval(self._mean, self._offset),
                           self._unit)
 
     # Returns the relative CI width, which is the width of the confidence
     # interval divided by the mean.
     def RelativeConfidenceIntervalWidth(self):
+        assert self._offset is not None
         return self._offset * 2 / self._mean
 
 
@@ -310,6 +320,8 @@ def CompareIntervals(stats_before, stats_after):
         return 'added', '-'
     if stats_after is None:
         return 'removed', '-'
+    if stats_before.interval is None or stats_after.interval is None:
+        return 'point_estimate', '-'
     # Using a ">" comparison rather than ">=" ensures that if the intervals
     # are equal and zero-width, they are treated as "no_sig_diff".
     if stats_after.interval[0] > stats_before.interval[1]:
@@ -357,6 +369,7 @@ def ComparePerf(args, out_fh):
         'faster': 0,
         'slower': 0,
         'no_sig_diff': 0,
+        'point_estimate': 0,
     }
     heading_row = ['Test case', 'Improve/regress?', 'Factor change',
                    'Mean before', 'Mean after']
@@ -370,7 +383,7 @@ def ComparePerf(args, out_fh):
                StatsFormatConfidenceInterval(stats[0]),
                StatsFormatConfidenceInterval(stats[1])]
         all_rows.append(row)
-        if result != 'no_sig_diff':
+        if result not in ('no_sig_diff', 'point_estimate'):
             diff_rows.append(row)
 
     def FormatCount(count, text):
@@ -381,6 +394,9 @@ def ComparePerf(args, out_fh):
     FormatCount(len(labels), 'in total')
     FormatCount(counts['no_sig_diff'],
                 'had no significant difference (no_sig_diff)')
+    if counts['point_estimate']:
+        FormatCount(counts['point_estimate'],
+                    'cannot be compared because we have point estimates only')
     FormatCount(counts['faster'], 'got faster')
     FormatCount(counts['slower'], 'got slower')
     FormatCount(counts['added'], 'added')

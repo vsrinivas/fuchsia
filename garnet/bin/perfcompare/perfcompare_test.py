@@ -288,14 +288,14 @@ class PerfCompareTest(TempDirTestCase):
             fh.write('dummy_data')
 
     def WriteExampleDataDir(self, dir_path, mean=1000, stddev=100,
-                            drop_one=False):
+                            drop_one=False, single_boot=False):
         results = [('ClockGetTimeExample', GenerateTestData(mean, stddev))]
         if not drop_one:
             results.append(('SecondExample', GenerateTestData(2000, 300)))
 
-        for test_name, values in results:
-            for idx, value in enumerate(values):
-                dest_dir = os.path.join(dir_path, 'by_boot', 'boot%06d' % idx)
+        if single_boot:
+            for test_name, values in results:
+                dest_dir = os.path.join(dir_path, 'by_boot', 'boot0')
                 dest_file = os.path.join(
                     dest_dir, '%s.fuchsiaperf.json' % test_name)
                 if not os.path.exists(dest_dir):
@@ -306,7 +306,23 @@ class PerfCompareTest(TempDirTestCase):
                     [{'label': test_name,
                       'test_suite': 'fuchsia.example',
                       'unit': 'nanoseconds',
-                      'values': SLOW_INITIAL_RUN + [value]}])
+                      'values': SLOW_INITIAL_RUN + values}])
+        else:
+            for test_name, values in results:
+                for idx, value in enumerate(values):
+                    dest_dir = os.path.join(
+                        dir_path, 'by_boot', 'boot%06d' % idx)
+                    dest_file = os.path.join(
+                        dest_dir, '%s.fuchsiaperf.json' % test_name)
+                    if not os.path.exists(dest_dir):
+                        os.makedirs(dest_dir)
+                        self.AddIgnoredFiles(dest_dir)
+                    WriteJsonFile(
+                        dest_file,
+                        [{'label': test_name,
+                          'test_suite': 'fuchsia.example',
+                          'unit': 'nanoseconds',
+                          'values': SLOW_INITIAL_RUN + [value]}])
 
     def ExampleDataDir(self, **kwargs):
         dir_path = self.MakeTempDir()
@@ -334,11 +350,11 @@ class PerfCompareTest(TempDirTestCase):
         self.assertEquals(mean_val, 10.0)
         self.assertEquals(perfcompare.Mean(values), 10.0)
         self.assertEquals(stddev_val, 5.0)
+        # Single-value sample.
+        self.assertEquals(perfcompare.MeanAndStddev([123]), (123.0, None))
         # Check error cases.
         self.assertRaises(AssertionError, lambda: perfcompare.Mean([]))
         self.assertRaises(AssertionError, lambda: perfcompare.MeanAndStddev([]))
-        self.assertRaises(AssertionError,
-                          lambda: perfcompare.MeanAndStddev([100]))
 
     # Check that data written using the golden file helper reads back
     # the same.
@@ -408,6 +424,24 @@ class PerfCompareTest(TempDirTestCase):
         perfcompare.Main(['compare_perf'] + dataset_dirs, stdout)
         output = stdout.getvalue()
         GOLDEN.AssertCaseEq('display_three_datasets', output)
+
+    # Test printing a table of point estimates.
+    def test_display_single_boot_single_dataset(self):
+        dataset_dir = self.ExampleDataDir(single_boot=True)
+        stdout = StringIO.StringIO()
+        perfcompare.Main(['compare_perf', dataset_dir], stdout)
+        output = stdout.getvalue()
+        GOLDEN.AssertCaseEq('display_single_boot_single_dataset', output)
+
+    # Test printing a table of point estimates.
+    def test_display_single_boot_two_datasets(self):
+        dataset_dirs = [self.ExampleDataDir(mean=1000, single_boot=True),
+                        self.ExampleDataDir(mean=2000, single_boot=True,
+                                            drop_one=True)]
+        stdout = StringIO.StringIO()
+        perfcompare.Main(['compare_perf'] + dataset_dirs, stdout)
+        output = stdout.getvalue()
+        GOLDEN.AssertCaseEq('display_single_boot_two_datasets', output)
 
     def test_factor_range_formatting(self):
         # Construct an interval pair of the same type used in the
