@@ -23,6 +23,7 @@ group("tools") {
     "//tools/make-fuchsia-vol:host",
     "//tools/net/device-finder:host",
     "//tools/netprotocol($host_toolchain)",
+    "//tools/symbol-index:symbol_index_host",
   ]
 }
 
@@ -98,6 +99,7 @@ group("tests") {
     "//tools/qemu:tests($host_toolchain)",
     "//tools/serial:tests($host_toolchain)",
     "//tools/size_checker/cmd:tests",
+    "//tools/symbol-index:tests",
     "//tools/testing:tests($host_toolchain)",
     "//tools/zedmon:tests",
   ]
