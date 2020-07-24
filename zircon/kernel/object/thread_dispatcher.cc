@@ -94,7 +94,7 @@ ThreadDispatcher::~ThreadDispatcher() {
 
   // If MakeRunnable hasn't been called, then our core_thread_ has never run and
   // we need to be the ones to remove it.
-  if (!HasStartedLocked()) {
+  if (!HasStartedLocked() && core_thread_ != nullptr) {
     // Since the Thread is in an initialized state we can directly destruct it.
     core_thread_->Forget();
     core_thread_ = nullptr;
