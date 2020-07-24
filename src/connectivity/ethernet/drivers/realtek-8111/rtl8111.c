@@ -341,7 +341,7 @@ static zx_protocol_device_t device_ops = {
 static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
   zxlogf(DEBUG, "rtl8111: binding device");
 
-  zx_status_t r;
+  zx_status_t res;
   ethernet_device_t* edev;
   if ((edev = calloc(1, sizeof(ethernet_device_t))) == NULL) {
     return ZX_ERR_NO_MEMORY;
@@ -350,43 +350,37 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
   mtx_init(&edev->tx_lock, mtx_plain);
   cnd_init(&edev->tx_cond);
 
-  if ((r = device_get_protocol(dev, ZX_PROTOCOL_PCI, &edev->pci)) != ZX_OK) {
+  if ((res = device_get_protocol(dev, ZX_PROTOCOL_PCI, &edev->pci)) != ZX_OK) {
     zxlogf(ERROR, "rtl8111: no pci protocol");
     goto fail;
   }
 
-  uint32_t irq_cnt = 0;
-  if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
-      (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
-    zxlogf(DEBUG, "rtl8111: using MSI mode");
-  } else if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
-             (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
-    zxlogf(DEBUG, "rtl8111: using legacy irq mode");
-  } else {
+  res = pci_configure_irq_mode(&edev->pci, 1);
+  if (res != ZX_OK) {
     zxlogf(ERROR, "rtl8111: failed to configure irqs");
-    r = ZX_ERR_INTERNAL;
+    res = ZX_ERR_INTERNAL;
     goto fail;
   }
 
-  r = pci_map_interrupt(&edev->pci, 0, &edev->irqh);
-  if (r != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: failed to map irq %d", r);
+  res = pci_map_interrupt(&edev->pci, 0, &edev->irqh);
+  if (res != ZX_OK) {
+    zxlogf(ERROR, "rtl8111: failed to map irq %d", res);
     goto fail;
   }
 
-  r = pci_map_bar_buffer(&edev->pci, 2u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &edev->mmio);
-  if (r != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: cannot map io %d", r);
+  res = pci_map_bar_buffer(&edev->pci, 2u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &edev->mmio);
+  if (res != ZX_OK) {
+    zxlogf(ERROR, "rtl8111: cannot map io %d", res);
     goto fail;
   }
 
-  if ((r = pci_enable_bus_master(&edev->pci, true)) != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: cannot enable bus master %d", r);
+  if ((res = pci_enable_bus_master(&edev->pci, true)) != ZX_OK) {
+    zxlogf(ERROR, "rtl8111: cannot enable bus master %d", res);
     goto fail;
   }
 
-  if ((r = pci_get_bti(&edev->pci, 0, &edev->btih)) != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: could not get bti %d", r);
+  if ((res = pci_get_bti(&edev->pci, 0, &edev->btih)) != ZX_OK) {
+    zxlogf(ERROR, "rtl8111: could not get bti %d", res);
     goto fail;
   }
 
@@ -395,9 +389,9 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
 
   // TODO(stevensd): Don't require a contiguous buffer
   uint32_t alloc_size = ((ETH_BUF_SIZE + ETH_DESC_ELT_SIZE) * ETH_BUF_COUNT) * 2;
-  r = io_buffer_init(&edev->buffer, edev->btih, alloc_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (r != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: cannot alloc io-buffer %d", r);
+  res = io_buffer_init(&edev->buffer, edev->btih, alloc_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (res != ZX_OK) {
+    zxlogf(ERROR, "rtl8111: cannot alloc io-buffer %d", res);
     goto fail;
   }
 
@@ -413,14 +407,14 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
       .proto_ops = &ethernet_impl_ops,
   };
 
-  if ((r = device_add(dev, &args, &edev->zxdev)) != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: failed to add device %d", r);
+  if ((res = device_add(dev, &args, &edev->zxdev)) != ZX_OK) {
+    zxlogf(ERROR, "rtl8111: failed to add device %d", res);
     goto fail;
   }
 
-  r = thrd_create_with_name(&edev->irq_thread, irq_thread, edev, "rtl-irq-thread");
-  if (r < 0) {
-    zxlogf(ERROR, "rtl8111: failed to create irq thread %d", r);
+  res = thrd_create_with_name(&edev->irq_thread, irq_thread, edev, "rtl-irq-thread");
+  if (res < 0) {
+    zxlogf(ERROR, "rtl8111: failed to create irq thread %d", res);
     device_async_remove(edev->zxdev);
     return ZX_OK;  // The cleanup will be done in release
   }
@@ -439,7 +433,7 @@ fail:
     zx_handle_close(edev->irqh);
   }
   free(edev);
-  return r != ZX_OK ? r : ZX_ERR_INTERNAL;
+  return res != ZX_OK ? res : ZX_ERR_INTERNAL;
 }
 
 static zx_driver_ops_t rtl8111_ethernet_driver_ops = {
