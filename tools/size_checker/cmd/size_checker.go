@@ -130,6 +130,19 @@ func (node *Node) getOnlyChild() (*Node, error) {
 	return nil, fmt.Errorf("this node does not contain a single child.")
 }
 
+// storageBreakdown constructs a string including detailed storage
+// consumption for the subtree of this node.
+//
+// `level` controls the indentation level to preserve hierarchy in the
+// output.
+func (node *Node) storageBreakdown(level int) string {
+	ret := fmt.Sprintf("%s%s: %s (%d)\n", strings.Repeat("  ", level), node.fullPath, formatSize(node.size), node.size)
+	for _, n := range node.children {
+		ret += n.storageBreakdown(level + 1)
+	}
+	return ret
+}
+
 // Formats a given number into human friendly string representation of bytes, rounded to 2 decimal places.
 func formatSize(s int64) string {
 	size := float64(s)
@@ -355,8 +368,11 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 
 	for _, component := range input.Components {
 		var size int64
+		var nodes []*Node
+
 		for _, src := range component.Src {
 			if node := root.find(src); node != nil {
+				nodes = append(nodes, node)
 				size += node.size
 			}
 		}
@@ -365,6 +381,10 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 		if s := checkLimit(component.Component, size, component.Limit); s != "" {
 			noSpace = true
 			report.WriteString(s + "\n")
+			for _, n := range nodes {
+				report.WriteString(n.storageBreakdown(1))
+			}
+			report.WriteString("\n")
 		}
 	}
 
