@@ -20,6 +20,11 @@
             trigger: "disk_percentage >= 0.98",
             print: "Disk is 98% full",
         },
+        disk_display: {
+            type: "Gauge",
+            value: "disk_percentage",
+            format: "percentage",
+        },
         component_overflow: {
             type: "Warning",
             trigger: "too_many_components",
@@ -45,6 +50,24 @@
             values: {
                 disk_used: 97,
                 disk_total: 100,
+            },
+        },
+        component_max_ok: {
+            no: [
+                "component_overflow",
+            ],
+            values: {
+                actual_components: 17,
+                "product::max_components": 17,
+            },
+        },
+        component_too_many: {
+            yes: [
+                "component_overflow",
+            ],
+            values: {
+                actual_components: 18,
+                "product::max_components": 17,
             },
         },
     },

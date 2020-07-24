@@ -1,4 +1,5 @@
 {
+    select: {},
     eval: {
         always_true: "0 == 0",
     },

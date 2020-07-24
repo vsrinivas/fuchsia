@@ -39,8 +39,10 @@ fx triage
 ```
 
 This command downloads a fresh `bugreport.zip` file using the `fx bugreport`
-command. This command runs the default rules which are located in
-`//src/diagnostics/config/triage/*.triage`.
+command. This command runs the default rules which are located in the source
+tree:
+
+ *   `//src/diagnostics/config/triage/*.triage`
 
 To analyze a specific bugreport.zip or fuchsia_feedback_data.zip file, use
 `--data`.
@@ -49,7 +51,7 @@ To analyze a specific bugreport.zip or fuchsia_feedback_data.zip file, use
 * The argument to `--data` can also be a path to a directory containing
 an unzipped bugreport.
 * If you run `fx triage` without specifying a `--data` option, it
-runs a fresh `fx bugreport` and analyzes its `inspect.json` file.
+runs a fresh `fx bugreport` and analyzes its files.
 
 ```shell
 $ fx triage --data my/foo/bugreport.zip
@@ -72,16 +74,19 @@ The rest of this codelab explains how to configure new behavior in Triage.
 
 ### Overview
 
-Triage condenses the mass of Inspect data into useful information, through the
-following steps:
+Triage condenses the mass of Diagnostic data into useful information, through
+the following steps:
 
 1. Select values from the `inspect.json` file using _selector_ strings in the
 `select` section of the config file.
 1. Perform computations and comparisons to generate new values, as specified
 in the `eval` section of the config file.
-1. Take actions depending on Boolean values, according to entries in the `act`
+1. Take actions according to entries in the `act`
 section of the config file.
-1. Support unit-testing the actions via entries in the `test` section.
+    1. Warn if an error condition (Boolean expression) is true.
+    1. Display a value to the user.
+1. Support unit-testing the actions and computation via entries in the `test`
+section.
 
 ### Find the codelab's sample files
 
@@ -93,7 +98,7 @@ fx triage --config . --data bugreport
 ```
 
 Running this command in the sample directory with the unmodified codelab files
-prints a line indicating that Triage is working properly:
+prints a line from a pre-supplied action:
 
 ```none
 Warning: 'always_triggered' in 'rules' detected 'Triage is running': 'always_true' was true
@@ -114,6 +119,13 @@ bugreport has already been unzipped.
 
 The Triage program uses configuration loaded from one or more .triage files.
 This codelab uses the `rules.triage` file located in the sample directory.
+
+.triage files use JSON5 which is easier to write and read than JSON:
+
+*    It's good style to put a comma after the last list item.
+*    Most keys (including all valid Triage names) don't need to be
+wrapped in quotation marks.
+*    /* Multiline */ and // single-line comments can be used.
 
 ### Add selectors for the Inspect values
 
@@ -156,22 +168,25 @@ The above selector string indicates a component whose `moniker` contains the
 string `global_dat/storage`. It also indicates the `used_bytes` property from
 the `stats` subnode of the `root` node of that component's Inspect Tree.
 
-1. Copy the above "disk_used" selector, and add it to the "select"
-section of the rules.triage file.
+Put the above selectors into the "select" section of the rules.triage file.
 
-2. Write and add another selector named "disk_total" to select the "total_bytes"
-property at the same node in the Inspect data.
+#### Generating selectors
 
-.triage files use JSON5 which is easier to write and read than JSON:
+Entering selectors by hand is error-prone, so `fx triage --select` can be used
+to output valid selectors.
 
-*    It's good style to put a comma after the last list item.
-*    Most keys (including all valid Triage names) don't need to be
-wrapped in quotation marks.
-*    /* Multiline */ and // single comments can be used.
+```shell
+$ fx triage --data bugreport --select total_bytes
+INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes
+```
+
+Multiple --select parameters can be used. The program will generate all possible
+selectors for the bugreport's Diagnostic data, then filter (grep) through all
+--select parameters.
 
 ### Add a computation
 
-In addition to selecting values from the `inspect.json` file, you need to do
+After selecting values from the `inspect.json` file, you need to do
 some logic, and probably some arithmetic, to see whether those values indicate
 a condition worth flagging.
 
@@ -193,12 +208,13 @@ section for more information.
 In the "act" part of the config file, add an action which prints a
 warning when the disk is 98% full. Use the following lines:
 
-```json
+```json5
 act: {
     ...
-    "disk_full": {
-        "trigger": "disk_percentage > 0.98",
-        "print": "Disk reached 98% full",
+    disk_full: {
+        type: "Warning",
+        trigger: "disk_percentage > 0.98",
+        print: "Disk reached 98% full",
     },
 }
 ```
@@ -210,6 +226,24 @@ Note the following:
     expression.
 *   See the [Details](#details) section for more information about comparisons.
 *   Currently, `print` is the only available action.
+
+### Add a gauge
+
+```json5
+act: {
+    ...
+    disk_display: {
+        type: "Gauge",
+        value: "disk_percentage",
+        format: "percentage",
+    }
+}
+```
+
+Gauges always display the supplied value.
+
+The `format` field is optional. A value of "percentage" tells the output formatter
+to expect a value between 0 and 1 and display it as a percentage.
 
 ### Try it out
 
@@ -239,9 +273,8 @@ problem in the `inspect.json` file, or a bug in your rule?
 
 ### Test your rule
 
-You can (and should!) add tests for your actions. For each test, write a snippet
-of Inspect-format content and specify whether it should or should not trigger
-your rule.
+You can (and should!) add tests for your actions. For each test, specify values
+and whether or not those values should trigger your rule.
 
 To test the rule you've added, add the following to the `test` section of the
 `rules.triage` file:
@@ -251,7 +284,6 @@ test: {
     ....
     is_full: {
         yes: ["disk_full"],
-        no: [],
         values: {
             disk_used: 98,
             disk_total: 100,
@@ -259,6 +291,9 @@ test: {
     }
 }
 ```
+
+Note: Unlike the right hand side of `eval` entries, the `values` entries are
+parsed as JSON values, not expression strings. Numbers should not be quoted.
 
 The keys in the `values` section should be the names of `eval` or `select`
 entries. The values supplied will override the value that the entry would have
@@ -270,7 +305,6 @@ You can also test conditions in which actions should not trigger:
 test: {
     ....
     not_full: {
-        yes: [],
         no: ["disk_full"],
         values: {
             disk_used: 97,
@@ -298,7 +332,7 @@ not quite what you wrote, and your test caught the problem.
 Modify the `>` in your action to be a `>=`:
 
 ```json5
-        "trigger": "disk_percentage >= 0.98",
+        trigger: "disk_percentage >= 0.98",
 ```
 
 Run Triage again. The error should disappear, replaced by a warning that your
@@ -367,8 +401,8 @@ Note the following:
 
 *   Empty sections may be omitted from .triage files. This file
     contains no `select`, `act`, or `test` entries.
-*   Although numeric values in JSON are not quoted, this is an expression string
-    so it does need to be quoted.
+*   Although numeric values in JSON are not quoted, `4` is a math expression
+    string so it does need to be quoted.
 
 Add the following entries to the rules.triage file:
 
@@ -399,14 +433,15 @@ Finally, add an action:
 act: {
     ...
     component_overflow: {
+        type: "Warning",
         trigger: "too_many_components",
         print: "Too many components!",
     },
 }
 ```
 
-Unfortunately, this device tried to use too many components, so this warning should
-trigger when "fx triage" is run.
+Unfortunately, this device tried to use too many components, so this warning
+should trigger when "fx triage" is run.
 
 Note: The `trigger` of an action can also use `file::name` syntax to refer to a
 variable from another file.
@@ -422,9 +457,24 @@ values supplied by the test. An expression (eval or test trigger) which uses
 namespaced values like "a::b" must have those values supplied by an "a::b" entry
 in the test's values.
 
-Note: Unlike most keys in .triage files, namespaced names must be double-quoted.
+Note: Unlike most keys in .triage files, namespaced names must be double-quoted
+when used as keys.
 
-### Details {#details}
+```json5
+test: {
+    component_max_ok: {
+        no: [
+            "component_overflow",
+        ],
+        values: {
+            actual_components: 17,
+            "product::max_components": 17,
+        },
+    },
+},
+```
+
+### Details{#details}
 
 #### Names
 
@@ -470,9 +520,12 @@ logical AND of the values.
 * Or(value1, value2, value3...) takes Boolean arguments and returns the
 logical OR of the values.
 * Not(value) takes one Boolean argument and returns the logical NOT of it.
-* SyslogHas(regex), KlogHas(regex), BootlogHas(regex) take one
-string argument and return Boolean, true if the regex matches
-any line in the corresponding log file.
+* SyslogHas(matcher), KlogHas(matcher), BootlogHas(matcher) return true if the
+corresponding log file has a line matching matcher, which is a string containing
+a regex expression.
+
+Note: Since logs are not structured, selectors can't be applied to them, so we
+supply regex matching functions instead.
 
 ## Further Reading
 
