@@ -7,7 +7,9 @@ package artifacts
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 
 	"golang.org/x/crypto/ssh"
@@ -16,6 +18,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/paver"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/zbi"
 )
 
 type Build interface {
@@ -180,10 +183,11 @@ type OmahaBuild struct {
 	build    Build
 	omahaUrl string
 	avbtool  *avb.AVBTool
+	zbitool  *zbi.ZBITool
 }
 
-func NewOmahaBuild(build Build, omahaUrl string, avbtool *avb.AVBTool) *OmahaBuild {
-	return &OmahaBuild{build: build, omahaUrl: omahaUrl, avbtool: avbtool}
+func NewOmahaBuild(build Build, omahaUrl string, avbtool *avb.AVBTool, zbitool *zbi.ZBITool) *OmahaBuild {
+	return &OmahaBuild{build: build, omahaUrl: omahaUrl, avbtool: avbtool, zbitool: zbitool}
 }
 
 // GetPackageRepository returns a Repository for this build.
@@ -202,22 +206,34 @@ func (b *OmahaBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 		return nil, err
 	}
 
-	paveScript := filepath.Join(paverDir, "pave.sh")
-	paveZedbootScript := filepath.Join(paverDir, "pave-zedboot.sh")
-
-	bootArgs := map[string]string{
+	// Create a ZBI with the omaha_url argument.
+	tempDir, err := ioutil.TempDir("", "")
+	destZbiPath := path.Join(tempDir, "omaha_argument.zbi")
+	imageArguments := map[string]string{
 		"omaha_url": b.omahaUrl,
+	}
+	err = b.zbitool.MakeImageArgsZbi(ctx, destZbiPath, imageArguments)
+	defer os.Remove(destZbiPath)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create ZBI. %s", err)
+	}
+
+	// Create a vbmeta that includes the ZBI we just created.
+	propFiles := map[string]string{
+		"zbi": destZbiPath,
 	}
 	destVbmeta := filepath.Join(paverDir, "zircon-a-omaha-test.vbmeta")
 	srcVbmeta, err := b.GetVbmetaPath(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	err = b.avbtool.MakeVBMetaImage(ctx, destVbmeta, srcVbmeta, bootArgs)
+	err = b.avbtool.MakeVBMetaImage(ctx, destVbmeta, srcVbmeta, propFiles)
 	if err != nil {
 		return nil, err
 	}
+
+	paveScript := filepath.Join(paverDir, "pave.sh")
+	paveZedbootScript := filepath.Join(paverDir, "pave-zedboot.sh")
 
 	return paver.NewBuildPaver(
 		paveZedbootScript,
