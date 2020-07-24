@@ -267,7 +267,6 @@ TEST_F(PciDeviceTests, MsixCapabilityTest) {
   EXPECT_EQ(2, msix.table_size());
   EXPECT_EQ(1, msix.pba_bar());
   EXPECT_EQ(0x800, msix.pba_offset());
-  EXPECT_EQ(false, msix.function_mask());
 
   MsixControlReg ctrl = {.value = dev.config()->Read(msix.ctrl())};
   EXPECT_EQ(0, ctrl.enable());

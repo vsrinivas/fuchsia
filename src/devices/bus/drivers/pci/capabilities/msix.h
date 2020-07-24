@@ -4,6 +4,11 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSIX_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSIX_H_
 
+#include <lib/mmio/mmio.h>
+#include <lib/zx/vmo.h>
+
+#include <algorithm>
+
 #include <hwreg/bitfields.h>
 
 #include "../bar_info.h"
@@ -50,7 +55,6 @@ class MsixCapability : public Capability {
         table_reg_(PciReg32(static_cast<uint16_t>(base + 0x4))),
         pba_reg_(PciReg32(static_cast<uint16_t>(base + 0x8))) {
     MsixControlReg ctrl = {.value = cfg.Read(ctrl_)};
-    function_mask_ = ctrl.function_mask();
     // Table size is stored in the register as N-1 (PCIe Base Spec 7.7.2.2)
     table_size_ = static_cast<uint16_t>(ctrl.table_size() + 1);
 
@@ -132,13 +136,18 @@ class MsixCapability : public Capability {
   const PciReg32 pba() { return pba_reg_; }
   uint8_t table_bar() { return table_bar_; }
   uint32_t table_offset() { return table_offset_; }
-  uint16_t table_size() { return table_size_; }
+  zx::unowned_vmo table_vmo() { return table_mmio_->get_vmo(); }
+  uint16_t table_size() { return std::min(kMaxMsixVectors, table_size_); }
   uint8_t pba_bar() { return pba_bar_; }
   uint32_t pba_offset() { return pba_offset_; }
-  // True if masking is limited to the entire function rather than per vector
-  bool function_mask() { return function_mask_; }
 
  private:
+  // MSI-X supports up to 2048 vectors, but our system only processes vectors on
+  // the bootstrap cpu. There is a real risk that a given device function can
+  // exhaust our IRQ pool, though it's unlikely outside of server class
+  // hardware. For now, limit an individual function to 8 vectors by reporting
+  // a limited table size.
+  static constexpr uint16_t kMaxMsixVectors = 8u;
   // Mapped tables for the capability. They may share the same page, but it's impossible
   // to know until runtime.
   std::optional<ddk::MmioBuffer> table_mmio_;
@@ -155,7 +164,6 @@ class MsixCapability : public Capability {
   uint16_t table_size_;
   uint8_t table_bar_;
   uint8_t pba_bar_;
-  bool function_mask_;
   bool inited_ = false;
 };
 

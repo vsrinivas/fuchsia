@@ -151,7 +151,7 @@ zx_status_t zx_msi_create(zx_handle_t msi_handle, uint32_t options, uint32_t msi
   ZX_ASSERT(vmo->get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr) == ZX_OK);
 
   if (cap_offset > vmo_info.size_bytes - MsiCapabilitySize ||
-      vmo_info.cache_policy != ZX_CACHE_POLICY_UNCACHED_DEVICE || options) {
+      vmo_info.cache_policy != ZX_CACHE_POLICY_UNCACHED_DEVICE || options & ~ZX_MSI_MODE_MSI_X) {
     return ZX_ERR_INVALID_ARGS;
   }
 

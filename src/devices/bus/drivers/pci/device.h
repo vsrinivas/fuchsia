@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -188,9 +189,13 @@ class Device : public PciDeviceType,
   // Dump some information about the device
   virtual void Dump() const __TA_EXCLUDES(dev_lock_);
 
+  // These methods handle IRQ configuration and are generally called by the
+  // PciProtocol methods, though they may be used to disable IRQs on
+  // initialization as well.
   zx_status_t QueryIrqMode(pci_irq_mode_t mode, uint32_t* max_irqs) __TA_EXCLUDES(dev_lock_)
       __TA_EXCLUDES(dev_lock_);
   zx_status_t SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) __TA_EXCLUDES(dev_lock_);
+  zx::status<zx::interrupt> MapInterrupt(uint32_t which_irq) __TA_EXCLUDES(dev_lock_);
   zx_status_t DisableInterrupts() __TA_REQUIRES(dev_lock_);
   zx_status_t EnableMsi(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
   zx_status_t EnableMsix(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
@@ -261,6 +266,9 @@ class Device : public PciDeviceType,
   // configuring downstream BARs..
   virtual zx_status_t ConfigureBars() __TA_EXCLUDES(dev_lock_);
   zx_status_t ConfigureCapabilities() __TA_EXCLUDES(dev_lock_);
+  zx::status<std::pair<zx::msi, zx_info_msi_t>> AllocateMsi(uint32_t irq_cnt)
+      __TA_REQUIRES(dev_lock_);
+  zx_status_t VerifyAllMsisFreed() __TA_REQUIRES(dev_lock_);
 
   // Disable a device, and anything downstream of it.  The device will
   // continue to enumerate, but users will only be able to access config (and

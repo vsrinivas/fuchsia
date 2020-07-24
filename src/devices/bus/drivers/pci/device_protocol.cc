@@ -17,6 +17,7 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/pci.h>
+#include <zircon/types.h>
 
 #define RPC_ENTRY zxlogf(DEBUG, "[%s] %s: entry", cfg_->addr(), __func__)
 
@@ -186,6 +187,10 @@ zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
 
   // If this device supports MSIX then we need to deny access to the BARs it
   // uses.
+  // TODO(32978): It is technically possible for a device to place the pba/mask
+  // tables in the same bar as other data. In that case, we would need to ensure
+  // that the bar size reflected the non-table portions, and only allow mapping
+  // of that other space.
   auto& msix = caps_.msix;
   if (msix && (msix->table_bar() == bar_id || msix->pba_bar() == bar_id)) {
     return RpcReply(ch, ZX_ERR_ACCESS_DENIED);
@@ -340,38 +345,17 @@ zx_status_t Device::RpcSetIrqMode(const zx::unowned_channel& ch) {
 }
 
 zx_status_t Device::RpcMapInterrupt(const zx::unowned_channel& ch) {
-  fbl::AutoLock dev_lock(&dev_lock_);
-
-  if (irqs_.mode == PCI_IRQ_MODE_DISABLED) {
-    return RpcReply(ch, ZX_ERR_BAD_STATE);
-  }
-
-  if (irqs_.mode == PCI_IRQ_MODE_LEGACY || irqs_.mode == PCI_IRQ_MODE_MSI_X) {
-    return RpcReply(ch, ZX_ERR_NOT_SUPPORTED);
-  }
-
-  zx::status<ddk::MmioView> view_res = cfg_->get_view();
-  if (!view_res.is_ok()) {
-    return RpcReply(ch, view_res.status_value());
-  }
-
-  zx_status_t status;
-  zx_handle_t handle;
+  zx_handle_t handle = ZX_HANDLE_INVALID;
   size_t handle_cnt = 0;
-  switch (irqs_.mode) {
-    case PCI_IRQ_MODE_MSI:
-      status = zx_msi_create(irqs_.msi_allocation.get(), /*options=*/0, request_.irq.which_irq,
-                             view_res->get_vmo()->get(), view_res->get_offset() + caps_.msi->base(),
-                             &handle);
-  }
-
-  if (status == ZX_OK) {
+  zx::status<zx::interrupt> result = MapInterrupt(request_.irq.which_irq);
+  if (result.is_ok()) {
     handle_cnt++;
+    handle = result.value().release();
   }
 
-  zxlogf(DEBUG, "[%s] MapInterrupt { irq = %u, status = %s }", cfg_->addr(), request_.irq.which_irq,
-         zx_status_get_string(status));
-  return RpcReply(ch, status, &handle, handle_cnt);
+  zxlogf(INFO, "[%s] MapInterrupt { irq = %u, status = %s }", cfg_->addr(), request_.irq.which_irq,
+         zx_status_get_string(result.status_value()));
+  return RpcReply(ch, result.status_value(), &handle, handle_cnt);
 }
 
 zx_status_t Device::RpcResetDevice(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }

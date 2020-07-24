@@ -15,10 +15,12 @@
 // clang-format off
 
 // Standard config dump of an NVIDIA Quadro K2200 for testing because it has multiple bars
-// and other values that can be used for tests. The Base Address registers have been modified
-// to exercise different configurations in the tests, but keep the same size layout. An additional
-// PciPowerMangement capability was added at 0xA0 followed by an additional PciExpress capability
-// at 0xC2.
+// and other values that can be used for tests.
+// Modifications:
+// - The Base Address registers have been modifieVd to exercise different
+//   configurations in the tests, but keep the same size layout.
+// - An additional PciPowerMangement capability was added at 0xA0.
+// - An MSI-X capability was added at 0xf0.
 //
 // If this configuration is changed then it's likely that some of the tests in
 // protocol_test_driver.cpp will need to be updated.
@@ -40,7 +42,6 @@
 // 	Capabilities: [258] L1 PM Substates
 // 	Capabilities: [128] Power Budgeting <?>
 // 	Capabilities: [600] Vendor Specific Information: ID=0001 Rev=1 Len=024 <?>
-constexpr size_t kFakeQuadroMsiCapabilityOffset = 0x68;
 std::array<uint8_t, PCI_EXT_CONFIG_SIZE> kFakeQuadroDeviceConfig = {
     0xde, 0x10, // Vendor Id
     0xba, 0x13, // Device Id
@@ -325,6 +326,10 @@ std::array<uint8_t, PCI_EXT_CONFIG_SIZE> kFakeQuadroDeviceConfig = {
 /* ff0: */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
 };
+
+constexpr size_t kFakeQuadroMsiCapabilityOffset = 0x68;
+constexpr size_t kFakeQuadroMsiXCapabilityOffset = 0xf0;
+constexpr size_t kFakeQuadroMsiXIrqCnt = 5;
 
 // BAR metadata for the fake Quadro. Refer to the BAR lines above for an
 // explanation.

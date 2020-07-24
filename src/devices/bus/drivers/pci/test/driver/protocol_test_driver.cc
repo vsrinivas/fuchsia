@@ -14,6 +14,8 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/threads.h>
 
+#include <vector>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
@@ -428,6 +430,25 @@ TEST_F(PciProtocolTests, GetDeviceInfo) {
   ASSERT_EQ(func_id, info.func_id);
 }
 
+// MSI-X interrupts should be bound by the platform support.
+TEST_F(PciProtocolTests, MsiX) {
+  pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
+  uint32_t max_irqs;
+  ASSERT_OK(pci().QueryIrqMode(mode, &max_irqs));
+  ASSERT_EQ(max_irqs, kFakeQuadroMsiXIrqCnt);
+  ASSERT_OK(pci().SetIrqMode(mode, max_irqs));
+  {
+    std::vector<zx::interrupt> ints;
+    for (uint32_t i = 0; i < max_irqs; i++) {
+      zx::interrupt interrupt = {};
+      EXPECT_OK(pci().MapInterrupt(i, &interrupt));
+      ints.push_back(std::move(interrupt));
+    }
+    EXPECT_STATUS(ZX_ERR_BAD_STATE, pci().SetIrqMode(PCI_IRQ_MODE_DISABLED, 0));
+  }
+  EXPECT_OK(pci().SetIrqMode(PCI_IRQ_MODE_DISABLED, 0));
+}
+
 // The Quadro card supports 4 MSI interrupts.
 TEST_F(PciProtocolTests, QueryAndSetIrqMode) {
   pci::MsiControlReg msi_ctrl = {
@@ -437,7 +458,6 @@ TEST_F(PciProtocolTests, QueryAndSetIrqMode) {
 
   uint32_t max_irqs;
   ASSERT_STATUS(pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &max_irqs), ZX_ERR_NOT_SUPPORTED);
-  ASSERT_STATUS(pci().QueryIrqMode(PCI_IRQ_MODE_MSI_X, &max_irqs), ZX_ERR_NOT_SUPPORTED);
   ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &max_irqs));
   ASSERT_EQ(max_irqs, pci::MsiCapability::MmcToCount(msi_ctrl.mm_capable()));
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));
