@@ -5,7 +5,7 @@
 #include "pci.h"
 
 #include <inttypes.h>
-#include <lib/pci/root.h>
+#include <lib/pci/pciroot.h>
 #include <lib/pci/root_host.h>
 #include <lib/zx/resource.h>
 #include <stdio.h>
@@ -138,10 +138,10 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
   zxlogf(DEBUG, "ACPI range modification: %sing %s %016lx %016lx", add_range ? "add" : "subtract",
          is_mmio ? "MMIO" : "PIO", base, len);
   if (add_range) {
-    status = alloc->AddRegion({.base = base, .size = len}, RegionAllocator::AllowOverlap::Yes);
+    status = alloc->AddRegion({.base = base, .size = len}, RegionAllocator::AllowOverlap::No);
   } else {
     status =
-        alloc->SubtractRegion({.base = base, .size = len}, RegionAllocator::AllowIncomplete::Yes);
+        alloc->SubtractRegion({.base = base, .size = len}, RegionAllocator::AllowIncomplete::No);
   }
 
   if (status != ZX_OK) {
@@ -286,48 +286,49 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   // Build up a context structure for the PCI Root / Host Bridge we've found.
   // If we find _BBN / _SEG we will use those, but if we don't we can fall
   // back on having an ecam from mcfg allocations.
-  auto dev_ctx = std::make_unique<pciroot_ctx>();
-  dev_ctx->acpi_object = object;
-  dev_ctx->acpi_device_info = *info;
+  x64Pciroot::Context dev_ctx = {};
+  dev_ctx.platform_bus = ctx->platform_bus();
+  dev_ctx.acpi_object = object;
+  dev_ctx.acpi_device_info = *info;
   // ACPI names are stored as 4 bytes in a u32
-  memcpy(dev_ctx->name, &info->Name, 4);
+  memcpy(dev_ctx.name, &info->Name, 4);
 
-  zx_status_t status = acpi_bbn_call(object, &dev_ctx->info.start_bus_num);
+  zx_status_t status = acpi_bbn_call(object, &dev_ctx.info.start_bus_num);
   if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
-    zxlogf(DEBUG, "Unable to read _BBN for '%s' (%d), assuming base bus of 0", dev_ctx->name,
+    zxlogf(DEBUG, "Unable to read _BBN for '%s' (%d), assuming base bus of 0", dev_ctx.name,
            status);
 
     // Until we find an ecam we assume this potential legacy pci bus spans
     // bus 0 to bus 255 in its segment group.
-    dev_ctx->info.end_bus_num = PCI_BUS_MAX;
+    dev_ctx.info.end_bus_num = PCI_BUS_MAX;
   }
   bool found_bbn = (status == ZX_OK);
 
-  status = acpi_seg_call(object, &dev_ctx->info.segment_group);
+  status = acpi_seg_call(object, &dev_ctx.info.segment_group);
   if (status != ZX_OK) {
-    dev_ctx->info.segment_group = 0;
-    zxlogf(DEBUG, "Unable to read _SEG for '%s' (%d), assuming segment group 0.", dev_ctx->name,
+    dev_ctx.info.segment_group = 0;
+    zxlogf(DEBUG, "Unable to read _SEG for '%s' (%d), assuming segment group 0.", dev_ctx.name,
            status);
   }
 
   // If an MCFG is found for the given segment group this root has then we'll
   // cache it for later pciroot operations and use its information to populate
   // any fields missing via _BBN / _SEG.
-  auto& pinfo = dev_ctx->info;
-  memcpy(pinfo.name, dev_ctx->name, sizeof(pinfo.name));
+  auto& pinfo = dev_ctx.info;
+  memcpy(pinfo.name, dev_ctx.name, sizeof(pinfo.name));
   McfgAllocation mcfg_alloc;
-  status = RootHost->GetSegmentMcfgAllocation(dev_ctx->info.segment_group, &mcfg_alloc);
+  status = RootHost->GetSegmentMcfgAllocation(dev_ctx.info.segment_group, &mcfg_alloc);
   if (status == ZX_OK) {
     // Do the bus values make sense?
     if (found_bbn && mcfg_alloc.start_bus_number != pinfo.start_bus_num) {
       zxlogf(ERROR, "conflicting base bus num for '%s', _BBN reports %u and MCFG reports %u",
-             dev_ctx->name, pinfo.start_bus_num, mcfg_alloc.start_bus_number);
+             dev_ctx.name, pinfo.start_bus_num, mcfg_alloc.start_bus_number);
     }
 
     // Do the segment values make sense?
     if (pinfo.segment_group != 0 && pinfo.segment_group != mcfg_alloc.pci_segment) {
       zxlogf(ERROR, "conflicting segment group for '%s', _BBN reports %u and MCFG reports %u",
-             dev_ctx->name, pinfo.segment_group, mcfg_alloc.pci_segment);
+             dev_ctx.name, pinfo.segment_group, mcfg_alloc.pci_segment);
     }
 
     // Since we have an ecam its metadata will replace anything defined in the ACPI tables.
@@ -349,8 +350,8 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
 
   if (zxlog_level_enabled(DEBUG)) {
     fbl::StringBuffer<128> log;
-    log.AppendPrintf("%s { acpi_obj(%p), bus range: %u:%u, segment: %u", dev_ctx->name,
-                     dev_ctx->acpi_object, pinfo.start_bus_num, pinfo.end_bus_num,
+    log.AppendPrintf("%s { acpi_obj(%p), bus range: %u:%u, segment: %u", dev_ctx.name,
+                     dev_ctx.acpi_object, pinfo.start_bus_num, pinfo.end_bus_num,
                      pinfo.segment_group);
     if (pinfo.ecam_vmo != ZX_HANDLE_INVALID) {
       log.AppendPrintf(", ecam base: %#" PRIxPTR, mcfg_alloc.address);
@@ -362,12 +363,11 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   // These are cached here to work around dev_ctx potentially going out of scope
   // after device_add in the event that unbind/release are called from the DDK. See
   // the below TODO for more information.
-  char name[ACPI_NAMESEG_SIZE];
-  uint8_t last_pci_bbn = dev_ctx->info.start_bus_num;
-  memcpy(name, dev_ctx->name, sizeof(name));
+  char name[ZX_DEVICE_NAME_MAX] = {0};
+  uint8_t last_pci_bbn = dev_ctx.info.start_bus_num;
+  memcpy(name, dev_ctx.name, ACPI_NAMESEG_SIZE);
 
-  status = Pciroot<pciroot_ctx>::Create(&*RootHost, std::move(dev_ctx), parent, ctx->platform_bus(),
-                                        name);
+  status = x64Pciroot::Create(&*RootHost, std::move(dev_ctx), parent, name);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add pciroot device for '%s': %d", name, status);
   } else {

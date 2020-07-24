@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fake-resource/resource.h>
-#include <lib/pci/root.h>
+#include <lib/pci/pciroot.h>
 #include <lib/pci/root_host.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/resource.h>

@@ -5,7 +5,6 @@
 #include <endian.h>
 #include <inttypes.h>
 #include <lib/pci/pio.h>
-#include <lib/pci/root.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/i2c.h>
 #include <zircon/syscalls/resource.h>
@@ -17,7 +16,6 @@
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
 #include <ddk/protocol/auxdata.h>
-#include <ddk/protocol/pciroot.h>
 #include <ddk/protocol/sysmem.h>
 
 #include "acpi-private.h"
@@ -135,8 +133,8 @@ static zx_status_t pciroot_op_get_auxdata(void* context, const char* args, void*
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zxlogf(TRACE, "bus-acpi: get_auxdata type '%s' device %02x:%02x:%02x", type.data(), bus_id, dev_id,
-         func_id);
+  zxlogf(TRACE, "bus-acpi: get_auxdata type '%s' device %02x:%02x:%02x", type.data(), bus_id,
+         dev_id, func_id);
 
   if (strcmp(type.data(), "i2c-child") != 0) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -211,92 +209,57 @@ static zx_status_t pciroot_op_connect_sysmem(void* context, zx_handle_t handle) 
 }
 
 #ifdef ENABLE_USER_PCI
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootGetAuxdata(const char* args, void* data, size_t bytes,
-                                                    size_t* actual) {
-  return pciroot_op_get_auxdata(c_context(), args, data, bytes, actual);
+zx_status_t x64Pciroot::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
+  return pciroot_op_get_bti(nullptr, bdf, index, bti->reset_and_get_address());
 }
 
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
-  return pciroot_op_get_bti(c_context(), bdf, index, bti->reset_and_get_address());
-}
-
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootConnectSysmem(zx::handle handle) {
+zx_status_t x64Pciroot::PcirootConnectSysmem(zx::handle handle) {
   sysmem_protocol_t sysmem;
-  zx_status_t status = device_get_protocol(platform_bus_, ZX_PROTOCOL_SYSMEM, &sysmem);
+  zx_status_t status = device_get_protocol(context_.platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
   if (status != ZX_OK) {
     return status;
   }
   return sysmem_connect(&sysmem, handle.release());
 }
 
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
-  *info = ctx_->info;
+zx_status_t x64Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
+  *info = context_.info;
   return ZX_OK;
 }
 
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootGetPciIrqInfo(pci_irq_info_t* info) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-template <>
-bool Pciroot<pciroot_ctx>::PcirootDriverShouldProxyConfig(void) {
-  // If we have no mcfg then all config access will need to be through IOports which
-  // are proxied over pciroot.
-  return !root_host_->mcfgs().empty();
-}
-
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset,
-                                                     uint8_t* value) {
+zx_status_t x64Pciroot::PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset,
+                                           uint8_t* value) {
   return pci_pio_read8(*address, static_cast<uint8_t>(offset), value);
 }
 
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset,
-                                                      uint16_t* value) {
+zx_status_t x64Pciroot::PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset,
+                                            uint16_t* value) {
   return pci_pio_read16(*address, static_cast<uint8_t>(offset), value);
 }
 
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootConfigRead32(const pci_bdf_t* address, uint16_t offset,
-                                                      uint32_t* value) {
+zx_status_t x64Pciroot::PcirootConfigRead32(const pci_bdf_t* address, uint16_t offset,
+                                            uint32_t* value) {
   return pci_pio_read32(*address, static_cast<uint8_t>(offset), value);
 }
 
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootConfigWrite8(const pci_bdf_t* address, uint16_t offset,
-                                                      uint8_t value) {
+zx_status_t x64Pciroot::PcirootConfigWrite8(const pci_bdf_t* address, uint16_t offset,
+                                            uint8_t value) {
   return pci_pio_write8(*address, static_cast<uint8_t>(offset), value);
 }
 
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootConfigWrite16(const pci_bdf_t* address, uint16_t offset,
-                                                       uint16_t value) {
+zx_status_t x64Pciroot::PcirootConfigWrite16(const pci_bdf_t* address, uint16_t offset,
+                                             uint16_t value) {
   return pci_pio_write16(*address, static_cast<uint8_t>(offset), value);
 }
 
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootConfigWrite32(const pci_bdf_t* address, uint16_t offset,
-                                                       uint32_t value) {
+zx_status_t x64Pciroot::PcirootConfigWrite32(const pci_bdf_t* address, uint16_t offset,
+                                             uint32_t value) {
   return pci_pio_write32(*address, static_cast<uint8_t>(offset), value);
 }
 
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootAllocateMsi(uint32_t msi_cnt, bool can_target_64bit,
-                                                     zx::msi* allocation) {
-  return root_host_->AllocateMsi(msi_cnt, allocation);
-}
-
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootGetAddressSpace(size_t size, zx_paddr_t in_base,
-                                                         pci_address_space_t type, bool low,
-                                                         zx_paddr_t* out_base,
-                                                         zx::resource* out_resource) {
+zx_status_t x64Pciroot::PcirootGetAddressSpace(size_t size, zx_paddr_t in_base,
+                                               pci_address_space_t type, bool low,
+                                               zx_paddr_t* out_base, zx::resource* out_resource) {
   zxlogf(DEBUG, "%s(size = %zu, request_addr = %#lx, type = %u, low = %u)\n", __func__, size,
          in_base, type, low);
   RegionAllocator* alloc = nullptr;
@@ -351,7 +314,7 @@ zx_status_t Pciroot<pciroot_ctx>::PcirootGetAddressSpace(size_t size, zx_paddr_t
 
   // Names will be generated in the format of: PCI### [mm]io ##bit
   std::array<char, ZX_MAX_NAME_LEN> name = {};
-  snprintf(name.data(), name.size(), "%s %s", ctx_->name,
+  snprintf(name.data(), name.size(), "%s %s", context_.name,
            (type == PCI_ADDRESS_SPACE_MMIO) ? ((low) ? "mmio 32bit" : "mmio 64bit") : "io");
   // Craft a resource handle for the other end. This handle will be held
   // within the Root allocation in the pci bus driver will encompass the
@@ -373,17 +336,9 @@ zx_status_t Pciroot<pciroot_ctx>::PcirootGetAddressSpace(size_t size, zx_paddr_t
   return ZX_OK;
 }
 
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootFreeAddressSpace(uint64_t base, size_t len,
-                                                          pci_address_space_t type) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-template <>
-zx_status_t Pciroot<pciroot_ctx>::Create(PciRootHost* root_host, std::unique_ptr<pciroot_ctx> ctx,
-                                         zx_device_t* parent, zx_device_t* platform_bus,
-                                         const char* name) {
-  auto pciroot = new Pciroot(root_host, std::move(ctx), parent, platform_bus, name);
+zx_status_t x64Pciroot::Create(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent,
+                               const char* name) {
+  auto pciroot = new x64Pciroot(root_host, std::move(ctx), parent, name);
   return pciroot->DdkAdd(name);
 }
 

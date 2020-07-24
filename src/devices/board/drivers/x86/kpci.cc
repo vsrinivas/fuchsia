@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <lib/pci/root.h>
+#include <lib/pci/pciroot.h>
 #include <stdio.h>
 
 #include <array>

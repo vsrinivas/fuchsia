@@ -10,7 +10,8 @@ zx_library("pci") {
   sdk = "source"
   sdk_headers = [
     "lib/pci/pio.h",
-    "lib/pci/root.h",
+    "lib/pci/pciroot.h",
+    "lib/pci/root_host.h",
   ]
   sources = [
     "pio.cc",

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_PCI_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_PCI_H_
 
+#include <lib/pci/pciroot.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/pci.h>
 
@@ -30,18 +31,49 @@ struct pci_ecam_baas {
   uint32_t reserved0;
 };
 
-struct pciroot_ctx {
-  char name[ACPI_NAMESEG_SIZE];
-  ACPI_HANDLE acpi_object;
-  ACPI_DEVICE_INFO acpi_device_info;
-  struct pci_platform_info info;
-};
-
 zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
                      AcpiWalker* ctx);
 
 zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size);
 zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle);
+
+class x64Pciroot : public PcirootBase {
+ public:
+  struct Context {
+    char name[ACPI_NAMESEG_SIZE];
+    ACPI_HANDLE acpi_object;
+    ACPI_DEVICE_INFO acpi_device_info;
+    zx_device_t* platform_bus;
+    struct pci_platform_info info;
+  };
+
+  static zx_status_t Create(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent,
+                            const char* name);
+  virtual zx_status_t PcirootConnectSysmem(zx::handle handle) final;
+  virtual zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) final;
+  virtual zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) final;
+  virtual zx_status_t PcirootGetAddressSpace(size_t size, zx_paddr_t in_base,
+                                             pci_address_space_t type, bool low,
+                                             zx_paddr_t* out_base,
+                                             zx::resource* out_resource) final;
+  virtual zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset,
+                                         uint8_t* value) final;
+  virtual zx_status_t PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset,
+                                          uint16_t* value) final;
+  virtual zx_status_t PcirootConfigRead32(const pci_bdf_t* address, uint16_t offset,
+                                          uint32_t* value) final;
+  virtual zx_status_t PcirootConfigWrite8(const pci_bdf_t* address, uint16_t offset,
+                                          uint8_t value) final;
+  virtual zx_status_t PcirootConfigWrite16(const pci_bdf_t* address, uint16_t offset,
+                                           uint16_t value) final;
+  virtual zx_status_t PcirootConfigWrite32(const pci_bdf_t* address, uint16_t offset,
+                                           uint32_t value) final;
+
+ private:
+  Context context_;
+  x64Pciroot(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent, const char* name)
+      : PcirootBase(root_host, parent, name), context_(std::move(ctx)) {}
+};
 
 __END_CDECLS
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_PCI_H_
