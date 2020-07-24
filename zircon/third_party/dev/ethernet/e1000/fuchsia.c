@@ -98,7 +98,7 @@ struct framebuf {
  * See Intel 82574 Driver Programming Interface Manual, Section 10.2.6.9
  */
 #define TARC_SPEED_MODE_BIT (1 << 21) /* On PCI-E MACs only */
-#define TARC_ERRATA_BIT (1 << 26)     /* Note from errata on 82574 */
+#define TARC_ERRATA_BIT (1 << 26) /* Note from errata on 82574 */
 
 struct txrx_funcs;
 
@@ -940,15 +940,9 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
     goto fail;
   }
 
-  // Query whether we have MSI or Legacy interrupts.
-  uint32_t irq_cnt = 0;
-  if ((pci_query_irq_mode(pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
-      (pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
-    DEBUGOUT("using MSI mode\n");
-  } else if ((pci_query_irq_mode(pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
-             (pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
-    DEBUGOUT("using legacy irq mode\n");
-  } else {
+  // Request 1 interrupt of any mode.
+  status = pci_configure_irq_mode(pci, 1);
+  if (status != ZX_OK) {
     zxlogf(ERROR, "failed to configure irqs");
     goto fail;
   }
