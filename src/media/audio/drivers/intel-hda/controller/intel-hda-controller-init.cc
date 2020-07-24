@@ -236,16 +236,11 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
   // before proceeding.
   REG_WR(&regs()->intctl, 0u);
 
-  // Configure our IRQ mode and map our IRQ handle.  Try to use MSI, but if
-  // that fails, fall back on legacy IRQs.
-  zx_status_t res = pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_MSI, 1);
+  // Configure our IRQ mode and map our IRQ handle.
+  zx_status_t res = pci_configure_irq_mode(&pci_, 1);
   if (res != ZX_OK) {
-    res = pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, 1);
-    if (res != ZX_OK) {
-      LOG(ERROR, "Failed to set IRQ mode (%d)!\n", res);
-      return res;
-    }
-    LOG(ERROR, "Falling back on legacy IRQ mode!\n");
+    LOG(ERROR, "Failed to set IRQ mode (%d)!\n", res);
+    return res;
   }
 
   // Retrieve our PCI interrupt, then use it to activate our IRQ dispatcher.
