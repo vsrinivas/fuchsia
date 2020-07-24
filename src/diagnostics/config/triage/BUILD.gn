@@ -17,6 +17,7 @@ group("tests") {
 if (is_host) {
   triage_config_test("triage_configs_test") {
     sources = [
+      "crashes.triage",
       "disk.triage",
       "stash.triage",
       "stash_secure.triage",

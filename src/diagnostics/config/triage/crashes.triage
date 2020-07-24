@@ -1,0 +1,20 @@
+{
+    act: {
+        // Sysmgr should never crash. It always indicates a major problem somewhere.
+        // A sysmgr crash could result in a lot of system services becoming unavailable
+        // after the crash occurred or over time.
+        sysmgr_crashed: {
+            type: "Warning",
+            trigger: "SyslogHas('fatal : process sysmgr.cmx')",
+            print: "SysMgr crashed! Very bad! See //src/diagnostics/config/triage/crashes.triage.",
+        },
+    },
+    test: {
+        test_sysmgr: {
+            yes: [
+                "sysmgr_crashed",
+            ],
+            syslog: "7/10/2020, 2:29:49 PM [01890][02340][klog] INFO: <== fatal : process sysmgr.cmx[18481] thread initial-thread[18485]",
+        },
+    },
+}
