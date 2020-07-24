@@ -14,10 +14,9 @@ use {
     fidl_fuchsia_io::{
         self as fio, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
         INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
     },
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
     std::{
         any::Any,
@@ -30,6 +29,7 @@ use {
         sync::{Arc, RwLock},
     },
     vfs::{
+        common::send_on_open_with_error,
         directory::{
             connection::io1::DerivedConnection,
             dirents_sink::{AppendResult, Sink},
@@ -42,6 +42,14 @@ use {
         path::Path,
     },
 };
+
+fn check_open_flags_for_existing_entry(flags: u32) -> Result<(), Status> {
+    if flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
+        return Err(Status::ALREADY_EXISTS);
+    }
+    // Other flags are verified by VFS's new_connection_validate_flags method.
+    Ok(())
+}
 
 struct FatDirectoryData {
     /// The parent directory of this entry. Might be None if this is the root directory.
@@ -281,27 +289,22 @@ impl FatDirectory {
     ) -> Result<FatNode, Status> {
         // First, check the cache.
         if let Some(entry) = self.cache_get(name) {
-            if flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
-                return Err(Status::ALREADY_EXISTS);
-            }
+            check_open_flags_for_existing_entry(flags)?;
+            return Ok(entry);
+        };
+
+        let fs_lock = self.filesystem.lock().unwrap();
+        // Check the cache again in case we lost the race for the fs_lock.
+        if let Some(entry) = self.cache_get(name) {
+            check_open_flags_for_existing_entry(flags)?;
             return Ok(entry);
         };
 
         let node = {
             // Cache failed - try the real filesystem.
-            let fs_lock = self.filesystem.lock().unwrap();
             let entry = self.find_child(&fs_lock, name)?;
             if let Some(entry) = entry {
-                // Child entry exists! Make sure the result matches any requested flags.
-                if flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
-                    return Err(Status::ALREADY_EXISTS);
-                }
-                // Make sure that entry type matches requested type, if a type was requested.
-                if entry.is_file() && flags & OPEN_FLAG_DIRECTORY != 0 {
-                    return Err(Status::NOT_DIR);
-                } else if entry.is_dir() && flags & OPEN_FLAG_NOT_DIRECTORY != 0 {
-                    return Err(Status::NOT_FILE);
-                }
+                check_open_flags_for_existing_entry(flags)?;
 
                 if entry.is_dir() {
                     // Safe because we give the FatDirectory a FatFilesystem which ensures that the
@@ -346,19 +349,12 @@ impl FatDirectory {
             }
         };
 
-        // It's possible that two threads could check the cache at the same time, see that
-        // there is no entry in the cache, and then add an entry in the cache.
-        // To avoid accidentally making two Arcs referencing the same directory,
-        // we check `children` for a valid entry once again. If one exists, we throw away the one
-        // we made and return the entry that was added.
-        let mut data = self.data.write().unwrap();
-        match data.children.get(&name as &dyn InsensitiveStringRef).and_then(|v| v.upgrade()) {
-            Some(existing_node) => Ok(existing_node),
-            None => {
-                data.children.insert(InsensitiveString(name.to_owned()), node.downgrade());
-                Ok(node)
-            }
-        }
+        self.data
+            .write()
+            .unwrap()
+            .children
+            .insert(InsensitiveString(name.to_owned()), node.downgrade());
+        Ok(node)
     }
 }
 
@@ -455,17 +451,13 @@ impl DirectoryEntry for FatDirectory {
                         match result {
                             Ok(val) => cur_entry = val,
                             Err(e) => {
-                                server_end
-                                    .close_with_epitaph(e)
-                                    .unwrap_or_else(|e| fx_log_err!("Failed to fail: {:?}", e));
+                                send_on_open_with_error(flags, server_end, e);
                                 return;
                             }
                         }
                     }
                     FatNode::File(_) => {
-                        server_end
-                            .close_with_epitaph(Status::NOT_DIR)
-                            .unwrap_or_else(|e| fx_log_err!("Failed to fail: {:?}", e));
+                        send_on_open_with_error(flags, server_end, Status::NOT_DIR);
                         return;
                     }
                 };

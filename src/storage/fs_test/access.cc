@@ -136,6 +136,23 @@ TEST_P(AccessTest, TestAccessDirectory) {
   ASSERT_EQ(rmdir(filename.c_str()), 0);
 }
 
+// Same as the previous test, but open the directory first to guarantee caching comes into play.
+TEST_P(AccessTest, TestAccessDirectoryCache) {
+  const std::string filename = GetPath("foobar");
+  ASSERT_EQ(mkdir(filename.c_str(), 0666), 0);
+
+  auto read_fd = fbl::unique_fd(open(filename.c_str(), O_RDONLY));
+  ASSERT_TRUE(read_fd);
+
+  // Try opening as writable
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR, 0644));
+  ASSERT_FALSE(fd);
+  ASSERT_EQ(errno, EISDIR);
+  fd.reset(open(filename.c_str(), O_WRONLY, 0644));
+  ASSERT_FALSE(fd);
+  ASSERT_EQ(errno, EISDIR);
+}
+
 // Fixture setup for hierarchical directory permission tests
 class DirectoryPermissionTest : public AccessTest {
   // This class creates and tears down a nested structure
