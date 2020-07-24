@@ -199,13 +199,15 @@ int Tcs3400Device::Thread() {
         }
         break;
       case TCS_POLL: {
-        fbl::AutoLock lock(&client_input_lock_);
-        if (client_.is_valid()) {
-          FillInputRpt();  // We ioqueue even if report filling failed reporting bad state
-          input_rpt_.event = HID_USAGE_SENSOR_EVENT_PERIOD_EXCEEDED_VAL;
-          client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t), zx_clock_get_monotonic());
+        {
+          fbl::AutoLock lock(&client_input_lock_);
+          if (client_.is_valid()) {
+            FillInputRpt();  // We ioqueue even if report filling failed reporting bad state
+            input_rpt_.event = HID_USAGE_SENSOR_EVENT_PERIOD_EXCEEDED_VAL;
+            client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t),
+                            zx_clock_get_monotonic());
+          }
         }
-      }
         {
           fbl::AutoLock lock(&feature_lock_);
           poll_timeout += ZX_MSEC(feature_rpt_.interval_ms);
@@ -215,6 +217,7 @@ int Tcs3400Device::Thread() {
           }
         }
         break;
+      }
     }
   }
   return thrd_success;
@@ -429,7 +432,29 @@ zx_status_t Tcs3400Device::InitMetadata() {
     }
   }
 
-  return InitGain(parameters.gain);
+  status = InitGain(parameters.gain);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Set the default features and send a configuration packet.
+  {
+    fbl::AutoLock lock(&feature_lock_);
+    // The device will trigger an interrupt outside the thresholds.  These default threshold
+    // values effectively disable interrupts since we can't be outside this range, interrupts
+    // get effectively enabled when we configure a range that could trigger.
+    feature_rpt_.threshold_low = 0x0000;
+    feature_rpt_.threshold_high = 0xFFFF;
+    feature_rpt_.interval_ms = parameters.polling_time_ms;
+    feature_rpt_.state = HID_USAGE_SENSOR_STATE_INITIALIZING_VAL;
+  }
+  zx_port_packet packet = {TCS_CONFIGURE, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  status = port_.queue(&packet);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s zx_port_queue failed: %d", __FILE__, status);
+    return status;
+  }
+  return ZX_OK;
 }
 
 zx_status_t Tcs3400Device::Bind() {
@@ -450,23 +475,6 @@ zx_status_t Tcs3400Device::Bind() {
 
   status = InitMetadata();
   if (status != ZX_OK) {
-    return status;
-  }
-
-  {
-    fbl::AutoLock lock(&feature_lock_);
-    // The device will trigger an interrupt outside the thresholds.  These default threshold
-    // values effectively disable interrupts since we can't be outside this range, interrupts
-    // get effectively enabled when we configure a range that could trigger.
-    feature_rpt_.threshold_low = 0x0000;
-    feature_rpt_.threshold_high = 0xFFFF;
-    feature_rpt_.interval_ms = 0;
-    feature_rpt_.state = HID_USAGE_SENSOR_STATE_INITIALIZING_VAL;
-  }
-  zx_port_packet packet = {TCS_CONFIGURE, ZX_PKT_TYPE_USER, ZX_OK, {}};
-  status = port_.queue(&packet);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s zx_port_queue failed: %d", __FILE__, status);
     return status;
   }
 

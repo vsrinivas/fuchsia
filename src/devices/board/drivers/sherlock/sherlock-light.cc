@@ -48,6 +48,7 @@ zx_status_t Sherlock::LightInit() {
   // TODO(kpt): Insert the right parameters here.
   params.integration_time_ms = 615;
   params.gain = 16;
+  params.polling_time_ms = 100;
   device_metadata_t metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,
