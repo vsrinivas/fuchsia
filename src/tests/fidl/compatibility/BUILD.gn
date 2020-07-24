@@ -2,8 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
+
+# The protocol used in the test.
+fidl("fidl") {
+  name = "fidl.test.compatibility"
+
+  sources = [ "compatibility_service.test.fidl" ]
+}
+
+# Shared between the hlcpp test server and the test harness
+source_set("hlcpp_client_app") {
+  visibility = [ ":*" ]
+  sources = [
+    "hlcpp_client_app.cc",
+    "hlcpp_client_app.h",
+  ]
+
+  deps = [
+    ":fidl",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
 
 ## HLCPP Test Server
 
@@ -14,8 +37,8 @@ executable("hlcpp_server") {
   sources = [ "hlcpp_server.cc" ]
 
   deps = [
-    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
-    "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
+    ":fidl",
+    ":hlcpp_client_app",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -39,7 +62,7 @@ executable("llcpp_server") {
   sources = [ "llcpp_server.cc" ]
 
   deps = [
-    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service_llcpp",
+    ":fidl_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-default",
@@ -65,7 +88,7 @@ rustc_binary("rust_server") {
   source_root = "rust_server.rs"
 
   deps = [
-    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service-rustc",
+    ":fidl-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -91,8 +114,8 @@ executable("fidl_compatibility_test_executable") {
   sources = [ "compatibility_test.cc" ]
 
   deps = [
-    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
-    "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
+    ":fidl",
+    ":hlcpp_client_app",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/files",
@@ -135,7 +158,9 @@ fidl_compatibilty_test_servers = [
   "go",
   "llcpp",
   "rust",
-  "fuchsia-pkg://fuchsia.com/fidl_dart_compatibility_test_server#meta/fidl_dart_compatibility_test_server.cmx",
+
+  # Re-enable after http://fxr/409534 lands
+  # "fuchsia-pkg://fuchsia.com/fidl_dart_compatibility_test_server#meta/fidl_dart_compatibility_test_server.cmx",
 ]
 
 test_component_labels = []
@@ -212,7 +237,10 @@ fuchsia_package("fidl_compatibility_test_package") {
          ] + test_component_labels
 }
 
-group("fidl_compatibility_test") {
+group("compatibility") {
   testonly = true
-  deps = test_labels + [ "//topaz/bin/fidl_compatibility_test/dart:fidl_dart_compatibility_test_server" ]
+  deps = test_labels
+
+  # Re-enable after http://fxr/409534 lands
+  # deps += [ "//topaz/bin/fidl_compatibility_test/dart:fidl_dart_compatibility_test_server" ]
 }

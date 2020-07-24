@@ -6,15 +6,16 @@
 // In its own library so that both the C++ server and the compatibility test
 // itself can use it.
 
-#ifndef LIB_FIDL_COMPATIBILITY_TEST_ECHO_CLIENT_APP_H_
-#define LIB_FIDL_COMPATIBILITY_TEST_ECHO_CLIENT_APP_H_
+#ifndef SRCS_TESTS_FIDL_COMPATIBILITY_TEST_HLCPP_CLIENT_APP_H_
+#define SRCS_TESTS_FIDL_COMPATIBILITY_TEST_HLCPP_CLIENT_APP_H_
 
-#include <fidl/test/compatibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 #include <string>
+
+#include <fidl/test/compatibility/cpp/fidl.h>
 
 namespace fidl {
 namespace test {
@@ -42,4 +43,4 @@ class EchoClientApp {
 }  // namespace test
 }  // namespace fidl
 
-#endif  // LIB_FIDL_COMPATIBILITY_TEST_ECHO_CLIENT_APP_H_
+#endif  // SRCS_TESTS_FIDL_COMPATIBILITY_TEST_HLCPP_CLIENT_APP_H_

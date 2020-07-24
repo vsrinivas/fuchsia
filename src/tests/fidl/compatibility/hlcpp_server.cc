@@ -16,7 +16,7 @@
 
 #include <fidl/test/compatibility/cpp/fidl.h>
 
-#include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
+#include "src/tests/fidl/compatibility/hlcpp_client_app.h"
 
 namespace fidl {
 namespace test {

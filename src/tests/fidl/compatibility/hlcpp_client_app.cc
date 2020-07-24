@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
-
-#include <fidl/test/compatibility/cpp/fidl.h>
+#include "src/tests/fidl/compatibility/hlcpp_client_app.h"
 
 namespace fidl {
 namespace test {

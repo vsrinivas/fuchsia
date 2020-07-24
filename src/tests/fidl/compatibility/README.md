@@ -77,13 +77,10 @@ calling the client back directly, the server sends the `EchoEvent()`.
 
 The code for the compatibility tests are located at:
 
-- `garnet/bin/fidl_compatibility_test`: contains the server implementations for
-  HLCPP, LLCPP, Rust, and Go.
+- `src/tests/fidl/compatibility`: contains FIDL definitions and the server
+  implementations for HLCPP, LLCPP, Rust, and Go.
 - `topaz/bin/fidl_compatibility_test`: contains the server implementation for
   the dart bindings.
-- `garnet/public/lib/fidl/compatibility_test`: contains the FIDL definitions for
-  the test messages and protocol. The server implementations in garnet and topaz
-  depend on this FIDL file.
 
 The test runner and all of the test server components except for Dart are in a single package, `fuchsia-pkg://fuchsia.com/fidl-compatibility-test`.
 

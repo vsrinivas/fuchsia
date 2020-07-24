@@ -21,12 +21,12 @@
 #include <fidl/test/compatibility/cpp/fidl.h>
 #include <gtest/gtest.h>
 
-#include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/utf_codecs.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/tests/fidl/compatibility/hlcpp_client_app.h"
 
 using fidl::VectorPtr;
 using fidl::test::compatibility::AllTypesTable;

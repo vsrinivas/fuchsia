@@ -328,7 +328,7 @@ commands.
 ### Compatibility Test
 
 Details about how the compatibility tests work and where the code is located can be
-found in the README at [//garnet/public/lib/fidl/compatibility_test][compat_readme].
+found in the README at [//src/tests/fidl/compatibility][compat_readme].
 
 To run the compatibility tests, you first need to have Fuchsia running in an
 emulator:
@@ -583,7 +583,7 @@ fidl fmt --library my_library.fidl -i
 [rtl-go]: https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/
 [rtl-rust]: /src/lib/fidl/rust/fidl/
 [getting_started]: /docs/getting_started.md
-[compat_readme]: /garnet/public/lib/fidl/compatibility_test/README.md
+[compat_readme]: /src/tests/fidl/compatibility/README.md
 [go-test-flags]: https://golang.org/cmd/go/#hdr-Testing_flags
 [fidl-misc]: https://fuchsia.googlesource.com/fidl-misc
 [fidldev]: https://fuchsia.googlesource.com/fidl-misc/+/refs/heads/master/fidldev
