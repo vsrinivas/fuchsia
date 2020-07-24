@@ -1,7 +1,7 @@
 # Task samples
 
-The [Harvester](README.md) gathers task samples from jobs, processes, and
-threads on the Fuchsia device. This document describes how the data is labelled
+The Harvester gathers task samples from jobs, processes, and
+threads on the Fuchsia device. This document describes how the data is labeled
 and what the values represent.
 
 ## Dockyard path
