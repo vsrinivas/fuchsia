@@ -102,7 +102,7 @@ static const gpio_pin_t gpio_pins[] = {
     {T931_GPIOE(4)},     {T931_GPIOE(5)},     {T931_GPIOE(6)},     {T931_GPIOE(7)},
 };
 #else
-#define GPIO_PIN_COUNT 25
+#define GPIO_PIN_COUNT 26
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
     {T931_WIFI_HOST_WAKE},
@@ -141,6 +141,9 @@ static const gpio_pin_t gpio_pins[] = {
     // For Bluetooth.
     {GPIO_SOC_WIFI_LPO_32k768},
     {GPIO_SOC_BT_REG_ON},
+
+    // Luis Audio
+    {GPIO_AMP_24V_EN},
 };
 #endif
 
@@ -205,6 +208,13 @@ zx_status_t Sherlock::GpioInit() {
   if (!gpio_impl_.is_valid()) {
     zxlogf(ERROR, "%s: device_get_protocol failed %d", __func__, status);
     return ZX_ERR_INTERNAL;
+  }
+
+  // Luis audio
+  pdev_board_info_t info;
+  status = pbus_.GetBoardInfo(&info);
+  if (status == ZX_OK && info.pid == PDEV_PID_LUIS) {
+      gpio_impl_.ConfigOut(GPIO_AMP_24V_EN, 1);
   }
 
   return ZX_OK;
