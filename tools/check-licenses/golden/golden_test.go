@@ -5,18 +5,20 @@
 package golden
 
 import (
+	"flag"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 )
 
+var testDataFlag = flag.String("test_data_dir", "", "Path to testdata")
+
 func TestPatternsMatchExamples(t *testing.T) {
-	// TODO(solomonkinard) this works locally, but CQ doesn't know about relative paths
-	t.Skip()
-	goldenDir := "../../tools/check-licenses/golden"
+	goldenDir := path.Join(filepath.Dir(os.Args[0]), *testDataFlag)
 	wantDirs := map[string]string{"examples": "examples", "patterns": "patterns"}
 	base := goldenDir + "/"
 	for folder, _ := range wantDirs {

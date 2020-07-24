@@ -5,6 +5,7 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
 
 go_binary("check-licenses") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/check-licenses/cmd"
@@ -65,7 +66,21 @@ go_test("check-licenses_lib_tests") {
   deps = [ ":lib" ]
 }
 
-go_test("check-licenses_golden_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/golden" ]
-  deps = [ ":golden" ]
+if (is_host) {
+  _testdata_path = "$target_gen_dir/golden"
+
+  go_test("check-licenses_golden_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/golden" ]
+    args = [
+      "--test_data_dir",
+      rebase_path(_testdata_path, root_out_dir),
+    ]
+    deps = [ ":golden" ]
+    non_go_deps = [ ":golden_test_data" ]
+  }
+
+  host_test_data("golden_test_data") {
+    sources = [ "golden" ]
+    outputs = [ _testdata_path ]
+  }
 }
