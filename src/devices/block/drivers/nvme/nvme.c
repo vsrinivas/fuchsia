@@ -1012,23 +1012,12 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
     goto fail;
   }
 
-  uint32_t modes[3] = {
-      ZX_PCIE_IRQ_MODE_MSI_X,
-      ZX_PCIE_IRQ_MODE_MSI,
-      ZX_PCIE_IRQ_MODE_LEGACY,
-  };
-  uint32_t nirq = 0;
-  for (unsigned n = 0; n < countof(modes); n++) {
-    if ((pci_query_irq_mode(&nvme->pci, modes[n], &nirq) == ZX_OK) &&
-        (pci_set_irq_mode(&nvme->pci, modes[n], 1) == ZX_OK)) {
-      zxlogf(INFO, "nvme: irq mode %u, irq count %u (#%u)", modes[n], nirq, n);
-      goto irq_configured;
-    }
+  zx_status_t status = pci_configure_irq_mode(&nvme->pci, 1);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "nvme: could not configure irqs");
+    goto fail;
   }
-  zxlogf(ERROR, "nvme: could not configure irqs");
-  goto fail;
 
-irq_configured:
   if (pci_map_interrupt(&nvme->pci, 0, &nvme->irqh) != ZX_OK) {
     zxlogf(ERROR, "nvme: could not map irq");
     goto fail;
